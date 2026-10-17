@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { TimelineSplit } from "./TimelineSplit";
 import { getTranscriptTimeline, resetTranscriptTimelineStore } from "../../contexts/TranscriptTimelineStore";
+import { _resetEmbeddedCache } from "../../utils/embedded";
 
 beforeEach(() => resetTranscriptTimelineStore());
 
@@ -56,5 +57,59 @@ describe("TimelineSplit", () => {
     fireEvent.click(screen.getByTestId("timeline-more"));
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+});
+
+describe("TimelineSplit in the Mac app", () => {
+  const w = window as unknown as Record<string, unknown>;
+  let postMessage: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    w.__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    postMessage = vi.fn();
+    w.webkit = { messageHandlers: { navigation: { postMessage } } };
+  });
+
+  afterEach(() => {
+    delete w.__BRISTLENOSE_EMBEDDED__;
+    delete w.webkit;
+    _resetEmbeddedCache();
+  });
+
+  it("asks native for the menu, with the words and the state, instead of opening its own", () => {
+    render(<TimelineSplit />);
+    const more = screen.getByTestId("timeline-more");
+    fireEvent.click(more);
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage.mock.calls[0][0]).toEqual({
+      type: "timeline-menu",
+      on: false,
+      lanes: 3,
+      anchor: { x: 0, y: 0, width: 0, height: 0 },
+      labels: {
+        journey: "User journey",
+        timeline: "Session timeline",
+        detail: "Timeline detail",
+        lanes: [
+          { lanes: 2, title: "Compact", hint: "Sections · Moderator · Participant" },
+          { lanes: 3, title: "Standard", hint: "+ Sentiment" },
+          { lanes: 5, title: "Full", hint: "+ Themes" },
+        ],
+      },
+    });
+  });
+
+  it("takes focus back on the caret when native says the menu closed", () => {
+    render(<TimelineSplit />);
+    const more = screen.getByTestId("timeline-more");
+    fireEvent.click(more);
+    act(() => {
+      window.dispatchEvent(new CustomEvent("bn:menu-action", { detail: { action: "timelineMenuClosed" } }));
+    });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).toHaveFocus();
   });
 });

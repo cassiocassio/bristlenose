@@ -7,13 +7,19 @@
  * button (a SwiftUI `Menu` with a `primaryAction`), drawn as two segments of the house segmented
  * control (`.dimension-toggle`) inside the Export menu's wrapper, with the Export menu's classes
  * and check gutter. The label hides on a narrow row (a container query, templates/transcript.css).
+ *
+ * In the Mac app the pulldown is a native NSMenu (docs/mockups/transcript-timeline-native-menu.html,
+ * desktop TimelineMenu.swift): the caret posts `timeline-menu` with the words and where the control
+ * is, and native answers with the View menu's own actions, then `timelineMenuClosed`.
  */
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../../components/Icon";
 import { useDropdown } from "../../hooks/useDropdown";
 import { useMenuKeyboard } from "../../hooks/useMenuKeyboard";
+import { postTimelineMenu } from "../../shims/bridge";
+import { isEmbedded } from "../../utils/embedded";
 import {
   TIMELINE_LANES,
   setTimelineLanes,
@@ -35,12 +41,43 @@ export function TimelineSplit() {
   const moreRef = useRef<HTMLButtonElement | null>(null);
   const { open, setOpen, toggle, containerRef } = useDropdown();
   const { menuRef } = useMenuKeyboard({ open, onClose: () => setOpen(false), triggerRef: moreRef });
+  const groupRef = useRef<HTMLSpanElement | null>(null);
+  const embedded = isEmbedded();
+  // The native menu is open: the caret stays pressed until native says it closed.
+  const [nativeOpen, setNativeOpen] = useState(false);
+
+  useEffect(() => {
+    if (!embedded) return;
+    const onMenu = (e: Event) => {
+      if ((e as CustomEvent<{ action?: string }>).detail?.action !== "timelineMenuClosed") return;
+      setNativeOpen(false);
+      moreRef.current?.focus();
+    };
+    window.addEventListener("bn:menu-action", onMenu);
+    return () => window.removeEventListener("bn:menu-action", onMenu);
+  }, [embedded]);
 
   // What each detail adds, in the timeline's own lane words.
   const hint: Record<TimelineLanes, string> = {
     2: [t("quotes.sections"), t("sessions.speakerPlaceholder.moderator"), t("sessions.speakerPlaceholder.participant")].join(" · "),
     3: `+ ${t("sessions.colSentiment")}`,
     5: `+ ${t("quotes.themes")}`,
+  };
+  const openNative = () => {
+    const r = groupRef.current?.getBoundingClientRect();
+    if (!r) return;
+    postTimelineMenu({
+      on,
+      lanes,
+      anchor: { x: r.left, y: r.top, width: r.width, height: r.height },
+      labels: {
+        journey: t("sessions.colJourney"),
+        timeline: t("sessions.tapestry.label"),
+        detail: t("sessions.tapestry.detail"),
+        lanes: TIMELINE_LANES.map((n) => ({ lanes: n, title: t(DETAIL_KEY[n]), hint: hint[n] })),
+      },
+    });
+    setNativeOpen(true);
   };
   const pick = (fn: () => void) => () => {
     fn();
@@ -72,7 +109,7 @@ export function TimelineSplit() {
   return (
     <div ref={containerRef} className="bn-timeline-split export-dropdown-wrapper" data-testid="timeline-split">
       {/* No group name: the button inside already says "Session timeline". */}
-      <span className="dimension-toggle" role="group">
+      <span ref={groupRef} className="dimension-toggle" role="group">
         <button
           type="button"
           className={`dimension-btn bn-timeline-split__main${on ? " active" : ""}`}
@@ -92,10 +129,10 @@ export function TimelineSplit() {
           type="button"
           className="dimension-btn bn-timeline-split__more"
           aria-haspopup="menu"
-          aria-expanded={open}
+          aria-expanded={embedded ? nativeOpen : open}
           aria-label={t("sessions.tapestry.detail")}
           title={t("sessions.tapestry.detail")}
-          onClick={toggle}
+          onClick={embedded ? openNative : toggle}
           data-testid="timeline-more"
         >
           <Icon name="caret" decorative />

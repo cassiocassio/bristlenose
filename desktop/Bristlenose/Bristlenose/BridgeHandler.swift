@@ -258,6 +258,7 @@ final class BridgeHandler: ObservableObject {
     /// The native person picker, opened over this window's report when the
     /// SPA sends `person-picker` (docs/design-people.md § UX iteration 3).
     private lazy var personPicker = PersonPickerPresenter()
+    private lazy var timelineMenu = TimelineMenuPresenter()
 
     /// Whether the report is in Focus Mode. Mirrored from the SPA (`focus-mode`
     /// message) — the web side owns the state; this drives only the View-menu
@@ -1034,6 +1035,24 @@ final class BridgeHandler: ObservableObject {
             }
             personPicker.present(request, over: webView) { [weak self] action, payload in
                 self?.menuAction(action, payload: payload)
+            }
+
+        case "timeline-menu":
+            // The transcript split control's caret: pop the native menu under the
+            // control (TimelineMenu.swift). Picks go back as the View menu's own
+            // actions; the close as `timelineMenuClosed`. Deferred a turn so the
+            // menu's tracking loop doesn't run inside WebKit's message callback.
+            guard let request = TimelineMenuRequest(message: body), let webView else {
+                Self.log.error("timeline-menu dropped — unreadable request or no webView")
+                break
+            }
+            Task { @MainActor [weak self, weak webView] in
+                guard let self, let webView else { return }
+                self.timelineMenu.present(request, over: webView, choose: { [weak self] action, payload in
+                    self?.menuAction(action, payload: payload)
+                }, closed: { [weak self] in
+                    self?.menuAction("timelineMenuClosed")
+                })
             }
 
         case "search-badge-styles":

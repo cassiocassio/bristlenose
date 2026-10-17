@@ -91,6 +91,7 @@ export type BridgeMessage =
   | { type: "store-miro-token"; token: string }
   | { type: "lens-availability"; lenses: Record<string, boolean> }
   | { type: "timeline-state"; available: boolean; on: boolean; lanes: number }
+  | ({ type: "timeline-menu" } & WireTimelineMenu)
   | { type: "llm-failure"; kind: string; provider: string };
 
 // ---------------------------------------------------------------------------
@@ -414,6 +415,32 @@ export function postPanelState(
  */
 export function postTimelineState(available: boolean, on: boolean, lanes: number): void {
   postNativeMessage({ type: "timeline-state", available, on, lanes });
+}
+
+/** The transcript split control's pulldown, drawn by the Mac as an NSMenu
+ *  (docs/mockups/transcript-timeline-native-menu.html). Every string already
+ *  localised; native holds no locale key and no rule about what a pick means. */
+export interface WireTimelineMenu {
+  on: boolean;
+  lanes: number;
+  /** The split control, in CSS pixels from the web view's top-left. */
+  anchor: { x: number; y: number; width: number; height: number };
+  labels: {
+    journey: string;
+    timeline: string;
+    detail: string;
+    lanes: { lanes: number; title: string; hint: string }[];
+  };
+}
+
+/**
+ * Ask the Mac app to open the timeline pulldown as a native menu under the split control
+ * (TimelineSplit.tsx). Picks come back as the View menu's own actions
+ * (`toggleSessionTimeline`, `setSessionTimelineLanes`), and the close as
+ * `timelineMenuClosed`. No-ops outside the desktop WKWebView.
+ */
+export function postTimelineMenu(menu: WireTimelineMenu): void {
+  postNativeMessage({ type: "timeline-menu", ...menu });
 }
 
 /**

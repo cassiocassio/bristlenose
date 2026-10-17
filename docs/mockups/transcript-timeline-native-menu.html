@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default" data-platform="desktop">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Timeline menu, native · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   TRANSCRIPT TIMELINE MENU, NATIVE — bn-accurate mockup, 17 Oct 2026.
+   Follows docs/mockups/transcript-timeline-toggle.html (iteration 2, shipped as
+   frontend/src/islands/transcript/TimelineSplit.tsx).
+
+   Question: in the Mac app, should the split control's pulldown be a real NSMenu?
+   Proposal (option A): the web keeps drawing the split button; in embedded mode the
+   caret asks native to pop an NSMenu under it.
+
+   Three <style> blocks, in this order:
+   1. VERBATIM theme CSS, extracted by a script from the tree at 57ab4768, each block
+      headed by its source path and line range. Nothing edited:
+   bristlenose/theme/tokens.css — whole file, lines 1–405
+   bristlenose/theme/tokens-typography.css — whole file, lines 1–88
+   bristlenose/theme/tokens-desktop.css — whole file, lines 1–70
+   bristlenose/theme/colors/palette-default.css — whole file, lines 1–176
+   bristlenose/theme/colors/palette-edo.css — whole file, lines 1–189
+   bristlenose/theme/atoms/icon.css — whole file, lines 1–36
+   bristlenose/theme/atoms/journey-label.css — whole file, lines 1–57
+   bristlenose/theme/templates/report.css — rule, lines 319–324
+   bristlenose/theme/templates/transcript.css — whole file, lines 1–338
+   bristlenose/theme/organisms/inspector.css — lines, lines 343–387
+   bristlenose/theme/organisms/global-nav.css — lines, lines 356–441
+   2. APPLE CHROME (id="ns") — the NSMenu, drawn by hand. Not Bristlenose CSS and
+      never shipped: AppKit draws the real one. Metrics from PickerMetrics in
+      desktop/Bristlenose/Bristlenose/PersonPickerPopover.swift (24 pt rows, 22 pt
+      check column, measured on macOS 27); colours and radius approximated.
+   3. MOCKUP CHROME (id="chrome") — frames, commentary, controls. Every class
+      prefixed m-.
+   ============================================================================ */
+/* ════ bristlenose/theme/tokens.css — whole file, lines 1–405 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — whole file, lines 1–88 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+/* ════ bristlenose/theme/tokens-desktop.css — whole file, lines 1–70 ════ */
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
+
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
+
+[data-platform="desktop"]:not([data-typography="inter"]) {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    /* No --bn-font-mono override: the :root stack reaches the system SF Mono via ui-monospace. */
+
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — whole file, lines 1–176 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo.css — whole file, lines 1–189 ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/icon.css — whole file, lines 1–36 ════ */
+/* Atom: icon — Lucide glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies.
+
+   Stroke is the stem of that text, never under a pixel: em resolves against the
+   text the icon sits in, so a 15 px label draws a heavier line than a 13 px one,
+   and a context in a heavier weight sets --bn-icon-stem (tokens-typography.css).
+   This beats Lucide's stroke-width="2" attribute; `nonScalingStroke` keeps the
+   width in screen pixels at any box size (docs/design-icon-system.md § Weight). */
+
+.bn-icon {
+    display: inline-block;
+    flex: none;
+    stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em));
+}
+
+/* The default box, at zero specificity: a control that sizes its own icon
+   (`.bn-tp-nav svg { width: 6px }`) wins, and an icon given `px` keeps the
+   width/height attributes it was drawn with. */
+:where(.bn-icon:not(.bn-icon--px)) {
+    width: 1em;
+    height: 1em;
+}
+:where(.bn-icon) {
+    vertical-align: -0.125em;
+}
+
+/* A menu's check gutter: the tick sized to the row's text, about 9 px of
+   visible check at a 13 px label. Used by the person picker, the Export
+   menu and the search token menu, so the web app has one tick (owner,
+   6 Oct 2026; design-people.md §J8.8). Lucide's check fills two thirds of
+   its box, so 1em keeps the ~9 px the improvised 0.9em tick drew. */
+.bn-icon--menu {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+}
+
+/* ════ bristlenose/theme/atoms/journey-label.css — whole file, lines 1–57 ════ */
+/* Atom: journey-label — interactive journey step buttons with active state.
+
+   Used by JourneyChain component in sessions table and transcript pages.
+   The active state applies a hover-tint pill (--bn-colour-hover) to mark
+   the current section during scroll-sync or click-to-jump navigation.
+
+   Specificity note: the base rule uses `all: unset` which resets background.
+   The active rule must match or exceed that specificity (0-1-1) to win. */
+
+/* Base interactive label — reset to inline text, add cursor + transitions.
+   Matches both the transcript page's <button> (in-page scroll) and the
+   Sessions lens's <a> (deep-link navigation). `:is(button, a)` keeps the
+   0-1-1 specificity the active rule below relies on. */
+:is(button, a).bn-journey-label--interactive {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0.1rem 0.3rem;
+    transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
+}
+
+/* Wrapping chains (the Sessions lens grid) carry the horizontal breathing room
+   on the trailing edge only. Padding on an inline box paints at the start of
+   its first line fragment and the end of its last — so symmetric padding shows
+   as a ragged left indent on line 1 and on every line that opens after an
+   arrow, while a line continuing a wrapped label sits flush. Trailing-edge
+   padding keeps the mid-line gaps identical (label's padding-right + the
+   separator's leading space before the arrow; the separator's padding-right +
+   its trailing space after) and leaves nothing to paint at a line start.
+   The transcript header's chain is `--overflow` — one line, horizontal scroll,
+   no wrapping — so it keeps the symmetric pill the active state wants. */
+.bn-session-journey:not(.bn-session-journey--overflow)
+  :is(.bn-journey-label, .bn-journey-sep) {
+    padding-inline: 0 0.3rem;
+}
+
+:is(button, a).bn-journey-label--interactive:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-muted);
+    text-underline-offset: 0.25em;
+}
+
+:is(button, a).bn-journey-label--interactive:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Active journey step — hover-tint pill background.
+   Selector must beat the base `all: unset` rule (0-2-1 > 0-1-1). */
+:is(button, a).bn-journey-label--interactive.bn-journey-label--active {
+    font-weight: var(--bn-weight-emphasis);
+    background: var(--bn-colour-hover);
+    border-radius: var(--bn-radius-sm);
+}
+
+/* ════ bristlenose/theme/templates/report.css — rule, lines 319–324 ════ */
+.bn-session-journey {
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-muted);
+    margin-top: 0.25rem;
+    white-space: normal;
+}
+
+/* ════ bristlenose/theme/templates/transcript.css — whole file, lines 1–338 ════ */
+/* Template: transcript — per-participant transcript page layout */
+
+.transcript-meta {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin-bottom: var(--bn-space-md);
+}
+
+/* ── Sticky journey header ────────────────────────────────────────────── */
+
+.bn-transcript-journey-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bn-colour-bg);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+}
+
+/* Participant badges — the persistent "who is p2" answer. Never shrink; the
+   journey chain absorbs the squeeze (it already scrolls with edge fades). */
+.bn-transcript-journey-header__people {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+/* Journey chain: horizontal scroll mode on transcript pages */
+.bn-session-journey--overflow {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-session-journey--overflow::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade masks for overflow edges */
+.bn-journey--fade-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+}
+
+.bn-journey--fade-left {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+}
+
+.bn-journey--fade-both {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+}
+
+/* ── Journey chain or session timeline (docs/mockups/transcript-timeline-toggle.html) ──
+   The header row is a size container, so the split control can drop its label when the row is
+   narrow however wide the window is (the sidebars take their share first). */
+.bn-transcript-journey-header { container: bn-journey-header / inline-size; }
+
+/* The split control (islands/transcript/TimelineSplit.tsx): the house segmented control
+   (.dimension-toggle + .dimension-btn, organisms/inspector.css) with two segments, inside the
+   Export menu's positioning wrapper — the toggle clips its children, so the menu is its sibling.
+   Pressed is .dimension-btn.active as shipped; only the icon turns accent. */
+.bn-timeline-split { flex-shrink: 0; margin-left: auto; position: relative; }
+.bn-timeline-split .dimension-toggle { vertical-align: middle; }
+.bn-timeline-split .dimension-btn { display: inline-flex; align-items: center; gap: var(--bn-space-sm); }
+.bn-timeline-split .dimension-btn .bn-icon { width: 14px; height: 14px; }
+.bn-timeline-split .dimension-btn.active .bn-icon { color: var(--bn-colour-accent); }
+.bn-timeline-split__more { padding-inline: var(--bn-space-sm); }
+.bn-timeline-split__more .bn-icon { width: 11px; height: 11px; }
+.bn-timeline-split__more[aria-expanded="true"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+/* A narrow row keeps the icon; the button's name and tooltip carry the word. */
+@container bn-journey-header (max-width: 720px) {
+    .bn-timeline-split__label { display: none; }
+}
+/* The menu: the Export menu's classes, with a muted trailing hint where a Mac menu puts its key
+   equivalent. */
+/* Wider than the Export menu's 14rem: the hints ride on the same line. */
+.bn-timeline-split .export-dropdown-menu { min-width: 19rem; }
+.bn-timeline-menu-hint {
+    margin-left: auto;
+    padding-left: var(--bn-space-lg);
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+}
+
+/* The timeline on: the row wraps, the chain gives up its place, and the timeline takes a
+   full-width second line of the same sticky header. */
+.bn-transcript-journey-header--timeline { flex-wrap: wrap; row-gap: 0; }
+.bn-transcript-journey-header--timeline .bn-session-journey { display: none; }
+.bn-transcript-timeline { flex: 1 0 100%; min-width: 0; }
+/* A window too short to read under a stuck timeline (a small window, or the page zoomed to
+   200–400%: WCAG 1.4.10): the header scrolls with the page instead of staying over it. */
+@media (max-height: 30rem) {
+    .bn-transcript-journey-header--timeline { position: static; }
+}
+
+@media print {
+    .bn-timeline-split { display: none; }
+}
+
+/* Selector — reusable dropdown primitive (bn-selector) */
+.bn-selector {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.bn-selector__trigger {
+    all: unset;
+    font: inherit;
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.bn-selector__trigger:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-selector__trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.bn-selector__caret {
+    font-size: var(--bn-text-badge);
+    opacity: 0.6;
+}
+
+.bn-selector__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -0.75rem;  /* outdent by item padding so menu text aligns with trigger */
+    z-index: 20;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.bn-selector__item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    color: inherit;
+    text-decoration: none;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    cursor: pointer;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.bn-selector__item:hover {
+    background: var(--bn-colour-hover, #f0f0f0);
+}
+
+.bn-selector__item--active {
+    color: var(--bn-colour-accent);
+}
+
+/* Session-specific: secondary detail line (date) */
+.bn-selector__detail {
+    font-size: var(--bn-text-caption);
+    font-weight: 400;
+    color: var(--bn-colour-muted);
+}
+
+/* Plain session label when there is only one session (no dropdown) */
+.bn-session-selector__label {
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Segments need scroll-margin to not hide behind sticky header. The body sits inside the gutter's
+   sheet since 3baf841f (17 Oct 2026), so the sibling is the sheet, not the body: the old
+   `~ .transcript-body` matched nothing, and a journey-chain click landed under the header. */
+.bn-transcript-journey-header ~ :is(.transcript-body, .bn-transcript-sheet) .transcript-segment[id] {
+    scroll-margin-top: var(--bn-journey-header-height, 3rem);
+}
+
+/* ── Session roles (moderator/observer line) ────────────────────────── */
+
+.bn-transcript-roles {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin: var(--bn-space-lg) 0 0;
+    line-height: 1.5;
+}
+
+.bn-transcript-roles__person {
+    white-space: nowrap;
+}
+
+.bn-transcript-roles__name {
+    margin-left: 0.25rem;
+}
+
+/* ── Transcript body ─────────────────────────────────────────────────── */
+
+.transcript-body {
+    margin-top: var(--bn-space-lg);
+    position: relative;
+    display: grid;
+    /* Timecode: ~4.5rem for [HH:MM:SS] in monospace.
+       Badge: right-aligned in a 2.2rem slot (fits p1–p99, m1–m99).
+       Body: remaining space for text. */
+    grid-template-columns: 4.5rem 2.2rem 1fr;
+    gap: 0 0.5rem;
+}
+
+/* At the annotation breakpoint (see molecules/transcript-annotations.css) the
+   body gains a 4th column for margin annotations. clamp() narrows it as the
+   window narrows, so section/theme labels wrap at medium widths and fit at wide. */
+@media (min-width: 800px) {
+    .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem 1fr clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The 1.7 here is STRUCTURAL, not typographic. This row is a baseline-aligned
+   grid (`align-items: baseline`), and the 1.7 sets the rhythm the timecode and
+   speaker-badge columns align to; `.segment-body` inside deliberately resets to
+   the prose token for the text itself. Pull this onto --bn-text-*-lh and the
+   timecode stops sitting on the first line of its segment.
+   It is also the largest leading in the theme, which makes it the most obvious
+   target for a normalising sweep — hence this comment. Any change here wants
+   the transcript page open beside it.
+   See docs/design-native-typography-grid.md § Leading. */
+.transcript-segment {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    margin: 0.5rem 0;
+    line-height: 1.7;
+}
+
+.transcript-segment .timecode {
+    white-space: nowrap;
+    justify-self: start;
+}
+
+/* The timecode's non-editable island is the grid item now; it sits as the
+   timecode did. */
+.transcript-segment .segment-timecode-cell {
+    white-space: nowrap;
+    justify-self: start;
+}
+
+.transcript-segment .segment-body {
+    min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+}
+
+.transcript-segment .segment-speaker {
+    white-space: nowrap;
+    justify-self: end;
+}
+
+/* A paragraph that begins a sentence draws its first letter as a capital
+   (design-transcript-editing.md, option C): display only, and it follows the
+   paragraph's lang, so Turkish i becomes İ. Scripts without case are untouched. */
+.transcript-segment .segment-body.bn-sentence-start::first-letter {
+    text-transform: uppercase;
+}
+
+/* The transcript is one editable region (a caret for split and join); it
+   draws no focus ring, as the paragraphs did not. */
+.transcript-body[contenteditable="true"]:focus {
+    outline: none;
+}
+
+/* Someone spoke and nothing usable was heard: an annotation, not words. Drawn
+   like the timecode, never like speech, so it cannot read as something said. */
+.segment-inaudible {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    user-select: none;
+}
+
+.segment-moderator .segment-body {
+    color: var(--bn-colour-muted);
+}
+
+.segment-moderator .segment-speaker .badge {
+    opacity: 0.55;
+}
+
+/* Quoted segments — non-quoted participant text knocked back */
+.transcript-segment:not(.segment-quoted):not(.segment-moderator) .segment-body {
+    opacity: 0.6;
+}
+
+/* Inline citation highlight — wraps the verbatim excerpt within a segment.
+   Currently invisible while we rethink the visual treatment; the <mark>
+   elements and --bn-colour-cited-bg token are preserved so this can be
+   re-enabled by restoring `background: var(--bn-colour-cited-bg)`. */
+.bn-cited {
+    background: transparent;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* The paragraph a link landed on flashes (atoms/arrival.css); its corners
+   round while it does. `[data-arrived]` in the app, `.anchor-highlight` from
+   the sealed static render's transcript-names.js. */
+.transcript-segment[data-arrived],
+.transcript-segment.anchor-highlight {
+    border-radius: var(--bn-radius-sm);
+}
+
+/* ════ bristlenose/theme/organisms/inspector.css — lines, lines 343–387 ════ */
+.dimension-toggle {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.dimension-btn {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+
+.dimension-btn:first-child {
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+.dimension-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+.dimension-btn:focus-visible {
+    /* Inset: the toggle clips its children (overflow: hidden), so an outset
+       ring would be cut off at the edges the buttons share with it. */
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.dimension-btn.active {
+    background: var(--bn-colour-hover);
+    /* Body ink, not accent: accent on the hover tint measures 3.51:1 (light)
+       and 4.01:1 (dark) in the default palette, under AA's 4.5:1 for 12px
+       text. The tint and the weight carry "selected". */
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ════ bristlenose/theme/organisms/global-nav.css — lines, lines 356–441 ════ */
+.export-dropdown-wrapper {
+    position: relative;
+}
+
+.export-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin: 0.25rem 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    min-width: 14rem;
+    z-index: 200;
+}
+
+.export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    padding: 0.4rem 0.85rem;
+    font-size: var(--bn-text-label);
+    color: var(--bn-colour-text);
+    cursor: pointer;
+    transition: background var(--bn-transition-fast);
+    white-space: nowrap;
+}
+
+.export-dropdown-item:hover,
+.export-dropdown-item:focus {
+    background: var(--bn-colour-quote-bg);
+    outline: none;
+}
+
+/* The tint alone is ~1.05:1 against the menu, so keyboard focus also gets the
+   house ring (badge.css's focus-visible). */
+.export-dropdown-item:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.export-dropdown-hint {
+    padding: 0 0.85rem 0.25rem;
+    font-size: var(--bn-text-caption);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+/* Scope-picker group: a muted category label above three indented scope rows
+   (All / Selected / Starred). Mirrors the native Quotes menu taxonomy. */
+.export-dropdown-group-label {
+    padding: 0.35rem 0.85rem 0.1rem;
+    font-size: var(--bn-text-caption);
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-muted);
+    list-style: none;
+}
+
+.export-dropdown-scope {
+    padding-left: 1.5rem;
+}
+
+/* The checkmark gutter of a menuitemcheckbox row (Burn subtitles…), hung in
+   the scope indent so the label lines up with the scope rows above it. */
+.export-dropdown-check {
+    display: inline-block;
+    width: 0.75rem;
+    margin-left: -1rem;
+    text-align: center;
+}
+
+.export-dropdown-item.is-disabled {
+    color: var(--bn-colour-muted);
+    cursor: default;
+    pointer-events: none;
+}
+
+.export-dropdown-separator {
+    height: 0;
+    margin: 0.25rem 0;
+    border-top: 1px solid var(--bn-colour-border);
+    list-style: none;
+}
+</style>
+
+<style id="ns">
+/* An NSMenu, approximated. Pull-down placement: 4 pt below the anchor
+   (SearchFieldViews.swift: popUp(positioning: nil, at: (0, -4), in: anchor)). */
+.ns-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 300;
+  width: max-content;
+  min-width: var(--ns-min, 0);
+  padding: 5px;
+  border-radius: 12px;
+  font: 13px/16px -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  letter-spacing: -0.08px;
+  text-align: left;
+  color: light-dark(rgb(0 0 0 / 0.85), rgb(255 255 255 / 0.88));
+  background: light-dark(rgb(246 246 246 / 0.82), rgb(44 44 46 / 0.82));
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  backdrop-filter: blur(22px) saturate(1.7);
+  box-shadow: 0 0 0 0.5px light-dark(rgb(0 0 0 / 0.16), rgb(255 255 255 / 0.18)),
+              0 10px 30px rgb(0 0 0 / 0.22), 0 2px 6px rgb(0 0 0 / 0.12);
+  user-select: none;
+}
+.ns-menu[hidden] { display: none; }
+.ns-left { left: 0; }
+.ns-right { right: 0; }
+.ns-item {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  padding-right: 18px;
+  border-radius: 6px;
+  cursor: default;
+}
+.ns-check { flex: none; width: 22px; display: flex; justify-content: center; }
+.ns-check svg { width: 11px; height: 11px; stroke-width: 2.4; }
+.ns-text { display: flex; flex-direction: column; padding: 3px 0; }
+.ns-sub { font-size: 11px; line-height: 14px; color: light-dark(rgb(0 0 0 / 0.5), rgb(255 255 255 / 0.55)); }
+.ns-item:hover { background: light-dark(#007aff, #0a84ff); color: #fff; }
+.ns-item:hover .ns-sub { color: rgb(255 255 255 / 0.82); }
+.ns-sep { height: 1px; margin: 5px 9px; background: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.12)); }
+.ns-header {
+  padding: 5px 18px 1px 22px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  color: light-dark(rgb(0 0 0 / 0.5), rgb(255 255 255 / 0.55));
+}
+</style>
+
+<style id="chrome">
+.m-page {
+  margin: 0;
+  padding: 32px 24px 64px;
+  background: light-dark(#eef0f3, #161618);
+  color: light-dark(#1d1f23, #e6e6ea);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.m-wrap { max-width: 1240px; margin: 0 auto; }
+.m-h1 { font-size: 22px; margin: 0 0 6px; }
+.m-h2 { font-size: 16px; margin: 40px 0 4px; }
+.m-sub, .m-lede { margin: 0 0 14px; max-width: 78ch; color: light-dark(#4a4f57, #a9abb3); }
+.m-key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; margin: 12px 0; }
+.m-key span { display: inline-flex; align-items: center; gap: 6px; }
+.m-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid light-dark(#c9ccd2, #3a3a40); }
+.m-swatch--art { background: light-dark(#fff, #1e1e20); }
+.m-swatch--comm { background: repeating-linear-gradient(45deg, light-dark(#f6efe0, #2a261d) 0 4px, light-dark(#efe5cf, #332e22) 4px 8px); }
+.m-controls { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.m-tag { font: 11px ui-monospace, Menlo, monospace; text-transform: uppercase; letter-spacing: 0.06em; color: light-dark(#6b7078, #8d9099); }
+.m-btn { font: inherit; padding: 3px 10px; border-radius: 6px; border: 1px solid light-dark(#c9ccd2, #3a3a40); background: light-dark(#fff, #222226); color: inherit; cursor: pointer; }
+.m-btn[aria-pressed="true"] { background: light-dark(#1d1f23, #e6e6ea); color: light-dark(#fff, #161618); }
+
+.m-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.m-frame { border: 1px solid light-dark(#d4d7dc, #2e2e33); border-radius: 10px; overflow: hidden; background: light-dark(#fff, #1e1e20); }
+.m-chrome {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  font: 11px ui-monospace, Menlo, monospace;
+  color: light-dark(#6b7078, #8d9099);
+  background: light-dark(#f4f5f7, #232327);
+  border-bottom: 1px solid light-dark(#e1e3e7, #2e2e33);
+}
+.m-dots { display: inline-flex; gap: 4px; }
+.m-dots i { width: 8px; height: 8px; border-radius: 50%; background: light-dark(#d4d7dc, #3a3a40); }
+.m-new { margin-left: auto; padding: 1px 6px; border-radius: 4px; background: light-dark(#e3f0ff, #13304f); color: light-dark(#0b5cad, #8cc4ff); }
+
+/* The stage: the content column, top of the transcript, header stuck. */
+.m-stage {
+  position: relative;
+  height: 300px;
+  padding: 0 0 0 24px;
+  background: var(--bn-colour-bg);
+  color: var(--bn-colour-text);
+  font-family: var(--bn-font-body);
+  font-size: var(--bn-text-body);
+}
+.m-dark { color-scheme: dark; }
+.m-light { color-scheme: light; }
+.m-dark .m-stage, .m-light .m-stage { color: var(--bn-colour-text); }
+.m-stage .bn-transcript-journey-header { padding-left: 0; }
+.m-para { margin: 14px 24px 0 0; max-width: 62ch; line-height: 1.55; }
+.m-para b { font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted); margin-right: 6px; font-size: var(--bn-text-caption); }
+
+/* Alignment part: the window's right edge and the desktop beyond it. */
+.m-desk {
+  position: relative;
+  padding: 0 260px 0 0;
+  background: repeating-linear-gradient(135deg, light-dark(#e4e6ea, #1b1b1e) 0 6px, light-dark(#dcdfe4, #202024) 6px 12px);
+}
+.m-desk .m-stage { border-right: 1px solid light-dark(#b9bdc4, #3e3e44); }
+.m-desk-label { position: absolute; right: 12px; bottom: 10px; font: 11px ui-monospace, Menlo, monospace; color: light-dark(#7a7f87, #7c7f88); }
+.m-desk .m-frame, .m-desk { overflow: visible; }
+.m-frame.m-open { overflow: visible; }
+
+/* Commentary: deliberately not-the-product. */
+.m-comm {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-left: 3px solid light-dark(#c9a24a, #8a7033);
+  border-radius: 0 8px 8px 0;
+  background: repeating-linear-gradient(45deg, light-dark(#fbf6ea, #23201a) 0 6px, light-dark(#f7f0de, #27231c) 6px 12px);
+  font-size: 13px;
+}
+.m-comm h3 { font-size: 13px; margin: 14px 0 4px; }
+.m-comm h3:first-child { margin-top: 0; }
+.m-comm p, .m-comm li { max-width: 92ch; }
+.m-comm ul, .m-comm ol { margin: 4px 0; padding-left: 20px; }
+.m-comm code { font: 12px ui-monospace, Menlo, monospace; }
+.m-comm-label { font: 11px ui-monospace, Menlo, monospace; text-transform: uppercase; letter-spacing: 0.06em; color: light-dark(#8a6d22, #c9a24a); margin-bottom: 6px; }
+.m-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.m-table th, .m-table td { text-align: left; vertical-align: top; padding: 5px 10px 5px 0; border-bottom: 1px solid light-dark(#e6dcc4, #3a3426); }
+.m-table th { font-weight: 600; }
+
+/* Each frame needs the content column's real width (over 720 px), or the header's
+   container query drops the button's word, as it does in the app on a narrow row. */
+.m-wrap { max-width: 1640px; }
+@media (max-width: 1599px) { .m-grid { grid-template-columns: 1fr; max-width: 820px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+
+<body class="m-page">
+<div class="m-wrap">
+
+<header>
+  <h1 class="m-h1">Timeline menu: web pulldown → native NSMenu (Mac app)</h1>
+  <p class="m-lede">The split control at the end of the transcript's sticky row stays the web's. In the Mac app only, its caret pops a real AppKit menu under the control, with the same choices: the chain/timeline pair, then the timeline detail, each detail with its lanes as a subtitle. Browser and HTML export keep today's web menu.</p>
+  <div class="m-key">
+    <span><i class="m-swatch m-swatch--art"></i>Artefact: pixels as they would ship (no annotations inside)</span>
+    <span><i class="m-swatch m-swatch--comm"></i>Commentary: why, and what is still open</span>
+    <span>Paragraphs under the row are sample transcript text, there so the menu's material has something to blur.</span>
+  </div>
+  <div class="m-controls" role="group" aria-label="Mockup controls">
+    <span class="m-tag">Palette</span>
+    <button class="m-btn" type="button" data-palette="default" aria-pressed="true">Default</button>
+    <button class="m-btn" type="button" data-palette="edo" aria-pressed="false">Edo</button>
+    <span class="m-tag" style="margin-left:14px">Try</span>
+    <span>click the caret to close or reopen a menu; click an item to pick it</span>
+  </div>
+</header>
+
+<section>
+  <h2 class="m-h2">1 · Today and proposed, light and dark</h2>
+  <p class="m-sub">Same state in all four: Session timeline on, Standard detail. Left column is the shipped web menu. Right column is the NSMenu the caret would pop in the Mac app, right edge to the control's right edge (part 2 compares the two alignments).</p>
+  <div class="m-grid" id="compare"></div>
+</section>
+
+<section>
+  <h2 class="m-h2">2 · Where the menu hangs: the control sits at the window's trailing edge</h2>
+  <p class="m-sub">The split control is pinned to the right end of the content column. The hatched area is outside the window.</p>
+  <div class="m-grid" id="align" style="grid-template-columns: 1fr; max-width: 1100px"></div>
+  <div class="m-comm">
+    <div class="m-comm-label">Commentary · alignment</div>
+    <p><b>A · left edge under the control's left edge</b> is how a Mac pull-down opens (the Gruber pass recommended it, medium confidence): the menu belongs to the whole control. Here that runs the menu past the window's edge, which AppKit allows; it only keeps a menu on the screen, not inside its window. With the tag sidebar open, it would also cover the sidebar.</p>
+    <p><b>B · right edge to the control's right edge</b> is what the web menu does today, and stays inside the window. AppKit will not do it by itself: native computes <code>x = anchor.maxX − menu.size.width</code> before popping, which is one line.</p>
+    <p><b>Decided: B</b> (owner, 18 Oct 2026). The control is a trailing-edge control, and B keeps the menu over the content it changes.</p>
+  </div>
+</section>
+
+<section>
+  <h2 class="m-h2">3 · Review</h2>
+  <div class="m-comm">
+    <div class="m-comm-label">Commentary · review before build</div>
+
+    <h3>Verdict: yes, make the menu native; keep the button web (option A)</h3>
+    <ul>
+      <li><b>Why the menu:</b> WebKit already pops an NSMenu for a <code>&lt;select&gt;</code>, so a web control opening a native menu is how a WKWebView normally behaves. The menu gets the material, type-select, VoiceOver menu semantics, dismissal when the app deactivates, and it can extend outside the web view.</li>
+      <li><b>Why not the button (option B, a SwiftUI <code>Menu</code> with <code>primaryAction</code> in the toolbar):</b> it moves the control away from the slot it changes, adds a per-route toolbar item (the toolbar's overflow rules are documented as fragile), and the menu bar already has View ▸ Show/Hide Session Timeline and View ▸ Timeline Detail ▸.</li>
+      <li><b>Why not leave it (C):</b> it is the one web-drawn menu left in a place the Mac user reaches for with the pointer every session.</li>
+    </ul>
+
+    <h3>It is mostly wiring that exists</h3>
+    <table class="m-table">
+      <tr><th>Piece</th><th>Status</th><th>Where</th></tr>
+      <tr><td>Actions: toggle, set lanes (2/3/5)</td><td>shipped</td><td><code>menuAction("toggleSessionTimeline")</code>, <code>("setSessionTimelineLanes", {lanes})</code>, handled by <code>applyTimelineMenuAction</code> in <code>TranscriptTimelineStore.ts</code></td></tr>
+      <tr><td>State mirror</td><td>shipped</td><td><code>timeline-state</code> → <code>BridgeHandler.timelineOn / timelineLanes / timelineAvailable</code></td></tr>
+      <tr><td>Web rect → web-view coordinates</td><td>shipped</td><td><code>PersonPickerPresenter.viewRect(for:in:)</code> (safe-area inset + zoom; the trap it fixes is in <code>desktop/CLAUDE.md</code>)</td></tr>
+      <tr><td>NSMenu popped under an anchor, target/action closures</td><td>shipped pattern</td><td><code>SearchFieldViews.swift</code> ~300–318</td></tr>
+      <tr><td>Bridge message <code>timeline-menu {anchor}</code></td><td>new</td><td>web → native, posted by the caret when <code>isEmbedded()</code>, instead of opening the list</td></tr>
+      <tr><td>Menu builder</td><td>new, small</td><td>a pure function from <code>(on, lanes, i18n)</code> to items, so it gets a unit test (the house rule: a decision lives in a helper, not a view)</td></tr>
+      <tr><td>Closed echo</td><td>new</td><td>native → web when the menu closes: <code>aria-expanded</code> back to false and focus back on the caret. <code>popUp</code> is synchronous, so this is one call after it returns</td></tr>
+    </table>
+    <p>Pick mapping: <i>User journey</i> or <i>Session timeline</i> sends the toggle only when it differs from the current state; a detail sends set-lanes, which also turns the timeline on (the store already does that). Pass <code>positioning: nil</code>: passing the ticked item makes it a pop-up, which centres that item over the control instead of opening below it.</p>
+
+    <h3>Decided, and still open</h3>
+    <ol>
+      <li><b>Alignment: B</b>, part 2 (owner, 18 Oct 2026).</li>
+      <li><b>Casing: the web's sentence case, accepted</b> (owner, 18 Oct 2026). Mac menus are title case and the View menu says <i>Show Session Timeline</i>; the menu reads the web's strings, so it needs no new keys. As built, the section header is the web's <i>Timeline detail</i> (the caret's own name), not the menu bar's <i>Timeline Detail</i>, because the SPA does not read the desktop namespace.</li>
+      <li><b>Subtitle wording.</b> Drawn with the shipped hints. As a subtitle, "+ Sentiment" reads as web shorthand; the Gruber pass suggested words ("Adds sentiment"). That is new copy, so not drawn.</li>
+      <li><b>The section header.</b> Built. Without it the separator alone groups the details, as many Mac pull-downs do.</li>
+      <li><b>Parity.</b> View ▸ Timeline Detail ▸ has no hints. Whether a SwiftUI <code>Commands</code> menu item shows a subtitle needs a build to see; if it doesn't, the hints live only here, which is a fair asymmetry.</li>
+    </ol>
+
+    <h3>Strings</h3>
+    <table class="m-table">
+      <tr><th>Where</th><th>Text (en)</th><th>Key</th><th>Status</th></tr>
+      <tr><td>Radio 1</td><td>User journey</td><td><code>common.sessions.colJourney</code></td><td>shipped</td></tr>
+      <tr><td>Radio 2</td><td>Session timeline</td><td><code>common.sessions.tapestry.label</code></td><td>shipped</td></tr>
+      <tr><td>Section header</td><td>Timeline detail</td><td><code>common.sessions.tapestry.detail</code></td><td>shipped (the caret's own name)</td></tr>
+      <tr><td>Details</td><td>Compact · Standard · Full</td><td><code>common.sessions.tapestry.compact / standard / full</code></td><td>shipped</td></tr>
+      <tr><td>Subtitles</td><td>Sections · Moderator · Participant / + Sentiment / + Themes</td><td>composed from <code>quotes.sections</code>, <code>sessions.speakerPlaceholder.*</code>, <code>sessions.colSentiment</code>, <code>quotes.themes</code></td><td>shipped composition</td></tr>
+    </table>
+    <p>No new keys.</p>
+
+    <h3>What this mockup cannot show</h3>
+    <p>The NSMenu is drawn by hand from measured metrics (24 pt rows and a 22 pt check column, <code>PickerMetrics</code>, macOS 27). macOS 15 draws 22 pt rows and a smaller corner radius; the section header's exact type and indent are approximated. Check against a real NSMenu in Diagnostics ▸ Picker Lab before trusting a pixel here.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+// Shipped en values: sessions.colJourney, sessions.tapestry.{label,timeline,detail,compact,standard,full},
+// hints composed as TimelineSplit.tsx composes them.
+const T = {
+  journey: "User journey", timeline: "Session timeline", button: "Timeline",
+  more: "Timeline detail", header: "Timeline detail",
+  detail: { 2: "Compact", 3: "Standard", 5: "Full" },
+  hint: { 2: "Sections · Moderator · Participant", 3: "+ Sentiment", 5: "+ Themes" },
+};
+const LANES = [2, 3, 5];
+const SVG = (p) => `<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const ICON = {
+  timeline: SVG('<path d="M2 3v18"/><rect width="12" height="18" x="6" y="3" rx="2"/><path d="M22 3v18"/>'),
+  caret: SVG('<path d="m6 9 6 6 6-6"/>'),
+  check: SVG('<path d="M20 6 9 17l-5-5"/>'),
+};
+const NS_CHECK = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 6.4 4.6 9.2 10.2 2.6"/></svg>';
+const CHAIN = ["Homepage", "Product List", "Product Detail", "Basket", "Checkout"];
+const PARAS = [
+  ["p1", "So I went straight to the search, because I already knew which shelf I wanted, and it gave me the whole range before it gave me the one I'd typed."],
+  ["m1", "What did you expect it to show you first?"],
+  ["p1", "The exact one. I'd typed the name off the label at home. I scrolled past three bookcases that weren't it."],
+];
+
+function webMenu(s) {
+  const item = (k, on, label, sub) =>
+    `<li role="menuitemradio" aria-checked="${on}" tabindex="-1" class="export-dropdown-item export-dropdown-scope" data-k="${k}">`
+    + `<span class="export-dropdown-check" aria-hidden="true">${on ? ICON.check.replace('class="bn-icon"', 'class="bn-icon bn-icon--menu"') : ""}</span>${label}`
+    + (sub ? `<span class="bn-timeline-menu-hint">${sub}</span>` : "") + `</li>`;
+  return `<ul role="menu" class="export-dropdown-menu" aria-label="${T.more}"${s.open ? "" : " hidden"}>`
+    + item("chain", !s.on, T.journey) + item("timeline", s.on, T.timeline)
+    + `<li role="separator" class="export-dropdown-separator"></li>`
+    + LANES.map((n) => item(`lanes-${n}`, s.lanes === n, T.detail[n], T.hint[n])).join("") + `</ul>`;
+}
+
+function nsMenu(s, side) {
+  const item = (k, on, label, sub) =>
+    `<div class="ns-item" role="menuitemradio" aria-checked="${on}" data-k="${k}"><span class="ns-check">${on ? NS_CHECK : ""}</span>`
+    + (sub ? `<span class="ns-text"><span>${label}</span><span class="ns-sub">${sub}</span></span>` : `<span>${label}</span>`) + `</div>`;
+  return `<div class="ns-menu ns-${side}" role="menu"${s.open ? "" : " hidden"}>`
+    + item("chain", !s.on, T.journey) + item("timeline", s.on, T.timeline)
+    + `<div class="ns-sep" role="separator"></div><div class="ns-header" role="presentation">${T.header}</div>`
+    + LANES.map((n) => item(`lanes-${n}`, s.lanes === n, T.detail[n], T.hint[n])).join("") + `</div>`;
+}
+
+function split(s, menuHTML) {
+  return `<span class="bn-timeline-split export-dropdown-wrapper">`
+    + `<span class="dimension-toggle" role="group">`
+    + `<button type="button" class="dimension-btn bn-timeline-split__main${s.on ? " active" : ""}" aria-pressed="${s.on}" aria-label="${T.timeline}" title="${T.timeline}">${ICON.timeline}<span class="bn-timeline-split__label">${T.button}</span></button>`
+    + `<button type="button" class="dimension-btn bn-timeline-split__more" aria-haspopup="menu" aria-expanded="${s.open}" aria-label="${T.more}" title="${T.more}">${ICON.caret}</button>`
+    + `</span>${menuHTML}</span>`;
+}
+
+function stage(s, kind, side) {
+  const chain = CHAIN.map((c) => `<button class="bn-journey-label bn-journey-label--interactive">${c}</button>`).join('<span class="bn-journey-sep"> → </span>');
+  const menu = kind === "web" ? webMenu(s) : nsMenu(s, side);
+  return `<div class="m-stage">`
+    + `<div class="bn-transcript-journey-header"><div class="bn-session-journey bn-session-journey--overflow">${chain}</div>${split(s, menu)}</div>`
+    + PARAS.map(([who, t]) => `<p class="m-para"><b>${who}</b>${t}</p>`).join("") + `</div>`;
+}
+
+const frames = [];
+function frame(host, { title, tag, scheme, kind, side = "left", desk = false }) {
+  const s = { on: true, lanes: 3, open: true };
+  const el = document.createElement("div");
+  el.className = `m-frame m-open m-${scheme}`;
+  const render = () => {
+    const body = stage(s, kind, side);
+    el.innerHTML = `<div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>${title}<span class="m-new">${tag}</span></div>`
+      + (desk ? `<div class="m-desk">${body}<span class="m-desk-label">outside the window</span></div>` : body);
+    const ctl = el.querySelector(".dimension-toggle");
+    const menu = el.querySelector(".ns-menu");
+    if (menu) menu.style.setProperty("--ns-min", ctl.offsetWidth + "px");
+  };
+  el.addEventListener("click", (e) => {
+    const more = e.target.closest(".bn-timeline-split__more");
+    const main = e.target.closest(".bn-timeline-split__main");
+    const pick = e.target.closest("[data-k]");
+    if (more) s.open = !s.open;
+    else if (main) s.on = !s.on;
+    else if (pick) {
+      const k = pick.dataset.k;
+      if (k === "chain") s.on = false;
+      else if (k === "timeline") s.on = true;
+      else { s.lanes = Number(k.split("-")[1]); s.on = true; }
+      s.open = false;
+    } else return;
+    render();
+  });
+  render();
+  host.appendChild(el);
+  frames.push(render);
+}
+
+const cmp = document.getElementById("compare");
+frame(cmp, { title: "Transcript · light", tag: "today · web menu", scheme: "light", kind: "web" });
+frame(cmp, { title: "Transcript · light", tag: "proposed · NSMenu", scheme: "light", kind: "ns", side: "right" });
+frame(cmp, { title: "Transcript · dark", tag: "today · web menu", scheme: "dark", kind: "web" });
+frame(cmp, { title: "Transcript · dark", tag: "proposed · NSMenu", scheme: "dark", kind: "ns", side: "right" });
+
+const al = document.getElementById("align");
+frame(al, { title: "A · left edge under the control", tag: "NSMenu", scheme: "light", kind: "ns", side: "left", desk: true });
+frame(al, { title: "B · right edge to the control's right", tag: "NSMenu", scheme: "light", kind: "ns", side: "right", desk: true });
+
+document.querySelectorAll("[data-palette]").forEach((b) => b.addEventListener("click", () => {
+  document.documentElement.dataset.colorTheme = b.dataset.palette;
+  document.querySelectorAll("[data-palette]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+}));
+</script>
+</body>
+</html>

@@ -1,0 +1,3419 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transcript timeline toggle · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   TRANSCRIPT TIMELINE TOGGLE — bn-accurate mockup, 17 Oct 2026.
+
+   The transcript page's sticky slot shows either the user-journey chain
+   (skinny, today) or the session timeline (fat, the Sessions grid's tapestry),
+   switched by one button at the end of the sticky row.
+
+   Three <style> blocks, in this order:
+   1. VERBATIM theme CSS, copied by a script from the tree at 32d17eaa, each
+      block headed by its source path and line range. Nothing edited:
+   bristlenose/theme/tokens.css — whole file, lines 1–405
+   bristlenose/theme/tokens-typography.css — whole file, lines 1–88
+   bristlenose/theme/colors/palette-default.css — whole file, lines 1–176
+   bristlenose/theme/colors/palette-edo.css — whole file, lines 1–189
+   bristlenose/theme/atoms/badge.css — whole file, lines 1–326
+   bristlenose/theme/atoms/icon.css — whole file, lines 1–36
+   bristlenose/theme/atoms/timecode.css — whole file, lines 1–97
+   bristlenose/theme/atoms/journey-label.css — whole file, lines 1–57
+   bristlenose/theme/molecules/person-badge.css — whole file, lines 1–205
+   bristlenose/theme/organisms/inspector.css — lines 341–388
+   bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–355
+   bristlenose/theme/molecules/transcript-annotations.css — whole file, lines 1–78
+   bristlenose/theme/templates/transcript.css — whole file, lines 1–289
+   frontend/src/islands/transcript/transcript-gutter.css — whole file, lines 1–260
+   2. PROPOSED (id="proposed") — the only new CSS the design needs. Every rule
+      there is listed in the inventory at the foot of the page.
+   3. MOCKUP CHROME (id="chrome") — frames, commentary, controls. Every class
+      prefixed m-; none of it appears inside a frame except .m-viewport, the
+      scroll box that stands in for the window.
+
+   The timeline is drawn by a port of SessionTapestry.tsx's geometry (same
+   constants, same SVG classes); the session is fictional.
+   ========================================================================= */
+/* ════ bristlenose/theme/tokens.css — whole file, lines 1–405 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading, a Sessions row
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps; a palette may override the alias. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — whole file, lines 1–88 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — whole file, lines 1–176 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ════ bristlenose/theme/colors/palette-edo.css — whole file, lines 1–189 ════ */
+/* palette-edo — Edo-period Japanese art colour theme.
+   Sampled from three artworks seen at the British Museum Samurai exhibition,
+   1 Mar 2026. See docs/mockups/edo-colour-palette.html for source analysis.
+
+   Pigments: rokusho (verdigris), sumi (iron-gall ink), cinnabar vermillion,
+   bero-ai (Prussian blue), yellow ochre.
+
+   Desktop default. Activate: data-color-theme="edo" on <html>.
+   Env/CLI: BRISTLENOSE_PALETTE=edo or --palette edo (canonical; BRISTLENOSE_COLOR_THEME
+   is the deprecated alias). Internal <html> attribute stays data-color-theme (glossary §Display settings).
+
+   ── v1 decisions (Jul 2026) ──
+   Accent uses Prussian blue's vivid UNDERTONE (#0f5c9e), not the dull masstone
+   sampled off aged prints — that masstone reads too low-chroma for links/icons/selection.
+   Dark accent is vivid blue (#4d9fe0), not verdigris. Background is bright Paper
+   White (#fdfbf7). Body ink is passport navy (#1b2230 / #e8e3d6 dark).
+
+   Alternatives considered — for future edo2/edo3 variants (explore in
+   docs/mockups/edo-theme-studio.html):
+     paper  — Snow White #fdfbf7, Warm off-white #f0e9d8, Washi Cream #ede5d1 (warmer/more washi)
+     accent — masstone Prussian #0f5c9e, midpoint #164e80, electric #2a7ac0; dark verdigris #7ba8a0
+     ink    — Sumi Black #1b2230 light / Sail Parchment #d4c9a8 dark; Moonlight #e4e6ea (cool dark ink)
+   Known follow-up: warm surfaces (quote-bg #f0e9d8, hover #ede5d1, badge #e8dfc9)
+   now read warmer against the brighter paper — revisit surface harmony next pass. */
+
+[data-color-theme="edo"] {
+    /* Colour palette — warm paper with indigo/verdigris accents */
+    --bn-colour-bg: #fdfbf7;                    /* Paper White — bright near-white */
+    --bn-colour-text: #1b2230;                   /* Passport navy — near-black, indigo whisper */
+    --bn-colour-muted: #4a698a;                  /* Storm Slate — atmospheric grey-blue (AA 4.5:1 on paper + quote-bg) */
+    --bn-colour-border: #d4c9a8;                 /* Sail Parchment — warm border */
+    --bn-colour-accent: #0f5c9e;                 /* Vivid Prussian — bero-ai undertone */
+    --bn-colour-hover: #ede5d1;                  /* Washi Cream tint — warm hover */
+    --bn-colour-inspector-bg: #f7f2e6;           /* Inspector chrome — warm washi; the mirror of Xcode's #f9f9fa (Apple cools the neutral, Edo warms the paper). One notch off Paper White, lighter than quote-bg so it reads as chrome not content */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f0e9d8;              /* Warm off-white */
+    --bn-colour-paper: #f7f2e6;                 /* Transcript ground: washi under Paper White */
+    --bn-colour-sheet: #fdfbf7;                 /* A quote lifted: Paper White, 1.08:1 off the washi */
+    --bn-colour-badge-bg-paper: #e8dfc9;        /* Edo's badge already reads on washi (1.19:1) */
+    --bn-colour-badge-bg: #e8dfc9;              /* Parchment badge */
+    --bn-colour-badge-text: #2d3654;            /* Court Indigo */
+    --bn-colour-user-tag-bg: #e8dfc9;
+    --bn-colour-user-tag-text: #3d4a5c;
+    --bn-colour-crop-bg: #f5ecd0;               /* Gold Ochre tint */
+    --bn-crop-handle-colour: #b5432a;           /* Vermillion */
+    --bn-crop-handle-hover: #8b3a3a;            /* Bengara Red */
+    --bn-colour-active-bg: #e8f0e4;             /* Pine Green tint */
+    --bn-colour-highlight: #c4a96a;             /* Gold Ochre highlight */
+
+    /* Destructive action — vermillion */
+    --bn-colour-negative: #b5432a;
+
+    /* Success — Pine Green (matsuba-iro), the hue active-bg already tints toward.
+       Caution — Gold Ochre, deepened for legibility on paper. */
+    --bn-colour-positive: #4a6b4a;
+    --bn-colour-warning: #a8842c;
+
+    /* Playback-sync glow — Prussian Blue based */
+    --bn-glow-colour: rgba(15, 92, 158, 0.08);
+    --bn-glow-colour-strong: rgba(15, 92, 158, 0.15);
+
+    /* Minimap — warm parchment tones */
+    --bn-minimap-quote: #d4c9a8;
+    --bn-minimap-heading: #9e8b6e;
+    --bn-minimap-viewport-bg: rgba(15, 92, 158, 0.12);
+    --bn-minimap-viewport-border: rgba(15, 92, 158, 0.25);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #5a7d9b;
+    --bn-coverage-moderator: #c4a96a;
+    --bn-coverage-omitted: #d4c9a8;
+
+    /* Group card — neutral */
+    --bn-group-none: #f0e9d8;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #c4b898;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #b8ad91;
+    --bn-colour-icon-idle: #b8ad91;
+    --bn-colour-starred: #9e8b6e;
+    --bn-colour-shadow: rgba(30, 20, 10, 0.12);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(30, 20, 10, 0.12), 0 0 0 1px rgba(30, 20, 10, 0.06);
+    --bn-focus-ring: 0 0 0 2px rgba(15, 92, 158, 0.15);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(30, 20, 10, 0.05);
+    --bn-hover-bg-subtle: rgba(30, 20, 10, 0.03);
+
+    /* Selection state — Prussian Blue */
+    --bn-selection-bg: #e0e8f0;
+    --bn-selection-border: #0f5c9e;
+    --bn-selection-bg-inactive: #e8e2d4;
+    --bn-selection-border-inactive: #b8ad91;
+    /* Sidebar nav selected-row capsule — warm parchment grey (edo's native-grey analogue) */
+    --bn-nav-selection-bg: #e6ddc9;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(30, 20, 10, 0.10);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #0f5c9e;
+    --bn-colour-suggestion-bg: #e0e8f0;
+}
+
+/* Dark mode — Sumi Black bg, warm parchment text */
+
+@supports (color: light-dark(#000, #fff)) {
+    [data-color-theme="edo"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#fdfbf7, #1a1816);
+        --bn-colour-text:             light-dark(#1b2230, #e8e3d6);
+        --bn-colour-muted:            light-dark(#4a698a, #7ba8a0);
+        --bn-colour-border:           light-dark(#d4c9a8, #2d2820);
+        --bn-colour-accent:           light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-hover:            light-dark(#ede5d1, #252118);
+        --bn-colour-inspector-bg:     light-dark(#f7f2e6, #211e18);   /* Inspector chrome — warm washi light / one warm step off Sumi dark */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f0e9d8, #211e18);
+        --bn-colour-paper:            light-dark(#f7f2e6, #1a1816);   /* Washi / Sumi */
+        --bn-colour-sheet:            light-dark(#fdfbf7, #26221b);   /* 1.08:1 / 1.12:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-bg:         light-dark(#e8dfc9, #2d2820);
+        --bn-colour-badge-text:       light-dark(#2d3654, #c4b898);
+        --bn-colour-user-tag-bg:      light-dark(#e8dfc9, #2d2820);
+        --bn-colour-user-tag-text:    light-dark(#3d4a5c, #c4b898);
+        --bn-colour-crop-bg:          light-dark(#f5ecd0, #2d2614);
+        --bn-crop-handle-colour:      light-dark(#b5432a, #e06a4a);
+        --bn-crop-handle-hover:       light-dark(#8b3a3a, #e88a6a);
+        --bn-colour-active-bg:        light-dark(#e8f0e4, #1a2818);
+        --bn-colour-highlight:        light-dark(#c4a96a, #6b5528);
+        --bn-colour-cited-bg:         light-dark(#f5ecd0, #3b3010);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(15, 92, 158, 0.08), rgba(77, 159, 224, 0.10));
+        --bn-glow-colour-strong:      light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.18));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#d4c9a8, #2d2820);
+        --bn-minimap-heading:         light-dark(#9e8b6e, #4a4030);
+        --bn-minimap-viewport-bg:     light-dark(rgba(15, 92, 158, 0.12), rgba(77, 159, 224, 0.15));
+        --bn-minimap-viewport-border: light-dark(rgba(15, 92, 158, 0.25), rgba(77, 159, 224, 0.3));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#5a7d9b, #4a6a80);
+        --bn-coverage-moderator: light-dark(#c4a96a, #a08848);
+        --bn-coverage-omitted:   light-dark(#d4c9a8, #3d3830);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f0e9d8, #211e18);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#c4b898, #4a4030);
+
+        /* Destructive action — vermillion */
+        --bn-colour-negative:         light-dark(#b5432a, #e06a4a);
+
+        /* Success — Pine Green; caution — Gold Ochre */
+        --bn-colour-positive:         light-dark(#4a6b4a, #7fa87f);
+        --bn-colour-warning:          light-dark(#a8842c, #c4a96a);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#b8ad91, #4a4030);
+        --bn-colour-icon-idle:        light-dark(#b8ad91, #4a4030);
+        --bn-colour-starred:          light-dark(#9e8b6e, #b8a880);
+        --bn-colour-shadow:           light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(15, 92, 158, 0.15), rgba(77, 159, 224, 0.2));
+        --bn-selection-bg:            light-dark(#e0e8f0, #1e2830);
+        --bn-selection-border:        light-dark(#0f5c9e, #4d9fe0);
+        --bn-selection-bg-inactive:     light-dark(#e8e2d4, #26231d);
+        --bn-selection-border-inactive: light-dark(#b8ad91, #4a4030);
+        --bn-nav-selection-bg:          light-dark(#e6ddc9, #2d2922);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(30,20,10,0.05), rgba(212,201,168,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(30,20,10,0.03), rgba(212,201,168,0.04));
+
+        /* Legacy aliases */
+        --bn-colour-suggestion:       light-dark(#0f5c9e, #4d9fe0);
+        --bn-colour-suggestion-bg:    light-dark(#e0e8f0, #1e2830);
+    }
+}
+
+/* ════ bristlenose/theme/atoms/badge.css — whole file, lines 1–326 ════ */
+/* Atom: badge — base badge, sentiment variants, AI and user variants */
+
+/* Every tag is one weight, separated from its kind by colour, not weight:
+   --bn-weight-mono-tag, 460 in the light appearance and 400 in dark. It was 370
+   (Light), which drew Light only on a Mac with Apple's SF Mono download and
+   Regular almost everywhere else (docs/design-monospace-roles.md §6). */
+.badge {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-mono-tag);
+    padding: var(--bn-space-xs) 0.45rem;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+}
+
+/* Sentiment variants (v0.7+ taxonomy) — see docs/academic-sources.html */
+.badge-frustration { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-confusion { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-doubt { background: var(--bn-sentiment-doubt-bg); color: var(--bn-sentiment-doubt); }
+.badge-surprise { background: var(--bn-sentiment-surprise-bg); color: var(--bn-sentiment-surprise); }
+.badge-satisfaction { background: var(--bn-sentiment-satisfaction-bg); color: var(--bn-sentiment-satisfaction); }
+.badge-delight { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confidence { background: var(--bn-sentiment-confidence-bg); color: var(--bn-sentiment-confidence); }
+
+/* Legacy variants (deprecated — kept for backward compat with old intermediate JSON) */
+.badge-suggestion { background: var(--bn-colour-suggestion-bg); color: var(--bn-colour-suggestion); }
+.badge-frustrated { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-delighted { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-confused { background: var(--bn-sentiment-confusion-bg); color: var(--bn-sentiment-confusion); }
+.badge-amused { background: var(--bn-sentiment-delight-bg); color: var(--bn-sentiment-delight); }
+.badge-critical { background: var(--bn-sentiment-frustration-bg); color: var(--bn-sentiment-frustration); }
+.badge-sarcastic { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-judgment { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-narration { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+.badge-task_management { background: var(--bn-colour-badge-bg); color: var(--bn-colour-badge-text); }
+
+/* AI badge — deletable on hover */
+.badge-ai {
+    cursor: pointer;
+    position: relative;
+    transition: opacity var(--bn-transition-fast);
+}
+
+.badge-ai:hover {
+    opacity: 0.8;
+}
+
+/* Delete circle — white floating chip with grey ×.
+   Pure flexbox centering (10c-fix2 approach).
+   TODO: replace × character with SVG icon for cross-platform consistency. */
+.badge-ai::after {
+    content: "\00d7";
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: var(--bn-colour-bg);
+    color: var(--bn-colour-negative);
+    border-radius: 50%;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-ai:hover::after {
+    opacity: 1;
+}
+
+/* User tag — mode-dependent treatment.
+   Light mode: dark text on washed codebook bg (pale tint).
+   Dark mode: white text on saturated codebook bg.
+   Background colour set via inline style from codebook.js.
+   Falls back to --bn-colour-user-tag-bg when no codebook colour assigned. */
+.badge-user {
+    background: var(--bn-colour-user-tag-bg);
+    color: var(--bn-colour-text);
+    cursor: default;
+    position: relative;
+}
+
+/* Dark mode: user tags switch to white-on-saturated */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-user {
+        color: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-user {
+            color: #ffffff;
+        }
+    }
+}
+
+/* AI tag visibility toggle */
+body.hide-ai-tags .badge-ai { display: none; }
+
+.badge-user .badge-delete {
+    position: absolute;
+    top: calc(-0.3rem - 1px);
+    right: calc(-0.3rem - 1px);
+    width: calc(0.875rem + 0.5px);   /* ~14.5px */
+    height: calc(0.875rem + 0.5px);
+    background: var(--bn-colour-bg);
+    border: none;
+    border-radius: 50%;
+    color: var(--bn-colour-negative);
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.badge-user:hover .badge-delete {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Add-tag ghost button */
+.badge-add {
+    border: 1px dashed var(--bn-colour-border);
+    background: transparent;
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    transition: border-color var(--bn-transition-fast), color var(--bn-transition-fast);
+    user-select: none;
+}
+
+.badge-add:hover {
+    border-color: var(--bn-colour-accent);
+    color: var(--bn-colour-accent);
+}
+
+/* Proposed badge — pulsating dashed border (AutoCode) */
+@keyframes bn-proposed-pulse {
+    0%   { opacity: 0.50; }
+    50%  { opacity: 0.78; }
+    100% { opacity: 0.50; }
+}
+
+.badge-proposed {
+    animation: bn-proposed-pulse 3s ease-in-out infinite;
+    border: 1px dashed currentColor;
+    cursor: pointer;
+    position: relative;
+}
+
+.badge-proposed:hover {
+    animation: none;
+    opacity: 1 !important;
+}
+
+/* Action pill — floating [✗ | ✓] bar at badge top-right.
+   ✗ (deny) anchored at delete-circle position, ✓ (accept) hangs right.
+   16px compartments, pill-shaped, appears on hover. */
+.badge-action-pill {
+    position: absolute;
+    top: calc(-0.3rem - 1px);              /* same vertical as delete × */
+    right: calc(-0.3rem - 1px - 1rem);     /* ✗ aligns with delete × position,
+                                              ✓ extends past badge right edge */
+    display: flex;
+    gap: 0;
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-pill);   /* clamps to half-height; survives a height change */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
+    opacity: 0;
+    transition: opacity var(--bn-transition-fast);
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;                              /* sit above adjacent badges */
+}
+
+.badge-proposed:hover .badge-action-pill,
+.badge-proposed:focus-within .badge-action-pill {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.badge-action-deny,
+.badge-action-accept {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;       /* 16px */
+    height: 1rem;
+    font-size: var(--bn-text-micro);
+    font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    transition: background var(--bn-transition-fast);
+}
+
+.badge-action-deny {
+    color: var(--bn-colour-negative);
+}
+
+.badge-action-accept {
+    color: var(--bn-colour-positive);
+    border-left: 1px solid var(--bn-colour-border);
+}
+
+.badge-action-deny:hover { background: #fef2f2; }
+.badge-action-accept:hover { background: #dcfce7; }
+
+/* Keyboard focus ring — inset (outline-offset negative) because the pill has
+   overflow:hidden, which would clip an outset ring on these 16px buttons. */
+.badge-action-deny:focus-visible,
+.badge-action-accept:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+/* Dark mode: pill and action compartments */
+@supports (color: light-dark(#000, #fff)) {
+    [data-theme="dark"] .badge-action-pill {
+        background: var(--bn-colour-bg);
+    }
+    [data-theme="dark"] .badge-action-deny:hover {
+        background: rgba(220, 38, 38, 0.25);
+        color: #f87171;
+    }
+    [data-theme="dark"] .badge-action-accept:hover {
+        background: rgba(22, 163, 74, 0.25);
+        color: #4ade80;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) .badge-action-pill {
+            background: var(--bn-colour-bg);
+        }
+        :root:not([data-theme="light"]) .badge-action-deny:hover {
+            background: rgba(220, 38, 38, 0.25);
+            color: #f87171;
+        }
+        :root:not([data-theme="light"]) .badge-action-accept:hover {
+            background: rgba(22, 163, 74, 0.25);
+            color: #4ade80;
+        }
+    }
+}
+
+/* Accept flash — brief brightness burst when a proposed tag is accepted.
+   Applied by React (QuoteCard) on the new user badge for ~400ms. */
+@keyframes badge-accept-flash {
+    0%   { filter: brightness(1.35); }
+    100% { filter: brightness(1); }
+}
+
+.badge-accept-flash {
+    animation: badge-accept-flash 0.4s ease-out;
+}
+
+/* Badge animations */
+@keyframes badge-fade-out {
+    to { opacity: 0; transform: scale(0.8); }
+}
+
+.badge-removing {
+    animation: badge-fade-out 0.15s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes badge-fade-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.badge-appearing {
+    animation: badge-fade-in 0.15s ease-out;
+}
+
+/* Bulk-tag flash — asymmetric highlight (0.2s in, 0.6s hold+out).
+   Uses box-shadow spread to avoid overriding codebook background colour. */
+@keyframes badge-bulk-flash {
+    0%   { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+    25%  { box-shadow: 0 0 0 3px var(--bn-selection-border); }
+    100% { box-shadow: 0 0 0 0 var(--bn-selection-border); }
+}
+
+.badge-bulk-flash {
+    animation: badge-bulk-flash 0.8s ease-out;
+}
+
+/* "New" material marker — a body-sized highlighter shown inline after a
+   section/theme title (Phase 3, 3c).  Placeholder styling; click to dismiss
+   (it evaporates, no undo — it has served its purpose once noticed). */
+.bn-new-badge {
+    display: inline;
+    margin-left: 0.4rem;
+    padding: 0.05em 0.3em;
+    border: none;
+    border-radius: var(--bn-radius-sm);
+    background: var(--bn-colour-new-highlight);
+    color: var(--bn-colour-new-highlight-text);
+    font-family: inherit;
+    font-size: var(--bn-text-body);
+    font-weight: var(--bn-weight-emphasis);
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+.bn-new-badge:hover { filter: brightness(0.95); }
+.bn-new-badge:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 1px;
+}
+
+/* ════ bristlenose/theme/atoms/icon.css — whole file, lines 1–36 ════ */
+/* Atom: icon — Lucide glyphs drawn by `components/Icon.tsx`.
+   One em square by default, sitting on the text it accompanies.
+
+   Stroke is the stem of that text, never under a pixel: em resolves against the
+   text the icon sits in, so a 15 px label draws a heavier line than a 13 px one,
+   and a context in a heavier weight sets --bn-icon-stem (tokens-typography.css).
+   This beats Lucide's stroke-width="2" attribute; `nonScalingStroke` keeps the
+   width in screen pixels at any box size (docs/design-icon-system.md § Weight). */
+
+.bn-icon {
+    display: inline-block;
+    flex: none;
+    stroke-width: max(1px, calc(var(--bn-icon-stem) * 1em));
+}
+
+/* The default box, at zero specificity: a control that sizes its own icon
+   (`.bn-tp-nav svg { width: 6px }`) wins, and an icon given `px` keeps the
+   width/height attributes it was drawn with. */
+:where(.bn-icon:not(.bn-icon--px)) {
+    width: 1em;
+    height: 1em;
+}
+:where(.bn-icon) {
+    vertical-align: -0.125em;
+}
+
+/* A menu's check gutter: the tick sized to the row's text, about 9 px of
+   visible check at a 13 px label. Used by the person picker, the Export
+   menu and the search token menu, so the web app has one tick (owner,
+   6 Oct 2026; design-people.md §J8.8). Lucide's check fills two thirds of
+   its box, so 1em keeps the ~9 px the improvised 0.9em tick drew. */
+.bn-icon--menu {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+}
+
+/* ════ bristlenose/theme/atoms/timecode.css — whole file, lines 1–97 ════ */
+/* Atom: timecode — clickable and plain timecode links */
+
+a.timecode,
+a.timecode:visited {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+span.timecode {
+    color: var(--bn-colour-accent);
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-label);
+}
+
+a.timecode:hover {
+    text-decoration: underline;
+}
+
+.timecode-bracket {
+    color: var(--bn-colour-muted);
+}
+
+/* --- Glow states: synced playback highlight (driven by player.js) --- */
+
+.bn-timecode-glow {
+    box-shadow: 0 0 8px 2px var(--bn-glow-colour);
+    border-left-color: var(--bn-colour-accent);
+    background-color: var(--bn-glow-colour);
+    border-radius: var(--bn-radius-sm);
+    transition: box-shadow var(--bn-transition-normal),
+                background-color var(--bn-transition-normal);
+}
+
+@keyframes bn-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 2px var(--bn-glow-colour); }
+    50%      { box-shadow: 0 0 12px 4px var(--bn-glow-colour-strong); }
+}
+
+.bn-timecode-glow.bn-timecode-playing {
+    animation: bn-glow-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-timecode-glow.bn-timecode-playing {
+        animation: none;
+    }
+}
+
+/* --- Progress fill: left border grows top-to-bottom during playback ---
+   Driven by --bn-segment-progress (0–1) set in PlayerContext.tsx.
+   Only appears on transcript segments (not report blockquotes). */
+
+.transcript-segment.bn-timecode-glow {
+    position: relative;
+}
+
+.transcript-segment.bn-timecode-glow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: calc(var(--bn-segment-progress, 0) * 100%);
+    background: var(--bn-colour-accent);
+    border-radius: 0 0 1px 1px;
+    transition: height 0.25s linear;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-segment.bn-timecode-glow::before {
+        transition: none;
+    }
+}
+
+/* --- Word-level highlight: karaoke-style during playback ---
+   Driven by .bn-word-active toggled in PlayerContext.tsx.
+   Only appears when word timing data is available (Whisper sessions). */
+
+.transcript-word.bn-word-active {
+    background: color-mix(in srgb, var(--bn-colour-accent) 30%, transparent);
+    border-radius: 2px;
+    transition: background 0.1s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-word.bn-word-active {
+        text-decoration: underline;
+        text-decoration-color: var(--bn-colour-accent);
+        background: none;
+        transition: none;
+    }
+}
+
+/* ════ bristlenose/theme/atoms/journey-label.css — whole file, lines 1–57 ════ */
+/* Atom: journey-label — interactive journey step buttons with active state.
+
+   Used by JourneyChain component in sessions table and transcript pages.
+   The active state applies a hover-tint pill (--bn-colour-hover) to mark
+   the current section during scroll-sync or click-to-jump navigation.
+
+   Specificity note: the base rule uses `all: unset` which resets background.
+   The active rule must match or exceed that specificity (0-1-1) to win. */
+
+/* Base interactive label — reset to inline text, add cursor + transitions.
+   Matches both the transcript page's <button> (in-page scroll) and the
+   Sessions lens's <a> (deep-link navigation). `:is(button, a)` keeps the
+   0-1-1 specificity the active rule below relies on. */
+:is(button, a).bn-journey-label--interactive {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0.1rem 0.3rem;
+    transition: color 0.15s, text-decoration-color 0.15s, background 0.15s;
+}
+
+/* Wrapping chains (the Sessions lens grid) carry the horizontal breathing room
+   on the trailing edge only. Padding on an inline box paints at the start of
+   its first line fragment and the end of its last — so symmetric padding shows
+   as a ragged left indent on line 1 and on every line that opens after an
+   arrow, while a line continuing a wrapped label sits flush. Trailing-edge
+   padding keeps the mid-line gaps identical (label's padding-right + the
+   separator's leading space before the arrow; the separator's padding-right +
+   its trailing space after) and leaves nothing to paint at a line start.
+   The transcript header's chain is `--overflow` — one line, horizontal scroll,
+   no wrapping — so it keeps the symmetric pill the active state wants. */
+.bn-session-journey:not(.bn-session-journey--overflow)
+  :is(.bn-journey-label, .bn-journey-sep) {
+    padding-inline: 0 0.3rem;
+}
+
+:is(button, a).bn-journey-label--interactive:hover {
+    color: var(--bn-colour-accent);
+    text-decoration: underline;
+    text-decoration-color: var(--bn-colour-muted);
+    text-underline-offset: 0.25em;
+}
+
+:is(button, a).bn-journey-label--interactive:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+/* Active journey step — hover-tint pill background.
+   Selector must beat the base `all: unset` rule (0-2-1 > 0-1-1). */
+:is(button, a).bn-journey-label--interactive.bn-journey-label--active {
+    font-weight: var(--bn-weight-emphasis);
+    background: var(--bn-colour-hover);
+    border-radius: var(--bn-radius-sm);
+}
+
+/* ════ bristlenose/theme/molecules/person-badge.css — whole file, lines 1–205 ════ */
+/* Molecule: person-badge — two-tone split speaker badge
+ *
+ * Structure:  .bn-person-badge > .bn-speaker-badge--split
+ *               > .bn-speaker-badge-code + .bn-speaker-badge-name
+ *
+ * Display mode: data-person-display="code" on <html> hides the name half.
+ * Hover: linked badges increase contrast (name bg lightens, code text darkens).
+ */
+
+/* Wrapper — keeps backward compat with existing selectors */
+.bn-person-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    white-space: nowrap;
+}
+
+/* Split badge container */
+.bn-speaker-badge--split {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+    background: none;
+    vertical-align: baseline;
+}
+
+/* Left half: code lozenge */
+.bn-speaker-badge--split .bn-speaker-badge-code {
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-badge);
+    padding: var(--bn-space-xs) 0.4rem;
+    background: var(--bn-colour-badge-bg);
+    color: var(--bn-colour-badge-text);
+    border: 1px solid var(--bn-colour-border);
+    border-right: none;
+    border-radius: var(--bn-radius-sm) 0 0 var(--bn-radius-sm);
+    transition: color var(--bn-transition-fast);
+}
+
+/* Right half: name */
+.bn-speaker-badge--split .bn-speaker-badge-name {
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-badge);
+    font-weight: var(--bn-weight-emphasis);
+    padding: var(--bn-space-xs) 0.45rem var(--bn-space-xs) 0.35rem;
+    background: var(--bn-colour-quote-bg);
+    color: var(--bn-colour-text);
+    border: 1px solid var(--bn-colour-border);
+    border-left: none;
+    border-radius: 0 var(--bn-radius-sm) var(--bn-radius-sm) 0;
+    transition: background var(--bn-transition-fast);
+}
+
+/* No name available — code gets full radius */
+.bn-speaker-badge--split .bn-speaker-badge-code:last-child {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* --- Hover states (linked badges only) --- */
+
+/* Code-and-name: name bg lightens towards white */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-name {
+    background: var(--bn-colour-bg);
+}
+
+/* Code-only / code-and-name: code text darkens towards black */
+a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
+    color: var(--bn-colour-text);
+}
+
+/* --- Display mode toggle via data-person-display on <html> --- */
+
+[data-person-display="code"] .bn-speaker-badge-name {
+    display: none;
+}
+
+[data-person-display="code"] .bn-speaker-badge--split .bn-speaker-badge-code {
+    border-radius: var(--bn-radius-sm);
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+/* "You are here": the badge of the session or version showing, on an ancestor (a wrapper, or the
+   radio that holds the badge). The navigator's own selection vocabulary, as .toc-link.active has
+   it: the selection fill (--bn-nav-selection-bg), emphasis weight, and accent text, no ring. Chosen
+   for the Discussion lens's session bar (option C of the badge playground, 3 Oct 2026); shared
+   since 15 Oct 2026 by the Screens lens's versions.
+   Two things the plain accent did not do, both fixed here for both lenses (accessibility review,
+   15 Oct 2026): it was the only cue (colour alone, 1.4.1), so the code takes the emphasis weight as
+   the name half already has — the non-colour cue, and the active row's own; and the accent as text
+   was 3.65:1 on the badge grey in the default light palette (1.4.3). The text is the accent mixed a
+   quarter toward the palette's own text colour, which darkens it in light and lightens it in dark.
+   Measured (code / name half, on the selection fill): default light 5.12 / 5.12, default dark
+   5.01 / 5.01, Edo light 6.38 / 6.38, Edo dark 6.20 / 6.20 — every one past 4.5:1. No token held an
+   accent that passes as text; this mix is the theme's own idiom (color-mix of two tokens). */
+.bn-person-badge-here .bn-speaker-badge-code,
+.bn-person-badge-here .bn-speaker-badge-name {
+    background: var(--bn-nav-selection-bg);
+    color: color-mix(in srgb, var(--bn-colour-accent) 75%, var(--bn-colour-text));
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* Highlighted state */
+.bn-person-badge-highlighted .bn-speaker-badge-code {
+    box-shadow: 0 0 0 2px var(--bn-colour-accent);
+}
+
+/* --- Sessions grid: decomposed badge + editable name --- */
+
+.bn-session-speaker-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.bn-speaker-editable-name {
+    font-family: var(--bn-font-body);
+    font-size: inherit;
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+    cursor: text;
+    border-radius: var(--bn-radius-sm);
+    padding: var(--bn-space-xs) 0.2rem;
+    min-width: 2rem;
+}
+
+.bn-speaker-editable-name:hover {
+    background: var(--bn-colour-quote-bg);
+}
+
+/* The editing state lives in `molecules/editable-text.css`, which names this
+   class alongside `.editable-text` — one rule for "a name, title or
+   description on neutral ground", so the speakers grid and the quotes lens
+   cannot drift apart. Only the metrics above are local to the speaker name.
+   An edited name carries no committed mark: italic is reserved for the
+   unidentified placeholder below (grey italic = unknown), and since migration
+   012 the confirmed state says what "you edited this" used to (owner,
+   6 Oct 2026; design-people.md §J8.8). */
+
+/* Unidentified speaker: role word shown as a muted-italic placeholder
+   (PowerPoint-title convention) to read as editable, not as a real name. */
+.bn-speaker-editable-name.unnamed {
+    font-weight: var(--bn-weight-normal);
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+/* Same placeholder on the narrow-width rung, where the short form is shown
+   instead. Rehomed from `molecules/name-edit.css` when that file was deleted
+   on 20 Sep 2026: it was a bare `.unnamed` in the global sheet, and the two
+   classes above and below are its only consumers. Deliberately NOT merged
+   into one selector — the full name also drops to normal weight, the short
+   one never carried emphasis to drop. */
+.bn-speaker-name-short.unnamed {
+    font-style: italic;
+    color: var(--bn-colour-muted);
+}
+
+.bn-name-pencil {
+    all: unset;
+    cursor: pointer;
+    font-size: var(--bn-text-micro);
+    opacity: 0;
+    color: var(--bn-colour-muted);
+    transition: opacity var(--bn-transition-fast);
+    padding: 0 0.1rem;
+}
+
+.bn-session-speaker-entry:hover .bn-name-pencil {
+    opacity: 0.4;
+}
+
+.bn-name-pencil:hover {
+    opacity: 0.8 !important;
+}
+
+/* --- A proposed name (design-people.md § UX iteration 3) ---
+   A name the pipeline found, not yet a person's yes
+   (`session_speakers.name_confirmed`): one dotted ring round the whole split
+   badge, and the name in grey that darkens on hover. Saying yes in the picker
+   makes both solid. The halves lose their own borders so the ring is the only
+   line — the `--split` qualifier matches the specificity of the
+   `.bn-speaker-badge-code:last-child` rule above, and later in the file wins,
+   so a code-only badge keeps no solid edge inside the dashes. */
+.bn-person-proposed .bn-speaker-badge--split {
+    border: 1px dashed currentColor;
+}
+
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-code,
+.bn-person-proposed .bn-speaker-badge--split .bn-speaker-badge-name {
+    border: none;
+}
+
+.bn-speaker-editable-name.proposed {
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+}
+
+.bn-session-speaker-entry:hover .bn-speaker-editable-name.proposed {
+    color: var(--bn-colour-text);
+}
+
+/* ════ bristlenose/theme/organisms/inspector.css — lines 341–388 ════ */
+/* ── Section/Theme toggle — lives in the table top-left cell ── */
+
+.dimension-toggle {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    overflow: hidden;
+}
+
+.dimension-btn {
+    border: none;
+    background: none;
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    font-weight: var(--bn-weight-normal);
+    color: var(--bn-colour-muted);
+    padding: var(--bn-space-xs) var(--bn-space-sm);
+    cursor: pointer;
+    transition: all var(--bn-transition-fast);
+}
+
+.dimension-btn:first-child {
+    border-right: 1px solid var(--bn-colour-border);
+}
+
+.dimension-btn:hover {
+    background: var(--bn-colour-hover);
+    color: var(--bn-colour-text);
+}
+
+.dimension-btn:focus-visible {
+    /* Inset: the toggle clips its children (overflow: hidden), so an outset
+       ring would be cut off at the edges the buttons share with it. */
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: -2px;
+}
+
+.dimension-btn.active {
+    background: var(--bn-colour-hover);
+    /* Body ink, not accent: accent on the hover tint measures 3.51:1 (light)
+       and 4.01:1 (dark) in the default palette, under AA's 4.5:1 for 12px
+       text. The tint and the weight carry "selected". */
+    color: var(--bn-colour-text);
+    font-weight: var(--bn-weight-emphasis);
+}
+
+/* ════ bristlenose/theme/organisms/session-tapestry.css — whole file, lines 1–355 ════ */
+/* Session tapestry — the timeline slice under a row of the Sessions grid
+   (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
+   clips, sentiment bars, theme spans. Every colour and size is a shipped token
+   except the three marked NEW. Type sizes and popover padding go through
+   --bn-tp-* variables that default to the shipped tokens; the values live in
+   frontend/src/utils/tapestryTuning.ts, and the dev
+   playground moves them along the existing ladders only. Design + measurements:
+   experiments/session-tapestry/README.md. */
+
+:root {
+    /* NEW: resting section flag — the page background with a 6% tint, so the
+       raised flag (pure background + shadow) reads as in front. */
+    --bn-tp-flag-rest: color-mix(in srgb, var(--bn-colour-bg) 94%, var(--bn-colour-text));
+    /* NEW: hover tint on the quote popover (4%), the sign that it opens the transcript. */
+    --bn-tp-popover-hover: color-mix(in srgb, var(--bn-colour-bg) 96%, var(--bn-colour-text));
+}
+
+/* Disclosure, inside the ID cell — no new grid column, so the width ladder is untouched. */
+.bn-tapestry-toggle {
+    all: unset;
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    margin: 0 2px 0 -4px;
+    vertical-align: -2px;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tapestry-toggle:hover { color: var(--bn-colour-text); }
+.bn-tapestry-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tapestry-toggle svg { transition: transform 0.15s ease; }
+.bn-tapestry-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+/* An open session reads as one unit: its row and its slice share the tint, with no
+   keyline between them; the keyline and a band of empty space come after the slice,
+   before the next session. */
+.bn-sessions-row.bn-tapestry-open {
+    background: var(--bn-colour-quote-bg);
+    border-bottom-color: transparent;
+}
+/* Hover would tint the row alone and split the unit (beats the grid's 0-3-0 hover rule). */
+.bn-sessions-row.bn-tapestry-open[data-session]:hover { background: var(--bn-colour-quote-bg); }
+
+/* The slice: a full-width grid item after its row. */
+.bn-tapestry {
+    grid-column: 1 / -1;
+    min-width: 0;
+    background: var(--bn-colour-quote-bg);
+    border-bottom: 1px solid var(--bn-colour-border);
+    margin-bottom: var(--bn-space-lg);
+}
+.bn-tapestry-cell { min-width: 0; }
+.bn-tapestry-scroll {
+    padding: var(--bn-space-sm) 0;
+    /* Room under the timecodes for the horizontal scrollbar: macOS draws an overlay
+       bar over the content (~11px, ~15px while hovered), so it would cover them. */
+    padding-bottom: calc(var(--bn-space-sm) + 14px);
+    overflow-x: auto;
+}
+.bn-tapestry-svg { display: block; }
+
+/* Lane labels read as headings: the column headers' face, weight and ink
+   (.bn-sessions-head), one stop down the ladder. */
+.bn-tp-lane {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-lane, var(--bn-text-caption)) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
+.bn-tp-tick {
+    font: var(--bn-tp-text-tick, var(--bn-text-micro)) var(--bn-font-mono);
+    fill: var(--bn-colour-muted);
+}
+/* The tick nearest the hover playhead, in the timecode blue: about where a click lands. */
+.bn-tp-tick.near { fill: var(--bn-colour-accent); }
+.bn-tp-track { fill: var(--bn-colour-badge-bg); }
+/* Without video the clips fall back to neutral greys; the track says who speaks. */
+.bn-tp-clip-team { fill: var(--bn-colour-border-hover); }
+.bn-tp-clip-ppt { fill: var(--bn-colour-muted); }
+.bn-tp-clip[data-video] { stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; }
+/* The scene strip — what was on screen, moment by moment (utils/scene_strip.py) — runs inside
+   the clips at an opacity. The opacity is the design: the clip keeps its colour and the track its
+   identity, and only change shows. The clip's edge is redrawn over it so a striped clip keeps its
+   outline. */
+.bn-tp-strip { pointer-events: none; }
+.bn-tp-strip-ppt { opacity: 0.7; }
+.bn-tp-strip-team { opacity: 0.75; }
+.bn-tp-clip-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.75; pointer-events: none; }
+/* A notch where the scene changed: a short hairline just above the tracks, in the text ink. */
+.bn-tp-notch { stroke: var(--bn-colour-text); stroke-width: 1; opacity: 0.6; pointer-events: none; }
+.bn-tp-clip-label {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-clip, var(--bn-text-badge)) var(--bn-font-body);
+    pointer-events: none;
+}
+/* Neutral clips only; a scene-coloured clip's ink is chosen in JS by WCAG contrast. */
+.bn-tp-clip-label.on-team { fill: var(--bn-colour-text); }
+.bn-tp-clip-label.on-ppt { fill: light-dark(#fff, #111); }
+
+.bn-tp-flag { cursor: pointer; }
+/* The staff and the banner share one hairline: the border keyline at rest, the text
+   ink when raised — darker, never thicker. */
+.bn-tp-flag line,
+.bn-tp-flag path { stroke: var(--bn-colour-border); stroke-width: 1; }
+.bn-tp-flag path { fill: var(--bn-tp-flag-rest); }
+.bn-tp-flag.raised line,
+.bn-tp-flag.raised path { stroke: var(--bn-colour-text); }
+.bn-tp-flag.raised path { fill: var(--bn-colour-bg); }
+/* Directly under the pointer: the app's selected blue — ink and wash — on the same
+   hairline, so it is clear a click goes there. */
+.bn-tp-flag.hot line,
+.bn-tp-flag.hot path { stroke: var(--bn-selection-border); }
+.bn-tp-flag.hot path { fill: var(--bn-selection-bg); }
+/* The label keeps the text ink: blue text on the selection wash is 3.6:1. The blue staff,
+   hairline and wash carry the state. */
+.bn-tp-flag text {
+    font: var(--bn-weight-emphasis) var(--bn-tp-text-flag, var(--bn-text-label)) var(--bn-font-body);
+    fill: var(--bn-colour-text);
+}
+.bn-tp-hit { cursor: pointer; }
+.bn-tp-playhead { stroke: var(--bn-colour-accent); stroke-width: 1; pointer-events: none; }
+
+.bn-tp-axis { stroke: var(--bn-colour-muted); stroke-width: 0.8; }
+.bn-tp-bar { cursor: pointer; transition: opacity 0.12s; }
+.bn-tp-bar:focus { outline: none; }
+.bn-tp-bar.sel { stroke: var(--bn-colour-text); stroke-width: 1.25; }
+/* Focus is its own ring, so a keyboard user can tell it from the selection. */
+.bn-tp-bar:focus-visible { stroke: var(--bn-colour-accent); stroke-width: 2; }
+/* 0.4, not lower: a dimmed bar is still a control and must keep 3:1 (WCAG 1.4.11). */
+.bn-tp-bar.dim { opacity: 0.4; }
+.bn-tp-unrated { fill: var(--bn-colour-muted); }
+/* The invisible, wider click target over each sentiment mark (pointer only). */
+.bn-tp-bar-hit { fill: transparent; cursor: pointer; }
+
+.bn-tp-span { fill: var(--bn-colour-muted); opacity: 0.5; }
+/* The chip's fill is a gradient set inline (solid, then fading out over its last 20%), so
+   only its left edge is hard — on the timecode where the theme starts. */
+.bn-tp-tag { fill: var(--bn-colour-badge-bg); }
+/* Sans, not mono: monospace is reserved for tag text, and a theme is not a tag. */
+.bn-tp-tag-text {
+    font: var(--bn-weight-normal) var(--bn-tp-text-theme, var(--bn-text-label)) var(--bn-font-body);
+    fill: var(--bn-colour-badge-text);
+}
+
+/* Quote popover: floats under the selected bar, over the themes track, with an
+   arrow on the bar — a Mac popover. The whole popover opens the transcript; the
+   faint hover tint is the affordance. Shadow: the focused-card token. */
+.bn-tp-wrap { position: relative; }
+.bn-tp-popover {
+    position: absolute;
+    z-index: 20;
+    box-sizing: border-box;
+    padding: var(--bn-tp-pad-popover, var(--bn-space-md));
+    background: var(--bn-colour-bg);
+    border-radius: var(--bn-radius-lg);
+    box-shadow: var(--bn-focus-shadow);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+/* The arrow: a square turned 45°, sharing the popover's ground (so it takes the
+   hover tint too) and its hairline on the two outward edges. */
+.bn-tp-popover::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: calc(var(--bn-tp-arrow-x, 24px) - 6px);
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    transform: rotate(45deg);
+    box-shadow: -1px -1px 0 rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 2px;
+}
+.bn-tp-popover:hover { background: var(--bn-tp-popover-hover); }
+/* --bn-focus-shadow has no dark value, and a dark shadow on a dark ground is no
+   edge at all; dark mode adds a faint light hairline instead. */
+.bn-tp-popover { outline: 1px solid light-dark(transparent, rgb(255 255 255 / 0.1)); }
+.bn-tp-popover::before { box-shadow: -1px -1px 0 light-dark(rgba(0, 0, 0, 0.05), rgb(255 255 255 / 0.1)); }
+.bn-tp-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-wrap: wrap;
+    padding-right: 72px; /* room for prev / next / close */
+    font-size: var(--bn-tp-text-pop-meta, var(--bn-text-caption));
+    color: var(--bn-colour-muted);
+}
+.bn-tp-tc {
+    all: unset;
+    font-family: var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    border-radius: var(--bn-radius-sm);
+}
+.bn-tp-tc:hover { color: var(--bn-colour-text); }
+.bn-tp-tc:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-popover blockquote {
+    margin: var(--bn-space-sm) 0 0;
+    font-size: var(--bn-tp-text-pop-quote, var(--bn-text-body));
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+.bn-tp-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+}
+.bn-tp-close {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-close:hover { color: var(--bn-colour-text); }
+.bn-tp-close:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: -2px; }
+.bn-tp-close svg { width: 10px; height: 10px; }
+
+/* Previous / next: bristlenose.app's homepage carousel buttons, at 12 px (from
+   26) inside a 22 px hit area, revealed on hover or keyboard focus as there. */
+.bn-tp-nav { display: flex; }
+.bn-tp-nav button {
+    all: unset;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in-out;
+    color: var(--bn-colour-text);
+}
+.bn-tp-nav button > span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+    backdrop-filter: blur(12px) saturate(1.5);
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
+    display: grid;
+    place-items: center;
+}
+.bn-tp-nav svg { width: 6px; height: 6px; }
+.bn-tp-nav button:disabled > span { opacity: 0.35; }
+.bn-tp-popover:hover .bn-tp-nav button,
+.bn-tp-popover:focus-within .bn-tp-nav button { opacity: 1; pointer-events: auto; }
+.bn-tp-nav button:focus-visible > span { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+@media (prefers-color-scheme: dark) {
+    .bn-tp-nav button > span { background: rgba(40, 40, 40, 0.72); border-color: rgba(255, 255, 255, 0.1); }
+}
+
+/* NEW: zoom — a mini slider between magnifiers (Photos, the Final Cut timeline),
+   in the section heading's action slot; no range control ships elsewhere. */
+.bn-tp-zoom { display: flex; align-items: center; gap: 2px; }
+.bn-tp-zoom-btn {
+    all: unset;
+    width: 16px;
+    height: 16px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+}
+.bn-tp-zoom-btn:hover { color: var(--bn-colour-text); }
+.bn-tp-zoom-btn:disabled { opacity: 0.4; cursor: default; }
+.bn-tp-zoom-btn:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.bn-tp-zoom-btn svg { width: 12px; height: 12px; }
+.bn-tp-zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 64px;
+    height: 14px;
+    margin: 0 2px;
+    background: none;
+}
+.bn-tp-zoom-slider:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+/* Track and thumb ring meet 3:1 against the page (WCAG 1.4.11). */
+.bn-tp-zoom-slider::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
+.bn-tp-zoom-slider::-moz-range-track { height: 3px; border-radius: 2px; background: var(--bn-colour-muted); }
+.bn-tp-zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 11px;
+    height: 11px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.bn-tp-zoom-slider::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border: 0;
+    border-radius: 50%;
+    background: light-dark(#fff, #d8d8dc);
+    box-shadow: 0 0 0 1px var(--bn-colour-muted), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-tapestry-toggle svg,
+    .bn-tp-bar,
+    .bn-tp-popover,
+    .bn-tp-nav button { transition: none; }
+}
+
+@media print {
+    .bn-tapestry-toggle,
+    .bn-tp-zoom { display: none; }
+}
+
+/* ── Hover thumbnail: a still of the participant's screen below the speaker lane ──
+   (utils/tapestryThumb.ts). Fixed on document.body, so the slice's scroll cannot clip it;
+   the popover's ground and shadow; never takes the pointer. */
+.bn-tp-thumb {
+    position: fixed;
+    z-index: 20;
+    padding: 3px;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-md);
+    box-shadow: var(--bn-focus-shadow);
+    pointer-events: none;
+    animation: bn-tp-thumb-in 0.12s ease;
+}
+.bn-tp-thumb img {
+    display: block;
+    width: var(--bn-tp-thumb-w, 160px);
+    height: auto;
+    border-radius: calc(var(--bn-radius-md) - 2px);
+}
+.bn-tp-thumb-tc {
+    display: block;
+    padding: 3px 3px 0;
+    font: var(--bn-text-micro) var(--bn-font-mono);
+    color: var(--bn-colour-muted);
+}
+@keyframes bn-tp-thumb-in {
+    from { opacity: 0; transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .bn-tp-thumb { animation: none; }
+}
+/* The stretch of the participant track the frame stands for. */
+.bn-tp-thumb-src { fill: none; stroke: var(--bn-colour-accent); stroke-width: 1.5; pointer-events: none; }
+
+/* ════ bristlenose/theme/molecules/transcript-annotations.css — whole file, lines 1–78 ════ */
+/* Molecule: transcript-annotations — right-margin annotations on transcript pages.
+   Shows section/theme labels and tag badges alongside quoted segments.
+
+   Layout: the annotation lives in a real grid column (the 4th track of
+   .transcript-body, added at the breakpoint in templates/transcript.css) — NOT
+   absolutely positioned. Being in flow means a tall annotation grows its grid
+   row, pushing the next segment down instead of overlapping it. Below the
+   breakpoint it drops inline under the segment text. Repetition is suppressed
+   in TranscriptPage (first-occurrence-per-run), which is what replaced the
+   earlier vertical extent bars. */
+
+.transcript-segment {
+    position: relative;
+}
+
+/* Right-margin annotation container */
+.segment-margin {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    display: flex;
+    flex-direction: column;
+    gap: var(--bn-space-xs);
+}
+
+/* Wide + medium (≥800px): the annotation is the 4th grid column. Its height
+   grows the row → no overlap between adjacent annotations. */
+@media (min-width: 800px) {
+    .segment-margin {
+        grid-column: 4;
+        align-self: start;
+    }
+}
+
+/* Narrow (<800px): inline below the segment text, aligned with the body column */
+@media (max-width: 799px) {
+    .segment-margin {
+        grid-column: 3 / -1;
+        align-self: start;
+        margin: var(--bn-space-xs) 0 var(--bn-space-sm);
+    }
+}
+
+/* Individual annotation block (one per quote in this segment) */
+.margin-annotation {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Section/theme label — wraps in the narrow column (no ellipsis truncation) */
+.margin-label {
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+    text-decoration: none;
+    max-width: 100%;
+    transition: color var(--bn-transition-fast);
+}
+
+.margin-label:hover {
+    color: var(--bn-colour-text);
+}
+
+/* Tag badges row in margin */
+.margin-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow: visible; /* allow delete × circles to protrude */
+    padding-top: 2px;  /* room for × circle above badges */
+    padding-right: 2px; /* room for × circle to the right */
+}
+
+/* Margin tags match the quotes + codebook lenses (--bn-text-badge, 11px);
+   only the padding is tightened for the dense margin context. */
+.margin-tags .badge {
+    padding: 1px 4px;
+    line-height: 1.4;
+}
+
+/* ════ bristlenose/theme/templates/transcript.css — whole file, lines 1–289 ════ */
+/* Template: transcript — per-participant transcript page layout */
+
+.transcript-meta {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin-bottom: var(--bn-space-md);
+}
+
+/* ── Sticky journey header ────────────────────────────────────────────── */
+
+.bn-transcript-journey-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bn-colour-bg);
+    box-shadow: 0 4px 12px var(--bn-colour-shadow);
+    padding: var(--bn-space-xs) var(--bn-space-md) var(--bn-space-xs) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-md);
+}
+
+/* Participant badges — the persistent "who is p2" answer. Never shrink; the
+   journey chain absorbs the squeeze (it already scrolls with edge fades). */
+.bn-transcript-journey-header__people {
+    display: flex;
+    align-items: center;
+    gap: var(--bn-space-sm);
+    flex-shrink: 0;
+}
+
+/* Journey chain: horizontal scroll mode on transcript pages */
+.bn-session-journey--overflow {
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex: 1;
+    min-width: 0;
+}
+
+.bn-session-journey--overflow::-webkit-scrollbar {
+    display: none;
+}
+
+/* Fade masks for overflow edges */
+.bn-journey--fade-right {
+    mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 2rem), transparent 100%);
+}
+
+.bn-journey--fade-left {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black 100%);
+}
+
+.bn-journey--fade-both {
+    mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 2rem, black calc(100% - 2rem), transparent 100%);
+}
+
+/* Selector — reusable dropdown primitive (bn-selector) */
+.bn-selector {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.bn-selector__trigger {
+    all: unset;
+    font: inherit;
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.bn-selector__trigger:hover {
+    color: var(--bn-colour-accent);
+}
+
+.bn-selector__trigger:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+}
+
+.bn-selector__caret {
+    font-size: var(--bn-text-badge);
+    opacity: 0.6;
+}
+
+.bn-selector__menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: -0.75rem;  /* outdent by item padding so menu text aligns with trigger */
+    z-index: 20;
+    background: var(--bn-colour-bg);
+    border: 1px solid var(--bn-colour-border);
+    border-radius: var(--bn-radius-sm);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.bn-selector__item {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    color: inherit;
+    text-decoration: none;
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+    cursor: pointer;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.bn-selector__item:hover {
+    background: var(--bn-colour-hover, #f0f0f0);
+}
+
+.bn-selector__item--active {
+    color: var(--bn-colour-accent);
+}
+
+/* Session-specific: secondary detail line (date) */
+.bn-selector__detail {
+    font-size: var(--bn-text-caption);
+    font-weight: 400;
+    color: var(--bn-colour-muted);
+}
+
+/* Plain session label when there is only one session (no dropdown) */
+.bn-session-selector__label {
+    font-size: var(--bn-text-label);
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Segments need scroll-margin to not hide behind sticky header */
+.bn-transcript-journey-header ~ .transcript-body .transcript-segment[id] {
+    scroll-margin-top: var(--bn-journey-header-height, 3rem);
+}
+
+/* ── Session roles (moderator/observer line) ────────────────────────── */
+
+.bn-transcript-roles {
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-label);
+    margin: var(--bn-space-lg) 0 0;
+    line-height: 1.5;
+}
+
+.bn-transcript-roles__person {
+    white-space: nowrap;
+}
+
+.bn-transcript-roles__name {
+    margin-left: 0.25rem;
+}
+
+/* ── Transcript body ─────────────────────────────────────────────────── */
+
+.transcript-body {
+    margin-top: var(--bn-space-lg);
+    position: relative;
+    display: grid;
+    /* Timecode: ~4.5rem for [HH:MM:SS] in monospace.
+       Badge: right-aligned in a 2.2rem slot (fits p1–p99, m1–m99).
+       Body: remaining space for text. */
+    grid-template-columns: 4.5rem 2.2rem 1fr;
+    gap: 0 0.5rem;
+}
+
+/* At the annotation breakpoint (see molecules/transcript-annotations.css) the
+   body gains a 4th column for margin annotations. clamp() narrows it as the
+   window narrows, so section/theme labels wrap at medium widths and fit at wide. */
+@media (min-width: 800px) {
+    .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem 1fr clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
+/* SPECIAL CASE — do NOT normalise this to a leading token.
+   The 1.7 here is STRUCTURAL, not typographic. This row is a baseline-aligned
+   grid (`align-items: baseline`), and the 1.7 sets the rhythm the timecode and
+   speaker-badge columns align to; `.segment-body` inside deliberately resets to
+   the prose token for the text itself. Pull this onto --bn-text-*-lh and the
+   timecode stops sitting on the first line of its segment.
+   It is also the largest leading in the theme, which makes it the most obvious
+   target for a normalising sweep — hence this comment. Any change here wants
+   the transcript page open beside it.
+   See docs/design-native-typography-grid.md § Leading. */
+.transcript-segment {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: baseline;
+    margin: 0.5rem 0;
+    line-height: 1.7;
+}
+
+.transcript-segment .timecode {
+    white-space: nowrap;
+    justify-self: start;
+}
+
+/* The timecode's non-editable island is the grid item now; it sits as the
+   timecode did. */
+.transcript-segment .segment-timecode-cell {
+    white-space: nowrap;
+    justify-self: start;
+}
+
+.transcript-segment .segment-body {
+    min-width: 0;
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+}
+
+.transcript-segment .segment-speaker {
+    white-space: nowrap;
+    justify-self: end;
+}
+
+/* A paragraph that begins a sentence draws its first letter as a capital
+   (design-transcript-editing.md, option C): display only, and it follows the
+   paragraph's lang, so Turkish i becomes İ. Scripts without case are untouched. */
+.transcript-segment .segment-body.bn-sentence-start::first-letter {
+    text-transform: uppercase;
+}
+
+/* The transcript is one editable region (a caret for split and join); it
+   draws no focus ring, as the paragraphs did not. */
+.transcript-body[contenteditable="true"]:focus {
+    outline: none;
+}
+
+/* Someone spoke and nothing usable was heard: an annotation, not words. Drawn
+   like the timecode, never like speech, so it cannot read as something said. */
+.segment-inaudible {
+    color: var(--bn-colour-muted);
+    font-style: italic;
+    user-select: none;
+}
+
+.segment-moderator .segment-body {
+    color: var(--bn-colour-muted);
+}
+
+.segment-moderator .segment-speaker .badge {
+    opacity: 0.55;
+}
+
+/* Quoted segments — non-quoted participant text knocked back */
+.transcript-segment:not(.segment-quoted):not(.segment-moderator) .segment-body {
+    opacity: 0.6;
+}
+
+/* Inline citation highlight — wraps the verbatim excerpt within a segment.
+   Currently invisible while we rethink the visual treatment; the <mark>
+   elements and --bn-colour-cited-bg token are preserved so this can be
+   re-enabled by restoring `background: var(--bn-colour-cited-bg)`. */
+.bn-cited {
+    background: transparent;
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* The paragraph a link landed on flashes (atoms/arrival.css); its corners
+   round while it does. `[data-arrived]` in the app, `.anchor-highlight` from
+   the sealed static render's transcript-names.js. */
+.transcript-segment[data-arrived],
+.transcript-segment.anchor-highlight {
+    border-radius: var(--bn-radius-sm);
+}
+
+/* ════ frontend/src/islands/transcript/transcript-gutter.css — whole file, lines 1–260 ════ */
+/* The transcript's gutter: docs/design-transcript-gutter.md (decided against
+   docs/mockups/transcript-quote-gutter.html, 16–17 Oct 2026).
+
+   This file lives with the page, as screens.css and discussion.css do, and not under
+   bristlenose/theme/: a project serves its own baked copy of the theme CSS, so a rule added
+   there would reach no project analysed before the release, and the new markup would draw
+   unstyled. Rules that override templates/transcript.css are written one class more specific
+   (`.center …`) so they win whatever order the two stylesheets load in.
+
+   The palette's paper, sheet and badge-on-paper colours are read with a fallback for the same
+   reason: a project baked before they existed has no such variables. */
+
+/* ── The paper ──────────────────────────────────────────────────────────── */
+/* The transcript is a document on very pale paper; a quote lifts to a white sheet. The
+   scope re-points the badge grey rather than overriding badges one by one: tags and speaker
+   badges both read it. Menus and popovers mount outside .center and keep the page colour. */
+.center:has(.transcript-body) {
+    --bn-transcript-paper: var(--bn-colour-paper, light-dark(#f6f7f8, #111111));
+    --bn-transcript-sheet: var(--bn-colour-sheet, light-dark(#ffffff, #1c1c1e));
+    --bn-colour-badge-bg: var(--bn-colour-badge-bg-paper, light-dark(#ebedf0, #252525));
+    --bn-transcript-gutter: 2rem;
+    /* A mark at rest is an "invisible", like ¶ with Show Invisibles on. */
+    --bn-transcript-mark: color-mix(in srgb, var(--bn-colour-muted) 40%, transparent);
+    background: var(--bn-transcript-paper);
+}
+.center:has(.transcript-body) .bn-transcript-journey-header {
+    background: var(--bn-transcript-paper);
+}
+
+/* ── The grid: timecode | speaker | text | gutter | margin ──────────────── */
+.center .transcript-body {
+    grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr) var(--bn-transcript-gutter);
+}
+@media (min-width: 800px) {
+    .center .transcript-body {
+        grid-template-columns: 4.5rem 2.2rem minmax(0, 1fr) var(--bn-transcript-gutter) clamp(8.5rem, 13vw, 12.5rem);
+    }
+}
+
+/* The gutter and the margin are one two-column block, so a mark always sits beside the
+   margin entry it names, and the first one on the paragraph's first baseline. */
+.transcript-segment .segment-side {
+    grid-column: 4 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    row-gap: var(--bn-space-sm);
+    align-self: baseline;
+    min-width: 0;
+}
+.segment-side .bn-gutter-entry {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    min-width: 0;
+}
+.bn-gutter-content {
+    font-size: var(--bn-text-caption);
+    line-height: var(--bn-text-caption-lh);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+/* Narrow: the gutter stays; what the margin says drops under the text. The content is
+   drawn in both places and only one is ever displayed (display:none takes the other out of
+   the accessibility tree as well). */
+.segment-under { display: none; }
+@media (max-width: 799px) {
+    .transcript-segment .segment-side { grid-column: 4; grid-template-columns: 1fr; }
+    .segment-side .bn-gutter-entry { grid-template-columns: 1fr; }
+    .segment-side .bn-gutter-content { display: none; }
+    .transcript-segment .segment-under {
+        display: flex;
+        flex-direction: column;
+        gap: var(--bn-space-xs);
+        grid-column: 3;
+        margin: var(--bn-space-xs) 0 var(--bn-space-sm);
+        font-size: var(--bn-text-caption);
+        line-height: var(--bn-text-caption-lh);
+    }
+}
+
+/* ── The marks ──────────────────────────────────────────────────────────── */
+/* Pale at rest; dark ink while the pointer is anywhere on the paragraph's row; the link's
+   blue on its own hover. Centred in the gutter, then a quarter rem towards what it names. */
+.bn-gutter-mark {
+    justify-self: center;
+    display: inline-flex;
+    width: 15px;
+    height: 15px;
+    transform: translate(0.25rem, 2.5px);
+    color: var(--bn-transcript-mark);
+    border-radius: var(--bn-radius-sm);
+    text-decoration: none;
+    transition: color var(--bn-transition-fast);
+}
+.bn-gutter-mark .bn-icon,
+.bn-gutter-mark svg { width: 15px; height: 15px; }
+.transcript-segment:hover .bn-gutter-mark,
+.transcript-segment:focus-within .bn-gutter-mark { color: var(--bn-colour-text); }
+.transcript-segment:hover .bn-gutter-entry[data-hidden] .bn-gutter-mark,
+.transcript-segment:focus-within .bn-gutter-entry[data-hidden] .bn-gutter-mark { color: var(--bn-colour-muted); }
+a.bn-gutter-mark:hover,
+.bn-gutter-entry.is-hot a.bn-gutter-mark { color: var(--bn-colour-accent); }
+/* A mark that leads nowhere (a quote in no section or theme) never turns link-blue. */
+.bn-gutter-entry.is-hot span.bn-gutter-mark { color: var(--bn-colour-text); }
+/* A target the size of the icon is small: widen what takes the click, not what is drawn. */
+.bn-gutter-mark::after { content: ""; position: absolute; inset: -4.5px; }
+/* Where nothing hovers (a touch screen), or the researcher asked for more contrast, the mark is
+   never the pale invisible: it is a link, and at rest it may be the only sign of one. */
+@media (hover: none), (prefers-contrast: more) {
+    .center:has(.transcript-body) { --bn-transcript-mark: var(--bn-colour-muted); }
+}
+.bn-gutter-mark:focus-visible {
+    outline: 2px solid var(--bn-colour-accent);
+    outline-offset: 2px;
+    color: var(--bn-colour-accent);
+}
+span.bn-gutter-mark { cursor: default; }
+
+/* ── The margin's titles ────────────────────────────────────────────────── */
+.bn-gutter-title {
+    color: var(--bn-colour-accent);
+    font-weight: var(--bn-weight-emphasis);
+    text-decoration: none;
+    text-underline-offset: 2px;
+    max-width: 100%;
+}
+.bn-gutter-title:hover,
+.bn-gutter-entry.is-hot .bn-gutter-title { text-decoration: underline; }
+.bn-gutter-entry[data-hidden] .bn-gutter-title { color: var(--bn-colour-muted); font-weight: var(--bn-weight-normal); }
+.bn-gutter-title:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+
+/* ── The quote lift ─────────────────────────────────────────────────────── */
+/* Anywhere along a paragraph's row lifts its quotes from the paper to a white sheet. The
+   words are the quote's own, marked data-q on the timed and the untimed path alike. */
+.transcript-body [data-q] {
+    border-radius: 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-color var(--bn-transition-fast), box-shadow var(--bn-transition-fast);
+}
+.transcript-segment:hover [data-q],
+.transcript-segment:focus-within [data-q] {
+    background: var(--bn-transcript-sheet);
+    box-shadow: 0 0 0 3px var(--bn-transcript-sheet);
+}
+/* A hidden quote is discounted evidence: grey ink, still there to be read. */
+.transcript-body [data-q][data-q-hidden] { color: var(--bn-colour-muted); }
+
+/* The theme knocks back a paragraph the server did not mark as quoted. The server's join
+   misses the paragraph a quote starts in, mid-paragraph; a paragraph that draws a quote's
+   words is quoted, whatever the join said. */
+.center .transcript-body .transcript-segment[data-has-quote] .segment-body { opacity: 1; }
+
+/* ── The keyline ────────────────────────────────────────────────────────── */
+/* One 0.5px ink hairline round the whole quote (or question, or paragraph), notched where
+   its first line starts and its last line ends: drawn by useGutterHover into this layer. */
+.bn-transcript-sheet { position: relative; }
+.bn-keylines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 3;
+}
+.bn-keylines path {
+    fill: none;
+    stroke: var(--bn-colour-text);
+    stroke-width: 0.5;
+    stroke-linejoin: miter;
+}
+.bn-keylines path.is-hidden { stroke: var(--bn-colour-muted); }
+/* Words matched only roughly (quoteExtents: the excerpt was not found as said): dashed. */
+.bn-keylines path.is-approx { stroke-dasharray: 2 2; }
+/* Windows high contrast forces backgrounds, so the lift goes; keep the keyline a system colour. */
+@media (forced-colors: active) {
+    .bn-keylines path { stroke: CanvasText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .transcript-body [data-q],
+    .bn-gutter-mark { transition: none; }
+}
+
+/* ── Discussion (stage 3) ───────────────────────────────────────────────── */
+/* The question's topic: a link like the others (hover underline), in grey — more blue in the
+   margin would be too much (owner, 17 Oct 2026). */
+.bn-gutter-topic {
+    color: var(--bn-colour-muted);
+    text-decoration: none;
+    text-underline-offset: 2px;
+}
+.bn-gutter-topic:hover,
+.bn-gutter-entry.is-hot .bn-gutter-topic { text-decoration: underline; }
+.bn-gutter-topic:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 2px; }
+
+/* ── Screens (stage 2) ──────────────────────────────────────────────────── */
+/* A screen's title is a link like the others, at body weight: it names a place, not a finding. */
+.bn-gutter-title.is-screen { font-weight: var(--bn-weight-normal); }
+
+/* The margin's words are their own layer, painted in reading order, and carry the paper behind
+   them: a thumbnail hanging down from an earlier row slides under the next title, not over it. */
+.segment-side .bn-gutter-content { position: relative; z-index: 2; }
+.segment-side .bn-gutter-title,
+.segment-side .bn-gutter-topic,
+.segment-side .margin-tags {
+    background: var(--bn-transcript-paper);
+    box-shadow: 0 0 0 2px var(--bn-transcript-paper);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+.segment-side .margin-tags { width: fit-content; }
+/* During playback the row is washed blue; the paper backing would show as patches. */
+.transcript-segment.bn-timecode-glow .segment-side .bn-gutter-title,
+.transcript-segment.bn-timecode-glow .segment-side .bn-gutter-topic,
+.transcript-segment.bn-timecode-glow .segment-side .margin-tags { background: transparent; box-shadow: none; }
+
+/* The thumbnail never grows its row: it hangs below the screen's title, out of flow, and fades
+   out under whatever follows. Hovering the title, the thumbnail or the mark brings it up whole,
+   over the neighbouring margin. */
+.bn-gutter-thumb {
+    display: block;
+    width: 100%;
+    max-width: 140px;
+    border-radius: var(--bn-radius-md);
+    text-decoration: none;
+}
+.bn-gutter-thumb img,
+.bn-gutter-thumb-empty {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    object-position: top;
+    border-radius: var(--bn-radius-md);
+    border: 1px solid var(--bn-colour-border);
+    background: var(--bn-colour-bg);
+}
+.segment-side .bn-gutter-thumb {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 3px);
+    z-index: 1;
+    -webkit-mask-image: linear-gradient(#000 15%, transparent 80%);
+    mask-image: linear-gradient(#000 15%, transparent 80%);
+}
+.segment-side .bn-gutter-entry[data-same] .bn-gutter-thumb { top: 3px; }
+.segment-side .bn-gutter-entry.is-hot .bn-gutter-content { z-index: 10; }
+.segment-side .bn-gutter-entry.is-hot .bn-gutter-thumb {
+    -webkit-mask-image: none;
+    mask-image: none;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.18), 0 0 0 1px var(--bn-colour-border);
+}
+/* Under the text, in a narrow window, there is room for it whole. */
+.segment-under .bn-gutter-thumb { margin-top: 2px; }
+
+</style>
+
+<style id="proposed">
+/* ════ PROPOSED — new CSS (nothing below exists in the tree) ════ */
+
+/* The toggle: an icon button at the end of the sticky row. The tapestry
+   popover close's metrics (.bn-tp-close: unset button, radius-sm, muted
+   glyph, text ink on hover), grown to a 24px target; pressed is
+   .dimension-btn.active's hover tint with the glyph in accent, as a toggled
+   Mac toolbar item tints its symbol. Accent on the tint is 3.51:1 light /
+   4.01:1 dark (inspector.css's own measurement), over 1.4.11's 3:1 for a
+   non-text mark. */
+.bn-timeline-toggle {
+    all: unset;
+    flex-shrink: 0;
+    margin-left: auto;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--bn-radius-sm);
+    color: var(--bn-colour-muted);
+    cursor: pointer;
+    font-size: 15px;
+    transition: background-color var(--bn-transition-fast), color var(--bn-transition-fast);
+}
+.bn-timeline-toggle:hover { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+.bn-timeline-toggle[aria-pressed="true"] { background: var(--bn-colour-hover); color: var(--bn-colour-accent); }
+.bn-timeline-toggle:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+
+/* Fat: the row wraps, the chain gives up its place, the timeline takes a
+   full-width second line of the same sticky header. */
+.bn-transcript-timeline { display: none; }
+.bn-transcript-journey-header--timeline { flex-wrap: wrap; row-gap: 0; }
+.bn-transcript-journey-header--timeline .bn-session-journey { display: none; }
+.bn-transcript-journey-header--timeline .bn-transcript-timeline {
+    display: block;
+    flex: 1 0 100%;
+    min-width: 0;
+    animation: bn-timeline-in 0.15s ease-out;
+}
+@keyframes bn-timeline-in { from { opacity: 0; } }
+
+/* The reading window: the time span of the paragraphs on screen, in the
+   minimap's viewport-indicator tokens (organisms/minimap.css) — the house
+   mark for "what you are looking at". Dragging it scrolls the page, as the
+   minimap's does. */
+.bn-tp-window {
+    fill: var(--bn-minimap-viewport-bg);
+    stroke: var(--bn-minimap-viewport-border);
+    stroke-width: 1.5;
+    cursor: grab;
+}
+
+/* The player's position, only while media is open: accent, a notch heavier
+   than the hover cursor (.bn-tp-playhead) so the two never read as one. */
+.bn-tp-player line { stroke: var(--bn-colour-accent); stroke-width: 1.5; }
+.bn-tp-player path { fill: var(--bn-colour-accent); }
+.bn-tp-player { pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-timeline-toggle { transition: none; }
+    .bn-transcript-journey-header--timeline .bn-transcript-timeline { animation: none; }
+}
+@media print {
+    .bn-timeline-toggle { display: none; }
+}
+</style>
+
+<style id="chrome">
+/* ════ MOCKUP CHROME — not the product ════ */
+html, body { margin: 0; }
+body.m-page {
+    background: light-dark(#e9ebee, #050506);
+    color: var(--bn-colour-text);
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+}
+.m-wrap { max-width: 1520px; margin: 0 auto; padding: 28px 24px 80px; }
+.m-head h1 { font-size: var(--bn-text-title); font-weight: var(--bn-weight-emphasis); margin: 0 0 6px; }
+.m-lede { max-width: 72ch; margin: 0 0 14px; color: var(--bn-colour-muted); font-size: var(--bn-text-body); line-height: 1.5; }
+.m-key { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin: 10px 0 18px; font-size: var(--bn-text-caption); }
+.m-key span { display: inline-flex; gap: 6px; align-items: center; }
+.m-key i { display: inline-block; width: 22px; height: 14px; border-radius: 3px; }
+.m-key .k-a { background: var(--bn-colour-bg); border: 1px solid var(--bn-colour-border); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+.m-key .k-c { background: repeating-linear-gradient(135deg, light-dark(#fbf7e9,#1d1b14) 0 6px, light-dark(#f4eed8,#232016) 6px 12px); border-left: 3px solid light-dark(#b59a3a, #8a7631); }
+.m-controls { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 10px 12px; border-radius: 8px;
+    background: light-dark(#f7f8fa, #141416); border: 1px dashed light-dark(#c4c8ce, #3a3a3f); font-size: var(--bn-text-caption); }
+.m-controls label { display: inline-flex; gap: 6px; align-items: center; }
+.m-controls select, .m-controls button { font: inherit; }
+.m-controls .m-tag { font-family: var(--bn-font-mono); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; color: var(--bn-colour-muted); }
+
+.m-part { margin-top: 44px; }
+.m-h2 { font-size: var(--bn-text-heading); font-weight: var(--bn-weight-emphasis); margin: 0 0 4px; }
+.m-sub { margin: 0 0 14px; color: var(--bn-colour-muted); max-width: 80ch; }
+.m-row { display: grid; grid-template-columns: minmax(0, 1040px) minmax(300px, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1100px) { .m-row { grid-template-columns: 1fr; } }
+
+/* The artefact frame: a light "screenshot" chrome bar, then the real pixels. */
+.m-frame { background: var(--bn-colour-bg); border-radius: 10px; overflow: hidden; color: var(--bn-colour-text);
+    box-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / .12), rgb(255 255 255 / .1)), 0 8px 28px rgb(0 0 0 / .14); }
+.m-chrome { display: flex; gap: 10px; align-items: center; padding: 7px 12px; font-size: 11px; font-family: var(--bn-font-mono);
+    background: light-dark(#eceef1, #232326); color: light-dark(#5b6170, #9a9aa3); border-bottom: 1px solid light-dark(#d9dce1, #2e2e33); }
+.m-chrome .m-dots { display: inline-flex; gap: 5px; }
+.m-chrome .m-dots i { width: 9px; height: 9px; border-radius: 50%; background: light-dark(#cfd3d9, #46464c); }
+.m-chrome .m-new { margin-left: auto; padding: 1px 6px; border-radius: 4px; background: light-dark(#fff3c4, #3a3214); color: light-dark(#7a5b00, #e7c95c); }
+.m-viewport { overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.m-viewport .center { padding: 0 24px 40px; }
+.m-static .center { padding: 0 24px; }
+
+/* Commentary: deliberately not-the-product. */
+.m-notes, .m-comm { background: repeating-linear-gradient(135deg, light-dark(#fbf7e9,#1d1b14) 0 6px, light-dark(#f6f0dc,#211e15) 6px 12px);
+    border-left: 3px solid light-dark(#b59a3a, #8a7631); padding: 12px 16px 14px; border-radius: 0 8px 8px 0;
+    font-size: var(--bn-text-caption); line-height: 1.5; color: light-dark(#3a3626, #d9d3bd); }
+.m-notes::before, .m-comm::before { content: "Commentary"; display: block; font-family: var(--bn-font-mono); font-size: 10px;
+    letter-spacing: .08em; text-transform: uppercase; color: light-dark(#8a7631, #b59a3a); margin-bottom: 6px; }
+.m-notes h3 { font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); margin: 12px 0 2px; color: light-dark(#26231a, #efe9d2); }
+.m-notes h3:first-of-type { margin-top: 0; }
+.m-notes p, .m-comm p { margin: 0 0 6px; }
+.m-notes code, .m-comm code { font-family: var(--bn-font-mono); font-size: 0.95em; }
+.m-notes ul, .m-comm ul { margin: 0 0 6px; padding-left: 1.2em; }
+.m-readout { font-family: var(--bn-font-mono); font-size: 11px; margin-top: 8px; padding: 6px 10px; border-radius: 6px;
+    background: light-dark(#fff, #111); border: 1px dashed light-dark(#c4c8ce, #3a3a3f); color: var(--bn-colour-muted); white-space: pre-wrap; }
+.m-meter { display: grid; grid-template-columns: max-content 1fr max-content; gap: 3px 10px; align-items: center; margin: 6px 0; }
+.m-meter b { font-weight: var(--bn-weight-emphasis); }
+.m-bar { height: 8px; border-radius: 4px; background: light-dark(#e5dfc7, #2d2a1f); position: relative; overflow: hidden; }
+.m-bar i { position: absolute; inset: 0 auto 0 0; background: light-dark(#b59a3a, #8a7631); border-radius: 4px; }
+.m-bar i.over { background: light-dark(#c2410c, #f97316); }
+.m-bar::after { content: ""; position: absolute; left: 33.333%; top: -2px; bottom: -2px; width: 1px; background: light-dark(#3a3626, #d9d3bd); }
+
+/* Toggle-state crops */
+.m-states { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.m-state { border-radius: 8px; overflow: hidden; box-shadow: 0 0 0 1px light-dark(rgb(0 0 0 / .12), rgb(255 255 255 / .1)); }
+.m-state .m-chrome { font-size: 10px; padding: 4px 8px; }
+.m-state .center { padding: 6px 10px 10px; }
+.m-state .bn-transcript-journey-header { position: static; box-shadow: none; }
+.m-dark { color-scheme: dark; color: var(--bn-colour-text); }
+.m-light { color-scheme: light; color: var(--bn-colour-text); }
+.m-dark .m-chrome, .m-light .m-chrome { color-scheme: inherit; }
+/* Forced states for the crops only: mirrors the PROPOSED :hover / :focus-visible rules. */
+.bn-timeline-toggle[data-m-force="hover"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+.bn-timeline-toggle[aria-pressed="true"][data-m-force="hover"] { color: var(--bn-colour-accent); }
+.bn-timeline-toggle[data-m-force="focus"] { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.dimension-btn[data-m-force="active"] { background: var(--bn-colour-hover); color: var(--bn-colour-text); }
+.m-alt .dimension-btn { display: inline-grid; place-items: center; padding: 3px 8px; font-size: 14px; }
+
+.m-ladder { display: flex; flex-direction: column; gap: 14px; }
+.m-ladder .m-frame .center { padding: 0 24px 8px; }
+.m-ladder .bn-transcript-journey-header { position: relative; }
+
+table.m-table { border-collapse: collapse; width: 100%; font-size: var(--bn-text-caption); }
+.m-table th, .m-table td { text-align: left; padding: 5px 8px; border-bottom: 1px solid light-dark(#e2dcc3, #2d2a1f); vertical-align: top; }
+.m-table th { font-weight: var(--bn-weight-emphasis); }
+.m-table code { font-family: var(--bn-font-mono); }
+</style>
+</head>
+<body class="m-page">
+<div class="m-wrap">
+
+<header class="m-head">
+  <h1>Transcript: the journey chain or the timeline, in one sticky slot</h1>
+  <p class="m-lede">The transcript's sticky header keeps today's skinny journey chain by default. One button at the end of the row swaps it for the session timeline from the Sessions grid, in the same sticky slot, scaled to this one session. While you read, a window on the timeline covers the paragraphs on screen.</p>
+  <div class="m-key">
+    <span><i class="k-a"></i> Artefact: real <code>--bn-*</code> tokens and shipped classes; only what would ship</span>
+    <span><i class="k-c"></i> Commentary: not the product</span>
+  </div>
+  <div class="m-controls" role="group" aria-label="Mockup controls">
+    <span class="m-tag">Mockup controls</span>
+    <label>Appearance <select id="m-appearance"><option value="">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label>Palette <select id="m-palette"><option value="default">Default</option><option value="edo">Edo</option></select></label>
+    <label>Window height <select id="m-height"><option value="900">900 px (large display)</option><option value="720" selected>720 px (laptop)</option><option value="560">560 px (short / split view)</option><option value="400">400 px (very short)</option></select></label>
+    <label>Lanes asked for <select id="m-lanes"><option value="3" selected>3: sections, speakers, sentiment (proposed)</option><option value="2">2: sections, speakers</option><option value="5">5: as in the Sessions grid</option></select></label>
+    <button type="button" id="m-play">Play from the reading position</button>
+  </div>
+</header>
+
+<!-- ═════════════════════════ Part 1 — live ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">1 · Live: scroll the transcript, click the timeline</h2>
+  <p class="m-sub">The frame is a window at the height chosen above. Scroll inside it, press the button at the right end of the sticky row, click a flag, the speaker lane or a sentiment bar, or drag the blue window.</p>
+  <div class="m-row">
+    <div>
+      <div class="m-frame">
+        <div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>Transcript, Session 3: live<span class="m-new">new: toggle · window · player mark</span></div>
+        <div class="m-viewport" id="live-vp" style="height:720px">
+          <div class="center">
+            <div class="bn-transcript-journey-header" id="live-header">
+              <div class="bn-selector bn-session-selector">
+                <button type="button" class="bn-selector__trigger" aria-haspopup="listbox">Session 3 <span class="bn-selector__caret"><svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>
+              </div>
+              <span class="bn-transcript-journey-header__people"><span class="bn-person-badge"><span class="badge">p1</span><span class="bn-person-badge-name">Rosa</span></span></span>
+              <div class="bn-session-journey bn-session-journey--overflow" id="live-chain"></div>
+              <button type="button" class="bn-timeline-toggle" id="live-toggle" aria-pressed="false" aria-label="Session timeline" title="Session timeline"><svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6h8"/><path d="M12 16h6"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 11h7"/></svg></button>
+              <div class="bn-transcript-timeline"><div class="bn-tp-wrap"><div class="bn-tapestry-scroll" id="live-tl"></div></div></div>
+            </div>
+            <section class="transcript-body" id="live-body"></section>
+          </div>
+        </div>
+      </div>
+      <div class="m-readout" id="m-readout">Scroll or click to see what the page would do.</div>
+    </div>
+    <aside class="m-notes">
+      <h3>The slot</h3>
+      <p>One sticky header, as today. Skinny: the chain, unchanged. Fat: the timeline takes the chain's place on a second line; the session label and the participant's name stay on the first. Section flags are the chain's own waypoints (first quote of each run, revisits included), so nothing is lost by hiding the chain.</p>
+      <h3>Does a marker track scroll? A range does, a playhead doesn't</h3>
+      <p>Reading is a range, not a moment, so scroll moves a <b>reading window</b>: the time from the paragraph under the header to the last one on screen, interpolated within each, recomputed once per frame. It uses the minimap's viewport tokens, the house mark for "what you are looking at", and dragging it scrolls the page as the minimap's does.</p>
+      <p>The <b>current section's flag stays raised</b>, the fat equivalent of the chain's active pill, by the chain's rule: the last waypoint above the header's bottom + 8 px.</p>
+      <p>The <b>playhead</b> stays a player thing. The thin hover cursor is the shipped one (where a click lands). A heavier accent mark with a head shows the player's time, only while media plays. Press <i>Play</i> above: <code>PlayerContext</code> already centres the playing paragraph, so the window follows the player without any new code.</p>
+      <h3>A click scrolls, never navigates</h3>
+      <ul>
+        <li><b>Flag</b>: the chain's own <code>handleIndexClick</code> (smooth scroll to the waypoint, 600 ms observer lock).</li>
+        <li><b>Speaker lane</b>: the paragraph holding that moment, by <code>resolveSegmentForSeconds</code>, the resolver <code>#t-</code> deep links already use, with the anchor flash.</li>
+        <li><b>Sentiment bar</b>: straight to its quote. No popover: on this page the quote is the text itself.</li>
+        <li>The URL takes <code>#t-&lt;s&gt;</code> by <code>replaceState</code>: shareable, and Back still leaves the page. The readout under the frame shows what would be written.</li>
+      </ul>
+      <p>So <code>onJump</code> is the one seam: the Sessions grid passes "navigate to <code>/report/sessions/s3#t-589</code>"; the transcript passes "scroll here".</p>
+      <h3>Opening it keeps your place</h3>
+      <p>The header grows by the timeline's height, so the page compensates <code>scrollTop</code>: the paragraph under the header is still under it. <code>--bn-journey-header-height</code> (the anchors' <code>scroll-margin-top</code>) is measured today on labels and speakers only; the mode joins those deps.</p>
+      <h3>Scale</h3>
+      <p>One session, so it fits its own duration to the width (no shared project scale). Clips or slivers by the shipped 2.5 s/px threshold: a 34-minute session at this width draws clips; a 60-minute one at a narrow window falls to slivers. No zoom slider in the slot for v1, so there's never a sideways scrollbar.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════════════════════ Part 2 — height ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">2 · How tall it can get: a third of the window, sentiment goes first</h2>
+  <p class="m-sub">Each frame is the sticky slot alone at the live frame's width, same reading window, same current section. The bars measure each slot against the window height chosen above; the tick is one third.</p>
+  <div class="m-row">
+    <div class="m-ladder" id="ladder"></div>
+    <aside class="m-notes">
+      <h3>The budget</h3>
+      <p>The sticky slot may take at most a third of the window. The rest is the reading area, and the transcript is what the page is for.</p>
+      <div id="m-meters"></div>
+      <h3>The ladder: shed detail before structure</h3>
+      <ul>
+        <li><b>3 lanes</b> by default: sections, speakers, sentiment. They answer "where am I, who's talking, how did it go".</li>
+        <li><b>Themes never ride in the sticky slot.</b> The margin already names them beside the text, and their three packed rows cost more than any other lane.</li>
+        <li>When 3 lanes would pass a third, <b>sentiment goes</b>, leaving flags and speakers. Try 560 px in the live frame.</li>
+        <li>It never falls back to the chain by itself, because a pressed button that shows the chain would be lying. Below about 410 px even 2 lanes pass a third. I suggest we accept that: the researcher can turn it off. Try 400 px.</li>
+      </ul>
+      <p>The tapestry's 14 px under the timecodes is room for macOS's overlay scrollbar. With no zoom in the slot there's no scrollbar, so that space could go: a cheap saving if the owner wants it, not taken here.</p>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════════════════════ Part 3 — toggle ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">3 · The toggle</h2>
+  <p class="m-sub">The right end of the sticky row, in each state, light then dark.</p>
+  <div class="m-row">
+    <div>
+      <div class="m-states" id="states-light"></div>
+      <div class="m-states" id="states-dark" style="margin-top:10px"></div>
+      <div class="m-states m-alt" id="states-alt" style="margin-top:22px; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 420px"></div>
+    </div>
+    <aside class="m-notes">
+      <h3>One button, not a segmented pair</h3>
+      <p>The chain is the resting state and needs no glyph of its own; the button names what it adds, like the Mac's show/hide toolbar toggles (the sidebar, Xcode's inspectors). <code>aria-pressed</code>, with the shipped string <code>sessions.tapestry.label</code> ("Session timeline") as its name and tooltip, so the web needs no new copy.</p>
+      <p>Pressed takes no further hover change, as a selected <code>.dimension-btn</code> takes none; the pointer and the tooltip carry it.</p>
+      <p>Glyph: Lucide <code>chart-gantt</code> on the web (a new <code>timeline</code> concept in <code>Icon.tsx</code>); <code>calendar.day.timeline.left</code> on the Mac. SF Symbols can't be drawn in a browser engine (house rule), so the Mac half is named, not shown.</p>
+      <p>The alternative, last row (flagged): <code>.dimension-toggle</code> with Lucide <code>route</code> ↔ <code>chart-gantt</code> (SF <code>point.topleft.down.to.point.bottomright.curvepath</code> ↔ <code>calendar.day.timeline.left</code>). Rejected: two glyphs to learn for one decision, and this house's segmented controls carry words, not icons.</p>
+      <h3>On the Mac</h3>
+      <p>The View menu gets <b>Show Session Timeline</b> / <b>Hide Session Timeline</b>, with the SF Symbol, enabled on a transcript and greyed elsewhere, mirroring the button's state. No keyboard shortcut is proposed (shortcuts are earned). These are the only new strings, and they're for the owner to write.</p>
+      <h3>For the owner to decide</h3>
+      <ul>
+        <li><b>Remembered how?</b> Per viewer it's a convenience, but <code>localStorage</code> does not survive quitting the Mac app. Forget on quit, or a native mirror like the subtitle prefs?</li>
+        <li><b>A session with no sections</b> has no chain, but it still has a timeline (clips and sentiment), so the button stays.</li>
+        <li><b>Export:</b> <code>/tapestry</code> is already embedded, so the timeline works offline. The hover thumbnail stays serve-only, as it is in the grid.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════════════════════ Part 4 — inventory ═════════════════════════ -->
+<section class="m-part">
+  <h2 class="m-h2">4 · What's new, and what isn't</h2>
+  <div class="m-comm" style="max-width: 1040px">
+    <table class="m-table">
+      <tr><th>Thing</th><th>Status</th><th>Notes</th></tr>
+      <tr><td><code>.bn-timeline-toggle</code></td><td>new CSS</td><td>The <code>.bn-tp-close</code> idiom at 24 px; pressed state from <code>.dimension-btn.active</code>.</td></tr>
+      <tr><td><code>.bn-transcript-journey-header--timeline</code>, <code>.bn-transcript-timeline</code></td><td>new CSS</td><td>Wrap rule plus slot; one 0.15 s fade, off under reduced motion.</td></tr>
+      <tr><td><code>.bn-tp-window</code></td><td>new mark</td><td>The minimap's <code>--bn-minimap-viewport-*</code> tokens; no new colour.</td></tr>
+      <tr><td><code>.bn-tp-player</code></td><td>new mark</td><td>Accent, 1.5 px, with a head. Only while media plays.</td></tr>
+      <tr><td><code>Icon</code> concept <code>timeline</code></td><td>new, one line</td><td>Lucide <code>chart-gantt</code> ↔ SF <code>calendar.day.timeline.left</code>; add a row to the concept map in <code>design-icon-system.md</code>.</td></tr>
+      <tr><td>Strings</td><td>web: none<br>Mac: 2</td><td>Web reuses <code>sessions.tapestry.label</code> and the lane keys (<code>quotes.sections</code>, <code>sessions.speakerPlaceholder.*</code>, <code>sessions.colSentiment</code>). Mac View menu: "Show Session Timeline" / "Hide Session Timeline", owner-written, then 21 locales.</td></tr>
+      <tr><td><code>SessionTapestry</code></td><td>reused</td><td>New props, roughly: <code>lanes</code> (3 or 2), <code>window</code> (a range in seconds), <code>current</code> (the raised flag), <code>player</code>, and <code>onJump</code> wired to scrolling. Sentiment bars jump instead of opening a popover when the host says so.</td></tr>
+      <tr><td>Chain, header, transcript, gutter</td><td>unchanged</td><td>All drawn here from the verbatim CSS.</td></tr>
+    </table>
+  </div>
+</section>
+
+</div>
+
+<script>
+const D = {"duration":2040,"turns":[{"t0":0.0,"t1":8.1,"speaker":"m1","team":true,"colour":"#2b2937"},{"t0":8.5,"t1":71.7,"speaker":"p1","team":false,"colour":"#22282e"},{"t0":72.3,"t1":80.8,"speaker":"m1","team":true,"colour":"#eae7d6"},{"t0":81.3,"t1":148.2,"speaker":"p1","team":false,"colour":"#e6e0d3"},{"t0":149.0,"t1":162.8,"speaker":"m1","team":true,"colour":"#e9dfd2"},{"t0":163.2,"t1":222.1,"speaker":"p1","team":false,"colour":"#edd9cd"},{"t0":223.3,"t1":228.3,"speaker":"m1","team":true,"colour":"#eae7d4"},{"t0":229.7,"t1":265.7,"speaker":"p1","team":false,"colour":"#e0e3cb"},{"t0":266.9,"t1":282.8,"speaker":"m1","team":true,"colour":"#c45642"},{"t0":283.6,"t1":305.6,"speaker":"p1","team":false,"colour":"#be4b47"},{"t0":306.2,"t1":312.3,"speaker":"m1","team":true,"colour":"#cb503f"},{"t0":313.7,"t1":338.6,"speaker":"p1","team":false,"colour":"#cd5640"},{"t0":340.0,"t1":348.3,"speaker":"m1","team":true,"colour":"#c34f3f"},{"t0":349.2,"t1":368.8,"speaker":"p1","team":false,"colour":"#bf4c46"},{"t0":369.8,"t1":379.6,"speaker":"m1","team":true,"colour":"#c65a3e"},{"t0":380.4,"t1":399.4,"speaker":"p1","team":false,"colour":"#c55d39"},{"t0":400.4,"t1":406.6,"speaker":"m1","team":true,"colour":"#c7573c"},{"t0":407.4,"t1":464.8,"speaker":"p1","team":false,"colour":"#cc5b33"},{"t0":465.7,"t1":473.8,"speaker":"m1","team":true,"colour":"#c34f40"},{"t0":475.1,"t1":499.3,"speaker":"p1","team":false,"colour":"#d05742"},{"t0":500.1,"t1":515.1,"speaker":"m1","team":true,"colour":"#c45b3a"},{"t0":515.7,"t1":547.2,"speaker":"p1","team":false,"colour":"#d05c45"},{"t0":548.2,"t1":561.4,"speaker":"m1","team":true,"colour":"#f4f3f5"},{"t0":562.2,"t1":604.7,"speaker":"p1","team":false,"colour":"#fbf7f9"},{"t0":606.1,"t1":617.2,"speaker":"m1","team":true,"colour":"#faf0f5"},{"t0":618.0,"t1":706.0,"speaker":"p1","team":false,"colour":"#f5faef"},{"t0":706.9,"t1":722.0,"speaker":"m1","team":true,"colour":"#eff4ed"},{"t0":723.4,"t1":753.5,"speaker":"p1","team":false,"colour":"#f6e9f2"},{"t0":754.4,"t1":763.2,"speaker":"m1","team":true,"colour":"#f1f7f5"},{"t0":764.7,"t1":791.7,"speaker":"p1","team":false,"colour":"#f7f3f3"},{"t0":793.1,"t1":805.0,"speaker":"m1","team":true,"colour":"#f6f3f4"},{"t0":805.7,"t1":836.3,"speaker":"p1","team":false,"colour":"#f9fdf6"},{"t0":837.4,"t1":842.7,"speaker":"m1","team":true,"colour":"#417962"},{"t0":844.0,"t1":872.2,"speaker":"p1","team":false,"colour":"#388061"},{"t0":872.8,"t1":888.3,"speaker":"m1","team":true,"colour":"#3f7e5e"},{"t0":889.0,"t1":952.7,"speaker":"p1","team":false,"colour":"#418269"},{"t0":954.0,"t1":965.1,"speaker":"m1","team":true,"colour":"#447f64"},{"t0":966.2,"t1":1046.5,"speaker":"p1","team":false,"colour":"#40855c"},{"t0":1047.3,"t1":1060.9,"speaker":"m1","team":true,"colour":"#c65139"},{"t0":1061.7,"t1":1090.4,"speaker":"p1","team":false,"colour":"#c25c33"},{"t0":1091.7,"t1":1097.8,"speaker":"m1","team":true,"colour":"#c8593e"},{"t0":1098.2,"t1":1182.3,"speaker":"p1","team":false,"colour":"#c04f34"},{"t0":1183.2,"t1":1197.9,"speaker":"m1","team":true,"colour":"#c65837"},{"t0":1199.1,"t1":1219.1,"speaker":"p1","team":false,"colour":"#cc5243"},{"t0":1219.7,"t1":1232.5,"speaker":"m1","team":true,"colour":"#c2523f"},{"t0":1233.2,"t1":1274.0,"speaker":"p1","team":false,"colour":"#c45b3c"},{"t0":1275.2,"t1":1289.5,"speaker":"m1","team":true,"colour":"#5a6bae"},{"t0":1290.6,"t1":1320.7,"speaker":"p1","team":false,"colour":"#596cb1"},{"t0":1321.4,"t1":1335.8,"speaker":"m1","team":true,"colour":"#546dab"},{"t0":1336.8,"t1":1366.2,"speaker":"p1","team":false,"colour":"#516eaf"},{"t0":1366.8,"t1":1371.9,"speaker":"m1","team":true,"colour":"#5669a9"},{"t0":1372.5,"t1":1395.1,"speaker":"p1","team":false,"colour":"#5a6ca7"},{"t0":1395.8,"t1":1403.3,"speaker":"m1","team":true,"colour":"#516ba6"},{"t0":1404.2,"t1":1419.6,"speaker":"p1","team":false,"colour":"#5b5fa8"},{"t0":1420.3,"t1":1430.3,"speaker":"m1","team":true,"colour":"#5a6ba4"},{"t0":1431.0,"t1":1446.8,"speaker":"p1","team":false,"colour":"#586aa5"},{"t0":1448.1,"t1":1462.5,"speaker":"m1","team":true,"colour":"#4f6ca5"},{"t0":1463.5,"t1":1484.8,"speaker":"p1","team":false,"colour":"#526bb0"},{"t0":1485.8,"t1":1496.2,"speaker":"m1","team":true,"colour":"#242b3c"},{"t0":1497.2,"t1":1591.1,"speaker":"p1","team":false,"colour":"#28303c"},{"t0":1591.7,"t1":1607.4,"speaker":"m1","team":true,"colour":"#242445"},{"t0":1608.4,"t1":1623.1,"speaker":"p1","team":false,"colour":"#242944"},{"t0":1623.6,"t1":1631.6,"speaker":"m1","team":true,"colour":"#1f2f43"},{"t0":1632.3,"t1":1666.0,"speaker":"p1","team":false,"colour":"#162f3d"},{"t0":1667.2,"t1":1677.8,"speaker":"m1","team":true,"colour":"#232345"},{"t0":1678.3,"t1":1705.7,"speaker":"p1","team":false,"colour":"#293348"},{"t0":1706.7,"t1":1718.9,"speaker":"m1","team":true,"colour":"#1f283c"},{"t0":1719.6,"t1":1743.5,"speaker":"p1","team":false,"colour":"#212d38"},{"t0":1744.5,"t1":1752.8,"speaker":"m1","team":true,"colour":"#212b46"},{"t0":1753.2,"t1":1769.3,"speaker":"p1","team":false,"colour":"#203041"},{"t0":1770.0,"t1":1775.7,"speaker":"m1","team":true,"colour":"#1f273a"},{"t0":1776.6,"t1":1825.6,"speaker":"p1","team":false,"colour":"#222243"},{"t0":1826.7,"t1":1834.1,"speaker":"m1","team":true,"colour":"#bdb8a0"},{"t0":1834.7,"t1":1879.0,"speaker":"p1","team":false,"colour":"#bfacb0"},{"t0":1880.2,"t1":1886.4,"speaker":"m1","team":true,"colour":"#bbb3a0"},{"t0":1886.8,"t1":1931.5,"speaker":"p1","team":false,"colour":"#c6b69e"},{"t0":1932.7,"t1":1943.9,"speaker":"m1","team":true,"colour":"#b9b5a3"},{"t0":1944.8,"t1":2028.0,"speaker":"p1","team":false,"colour":"#c6be9d"}],"segments":[{"start":0.0,"end":8.1,"code":"m1","mod":true,"text":"Thanks for joining. Can you see my screen all right?"},{"start":8.5,"end":40.3,"code":"p1","mod":false,"text":"Sure, I can see you fine. I'm in the kitchen, so excuse the noise. I mostly cook on weekday evenings, nothing elaborate, maybe four nights a week."},{"start":41.0,"end":71.2,"code":"p1","mod":false,"text":"Usually I'll have a rough idea on the way home and then panic in the shop. Sure, I can see you fine. I'm in the kitchen, so excuse the noise."},{"start":72.3,"end":80.8,"code":"m1","mod":true,"text":"What do you make of this first screen?"},{"start":81.3,"end":106.4,"code":"p1","mod":false,"text":"Okay, so this is the first screen. It wants me to pick what I like cooking."},{"start":107.0,"end":147.6,"code":"p1","mod":false,"text":"I'd skip this, honestly. I don't know what I like until I see it. The little pictures help. Pasta, curries, traybakes. I'll tap traybakes.","quote":0},{"start":149.0,"end":162.8,"code":"m1","mod":true,"text":"What would you do here if I weren't watching?"},{"start":163.2,"end":196.7,"code":"p1","mod":false,"text":"It's asking how many people. Two, most nights, sometimes three. I didn't expect it to ask about allergies this early, but that's fine, I suppose.","quote":1},{"start":197.4,"end":221.8,"code":"p1","mod":false,"text":"Okay, so this is the first screen. It wants me to pick what I like cooking. I'd skip this, honestly. I don't know what I like until I see it."},{"start":223.3,"end":228.3,"code":"m1","mod":true,"text":"Is there anything you'd expect it to ask that it hasn't?"},{"start":229.7,"end":248.0,"code":"p1","mod":false,"text":"The little pictures help. Pasta, curries, traybakes. I'll tap traybakes.","quote":2},{"start":248.9,"end":264.9,"code":"p1","mod":false,"text":"It's asking how many people. Two, most nights, sometimes three. I didn't expect it to ask about allergies this early, but that's fine, I suppose."},{"start":266.9,"end":282.8,"code":"m1","mod":true,"text":"How would you find something to cook tonight?"},{"start":283.6,"end":305.2,"code":"p1","mod":false,"text":"I'm going to search for something with chicken thighs, because I have some. These photos are lovely. That one looks like a lot of washing up though."},{"start":306.2,"end":312.3,"code":"m1","mod":true,"text":"What are you looking at when you scan these?"},{"start":313.7,"end":338.3,"code":"p1","mod":false,"text":"I want to know how long it takes before I open it. I can't see that here. Oh, it does say thirty-five minutes, it's just very small, under the title.","quote":3},{"start":340.0,"end":348.3,"code":"m1","mod":true,"text":"What would make you pick one over the other?"},{"start":349.2,"end":368.0,"code":"p1","mod":false,"text":"I'd filter by time if I could. I don't see a filter. Maybe it's behind this icon?","quote":4},{"start":369.8,"end":379.6,"code":"m1","mod":true,"text":"How would you find something to cook tonight?"},{"start":380.4,"end":399.1,"code":"p1","mod":false,"text":"I'm going to search for something with chicken thighs, because I have some. These photos are lovely. That one looks like a lot of washing up though."},{"start":400.4,"end":406.6,"code":"m1","mod":true,"text":"What are you looking at when you scan these?"},{"start":407.4,"end":433.8,"code":"p1","mod":false,"text":"I want to know how long it takes before I open it. I can't see that here. Oh, it does say thirty-five minutes, it's just very small, under the title."},{"start":434.3,"end":464.3,"code":"p1","mod":false,"text":"I'd filter by time if I could. I don't see a filter. Maybe it's behind this icon?"},{"start":465.7,"end":473.8,"code":"m1","mod":true,"text":"What would make you pick one over the other?"},{"start":475.1,"end":498.9,"code":"p1","mod":false,"text":"I'm going to search for something with chicken thighs, because I have some. These photos are lovely. That one looks like a lot of washing up though."},{"start":500.1,"end":515.1,"code":"m1","mod":true,"text":"How would you find something to cook tonight?"},{"start":515.7,"end":547.2,"code":"p1","mod":false,"text":"I want to know how long it takes before I open it. I can't see that here. Oh, it does say thirty-five minutes, it's just very small, under the title.","quote":5},{"start":548.2,"end":561.4,"code":"m1","mod":true,"text":"Talk me through this list."},{"start":562.2,"end":604.5,"code":"p1","mod":false,"text":"So these are the ingredients, and it's ticked the ones it thinks I have. It's assumed I have fish sauce. I definitely don't have fish sauce.","quote":6},{"start":606.1,"end":617.2,"code":"m1","mod":true,"text":"What do you think the ticks mean?"},{"start":618.0,"end":657.7,"code":"p1","mod":false,"text":"I like that I can untick them. That's the bit I'd actually use. I'm not sure what the grey ones mean. Optional, maybe?"},{"start":658.0,"end":705.8,"code":"p1","mod":false,"text":"If it swapped the shallots for an onion I'd be happier. I always have onions. So these are the ingredients, and it's ticked the ones it thinks I have."},{"start":706.9,"end":722.0,"code":"m1","mod":true,"text":"What would you change here?"},{"start":723.4,"end":753.1,"code":"p1","mod":false,"text":"It's assumed I have fish sauce. I definitely don't have fish sauce.","quote":7},{"start":754.4,"end":763.2,"code":"m1","mod":true,"text":"Talk me through this list."},{"start":764.7,"end":791.5,"code":"p1","mod":false,"text":"I like that I can untick them. That's the bit I'd actually use. I'm not sure what the grey ones mean. Optional, maybe?","quote":8},{"start":793.1,"end":805.0,"code":"m1","mod":true,"text":"What do you think the ticks mean?"},{"start":805.7,"end":836.1,"code":"p1","mod":false,"text":"If it swapped the shallots for an onion I'd be happier. I always have onions. So these are the ingredients, and it's ticked the ones it thinks I have."},{"start":837.4,"end":842.7,"code":"m1","mod":true,"text":"What happened just then?"},{"start":844.0,"end":872.1,"code":"p1","mod":false,"text":"Right, it's put everything in a basket. Twelve items. That seems like a lot."},{"start":872.8,"end":888.3,"code":"m1","mod":true,"text":"Is that what you expected it to add?"},{"start":889.0,"end":910.5,"code":"p1","mod":false,"text":"It's chosen the big bag of rice. I only need a cupful. I can change the brand, that's good, I'd pick the cheaper one.","quote":9},{"start":910.8,"end":952.3,"code":"p1","mod":false,"text":"The total is at the bottom, I wasn't sure it would show me that before checkout.","quote":10},{"start":954.0,"end":965.1,"code":"m1","mod":true,"text":"How do you feel about the total?"},{"start":966.2,"end":1010.8,"code":"p1","mod":false,"text":"I'd want to add washing-up liquid here. Can I just search for anything?"},{"start":1011.7,"end":1045.9,"code":"p1","mod":false,"text":"Right, it's put everything in a basket. Twelve items. That seems like a lot. It's chosen the big bag of rice. I only need a cupful.","quote":11},{"start":1047.3,"end":1060.9,"code":"m1","mod":true,"text":"You went back. What were you after?"},{"start":1061.7,"end":1089.7,"code":"p1","mod":false,"text":"Let me go back and add a second recipe, for Thursday. Now it remembers I like traybakes, which is nice, it's leading with those."},{"start":1091.7,"end":1097.8,"code":"m1","mod":true,"text":"Did it remember anything about you?"},{"start":1098.2,"end":1142.2,"code":"p1","mod":false,"text":"I'll take the lentil one. It shares the coriander with the chicken, that's clever. Let me go back and add a second recipe, for Thursday."},{"start":1143.1,"end":1182.0,"code":"p1","mod":false,"text":"Now it remembers I like traybakes, which is nice, it's leading with those. I'll take the lentil one. It shares the coriander with the chicken, that's clever."},{"start":1183.2,"end":1197.9,"code":"m1","mod":true,"text":"You went back. What were you after?"},{"start":1199.1,"end":1218.6,"code":"p1","mod":false,"text":"Let me go back and add a second recipe, for Thursday.","quote":12},{"start":1219.7,"end":1232.5,"code":"m1","mod":true,"text":"Did it remember anything about you?"},{"start":1233.2,"end":1258.7,"code":"p1","mod":false,"text":"Now it remembers I like traybakes, which is nice, it's leading with those."},{"start":1259.3,"end":1274.0,"code":"p1","mod":false,"text":"I'll take the lentil one. It shares the coriander with the chicken, that's clever."},{"start":1275.2,"end":1289.5,"code":"m1","mod":true,"text":"What are you looking for on this screen?"},{"start":1290.6,"end":1320.5,"code":"p1","mod":false,"text":"The slots are all tomorrow or later. I wanted tonight, really."},{"start":1321.4,"end":1335.8,"code":"m1","mod":true,"text":"What would you do if none of these worked?"},{"start":1336.8,"end":1366.1,"code":"p1","mod":false,"text":"Six till seven is fine. The cheap ones are all in the morning when I'm at work. I don't understand why this one is greyed out. It doesn't say.","quote":13},{"start":1366.8,"end":1371.9,"code":"m1","mod":true,"text":"What are you looking for on this screen?"},{"start":1372.5,"end":1394.6,"code":"p1","mod":false,"text":"Oh, it's full. It would be nice if it just said full.","quote":14},{"start":1395.8,"end":1403.3,"code":"m1","mod":true,"text":"What would you do if none of these worked?"},{"start":1404.2,"end":1419.4,"code":"p1","mod":false,"text":"The slots are all tomorrow or later. I wanted tonight, really."},{"start":1420.3,"end":1430.3,"code":"m1","mod":true,"text":"What are you looking for on this screen?"},{"start":1431.0,"end":1446.4,"code":"p1","mod":false,"text":"Six till seven is fine. The cheap ones are all in the morning when I'm at work.","quote":15},{"start":1448.1,"end":1462.5,"code":"m1","mod":true,"text":"What would you do if none of these worked?"},{"start":1463.5,"end":1484.6,"code":"p1","mod":false,"text":"I don't understand why this one is greyed out. It doesn't say. Oh, it's full. It would be nice if it just said full."},{"start":1485.8,"end":1496.2,"code":"m1","mod":true,"text":"What are you checking before you pay?"},{"start":1497.2,"end":1542.9,"code":"p1","mod":false,"text":"This is the bit where I'd normally give up and go to the shop. It's filled in my address, which is good. Card details I'd have to type.","quote":16},{"start":1543.8,"end":1590.6,"code":"p1","mod":false,"text":"There's a box for substitutions. Yes, substitutions are fine, but not for the chicken. I'd want to see the recipe again here, so I know I've got everything."},{"start":1591.7,"end":1607.4,"code":"m1","mod":true,"text":"Anything here that makes you hesitate?"},{"start":1608.4,"end":1622.8,"code":"p1","mod":false,"text":"Pay now. Okay. That was quicker than I thought it would be, actually. This is the bit where I'd normally give up and go to the shop."},{"start":1623.6,"end":1631.6,"code":"m1","mod":true,"text":"How did that compare with what you do now?"},{"start":1632.3,"end":1665.6,"code":"p1","mod":false,"text":"It's filled in my address, which is good. Card details I'd have to type.","quote":17},{"start":1667.2,"end":1677.8,"code":"m1","mod":true,"text":"What are you checking before you pay?"},{"start":1678.3,"end":1705.2,"code":"p1","mod":false,"text":"There's a box for substitutions. Yes, substitutions are fine, but not for the chicken."},{"start":1706.7,"end":1718.9,"code":"m1","mod":true,"text":"Anything here that makes you hesitate?"},{"start":1719.6,"end":1742.9,"code":"p1","mod":false,"text":"I'd want to see the recipe again here, so I know I've got everything."},{"start":1744.5,"end":1752.8,"code":"m1","mod":true,"text":"How did that compare with what you do now?"},{"start":1753.2,"end":1769.3,"code":"p1","mod":false,"text":"Pay now. Okay. That was quicker than I thought it would be, actually."},{"start":1770.0,"end":1775.7,"code":"m1","mod":true,"text":"What are you checking before you pay?"},{"start":1776.6,"end":1800.2,"code":"p1","mod":false,"text":"This is the bit where I'd normally give up and go to the shop.","quote":18},{"start":1800.8,"end":1825.5,"code":"p1","mod":false,"text":"It's filled in my address, which is good. Card details I'd have to type."},{"start":1826.7,"end":1834.1,"code":"m1","mod":true,"text":"Where would you go to find this order again?"},{"start":1834.7,"end":1849.6,"code":"p1","mod":false,"text":"So I can see the order, and it's linked to the two recipes. That's handy.","quote":19},{"start":1850.0,"end":1878.4,"code":"p1","mod":false,"text":"I'd use this to repeat a week I liked, probably. Same five dinners."},{"start":1880.2,"end":1886.4,"code":"m1","mod":true,"text":"Anything you'd want to say before we finish?"},{"start":1886.8,"end":1930.9,"code":"p1","mod":false,"text":"Honestly, I'd try it for a month. The basket bit is the part that would win me over. So I can see the order, and it's linked to the two recipes. That's handy."},{"start":1932.7,"end":1943.9,"code":"m1","mod":true,"text":"Where would you go to find this order again?"},{"start":1944.8,"end":1984.3,"code":"p1","mod":false,"text":"I'd use this to repeat a week I liked, probably. Same five dinners. Honestly, I'd try it for a month. The basket bit is the part that would win me over."},{"start":1985.0,"end":2027.8,"code":"p1","mod":false,"text":"So I can see the order, and it's linked to the two recipes. That's handy.","quote":20}],"quotes":[{"t0":107.0,"t1":147.6,"sentiment":"doubt","intensity":2,"theme":"Delivery when it suits","section":"Getting started"},{"t0":163.2,"t1":196.7,"sentiment":"surprise","intensity":1,"theme":"Pantry assumptions","section":"Getting started"},{"t0":229.7,"t1":248.0,"sentiment":"doubt","intensity":1,"theme":"Delivery when it suits","section":"Getting started"},{"t0":313.7,"t1":338.3,"sentiment":"confidence","intensity":2,"theme":"Time is the first filter","section":"Finding a recipe"},{"t0":349.2,"t1":368.0,"sentiment":"confidence","intensity":2,"theme":"Time is the first filter","section":"Finding a recipe"},{"t0":515.7,"t1":547.2,"sentiment":"confusion","intensity":2,"theme":"Pantry assumptions","section":"Finding a recipe"},{"t0":562.2,"t1":604.5,"sentiment":"confusion","intensity":1,"theme":"Pantry assumptions","section":"Ingredient list"},{"t0":723.4,"t1":753.1,"sentiment":"delight","intensity":3,"theme":"Time is the first filter","section":"Ingredient list"},{"t0":764.7,"t1":791.5,"sentiment":"satisfaction","intensity":1,"theme":"Trust in the basket","section":"Ingredient list"},{"t0":889.0,"t1":910.5,"sentiment":"confidence","intensity":3,"theme":"Pantry assumptions","section":"Basket"},{"t0":910.8,"t1":952.3,"sentiment":"confusion","intensity":1,"theme":"Trust in the basket","section":"Basket"},{"t0":1011.7,"t1":1045.9,"sentiment":"surprise","intensity":1,"theme":"Checkout friction","section":"Basket"},{"t0":1199.1,"t1":1218.6,"sentiment":"delight","intensity":2,"theme":"Delivery when it suits","section":"Finding a recipe"},{"t0":1336.8,"t1":1366.1,"sentiment":"surprise","intensity":1,"theme":"Delivery when it suits","section":"Delivery slots"},{"t0":1372.5,"t1":1394.6,"sentiment":"confusion","intensity":1,"theme":"Pantry assumptions","section":"Delivery slots"},{"t0":1431.0,"t1":1446.4,"sentiment":"surprise","intensity":1,"theme":"Checkout friction","section":"Delivery slots"},{"t0":1497.2,"t1":1542.9,"sentiment":"frustration","intensity":2,"theme":"Delivery when it suits","section":"Checkout"},{"t0":1632.3,"t1":1665.6,"sentiment":"delight","intensity":1,"theme":"Pantry assumptions","section":"Checkout"},{"t0":1776.6,"t1":1800.2,"sentiment":"surprise","intensity":2,"theme":"Pantry assumptions","section":"Checkout"},{"t0":1834.7,"t1":1849.6,"sentiment":"satisfaction","intensity":3,"theme":"Delivery when it suits","section":"Order history"},{"t0":1985.0,"t1":2027.8,"sentiment":"confusion","intensity":2,"theme":"Trust in the basket","section":"Order history"}],"sections":[{"t0":107.0,"label":"Getting started","seg":5},{"t0":313.7,"label":"Finding a recipe","seg":15},{"t0":562.2,"label":"Ingredient list","seg":28},{"t0":889.0,"label":"Basket","seg":41},{"t0":1199.1,"label":"Finding a recipe","seg":52},{"t0":1336.8,"label":"Delivery slots","seg":59},{"t0":1497.2,"label":"Checkout","seg":69},{"t0":1834.7,"label":"Order history","seg":85}],"names":{"m1":"Sam","p1":"Rosa"}};
+
+// ── Shipped constants (utils/tapestryScale.ts, utils/tapestryTuning.ts DEFAULTS) ──
+const GUTTER = 82, RIGHT = 14, CLIP_THRESHOLD = 2.5;
+const P = { flagX: 3, flagH: 18, clipX: 4, clipH: 16, themeX: 4, themeH: 18, themeGap: 4, barW: 6 };
+const POSITIVE = new Set(["satisfaction", "delight", "confidence"]);
+const LANE = { sections: "Sections", moderator: "Moderator", participant: "Participant", sentiment: "Sentiment", themes: "Themes" };
+const SCROLL_PAD = 8 + 8 + 14; // .bn-tapestry-scroll padding: sm top, sm + 14 bottom
+
+const tc = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+let ctx;
+const mw = new Map();
+function measure(text, font) {
+  const k = font + "\0" + text;
+  if (mw.has(k)) return mw.get(k);
+  ctx = ctx || document.createElement("canvas").getContext("2d");
+  ctx.font = font;
+  const w = ctx.measureText(text).width;
+  mw.set(k, w);
+  return w;
+}
+function fit(text, avail, font) {
+  if (avail < 10) return "";
+  if (measure(text, font) <= avail) return text;
+  let t = text;
+  while (t.length > 1 && measure(t + "…", font) > avail) t = t.slice(0, -1);
+  return t.length > 1 ? t + "…" : "";
+}
+function fonts() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (n, f) => cs.getPropertyValue(n).trim() || f;
+  const size = (step) => { const raw = v(`--bn-text-${step}`, ""); const n = raw.endsWith("rem") ? parseFloat(raw) * 16 : parseFloat(raw); return Number.isFinite(n) ? n : 12; };
+  const body = v("--bn-font-body", "system-ui, sans-serif"), em = v("--bn-weight-emphasis", "490"), nm = v("--bn-weight-normal", "420");
+  const px = { flag: size("label"), tag: size("label"), clip: size("badge"), lane: size("caption") };
+  return { px, flag: `${em} ${px.flag}px ${body}`, tag: `${nm} ${px.tag}px ${body}`, clip: `${em} ${px.clip}px ${body}`, lane: `${em} ${px.lane}px ${body}` };
+}
+const centre = (fpx) => fpx * 0.35;
+function relLum(hex) { const n = parseInt(hex.slice(1), 16); const lin = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255); }
+function inkOn(hex) { const l = relLum(hex); return 1.05 / (l + 0.05) >= (l + 0.05) / (relLum("#1a1a1a") + 0.05) ? "#fff" : "#1a1a1a"; }
+
+function geom(L) {
+  const MT = { y: P.flagH + 12, h: P.clipH };
+  const PT = { y: P.flagH + 12 + P.clipH + 3, h: P.clipH + 2 };
+  const SE = { mid: PT.y + PT.h + 41, amp: 30 };
+  const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
+  const bottom = L === 2 ? PT.y + PT.h + 1 : L === 3 ? SE.mid + SE.amp : TG.y + TG.row * TG.rows;
+  const H = L === 2 ? PT.y + PT.h + 16 : L === 3 ? SE.mid + SE.amp + 16 : TG.y + TG.row * TG.rows + 14;
+  return { MT, PT, SE, TG, H, bottom };
+}
+const sectionAt = (sec) => { let i = -1; D.sections.forEach((f, k) => { if (f.t0 <= sec) i = k; }); return i; };
+
+/** A port of SessionTapestry's render; returns { svg, layout }. st: { L, width, win, current, hover, hot, player } */
+function drawTimeline(st) {
+  const F = fonts();
+  const s = D;
+  const L = st.L, g = geom(L);
+  const { MT, PT, SE, TG, H } = g;
+  const sPerPx = s.duration / Math.max(1, st.width - GUTTER - RIGHT);
+  const x = (sec) => GUTTER + sec / sPerPx;
+  const xEnd = x(s.duration), W = Math.ceil(xEnd + RIGHT);
+  const clips = sPerPx <= CLIP_THRESHOLD;
+  const lane = (label) => fit(label, GUTTER - 18, F.lane) || label.slice(0, 1);
+  const o = [];
+  o.push(`<svg class="bn-tapestry-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="Session timeline">`);
+  o.push(`<defs><filter id="lift-${st.id}" x="-10%" y="-30%" width="120%" height="170%"><feDropShadow dx="0" dy="0.6" stdDeviation="0.9" flood-color="#000" flood-opacity="0.16"/></filter>`
+    + `<linearGradient id="fade-${st.id}" x1="0" x2="1" y1="0" y2="0"><stop offset="0.8" style="stop-color:var(--bn-colour-badge-bg);stop-opacity:1"/><stop offset="1" style="stop-color:var(--bn-colour-badge-bg);stop-opacity:0"/></linearGradient></defs>`);
+  o.push(`<text class="bn-tp-lane" x="12" y="${2.5 + P.flagH / 2 + centre(F.px.lane)}">${lane(LANE.sections)}</text>`);
+  o.push(`<text class="bn-tp-lane" x="12" y="${MT.y + MT.h / 2 + centre(F.px.lane)}">${lane(LANE.moderator)}</text>`);
+  o.push(`<text class="bn-tp-lane" x="12" y="${PT.y + PT.h / 2 + centre(F.px.lane)}">${lane(LANE.participant)}</text>`);
+  if (L >= 3) o.push(`<text class="bn-tp-lane" x="12" y="${SE.mid + centre(F.px.lane)}">${lane(LANE.sentiment)}</text>`);
+  if (L >= 5) o.push(`<text class="bn-tp-lane" x="12" y="${TG.y + P.themeH / 2 + centre(F.px.lane)}">${lane(LANE.themes)}</text>`);
+
+  o.push(`<rect class="bn-tp-track" x="${GUTTER}" y="${MT.y - 1}" width="${Math.max(0, xEnd - GUTTER)}" height="${PT.y + PT.h - MT.y + 2}" rx="4"/>`);
+  const clipGeom = (tn) => {
+    const tr = tn.team ? MT : PT, x0 = x(tn.t0), w = x(tn.t1) - x0;
+    if (!clips) return { x: x0, y: tr.y, w: Math.max(0.5, w), h: tr.h, rx: 0 };
+    if (w < 1) return null;
+    return { x: x0 + 0.5, y: tr.y, w: Math.max(1, w - 1), h: tr.h, rx: Math.min(3, w / 2) };
+  };
+  for (const tn of s.turns) {
+    const c = clipGeom(tn); if (!c) continue;
+    o.push(`<rect class="bn-tp-clip ${tn.team ? "bn-tp-clip-team" : "bn-tp-clip-ppt"}" style="fill:${tn.colour}" x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}"${c.rx ? ` rx="${c.rx}"` : ""}${clips ? ' data-video=""' : ""}/>`);
+  }
+  if (clips) for (const tn of s.turns) {
+    const c = clipGeom(tn); if (!c) continue;
+    const w = c.w + 1, name = s.names[tn.speaker] || tn.speaker;
+    const label = fit(name, w - 2 * P.clipX, F.clip) || (w > 22 ? tn.speaker : "");
+    if (label) o.push(`<text class="bn-tp-clip-label ${tn.team ? "on-team" : "on-ppt"}" style="fill:${inkOn(tn.colour)}" x="${x(tn.t0) + P.clipX}" y="${c.y + c.h / 2 + centre(F.px.clip)}">${esc(label)}</text>`);
+  }
+
+  // Flags: the raised one (hover's section, else the current one) and the hot one draw last.
+  const raised = st.hover != null ? sectionAt(st.hover) : st.current;
+  const top = st.hot >= 0 ? st.hot : raised;
+  const order = s.sections.map((_, i) => i).filter((i) => i !== top);
+  if (top >= 0) order.push(top);
+  const flags = [];
+  for (const i of order) {
+    const f = s.sections[i], isHot = i === st.hot, isRaised = i === raised || isHot;
+    const fx = x(f.t0), next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
+    const text = isRaised ? f.label : fit(f.label, next - fx - 20, F.flag);
+    const pw = (text ? measure(text, F.flag) : 0) + 2 * P.flagX + 6, half = P.flagH / 2;
+    flags.push({ i, x0: fx, x1: fx + 1.5 + pw });
+    o.push(`<g class="bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}"><title>${esc(f.label)} · ${tc(f.t0)}</title>`
+      + `<line x1="${fx + 0.5}" x2="${fx + 0.5}" y1="2" y2="${MT.y - 2}"/>`
+      + `<path d="M${fx + 1.5},2.5 h${pw} l-5,${half} l5,${half} h-${pw} z"${isRaised ? ` filter="url(#lift-${st.id})"` : ""}/>`
+      + (text ? `<text x="${fx + 1 + P.flagX}" y="${2.5 + half + centre(F.px.flag)}">${esc(text)}</text>` : "") + `</g>`);
+  }
+
+  if (L >= 3) {
+    o.push(`<line class="bn-tp-axis" x1="${GUTTER}" x2="${xEnd}" y1="${SE.mid}" y2="${SE.mid}"/>`);
+    s.quotes.forEach((q) => {
+      const cx = x(q.t0), h = (0.35 + (0.65 * (Math.min(3, Math.max(1, q.intensity)) - 1)) / 2) * SE.amp;
+      if (q.sentiment === "surprise") o.push(`<circle class="bn-tp-bar" cx="${cx}" cy="${SE.mid}" r="3.2" style="fill:var(--bn-sentiment-surprise)"/>`);
+      else { const up = POSITIVE.has(q.sentiment); o.push(`<rect class="bn-tp-bar" style="fill:var(--bn-sentiment-${q.sentiment})" x="${cx - P.barW / 2}" width="${P.barW}" rx="1" height="${h}" y="${up ? SE.mid - h : SE.mid}"/>`); }
+    });
+  }
+  if (L >= 5) {
+    const by = new Map();
+    for (const q of s.quotes) { const sp = by.get(q.theme) || { t0: q.t0, t1: q.t0 }; sp.t0 = Math.min(sp.t0, q.t0); sp.t1 = Math.max(sp.t1, q.t0); by.set(q.theme, sp); }
+    const ends = Array(TG.rows).fill(-1e9);
+    for (const [theme, sp] of [...by.entries()].sort((a, b) => a[1].t0 - b[1].t0)) {
+      const x0 = x(sp.t0), x1 = Math.max(x(sp.t1), x0 + 6), row = ends.indexOf(Math.min(...ends));
+      const lx = Math.max(x0, ends[row] + 4), y = TG.y + row * TG.row;
+      const text = fit(theme, W - RIGHT - lx - 2 * P.themeX, F.tag), tw = text ? measure(text, F.tag) : 0;
+      ends[row] = Math.max(x1, lx + tw + 2 * P.themeX);
+      o.push(`<g class="bn-tp-theme"><rect class="bn-tp-span" x="${x0}" y="${y + P.themeH / 2 - 2}" width="${x1 - x0}" height="4" rx="2"/>`
+        + (text ? `<rect class="bn-tp-tag" x="${lx}" y="${y}" width="${tw + 2 * P.themeX}" height="${P.themeH}" rx="3" style="fill:url(#fade-${st.id})"/><text class="bn-tp-tag-text" x="${lx + P.themeX}" y="${y + P.themeH / 2 + centre(F.px.tag)}">${esc(text)}</text>` : "") + `</g>`);
+    }
+  }
+
+  // PROPOSED: the reading window, over the lanes, under the flags' labels.
+  let win = null;
+  if (st.win) {
+    const a = x(st.win[0]), b = Math.max(a + 4, x(st.win[1]));
+    win = { x0: a, x1: b, y0: MT.y - 4, y1: g.bottom + 3 };
+    o.push(`<rect class="bn-tp-window" x="${a}" y="${win.y0}" width="${b - a}" height="${win.y1 - win.y0}" rx="3"/>`);
+  }
+  if (st.hover != null) o.push(`<line class="bn-tp-playhead" x1="${x(st.hover)}" x2="${x(st.hover)}" y1="${MT.y - 1}" y2="${L >= 3 ? SE.mid + SE.amp : PT.y + PT.h + 1}"/>`);
+  if (st.player != null) {
+    const px = x(st.player);
+    o.push(`<g class="bn-tp-player"><path d="M${px - 4},${MT.y - 9} h8 l-4,5 z"/><line x1="${px}" x2="${px}" y1="${MT.y - 5}" y2="${g.bottom + 3}"/></g>`);
+  }
+
+  const tickStep = [60, 120, 300, 600, 900, 1800].find((t) => t / sPerPx >= 64) || 3600;
+  const near = st.hover == null ? null : Math.round(st.hover / tickStep) * tickStep;
+  for (let tk = 0; tk <= s.duration; tk += tickStep) o.push(`<text class="bn-tp-tick${near === tk ? " near" : ""}" x="${x(tk)}" y="${H - 2}" text-anchor="${tk === 0 ? "start" : "middle"}">${tc(tk)}</text>`);
+  o.push(`</svg>`);
+  return { svg: o.join(""), layout: { x, sPerPx, g, flags, win, xEnd } };
+}
+
+// ── Transcript body ──
+const TQ = '<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 5H3"/><path d="M21 12H8"/><path d="M21 19H8"/><path d="M3 12v7"/></svg>';
+function buildBody(host) {
+  let lastLabel = "", lastSent = "";
+  host.innerHTML = D.segments.map((seg, i) => {
+    const id = "t-" + Math.floor(seg.start);
+    const q = seg.quote != null ? D.quotes[seg.quote] : null;
+    const cls = ["transcript-segment", seg.mod ? "segment-moderator" : "", q ? "segment-quoted" : ""].filter(Boolean).join(" ");
+    let side = "";
+    if (q) {
+      const showLabel = q.section !== lastLabel; lastLabel = q.section;
+      const showSent = q.sentiment !== lastSent; lastSent = q.sentiment;
+      side = `<div class="segment-side"><div class="bn-gutter-entry"><span class="bn-gutter-mark">${TQ}</span><div class="bn-gutter-content">`
+        + (showLabel ? `<span class="bn-gutter-title">${esc(q.section)}</span>` : "")
+        + (showSent ? `<div class="margin-tags"><span class="badge badge-ai badge-${q.sentiment}">${q.sentiment}</span></div>` : "")
+        + `</div></div></div>`;
+    }
+    const text = q ? `<span data-q="q${seg.quote}">${esc(seg.text)}</span>` : esc(seg.text);
+    return `<div class="${cls}" id="${id}" data-i="${i}" data-start-seconds="${seg.start}" data-end-seconds="${seg.end}"${q ? " data-has-quote" : ""}>`
+      + `<span class="segment-timecode-cell"><a class="timecode" href="#${id}" data-seek="${seg.start}"><span class="timecode-bracket">[</span>${tc(seg.start)}<span class="timecode-bracket">]</span></a></span>`
+      + `<span class="segment-speaker"><span class="badge">${seg.code}</span></span>`
+      + `<div class="segment-body bn-sentence-start" lang="en">${text}</div>${side}</div>`;
+  }).join("");
+}
+
+// ── Live frame ──
+const S = { fat: false, asked: 3, L: 3, win: null, current: 0, hover: null, hot: -1, player: null, lockUntil: 0, id: "live" };
+const vp = document.getElementById("live-vp"), header = document.getElementById("live-header"),
+  chain = document.getElementById("live-chain"), tl = document.getElementById("live-tl"),
+  body = document.getElementById("live-body"), toggle = document.getElementById("live-toggle"),
+  readout = document.getElementById("m-readout");
+let layout = null, segEls = [];
+
+function renderChain() {
+  chain.innerHTML = D.sections.map((f, i) => (i ? '<span class="bn-journey-sep" aria-hidden="true"> → </span>' : "")
+    + `<button type="button" class="bn-journey-label bn-journey-label--interactive${i === S.current ? " bn-journey-label--active" : ""}" data-i="${i}"${i === S.current ? ' aria-current="step"' : ""}>${esc(f.label)}</button>`)
+    .map((h) => `<span>${h}</span>`).join("");
+  fades();
+}
+function fades() {
+  const l = chain.scrollLeft > 1, r = chain.scrollLeft + chain.clientWidth < chain.scrollWidth - 1;
+  chain.classList.toggle("bn-journey--fade-both", l && r);
+  chain.classList.toggle("bn-journey--fade-left", l && !r);
+  chain.classList.toggle("bn-journey--fade-right", !l && r);
+}
+function setChainActive() {
+  chain.querySelectorAll(".bn-journey-label").forEach((b, i) => {
+    b.classList.toggle("bn-journey-label--active", i === S.current);
+    if (i === S.current) { b.setAttribute("aria-current", "step"); chain.scrollTo({ left: b.offsetLeft - chain.clientWidth / 2 + b.offsetWidth / 2, behavior: "smooth" }); }
+    else b.removeAttribute("aria-current");
+  });
+}
+function tlWidth() { return Math.max(320, tl.clientWidth || header.clientWidth - 16); }
+function renderTimeline() {
+  if (!S.fat) return;
+  const r = drawTimeline({ ...S, width: tlWidth() });
+  tl.innerHTML = r.svg;
+  layout = r.layout;
+}
+
+function rowHeight() {
+  // The first line of the header: the tallest of selector, names and toggle, plus the header's padding.
+  const kids = [header.querySelector(".bn-selector"), header.querySelector(".bn-transcript-journey-header__people"), toggle];
+  const h = Math.max(...kids.map((k) => k.getBoundingClientRect().height));
+  const cs = getComputedStyle(header);
+  return h + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+}
+const fatHeight = (L) => rowHeight() + geom(L).H + SCROLL_PAD;
+function chooseLanes(vh) {
+  // Shed detail before structure: the asked-for lanes, then 3, then 2; never below 2.
+  for (const L of [5, 3, 2].filter((n) => n <= S.asked)) if (fatHeight(L) <= vh / 3) return L;
+  return 2;
+}
+
+function readingWindow() {
+  const hb = header.getBoundingClientRect().bottom, vb = vp.getBoundingClientRect().bottom;
+  let a = null, b = null;
+  for (const el of segEls) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom <= hb) continue;
+    if (r.top >= vb) break;
+    const seg = D.segments[+el.dataset.i], span = seg.end - seg.start;
+    if (a === null) a = seg.start + span * Math.min(1, Math.max(0, (hb - r.top) / r.height));
+    b = seg.start + span * Math.min(1, Math.max(0, (vb - r.top) / r.height));
+  }
+  return a === null ? null : [a, b];
+}
+function locateSection() {
+  const threshold = header.getBoundingClientRect().bottom + 8;
+  let cur = 0;
+  for (let i = 0; i < D.sections.length; i++) {
+    const el = segEls[D.sections[i].seg];
+    if (el.getBoundingClientRect().top <= threshold) cur = i; else break;
+  }
+  return cur;
+}
+let raf = 0;
+function onScroll() {
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(() => {
+    S.win = readingWindow();
+    if (performance.now() > S.lockUntil) {
+      const c = locateSection();
+      if (c !== S.current) { S.current = c; setChainActive(); }
+    }
+    renderTimeline();
+  });
+}
+
+function headerVar() { vp.style.setProperty("--bn-journey-header-height", header.offsetHeight + "px"); }
+function scrollToEl(el, smooth = true) {
+  const top = vp.scrollTop + el.getBoundingClientRect().top - vp.getBoundingClientRect().top - header.offsetHeight;
+  vp.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+}
+function flash(el) { el.classList.remove("anchor-highlight"); void el.offsetWidth; el.classList.add("anchor-highlight"); }
+function resolveSegment(sec) {
+  let after = null;
+  for (let i = 0; i < D.segments.length; i++) { const s = D.segments[i]; if (s.start <= sec && sec < s.end) return i; if (s.start >= sec && after === null) after = i; }
+  return after ?? D.segments.length - 1;
+}
+function say(what, i) {
+  const seg = D.segments[i];
+  readout.textContent = `${what}\n→ scroll to the paragraph at ${tc(seg.start)} (stays on this page)\n→ history.replaceState: /report/sessions/s3#t-${Math.floor(seg.start)}`;
+}
+function jumpToSection(i) {
+  S.current = i; S.lockUntil = performance.now() + 600; setChainActive();
+  const el = segEls[D.sections[i].seg];
+  scrollToEl(el); say(`Section flag "${D.sections[i].label}" (the chain's handleIndexClick)`, D.sections[i].seg);
+  renderTimeline();
+}
+function jumpToSec(sec, what) {
+  const i = resolveSegment(sec), el = segEls[i];
+  scrollToEl(el); flash(el); say(`${what} at ${tc(sec)}, by resolveSegmentForSeconds`, i);
+}
+
+function setMode(fat) {
+  // Keep the paragraph under the header where it is, relative to the header.
+  const hb0 = header.getBoundingClientRect().bottom;
+  const anchor = segEls.find((el) => el.getBoundingClientRect().bottom > hb0) || segEls[0];
+  const off0 = anchor.getBoundingClientRect().top - hb0;
+  S.fat = fat;
+  toggle.setAttribute("aria-pressed", String(fat));
+  header.classList.toggle("bn-transcript-journey-header--timeline", fat);
+  if (fat) { S.L = chooseLanes(vp.clientHeight); S.win = readingWindow(); renderTimeline(); }
+  const off1 = anchor.getBoundingClientRect().top - header.getBoundingClientRect().bottom;
+  vp.scrollTop += off1 - off0;
+  headerVar();
+  onScroll();
+  meters();
+}
+
+// Timeline pointer handling, by geometry (the SVG is re-drawn every frame).
+let drag = null;
+function zoneAt(e) {
+  if (!layout) return null;
+  const svg = tl.querySelector("svg"); if (!svg) return null;
+  const r = svg.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, g = layout.g;
+  const sec = Math.max(0, Math.min(D.duration, (px - GUTTER) * layout.sPerPx));
+  if (px < GUTTER || px > layout.xEnd) return { kind: "none", sec };
+  if (py >= 2 && py <= 2.5 + P.flagH) {
+    for (let k = layout.flags.length - 1; k >= 0; k--) { const f = layout.flags[k]; if (px >= f.x0 && px <= f.x1) return { kind: "flag", i: f.i, sec }; }
+  }
+  const w = layout.win;
+  if (w && px >= w.x0 && px <= w.x1 && py >= w.y0 && py <= w.y1) return { kind: "window", sec, px };
+  if (py >= g.MT.y - 1 && py <= g.PT.y + g.PT.h + 1) return { kind: "lane", sec };
+  if (S.L >= 3 && Math.abs(py - g.SE.mid) <= g.SE.amp) {
+    let best = -1, d = 7;
+    D.quotes.forEach((q, i) => { const dd = Math.abs(layout.x(q.t0) - px); if (dd < d) { d = dd; best = i; } });
+    if (best >= 0) return { kind: "bar", q: best, sec };
+  }
+  return { kind: "none", sec };
+}
+tl.addEventListener("pointermove", (e) => {
+  if (drag) {
+    const svg = tl.querySelector("svg").getBoundingClientRect();
+    const sec = Math.max(0, (e.clientX - svg.left - GUTTER - drag.grab) * layout.sPerPx);
+    if (Math.abs(e.clientX - drag.x) > 3) drag.moved = true;
+    if (drag.moved) { const i = resolveSegment(sec); scrollToEl(segEls[i], false); }
+    return;
+  }
+  const z = zoneAt(e);
+  const hot = z && z.kind === "flag" ? z.i : -1;
+  const hover = z && z.kind === "lane" ? z.sec : null;
+  tl.style.cursor = !z || z.kind === "none" ? "" : z.kind === "window" ? "grab" : "pointer";
+  if (hot !== S.hot || hover !== S.hover) { S.hot = hot; S.hover = hover; renderTimeline(); }
+});
+tl.addEventListener("pointerleave", () => { if (!drag) { S.hot = -1; S.hover = null; renderTimeline(); } });
+tl.addEventListener("pointerdown", (e) => {
+  const z = zoneAt(e); if (!z) return;
+  if (z.kind === "window") { drag = { grab: z.px - layout.win.x0, x: e.clientX, moved: false, z }; tl.setPointerCapture(e.pointerId); tl.style.cursor = "grabbing"; return; }
+  drag = null; tl._down = z;
+});
+tl.addEventListener("pointerup", (e) => {
+  if (drag) {
+    const d = drag; drag = null; tl.style.cursor = "grab";
+    if (d.moved) { readout.textContent = "Dragged the reading window: the page scrolled with it (as the minimap's viewport does)."; return; }
+    jumpToSec(d.z.sec, "Click inside the reading window"); return;
+  }
+  const z = zoneAt(e); const d = tl._down; tl._down = null;
+  if (!z || !d || z.kind !== d.kind) return;
+  if (z.kind === "flag") jumpToSection(z.i);
+  else if (z.kind === "lane") jumpToSec(z.sec, "Speaker lane");
+  else if (z.kind === "bar") { const q = D.quotes[z.q]; jumpToSec(q.t0, `Sentiment bar (${q.sentiment}), straight to its quote, no popover,`); }
+});
+
+chain.addEventListener("click", (e) => { const b = e.target.closest(".bn-journey-label"); if (b) jumpToSection(+b.dataset.i); });
+chain.addEventListener("scroll", fades, { passive: true });
+toggle.addEventListener("click", () => setMode(!S.fat));
+vp.addEventListener("scroll", onScroll, { passive: true });
+
+// The simulated player: a timecode click (as in the app) or the Play control. PlayerContext's
+// glow + "centre the playing paragraph" behaviour, reproduced.
+let timer = 0, playing = -1;
+function stopPlayer() { clearInterval(timer); timer = 0; S.player = null; if (playing >= 0) segEls[playing].classList.remove("bn-timecode-glow", "bn-timecode-playing"); playing = -1; document.getElementById("m-play").textContent = "Play from the reading position"; renderTimeline(); }
+function startPlayer(sec) {
+  stopPlayer(); S.player = sec;
+  document.getElementById("m-play").textContent = "Stop";
+  timer = setInterval(() => {
+    S.player += 0.5;
+    if (S.player >= D.duration) return stopPlayer();
+    const i = resolveSegment(S.player), seg = D.segments[i];
+    if (i !== playing) {
+      if (playing >= 0) segEls[playing].classList.remove("bn-timecode-glow", "bn-timecode-playing");
+      playing = i; segEls[i].classList.add("bn-timecode-glow", "bn-timecode-playing");
+      const el = segEls[i], r = el.getBoundingClientRect(), v = vp.getBoundingClientRect();
+      vp.scrollTo({ top: vp.scrollTop + r.top - v.top - (v.height - r.height) / 2, behavior: "smooth" });
+    }
+    segEls[i].style.setProperty("--bn-segment-progress", String(Math.min(1, Math.max(0, (S.player - seg.start) / (seg.end - seg.start)))));
+    renderTimeline();
+  }, 50);
+}
+body.addEventListener("click", (e) => { const a = e.target.closest("a[data-seek]"); if (a) { e.preventDefault(); startPlayer(+a.dataset.seek); } });
+document.getElementById("m-play").addEventListener("click", () => { if (timer) stopPlayer(); else startPlayer(S.win ? S.win[0] : 0); });
+
+// ── Static frames: the height ladder ──
+function ladder() {
+  const host = document.getElementById("ladder");
+  const win = S.win || [700, 790];
+  const cur = S.win ? S.current : 2;
+  const rows = [["Skinny: the chain (today)", 0], ["Fat, 2 lanes: what a short window gets", 2], ["Fat, 3 lanes: the proposed default", 3], ["Fat, 5 lanes: the Sessions grid's full slice (for reference, not proposed)", 5]];
+  host.innerHTML = rows.map(([title, L], k) => `<div class="m-frame m-static"><div class="m-chrome"><span class="m-dots"><i></i><i></i><i></i></span>${title}${L === 5 ? '<span class="m-new">not proposed</span>' : ""}</div><div class="center"><div class="transcript-body" hidden></div>`
+    + `<div class="bn-transcript-journey-header${L ? " bn-transcript-journey-header--timeline" : ""}" data-ladder="${L}">`
+    + header.querySelector(".bn-selector").outerHTML + header.querySelector(".bn-transcript-journey-header__people").outerHTML
+    + `<div class="bn-session-journey bn-session-journey--overflow bn-journey--fade-right">${D.sections.map((f, i) => `<span>${i ? '<span class="bn-journey-sep" aria-hidden="true"> → </span>' : ""}<button type="button" class="bn-journey-label bn-journey-label--interactive${i === cur ? " bn-journey-label--active" : ""}">${esc(f.label)}</button></span>`).join("")}</div>`
+    + toggle.outerHTML.replace(/id="live-toggle"/, "").replace(/aria-pressed="(true|false)"/, `aria-pressed="${L ? "true" : "false"}"`)
+    + `<div class="bn-transcript-timeline"><div class="bn-tp-wrap"><div class="bn-tapestry-scroll" data-tl="${k}"></div></div></div></div></div></div>`).join("");
+  host.querySelectorAll("[data-tl]").forEach((el) => {
+    const L = rows[+el.dataset.tl][1]; if (!L) return;
+    el.innerHTML = drawTimeline({ id: "lad" + L, L, width: el.clientWidth || 960, win, current: cur, hover: null, hot: -1, player: null }).svg;
+  });
+}
+function meters() {
+  const vh = +document.getElementById("m-height").value;
+  const hs = [...document.querySelectorAll("[data-ladder]")].map((el) => [+el.dataset.ladder, el.getBoundingClientRect().height]);
+  const name = { 0: "Chain", 2: "2 lanes", 3: "3 lanes", 5: "5 lanes" };
+  document.getElementById("m-meters").innerHTML = `<div class="m-meter">` + hs.map(([L, h]) => {
+    const pct = (h / vh) * 100;
+    return `<b>${name[L]}</b><span class="m-bar"><i class="${pct > 33.4 ? "over" : ""}" style="width:${Math.min(100, pct)}%"></i></span><span>${Math.round(h)} px · ${Math.round(pct)}%</span>`;
+  }).join("") + `</div><p>Against a ${vh} px window. The live frame is drawing <b>${S.fat ? S.L + " lanes" : "the chain"}</b>${S.fat && S.L < S.asked ? ` (asked for ${S.asked}; shed to fit)` : ""}${S.fat && fatHeight(S.L) > vh / 3 ? ", over a third: the edge case named below" : ""}.</p>`;
+}
+
+// ── Static frames: the toggle's states ──
+function states() {
+  const crop = (pressed, force, label, scheme) => `<div class="m-state ${scheme}"><div class="m-chrome">${label}</div><div class="center"><div class="transcript-body" hidden></div>`
+    + `<div class="bn-transcript-journey-header">`
+    + `<div class="bn-session-journey bn-session-journey--overflow bn-journey--fade-left"><span><span class="bn-journey-sep" aria-hidden="true"> → </span><button type="button" class="bn-journey-label bn-journey-label--interactive">Checkout</button></span><span><span class="bn-journey-sep" aria-hidden="true"> → </span><button type="button" class="bn-journey-label bn-journey-label--interactive">Order history</button></span></div>`
+    + toggle.outerHTML.replace(/id="live-toggle"/, `data-m-force="${force}"`).replace(/aria-pressed="(true|false)"/, `aria-pressed="${pressed}"`)
+    + `</div></div></div>`;
+  const set = [[false, "", "rest"], [false, "hover", "hover"], [true, "", "pressed"], [true, "hover", "pressed · hover"], [false, "focus", "keyboard focus"]];
+  document.getElementById("states-light").innerHTML = set.map(([p, f, l]) => crop(p, f, "light · " + l, "m-light")).join("");
+  document.getElementById("states-dark").innerHTML = set.map(([p, f, l]) => crop(p, f, "dark · " + l, "m-dark")).join("");
+  const route = '<svg class="bn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>';
+  const gantt = toggle.querySelector("svg").outerHTML;
+  const alt = (on, scheme) => `<div class="m-state ${scheme}"><div class="m-chrome">alternative, rejected · ${scheme.slice(2)}</div><div class="center"><div class="transcript-body" hidden></div><div class="bn-transcript-journey-header"><span style="margin-left:auto"></span><span class="dimension-toggle" role="group" aria-label="Session timeline"><button type="button" class="dimension-btn" aria-pressed="${!on}"${!on ? ' data-m-force="active"' : ""}>${route}</button><button type="button" class="dimension-btn" aria-pressed="${on}"${on ? ' data-m-force="active"' : ""}>${gantt}</button></span></div></div></div>`;
+  document.getElementById("states-alt").innerHTML = alt(true, "m-light") + alt(true, "m-dark");
+}
+
+// ── Controls ──
+document.getElementById("m-appearance").addEventListener("change", (e) => { const v = e.target.value; if (v) document.documentElement.dataset.theme = v; else delete document.documentElement.dataset.theme; renderAll(); });
+document.getElementById("m-palette").addEventListener("change", (e) => { document.documentElement.dataset.colorTheme = e.target.value; renderAll(); });
+document.getElementById("m-height").addEventListener("change", (e) => { vp.style.height = e.target.value + "px"; if (S.fat) setMode(true); else meters(); });
+document.getElementById("m-lanes").addEventListener("change", (e) => { S.asked = +e.target.value; if (S.fat) setMode(true); else meters(); });
+
+function renderAll() { renderChain(); setChainActive(); renderTimeline(); ladder(); meters(); }
+
+buildBody(body);
+segEls = [...body.querySelectorAll(".transcript-segment")];
+renderChain();
+states();
+headerVar();
+requestAnimationFrame(() => { onScroll(); ladder(); meters(); });
+new ResizeObserver(() => { renderTimeline(); }).observe(vp);
+</script>
+</body>
+</html>

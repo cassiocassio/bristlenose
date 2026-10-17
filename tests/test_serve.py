@@ -387,8 +387,9 @@ class TestProdServeReport:
         resp = prod_client.get("/report/assets/missing-thumbnail.png")
         assert resp.status_code == 404
 
-    def test_existing_output_asset_served(self, tmp_path: Path) -> None:
-        """An actual file in the output dir is served via FileResponse."""
+    def test_baked_theme_css_is_not_served(self, tmp_path: Path) -> None:
+        """A theme baked into the project at analysis time loses to the running
+        version's, or every CSS change since (new palettes) misses old projects."""
         output_dir = tmp_path / "bristlenose-output"
         output_dir.mkdir()
         assets_dir = output_dir / "assets"
@@ -406,7 +407,8 @@ class TestProdServeReport:
         client = TestClient(app, base_url="http://127.0.0.1")
         resp = client.get("/report/assets/bristlenose-theme.css")
         assert resp.status_code == 200
-        assert "color: red" in resp.text
+        assert "color: red" not in resp.text
+        assert 'data-color-theme="gruvbox"' in resp.text
 
     def test_no_bundle_returns_500_fail_loud(self, tmp_path: Path) -> None:
         """When no React bundle exists, fail loud with 500 — don't fall back

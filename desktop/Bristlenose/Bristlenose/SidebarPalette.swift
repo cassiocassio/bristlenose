@@ -5,9 +5,12 @@ import AppKit
 ///
 /// Under `palette = "default"`, helpers return the system semantic colour
 /// passed as `fallback` (`.labelColor`, etc.) — the sidebar tracks the user's
-/// System Settings accent and appearance. Under `palette = "edo"`, helpers
-/// return values authored in `Assets.xcassets` (Any + Dark variants — Xcode
-/// resolves the appearance match at draw time, no manual dark-mode branch).
+/// System Settings accent and appearance. Under any other palette (Edo and
+/// the brand palettes), helpers return that palette's colorsets in
+/// `Assets.xcassets` (Any + Dark variants — Xcode resolves the appearance match
+/// at draw time, no manual dark-mode branch). Edo's were hand-authored; the
+/// brand palettes' are written by `experiments/brand-palettes/gen.py` from the
+/// same CSS tokens the report uses.
 ///
 /// Concepts map onto the CSS palette tokens the web report uses, so the
 /// sidebar and the report share one semantic vocabulary. Colorsets are
@@ -43,12 +46,33 @@ enum SidebarPalette {
         case badgeBorder
     }
 
+    /// Palettes that tint the native sidebar — every palette except Default,
+    /// which leaves the system colours alone. Mirrors the picker in
+    /// `AppearanceSettingsView` and `PALETTES` in the frontend.
+    static let tinted: Set<String> = ["edo", "catppuccin", "gruvbox", "rose-pine", "solarized"]
+
     /// The active palette, read from `UserDefaults` (same key as
-    /// `@AppStorage("palette")` in `AppearanceSettingsView`). Anything other
-    /// than `"edo"` collapses to `"default"` — no throw, no log.
-    static var current: String {
-        let raw = UserDefaults.standard.string(forKey: "palette") ?? "default"
-        return raw == "edo" ? "edo" : "default"
+    /// `@AppStorage("palette")` in `AppearanceSettingsView`). An unknown value
+    /// collapses to `"default"` — no throw, no log.
+    static var current: String { normalised(UserDefaults.standard.string(forKey: "palette")) }
+
+    static func normalised(_ raw: String?) -> String {
+        guard let raw, tinted.contains(raw) else { return "default" }
+        return raw
+    }
+
+    /// True when the active palette tints the sidebar.
+    static var isTinted: Bool { current != "default" }
+
+    /// The colorset stem for a palette id: "rose-pine" → "RosePine". Asset
+    /// names carry no hyphen, so `String.capitalized` alone is wrong here.
+    static func assetStem(_ palette: String) -> String {
+        palette.split(separator: "-").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    }
+
+    /// The colorset name for a concept, e.g. `PaletteRosePineAccent`.
+    static func assetName(_ concept: Concept, palette: String = current) -> String {
+        "Palette" + assetStem(normalised(palette)) + concept.rawValue.capitalized
     }
 
     /// Direct asset lookup. Returns a dynamic `NSColor` (resolves Any/Dark
@@ -56,8 +80,7 @@ enum SidebarPalette {
     /// falls back to a sensible system semantic so the miss is visible
     /// rather than transparent placeholder magenta.
     static func nsColor(_ concept: Concept, palette: String = current) -> NSColor {
-        let assetName = "Palette" + palette.capitalized + concept.rawValue.capitalized
-        if let asset = NSColor(named: assetName) {
+        if let asset = NSColor(named: assetName(concept, palette: palette)) {
             return asset
         }
         switch concept {
@@ -71,42 +94,42 @@ enum SidebarPalette {
         }
     }
 
-    /// Ink for cell text — Edo Ink under Edo, else the passed system
-    /// semantic. Passing `.labelColor` preserves system tracking (dark mode,
-    /// increased contrast) on Default.
+    /// Ink for cell text — the palette's Ink when tinted, else the passed
+    /// system semantic. Passing `.labelColor` preserves system tracking (dark
+    /// mode, increased contrast) on Default.
     static func ink(fallback: NSColor) -> NSColor {
-        current == "edo" ? nsColor(.ink, palette: "edo") : fallback
+        isTinted ? nsColor(.ink) : fallback
     }
 
     /// Accent for BN-drawn row glyphs (lens icons, folder icons). Passing
     /// `nil` here mirrors `NSImageView.contentTintColor = nil` — system
     /// picks the tint (label colour, tracking the user's accent).
     static func accent(fallback: NSColor?) -> NSColor? {
-        current == "edo" ? nsColor(.accent, palette: "edo") : fallback
+        isTinted ? nsColor(.accent) : fallback
     }
 
     /// Ink override — `nil` under Default (leave whatever the caller had,
-    /// which for text usually means system `backgroundStyle` tracking), Edo
-    /// Ink under Edo. Use at sites where the existing code did NOT force a
-    /// text colour and you want to preserve that hands-off behaviour on
-    /// Default while still shifting to Ink on Edo.
+    /// which for text usually means system `backgroundStyle` tracking), the
+    /// palette's Ink when tinted. Use at sites where the existing code did NOT
+    /// force a text colour and you want to preserve that hands-off behaviour
+    /// on Default while still shifting to Ink on a tinted palette.
     static var inkOverride: NSColor? {
-        current == "edo" ? nsColor(.ink, palette: "edo") : nil
+        isTinted ? nsColor(.ink) : nil
     }
 
     /// Accent override — same "nil on Default" semantics as `inkOverride`.
     /// Preserves the system's `backgroundStyle`-driven icon tinting on
-    /// Default (selected row → system accent) while forcing Edo Accent on
-    /// Edo (consistent Prussian across all rows, selected or not).
+    /// Default (selected row → system accent) while forcing the palette's
+    /// Accent when tinted (one accent across all rows, selected or not).
     static var accentOverride: NSColor? {
-        current == "edo" ? nsColor(.accent, palette: "edo") : nil
+        isTinted ? nsColor(.accent) : nil
     }
 
     /// Sidebar paper tint. Nil under Default (leave the system material
-    /// untouched); a parchment `NSColor` under Edo, to be composited at
-    /// low alpha above the sidebar material. The alpha is applied at the
-    /// consumer site so this stays a token, not a rendered value.
+    /// untouched); the palette's Paper when tinted, to be composited at low
+    /// alpha above the sidebar material. The alpha is applied at the consumer
+    /// site so this stays a token, not a rendered value.
     static var paperTint: NSColor? {
-        current == "edo" ? nsColor(.paper, palette: "edo") : nil
+        isTinted ? nsColor(.paper) : nil
     }
 }

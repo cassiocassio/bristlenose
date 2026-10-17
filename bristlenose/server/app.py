@@ -1008,24 +1008,17 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     def serve_live_player() -> Response:
         return _player_page_response()
 
-    # Theme CSS fallback: brand-new projects that haven't been through the
-    # pipeline yet have no `<output_dir>/assets/bristlenose-theme.css`. Without
-    # this route the SPA's <link> 404s and the whole UI renders unstyled.
-    # Mirror dev mode's `load_default_css()` behaviour: prefer the project's
-    # rendered CSS if it exists (so per-project theme tweaks still win), fall
-    # back to the cached bundled source otherwise. The cache is process-scoped
-    # so the 47-file disk read happens at most once per server process.
+    # Theme CSS: always the running version's, never the copy the static
+    # render baked into `<output_dir>/assets/` at analysis time. That copy is
+    # never newer than the running code and nothing else writes it, so
+    # preferring it served every project analysed before an upgrade the old
+    # CSS — the palettes added on 17 Oct 2026 matched nothing in the app until
+    # the project was re-analysed. The cache is process-scoped, so the theme's
+    # disk read happens at most once per server process.
     _theme_cache_headers = {"Cache-Control": "public, max-age=3600"}
 
     @app.get("/report/assets/bristlenose-theme.css")
-    def serve_theme_css_with_fallback() -> Response:
-        per_project = output_dir / "assets" / "bristlenose-theme.css"
-        if per_project.is_file():
-            return FileResponse(
-                per_project,
-                media_type="text/css",
-                headers=_theme_cache_headers,
-            )
+    def serve_theme_css() -> Response:
         from bristlenose.stages.s12_render.theme_assets import get_default_css
 
         return Response(

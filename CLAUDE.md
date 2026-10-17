@@ -152,7 +152,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 
 - **Ask `xcodebuild -showBuildSettings`, not the pbxproj or `.entitlements`**: membership, deployment target and sandboxing aren't readable from the files; an unsigned `.xctest` failing the app's signing needs the test intermediates, PlugIns and maybe `XCBuildData` cleared; only the 4 Mach-O executables carry entitlements.
 - **Locale on the Mac**: `Bundle.preferredLocalizations(from:forPreferences: nil)` latches at launch (pass `Locale.preferredLanguages`); `@AppStorage` defaults are not registered defaults.
-- **Sandbox and bundle**: transitive bare-name shellouts need `prepend_bundled_to_path()`; `mimetypes.knownfiles = []` before any init; the build-info `-dirty` suffix is `GeneratedBuildInfo.swift`; an analysed project serves its baked theme CSS in the `.app` (QA on a fresh project); `forkpty: Device not configured` is the process limit (quit Xcode or leaked workers).
+- **Sandbox and bundle**: transitive bare-name shellouts need `prepend_bundled_to_path()`; `mimetypes.knownfiles = []` before any init; the build-info `-dirty` suffix is `GeneratedBuildInfo.swift`; serve and export use the running version's theme CSS, never a project's baked copy (since 17 Oct 2026); `forkpty: Device not configured` is the process limit (quit Xcode or leaked workers).
 
 **Release, CI and packaging** — [full entries](.claude/gotchas.md#release-ci-and-packaging)
 

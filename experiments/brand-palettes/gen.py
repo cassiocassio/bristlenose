@@ -197,6 +197,38 @@ def gallery(colors: Path) -> str:
 '''
 
 
+def colorset(light: str, dark: str) -> str:
+    """An Xcode colorset (Any + Dark), in the shape of the hand-made Edo ones."""
+    import json
+    def comp(h):
+        r, g, b = rgb(h)
+        return {"alpha": "1.000", "blue": f"0x{b:02X}", "green": f"0x{g:02X}", "red": f"0x{r:02X}"}
+    return json.dumps({"colors": [
+        {"color": {"color-space": "srgb", "components": comp(light)}, "idiom": "universal"},
+        {"appearances": [{"appearance": "luminosity", "value": "dark"}],
+         "color": {"color-space": "srgb", "components": comp(dark)}, "idiom": "universal"},
+    ], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n"
+
+
+# The native sidebar's four concepts (SidebarPalette.Concept), read off the CSS tokens
+# the web report uses, so both sides of the seam share one value.
+SIDEBAR = {"Paper": "--bn-colour-bg", "Ink": "--bn-colour-text",
+           "Accent": "--bn-colour-accent", "Lozenge": "--bn-nav-selection-bg"}
+
+
+def asset_stem(key: str) -> str:
+    """Mirror of SidebarPalette.assetStem: "rose-pine" -> "RosePine"."""
+    return "".join(part.capitalize() for part in key.split("-"))
+
+
+def write_colorsets(assets: Path, key: str, light: dict, dark: dict) -> None:
+    L, D = derive(light, False, key), derive(dark, True, key)
+    for concept, token in SIDEBAR.items():
+        d = assets / f"Palette{asset_stem(key)}{concept}.colorset"
+        d.mkdir(exist_ok=True)
+        (d / "Contents.json").write_text(colorset(L[token], D[token]))
+
+
 if __name__ == "__main__":
     import palettes
     repo = Path(__file__).resolve().parents[2]
@@ -207,5 +239,9 @@ if __name__ == "__main__":
         adj = "\n".join("   AA nudge: " + n for n in NOTES) or "   No colour needed nudging for WCAG AA."
         (colors / f"palette-{key}.css").write_text(css.replace("{adjust}", adj))
         print(key); print(adj)
+    assets = repo / "desktop/Bristlenose/Bristlenose/Assets.xcassets"
+    for key, (_, light, dark) in palettes.PALETTES.items():
+        write_colorsets(assets, key, light, dark)
+    print("wrote the sidebar colorsets")
     (repo / "docs/mockups/palette-gallery.html").write_text(gallery(colors))
     print("wrote docs/mockups/palette-gallery.html")

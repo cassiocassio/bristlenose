@@ -606,21 +606,12 @@ def export_report(
     }
 
     # --- Read theme CSS ---
-    project_dir: Path | None = getattr(request.app.state, "project_dir", None)
-    theme_css = ""
-    if project_dir:
-        from bristlenose.output_paths import project_output_dir
+    # The running version's theme, like serve mode's serve_theme_css — never the
+    # copy baked into the project at analysis time, which predates any upgrade
+    # and would ship an export whose stylesheet is older than its React bundle.
+    from bristlenose.stages.s12_render.theme_assets import load_default_css
 
-        css_path = project_output_dir(project_dir) / "assets" / "bristlenose-theme.css"
-        if css_path.is_file():
-            theme_css = css_path.read_text(encoding="utf-8")
-    if not theme_css.strip():
-        # No per-project baked CSS — fall back to the bundled source so a
-        # leave-behind is never shipped unstyled (parity with serve mode's
-        # serve_theme_css_with_fallback).
-        from bristlenose.stages.s12_render.theme_assets import load_default_css
-
-        theme_css = load_default_css()
+    theme_css = load_default_css()
 
     # --- Build HTML ---
     html = _build_export_html(export_data, theme_css)

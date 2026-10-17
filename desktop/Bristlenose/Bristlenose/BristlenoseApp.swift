@@ -148,7 +148,7 @@ struct BristlenoseApp: App {
     /// Palette accent as a SwiftUI `Color`, resolved via the asset catalogue
     /// so Xcode picks the Any/Dark variant per effective appearance.
     private var paletteAccent: Color {
-        Color("Palette\(palette.capitalized)Accent")
+        Color(SidebarPalette.assetName(.accent, palette: palette))
     }
 
     var body: some Scene {

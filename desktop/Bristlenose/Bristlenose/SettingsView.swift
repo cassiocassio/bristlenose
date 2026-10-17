@@ -442,7 +442,7 @@ private struct SettingsPaneChrome: ViewModifier {
             // Palette-aware SwiftUI accent (matches the main window). AppKit
             // chrome — the pane toolbar icons — still reads the system accent,
             // deliberate per the seam-alignment discipline.
-            .tint(Color("Palette\(palette.capitalized)Accent"))
+            .tint(Color(SidebarPalette.assetName(.accent, palette: palette)))
             .preferredColorScheme(colorScheme)
             // Re-apply the AppKit window appearance live — the pref is edited
             // from the Appearance pane, so this modifier is on-screen whenever

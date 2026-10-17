@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  /* Figma's own theme colours (themeColors: true), so the panel matches light and dark. */
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; padding: 16px;
+    font: 12px/1.45 Inter, system-ui, sans-serif;
+    color: var(--figma-color-text, #222);
+    background: var(--figma-color-bg, #fff);
+  }
+  h1 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  p { margin: 0 0 12px; color: var(--figma-color-text-secondary, #666); }
+  .drop {
+    display: block; border: 1px dashed var(--figma-color-border, #ccc); border-radius: 8px;
+    padding: 18px 12px; text-align: center; cursor: pointer;
+  }
+  .drop.over { border-color: var(--figma-color-border-brand-strong, #0d99ff); background: var(--figma-color-bg-brand-tertiary, #e5f4ff); }
+  .drop:focus-within { outline: 2px solid var(--figma-color-border-brand-strong, #0d99ff); outline-offset: 2px; }
+  input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .choose { color: var(--figma-color-text-brand, #0d99ff); font-weight: 500; }
+  .status { min-height: 3em; margin-top: 12px; }
+  .status.problem { color: var(--figma-color-text-danger, #d1292c); }
+  .bar { height: 4px; border-radius: 2px; background: var(--figma-color-bg-secondary, #eee); overflow: hidden; visibility: hidden; }
+  .bar.on { visibility: visible; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--figma-color-bg-brand, #0d99ff); transition: width .2s; }
+</style>
+</head>
+<body>
+  <h1>Build a research board</h1>
+  <p>Choose the board file you downloaded from Bristlenose. The plugin draws it into this board and connects to nothing else.</p>
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept=".json,application/json">
+    <span class="choose">Choose a board file</span> or drop it here
+  </label>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="bar" id="bar"><span id="fill"></span></div>
+  <!-- script -->
+</body>
+</html>

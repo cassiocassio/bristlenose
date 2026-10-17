@@ -1,0 +1,19 @@
+{
+  "name": "bristlenose-figjam-plugin",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Builds a research board in FigJam from a Bristlenose board file.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "1.140.0",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.5"
+  }
+}

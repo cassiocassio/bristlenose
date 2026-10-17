@@ -13,11 +13,7 @@
  * and out of the tab order, because the row's disclosure button already opens the same timeline.
  */
 import type { TapestrySession } from "../utils/types";
-import { TAPESTRY_GUTTER, TAPESTRY_RIGHT } from "../utils/tapestryScale";
-
-/** The open timeline draws clips above this scale as bare slivers; so does the strip.
- *  (Moves to utils/tapestryScale.ts, shared with SessionTapestry.) */
-const CLIP_THRESHOLD = 2.5;
+import { CLIP_THRESHOLD, TAPESTRY_GUTTER, TAPESTRY_RIGHT } from "../utils/tapestryScale";
 
 /** A quarter of the open timeline's participant clips (18 px). */
 export const PREVIEW_H = 4.5;

@@ -162,7 +162,7 @@ homepage from every user*, then the star/section/tag scope to surface the good o
 The reuse point is large; the per-board delta is small and shaped like Miro's.
 
 ### Shared (build once, never fork)
-- **Layout engine + Board IR** (`miro_board.py`, to be renamed `board_layout.py`).
+- **Layout engine + Board IR** (`board_layout.py`, renamed from `miro_board.py` in F1).
 - **Semantic palette** (`board_palette.py`, new — see above).
 - **Creds-free SVG renderer** (`miro_render_svg.py`, to be renamed
   `board_render_svg.py`) — dev/iteration, board-independent.
@@ -393,7 +393,7 @@ set up twice) is unchanged.
 
 | Seam | Today (Miro) | After generalisation |
 |---|---|---|
-| Layout + IR | `bristlenose/miro_board.py` | `bristlenose/board_layout.py` (rename; grep `miro_board` import sites first) |
+| Layout + IR | `bristlenose/board_layout.py` (renamed from `miro_board.py`, F1, 17 Oct 2026) | done |
 | Palette | inline in `miro_board.py` + `miro_render_svg.py` | `bristlenose/board_palette.py` (new, single source) |
 | SVG renderer | `bristlenose/miro_render_svg.py` | `bristlenose/board_render_svg.py` (rename) |
 | Per-target renderer | `bristlenose/miro_client.py` | `+ mural_client.py`, `+ lucid_client.py` (+ `lucid_package.py`) behind a `BoardRenderer` protocol |
@@ -418,8 +418,9 @@ import-site grep done first.
    NO-GO for *server* push but reachable via an in-editor plugin — so the engine is
    built toward a **serialized Board Manifest** that the FigJam plugin (and Lucid's
    package) consume. (Research-confirmed against current vendor docs.)
-2. **Colour is flat: pink headers, yellow quotes, everywhere** (Miro's `light_pink`
-   / `light_yellow` reproduced on every board). Sentiment-colouring is a party trick,
+2. **Colour is flat: pink headers, yellow quotes, everywhere** — the same two
+   roles on every board, each in that board's own palette (Miro's `light_pink` /
+   `light_yellow`; FigJam's Pink / Yellow, decided 17 Oct 2026). Sentiment-colouring is a party trick,
    demoted to optional; custom-tag colouring is the real future win, deferred. The
    only colour work is a tiny two-token `board_palette.py` that deletes the SVG
    renderer's duplicate hex map — no semantic-sentiment-palette refactor.
@@ -479,7 +480,7 @@ consumer (the manifest), they aren't front-loaded.
 | Milestone | What | Toward FigJam |
 |---|---|---|
 | **✅ B0 — Palette** | `board_palette.py` (done) — flat pink/yellow baseline, deletes the SVG hex duplication. | Foundation. |
-| **F1 — IR → Manifest** | `board_manifest.py`: serialize the Board IR to **versioned JSON** (`ensure_ascii=True`, build-dict-once, schema `version` field). Do the `miro_board`→`board_layout` rename here — the manifest is the 2nd real consumer, so the name now describes two things. | **This *is* the FigJam plugin's input contract.** Version from day one (a published plugin lags BN releases). The SVG preview already renders the IR, so it's the creds-free way to eyeball a manifest. |
+| **✅ F1 — IR → Manifest** (17 Oct 2026) | `board_manifest.py`: serialize the Board IR to **versioned JSON** (`ensure_ascii=True`, build-dict-once, schema `version` field). Do the `miro_board`→`board_layout` rename here — the manifest is the 2nd real consumer, so the name now describes two things. | **This *is* the FigJam plugin's input contract.** Version from day one (a published plugin lags BN releases). The SVG preview already renders the IR, so it's the creds-free way to eyeball a manifest. |
 | **F2 — Lucidspark renderer (dress rehearsal)** | IR → `.lucid` package (wrap the serialized board) → `POST /documents` via API key; `routes/lucid.py`; `lucid` keychain+env; SECURITY note; serialized-payload anonymisation test. Extract the renderer seam (Miro REST + Lucid package = two real shapes → hoist `build_board`, extract `BoardRenderer`). | Proves **whole-board-as-document** against a live API, cheapest auth, before the plugin. The free product win. |
 | **F3 — FigJam plugin (the prize)** | Published Figma/FigJam plugin (separate TS repo): reads a BN manifest → loops `createSticky()` + sections + text in-editor. BN side: a "Download FigJam manifest" export + the handoff UX (download → open FigJam → run plugin → pick file). **Re-verify Figma's API here** — if a server write path has shipped by then, FigJam collapses into a normal renderer (upside). | The goal. Note: the *plugin* is a real, separate project (TS, store review, distribution, in-editor UX) — only F1–F2 are shared/free. |
 | **— Mural (deferred, but strategically valuable)** | `mural_client.py` (port the Miro item-loop), `routes/mural.py`, on top of the **shared OAuth pickup** (15-min rotating tokens; `ASWebAuthenticationSession`). | Architecturally advances FigJam by **nothing** (per-item REST, consumes no manifest) — so it's late, not on the engine's critical path. **But it's a real enterprise/government-procurement wedge** (private planner), so it's a high-value *cheap* add once OAuth exists, not a rounding error. The ~Sept-2026 Mural test rides this. |
@@ -521,21 +522,41 @@ board in the maintainer's Figma drafts):
 - **One pass is enough:** 41 stickies + 2 sections + title in a single call;
   load Inter Medium / Medium Italic / Bold once; set `authorVisible = false`.
 
-**Open questions for the maintainer (both reopen a Miro-era decision):**
-1. **Column headers: pink header stickies, or one nested section per column?**
-   Miro forced header stickies because frames cannot nest; FigJam sections can.
-   A header sticky is 240 px tall for two lines (visibly wasteful); a nested
-   section named "IKEA Homepage · 2 quotes" is the FigJam-native shape, but
-   section names are editor chrome and do not appear in screenshots or image
-   exports. *Lean: keep header stickies* — cross-board sameness, survives export.
-2. **Colours: FigJam's palette pink `#FFA8DB` / yellow `#FFE299`, or Miro's
-   `#FADADD` / `#FFF9B1`?** Decision 2 says the same two colours everywhere; in
-   FigJam those Miro hexes register as custom colours, not palette ones. *Lean:
-   FigJam palette* — go with the board's grain.
+**Decided 17 Oct 2026 (maintainer):**
+1. **Column headers stay pink header stickies**, not nested sections — the same
+   board shape as Miro, and it survives an image export (section names are editor
+   chrome and do not). The cost, a 240 px sticky for two lines, is accepted.
+2. **FigJam's own palette pink `#FFA8DB` / yellow `#FFE299`**, not Miro's hexes,
+   so the colours register as palette colours. Decision 2 below now reads "the
+   same two *roles* everywhere, in each board's own palette";
+   `board_palette.FIGJAM_TOKEN_HEX` holds the map.
 
-Also noticed: `_clip_url` logs "Ignoring clips_base…" once per quote when no clip
-folder is set, because an empty base fails `is_safe_url`. An empty base should
-return `None` silently. Fold into the F1 commit.
+**F1 built 17 Oct 2026.** `bristlenose/board_manifest.py` (pure) and
+`miro_export.build_figjam_manifest` (the project → document step, sharing
+`build_columns`, `board_title` and `board_strings` with the Miro board).
+Version 1 of the document:
+
+```
+{ "format": "bristlenose-board", "version": 1, "generator": "Bristlenose X.Y.Z",
+  "locale": "en", "title": "…", "strings": {"clip": "▶ clip"},
+  "palette": {"light_pink": "#FFA8DB", "light_yellow": "#FFE299"},
+  "frames": [ { "kind": "section", "title": "Sections", "columns": [
+      { "label": "Checkout", "count": "2 quotes", "colour": "light_pink",
+        "quotes": [ { "text": "“…”", "attribution": "— P2 · 00:22",
+                      "colour": "light_yellow", "clip_url": null } ] } ] } ] }
+```
+
+The document carries every word, the attribution line and the palette, so the
+plugin only draws and a wording or colour change never waits on a plugin review.
+It carries no sentiment, speaker field or timecode beyond the attribution line:
+adding an optional key later is not a version bump. `miro_board.py` became
+`board_layout.py`; the attribution and curly-quote composition, which the Miro
+push and the SVG preview each spelled out, is one helper there. An empty clip
+folder no longer logs "Ignoring clips_base…" once per quote. Tests:
+`tests/test_board_manifest.py` (contract, Miro-order parity, hostile text, the
+name and name-bearing filename absent from the bytes; each mutation-proved).
+Next: the download route (classified server-only in `routes/export.py`), then
+the plugin.
 
 **Security disciplines for the Lucid renderer (F2):**
 - **`lucid_package.py` builds `document.json` as a Python dict and serialises via

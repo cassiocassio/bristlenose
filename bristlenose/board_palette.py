@@ -1,7 +1,7 @@
 """Canonical colour-token → hex map, shared across board renderers.
 
 Single source of truth for what each board IR colour token renders as. The board
-IR (`miro_board.py`) stores colour tokens by name (currently Miro's named-palette
+IR (`board_layout.py`) stores colour tokens by name (currently Miro's named-palette
 strings, e.g. ``light_pink``); the *concrete hex* a renderer paints them is a
 rendering concern, not an IR concern, so it lives here — one map, consumed by every
 renderer that needs hex (the creds-free SVG preview today; Mural / Lucidspark
@@ -38,6 +38,21 @@ TOKEN_HEX = {
 
 # Fallback for an unknown token — the yellow quote default.
 DEFAULT_HEX = QUOTE_HEX
+
+# FigJam paints the same tokens from its own fixed sticky palette (decided 17 Oct
+# 2026): Miro's pale hexes would register there as custom colours. A palette
+# colour is matched exactly, so these are FigJam's own values, not near misses.
+# The manifest carries this map, so the plugin draws whatever Bristlenose sends
+# and a colour change never waits on a plugin release.
+FIGJAM_TOKEN_HEX = {
+    "light_pink": "#FFA8DB",  # FigJam Pink — header
+    "light_yellow": "#FFE299",  # FigJam Yellow — quote default
+    "light_green": "#B3EFBD",  # FigJam Green
+    "green": "#B3F4EF",  # FigJam Teal — kept apart from light_green
+    "red": "#FFB8A8",  # FigJam Red
+    "light_blue": "#A8DAFF",  # FigJam Blue
+    "gray": "#E6E6E6",  # FigJam Gray
+}
 
 
 def hex_for(token: str) -> str:

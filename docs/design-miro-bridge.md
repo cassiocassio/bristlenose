@@ -453,7 +453,7 @@ wrong in English before any of this was about translation.
 
 **Where the language lives now.** `server/miro_export.py` owns it: the SPA panel
 and the Mac sheet each send their UI locale, the module resolves the board's
-words, and everything below is handed the result — `miro_board.py` takes a
+words, and everything below is handed the result — `board_layout.py` (was `miro_board.py`) takes a
 `BoardStrings` (defaults English, so an un-updated caller is unchanged) and
 never resolves a key, and `miro_render_svg.render_html` takes a locale for the
 one string it owns. That keeps the layout engine target-agnostic, which was
@@ -526,7 +526,7 @@ merge-ready pending push + CI. The "syntax only" markers below were the original
 ### What's built
 | Piece | File | Verified |
 |---|---|---|
-| Layout engine (IR + trivial layout) | `bristlenose/miro_board.py` | ✅ 7 unit tests pass (`tests/test_miro_board.py`) |
+| Layout engine (IR + trivial layout) | `bristlenose/board_layout.py` (was `miro_board.py`) | ✅ 7 unit tests pass (`tests/test_miro_board.py`) |
 | Creds-free SVG/HTML preview | `bristlenose/miro_render_svg.py` | ✅ rendered vs smoke fixture |
 | REST client (OAuth/PKCE + board/frame/sticky/text) | `bristlenose/miro_client.py` | ✅ runs; live push validated 24 Jun (`tests/test_miro_client.py`) |
 | Export orchestration (quotes→columns→push/preview) | `bristlenose/server/miro_export.py` | ✅ runs; egress tests (`tests/test_miro_export.py`) |

@@ -18,7 +18,7 @@ import types
 
 import pytest
 
-from bristlenose.miro_board import Sticky
+from bristlenose.board_layout import Sticky
 from bristlenose.server.export_core import ExportableQuote
 from bristlenose.server.miro_export import (
     MAX_QUOTE_CHARS,

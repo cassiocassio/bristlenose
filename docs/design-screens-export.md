@@ -42,7 +42,7 @@ it is the one picture with one participant's quotes on it.
   (another participant's quote whose words appear on this still) are left out too: they would put
   one quote on two frames.
 - **Hidden quotes are dropped** by the same rule as every other export (`export_core`).
-- **Speaker codes, never names**, as on the existing Miro stickies (`miro_board.QuoteCard` has no
+- **Speaker codes, never names**, as on the existing Miro stickies (`board_layout.QuoteCard` has no
   name field). Codes are already the file-name convention for clips.
 
 Scope is the whole project in v1. The All/Selected/Starred picker the other exports share
@@ -98,7 +98,7 @@ manifest is a dotfile.
 
 ## 6. A Miro board
 
-Built on the existing bridge (`miro_board.py` layout, `miro_client.py` transport,
+Built on the existing bridge (`board_layout.py` layout, `miro_client.py` transport,
 `server/miro_export.py`, `routes/miro.py`, `docs/design-miro-bridge.md`); a new board per export,
 as today.
 
@@ -175,7 +175,7 @@ Smallest first; each step ends usable and green.
 
 **Sunday**
 
-5. **The board model:** `miro_board` gains images, frames per still and parented children; pure,
+5. **The board model:** `board_layout` gains images, frames per still and parented children; pure,
    tested like `test_miro_board.py`.
 6. **The client:** image upload and `parent`; a fake-client test of the whole push, which the
    existing export lacks.

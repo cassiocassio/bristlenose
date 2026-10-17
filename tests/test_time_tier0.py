@@ -63,7 +63,7 @@ class TestMiroTimecodes:
     def test_fmt_timecode_rolls_into_hours(self) -> None:
         """H5: overflowed minutes (`100:00`) and was unparseable from 100 min —
         the corpus's longest session is 99.7 min."""
-        from bristlenose.miro_board import fmt_timecode
+        from bristlenose.board_layout import fmt_timecode
         assert fmt_timecode(6000) == "1:40:00"
         assert fmt_timecode(330) == "05:30"
         assert parse_timecode(fmt_timecode(6000)) == 6000.0

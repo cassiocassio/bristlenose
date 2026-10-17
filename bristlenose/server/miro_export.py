@@ -29,17 +29,19 @@ from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
 
-from bristlenose import miro_client
-from bristlenose.i18n import plural_in, t_in
-from bristlenose.miro_board import (
+from bristlenose import __version__, miro_client
+from bristlenose.board_layout import (
     Board,
     BoardStrings,
     Column,
     QuoteCard,
     Sticky,
-    fmt_timecode,
+    attribution,
     layout_board,
 )
+from bristlenose.board_manifest import build_manifest
+from bristlenose.board_palette import FIGJAM_TOKEN_HEX
+from bristlenose.i18n import plural_in, t_in
 from bristlenose.miro_render_svg import render_html
 from bristlenose.server.export_core import ExportableQuote, extract_quotes_for_export
 from bristlenose.utils.safe_url import is_safe_url
@@ -89,6 +91,10 @@ def _clip_url(base: str, q: ExportableQuote) -> str | None:
     `javascript:`/`data:` scheme, and this URL egresses into a shareable Miro
     board's `<a href>`. ASSUMPTION (A5): filename convention mirrors export-clips.
     """
+    if not base:
+        # No clip folder is the default, not a refusal — it was logged as
+        # one, once per quote, on every board built without clip links.
+        return None
     if not is_safe_url(base) or urlparse(base).scheme == "mailto":
         # Don't echo the user-supplied value into the log (log-injection guard).
         logger.warning("Ignoring clips_base for Miro links: not an http(s) URL")
@@ -129,19 +135,45 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
     return list(sections.values()) + list(themes.values())
 
 
-def build_board(db: Session, project_id: int, project_name: str,
-                quote_ids: list[str] | None, *, colour_by: str = "sentiment",
-                clips_base: str = "", locale: str = "en") -> Board:
-    columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
+def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
     n = sum(len(c.quotes) for c in columns)
     # The count goes through CLDR selection even in English, where the old
     # hand-rolled `({n} quotes)` titled a one-quote board "1 quotes".
-    title = t_in(
+    return t_in(
         locale, "common.miro.boardTitle",
         project=project_name,
         quotes=plural_in(locale, "common.miro.boardQuoteCount", n),
     )
+
+
+def build_board(db: Session, project_id: int, project_name: str,
+                quote_ids: list[str] | None, *, colour_by: str = "sentiment",
+                clips_base: str = "", locale: str = "en") -> Board:
+    columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
+    title = board_title(locale, project_name, columns)
     return layout_board(columns, title, colour_by=colour_by, strings=board_strings(locale))
+
+
+def build_figjam_manifest(db: Session, project_id: int, project_name: str,
+                          quote_ids: list[str] | None, *, clips_base: str = "",
+                          locale: str = "en") -> dict[str, Any]:
+    """The FigJam board document (`board_manifest`): the same selection, order,
+    words and title as a Miro board, carried as structure for the plugin.
+
+    Flat colour only — the cross-board baseline. It lives beside the Miro
+    orchestration because it shares every step up to the renderer; the module
+    becomes `board_export` when the renderer seam is extracted (design doc,
+    *Map to our code*).
+    """
+    columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
+    return build_manifest(
+        columns, board_title(locale, project_name, columns),
+        strings=board_strings(locale),
+        clip_label=t_in(locale, "common.miro.clipLink"),
+        palette=FIGJAM_TOKEN_HEX,
+        locale=locale,
+        generator=f"Bristlenose {__version__}",
+    )
 
 
 def build_preview_html(db: Session, project_id: int, project_name: str,
@@ -166,11 +198,11 @@ def _sticky_content(s: Sticky, locale: str = "en") -> str:
     body = s.text
     if len(body) > MAX_QUOTE_CHARS:
         body = body[: MAX_QUOTE_CHARS - 1].rstrip() + "…"
-    attribution = f"— {s.participant_id.upper()} · {fmt_timecode(s.timecode)}"
+    line = attribution(s.participant_id, s.timecode)
     if s.link_url:
         clip = escape(t_in(locale, "common.miro.clipLink"))
-        attribution += f' · <a href="{escape(s.link_url, quote=True)}">▶ {clip}</a>'
-    return f"{escape(body)}<br><i>{attribution}</i>"
+        line += f' · <a href="{escape(s.link_url, quote=True)}">▶ {clip}</a>'
+    return f"{escape(body)}<br><i>{line}</i>"
 
 
 def _sticky_item(s: Sticky, locale: str = "en") -> dict[str, Any]:

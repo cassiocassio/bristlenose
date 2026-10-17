@@ -1,10 +1,12 @@
-"""Target-agnostic board IR + trivial layout engine for the Miro bridge.
+"""Target-agnostic board IR + trivial layout engine for the whiteboard bridges.
 
 Near-pure stdlib (no pydantic models, no I/O) so it stays fast, testable, and
 renderer-agnostic. The layout engine turns grouped quotes into a `Board` of
 frames + stickies + text items in absolute board coordinates; renderers
 (`miro_render_svg` for preview, `miro_client`/`server.miro_export` for the real
-Miro push) translate the IR to a concrete surface.
+Miro push) translate the IR to a concrete surface. `board_manifest` reads the
+same columns, ordering and colour tokens but not the geometry: FigJam stickies
+grow with their text, so the in-editor plugin does its own vertical layout.
 
 **The board's words arrive as `BoardStrings`; this module never resolves them.**
 A Miro board is a deliverable a researcher hands to a client, which puts it on
@@ -144,7 +146,7 @@ def _session_num(session_id: str) -> int:
     return int(m.group(1)) if m else 0
 
 
-def _quote_sort_key(q: QuoteCard) -> tuple[int, float]:
+def quote_sort_key(q: QuoteCard) -> tuple[int, float]:
     return (_session_num(q.session_id), q.start_timecode)
 
 
@@ -158,7 +160,17 @@ def fmt_timecode(seconds: float) -> str:
     return format_timecode(seconds)
 
 
-def _quote_colour(q: QuoteCard, colour_by: str) -> str:
+def attribution(participant_id: str, timecode: float) -> str:
+    """The italic line under a quote: ``— P2 · 00:22``. One copy for every board."""
+    return f"— {participant_id.upper()} · {fmt_timecode(timecode)}"
+
+
+def quoted(text: str) -> str:
+    """A quote as a sticky shows it, in curly marks."""
+    return f"“{text.strip()}”"
+
+
+def quote_colour(q: QuoteCard, colour_by: str) -> str:
     if colour_by != "sentiment":  # "none" (or anything else) -> single colour
         return DEFAULT_QUOTE_TOKEN
     if q.sentiment:
@@ -186,10 +198,10 @@ def _build_frame(
             colour=HEADER_TOKEN, text=f"{col.label}\n{strings.quote_count(len(col.quotes))}",
         ))
         sy = FRAMES_Y + FRAME_PAD + HEADER_H + GAP_Y
-        for q in sorted(col.quotes, key=_quote_sort_key):
+        for q in sorted(col.quotes, key=quote_sort_key):
             stickies.append(Sticky(
                 x=cx, y=sy, width=STICKY_W, height=QUOTE_H,
-                colour=_quote_colour(q, colour_by), text=f"“{q.text.strip()}”",
+                colour=quote_colour(q, colour_by), text=quoted(q.text),
                 participant_id=q.participant_id, timecode=q.start_timecode, link_url=q.link_url,
             ))
             sy += QUOTE_H + GAP_Y

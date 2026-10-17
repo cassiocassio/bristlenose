@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import itertools
 
-from bristlenose.miro_board import (
+from bristlenose.board_layout import (
     DEFAULT_QUOTE_TOKEN,
     HEADER_TOKEN,
     Column,

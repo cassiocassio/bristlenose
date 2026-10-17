@@ -14,9 +14,9 @@ from __future__ import annotations
 import unicodedata
 from html import escape
 
+from bristlenose.board_layout import Board, Frame, Sticky, TextItem, attribution
 from bristlenose.board_palette import hex_for
 from bristlenose.i18n import t_in
-from bristlenose.miro_board import Board, Frame, Sticky, TextItem, fmt_timecode
 
 BOARD_BG = "#F4F4F2"
 PAD_IN = 16.0
@@ -163,7 +163,7 @@ def _sticky_svg(s: Sticky) -> str:
         parts.append(_text(tx, ty, line, size=BODY_FONT, weight="400", ink=BODY_INK))
         ty += BODY_LH
     link = " 🔗" if s.link_url else ""
-    meta = f"— {s.participant_id.upper()} · {fmt_timecode(s.timecode)}{link}"
+    meta = f"{attribution(s.participant_id, s.timecode)}{link}"
     parts.append(_text(tx, s.y + s.height - PAD_IN + 2, meta,
                        size=BODY_FONT, weight="400", ink=BODY_INK, italic=True))
     parts.append("</g>")

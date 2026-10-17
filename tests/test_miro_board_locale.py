@@ -2,7 +2,7 @@
 
 Until 22 Sep 2026 it did not, and nothing could see it. Every board ever
 generated said `Sections`, `Themes` and `3 quotes` in English, in all 21
-locales, because `miro_board.py` held those as literals — and a literal is
+locales, because `miro_board.py` (now `board_layout.py`) held those as literals — and a literal is
 invisible to every gate we own. `check-locales.py` compares each locale against
 English and is silent about a surface English never enrolled; the register calls
 that the second blind spot, and this is it in the wild. The tell was small and
@@ -210,7 +210,7 @@ def test_render_html_still_defaults_to_english():
     """Every default in this chain is English, so a caller that sends nothing
     gets what the board produced before — which is what keeps this a fix rather
     than a behaviour change for anyone who has not been updated."""
-    from bristlenose.miro_board import Board
+    from bristlenose.board_layout import Board
 
     assert 'lang="en"' in render_html(Board(title="T"))
 
@@ -228,7 +228,8 @@ _CHROME_LITERALS = {
 @pytest.mark.parametrize(
     "module",
     [
-        "bristlenose/miro_board.py",
+        "bristlenose/board_layout.py",
+        "bristlenose/board_manifest.py",
         "bristlenose/miro_render_svg.py",
         "bristlenose/server/miro_export.py",
     ],
@@ -263,7 +264,7 @@ def test_no_english_literal_creeps_back(module):
     offenders = {
         lit: key for lit, key in _CHROME_LITERALS.items()
         if lit.strip('"<') in code
-        and not (module.endswith("miro_board.py") and lit in ('"Sections"', '"Themes"'))
+        and not (module.endswith("board_layout.py") and lit in ('"Sections"', '"Themes"'))
     }
     assert not offenders, (
         f"{module} carries English the board says out loud: "

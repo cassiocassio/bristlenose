@@ -23,7 +23,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "./Badge";
 import type { TapestryQuote, TapestrySession } from "../utils/types";
-import { TAPESTRY_GUTTER, TAPESTRY_RIGHT as RIGHT } from "../utils/tapestryScale";
+import { CLIP_THRESHOLD, TAPESTRY_GUTTER, TAPESTRY_RIGHT as RIGHT } from "../utils/tapestryScale";
 import { formatTimecode } from "../utils/format";
 import { type Step, type TapestryTuning, useTapestryTuning } from "../utils/tapestryTuning";
 import { announce } from "../utils/announce";
@@ -34,8 +34,6 @@ import { ThumbOutline, ThumbPreview } from "./TapestryThumb";
 import { Icon } from "./Icon";
 import { screenInk } from "../utils/sceneInk";
 
-/** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it. */
-const CLIP_THRESHOLD = 2.5;
 const POSITIVE = new Set(["satisfaction", "delight", "confidence"]);
 
 // ── Text fitting: measured with the fonts the SVG classes render in ───────
@@ -118,16 +116,38 @@ interface Props {
   /** Drawn inside the timeline's scroll container, under the timeline: the transcription
    *  diagnostics, whose lanes share this time scale and scroll with it. */
   children?: React.ReactNode;
+
+  // ── The transcript's sticky timeline (islands/transcript/TranscriptTimeline.tsx). Each defaults
+  // to the grid's slice, so the grid passes none of them. docs/mockups/transcript-timeline-toggle.html.
+  /** How much to draw: 2 = sections and speakers, 3 = + sentiment, 5 = + themes (the default). */
+  lanes?: TapestryLanes;
+  /** The time span the reader can see, drawn as a window in the minimap's viewport tokens. */
+  readingWindow?: readonly [number, number] | null;
+  /** Dragging the reading window: the moment its left edge is dragged to. Without it the window
+   *  only shows; with it, a click inside the window jumps like the speaker lane. */
+  onScrub?: (seconds: number) => void;
+  /** The section flag raised at rest: the transcript's current section. Hover raises its own. */
+  current?: number;
+  /** The popout player's time, drawn as a heavier mark while media plays. */
+  player?: number | null;
+  /** A sentiment mark opens its quote in a popover (the grid) or jumps to it (the transcript,
+   *  where the quote is the text on the page). */
+  quoteAction?: "popover" | "jump";
 }
+
+export type TapestryLanes = 2 | 3 | 5;
 
 export default function SessionTapestry({
   session, sPerPx, nameOf, codeOf = (slot) => slot, onJump, clipInk, initialScrollLeft = 0, onReady, children,
+  lanes = 5, readingWindow = null, onScrub, current = -1, player = null, quoteAction = "popover",
 }: Props) {
   const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const [raised, setRaised] = useState(-1);
   // A flag directly under the pointer: selected-blue, full label, cursor at its time.
   const [hotFlag, setHotFlag] = useState(-1);
+  // The section flag holding the slice's one Tab stop among flags (roving, like the bars).
+  const [flagFocus, setFlagFocus] = useState(0);
   const [playhead, setPlayhead] = useState<number | null>(null);
   const [selected, setSelected] = useState(-1);
   const [themeFocus, setThemeFocus] = useState<string | null>(null);
@@ -164,6 +184,21 @@ export default function SessionTapestry({
     if (i >= 0) setLastIndex(i);
     if (i >= 0) window.dispatchEvent(new CustomEvent(ACTIVE_EVENT, { detail: session.session_id }));
   };
+  // The transcript's bars jump to their quote, which is the text on the page; the grid's open it.
+  const jumps = quoteAction === "jump";
+  const activate = (i: number) => {
+    if (!jumps) return choose(i);
+    setLastIndex(i);
+    const q = session.quotes[i];
+    if (q) onJump(q.t0);
+  };
+  // No popover to open in the transcript: an arrow moves the bars' roving Tab stop, Return jumps.
+  // The sibling is found from the event's own SVG, not a ref: this runs inside the bars' render map.
+  const focusBar = (n: number, svg: SVGSVGElement | null) => {
+    setLastIndex(n);
+    svg?.querySelectorAll<SVGElement>(".bn-tp-bar")[n]?.focus({ preventScroll: true });
+  };
+  const scrub = useRef<{ grab: number; x: number; moved: boolean } | null>(null);
   useEffect(() => {
     const other = (e: Event) => {
       if ((e as CustomEvent<string>).detail !== session.session_id) setSelected(-1);
@@ -211,7 +246,11 @@ export default function SessionTapestry({
   };
   const SE = { mid: PT.y + PT.h + 41, amp: 30 };
   const TG = { y: SE.mid + 40, row: P.themeH + P.themeGap, rows: 3 };
-  const H = TG.y + TG.row * TG.rows + 14;
+  // Fewer lanes stop drawing below a lane; the geometry above stays the one layout.
+  const showSentiment = lanes >= 3;
+  const showThemes = lanes >= 5;
+  const lanesBottom = showThemes ? TG.y + TG.row * TG.rows : showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1;
+  const H = showThemes ? TG.y + TG.row * TG.rows + 14 : lanesBottom + 16;
 
   // While a quote is open, ← → step quotes and Esc closes, whatever has focus:
   // WebKit does not focus an SVG element on click, so a bar-scoped handler let
@@ -253,6 +292,18 @@ export default function SessionTapestry({
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [selected]);
+
+  // The reading window (or, while media plays, the player) stays in view when the timeline is wider
+  // than its slot: a long session at the 4 s/px ceiling scrolls sideways.
+  const follow = player ?? readingWindow?.[0] ?? null;
+  useEffect(() => {
+    const wrap = scrollRef.current;
+    if (follow === null || !wrap || wrap.scrollWidth <= wrap.clientWidth) return;
+    const fx = TAPESTRY_GUTTER + follow / sPerPx;
+    if (fx < wrap.scrollLeft + TAPESTRY_GUTTER || fx > wrap.scrollLeft + wrap.clientWidth - 40) {
+      wrap.scrollLeft = Math.max(0, fx - wrap.clientWidth / 3);
+    }
+  }, [follow, sPerPx]);
 
   // Keep the selected bar in view inside the horizontally scrolling slice; focus follows the
   // selection (clicking an SVG element does not focus it in WebKit); announce the change.
@@ -342,11 +393,56 @@ export default function SessionTapestry({
     if (!seenLabel.has(f.label)) firstVisit.add(i);
     seenLabel.add(f.label);
   });
-  const top = hotFlag >= 0 ? hotFlag : raised;
+  // At rest the host's current section stays raised (the transcript); hover raises its own.
+  const lifted = raised >= 0 ? raised : current;
+  const top = hotFlag >= 0 ? hotFlag : lifted;
   const flagOrder = s.sections.map((_, i) => i).filter((i) => i !== top);
   if (top >= 0) flagOrder.push(top); // raised or hot flag draws last, on top
 
   const themeEnds = Array(TG.rows).fill(-1e9) as number[];
+
+  // The reading window and its drag (the transcript): dragging it scrolls the page, as the
+  // minimap's viewport does; a click without a drag jumps like the speaker lane.
+  const win = readingWindow ? (() => {
+    const x0 = x(Math.max(0, readingWindow[0]));
+    return { x0, x1: Math.max(x0 + 4, x(Math.min(s.duration_seconds, readingWindow[1]))) };
+  })() : null;
+  const windowDown = (e: React.PointerEvent<SVGRectElement>) => {
+    if (!win) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const left = svgRef.current?.getBoundingClientRect().left ?? 0;
+    scrub.current = { grab: e.clientX - left - win.x0, x: e.clientX, moved: false };
+  };
+  const windowMove = (e: React.PointerEvent<SVGRectElement>) => {
+    const d = scrub.current;
+    if (!d) return;
+    if (Math.abs(e.clientX - d.x) > 3) d.moved = true;
+    if (d.moved) onScrub?.(secAt(e.clientX - d.grab));
+  };
+  const windowUp = (e: React.PointerEvent<SVGRectElement>) => {
+    const d = scrub.current;
+    scrub.current = null;
+    if (d && !d.moved) onJump(secAt(e.clientX));
+  };
+  const windowCancel = () => {
+    scrub.current = null;
+  };
+
+  // Section flags are buttons: one Tab stop (roving), ← → move, Return or Space jumps — so a
+  // keyboard reaches sections in the grid (where an open timeline hides the chain's links) and
+  // in the transcript.
+  const flagStop = Math.min(flagFocus, Math.max(0, s.sections.length - 1));
+  const flagKey = (i: number) => (e: React.KeyboardEvent<SVGGElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onJump(s.sections[i].t0);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const n = Math.max(0, Math.min(s.sections.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)));
+      setFlagFocus(n);
+      e.currentTarget.ownerSVGElement?.querySelector<SVGGElement>(`.bn-tp-flag[data-i="${n}"]`)?.focus({ preventScroll: true });
+    }
+  };
   const sel: TapestryQuote | undefined = selQ;
 
   return (
@@ -390,8 +486,8 @@ export default function SessionTapestry({
           <text className="bn-tp-lane" x={12} y={2.5 + P.flagH / 2 + centre(F.px.lane)}>{lane(t("quotes.sections"))}</text>
           <text className="bn-tp-lane" x={12} y={MT.y + MT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.moderator"))}</text>
           <text className="bn-tp-lane" x={12} y={PT.y + PT.h / 2 + centre(F.px.lane)}>{lane(t("sessions.speakerPlaceholder.participant"))}</text>
-          <text className="bn-tp-lane" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>
-          <text className="bn-tp-lane" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>
+          {showSentiment && <text className="bn-tp-lane" x={12} y={SE.mid + centre(F.px.lane)}>{lane(t("sessions.colSentiment"))}</text>}
+          {showThemes && <text className="bn-tp-lane" x={12} y={TG.y + P.themeH / 2 + centre(F.px.lane)}>{lane(t("quotes.themes"))}</text>}
 
           {/* Speaker clips */}
           <rect className="bn-tp-track" x={TAPESTRY_GUTTER} y={MT.y - 1} width={Math.max(0, xEnd - TAPESTRY_GUTTER)}
@@ -459,7 +555,7 @@ export default function SessionTapestry({
           {flagOrder.map((i) => {
             const f = s.sections[i];
             const isHot = i === hotFlag;
-            const isRaised = i === raised || isHot;
+            const isRaised = i === lifted || isHot;
             const fx = x(f.t0);
             const next = i + 1 < s.sections.length ? x(s.sections[i + 1].t0) : xEnd;
             const text = isRaised ? f.label : fit(f.label, next - fx - 20, F.flag);
@@ -467,7 +563,11 @@ export default function SessionTapestry({
             const half = P.flagH / 2;
             return (
               <g key={`f${i}`} className={`bn-tp-flag${isRaised ? " raised" : ""}${isHot ? " hot" : ""}`}
-                data-label={f.label} data-first={firstVisit.has(i) ? "" : undefined}
+                data-label={f.label} data-first={firstVisit.has(i) ? "" : undefined} data-i={i}
+                role="button" tabIndex={i === flagStop ? 0 : -1}
+                aria-label={`${f.label} · ${formatTimecode(f.t0)}`}
+                onKeyDown={flagKey(i)}
+                onFocus={() => setFlagFocus(i)}
                 onClick={() => onJump(f.t0)}
                 onMouseEnter={() => {
                   setHotFlag(i);
@@ -521,13 +621,28 @@ export default function SessionTapestry({
               const change = thumbs ? tapestryThumb.changeAt(s.session_id) : null;
               onJump(change !== null ? Math.max(0, change - 1) : secAt(e.clientX));
             }} />
+          {win && (
+            // What the reader can see (the transcript): over the lanes, under the flags' labels.
+            <rect className={`bn-tp-window${onScrub ? " draggable" : ""}`} x={win.x0} y={MT.y - 4} width={win.x1 - win.x0}
+              height={lanesBottom + 3 - (MT.y - 4)} rx={3} data-testid="tapestry-window"
+              onPointerDown={onScrub ? windowDown : undefined}
+              onPointerMove={onScrub ? windowMove : undefined}
+              onPointerUp={onScrub ? windowUp : undefined}
+              onPointerCancel={onScrub ? windowCancel : undefined} />
+          )}
           {playhead !== null && (
-            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={MT.y - 1} y2={SE.mid + SE.amp} />
+            <line className="bn-tp-playhead" x1={x(playhead)} x2={x(playhead)} y1={MT.y - 1} y2={showSentiment ? SE.mid + SE.amp : PT.y + PT.h + 1} />
+          )}
+          {player !== null && (
+            <g className="bn-tp-player" data-testid="tapestry-player">
+              <path d={`M${x(player) - 4},${MT.y - 9} h8 l-4,5 z`} />
+              <line x1={x(player)} x2={x(player)} y1={MT.y - 5} y2={lanesBottom + 3} />
+            </g>
           )}
 
           {/* Sentiment */}
-          <line className="bn-tp-axis" x1={TAPESTRY_GUTTER} x2={xEnd} y1={SE.mid} y2={SE.mid} />
-          {s.quotes.map((q, i) => {
+          {showSentiment && <line className="bn-tp-axis" x1={TAPESTRY_GUTTER} x2={xEnd} y1={SE.mid} y2={SE.mid} />}
+          {showSentiment && s.quotes.map((q, i) => {
             const cx = x(q.t0);
             const h = (0.35 + (0.65 * (Math.min(3, Math.max(1, q.intensity)) - 1)) / 2) * SE.amp;
             const dim = (selected >= 0 && i !== selected) || (themeFocus !== null && q.theme !== themeFocus);
@@ -536,20 +651,22 @@ export default function SessionTapestry({
               // One Tab stop per slice (roving): the selected bar, else the first; arrows move.
               tabIndex: (selected >= 0 ? i === selected : i === Math.min(lastIndex, s.quotes.length - 1)) ? 0 : -1,
               role: "button",
-              "aria-expanded": i === selected,
-              "aria-controls": panelId,
+              "aria-expanded": jumps ? undefined : i === selected,
+              "aria-controls": jumps ? undefined : panelId,
               "aria-label": [
                 q.sentiment ? t(`enums:sentiment.${q.sentiment}`, { defaultValue: q.sentiment }) : "",
                 formatTimecode(q.t0),
               ].filter(Boolean).join(" "),
-              onClick: () => choose(i),
+              onClick: () => activate(i),
               onKeyDown: (e: React.KeyboardEvent) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  choose(i);
+                  activate(i);
                 } else if (selected < 0 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
                   e.preventDefault();
-                  choose(Math.max(0, Math.min(s.quotes.length - 1, i + (e.key === "ArrowRight" ? 1 : -1))));
+                  const n = Math.max(0, Math.min(s.quotes.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)));
+                  if (jumps) focusBar(n, (e.currentTarget as SVGElement).ownerSVGElement);
+                  else choose(n);
                 }
               },
             };
@@ -569,7 +686,7 @@ export default function SessionTapestry({
             const right = Math.max(markHalf, Math.min(want, gapNext / 2));
             const hit = (
               <rect className="bn-tp-bar-hit" aria-hidden="true" x={cx - left} y={top} width={left + right}
-                height={bottom - top} onClick={() => choose(i)} />
+                height={bottom - top} onClick={() => activate(i)} />
             );
             let mark: React.ReactNode;
             if (!q.sentiment) {
@@ -586,7 +703,7 @@ export default function SessionTapestry({
           })}
 
           {/* Theme spans */}
-          {spans.map(([theme, sp]) => {
+          {showThemes && spans.map(([theme, sp]) => {
             const x0 = x(sp.t0);
             const x1 = Math.max(x(sp.t1), x0 + 6);
             const row = themeEnds.indexOf(Math.min(...themeEnds));

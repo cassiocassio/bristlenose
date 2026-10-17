@@ -512,3 +512,108 @@ describe("tapestry scale", () => {
     expect(zoomScale(0.33, 100)).toBeCloseTo(0.0825);
   });
 });
+
+describe("SessionTapestry — section flags from the keyboard", () => {
+  it("are buttons with one Tab stop: the arrows move it, Return jumps", () => {
+    const { onJump } = setup();
+    const flags = [...document.querySelectorAll<SVGGElement>(".bn-tp-flag")];
+    expect(flags.map((g) => g.getAttribute("tabindex"))).toEqual(["0", "-1"]);
+    expect(flags[0]).toHaveAttribute("role", "button");
+    expect(flags[0]).toHaveAttribute("aria-label", "Searching for a product · 00:40");
+    flags[0].focus();
+    fireEvent.keyDown(flags[0], { key: "ArrowRight" });
+    const moved = document.querySelector<SVGGElement>('.bn-tp-flag[data-i="1"]')!;
+    expect(document.activeElement).toBe(moved);
+    expect(moved).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(moved, { key: "Enter" });
+    expect(onJump).toHaveBeenCalledWith(300);
+  });
+});
+
+// The transcript's sticky timeline (islands/transcript/TranscriptTimeline.tsx): every prop below
+// defaults to the grid's slice, which the tests above pin by passing none of them.
+describe("SessionTapestry — in the transcript", () => {
+  const draw = (extra: Partial<React.ComponentProps<typeof SessionTapestry>> = {}) => {
+    const onJump = vi.fn();
+    const utils = render(<SessionTapestry session={session} sPerPx={1} nameOf={(c) => c} onJump={onJump} {...extra} />);
+    return { onJump, ...utils };
+  };
+  const height = () => Number(document.querySelector(".bn-tapestry-svg")!.getAttribute("height"));
+
+  it("draws fewer lanes, shorter, when asked: compact keeps sections and speakers only", () => {
+    const { unmount } = draw();
+    const full = height();
+    unmount();
+    draw({ lanes: 3 });
+    const standard = height();
+    expect(document.querySelectorAll(".bn-tp-bar")).toHaveLength(3);
+    expect(document.querySelectorAll(".bn-tp-theme")).toHaveLength(0);
+    document.body.innerHTML = "";
+    draw({ lanes: 2 });
+    expect(document.querySelectorAll(".bn-tp-bar")).toHaveLength(0);
+    expect(document.querySelectorAll(".bn-tp-axis")).toHaveLength(0);
+    expect(document.querySelectorAll(".bn-tp-clip")).toHaveLength(3);
+    expect(document.querySelectorAll(".bn-tp-flag")).toHaveLength(2);
+    expect(height()).toBeLessThan(standard);
+    expect(standard).toBeLessThan(full);
+  });
+
+  it("draws the reading window over the span the reader can see, and nothing without one", () => {
+    const { unmount } = draw();
+    expect(document.querySelector(".bn-tp-window")).toBeNull();
+    unmount();
+    draw({ readingWindow: [100, 220] });
+    const win = document.querySelector<SVGRectElement>(".bn-tp-window")!;
+    // x = gutter (82) + seconds / sPerPx.
+    expect(Number(win.getAttribute("x"))).toBe(182);
+    expect(Number(win.getAttribute("width"))).toBe(120);
+    expect(win).not.toHaveClass("draggable");
+  });
+
+  it("keeps the current section's flag raised at rest", () => {
+    draw({ current: 1 });
+    const flags = [...document.querySelectorAll<SVGGElement>(".bn-tp-flag")];
+    expect(flags.find((g) => g.dataset.i === "1")).toHaveClass("raised");
+    expect(flags.find((g) => g.dataset.i === "0")).not.toHaveClass("raised");
+  });
+
+  it("marks the player's moment only while there is one", () => {
+    const { unmount } = draw();
+    expect(document.querySelector(".bn-tp-player")).toBeNull();
+    unmount();
+    draw({ player: 250 });
+    expect(document.querySelector(".bn-tp-player line")).toHaveAttribute("x1", "332");
+  });
+
+  it("jumps from a sentiment bar instead of opening a popover, by mouse and by Return", () => {
+    const { onJump } = draw({ quoteAction: "jump" });
+    const bars = [...document.querySelectorAll<SVGElement>(".bn-tp-bar")];
+    fireEvent.click(bars[1]);
+    expect(onJump).toHaveBeenLastCalledWith(310);
+    expect(document.querySelector(".bn-tp-popover")).toBeNull();
+    expect(bars[1]).not.toHaveAttribute("aria-expanded");
+    fireEvent.keyDown(bars[1], { key: "ArrowLeft" });
+    const first = document.querySelectorAll<SVGElement>(".bn-tp-bar")[0];
+    expect(document.activeElement).toBe(first);
+    fireEvent.keyDown(first, { key: "Enter" });
+    expect(onJump).toHaveBeenLastCalledWith(40);
+    expect(document.querySelector(".bn-tp-popover")).toBeNull();
+  });
+
+  it("scrubs while the window is dragged, and a click on it without a drag jumps", () => {
+    const onScrub = vi.fn();
+    const { onJump } = draw({ readingWindow: [100, 220], onScrub });
+    const win = document.querySelector<SVGRectElement>(".bn-tp-window")!;
+    expect(win).toHaveClass("draggable");
+    // jsdom: the svg sits at 0, so clientX is the drawn x.
+    fireEvent.pointerDown(win, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerMove(win, { clientX: 260, pointerId: 1 });
+    fireEvent.pointerUp(win, { clientX: 260, pointerId: 1 });
+    // Grabbed 18 px into the window; its left edge followed the pointer to 242 → 160 s.
+    expect(onScrub).toHaveBeenLastCalledWith(160);
+    expect(onJump).not.toHaveBeenCalled();
+    fireEvent.pointerDown(win, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerUp(win, { clientX: 200, pointerId: 1 });
+    expect(onJump).toHaveBeenCalledWith(118);
+  });
+});

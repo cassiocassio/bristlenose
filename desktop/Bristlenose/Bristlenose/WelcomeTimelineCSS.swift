@@ -1929,7 +1929,7 @@ body.hide-ai-tags .badge-ai { display: none; }
     outline-offset: 1px;
 }
 
-/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–399 ════ */
+/* ════ bristlenose/theme/organisms/session-tapestry.css — lines 1–428 ════ */
 /* Session tapestry — the timeline slice under a row of the Sessions grid
    (frontend/src/components/SessionTapestry.tsx). Lanes: section flags, speaker
    clips, sentiment bars, theme spans. Every colour and size is a shipped token
@@ -1964,16 +1964,16 @@ body.hide-ai-tags .badge-ai { display: none; }
     margin-top: -2px;
     padding-bottom: 10px;
     cursor: pointer;
-    transition: opacity 0.12s ease;
+    transition: opacity var(--bn-transition-fast);
 }
 .bn-tapestry-preview-svg { display: block; overflow: visible; }
-.bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill 0.12s ease; }
+.bn-tp-pv-track { fill: var(--bn-colour-badge-bg); transition: fill var(--bn-transition-fast); }
 .bn-tapestry-preview:hover .bn-tp-pv-track { fill: var(--bn-tp-preview-track-hover); }
 .bn-tp-pv-clips { opacity: var(--bn-tp-preview-opacity); }
 .bn-tp-pv-clip { fill: var(--bn-colour-muted); }
 .bn-tp-pv-edge { fill: none; stroke: rgb(0 0 0 / 0.25); stroke-width: 0.5; vector-effect: non-scaling-stroke; }
 /* Open, the timeline is the strip: it gives way. */
-.bn-sessions-row.bn-tapestry-open .bn-tapestry-preview { opacity: 0; pointer-events: none; }
+.bn-sessions-row.bn-tapestry-open .bn-tapestry-preview { opacity: 0; }
 
 /* Open, the journey chain's words are the timeline's flag labels: they fly there and back
    (utils/tapestryMotion.ts). The chain keeps its place, so nothing reflows under the flight;
@@ -2069,6 +2069,11 @@ body.hide-ai-tags .badge-ai { display: none; }
 .bn-tp-clip-label.on-ppt { fill: light-dark(#fff, #111); }
 
 .bn-tp-flag { cursor: pointer; }
+/* A flag is a button (one Tab stop per timeline, roving): the focus ring is the banner's own
+   hairline in the accent, heavier, so it reads apart from the hot (pointer) state. */
+.bn-tp-flag:focus { outline: none; }
+.bn-tp-flag:focus-visible line,
+.bn-tp-flag:focus-visible path { stroke: var(--bn-colour-accent); stroke-width: 2; }
 /* The staff and the banner share one hairline: the border keyline at rest, the text
    ink when raised — darker, never thicker. */
 .bn-tp-flag line,
@@ -2294,6 +2299,30 @@ body.hide-ai-tags .badge-ai { display: none; }
     .bn-tapestry-toggle,
     .bn-tp-zoom { display: none; }
 }
+
+/* ── The transcript's sticky timeline (islands/transcript/TranscriptTimeline.tsx) ──
+   The same timeline, with what the reader can see drawn on it and the player's moment while media
+   plays. docs/mockups/transcript-timeline-toggle.html. */
+:root {
+    /* The reading window is the minimap's viewport indicator: the house mark for "what you are
+       looking at" (organisms/minimap.css), aliased so the family has its own names. */
+    --bn-tp-window-bg: var(--bn-minimap-viewport-bg);
+    --bn-tp-window-border: var(--bn-minimap-viewport-border);
+}
+.bn-tp-window {
+    fill: var(--bn-tp-window-bg);
+    stroke: var(--bn-tp-window-border);
+    stroke-width: 1.5;
+    pointer-events: none;
+}
+/* Draggable, as the minimap's viewport is: dragging scrolls the transcript. */
+.bn-tp-window.draggable { pointer-events: auto; cursor: grab; }
+.bn-tp-window.draggable:active { cursor: grabbing; }
+/* The player's moment: accent, a notch heavier than the hover cursor (.bn-tp-playhead), with a
+   head, so the two never read as one. */
+.bn-tp-player { pointer-events: none; }
+.bn-tp-player line { stroke: var(--bn-colour-accent); stroke-width: 1.5; }
+.bn-tp-player path { fill: var(--bn-colour-accent); }
 
 /* ── Hover thumbnail: a still of the participant's screen below the speaker lane ──
    (utils/tapestryThumb.ts). Fixed on document.body, so the slice's scroll cannot clip it;

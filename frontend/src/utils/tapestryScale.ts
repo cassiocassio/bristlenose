@@ -2,6 +2,10 @@
 
 export const TAPESTRY_GUTTER = 82;
 export const TAPESTRY_RIGHT = 14;
+/** Clips are drawn as rounded clips at or below this many seconds per pixel, as slivers above it.
+ *  Here, not in SessionTapestry, so the closed strip (TapestryPreview, on first paint) can share it
+ *  without importing the lazy timeline. */
+export const CLIP_THRESHOLD = 2.5;
 
 /**
  * One shared scale for every slice, from every session's duration, so it is fixed
@@ -30,6 +34,16 @@ export function fitScale(durations: readonly number[], width: number): number {
   const shortest = kept[0];
   const longest = kept[kept.length - 1];
   return Math.min(4, Math.max(shortest / usable, longest / (4 * usable)));
+}
+
+/**
+ * One session fitted to the width: the transcript's timeline, which has no other session to share
+ * a scale with. The same 4 s/px ceiling as `fitScale`, so a very long session at a narrow window
+ * scrolls sideways rather than drawing finer than the grid ever does.
+ */
+export function fitSession(duration: number, width: number): number {
+  const usable = Math.max(1, width - TAPESTRY_GUTTER - TAPESTRY_RIGHT);
+  return duration > 0 ? Math.min(4, duration / usable) : 1;
 }
 
 /** Zoom slider 0–100 → seconds per pixel, log-spaced from fit down to min(0.25, fit / 4),

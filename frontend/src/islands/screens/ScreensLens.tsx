@@ -610,11 +610,21 @@ export function ScreensLens() {
     return [...seen].sort((a, b) => byId.get(a)!.start_timecode - byId.get(b)!.start_timecode);
   }, [screen, byId, store.hidden]);
 
-  // The window subtitle's count, and what the Mac reads for its View menu and column fit.
+  // The window subtitle's counts: the screens, and every quote on any of them once each, hidden ones
+  // not counted (the same rule as each row's count in the navigator).
+  const quotesOnScreens = useMemo(() => {
+    const seen = new Set<string>();
+    for (const s of screens) {
+      for (const tb of s.tabs) {
+        for (const d of [...tb.pins.map((p) => p.dom_id), ...tb.loose]) if (byId.has(d) && !store.hidden[d]) seen.add(d);
+      }
+    }
+    return seen.size;
+  }, [screens, byId, store.hidden]);
   useEffect(() => {
-    setScreensCount(screens.length);
+    setScreensCount(screens.length, quotesOnScreens);
     return () => setScreensCount(0);
-  }, [screens.length]);
+  }, [screens.length, quotesOnScreens]);
 
   // The navigator: shown and hidden like Discussion's guide, and resized the same way — the
   // shipped .drag-handle on its edge, a keyboard-operable separator (←/→ by RESIZE_STEP, Home,

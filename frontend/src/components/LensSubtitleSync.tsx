@@ -88,7 +88,7 @@ export function LensSubtitleSync(): null {
       const { codebooks, tags } = codebookCounts(codebook);
       subtitle = codebookSubtitle(codebooks, tags);
     } else if (tab === "screens") {
-      subtitle = screensSubtitle(screensCount);
+      subtitle = screensSubtitle(screensCount.screens, screensCount.quotes);
     }
 
     document.title = subtitle || "Bristlenose";

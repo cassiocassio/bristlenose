@@ -37,10 +37,16 @@ export function quotesSubtitle(visibleCount: number, starred = false): string {
   return i18n.t("titlebar.quotes", { count: visibleCount });
 }
 
-/** "12 Screens" — the count of screens the Screens lens is showing. */
-export function screensSubtitle(count: number): string {
-  if (count === 0) return "";
-  return i18n.t("screens.subtitle", { count });
+/**
+ * "12 Screens · 41 Quotes" — the screens the Screens lens is showing, and the
+ * quotes on them (each once, hidden excluded). No screens, no subtitle; screens
+ * with nothing said on them yet name only the screens.
+ */
+export function screensSubtitle(screens: number, quotes = 0): string {
+  if (screens === 0) return "";
+  const left = i18n.t("screens.subtitle", { count: screens });
+  if (quotes === 0) return left;
+  return `${left}${SEP}${i18n.t("titlebar.quotes", { count: quotes })}`;
 }
 
 /** "13 Signals" — the count of currently-shown signals (dismissed excluded). */

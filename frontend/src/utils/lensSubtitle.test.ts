@@ -115,6 +115,13 @@ describe("zero counts produce no subtitle", () => {
     expect(screensSubtitle(12)).toBe("12\u00a0Screens");
   });
 
+  it("screens: the quotes on them follow, and only when there are some", () => {
+    expect(screensSubtitle(23, 41)).toBe("23\u00a0Screens · 41\u00a0Quotes");
+    expect(screensSubtitle(1, 1)).toBe("1\u00a0Screen · 1\u00a0Quote");
+    // Quotes without screens can't happen on the board, but the screens rule wins.
+    expect(screensSubtitle(0, 5)).toBe("");
+  });
+
   it("codebook: empty only when there is nothing at all", () => {
     expect(codebookSubtitle(0, 0)).toBe("");
     // A codebook with no tags yet is still something to name — a fresh project

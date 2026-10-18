@@ -80,10 +80,10 @@ locale as **assumed**, never as `detected`, so subtitles and clips don't inherit
 | A | **Speech helper** `bristlenose-speech`: WAV + locale in, JSON out (segments, words with time ranges and confidences, asset version) | new `desktop/speech-helper/` | Most of it is `experiments/apple-speech/transcribe.swift`. **Built like `desktop/mcp-helper/`** (embedded Info.plist, `PrivacyInfo.xcprivacy`, minos = the app's 15.0 floor, `Contents/Helpers`), **signed like ffmpeg** (`sign-ffmpeg.sh`: sandbox + inherit, because the sidecar launches it; mcp-helper is sandboxed *without* inherit because a foreign app launches it). Its own gate script, not a copy of `check-mcp-helper.sh`, which asserts the opposite. `if #available(macOS 26, *)`; reports *unavailable* below. Holds its own five locale reservations and releases each after use, by the stored `Locale` object |
 | B | **Engine decision + backend** | `s05_transcribe.py` | A **separate** decision function fed settings, env and the helper's availability. `_resolve_backend` stays as it is: the preflight (`whisper.py:148`) and `doctor` share it, and a third value would pick the wrong repo table. `_init_apple_backend` returns `TranscriptSegment`s with words, `source = "apple-speech"`, **re-segmented** on word gaps over ~0.7 s and sentence ends (Apple's results are long, and stage 5b labels per segment). Keeps the signal gate; skips the style prompt, echo filter and inaudible marker (Whisper-specific). Applies the gate (§2) |
 | C | **No fetch from Python on the Apple path** | `pipeline.py` `_needs_whisper` block | With the helper set, Python never fetches: the app owns the one download. A deferred session waits on that job by its outcome, never by calling `ensure_hf_model` itself (two fetchers of one repo each write their own partial under hf_xet) |
-| D | **The download job** | Swift `WhisperDownloadModel` (app-level `@StateObject`, sibling of `OllamaDownloadModel`), single-flight across windows; Python **`bristlenose doctor --fetch`** (already a sidecar passthrough) | `doctor --fetch` gains one structured progress line per tick from `ensure_hf_model(tqdm_class=)` (the seam `_native_download_progress` already uses), parsed like `ServeManager.handleLine`. Bytes from the wire, total from the server, not `_DOWNLOAD_MB` (which drifts) or blob growth (which hf_xet chunking distorts). Restart on relaunch when `cache_state == "partial"` (the appliance copes). Starts at the first Apple run, or at the first welcome screen if the owner prefers (§6) |
+| D | **The download job** | Swift `WhisperDownloadModel` (app-level `@StateObject`, sibling of `OllamaDownloadModel`), single-flight across windows; Python **`bristlenose doctor --fetch`** (already a sidecar passthrough) | `doctor --fetch` gains one structured progress line per tick from `ensure_hf_model(tqdm_class=)` (the seam `_native_download_progress` already uses), parsed like `ServeManager.handleLine`. Bytes from the wire, total from the server, not `_DOWNLOAD_MB` (which drifts) or blob growth (which hf_xet chunking distorts). Restart on relaunch when `cache_state == "partial"` (the appliance copes). **One probe of "is Whisper on disk"**: Swift asks Python (the job's answer, or `doctor`), never computes the Hugging Face cache path itself; and reconcile the two Python probes that already disagree (`doctor` uses `scan_cache_dir`, which reads a config-only partial as cached; the preflight's `cache_state` checks the heavy blob). Starts at the first Apple run, or at the first welcome screen if the owner prefers (§6) |
 | E | **Record the engine** | transcription-quality record (`recognition.backend`, locale `assumed`, asset version), segment `source` | The Diagnostics row types `backend` but renders nothing (`TranscriptionDiagnostics.tsx:32`); render it there |
 | F | **No re-transcription** | stage-5 fingerprints unchanged | The engine must not join the fingerprint, or a re-analyse silently re-transcribes and orphans stars, tags and edits (README § 7). Known paths that will re-transcribe anyway: `--clean`, a copy without `-p`, a folder moved before its first post-upgrade run. Warn on those when the engine would change |
-| G | **Settings ▸ Transcription** | `TranscriptionSettingsView` | Redesigned (§4): one behaviour choice and a Whisper status row; MLX vs faster-whisper moves behind the Diagnostics preference; the interim model picker leaves the pane |
+| G | **Settings ▸ Transcription** | `TranscriptionSettingsView` | Redesigned (§4): one behaviour choice and a Whisper status row; MLX vs faster-whisper moves behind the Diagnostics preference; the interim model picker leaves the pane (update `tests/test_interim_model_pickers.py`; `BRISTLENOSE_WHISPER_MODEL` stays as an env override). *Whisper when ready* and *Whisper only* both write `whisperBackend = auto`; *Whisper only* also withholds the helper path from `childEnvironment` (or sets `BRISTLENOSE_APPLE_SPEECH=0`), which is all the engine decision needs. The status row changes height between its states, so the pane calls `SettingsWindow.refitToContent()` on a height signature of the state |
 | H | **Progress wording** | Swift | Foundation's `Progress` (`kind = .file`, `fileOperationKind = .downloading`, throughput and time-remaining keys) composes "600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining" in every locale; probe the exact string before relying on it. Throughput over an 8–10 s window, *Calculating…* until it fills, minutes with hysteresis |
 | I | **Honest ETAs** | `timing.py` | Key the `transcribe` timing sample by engine (`build_hardware_key` doesn't know it), or Apple's 3× pace poisons Whisper's estimate. A Mac with no history shows no ETA (`initial_estimate` returns `None`), and the storyboard follows |
 | J | **Parked behind a flag** | `Config.experimental_apple_speech` (Python), mirrored in `BristlenoseFlags` | Default off for the cohort; tests for both shapes; removed once the gate is measured on more files |
@@ -124,7 +124,9 @@ Frames refer to the storyboard.
    when Whisper is ready, so absence keeps one meaning. [2, 3]
 3. **The report arrives about three minutes sooner** on typical broadband. [3]
 4. **A deferred session** reads *Waiting for download*, the `.queued` row's sibling (info,
-   no glyph, no door), with its one sentence in the row's tooltip. [4]
+   no glyph, no ring, no door), with its one sentence in the row's tooltip. Swift learns the
+   gate fired from a new field on `RunProgressEvent` (Python, `PipelineSummary.swift` /
+   `EventLogReader`, and the fixture). [4]
 5. **Settings ▸ Transcription** becomes one behaviour choice and a status row. [5]
 
 ```
@@ -169,6 +171,9 @@ every run once Whisper is on disk, and every pinned-language run.
   enough for now, or should the Diagnostics row flag a version change?
 - **macOS 26's locale list** (the trial read 27 only); the order of the pills in the
   status zone (already open).
+- **Today's shipped time wording** (*~2 min left*, *<1 min left*) uses a tilde and a
+  less-than sign where Apple writes words (*About 2 min left*, *Under a minute*). Separate
+  from this slice; worth its own small change across 21 locales.
 
 ## 7. Reviews (18 Oct 2026)
 
@@ -181,5 +186,7 @@ state; the `cca68462` reversal stated and bounded; locale table and *assumed* lo
 re-segmentation for the speaker pass; no ETA without history and engine-keyed timing;
 Foundation's progress wording; *Stop Download*; the `StatusPill` envelope; tooltip instead
 of a popover for the deferred row; the settings pane redesigned; a parked flag; and the
-Diagnostics row's missing `backend` render. Also found: `desktop/CLAUDE.md` put the Whisper
+Diagnostics row's missing `backend` render; then one cache probe instead of a third, the
+settings pane's refit and the interim-picker test, the *Whisper only* wire, no ring on a
+deferred row, and the shipped tilde wording as its own question. Also found: `desktop/CLAUDE.md` put the Whisper
 model in Application Support; it lands in the container's Hugging Face cache (corrected).

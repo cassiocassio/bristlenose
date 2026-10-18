@@ -194,8 +194,11 @@ The hard-won constraints. Build against these.
   and mark the sticky's centre**. No server-side auto-layout (we compute it).
 - **A sticky takes a width only; Miro sets the height**, in fixed proportion per
   shape: a square is 1.1457 × its width, a rectangle 0.6514 × (measured on a live
-  board at six widths, 18 Oct 2026). The defaults are 199 × 228 and 350 × 228, so
-  **the paper is the top 199/228 of the box and the rest is its shadow**. Anything
+  board at six widths, 18 Oct 2026). The defaults are 199 × 228 and 350 × 228, and
+  Miro's [Web SDK reference](https://developers.miro.com/docs/websdk-reference-sticky-note)
+  says the 228 "includes the sticky note shadow" and a square sticky is square
+  "(sticky note shadow excluded)": **the paper is 199/228 of the box's height and
+  the rest is its shadow** (where the shadow sits is not documented; we draw it below). Anything
   that overlaps stickies on purpose must overlap the paper, not the box: a split
   quote's parts overlapped the boxes by one x-height and showed as separate notes
   with a gap (owner, 18 Oct 2026). `board_layout.MIRO_PAPER` and `set_overlap`;

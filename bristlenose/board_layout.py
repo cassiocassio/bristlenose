@@ -614,8 +614,11 @@ X_HEIGHT = 5.0
 SET_STAGGER = X_HEIGHT
 #: Miro's sticky box is not all paper. Its default stickies are 199 × 228 (square) and 350 × 228
 #: (rectangle), and every size keeps those proportions (measured on a live board, 18 Oct 2026: a
-#: square is 1.1457 times as tall as wide, a rectangle 0.6514), so the paper is the top 199/228 of
-#: the box and the rest is its shadow. An overlap of one x-height measured on the box therefore
+#: square is 1.1457 times as tall as wide, a rectangle 0.6514). Miro's Web SDK reference says the
+#: 228 "includes the sticky note shadow" and that a square sticky "is square (sticky note shadow
+#: excluded)", so the paper is 199/228 of the box's height and the rest is its shadow. Where the
+#: shadow sits is not documented; drawn below the paper, as here, or split above and below, the
+#: overlap between parts of near-equal height comes out the same to within a unit or two. An overlap of one x-height measured on the box therefore
 #: showed as a gap of about a tenth of a sticky (owner, 18 Oct 2026: in FigJam the parts overlap,
 #: in Miro they don't), and more on a square, which is taller for its width. FigJam's stickies are
 #: all paper, so the plugin overlaps the boxes by the x-height alone.

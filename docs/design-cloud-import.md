@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-17 (eighth pass — Zoom: parts, transcripts, redirect auth, diagnostics gate, first live sign-in)
-trued-against: HEAD@main efbb9c8a
+last-trued: 2026-10-18 (ninth pass — Zoom on a Pro account: first fetch, and the fixes it and a review drove)
+trued-against: HEAD@main 2878f68e
 ---
 
 > **Truing status:** Partial — trued **twice** on 15 Aug 2026, and the second
@@ -75,6 +75,16 @@ trued-against: HEAD@main efbb9c8a
 
 ## Changelog
 
+- _2026-10-18 (ninth pass)_ — Zoom fetched real recordings on a Pro account; status block note
+  "As tested, 18 Oct 2026" added under the 17 Oct one, and §9's Zoom tolerance line annotated.
+  Anchors: commits "zoom import: a meeting recorded today is listed once, not twice"
+  (`a5e31df7`), "take the video whenever there is one, screen first" (`421da4f7`), "every row says
+  when it was recorded" (`063c9c38`), "the Expires column appears only when a recording has a
+  date" (`16d52992`), "the booked time, and instant meetings named as such" (`6802e870`),
+  "reliability fixes from the pre-release Zoom review" (`a912a6d5`), "an empty list says the
+  meetings are still recording or processing" (`97c00fae`), "a meeting still processing is
+  counted in the footer" (`2eda5268`), "a meeting whose video is still processing is not offered
+  yet" (`2878f68e`).
 - _2026-10-17 (eighth pass)_ — trued up for Zoom: the Diagnostics gate, the Marketplace app,
   `webcredentials`, the redirect-auth rule, transcript readiness by inference, the VTT
   exception, the first live sign-in, the parked-platform grant consequence, and the test
@@ -412,6 +422,9 @@ trued-against: HEAD@main efbb9c8a
     match. Stated rather than papered over; sharpening it means reading
     `recording_end − recording_start` off the recordings endpoint, which waits
     until Zoom is unparked and can be measured rather than reasoned about.
+    _17–18 Oct 2026:_ a row's duration now is that span when Zoom stamps it,
+    so seconds-level matching is possible; the ±90s tolerance is unchanged
+    until a few real files have been compared against their rows.
   - **The split that was there.** `fetchOrder` read `listing.rows` while the
     outline drew a marked copy — harmless until the two disagree, at which
     point the window says "already in this project" and the batch fetches it
@@ -550,6 +563,8 @@ trued-against: HEAD@main efbb9c8a
 > **Zoom — built, flagged off, never run against a real account (4 Sep 2026).** The adapter — `ZoomOAuth.swift`, `ZoomRecordingModel.swift`, `ZoomSource.swift`, ~1,900 lines, with `ZoomGrantTests` + `ZoomImportTests` — sits behind `BristlenoseFlags.cloudImportZoom`, off by default; `CloudPlatform.offered(zoomEnabled:)` filters it out of the offered platforms. It has not run against a real account because cloud recording needs Zoom Pro or higher and there is no Pro account to test on; the maintainer's estimate is October. "Deferred: Zoom" below means *sequenced after Teams*, not unbuilt — don't propose building it, and don't flip the flag without a real-world pass.
 >
 > **As built, 17 Oct 2026 — a Diagnostics beta, signed in live, never fetched a recording.** The 4 Sep sentence above is the baseline and stays. Since then: the three files are 2,487 lines (`ZoomOAuth.swift` 550, `ZoomRecordingModel.swift` 796, `ZoomSource.swift` 1,141). Zoom is offered when the Diagnostics menu is on **or** the `BristlenoseCloudImportZoom` override is set — `CloudPlatform.zoomOffered(flag:diagnostics:)` (`CloudPlatform.swift:52-68`; commit "zoom import is a diagnostics beta: shown whenever the diagnostics menu is on", `3f91d03c`) — and it stays out of the docs, the About page and release notes until Zoom's review clears. A Marketplace General App exists: user-managed, public client with PKCE, **Development credentials only**, no review submitted; its client ID and redirect live in the app's `UserDefaults`, not in the bundle. The first live sign-in ran 17 Oct on a free **Basic** account: consent, the HTTPS callback via `webcredentials`, the PKCE exchange, and the preflight notice "Recordings aren't available" (`efbb9c8a`). Basic can grant the `cloud_recording:*` scopes; it simply has nothing to list. Fetching a real recording still needs a Pro account.
+>
+> **As tested, 18 Oct 2026 — the whole path on a Pro account.** List, download, Zoom's VTT with named speakers, and the analysis all ran end to end. What the live account taught, each fixed the same day: every meeting recorded today was listed twice, because Zoom's `from`/`to` are inclusive dates and the store's window always ends in a chunk that is today alone (de-duplicated by UUID, and chunks now span 30 inclusive dates, not 31); the import took the audio-only M4A, and now always takes the video, a layout with the shared screen first, with no audio option, by product decision; single recordings showed no recorded time; Expires showed dashes on an account with retention off (now shown only when some row has a date); and Zoom lists a meeting the moment recording starts, before any file exists, which now reads as "still recording or processing" rather than Meet's organiser sentence, and is counted in the footer beside fetchable rows. A fifth read-only scope, `meeting:read:meeting`, gives the Scheduled column and "Instant meeting" (asked for at first sign-in, so a researcher consents once). A pre-release review then found that a listing failing outright read as an empty month, that concurrent downloads wrote the adapter's file plans unguarded, and that a meeting whose video was still processing could be offered as audio and lock out its video; all three are fixed (the last by reading Zoom's documented per-file `status`). Public docs naming Zoom are written and held on the website's `hold/zoom-review` branch until Production credentials ship.
 
 **What exists as of 15 Aug 2026.** All three platforms are live behind `File ▸ Import`, on one shared spine: `CloudImportSource` (the protocol), `CloudImportStore` (the state machine), `CloudImportWindow` (the surface), `CloudPlatform` (everything vendor-shaped the UI says), `CloudImportCoordinator` (which source the window holds), and `CloudDownloader` + `CloudDownloadVerification` (§6's "prove the bytes arrived", once, for all three). Per-platform adapters carry only what genuinely differs: the endpoints, the scope vocabulary, the error dialects, the OAuth ceremony, and each vendor's own way of failing quietly. A `FixtureCloudSource` drives every state from the Diagnostics menu without an account.
 

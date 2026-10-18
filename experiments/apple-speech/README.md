@@ -309,6 +309,24 @@ Ameresco references' human-annotated turn starts, Whisper is a little closer (me
 A factor of 3.2, not the 10× the vendor benchmarks report: mlx turbo is fast on an M2 Max.
 On a base M1 or M2 the gap is likely wider (not measured).
 
+### A wrong language guess (measured 18 Oct 2026, later the same day)
+
+Apple needs a locale up front. Five recordings were run under the wrong one; mean word
+confidence over the first two minutes, then over the whole file, against the right locale:
+
+| Audio | Locale given | Wrong: first 2 min / whole file | Right locale | Output |
+|---|---|---|---|---|
+| German interview (de-1) | en-US | 0.14 / 0.10 | 0.93 | 114 words instead of 2,128 |
+| Spanish podcast (es-2) | en-US | 0.35 / 0.16 | 0.92 | 607 words instead of 3,441 |
+| French interview (fr-1) | en-GB | 0.38 / 0.30 | 0.93 | 24 words instead of 1,640 |
+| English oral history (fossda-01) | es-ES | 0.86 / 0.84 | 0.92 | 4,455 words, **in English** |
+| English Teams call | de-DE | 0.70 / 0.68 | 0.80 | 1,979 words, **in English** |
+
+So a non-English model handed English audio writes English (1,138 English function words
+in the Spanish-model run, 10 Spanish), and the English model handed other languages gives
+itself away by low confidence. A gate at mean confidence 0.5 over the first two minutes
+separates all five; five files are too few to trust the exact number.
+
 ### Memory, several at once, determinism, video input (measured 18 Oct 2026, later the same day)
 
 - **Memory.** One 28-minute German file (de-2): Apple's work runs in a per-client

@@ -17,6 +17,16 @@
 	     a soft restriction: measured 29 Sep 2026 on clean macOS 15.7.7, 26.6.2
 	     and 27.0, the app launches and the group works (§6.7, P0.1). Re-export
 	     the profile for a clean log; nothing depends on it. -->
+	<!-- Zoom's HTTPS sign-in callback: webcredentials, never applinks (an
+	     applinks-only entry makes ASWebAuthenticationSession hang after
+	     consent). Added to the .dmg 18 Oct 2026 so Zoom import works where
+	     Teams and Meet already do, with no TestFlight invite needed; the
+	     Developer ID profile is minted with the App ID's Associated Domains
+	     capability at export (-allowProvisioningUpdates). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:bristlenose.app</string>
+	</array>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)app.bristlenose</string>

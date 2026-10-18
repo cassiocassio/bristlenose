@@ -704,7 +704,7 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
      *18 Oct 2026: a fifth, `meeting:read:meeting`, for the booked time (below). Asked for at the
      first sign-in so a researcher consents once; it must be added to the Marketplace app too.*
    - Don't submit for review.
-3. **Done 17 Oct 2026** (`0b50d663`; the `.dmg` question is decided: **no**, it does not carry the entitlement). **Apple side (code + portal):**
+3. **Done 17 Oct 2026** (`0b50d663`; the `.dmg` question was decided **no**, then reversed **yes** on 18 Oct 2026 so Zoom works where Teams and Meet do). **Apple side (code + portal):**
    - Re-add `com.apple.developer.associated-domains = ["webcredentials:bristlenose.app"]`
      (`webcredentials`, not `applinks`; an `applinks`-only entry hangs) to `Bristlenose.entitlements`
      and `BristlenoseDebug.entitlements`. Decide whether the Developer-ID `.dmg` carries it too.
@@ -1095,7 +1095,7 @@ tree first** (the harnesses already reproduce every defect), then turned green. 
 | 4 per-session fingerprints | M–L | cache-invalidation bugs are silent: prove each red first |
 | 5 Zoom | S–M | Marketplace publication |
 
-App Store: no new entitlement. Import is ingress; consent was already settled on 22 Aug 2026. *Except Zoom (17 Oct 2026): its HTTPS sign-in re-adds Associated Domains (`webcredentials:bristlenose.app`) to the store and Debug entitlements only, not the `.dmg` (`0b50d663`, pinned by `tests/test_entitlements_split.py`).*
+App Store: no new entitlement. Import is ingress; consent was already settled on 22 Aug 2026. *Except Zoom (17 Oct 2026): its HTTPS sign-in re-adds Associated Domains (`webcredentials:bristlenose.app`) to the store and Debug entitlements only, not the `.dmg` (`0b50d663`, pinned by `tests/test_entitlements_split.py`). 18 Oct 2026: the `.dmg` carries it too, so Zoom import works there with no TestFlight invite; a Developer ID export minted a profile allowing it (verified that day, unnotarised).*
 
 ---
 

@@ -68,6 +68,7 @@ async function start(text: string): Promise<void> {
       figma.closePlugin(`Stopped after ${tally.built} of ${plan.expectedQuotes} quotes. Undo removes what was drawn.`);
       return;
     }
+    console.error(e); // the panel says how far it got; the console keeps why
     say({
       type: "failed",
       message: `Stopped after ${tally.built} of ${plan.expectedQuotes} quotes. Undo removes what was drawn; then try again.`,

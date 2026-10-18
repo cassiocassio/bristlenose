@@ -87,7 +87,8 @@ class BoardBuild(BaseModel):
     ``phase`` says what the line counts: ``preparing`` (screengrabs, no call yet), ``opening``
     (the board and its first frames — no fraction or estimate claimed), then ``quotes``,
     ``groups`` or ``screens``. ``fraction`` is the share of all the board's calls made;
-    ``eta_seconds`` is None until this build has measured enough calls to say."""
+    ``eta_seconds`` is None until every kind of call still to come has an earned rate, from this
+    build or kept from earlier ones."""
 
     phase: str
     done: int
@@ -402,15 +403,19 @@ def _run_board_sync(job: dict[str, Any], db_factory: Callable[[], Session], proj
 async def _run_board(job: dict[str, Any], *args: Any) -> None:
     try:
         await asyncio.to_thread(_run_board_sync, job, *args)
-        if job["status"] == "running":
-            job["status"] = "completed"
+        # The push returned whole: a Stop that arrived during its last call was too late, and
+        # the board is finished — say so, with its link, rather than "cancelled".
+        job["status"] = "completed"
     except BoardCancelledError:
         pass  # the status already says cancelled; the board keeps what it has
     except miro_client.MiroError as exc:
         logger.warning("Miro board failed: reason=%s %s", exc.reason, exc)
         if job["status"] != "cancelled":  # a cancel stays a cancel, whatever the call in hand did
             job["status"] = "failed"
-            job["reason"] = exc.reason
+            # Miro refusing the token has no reason of its own at the raise (a wire diagnostic);
+            # the clients have a sentence for it, so it is named here rather than shown as
+            # "check your connection".
+            job["reason"] = exc.reason or ("token_rejected" if exc.status in (401, 403) else None)
             job["vars"] = dict(exc.vars)
     except Exception:
         logger.exception("Miro board failed")

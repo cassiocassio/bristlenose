@@ -357,7 +357,8 @@ def _push(token: str, db: Session, project_id: int, project_name: str,
                 call("bulk", sum(1 for s in board.stickies[i:i + 20]
                                  if s.kind == "quote" and s.attributed))
             progress.enter("groups", split_sets(set_ids))
-            group_sets(token, board_id, set_ids, made, each=lambda: call("group", 1))
+            grouped = group_sets(token, board_id, set_ids, made, each=lambda: call("group", 1))
+            progress.unplan("group", split_sets(set_ids) - grouped)
             for t in board.texts:  # board title as a real text item
                 miro_client.create_text(token, board_id, escape(t.text),
                                         t.x + 300, t.y, 600, int(t.size))

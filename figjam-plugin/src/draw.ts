@@ -121,6 +121,17 @@ function origin(): { x: number; y: number } {
   return { x: Math.round(right + 400), y: Math.round(top) };
 }
 
+/** Size a section to the nodes inside it (its children's coordinates are local to it). */
+function fitToChildren(section: SectionNode): void {
+  let right = 0;
+  let bottom = 0;
+  for (const n of section.children) {
+    right = Math.max(right, n.x + n.width);
+    bottom = Math.max(bottom, n.y + n.height);
+  }
+  section.resizeWithoutConstraints(Math.max(right + PAD, 200), bottom + PAD);
+}
+
 export async function draw(
   plan: BoardPlan,
   tally: { built: number },
@@ -159,43 +170,52 @@ export async function draw(
 
       let colX = PAD;
       let bottom = PAD;
-      for (const column of frame.columns) {
-        const header = makeHeaderLabel(column.header, plan.wide ? STICKY_WIDTH.wide : STICKY_WIDTH.square, fonts, measure);
-        section.appendChild(header); // then local coordinates
-        header.x = colX;
-        header.y = PAD;
-        let y = PAD + header.height + GAP;
-        let width = header.width;
-        for (const set of column.quotes) {
-          const stickies: StickyNode[] = [];
-          set.parts.forEach((p, k) => {
-            const s = makeSticky(p, plan.wide, fonts);
-            section.appendChild(s);
-            s.x = colX + k * NOTCH;
-            s.y = y;
-            y += s.height - NOTCH; // stacked by the height it actually grew to
-            width = Math.max(width, s.width + k * NOTCH);
-            stickies.push(s);
-          });
-          y += NOTCH + GAP;
-          // A set moves and sorts as one; ⌘-click still picks out a single part
-          // to delete, which is how researchers trim (design doc, 17 Oct 2026).
-          if (stickies.length > 1) figma.group(stickies, section).name = set.name;
-          tally.built++;
-          if (Date.now() - lastYield >= YIELD_MS) {
-            progress();
-            await pause();
-            lastYield = Date.now();
-            if (stopRequested()) throw new Stopped();
+      try {
+        for (const column of frame.columns) {
+          const header = makeHeaderLabel(column.header, plan.wide ? STICKY_WIDTH.wide : STICKY_WIDTH.square, fonts, measure);
+          section.appendChild(header); // then local coordinates
+          header.x = colX;
+          header.y = PAD;
+          let y = PAD + header.height + GAP;
+          let width = header.width;
+          for (const set of column.quotes) {
+            const stickies: StickyNode[] = [];
+            set.parts.forEach((p, k) => {
+              const s = makeSticky(p, plan.wide, fonts);
+              section.appendChild(s);
+              s.x = colX + k * NOTCH;
+              s.y = y;
+              y += s.height - NOTCH; // stacked by the height it actually grew to
+              width = Math.max(width, s.width + k * NOTCH);
+              stickies.push(s);
+            });
+            y += NOTCH + GAP;
+            // A set moves and sorts as one; ⌘-click still picks out a single part
+            // to delete, which is how researchers trim (design doc, 17 Oct 2026).
+            if (stickies.length > 1) figma.group(stickies, section).name = set.name;
+            tally.built++;
+            if (Date.now() - lastYield >= YIELD_MS) {
+              progress();
+              await pause();
+              lastYield = Date.now();
+              if (stopRequested()) throw new Stopped();
+            }
           }
+          bottom = Math.max(bottom, y - GAP);
+          colX += width + GAP;
         }
-        bottom = Math.max(bottom, y - GAP);
-        colX += width + GAP;
+      } catch (e) {
+        // Stopped mid-section: size it to what it holds, so nothing drawn hangs outside it.
+        if (e instanceof Stopped) fitToChildren(section);
+        throw e;
       }
       // Sections don't grow to fit; size this one to what it now holds.
       section.resizeWithoutConstraints(Math.max(colX - GAP + PAD, 200), bottom + PAD);
       x += section.width + FRAME_GAP;
     }
+  } catch (e) {
+    if (e instanceof Stopped) figma.viewport.scrollAndZoomIntoView(made); // show what was drawn
+    throw e;
   } finally {
     measure.remove(); // even if the build stops part-way
   }

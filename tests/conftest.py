@@ -30,6 +30,7 @@ os.environ.setdefault("BRISTLENOSE_SKIP_PREFLIGHT", "1")
 # opt back in with monkeypatch.setenv, with the model and audio faked.
 os.environ["BRISTLENOSE_VOICE_PASS"] = "false"
 
+from bristlenose.board_progress import default_history_dir as _real_board_history_dir
 from bristlenose.config import _find_env_files as _real_find_env_files
 from bristlenose.credentials import CredentialStore
 from bristlenose.credentials import get_credential_store as _real_get_credential_store
@@ -364,6 +365,9 @@ def _isolate_machine_config(
     _rebind_everywhere(monkeypatch, _real_get_credential_store, lambda: store)
 
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path_factory.mktemp("xdg-config")))
+    # A Miro board build keeps its call rates in the real config folder; a test's go to its own.
+    board_history = tmp_path_factory.mktemp("board-timing")
+    _rebind_everywhere(monkeypatch, _real_board_history_dir, lambda: board_history)
     monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
     monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
     for name, field in BristlenoseSettings.model_fields.items():

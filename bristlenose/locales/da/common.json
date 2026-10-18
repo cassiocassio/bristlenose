@@ -357,6 +357,7 @@
     "errNoQuotesSelected": "Ingen citater matcher det aktuelle valg \u2014 der er intet at sende.",
     "errNoBoardId": "Miro returnerede ikke et board. Der blev ikke oprettet noget.",
     "errBoardIncomplete": "Boardet blev oprettet, men er ufuldst\u00e6ndigt. \u00c5bn det for at se, hvad der kom med.",
+    "stillStopping": "Det forrige board er stadig ved at stoppe. Pr\u00f8v igen om et \u00f8jeblik.",
     "menuLabel": "Send til Miro …",
     "serverUnreachable": "Kunne ikke n\u00e5 den lokale server.",
     "requestFailed": "Foresp\u00f8rgslen mislykkedes (HTTP {{status}}).",

@@ -10,7 +10,7 @@
  * @module MiroExportPanel
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
@@ -66,10 +66,11 @@ function errDetail(e: unknown): string {
  * discriminator there was nothing else to show. A table, not a `includes()` on
  * the sentence: matching English prose breaks the day somebody rewords it.
  *
- * An unknown or absent reason falls through to `detail`, so an older sidecar
- * behaves exactly as it did before.
+ * Both boards are jobs (18 Oct 2026), and a job's status carries a reason, never
+ * prose: an unknown or absent one reads as `miro.exportError`.
  */
 const EXPORT_ERROR_KEYS: Record<string, string> = {
+  token_rejected: "miro.tokenRejected",
   no_quotes_selected: "miro.errNoQuotesSelected",
   no_board_id: "miro.errNoBoardId",
   board_incomplete: "miro.errBoardIncomplete",
@@ -185,7 +186,13 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
           s = await read();
         }
         if (!live()) return;
-        if (s.status === "cancelled" || s.status === "idle") {
+        if (s.status === "cancelled") {
+          setView("configure");
+          return;
+        }
+        if (s.status === "idle") {
+          // The server no longer knows the build (it restarted): say so rather than nothing.
+          setError(t("miro.exportError"));
           setView("configure");
           return;
         }
@@ -211,6 +218,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     },
     [screens, t],
   );
+  // An event, not a dependency: a language change re-creates `watch` (it closes over `t`), and
+  // the open effect must not re-run for that — it would reset a finished panel to loading.
+  const resume = useEffectEvent(() => {
+    void watch(++build.current);
+  });
+
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
     if (!open) return;
@@ -220,22 +233,25 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setSkipped(0);
     setBuildState(null);
     setView("loading");
+    // Which build this opening may pick up: closing the panel before the reads come back moves
+    // `build.current` on, and nothing then starts polling behind a shut panel.
+    const mine = build.current;
     getMiroStatus()
       .then((s) => {
         setAccount(accountLine(s));
         setTeamName(s.team_name?.trim() || null);
         setView(s.connected ? "configure" : "connect");
         if (!s.connected) return;
+        if (mine !== build.current) return;
         // A board still being built when the panel was closed is picked up again, not lost.
-        const mine = build.current;
         return (screens ? getScreensMiroStatus : getMiroBoardStatus)().then((b) => {
           if (mine !== build.current || b.status !== "running") return;
           setView("exporting");
-          void watch(++build.current);
+          resume();
         });
       })
       .catch(() => setView((v) => (v === "loading" ? "connect" : v)));
-  }, [open, screens, watch]);
+  }, [open, screens]);
 
   // On open, fill the name with what the board would be called anyway, so nothing arrives on
   // Miro untitled and the researcher sees the name before choosing it (owner, 17 Oct 2026).
@@ -255,6 +271,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   useEffect(() => {
     if (!open) build.current += 1;
   }, [open]);
+  // Unmounting stops the wait too — a panel that is gone must not go on reading the build.
+  useEffect(() => () => {
+    build.current += 1;
+  }, []);
 
   // Restore focus on close.
   useEffect(() => {
@@ -374,7 +394,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       if (!live()) return;
       // A refusal is a status, never the server's English: a build already running, or none.
       const msg = e instanceof Error ? e.message : "";
-      setError(t(screens && / 409\b/.test(msg) ? "export.screens.inProgress"
+      // A 409 on the quotes board is the last one still stopping (Stop answers at once; the server
+      // finishes the call in hand, which can be Miro's half-minute of refusing a new board).
+      setError(t(/ 409\b/.test(msg) ? (screens ? "export.screens.inProgress" : "miro.stillStopping")
         : screens && / 404\b/.test(msg) ? "export.screens.none" : "miro.exportError"));
       setView("configure");
       return;
@@ -601,10 +623,15 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                 className="bn-btn bn-btn-secondary"
                 onClick={() => {
                   // Stopping is acknowledged at once; the server finishes the call in hand, and
-                  // the board keeps what it has.
-                  void (screens ? cancelScreensMiro : cancelMiroBoard)().catch(() => undefined);
-                  build.current += 1;
+                  // the board keeps what it has. If the stop did not land (the build had just
+                  // finished, or the request failed), read the build again and say what it did.
+                  const stopped = ++build.current;
                   setView("configure");
+                  (screens ? cancelScreensMiro : cancelMiroBoard)().catch(() => {
+                    if (stopped !== build.current) return; // closed, or a new build begun
+                    setView("exporting");
+                    void watch(++build.current);
+                  });
                 }}
               >
                 {t("miro.cancel")}

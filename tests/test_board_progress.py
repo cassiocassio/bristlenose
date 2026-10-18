@@ -23,6 +23,7 @@ from bristlenose.board_progress import (
     MIN_MEASURED_CALLS,
     BoardCancelledError,
     BoardProgress,
+    load_history,
 )
 from bristlenose.server.app import create_app
 from tests.conftest import AuthTestClient
@@ -230,9 +231,7 @@ class _FakeMiro:
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AuthTestClient:
     from bristlenose.server.routes import miro as miro_routes
 
-    miro_routes._board_jobs.clear()
-    # A real build keeps its rates in the config folder; a test keeps them in its own.
-    monkeypatch.setattr(miro_routes, "default_history_dir", lambda: tmp_path)
+    miro_routes._board_jobs.clear()  # (conftest keeps a build's rates out of the real config)
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
     return AuthTestClient(app)
 
@@ -375,3 +374,99 @@ def test_a_stop_mid_screen_is_acted_on_at_the_next_call(
 def test_board_cancelled_is_not_a_miro_error() -> None:
     # A Stop must never be wrapped as "board incomplete" by the push's MiroError handler.
     assert not issubclass(BoardCancelledError, mc.MiroError)
+
+
+# ── From the 18 Oct 2026 review ─────────────────────────────────────────────────────────────
+
+
+def test_a_stop_that_lands_during_the_last_call_reports_the_finished_board(
+        client: AuthTestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The title is the last call and is not followed by a Stop check: a Stop arriving while it
+    # is in hand was too late. The board is whole, so it is reported completed, with its link.
+    fake = _FakeMiro()
+    fake.install(monkeypatch)
+
+    def title_then_stop(*_a: Any, **_k: Any) -> dict[str, str]:
+        client.post("/api/projects/1/miro/board/cancel")
+        return {"id": "t"}
+
+    monkeypatch.setattr(mc, "create_text", title_then_stop)
+    with client, patch("bristlenose.server.routes.miro._miro_token", return_value="tok"):
+        client.post("/api/projects/1/miro/board", json={"split_long_quotes": False})
+        s = _wait_for(client, lambda s: s["status"] != "running")
+    assert s["status"] == "completed" and s["board_url"] == "https://miro.com/app/board/b1/"
+
+
+def test_miro_refusing_the_token_is_named_not_shown_as_a_connection_problem(
+        client: AuthTestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def refuse(*_a: Any, **_k: Any) -> Any:
+        raise mc.MiroError("POST /boards -> 401 unauthorized", status=401)
+
+    monkeypatch.setattr(mc, "create_board", refuse)
+    with client, patch("bristlenose.server.routes.miro._miro_token", return_value="tok"):
+        client.post("/api/projects/1/miro/board", json={})
+        s = _wait_for(client, lambda s: s["status"] != "running")
+    assert s["status"] == "failed" and s["reason"] == "token_rejected"
+
+
+@pytest.mark.parametrize("content", ['{"profiles": []}', '{"profiles": {"miro": []}}',
+                                     '{"profiles": {"miro": {"group": {"mean": "x"}}}}', "not json"])
+def test_a_malformed_rates_file_costs_the_estimate_not_the_export(tmp_path: Path, content: str) -> None:
+    (tmp_path / "board-timing.json").write_text(content)
+    p = BoardProgress("quotes", history_dir=tmp_path)  # raised inside every board's start
+    p.plan({"group": 5})
+    p.enter("groups", 5)
+    for _ in range(5):
+        p.call_done("group", 1)
+    p.remember()
+    assert load_history(tmp_path)["group"].n == 5  # rewritten whole
+
+
+def test_groups_miro_never_makes_leave_the_plan(caplog: pytest.LogCaptureFixture) -> None:
+    clock = _Clock()
+    p = BoardProgress("quotes", clock=clock)
+    p.plan({"bulk": 1, "group": 3})
+    p.enter("quotes", 4)
+    p.call_done("bulk", 4)
+    p.enter("groups", 3)
+    p.unplan("group", 3)  # Miro made fewer stickies than sent: group_sets made none
+    assert p.total == 1 and p.fraction() == 1.0 and p.count_total == 0
+    with caplog.at_level(logging.INFO, logger="bristlenose.board_progress"):
+        p.log_summary("completed")
+    assert caplog.records[-1].levelno == logging.INFO  # whole by its own (corrected) plan
+
+
+def test_a_board_finished_short_of_its_plan_is_logged_as_a_warning(caplog: pytest.LogCaptureFixture) -> None:
+    p = BoardProgress("quotes")
+    p.plan({"bulk": 2})
+    p.enter("quotes", 2)
+    p.call_done("bulk", 1)
+    with caplog.at_level(logging.INFO, logger="bristlenose.board_progress"):
+        p.log_summary("completed")
+    assert caplog.records[-1].levelno == logging.WARNING
+
+
+def test_a_refused_screengrab_is_counted_but_never_becomes_a_rate(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from bristlenose.server.routes import screens_export as se
+    from tests.test_serve_screens_export import _JPEG, _job
+    from tests.test_serve_screens_export import _FakeMiro as _ScreensMiro
+
+    fake = _ScreensMiro()
+    fake.install(monkeypatch)
+    monkeypatch.setattr(se, "render_still", lambda *a, **k: _JPEG)
+
+    def refuse_the_back_one(_t: Any, _b: Any, _j: Any, name: str, **_k: Any) -> dict[str, str]:
+        if name.endswith("p1.jpg"):
+            raise mc.MiroError("timeout", status=500)
+        return {"id": "i"}
+
+    monkeypatch.setattr(mc, "upload_image", refuse_the_back_one)
+    screen = {"screen_key": "/s1", "title": "S1", "groups": [],
+              "versions": [{"session_id": "s1", "code": f"p{n}", "t": 1.0, "crop": [0, 0, 1, 1],
+                            "title": "S1", "filename": f"screen-01-p{n}.jpg"} for n in (2, 1)]}
+    job = _job()
+    se._run_miro_sync(job, "tok", "Board", tmp_path, [screen], {"s1": tmp_path / "v.mp4"}, {}, "none")
+    tracker = job["tracker"]
+    assert job["status"] == "completed" and tracker.done == tracker.total
+    assert tracker._rates["image"].n == 1  # the front one only

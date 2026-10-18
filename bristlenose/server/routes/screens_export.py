@@ -338,6 +338,8 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
                     if still is front:
                         raise
                     logger.warning("Left out %s: Miro refused the upload", still.filename, exc_info=True)
+                    tracker.call_done("image", timed=False)  # a refusal can be a timeout: no rate
+                    continue
                 call("image")
             items = []
             for st in frame.stickies:
@@ -354,8 +356,9 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             for i in range(0, len(items), 20):
                 made_items += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
                 call("bulk")
-            group_sets(token, board_id, [st.set_id for st in frame.stickies], made_items,
-                       each=lambda: call("group"))
+            set_ids = [st.set_id for st in frame.stickies]
+            grouped = group_sets(token, board_id, set_ids, made_items, each=lambda: call("group"))
+            tracker.unplan("group", split_sets(set_ids) - grouped)
             job["completed_count"] += 1
             job["progress"] += 1
             tracker.counted()

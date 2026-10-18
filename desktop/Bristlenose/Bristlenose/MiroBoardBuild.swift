@@ -6,8 +6,9 @@ import Foundation
 /// `phase` names what `count_done`/`count_total` count: `preparing` (screenshots, before any Miro
 /// call), `opening` (the board and its first frames — Miro refuses a new board's frames for about
 /// half a minute, so no fraction or estimate is claimed), then `quotes`, `groups` or `screens`.
-/// `fraction` is the share of the board's Miro calls made; `eta_seconds` is nil until this build
-/// has measured enough calls to say (the pipeline's thresholds, `bristlenose/board_progress.py`).
+/// `fraction` is the share of the board's Miro calls made; `eta_seconds` is nil until every kind of
+/// call still to come has an earned rate, from this build or kept from earlier ones on this machine
+/// (the pipeline's thresholds, `bristlenose/board_progress.py`).
 struct MiroBoardBuild: Decodable, Equatable {
     let phase: String
     let done: Int

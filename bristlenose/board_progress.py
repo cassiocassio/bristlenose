@@ -13,7 +13,7 @@ kept per machine in ``board-timing.json``, beside the pipeline's ``timing.json``
 so the Run Inspector, which reads the profile with the most observations from ``timing.json``, never
 mistakes a board for a run. Nothing is said until every kind still to come has a rate, and nothing
 under ten seconds left (the pipeline's floor). A kind with only a few calls left (the title, the
-quotes board's two frames) borrows the build's average rather than holding the estimate back.
+screens board's last frames) borrows the build's average rather than holding the estimate back.
 
 Two kinds of time are kept apart. Miro refusing a new board's frames for its first half-minute, and
 backing off on a rate limit, are waits: they are counted as waiting, said as waiting, and kept out
@@ -23,8 +23,9 @@ The phases are what a researcher is told:
 
 - ``starting``: before the layout (the quotes board reading its quotes).
 - ``preparing``: local work before any call (the screens board's screengrabs), counted.
-- ``opening``: the board and its first frame. Miro's start-up refusal lands here, so no bar
-  fraction and no estimate are claimed, and these calls are not timed.
+- ``opening``: the board and its first frame (all its frames, on the quotes board). Miro's
+  start-up refusal lands here, so no bar fraction and no estimate are claimed, and these calls
+  are not timed.
 - ``quotes``, ``groups``, ``screens``: the build, each with its own count; the bar is the share of
   all the board's calls made.
 
@@ -36,6 +37,7 @@ than one call.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 from collections.abc import Callable, Iterator, Mapping
@@ -72,16 +74,30 @@ def default_history_dir() -> Path:
     return Path(snap) if snap else Path("~/.config/bristlenose").expanduser()
 
 
+def _profile(data: Any) -> dict[str, Any]:
+    """The board profile in a loaded file, or empty — a hand-edited or truncated file must cost the
+    estimate, never the export (a malformed one raised inside every board's start)."""
+    profiles = data.get("profiles") if isinstance(data, dict) else None
+    profile = profiles.get(HISTORY_PROFILE) if isinstance(profiles, dict) else None
+    return profile if isinstance(profile, dict) else {}
+
+
+def _stat(raw: Any) -> WelfordStat | None:
+    try:
+        stat = WelfordStat.from_dict(raw)
+    except (KeyError, TypeError, ValueError):
+        return None
+    ok = stat.n > 0 and stat.m2 >= 0 and math.isfinite(stat.mean) and math.isfinite(stat.m2)
+    return stat if ok and stat.mean >= 0 else None
+
+
 def load_history(config_dir: Path) -> dict[str, WelfordStat]:
     """The per-kind rates earlier builds measured. Empty, never an error, when there are none."""
-    data = load_timing_data(config_dir, HISTORY_FILENAME)
-    profile = data.get("profiles", {}).get(HISTORY_PROFILE, {})
     out: dict[str, WelfordStat] = {}
-    for kind, stat in profile.items():
-        try:
-            out[kind] = WelfordStat.from_dict(stat)
-        except (KeyError, TypeError, ValueError):
-            continue
+    for kind, raw in _profile(load_timing_data(config_dir, HISTORY_FILENAME)).items():
+        stat = _stat(raw)
+        if stat is not None:
+            out[kind] = stat
     return out
 
 
@@ -138,6 +154,17 @@ class BoardProgress:
         self._planned = {k: max(0, n) for k, n in calls.items() if n}
         self.total = sum(self._planned.values())
 
+    def unplan(self, kind: str, n: int) -> None:
+        """Calls the plan counted that will not be made (Miro made fewer stickies than were sent,
+        so their groups are skipped): out of the total and out of the estimate."""
+        if n <= 0 or kind not in self._planned:
+            return
+        dropped = min(n, self._planned[kind] - self._made.get(kind, 0))
+        self._planned = {**self._planned, kind: self._planned[kind] - dropped}
+        self.total -= dropped
+        if self.count_total and self.phase == "groups":
+            self.count_total -= min(dropped, self.count_total - self.count_done)
+
     def enter(self, phase: str, count_total: int = 0) -> None:
         now = self._clock()
         if phase == "opening" and self._opening_started is None:
@@ -154,8 +181,10 @@ class BoardProgress:
         self.count_done = min(self.count_total, self.count_done + n) if self.count_total else (
             self.count_done + n)
 
-    def call_done(self, kind: str, counted: int = 0) -> None:
-        """One Miro call of ``kind`` answered. ``counted`` is how far it moved the phase's line."""
+    def call_done(self, kind: str, counted: int = 0, *, timed: bool = True) -> None:
+        """One Miro call of ``kind`` answered. ``counted`` is how far it moved the phase's line;
+        ``timed=False`` counts a call whose time is not a rate (one Miro refused, which can be a
+        timeout)."""
         now = self._clock()
         elapsed = now - self._mark
         self._mark = now
@@ -163,7 +192,7 @@ class BoardProgress:
         self._made[kind] = self._made.get(kind, 0) + 1
         if counted:
             self.counted(counted)
-        if self.phase not in UNMEASURED_PHASES:
+        if timed and self.phase not in UNMEASURED_PHASES:
             self._rates.setdefault(kind, WelfordStat()).update(elapsed)
             self._all.update(elapsed)
             self._slowest = max(self._slowest, elapsed)
@@ -234,20 +263,23 @@ class BoardProgress:
         folder = self._history_dir
         if folder is None or not any(s.n for s in self._rates.values()):
             return
-        data = load_timing_data(folder, HISTORY_FILENAME)
-        profile = data.setdefault("profiles", {}).setdefault(HISTORY_PROFILE, {})
+        loaded = load_timing_data(folder, HISTORY_FILENAME)
+        profile = {k: v for k, v in _profile(loaded).items() if _stat(v) is not None}
         for kind, stat in self._rates.items():
-            try:
-                kept = WelfordStat.from_dict(profile[kind]) if kind in profile else WelfordStat()
-            except (KeyError, TypeError, ValueError):
-                kept = WelfordStat()
+            kept = _stat(profile.get(kind)) or WelfordStat()
             profile[kind] = _merge(kept, stat).to_dict()
-        save_timing_data(data, folder, HISTORY_FILENAME)
+        profiles = loaded.get("profiles") if isinstance(loaded.get("profiles"), dict) else {}
+        save_timing_data({"version": 1, "profiles": {**profiles, HISTORY_PROFILE: profile}},
+                         folder, HISTORY_FILENAME)
 
     def log_summary(self, outcome: str) -> None:
         """One line per build: counts and timings only, so later builds can be predicted."""
         rates = " ".join(f"{k}={s.mean:.2f}s/{s.n}" for k, s in sorted(self._rates.items()))
-        logger.info(
+        # A board that finished short of its plan (Miro made fewer stickies than were sent) is
+        # still "ready" to the researcher; the log says it was not whole.
+        level = logging.WARNING if outcome == "completed" and self.done != self.total else logging.INFO
+        logger.log(
+            level,
             "miro_board_built kind=%s outcome=%s calls=%d/%d elapsed=%.1fs waited=%.1fs "
             "opening=%s slowest=%.2fs rates=[%s]",
             self.kind, outcome, self.done, self.total, self._clock() - self.started, self.waited,

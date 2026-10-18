@@ -86,6 +86,8 @@ struct MiroAPI {
         ["no_stills": "common.export.screens.none"]) { a, _ in a }
 
     private static let errorKeys: [String: String] = [
+        // Named by the job route when Miro refuses the token (a 401/403 with no reason of its own).
+        "token_rejected": "common.miro.tokenRejected",
         "no_quotes_selected": "common.miro.errNoQuotesSelected",
         "no_board_id": "common.miro.errNoBoardId",
         "board_incomplete": "common.miro.errBoardIncomplete",
@@ -209,6 +211,14 @@ struct MiroAPI {
         }
     }
 
+    /// A refused start: a 409 is the last build still running or stopping (Stop answers at once,
+    /// the server finishes the call in hand), said in the reader's language, not the server's.
+    private func startError(from data: Data, status: Int, screens: Bool = false) -> APIError {
+        guard status == 409 else { return apiError(from: data, status: status) }
+        return APIError(message: "A Miro board is still being built or stopped",
+                        localeKey: screens ? "common.export.screens.inProgress" : "common.miro.stillStopping")
+    }
+
     /// Called on the main actor with each progress read while a board builds.
     typealias ProgressHandler = @MainActor (MiroBoardBuild?) -> Void
 
@@ -237,7 +247,9 @@ struct MiroAPI {
             throw APIError.serverUnreachable()
         }
         while true {
-            let (sd, _) = try await URLSession.shared.data(for: poll)
+            let (sd, resp) = try await URLSession.shared.data(for: poll)
+            guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
+            guard (200..<300).contains(http.statusCode) else { throw apiError(from: sd, status: http.statusCode) }
             let s = try JSONDecoder().decode(BoardJobStatus.self, from: sd)
             switch s.status {
             case "running":
@@ -247,8 +259,12 @@ struct MiroAPI {
                 return ExportResult(boardURL: s.board_url ?? "",
                                     stickies: s.completed_count ?? s.stickies ?? 0,
                                     skipped: s.skipped_count ?? 0)
-            case "cancelled", "idle":
+            case "cancelled":
                 throw CancellationError()
+            case "idle":
+                // The server no longer knows the build (it restarted): an error, not a quiet stop.
+                throw APIError(message: "Miro board job unknown to the server",
+                               localeKey: "common.miro.exportError")
             default:
                 let keys = screens ? Self.screensErrorKeys : Self.errorKeys
                 throw APIError(message: "Miro board \(s.status): \(s.reason ?? "")",
@@ -297,7 +313,9 @@ struct MiroAPI {
         return try await withTaskCancellationHandler {
             let (data, resp) = try await URLSession.shared.data(for: start)
             guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
-            guard (200..<300).contains(http.statusCode) else { throw apiError(from: data, status: http.statusCode) }
+            guard (200..<300).contains(http.statusCode) else {
+                throw startError(from: data, status: http.statusCode, screens: true)
+            }
             let started = try JSONDecoder().decode(ScreensStart.self, from: data)
             if started.total == 0 {
                 throw APIError(message: "No screens to export", localeKey: "common.export.screens.none")
@@ -331,7 +349,7 @@ struct MiroAPI {
         return try await withTaskCancellationHandler {
             let (data, resp) = try await URLSession.shared.data(for: start)
             guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
-            guard (200..<300).contains(http.statusCode) else { throw apiError(from: data, status: http.statusCode) }
+            guard (200..<300).contains(http.statusCode) else { throw startError(from: data, status: http.statusCode) }
             return try await pollUntilDone(screens: false, onProgress: onProgress)
         } onCancel: {
             Task { _ = try? await URLSession.shared.data(for: cancel) }

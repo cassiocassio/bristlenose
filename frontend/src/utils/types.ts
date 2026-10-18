@@ -409,8 +409,8 @@ export interface ScreensMiroRequest {
  * `phase` names what `count_done`/`count_total` count: `preparing` (screenshots, before any Miro
  * call), `opening` (the board and its first frames; no fraction or estimate is claimed), then
  * `quotes`, `groups` or `screens`. `fraction` is the share of the board's Miro calls made, null
- * while there is nothing honest to show; `eta_seconds` is null until this build has measured
- * enough calls to say.
+ * while there is nothing honest to show; `eta_seconds` is null until every kind of call still to
+ * come has an earned rate (measured in this build, or kept from earlier builds on this machine).
  */
 export interface MiroBoardBuild {
   phase: "preparing" | "opening" | "quotes" | "groups" | "screens" | string;

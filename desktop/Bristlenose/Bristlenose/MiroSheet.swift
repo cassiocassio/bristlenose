@@ -240,8 +240,11 @@ final class MiroSheetModel: ObservableObject {
                 self.skipped = result.skipped
                 self.step = .done
             } catch is CancellationError {
-                // Stopped: the server was asked to stop after the call in hand; the board keeps
-                // what it has.
+                // Our own Cancel: the server was asked to stop after the call in hand, the board
+                // keeps what it has, and the sheet is going away. A stop nobody here asked for (the
+                // build stopped elsewhere, or the sidecar restarted and forgot it) hands the form
+                // back rather than leaving the bar frozen.
+                if !Task.isCancelled { self.step = .configure }
             } catch {
                 self.error = Self.text(for: error, i18n) ?? t("exportError")
                 self.step = .configure

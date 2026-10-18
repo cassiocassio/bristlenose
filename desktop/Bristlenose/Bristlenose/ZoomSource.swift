@@ -531,6 +531,19 @@ final class ZoomSource: CloudImportSource {
             } while pageToken != nil
         }
 
+        // **One meeting, once.** Zoom's `from`/`to` are inclusive dates, so the
+        // day two chunks meet on is asked about twice — and the store's window
+        // (the days chosen plus three hours) always ends in a chunk that is
+        // today alone. Every meeting recorded today came back twice, drew as a
+        // call with two identical recordings, and counted as two meetings
+        // (18 Oct 2026, the first live Pro listing). Dropping repeats by UUID
+        // holds whatever the chunk edges do.
+        var seenMeetings = Set<String>()
+        meetings = meetings.filter { meeting in
+            guard let uuid = meeting.uuid else { return true }
+            return seenMeetings.insert(uuid).inserted
+        }
+
         // The plans describe this listing and no other. Left in place, a row a
         // re-list no longer returns would keep a download URL nothing shows.
         chosenFiles = [:]

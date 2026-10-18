@@ -1365,6 +1365,52 @@ struct AdapterRowDerivationTests {
         #expect(listing.rows.isEmpty)
         #expect(listing.notice == .zoomCloudRecordingOff)
     }
+
+    /// The window `CloudImportStore.load()` really sends: the days asked for,
+    /// plus three hours. That is two month-sized chunks, and Zoom's `from`/`to`
+    /// dates are inclusive, so today sits at the end of the first and is all of
+    /// the second. Every meeting recorded today came back twice, and the grid
+    /// drew one call as "2 recordings" of identical size and transcript — found
+    /// on the first live Pro listing, 18 Oct 2026. The suite's own `window` is
+    /// exactly 30 days, one chunk, which is why nothing caught it.
+    @Test("Zoom: a meeting both chunks return is listed once")
+    func zoomChunkOverlapListsOnce() async {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let now = Date()
+        let start = Date(timeIntervalSince1970: floor(now.timeIntervalSince1970) - 3600)
+        let meeting = """
+        {"meetings":[{"uuid":"u3","id":83,"topic":"P07 Interview",
+          "start_time":"\(iso.string(from: start))","duration":10,
+          "recording_files":[
+            {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+             "download_url":"https://zoom.example/a1","recording_start":"\(iso.string(from: start))",
+             "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]}],"total_records":1}
+        """
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json(meeting))
+        StubURLProtocol.enqueue(.json(meeting))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let storeWindow = DateInterval(
+            start: Calendar.current.date(byAdding: .day, value: -30, to: now)!,
+            end: now.addingTimeInterval(3 * 3600))
+        let listing = await source.list(window: storeWindow)
+
+        let listings = StubURLProtocol.requests.filter {
+            $0.url?.path.hasSuffix("/users/me/recordings") == true
+        }
+        #expect(listings.count == 2, "the premise: the store's window is two chunks")
+        #expect(listing.rows.map(\.id) == ["u3"])
+        #expect(listing.arithmetic.eventsInWindow == 1)
+    }
 }
 
 // MARK: - Zoom's single-use refresh token

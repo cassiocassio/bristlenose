@@ -388,7 +388,7 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
-**0.41.0** — _18 Oct 2026_
+**0.41.0** — _19 Oct 2026_
 
 Miro and FigJam boards show their progress and can be stopped, and a long quote split over several stickies breaks where it reads, in every language Bristlenose speaks.
 
@@ -400,6 +400,7 @@ Miro and FigJam boards show their progress and can be stopped, and a long quote 
 
 - **Long quotes break where they read.** A quote split over two or three stickies breaks at a sentence end, at a cut the quote already marks, or where the participant paused, and never just after a word like "the" or "of". Each language follows its own subtitling and typography rules. Japanese and Chinese break between phrases instead of mid-word.
 - **Japanese, Chinese and Korean stickies on Miro are sized for their characters**, so their type matches the rest of the board.
+- **In the Discussion lens, the selected session's column is lighter.** A pale band behind its cells replaces the blue outlines, and it slides across when you pick another session.
 
 **Fixed**
 

@@ -23,12 +23,14 @@ Ported and generalised from experiments/board-layout-poc/.
 from __future__ import annotations
 
 import difflib
+import functools
 import itertools
 import math
 import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import format_timecode
@@ -222,7 +224,7 @@ _SCORE = {"sentence": 10.0, "elision": 9.0, "clause": 6.0, "phrase": 4.0}
 #: counting it pulled breaks off the even split for nothing (median worst part 8% → 17% off even
 #: across the trial runs). Whisper's word timings put most words edge to edge, so only a real
 #: pause scores.
-PAUSE_WEIGHT = 6.0
+PAUSE_WEIGHT = 8.0  # 6 until tuned, 18 Oct 2026 (docs/research/board-quote-breaks.md)
 PAUSE_CAP = 1.5
 @dataclass(frozen=True)
 class BreakRules:
@@ -239,8 +241,8 @@ class BreakRules:
     #: (Turkish postpositions, *için*, *gibi*).
     no_start: frozenset[str] = frozenset()
     closes: Mapping[str, float] = field(default_factory=dict)
-    #: For a script written without spaces, which phrase rule finds its bare breaks (``"ja"``,
-    #: ``"zh"``: `_phrase_ends`); and how a phrase
+    #: For a script written without spaces, the BudouX model whose phrase ends are its bare
+    #: breaks (``"ja"``, ``"zh-hans"``, ``"zh-hant"``: `_phrase_ends`); and how a phrase
     #: ending reads, as the language's ``opens`` and ``leads`` do: ``ends_well`` (a clause-final
     #: particle, worth 1–3), ``ends_badly`` (a modifier bound to what follows), ``starts_well``
     #: (a conjunction opening the next phrase).
@@ -320,9 +322,11 @@ def text_width(text: str) -> int:
     character is drawn full-width, two (Unicode East Asian Width, UAX #11). A quote's length is
     measured this way, so a Japanese sticky holds as much type as an English one."""
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
-#: The parts stay near even: a sentence end about a third off the even split still beats a bare
-#: word right on it, as the owner's ~55-word parts expect, and no part is under 45% of even.
-BALANCE_WEIGHT = 40.0
+#: The parts stay near even: a sentence end well off the even split still beats a bare word right
+#: on it, as the owner's ~55-word parts expect, and no part is under 45% of even. 40 until tuned on
+#: the held-out corpus (18 Oct 2026): 30 lands more breaks on a mark in every language and moves
+#: the median part 1 point further from even (docs/research/board-quote-breaks.md).
+BALANCE_WEIGHT = 30.0
 MIN_PART = 0.45
 
 
@@ -381,8 +385,10 @@ def _breaks(text: str, pauses: Mapping[int, float] | None,
                         max((w for end, w in rules.ends_well.items() if last.endswith(end)),
                             default=0.0))
             if last in rules.leads or nxt in rules.no_start:
+                # Inside a phrase a pause is the speaker looking for the word ("on a… Monday"),
+                # not a break they made, so it earns nothing.
                 worth -= _LEAD_PENALTY
-            if pauses:
+            elif pauses:
                 worth += min(pauses.get(gap.start(), 0.0), PAUSE_CAP) * PAUSE_WEIGHT
         out.append((gap.start(), worth))
     marked = set()
@@ -393,44 +399,47 @@ def _breaks(text: str, pauses: Mapping[int, float] | None,
             marked.add(m.end())
     if rules.phrases and _SPACELESS.search(text):
         for run in re.finditer(r"\S+", text):
-            for at in _phrase_ends(run.group(), rules.phrases, rules):
-                o = run.start() + at
+            phrases = _phrase_parser(rules.phrases).parse(run.group())
+            o = run.start()
+            for before, after in itertools.pairwise(phrases):
+                o += len(before)
                 if o in marked or text[o] in KINSOKU_NO_START or text[o - 1] in KINSOKU_NO_END:
                     continue
-                out.append((o, _phrase_worth(text, o, rules)))
+                out.append((o, _phrase_worth(before, after, rules)))
     return out
 
 
-def _phrase_ends(run: str, script: str, rules: BreakRules) -> list[int]:
-    """Offsets inside ``run`` (no spaces) where one phrase plausibly ends and the next begins.
+@functools.cache
+def _phrase_parser(model: str) -> Any:
+    """BudouX's parser for ``model`` (``"ja"``, ``"zh-hans"``, ``"zh-hant"``): Google's phrase
+    segmenter, the one Chrome breaks lines with for CSS ``word-break: auto-phrase``."""
+    import budoux
 
-    Japanese shows its phrases (bunsetsu) in its script: a run of kana — the particle or the
-    ending — closing on a kanji or katakana word that starts the next (the captioning research's
-    proxy, docs/research/board-quote-breaks.md); and in both languages the words say: before a
-    conjunction (*でも*, *但是*), after a clause-final particle (*ので*, *吧*). Google's BudouX
-    segmenter would find every phrase; it is not a dependency."""
-    ends = {m.start() for w in rules.starts_well for m in re.finditer(re.escape(w), run)}
-    # A one-character ending (Japanese に, を) is too common inside words to mark a phrase alone.
-    ends |= {m.end() for w in rules.ends_well if len(w) > 1 or script == "zh"
-             for m in re.finditer(re.escape(w), run)}
-    if script == "ja":
-        ends |= {i for i in range(1, len(run))
-                 if "\u3040" <= run[i - 1] <= "\u309f" and not "\u3040" <= run[i] <= "\u309f"
-                 and _SPACELESS.match(run[i])}
-    return sorted(e for e in ends if 0 < e < len(run))
+    return {"ja": budoux.load_default_japanese_parser,
+            "zh-hans": budoux.load_default_simplified_chinese_parser,
+            "zh-hant": budoux.load_default_traditional_chinese_parser}[model]()
 
 
-def _phrase_worth(text: str, at: int, rules: BreakRules) -> float:
-    """A phrase end as a break: its last characters (a clause-final particle reads well, a
-    modifier bound to the next word badly) and the next phrase's first."""
-    before, after = text[max(0, at - 6):at], text[at:at + 6]
+def _phrase_worth(before: str, after: str, rules: BreakRules) -> float:
+    """A break between two of BudouX's phrases: a Japanese bunsetsu, a Chinese word. The phrase
+    before ending in a clause-final particle reads well (*ので*, *吧*), the next opening with a
+    conjunction too (*でも*, *但是*); ending in a modifier bound to the next word reads badly
+    (*の*, *的*), as does the next phrase being a particle bound to this one (*了*, *嗎*).
+
+    A Japanese bunsetsu carries its particle at its end, so endings are matched. Chinese words
+    end in the same characters as the particles (覺得 "feel", 地方 "place"), and BudouX gives a
+    particle its own token, so for Chinese a particle is a whole phrase — except 的, which almost
+    always ends its phrase as the particle."""
+    chinese = (rules.phrases or "").startswith("zh")
     worth = max((w for end, w in rules.ends_well.items() if before.endswith(end)), default=0.0)
     worth = max(worth, max((w for st, w in rules.starts_well.items() if after.startswith(st)),
                            default=0.0))
-    if (any(before.endswith(end) for end in rules.ends_badly)
-            or any(after.startswith(st) for st in rules.starts_badly)):
-        worth -= _LEAD_PENALTY
-    return worth
+    if chinese:
+        bad = (before in rules.ends_badly or before.endswith("的") or after in rules.starts_badly)
+    else:
+        bad = (any(before.endswith(end) for end in rules.ends_badly)
+               or any(after.startswith(st) for st in rules.starts_badly))
+    return worth - (_LEAD_PENALTY if bad else 0.0)
 
 
 def _cuts(text: str, n: int, pauses: Mapping[int, float] | None,

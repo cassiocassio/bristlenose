@@ -10,7 +10,11 @@ from the Whisper style-prompt research), the fossda trial's punctuated sessions 
 the Sapporo demo for Japanese. Extra `{"segments": [{"start", "end", "text"}]}` files can be named
 as `lang=path` arguments.
 
-    .venv/bin/python experiments/quote-breaks/lang_eval.py [ja=extra.segments.json …]
+    .venv/bin/python experiments/quote-breaks/lang_eval.py [--half tune|held] [--why LANG] [ja=extra.segments.json …]
+
+``--half`` scores one half of each language's recordings: sorted, alternating, fixed before
+any tuning looked at the data, so the rules are tuned on ``tune`` and judged on ``held``.
+``--why LANG`` lists the words either side of each break that missed a mark, on the half given.
 """
 
 from __future__ import annotations
@@ -101,7 +105,8 @@ def strip_spaceless(text: str) -> tuple[str, dict[int, str]]:
     return "".join(out), kinds
 
 
-def score(lang: str, sessions: list[list[dict]], pauses_on: bool) -> tuple[int, float, float]:
+def score(lang: str, sessions: list[list[dict]], pauses_on: bool,
+          why: collections.Counter | None = None) -> tuple[int, float, float]:
     c: collections.Counter[str] = collections.Counter()
     spaceless = lang in ("ja", "zh")
     for segs in sessions:
@@ -121,24 +126,41 @@ def score(lang: str, sessions: list[list[dict]], pauses_on: bool) -> tuple[int, 
                 core = part.removeprefix("…").removesuffix("…")
                 at = text.find(core, at) + len(core)
                 c[kinds.get(at, "none")] += 1
+                if why is not None and at not in kinds and not spaceless:
+                    left, right = text[:at].split()[-1:], text[at:].split()[:1]
+                    why[f"{bl._word(left[0]) if left else ''} | {bl._word(right[0]) if right else ''}"] += 1
     total = sum(c.values()) or 1
     return total, c["sentence"] / total, (c["sentence"] + c["mark"]) / total
 
 
 def main() -> None:
+    args = sys.argv[1:]
+    half = args[args.index("--half") + 1] if "--half" in args else None
+    why_lang = args[args.index("--why") + 1] if "--why" in args else None
     corpus: dict[str, list[list[dict]]] = {"en": english(), "ja": japanese()}
     stems = sorted({Path(f).name.split(".")[0] for f in glob.glob(f"{TRIALS}/trials/*-[0-9]*.json")})
     for stem in stems:
         lang = re.sub(r"-\d+$", "", stem)
+        lang = "pt" if lang.startswith("pt-") else lang  # Whisper says "pt"; one language here
         corpus.setdefault(lang, []).append(trial(stem))
-    for arg in sys.argv[1:]:
-        lang, path = arg.split("=", 1)
-        corpus.setdefault(lang, []).append(json.loads(Path(path).read_text())["segments"])
+    for arg in args:
+        if "=" in arg:
+            lang, path = arg.split("=", 1)
+            corpus.setdefault(lang, []).append(json.loads(Path(path).read_text())["segments"])
+    if half:
+        corpus = {lang: sessions[(0 if half == "tune" else 1)::2] for lang, sessions in corpus.items()}
+    if why_lang:
+        why: collections.Counter[str] = collections.Counter()
+        score(why_lang, corpus[why_lang], False, why)
+        for pair, n in why.most_common(40):
+            print(f"{n:3d}  {pair}")
+        return
     print(f"{'lang':6} {'breaks':>6} | no pauses: sentence  any mark | with pauses: sentence  any mark")
     for lang, sessions in corpus.items():
-        code = {"pt-br": "pt", "pt-pt": "pt", "pt-ao": "pt"}.get(lang, lang)
-        n, s0, m0 = score(code, sessions, False)
-        _, s1, m1 = score(code, sessions, True)
+        if not sessions:
+            continue
+        n, s0, m0 = score(lang, sessions, False)
+        _, s1, m1 = score(lang, sessions, True)
         print(f"{lang:6} {n:6d} | {s0:17.0%} {m0:8.0%} | {s1:19.0%} {m1:8.0%}")
 
 

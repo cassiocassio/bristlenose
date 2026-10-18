@@ -105,6 +105,7 @@ procurement; under-listing would be a compliance risk.
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
 | `blis` | 1.3.3 | BSD License | <https://github.com/explosion/cython-blis> |
+| `budoux` | 0.9.3 | Apache-2.0 | — |
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
 | `certifi` | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |

@@ -303,7 +303,10 @@ def test_chinese_breaks_before_a_conjunction_and_never_after_de() -> None:
     first, _ = split_quote(said, at=60, language="zh")
     assert first.removesuffix("…")[-3:] in ("很好用", "找不到", "有點困惑")
     rules = break_rules("zh", said)
-    assert all(not said[:at].endswith("的") for at, _ in _breaks(said, None, rules))
+    worth = dict(_breaks(said, None, rules))
+    assert all(w < 0 for at, w in worth.items() if said[:at].endswith("的") or said[at] == "的")
+    # 覺得 is "feel", not the particle 得: a word end like any other.
+    assert worth[said.index("覺得") + 2] >= 0
 
 
 def test_each_language_follows_its_own_rules() -> None:

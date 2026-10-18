@@ -22,16 +22,23 @@ trial runs, and split Japanese mid-word, because it knew no Japanese punctuation
 | Elision the extraction made (" ... ") | 9 | becomes the part's "…" |
 | Clause mark, or a speaker trailing off ("but...") | 6 | trailing off was a sentence end before; it isn't |
 | Comma (and `、，`) | 4 | |
-| Bare gap: the speaker's pause | up to 9 | only where there is no mark; from the transcript's word timings |
+| Bare gap: the speaker's pause | up to 12 | 8 a second, capped at 1.5 s; only where there is no mark and not inside a phrase |
 | Bare gap: the language's word rules | −4 to +3 | `leads`, `no_start`, `opens`, `closes`, `ends_well` |
-| Imbalance | 40 × Σ((part − even)/even)² | no part under 45% of even |
+| Imbalance | 30 × Σ((part − even)/even)² | no part under 45% of even |
 
-Japanese and Chinese have no spaces, so their bare breaks come from a phrase rule
-(`_phrase_ends`). In Japanese a run of kana closes on a kanji or katakana word; in both languages
-a break also falls before a conjunction or after a clause-final particle. Kinsoku (JLREQ, clreq)
-removes any break before a closing mark or small kana, or after an opening one.
+Japanese and Chinese have no spaces, so their bare breaks are the phrase ends **BudouX** finds
+(Google's segmenter, the one Chrome uses for CSS `word-break: auto-phrase`; a dependency since
+18 Oct 2026): a Japanese bunsetsu, a Chinese word. The language's rules score each
+(`_phrase_worth`): a clause-final particle reads well, a modifier (の, 的) badly. A Japanese
+bunsetsu carries its particle at its end, so endings are matched; BudouX gives a Chinese particle
+its own token, and Chinese words end in the same characters (覺得 "feel"), so a Chinese particle
+counts only as a whole token, except 的. Kinsoku (JLREQ, clreq) removes any break before a closing
+mark or small kana, or after an opening one. A pause inside a phrase, after an article or before a
+bound word, is hesitation and earns nothing.
 
 ## Measured
+
+*First measurement, whole corpus, before tuning; the tuned, held-out numbers are in the next section.*
 
 `experiments/quote-breaks/lang_eval.py` takes the real Whisper transcripts from the style-prompt
 research (`docs/design-whisper-style-prompts.md`; 19 languages, 2–4 recordings each) and the
@@ -61,6 +68,70 @@ the splits read correctly by eye ("…思ったのですが / ただ英語を…
 Across the trial runs' 322 long English quotes, no part now ends on an article, a preposition or a
 pronoun (5 did), and none shows "..…" (120 did).
 
+## Tuned on a held-out half (18 Oct 2026)
+
+Each language's recordings, sorted, were split alternately into a **tuning half** and a
+**held-out half** before anything was looked at (`lang_eval.py --half tune|held`; the three
+Portuguese variants pooled as `pt`). Changes were found on the tuning half only, from the words
+either side of each break that missed a mark (`--why LANG`), and made by category, never one word
+to fit one miss. The held-out half was then scored, and scored once more after the last change,
+which came from a rule a unit test pins rather than from held-out data.
+
+- **"That" words.** Romance *che/que*, Dutch *dat*, Scandinavian *at/att/som* no longer earn an
+  opener bonus, as English *that* never did: those languages put no comma before them, so a break
+  there splits a noun from the clause that defines it. Kept where the authority requires the comma
+  (German *dass*, Duden D 118; Czech *že*; Polish *że*; Russian *что*; Ukrainian *що*; Finnish
+  *että*): removing them there cost 7–10 points, because with the comma gone the word is the cue
+  to where it stood.
+- **Finnish *sitten*, *nyt*** open no clause: spoken Finnish puts them inside or at the end of one
+  (*lähdetään sitten*). Tuning half 61% → 70%.
+- **Weights** (grid on the tuning half, every language at once): balance 40 → 30, pause 6 → 8 a
+  second. The lead penalty made no difference between 3 and 6. Balance 25 scored a point higher
+  again and was not taken, to stay near the English boards the owner judged.
+- **A pause inside a phrase earns nothing**, so a pause after "a" stays a hesitation at the
+  higher pause weight.
+- **Tried and dropped:** Turkish *yani*, *işte* as clause enders (41% → 38% on the tuning half).
+
+Held-out half, before → after (on any mark; breaks in brackets — under ~40 a single break moves a
+number several points):
+
+| | No pauses | With pauses |
+|---|---|---|
+| English (479) | 52 → 55% | 74 → 78% |
+| Catalan (69) | 48 → 48% | 71 → 67% |
+| Czech (69) | 72 → 74% | 84 → 90% |
+| Danish (49) | 63 → 63% | 86 → 90% |
+| German (60) | 47 → 50% | 58 → 62% |
+| Spanish (90) | 66 → 69% | 82 → 86% |
+| Finnish (47) | 68 → 70% | 85 → 87% |
+| French (43) | 63 → 67% | 84 → 86% |
+| Italian (41) | 41 → 49% | 68 → 71% |
+| Korean (22) | 50 → 55% | 82 → 82% |
+| Norwegian (10) | 10 → 30% | 80 → 80% |
+| Dutch (47) | 40 → 51% | 60 → 68% |
+| Polish (33) | 73 → 73% | 82 → 82% |
+| Portuguese (25) | 44 → 44% | 68 → 76% |
+| Russian (45) | 53 → 56% | 60 → 62% |
+| Swedish (38) | 47 → 45% | 76 → 76% |
+| Turkish (42) | 57 → 57% | 64 → 71% |
+| Ukrainian (17) | 59 → 59% | 65 → 76% |
+
+Everything held or improved but three: Swedish without pauses (one break), and Catalan with pauses
+(71 → 67%), where the pause-inside-a-phrase rule took back what the weights gave (72% before it;
+the same rule cost German and Dutch 2–3 points there while gaining on the tuning half). It is kept
+because it is the subtitlers' rule and a test pins it; the likely cost is words that are both a
+lead and a clause end (German *das* as a demonstrative, *ich weiß das*), which the lists cannot
+tell apart.
+
+**Against English** (held-out half). Without pauses, Czech, Danish, Spanish, Finnish, French,
+Korean, Polish, Russian, Turkish and Ukrainian match or beat English's 55%; Catalan, German,
+Italian, Dutch, Portuguese and Swedish are 4–11 points below; Norwegian's 10 breaks are too few to
+read. With pauses, Czech, Danish, Spanish, Finnish, French, Korean, Norwegian and Polish beat
+English's 78%; Portuguese, Swedish and Ukrainian are 2 points below, Italian and Turkish 7, Dutch
+10, Catalan 11, German and Russian 16.
+On the 322 long English quotes of the trial runs, 22 now break elsewhere than on the boards the
+owner judged; across all of them the median part sits one point further from even.
+
 ## Decisions
 
 - **A full-width character counts as two** (`text_width`, UAX #11), for the split length and for
@@ -73,10 +144,10 @@ pronoun (5 did), and none shows "..…" (120 did).
   because, if, when, that* added nothing.
 - **Japanese が after a predicate is "but"**, a clause end: *ですが ますが だが たが ですけど* score
   as a clause (6), not as the subject particle (3).
-- **BudouX is not a dependency.** Google's phrase segmenter (Apache-2.0, 105 KB, pure Python, what
-  Chrome uses for CSS `word-break: auto-phrase`) gave the same Japanese breaks as the phrase rule
-  on this corpus. It would matter for Chinese, which now breaks only at marks, before conjunctions
-  and after particles. Adding it is a channel-wide dependency decision, left open.
+- **BudouX is a dependency** (owner, 18 Oct 2026): `budoux>=0.9` in core, collected into the
+  sidecar with its models and licence (`collect_all`), in THIRD-PARTY-BINARIES.md, ACKNOWLEDGEMENTS.md
+  and the Windows lock. On this corpus it gave the same Japanese breaks as the kana-to-kanji rule it
+  replaced; for Chinese it is what finds a word end at all.
 - **Simplified Chinese** uses the Traditional rules with their characters converted; **pt-BR and
   pt-PT** share one list, because Whisper reports only `pt`; **Norwegian** `no`/`nn` uses `nb`.
 - With no language stored (a platform or docx transcript), the script decides: kana is Japanese,

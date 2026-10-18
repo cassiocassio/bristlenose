@@ -87,6 +87,12 @@ _JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = col
 )
 _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
 
+# BudouX (board_layout._phrase_ends: where a Japanese or Chinese quote breaks on a board) loads its
+# models, `budoux/models/*.json`, package-relative: the rule above, a fifth time. Without them the
+# bundle imports budoux and fails the first Japanese board. collect_all also brings its dist-info,
+# whose licences/LICENSE is the Apache-2.0 text the licence requires us to ship.
+_BUDOUX_DATAS, _BUDOUX_BINARIES, _BUDOUX_HIDDEN = collect_all("budoux")
+
 # The voice pass (bristlenose/stages/s05b_voice.py, the `voice` extra) runs
 # TitaNet through the `onnxruntime` package and computes its features with
 # `kaldi_native_fbank`. NOT sherpa-onnx: its published wheels statically link
@@ -136,6 +142,7 @@ a = Analysis(
         *_MCP_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
+        *_BUDOUX_DATAS,
         *_VOICE_NOTICES,
         # starlette is pure Python, so PyInstaller bytecompiles it into the
         # archive and leaves no dist-info in _internal/ — which meant the
@@ -223,6 +230,7 @@ a = Analysis(
         *_MCP_HIDDEN,
         *_JSONSCHEMA_SPEC_HIDDEN,
         *_JSONSCHEMA_HIDDEN,
+        *_BUDOUX_HIDDEN,
         *_SQLADMIN_HIDDEN,
         *collect_submodules("rich"),
         # LLM providers (dynamically imported in llm/client.py)

@@ -7,7 +7,13 @@ with `--constraint constraints.txt`, and the file records a digest of the
 dependency lists it was compiled from; tests/test_windows_packaging.py fails
 when pyproject.toml's dependencies change and this was not re-run.
 
-    python packaging/windows/lock.py          # needs uv on PATH
+    python packaging/windows/lock.py            # needs uv on PATH
+    python packaging/windows/lock.py --upgrade  # every package to its latest
+
+Without ``--upgrade`` the current pins are kept wherever they still satisfy pyproject.toml, so
+adding a dependency adds it and nothing else moves (uv prefers the versions already in its
+output file). Until 18 Oct 2026 every run re-resolved from nothing, and adding one package
+moved twenty-five others.
 """
 
 from __future__ import annotations
@@ -58,11 +64,16 @@ def recorded_digest(constraints_text: str) -> str | None:
     return None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    upgrade = "--upgrade" in (sys.argv[1:] if argv is None else argv)
     with tempfile.TemporaryDirectory() as tmp:
         build_in = Path(tmp) / "build.in"
         build_in.write_text("\n".join(BUILD_TOOLS) + "\n", encoding="utf-8")
         compiled = Path(tmp) / "out.txt"
+        if not upgrade and OUT.exists():
+            # The pins uv should keep: the current file, its header off.
+            pins = [ln for ln in OUT.read_text(encoding="utf-8").splitlines() if not ln.startswith("#")]
+            compiled.write_text("\n".join(pins) + "\n", encoding="utf-8")
         cmd = [
             "uv", "pip", "compile", str(PYPROJECT), str(build_in),
             "--extra", "voice",
@@ -70,6 +81,7 @@ def main() -> int:
             "--python-platform", PLATFORM,
             "--no-header", "--no-annotate",
             "-o", str(compiled),
+            *(["--upgrade"] if upgrade else []),
         ]
         result = subprocess.run(cmd, cwd=ROOT)
         if result.returncode != 0:

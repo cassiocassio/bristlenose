@@ -187,7 +187,6 @@
    "bé": 2,
    "i": 1,
    "o": 1,
-   "que": 1,
    "on": 1
   },
   "opens2": [
@@ -294,7 +293,6 @@
    "když": 2,
    "jestli": 2,
    "kdyby": 2,
-   "že": 2,
    "ačkoli": 2,
    "pak": 2,
    "teď": 2,
@@ -306,7 +304,8 @@
    "který": 1,
    "která": 1,
    "které": 1,
-   "jako": 1
+   "jako": 1,
+   "že": 2
   },
   "opens2": [
    [
@@ -418,10 +417,8 @@
    "selvom": 2,
    "mens": 2,
    "for": 2,
-   "at": 1,
    "og": 1,
    "eller": 1,
-   "som": 1,
    "hvilket": 1,
    "inden": 1
   },
@@ -551,7 +548,6 @@
    "denn": 3,
    "also": 3,
    "sondern": 3,
-   "dass": 2,
    "wenn": 2,
    "ob": 2,
    "obwohl": 2,
@@ -566,7 +562,8 @@
    "wo": 1,
    "was": 1,
    "bevor": 1,
-   "nachdem": 1
+   "nachdem": 1,
+   "dass": 2
   },
   "opens2": [
    [
@@ -705,7 +702,6 @@
    "e": 1,
    "o": 1,
    "u": 1,
-   "que": 1,
    "donde": 1
   },
   "opens2": [
@@ -794,19 +790,17 @@
    "koska": 3,
    "joten": 3,
    "eli": 2,
-   "että": 2,
    "kun": 2,
    "jos": 2,
    "vaikka": 2,
-   "sitten": 2,
-   "nyt": 2,
    "niin": 2,
    "ja": 1,
    "tai": 1,
    "vai": 1,
    "joka": 1,
    "mikä": 1,
-   "kuin": 1
+   "kuin": 1,
+   "että": 2
   },
   "opens2": [
    [
@@ -933,7 +927,6 @@
    "et": 1,
    "ou": 1,
    "qui": 1,
-   "que": 1,
    "dont": 1,
    "où": 1
   },
@@ -1089,7 +1082,6 @@
    "e": 1,
    "o": 1,
    "oppure": 1,
-   "che": 1,
    "dove": 1
   },
   "opens2": [
@@ -1198,10 +1190,8 @@
    "nå": 2,
    "mens": 2,
    "for": 2,
-   "at": 1,
    "og": 1,
    "eller": 1,
-   "som": 1,
    "om": 1,
    "før": 1,
    "liksom": 1
@@ -1312,8 +1302,7 @@
    "zodat": 2,
    "nou": 2,
    "en": 1,
-   "of": 1,
-   "dat": 1
+   "of": 1
   },
   "opens2": [
    [
@@ -1404,7 +1393,6 @@
    "bo": 3,
    "więc": 3,
    "czyli": 3,
-   "że": 2,
    "kiedy": 2,
    "jak": 2,
    "jeśli": 2,
@@ -1423,7 +1411,8 @@
    "czy": 1,
    "który": 1,
    "która": 1,
-   "które": 1
+   "które": 1,
+   "że": 2
   },
   "opens2": [
    [
@@ -1535,12 +1524,12 @@
    "тогда": 2,
    "и": 1,
    "или": 1,
-   "что": 1,
    "который": 1,
    "которая": 1,
    "которое": 1,
    "которые": 1,
-   "где": 1
+   "где": 1,
+   "что": 1
   },
   "opens2": [
    [
@@ -1666,10 +1655,8 @@
    "fast": 2,
    "medan": 2,
    "för": 2,
-   "att": 1,
    "och": 1,
    "eller": 1,
-   "som": 1,
    "vilket": 1,
    "innan": 1,
    "tills": 1,
@@ -1787,12 +1774,12 @@
    "й": 1,
    "або": 1,
    "чи": 1,
-   "що": 1,
    "який": 1,
    "яка": 1,
    "яке": 1,
    "які": 1,
-   "де": 1
+   "де": 1,
+   "що": 1
   },
   "opens2": [
    [
@@ -1937,7 +1924,6 @@
    "enquanto": 2,
    "e": 1,
    "ou": 1,
-   "que": 1,
    "onde": 1,
    "pois": 2,
    "pronto": 2,
@@ -2287,7 +2273,7 @@
   ]
  },
  "zh-hant": {
-  "phrases": "zh",
+  "phrases": "zh-hant",
   "ends_well": {
    "吧": 4.0,
    "呢": 4.0,
@@ -2351,7 +2337,7 @@
   ]
  },
  "zh-hans": {
-  "phrases": "zh",
+  "phrases": "zh-hans",
   "ends_well": {
    "吧": 4.0,
    "呢": 4.0,
@@ -2411,6 +2397,15 @@
   "sources": [
    "https://www.w3.org/TR/clreq/",
    "https://partnerhelp.netflixstudios.com/hc/en-us/articles/215994807-Chinese-Traditional-Timed-Text-Style-Guide"
+  ]
+ },
+ "_tuned": {
+  "date": "18 Oct 2026",
+  "how": "Diagnosed on the tuning half of the trial corpus only (experiments/quote-breaks/lang_eval.py --half tune --why LANG), judged on the held-out half; changes by category, never one word to fit one miss.",
+  "changes": [
+   "A word for 'that'/'which' earns no opener bonus where the language puts no comma before it, as English 'that' never did: Catalan, Spanish, French, Portuguese que, Italian che, Dutch dat, Danish and Norwegian at/som, Swedish att/som. Kept where the authority requires the comma (German dass, Duden D 118; Czech že; Polish że; Russian что; Ukrainian що; Finnish että): with the comma stripped, the word is the cue to where it stood.",
+   "Finnish sitten, nyt: spoken Finnish uses them inside or at the end of a clause ('lähdetään sitten'), not to open one. Tuning half 61% -> 70% (no pauses).",
+   "Tried and dropped: Turkish yani, işte as clause enders (tuning half 41% -> 38%)."
   ]
  }
 }

@@ -28,6 +28,7 @@ Bristlenose is built with these open-source projects.
 - [pysrt](https://github.com/byroot/pysrt) & [webvtt-py](https://github.com/glut23/webvtt-py) — subtitle parsing
 - [python-docx](https://python-docx.readthedocs.io/) — Word document parsing
 - [openpyxl](https://openpyxl.readthedocs.io/) — Excel export
+- [BudouX](https://github.com/google/budoux) — where a Japanese or Chinese quote breaks on a Miro or FigJam board
 
 ## Frontend
 

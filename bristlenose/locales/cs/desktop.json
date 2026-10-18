@@ -1159,6 +1159,7 @@
     "footerRecordings_other": "{{count}} nahr\u00e1vek",
     "footerFetchable": "{{count}} lze st\u00e1hnout",
     "footerOrganisedByOthers": "{{count}} uspo\u0159\u00e1dal n\u011bkdo jin\u00fd",
+    "footerStillProcessing": "{{count}} Zoom ještě zpracovává",
     "footerImported": "{{count}} importov\u00e1no",
     "footerFailed": "{{count}} selhalo",
     "footerPartial": "Ne\u00fapln\u00fd seznam",

@@ -1424,6 +1424,40 @@ struct AdapterRowDerivationTests {
         #expect(asked == ["/v2/meetings/91"], "only the booked call is looked up")
     }
 
+    /// Zoom lists a call the moment recording starts, before any file exists.
+    @Test("Zoom: a meeting with no files yet is counted, not dropped")
+    func zoomProcessingIsCounted() async {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) - 3600)
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"meetings":[
+          {"uuid":"ready","id":95,"type":1,"topic":"P11",
+           "start_time":"\(iso.string(from: start))","duration":10,
+           "recording_files":[
+             {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+              "download_url":"https://zoom.example/a1","recording_start":"\(iso.string(from: start))",
+              "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]},
+          {"uuid":"busy","id":96,"type":1,"topic":"P12",
+           "start_time":"\(iso.string(from: start))","duration":0,"recording_files":[]}],
+         "total_records":2}
+        """))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: zoomWindow)
+
+        #expect(listing.rows.map(\.id) == ["ready"])
+        #expect(listing.arithmetic.stillProcessing == 1)
+    }
+
     /// A refused lookup costs the Scheduled time and nothing else.
     @Test("Zoom: a booking lookup that fails leaves the listing whole")
     func zoomBookingFailureIsQuiet() async {

@@ -1067,6 +1067,7 @@
     "footerRecordings_other": "\ub179\ud654 {{count}}\uac74",
     "footerFetchable": "{{count}}\uac74\uc744 \uac00\uc838\uc62c \uc218 \uc788\uc74c",
     "footerOrganisedByOthers": "{{count}}\uac74\uc740 \ub2e4\ub978 \uc0ac\ub78c\uc774 \uc8fc\ucd5c",
+    "footerStillProcessing": "{{count}}건은 Zoom에서 처리 중",
     "footerImported": "{{count}}\uac74 \uac00\uc838\uc634",
     "footerFailed": "{{count}}\uac74 \uc2e4\ud328",
     "footerPartial": "\uc77c\ubd80 \ubaa9\ub85d",

@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} opnames",
     "footerFetchable": "{{count}} op te halen",
     "footerOrganisedByOthers": "{{count}} door iemand anders georganiseerd",
+    "footerStillProcessing": "{{count}} nog in verwerking bij Zoom",
     "footerImported": "{{count}} ge\u00efmporteerd",
     "footerFailed": "{{count}} mislukt",
     "footerPartial": "Onvolledige lijst",

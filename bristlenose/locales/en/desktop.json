@@ -1107,6 +1107,7 @@
     "footerRecordings_other": "{{count}} recordings",
     "footerFetchable": "{{count}} you can fetch",
     "footerOrganisedByOthers": "{{count}} organised by someone else",
+    "footerStillProcessing": "{{count}} still processing on Zoom",
     "footerImported": "{{count}} imported",
     "footerFailed": "{{count}} failed",
     "footerPartial": "Partial list",

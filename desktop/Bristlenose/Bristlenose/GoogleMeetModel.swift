@@ -1444,6 +1444,11 @@ struct JoinArithmetic: Equatable {
     /// count above a lower bound rather than a total, and the UI must not print
     /// a confident number over an incomplete read.
     let outcome: ListOutcome
+    /// Meetings listed with no recording file yet, still being recorded or
+    /// processed. Zoom's alone, since only Zoom lists a call before its files
+    /// exist; zero everywhere else. Without it a processing meeting beside
+    /// fetchable ones simply dropped out of the list (18 Oct 2026).
+    var stillProcessing: Int = 0
 
     /// Events in the window with no fetchable recording and no named organiser
     /// — the genuinely unexplained remainder. Never negative: a negative here

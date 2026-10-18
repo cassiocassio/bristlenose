@@ -1067,6 +1067,7 @@
     "footerRecordings_other": "{{count}} \u6bb5\u9304\u5f71",
     "footerFetchable": "\u53ef\u53d6\u5f97 {{count}} \u6bb5",
     "footerOrganisedByOthers": "{{count}} \u5834\u7531\u4ed6\u4eba\u4e3b\u6301",
+    "footerStillProcessing": "{{count}} 場仍在 Zoom 處理中",
     "footerImported": "\u5df2\u532f\u5165 {{count}} \u6bb5",
     "footerFailed": "{{count}} \u6bb5\u5931\u6557",
     "footerPartial": "\u90e8\u5206\u6e05\u55ae",

@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} inspelningar",
     "footerFetchable": "{{count}} kan h\u00e4mtas",
     "footerOrganisedByOthers": "{{count}} anordnade av n\u00e5gon annan",
+    "footerStillProcessing": "{{count}} bearbetas fortfarande i Zoom",
     "footerImported": "{{count}} importerade",
     "footerFailed": "{{count}} misslyckades",
     "footerPartial": "Ofullst\u00e4ndig lista",

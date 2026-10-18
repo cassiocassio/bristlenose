@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} tallennetta",
     "footerFetchable": "{{count}} voidaan hakea",
     "footerOrganisedByOthers": "{{count}} jonkun muun j\u00e4rjest\u00e4m\u00e4\u00e4",
+    "footerStillProcessing": "{{count}} Zoom käsittelee vielä",
     "footerImported": "{{count}} tuotu",
     "footerFailed": "{{count}} ep\u00e4onnistui",
     "footerPartial": "Osittainen luettelo",

@@ -598,7 +598,10 @@ final class ZoomSource: CloudImportSource {
                 // chosen, which makes Zoom a cleaner fit for §4 than either
                 // other platform.
                 organisedByOthers: 0,
-                outcome: outcome
+                outcome: outcome,
+                stillProcessing: meetings.filter { meeting in
+                    !(meeting.recording_files ?? []).contains { ZoomFileType($0.file_type ?? "").isMedia }
+                }.count
             ),
             window: window,
             notice: preflight?.notice

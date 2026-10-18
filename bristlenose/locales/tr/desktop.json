@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} kay\u0131t",
     "footerFetchable": "{{count}} tanesi al\u0131nabilir",
     "footerOrganisedByOthers": "{{count}} tanesini ba\u015fkas\u0131 d\u00fczenledi",
+    "footerStillProcessing": "{{count}} tanesi Zoom'da hâlâ işleniyor",
     "footerImported": "{{count}} i\u00e7e aktar\u0131ld\u0131",
     "footerFailed": "{{count}} ba\u015far\u0131s\u0131z",
     "footerPartial": "K\u0131smi liste",

@@ -1067,6 +1067,7 @@
     "footerRecordings_other": "{{count}} \u4ef6\u306e\u9332\u753b",
     "footerFetchable": "{{count}} \u4ef6\u3092\u53d6\u5f97\u3067\u304d\u307e\u3059",
     "footerOrganisedByOthers": "{{count}} \u4ef6\u306f\u5225\u306e\u65b9\u304c\u4e3b\u50ac",
+    "footerStillProcessing": "{{count}} 件は Zoom で処理中",
     "footerImported": "{{count}} \u4ef6\u3092\u8aad\u307f\u8fbc\u307f\u307e\u3057\u305f",
     "footerFailed": "{{count}} \u4ef6\u304c\u5931\u6557",
     "footerPartial": "\u4e00\u90e8\u306e\u307f\u306e\u4e00\u89a7",

@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} enregistraments",
     "footerFetchable": "{{count}} que pots baixar",
     "footerOrganisedByOthers": "{{count}} organitzades per una altra persona",
+    "footerStillProcessing": "{{count}} encara en procés a Zoom",
     "footerImported": "{{count}} importats",
     "footerFailed": "{{count}} fallits",
     "footerPartial": "Llista parcial",

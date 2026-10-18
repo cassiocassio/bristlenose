@@ -585,6 +585,14 @@ struct CloudImportWindow: View {
                                 ["count": String(a.organisedByOthers)]))
                         .foregroundStyle(.secondary)
                 }
+                // Zoom lists a call before its files exist. Whole-window, like
+                // the organiser count, so suppressed under a filter too.
+                if a.stillProcessing > 0, store.filterText.isEmpty {
+                    Text("·").foregroundStyle(.secondary)
+                    Text(i18n.t("desktop.cloudImport.footerStillProcessing",
+                                ["count": String(a.stillProcessing)]))
+                        .foregroundStyle(.secondary)
+                }
                 // Shown only when a recording the researcher can *see* is one
                 // they cannot fetch. Fetch 8 of 8 and there is no link — that
                 // absence is the reassurance, and a permanent "learn about

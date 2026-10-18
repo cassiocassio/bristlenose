@@ -1102,6 +1102,7 @@
     "footerRecordings_other": "{{count}} optagelser",
     "footerFetchable": "{{count}} kan hentes",
     "footerOrganisedByOthers": "{{count}} arrangeret af en anden",
+    "footerStillProcessing": "{{count}} behandles stadig i Zoom",
     "footerImported": "{{count}} importeret",
     "footerFailed": "{{count}} mislykkedes",
     "footerPartial": "Delvis liste",

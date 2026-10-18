@@ -11,43 +11,42 @@ import Testing
 @MainActor
 struct TimelineMenuTests {
 
-    /// The shape `postTimelineMenu` sends (TimelineSplit.test.tsx pins the web side).
-    private func wire(on: Bool = true, lanes: Int = 3) -> [String: Any] {
-        [
-            "type": "timeline-menu",
-            "on": on,
-            "lanes": lanes,
-            "anchor": ["x": 600, "y": 12.5, "width": 110, "height": 24],
-            "labels": [
-                "journey": "User journey",
-                "timeline": "Session timeline",
-                "detail": "Timeline detail",
-                "lanes": [
-                    ["lanes": 2, "title": "Compact", "hint": "Sections · Moderator · Participant"],
-                    ["lanes": 3, "title": "Standard", "hint": "+ Sentiment"],
-                    ["lanes": 5, "title": "Full", "hint": "+ Themes"],
-                ],
-            ],
-        ]
+    nonisolated private static let fixtureURL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // BristlenoseTests
+        .deletingLastPathComponent()   // Bristlenose
+        .deletingLastPathComponent()   // desktop
+        .deletingLastPathComponent()   // repo root
+        .appendingPathComponent("tests/fixtures/timeline-menu-bridge-contract.json")
+
+    /// The wire `postTimelineMenu` sends, from the fixture TimelineSplit.test.tsx
+    /// pins on the web side, decoded with JSONSerialization so numbers and
+    /// booleans arrive as NSNumber, as they do from WebKit.
+    private func wire(on: Bool? = nil, lanes: Int? = nil) throws -> [String: Any] {
+        let data = try Data(contentsOf: Self.fixtureURL)
+        let root = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var body = try #require(root["wire"] as? [String: Any])
+        if let on { body["on"] = on }
+        if let lanes { body["lanes"] = lanes }
+        return body
     }
 
     @Test func readsTheWire() throws {
-        let r = try #require(TimelineMenuRequest(message: wire()))
-        #expect(r.on)
+        let r = try #require(TimelineMenuRequest(message: try wire()))
+        #expect(!r.on)
         #expect(r.lanes == 3)
         #expect(r.anchor == CGRect(x: 600, y: 12.5, width: 110, height: 24))
         #expect(r.laneItems.map(\.lanes) == [2, 3, 5])
         #expect(r.laneItems[0].hint == "Sections · Moderator · Participant")
     }
 
-    @Test func refusesAWireWithoutItsLabels() {
-        var body = wire()
+    @Test func refusesAWireWithoutItsLabels() throws {
+        var body = try wire()
         body["labels"] = nil
         #expect(TimelineMenuRequest(message: body) == nil)
     }
 
     @Test func ticksTheStateShowingAndOnlyFlipsFromTheOtherRow() throws {
-        let on = TimelineMenuEntry.entries(for: try #require(TimelineMenuRequest(message: wire(on: true))))
+        let on = TimelineMenuEntry.entries(for: try #require(TimelineMenuRequest(message: try wire(on: true))))
         #expect(on == [
             .item(title: "User journey", subtitle: nil, checked: false, pick: .toggle),
             .item(title: "Session timeline", subtitle: nil, checked: true, pick: .none),
@@ -57,7 +56,7 @@ struct TimelineMenuTests {
             .item(title: "Standard", subtitle: "+ Sentiment", checked: true, pick: .lanes(3)),
             .item(title: "Full", subtitle: "+ Themes", checked: false, pick: .lanes(5)),
         ])
-        let off = TimelineMenuEntry.entries(for: try #require(TimelineMenuRequest(message: wire(on: false))))
+        let off = TimelineMenuEntry.entries(for: try #require(TimelineMenuRequest(message: try wire(on: false))))
         #expect(off[0] == .item(title: "User journey", subtitle: nil, checked: true, pick: .none))
         #expect(off[1] == .item(title: "Session timeline", subtitle: nil, checked: false, pick: .toggle))
     }

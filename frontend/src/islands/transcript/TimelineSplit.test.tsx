@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { TimelineSplit } from "./TimelineSplit";
 import { getTranscriptTimeline, resetTranscriptTimelineStore } from "../../contexts/TranscriptTimelineStore";
 import { _resetEmbeddedCache } from "../../utils/embedded";
+import contractJson from "../../../../tests/fixtures/timeline-menu-bridge-contract.json";
 
 beforeEach(() => resetTranscriptTimelineStore());
 
@@ -78,28 +79,21 @@ describe("TimelineSplit in the Mac app", () => {
   });
 
   it("asks native for the menu, with the words and the state, instead of opening its own", () => {
+    // The wire is pinned by a fixture TimelineMenuTests.swift decodes too, so a rename on either side
+    // reddens one of them. The control (the toggle group, not the caret) is what native hangs the
+    // menu from, so only it gets the fixture's rect; jsdom lays out nothing.
+    const wire = contractJson.wire;
     render(<TimelineSplit />);
     const more = screen.getByTestId("timeline-more");
+    const group = more.closest(".dimension-toggle") as HTMLElement;
+    const { x, y, width, height } = wire.anchor;
+    group.getBoundingClientRect = () => ({ left: x, top: y, width, height, x, y, right: x + width, bottom: y + height, toJSON: () => ({}) }) as DOMRect;
+    more.getBoundingClientRect = () => ({ left: 1, top: 2, width: 3, height: 4, x: 1, y: 2, right: 4, bottom: 6, toJSON: () => ({}) }) as DOMRect;
     fireEvent.click(more);
     expect(screen.queryByRole("menu")).toBeNull();
     expect(more).toHaveAttribute("aria-expanded", "true");
     expect(postMessage).toHaveBeenCalledTimes(1);
-    expect(postMessage.mock.calls[0][0]).toEqual({
-      type: "timeline-menu",
-      on: false,
-      lanes: 3,
-      anchor: { x: 0, y: 0, width: 0, height: 0 },
-      labels: {
-        journey: "User journey",
-        timeline: "Session timeline",
-        detail: "Timeline detail",
-        lanes: [
-          { lanes: 2, title: "Compact", hint: "Sections · Moderator · Participant" },
-          { lanes: 3, title: "Standard", hint: "+ Sentiment" },
-          { lanes: 5, title: "Full", hint: "+ Themes" },
-        ],
-      },
-    });
+    expect(postMessage.mock.calls[0][0]).toEqual(wire);
   });
 
   it("takes focus back on the caret when native says the menu closed", () => {

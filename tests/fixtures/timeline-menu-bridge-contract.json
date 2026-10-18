@@ -1,0 +1,19 @@
+{
+  "_comment": "The timeline-menu bridge message (web -> native), pinned on both sides: TimelineSplit.test.tsx asserts the SPA posts exactly `wire`; TimelineMenuTests.swift decodes it as BridgeHandler receives it. Change both sides with this file.",
+  "wire": {
+    "type": "timeline-menu",
+    "on": false,
+    "lanes": 3,
+    "anchor": { "x": 600, "y": 12.5, "width": 110, "height": 24 },
+    "labels": {
+      "journey": "User journey",
+      "timeline": "Session timeline",
+      "detail": "Timeline detail",
+      "lanes": [
+        { "lanes": 2, "title": "Compact", "hint": "Sections · Moderator · Participant" },
+        { "lanes": 3, "title": "Standard", "hint": "+ Sentiment" },
+        { "lanes": 5, "title": "Full", "hint": "+ Themes" }
+      ]
+    }
+  }
+}

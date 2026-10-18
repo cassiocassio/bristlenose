@@ -273,6 +273,24 @@ enum CloudImportOutline {
         rows.isEmpty || rows.contains { $0.scheduledAt != nil }
     }
 
+    // MARK: - Whether the Expires column has anything to say
+
+    /// Whether the Expires column earns its place in a listing of `rows`.
+    ///
+    /// The Scheduled rule again: a column appears when it would have something
+    /// in it. The platform must be able to expire a recording at all (Meet
+    /// cannot), **and** some row must carry a date. Zoom dates a recording only
+    /// when the account deletes recordings automatically, so with retention off
+    /// the column was dashes from top to bottom (18 Oct 2026), and no scope or
+    /// extra call could fill it, because the date does not exist.
+    ///
+    /// False for an empty listing, as `showsTranscriptColumn` is. Ask it of the
+    /// **whole** listing, never the filtered subset, so a filter keystroke
+    /// cannot take the column away.
+    static func showsExpiresColumn(on platform: CloudPlatform, for rows: [CloudImportRow]) -> Bool {
+        platform.hasPerFileExpiry && rows.contains { $0.expiresAt != nil }
+    }
+
     // MARK: - Whether the Transcript column has anything to say
 
     /// Whether the Transcript column earns its place in a listing of `rows`.

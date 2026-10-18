@@ -136,6 +136,7 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // frame rather than corrected on the second.
         context.coordinator.syncScheduledColumn()
         context.coordinator.syncTranscriptColumn()
+        context.coordinator.syncExpiresColumn()
         context.coordinator.syncStatusColumnWidth()
         context.coordinator.reportMinimumWidth()
         context.coordinator.reload(force: true)
@@ -214,10 +215,9 @@ struct CloudImportOutlineView: NSViewRepresentable {
         // Transcript is NOT added here either — `syncTranscriptColumn` owns it,
         // for the Scheduled reason: whether any row has a transcript is a fact
         // about the data.
-        // Added and removed live by `syncExpiresColumn`, because the platform can
-        // change under the same window.
-        outline.addTableColumn(column(Column.expires, i18n.t("desktop.cloudImport.columnExpires"),
-                                      width: 92, min: 72, max: 160))
+        // Expires is NOT added here — `syncExpiresColumn` owns it, for the
+        // Scheduled reason: whether any recording carries an expiry date is a
+        // fact about the data as well as the platform.
         // The minimum here is a placeholder: `syncStatusColumnWidth` replaces it
         // with a measured one before the first frame.
         outline.addTableColumn(column(Column.status, i18n.t("desktop.cloudImport.columnStatus"),
@@ -500,15 +500,18 @@ extension CloudImportOutlineView {
             return nil
         }
 
-        /// Adds or removes the Expires column to match the platform.
+        /// Adds or removes the Expires column to match the platform and the
+        /// listing (`CloudImportOutline.showsExpiresColumn`).
         ///
         /// A column of em-dashes pretending to be data is worse than an absent
         /// one — Drive has no per-file expiry at all, so on Meet the column is
-        /// not narrow, it is *gone*.
+        /// not narrow, it is *gone*; and a Zoom account with retention off has
+        /// no dates either, so there it goes too.
         func syncExpiresColumn() {
             guard let outline else { return }
+            let wanted = CloudImportOutline.showsExpiresColumn(on: platform, for: store.rows)
             let existing = outline.tableColumns.first { $0.identifier == Column.expires }
-            switch (platform.hasPerFileExpiry, existing) {
+            switch (wanted, existing) {
             case (false, .some(let column)):
                 outline.removeTableColumn(column)
             case (true, .none):

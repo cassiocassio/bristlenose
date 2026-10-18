@@ -202,6 +202,10 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
     case scopeDeclined
     case paginatorCapped
     case partialFailure
+    /// The listing failed before a single page arrived: a 503, a dropped
+    /// connection, a refresh that could not reach the server. Must not read as
+    /// an empty month.
+    case listingFailed
     /// One row for every string the Status column can show — each video
     /// availability, each local state, each fetch outcome including all
     /// `CloudFetchFailure` sentences, and the in-flight bar and Queued — so
@@ -226,6 +230,7 @@ enum CloudImportScenario: String, CaseIterable, Identifiable {
         case .scopeDeclined:               return "Drive Scope Declined"
         case .paginatorCapped:             return "Paginator Capped (partial list)"
         case .partialFailure:              return "Partial Failure After Fetch"
+        case .listingFailed:               return "Listing Failed (no pages)"
         case .everyStatus:                 return "Every Status (one row each)"
         }
     }
@@ -611,7 +616,7 @@ final class FixtureCloudSource: CloudImportSource {
 
     private func rows() -> [CloudImportRow] {
         switch scenario {
-        case .signedOut, .signInIncomplete, .loading, .emptyWindow:
+        case .signedOut, .signInIncomplete, .loading, .emptyWindow, .listingFailed:
             return []
 
         case .everyStatus:
@@ -736,6 +741,9 @@ final class FixtureCloudSource: CloudImportSource {
         case .emptyWindow:
             return JoinArithmetic(eventsInWindow: 11, fetchable: 0,
                                   organisedByOthers: 0, outcome: .exhausted)
+        case .listingFailed:
+            return JoinArithmetic(eventsInWindow: 0, fetchable: 0, organisedByOthers: 0,
+                                  outcome: .failed(after: 0, outcome: .transient(status: 503)))
         case .paginatorCapped:
             return JoinArithmetic(eventsInWindow: 14, fetchable: fetchable,
                                   organisedByOthers: others,

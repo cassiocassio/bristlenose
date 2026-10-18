@@ -182,6 +182,10 @@ struct CloudImportWindow: View {
                                      count: store.windowDays))
                 }
                 .menuStyle(.borderlessButton)
+                // Not while an import runs: a re-list replaces the plans the
+                // queued rows download from, and a row that started in that
+                // gap failed for good (pre-release review, 18 Oct 2026).
+                .disabled(store.isFetching)
                 // **Primary, not the window's accent.** The borderless style
                 // draws its label in the tint, and this window is tinted with
                 // the palette's blue, so a scope at its default read as a link
@@ -340,6 +344,15 @@ struct CloudImportWindow: View {
                 Label(i18n.t("desktop.cloudImport.blanketUnsupportedTitle"), systemImage: "video.slash")
             } description: {
                 Text(i18n.t(notice.key))
+            }
+        } else if store.listingFailed {
+            // Not the empty month: nothing arrived, so nothing can be said
+            // about what is there. Try Again re-lists; a sign-in that has
+            // truly gone comes back through the coordinator as signed out.
+            ContentUnavailableView {
+                Label(i18n.t("desktop.cloudImport.loadFailedTitle"), systemImage: "exclamationmark.triangle")
+            } actions: {
+                Button(i18n.t("desktop.cloudImport.tryAgain")) { Task { await store.load() } }
             }
         } else if let refusal = store.blanketRefusal {
             // DEVIATION, and the most important one on this platform. Every row

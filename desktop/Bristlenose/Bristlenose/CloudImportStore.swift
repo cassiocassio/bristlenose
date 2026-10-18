@@ -337,6 +337,22 @@ final class CloudImportStore: ObservableObject {
         fetchOrder.reduce(0) { $0 + ($1.sizeBytes ?? 0) }
     }
 
+    /// The listing failed before a single page arrived, so there is nothing to
+    /// show and no reason to think there is nothing to find.
+    ///
+    /// **Not the empty month.** A 503, a dropped connection, a token refresh
+    /// that could not reach the server, or a denial Zoom sends as HTTP 200 all
+    /// return no rows; the window used to say "No recordings in the last 30
+    /// days" for every one of them (pre-release review, 18 Oct 2026), and a
+    /// researcher would conclude the session was never recorded while its
+    /// expiry clock ran on. A failure after some pages keeps its rows and the
+    /// footer's partial marker instead.
+    var listingFailed: Bool {
+        guard let listing, listing.rows.isEmpty,
+              case .failed(after: 0, _) = listing.arithmetic.outcome else { return false }
+        return true
+    }
+
     /// Whether every row in the list is unfetchable for the *same* reason. When
     /// true the window says it once, at the top, instead of repeating it on
     /// every row — the difference between one sentence and eleven dead ticks.

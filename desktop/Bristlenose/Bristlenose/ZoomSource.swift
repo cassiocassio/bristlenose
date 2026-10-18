@@ -141,6 +141,15 @@ final class ZoomSource: CloudImportSource {
     }
     private var rowPlans: [String: RowPlan] = [:]
 
+    /// Guards `chosenFiles`, `transcriptFiles`, `rowPlans` and `bookings`.
+    ///
+    /// This class is not isolated, and the store runs three fetches at once on
+    /// the cooperative pool: two waiting rows rechecking their transcripts
+    /// wrote `transcriptFiles` concurrently, which is a crash or a lost entry
+    /// (pre-release review, 18 Oct 2026). Held for one read or write at a
+    /// time, never across an `await`.
+    private let stateLock = NSLock()
+
     /// What `GET /meetings/{id}` said about each meeting in the current
     /// listing, keyed by meeting number. Absent means "not asked, or not
     /// answered", never "not booked".
@@ -518,12 +527,27 @@ final class ZoomSource: CloudImportSource {
 
         outer: for chunk in chunks {
             var pageToken: String?
+            var collected = 0
+            var reported: Int?
             repeat {
                 do {
                     let page = try await fetchPage(chunk, pageToken: pageToken)
                     meetings.append(contentsOf: page.meetings ?? [])
+                    collected += page.meetings?.count ?? 0
+                    reported = page.total_records ?? reported
                     pageToken = page.next_page_token?.isEmpty == false ? page.next_page_token : nil
                     pagesFetched += 1
+                    // A tripwire, logged rather than shown: Zoom's docs do not
+                    // say what `total_records` counts under
+                    // `recording_source_type`, so a mismatch is evidence to
+                    // read, not yet a reason to mark the list partial
+                    // (pre-release review, 18 Oct 2026).
+                    if pageToken == nil, let reported, reported > collected {
+                        Self.log.notice("""
+                            zoom_list_short chunk_from=\(chunk.fromString, privacy: .public) \
+                            collected=\(collected, privacy: .public) total_records=\(reported, privacy: .public)
+                            """)
+                    }
                     if pageToken != nil && pagesFetched >= pageCap {
                         outcome = .pageCapHit(pagesFetched: pagesFetched)
                         break outer
@@ -552,13 +576,16 @@ final class ZoomSource: CloudImportSource {
             return seenMeetings.insert(uuid).inserted
         }
 
-        bookings = await fetchBookings(for: meetings)
+        let fetchedBookings = await fetchBookings(for: meetings)
 
         // The plans describe this listing and no other. Left in place, a row a
         // re-list no longer returns would keep a download URL nothing shows.
-        chosenFiles = [:]
-        transcriptFiles = [:]
-        rowPlans = [:]
+        stateLock.withLock {
+            bookings = fetchedBookings
+            chosenFiles = [:]
+            transcriptFiles = [:]
+            rowPlans = [:]
+        }
         let rows = meetings.flatMap(makeRows)
         return MeetingListing(
             rows: rows,
@@ -659,7 +686,7 @@ final class ZoomSource: CloudImportSource {
         let isSplit = parts.count > 1
         // One booking for the whole call, matched on when the meeting started,
         // so the parts of a split meeting share it.
-        let booking = meeting.id.flatMap { bookings[$0] }.flatMap { found in
+        let booking = meeting.id.flatMap { id in stateLock.withLock { bookings[id] } }.flatMap { found in
             ZoomSchedule.booking(start: found.start_time.flatMap(Self.parseDate),
                                  duration: found.duration.map { TimeInterval($0 * 60) },
                                  occurrences: found.occurrenceBookings,
@@ -673,10 +700,13 @@ final class ZoomSource: CloudImportSource {
             // its whole-minute duration. The transcript wait is timed from it.
             let ended = part.end ?? meetingDuration.map { start.addingTimeInterval($0) }
             let id = ordinal.map { "\(uuid)#\($0)" } ?? uuid
-            chosenFiles[id] = media
-            transcriptFiles[id] = part.choice.transcript
-            rowPlans[id] = RowPlan(meetingUUID: uuid, partStart: part.start,
+            let plan = RowPlan(meetingUUID: uuid, partStart: part.start,
                                    partEnd: ended, ordinal: ordinal)
+            stateLock.withLock {
+                chosenFiles[id] = media
+                transcriptFiles[id] = part.choice.transcript
+                rowPlans[id] = plan
+            }
 
             let partDuration: TimeInterval? = {
                 guard let s = part.start, let e = part.end, e > s else { return nil }
@@ -757,7 +787,7 @@ final class ZoomSource: CloudImportSource {
         destination: URL,
         progress: @escaping @Sendable (FetchProgress) -> Void
     ) async -> FetchOutcome {
-        guard let file = chosenFiles[row.id], let url = file.downloadURL else {
+        guard let file = stateLock.withLock({ chosenFiles[row.id] }), let url = file.downloadURL else {
             return .failed(reason: .noDownloadableFile, isRetryable: false)
         }
         // Renew before every file, not once per batch. The tail of a long
@@ -868,10 +898,10 @@ final class ZoomSource: CloudImportSource {
         // Ask again rather than trust the listing, as Meet does: the transcript
         // routinely lands minutes after the video, so a row included while it
         // was *Expected* may have its file by the time the media is down.
-        if transcriptFiles[row.id] == nil, row.transcript == .expected {
+        if stateLock.withLock({ transcriptFiles[row.id] }) == nil, row.transcript == .expected {
             _ = await recheckTranscripts(rowIDs: [row.id])
         }
-        guard let file = transcriptFiles[row.id], let url = file.downloadURL else {
+        guard let file = stateLock.withLock({ transcriptFiles[row.id] }), let url = file.downloadURL else {
             switch row.transcript {
             // Promised and not paired with anything we can fetch: carrying
             // *Available* past Import would claim a file that is not there.
@@ -992,7 +1022,7 @@ final class ZoomSource: CloudImportSource {
     /// row past the 24-hour window reads *No transcript*. A meeting Zoom would
     /// not answer for is left out and asked again next pass.
     func recheckTranscripts(rowIDs: [String]) async -> [String: TranscriptAvailability] {
-        let plans = rowPlans
+        let plans = stateLock.withLock { rowPlans }
         let clock = now()
         guard await renewedTokenIfNeeded() else {
             // A refused grant will never answer; a transient failure might, so
@@ -1022,7 +1052,9 @@ final class ZoomSource: CloudImportSource {
             for id in ids {
                 guard let plan = plans[id],
                       let part = Self.part(matching: plan, in: parts) else { continue }
-                if let transcript = part.choice.transcript { transcriptFiles[id] = transcript }
+                if let transcript = part.choice.transcript {
+                    stateLock.withLock { transcriptFiles[id] = transcript }
+                }
                 answers[id] = ZoomTranscriptAvailability.decide(
                     hasTranscript: part.choice.transcript != nil,
                     audioTranscriptEnabled: preflight?.audioTranscriptEnabled,
@@ -1075,8 +1107,14 @@ final class ZoomSource: CloudImportSource {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (data, response) = try await session.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        let outcome = ZoomResponseClassifier.classify(status: status, body: data)
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? 0
+        // Zoom's own back-off on a 429, in seconds. Unread until 18 Oct 2026,
+        // so every rate limit backed off by our default instead of Zoom's.
+        let retryAfter = (http?.value(forHTTPHeaderField: "Retry-After"))
+            .flatMap { TimeInterval($0.trimmingCharacters(in: .whitespaces)) }
+        let outcome = ZoomResponseClassifier.classify(status: status, body: data,
+                                                      retryAfter: retryAfter)
         guard outcome == .ok else { throw ZoomAPIError(outcome: outcome) }
         return data
     }
@@ -1124,98 +1162,6 @@ final class ZoomSource: CloudImportSource {
 
 struct ZoomAPIError: Error {
     let outcome: ZoomAPIOutcome
-}
-
-// MARK: - The redirect trap
-
-/// Strips `Authorization` when a download redirects to Zoom's CDN.
-///
-/// `download_url` on `zoom.us` answers with a 302 to a **pre-signed** URL on
-/// `ssrweb.zoom.us` that carries its own credentials in the query string.
-/// `URLSession` re-attaches the original headers across the redirect by
-/// default, and a signed URL arriving with both a signature and an
-/// `Authorization` header has been reported to 403 — the same behaviour S3-style
-/// backends have.
-///
-/// So this hands back a request with the header removed. The failure it
-/// prevents is not loud: a 403 here yields an HTML error body that a naive
-/// downloader writes into a `.mp4`, producing a 3 KB file that ffprobe rejects
-/// hours later at stage 2, long after the researcher stopped watching.
-final class ZoomRedirectStripper: NSObject, URLSessionTaskDelegate {
-    func urlSession(
-        _ session: URLSession,
-        task: URLSessionTask,
-        willPerformHTTPRedirection response: HTTPURLResponse,
-        newRequest request: URLRequest,
-        completionHandler: @escaping (URLRequest?) -> Void
-    ) {
-        var stripped = request
-        stripped.setValue(nil, forHTTPHeaderField: "Authorization")
-        completionHandler(stripped)
-    }
-}
-
-/// Guards against Zoom's download failure shapes, of which the dangerous one is
-/// **an error delivered as HTTP 200**.
-///
-/// This is not a theoretical hardening. The best-documented case in the whole
-/// Zoom ecosystem: a developer ran the leading open-source downloader over
-/// ~2,000 recordings and **880 of them wrote a 59-byte JSON error body to disk
-/// as a `.mp4`** — and every one was logged as a successful download. A
-/// permission failure renders as an HTML login page or a JSON error with a 200
-/// status line, so nothing throws, nothing 4xxs, and the batch reports success.
-///
-/// The two leading downloaders independently converged on the same fix, which
-/// is the second check here: **compare bytes received against the size the
-/// listing already told you.** One maintainer removed his completed-downloads
-/// log entirely because it "often erroneously classif[ied] recordings as
-/// successfully downloaded".
-///
-/// It is the same defect `docs/design-cloud-import.md` §6 calls "prove the bytes
-/// arrived", arrived at independently by strangers — which is the strongest
-/// evidence available that the rule is right.
-enum ZoomDownloadGuard {
-
-    enum Verdict: Equatable {
-        case usable
-        /// The response is an error wearing a success status.
-        case notMedia(contentType: String)
-        case badStatus(Int)
-        /// Arrived, but not all of it. A truncated-but-valid MP4 is the quiet
-        /// version of this failure: ffprobe accepts it, Whisper transcribes 40
-        /// of 60 minutes, and the report presents a confident analysis of a
-        /// session that was never fully read.
-        case shortRead(expected: Int64, received: Int64)
-    }
-
-    /// Checked *before* the destination file is opened, so nothing half-written
-    /// is ever visible.
-    static func inspect(response: URLResponse?) -> Verdict {
-        guard let http = response as? HTTPURLResponse else { return .badStatus(0) }
-        guard (200...299).contains(http.statusCode) else { return .badStatus(http.statusCode) }
-        let type = (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased()
-        if type.contains("text/html") || type.contains("application/json") {
-            return .notMedia(contentType: type)
-        }
-        return .usable
-    }
-
-    /// Checked after the transfer, against the listing's own figure.
-    ///
-    /// `expected` comes from `recording_files[].file_size` — an independent
-    /// second source, so it catches a redirect that served something else
-    /// entirely, not just a truncated stream. Nil expected means the file type
-    /// carries no size (`CC` and `TIMELINE` genuinely have none), and an absent
-    /// figure must read as unknown rather than as zero.
-    static func verify(received: Int64, expected: Int64?) -> Verdict {
-        guard let expected, expected > 0 else { return .usable }
-        return received == expected ? .usable
-                                    : .shortRead(expected: expected, received: received)
-    }
-
-    static func isUsableMedia(response: URLResponse?) -> Bool {
-        inspect(response: response) == .usable
-    }
 }
 
 /// `GET /meetings/{id}`, the parts that say when a call was booked.

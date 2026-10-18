@@ -850,7 +850,9 @@ struct ListingTransportTests {
         let listings = StubURLProtocol.requests.filter {
             $0.url?.path.hasSuffix("/users/me/recordings") == true
         }
-        #expect(listings.count == 3)
+        // Four, not three: chunks are 29 days apart so each asks for 30
+        // inclusive dates (18 Oct 2026).
+        #expect(listings.count == 4)
         // Each chunk carries its own explicit from/to — omitting them makes
         // Zoom answer for TODAY ONLY, which reads as an empty account.
         for request in listings {
@@ -905,6 +907,15 @@ struct AdapterRowDerivationTests {
     private var window: DateInterval {
         let end = Date()
         return DateInterval(start: Calendar.current.date(byAdding: .day, value: -30, to: end)!,
+                            end: end)
+    }
+
+    /// One Zoom chunk. Zoom splits a window into 29-day chunks, so the 30-day
+    /// `window` is two requests; a Zoom test that stubs one listing page uses
+    /// this, or its next stub is read by the second chunk.
+    private var zoomWindow: DateInterval {
+        let end = Date()
+        return DateInterval(start: Calendar.current.date(byAdding: .day, value: -20, to: end)!,
                             end: end)
     }
 
@@ -1239,7 +1250,7 @@ struct AdapterRowDerivationTests {
             restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
                                        expiresAt: Date().addingTimeInterval(3600),
                                        scopes: ZoomScopes.requested))
-        let listing = await source.list(window: window)
+        let listing = await source.list(window: zoomWindow)
 
         #expect(listing.rows.count == 2, "both parts, not just the first")
         #expect(Set(listing.rows.map(\.meetingID)) == ["u/1=="])
@@ -1305,7 +1316,7 @@ struct AdapterRowDerivationTests {
                                        expiresAt: Date().addingTimeInterval(7 * 86_400),
                                        scopes: ZoomScopes.requested),
             now: { clock.now })
-        let listing = await source.list(window: window)
+        let listing = await source.list(window: zoomWindow)
         return (source, listing.rows.first)
     }
 
@@ -1361,7 +1372,7 @@ struct AdapterRowDerivationTests {
             restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
                                        expiresAt: Date().addingTimeInterval(3600),
                                        scopes: ZoomScopes.requested))
-        let listing = await source.list(window: window)
+        let listing = await source.list(window: zoomWindow)
         #expect(listing.rows.isEmpty)
         #expect(listing.notice == .zoomCloudRecordingOff)
     }
@@ -1400,7 +1411,7 @@ struct AdapterRowDerivationTests {
             restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
                                        expiresAt: Date().addingTimeInterval(3600),
                                        scopes: ZoomScopes.requested))
-        let listing = await source.list(window: window)
+        let listing = await source.list(window: zoomWindow)
 
         let scheduled = listing.rows.first { $0.id == "s1" }
         let instant = listing.rows.first { $0.id == "i1" }
@@ -1441,7 +1452,7 @@ struct AdapterRowDerivationTests {
             restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
                                        expiresAt: Date().addingTimeInterval(3600),
                                        scopes: ZoomScopes.requested))
-        let listing = await source.list(window: window)
+        let listing = await source.list(window: zoomWindow)
 
         #expect(listing.rows.map(\.id) == ["s2"])
         #expect(listing.rows.first?.scheduledAt == nil)

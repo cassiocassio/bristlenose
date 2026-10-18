@@ -523,13 +523,15 @@ struct ZoomListWindow: Equatable {
 
     /// Splits an arbitrary interval into Zoom-legal month-long chunks.
     ///
-    /// - Parameter monthDays: 30 rather than a calendar month. Zoom documents
-    ///   "a month" without defining it, and 30 days is inside every reading —
-    ///   an off-by-one at the boundary would drop a day silently, which is the
-    ///   whole class of bug this type exists to prevent.
+    /// - Parameter monthDays: 29, so a chunk's dates span 30 inclusive days.
+    ///   Zoom documents "a month" without defining it, and its `from`/`to` are
+    ///   inclusive dates (a meeting on a boundary day comes back from both
+    ///   chunks, measured 18 Oct 2026). At 30, every chunk asked for 31 dates;
+    ///   if Zoom trims to 30 it drops the oldest day of each chunk silently,
+    ///   which is the whole class of bug this type exists to prevent.
     static func chunks(
         covering interval: DateInterval,
-        monthDays: Int = 30,
+        monthDays: Int = 29,
         calendar: Calendar = .current
     ) -> [ZoomListWindow] {
         guard interval.duration > 0 else {

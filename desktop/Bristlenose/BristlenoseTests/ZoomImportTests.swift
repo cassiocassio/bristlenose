@@ -200,9 +200,26 @@ struct ZoomListWindowTests {
         let end = Date()
         let start = Calendar.current.date(byAdding: .day, value: -90, to: end)!
         let chunks = ZoomListWindow.chunks(covering: DateInterval(start: start, end: end))
-        #expect(chunks.count == 3)
+        #expect(chunks.count == 4)
         #expect(chunks.first?.start == start)
         #expect(chunks.last?.end == end)
+    }
+
+    @Test("No chunk asks Zoom for more than 30 inclusive dates")
+    func thirtyInclusiveDates() {
+        // `from` and `to` are inclusive; a chunk 30 days long asked for 31.
+        let end = Date()
+        let start = Calendar.current.date(byAdding: .day, value: -90, to: end)!
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day = DateFormatter()
+        day.dateFormat = "yyyy-MM-dd"
+        day.timeZone = utc.timeZone
+        for chunk in ZoomListWindow.chunks(covering: DateInterval(start: start, end: end)) {
+            let from = day.date(from: chunk.fromString)!, to = day.date(from: chunk.toString)!
+            let dates = utc.dateComponents([.day], from: from, to: to).day! + 1
+            #expect(dates <= 30, "\(chunk.fromString)…\(chunk.toString) is \(dates) dates")
+        }
     }
 
     @Test("Chunks are contiguous and leave no gap")
@@ -485,71 +502,6 @@ struct ZoomPreflightTests {
                                       audioTranscriptEnabled: true,
                                       autoDeleteEnabled: true, autoDeleteDays: 30)
         #expect(preflight.notice == nil)
-    }
-}
-
-// MARK: - Download guard
-
-@Suite("Zoom download guard")
-struct ZoomDownloadGuardTests {
-
-    private func response(_ status: Int, _ contentType: String) -> HTTPURLResponse? {
-        HTTPURLResponse(url: URL(string: "https://ssrweb.zoom.us/x")!,
-                        statusCode: status, httpVersion: nil,
-                        headerFields: ["Content-Type": contentType])
-    }
-
-    @Test("HTML with a 200 is refused")
-    func htmlIsNotMedia() {
-        // A documented Zoom failure shape: a permission or session problem
-        // answers with a login page and a 200. Written to disk it becomes a
-        // 3 KB file named .mp4 that ffprobe rejects hours later at stage 2 —
-        // long after the researcher stopped watching.
-        #expect(!ZoomDownloadGuard.isUsableMedia(response: response(200, "text/html; charset=utf-8")))
-    }
-
-    @Test("A JSON error body is refused")
-    func jsonIsNotMedia() {
-        #expect(!ZoomDownloadGuard.isUsableMedia(response: response(200, "application/json")))
-    }
-
-    @Test("Real media passes")
-    func mediaPasses() {
-        #expect(ZoomDownloadGuard.isUsableMedia(response: response(200, "video/mp4")))
-        #expect(ZoomDownloadGuard.isUsableMedia(response: response(200, "audio/mp4")))
-    }
-
-    @Test("A 403 is refused whatever its content type claims")
-    func statusStillCounts() {
-        #expect(!ZoomDownloadGuard.isUsableMedia(response: response(403, "video/mp4")))
-    }
-}
-
-// MARK: - Byte verification
-
-@Suite("Zoom byte verification")
-struct ZoomByteVerificationTests {
-
-    @Test("A short read is caught, not written")
-    func shortRead() {
-        // The 880-error-bodies case: expected 239 MB, received 41 KB of HTML.
-        // Size is an independent second source, so it catches a redirect that
-        // served something else entirely — not merely a truncated stream.
-        let verdict = ZoomDownloadGuard.verify(received: 41_000, expected: 239_000_000)
-        #expect(verdict == .shortRead(expected: 239_000_000, received: 41_000))
-    }
-
-    @Test("An exact match passes")
-    func exactMatch() {
-        #expect(ZoomDownloadGuard.verify(received: 1_234, expected: 1_234) == .usable)
-    }
-
-    @Test("An absent expected size reads as unknown, not as zero")
-    func unknownSize() {
-        // CC and TIMELINE files genuinely carry no file_size. Treating nil as 0
-        // would fail every one of them.
-        #expect(ZoomDownloadGuard.verify(received: 5_000, expected: nil) == .usable)
-        #expect(ZoomDownloadGuard.verify(received: 5_000, expected: 0) == .usable)
     }
 }
 

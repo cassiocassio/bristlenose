@@ -1456,6 +1456,38 @@ def check_bundle_admin_panel() -> CheckResult:
     )
 
 
+def check_bundle_budoux() -> CheckResult:
+    """BudouX's phrase models (third-party package data) and the board's break rules.
+
+    Another instance of the ``collect_all`` rule: BudouX opens its models and
+    ``skip_nodes.json`` package-relative, so a bundle missing them imports
+    cleanly and fails the first Japanese or Chinese board
+    (``board_layout._phrase_parser``). The break rules (``data/break_rules.json``)
+    load when ``board_layout`` is imported, which the serve does at start.
+    """
+    try:
+        from bristlenose import board_layout
+
+        for model in ("ja", "zh-hans", "zh-hant"):
+            board_layout._phrase_parser(model).parse("テスト")
+        langs = len(board_layout.BREAK_RULES)
+    except Exception as exc:
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="Bundle: board break rules",
+            detail=(
+                "BudouX models or data/break_rules.json missing "
+                f"(keep collect_all('budoux') in the spec): {exc}"
+            ),
+            fix_key="bundle_dir_missing",
+        )
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="Bundle: board break rules",
+        detail=f"BudouX ja / zh-hans / zh-hant parse; break rules for {langs} languages",
+    )
+
+
 def check_bundle_mcp() -> CheckResult:
     """MCP server + its lazily-loaded schema data (third-party package data).
 
@@ -1704,6 +1736,7 @@ def run_bundle_integrity() -> DoctorReport:
         check_bundle_alembic(),
         check_bundle_admin_panel(),
         check_bundle_mcp(),
+        check_bundle_budoux(),
         check_bundle_voice(),
         check_bundle_transcription(),
     ])

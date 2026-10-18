@@ -192,6 +192,14 @@ The hard-won constraints. Build against these.
 - **Stickies:** absolute `position` x/y + `geometry` w/h. A sticky can be
   `parent`-ed into a frame — then its x/y are **relative to the frame's top-left
   and mark the sticky's centre**. No server-side auto-layout (we compute it).
+- **A sticky takes a width only; Miro sets the height**, in fixed proportion per
+  shape: a square is 1.1457 × its width, a rectangle 0.6514 × (measured on a live
+  board at six widths, 18 Oct 2026). The defaults are 199 × 228 and 350 × 228, so
+  **the paper is the top 199/228 of the box and the rest is its shadow**. Anything
+  that overlaps stickies on purpose must overlap the paper, not the box: a split
+  quote's parts overlapped the boxes by one x-height and showed as separate notes
+  with a gap (owner, 18 Oct 2026). `board_layout.MIRO_PAPER` and `set_overlap`;
+  FigJam's stickies are all paper, so the plugin overlaps its boxes directly.
 - **Frames are named containers** (`data.title` = the label, shown as a tab),
   positionable + sizable, with a `style.fillColor`. **Frames don't nest**, and an
   item belongs to **at most one** frame — so "a Sections frame and a Themes

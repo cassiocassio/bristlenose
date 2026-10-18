@@ -133,6 +133,7 @@ def load_pauses(db: Session | None, project_id: int,
     """Each quote's pauses (`board_layout.quote_pauses`), by quote row, from the word timings
     the transcript keeps. A quote whose words are untimed (a docx or an imported transcript
     without words) is simply absent, and splits on its punctuation alone."""
+    import bisect
     import json
 
     from bristlenose.server.models import Quote, TranscriptSegment
@@ -143,7 +144,9 @@ def load_pauses(db: Session | None, project_id: int,
         return {}
     rows = db.query(Quote).filter(Quote.id.in_(ids)).all()
     sessions = {s.session_id: s.id for s in db.query(StudySession).filter_by(project_id=project_id)}
-    words: dict[str, list[dict[str, Any]]] = {}
+    # Each session's timed words once, in time order, with their starts for bisecting: scanning
+    # every word of the session for every quote grew with quotes × words.
+    words: dict[str, tuple[list[float], list[dict[str, Any]]]] = {}
     out: dict[int, dict[int, float]] = {}
     text = {q.quote_id: q.text for q in quotes}
     for row in rows:
@@ -155,13 +158,20 @@ def load_pauses(db: Session | None, project_id: int,
                     .order_by(TranscriptSegment.start_time).all())
             for seg in segs:
                 try:
-                    said.extend(w for w in json.loads(seg.words_json or "[]") if isinstance(w, dict))
+                    timed = json.loads(seg.words_json or "[]")
                 except ValueError:
+                    timed = None
+                if not isinstance(timed, list):
+                    logger.debug("Segment %s has no readable word timings; its quotes split on "
+                                 "their marks alone", seg.id)
                     continue
-            words[row.session_id] = said
+                said.extend(w for w in timed
+                            if isinstance(w, dict) and isinstance(w.get("s"), (int, float)))
+            said.sort(key=lambda w: w["s"])
+            words[row.session_id] = ([w["s"] for w in said], said)
+        starts, said = words[row.session_id]
         lo, hi = row.start_timecode - _WORDS_MARGIN, row.end_timecode + _WORDS_MARGIN
-        span = [w for w in words[row.session_id]
-                if isinstance(w.get("s"), (int, float)) and lo <= w["s"] <= hi]
+        span = said[bisect.bisect_left(starts, lo):bisect.bisect_right(starts, hi)]
         if span and (pauses := quote_pauses(text[row.id], span)):
             out[row.id] = pauses
     return out

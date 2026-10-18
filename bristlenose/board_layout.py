@@ -242,7 +242,7 @@ class BreakRules:
     no_start: frozenset[str] = frozenset()
     closes: Mapping[str, float] = field(default_factory=dict)
     #: For a script written without spaces, the BudouX model whose phrase ends are its bare
-    #: breaks (``"ja"``, ``"zh-hans"``, ``"zh-hant"``: `_phrase_ends`); and how a phrase
+    #: breaks (``"ja"``, ``"zh-hans"``, ``"zh-hant"``: `_phrase_parser`); and how a phrase
     #: ending reads, as the language's ``opens`` and ``leads`` do: ``ends_well`` (a clause-final
     #: particle, worth 1–3), ``ends_badly`` (a modifier bound to what follows), ``starts_well``
     #: (a conjunction opening the next phrase).
@@ -251,6 +251,10 @@ class BreakRules:
     ends_badly: frozenset[str] = frozenset()
     starts_well: Mapping[str, float] = field(default_factory=dict)
     starts_badly: frozenset[str] = frozenset()
+
+
+_RULE_KEYS = frozenset({"leads", "opens", "opens2", "no_start", "closes", "phrases", "ends_well",
+                        "ends_badly", "starts_well", "starts_badly", "sources"})
 
 
 def _load_break_rules() -> dict[str, BreakRules]:
@@ -274,6 +278,10 @@ def _load_break_rules() -> dict[str, BreakRules]:
     for code, r in raw.items():
         if code.startswith("_"):
             continue
+        # A misspelt key would load as an empty list and quietly drop a language's rules.
+        unknown = set(r) - _RULE_KEYS
+        if unknown or r.get("phrases") not in (None, "ja", "zh-hans", "zh-hant"):
+            raise ValueError(f"break_rules.json: {code} has {sorted(unknown) or r.get('phrases')!r}")
         spaceless = bool(r.get("phrases"))
         out[code] = BreakRules(
             leads=words(r.get("leads", [])), opens=weights(r.get("opens", {})),
@@ -295,25 +303,36 @@ _SIMPLIFIED = set("这个们说会来时对为还过后么见经发问题实现�
 _TRADITIONAL = set("這個們說會來時對為還過後麼見經發問題實現開關東車長門")
 
 
+def _script_language(text: str) -> str | None:
+    """The language a quote's script says, when most of its letters are Japanese, Chinese or
+    Korean: kana is Japanese, Han without kana Chinese, Hangul Korean."""
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return None
+    if sum(1 for c in letters if _SPACELESS.match(c)) * 2 > len(letters):
+        return "ja" if _KANA.search(text) else "zh"
+    if sum(1 for c in letters if "\uac00" <= c <= "\ud7af") * 2 > len(letters):
+        return "ko"
+    return None
+
+
 def break_rules(language: str | None, text: str = "") -> BreakRules:
     """The rules for a session's spoken language (``"pt"``, ``"pt-BR"``, ``"zh-Hant"``): its own
-    if Bristlenose has them, else English's, which is how every quote split before. With no
-    language known (a platform or docx transcript), the script of ``text`` says: kana is Japanese,
-    Han without kana Chinese, Hangul Korean."""
-    if not language:
-        if _KANA.search(text):
-            language = "ja"
-        elif _SPACELESS.search(text):
-            language = "zh"
-        elif re.search(r"[\uac00-\ud7af]", text):
-            language = "ko"
-    code = (language or "en").replace("_", "-").split("-")[0].casefold()
-    code = {"no": "nb", "nn": "nb"}.get(code, code)
+    if Bristlenose has them. Where it has none — no language stored (a platform or docx
+    transcript), a code the rules do not cover (Whisper's Cantonese ``yue``), or a language whose
+    rules cannot break the quote's script (an English session quoting at length in Japanese) — the
+    script of ``text`` decides, and failing that English, which is how every quote split before."""
+    code = (language or "").replace("_", "-").split("-")[0].casefold()
+    code = {"no": "nb", "nn": "nb", "yue": "zh"}.get(code, code)
+    script = _script_language(text)
+    known = BREAK_RULES.get(code) if code != "zh" else BREAK_RULES["zh-hans"]
+    if script and (known is None or (script != "ko" and not known.phrases)):
+        code = script
     if code == "zh":
         tag = (language or "").casefold()
-        hant = ("hant" in tag or tag.endswith(("-tw", "-hk", "-mo"))
+        hant = ("hant" in tag or tag.endswith(("-tw", "-hk", "-mo")) or tag.startswith("yue")
                 or sum(c in _TRADITIONAL for c in text) > sum(c in _SIMPLIFIED for c in text))
-        return BREAK_RULES.get("zh-hant" if hant else "zh-hans", ENGLISH)
+        return BREAK_RULES["zh-hant" if hant else "zh-hans"]
     return BREAK_RULES.get(code, ENGLISH)
 
 
@@ -327,6 +346,8 @@ def text_width(text: str) -> int:
 #: the held-out corpus (18 Oct 2026): 30 lands more breaks on a mark in every language and moves
 #: the median part 1 point further from even (docs/research/board-quote-breaks.md).
 BALANCE_WEIGHT = 30.0
+#: Candidate breaks kept around each even point (`_cuts`).
+_KEEP = 24
 MIN_PART = 0.45
 
 
@@ -405,6 +426,11 @@ def _breaks(text: str, pauses: Mapping[int, float] | None,
                 o += len(before)
                 if o in marked or text[o] in KINSOKU_NO_START or text[o - 1] in KINSOKU_NO_END:
                     continue
+                # BudouX's Chinese models will split a Latin name inside a Chinese sentence
+                # ("TestFlig… / …ht"): never between two letters of another script.
+                if (text[o - 1].isalnum() and text[o].isalnum()
+                        and not _SPACELESS.match(text[o - 1]) and not _SPACELESS.match(text[o])):
+                    continue
                 out.append((o, _phrase_worth(before, after, rules)))
     return out
 
@@ -454,11 +480,15 @@ def _cuts(text: str, n: int, pauses: Mapping[int, float] | None,
     found = sorted(_breaks(text, pauses, rules))
     if not found:
         return targets  # a spaceless script with no mark near: an even cut, as before
-    # Bare words differ only in balance, so only the few nearest each even point can win.
-    keep = {i for i, (_, worth) in enumerate(found) if worth > 0}
+    # Only a break that scores well near some even point can win, so keep the best `_KEEP` around
+    # each: trying every pair of every candidate grew with the square of a long quote's length
+    # (a 3,000-character Japanese quote took 0.3 s). 24 gives the full search's cuts on all 5,507
+    # trial quotes in 19 languages, punctuated and stripped; 12 changed 19 of them.
+    keep: set[int] = set()
     for t in targets:
-        near = sorted(range(len(found)), key=lambda i: abs(found[i][0] - t))[:6]
-        keep.update(near)
+        def near(i: int, t: int = t) -> float:
+            return found[i][1] - BALANCE_WEIGHT * ((room[found[i][0]] - room[t]) / even) ** 2
+        keep.update(sorted(range(len(found)), key=near, reverse=True)[:_KEEP])
     cands = [found[i] for i in sorted(keep)]
 
     def cost(cuts: Sequence[tuple[int, float]]) -> float:
@@ -501,7 +531,8 @@ def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS,
             # "successful." goes on as "successful…": the full stop gives way to the ellipsis, as
             # in a hand-split quote; a question or an exclamation keeps its mark. An elision at
             # the break is already an ellipsis, so it becomes this one.
-            part = re.sub(r"\s*(\.\.\.|…)$", "", part).rstrip(",;:—–、，；： ")
+            # Marks off first, then the elision they followed ("but...," / "said...;").
+            part = re.sub(r"\s*(\.\.\.|…)$", "", part.rstrip(",;:—–、，；： ")).rstrip(",;:—–、，；： ")
             part = part.removesuffix(".").removesuffix("。") + ("" if part.endswith("…") else "…")
         if i > 0:
             part = "…" + re.sub(r"^(\.\.\.|…)\s*", "", part)

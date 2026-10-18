@@ -13,8 +13,10 @@ const TITLE_GAP = 96; // from the title to the sections
 // long a quote is (a set of three parts once advanced the count three times as slowly).
 const YIELD_MS = 50;
 // A set's parts overlap by about one x-height and step right by the same, so
-// each left edge shows a small square notch — the owner's spacing on the Miro
-// board (board_layout.SET_GAP / SET_STAGGER), scaled to FigJam's 16 px type.
+// each left edge shows a small square notch — the owner's spacing, scaled to
+// FigJam's 16 px type. FigJam's sticky is all paper, so the boxes overlap by the
+// x-height alone; Miro's box carries a shadow below its paper, which
+// board_layout.set_overlap climbs past (MIRO_PAPER).
 const NOTCH = 9;
 
 const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 1));

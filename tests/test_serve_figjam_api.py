@@ -230,7 +230,8 @@ def test_a_quote_splits_by_the_rules_of_the_language_it_was_spoken_in(
             [doc] = _quotes(client.get(_URL, params={"quote_ids": "q-p1-10"}).json())
             return doc["parts"][0]
 
-        assert first_part(None).endswith(" v…")
-        assert not first_part("cs").endswith(" v…")
+        english, czech = first_part(None), first_part("cs")
+        # English rules have no word against ending on "v"; Czech typography forbids it.
+        assert not czech.endswith(" v…") and czech != english
     finally:
         db.close()

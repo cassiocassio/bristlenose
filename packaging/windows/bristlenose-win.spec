@@ -40,6 +40,8 @@ _JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = col
     "jsonschema_specifications"
 )
 _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
+# BudouX opens its models package-relative (board_layout._phrase_parser), as on the Mac spec.
+_BUDOUX_DATAS, _BUDOUX_BINARIES, _BUDOUX_HIDDEN = collect_all("budoux")
 
 # Voice pass (optional at runtime): kaldi-native-fbank's DLLs and the licence
 # notices the Mac build also carries.
@@ -75,6 +77,7 @@ a = Analysis(
         *_SQLADMIN_DATAS,
         *_JSONSCHEMA_SPEC_DATAS,
         *_JSONSCHEMA_DATAS,
+        *_BUDOUX_DATAS,
         *_VOICE_NOTICES,
         *copy_metadata("starlette"),
         *copy_metadata("hf-xet"),
@@ -93,6 +96,7 @@ a = Analysis(
         *_SQLADMIN_HIDDEN,
         *_JSONSCHEMA_SPEC_HIDDEN,
         *_JSONSCHEMA_HIDDEN,
+        *_BUDOUX_HIDDEN,
         *collect_submodules("rich"),
         *collect_submodules("bristlenose"),
         "anthropic",

@@ -98,37 +98,41 @@ number several points):
 | | No pauses | With pauses |
 |---|---|---|
 | English (479) | 52 → 55% | 74 → 78% |
-| Catalan (69) | 48 → 48% | 71 → 67% |
+| Catalan (69) | 48 → 46% | 71 → 65% |
 | Czech (69) | 72 → 74% | 84 → 90% |
-| Danish (49) | 63 → 63% | 86 → 90% |
+| Danish (49) | 63 → 59% | 86 → 86% |
 | German (60) | 47 → 50% | 58 → 62% |
-| Spanish (90) | 66 → 69% | 82 → 86% |
+| Spanish (90) | 66 → 69% | 82 → 84% |
 | Finnish (47) | 68 → 70% | 85 → 87% |
-| French (43) | 63 → 67% | 84 → 86% |
+| French (43) | 63 → 65% | 84 → 86% |
 | Italian (41) | 41 → 49% | 68 → 71% |
 | Korean (22) | 50 → 55% | 82 → 82% |
 | Norwegian (10) | 10 → 30% | 80 → 80% |
 | Dutch (47) | 40 → 51% | 60 → 68% |
 | Polish (33) | 73 → 73% | 82 → 82% |
 | Portuguese (25) | 44 → 44% | 68 → 76% |
-| Russian (45) | 53 → 56% | 60 → 62% |
+| Russian (45) | 53 → 62% | 60 → 69% |
 | Swedish (38) | 47 → 45% | 76 → 76% |
-| Turkish (42) | 57 → 57% | 64 → 71% |
-| Ukrainian (17) | 59 → 59% | 65 → 76% |
+| Turkish (42) | 57 → 57% | 64 → 69% |
+| Ukrainian (17) | 59 → 65% | 65 → 82% |
 
-Everything held or improved but three: Swedish without pauses (one break), and Catalan with pauses
-(71 → 67%), where the pause-inside-a-phrase rule took back what the weights gave (72% before it;
-the same rule cost German and Dutch 2–3 points there while gaining on the tuning half). It is kept
-because it is the subtitlers' rule and a test pins it; the likely cost is words that are both a
-lead and a clause end (German *das* as a demonstrative, *ich weiß das*), which the lists cannot
-tell apart.
+The held-out half was scored three times: after the tuning; after the pause-inside-a-phrase
+rule, which a unit test pins; and after the review on 18 Oct 2026 made the search exact (the
+first version kept only the positive breaks and the six nearest each even point, and a speed
+cap that keeps the best 24 around each now gives the full search's cuts on all 5,507 trial
+quotes). The table is the last. Most languages held or improved; three did not. Catalan fell
+with pauses (71 → 65%) and without (48 → 46%), and Danish and Swedish without (63 → 59%,
+47 → 45%). The pause-inside-a-phrase rule cost Catalan, German and Dutch points with pauses where
+it gained on the tuning half. It is kept because it is the subtitlers' rule and a test pins it;
+the likely cost is words that are both a lead and a clause end (German *das* as a demonstrative,
+*ich weiß das*), which the lists cannot tell apart.
 
 **Against English** (held-out half). Without pauses, Czech, Danish, Spanish, Finnish, French,
-Korean, Polish, Russian, Turkish and Ukrainian match or beat English's 55%; Catalan, German,
-Italian, Dutch, Portuguese and Swedish are 4–11 points below; Norwegian's 10 breaks are too few to
-read. With pauses, Czech, Danish, Spanish, Finnish, French, Korean, Norwegian and Polish beat
-English's 78%; Portuguese, Swedish and Ukrainian are 2 points below, Italian and Turkish 7, Dutch
-10, Catalan 11, German and Russian 16.
+Korean, Polish, Russian, Turkish and Ukrainian match or beat English's 55%; German, Italian,
+Dutch, Catalan, Swedish and Portuguese are 4–11 points below; Norwegian's 10 breaks are too few
+to read. With pauses, Czech, Danish, Spanish, Finnish, French, Korean, Norwegian, Polish and
+Ukrainian beat English's 78%; Portuguese and Swedish are 2 points below, Italian 7, Russian and
+Turkish 9, Dutch 10, Catalan 13 and German 16.
 On the 322 long English quotes of the trial runs, 22 now break elsewhere than on the boards the
 owner judged; across all of them the median part sits one point further from even.
 

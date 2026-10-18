@@ -117,14 +117,19 @@ def score(lang: str, sessions: list[list[dict]], pauses_on: bool,
             if pauses_on and not spaceless:
                 pauses, at = {}, 0
                 for t, g in zip(texts, gaps, strict=False):
-                    at += len(" ".join(w for w in (MARKS.sub("", x) for x in t.split()) if w))
+                    seg = " ".join(w for w in (MARKS.sub("", x) for x in t.split()) if w)
+                    if not seg:  # a segment of marks alone adds no word and no gap
+                        continue
+                    at += len(seg)
                     pauses[at] = g
                     at += 1
             parts = bl.split_quote(text, pauses=pauses, language=lang)
             at = 0
             for part in parts[:-1]:
                 core = part.removeprefix("…").removesuffix("…")
-                at = text.find(core, at) + len(core)
+                found = text.find(core, at)
+                assert found >= 0, f"a part not found in its quote: {core[:40]!r}"
+                at = found + len(core)
                 c[kinds.get(at, "none")] += 1
                 if why is not None and at not in kinds and not spaceless:
                     left, right = text[:at].split()[-1:], text[at:].split()[:1]

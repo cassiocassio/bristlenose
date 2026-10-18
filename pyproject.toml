@@ -61,7 +61,7 @@ dependencies = [
     "jinja2>=3.1",
     "inflect>=7.0",
     # Japanese and Chinese have no spaces, so a long quote on a board breaks between the phrases
-    # BudouX finds (board_layout._phrase_ends): Google's segmenter, the one Chrome uses for CSS
+    # BudouX finds (board_layout._phrase_parser): Google's segmenter, the one Chrome uses for CSS
     # `word-break: auto-phrase`. Apache-2.0, pure Python, no runtime dependencies, models are
     # package data (the sidecar spec collects them). docs/research/board-quote-breaks.md.
     "budoux>=0.9",

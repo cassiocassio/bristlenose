@@ -2402,3 +2402,29 @@ def test_voice_hint_names_a_command_that_can_work_here(monkeypatch, platform, ve
     monkeypatch.setattr(sys, "version_info", version)
     monkeypatch.setattr(sys, "prefix", str(Path(*prefix)))
     assert voice_install_hint().startswith(hint)
+
+
+class TestBundleBudoux:
+    """BudouX's models are package data the spec must collect (`check_bundle_budoux`)."""
+
+    def test_passes_in_an_installed_env(self) -> None:
+        from bristlenose.doctor import check_bundle_budoux
+
+        r = check_bundle_budoux()
+        assert r.status == CheckStatus.OK and "break rules" in r.label
+
+    def test_is_in_the_bundle_integrity_report(self) -> None:
+        assert "Bundle: board break rules" in [r.label for r in run_bundle_integrity().results]
+
+    def test_fails_when_a_model_will_not_load(self) -> None:
+        from bristlenose import board_layout
+        from bristlenose.doctor import check_bundle_budoux
+
+        board_layout._phrase_parser.cache_clear()
+
+        def missing(model: str) -> object:
+            raise FileNotFoundError(f"budoux/models/{model}.json")
+
+        with patch.object(board_layout, "_phrase_parser", missing):
+            r = check_bundle_budoux()
+        assert r.status == CheckStatus.FAIL and "collect_all('budoux')" in r.detail

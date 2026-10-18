@@ -234,18 +234,45 @@ def test_pauses_align_across_a_cut_and_never_time_a_gap_the_quote_made() -> None
         len("one two"): pytest.approx(0.8)}
 
 
-def test_french_and_german_marks_are_sentence_ends_where_they_stand() -> None:
-    """French sets ? ! ; : and » off with a space and German closes with “: the break goes after
-    the whole mark, never before a "?" standing alone, never after an opening « or „."""
-    from bristlenose.board_layout import _breaks
+#: A word no language's rules mention, to pad a phrase out to quote length.
+_FILL = "bork"
 
-    def worths(text: str) -> dict[str, float]:
-        return {text[:at].split()[-1]: w for at, w in _breaks(text, None)}
 
-    assert worths("Avez-vous trouvé ? Non") == {"Avez-vous": 0.0, "?": 10.0}
-    assert worths("« Vraiment ? » Oui") == {"»": 10.0}
-    assert worths("Ich dachte: „Wo ist das?“ Dann")["das?“"] == 10.0
-    assert "„Wo" in worths("Ich dachte: „Wo ist das?“ Dann")  # „Wo is a word with its mark
+def _split_at(left: list[str], right: list[str], lang: str, off: int = 0) -> list[str]:
+    """``left + right`` padded with filler so the gap between them sits at the even split, then
+    moved ``off`` words to the right; the quote as `split_quote` breaks it in ``lang``."""
+    from bristlenose.board_layout import split_quote
+
+    before, after = [_FILL] * (24 + off), [_FILL] * (24 - off)
+    # Pad whichever side is short, last with one-letter words, until the gap is within two
+    # characters of the middle: nearer than any other gap, so it is the one the rules judge.
+    while True:
+        head, tail = " ".join(before + left), " ".join(right + after)
+        short = len(tail) - len(head)
+        if abs(short) <= 2:
+            break
+        pad = _FILL if abs(short) > len(_FILL) + 1 else "q"
+        (before.insert(0, pad) if short > 0 else after.append(pad))
+    words = before + left + right + after
+    if off:  # then move the gap off the middle by ``off`` words
+        words = words[off:] + [_FILL] * off
+
+    parts = split_quote(" ".join(words), at=len(" ".join(words)) // 2 + 20, language=lang)
+    assert len(parts) == 2
+    return parts
+
+
+def test_french_and_german_marks_stay_with_their_sentence() -> None:
+    """French sets ? ! ; : and » off with a space and German closes with “: a part ends after the
+    whole mark, never before a "?" standing alone, never just after an opening « or „."""
+    first, second = _split_at(["trouvé"], ["?", "Non"], "fr")
+    assert first.endswith("?…") and not second.startswith("…?")
+    first, second = _split_at(["Vraiment", "?"], ["»", "Oui"], "fr")
+    assert first.endswith("»…")
+    first, _ = _split_at(["dachte", "„Wo", "ist", "das?“"], ["Dann"], "de")
+    assert first.endswith("das?“…")
+    first, _ = _split_at(["«"], ["Vraiment", "dit-il"], "fr")
+    assert not first.endswith("«…")
 
 
 def test_japanese_breaks_at_a_sentence_end_never_inside_a_word() -> None:
@@ -284,15 +311,64 @@ def test_unspaced_japanese_breaks_at_a_clause_particle() -> None:
     first, second = split_quote(said, at=100, language="ja")
     assert first.endswith(("ので…", "ですが…", "なくて…")), first
     assert first.removesuffix("…") + second.removeprefix("…") == said
-    # Kinsoku (JLREQ): no break before a small kana, a long-vowel mark or a closing bracket.
-    from bristlenose.board_layout import KINSOKU_NO_START, _breaks, break_rules
+    # No part ends straight after の, which cuts a modifier from its noun (トップレベルの | 人工芝).
+    turf = "「行くけど」って言ったんですけどそれから北海道でトップレベルの人工芝があります" * 3
+    for at in range(40, 160, 10):
+        assert not any(p.endswith("の…") for p in split_quote(turf, at=at, language="ja"))
 
-    tricky = "「行くけど」って言ったんですけどそれから「来るから」って" * 2
-    assert all(tricky[at] not in KINSOKU_NO_START for at, _ in _breaks(tricky, None, break_rules("ja")))
-    # Never straight after の: that cuts a modifier from its noun (トップレベルの | 人工芝).
-    turf = "北海道でトップレベルの人工芝があります"
-    worth = dict(_breaks(turf, None, break_rules("ja")))
-    assert worth[turf.index("人工芝")] < 0 < worth[turf.index("トップ")] + 5
+
+def _centred(left: str, right: str, filler: str, n: int = 30) -> str:
+    """``left + right`` with ``filler`` either side, so the seam between them is the middle."""
+    from bristlenose.board_layout import text_width
+
+    head, tail = filler * n + left, right + filler * n
+    while text_width(head) < text_width(tail):
+        head = filler[0] + head
+    while text_width(tail) < text_width(head):
+        tail = tail + filler[0]
+    return head + tail
+
+
+def test_kinsoku_holds_even_where_the_segmenter_would_break() -> None:
+    """JLREQ: no part starts on a closing bracket, a small kana or a long-vowel mark, nor ends on
+    an opening bracket. BudouX keeps to it already; a segmenter that did not must not get its way."""
+    from unittest.mock import patch
+
+    from bristlenose import board_layout
+
+    class Careless:  # breaks before every character, kinsoku or not
+        def parse(self, run: str) -> list[str]:
+            return list(run)
+
+    with patch.object(board_layout, "_phrase_parser", lambda model: Careless()):
+        # The middle falls just before a closing bracket, a small kana, a long-vowel mark, and
+        # just after an opening bracket: each a break the rule must refuse.
+        for left, right in (("行くけど", "」って"), ("ちょ", "っと"), ("すご", "ーい"), ("言った「", "うん")):
+            text = _centred(left, right, "あいうえお")
+            first, second = board_layout.split_quote(text, at=board_layout.text_width(text) // 2 + 4,
+                                                     language="ja")
+            assert second[1] not in board_layout.KINSOKU_NO_START, (first[-6:], second[:6])
+            assert first[-2] not in board_layout.KINSOKU_NO_END, (first[-6:], second[:6])
+
+
+def test_a_latin_name_in_a_chinese_quote_is_never_split() -> None:
+    """BudouX's Chinese models offer breaks inside Latin words (review, 18 Oct 2026:
+    "TestFlig… / …ht")."""
+    from bristlenose.board_layout import split_quote, text_width
+
+    for name in ("TestFlight", "PowerPoint", "WhatsApp", "iPhone"):
+        half = len(name) // 2  # the middle of the quote falls inside the name
+        text = _centred("要先下载" + name[:half], name[half:] + "才能试用", "我觉得这个很好用")
+        parts = split_quote(text, at=text_width(text) // 2 + 4, language="zh-Hans")
+        assert len(parts) == 2 and sum(p.count(name) for p in parts) == 1, parts
+
+
+def test_an_ellipsis_with_a_comma_at_a_cut_is_one_ellipsis() -> None:
+    from bristlenose.board_layout import split_quote
+
+    for tail in ("but...,", "said...;", "then…,"):
+        text = "zork " * 30 + f"and I {tail} " + "zork " * 30
+        assert all("..…" not in p and "……" not in p for p in split_quote(text, at=200))
 
 
 def test_chinese_breaks_before_a_conjunction_and_never_after_de() -> None:
@@ -302,33 +378,35 @@ def test_chinese_breaks_before_a_conjunction_and_never_after_de() -> None:
             "後來同事教我怎麼用我才知道原來在右上角的選單裡面")
     first, _ = split_quote(said, at=60, language="zh")
     assert first.removesuffix("…")[-3:] in ("很好用", "找不到", "有點困惑")
-    rules = break_rules("zh", said)
-    worth = dict(_breaks(said, None, rules))
-    assert all(w < 0 for at, w in worth.items() if said[:at].endswith("的") or said[at] == "的")
-    # 覺得 is "feel", not the particle 得: a word end like any other.
+    from bristlenose.board_layout import text_width
+
+    for left, right in (("設定", "的地方"), ("設定的", "地方")):  # the middle either side of 的
+        text = _centred(left, right, "我覺得這個應用程式很好用")
+        first, second = split_quote(text, at=text_width(text) // 2 + 4, language="zh-Hant")
+        assert not first.endswith("的…") and not second.startswith("…的"), (first[-6:], second[:6])
+    # 覺得 is "feel", not the particle 得: BudouX gives a particle its own token, so a word ending
+    # in the same character is a word end like any other (the one rule only the scorer can show).
+    worth = dict(_breaks(said, None, break_rules("zh", said)))
     assert worth[said.index("覺得") + 2] >= 0
 
 
 def test_each_language_follows_its_own_rules() -> None:
-    """The authorities' rules (docs/research/board-quote-breaks.md): Czech typography forbids a
-    one-letter preposition at a line end (ČSN 01 6910), Polish *się* is bound to the word before,
-    German *aber* opens a clause."""
-    from bristlenose.board_layout import _breaks, break_rules
+    """The authorities' rules (docs/research/board-quote-breaks.md), each with the word in
+    question at the even split: Czech typography forbids a one-letter preposition at a line end
+    (ČSN 01 6910); Polish *się* is bound to the word before; Korean *수* to its modifier; German
+    *aber* opens a clause; Turkish breaks after a postposition and a converb, Korean after a
+    connective ending."""
+    def ends(left: list[str], right: list[str], lang: str, off: int = 0) -> str:
+        return _split_at(left, right, lang, off)[0].removesuffix("…").split()[-1]
 
-    def worth(text: str, after: str, lang: str) -> float:
-        return dict(_breaks(text, None, break_rules(lang)))[text.index(after) + len(after)]
-
-    assert worth("bydlím v Praze", "v", "cs") < 0 < worth("bydlím v Praze", "bydlím", "cs") + 5
-    assert worth("on bardzo martwi się tym", "martwi", "pl") < 0
-    assert worth("das war gut aber dann", "gut", "de") > 0
-    # The same words under English rules are neither: the language decides.
-    assert worth("das war gut aber dann", "gut", "en") == 0
-    # Turkish breaks after a postposition and a converb; Korean after a connective ending, and
-    # never before a bound noun (*할 수 있다*).
-    assert worth("bunun için gidiyoruz", "için", "tr") > 0
-    assert worth("eve gelince yemek yedik", "gelince", "tr") > 0
-    assert worth("찾았는데 없었어요", "찾았는데", "ko") > 0
-    assert worth("할 수 있어요", "할", "ko") < 0
+    assert ends(["bydlím", "v"], ["Praze"], "cs") != "v"
+    assert ends(["bydlím", "v"], ["Praze"], "cs") != ends(["bydlím", "v"], ["Praze"], "en")
+    assert ends(["bardzo", "martwi"], ["się", "tym"], "pl") != "martwi"
+    assert ends(["할"], ["수", "있어요"], "ko") != "할"
+    assert ends(["war", "gut"], ["aber", "dann"], "de", off=2) == "gut"
+    assert ends(["bunun", "için"], ["gidiyoruz"], "tr", off=2) == "için"
+    assert ends(["eve", "gelince"], ["yemek", "yedik"], "tr", off=2) == "gelince"
+    assert ends(["찾았는데"], ["없었어요"], "ko", off=2) == "찾았는데"
 
 
 def test_turkish_capitals_and_russian_yo_match_their_lists() -> None:
@@ -354,6 +432,11 @@ def test_the_language_comes_from_the_script_when_the_session_does_not_say() -> N
     assert break_rules(None, "설정을 찾을 수") is BREAK_RULES["ko"]
     assert break_rules("pt-BR") is BREAK_RULES["pt"] and break_rules("no") is BREAK_RULES["nb"]
     assert break_rules(None, "plain words") is ENGLISH and break_rules("xx") is ENGLISH
+    # A code the rules do not cover, or rules that cannot break the quote's script: the script
+    # decides (Whisper's Cantonese; an English session quoting at length in Japanese).
+    assert break_rules("yue", "我覺得這個") is BREAK_RULES["zh-hant"]
+    assert break_rules("en", "設定がわからないのでとても困りました") is BREAK_RULES["ja"]
+    assert break_rules("en", "We went to 東京 last year") is ENGLISH
 
 
 def test_every_shipped_language_has_rules_and_every_rule_its_sources() -> None:
@@ -362,12 +445,11 @@ def test_every_shipped_language_has_rules_and_every_rule_its_sources() -> None:
     from importlib.resources import files
     from pathlib import Path
 
-    from bristlenose.board_layout import BREAK_RULES, break_rules
+    from bristlenose.board_layout import BREAK_RULES
 
     raw = json.loads(files("bristlenose.data").joinpath("break_rules.json").read_text("utf-8"))
     locales = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
     for loc in sorted(d.name for d in locales.iterdir() if d.is_dir()):
-        assert break_rules(loc, "") is not None
         code = {"zh-Hant": "zh-hant", "zh-Hant-HK": "zh-hant"}.get(loc, loc.split("-")[0])
         assert code in BREAK_RULES, loc
         assert raw[code]["sources"], loc
@@ -411,6 +493,35 @@ def test_the_quotes_board_stacks_a_set_stepping_right_with_only_the_last_attribu
     assert [s.set_id for s in unsplit.stickies if s.kind == "quote"] == [None]
 
 
+def test_split_sets_in_one_column_never_overlap_and_their_drawn_height_is_their_extent() -> None:
+    """Sets overlap inside themselves only: one quote's parts never reach the next quote, and the
+    height the layout reserves for a set is the height it draws, in either shape."""
+    from bristlenose.board_layout import (
+        GAP_Y,
+        SPLIT_AT,
+        Column,
+        QuoteCard,
+        layout_board,
+        quote_parts,
+        set_extent,
+    )
+
+    texts = [_between(SPLIT_AT, 2 * SPLIT_AT), _between(2 * SPLIT_AT, 3 * SPLIT_AT), "Short and whole."]
+    cards = [QuoteCard(t, "p1", "s1", 10.0 * k) for k, t in enumerate(texts)]
+    for shape in ("rectangle", "square"):
+        board = layout_board([Column("Basket", "section", cards)], "B", shape=shape)
+        quotes = [s for s in board.stickies if s.kind == "quote"]
+        sets: dict[object, list] = {}
+        for s in quotes:
+            sets.setdefault(s.set_id or id(s), []).append(s)
+        boxes = [(min(s.y for s in ss), max(s.y + s.height for s in ss)) for ss in sets.values()]
+        for (_, bottom), (top, _) in itertools.pairwise(boxes):
+            assert top - bottom == pytest.approx(GAP_Y)
+        for t, (top, bottom) in zip(texts, boxes, strict=True):
+            _, h = set_extent(quote_parts(t, "— P1 · 00:00", shape=shape))
+            assert bottom - top == pytest.approx(h)
+
+
 def test_a_square_sticky_keeps_the_same_size_of_type_and_reaches_miro() -> None:
     """A square is taller for its width, so it needs less width for the same area: same type."""
     from bristlenose.board_layout import Column, QuoteCard, layout_board, quote_parts
@@ -424,3 +535,49 @@ def test_a_square_sticky_keeps_the_same_size_of_type_and_reaches_miro() -> None:
     quote = next(st for st in board.stickies if st.kind == "quote")
     assert _sticky_item(quote, shape=board.sticky_shape)["data"]["shape"] == "square"
     assert layout_board([], "B", shape="hexagon").sticky_shape == "rectangle"  # an unknown shape falls back
+
+
+def test_a_misspelt_rule_in_the_data_file_fails_loudly() -> None:
+    """A misspelt key would load as an empty list and drop a language's rules without a word."""
+    import json
+    from importlib.resources import files
+    from unittest.mock import patch
+
+    from bristlenose import board_layout
+
+    raw = json.loads(files("bristlenose.data").joinpath("break_rules.json").read_text(encoding="utf-8"))
+    raw["de"]["lead"] = raw["de"].pop("leads")
+
+    class Fake:
+        def joinpath(self, _name: str) -> Fake:
+            return self
+
+        def read_text(self, encoding: str) -> str:
+            return json.dumps(raw)
+
+    with patch("importlib.resources.files", lambda _pkg: Fake()), pytest.raises(ValueError, match="de"):
+        board_layout._load_break_rules()
+
+
+def test_the_search_cap_never_changes_where_a_quote_breaks() -> None:
+    """`_KEEP` keeps the best candidates around each even point for speed; it must give the cuts
+    the full search gives. Seeded quotes with marks and lead words scattered, so the best pair is
+    not simply the best break at each even point."""
+    import random
+    from unittest.mock import patch
+
+    from bristlenose import board_layout
+
+    rng = random.Random(18)
+    vocab = {"en": "the a of and but so we it shelf jars kitchen walk bags shop list".split(),
+             "de": "der die und aber dann ich es Regal Glas Küche Weg Taschen Laden".split()}
+    marks = ["", "", "", "", ",", ".", "?", "...", ";"]
+    differ = 0
+    for _ in range(300):
+        lang = rng.choice(sorted(vocab))
+        text = " ".join(rng.choice(vocab[lang]) + rng.choice(marks) for _ in range(rng.randint(60, 260)))
+        at = rng.randint(120, 500)
+        capped = board_layout.split_quote(text, at=at, language=lang)
+        with patch.object(board_layout, "_KEEP", 10**9):
+            differ += board_layout.split_quote(text, at=at, language=lang) != capped
+    assert differ == 0

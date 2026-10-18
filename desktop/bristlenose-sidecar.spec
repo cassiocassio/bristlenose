@@ -87,7 +87,7 @@ _JSONSCHEMA_SPEC_DATAS, _JSONSCHEMA_SPEC_BINARIES, _JSONSCHEMA_SPEC_HIDDEN = col
 )
 _JSONSCHEMA_DATAS, _JSONSCHEMA_BINARIES, _JSONSCHEMA_HIDDEN = collect_all("jsonschema")
 
-# BudouX (board_layout._phrase_ends: where a Japanese or Chinese quote breaks on a board) loads its
+# BudouX (board_layout._phrase_parser: where a Japanese or Chinese quote breaks on a board) loads its
 # models, `budoux/models/*.json`, package-relative: the rule above, a fifth time. Without them the
 # bundle imports budoux and fails the first Japanese board. collect_all also brings its dist-info,
 # whose licences/LICENSE is the Apache-2.0 text the licence requires us to ship.

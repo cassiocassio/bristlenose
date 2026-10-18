@@ -763,9 +763,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         </div>
         {data.sessions.filter((sess) => sess.state && sess.state !== "ok").map((sess) => (
           // A session that contributes nothing says why here too — never silently absent.
-          <p key={sess.id} className="dl-before dl-notasked" role="note">
-            <PersonBadge code={`#${sess.number}`} role="participant" compact />
-            <span>{S.sessionState(sess.state!)}</span>
+          <p key={sess.id} className="dl-before dl-state" role="note">
+            <PersonBadge code={`#${sess.number}`} role="participant" compact /> {S.sessionState(sess.state!)}
           </p>
         ))}
         {sections.filter(({ rows }) => asked(rows).length > 0).map(({ head, rows }) => (

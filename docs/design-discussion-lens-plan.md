@@ -480,7 +480,11 @@ overrides keyed on durable ids, never on labels.
   study (every cell the same count) takes the middle shade; the ramp runs muted ink →
   ink (the first ramp's lightest step measured 2.3:1 on the guide's tint); stepping
   up a tier needs 20px to spare; a row's screen-reader summary is a count ("Asked in
-  3 sessions", "7 quotes"), never `n of m`. **Built from the mockup and awaiting the
+  3 sessions", "7 quotes"), never `n of m`. The guide's width is the grid's own columns
+  and All's session blocks are `content-visibility: auto`: on a 12-session, 1,800-quote
+  study a WebKit splitter step went from 238ms to 33ms, a single session's cost (an
+  inherited custom property had restyled every descendant), with jumps into All landing
+  through `scrollToLand`. **Built from the mockup and awaiting the
   owner's yes** (review Q6): the absent compact badge and the "Not asked in" line; no
   wires in All. **Still only proposed:** the compact badge replacing Signals' `.p-box`;
   the session bar's names → codes → pull-down tiers. **Owner calls raised by the

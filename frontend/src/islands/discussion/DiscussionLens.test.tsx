@@ -266,16 +266,21 @@ describe("DiscussionView", () => {
     }
   });
 
-  it("a session's lead-in in All opens that session at that question", () => {
+  it("a session's lead-in in All opens that session at that question", async () => {
     const { container } = render(<DiscussionView data={data} />);
     const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
     const target = data.sessions.find((s) => s.id !== "s1" && multi.asks.some((a) => a.session === s.id))!;
     const block = within(container.querySelector(`.dl-item[data-item="${multi.id}"]`) as HTMLElement);
     const lead = block.getByRole("button", { name: new RegExp(`^#${target.number}`) });
     expect(lead).toHaveAttribute("title", `Show session ${target.number}`);
+    lead.focus();
     fireEvent.click(lead);
     expect(heading()).toBe(`Session ${target.number}`);
     expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
+    // the lead-in is gone with the All column: focus goes to the question it opened, not the page
+    await act(async () => { await new Promise((r) => requestAnimationFrame(() => r(null))); });
+    expect(document.activeElement).toHaveClass("dl-ask-btn");
+    expect(document.activeElement!.closest(".dl-ask")).toHaveClass("hot");
   });
 
   it("each cell is shaded by the quotes it drew, in the study's thirds, and the row says its totals", () => {

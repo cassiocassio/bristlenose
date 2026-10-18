@@ -447,17 +447,35 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // Bring the first lit question into view when a navigator row takes focus.
   useEffect(() => {
     if (!focus || focus.turn) return;
-    // In All the question has a heading of its own: land on it, not on its first session's ask.
+    // In All the question has a heading of its own: land on it, not on its first session's ask —
+    // and only when its heading is out of view (the block under it nearly always runs past it).
     const el = session === ALL
       ? contentRef.current?.querySelector<HTMLElement>(`.dl-item[data-item="${CSS.escape(focus.item)}"]`)
       : contentRef.current?.querySelector<HTMLElement>(".dl-ask.hot");
     if (!el) return;
-    const r = el.getBoundingClientRect();
+    const r = (session === ALL ? el.querySelector("h3") ?? el : el).getBoundingClientRect();
     const barH = barRef.current?.getBoundingClientRect().height ?? 0;
     if (r.top < barH || r.bottom > window.innerHeight) el.scrollIntoView({ block: "start" });
   }, [focus, session]);
 
-  // ── geometry: bar height, badge collapse, wires ──
+  // A session switch with nothing to land on (no focus, or a question this session never asked)
+  // starts the column at its top: leaving All, the reader would otherwise land part-way down a
+  // shorter column. Only on an actual switch — clearing focus never moves the page.
+  const lastSession = useRef(session);
+  useEffect(() => {
+    if (lastSession.current === session) return;
+    lastSession.current = session;
+    const content = contentRef.current, lens = lensRef.current;
+    if (!content || !lens) return;
+    const target = focus && !focus.turn
+      ? content.querySelector(session === ALL ? `.dl-item[data-item="${CSS.escape(focus.item)}"]` : ".dl-ask.hot")
+      : null;
+    if (target) return; // the focus effect above lands it
+    const top = lens.getBoundingClientRect().top;
+    if (top < 0) window.scrollBy(0, top);
+  }, [session, focus]);
+
+  // ── geometry: bar height, measure, wires ──
   useLayoutEffect(() => {
     const bar = barRef.current, lens = lensRef.current;
     if (!bar || !lens || typeof ResizeObserver === "undefined") return;
@@ -790,10 +808,19 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
 
   // A session's lead-in in All: its bar badge, a button that opens that session (at the question).
   const leadIn = (sess: DiscussionSession, item: string | null) => (
+    // Named as it reads ("#3 Priya and Dan"); the title says what it does. Activating it removes
+    // the All column, button and all, so focus moves to the question it opened (else the session's
+    // radio) rather than falling to the page.
     <button type="button" className="dl-from" title={S.showSession(sess.number)}
+      aria-label={S.sessionLabel(sess.number, namesOf(sess)).trim()}
       onClick={() => {
         selectSession(sess.id);
         if (item) setFocus({ item, turn: null });
+        requestAnimationFrame(() => {
+          const to = contentRef.current?.querySelector<HTMLElement>(".dl-ask.hot .dl-ask-btn")
+            ?? barRef.current?.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]');
+          to?.focus({ preventScroll: true });
+        });
       }}>
       <PersonBadge code={`#${sess.number}`} role="participant" name={namesOf(sess) || undefined} />
     </button>
@@ -883,6 +910,15 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       </section>
     );
   };
+
+  // The All column is every quote of every session; build it only when what it shows changes.
+  // A splitter drag (navW) or a measure change re-renders the lens but not this. Its handlers and
+  // card builders are derived from the deps listed, so they are not listed themselves.
+  const allView = useMemo(
+    () => (all ? allColumn() : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [all, allSections, answers, leftovers, readable, lit, focus, data, byId, names, tr.language],
+  );
 
   // The session bar's choices, in order: All (with two sessions or more), then each session.
   const picks = multi ? [ALL, ...order] : order;
@@ -1102,7 +1138,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       </div>
 
       <div ref={contentRef} className="dl-content">
-        {all && allColumn()}
+        {allView}
         {current && (
           <section>
             <SectionHeading>{S.session(current.number)}</SectionHeading>

@@ -26,6 +26,7 @@ from bristlenose.board_progress import (
     load_history,
 )
 from bristlenose.server.app import create_app
+from bristlenose.server.routes import miro as miro_routes
 from tests.conftest import AuthTestClient
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
@@ -393,7 +394,9 @@ def test_a_stop_that_lands_during_the_last_call_reports_the_finished_board(
     monkeypatch.setattr(mc, "create_text", title_then_stop)
     with client, patch("bristlenose.server.routes.miro._miro_token", return_value="tok"):
         client.post("/api/projects/1/miro/board", json={"split_long_quotes": False})
-        s = _wait_for(client, lambda s: s["status"] != "running")
+        # Not `status != "running"`: the Stop reads "cancelled" until the call in hand returns,
+        # and a slow runner polled inside that gap (strict CI, 19 Oct 2026). Wait for the job.
+        s = _wait_for(client, lambda s: miro_routes._board_jobs[1]["task"].done())
     assert s["status"] == "completed" and s["board_url"] == "https://miro.com/app/board/b1/"
 
 

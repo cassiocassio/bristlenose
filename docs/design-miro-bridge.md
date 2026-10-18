@@ -196,12 +196,15 @@ The hard-won constraints. Build against these.
   shape: a square is 1.1457 × its width, a rectangle 0.6514 × (measured on a live
   board at six widths, 18 Oct 2026). The defaults are 199 × 228 and 350 × 228, and
   Miro's [Web SDK reference](https://developers.miro.com/docs/websdk-reference-sticky-note)
-  says the 228 "includes the sticky note shadow" and a square sticky is square
-  "(sticky note shadow excluded)": **the paper is 199/228 of the box's height and
-  the rest is its shadow** (where the shadow sits is not documented; we draw it below). Anything
+  says the 228 "includes the sticky note shadow". **Measured off a screenshot of a
+  check board, the paper is 0.82–0.84 of the box's height in both shapes** (the
+  bottom sixth is shadow), not the 199/228 the defaults suggest: that value left a
+  2–4 px gap (owner, 18 Oct 2026, "closer but not overlapping"). A square's paper is
+  also about 8% narrower than its box. Miro does not snap positions: the API reads
+  back exactly what was sent. Anything
   that overlaps stickies on purpose must overlap the paper, not the box: a split
   quote's parts overlapped the boxes by one x-height and showed as separate notes
-  with a gap (owner, 18 Oct 2026). `board_layout.MIRO_PAPER` and `set_overlap`;
+  with a gap (owner, 18 Oct 2026). `board_layout.MIRO_PAPER` (0.825) and `set_overlap`;
   FigJam's stickies are all paper, so the plugin overlaps its boxes directly.
 - **Frames are named containers** (`data.title` = the label, shown as a tab),
   positionable + sizable, with a `style.fillColor`. **Frames don't nest**, and an

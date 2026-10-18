@@ -167,6 +167,16 @@ def load_pauses(db: Session | None, project_id: int,
     return out
 
 
+def session_languages(db: Session | None, project_id: int) -> dict[str, str]:
+    """Each session's spoken language (``Session.language``), by session id, where it is known."""
+    from bristlenose.server.models import Session as StudySession
+
+    if db is None:
+        return {}
+    rows = db.query(StudySession.session_id, StudySession.language).filter_by(project_id=project_id)
+    return {sid: lang for sid, lang in rows if lang}
+
+
 def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
                   clips_base: str = "", locale: str = "en") -> list[Column]:
     """Bucket the project's (optionally scoped) quotes into section/theme columns,
@@ -179,6 +189,7 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
         clips_base = ""
 
     pauses = load_pauses(db, project_id, quotes)
+    languages = session_languages(db, project_id)
     sections: dict[str, Column] = {}
     themes: dict[str, Column] = {}
     for q in quotes:
@@ -190,6 +201,7 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
             sentiment=(q.sentiment or None),
             link_url=_clip_url(clips_base, q),
             pauses=pauses.get(q.quote_id),
+            language=languages.get(q.session),
         )
         label = (q.section or "").strip()
         if label:

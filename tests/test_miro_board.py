@@ -172,12 +172,12 @@ def _words(text: str, pause_after: int | None = None, pause: float = 1.2) -> lis
 def test_an_unpunctuated_quote_never_ends_a_part_on_a_word_that_leads_into_the_next() -> None:
     """The board in the owner's screenshot (18 Oct 2026) broke "back in the… / …day": with no
     mark to go on, a part may not end on an article, a preposition or a pronoun."""
-    from bristlenose.board_layout import _LEADS, _word, split_quote
+    from bristlenose.board_layout import ENGLISH, _word, split_quote
 
     parts = split_quote(_RUN, at=200)
     assert len(parts) == 3
     for part in parts[:-1]:
-        assert _word(part.rstrip("…").split()[-1]) not in _LEADS, part[-30:]
+        assert _word(part.rstrip("…").split()[-1]) not in ENGLISH.leads, part[-30:]
     assert " ".join(p.strip("…") for p in parts) == _RUN
 
 
@@ -254,9 +254,120 @@ def test_japanese_breaks_at_a_sentence_end_never_inside_a_word() -> None:
     from bristlenose.board_layout import split_quote
 
     sentence = "このアプリはとても使いやすいと思いました。でも、設定画面がどこにあるのか分からなくて、最初は少し戸惑いました。"
-    first, second = split_quote(sentence * 7 + "最初は少し戸惑いました。")
-    assert first.endswith("ました…") and second.startswith("…でも、") or second.startswith("…この")
-    assert first.removesuffix("…") + "。" + second.removeprefix("…") == sentence * 7 + "最初は少し戸惑いました。"
+    text = sentence * 3 + "最初は少し戸惑いました。"
+    parts = split_quote(text, language="ja")
+    assert len(parts) == 2
+    assert parts[0].endswith("ました…") and parts[1][1:3] in ("でも", "この", "最初")
+    assert parts[0].removesuffix("…") + "。" + parts[1].removeprefix("…") == text
+
+
+def test_a_full_width_character_takes_the_room_of_two() -> None:
+    """A Japanese, Chinese or Korean character is drawn full-width (UAX #11): a quote splits by
+    the room it takes, and its sticky is sized for the same size of type as an English one."""
+    from bristlenose.board_layout import quote_parts, split_quote, text_width
+
+    assert text_width("abc") == 3 and text_width("日本語") == 6 and text_width("한국") == 4
+    ja = "設定画面がどこにあるのか分からなくて、最初は少し戸惑いました。" * 4  # 124 chars, 248 wide
+    assert len(split_quote(ja, at=200)) == 2
+    [en] = quote_parts("x" * 248, "— P1 · 0:10", split=False)
+    [jp] = quote_parts(ja, "— P1 · 0:10", split=False)
+    assert round(jp.width) == round(en.width)
+
+
+def test_unspaced_japanese_breaks_at_a_clause_particle() -> None:
+    """Whisper on a bad run writes Japanese with no marks at all; the phrase rule still finds
+    the clause end: "…思ったのですが / ただ…", not inside a word."""
+    from bristlenose.board_layout import split_quote
+
+    said = ("高校生の時英語が得意だったのでそれを活かせる大学に入ろうと思ったのですが"
+            "ただ英語を学ぶだけではなくてそれプラス何か新しいことを学べる大学がないかなと思い受験しました")
+    first, second = split_quote(said, at=100, language="ja")
+    assert first.endswith(("ので…", "ですが…", "なくて…")), first
+    assert first.removesuffix("…") + second.removeprefix("…") == said
+    # Kinsoku (JLREQ): no break before a small kana, a long-vowel mark or a closing bracket.
+    from bristlenose.board_layout import KINSOKU_NO_START, _breaks, break_rules
+
+    tricky = "「行くけど」って言ったんですけどそれから「来るから」って" * 2
+    assert all(tricky[at] not in KINSOKU_NO_START for at, _ in _breaks(tricky, None, break_rules("ja")))
+    # Never straight after の: that cuts a modifier from its noun (トップレベルの | 人工芝).
+    turf = "北海道でトップレベルの人工芝があります"
+    worth = dict(_breaks(turf, None, break_rules("ja")))
+    assert worth[turf.index("人工芝")] < 0 < worth[turf.index("トップ")] + 5
+
+
+def test_chinese_breaks_before_a_conjunction_and_never_after_de() -> None:
+    from bristlenose.board_layout import _breaks, break_rules, split_quote
+
+    said = ("我覺得這個應用程式很好用但是設定的地方我一直找不到所以一開始有點困惑"
+            "後來同事教我怎麼用我才知道原來在右上角的選單裡面")
+    first, _ = split_quote(said, at=60, language="zh")
+    assert first.removesuffix("…")[-3:] in ("很好用", "找不到", "有點困惑")
+    rules = break_rules("zh", said)
+    assert all(not said[:at].endswith("的") for at, _ in _breaks(said, None, rules))
+
+
+def test_each_language_follows_its_own_rules() -> None:
+    """The authorities' rules (docs/research/board-quote-breaks.md): Czech typography forbids a
+    one-letter preposition at a line end (ČSN 01 6910), Polish *się* is bound to the word before,
+    German *aber* opens a clause."""
+    from bristlenose.board_layout import _breaks, break_rules
+
+    def worth(text: str, after: str, lang: str) -> float:
+        return dict(_breaks(text, None, break_rules(lang)))[text.index(after) + len(after)]
+
+    assert worth("bydlím v Praze", "v", "cs") < 0 < worth("bydlím v Praze", "bydlím", "cs") + 5
+    assert worth("on bardzo martwi się tym", "martwi", "pl") < 0
+    assert worth("das war gut aber dann", "gut", "de") > 0
+    # The same words under English rules are neither: the language decides.
+    assert worth("das war gut aber dann", "gut", "en") == 0
+    # Turkish breaks after a postposition and a converb; Korean after a connective ending, and
+    # never before a bound noun (*할 수 있다*).
+    assert worth("bunun için gidiyoruz", "için", "tr") > 0
+    assert worth("eve gelince yemek yedik", "gelince", "tr") > 0
+    assert worth("찾았는데 없었어요", "찾았는데", "ko") > 0
+    assert worth("할 수 있어요", "할", "ko") < 0
+
+
+def test_turkish_capitals_and_russian_yo_match_their_lists() -> None:
+    from bristlenose.board_layout import _word, break_rules
+
+    assert _word("İçin") == "için" and _word("Ещё") == "еще"
+    assert "için" in break_rules("tr").closes
+
+
+def test_a_no_break_space_is_never_a_break() -> None:
+    from bristlenose.board_layout import _breaks
+
+    text = "Vous avez trouvé\u202f? Non, 40\u00a0kilomètres avec M.\u00a0Dupont"
+    assert all(text[at] not in "\u202f\u00a0" for at, _ in _breaks(text, None))
+
+
+def test_the_language_comes_from_the_script_when_the_session_does_not_say() -> None:
+    from bristlenose.board_layout import BREAK_RULES, ENGLISH, break_rules
+
+    assert break_rules(None, "設定がわからない") is BREAK_RULES["ja"]
+    assert break_rules(None, "我覺得這個") is BREAK_RULES["zh-hant"]
+    assert break_rules(None, "我觉得这个") is BREAK_RULES["zh-hans"]
+    assert break_rules(None, "설정을 찾을 수") is BREAK_RULES["ko"]
+    assert break_rules("pt-BR") is BREAK_RULES["pt"] and break_rules("no") is BREAK_RULES["nb"]
+    assert break_rules(None, "plain words") is ENGLISH and break_rules("xx") is ENGLISH
+
+
+def test_every_shipped_language_has_rules_and_every_rule_its_sources() -> None:
+    """One entry per spoken language the app is localised for, each citing where it came from."""
+    import json
+    from importlib.resources import files
+    from pathlib import Path
+
+    from bristlenose.board_layout import BREAK_RULES, break_rules
+
+    raw = json.loads(files("bristlenose.data").joinpath("break_rules.json").read_text("utf-8"))
+    locales = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
+    for loc in sorted(d.name for d in locales.iterdir() if d.is_dir()):
+        assert break_rules(loc, "") is not None
+        code = {"zh-Hant": "zh-hant", "zh-Hant-HK": "zh-hant"}.get(loc, loc.split("-")[0])
+        assert code in BREAK_RULES, loc
+        assert raw[code]["sources"], loc
 
 
 def test_every_sticky_shows_the_same_size_of_type() -> None:

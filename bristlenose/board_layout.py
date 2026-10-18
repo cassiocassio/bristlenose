@@ -26,6 +26,7 @@ import difflib
 import itertools
 import math
 import re
+import unicodedata
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
@@ -106,6 +107,8 @@ class QuoteCard:
     link_url: str | None = None  # optional clip link
     #: The speaker's pauses inside the quote (`quote_pauses`), which tell a split where to fall.
     pauses: Mapping[int, float] | None = None
+    #: The session's spoken language, whose `break_rules` the split follows.
+    language: str | None = None
 
 
 @dataclass
@@ -206,6 +209,13 @@ _PHRASE_END = re.compile(r"[,，、]$")
 _ELISION = re.compile(r"^(\.\.\.|…)$")
 #: After a mark a spaceless script runs straight on, so its breaks are found inside the text.
 _CJK_BREAK = re.compile(r"[。！？][」』）)]*|[、，；：]")
+_SPACELESS = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+_KANA = re.compile(r"[\u3040-\u30ff]")
+#: Kinsoku (JIS X 4051; W3C JLREQ §3.1.7, clreq): what may not begin a line — closing brackets,
+#: marks, the long-vowel mark, small kana, iteration marks — and what may not end one.
+KINSOKU_NO_START = ("、。，．・：；？！ー〜～…‥⋯」』）〕］｝〉》】〙〗⦆»〟’”)]}‐–—゠!?‼⁇⁈⁉:;.,·‧"
+                    "ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶ々〻ゝゞヽヾ")
+KINSOKU_NO_END = "「『（〔［｛〈《【〘〖⦅«〝‘“([{"
 _SCORE = {"sentence": 10.0, "elision": 9.0, "clause": 6.0, "phrase": 4.0}
 #: Seconds of silence between two words are a break the speaker made: worth up to a sentence end,
 #: where the text has no mark to say so. Only there: a pause after a full stop is usual, and
@@ -214,15 +224,102 @@ _SCORE = {"sentence": 10.0, "elision": 9.0, "clause": 6.0, "phrase": 4.0}
 #: pause scores.
 PAUSE_WEIGHT = 6.0
 PAUSE_CAP = 1.5
-#: Where no mark or pause says, the subtitlers' rules for a bare word: a part may begin on a word
-#: that opens a clause, and never end on one that leads into the next (an article, a preposition,
-#: a pronoun before its verb). English only; in another language these simply never match.
-_OPENS = {"but": 3.0, "so": 3.0, "because": 3.0, "when": 2.0, "now": 2.0, "then": 2.0,
-          "what": 2.0, "if": 2.0, "though": 2.0, "and": 1.0, "or": 1.0, "which": 1.0}
-_LEADS = frozenset("""a an the to of in on at for with from by into about as than my your his her
-its our their this that these those i i'm i've i'd we they he she you it's is are was were be been
-am very really not don't just""".split())
+@dataclass(frozen=True)
+class BreakRules:
+    """Where no mark or pause says, a language's rules for a bare word, as its subtitlers break a
+    line: a part may begin on a word that opens a clause (``opens``, worth 1–3, and ``opens2`` for
+    two-word openers), and never end on one that leads into the next (``leads``: an article, a
+    preposition, a pronoun before its verb)."""
+
+    leads: frozenset[str] = frozenset()
+    opens: Mapping[str, float] = field(default_factory=dict)
+    opens2: Mapping[tuple[str, str], float] = field(default_factory=dict)
+    #: Words a part may not begin on, bound to the word before: Polish *się*, Czech *se*, Russian
+    #: *же*, Turkish *mi* and *değil*, German *sich*; and words after which a part may end well
+    #: (Turkish postpositions, *için*, *gibi*).
+    no_start: frozenset[str] = frozenset()
+    closes: Mapping[str, float] = field(default_factory=dict)
+    #: For a script written without spaces, which phrase rule finds its bare breaks (``"ja"``,
+    #: ``"zh"``: `_phrase_ends`); and how a phrase
+    #: ending reads, as the language's ``opens`` and ``leads`` do: ``ends_well`` (a clause-final
+    #: particle, worth 1–3), ``ends_badly`` (a modifier bound to what follows), ``starts_well``
+    #: (a conjunction opening the next phrase).
+    phrases: str | None = None
+    ends_well: Mapping[str, float] = field(default_factory=dict)
+    ends_badly: frozenset[str] = frozenset()
+    starts_well: Mapping[str, float] = field(default_factory=dict)
+    starts_badly: frozenset[str] = frozenset()
+
+
+def _load_break_rules() -> dict[str, BreakRules]:
+    """``data/break_rules.json``: each language's rules, compiled from its subtitling and
+    typography authorities (Netflix's per-language Timed Text Style Guides and General
+    Requirements, ÚJČ for Czech, Blanquerna for Catalan, SKTL for Finnish, ATAA for French, W3C
+    JLREQ, clreq and KLREQ…), every entry carrying its sources;
+    docs/research/board-quote-breaks.md has the research."""
+    import json
+    from importlib.resources import files
+
+    raw = json.loads(files("bristlenose.data").joinpath("break_rules.json").read_text(encoding="utf-8"))
+
+    def words(xs: Sequence[str]) -> frozenset[str]:
+        return frozenset(_word(x) for x in xs)
+
+    def weights(xs: Mapping[str, float], fold: bool = True) -> dict[str, float]:
+        return {(_word(k) if fold else k): float(v) for k, v in xs.items()}
+
+    out: dict[str, BreakRules] = {}
+    for code, r in raw.items():
+        if code.startswith("_"):
+            continue
+        spaceless = bool(r.get("phrases"))
+        out[code] = BreakRules(
+            leads=words(r.get("leads", [])), opens=weights(r.get("opens", {})),
+            opens2={(_word(a), _word(b)): float(w) for a, b, w in r.get("opens2", [])},
+            no_start=words(r.get("no_start", [])), closes=weights(r.get("closes", {})),
+            phrases=r.get("phrases"),
+            ends_well=weights(r.get("ends_well", {}), fold=not spaceless),
+            ends_badly=frozenset(r.get("ends_badly", [])),
+            starts_well=weights(r.get("starts_well", {}), fold=False),
+            starts_badly=frozenset(r.get("starts_badly", [])))
+    return out
+
+
 _LEAD_PENALTY = 4.0
+
+
+#: A handful of characters that differ between the two Chinese scripts, to pick BudouX's model.
+_SIMPLIFIED = set("这个们说会来时对为还过后么见经发问题实现开关东车长门")
+_TRADITIONAL = set("這個們說會來時對為還過後麼見經發問題實現開關東車長門")
+
+
+def break_rules(language: str | None, text: str = "") -> BreakRules:
+    """The rules for a session's spoken language (``"pt"``, ``"pt-BR"``, ``"zh-Hant"``): its own
+    if Bristlenose has them, else English's, which is how every quote split before. With no
+    language known (a platform or docx transcript), the script of ``text`` says: kana is Japanese,
+    Han without kana Chinese, Hangul Korean."""
+    if not language:
+        if _KANA.search(text):
+            language = "ja"
+        elif _SPACELESS.search(text):
+            language = "zh"
+        elif re.search(r"[\uac00-\ud7af]", text):
+            language = "ko"
+    code = (language or "en").replace("_", "-").split("-")[0].casefold()
+    code = {"no": "nb", "nn": "nb"}.get(code, code)
+    if code == "zh":
+        tag = (language or "").casefold()
+        hant = ("hant" in tag or tag.endswith(("-tw", "-hk", "-mo"))
+                or sum(c in _TRADITIONAL for c in text) > sum(c in _SIMPLIFIED for c in text))
+        return BREAK_RULES.get("zh-hant" if hant else "zh-hans", ENGLISH)
+    return BREAK_RULES.get(code, ENGLISH)
+
+
+def text_width(text: str) -> int:
+    """How much room ``text`` takes, a Latin letter being one: a Japanese, Chinese or Korean
+    character is drawn full-width, two (Unicode East Asian Width, UAX #11). A quote's length is
+    measured this way, so a Japanese sticky holds as much type as an English one."""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
 #: The parts stay near even: a sentence end about a third off the even split still beats a bare
 #: word right on it, as the owner's ~55-word parts expect, and no part is under 45% of even.
 BALANCE_WEIGHT = 40.0
@@ -234,13 +331,23 @@ _OPENER = re.compile(r"[«‹„“‘(\[¿¡]+")
 
 
 def _word(token: str) -> str:
-    return re.sub(r"[^\w']", "", token.casefold().replace("’", "'"))
+    """A word as the lists hold it: case folded, Russian *ё* as *е* (writers and Whisper
+    alternate), curly apostrophe straight, and nothing but letters and apostrophes — which also
+    drops the dot that Turkish *İ* keeps when folded, so *İçin* is *için*."""
+    folded = token.casefold().replace("ё", "е").replace("’", "'")
+    return re.sub(r"[^\w']", "", folded)
 
 
-def _breaks(text: str, pauses: Mapping[int, float] | None) -> list[tuple[int, float]]:
+BREAK_RULES: dict[str, BreakRules] = _load_break_rules()
+ENGLISH = BREAK_RULES["en"]
+
+
+def _breaks(text: str, pauses: Mapping[int, float] | None,
+            rules: BreakRules = ENGLISH) -> list[tuple[int, float]]:
     """Every place ``text`` could break, as (offset of the end of the part before, worth)."""
     out: list[tuple[int, float]] = []
-    gaps = list(re.finditer(r"\s+", text))
+    # A no-break space is there to forbid a break (French before ; : ! ?, a number and its unit).
+    gaps = list(re.finditer(r"[^\S\u00a0\u202f\u2007]+", text))
 
     def token(k: int) -> str:  # the word after gap k (k = -1: the first)
         a = gaps[k].end() if k >= 0 else 0
@@ -257,7 +364,7 @@ def _breaks(text: str, pauses: Mapping[int, float] | None) -> list[tuple[int, fl
         if _ELISION.match(before):  # it becomes the part's "…" (`split_quote`)
             worth = _SCORE["elision"]
         elif _TRAILING_OFF.search(before):
-            worth = _SCORE["clause"] - (_LEAD_PENALTY if _word(before) in _LEADS else 0.0)
+            worth = _SCORE["clause"] - (_LEAD_PENALTY if _word(before) in rules.leads else 0.0)
         elif _SENTENCE_END.search(before):
             worth = _SCORE["sentence"]
         elif _CLAUSE_END.search(before) or after[:1] in "—–":
@@ -266,28 +373,76 @@ def _breaks(text: str, pauses: Mapping[int, float] | None) -> list[tuple[int, fl
             worth = _SCORE["phrase"]
         else:
             nxt = _word(after)
-            worth = _OPENS.get(nxt, 0.0)
-            if nxt == "i" and k + 1 < len(gaps) and _word(token(k + 1)) == "mean":
-                worth = 3.0
-            if _word(before) in _LEADS:
+            worth = rules.opens.get(nxt, 0.0)
+            if rules.opens2 and k + 1 < len(gaps):
+                worth = max(worth, rules.opens2.get((nxt, _word(token(k + 1))), 0.0))
+            last = _word(before)
+            worth = max(worth, rules.closes.get(last, 0.0),
+                        max((w for end, w in rules.ends_well.items() if last.endswith(end)),
+                            default=0.0))
+            if last in rules.leads or nxt in rules.no_start:
                 worth -= _LEAD_PENALTY
             if pauses:
                 worth += min(pauses.get(gap.start(), 0.0), PAUSE_CAP) * PAUSE_WEIGHT
         out.append((gap.start(), worth))
+    marked = set()
     for m in _CJK_BREAK.finditer(text):
         if m.end() < len(text) and not text[m.end()].isspace():
             mark = m.group()[0]
             out.append((m.end(), _SCORE["sentence"] if mark in "。！？" else _SCORE["phrase"]))
+            marked.add(m.end())
+    if rules.phrases and _SPACELESS.search(text):
+        for run in re.finditer(r"\S+", text):
+            for at in _phrase_ends(run.group(), rules.phrases, rules):
+                o = run.start() + at
+                if o in marked or text[o] in KINSOKU_NO_START or text[o - 1] in KINSOKU_NO_END:
+                    continue
+                out.append((o, _phrase_worth(text, o, rules)))
     return out
 
 
-def _cuts(text: str, n: int, pauses: Mapping[int, float] | None) -> list[int]:
+def _phrase_ends(run: str, script: str, rules: BreakRules) -> list[int]:
+    """Offsets inside ``run`` (no spaces) where one phrase plausibly ends and the next begins.
+
+    Japanese shows its phrases (bunsetsu) in its script: a run of kana — the particle or the
+    ending — closing on a kanji or katakana word that starts the next (the captioning research's
+    proxy, docs/research/board-quote-breaks.md); and in both languages the words say: before a
+    conjunction (*でも*, *但是*), after a clause-final particle (*ので*, *吧*). Google's BudouX
+    segmenter would find every phrase; it is not a dependency."""
+    ends = {m.start() for w in rules.starts_well for m in re.finditer(re.escape(w), run)}
+    # A one-character ending (Japanese に, を) is too common inside words to mark a phrase alone.
+    ends |= {m.end() for w in rules.ends_well if len(w) > 1 or script == "zh"
+             for m in re.finditer(re.escape(w), run)}
+    if script == "ja":
+        ends |= {i for i in range(1, len(run))
+                 if "\u3040" <= run[i - 1] <= "\u309f" and not "\u3040" <= run[i] <= "\u309f"
+                 and _SPACELESS.match(run[i])}
+    return sorted(e for e in ends if 0 < e < len(run))
+
+
+def _phrase_worth(text: str, at: int, rules: BreakRules) -> float:
+    """A phrase end as a break: its last characters (a clause-final particle reads well, a
+    modifier bound to the next word badly) and the next phrase's first."""
+    before, after = text[max(0, at - 6):at], text[at:at + 6]
+    worth = max((w for end, w in rules.ends_well.items() if before.endswith(end)), default=0.0)
+    worth = max(worth, max((w for st, w in rules.starts_well.items() if after.startswith(st)),
+                           default=0.0))
+    if (any(before.endswith(end) for end in rules.ends_badly)
+            or any(after.startswith(st) for st in rules.starts_badly)):
+        worth -= _LEAD_PENALTY
+    return worth
+
+
+def _cuts(text: str, n: int, pauses: Mapping[int, float] | None,
+          rules: BreakRules = ENGLISH) -> list[int]:
     """The ``n - 1`` offsets that make the best-reading parts: the breaks' worth, less how far
-    the parts stray from an even split."""
-    length = len(text)
+    the parts stray from an even split, measured in `text_width`."""
+    room = list(itertools.accumulate((text_width(c) for c in text), initial=0))
+    length = room[-1]
     even = length / n
-    targets = [round(even * k) for k in range(1, n)]
-    found = sorted(_breaks(text, pauses))
+    # The offsets where the room taken reaches each even share.
+    targets = [next(i for i, r in enumerate(room) if r >= even * k) for k in range(1, n)]
+    found = sorted(_breaks(text, pauses, rules))
     if not found:
         return targets  # a spaceless script with no mark near: an even cut, as before
     # Bare words differ only in balance, so only the few nearest each even point can win.
@@ -298,8 +453,8 @@ def _cuts(text: str, n: int, pauses: Mapping[int, float] | None) -> list[int]:
     cands = [found[i] for i in sorted(keep)]
 
     def cost(cuts: Sequence[tuple[int, float]]) -> float:
-        edges = [0, *(c for c, _ in cuts), length]
-        sizes = [b - a for a, b in zip(edges, edges[1:], strict=False)]
+        edges = [0, *(c for c, _ in cuts), len(text)]
+        sizes = [room[b] - room[a] for a, b in zip(edges, edges[1:], strict=False)]
         if min(sizes) < MIN_PART * even:
             return math.inf
         stray = sum(((s - even) / even) ** 2 for s in sizes)
@@ -312,22 +467,24 @@ def _cuts(text: str, n: int, pauses: Mapping[int, float] | None) -> list[int]:
 
 
 def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS,
-                pauses: Mapping[int, float] | None = None) -> list[str]:
+                pauses: Mapping[int, float] | None = None,
+                language: str | None = None) -> list[str]:
     """A quote as one, two or three parts that each read on their own, as researchers split a
     long quote by hand: at the best-reading break near each even split, a part that goes on ending
     in "…" and the next beginning with one. The words are never changed, only where they break.
 
     ``pauses`` (`quote_pauses`) is the speaker's silence, in seconds, at the whitespace that
     starts at each offset — the breaks the speaker made, which an unpunctuated transcript has
-    nothing else to show (Whisper drops punctuation on long unbroken runs)."""
+    nothing else to show (Whisper drops punctuation on long unbroken runs). ``language`` is the
+    session's spoken language, whose `break_rules` apply; ``at`` is a `text_width`."""
     lead = len(text) - len(text.lstrip())
     if pauses and lead:
         pauses = {at - lead: gap for at, gap in pauses.items()}
     text = text.strip()
-    n = max(1, min(max_parts, -(-len(text) // at)))
+    n = max(1, min(max_parts, -(-text_width(text) // at)))
     if n == 1:
         return [text]
-    cuts = _cuts(text, n, pauses)
+    cuts = _cuts(text, n, pauses, break_rules(language, text))
     parts = [text[a:b].strip() for a, b in zip([0, *cuts], [*cuts, len(text)], strict=True)]
     out: list[str] = []
     for i, part in enumerate(parts):
@@ -420,7 +577,8 @@ SET_STAGGER = X_HEIGHT
 
 def sticky_width(chars: int, shape: str = STICKY_SHAPE) -> float:
     """The width that shows ``chars`` characters at the board's one size of type. A square sticky
-    is taller for its width, so it needs less width for the same area — the same type size."""
+    is taller for its width, so it needs less width for the same area — the same type size.
+    ``chars`` is a `text_width`: a full-width character needs the room of two."""
     return SIZE_K * math.sqrt(max(chars, 1) * RECT_ASPECT / ASPECT.get(shape, RECT_ASPECT))
 
 
@@ -436,26 +594,28 @@ class QuotePart:
 
 
 def quote_part_texts(text: str, split: bool = True,
-                     pauses: Mapping[int, float] | None = None) -> list[str]:
+                     pauses: Mapping[int, float] | None = None,
+                     language: str | None = None) -> list[str]:
     """A quote's words as each sticky shows them, board-neutral: one string, or with ``split`` a
     long quote's two or three parts (`split_quote`), the opening mark on the first and the closing
     mark on the last. The attribution goes on the last part; the board adds it. FigJam and Miro both
     build on this, so a quote breaks in the same places on either board."""
-    parts = split_quote(text, SPLIT_AT, MAX_PARTS, pauses) if split else [text.strip()]
+    parts = split_quote(text, SPLIT_AT, MAX_PARTS, pauses, language) if split else [text.strip()]
     return [("“" if k == 0 else "") + part + ("”" if k == len(parts) - 1 else "")
             for k, part in enumerate(parts)]
 
 
 def quote_parts(text: str, attribution_line: str, split: bool = True,
                 shape: str = STICKY_SHAPE,
-                pauses: Mapping[int, float] | None = None) -> list[QuotePart]:
+                pauses: Mapping[int, float] | None = None,
+                language: str | None = None) -> list[QuotePart]:
     """A quote as the stickies a Miro board shows it on (`quote_part_texts`), each sized so the
     type comes out the same."""
-    shown = quote_part_texts(text, split, pauses)
+    shown = quote_part_texts(text, split, pauses, language)
     out: list[QuotePart] = []
     for k, part in enumerate(shown):
         last = k == len(shown) - 1
-        w = sticky_width(len(part) + (len(attribution_line) if last else 0), shape)
+        w = sticky_width(text_width(part) + (text_width(attribution_line) if last else 0), shape)
         out.append(QuotePart(part, last, w, w * ASPECT.get(shape, RECT_ASPECT)))
     return out
 
@@ -489,7 +649,7 @@ def _build_frame(
     bottom = FRAMES_Y + FRAME_PAD + header_h
     for col in columns:
         sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split, shape,
-                                q.pauses))
+                                q.pauses, q.language))
                 for q in sorted(col.quotes, key=quote_sort_key)]
         col_w = max([STICKY_W] + [set_extent(parts)[0] for _, parts in sets])
         stickies.append(Sticky(

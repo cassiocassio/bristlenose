@@ -263,3 +263,22 @@ def test_a_long_quote_on_the_screens_board_breaks_where_its_speaker_paused(
                       {"q-p1-1": quote}, "none", True, "rectangle",
                       {"q-p1-1": quote_pauses(said, words)})
     assert any("to finish…" in c for c in made), made
+
+
+def test_the_screens_board_splits_by_the_language_the_quote_was_spoken_in(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from bristlenose import miro_client as mc
+    from bristlenose.server.routes import screens_export as se
+
+    fake = _FakeMiro()
+    fake.install(monkeypatch)
+    made: list[str] = []
+    monkeypatch.setattr(mc, "bulk_create_items", lambda _t, _b, items: made.extend(
+        str(i.get("data", {}).get("content", "")) for i in items) or items)
+    monkeypatch.setattr(se, "render_still", lambda *a, **k: _JPEG)
+    monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 200)
+    quote = _Q("q-p1-1")
+    quote.text, quote.session = "dlouho " * 19 + "v praze" + " dlouho" * 19, "s1"
+    se._run_miro_sync(_job(), "tok", "Board", tmp_path, _screens(1), {"s1": tmp_path / "v.mp4"},
+                      {"q-p1-1": quote}, "none", True, "rectangle", None, {"s1": "cs"})
+    assert made and not any(" v…" in c for c in made), made

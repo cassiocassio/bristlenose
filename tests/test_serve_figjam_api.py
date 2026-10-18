@@ -206,3 +206,31 @@ def test_a_long_quote_breaks_where_its_speaker_paused(client: TestClient, monkey
     monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 200)
     [quote_doc] = _quotes(client.get(_URL, params={"quote_ids": "q-p1-10"}).json())
     assert quote_doc["parts"][0].rstrip("…").split()[-1] == "finish"
+
+
+def test_a_quote_splits_by_the_rules_of_the_language_it_was_spoken_in(
+        client: TestClient, monkeypatch) -> None:
+    """The session's spoken language reaches the splitter: in Czech a part may not end on the
+    one-letter preposition *v* (ČSN 01 6910), which English rules would happily end on."""
+    from bristlenose.server.models import Quote
+    from bristlenose.server.models import Session as StudySession
+
+    said = "dlouho " * 19 + "v praze" + " dlouho" * 19
+    db = client.app.state.db_factory()
+    try:
+        quote = db.query(Quote).filter_by(participant_id="p1", start_timecode=10.0).one()
+        quote.text = said
+        session = db.query(StudySession).filter_by(session_id=quote.session_id).one()
+        db.commit()
+        monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 200)
+
+        def first_part(language: str | None) -> str:
+            session.language = language
+            db.commit()
+            [doc] = _quotes(client.get(_URL, params={"quote_ids": "q-p1-10"}).json())
+            return doc["parts"][0]
+
+        assert first_part(None).endswith(" v…")
+        assert not first_part("cs").endswith(" v…")
+    finally:
+        db.close()

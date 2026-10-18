@@ -491,3 +491,21 @@ with `sandbox.entitlements` and `sandbox-Info.plist` (App Sandbox check), `video
 product's stage-5 path). Analysis: `analyse.py speech|dictation`, `one_sided.py` (dumps the
 disagreeing stretches for reading), `tables.py`. Transcripts, dumps and per-file results stay
 in the gitignored trial folder: they hold participants' speech. This note carries numbers and verdicts only.
+
+## 12. What to measure next, and a download list for approval (nothing fetched)
+
+The two gaps that most limit the verdict are human references outside the extreme Spanish
+files, and non-native English. Two public corpora cover both; each needs the owner's approval
+before any download, and each licence file to be read first.
+
+| Corpus | What it adds | Licence (as listed, 18 Oct 2026) | Proposed batch |
+|---|---|---|---|
+| AMI Meeting Corpus (Edinburgh; also OpenSLR 16) | group meetings, **mostly non-native English speakers**, manual transcripts **with word timings** (true WER for the group-talk failure, and a timing ground truth) | CC BY 4.0 (signals, transcription, some annotations; annotations v1.6.2 carry their own LICENCE.txt) | 4 meetings, headset mix only (~30 MB each, ~120 MB), plus the manual-annotations zip |
+| Earnings-22 (Rev, `revdotcom/speech-datasets`) | calls by speakers from 27 countries in 7 language regions, references with entities | CC BY-SA 4.0 (catalogue listing; check `LICENSE.md`) | 4 calls from different regions |
+
+Also open, needing hardware or people rather than downloads: a base 8 GB Mac (memory and
+speed, § 9), and the cohort's own recordings. Sources:
+<https://groups.inf.ed.ac.uk/ami/corpus/>, <https://groups.inf.ed.ac.uk/ami/download>,
+<https://huggingface.co/datasets/legacy-datasets/ami>,
+<https://github.com/revdotcom/speech-datasets>, <https://arxiv.org/abs/2104.11348>.
+

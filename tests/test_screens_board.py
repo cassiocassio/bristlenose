@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from bristlenose import screens_board as sb
-from bristlenose.board_layout import SET_GAP, SET_STAGGER, quote_parts
+from bristlenose.board_layout import MIRO_PAPER, SET_STAGGER, X_HEIGHT, quote_parts
 
 
 def _overlaps(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
@@ -41,8 +41,10 @@ def test_a_split_quote_is_a_grouped_set_stepping_right_and_overlapping_by_one_am
     _, _, _, stickies = sb.lay_out_screen([("p1", ["q-p1-5"])], [("a.jpg", "A", (1600, 900))], parts)
     assert len(stickies) >= 2 and len({s.set_id for s in stickies}) == 1 and stickies[0].set_id
     a, b = stickies[0], stickies[1]
-    assert b.x - a.x == SET_STAGGER and b.y - (a.y + a.height) == pytest.approx(SET_GAP)
-    assert SET_STAGGER == -SET_GAP  # the notch at each left edge is a square
+    # The next part's paper covers one x-height of the paper above, which is the stagger too:
+    # the notch at each left edge is a square (Miro's paper is the top 199/228 of the box).
+    assert b.x - a.x == SET_STAGGER == X_HEIGHT
+    assert (a.y + a.height * MIRO_PAPER) - b.y == pytest.approx(X_HEIGHT)
     assert [s.attributed for s in stickies][-1] and not stickies[0].attributed
 
 

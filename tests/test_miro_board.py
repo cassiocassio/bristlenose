@@ -386,21 +386,27 @@ def test_every_sticky_shows_the_same_size_of_type() -> None:
 
 def test_the_quotes_board_stacks_a_set_stepping_right_with_only_the_last_attributed() -> None:
     from bristlenose.board_layout import (
-        SET_GAP,
+        MIRO_PAPER,
         SET_STAGGER,
         SPLIT_AT,
+        X_HEIGHT,
         Column,
         QuoteCard,
         layout_board,
     )
 
     long_ = _between(SPLIT_AT, 2 * SPLIT_AT)
-    board = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B")
-    parts = [s for s in board.stickies if s.kind == "quote"]
-    assert len(parts) == 2 and parts[0].set_id == parts[1].set_id is not None
-    assert [s.attributed for s in parts] == [False, True]
-    assert parts[1].x == parts[0].x + SET_STAGGER
-    assert parts[1].y == pytest.approx(parts[0].y + parts[0].height + SET_GAP)
+    for shape in ("rectangle", "square"):
+        board = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])],
+                             "B", shape=shape)
+        parts = [s for s in board.stickies if s.kind == "quote"]
+        assert len(parts) == 2 and parts[0].set_id == parts[1].set_id is not None
+        assert [s.attributed for s in parts] == [False, True]
+        assert parts[1].x == parts[0].x + SET_STAGGER
+        # What shows: the next part's paper covers one x-height of the paper above (Miro draws the
+        # paper in the top 199/228 of a sticky's box), in either shape, so the notch is square.
+        paper_bottom = parts[0].y + parts[0].height * MIRO_PAPER
+        assert paper_bottom - parts[1].y == pytest.approx(X_HEIGHT) == SET_STAGGER
     unsplit = layout_board([Column("Basket", "section", [QuoteCard(long_, "p1", "s1", 12.0)])], "B", split=False)
     assert [s.set_id for s in unsplit.stickies if s.kind == "quote"] == [None]
 

@@ -17,7 +17,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from bristlenose.board_layout import SET_GAP, SET_STAGGER, QuotePart, set_extent
+from bristlenose.board_layout import SET_STAGGER, QuotePart, set_extent, set_tops
 
 #: The still's width on the board. Miro keeps an image's aspect from its width.
 SHOT_W = 1200.0
@@ -113,11 +113,9 @@ def lay_out_screen(groups: Sequence[tuple[str, Sequence[str]]],
             if len(ps) > 1:
                 set_ids[0] += 1
                 set_id = set_ids[0]
-            py = y
-            for k, p in enumerate(ps):
-                stickies.append(ScreenSticky(d, x + k * SET_STAGGER, py, p.width, p.height, p.text,
-                                             p.attributed, set_id))
-                py += p.height + SET_GAP
+            for k, (top, p) in enumerate(zip(set_tops(ps), ps, strict=True)):
+                stickies.append(ScreenSticky(d, x + k * SET_STAGGER, y + top, p.width, p.height,
+                                             p.text, p.attributed, set_id))
             right = max(right, x + w)
             row_h = max(row_h, h)
             x += w + GAP

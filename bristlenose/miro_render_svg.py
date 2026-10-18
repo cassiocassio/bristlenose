@@ -14,7 +14,7 @@ from __future__ import annotations
 import unicodedata
 from html import escape
 
-from bristlenose.board_layout import Board, Frame, Sticky, TextItem, attribution
+from bristlenose.board_layout import MIRO_PAPER, Board, Frame, Sticky, TextItem, attribution
 from bristlenose.board_palette import hex_for
 from bristlenose.i18n import t_in
 
@@ -127,12 +127,15 @@ def _frame_svg(f: Frame) -> str:
 
 def _sticky_svg(s: Sticky) -> str:
     fill = _hex(s.colour)
+    # Miro draws the paper in the top of the sticky's box and its shadow below (MIRO_PAPER), so
+    # the preview does too: a split quote's parts overlap here as they do on the board.
+    paper = s.height * MIRO_PAPER
     if s.kind == "header":
         lines = s.text.split("\n")
         cx = s.x + s.width / 2
         parts = [
             "<g>",
-            f'<rect x="{s.x:.1f}" y="{s.y:.1f}" width="{s.width:.1f}" height="{s.height:.1f}" '
+            f'<rect x="{s.x:.1f}" y="{s.y:.1f}" width="{s.width:.1f}" height="{paper:.1f}" '
             f'rx="10" ry="10" fill="{fill}" stroke="{HEADER_STROKE}" stroke-width="1.5" '
             f'filter="url(#shadow)"/>',
             _text(cx, s.y + 32, lines[0], size=16, weight="700", ink=BODY_INK, anchor="middle"),
@@ -145,11 +148,11 @@ def _sticky_svg(s: Sticky) -> str:
 
     usable_w = s.width - 2 * PAD_IN
     max_chars = max(8, int(usable_w / (BODY_FONT * 0.52)))
-    max_lines = max(1, int((s.height - 2 * PAD_IN) / BODY_LH))
+    max_lines = max(1, int((paper - 2 * PAD_IN) / BODY_LH))
     tx = s.x + PAD_IN
     parts = [
         "<g>",
-        f'<rect x="{s.x:.1f}" y="{s.y:.1f}" width="{s.width:.1f}" height="{s.height:.1f}" '
+        f'<rect x="{s.x:.1f}" y="{s.y:.1f}" width="{s.width:.1f}" height="{paper:.1f}" '
         f'rx="10" ry="10" fill="{fill}" stroke="{QUOTE_STROKE}" stroke-width="1.5" '
         f'filter="url(#shadow)"/>',
     ]
@@ -165,7 +168,7 @@ def _sticky_svg(s: Sticky) -> str:
     if s.attributed:  # only the last part of a split quote says whose it is
         link = " 🔗" if s.link_url else ""
         meta = f"{attribution(s.participant_id, s.timecode)}{link}"
-        parts.append(_text(tx, s.y + s.height - PAD_IN + 2, meta,
+        parts.append(_text(tx, s.y + paper - PAD_IN + 2, meta,
                            size=BODY_FONT, weight="400", ink=BODY_INK, italic=True))
     parts.append("</g>")
     return "\n".join(parts)

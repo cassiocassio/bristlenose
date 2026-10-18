@@ -580,8 +580,31 @@ SIZE_K = 17.0
 #: 17 Oct 2026). One size of type makes it one number: measured off the owner's screenshot as about
 #: 4.5 board units. Later parts are created later, so they are drawn on top.
 X_HEIGHT = 5.0
-SET_GAP = -X_HEIGHT
 SET_STAGGER = X_HEIGHT
+#: Miro's sticky box is not all paper. Its default stickies are 199 × 228 (square) and 350 × 228
+#: (rectangle), and every size keeps those proportions (measured on a live board, 18 Oct 2026: a
+#: square is 1.1457 times as tall as wide, a rectangle 0.6514), so the paper is the top 199/228 of
+#: the box and the rest is its shadow. An overlap of one x-height measured on the box therefore
+#: showed as a gap of about a tenth of a sticky (owner, 18 Oct 2026: in FigJam the parts overlap,
+#: in Miro they don't), and more on a square, which is taller for its width. FigJam's stickies are
+#: all paper, so the plugin overlaps the boxes by the x-height alone.
+MIRO_PAPER = 199 / 228
+
+
+def set_overlap(upper: QuotePart) -> float:
+    """How far a set's next sticky climbs over ``upper``'s box: past its shadow, then one
+    x-height of paper."""
+    return upper.height * (1 - MIRO_PAPER) + X_HEIGHT
+
+
+def set_tops(parts: Sequence[QuotePart]) -> list[float]:
+    """Each part's top, from the top of its set: the one stacking every Miro board uses."""
+    tops: list[float] = []
+    y = 0.0
+    for k, part in enumerate(parts):
+        tops.append(y)
+        y += part.height - (set_overlap(part) if k < len(parts) - 1 else 0.0)
+    return tops
 
 
 def sticky_width(chars: int, shape: str = STICKY_SHAPE) -> float:
@@ -632,7 +655,7 @@ def quote_parts(text: str, attribution_line: str, split: bool = True,
 def set_extent(parts: Sequence[QuotePart]) -> tuple[float, float]:
     """(width, height) of a quote's stickies laid out as a set."""
     w = max((p.width + k * SET_STAGGER for k, p in enumerate(parts)), default=0.0)
-    h = sum(p.height for p in parts) + max(len(parts) - 1, 0) * SET_GAP
+    h = max((top + p.height for top, p in zip(set_tops(parts), parts, strict=True)), default=0.0)
     return w, h
 
 
@@ -671,15 +694,14 @@ def _build_frame(
             if len(parts) > 1:
                 set_ids[0] += 1
                 set_id = set_ids[0]
-            for k, part in enumerate(parts):
+            for k, (top, part) in enumerate(zip(set_tops(parts), parts, strict=True)):
                 stickies.append(Sticky(
-                    x=cx + k * SET_STAGGER, y=sy, width=part.width, height=part.height,
+                    x=cx + k * SET_STAGGER, y=sy + top, width=part.width, height=part.height,
                     colour=quote_colour(q, colour_by), text=part.text,
                     participant_id=q.participant_id, timecode=q.start_timecode, link_url=q.link_url,
                     attributed=part.attributed, set_id=set_id,
                 ))
-                sy += part.height + (SET_GAP if k < len(parts) - 1 else 0)
-            sy += GAP_Y
+            sy += set_extent(parts)[1] + GAP_Y
         bottom = max(bottom, sy - GAP_Y)
         cx += col_w + GAP_X
     frame_w = (cx - GAP_X if columns else cx) - left_x + FRAME_PAD

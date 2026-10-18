@@ -386,6 +386,41 @@ Whisper's words, nothing lost) comes close.
   helper-inside-the-app reservation question (§ 8).
 
 
+### Time to first report: what an Apple-first first run would save (estimated 18 Oct 2026)
+
+Scenario (the owner's): a researcher drags one recording from a recent study onto a fresh
+install; no platform transcript beside it; macOS 26 or later; one of Apple's nine languages;
+Whisper not yet on disk. Today the 1.61 GB Whisper download happens inside that first run's
+transcription stage, on the critical path, behind a banner on the CLI and a spinner in the Mac
+app; nothing fetches it earlier (the lazy-download rule), and an interrupted fetch starts again
+from zero (hf_xet does not resume, measured 14 Oct 2026). Inputs, all measured on this M2 Max:
+Hugging Face delivered 19–25 MB/s here (two 300 MB range fetches of the real file); Apple's
+models are 138–151 MB; an 18-minute Teams interview went from drop to report in 106 s with
+Whisper cached (transcription 68 s, LLM stages ~38 s); Whisper RTF 0.04 and Apple's 0.012
+(§ 4). Line speeds: typical home broadband taken as 100 Mbit/s (2026 national medians are
+roughly 100–180), weak Wi-Fi as 50, 80% of the line reaching the download.
+
+| First recording | Line | Today: download + Whisper + LLM | Apple-first | Saved |
+|---|---|---|---|---|
+| 18-min interview, English | 100 Mbit/s | 2.7 + 0.9 + 0.7 ≈ **4.3 min** | 0.3 + 0.7 ≈ **1.0 min** | **≈ 3.3 min** |
+| 18-min interview, English | 50 Mbit/s | 5.4 + 0.9 + 0.7 ≈ **7.0 min** | ≈ **1.0 min** | **≈ 6.0 min** |
+| 60-min interview, English | 100 Mbit/s | 2.7 + 2.4 + ~1.7 ≈ **6.8 min** | 0.7 + ~1.7 ≈ **2.4 min** | **≈ 4.4 min** |
+| 60-min interview, English | 50 Mbit/s | 5.4 + 2.4 + ~1.7 ≈ **9.5 min** | ≈ **2.4 min** | **≈ 7.1 min** |
+| any of the other eight languages | 100 / 50 Mbit/s | as above | add 0.2–0.4 min for Apple's model | ≈ 0.3 min less |
+
+The 60-minute LLM time is scaled from the 18-minute run, not measured. On a slower Apple
+silicon Mac both transcription columns grow, Whisper's more (not measured). **Clicks saved:
+none.** Neither the Mac app nor the CLI asks before downloading Whisper, and an Apple-first run
+would add no question either; the saving is minutes of waiting, plus removing the one way a
+first run can lose all its progress (quitting during the download: Apple's fetch finishes in a
+system daemon, Whisper's restarts from zero).
+
+**Where it applies:** the Mac app on macOS 26 or later only. Not on macOS 15 (no API), not on
+the Linux or Windows CLI (no API, and faster-whisper downloads 1.62 GB just the same), not on
+the Mac CLI unless the Swift helper ships with it, not for the eleven other corpus languages, and
+not where a platform transcript is present (already no wait). Locales were read on macOS 27
+only; macOS 26's list may differ.
+
 ## 7. The upgrade-later path: a study with two engines (assessed, not built)
 
 The idea: day one, Apple transcribes with no wait while Whisper downloads in the background;

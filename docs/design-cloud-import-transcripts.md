@@ -612,8 +612,13 @@ Background: the parking brief in the maintainer's private handoffs, and `docs/de
   roster); **no Scheduled column** (no calendar); Recorded shows the start time, with duration in
   whole minutes (*since 17 Oct 2026: the part's `recording_end − recording_start`, falling back to the meeting's whole-minute `duration` only for a single-part meeting*); Size is the chosen file; **Expires comes from `auto_delete_date`**, orange under a
   week as everywhere else.
-- **Media choice:** `ZoomFileSelection.choose` **prefers the audio-only M4A** over the video files,
-  and also identifies the `TRANSCRIPT` VTT. ~~Today only the media is downloaded. Downloads use a
+- **Media choice:** ~~`ZoomFileSelection.choose` **prefers the audio-only M4A** over the video files,~~
+  *18 Oct 2026: it takes the video whenever Zoom made one, and the M4A only for a meeting with no
+  video. The researcher is testing a digital product, so the screen is evidence (thumbnails, scene
+  timeline, screen text, clips), and the video player's timecodes need it. Of several videos, a
+  layout with the screen wins: screen with speaker, then screen with gallery, then screen alone,
+  then faces (`ZoomRecordingLayout.videoRank`). There is no option, by decision.* The selection
+  also identifies the `TRANSCRIPT` VTT. ~~Today only the media is downloaded. Downloads use a
   bearer token, following the redirect by hand and stripping the `Authorization` header.~~
   *17 Oct 2026:* the VTT is fetched too (`ZoomSource.fetchTranscript`, `ZoomSource.swift:789`), and the
   bearer is kept on a redirect while it stays on `*.zoom.us` over HTTPS (`CloudTransferPolicy.zoom`,

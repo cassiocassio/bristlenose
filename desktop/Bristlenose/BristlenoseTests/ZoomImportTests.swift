@@ -130,21 +130,36 @@ struct ZoomFileSelectionTests {
         #expect(!choice.skippedMedia.contains { $0 == choice.media })
     }
 
-    @Test("Audio is preferred by default — the pipeline discards the video anyway")
-    func prefersAudio() {
+    @Test("The video is taken whenever there is one")
+    func prefersVideo() {
+        // What was on screen is the evidence in a test of a digital product:
+        // thumbnails, the scene timeline, screen text and clips all need the
+        // video. The M4A was the default until 18 Oct 2026, and every Zoom
+        // import arrived without them.
         let choice = ZoomFileSelection.choose(from: typicalMeeting)
-        #expect(choice.media?.fileType == .m4a)
-        // ~60 MB instead of ~800 MB, for input that stage 2 would have reduced
-        // to audio regardless.
-        #expect((choice.media?.sizeBytes ?? 0) < 100_000_000)
+        #expect(choice.media?.fileType == .mp4)
+        #expect(choice.skippedMedia.contains { $0.fileType == .m4a })
     }
 
-    @Test("When video is wanted, faces beat screens")
+    @Test("Of the videos, the screen with the speaker beside it wins")
     func videoRanking() {
-        let choice = ZoomFileSelection.choose(from: typicalMeeting, preferAudioOnly: false)
-        // `shared_screen` alone is a slide deck with a voice over it; the value
-        // of a research interview is the person.
+        let choice = ZoomFileSelection.choose(from: typicalMeeting)
+        // The product on screen and the person reacting to it, in one file.
         #expect(choice.media?.layout == .sharedScreenWithSpeakerView)
+    }
+
+    @Test("Recorded as separate files, the screen beats the face")
+    func screenBeatsFace() {
+        // "Record active speaker, gallery view and shared screen separately"
+        // gives no combined layout. The screen is the evidence in a test of a
+        // digital product; a face-first order dropped it.
+        let choice = ZoomFileSelection.choose(from: [
+            file("MP4", "active_speaker", size: 500_000_000),
+            file("MP4", "gallery_view", size: 600_000_000),
+            file("MP4", "shared_screen", size: 300_000_000),
+            file("M4A", "audio_only", size: 60_000_000),
+        ])
+        #expect(choice.media?.layout == .sharedScreen)
     }
 
     @Test("A transcript is picked up alongside, not instead of, the media")
@@ -613,7 +628,7 @@ struct ZoomRecordingPartsTests {
         let parts = ZoomFileSelection.parts(from: restarted)
         #expect(parts.count == 2)
         #expect(parts.map { $0.start } == [t0, t0.addingTimeInterval(1200)])
-        #expect(parts.allSatisfy { $0.choice.media?.fileType == .m4a })
+        #expect(parts.allSatisfy { $0.choice.media?.fileType == .mp4 })
     }
 
     @Test("Each transcript goes to the part it overlaps")

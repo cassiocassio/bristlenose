@@ -87,16 +87,20 @@ enum ZoomRecordingLayout: Equatable {
 
     /// Preference order when several MP4s exist, best first.
     ///
-    /// Faces before screens: a research interview's value is in the person, and
-    /// `shared_screen` alone is a slide deck with a voice over it. Lower is
-    /// better; `nil` means "not a video layout".
+    /// Screens before faces: Bristlenose's researcher is testing a digital
+    /// product, so the screen is the evidence and the participant's face is the
+    /// supporting witness. A layout that carries both wins; then any layout
+    /// with the screen; then faces. (Faces came first until 18 Oct 2026, on an
+    /// interview premise, which would drop the product for a host who records
+    /// screen and speaker as separate files.) Lower is better; `nil` means
+    /// "not a video layout".
     var videoRank: Int? {
         switch self {
         case .sharedScreenWithSpeakerView: return 0
-        case .activeSpeaker:               return 1
-        case .sharedScreenWithGalleryView: return 2
-        case .galleryView:                 return 3
-        case .sharedScreen:                return 4
+        case .sharedScreenWithGalleryView: return 1
+        case .sharedScreen:                return 2
+        case .activeSpeaker:               return 3
+        case .galleryView:                 return 4
         case .audioOnly, .audioTranscript: return nil
         case .other:                       return 5
         }
@@ -150,33 +154,21 @@ enum ZoomFileSelection {
         let skippedMedia: [ZoomRecordingFile]
     }
 
-    /// - Parameter preferAudioOnly: take the M4A over the MP4 when both exist.
-    ///
-    ///   Default **true**, and it is a real optimisation rather than a
-    ///   preference: Bristlenose's stage 2 extracts audio and discards the
-    ///   video anyway, and Zoom's own figures put video at ~200 MB/hour against
-    ///   ~20 MB/hour for screen share. Over a twelve-session study that is the
-    ///   difference between a coffee break and a lunch break, on a transfer the
-    ///   researcher is watching.
-    ///
-    ///   Set false when the video is wanted for its own sake — thumbnails, and
-    ///   the timecode deep-links the report offers.
-    static func choose(
-        from files: [ZoomRecordingFile],
-        preferAudioOnly: Bool = true
-    ) -> Choice {
+    /// **The video, whenever Zoom made one; the audio only when it did not.**
+    /// Bristlenose's premise is a researcher testing a digital product, so what
+    /// was on screen is evidence: thumbnails, the scene timeline, screen text
+    /// and the clips all come from the video. Until 18 Oct 2026 this took the
+    /// M4A by default to save download time (~20 MB/hour against ~200), which
+    /// quietly stripped every Zoom import of those. Stage 2 takes the audio out
+    /// of the video itself, so nothing needs the M4A when a video exists.
+    static func choose(from files: [ZoomRecordingFile]) -> Choice {
         let transcript = files.first { $0.fileType == .transcript }
         let audio = files.first { $0.fileType == .m4a }
         let videos = files
             .filter { $0.fileType == .mp4 }
             .sorted { ($0.layout.videoRank ?? 99) < ($1.layout.videoRank ?? 99) }
 
-        let chosen: ZoomRecordingFile?
-        if preferAudioOnly, let audio {
-            chosen = audio
-        } else {
-            chosen = videos.first ?? audio
-        }
+        let chosen = videos.first ?? audio
 
         let skipped = files
             .filter { $0.fileType.isMedia }
@@ -211,14 +203,11 @@ enum ZoomFileSelection {
     ///
     /// A meeting whose media files do not all carry a start has nothing to
     /// split on, and comes back as one part, exactly as `choose` saw it.
-    static func parts(
-        from files: [ZoomRecordingFile],
-        preferAudioOnly: Bool = true
-    ) -> [Part] {
+    static func parts(from files: [ZoomRecordingFile]) -> [Part] {
         let media = files.filter { $0.fileType.isMedia }
         let starts = media.compactMap(\.recordingStart)
         guard !media.isEmpty, starts.count == media.count else {
-            let choice = choose(from: files, preferAudioOnly: preferAudioOnly)
+            let choice = choose(from: files)
             return [Part(choice: choice, start: choice.media?.recordingStart,
                          end: choice.media?.recordingEnd)]
         }
@@ -247,8 +236,7 @@ enum ZoomFileSelection {
         }
 
         return groups.enumerated().map { index, group in
-            let choice = choose(from: group + [transcriptFor[index]].compactMap { $0 },
-                                preferAudioOnly: preferAudioOnly)
+            let choice = choose(from: group + [transcriptFor[index]].compactMap { $0 })
             return Part(choice: choice, start: spans[index].start, end: spans[index].end)
         }
     }

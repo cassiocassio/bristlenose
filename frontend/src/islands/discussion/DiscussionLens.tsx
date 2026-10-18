@@ -468,20 +468,35 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
 
   // The grid's pitch is a ONE-digit head badge plus 4px (decided 18 Oct 2026): a 10–12 head is
   // squeezed into the same box, so twelve sessions cost twelve one-digit columns, not two-digit
-  // ones. The probe is always laid out (invisible), so the measure never reads a hidden element.
+  // ones. The probe is always laid out (invisible). A ResizeObserver on the guide and the probe
+  // re-measures whenever either changes size — a drag, a fold, a late font, a scrollbar — and a
+  // folded guide or an unlaid probe measures 0, which keeps the tier rather than guessing.
+  const lastPitch = useRef(0);
   const fitMeasure = useCallback(() => {
     const nav = navRef.current, lens = lensRef.current;
     const head = probeRef.current?.firstElementChild;
     if (!nav || !lens) return;
     const w = head ? head.getBoundingClientRect().width : 0;
+    if (nav.clientWidth === 0 || !(w > 0)) return;
     const pitch = Math.ceil(w) + 4;
-    if (w > 0) {
+    if (pitch !== lastPitch.current) {
+      lastPitch.current = pitch;
       lens.style.setProperty("--dl-head-w", `${w}px`);
       lens.style.setProperty("--dl-pitch", `${pitch}px`);
     }
-    const next = measureTier(nav.clientWidth, order.length, pitch);
-    setTier((t) => (t === next ? t : next));
+    const cs = getComputedStyle(nav);
+    const width = nav.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+    setTier((t) => measureTier(width, order.length, pitch, t));
   }, [order.length]);
+  useLayoutEffect(() => {
+    fitMeasure();
+    const nav = navRef.current, probe = probeRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => fitMeasure());
+    ro.observe(nav);
+    if (probe) ro.observe(probe);
+    return () => ro.disconnect();
+  }, [fitMeasure]);
 
   const drawWires = useCallback(() => {
     const gut = gutRef.current, nav = navRef.current, content = contentRef.current;
@@ -525,7 +540,6 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           const gut = gutNow > 0 ? gutNow : p.gut;
           return p.lens === lens && p.nav === nav && p.gut === gut && p.view === view ? p : { lens, nav, gut, view };
         });
-        fitMeasure();
         drawWires();
       });
     };
@@ -540,7 +554,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       window.removeEventListener("resize", schedule);
       nav?.removeEventListener("scroll", schedule);
     };
-  }, [fitMeasure, drawWires, entries, column, navW, all]);
+  // `tier` too: a tier change moves every row (the grid's head arrives), so the wires redraw.
+  }, [drawWires, entries, column, navW, all, tier]);
 
   // ── the split ──
   const navMax = Math.max(MIN_WIDTH, NAV_MAX_SHARE * sizes.lens);
@@ -608,10 +623,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       : r.mark === "dot" ? S.markBoth : r.mark === "hollow" ? S.markHollow : S.markPlus;
 
   // The label a session's cell, head or lead-in reads by: "#3 Bettina and Kwame", or "#4".
-  const sessionName = (sid: string) => {
-    const sess = byId.get(sid);
-    return sess ? S.sessionLabel(sess.number, fullNames(sess)).trim() : "";
-  };
+  // Built once per language, not once per cell (a 12-session guide has hundreds of cells).
+  const names = useMemo(
+    () => new Map(data.sessions.map((sess) => [sess.id, S.sessionLabel(sess.number, fullNames(sess)).trim()])),
+    // tr.language: the label is a translated string
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, fullNames, tr.language]);
+  const sessionName = (sid: string) => names.get(sid) ?? "";
 
   // The row's measure, replacing the session chips and #N ▾ (decided 18 Oct 2026). One cell per
   // session, shaded by the quotes it drew in the study's thirds; not asked and asked-but-nothing
@@ -621,7 +639,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     const total = rowTotal(r);
     return (
       <span className="dl-measure">
-        <span className="dl-cells">
+        {tier !== "bar" && <span className="dl-cells">
           {data.sessions.map((sess) => {
             const asked = r.sessions.includes(sess.id);
             const q = asked ? cellQuotes(answers, r.id, sess.id) : 0;
@@ -640,9 +658,12 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
                 }} />
             );
           })}
-        </span>
+        </span>}
         <span className="tag-bar-area">
-          {total > 0 && <MicroBar value={barShare(total, rowMax)} colour="var(--dl-bar)" />}
+          {/* The bar's own 48px box, so its share is of the bar and not of the whole area. */}
+          <span className="dl-bar-box" aria-hidden="true">
+            {total > 0 && <MicroBar value={barShare(total, rowMax)} colour="var(--dl-bar)" />}
+          </span>
           <span className="tag-count" aria-hidden="true">{total}</span>
         </span>
         <span className="bn-sr-only">{`, ${S.askedInOf(r.sessions.length, data.sessions.length, total)}`}</span>

@@ -178,7 +178,11 @@ describe("all sessions", () => {
     expect(shadeStep(10, thirds)).toBe(3);
     const spread = yieldThirds([1, 2, 3, 4, 5, 6]);
     expect([1, 2, 3, 4, 5, 6].map((n) => shadeStep(n, spread))).toEqual([1, 1, 2, 2, 3, 3]);
-    expect(yieldThirds([0, 0])).toEqual([0, 0]);
+    expect(yieldThirds([0, 0])).toEqual([0, 0, 0]);
+    // ties and short studies: the richest cell is still the darkest
+    const tied = yieldThirds([1, 1, 1, 2, 2, 2]);
+    expect([1, 2].map((n) => shadeStep(n, tied))).toEqual([1, 3]);
+    expect(shadeStep(4, yieldThirds([4, 4]))).toBe(2); // all alike: nothing to rank
   });
 
   it("the bar is logarithmic: one quote of a maximum ten is about a third, not a tenth", () => {
@@ -193,6 +197,10 @@ describe("all sessions", () => {
     const fixed = MEASURE.rowChrome + MEASURE.textMin + MEASURE.gap;
     const pitch = 23;
     expect(measureTier(fixed + 8 * pitch + MEASURE.bar, 8, pitch)).toBe("grid");
+    // stepping up needs MEASURE.hysteresis to spare; holding a tier does not
+    expect(measureTier(fixed + 8 * pitch + MEASURE.bar, 8, pitch, "strip")).toBe("strip");
+    expect(measureTier(fixed + 8 * pitch + MEASURE.bar + MEASURE.hysteresis, 8, pitch, "strip")).toBe("grid");
+    expect(measureTier(fixed + 8 * pitch + MEASURE.bar, 8, pitch, "grid")).toBe("grid");
     expect(measureTier(fixed + 8 * pitch + MEASURE.bar - 1, 8, pitch)).toBe("strip");
     expect(measureTier(fixed + 8 * MEASURE.strip + MEASURE.count - 1, 8, pitch)).toBe("bar");
     expect(measureTier(2000, 1, pitch)).toBe("bar"); // one session: nothing to compare

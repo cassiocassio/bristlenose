@@ -217,17 +217,22 @@ export function cellQuotes(answers: ItemAnswers, item: string, session: string):
 /** The study's thirds: every asked cell that drew a quote, ranked by its count;
  *  a cell's shade is the third it falls in. Normalised to the study, so a dark
  *  cell means "among this study's richest answers" whatever the study's scale. */
-export function yieldThirds(counts: number[]): [number, number] {
+export function yieldThirds(counts: number[]): [number, number, number] {
   const v = counts.filter((n) => n > 0).sort((a, b) => a - b);
-  if (!v.length) return [0, 0];
-  return [v[Math.ceil(v.length / 3) - 1], v[Math.ceil((2 * v.length) / 3) - 1]];
+  if (!v.length) return [0, 0, 0];
+  return [v[Math.ceil(v.length / 3) - 1], v[Math.ceil((2 * v.length) / 3) - 1], v[v.length - 1]];
 }
 
 /** 0 = nothing to shade (not asked, or asked and no quotes: drawn alike, 18 Oct);
- *  1–3 = the lower, middle and upper third. */
-export function shadeStep(quotes: number, thirds: [number, number]): 0 | 1 | 2 | 3 {
+ *  1–3 = the lower, middle and upper third. When the cells differ, the study's richest
+ *  is always the darkest, even where ties or a short study put it in a lower third.
+ *  When every cell drew the same, there is nothing to rank: all take the middle step. */
+export function shadeStep(quotes: number, thirds: [number, number, number]): 0 | 1 | 2 | 3 {
   if (quotes <= 0) return 0;
-  return quotes <= thirds[0] ? 1 : quotes <= thirds[1] ? 2 : 3;
+  const [low, mid, max] = thirds;
+  if (max === low) return 2;
+  if (quotes >= max) return 3;
+  return quotes <= low ? 1 : quotes <= mid ? 2 : 3;
 }
 
 /** The row's bar, logarithmic: some data is much better than none, so the first
@@ -243,18 +248,26 @@ export function barShare(quotes: number, max: number): number {
 export type Tier = "bar" | "strip" | "grid";
 export const MEASURE = {
   textMin: 130,   // the narrowest a question's text may get
-  rowChrome: 38,  // the row's padding and its mark column
-  gap: 8,
-  bar: 72,        // bar + count
+  rowChrome: 38,  // a row's padding and its mark column (the guide's own padding is measured)
+  gap: 12,        // between the text and the measure, and between the cells and the count
+  bar: 72,        // bar + count (discussion.css: .dl-bar-box 48px, a gap, the count)
   count: 28,      // count alone
   strip: 8,       // a strip cell's pitch
+  hysteresis: 20, // stepping UP a tier needs this much to spare, so a scrollbar appearing
+                  // (up to 17px) when the grid's taller head arrives cannot flip it back
 } as const;
 
-export function measureTier(navWidth: number, sessions: number, pitch: number): Tier {
+const RANK: Record<Tier, number> = { bar: 0, strip: 1, grid: 2 };
+
+/** `width` is the guide's content width (its padding already taken off). `current`, when
+ *  given, is the tier showing now: stepping up from it needs MEASURE.hysteresis spare. */
+export function measureTier(width: number, sessions: number, pitch: number, current?: Tier): Tier {
   if (sessions < 2) return "bar";
-  const room = navWidth - MEASURE.rowChrome - MEASURE.textMin - MEASURE.gap;
-  if (room >= sessions * pitch + MEASURE.bar) return "grid";
-  if (room >= sessions * MEASURE.strip + MEASURE.count) return "strip";
+  const room = width - MEASURE.rowChrome - MEASURE.textMin - MEASURE.gap;
+  const fits = (t: Tier, need: number) =>
+    room >= need + (current !== undefined && RANK[t] > RANK[current] ? MEASURE.hysteresis : 0);
+  if (fits("grid", sessions * pitch + MEASURE.bar)) return "grid";
+  if (fits("strip", sessions * MEASURE.strip + MEASURE.count)) return "strip";
   return "bar";
 }
 

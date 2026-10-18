@@ -171,11 +171,12 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
      .dl-m-strip — one thin cell per session, then the count
      .dl-m-grid  — wider cells under one-digit heads, then the bar + count
    A cell is shaded by the quotes it drew, in the study's thirds (s1–s3). Not asked and asked-
-   with-no-quotes are both s0, the keyline alone. The ramp is the ink mixed into the paper — no
-   new colour, and it follows light and dark — and it starts well off the paper: some data is
-   much better than none. */
+   with-no-quotes are both s0, the keyline alone. No new colour: the ramp runs from the muted ink
+   to the ink, so it follows light, dark and every palette, and the lightest filled cell already
+   holds 3:1 on the guide's tint (review, 18 Oct: the first ramp mixed into the page's white and
+   its lightest step measured 2.3:1 here). Some data is much better than none. */
 .dl-lens {
-    --dl-bar: color-mix(in srgb, var(--bn-colour-text) 40%, var(--bn-colour-bg));
+    --dl-bar: var(--bn-colour-muted);
     --dl-cell-pitch: 8px; --dl-cell-w: 6px; --dl-cell-h: 12px;
 }
 .dl-lens.dl-m-grid {
@@ -190,30 +191,43 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
     justify-items: center; align-items: center;
 }
 .dl-cell {
-    appearance: none; padding: 0; margin: 0; border: 0; cursor: pointer;
-    width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: 2px;
+    appearance: none; padding: 0; margin: 0; border: 0;
+    width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: var(--bn-radius-sm);
 }
-.dl-cell.s0 { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
-.dl-cell[aria-disabled="true"] { cursor: default; }
-.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 38%, var(--bn-colour-bg)); }
-.dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 56%, var(--bn-colour-bg)); }
-.dl-cell.s3 { background: color-mix(in srgb, var(--bn-colour-text) 76%, var(--bn-colour-bg)); }
-/* The selected session's column: the accent ring is a cell's "you are here". */
+button.dl-cell { cursor: pointer; }
+/* The empty cell's keyline: the muted ink half-way into the guide's tint, so a strip's empty
+   slots still read as slots (the border token measured 1.2:1 on the tint). */
+.dl-cell.s0 {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bn-colour-muted) 50%, var(--bn-colour-inspector-bg));
+}
+button.dl-cell[aria-disabled="true"] { cursor: default; }
+.dl-cell.s1 { background: var(--bn-colour-muted); }
+.dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 50%, var(--bn-colour-muted)); }
+.dl-cell.s3 { background: var(--bn-colour-text); }
+/* The selected session's column: the accent ring is a cell's "you are here". Hover never
+   replaces it. */
 .dl-cell.here { outline: 1.5px solid var(--bn-colour-accent); outline-offset: 1px; }
-.dl-cell:not([aria-disabled="true"]):hover { outline: 1px solid var(--bn-colour-text); outline-offset: 1px; }
-.dl-measure .tag-bar-area { display: inline-flex; align-items: center; justify-content: flex-end;
-    gap: var(--bn-space-xs); width: 72px; }
-.dl-measure .tag-micro-bar { display: inline-block; max-width: 48px; }
+button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
+    outline: 1px solid var(--bn-colour-border-hover); outline-offset: 1px;
+}
+.dl-measure .tag-bar-area {
+    display: inline-flex; align-items: center; justify-content: flex-end;
+    gap: var(--bn-space-xs); min-width: 0;   /* the codebook's 50px minimum is not this row's */
+}
+/* The bar's own box: its share is of 48px, not of the whole area, so a row with half the
+   busiest row's quotes draws half a bar. */
+.dl-bar-box { display: inline-flex; justify-content: flex-end; width: 48px; }
 .dl-measure .tag-count {
-    font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+    font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh); color: var(--bn-colour-muted);
     min-width: 16px; text-align: right; font-variant-numeric: tabular-nums;
 }
-.dl-m-bar .dl-cells { display: none; }
-.dl-m-strip .dl-measure .tag-bar-area { width: auto; }
-.dl-m-strip .dl-measure .tag-micro-bar { display: none; }
-/* The key's swatches */
-.dl-key .dl-cell { display: inline-block; vertical-align: -1px; width: 10px; height: 10px; margin-right: 2px; }
-.dl-key .dl-cell + .dl-cell { margin-left: 0; }
+.dl-m-strip .dl-bar-box { display: none; }
+/* The key's swatches: not controls, so no pointer and no hover. */
+.dl-key .dl-cell {
+    display: inline-block; vertical-align: -1px; width: 10px; height: 10px; margin-right: var(--bn-space-xs);
+}
+.dl-key .dl-cell + .dl-cell { margin-left: calc(-1 * var(--bn-space-xs) + 2px); }
 /* The grid's one-digit heads, sticky under the bar; a 10–12 head is squeezed into the same box
    (no side padding, tighter tracking) rather than widening every column. */
 .dl-head-probe { position: absolute; visibility: hidden; pointer-events: none; left: 0; top: 0; }
@@ -304,12 +318,13 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 
 /* ── All: the guide's order, each question once, a block per session ── */
 .dl-content .dl-part {
-    font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted);
-    margin: var(--bn-space-xl) 0 0; padding-bottom: 0.25rem;
+    font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh);
+    font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted);
+    margin: var(--bn-space-xl) 0 0; padding-bottom: var(--bn-space-xs);
     border-bottom: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width);
 }
 .dl-content .dl-item { scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md)); }
-.dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); }
+.dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); overflow-wrap: anywhere; }
 .dl-content .dl-item > h3 + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }
 /* A session's lead-in: its bar badge, a button that opens this session at this question. */
 .dl-from {
@@ -321,7 +336,7 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 .dl-from:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 .dl-from .bn-speaker-badge-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
 /* "Not asked in #4 #11": absence shown, one line, the sessions as absent compact badges. */
-.dl-notasked { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: var(--bn-space-sm); }
+.dl-notasked { display: flex; flex-wrap: wrap; gap: var(--bn-space-xs); align-items: center; margin-top: var(--bn-space-sm); }
 .dl-notasked > span:first-child { margin-right: var(--bn-space-xs); }
 /* Asks never classified close All, apart from the last question by a keyline. */
 .dl-content .dl-leftovers { margin-top: var(--bn-space-xl); border-top: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width); }

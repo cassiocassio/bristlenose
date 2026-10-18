@@ -8,6 +8,7 @@ import enDesktop from "@locales/en/desktop.json";
 import { _resetPlatformCache } from "../../utils/platform";
 import { _resetEmbeddedCache } from "../../utils/embedded";
 import { resetLensState } from "./lensState";
+import { cellQuotes, itemAnswers, shadeStep, yieldThirds } from "./model";
 import { discussionGuideState, resetDiscussionGuide, setDiscussionGuideOpen, setPendingGuide, toggleDiscussionGuide } from "./guidePanel";
 import type { DiscussionData } from "./types";
 
@@ -24,6 +25,39 @@ function heading() {
 /** Pick a session by its digit key (the lens opens on All once there are two sessions). */
 function onSession(n: number) {
   fireEvent.keyDown(document, { key: String(n) });
+}
+
+/** jsdom lays nothing out, and the navigator's measure (bar → strip → grid) is chosen by
+ *  measuring. This gives the guide a content width and the one-digit probe head a width, and
+ *  stands in for the ResizeObserver the lens re-measures through. Restore in a finally. */
+function layout(nav: number, probe = 19) {
+  const size = { nav, probe };
+  const cw = vi.spyOn(Element.prototype, "clientWidth", "get").mockImplementation(function (this: Element) {
+    return this.classList.contains("dl-nav") ? size.nav : 0;
+  });
+  const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+    const w = this.closest(".dl-head-probe") ? size.probe : 0;
+    return { width: w, height: 0, top: 0, left: 0, right: w, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+  });
+  const observers: (() => void)[] = [];
+  const real = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = class {
+    constructor(cb: () => void) { observers.push(cb); }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+  return {
+    resize(next: Partial<typeof size>) {
+      Object.assign(size, next);
+      act(() => observers.forEach((cb) => cb()));
+    },
+    restore() {
+      cw.mockRestore();
+      rect.mockRestore();
+      globalThis.ResizeObserver = real;
+    },
+  };
 }
 
 beforeEach(() => {
@@ -48,8 +82,6 @@ describe("DiscussionView", () => {
       const missing = data.sessions.length - sessions.size;
       expect(block.querySelectorAll(".dl-notasked .bn-person-badge-absent")).toHaveLength(missing);
     }
-    // no wires: the column is in the guide's own order
-    expect(container.querySelectorAll(".dl-wire")).toHaveLength(0);
   });
 
   it("All loses no quote: before the first question, under a question, or under an unclassified ask", () => {
@@ -92,11 +124,16 @@ describe("DiscussionView", () => {
         ...sec, items: sec.items.map((it) => ({ ...it, asks: it.asks.filter((a) => a.session !== "s1") })),
       })),
     };
+    const L = layout(800);
+    try {
     const { container } = render(<DiscussionView data={d} />);
     for (const line of container.querySelectorAll(".dl-notasked")) expect(line.textContent).not.toContain("#1");
     const cells = [...container.querySelectorAll(".dl-row .dl-cell")].filter((c) => c.getAttribute("aria-label")?.startsWith("#1"));
     expect(cells.length).toBeGreaterThan(0);
     for (const c of cells) expect(c.getAttribute("aria-label")).toMatch(/not classified$/);
+    } finally {
+      L.restore();
+    }
   });
 
   it("a session shows that session's questions and quotes, in the order they were asked", () => {
@@ -207,6 +244,8 @@ describe("DiscussionView", () => {
   });
 
   it("a session's cell in a row opens that session at that question; a not-asked cell does nothing", () => {
+    const L = layout(800);
+    try {
     const { container } = render(<DiscussionView data={data} />);
     const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
     const target = data.sessions.find((s) => s.id !== "s1" && multi.asks.some((a) => a.session === s.id))!;
@@ -222,6 +261,9 @@ describe("DiscussionView", () => {
     expect(notAsked.getAttribute("aria-label")).toMatch(/Not asked$/);
     fireEvent.click(notAsked);
     expect(heading()).toBe(`Session ${target.number}`);
+      } finally {
+      L.restore();
+    }
   });
 
   it("a session's lead-in in All opens that session at that question", () => {
@@ -236,20 +278,33 @@ describe("DiscussionView", () => {
     expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
   });
 
-  it("each cell is shaded by the quotes it drew, and the row says its totals in words", () => {
-    const { container } = render(<DiscussionView data={data} />);
-    const rows = [...container.querySelectorAll<HTMLElement>(".dl-nav .dl-row")];
-    for (const r of rows) {
-      const it = data.sections.flatMap((s) => s.items).find((i) => i.id === r.dataset.id)!;
-      const cells = [...r.querySelectorAll(".dl-cell")];
-      expect(cells).toHaveLength(data.sessions.length);
-      // a session that never asked it is never shaded
-      data.sessions.forEach((sess, i) => {
-        if (!it.asks.some((a) => a.session === sess.id)) expect(cells[i]).toHaveClass("s0");
-      });
-      const asked = new Set(it.asks.map((a) => a.session)).size;
-      expect(r.querySelector(".dl-measure .bn-sr-only")!.textContent)
-        .toMatch(new RegExp(`Asked in ${asked} of ${data.sessions.length} sessions, \\d+ quotes?$`));
+  it("each cell is shaded by the quotes it drew, in the study's thirds, and the row says its totals", () => {
+    const L = layout(800);
+    try {
+      const { container } = render(<DiscussionView data={data} />);
+      const answers = itemAnswers(data);
+      const counts: number[] = [];
+      for (const [item, bySession] of answers) for (const sid of bySession.keys()) counts.push(cellQuotes(answers, item, sid));
+      const thirds = yieldThirds(counts);
+      const steps = new Set<string>();
+      for (const r of container.querySelectorAll<HTMLElement>(".dl-nav .dl-row")) {
+        const it = data.sections.flatMap((s) => s.items).find((i) => i.id === r.dataset.id)!;
+        const cells = [...r.querySelectorAll(".dl-cell")];
+        expect(cells).toHaveLength(data.sessions.length);
+        data.sessions.forEach((sess, i) => {
+          const asked = it.asks.some((a) => a.session === sess.id);
+          const want = asked ? `s${shadeStep(cellQuotes(answers, it.id, sess.id), thirds)}` : "s0";
+          expect(cells[i]).toHaveClass(want);
+          steps.add(want);
+        });
+        const total = data.sessions.reduce((n, sess) => n + cellQuotes(answers, it.id, sess.id), 0);
+        expect(r.querySelector(".tag-count")!.textContent).toBe(String(total));
+      }
+      // asked cells are shaded, not all drawn as not asked (the fixture's cells all drew one
+      // quote, so all take the middle step; the ranking itself is model.test.ts's)
+      expect([...steps].some((x) => x !== "s0")).toBe(true);
+    } finally {
+      L.restore();
     }
   });
 
@@ -432,51 +487,47 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(within(nav()).getAllByRole("heading", { level: 2 }).length).toBe(data.sections.length);
   });
 
-  it("the measure is chosen by measuring the guide, and holds frame after frame", async () => {
-    // jsdom lays nothing out: give the guide a width and the one-digit probe head a size.
-    const navDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
-    let navW = 600;
-    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
-      configurable: true,
-      get(this: HTMLElement) { return this.classList.contains("dl-nav") ? navW : 0; },
-    });
-    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
-      const w = this.closest(".dl-head-probe") ? 19 : 0;
-      return { width: w, height: 0, top: 0, left: 0, right: w, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
-    });
-    const frames = async () => act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+  it("the measure is chosen by measuring the guide and its one-digit head, and holds", () => {
+    // 3 sessions; the guide's text keeps 130px, its row chrome and gaps 50px: room = nav − 180.
+    // The grid needs 3 × pitch + 72 (+20 to step up into it); the strip 3 × 8 + 28.
+    const L = layout(380, 19); // pitch 23: 69 + 72 + 20 = 161 ≤ 200 → grid
     try {
       const { container } = render(<DiscussionView data={data} />);
       const lens = () => container.querySelector(".dl-lens")!;
-      await frames();
       expect(lens()).toHaveClass("dl-m-grid");
-      // the grid's heads, one-digit compact badges, none lit in All
-      const heads = container.querySelectorAll(".dl-grid-head .bn-person-badge-compact");
-      expect(heads).toHaveLength(data.sessions.length);
+      expect((lens() as HTMLElement).style.getPropertyValue("--dl-pitch")).toBe("23px");
+      // the heads: one-digit compact badges, none lit in All, the selected one lit in a session
+      expect(container.querySelectorAll(".dl-grid-head .bn-person-badge-compact")).toHaveLength(data.sessions.length);
       expect(container.querySelector(".dl-grid-head .bn-person-badge-here")).toBeNull();
-      for (let i = 0; i < 3; i++) {
-        fireEvent.scroll(window);
-        await frames();
-        expect(lens()).toHaveClass("dl-m-grid");
-      }
-      // a selected session's head is "here"
       onSession(2);
-      await frames();
       expect(container.querySelectorAll(".dl-grid-head .bn-person-badge-here")).toHaveLength(1);
-      navW = 230; // narrower: the strip, then the bar
-      fireEvent.scroll(window);
-      await frames();
+      // the probe decides: a wider head (pitch 44: 132 + 72 = 204 > 200) cannot hold the grid
+      L.resize({ probe: 40 });
       expect(lens()).toHaveClass("dl-m-strip");
       expect(container.querySelector(".dl-grid-head")).toBeNull();
-      navW = 150;
-      fireEvent.scroll(window);
-      await frames();
+      expect(container.querySelector(".dl-cells")).not.toBeNull();
+      // stepping back up needs 20px to spare, so a scrollbar's width cannot flip it to and fro
+      L.resize({ probe: 19, nav: 330 }); // 141 ≤ 150, but 161 > 150: stays strip
+      expect(lens()).toHaveClass("dl-m-strip");
+      L.resize({ nav: 345 });              // 161 ≤ 165: steps up
+      expect(lens()).toHaveClass("dl-m-grid");
+      L.resize({ nav: 325 });              // 141 ≤ 145: a grid holds without the spare
+      expect(lens()).toHaveClass("dl-m-grid");
+      L.resize({ nav: 150 });              // under the strip's 52: the bar, and no cells at all
       expect(lens()).toHaveClass("dl-m-bar");
+      expect(container.querySelector(".dl-cells")).toBeNull();
+      // a folded guide (or an unlaid probe) measures 0 and keeps the tier, never guesses
+      L.resize({ nav: 380 });
+      expect(lens()).toHaveClass("dl-m-grid");
+      L.resize({ nav: 0 });
+      expect(lens()).toHaveClass("dl-m-grid");
+      L.resize({ nav: 380, probe: 0 });
+      expect(lens()).toHaveClass("dl-m-grid");
     } finally {
-      rect.mockRestore();
-      if (navDesc) Object.defineProperty(HTMLElement.prototype, "clientWidth", navDesc);
+      L.restore();
     }
   });
+
 
   it("remembers All across a lens switch", () => {
     const first = render(<DiscussionView data={data} />);

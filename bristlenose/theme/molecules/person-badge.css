@@ -104,11 +104,12 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
 }
 
 /* Compact: the code half alone, tight, for a row of numbers in a narrow place (the Discussion
-   lens's grid heads, "Not asked in"). The keyline and the type size stay; only the line height
-   and padding tighten. Decided 18 Oct 2026 (docs/design-discussion-lens-plan.md §3). */
-.bn-person-badge-compact .bn-speaker-badge-code { line-height: 1; padding: 2px 0.3rem; }
+   lens's grid heads, decided 18 Oct 2026 — docs/design-discussion-lens-plan.md §3). The keyline
+   and the type size stay; only the line height and padding tighten. */
+.bn-person-badge-compact .bn-speaker-badge-code { line-height: 1; padding: var(--bn-space-xs) 0.3rem; }
 /* Absent: not here (not asked, did not speak). The outline only, muted ink, no fill — never
-   opacity, which took the text to 2.0:1 where it was tried. */
+   opacity, which took the text to 2.0:1 where it was tried. Built 18 Oct 2026 for the
+   Discussion lens's "Not asked in" line, which the plan still lists as proposed. */
 .bn-person-badge-absent .bn-speaker-badge-code { background: transparent; color: var(--bn-colour-muted); }
 
 /* Highlighted state */

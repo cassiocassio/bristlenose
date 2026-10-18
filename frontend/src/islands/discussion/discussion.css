@@ -76,9 +76,11 @@
 /* A group session's names are capped in copy ("Bettina and 4 others"); this is
    the backstop for very long single names. */
 .dl-sess .bn-speaker-badge-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
-.dl-sess:focus-visible, .dl-chip:focus-visible, .dl-row-btn:focus-visible, .dl-ask-btn:focus-visible {
+.dl-sess:focus-visible, .dl-cell:focus-visible, .dl-row-btn:focus-visible, .dl-ask-btn:focus-visible {
     outline: 2px solid var(--bn-colour-accent); outline-offset: 1px;
 }
+/* The keyline after All: All is a different kind of choice from a session. */
+.dl-sessions .dl-sep { width: 1px; align-self: stretch; margin: var(--bn-space-xs) 0; background: var(--bn-colour-border); }
 /* "You are here" is the shared .bn-person-badge-here (theme/molecules/person-badge.css), chosen
    here first (option C of the badge playground, 3 Oct 2026) and shared with the Screens lens's
    versions since 15 Oct 2026. Navigator rows carry #N only, so there the accent #N is the whole
@@ -162,18 +164,72 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
    the screen-reader text still say what it is). */
 .dl-row-btn[aria-disabled="true"] { cursor: default; }
 
-/* Adaptive session badges: the full row while it fits in CHIP_SHARE of the
-   navigator, else one native pull-down showing #N. */
-.dl-chips { display: inline-flex; gap: var(--bn-space-xs); flex: none; }
-.dl-chip { appearance: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
-.dl-pick { display: none; position: relative; flex: none; }
-.dl-pick select {
-    position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
-    appearance: none; -webkit-appearance: none; border: 0; font: inherit;
+/* ── the measure (decided 18 Oct 2026; plan §3 "All sessions") ──
+   Replaces the rows' session chips and #N ▾. Three tiers, one per lens, chosen by measuring
+   the guide (fitMeasure, measureTier in model.ts):
+     .dl-m-bar   — the tags sidebar's bar + count
+     .dl-m-strip — one thin cell per session, then the count
+     .dl-m-grid  — wider cells under one-digit heads, then the bar + count
+   A cell is shaded by the quotes it drew, in the study's thirds (s1–s3). Not asked and asked-
+   with-no-quotes are both s0, the keyline alone. The ramp is the ink mixed into the paper — no
+   new colour, and it follows light and dark — and it starts well off the paper: some data is
+   much better than none. */
+.dl-lens {
+    --dl-bar: color-mix(in srgb, var(--bn-colour-text) 40%, var(--bn-colour-bg));
+    --dl-cell-pitch: 8px; --dl-cell-w: 6px; --dl-cell-h: 12px;
 }
-.dl-pick:focus-within { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; border-radius: var(--bn-radius-sm); }
-.dl-row.compact .dl-chips { display: none; }
-.dl-row.compact .dl-pick { display: inline-flex; }
+.dl-lens.dl-m-grid {
+    --dl-cell-pitch: var(--dl-pitch, 23px);
+    --dl-cell-w: calc(var(--dl-pitch, 23px) - 6px);
+    --dl-cell-h: 14px;
+}
+.dl-nav .dl-row { align-items: center; }
+.dl-measure { display: inline-flex; align-items: center; gap: var(--bn-space-sm); flex: none; }
+.dl-cells {
+    display: inline-grid; grid-auto-flow: column; grid-auto-columns: var(--dl-cell-pitch);
+    justify-items: center; align-items: center;
+}
+.dl-cell {
+    appearance: none; padding: 0; margin: 0; border: 0; cursor: pointer;
+    width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: 2px;
+}
+.dl-cell.s0 { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
+.dl-cell[aria-disabled="true"] { cursor: default; }
+.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 38%, var(--bn-colour-bg)); }
+.dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 56%, var(--bn-colour-bg)); }
+.dl-cell.s3 { background: color-mix(in srgb, var(--bn-colour-text) 76%, var(--bn-colour-bg)); }
+/* The selected session's column: the accent ring is a cell's "you are here". */
+.dl-cell.here { outline: 1.5px solid var(--bn-colour-accent); outline-offset: 1px; }
+.dl-cell:not([aria-disabled="true"]):hover { outline: 1px solid var(--bn-colour-text); outline-offset: 1px; }
+.dl-measure .tag-bar-area { display: inline-flex; align-items: center; justify-content: flex-end;
+    gap: var(--bn-space-xs); width: 72px; }
+.dl-measure .tag-micro-bar { display: inline-block; max-width: 48px; }
+.dl-measure .tag-count {
+    font-size: var(--bn-text-caption); color: var(--bn-colour-muted);
+    min-width: 16px; text-align: right; font-variant-numeric: tabular-nums;
+}
+.dl-m-bar .dl-cells { display: none; }
+.dl-m-strip .dl-measure .tag-bar-area { width: auto; }
+.dl-m-strip .dl-measure .tag-micro-bar { display: none; }
+/* The key's swatches */
+.dl-key .dl-cell { display: inline-block; vertical-align: -1px; width: 10px; height: 10px; margin-right: 2px; }
+.dl-key .dl-cell + .dl-cell { margin-left: 0; }
+/* The grid's one-digit heads, sticky under the bar; a 10–12 head is squeezed into the same box
+   (no side padding, tighter tracking) rather than widening every column. */
+.dl-head-probe { position: absolute; visibility: hidden; pointer-events: none; left: 0; top: 0; }
+.dl-grid-head {
+    display: flex; align-items: center; gap: var(--bn-space-sm);
+    position: sticky; top: calc(-1 * var(--bn-space-sm)); z-index: 1;
+    margin: 0 0 var(--bn-space-sm); padding: var(--bn-space-xs) var(--bn-space-sm);
+    background: var(--bn-colour-inspector-bg); border-bottom: 1px solid var(--bn-colour-border);
+}
+.dl-grid-head-l { flex: 1; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
+.dl-head-cell { display: inline-flex; justify-content: center; }
+.dl-head-cell.wide .bn-speaker-badge-code {
+    box-sizing: border-box; width: var(--dl-head-w, auto); padding-inline: 0;
+    display: inline-flex; justify-content: center; letter-spacing: -0.04em;
+}
+.dl-head-bar { width: 72px; flex: none; }
 
 /* ── gutter: wires and the split ── */
 .dl-gut {
@@ -245,6 +301,28 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 .dl-noans { margin-top: var(--bn-space-xs); }
 .dl-before { padding: var(--bn-space-xs) var(--bn-space-sm); }
 .dl-group blockquote.dl-ask.hot { background: var(--bn-nav-selection-bg); }
+
+/* ── All: the guide's order, each question once, a block per session ── */
+.dl-content .dl-part {
+    font-size: var(--bn-text-label); font-weight: var(--bn-weight-emphasis); color: var(--bn-colour-muted);
+    margin: var(--bn-space-xl) 0 0; padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width);
+}
+.dl-content .dl-item { scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md)); }
+.dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); }
+.dl-content .dl-item > h3 + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }
+/* A session's lead-in: its bar badge, a button that opens this session at this question. */
+.dl-from {
+    display: inline-flex; align-items: center; margin: 0 0 var(--bn-space-xs) calc(-1 * var(--bn-space-xs));
+    padding: var(--bn-space-xs); background: none; border: 0; border-radius: var(--bn-radius-md);
+    font: inherit; cursor: pointer;
+}
+.dl-from:hover { background: var(--bn-colour-hover); }
+.dl-from:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
+.dl-from .bn-speaker-badge-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
+/* "Not asked in #4 #11": absence shown, one line, the sessions as absent compact badges. */
+.dl-notasked { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; margin-top: var(--bn-space-sm); }
+.dl-notasked > span:first-child { margin-right: var(--bn-space-xs); }
 
 /* The guide folded, by the researcher or by the fit (guidePanel.ts): the
    conversation takes the width. The lens keeps its bleed so it measures the

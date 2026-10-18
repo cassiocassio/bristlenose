@@ -21,31 +21,39 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { Badge } from "../../components/Badge";
+import { MicroBar } from "../../components/MicroBar";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
 import { announce } from "../../utils/announce";
 import { isExportMode } from "../../utils/exportData";
 import { dt } from "../../utils/platformTranslation";
-import { formatFinderFilename } from "../../utils/format";
+import { formatDurationHuman, formatFinderFilename } from "../../utils/format";
 import { isEmbedded } from "../../utils/embedded";
 import { postProjectAction } from "../../shims/bridge";
 import { CONTENT_FLOOR_PX, fitPanels } from "../../contexts/SidebarStore";
 import { MIN_WIDTH, RESIZE_STEP } from "./split";
 import { reportDiscussionGuide, useDiscussionGuide } from "./guidePanel";
 import {
+  ALL,
+  barShare,
   capNames,
+  cellQuotes,
+  itemAnswers,
   litTurns,
+  measureTier,
   navEntries,
   sessionColumn,
   sessionForFocus,
   sessionStats,
-  shownSession,
+  shadeStep,
   wirePath,
+  yieldThirds,
   type Focus,
   type GuideView,
   type Mode,
   type NavEntry,
   type NavRow,
+  type Tier,
   type WireEnd,
 } from "./model";
 import { loadDiscussion, type DiscussionLoad } from "./loadDiscussion";
@@ -85,12 +93,20 @@ const S = {
   stats: (duration: string, q: number, n: number) =>
     d("stats", { duration, questions: d("questionCount", { count: q }), quotes: d("quoteCount", { count: n }) }),
   get noAnswers() { return d("noAnswers"); },
+  get all() { return d("all"); },
+  get allSessions() { return d("allSessions"); },
+  get notAskedIn() { return d("notAskedIn"); },
+  get notAsked() { return d("notAsked"); },
+  showSession: (n: number) => d("showSession", { n }),
+  quotes: (n: number) => d("quoteCount", { count: n }),
+  askedInOf: (asked: number, total: number, quotes: number) =>
+    d("askedInOf", { asked, total, quotes: d("quoteCount", { count: quotes }) }),
+  get keyMeasure() { return d("keyMeasure"); },
   get before() { return d("before"); },
   get noQuestions() { return d("noQuestions"); },
   get noSessions() { return d("noSessions"); },
   get unclassified() { return d("unclassified"); },
   others: (first: string, n: number) => d("others", { first, count: n }),
-  askedIn: (n: number) => d("askedIn", { count: n }),
   sessionLabel: (n: number, names: string) => d("sessionLabel", { n, names }),
   get resize() { return d("resize"); },
   resizeText: (pct: number) => d("resizeText", { pct }),
@@ -143,7 +159,6 @@ interface ListFormatter {
 type ListFormatCtor = new (locale: string, opts: { style: string; type: string }) => ListFormatter;
 const ListFormat = (Intl as unknown as { ListFormat?: ListFormatCtor }).ListFormat;
 
-const CHIP_SHARE = 0.3;      // a row's badges collapse past 30% of the navigator's width
 const NAV_MAX_SHARE = 0.6;   // the navigator may widen to 60% of the lens
 // Its opening width: the CSS default it replaced, clamp(--bn-sidebar-width, 30vw, --bn-sidebar-max).
 const NAV_OPEN_MIN = 280, NAV_OPEN_MAX = 480, NAV_OPEN_SHARE = 0.3;
@@ -257,12 +272,20 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
   const [guideNote, setGuideNote] = useState(false);
-  const [session, setSession] = useState<string>(
-    arrived?.session ?? (saved.session && order.includes(saved.session) ? saved.session : (order[0] ?? "")),
-  );
+  // All is the first choice and the default once there are two sessions (decided 17 Oct 2026);
+  // with one, All would be that session twice, so there is no All.
+  const multi = order.length > 1;
+  const [session, setSession] = useState<string>(() => {
+    if (arrived?.session) return arrived.session;
+    if (saved.session === ALL && multi) return ALL;
+    if (saved.session && order.includes(saved.session)) return saved.session;
+    return multi ? ALL : (order[0] ?? "");
+  });
+  const all = session === ALL;
   const [focus, setFocus] = useState<Focus | null>(arrived ? { item: arrived.item, turn: arrived.turn } : saved.focus);
   const [navW, setNavW] = useState<number | null>(saved.navWidth);
-  const [compact, setCompact] = useState<Set<string>>(new Set());
+  // The navigator's measure (bar + count → strip → grid), chosen by measuring the guide.
+  const [tier, setTier] = useState<Tier>("bar");
   // Measured in the same frame as the wires — never read from the DOM during render.
   const [sizes, setSizes] = useState<{ lens: number; nav: number; gut: number; view: number }>(
     { lens: 1000, nav: MIN_WIDTH, gut: 40, view: 1000 });
@@ -280,7 +303,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const navRef = useRef<HTMLElement>(null);
   const gutRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const natural = useRef(new Map<string, number>()); // each row's badges at full width
+  const probeRef = useRef<HTMLSpanElement>(null); // a one-digit head badge: the grid's pitch
   const lastWires = useRef("");
 
   // "Sarah and Mike", "Tom, Dick and Harry" — the UI locale's own list form.
@@ -312,6 +335,19 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const stats = useMemo(() => sessionStats(data, session), [data, session]);
   const lit = useMemo(() => litTurns(data, session, focus), [data, session, focus]);
   const current = byId.get(session);
+  // What each session gave each question — the All column and the measure count the same thing.
+  const answers = useMemo(() => itemAnswers(data), [data]);
+  const thirds = useMemo(() => {
+    const counts: number[] = [];
+    for (const bySession of answers.values()) {
+      for (const asks of bySession.values()) counts.push(asks.reduce((n, a) => n + a.answers.length, 0));
+    }
+    return yieldThirds(counts);
+  }, [answers]);
+  const rowTotal = useCallback(
+    (r: NavRow) => r.sessions.reduce((n, sid) => n + cellQuotes(answers, r.id, sid), 0), [answers]);
+  const rowMax = useMemo(
+    () => Math.max(0, ...entries.filter((x): x is NavRow => x.type === "row").map(rowTotal)), [entries, rowTotal]);
 
   // ── selection & focus ──
   const selectSession = useCallback(
@@ -319,7 +355,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       setSession(sid);
       // a question is per session; keep its topic, drop the specific ask
       setFocus((f) => (f && f.turn ? { item: f.item, turn: null } : f));
-      announce(S.announceSession(num(sid), data.turns.filter((t) => t.session === sid && t.item).length));
+      announce(sid === ALL ? S.allSessions
+        : S.announceSession(num(sid), data.turns.filter((t) => t.session === sid && t.item).length));
     },
     [data, num],
   );
@@ -404,7 +441,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // Bring the first lit question into view when a navigator row takes focus.
   useEffect(() => {
     if (!focus || focus.turn) return;
-    const el = contentRef.current?.querySelector<HTMLElement>(".dl-ask.hot");
+    // In All the question has a heading of its own: land on it, not on its first session's ask.
+    const el = session === ALL
+      ? contentRef.current?.querySelector<HTMLElement>(`.dl-item[data-item="${CSS.escape(focus.item)}"]`)
+      : contentRef.current?.querySelector<HTMLElement>(".dl-ask.hot");
     if (!el) return;
     const r = el.getBoundingClientRect();
     const barH = barRef.current?.getBoundingClientRect().height ?? 0;
@@ -420,28 +460,29 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return () => ro.disconnect();
   }, []);
 
-  const fitChips = useCallback(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const limit = CHIP_SHARE * nav.clientWidth;
-    const next = new Set<string>();
-    nav.querySelectorAll<HTMLElement>(".dl-row").forEach((r) => {
-      const id = r.dataset.id ?? "";
-      const chips = r.querySelector<HTMLElement>(".dl-chips");
-      if (!chips) return;
-      // A collapsed row's badges are display:none and measure 0 — so measure only
-      // while they are shown, and remember. (Measuring the hidden row flipped it
-      // open and shut every frame: review, 3 Oct 2026.)
-      if (!r.classList.contains("compact") && chips.scrollWidth > 0) natural.current.set(id, chips.scrollWidth);
-      if ((natural.current.get(id) ?? 0) > limit) next.add(id);
-    });
-    setCompact((prev) => (prev.size === next.size && [...next].every((x) => prev.has(x)) ? prev : next));
-  }, []);
+  // The grid's pitch is a ONE-digit head badge plus 4px (decided 18 Oct 2026): a 10–12 head is
+  // squeezed into the same box, so twelve sessions cost twelve one-digit columns, not two-digit
+  // ones. The probe is always laid out (invisible), so the measure never reads a hidden element.
+  const fitMeasure = useCallback(() => {
+    const nav = navRef.current, lens = lensRef.current;
+    const head = probeRef.current?.firstElementChild;
+    if (!nav || !lens) return;
+    const w = head ? head.getBoundingClientRect().width : 0;
+    const pitch = Math.ceil(w) + 4;
+    if (w > 0) {
+      lens.style.setProperty("--dl-head-w", `${w}px`);
+      lens.style.setProperty("--dl-pitch", `${pitch}px`);
+    }
+    const next = measureTier(nav.clientWidth, order.length, pitch);
+    setTier((t) => (t === next ? t : next));
+  }, [order.length]);
 
   const drawWires = useCallback(() => {
     const gut = gutRef.current, nav = navRef.current, content = contentRef.current;
     const out: Wire[] = [];
-    if (gut && nav && content && gut.offsetParent !== null) {
+    // All reads in the guide's own order, so a wire would join a row to the heading beside it.
+    const allView = lensRef.current?.dataset.all === "true";
+    if (gut && nav && content && gut.offsetParent !== null && !allView) {
       const g = gut.getBoundingClientRect();
       const nb = nav.getBoundingClientRect();
       const end = (el: Element, top: number, bottom: number): WireEnd => {
@@ -478,7 +519,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           const gut = gutNow > 0 ? gutNow : p.gut;
           return p.lens === lens && p.nav === nav && p.gut === gut && p.view === view ? p : { lens, nav, gut, view };
         });
-        fitChips();
+        fitMeasure();
         drawWires();
       });
     };
@@ -493,7 +534,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       window.removeEventListener("resize", schedule);
       nav?.removeEventListener("scroll", schedule);
     };
-  }, [fitChips, drawWires, entries, column, navW]);
+  }, [fitMeasure, drawWires, entries, column, navW, all]);
 
   // ── the split ──
   const navMax = Math.max(MIN_WIDTH, NAV_MAX_SHARE * sizes.lens);
@@ -560,15 +601,57 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     mode === "planned" ? S.markPlanned
       : r.mark === "dot" ? S.markBoth : r.mark === "hollow" ? S.markHollow : S.markPlus;
 
+  // The label a session's cell, head or lead-in reads by: "#3 Bettina and Kwame", or "#4".
+  const sessionName = (sid: string) => {
+    const sess = byId.get(sid);
+    return sess ? S.sessionLabel(sess.number, fullNames(sess)).trim() : "";
+  };
+
+  // The row's measure, replacing the session chips and #N ▾ (decided 18 Oct 2026). One cell per
+  // session, shaded by the quotes it drew in the study's thirds; not asked and asked-but-nothing
+  // are drawn alike. Then the row's total as the tags sidebar's bar and count, the bar
+  // logarithmic so one quote never looks like none. The tier (lens class) shows what fits.
+  const measure = (r: NavRow) => {
+    const total = rowTotal(r);
+    return (
+      <span className="dl-measure">
+        <span className="dl-cells">
+          {data.sessions.map((sess) => {
+            const asked = r.sessions.includes(sess.id);
+            const q = asked ? cellQuotes(answers, r.id, sess.id) : 0;
+            const label = `${sessionName(sess.id)} · ${asked ? S.quotes(q) : S.notAsked}`;
+            return (
+              // Not a tab stop: twelve per row would bury the guide. The keyboard reaches the
+              // same place through the session bar (focus is kept) or the All view's lead-ins.
+              <button key={sess.id} type="button" tabIndex={-1} title={label} aria-label={label}
+                aria-disabled={asked ? undefined : true}
+                className={`dl-cell s${shadeStep(q, thirds)}${sess.id === session ? " here" : ""}`}
+                onClick={() => {
+                  if (!asked) return;
+                  selectSession(sess.id);
+                  setFocus({ item: r.id, turn: null });
+                }} />
+            );
+          })}
+        </span>
+        <span className="tag-bar-area">
+          {total > 0 && <MicroBar value={barShare(total, rowMax)} colour="var(--dl-bar)" />}
+          <span className="tag-count" aria-hidden="true">{total}</span>
+        </span>
+        <span className="bn-sr-only">{`, ${S.askedInOf(r.sessions.length, data.sessions.length, total)}`}</span>
+      </span>
+    );
+  };
+
   const row = (r: NavRow) => {
-    const asked = r.sessions.includes(session);
+    // In All every session is showing, so nothing is greyed for "not asked in this session".
+    const asked = all || r.sessions.includes(session);
     const on = !!focus && focus.item === r.id;
     const cls = ["toc-link", "dl-row"];
-    if (!asked) cls.push(r.sessions.length ? "ghost" : "dim");
+    if (!r.sessions.length) cls.push("dim");
+    else if (!asked) cls.push("ghost");
     if (r.mark === "hollow") cls.push("unasked");
     if (on) cls.push("active");
-    if (compact.has(r.id)) cls.push("compact");
-    const shown = r.sessions.length ? shownSession(session, r.sessions) : null;
     return (
       <div key={r.id} className={cls.join(" ")} data-id={r.id}>
         <button type="button" className="dl-row-btn" title={r.title} onClick={() => focusRow(r)}
@@ -587,37 +670,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           <span className="dl-tx">{r.text}</span>
           <span className="bn-sr-only">{`${data.guide ? `, ${markText(r)}` : ""}${asked || !r.sessions.length ? "" : S.notHere(num(session))}`}</span>
         </button>
-        {shown && (
-          <>
-            <span className="dl-chips">
-              {r.sessions.map((sid) => (
-                <button key={sid} type="button" className="dl-chip"
-                  aria-label={S.sessionLabel(num(sid), fullNames(byId.get(sid)!))}
-                  aria-current={sid === session ? "true" : undefined}
-                  onClick={() => {
-                    selectSession(sid);
-                    setFocus({ item: r.id, turn: null });
-                  }}>
-                  {sessionBadge(sid)}
-                </button>
-              ))}
-            </span>
-            <span className="dl-pick">
-              <span className={shown === session ? "bn-person-badge-here" : undefined} aria-hidden="true">
-                <PersonBadge code={`#${num(shown)} ▾`} role="participant" />
-              </span>
-              <select aria-label={S.askedIn(r.sessions.length)} value={shown}
-                onChange={(e) => {
-                  selectSession(e.target.value);
-                  setFocus({ item: r.id, turn: null });
-                }}>
-                {r.sessions.map((sid) => (
-                  <option key={sid} value={sid}>{`#${num(sid)} — ${namesOf(byId.get(sid)!)}`}</option>
-                ))}
-              </select>
-            </span>
-          </>
-        )}
+        {measure(r)}
       </div>
     );
   };
@@ -692,10 +745,82 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const keyMarks = new Set(data.guide ? shownSections.flatMap(({ rows }) => rows.map((r) => r.mark)) : []);
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
+  // All: the guide's order, each question once, then one block per session that asked it —
+  // the session's lead-in (its badge, which opens that session at this question), the
+  // moderator's own wording, the quotes. Sessions that never asked it: one line at the foot.
+  const allColumn = () => {
+    const seconds = data.sessions.reduce((n, sess) => n + (sess.seconds || 0), 0);
+    let quotes = 0;
+    for (const bySession of answers.values()) {
+      for (const asks of bySession.values()) quotes += asks.reduce((n, a) => n + a.answers.length, 0);
+    }
+    const asked = (rows: NavRow[]) => rows.filter((r) => r.sessions.length > 0);
+    return (
+      <section>
+        <SectionHeading>{S.allSessions}</SectionHeading>
+        <div className="dl-meta">
+          <span className="dl-stats">{S.stats(formatDurationHuman(seconds), answers.size, quotes)}</span>
+        </div>
+        {data.sessions.filter((sess) => sess.state && sess.state !== "ok").map((sess) => (
+          // A session that contributes nothing says why here too — never silently absent.
+          <p key={sess.id} className="dl-before dl-notasked" role="note">
+            <PersonBadge code={`#${sess.number}`} role="participant" compact />
+            <span>{S.sessionState(sess.state!)}</span>
+          </p>
+        ))}
+        {sections.filter(({ rows }) => asked(rows).length > 0).map(({ head, rows }) => (
+          <div key={head.id} className="dl-part-group">
+            <h2 className="dl-part">{head.id === "standalone" ? S.standalone : head.title}</h2>
+            {asked(rows).map((r) => {
+              const missing = data.sessions.filter((sess) => !r.sessions.includes(sess.id));
+              return (
+                <div key={r.id} className="dl-item" data-item={r.id}>
+                  <h3>{r.text}</h3>
+                  {r.sessions.map((sid) => {
+                    const sess = byId.get(sid);
+                    if (!sess) return null;
+                    const asks = answers.get(r.id)?.get(sid) ?? [];
+                    return (
+                      <div key={sid} className="dl-group">
+                        {/* Named by its badge ("#3 Bettina and 4 others"); the title says what it does. */}
+                        <button type="button" className="dl-from" title={S.showSession(sess.number)}
+                          onClick={() => {
+                            selectSession(sid);
+                            setFocus({ item: r.id, turn: null });
+                          }}>
+                          <PersonBadge code={`#${sess.number}`} role="participant" name={namesOf(sess) || undefined} />
+                        </button>
+                        {asks.map(({ turn, answers: said }) => [
+                          askRow(turn, said.length === 0),
+                          ...said.map((q) => quoteCard(q, turn.id)),
+                        ])}
+                      </div>
+                    );
+                  })}
+                  {missing.length > 0 && (
+                    <p className="dl-before dl-notasked">
+                      <span>{S.notAskedIn}</span>
+                      {missing.map((sess) => (
+                        <PersonBadge key={sess.id} code={`#${sess.number}`} role="participant" compact absent />
+                      ))}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </section>
+    );
+  };
+
+  // The session bar's choices, in order: All (with two sessions or more), then each session.
+  const picks = multi ? [ALL, ...order] : order;
+  const showKey = keyMarks.size > 0 || !all || tier !== "bar";
 
   return (
-    <div ref={lensRef} className={`dl-lens${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`}
-      style={style} data-testid="discussion-lens">
+    <div ref={lensRef} className={`dl-lens dl-m-${tier}${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`}
+      style={style} data-testid="discussion-lens" data-all={all ? "true" : "false"}>
       <div ref={barRef} className="dl-bar">
         <div className="dl-bar-nav">
         {/* Always both tabs: with no guide, the second is where one is added. An
@@ -716,10 +841,24 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         )}
         </div>
         <div className="dl-sessions" role="radiogroup" aria-label={S.sessions}>
+          {multi && (
+            // All, first, then a keyline: All is a different kind of choice from a session.
+            <>
+              <button type="button" role="radio" aria-checked={all} data-value={ALL}
+                tabIndex={all ? 0 : -1} className="dl-sess"
+                onKeyDown={(e) => onRadioKeys(e, picks, session, selectSession)}
+                aria-label={S.allSessions} title={S.allSessions} onClick={() => selectSession(ALL)}>
+                <span className={all ? "bn-person-badge-here" : undefined}>
+                  <PersonBadge code={S.all} role="participant" />
+                </span>
+              </button>
+              <span className="dl-sep" aria-hidden="true" />
+            </>
+          )}
           {data.sessions.map((s) => (
             <button key={s.id} type="button" role="radio" aria-checked={s.id === session} data-value={s.id}
               tabIndex={s.id === session ? 0 : -1} className="dl-sess"
-              onKeyDown={(e) => onRadioKeys(e, order, session, selectSession)}
+              onKeyDown={(e) => onRadioKeys(e, picks, session, selectSession)}
               aria-label={S.sessionLabel(s.number, fullNames(s))} title={fullNames(s) ? `${S.session(s.number)}: ${fullNames(s)}` : S.session(s.number)}
               onClick={() => selectSession(s.id)}>
               {sessionBadge(s.id, namesOf(s))}
@@ -786,7 +925,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {guideButton(data.guide_problem ? S.replaceGuide : S.addGuide)}
           </div>
         )}
-        {shownSections.length > 0 && (
+        {shownSections.length > 0 && showKey && (
           // The key first, so it scrolls away (4 Oct 2026). Only the marks this
           // view uses: with no guide uploaded, none, so only the grey line. The classes are the
           // Settings ▸ Pipeline symbol key's; the marks are the rows' own.
@@ -810,9 +949,41 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
               )}
             </div>
             )}
-            <div className="bn-pipeline-key-group">
-              <span className="bn-pipeline-key-item dl-key-grey">{S.keyGrey}</span>
-            </div>
+            {tier !== "bar" && (
+              // The measure's cells. Not asked and asked-with-no-quotes are drawn alike (18 Oct).
+              <div className="bn-pipeline-key-group">
+                <span className="bn-pipeline-key-item">
+                  <span className="dl-cell s0" aria-hidden="true" />{S.notAsked}
+                </span>
+                <span className="bn-pipeline-key-item">
+                  <span className="dl-cell s1" aria-hidden="true" /><span className="dl-cell s2" aria-hidden="true" />
+                  <span className="dl-cell s3" aria-hidden="true" />{S.keyMeasure}
+                </span>
+              </div>
+            )}
+            {!all && (
+              <div className="bn-pipeline-key-group">
+                <span className="bn-pipeline-key-item dl-key-grey">{S.keyGrey}</span>
+              </div>
+            )}
+          </div>
+        )}
+        {tier === "grid" && shownSections.length > 0 && (
+          // The grid's column heads: one-digit compact badges, a 10–12 squeezed into the same
+          // box. In All none is lit — All, in the bar, is the selection (variant A, 18 Oct).
+          <div className="dl-grid-head" aria-hidden="true">
+            <span className="dl-grid-head-l">{S.sessions}</span>
+            <span className="dl-cells">
+              {data.sessions.map((sess) => (
+                <span key={sess.id} className={`dl-head-cell${sess.number >= 10 ? " wide" : ""}`}
+                  title={sessionName(sess.id)}>
+                  <span className={sess.id === session ? "bn-person-badge-here" : undefined}>
+                    <PersonBadge code={String(sess.number)} role="participant" compact />
+                  </span>
+                </span>
+              ))}
+            </span>
+            <span className="dl-head-bar" />
           </div>
         )}
         {shownSections.map(({ head, rows }) => (
@@ -832,6 +1003,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           // A record from before the file name was kept: no link to click.
           guideButton(S.replaceGuide)}
         {guideNote && <p className="dl-before" role="status">{S.guideHowTo}</p>}
+        {/* The grid's pitch: a one-digit head, laid out but never seen (fitMeasure). */}
+        <span ref={probeRef} className="dl-head-probe" aria-hidden="true">
+          <PersonBadge code="8" role="participant" compact />
+        </span>
       </nav>
 
       <div ref={gutRef} className="dl-gut">
@@ -857,6 +1032,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       </div>
 
       <div ref={contentRef} className="dl-content">
+        {all && allColumn()}
         {current && (
           <section>
             <SectionHeading>{S.session(current.number)}</SectionHeading>

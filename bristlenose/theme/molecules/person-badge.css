@@ -103,6 +103,14 @@ a:hover .bn-speaker-badge--split .bn-speaker-badge-code {
     font-weight: var(--bn-weight-emphasis);
 }
 
+/* Compact: the code half alone, tight, for a row of numbers in a narrow place (the Discussion
+   lens's grid heads, "Not asked in"). The keyline and the type size stay; only the line height
+   and padding tighten. Decided 18 Oct 2026 (docs/design-discussion-lens-plan.md §3). */
+.bn-person-badge-compact .bn-speaker-badge-code { line-height: 1; padding: 2px 0.3rem; }
+/* Absent: not here (not asked, did not speak). The outline only, muted ink, no fill — never
+   opacity, which took the text to 2.0:1 where it was tried. */
+.bn-person-badge-absent .bn-speaker-badge-code { background: transparent; color: var(--bn-colour-muted); }
+
 /* Highlighted state */
 .bn-person-badge-highlighted .bn-speaker-badge-code {
     box-shadow: 0 0 0 2px var(--bn-colour-accent);

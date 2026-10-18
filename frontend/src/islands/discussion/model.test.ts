@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import fixture from "./fixture.json";
 import {
+  ALL,
+  barShare,
   capNames,
+  cellQuotes,
+  itemAnswers,
   litTurns,
+  measureTier,
+  MEASURE,
   markOf,
   mergedEntries,
   plannedEntries,
   sessionColumn,
   sessionForFocus,
-  shownSession,
+  shadeStep,
   wirePath,
+  yieldThirds,
   type NavRow,
 } from "./model";
 import type { DiscussionData, DiscussionItem, DiscussionQuote, DiscussionTurn } from "./types";
@@ -138,9 +145,58 @@ describe("focus", () => {
     expect(sessionForFocus("s1", [])).toBe("s1");
   });
 
-  it("a collapsed badge row shows the current session when it is there, else the first", () => {
-    expect(shownSession("s3", ["s1", "s3"])).toBe("s3");
-    expect(shownSession("s2", ["s1", "s3"])).toBe("s1");
+  it("All never jumps to a session, and a row lights its asks in every session", () => {
+    expect(sessionForFocus(ALL, ["s2", "s3"])).toBe(ALL);
+    const d = tiny([turn("a", 10, "x"), { ...turn("b", 20, "x"), session: "s2" }], []);
+    expect([...litTurns(d, ALL, { item: "x", turn: null })]).toEqual(["a", "b"]);
+    expect([...litTurns(d, "s1", { item: "x", turn: null })]).toEqual(["a"]);
+  });
+});
+
+describe("all sessions", () => {
+  it("counts what each session gave each question by the session column's own rule", () => {
+    const answers = itemAnswers(data);
+    for (const sess of data.sessions) {
+      const col = sessionColumn(data, sess.id);
+      const byItem = new Map<string, number>();
+      for (const g of col.groups) {
+        for (const a of g.asks) {
+          if (a.turn.item) byItem.set(a.turn.item, (byItem.get(a.turn.item) ?? 0) + a.answers.length);
+        }
+      }
+      for (const [item, n] of byItem) expect(cellQuotes(answers, item, sess.id)).toBe(n);
+    }
+    // an unclassified turn belongs to no question
+    expect([...answers.keys()].every((k) => k)).toBe(true);
+  });
+
+  it("shades a cell by the study's thirds, and nothing for no quotes", () => {
+    // one question drew 10, six drew 1, three drew 0 (owner's case, 18 Oct 2026)
+    const thirds = yieldThirds([10, 1, 1, 1, 1, 1, 1, 0, 0, 0]);
+    expect(shadeStep(0, thirds)).toBe(0);
+    expect(shadeStep(1, thirds)).toBe(1);
+    expect(shadeStep(10, thirds)).toBe(3);
+    const spread = yieldThirds([1, 2, 3, 4, 5, 6]);
+    expect([1, 2, 3, 4, 5, 6].map((n) => shadeStep(n, spread))).toEqual([1, 1, 2, 2, 3, 3]);
+    expect(yieldThirds([0, 0])).toEqual([0, 0]);
+  });
+
+  it("the bar is logarithmic: one quote of a maximum ten is about a third, not a tenth", () => {
+    expect(barShare(0, 10)).toBe(0);
+    expect(barShare(1, 10)).toBeGreaterThan(0.25);
+    expect(barShare(1, 10)).toBeLessThan(0.35);
+    expect(barShare(10, 10)).toBe(1);
+    expect(barShare(3, 0)).toBe(0);
+  });
+
+  it("picks the measure that fits: the grid, else the strip, else the bar", () => {
+    const fixed = MEASURE.rowChrome + MEASURE.textMin + MEASURE.gap;
+    const pitch = 23;
+    expect(measureTier(fixed + 8 * pitch + MEASURE.bar, 8, pitch)).toBe("grid");
+    expect(measureTier(fixed + 8 * pitch + MEASURE.bar - 1, 8, pitch)).toBe("strip");
+    expect(measureTier(fixed + 8 * MEASURE.strip + MEASURE.count - 1, 8, pitch)).toBe("bar");
+    expect(measureTier(2000, 1, pitch)).toBe("bar"); // one session: nothing to compare
+    expect(measureTier(0, 12, pitch)).toBe("bar");
   });
 });
 

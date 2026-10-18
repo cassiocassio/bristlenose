@@ -21,6 +21,11 @@ function heading() {
   return screen.getByRole("heading", { level: 1 }).textContent;
 }
 
+/** Pick a session by its digit key (the lens opens on All once there are two sessions). */
+function onSession(n: number) {
+  fireEvent.keyDown(document, { key: String(n) });
+}
+
 beforeEach(() => {
   resetLensState();
   resetDiscussionGuide();
@@ -28,9 +33,28 @@ beforeEach(() => {
 });
 
 describe("DiscussionView", () => {
-  it("opens on Merged and the first session, with the session's questions and quotes", () => {
+  it("opens on Merged and All: each question once, every session's answers under it", () => {
     const { container } = render(<DiscussionView data={data} />);
     expect(screen.getByRole("radio", { name: "Normalised questions" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "All sessions" })).toHaveAttribute("aria-checked", "true");
+    expect(heading()).toBe("All sessions");
+    const asked = data.sections.flatMap((s) => s.items).filter((i) => i.asks.length);
+    expect(container.querySelectorAll(".dl-content .dl-item")).toHaveLength(asked.length);
+    for (const it of asked) {
+      const block = container.querySelector(`.dl-item[data-item="${it.id}"]`)!;
+      const sessions = new Set(it.asks.map((a) => a.session));
+      // one block per session that asked it, each led by that session's badge
+      expect(block.querySelectorAll(".dl-group")).toHaveLength(sessions.size);
+      const missing = data.sessions.length - sessions.size;
+      expect(block.querySelectorAll(".dl-notasked .bn-person-badge-absent")).toHaveLength(missing);
+    }
+    // no wires: the column is in the guide's own order
+    expect(container.querySelectorAll(".dl-wire")).toHaveLength(0);
+  });
+
+  it("a session shows that session's questions and quotes, in the order they were asked", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    onSession(1);
     expect(heading()).toBe("Session 1");
     const asked = data.turns.filter((t) => t.session === "s1" && t.item).length;
     expect(container.querySelectorAll(".dl-content .dl-ask")).toHaveLength(asked);
@@ -116,6 +140,7 @@ describe("DiscussionView", () => {
 
   it("focusing a row the current session never asked jumps to a session that did", () => {
     const { container } = render(<DiscussionView data={data} />);
+    onSession(1);
     const elsewhere = data.sections.flatMap((s) => s.items)
       .find((i) => i.asks.length && !i.asks.some((a) => a.session === "s1"))!;
     const first = data.sessions.find((s) => elsewhere.asks.some((a) => a.session === s.id))!;
@@ -134,14 +159,51 @@ describe("DiscussionView", () => {
     expect(lit.length).toBeGreaterThan(0);
   });
 
-  it("a session badge in a row selects that session and focuses the row", () => {
+  it("a session's cell in a row opens that session at that question; a not-asked cell does nothing", () => {
     const { container } = render(<DiscussionView data={data} />);
     const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
     const target = data.sessions.find((s) => s.id !== "s1" && multi.asks.some((a) => a.session === s.id))!;
-    const chip = container.querySelector(`.dl-row[data-id="${multi.id}"] .dl-chips`)!;
-    fireEvent.click(within(chip as HTMLElement).getByRole("button", { name: new RegExp(`^#${target.number} `) }));
+    const cells = within(container.querySelector(`.dl-row[data-id="${multi.id}"] .dl-cells`) as HTMLElement);
+    const cell = cells.getByRole("button", { name: new RegExp(`^#${target.number} `) });
+    expect(cell.tabIndex).toBe(-1); // reached from the session bar, not one tab stop per session
+    fireEvent.click(cell);
     expect(heading()).toBe(`Session ${target.number}`);
     expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
+    expect(cell).toHaveClass("here");
+    const elsewhere = data.sections.flatMap((s) => s.items).find((i) => i.asks.length && !i.asks.some((a) => a.session === "s1"))!;
+    const notAsked = container.querySelector(`.dl-row[data-id="${elsewhere.id}"] .dl-cell[aria-disabled="true"]`)!;
+    expect(notAsked.getAttribute("aria-label")).toMatch(/Not asked$/);
+    fireEvent.click(notAsked);
+    expect(heading()).toBe(`Session ${target.number}`);
+  });
+
+  it("a session's lead-in in All opens that session at that question", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
+    const target = data.sessions.find((s) => s.id !== "s1" && multi.asks.some((a) => a.session === s.id))!;
+    const block = within(container.querySelector(`.dl-item[data-item="${multi.id}"]`) as HTMLElement);
+    const lead = block.getByRole("button", { name: new RegExp(`^#${target.number}`) });
+    expect(lead).toHaveAttribute("title", `Show session ${target.number}`);
+    fireEvent.click(lead);
+    expect(heading()).toBe(`Session ${target.number}`);
+    expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
+  });
+
+  it("each cell is shaded by the quotes it drew, and the row says its totals in words", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const rows = [...container.querySelectorAll<HTMLElement>(".dl-nav .dl-row")];
+    for (const r of rows) {
+      const it = data.sections.flatMap((s) => s.items).find((i) => i.id === r.dataset.id)!;
+      const cells = [...r.querySelectorAll(".dl-cell")];
+      expect(cells).toHaveLength(data.sessions.length);
+      // a session that never asked it is never shaded
+      data.sessions.forEach((sess, i) => {
+        if (!it.asks.some((a) => a.session === sess.id)) expect(cells[i]).toHaveClass("s0");
+      });
+      const asked = new Set(it.asks.map((a) => a.session)).size;
+      expect(r.querySelector(".dl-measure .bn-sr-only")!.textContent)
+        .toMatch(new RegExp(`Asked in ${asked} of ${data.sessions.length} sessions, \\d+ quotes?$`));
+    }
   });
 
   it("the split is a keyboard-operable separator that remembers its width", () => {
@@ -173,13 +235,14 @@ describe("review fixes, 3 Oct 2026", () => {
   it("arrow keys move the session radio group, with one tab stop", () => {
     render(<DiscussionView data={data} />);
     const radios = within(screen.getByRole("radiogroup", { name: "Sessions" })).getAllByRole("radio");
-    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
+    expect(radios.map((r) => r.getAttribute("aria-label")?.split(" ")[0])).toEqual(["All", "#1", "#2", "#3"]);
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1, -1]);
     fireEvent.keyDown(radios[0], { key: "ArrowRight" });
-    expect(heading()).toBe("Session 2");
+    expect(heading()).toBe("Session 1");
     fireEvent.keyDown(radios[1], { key: "End" });
     expect(heading()).toBe("Session 3");
-    fireEvent.keyDown(radios[2], { key: "ArrowRight" });  // wraps
-    expect(heading()).toBe("Session 1");
+    fireEvent.keyDown(radios[3], { key: "ArrowRight" });  // wraps, to All
+    expect(heading()).toBe("All sessions");
   });
 
   it("digit keys do nothing while a dialog owns the keyboard", () => {
@@ -189,7 +252,7 @@ describe("review fixes, 3 Oct 2026", () => {
     render(<DiscussionView data={data} />);
     root.setAttribute("inert", "");
     fireEvent.keyDown(document, { key: "2" });
-    expect(heading()).toBe("Session 1");
+    expect(heading()).toBe("All sessions");
     root.removeAttribute("inert");
     fireEvent.keyDown(document, { key: "2" });
     expect(heading()).toBe("Session 2");
@@ -197,6 +260,7 @@ describe("review fixes, 3 Oct 2026", () => {
 
   it("clearing a row's focus never moves the reader to another session", () => {
     const { container } = render(<DiscussionView data={data} />);
+    onSession(1);
     const elsewhere = data.sections.flatMap((s) => s.items)
       .find((i) => i.asks.length && !i.asks.some((a) => a.session === "s1"))!;
     const btn = container.querySelector(`.dl-row[data-id="${elsewhere.id}"] .dl-row-btn`)!;
@@ -239,7 +303,7 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(btn).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(btn);
     expect(container.querySelector(".dl-lens")).not.toHaveClass("has-focus");
-    expect(heading()).toBe("Session 1");
+    expect(heading()).toBe("All sessions");
   });
 
   it("with no guide there is no Planned view to offer", () => {
@@ -251,6 +315,7 @@ describe("review fixes, 3 Oct 2026", () => {
     const t = data.turns.find((x) => x.session === "s1" && x.kind === "chat")!;
     const d = { ...data, turns: data.turns.map((x) => (x.id === t.id ? { ...x, kind: "unclassified" as const } : x)) };
     const { container } = render(<DiscussionView data={d} />);
+    onSession(1);
     const row = container.querySelector(`.dl-ask[data-turn="${t.id}"]`)!;
     expect(row).not.toBeNull();
     expect(row.textContent).toContain("not classified");
@@ -281,6 +346,9 @@ describe("review fixes, 3 Oct 2026", () => {
 
   it("each tab carries a key at the top, of the marks it shows", () => {
     render(<DiscussionView data={data} />);
+    // in All nothing is greyed for "not asked in this session"
+    expect(within(screen.getByRole("note", { name: "Key" })).queryByText(/^Grey:/)).toBeNull();
+    onSession(1);
     const key = screen.getByRole("note", { name: "Key" });
     expect(key).toHaveClass("bn-pipeline-key");
     for (const t of ["Asked as planned", "Planned, never asked", "Not in your guide", "Grey: not asked in this session"]) {
@@ -317,44 +385,65 @@ describe("review fixes, 3 Oct 2026", () => {
     expect(within(nav()).getAllByRole("heading", { level: 2 }).length).toBe(data.sections.length);
   });
 
-  it("collapsed badge rows stay collapsed frame after frame (no measure-of-hidden flicker)", async () => {
-    // jsdom measures nothing: give the badges a width only while they are shown,
-    // which is exactly the browser behaviour that made a collapsed row reopen.
-    const desc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
+  it("the measure is chosen by measuring the guide, and holds frame after frame", async () => {
+    // jsdom lays nothing out: give the guide a width and the one-digit probe head a size.
     const navDesc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
-    Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
-      configurable: true,
-      get(this: HTMLElement) {
-        if (!this.classList.contains("dl-chips")) return 0;
-        return this.closest(".dl-row")?.classList.contains("compact") ? 0 : 50 * this.children.length;
-      },
-    });
+    let navW = 600;
     Object.defineProperty(HTMLElement.prototype, "clientWidth", {
       configurable: true,
-      get(this: HTMLElement) {
-        return this.classList.contains("dl-nav") ? 300 : 0;
-      },
+      get(this: HTMLElement) { return this.classList.contains("dl-nav") ? navW : 0; },
     });
+    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      const w = this.closest(".dl-head-probe") ? 19 : 0;
+      return { width: w, height: 0, top: 0, left: 0, right: w, bottom: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    });
+    const frames = async () => act(async () => { await new Promise((r) => setTimeout(r, 40)); });
     try {
       const { container } = render(<DiscussionView data={data} />);
-      const frames = async () => act(async () => {
-        await new Promise((r) => setTimeout(r, 40));
-      });
+      const lens = () => container.querySelector(".dl-lens")!;
       await frames();
-      const after1 = [...container.querySelectorAll(".dl-row.compact")].map((r) => (r as HTMLElement).dataset.id);
-      expect(after1.length).toBeGreaterThan(0); // 3 badges × 50 > 30% of 300
-      // every frame, not two frames apart: a flicker alternates, so comparing
-      // frames an even distance apart would pass it (it did, on the first draft)
+      expect(lens()).toHaveClass("dl-m-grid");
+      // the grid's heads, one-digit compact badges, none lit in All
+      const heads = container.querySelectorAll(".dl-grid-head .bn-person-badge-compact");
+      expect(heads).toHaveLength(data.sessions.length);
+      expect(container.querySelector(".dl-grid-head .bn-person-badge-here")).toBeNull();
       for (let i = 0; i < 3; i++) {
         fireEvent.scroll(window);
         await frames();
-        const now = [...container.querySelectorAll(".dl-row.compact")].map((r) => (r as HTMLElement).dataset.id);
-        expect(now).toEqual(after1);
+        expect(lens()).toHaveClass("dl-m-grid");
       }
+      // a selected session's head is "here"
+      onSession(2);
+      await frames();
+      expect(container.querySelectorAll(".dl-grid-head .bn-person-badge-here")).toHaveLength(1);
+      navW = 230; // narrower: the strip, then the bar
+      fireEvent.scroll(window);
+      await frames();
+      expect(lens()).toHaveClass("dl-m-strip");
+      expect(container.querySelector(".dl-grid-head")).toBeNull();
+      navW = 150;
+      fireEvent.scroll(window);
+      await frames();
+      expect(lens()).toHaveClass("dl-m-bar");
     } finally {
-      if (desc) Object.defineProperty(HTMLElement.prototype, "scrollWidth", desc);
+      rect.mockRestore();
       if (navDesc) Object.defineProperty(HTMLElement.prototype, "clientWidth", navDesc);
     }
+  });
+
+  it("remembers All across a lens switch", () => {
+    const first = render(<DiscussionView data={data} />);
+    onSession(2);
+    fireEvent.click(screen.getByRole("radio", { name: "All sessions" }));
+    first.unmount();
+    render(<DiscussionView data={data} />);
+    expect(heading()).toBe("All sessions");
+  });
+
+  it("with one session there is no All: it would be that session twice", () => {
+    render(<DiscussionView data={{ ...data, sessions: data.sessions.slice(0, 1) }} />);
+    expect(screen.queryByRole("radio", { name: "All sessions" })).toBeNull();
+    expect(heading()).toBe("Session 1");
   });
 
   it("remembers mode, session and focus across a lens switch", () => {
@@ -541,6 +630,7 @@ describe("language", () => {
 
   it("re-renders in the new language without remounting (the getters are read live)", async () => {
     render(<DiscussionView data={data} />);
+    onSession(1);
     expect(heading()).toBe("Session 1");
     i18n.addResourceBundle("xx", "common", { discussion: { session: "Sitzung {{n}}" } }, true, true);
     await act(async () => { await i18n.changeLanguage("xx"); });
@@ -557,6 +647,9 @@ describe("degraded records", () => {
   it("a session that could not be read says so, never 'no questions'", () => {
     const sessions = data.sessions.map((s, i) => (i === 0 ? { ...s, state: "failed" as const } : s));
     render(<DiscussionView data={{ ...data, sessions }} />);
+    // in All, and in the session itself
+    expect(screen.getByText(/questions could not be classified/)).toBeInTheDocument();
+    onSession(1);
     expect(screen.getByText(/questions could not be classified/)).toBeInTheDocument();
     expect(screen.queryByText("No questions found in this session")).toBeNull();
   });
@@ -663,6 +756,9 @@ describe("the guide tabs (4 Oct 2026)", () => {
     expect(container.querySelectorAll(".dl-nav .dl-row .dl-mid")).toHaveLength(rows.length);
     expect(container.querySelector(".dl-nav .dl-row .dl-dot")).toBeNull();
     expect(container.querySelector(".dl-nav .dl-row")?.textContent).not.toMatch(/\+|not in your guide/i);
+    // in All, no guide and no cells: nothing for a key to explain, so no key
+    expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
+    onSession(1);
     const key = screen.getByRole("note", { name: "Key" });
     expect(key.textContent).toBe("Grey: not asked in this session");
   });
@@ -697,6 +793,6 @@ describe("DiscussionView — arriving from the transcript's gutter", () => {
   it("opens as usual without one, or with a turn it does not have", () => {
     window.history.replaceState(null, "", "/report/discussion/?item=s5.1&turn=s9@00:00");
     render(<DiscussionView data={data} />);
-    expect(heading()).toBe(`Session ${data.sessions[0].number}`);
+    expect(heading()).toBe("All sessions");
   });
 });

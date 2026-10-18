@@ -125,10 +125,10 @@ export interface SessionColumn {
   groups: QuestionGroup[];
 }
 
-/** Each quote answers the last question asked at or before it (1 s of slack for
- *  transcript rounding). Consecutive questions that drew no quotes fold forward
- *  into the next question that did, as one group. */
-export function sessionColumn(data: DiscussionData, session: string): SessionColumn {
+/** One session's asked questions in order, each with the quotes that answer it: a
+ *  quote answers the last question asked at or before it (1 s of slack for
+ *  transcript rounding). Quotes before the first question are `before`. */
+function sessionAnswers(data: DiscussionData, session: string) {
   const asked = data.turns
     .filter((t) => t.session === session && (t.item || t.kind === "unclassified"))
     .sort((a, b) => a.sec - b.sec);
@@ -143,6 +143,13 @@ export function sessionColumn(data: DiscussionData, session: string): SessionCol
     }
     (last ? answers.get(last.id)! : before).push(q);
   }
+  return { asked, answers, before };
+}
+
+/** Consecutive questions that drew no quotes fold forward into the next question
+ *  that did, as one group. */
+export function sessionColumn(data: DiscussionData, session: string): SessionColumn {
+  const { asked, answers, before } = sessionAnswers(data, session);
   const groups: QuestionGroup[] = [];
   let cur: AskWithAnswers[] = [];
   for (const t of asked) {
@@ -155,6 +162,82 @@ export function sessionColumn(data: DiscussionData, session: string): SessionCol
   }
   if (cur.length) groups.push({ asks: cur, trailing: true });
   return { before, groups };
+}
+
+// ── all sessions (decided 17–18 Oct 2026; plan §3 "All sessions") ───────────
+
+/** The session bar's first choice: every session, read by question. Never a
+ *  session id (those are "s1", "s2"…). */
+export const ALL = "*all";
+
+/** Item → session → that session's asks of the item, each with its answers. The
+ *  same rule as the session column, so the All view and the navigator's measure
+ *  count exactly what a session view shows under each question. */
+export type ItemAnswers = Map<string, Map<string, AskWithAnswers[]>>;
+
+export function itemAnswers(data: DiscussionData): ItemAnswers {
+  const out: ItemAnswers = new Map();
+  for (const s of data.sessions) {
+    const { asked, answers } = sessionAnswers(data, s.id);
+    for (const t of asked) {
+      if (!t.item) continue; // an unclassified turn belongs to no question
+      let bySession = out.get(t.item);
+      if (!bySession) out.set(t.item, (bySession = new Map()));
+      const list = bySession.get(s.id) ?? [];
+      list.push({ turn: t, answers: answers.get(t.id) ?? [] });
+      bySession.set(s.id, list);
+    }
+  }
+  return out;
+}
+
+/** The quotes one session gave one question. */
+export function cellQuotes(answers: ItemAnswers, item: string, session: string): number {
+  return (answers.get(item)?.get(session) ?? []).reduce((n, a) => n + a.answers.length, 0);
+}
+
+/** The study's thirds: every asked cell that drew a quote, ranked by its count;
+ *  a cell's shade is the third it falls in. Normalised to the study, so a dark
+ *  cell means "among this study's richest answers" whatever the study's scale. */
+export function yieldThirds(counts: number[]): [number, number] {
+  const v = counts.filter((n) => n > 0).sort((a, b) => a - b);
+  if (!v.length) return [0, 0];
+  return [v[Math.ceil(v.length / 3) - 1], v[Math.ceil((2 * v.length) / 3) - 1]];
+}
+
+/** 0 = nothing to shade (not asked, or asked and no quotes: drawn alike, 18 Oct);
+ *  1–3 = the lower, middle and upper third. */
+export function shadeStep(quotes: number, thirds: [number, number]): 0 | 1 | 2 | 3 {
+  if (quotes <= 0) return 0;
+  return quotes <= thirds[0] ? 1 : quotes <= thirds[1] ? 2 : 3;
+}
+
+/** The row's bar, logarithmic: some data is much better than none, so the first
+ *  quote is the biggest step (one of a maximum ten fills about a third). 0–1. */
+export function barShare(quotes: number, max: number): number {
+  if (quotes <= 0 || max <= 0) return 0;
+  return Math.min(1, Math.log1p(quotes) / Math.log1p(max));
+}
+
+/** The navigator's measure, chosen by measuring: the grid (one cell per session
+ *  under heads, then the bar) when it fits beside the shortest question text,
+ *  else a strip of thin cells, else the bar and count, which fit anywhere. */
+export type Tier = "bar" | "strip" | "grid";
+export const MEASURE = {
+  textMin: 130,   // the narrowest a question's text may get
+  rowChrome: 38,  // the row's padding and its mark column
+  gap: 8,
+  bar: 72,        // bar + count
+  count: 28,      // count alone
+  strip: 8,       // a strip cell's pitch
+} as const;
+
+export function measureTier(navWidth: number, sessions: number, pitch: number): Tier {
+  if (sessions < 2) return "bar";
+  const room = navWidth - MEASURE.rowChrome - MEASURE.textMin - MEASURE.gap;
+  if (room >= sessions * pitch + MEASURE.bar) return "grid";
+  if (room >= sessions * MEASURE.strip + MEASURE.count) return "strip";
+  return "bar";
 }
 
 export function sessionStats(data: DiscussionData, session: string): { questions: number; quotes: number } {
@@ -187,21 +270,19 @@ export interface Focus {
   turn: string | null;
 }
 
-/** Which questions in the session column a focus lights. */
+/** Which questions in the column a focus lights: in one session, or in all of them. */
 export function litTurns(data: DiscussionData, session: string, focus: Focus | null): Set<string> {
   if (!focus) return new Set();
   if (focus.turn) return new Set([focus.turn]);
-  return new Set(data.turns.filter((t) => t.session === session && t.item === focus.item).map((t) => t.id));
+  return new Set(data.turns
+    .filter((t) => (session === ALL || t.session === session) && t.item === focus.item).map((t) => t.id));
 }
 
-/** Clicking a row the current session never asked jumps to the first session that did. */
+/** Clicking a row the current session never asked jumps to the first session that
+ *  did. All shows every session, so it never jumps. */
 export function sessionForFocus(current: string, rowSessions: string[]): string {
+  if (current === ALL) return current;
   return rowSessions.length && !rowSessions.includes(current) ? rowSessions[0] : current;
-}
-
-/** A collapsed badge row shows the current session if it is among them, else the first. */
-export function shownSession(current: string, rowSessions: string[]): string {
-  return rowSessions.includes(current) ? current : rowSessions[0];
 }
 
 /** Wire geometry: a path from a navigator row (left edge of the gutter) to a

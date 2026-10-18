@@ -8,6 +8,7 @@
 // --engine speech     SpeechTranscriber (new in macOS 26), preset with time ranges
 // --engine dictation  DictationTranscriber (the older dictation model, more locales),
 //                     long-dictation preset with punctuation and time ranges
+// --context FILE      supply the words in FILE (one per line) as contextualStrings
 // --install           fetch the locale's model if it is not on the Mac (timed);
 //                     without it, a missing model is reported and nothing is fetched
 //
@@ -67,6 +68,12 @@ struct Transcribe {
         var install = false
         if let i = args.firstIndex(of: "--engine") { engine = args[i + 1]; args.removeSubrange(i...i + 1) }
         if let i = args.firstIndex(of: "--install") { install = true; args.remove(at: i) }
+        var vocab: [String] = []
+        if let i = args.firstIndex(of: "--context") {
+            vocab = ((try? String(contentsOfFile: args[i + 1], encoding: .utf8)) ?? "")
+                .split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+            args.removeSubrange(i...i + 1)
+        }
         guard args.count == 3 else { fail("usage: transcribe <audio> <locale> <out.json> [--engine speech|dictation] [--install]") }
         let url = URL(fileURLWithPath: args[0])
         let wanted = Locale(identifier: args[1])
@@ -130,6 +137,11 @@ struct Transcribe {
         let audioSecs = Double(file.length) / file.processingFormat.sampleRate
 
         let analyzer = SpeechAnalyzer(modules: [module])
+        if !vocab.isEmpty {
+            let ctx = AnalysisContext()
+            ctx.contextualStrings[.general] = vocab
+            do { try await analyzer.setContext(ctx) } catch { fail("context failed: \(error)") }
+        }
         let tp = Date()
         do {
             let fmt = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [module])

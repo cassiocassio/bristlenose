@@ -323,6 +323,12 @@ On a base M1 or M2 the gap is likely wider (not measured).
 - **Deterministic.** The three German files came back word for word identical to their
   earlier sequential runs. Within one asset version a transcript is reproducible; across an OS
   or asset update it may not be (§ 8).
+- **Custom vocabulary does nothing.** fossda-01 re-run with six terms Whisper wrote more often
+  than Apple (Debian, BusyBox, Unix, Sebastian, Macworld, Safari) supplied as
+  `AnalysisContext.contextualStrings`: the transcript was byte-identical to the run without
+  them (Debian 2 against Whisper's 6, BusyBox, Unix and Macworld still 0). This confirms the one
+  anecdote in § 1: study context (product, guide and participant names) cannot be fed to
+  `SpeechTranscriber`. `transcribe.swift --context FILE`.
 - **Straight from video (macOS 27, `AssetInputSequenceProvider`).** Works on 48 kHz AAC
   (oral-history mp4s, macOS screen recordings): fossda-06 gave 3,361 words against 3,366 via
   WAV, in 21.4 s against 22.1 s. **Fails on 16 kHz AAC**, which is what the Teams recording
@@ -423,6 +429,8 @@ from day two, Whisper does new sessions. What follows is what the code says that
   the app keeps Whisper only.
 - **Keep the WAV step.** Both Apple input routes fail on 16 kHz AAC (Teams recordings), so the
   helper should take the WAV stage 2 already makes, not the video (§ 4, last subsection).
+- **No study vocabulary**: `contextualStrings` has no effect (§ 4), so product and participant
+  names cannot be supplied, unlike a Whisper prompt.
 - **Parallel sessions are cheap**: four at once ran near-linearly, ~180 MB each out of process.
 - **The CLI on PyPI/Homebrew** would need a prebuilt helper in the wheel or formula; the Linux and
   Windows CLI get nothing.

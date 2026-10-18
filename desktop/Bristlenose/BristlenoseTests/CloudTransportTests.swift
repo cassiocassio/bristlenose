@@ -1458,6 +1458,41 @@ struct AdapterRowDerivationTests {
         #expect(listing.arithmetic.stillProcessing == 1)
     }
 
+    /// The audio is done and the video is not: offering the audio now is how a
+    /// meeting ends up imported as audio only, for good.
+    @Test("Zoom: a meeting whose video is still processing is not offered yet")
+    func zoomVideoProcessingIsHeld() async {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) - 3600)
+        let at = iso.string(from: start), end = iso.string(from: start.addingTimeInterval(600))
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"meetings":[{"uuid":"half","id":97,"type":1,"topic":"P13",
+           "start_time":"\(at)","duration":10,"recording_files":[
+             {"id":"v1","file_type":"MP4","recording_type":"shared_screen_with_speaker_view",
+              "file_size":9000,"status":"processing","download_url":"https://zoom.example/v1",
+              "recording_start":"\(at)","recording_end":"\(end)"},
+             {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+              "status":"completed","download_url":"https://zoom.example/a1",
+              "recording_start":"\(at)","recording_end":"\(end)"}]}],
+         "total_records":1}
+        """))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: zoomWindow)
+
+        #expect(listing.rows.isEmpty)
+        #expect(listing.arithmetic.stillProcessing == 1)
+    }
+
     /// A refused lookup costs the Scheduled time and nothing else.
     @Test("Zoom: a booking lookup that fails leaves the listing whole")
     func zoomBookingFailureIsQuiet() async {

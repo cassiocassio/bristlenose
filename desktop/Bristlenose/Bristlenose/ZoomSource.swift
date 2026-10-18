@@ -44,6 +44,7 @@ private struct ZoomRecordingsPage: Decodable {
             let recording_start: String?
             let recording_end: String?
             let deleted_time: String?
+            let status: String?
         }
         /// Per-instance. **The dedup key** — `id` is the reusable meeting
         /// number and a recurring interview series shares one across every
@@ -600,7 +601,7 @@ final class ZoomSource: CloudImportSource {
                 organisedByOthers: 0,
                 outcome: outcome,
                 stillProcessing: meetings.filter { meeting in
-                    !(meeting.recording_files ?? []).contains { ZoomFileType($0.file_type ?? "").isMedia }
+                    ZoomFileSelection.isStillProcessing((meeting.recording_files ?? []).map(Self.recordingFile))
                 }.count
             ),
             window: window,
@@ -678,7 +679,12 @@ final class ZoomSource: CloudImportSource {
               let start = meeting.start_time.flatMap(Self.parseDate)
         else { return [] }
 
-        let files = (meeting.recording_files ?? []).map(Self.recordingFile)
+        let listed = (meeting.recording_files ?? []).map(Self.recordingFile)
+        // Not offered until every media file is done; counted in the footer
+        // as still processing instead (`ZoomFileSelection.isStillProcessing`).
+        guard !ZoomFileSelection.isStillProcessing(listed) else { return [] }
+        // A file whose processing failed will never finish: never chosen.
+        let files = listed.filter { !$0.hasFailed }
         let parts = ZoomFileSelection.parts(from: files).filter { $0.choice.media != nil }
         let expiry = ZoomExpiry(
             autoDelete: meeting.auto_delete,
@@ -779,7 +785,8 @@ final class ZoomSource: CloudImportSource {
             sizeBytes: file.file_size,
             downloadURL: file.download_url.flatMap(URL.init(string:)),
             recordingStart: file.recording_start.flatMap(Self.parseDate),
-            recordingEnd: file.recording_end.flatMap(Self.parseDate)
+            recordingEnd: file.recording_end.flatMap(Self.parseDate),
+            status: file.status
         )
     }
 

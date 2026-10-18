@@ -800,3 +800,49 @@ struct ZoomScheduleTests {
         #expect(ZoomSchedule.mayHaveBooking(type: nil))
     }
 }
+
+// MARK: - Not ready yet
+
+@Suite("Zoom processing")
+struct ZoomProcessingTests {
+
+    private func file(_ type: String, _ layout: String, status: String?) -> ZoomRecordingFile {
+        ZoomRecordingFile(id: "\(type)-\(layout)", fileType: ZoomFileType(type),
+                          layout: ZoomRecordingLayout(layout), sizeBytes: 1_000,
+                          downloadURL: URL(string: "https://zoom.us/rec/download/x"),
+                          recordingStart: nil, status: status)
+    }
+
+    @Test("Video still processing holds the meeting back, even with the audio done")
+    func videoProcessingHoldsBack() {
+        // Offered now, the audio would be imported, and the video row would
+        // later match it as already imported: audio only, for good.
+        #expect(ZoomFileSelection.isStillProcessing([
+            file("MP4", "shared_screen_with_speaker_view", status: "processing"),
+            file("M4A", "audio_only", status: "completed"),
+        ]))
+    }
+
+    @Test("A meeting with no media yet is still processing")
+    func noMediaIsProcessing() {
+        #expect(ZoomFileSelection.isStillProcessing([]))
+        #expect(ZoomFileSelection.isStillProcessing([file("TIMELINE", "timeline", status: nil)]))
+    }
+
+    @Test("Finished files, or no status at all, are ready")
+    func readyWhenDone() {
+        #expect(!ZoomFileSelection.isStillProcessing([
+            file("MP4", "active_speaker", status: "completed"),
+            file("M4A", "audio_only", status: nil),
+        ]))
+    }
+
+    @Test("A failed video does not hold back the audio for ever")
+    func failedVideoFallsBackToAudio() {
+        let files = [file("MP4", "active_speaker", status: "failed"),
+                     file("M4A", "audio_only", status: "completed")]
+        #expect(!ZoomFileSelection.isStillProcessing(files))
+        #expect(!ZoomFileSelection.isStillProcessing(files.filter { !$0.hasFailed }))
+        #expect(ZoomFileSelection.choose(from: files.filter { !$0.hasFailed }).media?.fileType == .m4a)
+    }
+}

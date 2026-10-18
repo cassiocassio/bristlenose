@@ -123,13 +123,27 @@ struct ZoomRecordingFile: Equatable {
     /// belongs to which part.
     var recordingEnd: Date? = nil
 
-    /// Deliberately NOT modelled: `status`. Its published enum is `["completed"]`
-    /// and nothing else, so it can never indicate "not ready" — reading it as a
-    /// readiness signal is how an importer downloads a transcript that does not
-    /// exist yet. Readiness is the `TRANSCRIPT` file appearing in the listing.
-    /// `GET /meetings/{id}/transcript` is **not** that check: it serves the AI
-    /// Companion transcript, a different artefact from the recording's VTT
-    /// (Zoom's OpenAPI spec, read 30 Sep 2026).
+    /// Zoom's per-file `status`. Read in one direction only.
+    ///
+    /// `completed` is **not** proof a file is ready: the main recordings page
+    /// publishes `["completed"]` and nothing else, and reading it as readiness
+    /// is how an importer downloads a transcript that does not exist yet.
+    /// Readiness is the `TRANSCRIPT` file appearing in the listing.
+    /// `GET /meetings/{id}/transcript` is **not** that check either: it serves
+    /// the AI Companion transcript, a different artefact from the recording's
+    /// VTT (Zoom's OpenAPI spec, read 30 Sep 2026).
+    ///
+    /// But `processing` and `failed` are documented on Zoom's account-level
+    /// recordings pages (read 18 Oct 2026), and when present they can only make
+    /// the import more careful: a meeting whose video is still processing must
+    /// not be offered as audio, because the audio import would then match the
+    /// video row as already imported and the video would never be offered.
+    /// Absent means ready, as before.
+    var status: String? = nil
+
+    var isStillProcessing: Bool { status == "processing" }
+    var hasFailed: Bool { status == "failed" }
+
     var isDownloadable: Bool { downloadURL != nil }
 }
 
@@ -175,6 +189,16 @@ enum ZoomFileSelection {
             .filter { $0 != chosen }
 
         return Choice(media: chosen, transcript: transcript, skippedMedia: skipped)
+    }
+
+    /// Whether a meeting's recording is not ready to offer: no media file yet
+    /// (Zoom lists a call the moment recording starts), or any media file still
+    /// processing. One media file processing holds back the whole meeting,
+    /// deliberately: offering the finished audio while the video processes is
+    /// how a researcher ends up with audio only, for good.
+    static func isStillProcessing(_ files: [ZoomRecordingFile]) -> Bool {
+        let media = files.filter { $0.fileType.isMedia && !$0.hasFailed }
+        return media.isEmpty || media.contains(where: \.isStillProcessing)
     }
 
     /// One recording of a meeting. A host who stops and restarts recording

@@ -4,7 +4,19 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
-## Native timeline menu (Mac app)
+## Discussion lens — All sessions and the navigator measure
+
+**Date:** 18 Oct 2026
+**Branch:** main (`538a2869`…`083a4874`)
+**Context:** All is the first and default session choice from two sessions; the rows' session chips became a measure (bar + count → strip → grid) chosen by the guide's width. Built overnight; reviewed by /usual-suspects (Findings 45–69, `docs/private/reviews/discussion-lens.md`). Checked headless in Chromium and WebKit, never in the app's window. Needs a ⌘R first (the bundled report rebuilds). Try `trial-runs/rockclimbing-fresh` (8 sessions).
+
+- [ ] **Opens on All.** The Discussion lens opens on All with "All" lit in the session bar; each question once, a block per session led by its badge; "Not asked in #N" under questions some sessions skipped.
+- [ ] **The measure grows with the guide.** Drag the guide's edge: bar + count → a strip of cells → a grid under one-digit session numbers (10–12 squeezed into the same width). Dragging feels smooth in All (measured 33 ms a step on 1,800 quotes in WebKit).
+- [ ] **Shading reads.** Empty slots are visible on the guide's tint; filled cells are clearly darker; the richest cells darkest. In light and dark. (The ramp changed to muted → ink for contrast — see the owner decisions in TODO.md.)
+- [ ] **Cells and lead-ins open a session at the question.** Click a cell, or a session's badge in All: that session opens with the question lit; a not-asked cell does nothing. After clicking a lead-in with the keyboard, focus is on the question, not the top of the page (VoiceOver too).
+- [ ] **Leaving All lands at the top**, not part-way down the shorter session column; clicking a question whose heading is already in view does not jump.
+- [ ] **A guide project** (Your guide tab): All shows the same questions on either tab, including those asked off the guide.
+
 
 **Date:** 18 Oct 2026
 **Branch:** main (`bd3698ea`, `7435256f`, `fad24516`)

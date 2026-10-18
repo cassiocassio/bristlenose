@@ -281,11 +281,21 @@ final class MiroSheetModel: ObservableObject {
 struct MiroSheet: View {
     @StateObject private var model: MiroSheetModel
     @Environment(\.dismiss) private var dismiss
+    /// The sheet loads its connection when shown; one handed a model leaves that to its driver.
+    private let loadsOnAppear: Bool
 
     init(port: Int, token: String?, projectName: String, i18n: I18n, screens: Bool = false) {
         _model = StateObject(wrappedValue: MiroSheetModel(
             port: port, token: token, projectName: projectName, i18n: i18n, screens: screens
         ))
+        loadsOnAppear = true
+    }
+
+    /// The sheet over a model someone else drives — the live board test renders the creating step
+    /// at the states a real build passed through (`MiroSheetLiveTests`).
+    init(model: MiroSheetModel) {
+        _model = StateObject(wrappedValue: model)
+        loadsOnAppear = false
     }
 
     // Constant size across every step (HIG: sheets keep one size through a flow —
@@ -310,7 +320,7 @@ struct MiroSheet: View {
         .padding(20)
         .frame(width: sheetWidth)
         .frame(minHeight: sheetMinHeight)
-        .task { await model.load() }
+        .task { if loadsOnAppear { await model.load() } }
     }
 
     // MARK: states
@@ -462,9 +472,9 @@ struct MiroSheet: View {
             .progressViewStyle(.linear)
             .frame(maxWidth: .infinity)
             .accessibilityLabel(model.t("creatingBoard"))
-            if let eta = model.buildETA() {
-                Text(eta).font(.subheadline).foregroundStyle(.secondary)
-            }
+            // The line keeps its height when empty, so the bar does not jump when a time arrives.
+            Text(model.buildETA() ?? " ").font(.subheadline).foregroundStyle(.secondary)
+                .accessibilityHidden(model.buildETA() == nil)
             Spacer()
             HStack {
                 Spacer()

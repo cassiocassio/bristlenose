@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apple first, Whisper next — first-run storyboard</title>
+<style>
+  /* ---------------------------------------------------------------------------
+     MEDIUM-FIDELITY MOCK of NATIVE macOS chrome (sidebar row, toolbar status
+     pill, popover, Settings form), in the style of ollama-setup-popovers.html.
+     Spec: docs/design-apple-first-transcription.md. Evidence:
+     experiments/apple-speech/README.md. Times are the README's estimate for one
+     18-minute English interview on 100 Mbit/s home broadband.
+     Every string inside a frame is a shipped locale key, or is flagged NEW in
+     that frame's chrome bar.
+  --------------------------------------------------------------------------- */
+  :root {
+    color-scheme: light;
+    --label: #1d1d1f;
+    --secondary: rgba(60,60,67,0.62);
+    --tertiary: rgba(60,60,67,0.40);
+    --accent: #0a6cff;
+    --sep: rgba(0,0,0,0.10);
+    --red: #e0301a;
+    --pop-bg: #f4f4f5;
+    --pop-stroke: rgba(0,0,0,0.12);
+    --side: #ecebf0;
+    --page: #e7e7ea;
+    --new: #b4530d;
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+    background: var(--page);
+    color: var(--label);
+    padding: 28px 16px 80px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .lede { color: var(--secondary); font-size: 13px; max-width: 820px; margin: 0 0 8px; line-height: 1.45; }
+  .key { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--secondary); margin: 10px 0 26px; }
+  .key span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  .swatch.art { background: #fff; border: 0.5px solid rgba(0,0,0,0.2); }
+  .swatch.com { background: repeating-linear-gradient(135deg, #f3efe4 0 4px, #ebe5d6 4px 8px); border-left: 3px solid #b9a77a; }
+
+  /* storyboard */
+  .frame-row { margin: 0 0 34px; }
+  .frame-head { font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+  .frame-head .t { font-family: ui-monospace, Menlo, monospace; font-weight: 500; color: var(--secondary); margin-left: 8px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+
+  .col-label { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--tertiary); margin: 0 0 6px; letter-spacing: .3px; }
+
+  /* artefact frame */
+  .shot { background: #fff; border: 0.5px solid rgba(0,0,0,0.18); border-radius: 10px; overflow: hidden;
+          box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
+  .chrome { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--tertiary);
+            background: #f6f6f8; border-bottom: 0.5px solid var(--sep); padding: 5px 10px; line-height: 1.5; }
+  .chrome b { color: var(--secondary); font-weight: 600; }
+  .chrome .new { color: var(--new); font-weight: 600; }
+
+  /* faux window */
+  .win { display: grid; grid-template-columns: 220px 1fr; grid-template-rows: 38px 1fr; min-height: 250px; position: relative; }
+  .win .tb { grid-column: 1 / -1; height: 38px; background: linear-gradient(#fbfbfc,#ededf0);
+             border-bottom: 0.5px solid rgba(0,0,0,0.12); display: flex; align-items: center;
+             padding: 0 10px; gap: 8px; }
+  .lights { display: flex; gap: 6px; }
+  .lights i { width: 11px; height: 11px; border-radius: 50%; background: #d8d8dc; display: block; }
+  .tb .title { font-size: 12.5px; font-weight: 600; margin-left: 64px; }
+  .tb .sub { font-size: 11px; color: var(--secondary); margin-left: 6px; }
+  .tb .status-zone { margin-left: auto; display: flex; align-items: center; min-height: 22px; }
+  .side { background: var(--side); border-right: 0.5px solid rgba(0,0,0,0.08); padding: 10px 8px; }
+  .side .group { font-size: 10.5px; font-weight: 600; color: var(--tertiary); margin: 2px 6px 6px; }
+  .row { display: grid; grid-template-columns: 18px 1fr 16px; gap: 7px; align-items: start;
+         padding: 6px 7px; border-radius: 6px; }
+  .row.sel { background: rgba(0,0,0,0.08); }
+  .row .ic { width: 16px; height: 16px; color: var(--secondary); margin-top: 1px; }
+  .row .nm { font-size: 12.5px; line-height: 1.25; }
+  .row .st { font-size: 11px; color: var(--secondary); line-height: 1.3; margin-top: 1px; font-variant-numeric: tabular-nums;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row > div { min-width: 0; }
+  .ring { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.12);
+          border-top-color: var(--secondary); margin-top: 2px; }
+  .ring.det { border-color: rgba(0,0,0,0.12); border-top-color: var(--accent); border-right-color: var(--accent); }
+  .detail { padding: 18px; }
+  .empty { color: var(--tertiary); font-size: 13px; text-align: center; margin-top: 64px; }
+  .report-h { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+  .card { border: 0.5px solid var(--sep); border-radius: 8px; padding: 10px 12px; margin: 0 0 8px; background: #fafafb; }
+  .card .ln { height: 7px; border-radius: 4px; background: rgba(0,0,0,0.08); margin: 6px 0; }
+
+  /* pill (sibling of OllamaDownloadPill) */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
+          background: rgba(0,0,0,0.055); border: 0.5px solid rgba(0,0,0,0.16);
+          font-size: 11.5px; font-weight: 500; color: var(--label); line-height: 1; white-space: nowrap; }
+  .pill svg { display: block; color: var(--secondary); }
+  .bar { height: 4px; border-radius: 2px; background: rgba(0,0,0,0.12); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+  .pill .bar { width: 48px; }
+
+  /* popover */
+  .pop { position: absolute; width: 280px; background: var(--pop-bg); border: 0.5px solid var(--pop-stroke);
+         border-radius: 11px; box-shadow: 0 12px 34px rgba(0,0,0,0.20); padding: 16px; z-index: 2; }
+  .pop::before { content: ""; position: absolute; top: -7px; right: 30px; width: 13px; height: 13px;
+         background: var(--pop-bg); border-left: 0.5px solid var(--pop-stroke); border-top: 0.5px solid var(--pop-stroke);
+         transform: rotate(45deg); border-top-left-radius: 3px; }
+  .pop.left::before { right: auto; left: 22px; }
+  .pop .ptitle { font-size: 13px; font-weight: 600; line-height: 1.3; margin: 0 0 6px; }
+  .pop .pbody { font-size: 12px; line-height: 1.42; color: var(--secondary); margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+  .pop .actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .btn { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 7px;
+         border: 0.5px solid rgba(0,0,0,0.2); background: #fff; color: var(--label); }
+
+  /* settings form */
+  .settings { padding: 16px 18px; background: #f5f5f7; min-height: 210px; }
+  .form-sec { background: #fff; border: 0.5px solid var(--sep); border-radius: 9px; padding: 10px 12px; margin: 0 0 10px; }
+  .frow { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+  .frow + .frow { border-top: 0.5px solid var(--sep); margin-top: 8px; padding-top: 8px; }
+  .flabel { font-size: 12.5px; }
+  .fhint { font-size: 11px; color: var(--secondary); margin-top: 2px; line-height: 1.35; max-width: 330px; }
+  .popup { font-size: 12px; padding: 2px 8px; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 6px; background: #fff; white-space: nowrap; }
+
+  /* commentary zone */
+  .comment { margin-top: 8px; background: repeating-linear-gradient(135deg, #f8f5ec 0 6px, #f3efe3 6px 12px);
+             border-left: 3px solid #b9a77a; border-radius: 0 6px 6px 0; padding: 8px 12px;
+             font-size: 12px; line-height: 1.45; color: #4a4434; }
+  .comment .lab { font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: .4px;
+                  text-transform: uppercase; color: #8a7a52; display: block; margin-bottom: 2px; }
+  .na { display: flex; align-items: center; justify-content: center; min-height: 250px;
+        border: 1px dashed rgba(0,0,0,0.18); border-radius: 10px; color: var(--tertiary); font-size: 12px; background: rgba(255,255,255,0.4); }
+  .strings { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 8px; overflow: hidden; }
+  .strings th, .strings td { text-align: left; padding: 6px 9px; border-bottom: 0.5px solid var(--sep); vertical-align: top; }
+  .strings th { font-weight: 600; color: var(--secondary); background: #f6f6f8; }
+  .strings code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+  .tag-new { color: var(--new); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Apple first, Whisper next — first-run storyboard</h1>
+<p class="lede">One researcher, a fresh Mac on macOS 26+, English UI, drags one 18-minute interview recording
+(no Teams transcript) into a new project. Left: what they see today. Right: the proposed slice. Spec:
+<code>docs/design-apple-first-transcription.md</code>.</p>
+<div class="key">
+  <span><i class="swatch art"></i> Artefact: what the app would draw</span>
+  <span><i class="swatch com"></i> Commentary: why, timing, strings</span>
+</div>
+
+<!-- SVG symbols -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="doc" viewBox="0 0 16 16"><path d="M4 1.5h5l3.5 3.5v9a1 1 0 0 1-1 1h-7.5a1 1 0 0 1-1-1v-11.5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M9 1.5v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.1"/></symbol>
+  <symbol id="down" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5v6M5.5 8.2 8 10.7l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="warn" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.6v4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11.3" r=".8" fill="currentColor"/></symbol>
+</svg>
+
+<!-- FRAME 1 -->
+<div class="frame-row">
+  <p class="frame-head">1 · The run starts<span class="t">0:05 after the drop</span></p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> chrome.pipeline.analysing · etaMinutes</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span><span class="status-zone"></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Analysing · ~2 min left</div></div><span class="ring"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · etaUnderMinute · ollamaSetup.pillDownloading</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:3%"></i></span></span></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Today the row says <em>Analysing · ~2 min left</em>, but the 1.6 GB Whisper download runs first, inside the
+    run, and the estimate does not count it (the estimate is sent before the download starts). Proposed: Apple's
+    model is already on the Mac (English came with macOS 27), so transcription starts at once, and the Whisper
+    download starts beside it as an app-wide job in the toolbar's status zone, the sibling of the Ollama download
+    pill. No new question, no explanation in the row.</div>
+</div>
+
+<!-- FRAME 2 -->
+<div class="frame-row">
+  <p class="frame-head">2 · Under a minute in<span class="t">0:45</span></p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> chrome.pipeline.analysing · etaMinutes</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span><span class="status-zone"></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Analysing · ~2 min left</div></div><span class="ring"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> stage.quotes · sessionsCount · etaUnderMinute · ollamaSetup.pillDownloading</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:28%"></i></span></span></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Finding quotes · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Today nothing visible has changed: the row still reads as analysis while bytes arrive, and on weak Wi-Fi it
+    stays like this for five minutes or more. Proposed: transcription is done (about 15 s for 18 minutes of audio)
+    and the LLM stages are running; the download continues in the pill.</div>
+</div>
+
+<!-- FRAME 3 -->
+<div class="frame-row">
+  <p class="frame-head">3 · The first report<span class="t">proposed ≈ 1:00 · today ≈ 4:20</span></p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY · 1:00</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> chrome.pipeline.analysing · etaMinutes</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span><span class="status-zone"></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Analysing · ~2 min left</div></div><span class="ring"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED · 1:00, pill clicked</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> ollamaSetup.downloadingTitle · bytesProgress · etaMinutes · common.buttons.cancel · <span class="new">NEW</span> modelDownload.rate · <span class="new">NEW</span> modelDownload.why</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:37%"></i></span></span></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">18 Oct 2026</div></div><span></span></div>
+          </div>
+          <div class="detail">
+            <p class="report-h">Checkout study</p>
+            <div class="card"><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div></div>
+            <div class="card"><div class="ln" style="width:70%"></div><div class="ln" style="width:45%"></div></div>
+          </div>
+          <div class="pop" style="top:44px; right:8px;">
+            <p class="ptitle">Downloading Whisper large-v3-turbo</p>
+            <p class="pbody">600 MB of 1.6 GB<br>10 MB/s · ~2 min left</p>
+            <div class="bar"><i style="width:37%"></i></div>
+            <p class="pbody" style="margin-top:8px">For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</p>
+            <div class="actions"><span class="btn">Cancel</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Proposed: the report is readable about three minutes earlier on typical broadband (six on weak Wi-Fi). The
+    popover is the honest progress the owner asked for: size, amount, speed, time left, and Cancel, so the
+    researcher can decide (carry on, move to faster Wi-Fi, stop). It extends the Ollama download popover, which
+    today shows bytes and a bar but no speed or time. The date subtitle is the row's existing ready state
+    (system-formatted). Today, at this moment, the row is unchanged from frame 1; its report lands near 4:20.</div>
+</div>
+
+<!-- FRAME 4 -->
+<div class="frame-row">
+  <p class="frame-head">4 · When the language guess is wrong<span class="t">English UI, Spanish interview</span></p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY</p>
+      <div class="na">No difference today: Whisper detects the language, after the download.</div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED · row popover open</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> ollamaSetup.pillDownloading · <span class="new">NEW</span> chrome.pipeline.waitingForWhisper · <span class="new">NEW</span> pipeline.diagnostic.reason.languageGuess</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Entrevistas</span>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:52%"></i></span></span></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Entrevistas</div><div class="st">Waiting for Whisper</div></div><span class="ring"></span></div>
+          </div>
+          <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
+          <div class="pop left" style="top:118px; left:14px;">
+            <p class="pbody" style="margin:0">This recording doesn't sound like English. It will be transcribed once Whisper has downloaded.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    Apple's English model on Spanish audio gives itself low confidence (0.10–0.38 over the first two minutes,
+    against 0.92 in the right language), so the guess is caught and Apple's text is thrown away. The session
+    falls back to today's behaviour, waiting for Whisper, but now with the wait visible and explained in one
+    sentence. The reverse case, English audio under a Spanish or German UI, came back as English and needs no
+    gate. The popover sentence is owner-written copy.</div>
+</div>
+
+<!-- FRAME 5 -->
+<div class="frame-row">
+  <p class="frame-head">5 · Settings ▸ Transcription</p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> transcriptionSettings.backendLabel · backendAuto · backendHint · modelLabel · modelRecommended</div>
+        <div class="settings">
+          <div class="form-sec"><div class="frow"><div><div class="flabel">Backend</div><div class="fhint">Auto detects the best engine for your Mac.</div></div><span class="popup">Auto ⌄</span></div></div>
+          <div class="form-sec"><div class="frow"><div class="flabel">Model</div><span class="popup">large-v3-turbo (recommended) ⌄</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> backendLabel · backendAuto · modelLabel · modelRecommended · <span class="new">REWORDED</span> transcriptionSettings.backendHint</div>
+        <div class="settings">
+          <div class="form-sec"><div class="frow"><div><div class="flabel">Backend</div><div class="fhint">Auto uses Apple's speech model on this Mac until Whisper has downloaded, then Whisper, which copes better with poor audio, people talking over each other, larger groups and more languages.</div></div><span class="popup">Auto ⌄</span></div></div>
+          <div class="form-sec"><div class="frow"><div class="flabel">Model</div><span class="popup">large-v3-turbo (recommended) ⌄</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    The smallest change: no new picker option. <em>Auto</em> keeps its name and gains a hint that says what it
+    now does and why Whisper is still the one to want. Choosing MLX or faster-whisper means Whisper only, exactly
+    as today, so a researcher who never wants Apple's model has a way out.</div>
+</div>
+
+<!-- FRAME 6 -->
+<div class="frame-row">
+  <p class="frame-head">6 · Whisper is ready; the next recording<span class="t">≈ 2:45, then later that day</span></p>
+  <div class="pair">
+    <div>
+      <p class="col-label">TODAY</p>
+      <div class="na">Same as proposed from here on: every recording is transcribed by Whisper.</div>
+    </div>
+    <div>
+      <p class="col-label">PROPOSED · second recording dropped</p>
+      <div class="shot">
+        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · etaUnderMinute</div>
+        <div class="win">
+          <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span><span class="status-zone"></span></div>
+          <div class="side"><div class="group">Projects</div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+          </div>
+          <div class="detail">
+            <p class="report-h">Checkout study</p>
+            <div class="card"><div class="ln" style="width:80%"></div><div class="ln" style="width:60%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="comment"><span class="lab">Commentary</span>
+    The pill has gone: absence is the signal that Whisper is ready. The new recording goes through Whisper. The
+    first session stays Apple's transcript, because re-transcribing it would orphan any stars, tags or edits made
+    on it; which engine wrote each session is recorded and shown in the diagnostics row only.</div>
+</div>
+
+<h2 style="font-size:15px; margin: 30px 0 8px;">String plan</h2>
+<table class="strings">
+  <tr><th>Key</th><th>English</th><th>Status</th></tr>
+  <tr><td><code>desktop.chrome.pipeline.*</code> (analysing, stage.transcribe, stage.quotes, sessionsCount, etaMinutes, etaUnderMinute)</td><td>as shipped</td><td>reused</td></tr>
+  <tr><td><code>desktop.ollamaSetup.pillDownloading</code>, <code>downloadingTitle</code>, <code>bytesProgress</code>; <code>common.buttons.cancel</code></td><td>Downloading %@ · %@ of %@ · Cancel</td><td>reused</td></tr>
+  <tr><td><code>desktop.modelDownload.rate</code></td><td>{{rate}}/s</td><td class="tag-new">new</td></tr>
+  <tr><td><code>desktop.modelDownload.why</code></td><td>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</td><td class="tag-new">new · owner to word</td></tr>
+  <tr><td><code>desktop.chrome.pipeline.waitingForWhisper</code></td><td>Waiting for Whisper</td><td class="tag-new">new</td></tr>
+  <tr><td><code>desktop.pipeline.diagnostic.reason.languageGuess</code></td><td>This recording doesn't sound like {{language}}. It will be transcribed once Whisper has downloaded.</td><td class="tag-new">new · owner to word</td></tr>
+  <tr><td><code>desktop.transcriptionSettings.backendHint</code></td><td>Auto uses Apple's speech model on this Mac until Whisper has downloaded, then Whisper, which copes better with poor audio, people talking over each other, larger groups and more languages.</td><td class="tag-new">reworded · 21 locales</td></tr>
+</table>
+</div>
+</body>
+</html>

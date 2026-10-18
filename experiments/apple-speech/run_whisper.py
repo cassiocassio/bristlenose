@@ -6,9 +6,10 @@ the skipped-window net and the inaudible marker. Keeps word timings and the
 repair counts the backend leaves in the quality sink, and times each file
 (the first file of a process includes loading the model: "cold").
 
-    .venv/bin/python experiments/apple-speech/run_whisper.py [ids or langs...]
+    .venv/bin/python experiments/apple-speech/run_whisper.py [--model=small] [ids or langs...]
 
-Outputs: trial-runs/apple-speech/whisper/<id>.whisper.json. Local compute only.
+Outputs: trial-runs/apple-speech/whisper/<id>.whisper.json (large-v3-turbo), or
+whisper-<model>/ for another model. Local compute, plus the model's own first download.
 """
 
 from __future__ import annotations
@@ -24,15 +25,16 @@ from run_apple import OUT, corpus  # noqa: E402
 from bristlenose.stages import s05_transcribe as s05  # noqa: E402
 
 
-def main(only: list[str]) -> int:
-    (OUT / "whisper").mkdir(parents=True, exist_ok=True)
-    settings = type("S", (), {"whisper_model": "large-v3-turbo", "whisper_language": "auto"})()
+def main(only: list[str], model: str = "large-v3-turbo") -> int:
+    folder = "whisper" if model == "large-v3-turbo" else f"whisper-{model}"
+    (OUT / folder).mkdir(parents=True, exist_ok=True)
+    settings = type("S", (), {"whisper_model": model, "whisper_language": "auto"})()
     fn = s05._init_mlx_backend(settings)
     first = True
     for item in corpus():
         if only and item["id"] not in only and item["lang"] not in only:
             continue
-        out = OUT / "whisper" / f"{item['id']}.whisper.json"
+        out = OUT / folder / f"{item['id']}.whisper.json"
         if out.exists():
             continue
         sink: dict = {}
@@ -45,7 +47,7 @@ def main(only: list[str]) -> int:
             s05._QUALITY_SINK.reset(token)
         audio_s = sink.get("duration_s")
         rec = {
-            "engine": "whisper", "id": item["id"], "lang": item["lang"], "detected": detected,
+            "engine": "whisper", "model": model, "id": item["id"], "lang": item["lang"], "detected": detected,
             "cold": first, "wall_s": round(secs, 2), "audio_s": audio_s,
             "repair": sink.get("repair"), "recognition": sink.get("recognition"),
             "segments": [
@@ -67,4 +69,8 @@ def main(only: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    argv = sys.argv[1:]
+    model = "large-v3-turbo"
+    if argv and argv[0].startswith("--model="):
+        model = argv.pop(0).split("=", 1)[1]
+    sys.exit(main(argv, model))

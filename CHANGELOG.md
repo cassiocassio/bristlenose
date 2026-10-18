@@ -2,6 +2,25 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.40.0** — _18 Oct 2026_
+
+The Discussion lens opens on all sessions at once, its guide shows how much each question drew out of each session, and a failed re-analyse no longer leaves the report empty.
+
+**New**
+
+- **The Discussion lens opens on All.** In a study with two or more sessions, each question appears once, with every session's answers beneath it, each led by that session's badge, which opens the session at that question. Sessions that skipped the question are listed under "Not asked in".
+- **The guide shows how much each question drew out of each session.** It replaces the session chips and the #N pull-down, and grows with the guide's width: a bar and a count, then a strip with one cell per session, then a grid. A cell's shade is how many quotes it drew compared with the rest of the study.
+
+**Improved**
+
+- **In the Mac app, the transcript's Timeline menu is a native Mac menu.**
+- **The Screens lens names its screens, screenshots and quotes in the window subtitle**, as in "23 Screens · 51 Screenshots · 41 Quotes". English now says "screenshot" where it said "screengrab", as every translation already did.
+
+**Fixed**
+
+- **After a failed Re-analyse, the report could reopen empty**, and stars, tags and edits made afterwards went into a set-aside copy rather than the project.
+- **A long moderator question's timecode sits beside its first line** in the Discussion lens, not its last.
+
 **0.39.0** — _17 Oct 2026_
 
 Every row of the Sessions lens carries its timeline and a transcript can show it too, the transcript margin links each quote, screen and question to its lens, the Screens lens exports to a folder, the clipboard and Miro, and four new colour palettes arrive in light and dark.

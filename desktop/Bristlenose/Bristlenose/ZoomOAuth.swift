@@ -312,7 +312,13 @@ private struct ZoomTokenResponse: Decodable {
 final class ZoomOAuthClient: NSObject {
     static let authorizeEndpoint = URL(string: "https://zoom.us/oauth/authorize")!
     static let tokenEndpoint = URL(string: "https://zoom.us/oauth/token")!
-    static let revokeEndpoint = URL(string: "https://zoom.us/oauth/revoke")!
+    // No revoke endpoint, unlike Google's client. Zoom's `/oauth/revoke`
+    // documents Basic auth with the client secret, and a public PKCE client has
+    // none; a developer who sent the public client ID got `invalid_client`
+    // (Zoom forum, read 18 Oct 2026). Disconnect deletes our stored sign-in, and
+    // revoking at Zoom is Marketplace ▸ Manage ▸ Added Apps ▸ Remove, which the
+    // privacy policy names. The unused constant that stood here implied a
+    // revoke that cannot work, so it went.
 
     private let config: ZoomOAuthConfig
     private let session: URLSession

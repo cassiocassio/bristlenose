@@ -41,3 +41,27 @@ struct CloudImportListingFailureTests {
         #expect(!(store.listing?.rows.isEmpty ?? true))
     }
 }
+
+// Zoom lists a meeting before its files exist, so an empty Zoom list with
+// meetings in it is "still recording or processing", not Meet's "none with a
+// recording you organised" (18 Oct 2026, the first live Pro listing).
+@Suite("Empty-window sentence")
+struct CloudImportEmptyDetailTests {
+
+    @Test("Zoom says the meetings are still being recorded or processed")
+    func zoomNamesProcessing() {
+        #expect(CloudPlatform.zoom.emptyDetailKey(meetingsInWindow: 2)
+                == "desktop.cloudImport.emptyDetailZoom")
+    }
+
+    @Test("Zoom with no meetings at all has no sentence")
+    func zoomWithNothingIsSilent() {
+        #expect(CloudPlatform.zoom.emptyDetailKey(meetingsInWindow: 0) == nil)
+    }
+
+    @Test("Meet and Teams keep the organiser sentence")
+    func calendarPlatformsUnchanged() {
+        #expect(CloudPlatform.meet.emptyDetailKey(meetingsInWindow: 3) == "desktop.cloudImport.emptyDetail")
+        #expect(CloudPlatform.teams.emptyDetailKey(meetingsInWindow: 3) == "desktop.cloudImport.emptyDetail")
+    }
+}

@@ -187,6 +187,23 @@ enum CloudPlatform: String, CaseIterable, Identifiable, Sendable {
 
     // MARK: Capability differences the UI must render
 
+    /// The sentence under "No recordings in the last N days", or nil for none.
+    ///
+    /// Meet and Teams list calendar meetings, so an empty list with meetings in
+    /// it means none had a recording you organised. **Zoom is different:** it
+    /// lists a meeting the moment recording starts, before any file exists, so
+    /// a Zoom meeting with nothing to fetch is still recording or still being
+    /// processed. It got Meet's sentence until 18 Oct 2026, which named the
+    /// wrong cause; with no meetings at all it gets no sentence.
+    func emptyDetailKey(meetingsInWindow: Int) -> String? {
+        switch self {
+        case .zoom:
+            return meetingsInWindow > 0 ? "desktop.cloudImport.emptyDetailZoom" : nil
+        case .teams, .meet:
+            return "desktop.cloudImport.emptyDetail"
+        }
+    }
+
     /// Whether the platform exposes a per-file expiry the list can count down.
     ///
     /// Teams: **yes** — its own product shows "Expires in 4 days" on exactly

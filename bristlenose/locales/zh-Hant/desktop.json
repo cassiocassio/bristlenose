@@ -1048,6 +1048,7 @@
     "loadFailedTitle": "\u7121\u6cd5\u8f09\u5165\u4f60\u7684\u6703\u8b70",
     "emptyTitle_other": "\u6700\u8fd1 {{count}} \u5929\u6c92\u6709\u9304\u5f71",
     "emptyDetail_other": "\u5171 {{count}} \u5834\u6703\u8b70\uff0c\u4f46\u6c92\u6709\u4f60\u4e3b\u6301\u7684\u9304\u5f71\u3002",
+    "emptyDetailZoom_other": "有 {{count}} 場會議 Zoom 仍在錄製或處理中。請過幾分鐘再查看。",
     "lookBack_other": "\u5f80\u524d\u67e5\u770b {{count}} \u5929",
     "blanketNotOnThisPlanTitle": "\u9019\u500b\u5e33\u6236\u7121\u6cd5\u9304\u88fd Meet \u901a\u8a71",
     "blanketNotOnThisPlanDetail_other": "\u9019\u88e1\u6709 {{count}} \u5834\u6703\u8b70\uff0c\u4f46 Meet \u9304\u5f71\u9700\u8981 Google Workspace \u65b9\u6848\u3002\u4ee5\u516c\u53f8\u5e33\u6236\u9304\u88fd\u7684\u6a94\u6848\u4ecd\u53ef\u5f9e Finder \u62d6\u5165\u3002",

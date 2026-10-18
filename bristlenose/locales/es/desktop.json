@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Sin grabaciones en los \u00faltimos {{count}} d\u00edas",
     "emptyDetail_one": "{{count}} reuni\u00f3n, y no tiene ninguna grabaci\u00f3n organizada por ti.",
     "emptyDetail_other": "{{count}} reuniones, ninguna con una grabaci\u00f3n organizada por ti.",
+    "emptyDetailZoom_one": "{{count}} reunión, que Zoom aún está grabando o procesando. Vuelve a mirar en unos minutos.",
+    "emptyDetailZoom_other": "{{count}} reuniones, que Zoom aún está grabando o procesando. Vuelve a mirar en unos minutos.",
     "lookBack_one": "Buscar {{count}} d\u00eda atr\u00e1s",
     "lookBack_other": "Buscar {{count}} d\u00edas atr\u00e1s",
     "blanketNotOnThisPlanTitle": "Esta cuenta no puede grabar llamadas de Meet",

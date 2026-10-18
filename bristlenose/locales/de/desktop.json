@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Keine Aufzeichnungen in den letzten {{count}} Tagen",
     "emptyDetail_one": "{{count}} Besprechung, ohne von dir organisierte Aufzeichnung.",
     "emptyDetail_other": "{{count}} Besprechungen, keine mit einer von dir organisierten Aufzeichnung.",
+    "emptyDetailZoom_one": "{{count}} Besprechung, die Zoom noch aufzeichnet oder verarbeitet. Schau in ein paar Minuten noch einmal nach.",
+    "emptyDetailZoom_other": "{{count}} Besprechungen, die Zoom noch aufzeichnet oder verarbeitet. Schau in ein paar Minuten noch einmal nach.",
     "lookBack_one": "{{count}} Tag zur\u00fcck suchen",
     "lookBack_other": "{{count}} Tage zur\u00fcck suchen",
     "blanketNotOnThisPlanTitle": "Dieses Konto kann Meet-Anrufe nicht aufzeichnen",

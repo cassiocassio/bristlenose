@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Cap enregistrament els \u00faltims {{count}} dies",
     "emptyDetail_one": "{{count}} reuni\u00f3, sense cap enregistrament que hagis organitzat.",
     "emptyDetail_other": "{{count}} reunions, cap amb un enregistrament que hagis organitzat.",
+    "emptyDetailZoom_one": "{{count}} reunió, que Zoom encara està enregistrant o processant. Torna-ho a mirar d'aquí a uns minuts.",
+    "emptyDetailZoom_other": "{{count}} reunions, que Zoom encara està enregistrant o processant. Torna-ho a mirar d'aquí a uns minuts.",
     "lookBack_one": "Cerca {{count}} dia enrere",
     "lookBack_other": "Cerca {{count}} dies enrere",
     "blanketNotOnThisPlanTitle": "Aquest compte no pot enregistrar trucades del Meet",

@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Nessuna registrazione negli ultimi {{count}} giorni",
     "emptyDetail_one": "{{count}} riunione, senza registrazioni che hai organizzato.",
     "emptyDetail_other": "{{count}} riunioni, nessuna con una registrazione che hai organizzato.",
+    "emptyDetailZoom_one": "{{count}} riunione, che Zoom sta ancora registrando o elaborando. Riprova tra qualche minuto.",
+    "emptyDetailZoom_other": "{{count}} riunioni, che Zoom sta ancora registrando o elaborando. Riprova tra qualche minuto.",
     "lookBack_one": "Cerca {{count}} giorno indietro",
     "lookBack_other": "Cerca {{count}} giorni indietro",
     "blanketNotOnThisPlanTitle": "Questo account non pu\u00f2 registrare le chiamate Meet",

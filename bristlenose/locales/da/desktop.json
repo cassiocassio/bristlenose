@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Ingen optagelser i de seneste {{count}} dage",
     "emptyDetail_one": "{{count}} m\u00f8de, uden en optagelse du selv har arrangeret.",
     "emptyDetail_other": "{{count}} m\u00f8der, ingen med en optagelse du selv har arrangeret.",
+    "emptyDetailZoom_one": "{{count}} møde, som Zoom stadig optager eller behandler. Kig igen om et par minutter.",
+    "emptyDetailZoom_other": "{{count}} møder, som Zoom stadig optager eller behandler. Kig igen om et par minutter.",
     "lookBack_one": "S\u00f8g {{count}} dag tilbage",
     "lookBack_other": "S\u00f8g {{count}} dage tilbage",
     "blanketNotOnThisPlanTitle": "Denne konto kan ikke optage Meet-opkald",

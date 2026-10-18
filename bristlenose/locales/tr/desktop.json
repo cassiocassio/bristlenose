@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Son {{count}} g\u00fcnde kay\u0131t yok",
     "emptyDetail_one": "{{count}} toplant\u0131, sizin d\u00fczenledi\u011finiz bir kay\u0131t yok.",
     "emptyDetail_other": "{{count}} toplant\u0131, hi\u00e7birinde sizin d\u00fczenledi\u011finiz bir kay\u0131t yok.",
+    "emptyDetailZoom_one": "{{count}} toplantı, Zoom tarafından hâlâ kaydediliyor ya da işleniyor. Birkaç dakika sonra yeniden bakın.",
+    "emptyDetailZoom_other": "{{count}} toplantı, Zoom tarafından hâlâ kaydediliyor ya da işleniyor. Birkaç dakika sonra yeniden bakın.",
     "lookBack_one": "{{count}} g\u00fcn geriye bak",
     "lookBack_other": "{{count}} g\u00fcn geriye bak",
     "blanketNotOnThisPlanTitle": "Bu hesap Meet aramalar\u0131n\u0131 kaydedemez",

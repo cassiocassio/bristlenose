@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Geen opnames in de laatste {{count}} dagen",
     "emptyDetail_one": "{{count}} vergadering, zonder opname die jij hebt georganiseerd.",
     "emptyDetail_other": "{{count}} vergaderingen, geen met een opname die jij hebt georganiseerd.",
+    "emptyDetailZoom_one": "{{count}} vergadering, die Zoom nog opneemt of verwerkt. Kijk over een paar minuten opnieuw.",
+    "emptyDetailZoom_other": "{{count}} vergaderingen, die Zoom nog opneemt of verwerkt. Kijk over een paar minuten opnieuw.",
     "lookBack_one": "{{count}} dag terug zoeken",
     "lookBack_other": "{{count}} dagen terug zoeken",
     "blanketNotOnThisPlanTitle": "Dit account kan Meet-gesprekken niet opnemen",

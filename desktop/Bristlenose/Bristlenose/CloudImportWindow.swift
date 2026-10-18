@@ -489,8 +489,9 @@ struct CloudImportWindow: View {
     }
 
     private var emptyWindowDetail: String {
-        guard let a = store.listing?.arithmetic else { return "" }
-        return i18n.plural("desktop.cloudImport.emptyDetail", count: a.eventsInWindow)
+        guard let a = store.listing?.arithmetic,
+              let key = platform.emptyDetailKey(meetingsInWindow: a.eventsInWindow) else { return "" }
+        return i18n.plural(key, count: a.eventsInWindow)
     }
 
     // MARK: - Footer

@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Aucun enregistrement sur les {{count}} derniers jours",
     "emptyDetail_one": "{{count}} r\u00e9union, sans enregistrement que vous ayez organis\u00e9.",
     "emptyDetail_other": "{{count}} r\u00e9unions, aucune avec un enregistrement que vous ayez organis\u00e9.",
+    "emptyDetailZoom_one": "{{count}} réunion, que Zoom enregistre ou traite encore. Revenez dans quelques minutes.",
+    "emptyDetailZoom_other": "{{count}} réunions, que Zoom enregistre ou traite encore. Revenez dans quelques minutes.",
     "lookBack_one": "Remonter \u00e0 {{count}} jour",
     "lookBack_other": "Remonter \u00e0 {{count}} jours",
     "blanketNotOnThisPlanTitle": "Ce compte ne peut pas enregistrer les appels Meet",

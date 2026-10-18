@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Nenhuma grava\u00e7\u00e3o nos \u00faltimos {{count}} dias",
     "emptyDetail_one": "{{count}} reuni\u00e3o, sem grava\u00e7\u00e3o organizada por voc\u00ea.",
     "emptyDetail_other": "{{count}} reuni\u00f5es, nenhuma com grava\u00e7\u00e3o organizada por voc\u00ea.",
+    "emptyDetailZoom_one": "{{count}} reunião, que o Zoom ainda está gravando ou processando. Confira de novo em alguns minutos.",
+    "emptyDetailZoom_other": "{{count}} reuniões, que o Zoom ainda está gravando ou processando. Confira de novo em alguns minutos.",
     "lookBack_one": "Buscar {{count}} dia atr\u00e1s",
     "lookBack_other": "Buscar {{count}} dias atr\u00e1s",
     "blanketNotOnThisPlanTitle": "Esta conta n\u00e3o pode gravar chamadas do Meet",

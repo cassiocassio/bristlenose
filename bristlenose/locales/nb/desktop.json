@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Ingen opptak de siste {{count}} dagene",
     "emptyDetail_one": "{{count}} m\u00f8te, uten opptak du selv har organisert.",
     "emptyDetail_other": "{{count}} m\u00f8ter, ingen med opptak du selv har organisert.",
+    "emptyDetailZoom_one": "{{count}} møte, som Zoom fortsatt tar opp eller behandler. Sjekk igjen om noen minutter.",
+    "emptyDetailZoom_other": "{{count}} møter, som Zoom fortsatt tar opp eller behandler. Sjekk igjen om noen minutter.",
     "lookBack_one": "S\u00f8k {{count}} dag tilbake",
     "lookBack_other": "S\u00f8k {{count}} dager tilbake",
     "blanketNotOnThisPlanTitle": "Denne kontoen kan ikke ta opp Meet-samtaler",

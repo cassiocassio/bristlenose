@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Inga inspelningar de senaste {{count}} dagarna",
     "emptyDetail_one": "{{count}} m\u00f6te, utan inspelning som du anordnat.",
     "emptyDetail_other": "{{count}} m\u00f6ten, inget med en inspelning som du anordnat.",
+    "emptyDetailZoom_one": "{{count}} möte, som Zoom fortfarande spelar in eller bearbetar. Titta igen om några minuter.",
+    "emptyDetailZoom_other": "{{count}} möten, som Zoom fortfarande spelar in eller bearbetar. Titta igen om några minuter.",
     "lookBack_one": "S\u00f6k {{count}} dag bak\u00e5t",
     "lookBack_other": "S\u00f6k {{count}} dagar bak\u00e5t",
     "blanketNotOnThisPlanTitle": "Det h\u00e4r kontot kan inte spela in Meet-samtal",

@@ -1076,6 +1076,8 @@
     "emptyTitle_other": "Ei tallenteita viimeisilt\u00e4 {{count}} p\u00e4iv\u00e4lt\u00e4",
     "emptyDetail_one": "{{count}} kokous, ei tallennetta jonka olisit j\u00e4rjest\u00e4nyt.",
     "emptyDetail_other": "{{count}} kokousta, ei yht\u00e4\u00e4n tallennetta jonka olisit j\u00e4rjest\u00e4nyt.",
+    "emptyDetailZoom_one": "{{count}} kokous, jota Zoom vielä tallentaa tai käsittelee. Katso uudelleen muutaman minuutin päästä.",
+    "emptyDetailZoom_other": "{{count}} kokousta, joita Zoom vielä tallentaa tai käsittelee. Katso uudelleen muutaman minuutin päästä.",
     "lookBack_one": "Hae {{count}} p\u00e4iv\u00e4 taaksep\u00e4in",
     "lookBack_other": "Hae {{count}} p\u00e4iv\u00e4\u00e4 taaksep\u00e4in",
     "blanketNotOnThisPlanTitle": "T\u00e4m\u00e4 tili ei voi tallentaa Meet-puheluita",

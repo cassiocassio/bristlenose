@@ -1081,6 +1081,8 @@
     "emptyTitle_other": "No recordings in the last {{count}} days",
     "emptyDetail_one": "{{count}} meeting, and it has no recording you organised.",
     "emptyDetail_other": "{{count}} meetings, none with a recording you organised.",
+    "emptyDetailZoom_one": "{{count}} meeting, still being recorded or processed by Zoom. Check again in a few minutes.",
+    "emptyDetailZoom_other": "{{count}} meetings, still being recorded or processed by Zoom. Check again in a few minutes.",
     "lookBack_one": "Look back {{count}} day",
     "lookBack_other": "Look back {{count}} days",
     "blanketNotOnThisPlanTitle": "This account can't record Meet calls",

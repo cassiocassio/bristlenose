@@ -10,6 +10,27 @@
 - **Apple `SpeechTranscriber` is not a backend** — not as default, not as draft, not as fallback. Structural mismatch, not a "wait one more year" gap.
 - **Desktop app downloads Whisper on first run, inside the app, covered by engaging first-run content.** Not bundled. Not replaced by Apple Speech.
 
+## Measured (18 Oct 2026)
+
+The section below was reasoning; this is a measurement, and it overturns part of it.
+`SpeechTranscriber` was run against the shipped Whisper path on 74 files (29.4 h) on one Mac
+(M2 Max, macOS 27.0); method, numbers and limits are in `experiments/apple-speech/README.md`.
+On English and one-to-one interviews in the nine languages it covers (en, es, fr, de, it, pt,
+ko, ja, zh) it **matched Whisper**: 98–100% of Whisper's words, 4–12% apart, level true WER on
+the two referenced recordings (35.1 vs 35.7%, 44.4 vs 42.0%), fewer inserted words, no loops,
+3.2× faster. Pace and ordinary accents did not break it. **Noise and crosstalk did**: in group
+talk it dropped the quieter or overlapping voice (431 s of 1.3 h, against Whisper's 38 s), and
+it marks nothing as inaudible. It covers 9 of our 20 trial languages, and the only Apple route for
+the other eleven, `DictationTranscriber`, loses most of the speech. Its English model was
+already on this Mac with the OS; the others are a 140 MB, 8–16 s fetch, with no prompt and
+working inside the App Sandbox. So "not as default" and "not as fallback" still hold, and so
+does the draft section's point that a day-one transcript is not disposable. What changed is
+that it no longer needs to be thrown away: **an Apple-first first study, with Whisper
+downloading behind it for later sessions, is now a measured option for those nine
+languages**, subject to the conditions in the README's § 9 (engine recorded per session, no
+silent re-transcription of a session the researcher has opened). L2 English and the cohort's
+own recordings were not specifically tested.
+
 ## Why Apple `SpeechTranscriber` isn't a backend
 
 Apple's on-device ASR (macOS 26+) is trained on a narrow distribution: dictation, voice memos, Siri commands. The model is fast, low-power, zero-setup — and structurally wrong for Bristlenose's audio.

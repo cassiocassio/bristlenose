@@ -320,7 +320,7 @@ block third-party app authorisation.
 8. **Italic attribution** inside the quote sticky — the only de-emphasis a sticky
    affords (no per-span size/colour).
 9. **Scope reuses starred/filter** — `quote_ids` + `is_starred`, no new machinery.
-10. **Background job**, not synchronous (10–30s export).
+10. **Background job**, not synchronous (10–30s export). Built 18 Oct 2026 (A7 below).
 11. **Document Miro as sub-processor** — data leaves the machine.
 12. **Clip links (opt-in):** linked stickies point to _exported, snipped-out
     clips_ of the quotes on the board — never to the original recording at a
@@ -539,8 +539,16 @@ merge-ready pending push + CI. The "syntax only" markers below were the original
 ### Assumptions (review later)
 - **A2** — hand-rolled httpx instead of the `miro_api` SDK (dependency-light;
   swap later).
-- **A7** — **synchronous** export, no `MiroExportJob` table/migration (seconds
-  for hundreds of stickies). Revisit for very large boards.
+- **A7** — ~~**synchronous** export, no `MiroExportJob` table/migration (seconds
+  for hundreds of stickies). Revisit for very large boards.~~ **Revisited 18 Oct 2026:**
+  measured, a board is not seconds — 242 quotes took 79–94 s (13 sticky batches and 212
+  group calls at ~0.2–0.4 s each, grouping 83 of the 94 s), and Miro's refusal of a new
+  board's frames cost 80 s before the first sticky on an 80-quote board. The quotes board is
+  now a job like the screens board (`POST /miro/board`, `GET …/status`, `POST …/cancel`,
+  in-memory, no table), with counted progress, an earned estimate and Stop
+  (`bristlenose/board_progress.py`). `POST /miro/export` stays, unused by either client.
+  Because of A9, frames could be made *after* the stickies, so Miro's start-up refusal
+  overlaps useful work — not yet tried.
 - **A9** — stickies placed at **absolute board coords, not parented into
   frames** (frame-relative coord math is the untestable footgun). Frames are
   visual containers; proper parenting once testable.

@@ -604,6 +604,23 @@ participants' **voices**, not just transcript text, to the provider: a step up t
 gradient (`docs/methodology/consent-gradient.md`), and a cost. None of it is built or measured in
 Bristlenose.
 
-**The biggest unknown in the grid is the small Whisper model**: it is the only stopgap that
-covers every platform and language, and it has not been measured on our corpus. Our prompts,
-loop removal and nets were all tuned on large-v3-turbo.
+### The small and base Whisper models, measured (18 Oct 2026, later the same day)
+
+Both through the product's own stage-5 path (`run_whisper.py --model=small|base`, the shipped
+prompts and nets) on 31 ordinary files, compared with large-v3-turbo (`compare_models.py`). The
+numbers are **distance from turbo**, not error: turbo is the reference because it is what the
+researcher gets once it arrives. Apple's distance from turbo on the same files is beside it.
+
+| Group | small: median distance | base: median distance | Apple: median distance | notes |
+|---|---|---|---|---|
+| English (7 files) | 15.5% | 26.3% | 12.7% | small and turbo agree on word count (99%) |
+| Interviews in Apple's 9 languages (11) | 16.5% | 31.8% | 8.6% | Apple is about twice as close to turbo as small |
+| Group talk (2) | 40.2% | 59.7% | 34.0% | all three lose the quieter voices turbo hears |
+| The 11 languages Apple lacks (11) | 32.9% (6.5–73.4%) | 54.3% | — | small: Dutch 12%, Polish 7%, Swedish 20%, Turkish 22%; Czech 44%, Ukrainian 55%, Russian 73% (22 loop segments, 11 min of sound without words in one file) |
+
+Speed: small's real-time factor was 0.040, the same as turbo's (turbo's four-layer decoder
+makes it as fast as small); base 0.025. So the small model saves only download size
+(481 MB against 1.61 GB). **Verdict:** in Apple's nine languages, Apple is the better
+stopgap. Elsewhere, small is a usable stopgap for Dutch, Polish, Swedish and Turkish and a
+poor one for Russian, Ukrainian and Czech; base is not worth offering. One file per
+language outside Apple's nine, so per-language claims are thin.

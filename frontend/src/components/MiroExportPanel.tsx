@@ -163,6 +163,54 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const triggerRef = useRef<Element | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
+  /**
+   * Read a build until it ends. Both boards are jobs: the quotes board because Miro refuses a new
+   * board's frames for about half a minute and every sticky batch is a round trip, the screens
+   * board because a screenshot per frame is made and uploaded. Their failures carry the same
+   * reasons; a board left part-built names its address, so it is never orphaned behind "try
+   * again".
+   */
+  const watch = useCallback(
+    async (mine: number) => {
+      const live = () => mine === build.current;
+      const read: () => Promise<ScreensMiroStatus | MiroBoardStatus> = screens
+        ? getScreensMiroStatus
+        : getMiroBoardStatus;
+      try {
+        let s = await read();
+        while (live() && s.status === "running") {
+          setBuildState(s.build ?? null);
+          await new Promise((r) => setTimeout(r, BOARD_POLL_MS));
+          if (!live()) return;
+          s = await read();
+        }
+        if (!live()) return;
+        if (s.status === "cancelled" || s.status === "idle") {
+          setView("configure");
+          return;
+        }
+        if (s.status !== "completed") {
+          const key = EXPORT_ERROR_KEYS[s.reason ?? ""] ?? "miro.exportError";
+          setError(s.board_url ? `${t(key)} ${s.board_url}` : t(key));
+          setView("configure");
+          return;
+        }
+        setBoardUrl(s.board_url);
+        if ("completed_count" in s) {
+          setStickies(s.completed_count);
+          setSkipped(s.skipped_count);
+        } else {
+          setStickies(s.stickies);
+        }
+        setView("done");
+      } catch {
+        if (!live()) return;
+        setError(t("miro.exportError"));
+        setView("configure");
+      }
+    },
+    [screens, t],
+  );
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
     if (!open) return;
@@ -183,11 +231,11 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         return (screens ? getScreensMiroStatus : getMiroBoardStatus)().then((b) => {
           if (mine !== build.current || b.status !== "running") return;
           setView("exporting");
-          void watchRef.current(++build.current);
+          void watch(++build.current);
         });
       })
       .catch(() => setView((v) => (v === "loading" ? "connect" : v)));
-  }, [open, screens]);
+  }, [open, screens, watch]);
 
   // On open, fill the name with what the board would be called anyway, so nothing arrives on
   // Miro untitled and the researcher sees the name before choosing it (owner, 17 Oct 2026).
@@ -299,60 +347,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       setBusy(false);
     }
   }, [t]);
-
-  /**
-   * Read a build until it ends. Both boards are jobs: the quotes board because Miro refuses a new
-   * board's frames for about half a minute and every sticky batch is a round trip, the screens
-   * board because a screenshot per frame is made and uploaded. Their failures carry the same
-   * reasons; a board left part-built names its address, so it is never orphaned behind "try
-   * again".
-   */
-  const watch = useCallback(
-    async (mine: number) => {
-      const live = () => mine === build.current;
-      const read: () => Promise<ScreensMiroStatus | MiroBoardStatus> = screens
-        ? getScreensMiroStatus
-        : getMiroBoardStatus;
-      try {
-        let s = await read();
-        while (live() && s.status === "running") {
-          setBuildState(s.build ?? null);
-          await new Promise((r) => setTimeout(r, BOARD_POLL_MS));
-          if (!live()) return;
-          s = await read();
-        }
-        if (!live()) return;
-        if (s.status === "cancelled" || s.status === "idle") {
-          setView("configure");
-          return;
-        }
-        if (s.status !== "completed") {
-          const key = EXPORT_ERROR_KEYS[s.reason ?? ""] ?? "miro.exportError";
-          setError(s.board_url ? `${t(key)} ${s.board_url}` : t(key));
-          setView("configure");
-          return;
-        }
-        setBoardUrl(s.board_url);
-        if ("completed_count" in s) {
-          setStickies(s.completed_count);
-          setSkipped(s.skipped_count);
-        } else {
-          setStickies(s.stickies);
-        }
-        setView("done");
-      } catch {
-        if (!live()) return;
-        setError(t("miro.exportError"));
-        setView("configure");
-      }
-    },
-    [screens, t],
-  );
-  // The open effect picks a running build back up after a fetch; it reads the latest `watch`.
-  const watchRef = useRef(watch);
-  useEffect(() => {
-    watchRef.current = watch;
-  }, [watch]);
 
   const handleExport = useCallback(async () => {
     setView("exporting");
@@ -594,11 +588,14 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
               aria-label={t("miro.creatingBoard")}
               data-testid="bn-miro-build-bar"
             />
-            {etaLine(t, buildState?.eta_seconds) && (
-              <p className="bn-export-hint" data-testid="bn-miro-build-eta">
-                {etaLine(t, buildState?.eta_seconds)}
-              </p>
-            )}
+            {/* The line is kept when empty, so the dialog does not grow when a time arrives. */}
+            <p className="bn-export-hint">
+              {etaLine(t, buildState?.eta_seconds) ? (
+                <span data-testid="bn-miro-build-eta">{etaLine(t, buildState?.eta_seconds)}</span>
+              ) : (
+                "\u00a0"
+              )}
+            </p>
             <div className="bn-modal-actions">
               <button
                 className="bn-btn bn-btn-secondary"

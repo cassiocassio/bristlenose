@@ -182,13 +182,12 @@ def build_hardware_key(settings: BristlenoseSettings) -> str:
 _TIMING_FILENAME = "timing.json"
 
 
-def _timing_path(config_dir: Path) -> Path:
-    return config_dir / _TIMING_FILENAME
+def load_timing_data(config_dir: Path, filename: str = _TIMING_FILENAME) -> dict[str, Any]:
+    """Load timing profiles from disk. Returns empty structure on error.
 
-
-def load_timing_data(config_dir: Path) -> dict[str, Any]:
-    """Load timing profiles from disk. Returns empty structure on error."""
-    path = _timing_path(config_dir)
+    ``filename`` lets another job keep its own profiles in the same shape without sharing this
+    file (the Miro board rates, `board_progress.py`)."""
+    path = config_dir / filename
     if not path.exists():
         return {"version": 1, "profiles": {}}
     try:
@@ -201,9 +200,10 @@ def load_timing_data(config_dir: Path) -> dict[str, Any]:
         return {"version": 1, "profiles": {}}
 
 
-def save_timing_data(data: dict[str, Any], config_dir: Path) -> None:
+def save_timing_data(data: dict[str, Any], config_dir: Path,
+                     filename: str = _TIMING_FILENAME) -> None:
     """Write timing profiles to disk."""
-    path = _timing_path(config_dir)
+    path = config_dir / filename
     try:
         config_dir.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")

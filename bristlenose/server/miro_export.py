@@ -319,10 +319,11 @@ def _push(token: str, db: Session, project_id: int, project_name: str,
     set_ids = [s.set_id for s in board.stickies]
     # Every call the board will take, counted before the first: the board, its frames, the sticky
     # batches, a group per split quote, the title.
-    progress.plan(1 + len(board.frames) + batches(len(items)) + split_sets(set_ids) + len(board.texts))
+    progress.plan({"board": 1, "frame": len(board.frames), "bulk": batches(len(items)),
+                   "group": split_sets(set_ids), "text": len(board.texts)})
 
-    def call(counted: int = 0) -> None:
-        progress.call_done(counted)
+    def call(kind: str, counted: int = 0) -> None:
+        progress.call_done(kind, counted)
         if cancelled():
             raise BoardCancelledError
 
@@ -340,11 +341,11 @@ def _push(token: str, db: Session, project_id: int, project_name: str,
         # Board exists from here — if a later call fails, surface the URL so the
         # researcher can find (or delete) the partially-built board.
         try:
-            call()
+            call("board")
             for f in board.frames:  # frames (position = centre)
                 miro_client.create_frame(token, board_id, f.title,
                                          f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
-                call()
+                call("frame")
             # The `stickies` count returned below is the *intended* count — Miro's
             # bulk endpoint can partially succeed, and we don't yet reconcile the
             # created-count against its response (deferred until a real multi-batch
@@ -353,13 +354,14 @@ def _push(token: str, db: Session, project_id: int, project_name: str,
             made: list[dict[str, Any]] = []
             for i in range(0, len(items), 20):
                 made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
-                call(sum(1 for s in board.stickies[i:i + 20] if s.kind == "quote" and s.attributed))
+                call("bulk", sum(1 for s in board.stickies[i:i + 20]
+                                 if s.kind == "quote" and s.attributed))
             progress.enter("groups", split_sets(set_ids))
-            group_sets(token, board_id, set_ids, made, each=lambda: call(1))
+            group_sets(token, board_id, set_ids, made, each=lambda: call("group", 1))
             for t in board.texts:  # board title as a real text item
                 miro_client.create_text(token, board_id, escape(t.text),
                                         t.x + 300, t.y, 600, int(t.size))
-                progress.call_done()
+                progress.call_done("text")
         except miro_client.MiroError as exc:
             logger.warning("Miro board %s partially populated: %s", board_id, exc)
             raise miro_client.MiroError(

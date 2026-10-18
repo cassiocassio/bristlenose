@@ -44,31 +44,33 @@ class _Clock:
 def test_nothing_is_claimed_while_the_board_is_opening() -> None:
     clock = _Clock()
     p = BoardProgress("quotes", clock=clock)
-    p.plan(10)
+    assert p.snapshot()["phase"] == "starting"  # not "preparing": the quotes board has no screenshots
+    p.plan({"board": 1, "frame": 2, "bulk": 7})
     p.enter("opening")
-    for _ in range(3):  # the board and two frames, slow as Miro's start-up makes them
+    for kind in ("board", "frame", "frame"):  # slow as Miro's start-up makes them
         clock.now += 30
-        p.call_done()
+        p.call_done(kind)
     assert p.fraction() is None and p.eta_seconds() is None
     p.enter("quotes", 40)
     assert p.fraction() == pytest.approx(0.3) and p.opening_seconds == pytest.approx(90)
+    assert "frame" not in p._rates  # start-up time never becomes a rate
 
 
 def test_no_estimate_until_enough_calls_are_measured_and_none_under_the_floor() -> None:
     clock = _Clock()
     p = BoardProgress("quotes", clock=clock)
-    p.plan(100)
+    p.plan({"bulk": 100})
     p.enter("quotes", 100)
     for _ in range(MIN_MEASURED_CALLS - 1):
         clock.now += 2
-        p.call_done(1)
+        p.call_done("bulk", 1)
     assert p.eta_seconds() is None  # three calls are not a rate
     clock.now += 2
-    p.call_done(1)
+    p.call_done("bulk", 1)
     assert p.eta_seconds() == pytest.approx((100 - MIN_MEASURED_CALLS) * 2)
     while p.done < 100:
         clock.now += 2
-        p.call_done(1)
+        p.call_done("bulk", 1)
         if (100 - p.done) * 2 < ETA_FLOOR_SECONDS:
             assert p.eta_seconds() is None  # "a few seconds" is not worth saying
     assert p.count_done == 100 and p.fraction() == 1.0
@@ -77,7 +79,7 @@ def test_no_estimate_until_enough_calls_are_measured_and_none_under_the_floor() 
 def test_a_wait_for_miro_is_said_and_kept_out_of_the_rate() -> None:
     clock = _Clock()
     p = BoardProgress("quotes", clock=clock)
-    p.plan(10)
+    p.plan({"bulk": 10})
     p.enter("quotes", 10)
     for i in range(MIN_MEASURED_CALLS):
         clock.now += 1
@@ -85,26 +87,89 @@ def test_a_wait_for_miro_is_said_and_kept_out_of_the_rate() -> None:
             with p.waiting_for(8, "rate_limit"):
                 assert p.snapshot()["waiting"] is True
                 clock.now += 8
-        p.call_done(1)
+        p.call_done("bulk", 1)
     assert p.waiting is False and p.waited == pytest.approx(8)
-    assert p._rate.mean == pytest.approx(1.0)  # the wait did not make every call look slower
+    assert p._rates["bulk"].mean == pytest.approx(1.0)  # the wait did not make every call look slower
 
 
 def test_the_log_line_carries_counts_and_timings(caplog: pytest.LogCaptureFixture) -> None:
     clock = _Clock()
     p = BoardProgress("screens", clock=clock)
-    p.plan(2)
+    p.plan({"board": 1, "image": 1})
     p.enter("opening")
     clock.now += 31
-    p.call_done()
+    p.call_done("board")
     p.enter("screens", 1)
     clock.now += 1
-    p.call_done(1)
+    p.call_done("image", 1)
     with caplog.at_level(logging.INFO, logger="bristlenose.board_progress"):
         p.log_summary("completed")
     line = caplog.records[-1].getMessage()
     assert line.startswith("miro_board_built kind=screens outcome=completed calls=2/2")
-    assert "opening=31.0s" in line and "per_call=1.00s" in line
+    assert "opening=31.0s" in line and "rates=[image=1.00s/1]" in line
+
+
+def _the_measured_board(clock: _Clock, p: BoardProgress) -> None:
+    """The 242-quote board measured 18 Oct 2026: 13 sticky batches, then 212 groups, every call
+    about 0.4 s. Built to its fifth batch."""
+    p.plan({"board": 1, "frame": 2, "bulk": 13, "group": 212, "text": 1})
+    p.enter("opening")
+    for kind in ("board", "frame", "frame"):
+        clock.now += 0.4
+        p.call_done(kind)
+    p.enter("quotes", 242)
+    for _ in range(5):
+        clock.now += 0.4
+        p.call_done("bulk", 20)
+
+
+def test_a_kind_of_call_not_yet_timed_holds_the_estimate_back() -> None:
+    # One rate for every call said "<1 min left" five seconds into this 94-second build: the
+    # 212 groups to come had never been timed. With a rate per kind there is no estimate yet...
+    clock = _Clock()
+    p = BoardProgress("quotes", clock=clock)
+    _the_measured_board(clock, p)
+    assert p.eta_seconds() is None
+    # ...until the groups have been timed themselves, and then it is the true remainder.
+    p.enter("groups", 212)
+    for _ in range(8):
+        clock.now += 0.4
+        p.call_done("bulk" if p._made.get("bulk", 0) < 13 else "group", 1)
+    for _ in range(MIN_MEASURED_CALLS):
+        clock.now += 0.4
+        p.call_done("group", 1)
+    left = 212 - MIN_MEASURED_CALLS + 1  # the groups, and the title on the build's average
+    assert p.eta_seconds() == pytest.approx(left * 0.4)
+
+
+def test_rates_kept_from_earlier_builds_earn_the_estimate_at_once(tmp_path: Path) -> None:
+    first_clock = _Clock()
+    first = BoardProgress("quotes", clock=first_clock, history_dir=tmp_path)
+    _the_measured_board(first_clock, first)
+    first.enter("groups", 212)
+    for _ in range(10):
+        first_clock.now += 0.4
+        first.call_done("group", 1)
+    first.remember()
+    assert (tmp_path / "board-timing.json").exists()
+    assert not (tmp_path / "timing.json").exists()  # never the pipeline's file
+
+    clock = _Clock()
+    second = BoardProgress("quotes", clock=clock, history_dir=tmp_path)
+    _the_measured_board(clock, second)
+    # Five batches in, the groups' kept rate answers for them: 8 batches + 212 groups + 1 title.
+    assert second.eta_seconds() == pytest.approx((8 + 212 + 1) * 0.4)
+
+
+def test_no_folder_means_nothing_is_read_or_written(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    p = BoardProgress("quotes")
+    p.plan({"bulk": 5})
+    p.enter("quotes", 5)
+    for _ in range(5):
+        p.call_done("bulk", 1)
+    p.remember()
+    assert list(tmp_path.rglob("board-timing.json")) == []
 
 
 # ── The wait hook in the Miro client ────────────────────────────────────────────────────────
@@ -162,10 +227,12 @@ class _FakeMiro:
 
 
 @pytest.fixture()
-def client() -> AuthTestClient:
+def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> AuthTestClient:
     from bristlenose.server.routes import miro as miro_routes
 
     miro_routes._board_jobs.clear()
+    # A real build keeps its rates in the config folder; a test keeps them in its own.
+    monkeypatch.setattr(miro_routes, "default_history_dir", lambda: tmp_path)
     app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
     return AuthTestClient(app)
 

@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose import miro_client
-from bristlenose.board_progress import BoardCancelledError, BoardProgress
+from bristlenose.board_progress import BoardCancelledError, BoardProgress, default_history_dir
 from bristlenose.config import load_settings
 from bristlenose.credentials import (
     CredentialStore,
@@ -418,6 +418,7 @@ async def _run_board(job: dict[str, Any], *args: Any) -> None:
             job["status"] = "failed"
             job["reason"] = "board_incomplete" if job.get("board_url") else None
             job["vars"] = {"url": job["board_url"]} if job.get("board_url") else {}
+    await asyncio.to_thread(job["tracker"].remember)
 
 
 @router.post("/projects/{project_id}/miro/board")
@@ -445,7 +446,7 @@ async def start_miro_board(project_id: int, body: MiroExportRequest,
     if not token:
         raise HTTPException(status_code=400, detail="Not connected to Miro")
     job: dict[str, Any] = {"status": "running", "board_url": None, "stickies": 0, "reason": None,
-                           "vars": {}, "tracker": BoardProgress("quotes")}
+                           "vars": {}, "tracker": BoardProgress("quotes", history_dir=default_history_dir())}
     _board_jobs[project_id] = job
     job["task"] = asyncio.create_task(
         _run_board(job, request.app.state.db_factory, project_id, name, token, body))

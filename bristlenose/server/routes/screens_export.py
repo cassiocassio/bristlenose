@@ -297,11 +297,13 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
         raise miro_client.MiroError("No screengrab could be made", reason="no_stills")
     # Every call, counted before the first: the board, then per frame the frame, its screengrabs,
     # its sticky batches and a group per split quote.
-    tracker.plan(1 + sum(1 + len(f.stills) + batches(len(f.stickies))
-                         + split_sets([st.set_id for st in f.stickies]) for f in frames))
+    tracker.plan({"board": 1, "frame": len(frames),
+                  "image": sum(len(f.stills) for f in frames),
+                  "bulk": sum(batches(len(f.stickies)) for f in frames),
+                  "group": sum(split_sets([st.set_id for st in f.stickies]) for f in frames)})
 
-    def call() -> None:
-        tracker.call_done()
+    def call(kind: str) -> None:
+        tracker.call_done(kind)
         if job["status"] == "cancelled":
             raise BoardCancelledError
 
@@ -312,14 +314,14 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
         if not board_id:
             raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
         job["board_url"] = board.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
-        call()
+        call("board")
         for frame in frames:
             if job["status"] == "cancelled":
                 return
             job["current"] = frame.title
             made = miro_client.create_frame(token, board_id, frame.title, frame.x + frame.width / 2,
                                             frame.y + frame.height / 2, frame.width, frame.height)
-            call()
+            call("frame")
             if tracker.phase == "opening":  # the board takes frames now: the build proper
                 tracker.enter("screens", len(frames))
             fid = made["id"]
@@ -336,7 +338,7 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
                     if still is front:
                         raise
                     logger.warning("Left out %s: Miro refused the upload", still.filename, exc_info=True)
-                call()
+                call("image")
             items = []
             for st in frame.stickies:
                 q = quotes[st.dom_id]
@@ -351,8 +353,9 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             made_items: list[dict[str, Any]] = []
             for i in range(0, len(items), 20):
                 made_items += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
-                call()
-            group_sets(token, board_id, [st.set_id for st in frame.stickies], made_items, each=call)
+                call("bulk")
+            group_sets(token, board_id, [st.set_id for st in frame.stickies], made_items,
+                       each=lambda: call("group"))
             job["completed_count"] += 1
             job["progress"] += 1
             tracker.counted()
@@ -382,6 +385,7 @@ async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
             job["reason"] = "board_incomplete" if job.get("board_url") else "miro_error"
     job["current"] = ""
     tracker.log_summary(job["status"])
+    await asyncio.to_thread(tracker.remember)
 
 
 class ScreensMiroStart(BaseModel):
@@ -457,8 +461,11 @@ async def start_screens_miro(request: Request, project_id: int,
     screens, videos, quotes, title = await asyncio.to_thread(read)
     if not screens:
         return ScreensExportStart(status="no_screens", total=0)
+    from bristlenose.board_progress import BoardProgress, default_history_dir
+
     job: dict[str, Any] = {"status": "running", "progress": 0, "total": len(screens), "completed_count": 0,
-                           "skipped_count": 0, "current": "", "board_url": None, "reason": None}
+                           "skipped_count": 0, "current": "", "board_url": None, "reason": None,
+                           "tracker": BoardProgress("screens", history_dir=default_history_dir())}
     _miro_jobs[project_id] = job
     job["task"] = asyncio.create_task(_run_miro(
         project_id, job, token, title, out_dir, screens, videos, quotes, body.colour_by,

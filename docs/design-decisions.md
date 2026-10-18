@@ -731,3 +731,28 @@ by the shown name, so two groups renamed to one name merge into one row, as
 identical pipeline names always did. Keying Signals by id is the deeper fix and
 an owner call. A rename also re-elaborates that location's cards on the next
 visit (one paid call), with the new name in the prompt.
+
+## In the Mac app, a web control's pulldown is a native menu
+
+_18 Oct 2026 (owner: alignment B, sentence case accepted; `bd3698ea`, `7435256f`)._
+
+The transcript timeline's split control stays drawn by the web, next to the
+slot it changes; only its pulldown goes native. In the Mac app the caret posts
+`timeline-menu` with the state, the control's rect and every string already
+localised, and native pops an NSMenu, as WebKit itself does for a `<select>`.
+Picks come back as the View menu's own actions, so the web keeps every rule
+about what a pick means. Moving the whole control into the toolbar was
+rejected: it would sit away from the slot it changes, and the menu bar already
+carries View ▸ Show/Hide Session Timeline and Timeline Detail.
+
+**The menu hangs from the control's right edge, not its left.** A Mac pull-down
+normally opens left-aligned under its button, but this control sits at the
+window's trailing edge, and a left-aligned menu would hang outside the window
+and over the tag sidebar. **The words are the web's**, sentence case, so the
+menu needs no keys of its own; the section header is the web's "Timeline
+detail", not the menu bar's "Timeline Detail".
+
+**Not settled:** the menu opens on the web click's mouse-up, where a native
+pull-down opens on mouse-down; and picks toggle against the state at the click
+rather than setting it. Both are in TODO.md (18 Oct) for the owner.
+Mockup: `docs/mockups/transcript-timeline-native-menu.html`.

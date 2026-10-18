@@ -4,6 +4,21 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
+## Native timeline menu (Mac app)
+
+**Date:** 18 Oct 2026
+**Branch:** main (`bd3698ea`, `7435256f`, `fad24516`)
+**Context:** The transcript split control's caret pops a native NSMenu in the Mac app. Placement and VoiceOver are things no test reaches. Review: `docs/private/reviews/transcript-timeline-native-menu.md` Findings 11–13, 16, 18. Needs a ⌘R first (the bundled report rebuilds with the new web code).
+
+- [ ] **Right edges line up.** Open a transcript with a timeline, click the caret: the menu opens just below the control with its right edge on the control's right edge. Take a 2× screenshot in light and dark; if off by a constant, fold a measured offset into `TimelineMenuEntry.origin`. Check on macOS 15 too if a machine is at hand (it draws tighter rows).
+- [ ] **Sidebar open.** Same check with the projects column and the tag sidebar open: is the menu shifted sideways? (`viewRect` ignores a left safe-area inset; shared with the person picker.)
+- [ ] **No double gap.** The separator above the "Timeline detail" header shouldn't read as a doubled space; if it does, drop the separator.
+- [ ] **Picks work.** Each row changes the slot and the tick follows; choosing the ticked row does nothing; a double-click on the caret opens one menu, not two.
+- [ ] **Keyboard and focus.** Tab to the caret, Space opens the menu, ↓ highlights the first row, Escape closes and the caret keeps focus with no stuck pressed shading. Hold Return on the caret once: it must not pick a row by itself. After a mouse pick, no focus ring should appear on the caret.
+- [ ] **VoiceOver.** The subtitles ("Sections · Moderator · Participant", "+ Sentiment") are read after each title, and the menu opening is announced.
+
+---
+
 ## macOS localisation — menu bar, Settings, and the failure surfaces
 
 **Date:** 21 Sep 2026

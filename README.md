@@ -388,6 +388,25 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.41.0** — _18 Oct 2026_
+
+Miro and FigJam boards show their progress and can be stopped, and a long quote split over several stickies breaks where it reads, in every language Bristlenose speaks.
+
+**New**
+
+- **Building a Miro or FigJam board shows its progress.** What is being placed and how many of how many, a bar, and the time left once there is enough to go on. Stop ends the build and keeps what was made. In Send to Miro, closing the window and opening it again picks the build back up.
+
+**Improved**
+
+- **Long quotes break where they read.** A quote split over two or three stickies breaks at a sentence end, at a cut the quote already marks, or where the participant paused, and never just after a word like "the" or "of". Each language follows its own subtitling and typography rules. Japanese and Chinese break between phrases instead of mid-word.
+- **Japanese, Chinese and Korean stickies on Miro are sized for their characters**, so their type matches the rest of the board.
+
+**Fixed**
+
+- **On Miro, the stickies of a split quote didn't overlap**, so they read as separate quotes. They now overlap a little, as on FigJam.
+- **A speaker trailing off showed as "that..…"** where a quote was split.
+- **Two labels in the Mac app's Send to Miro window were cut short.**
+
 **0.40.0** — _18 Oct 2026_
 
 The Discussion lens opens on all sessions at once, its guide shows how much each question drew out of each session, and a failed re-analyse no longer leaves the report empty.

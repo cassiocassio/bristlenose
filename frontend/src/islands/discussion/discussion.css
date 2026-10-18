@@ -325,7 +325,8 @@ button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
 }
 .dl-content .dl-item { scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md)); }
 .dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); overflow-wrap: anywhere; }
-.dl-content .dl-item > h3 + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }
+.dl-content .dl-item > h3 + .dl-group,
+.dl-content .dl-part + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }
 /* A session's lead-in: its bar badge, a button that opens this session at this question. */
 .dl-from {
     display: inline-flex; align-items: center; margin: 0 0 var(--bn-space-xs) calc(-1 * var(--bn-space-xs));

@@ -850,8 +850,11 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     const seconds = data.sessions.reduce((n, sess) => n + (sess.seconds || 0), 0);
     // The same counts a session's own line gives, summed: asks, and every quote.
     const asks = data.turns.filter((t) => t.item).length;
-    const withBefore = data.sessions.filter((sess) => leftovers.get(sess.id)?.before.length);
-    const withUnclassified = data.sessions.filter((sess) => leftovers.get(sess.id)?.unclassified.length);
+    // "Before the first question" is true only of a session that had questions; an unread
+    // session's quotes close the column with its other leftovers instead.
+    const withBefore = data.sessions.filter((sess) => readable.has(sess.id) && leftovers.get(sess.id)?.before.length);
+    const withUnclassified = data.sessions.filter((sess) => leftovers.get(sess.id)?.unclassified.length
+      || (!readable.has(sess.id) && leftovers.get(sess.id)?.before.length));
     return (
       <section>
         <SectionHeading>{S.allSessions}</SectionHeading>
@@ -915,6 +918,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {withUnclassified.map((sess) => (
               <div key={sess.id} className="dl-group">
                 {leadIn(sess, null)}
+                {!readable.has(sess.id) && leftovers.get(sess.id)!.before.map((q) => quoteCard(q, ""))}
                 {leftovers.get(sess.id)!.unclassified.map(({ turn, answers: said }) => [
                   askRow(turn, said.length === 0),
                   ...said.map((q) => quoteCard(q, turn.id)),

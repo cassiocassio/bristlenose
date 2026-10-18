@@ -128,6 +128,11 @@ describe("DiscussionView", () => {
     try {
     const { container } = render(<DiscussionView data={d} />);
     for (const line of container.querySelectorAll(".dl-notasked")) expect(line.textContent).not.toContain("#1");
+    // and its quotes are not "before the first question": it had none
+    const beforePart = [...container.querySelectorAll(".dl-part")].find((h) => h.textContent === "Before the first question");
+    expect(beforePart?.parentElement?.querySelector(".dl-from")?.textContent ?? "").not.toMatch(/^#1/);
+    const s1 = d.quotes.filter((q) => q.session === "s1").length;
+    expect(container.querySelectorAll(".dl-leftovers blockquote.quote-card:not(.dl-ask)").length).toBeGreaterThanOrEqual(s1);
     const cells = [...container.querySelectorAll(".dl-row .dl-cell")].filter((c) => c.getAttribute("aria-label")?.startsWith("#1"));
     expect(cells.length).toBeGreaterThan(0);
     for (const c of cells) expect(c.getAttribute("aria-label")).toMatch(/not classified$/);

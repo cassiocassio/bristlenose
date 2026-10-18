@@ -115,6 +115,9 @@
   .btn { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 7px;
          border: 0.5px solid rgba(0,0,0,0.2); background: #fff; color: var(--label); }
 
+  .tip { position: absolute; max-width: 250px; background: #fdfdfd; border: 0.5px solid rgba(0,0,0,0.22);
+         border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,0.15); padding: 4px 7px; font-size: 11px;
+         line-height: 1.35; color: var(--label); z-index: 2; }
   /* settings form */
   .settings { padding: 16px 18px; background: #f5f5f7; min-height: 210px; }
   .form-sec { background: #fff; border: 0.5px solid var(--sep); border-radius: 9px; padding: 10px 12px; margin: 0 0 10px; }
@@ -178,12 +181,12 @@
     <div>
       <p class="col-label">PROPOSED</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · etaUnderMinute · ollamaSetup.pillDownloading</div>
+        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · <span class="new">NEW</span> modelDownload.pill</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:3%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:3%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
-            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1</div></div><span class="ring det"></span></div>
           </div>
           <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
         </div>
@@ -192,10 +195,12 @@
   </div>
   <div class="comment"><span class="lab">Commentary</span>
     Today the row says <em>Analysing · ~2 min left</em>, but the 1.6 GB Whisper download runs first, inside the
-    run, and the estimate does not count it (the estimate is sent before the download starts). Proposed: Apple's
+    run; the estimate is sent before the download and does not count it, and the ring fills against the clock
+    while nothing but the download is happening. Proposed: Apple's
     model is already on the Mac (English came with macOS 27), so transcription starts at once, and the Whisper
     download starts beside it as an app-wide job in the toolbar's status zone, the sibling of the Ollama download
-    pill. No new question, no explanation in the row.</div>
+    pill. No new question, no explanation in the row, and no time estimate on a Mac that has never run anything (there
+    is no history to base one on).</div>
 </div>
 
 <!-- FRAME 2 -->
@@ -218,12 +223,12 @@
     <div>
       <p class="col-label">PROPOSED</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> stage.quotes · sessionsCount · etaUnderMinute · ollamaSetup.pillDownloading</div>
+        <div class="chrome"><b>shipped</b> stage.quotes · sessionsCount · <span class="new">NEW</span> modelDownload.pill</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:28%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:28%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
-            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Finding quotes · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Finding quotes · 1 of 1</div></div><span class="ring det"></span></div>
           </div>
           <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
         </div>
@@ -256,10 +261,10 @@
     <div>
       <p class="col-label">PROPOSED · 1:00, pill clicked</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> ollamaSetup.downloadingTitle · bytesProgress · etaMinutes · common.buttons.cancel · <span class="new">NEW</span> modelDownload.rate · <span class="new">NEW</span> modelDownload.why</div>
+        <div class="chrome"><b>system</b> Progress.localizedAdditionalDescription · <span class="new">NEW</span> modelDownload.pill · .title · .why · .stop · .stopNote</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:37%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:37%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
             <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">18 Oct 2026</div></div><span></span></div>
           </div>
@@ -269,11 +274,12 @@
             <div class="card"><div class="ln" style="width:70%"></div><div class="ln" style="width:45%"></div></div>
           </div>
           <div class="pop" style="top:44px; right:8px;">
-            <p class="ptitle">Downloading Whisper large-v3-turbo</p>
-            <p class="pbody">600 MB of 1.6 GB<br>10 MB/s · ~2 min left</p>
+            <p class="ptitle">Downloading speech model</p>
+            <p class="pbody">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</p>
             <div class="bar"><i style="width:37%"></i></div>
             <p class="pbody" style="margin-top:8px">For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</p>
-            <div class="actions"><span class="btn">Cancel</span></div>
+            <p class="pbody" style="margin:6px 0 0; font-size:11px; color:var(--tertiary)">Starts again from the beginning next time.</p>
+            <div class="actions"><span class="btn">Stop Download</span></div>
           </div>
         </div>
       </div>
@@ -281,9 +287,10 @@
   </div>
   <div class="comment"><span class="lab">Commentary</span>
     Proposed: the report is readable about three minutes earlier on typical broadband (six on weak Wi-Fi). The
-    popover is the honest progress the owner asked for: size, amount, speed, time left, and Cancel, so the
-    researcher can decide (carry on, move to faster Wi-Fi, stop). It extends the Ollama download popover, which
-    today shows bytes and a bar but no speed or time. The date subtitle is the row's existing ready state
+    popover is the honest progress the owner asked for: size, amount, speed and time left, in Foundation's own
+    words, so the researcher can decide (carry on, move to faster Wi-Fi, stop). <em>Stop Download</em> rather than
+    Cancel, because there is no resume: stopping throws the downloaded part away, and the note says so. The title
+    names a speech model, not a repository; Whisper is named in the sentence. The date subtitle is the row's existing ready state
     (system-formatted). Today, at this moment, the row is unchanged from frame 1; its report lands near 4:20.</div>
 </div>
 
@@ -296,29 +303,27 @@
       <div class="na">No difference today: Whisper detects the language, after the download.</div>
     </div>
     <div>
-      <p class="col-label">PROPOSED · row popover open</p>
+      <p class="col-label">PROPOSED · pointer resting on the row</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> ollamaSetup.pillDownloading · <span class="new">NEW</span> chrome.pipeline.waitingForWhisper · <span class="new">NEW</span> pipeline.diagnostic.reason.languageGuess</div>
+        <div class="chrome"><span class="new">NEW</span> modelDownload.pill · <span class="new">NEW</span> chrome.pipeline.waitingForDownload · …Hint (tooltip)</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Entrevistas</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:52%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:52%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
-            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Entrevistas</div><div class="st">Waiting for Whisper</div></div><span class="ring"></span></div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Entrevistas</div><div class="st">Waiting for download</div></div><span class="ring"></span></div>
           </div>
           <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
-          <div class="pop left" style="top:118px; left:14px;">
-            <p class="pbody" style="margin:0">This recording doesn't sound like English. It will be transcribed once Whisper has downloaded.</p>
-          </div>
+          <div class="tip" style="top:112px; left:60px;">This recording doesn't sound like English. It will be transcribed once Whisper has downloaded.</div>
         </div>
       </div>
     </div>
   </div>
   <div class="comment"><span class="lab">Commentary</span>
     Apple's English model on Spanish audio gives itself low confidence (0.10–0.38 over the first two minutes,
-    against 0.92 in the right language), so the guess is caught and Apple's text is thrown away. The session
-    falls back to today's behaviour, waiting for Whisper, but now with the wait visible and explained in one
-    sentence. The reverse case, English audio under a Spanish or German UI, came back as English and needs no
-    gate. The popover sentence is owner-written copy.</div>
+    against 0.92 in the right language), so the guess is caught and Apple's text is thrown away. The run
+    finishes with the other sessions; this one is deferred, reads <em>Waiting for download</em> like a queued row
+    (information, no glyph), explains itself in the tooltip, and is transcribed by Whisper when it lands. The reverse case, English audio under a Spanish or German UI, came back as English and needs no
+    gate. The tooltip sentence is owner-written copy.</div>
 </div>
 
 <!-- FRAME 5 -->
@@ -336,20 +341,29 @@
       </div>
     </div>
     <div>
-      <p class="col-label">PROPOSED</p>
+      <p class="col-label">PROPOSED · download in progress</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> backendLabel · backendAuto · modelLabel · modelRecommended · <span class="new">REWORDED</span> transcriptionSettings.backendHint</div>
+        <div class="chrome"><b>shipped</b> readScreens* · <span class="new">NEW</span> transcriptionSettings.engine* · whisper* · modelDownload.stop · <b>system</b> Progress</div>
         <div class="settings">
-          <div class="form-sec"><div class="frow"><div><div class="flabel">Backend</div><div class="fhint">Auto uses Apple's speech model on this Mac until Whisper has downloaded, then Whisper, which copes better with poor audio, people talking over each other, larger groups and more languages.</div></div><span class="popup">Auto ⌄</span></div></div>
-          <div class="form-sec"><div class="frow"><div class="flabel">Model</div><span class="popup">large-v3-turbo (recommended) ⌄</span></div></div>
+          <div class="form-sec">
+            <div class="frow"><div><div class="flabel">Transcribe with</div><div class="fhint">Apple's speech model is already on this Mac and is faster. Whisper copes better with poor audio, people talking over each other, larger groups, and languages Apple's model lacks.</div></div><span class="popup">Whisper when ready ⌄</span></div>
+            <div class="frow"><div style="flex:1"><div class="flabel">Whisper</div>
+              <div class="bar" style="margin:6px 0 4px; max-width:330px"><i style="width:37%"></i></div>
+              <div class="fhint">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</div></div><span class="btn">Stop Download</span></div>
+          </div>
+          <div class="form-sec"><div class="frow"><div><div class="flabel">Read shared screens</div><div class="fhint">Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project's folder. Never sent to the AI.</div></div><span class="popup">●</span></div></div>
         </div>
       </div>
     </div>
   </div>
   <div class="comment"><span class="lab">Commentary</span>
-    The smallest change: no new picker option. <em>Auto</em> keeps its name and gains a hint that says what it
-    now does and why Whisper is still the one to want. Choosing MLX or faster-whisper means Whisper only, exactly
-    as today, so a researcher who never wants Apple's model has a way out.</div>
+    Today the pane asks a question researchers can't answer (MLX or faster-whisper are two builds of the
+    same engine) and shows nothing about whether the 1.6 GB model is here. Proposed: one choice stated as a
+    behaviour (<em>Whisper when ready</em>, <em>Whisper only</em>, <em>Apple's speech model</em>), one sentence on
+    when each is better, and a status row fed by the same download job as the pill: <em>Download Now</em>,
+    progress with <em>Stop Download</em>, or <em>On this Mac · 1.6 GB</em>. MLX vs faster-whisper moves behind the
+    Diagnostics preference; the interim model picker leaves the pane. The progress line is Foundation's own
+    wording, localised by the system.</div>
 </div>
 
 <!-- FRAME 6 -->
@@ -363,11 +377,11 @@
     <div>
       <p class="col-label">PROPOSED · second recording dropped</p>
       <div class="shot">
-        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · etaUnderMinute</div>
+        <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span><span class="status-zone"></span></div>
           <div class="side"><div class="group">Projects</div>
-            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1 · &lt;1 min left</div></div><span class="ring det"></span></div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1</div></div><span class="ring det"></span></div>
           </div>
           <div class="detail">
             <p class="report-h">Checkout study</p>
@@ -386,13 +400,13 @@
 <h2 style="font-size:15px; margin: 30px 0 8px;">String plan</h2>
 <table class="strings">
   <tr><th>Key</th><th>English</th><th>Status</th></tr>
-  <tr><td><code>desktop.chrome.pipeline.*</code> (analysing, stage.transcribe, stage.quotes, sessionsCount, etaMinutes, etaUnderMinute)</td><td>as shipped</td><td>reused</td></tr>
-  <tr><td><code>desktop.ollamaSetup.pillDownloading</code>, <code>downloadingTitle</code>, <code>bytesProgress</code>; <code>common.buttons.cancel</code></td><td>Downloading %@ · %@ of %@ · Cancel</td><td>reused</td></tr>
-  <tr><td><code>desktop.modelDownload.rate</code></td><td>{{rate}}/s</td><td class="tag-new">new</td></tr>
+  <tr><td><code>desktop.chrome.pipeline.*</code> (analysing, stage.transcribe, stage.quotes, sessionsCount, etaMinutes)</td><td>as shipped</td><td>reused</td></tr>
+  <tr><td>progress line</td><td>Foundation <code>Progress.localizedAdditionalDescription</code></td><td>system, no key</td></tr>
+  <tr><td><code>desktop.modelDownload.pill</code>, <code>.title</code></td><td>Downloading speech model</td><td class="tag-new">new (Ollama's download keys move here too)</td></tr>
   <tr><td><code>desktop.modelDownload.why</code></td><td>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</td><td class="tag-new">new · owner to word</td></tr>
-  <tr><td><code>desktop.chrome.pipeline.waitingForWhisper</code></td><td>Waiting for Whisper</td><td class="tag-new">new</td></tr>
-  <tr><td><code>desktop.pipeline.diagnostic.reason.languageGuess</code></td><td>This recording doesn't sound like {{language}}. It will be transcribed once Whisper has downloaded.</td><td class="tag-new">new · owner to word</td></tr>
-  <tr><td><code>desktop.transcriptionSettings.backendHint</code></td><td>Auto uses Apple's speech model on this Mac until Whisper has downloaded, then Whisper, which copes better with poor audio, people talking over each other, larger groups and more languages.</td><td class="tag-new">reworded · 21 locales</td></tr>
+  <tr><td><code>desktop.modelDownload.stop</code>, <code>.stopNote</code></td><td>Stop Download · Starts again from the beginning next time.</td><td class="tag-new">new</td></tr>
+  <tr><td><code>desktop.chrome.pipeline.waitingForDownload</code>, <code>…Hint</code></td><td>Waiting for download · This recording doesn't sound like {{language}}. It will be transcribed once Whisper has downloaded.</td><td class="tag-new">new · owner to word</td></tr>
+  <tr><td><code>desktop.transcriptionSettings.engine*</code>, <code>whisper*</code>, <code>downloadNow</code></td><td>Transcribe with · Whisper when ready · Whisper only · Apple's speech model · Apple's speech model needs macOS 26. · Whisper · On this Mac · {{size}} · Download Now</td><td class="tag-new">new (replace backendLabel, backendAuto, backendHint)</td></tr>
 </table>
 </div>
 </body>

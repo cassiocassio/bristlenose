@@ -338,6 +338,8 @@ button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
 /* "Not asked in #4 #11": absence shown, one line, the sessions as absent compact badges. */
 .dl-notasked { display: flex; flex-wrap: wrap; gap: var(--bn-space-xs); align-items: center; margin-top: var(--bn-space-sm); }
 .dl-notasked > span:first-child { margin-right: var(--bn-space-xs); }
+/* Chinese ends the label with a fullwidth colon, which carries its own space. */
+.dl-notasked > span:first-child:lang(zh) { margin-right: 0; }
 /* Asks never classified close All, apart from the last question by a keyline. */
 .dl-content .dl-leftovers { margin-top: var(--bn-space-xl); border-top: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width); }
 .dl-content .dl-leftovers > .dl-group:first-child { border-top-color: transparent; }

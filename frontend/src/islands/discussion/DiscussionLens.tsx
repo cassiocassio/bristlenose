@@ -101,8 +101,12 @@ const S = {
   get notAsked() { return d("notAsked"); },
   showSession: (n: number) => d("showSession", { n }),
   quotes: (n: number) => d("quoteCount", { count: n }),
-  askedInOf: (asked: number, total: number, quotes: number) =>
-    d("askedInOf", { asked, total, quotes: d("quoteCount", { count: quotes }) }),
+  // "Asked in 3 sessions": a count, never "3 of 8" (the no-fraction rule, design doc)
+  askedIn: (n: number) => d("askedIn", { count: n }),
+  get askedNoQuotes() { return d("askedNoQuotes"); },
+  // A group session's cell: "4 quotes from 3 of 5 people" (decided 18 Oct 2026)
+  quotesFrom: (quotes: number, people: number, total: number) =>
+    d("quotesFrom", { quotes: d("quoteCount", { count: quotes }), people, count: total }),
   get keyMeasure() { return d("keyMeasure"); },
   get before() { return d("before"); },
   get noQuestions() { return d("noQuestions"); },
@@ -653,6 +657,12 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // session, shaded by the quotes it drew in the study's thirds; not asked and asked-but-nothing
   // are drawn alike. Then the row's total as the tags sidebar's bar and count, the bar
   // logarithmic so one quote never looks like none. The tier (lens class) shows what fits.
+  // How many of a session's people said something quoted under a question.
+  const speakers = (item: string, sid: string) =>
+    new Set((answers.get(item)?.get(sid) ?? []).flatMap((a) => a.answers.map((q) => q.participant))).size;
+  // An id for a row's description: guide item ids are free text.
+  const sumId = (id: string) => `dl-sum-${id.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+
   const measure = (r: NavRow) => {
     const total = rowTotal(r);
     return (
@@ -662,7 +672,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             const asked = r.sessions.includes(sess.id);
             const q = asked ? cellQuotes(answers, r.id, sess.id) : 0;
             const label = `${sessionName(sess.id)} · ${
-              asked ? S.quotes(q) : readable.has(sess.id) ? S.notAsked : S.unclassified}`;
+              !asked ? (readable.has(sess.id) ? S.notAsked : S.unclassified)
+                : q === 0 ? S.askedNoQuotes
+                  : sess.participants.length > 1 ? S.quotesFrom(q, speakers(r.id, sess.id), sess.participants.length)
+                    : S.quotes(q)}`;
             return (
               // Not a tab stop: twelve per row would bury the guide. The keyboard reaches the
               // same place through the session bar (focus is kept) or the All view's lead-ins.
@@ -684,7 +697,9 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           </span>
           <span className="tag-count" aria-hidden="true">{total}</span>
         </span>
-        <span className="bn-sr-only">{`, ${S.askedInOf(r.sessions.length, data.sessions.length, total)}`}</span>
+        {/* The row button's description (aria-describedby): where it was asked, and what it drew. */}
+        <span id={`${sumId(r.id)}-a`} hidden>{S.askedIn(r.sessions.length)}</span>
+        <span id={`${sumId(r.id)}-q`} hidden>{S.quotes(total)}</span>
       </span>
     );
   };
@@ -701,7 +716,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return (
       <div key={r.id} className={cls.join(" ")} data-id={r.id}>
         <button type="button" className="dl-row-btn" title={r.title} onClick={() => focusRow(r)}
-          aria-pressed={r.sessions.length ? on : undefined} aria-disabled={r.sessions.length ? undefined : true}>
+          aria-pressed={r.sessions.length ? on : undefined} aria-disabled={r.sessions.length ? undefined : true}
+          aria-describedby={`${sumId(r.id)}-a ${sumId(r.id)}-q`}>
           {data.guide ? (
             <span className="dl-mk" aria-hidden="true" title={markTip(r)}>
               {r.mark === "plus" ? "+" : <span className={r.mark === "hollow" ? "dl-dot hollow" : "dl-dot"} />}

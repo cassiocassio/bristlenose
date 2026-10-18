@@ -266,6 +266,45 @@ describe("DiscussionView", () => {
     }
   });
 
+  it("a row describes where it was asked and what it drew, as a count, never a fraction", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const answers = itemAnswers(data);
+    const it = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;
+    const asked = new Set(it.asks.map((a) => a.session)).size;
+    const quotes = data.sessions.reduce((n, sess) => n + cellQuotes(answers, it.id, sess.id), 0);
+    const btn = container.querySelector(`.dl-row[data-id="${it.id}"] .dl-row-btn`)!;
+    const said = btn.getAttribute("aria-describedby")!.split(" ").map((id) => document.getElementById(id)!.textContent);
+    expect(said).toEqual([`Asked in ${asked} sessions`, `${quotes} ${quotes === 1 ? "quote" : "quotes"}`]);
+    expect(said.join(" ")).not.toMatch(/ of /);
+  });
+
+  it("a cell's label says what the session gave: a count, who of a group, or asked with none", () => {
+    const answers = itemAnswers(data);
+    // a group session: s1 has three people, and its quotes come from p1 only
+    const group = { ...data, sessions: data.sessions.map((s, i) => (i === 0 ? { ...s, participants: [
+      s.participants[0], { code: "p8", name: "Ana" }, { code: "p9", name: "Joe" }] } : s)) };
+    const zero = [...answers].flatMap(([item, m]) => [...m.keys()].map((sid) => ({ item, sid })))
+      .find(({ item, sid }) => cellQuotes(answers, item, sid) === 0);
+    const L = layout(800);
+    try {
+      const { container } = render(<DiscussionView data={group} />);
+      const it = data.sections.flatMap((s) => s.items).find((i) => i.asks.some((a) => a.session === "s1")
+        && cellQuotes(answers, i.id, "s1") > 0)!;
+      const n = cellQuotes(answers, it.id, "s1");
+      const cell = container.querySelector(`.dl-row[data-id="${it.id}"] .dl-cell`)!;
+      expect(cell.getAttribute("aria-label")).toMatch(new RegExp(` · ${n} quotes? from 1 of 3 people$`));
+      if (zero) {
+        const i = data.sessions.findIndex((s) => s.id === zero.sid);
+        const z = container.querySelectorAll(`.dl-row[data-id="${zero.item}"] .dl-cell`)[i];
+        expect(z.getAttribute("aria-label")).toMatch(/ · Asked, no quotes$/);
+        expect(z).toHaveClass("s0"); // drawn as not asked (decided 18 Oct)
+      }
+      expect(zero).toBeDefined(); // the fixture carries one asked-with-no-quotes cell
+    } finally {
+      L.restore();
+    }
+  });
+
   it("a session's lead-in in All opens that session at that question", async () => {
     const { container } = render(<DiscussionView data={data} />);
     const multi = data.sections.flatMap((s) => s.items).find((i) => new Set(i.asks.map((a) => a.session)).size > 1)!;

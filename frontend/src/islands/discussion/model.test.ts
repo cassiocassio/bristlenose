@@ -14,6 +14,7 @@ import {
   plannedEntries,
   sessionColumn,
   sessionForFocus,
+  sessionLeftovers,
   shadeStep,
   wirePath,
   yieldThirds,
@@ -168,6 +169,22 @@ describe("all sessions", () => {
     }
     // an unclassified turn belongs to no question
     expect([...answers.keys()].every((k) => k)).toBe(true);
+  });
+
+  it("accounts for every quote exactly once: under a question, before the first, or unclassified", () => {
+    // independent of the session column: count the data, not the helper both views share
+    const d: DiscussionData = {
+      ...tiny([turn("a", 10, "x"), { ...turn("u", 30, null), kind: "unclassified" }, turn("b", 50, "y")],
+        [quote("q0", 5), quote("q1", 12), quote("q2", 31), quote("q3", 52), quote("q4", 53)]),
+    };
+    const answers = itemAnswers(d);
+    const left = sessionLeftovers(d).get("s1")!;
+    expect(cellQuotes(answers, "x", "s1")).toBe(1);
+    expect(cellQuotes(answers, "y", "s1")).toBe(2);
+    expect(left.before.map((q) => q.key)).toEqual(["q0"]);
+    expect(left.unclassified.flatMap((a) => a.answers.map((q) => q.key))).toEqual(["q2"]);
+    const placed = 1 + 2 + left.before.length + left.unclassified.reduce((n, a) => n + a.answers.length, 0);
+    expect(placed).toBe(d.quotes.length);
   });
 
   it("shades a cell by the study's thirds, and nothing for no quotes", () => {

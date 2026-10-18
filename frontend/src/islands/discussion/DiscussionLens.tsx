@@ -65,6 +65,7 @@ import "./discussion.css";
 import { discussionArrival } from "./discussionLinks";
 import { appQuery } from "../../utils/appQuery";
 import { markArrived } from "../../utils/arrival";
+import { scrollToLand } from "../../utils/scrollToLand";
 
 // The lens's strings, from `common.discussion.*`. Getters read the active
 // language when called. RULE: every component that reads `S` must call
@@ -459,7 +460,11 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     if (!el) return;
     const r = (session === ALL ? el.querySelector("h3") ?? el : el).getBoundingClientRect();
     const barH = barRef.current?.getBoundingClientRect().height ?? 0;
-    if (r.top < barH || r.bottom > window.innerHeight) el.scrollIntoView({ block: "start" });
+    if (r.top >= barH && r.bottom <= window.innerHeight) return;
+    // All's session blocks are content-visibility: auto, so a plain jump aims at placeholder
+    // heights and lands short: scrollToLand settles and corrects (utils/scrollToLand.ts).
+    if (session === ALL) scrollToLand(el);
+    else el.scrollIntoView({ block: "start" });
   }, [focus, session]);
 
   // A session switch with nothing to land on (no focus, or a question this session never asked)
@@ -793,7 +798,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const hotWire = (a: string, b: string) =>
     !!focus && (focus.turn ? focus.turn === b : focus.item === a && lit.has(b));
 
-  const style = { "--dl-nav-w": `${Math.round(navWidth)}px` } as React.CSSProperties;
+  // The guide's width as the grid's own columns, not a custom property on the lens: WebKit
+  // recalculates the style of every descendant when an inherited custom property changes, which
+  // on a 1,800-quote All cost 217ms per splitter step against 87ms this way (measured 18 Oct).
+  // A folded guide leaves the columns to the stylesheet (.guide-hidden).
+  const style = (guideShown
+    ? { gridTemplateColumns: `${Math.round(navWidth)}px var(--dl-gut) minmax(0, 1fr)` }
+    : {}) as React.CSSProperties;
 
   const chooseGuide = () => (isEmbedded() ? postProjectAction("choose-discussion-guide") : setGuideNote(true));
   // The house small secondary button, as at the foot of the Codebook navigator.

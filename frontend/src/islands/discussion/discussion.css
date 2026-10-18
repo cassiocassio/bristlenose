@@ -324,6 +324,11 @@ button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
     border-bottom: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width);
 }
 .dl-content .dl-item { scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md)); }
+/* All holds every session's quotes at once (1,800 in a 12-session study): a session block off
+   screen is not laid out until it nears the view. With the grid-column width (above) this took
+   a WebKit splitter step on that study from 217ms to 33ms, a single session's cost (measured
+   18 Oct 2026). Jumps into All go through scrollToLand, which corrects for the placeholders. */
+.dl-lens[data-all="true"] .dl-content .dl-group { content-visibility: auto; contain-intrinsic-size: auto 600px; }
 .dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); overflow-wrap: anywhere; }
 .dl-content .dl-item > h3 + .dl-group,
 .dl-content .dl-part + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }

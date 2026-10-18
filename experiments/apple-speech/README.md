@@ -16,7 +16,9 @@ for the rest, with no prompt and inside the App Sandbox. **Replace: no**: it cov
 20 languages, drops the quieter or overlapping voice in group talk, marks nothing inaudible,
 detects no language, and updates itself. **Fallback: no**: the only Apple route for the other
 eleven languages, `DictationTranscriber`, loses most of the speech (94–97% WER where
-`SpeechTranscriber` scored 35–44%). § 9 has the reasoning and the conditions.
+`SpeechTranscriber` scored 35–44%); the one open exception is memory on 8 GB Macs (~180 MB
+against Whisper's 9.2 GB peak footprint, not yet measured on such a Mac). § 9 has the reasoning
+and the conditions.
 
 ---
 
@@ -307,6 +309,28 @@ Ameresco references' human-annotated turn starts, Whisper is a little closer (me
 A factor of 3.2, not the 10× the vendor benchmarks report: mlx turbo is fast on an M2 Max.
 On a base M1 or M2 the gap is likely wider (not measured).
 
+### Memory, several at once, determinism, video input (measured 18 Oct 2026, later the same day)
+
+- **Memory.** One 28-minute German file (de-2): Apple's work runs in a per-client
+  `localspeechrecognition` XPC service that peaked at **~180 MB resident** (the calling
+  process stays small). Whisper through the product's path, measured with `/usr/bin/time -l`:
+  **2.3 GB maximum resident, 9.2 GB peak memory footprint** (mlx's GPU buffers count against
+  unified memory), 73 s wall including model load. On an 8 GB Mac that difference is likely to
+  matter more than speed; not measured on one.
+- **Several at once.** Four files at the same time (three German, one Italian; 88 minutes of
+  audio) finished in 23 s wall, each at a real-time factor of 0.013–0.014 against 0.012 alone:
+  near-linear, and no `insufficientResources` error at four.
+- **Deterministic.** The three German files came back word for word identical to their
+  earlier sequential runs. Within one asset version a transcript is reproducible; across an OS
+  or asset update it may not be (§ 8).
+- **Straight from video (macOS 27, `AssetInputSequenceProvider`).** Works on 48 kHz AAC
+  (oral-history mp4s, macOS screen recordings): fossda-06 gave 3,361 words against 3,366 via
+  WAV, in 21.4 s against 22.1 s. **Fails on 16 kHz AAC**, which is what the Teams recording
+  carries: AVFoundation −11800 / −50, and the macOS 26 `AVAudioFile` route fails the same way
+  (`ExtAudioFileRead` −50). The same Teams file re-encoded to 48 kHz worked (2,770 words against
+  2,768). So an Apple engine should keep the product's ffmpeg extraction to WAV, not read video
+  directly. Probe: `video_probe.swift`.
+
 ## 5. Results: `DictationTranscriber`, for the languages `SpeechTranscriber` lacks
 
 `DictationTranscriber` is Apple's only on-device route for ca, nl, sv, da, nb, pl, cs, ru, uk,
@@ -397,6 +421,9 @@ from day two, Whisper does new sessions. What follows is what the code says that
   belong to the executable here).
 - **Floor: no bump.** Behind `if #available(macOS 26, *)` the code builds at 15.0 (§ 2); on 15.x
   the app keeps Whisper only.
+- **Keep the WAV step.** Both Apple input routes fail on 16 kHz AAC (Teams recordings), so the
+  helper should take the WAV stage 2 already makes, not the video (§ 4, last subsection).
+- **Parallel sessions are cheap**: four at once ran near-linearly, ~180 MB each out of process.
 - **The CLI on PyPI/Homebrew** would need a prebuilt helper in the wheel or formula; the Linux and
   Windows CLI get nothing.
 - **Language must be known up front.** One locale per transcriber, no detection. Bristlenose today
@@ -433,8 +460,10 @@ multi-speaker recording may lose its quieter voices on day one.
 **3. Fallback: no.** For languages, Apple's only route is `DictationTranscriber`, which loses
 most speech in 10 of the 11 languages it would cover (§ 5). For machines, it needs the same Apple
 silicon Whisper already runs on, plus macOS 26; it is faster (3.2× here), not more robust.
-Whether that speed matters on a base 8 GB M1, where Whisper is slowest, is the one fallback
-question left open.
+The one fallback that may be real is **memory**: ~180 MB for Apple against a 9.2 GB peak
+footprint for Whisper on a 28-minute file, which on a base 8 GB Mac could decide whether
+transcription is usable at all. That needs a measurement on such a Mac before anyone builds on
+it.
 
 ## 10. Limits of this trial
 
@@ -456,7 +485,8 @@ question left open.
 
 Probes (Swift, `swiftc -parse-as-library -O <file> -o <bin>`): `probe_locales.swift` (locales,
 asset status), `transcribe.swift` (one file → JSON; `--list`, `--release`), `sandbox_probe.swift`
-with `sandbox.entitlements` and `sandbox-Info.plist` (App Sandbox check). Drivers:
+with `sandbox.entitlements` and `sandbox-Info.plist` (App Sandbox check), `video_probe.swift`
+(macOS 27 direct video input). Drivers:
 `run_apple.py <bin> speech|dictation [ids or langs]`, `run_whisper.py [ids or langs]` (the
 product's stage-5 path). Analysis: `analyse.py speech|dictation`, `one_sided.py` (dumps the
 disagreeing stretches for reading), `tables.py`. Transcripts, dumps and per-file results stay

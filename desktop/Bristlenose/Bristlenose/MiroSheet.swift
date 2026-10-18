@@ -410,7 +410,11 @@ struct MiroSheet: View {
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                    Toggle(model.t("splitLongQuotes"), isOn: $model.splitLongQuotes)
+                    // Long labels wrap rather than truncate (the grid column would cut them to one
+                    // line, "Break long quotes into multi…"); the same for the clip-link hint below.
+                    Toggle(isOn: $model.splitLongQuotes) {
+                        Text(model.t("splitLongQuotes")).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 GridRow(alignment: .firstTextBaseline) {
                     Text(model.t("stickyShape")).foregroundStyle(.secondary)
@@ -429,6 +433,7 @@ struct MiroSheet: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Toggle(model.t("linkClipsLabel"), isOn: $model.linkClips)
                         Text(model.t("linkClipsHint")).font(.subheadline).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         if model.linkClips {
                             TextField(model.t("clipsBasePlaceholder"), text: $model.clipsBase)
                                 .textFieldStyle(.roundedBorder)

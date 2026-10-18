@@ -26,6 +26,12 @@
   .bar { height: 4px; border-radius: 2px; background: var(--figma-color-bg-secondary, #eee); overflow: hidden; visibility: hidden; }
   .bar.on { visibility: visible; }
   .bar > span { display: block; height: 100%; width: 0; background: var(--figma-color-bg-brand, #0d99ff); transition: width .2s; }
+  .stop {
+    margin-top: 10px; padding: 4px 10px; border-radius: 6px; font: inherit; cursor: pointer;
+    color: var(--figma-color-text, #222); background: var(--figma-color-bg, #fff);
+    border: 1px solid var(--figma-color-border, #ccc);
+  }
+  .stop:disabled { color: var(--figma-color-text-disabled, #999); cursor: default; }
 </style>
 </head>
 <body>
@@ -37,6 +43,7 @@
   </label>
   <div class="status" id="status" role="status" aria-live="polite"></div>
   <div class="bar" id="bar"><span id="fill"></span></div>
+  <button class="stop" id="stop" type="button" hidden>Stop</button>
   <!-- script -->
 </body>
 </html>

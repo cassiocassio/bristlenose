@@ -10,6 +10,7 @@ const drop = $<HTMLLabelElement>("drop");
 const status = $<HTMLDivElement>("status");
 const bar = $<HTMLDivElement>("bar");
 const fill = $<HTMLSpanElement>("fill");
+const stop = $<HTMLButtonElement>("stop");
 
 function show(text: string, problem = false): void {
   status.textContent = text;
@@ -23,13 +24,23 @@ function send(file: File): void {
   }
   const reader = new FileReader();
   reader.onload = () => {
-    show("Building the board…");
+    // Fonts load before the first sticky, so the count starts only once they have.
+    show("Preparing the board…");
     bar.classList.add("on");
+    stop.hidden = false;
+    stop.disabled = false;
     parent.postMessage({ pluginMessage: { type: "build", text: String(reader.result) } }, "*");
   };
   reader.onerror = () => show("That file couldn't be read. Try choosing it again.", true);
   reader.readAsText(file);
 }
+
+// Acknowledged at once; the drawing stops at its next yield and the panel closes with a summary.
+stop.addEventListener("click", () => {
+  stop.disabled = true;
+  show("Stopping…");
+  parent.postMessage({ pluginMessage: { type: "stop" } }, "*");
+});
 
 input.addEventListener("change", () => {
   const file = input.files?.[0];
@@ -63,9 +74,10 @@ window.onmessage = (event: MessageEvent) => {
   if (!msg) return;
   if (msg.type === "progress") {
     fill.style.width = `${msg.total ? Math.round((100 * msg.done) / msg.total) : 100}%`;
-    show(`Building the board… ${msg.done} of ${msg.total} quotes`);
+    if (!stop.disabled) show(`Building the board… ${msg.done} of ${msg.total} quotes`);
   } else {
     bar.classList.remove("on");
+    stop.hidden = true;
     show(msg.message, true);
   }
 };

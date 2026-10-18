@@ -4,13 +4,13 @@
 // is tested. What lives here is what only Figma can answer: how tall a sticky
 // grew, which fonts load, where the free space on the canvas is.
 //
-// Runs on Figma's main thread with no timeout, so stickies are made in batches
-// with a pause between them; the panel shows progress meanwhile. By default one
-// undo reverts the whole build, which is what a researcher wants, so this never
-// calls commitUndo().
+// Runs on Figma's main thread with no timeout, so drawing yields every ~50 ms;
+// the panel shows progress meanwhile, and Stop is read at each yield. By default
+// one undo reverts the whole build, which is what a researcher wants, so this
+// never calls commitUndo().
 
 import { REFUSAL_TEXT, Refusal, parseBoard } from "./board";
-import { draw, fontState } from "./draw";
+import { Stopped, draw, fontState } from "./draw";
 import { type BoardPlan, planBoard } from "./plan";
 
 type ToUi =
@@ -23,9 +23,12 @@ const say = (msg: ToUi) => figma.ui.postMessage(msg);
 figma.showUI(__html__, { width: 320, height: 300, themeColors: true });
 
 let building = false;
+// Set by the panel's Stop; read by the drawing loop at its next yield.
+let stopRequested = false;
 
 figma.ui.onmessage = (msg: { type: string; text?: string }) => {
   if (msg.type === "build" && typeof msg.text === "string") void start(msg.text);
+  if (msg.type === "stop") stopRequested = true;
   if (msg.type === "cancel") figma.closePlugin();
 };
 
@@ -49,12 +52,22 @@ async function start(text: string): Promise<void> {
     return;
   }
   building = true;
+  stopRequested = false;
   // Counted as each quote is drawn, so a failure part-way says how far it got.
   const tally = { built: 0 };
   try {
-    await draw(plan, tally, () => say({ type: "progress", done: tally.built, total: plan.expectedQuotes }));
-  } catch {
+    await draw(
+      plan,
+      tally,
+      () => say({ type: "progress", done: tally.built, total: plan.expectedQuotes }),
+      () => stopRequested,
+    );
+  } catch (e) {
     building = false;
+    if (e instanceof Stopped) {
+      figma.closePlugin(`Stopped after ${tally.built} of ${plan.expectedQuotes} quotes. Undo removes what was drawn.`);
+      return;
+    }
     say({
       type: "failed",
       message: `Stopped after ${tally.built} of ${plan.expectedQuotes} quotes. Undo removes what was drawn; then try again.`,

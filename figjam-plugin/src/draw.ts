@@ -8,13 +8,19 @@ const GAP = 24; // between stickies, and between columns
 const PAD = 40; // inside a section
 const FRAME_GAP = 120; // between sections
 const TITLE_GAP = 96; // from the title to the sections
-const BATCH = 40; // stickies per batch before yielding
+// Figma's main thread repaints the panel only when the plugin yields, so the yield is what makes
+// the bar move. Yielding by time rather than by a count of stickies keeps it moving evenly however
+// long a quote is (a set of three parts once advanced the count three times as slowly).
+const YIELD_MS = 50;
 // A set's parts overlap by about one x-height and step right by the same, so
 // each left edge shows a small square notch — the owner's spacing on the Miro
 // board (board_layout.SET_GAP / SET_STAGGER), scaled to FigJam's 16 px type.
 const NOTCH = 9;
 
 const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 1));
+
+/** The researcher pressed Stop: thrown at the next yield, so the board keeps what was drawn. */
+export class Stopped extends Error {}
 
 interface Fonts {
   base: FontName;
@@ -115,8 +121,14 @@ function origin(): { x: number; y: number } {
   return { x: Math.round(right + 400), y: Math.round(top) };
 }
 
-export async function draw(plan: BoardPlan, tally: { built: number }, progress: () => void): Promise<void> {
+export async function draw(
+  plan: BoardPlan,
+  tally: { built: number },
+  progress: () => void,
+  stopRequested: () => boolean = () => false,
+): Promise<void> {
   const fonts = await loadFonts();
+  progress(); // fonts loaded: the count starts, at 0 of N
   const at = origin();
   const made: SceneNode[] = [];
 
@@ -134,7 +146,7 @@ export async function draw(plan: BoardPlan, tally: { built: number }, progress: 
   measure.visible = false;
 
   try {
-    let sinceYield = 0;
+    let lastYield = Date.now();
     let x = at.x;
     const top = at.y + title.height + TITLE_GAP;
 
@@ -170,11 +182,11 @@ export async function draw(plan: BoardPlan, tally: { built: number }, progress: 
           // to delete, which is how researchers trim (design doc, 17 Oct 2026).
           if (stickies.length > 1) figma.group(stickies, section).name = set.name;
           tally.built++;
-          sinceYield += stickies.length;
-          if (sinceYield >= BATCH) {
-            sinceYield = 0;
+          if (Date.now() - lastYield >= YIELD_MS) {
             progress();
             await pause();
+            lastYield = Date.now();
+            if (stopRequested()) throw new Stopped();
           }
         }
         bottom = Math.max(bottom, y - GAP);

@@ -27,6 +27,7 @@ from bristlenose.output_paths import project_output_dir
 from bristlenose.screen_text import export_folder
 from bristlenose.screen_text.shots import shot_list
 from bristlenose.server.models import Project, Quote, QuoteState
+from bristlenose.server.routes.miro import BoardBuild, build_snapshot
 from bristlenose.server.routes.screens import (
     StillError,
     derive_project_screens,
@@ -256,9 +257,12 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
         fit_miro_sticky,
         quote_parts,
     )
+    from bristlenose.board_progress import BoardCancelledError, BoardProgress
     from bristlenose.screens_board import jpeg_size, lay_out_board
-    from bristlenose.server.miro_export import group_sets
+    from bristlenose.server.miro_export import batches, group_sets, split_sets
 
+    tracker = job.setdefault("tracker", BoardProgress("screens"))
+    tracker.enter("preparing", sum(len(sc["versions"]) for sc in screens))
     stills: dict[str, bytes] = {}
     sizes: dict[str, tuple[int, int]] = {}
     for sc in screens:
@@ -268,6 +272,7 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
                 return
             job["current"] = v["filename"]
             video = videos.get(v["session_id"])
+            tracker.counted()
             try:
                 if video is None:
                     raise StillError("No recording")
@@ -290,58 +295,81 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
     frames = lay_out_board(screens, sizes, parts)
     if not frames:
         raise miro_client.MiroError("No screengrab could be made", reason="no_stills")
-    board = miro_client.create_board(token, title)
-    board_id = board.get("id")
-    if not board_id:
-        raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
-    job["board_url"] = board.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
-    for frame in frames:
+    # Every call, counted before the first: the board, then per frame the frame, its screengrabs,
+    # its sticky batches and a group per split quote.
+    tracker.plan(1 + sum(1 + len(f.stills) + batches(len(f.stickies))
+                         + split_sets([st.set_id for st in f.stickies]) for f in frames))
+
+    def call() -> None:
+        tracker.call_done()
         if job["status"] == "cancelled":
-            return
-        job["current"] = frame.title
-        made = miro_client.create_frame(token, board_id, frame.title, frame.x + frame.width / 2,
-                                        frame.y + frame.height / 2, frame.width, frame.height)
-        fid = made["id"]
-        front = frame.stills[-1]
-        for still in frame.stills:  # back first, so the front one is drawn on top
-            try:
-                miro_client.upload_image(token, board_id, stills[still.filename], still.filename,
-                                         title=still.title, x=still.x + still.width / 2,
-                                         y=still.y + still.height / 2, width=still.width, parent_id=fid)
-            except miro_client.MiroError:
-                # A screengrab behind the front one is a choice offered, not the frame: one Miro
-                # refused is left out, as a still that could not be rendered is. The front one
-                # failing still fails the board, which then names its link.
-                if still is front:
-                    raise
-                logger.warning("Left out %s: Miro refused the upload", still.filename, exc_info=True)
-        items = []
-        for st in frame.stickies:
-            q = quotes[st.dom_id]
-            colour = (SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN) if colour_by == "sentiment"
-                      else DEFAULT_QUOTE_TOKEN)
-            rest = f"<br><i>{escape(_attribution(q))}</i>" if st.attributed else ""
-            items.append({"type": "sticky_note",
-                          "data": {"content": fit_miro_sticky(st.text, rest), "shape": shape},
-                          "style": {"fillColor": colour},
-                          "position": {"x": st.x + st.width / 2, "y": st.y + st.height / 2},
-                          "geometry": {"width": st.width}, "parent": {"id": fid}})
-        made: list[dict[str, Any]] = []
-        for i in range(0, len(items), 20):
-            made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
-        group_sets(token, board_id, [st.set_id for st in frame.stickies], made)
-        job["completed_count"] += 1
-        job["progress"] += 1
+            raise BoardCancelledError
+
+    with miro_client.observe_waits(tracker.waiting_for):
+        tracker.enter("opening")
+        board = miro_client.create_board(token, title)
+        board_id = board.get("id")
+        if not board_id:
+            raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
+        job["board_url"] = board.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
+        call()
+        for frame in frames:
+            if job["status"] == "cancelled":
+                return
+            job["current"] = frame.title
+            made = miro_client.create_frame(token, board_id, frame.title, frame.x + frame.width / 2,
+                                            frame.y + frame.height / 2, frame.width, frame.height)
+            call()
+            if tracker.phase == "opening":  # the board takes frames now: the build proper
+                tracker.enter("screens", len(frames))
+            fid = made["id"]
+            front = frame.stills[-1]
+            for still in frame.stills:  # back first, so the front one is drawn on top
+                try:
+                    miro_client.upload_image(token, board_id, stills[still.filename], still.filename,
+                                             title=still.title, x=still.x + still.width / 2,
+                                             y=still.y + still.height / 2, width=still.width, parent_id=fid)
+                except miro_client.MiroError:
+                    # A screengrab behind the front one is a choice offered, not the frame: one Miro
+                    # refused is left out, as a still that could not be rendered is. The front one
+                    # failing still fails the board, which then names its link.
+                    if still is front:
+                        raise
+                    logger.warning("Left out %s: Miro refused the upload", still.filename, exc_info=True)
+                call()
+            items = []
+            for st in frame.stickies:
+                q = quotes[st.dom_id]
+                colour = (SENTIMENT_TOKEN.get(q.sentiment, DEFAULT_QUOTE_TOKEN) if colour_by == "sentiment"
+                          else DEFAULT_QUOTE_TOKEN)
+                rest = f"<br><i>{escape(_attribution(q))}</i>" if st.attributed else ""
+                items.append({"type": "sticky_note",
+                              "data": {"content": fit_miro_sticky(st.text, rest), "shape": shape},
+                              "style": {"fillColor": colour},
+                              "position": {"x": st.x + st.width / 2, "y": st.y + st.height / 2},
+                              "geometry": {"width": st.width}, "parent": {"id": fid}})
+            made_items: list[dict[str, Any]] = []
+            for i in range(0, len(items), 20):
+                made_items += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+                call()
+            group_sets(token, board_id, [st.set_id for st in frame.stickies], made_items, each=call)
+            job["completed_count"] += 1
+            job["progress"] += 1
+            tracker.counted()
     job["status"] = "completed"
 
 
 async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
     from bristlenose import miro_client
+    from bristlenose.board_progress import BoardCancelledError, BoardProgress
 
+    tracker = job.setdefault("tracker", BoardProgress("screens"))
     try:
         await asyncio.to_thread(_run_miro_sync, job, *args)
         if job["status"] == "running":
             job["status"] = "completed"
+    except BoardCancelledError:
+        pass  # the status already says cancelled; the board keeps what it has
     except miro_client.MiroError as exc:
         logger.warning("Screens Miro board failed: %s", exc)
         if job["status"] != "cancelled":  # a cancel stays a cancel, whatever the call in hand did
@@ -353,6 +381,7 @@ async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
             job["status"] = "failed"
             job["reason"] = "board_incomplete" if job.get("board_url") else "miro_error"
     job["current"] = ""
+    tracker.log_summary(job["status"])
 
 
 class ScreensMiroStart(BaseModel):
@@ -373,6 +402,9 @@ class ScreensMiroStatus(BaseModel):
     current: str
     board_url: str | None
     reason: str | None
+    #: How far the build has got (the quotes board's shape): screengrabs prepared, then the board
+    #: opening, then screens added, with a fraction of its Miro calls and an earned estimate.
+    build: BoardBuild | None = None
 
 
 @router.post("/projects/{project_id}/export/screens/miro")
@@ -441,6 +473,7 @@ async def screens_miro_status(project_id: int) -> ScreensMiroStatus:
         status=job.get("status", "idle"), progress=job.get("progress", 0), total=job.get("total", 0),
         completed_count=job.get("completed_count", 0), skipped_count=job.get("skipped_count", 0),
         current=job.get("current", ""), board_url=job.get("board_url"), reason=job.get("reason"),
+        build=build_snapshot(job),
     )
 
 

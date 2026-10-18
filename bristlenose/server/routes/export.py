@@ -120,6 +120,7 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/sessions/{session_id}/reanalyse",
         "/projects/{project_id}/miro/auth-url",
         "/projects/{project_id}/miro/status",
+        "/projects/{project_id}/miro/board/status",  # a board build's progress; live only
         "/projects/{project_id}/starred",  # write-mirror; baked into /quotes
         "/projects/{project_id}/tags",  # write-mirror; baked into /quotes
     }

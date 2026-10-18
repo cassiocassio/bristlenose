@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import secrets
-from typing import Literal
+from collections.abc import Callable
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -13,6 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose import miro_client
+from bristlenose.board_progress import BoardCancelledError, BoardProgress
 from bristlenose.config import load_settings
 from bristlenose.credentials import (
     CredentialStore,
@@ -76,6 +79,37 @@ class MiroExportResponse(BaseModel):
 
 class MiroPreviewResponse(BaseModel):
     html: str
+
+
+class BoardBuild(BaseModel):
+    """How far a board build has got (`BoardProgress.snapshot`), shared by both Miro boards.
+
+    ``phase`` says what the line counts: ``preparing`` (screengrabs, no call yet), ``opening``
+    (the board and its first frames — no fraction or estimate claimed), then ``quotes``,
+    ``groups`` or ``screens``. ``fraction`` is the share of all the board's calls made;
+    ``eta_seconds`` is None until this build has measured enough calls to say."""
+
+    phase: str
+    done: int
+    total: int
+    count_done: int
+    count_total: int
+    waiting: bool
+    fraction: float | None
+    eta_seconds: float | None
+
+
+class MiroBoardStart(BaseModel):
+    status: str  # "started"
+
+
+class MiroBoardStatus(BaseModel):
+    status: str  # idle | running | completed | failed | cancelled
+    board_url: str | None
+    stickies: int
+    reason: str | None
+    vars: dict[str, str]
+    build: BoardBuild | None
 
 
 class MiroAuthUrlResponse(BaseModel):
@@ -332,6 +366,110 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
         return MiroExportResponse(**result)
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# POST /projects/{id}/miro/board — the same push as a job, with progress and Stop
+# ---------------------------------------------------------------------------
+
+#: One build per project, in the screens board's shape (`routes/screens_export.py`). The task is
+#: held here, so the loop's weak reference cannot let it be collected mid-build.
+_board_jobs: dict[int, dict[str, Any]] = {}
+
+
+def build_snapshot(job: dict[str, Any]) -> BoardBuild | None:
+    tracker = job.get("tracker")
+    return BoardBuild(**tracker.snapshot()) if isinstance(tracker, BoardProgress) else None
+
+
+def _run_board_sync(job: dict[str, Any], db_factory: Callable[[], Session], project_id: int,
+                    name: str, token: str, body: MiroExportRequest) -> None:
+    db = db_factory()
+    try:
+        result = miro_export.push_to_miro(
+            token, db, project_id, name, body.quote_ids,
+            colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
+            split=body.split_long_quotes, shape=body.sticky_shape, progress=job["tracker"],
+            cancelled=lambda: job["status"] == "cancelled",
+            on_board=lambda url: job.__setitem__("board_url", url),
+        )
+        job["stickies"] = result["stickies"]
+        job["board_url"] = result["board_url"]
+    finally:
+        db.close()
+
+
+async def _run_board(job: dict[str, Any], *args: Any) -> None:
+    try:
+        await asyncio.to_thread(_run_board_sync, job, *args)
+        if job["status"] == "running":
+            job["status"] = "completed"
+    except BoardCancelledError:
+        pass  # the status already says cancelled; the board keeps what it has
+    except miro_client.MiroError as exc:
+        logger.warning("Miro board failed: reason=%s %s", exc.reason, exc)
+        if job["status"] != "cancelled":  # a cancel stays a cancel, whatever the call in hand did
+            job["status"] = "failed"
+            job["reason"] = exc.reason
+            job["vars"] = dict(exc.vars)
+    except Exception:
+        logger.exception("Miro board failed")
+        if job["status"] != "cancelled":
+            job["status"] = "failed"
+            job["reason"] = "board_incomplete" if job.get("board_url") else None
+            job["vars"] = {"url": job["board_url"]} if job.get("board_url") else {}
+
+
+@router.post("/projects/{project_id}/miro/board")
+async def start_miro_board(project_id: int, body: MiroExportRequest,
+                           request: Request) -> MiroBoardStart:
+    """Build a new Miro board from the project's (optionally scoped) quotes, as a job.
+
+    Read its progress at ``…/miro/board/status``; ``…/miro/board/cancel`` stops it after the call
+    in hand. Failures carry the same ``reason`` and ``vars`` as ``POST …/miro/export``."""
+    existing = _board_jobs.get(project_id)
+    if existing and existing.get("status") == "running":
+        raise HTTPException(status_code=409, detail="A Miro board is already being built")
+    # A cancelled build finishes the call in hand, which can be a minute of Miro's retries; a
+    # second build meanwhile would share the token's rate limit with it.
+    task = existing.get("task") if existing else None
+    if task is not None and not task.done():
+        raise HTTPException(status_code=409, detail="The last Miro board is still stopping")
+    db = _get_db(request)
+    try:
+        project = _check_project(db, project_id)
+        name = body.board_name or project_display_name(project)
+    finally:
+        db.close()
+    token = _miro_token(request)
+    if not token:
+        raise HTTPException(status_code=400, detail="Not connected to Miro")
+    job: dict[str, Any] = {"status": "running", "board_url": None, "stickies": 0, "reason": None,
+                           "vars": {}, "tracker": BoardProgress("quotes")}
+    _board_jobs[project_id] = job
+    job["task"] = asyncio.create_task(
+        _run_board(job, request.app.state.db_factory, project_id, name, token, body))
+    return MiroBoardStart(status="started")
+
+
+@router.get("/projects/{project_id}/miro/board/status")
+async def miro_board_status(project_id: int) -> MiroBoardStatus:
+    job = _board_jobs.get(project_id) or {}
+    return MiroBoardStatus(
+        status=job.get("status", "idle"), board_url=job.get("board_url"),
+        stickies=job.get("stickies", 0), reason=job.get("reason"), vars=job.get("vars", {}),
+        build=build_snapshot(job),
+    )
+
+
+@router.post("/projects/{project_id}/miro/board/cancel")
+async def cancel_miro_board(project_id: int) -> dict[str, Any]:
+    """Stop after the call in hand; a board already begun stays, with what it has."""
+    job = _board_jobs.get(project_id)
+    if job is None or job.get("status") != "running":
+        raise HTTPException(status_code=404, detail="No Miro board being built")
+    job["status"] = "cancelled"
+    return {"cancelled": True}
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,9 @@ import json
 import secrets
 import time
 import urllib.parse
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 import httpx
@@ -172,6 +175,36 @@ def refresh_access_token(client_id: str, refresh_token: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Waits — every backoff sleep goes through `_pause`, so a build can say it is waiting for Miro
+# ---------------------------------------------------------------------------
+
+#: Who is told about a wait: called with (seconds, reason), returns a context the sleep runs in.
+#: A context variable, so a build in one worker thread never hears another's waits.
+WaitObserver = Callable[[float, str], AbstractContextManager[None]]
+_wait_observer: ContextVar[WaitObserver | None] = ContextVar("miro_wait_observer", default=None)
+
+
+@contextmanager
+def observe_waits(observer: WaitObserver) -> Iterator[None]:
+    """Report every backoff wait made inside this block (``BoardProgress.waiting_for``)."""
+    token = _wait_observer.set(observer)
+    try:
+        yield
+    finally:
+        _wait_observer.reset(token)
+
+
+def _pause(seconds: float, reason: str) -> None:
+    """Sleep for a backoff. ``reason`` is ``rate_limit``, ``board_not_ready`` or ``read_retry``."""
+    observer = _wait_observer.get()
+    if observer is None:
+        time.sleep(seconds)
+        return
+    with observer(seconds, reason):
+        time.sleep(seconds)
+
+
+# ---------------------------------------------------------------------------
 # REST helpers + board/frame/sticky/text creation
 # ---------------------------------------------------------------------------
 
@@ -199,7 +232,7 @@ def _request(method: str, token: str, path: str, json: dict[str, Any] | list[Any
             raise MiroError(f"{method} {path} -> {resp.status_code} {resp.text[:300]}",
                             status=resp.status_code)
         if attempt < retries:
-            time.sleep(delay)
+            _pause(delay, "rate_limit")
             delay *= 2
     raise MiroError(f"{method} {path} failed after rate-limit retries")
 
@@ -240,7 +273,7 @@ def create_frame(token: str, board_id: str, title: str, x: float, y: float,
         except MiroError as exc:
             if exc.status != 500 or attempt == len(retry_delays):
                 raise
-            time.sleep(retry_delays[attempt])
+            _pause(retry_delays[attempt], "board_not_ready")
             found = _find_frame(token, board_id, title[:255], x, y)
             if found is not None:
                 return found
@@ -262,7 +295,7 @@ def _find_frame(token: str, board_id: str, title: str, x: float, y: float,
             except MiroError as exc:
                 if exc.status is None or exc.status < 500 or attempt == len(retry_delays):
                     raise
-                time.sleep(retry_delays[attempt])
+                _pause(retry_delays[attempt], "read_retry")
         if not isinstance(page, dict):
             # Not knowing is not "absent": retrying the POST on a misread could make two.
             raise MiroError(f"GET /boards/{board_id}/items -> unexpected body")
@@ -318,7 +351,7 @@ def upload_image(token: str, board_id: str, jpeg: bytes, filename: str, *, title
         if resp.status_code != 429:
             raise MiroError(f"POST {path} -> {resp.status_code} {resp.text[:300]}", status=resp.status_code)
         if attempt < retries:
-            time.sleep(delay)
+            _pause(delay, "rate_limit")
             delay *= 2
     raise MiroError(f"POST {path} failed after rate-limit retries")
 

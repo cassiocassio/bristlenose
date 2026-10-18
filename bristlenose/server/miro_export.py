@@ -5,8 +5,11 @@ star / tag / section / hidden-exclusion all collapse to a selection), buckets
 them into section/theme columns, runs the pure layout engine, and either renders
 a creds-free SVG/HTML preview or pushes a real Miro board.
 
-Synchronous by design for the v0 slice (an export is seconds for hundreds of
-stickies) — no background-job table yet. See design-miro-bridge.md.
+`push_to_miro` is synchronous; the route runs it as a job in a worker thread
+(`routes/miro.py`, the shape of the screens board's), because a board is not
+seconds: Miro refuses a new board's frames for about half a minute, and every
+sticky batch is a round trip. Its progress is a `BoardProgress`, counted from the
+layout before the first call (`bristlenose/board_progress.py`).
 
 **This module owns the board's language.** A Miro board is a deliverable, so it
 follows the caller's UI locale, which the SPA and the Mac sheet each send; the
@@ -23,6 +26,7 @@ deliberately not answered here.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from html import escape
 from typing import Any
 from urllib.parse import urlparse
@@ -43,6 +47,7 @@ from bristlenose.board_layout import (
 )
 from bristlenose.board_manifest import FIGJAM_STICKY_SHAPE, build_manifest
 from bristlenose.board_palette import FIGJAM_TOKEN_HEX
+from bristlenose.board_progress import BoardCancelledError, BoardProgress
 from bristlenose.i18n import plural_in, t_in
 from bristlenose.miro_render_svg import render_html
 from bristlenose.server.export_core import ExportableQuote, extract_quotes_for_export
@@ -237,12 +242,15 @@ def _sticky_item(s: Sticky, locale: str = "en", shape: str = STICKY_SHAPE) -> di
 
 
 def group_sets(token: str, board_id: str, set_ids: list[int | None],
-               made: list[dict[str, Any]]) -> int:
+               made: list[dict[str, Any]], *,
+               each: Callable[[], None] | None = None) -> int:
     """Group the parts of each split quote, so a set moves and sorts as one quote.
 
     ``set_ids`` is each item's set (None for a quote on one sticky), in the order the items were
     sent; ``made`` is what Miro created, in that order. A count that does not match is not guessed
-    at: the board keeps its stickies, ungrouped, and the log says so. Returns the sets grouped."""
+    at: the board keeps its stickies, ungrouped, and the log says so. Returns the sets grouped.
+    ``each`` runs after every group Miro made, before the next: the build's progress, and its
+    check for Stop."""
     if len(made) != len(set_ids):
         logger.warning("Miro made %d of %d items; split quotes left ungrouped", len(made), len(set_ids))
         return 0
@@ -252,14 +260,51 @@ def group_sets(token: str, board_id: str, set_ids: list[int | None],
             sets.setdefault(sid, []).append(str(item["id"]))
     for ids in sets.values():
         miro_client.create_group(token, board_id, ids)
+        if each is not None:
+            each()
     return len(sets)
+
+
+def split_sets(set_ids: list[int | None]) -> int:
+    """How many groups ``group_sets`` will make: one per split quote."""
+    return len({sid for sid in set_ids if sid is not None})
+
+
+def batches(n_items: int) -> int:
+    """Bulk calls for ``n_items`` stickies, 20 to a call."""
+    return -(-n_items // 20)
 
 
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
                  quote_ids: list[str] | None, *, colour_by: str = "sentiment",
                  clips_base: str = "", locale: str = "en", split: bool = True,
-                 shape: str = STICKY_SHAPE) -> dict[str, Any]:
-    """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}."""
+                 shape: str = STICKY_SHAPE, progress: BoardProgress | None = None,
+                 cancelled: Callable[[], bool] = lambda: False,
+                 on_board: Callable[[str], None] | None = None) -> dict[str, Any]:
+    """Create a new Miro board from the layout IR. Returns {board_id, board_url, stickies}.
+
+    ``progress`` is told every call and wait; ``cancelled`` is asked before each call, and a yes
+    raises `BoardCancelledError` with the board keeping what it has; ``on_board`` hears the board's link
+    as soon as Miro makes it, so a job can name a board it never finishes."""
+    progress = progress or BoardProgress("quotes")
+    outcome = "failed"
+    try:
+        result = _push(token, db, project_id, project_name, quote_ids, progress, cancelled,
+                       on_board, colour_by=colour_by, clips_base=clips_base, locale=locale,
+                       split=split, shape=shape)
+        outcome = "completed"
+        return result
+    except BoardCancelledError:
+        outcome = "cancelled"
+        raise
+    finally:
+        progress.log_summary(outcome)
+
+
+def _push(token: str, db: Session, project_id: int, project_name: str,
+          quote_ids: list[str] | None, progress: BoardProgress, cancelled: Callable[[], bool],
+          on_board: Callable[[str], None] | None, *, colour_by: str, clips_base: str, locale: str,
+          split: bool, shape: str) -> dict[str, Any]:
     board = build_board(db, project_id, project_name, quote_ids, colour_by=colour_by,
                         clips_base=clips_base, locale=locale, split=split, shape=shape)
     # A quote has one attributed sticky however many parts it was split into.
@@ -270,37 +315,57 @@ def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
             reason="no_quotes_selected",
         )
 
-    created = miro_client.create_board(token, board.title)
-    board_id = created.get("id")
-    if not board_id:
-        raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
-    view = created.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
-    logger.info("Miro board %s created (%s) — populating %d stickies", board_id, view, n_quotes)
+    items = [_sticky_item(s, locale, board.sticky_shape) for s in board.stickies]  # 20/bulk
+    set_ids = [s.set_id for s in board.stickies]
+    # Every call the board will take, counted before the first: the board, its frames, the sticky
+    # batches, a group per split quote, the title.
+    progress.plan(1 + len(board.frames) + batches(len(items)) + split_sets(set_ids) + len(board.texts))
 
-    # Board exists from here — if a later call fails, surface the URL so the
-    # researcher can find (or delete) the partially-built board.
-    try:
-        for f in board.frames:  # frames (position = centre)
-            miro_client.create_frame(token, board_id, f.title,
-                                     f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
-        items = [_sticky_item(s, locale, board.sticky_shape) for s in board.stickies]  # 20/bulk
-        # The `stickies` count returned below is the *intended* count — Miro's
-        # bulk endpoint can partially succeed, and we don't yet reconcile the
-        # created-count against its response (deferred until a real multi-batch
-        # push shows whether that count is clean enough to trust).
-        made: list[dict[str, Any]] = []
-        for i in range(0, len(items), 20):
-            made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
-        group_sets(token, board_id, [s.set_id for s in board.stickies], made)
-        for t in board.texts:  # board title as a real text item
-            miro_client.create_text(token, board_id, escape(t.text),
-                                    t.x + 300, t.y, 600, int(t.size))
-    except miro_client.MiroError as exc:
-        logger.warning("Miro board %s partially populated: %s", board_id, exc)
-        raise miro_client.MiroError(
-            f"Board created but incomplete — open it: {view} ({exc})",
-            reason="board_incomplete",
-            vars={"url": view},
-        ) from exc
+    def call(counted: int = 0) -> None:
+        progress.call_done(counted)
+        if cancelled():
+            raise BoardCancelledError
+
+    with miro_client.observe_waits(progress.waiting_for):
+        progress.enter("opening")
+        created = miro_client.create_board(token, board.title)
+        board_id = created.get("id")
+        if not board_id:
+            raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")
+        view = created.get("viewLink") or f"https://miro.com/app/board/{board_id}/"
+        if on_board is not None:
+            on_board(view)
+        logger.info("Miro board %s created (%s) — populating %d stickies", board_id, view, n_quotes)
+
+        # Board exists from here — if a later call fails, surface the URL so the
+        # researcher can find (or delete) the partially-built board.
+        try:
+            call()
+            for f in board.frames:  # frames (position = centre)
+                miro_client.create_frame(token, board_id, f.title,
+                                         f.x + f.width / 2, f.y + f.height / 2, f.width, f.height)
+                call()
+            # The `stickies` count returned below is the *intended* count — Miro's
+            # bulk endpoint can partially succeed, and we don't yet reconcile the
+            # created-count against its response (deferred until a real multi-batch
+            # push shows whether that count is clean enough to trust).
+            progress.enter("quotes", n_quotes)
+            made: list[dict[str, Any]] = []
+            for i in range(0, len(items), 20):
+                made += miro_client.bulk_create_items(token, board_id, items[i:i + 20])
+                call(sum(1 for s in board.stickies[i:i + 20] if s.kind == "quote" and s.attributed))
+            progress.enter("groups", split_sets(set_ids))
+            group_sets(token, board_id, set_ids, made, each=lambda: call(1))
+            for t in board.texts:  # board title as a real text item
+                miro_client.create_text(token, board_id, escape(t.text),
+                                        t.x + 300, t.y, 600, int(t.size))
+                progress.call_done()
+        except miro_client.MiroError as exc:
+            logger.warning("Miro board %s partially populated: %s", board_id, exc)
+            raise miro_client.MiroError(
+                f"Board created but incomplete — open it: {view} ({exc})",
+                reason="board_incomplete",
+                vars={"url": view},
+            ) from exc
 
     return {"board_id": board_id, "board_url": view, "stickies": n_quotes}

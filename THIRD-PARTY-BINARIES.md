@@ -119,8 +119,8 @@ procurement; under-listing would be a compliance risk.
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.143.3 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.2.1 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `fastapi` | 0.143.5 | MIT | <https://github.com/fastapi/fastapi> |
+| `filelock` | 4.2.2 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
 | `google-auth` | 2.62.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |

@@ -107,7 +107,7 @@ procurement; under-listing would be a compliance risk.
 | `blis` | 1.3.3 | BSD License | <https://github.com/explosion/cython-blis> |
 | `budoux` | 0.9.3 | Apache-2.0 | — |
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
-| `certifi` | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
+| `certifi` | 2026.10.18 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
 | `chardet` | 7.7.0 | 0BSD | <https://github.com/chardet/chardet> |
 | `charset-normalizer` | 3.5.2 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
@@ -119,7 +119,7 @@ procurement; under-listing would be a compliance risk.
 | `distro` | 1.9.0 | Apache Software License | <https://github.com/python-distro/distro> |
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
-| `fastapi` | 0.143.5 | MIT | <https://github.com/fastapi/fastapi> |
+| `fastapi` | 0.146.0 | MIT | <https://github.com/fastapi/fastapi> |
 | `filelock` | 4.2.2 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
@@ -129,10 +129,10 @@ procurement; under-listing would be a compliance risk.
 | `h11` | 0.16.0 | MIT License | <https://github.com/python-hyper/h11> |
 | `hf-xet` | 1.7.0 | Apache-2.0 | <https://github.com/huggingface/xet-core> |
 | `httpcore` | 1.0.9 | BSD-3-Clause | <https://www.encode.io/httpcore/> |
-| `httpcore2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `httpcore2` | 2.14.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `httptools` | 0.9.0 | MIT | <https://github.com/MagicStack/httptools> |
 | `httpx` | 0.28.1 | BSD License | <https://github.com/encode/httpx> |
-| `httpx2` | 2.13.1 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
+| `httpx2` | 2.14.0 | BSD-3-Clause | <https://github.com/pydantic/httpx2> |
 | `huggingface_hub` | 1.33.0 | Apache Software License | <https://github.com/huggingface/huggingface_hub> |
 | `idna` | 3.20 | BSD-3-Clause | <https://github.com/kjd/idna> |
 | `inflect` | 7.5.0 | MIT License | <https://github.com/jaraco/inflect> |
@@ -200,7 +200,7 @@ procurement; under-listing would be a compliance risk.
 | `SQLAlchemy` | 2.1.5 | MIT | <https://www.sqlalchemy.org> |
 | `srsly` | 2.5.4 | MIT License | <https://github.com/explosion/srsly> |
 | `sse-starlette` | 3.5.0 | BSD-3-Clause | <https://github.com/sysid/sse-starlette> |
-| `starlette` | 1.8.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
+| `starlette` | 1.9.0 | BSD-3-Clause | <https://github.com/Kludex/starlette> |
 | `sympy` | 1.14.0 | BSD License | <https://sympy.org> |
 | `tenacity` | 9.1.4 | Apache Software License | <https://github.com/jd/tenacity> |
 | `thinc` | 8.3.13 | MIT License | <https://github.com/explosion/thinc> |

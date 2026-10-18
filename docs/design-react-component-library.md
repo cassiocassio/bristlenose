@@ -34,7 +34,7 @@ A small coloured label.
 A speaker code lozenge, optionally with a name.
 
 - **Qualities:** code (`p1`, `m1`, `o1`), role (participant / moderator / observer), display name (optional), colour
-- **States:** default, highlighted (e.g. signal card shows which participants are quoted)
+- **States:** default, highlighted (e.g. signal card shows which participants are quoted); `compact` (number only, tight: the Discussion lens's grid heads and "Not asked in"); `absent` (outline, muted, no fill: not asked / did not speak). Both 18 Oct 2026
 - **Behaviours:** optionally navigable (click → session/transcript drill-down)
 - **Why separate from Badge:** Badge is a tag label with codebook colour. PersonBadge is an identity marker with role semantics. Same visual shape, completely different data source and meaning
 - **Current surfaces:** quote footers, sessions table speaker columns, transcript segment headers, featured quote attributions, moderator/observer headers, signal card participant row

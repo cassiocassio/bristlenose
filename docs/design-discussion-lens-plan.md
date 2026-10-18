@@ -369,7 +369,8 @@ overrides keyed on durable ids, never on labels.
   3 Oct 2026 over A (the shipped `.bn-person-badge-highlighted` ring): the
   navigator's own selection vocabulary (`.toc-link.active`), no ring. The `#N` in
   accent, the same mark on that session's badge in every navigator row and on the
-  `#N ▾` pull-down; in the header the name half also sits on the selection fill
+  `#N ▾` pull-down (*both superseded 18 Oct 2026 by the measure's cells, below*); in the
+  header the name half also sits on the selection fill
   (`--bn-nav-selection-bg`) in accent. Not solved:
   with many sessions the header still wraps to a second line — the cap only
   removes the long-names case.
@@ -420,13 +421,15 @@ overrides keyed on durable ids, never on labels.
 - **Navigator width — decided 3 Oct 2026: up to 60% of the lens**, not the shared
   480px. With many sessions a row of session badges is wide (10 badges ≈ 250px), and
   dragging the split wider is how the researcher gets them back in full; below a
-  row's share of the width they collapse to a `#N ▾` pull-down. The SPA shares one
+  row's share of the width they collapse to a `#N ▾` pull-down (*superseded 18 Oct 2026:
+  the rows carry the measure — bar, strip or grid — below*). The SPA shares one
   left-panel width across lenses with fixed 200–480px bounds (`useDragResize`
   `MIN_WIDTH`/`MAX_WIDTH`, `SidebarStore.ts`), so this needs a per-lens maximum
   there — and a decision on whether the Discussion width is remembered separately
   from the other lenses'. *Settled:* 60% of the lens (`NAV_MAX_SHARE`), remembered
   separately.
-- **All sessions — proposed 17–18 Oct 2026, not built.** Mockup:
+- **All sessions — designed 17–18 Oct 2026, built 18 Oct 2026** (`538a2869` and the
+  review fixes after it; review log Findings 45–69). Mockup:
   `docs/mockups/discussion-all-sessions.html` (generator
   `experiments/discussion-all-sessions/build.py`). The need: everything every session
   said in answer to question X. *Decided by the owner:*
@@ -469,10 +472,24 @@ overrides keyed on durable ids, never on labels.
     logarithmic (`log(1+q) / log(1+max)`: one quote of a maximum ten fills about a
     third). The exact count stays as the row's number.
 
-  *Proposed in the mockup, not yet decided:* the compact number-only `PersonBadge` (keyline kept, absent = outline)
-  replacing Signals' `.p-box`; the session bar's names → codes → pull-down tiers;
-  "Not asked in" as one line; no wires in All. The July "no fraction" rule (above, in
-  the design doc's *Evidence, not coverage*) holds: cells and a count, never `n/N`.
+  *As built, 18 Oct 2026, beyond the decided list:* All always reads the merged record
+  (Your guide lists only the guide's lines, and All must not lose the questions asked
+  off it); quotes before the first question open All and asks never classified close
+  it, so All shows every quote a session view shows; a session whose questions could
+  not be classified is never "not asked" (its cells say "not classified"); a uniform
+  study (every cell the same count) takes the middle shade; the ramp runs muted ink →
+  ink (the first ramp's lightest step measured 2.3:1 on the guide's tint); stepping
+  up a tier needs 20px to spare; a row's screen-reader summary is a count ("Asked in
+  3 sessions", "7 quotes"), never `n of m`. **Built from the mockup and awaiting the
+  owner's yes** (review Q6): the absent compact badge and the "Not asked in" line; no
+  wires in All. **Still only proposed:** the compact badge replacing Signals' `.p-box`;
+  the session bar's names → codes → pull-down tiers. **Owner calls raised by the
+  review:** the muted-anchored ramp (a visual change made for contrast); the key's
+  s0 swatch reads "Not asked" while asked-with-no-quotes cells are drawn alike
+  (agent-proposed "Not asked, or no quotes", not adopted without the owner); the
+  group tooltip's "n of m people" sits beside the no-fraction rule. The July "no
+  fraction" rule (above, in the design doc's *Evidence, not coverage*) holds for the
+  measure: cells and a count, never `n/N`.
 - **Unanswered questions fold forward.** Consecutive questions that drew no quotes
   join the next question that did, as one group (questions, then its quotes);
   groups are separated by the keyline, and the moderator's turn renders as a

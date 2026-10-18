@@ -653,7 +653,7 @@
     "askedNoQuotes": "Gefragt, keine Zitate",
     "quotesFrom_one": "{{quotes}} von {{people}} der {{count}} Person",
     "quotesFrom_other": "{{quotes}} von {{people}} der {{count}} Personen",
-    "keyMeasure": "Weniger \u2192 mehr Zitate in dieser Studie",
+    "keyMeasure": "Weniger \u2192 mehr Zitate",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Gr\u00f6\u00dfe des Gespr\u00e4chsleitfadens \u00e4ndern",
     "resizeText": "Leitfaden {{pct}} % der Breite",

@@ -653,7 +653,7 @@
     "askedNoQuotes": "Stilt, ingen sitater",
     "quotesFrom_one": "{{quotes}} fra {{people}} av {{count}} person",
     "quotesFrom_other": "{{quotes}} fra {{people}} av {{count}} personer",
-    "keyMeasure": "F\u00e6rre \u2192 flere sitater i denne studien",
+    "keyMeasure": "F\u00e6rre \u2192 flere sitater",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Endre st\u00f8rrelsen p\u00e5 intervjuguiden",
     "resizeText": "Guiden {{pct}} % av bredden",

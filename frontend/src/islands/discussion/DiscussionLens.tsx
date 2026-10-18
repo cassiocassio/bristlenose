@@ -16,7 +16,7 @@
  * the rest: opacity drops readable text below AA (review, 3 Oct 2026).
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
@@ -289,6 +289,11 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return multi ? ALL : (order[0] ?? "");
   });
   const all = session === ALL;
+  // The session before this one, so the selected column slides only from one column to
+  // another — never in from the left edge when leaving All (React's "previous render" pattern).
+  const [shown, setShown] = useState(session);
+  const [from, setFrom] = useState(session);
+  if (session !== shown) { setFrom(shown); setShown(session); }
   const [focus, setFocus] = useState<Focus | null>(arrived ? { item: arrived.item, turn: arrived.turn } : saved.focus);
   const [navW, setNavW] = useState<number | null>(saved.navWidth);
   // The navigator's measure (bar + count → strip → grid), chosen by measuring the guide.
@@ -668,11 +673,19 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // An id for a row's description: guide item ids are free text.
   const sumId = (id: string) => `dl-sum-${id.replace(/[^A-Za-z0-9_-]/g, "_")}`;
 
+  // Every strip of cells, and the grid's heads: the selected column is one band on the strip,
+  // placed by its index (--dl-here), so a new session slides it over rather than re-painting.
+  const hereAt = data.sessions.findIndex((sess) => sess.id === session);
+  const strip = {
+    className: `dl-cells${hereAt >= 0 ? " lit" : ""}${hereAt >= 0 && from !== ALL ? " slide" : ""}`,
+    style: hereAt >= 0 ? ({ "--dl-here": hereAt } as CSSProperties) : undefined,
+  };
+
   const measure = (r: NavRow) => {
     const total = rowTotal(r);
     return (
       <span className="dl-measure">
-        {tier !== "bar" && <span className="dl-cells">
+        {tier !== "bar" && <span {...strip}>
           {data.sessions.map((sess) => {
             const asked = r.sessions.includes(sess.id);
             const q = asked ? cellQuotes(answers, r.id, sess.id) : 0;
@@ -1110,7 +1123,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           // box. In All none is lit — All, in the bar, is the selection (variant A, 18 Oct).
           <div className="dl-grid-head" aria-hidden="true">
             <span className="dl-grid-head-l">{S.sessions}</span>
-            <span className="dl-cells">
+            <span {...strip}>
               {data.sessions.map((sess) => (
                 <span key={sess.id} className={`dl-head-cell${sess.number >= 10 ? " wide" : ""}`}
                   title={sessionName(sess.id)}>

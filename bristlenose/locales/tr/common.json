@@ -653,7 +653,7 @@
     "askedNoQuotes": "Soruldu, al\u0131nt\u0131 yok",
     "quotesFrom_one": "{{quotes}}, {{count}} ki\u015fiden {{people}} ki\u015fi",
     "quotesFrom_other": "{{quotes}}, {{count}} ki\u015fiden {{people}} ki\u015fi",
-    "keyMeasure": "Daha az \u2192 daha \u00e7ok al\u0131nt\u0131, bu \u00e7al\u0131\u015fmada",
+    "keyMeasure": "Daha az \u2192 daha \u00e7ok al\u0131nt\u0131",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "G\u00f6r\u00fc\u015fme rehberini yeniden boyutland\u0131r",
     "resizeText": "Rehber geni\u015fli\u011fin %{{pct}} kadar\u0131",

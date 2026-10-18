@@ -257,10 +257,28 @@ describe("DiscussionView", () => {
     const cells = within(container.querySelector(`.dl-row[data-id="${multi.id}"] .dl-cells`) as HTMLElement);
     const cell = cells.getByRole("button", { name: new RegExp(`^#${target.number} `) });
     expect(cell.tabIndex).toBe(-1); // reached from the session bar, not one tab stop per session
+    expect(container.querySelector(".dl-cells.lit")).toBeNull(); // All lights no column
     fireEvent.click(cell);
     expect(heading()).toBe(`Session ${target.number}`);
     expect(container.querySelector(`.dl-row[data-id="${multi.id}"]`)).toHaveClass("active");
     expect(cell).toHaveClass("here");
+    // The selected column: every strip carries the band at that session's index. Arriving from
+    // All it appears; only a move from one session to another slides.
+    const strips = () => [...container.querySelectorAll<HTMLElement>(".dl-nav .dl-cells")];
+    const at = (sid: string) => String(data.sessions.findIndex((s) => s.id === sid));
+    expect(strips().length).toBeGreaterThan(0);
+    for (const st of strips()) {
+      expect(st).toHaveClass("lit");
+      expect(st).not.toHaveClass("slide");
+      expect(st.style.getPropertyValue("--dl-here")).toBe(at(target.id));
+    }
+    const other = data.sessions.find((s) => s.id !== target.id && multi.asks.some((a) => a.session === s.id))!;
+    fireEvent.click(cells.getByRole("button", { name: new RegExp(`^#${other.number} `) }));
+    for (const st of strips()) {
+      expect(st).toHaveClass("slide");
+      expect(st.style.getPropertyValue("--dl-here")).toBe(at(other.id));
+    }
+    fireEvent.click(cells.getByRole("button", { name: new RegExp(`^#${target.number} `) }));
     const elsewhere = data.sections.flatMap((s) => s.items).find((i) => i.asks.length && !i.asks.some((a) => a.session === "s1"))!;
     const notAsked = container.querySelector(`.dl-row[data-id="${elsewhere.id}"] .dl-cell[aria-disabled="true"]`)!;
     expect(notAsked.getAttribute("aria-label")).toMatch(/Not asked$/);

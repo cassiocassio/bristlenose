@@ -621,7 +621,7 @@
     "askedNoQuotes": "\u5df2\u63d0\u554f\uff0c\u6c92\u6709\u5f15\u8ff0",
     "quotesFrom_one": "{{count}} \u4eba\u4e2d\u6709 {{people}} \u4eba\uff0c{{quotes}}",
     "quotesFrom_other": "{{count}} \u4eba\u4e2d\u6709 {{people}} \u4eba\uff0c{{quotes}}",
-    "keyMeasure": "\u5f15\u8ff0\u5c11 \u2192 \u591a\uff08\u6b64\u7814\u7a76\u5167\uff09",
+    "keyMeasure": "\u5f15\u8ff0\u5c11 \u2192 \u591a",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "\u8abf\u6574\u8a2a\u8ac7\u5927\u7db1\u5927\u5c0f",
     "resizeText": "\u5927\u7db1\u4f54\u5bec\u5ea6 {{pct}}%",

@@ -653,7 +653,7 @@
     "askedNoQuotes": "Gevraagd, geen citaten",
     "quotesFrom_one": "{{quotes}} van {{people}} van {{count}} persoon",
     "quotesFrom_other": "{{quotes}} van {{people}} van de {{count}} personen",
-    "keyMeasure": "Minder → meer citaten in deze studie",
+    "keyMeasure": "Minder → meer citaten",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Formaat van de gespreksgids wijzigen",
     "resizeText": "Gids op {{pct}}% van de breedte",

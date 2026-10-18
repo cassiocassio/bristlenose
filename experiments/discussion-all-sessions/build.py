@@ -290,7 +290,6 @@ def key(all_view: bool) -> str:
     # PROPOSED: the measure's three swatches join the key; they show only when cells do.
     cells = ('<div class="bn-pipeline-key-group dl-key-cells">'
              f'<span class="bn-pipeline-key-item">{swatch("off")}Not asked</span>'
-             f'<span class="bn-pipeline-key-item">{swatch("z")}Asked, no quotes</span>'
              f'<span class="bn-pipeline-key-item">{swatch("s1")}{swatch("s2")}{swatch("s3")}'
              "Less → more, for this study</span>"
              "</div>")
@@ -673,7 +672,7 @@ PROPOSED_CSS = r"""
      dl-m-grid  — wide cells under sticky session heads, then the bar + count
    Cell fill is a NEUTRAL ramp of the ink into the paper (no new colour; follows light/dark):
      off = not asked (keyline only — the absent badge's outline) ·
-     z = asked, no quotes (rare, and not interesting: a faint fill, one quiet step above not asked) ·
+     z = asked, no quotes (rare; drawn exactly as not asked, the tooltip says which) ·
      s1–s3 = the cell's quote count in the study's lower, middle and upper third. One measure,
      normalised to the study: more people talking and more said both raise it. */
 .dl-lens { --dl-bar: color-mix(in srgb, var(--bn-colour-text) 40%, var(--bn-colour-bg));
@@ -692,8 +691,9 @@ PROPOSED_CSS = r"""
 .dl-cell { appearance: none; padding: 0; margin: 0; border: 0; cursor: pointer;
   width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: 2px; }
 .dl-cell.off { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); cursor: default; }
-.dl-cell.z { background: color-mix(in srgb, var(--bn-colour-text) 8%, var(--bn-colour-bg));
-  box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
+/* Asked, no quotes: drawn as not asked — it might as well not have been (owner, 18 Oct). The
+   tooltip still says which. A separate look is a parked edge case. */
+.dl-cell.z { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
 /* Not linear: the ramp STARTS well off the paper. Any quote is a clearly filled cell — the big
    step is none → some; medium and dark are smaller steps above it. */
 .dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 38%, var(--bn-colour-bg)); }
@@ -898,7 +898,7 @@ def build() -> str:
                    "shade is its quote count ranked against every other asked cell in the study, in thirds: light, "
                    "medium, dark. More people talking and more said both raise it, so nothing separate is needed "
                    "for groups. Read a row for the questions that worked, and a column for the sessions to read in "
-                   "full. A zero is rare and not interesting, so it's only a faint fill, a quiet step above not asked. "
+                   "full. A zero is rare and not interesting, so it's drawn as not asked; only the tooltip tells them apart. "
                    "In a mixed study the groups lean dark, which is true: they gave more. The tooltip says how many "
                    "people that was (<i>#3 Bettina and 4 others · 4 quotes from 4 of 5 people</i>). The thirds move "
                    "as sessions are added. The ramp is the ink mixed into the paper, so there's no new colour.</p>"
@@ -998,8 +998,8 @@ def build() -> str:
              "{{size}} people, {{count}} quotes / asked, no quotes / not asked</td><td>cell tooltip</td></tr>"
              "<tr><td><code>discussion.rowMeasure</code></td><td>asked in {{asked}} of {{total}} sessions, "
              "{{count}} quotes</td><td>screen readers only</td></tr>"
-             "<tr><td><code>discussion.keyNotAsked</code> / <code>keyNoQuotes</code> / <code>keyQuoted</code></td>"
-             "<td>Not asked / Asked, no quotes / Less → more, for this study</td><td>key, when cells "
+             "<tr><td><code>discussion.keyNotAsked</code> / <code>keyQuoted</code></td>"
+             "<td>Not asked / Less → more, for this study</td><td>key, when cells "
              "show</td></tr><tr><td><code>discussion.sessionsHead</code></td><td>Sessions</td><td>grid heads "
              "(could reuse <code>sessions</code>)</td></tr></table>"
              "<p><b>Reused:</b> <code>MicroBar</code> + <code>.tag-bar-area</code>/<code>.tag-count</code> from the "

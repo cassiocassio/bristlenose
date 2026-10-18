@@ -25,7 +25,7 @@ import type {
   TranscriptPageResponse,
   MiroStatusResponse,
   MiroExportRequest,
-  MiroExportResponse,
+  MiroBoardStatus,
   MiroPreviewResponse,
   MiroAuthUrlResponse,
 } from "./types";
@@ -742,8 +742,17 @@ export function postMiroPreview(req: MiroExportRequest): Promise<MiroPreviewResp
   return apiPost<MiroPreviewResponse>("/miro/preview", req);
 }
 
-export function postMiroExport(req: MiroExportRequest): Promise<MiroExportResponse> {
-  return apiPost<MiroExportResponse>("/miro/export", req);
+/** The quotes board, as a job: start it, read its progress, stop it (the screens board's shape). */
+export function startMiroBoard(req: MiroExportRequest): Promise<{ status: string }> {
+  return apiPost<{ status: string }>("/miro/board", req);
+}
+
+export function getMiroBoardStatus(): Promise<MiroBoardStatus> {
+  return apiGet<MiroBoardStatus>("/miro/board/status");
+}
+
+export function cancelMiroBoard(): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/miro/board/cancel", {});
 }
 
 // ---------------------------------------------------------------------------

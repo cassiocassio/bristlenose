@@ -134,7 +134,8 @@ def test_both_clients_decode_the_field_the_server_writes(client: str) -> None:
     read expression, not a declaration a comment could satisfy.
     """
     body = (SWIFT if client == "swift" else PANEL).read_text(encoding="utf-8")
-    read = r"body\.reason\.flatMap" if client == "swift" else r"\)\?\.reason;"
+    # Since 18 Oct 2026 both boards are jobs and the SPA reads the reason off the job's status.
+    read = r"body\.reason\.flatMap" if client == "swift" else r"EXPORT_ERROR_KEYS\[s\.reason"
     assert re.search(read, body), (
         f"{client} does not index its reason→key table by the server's `reason` "
         "field — the localised sentences can never be reached."

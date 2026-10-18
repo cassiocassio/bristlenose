@@ -14,17 +14,20 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
 import i18n from "../../i18n";
 
-const postMiroExport = vi.fn().mockResolvedValue({
-  board_id: "b1",
-  board_url: "https://miro.com/app/board/b1/",
-  stickies: 3,
+const startMiroBoard = vi.fn().mockResolvedValue({ status: "started" });
+const board = (status: string, extra: object = {}) => ({
+  status, board_url: "https://miro.com/app/board/b1/", stickies: 3, reason: null, vars: {},
+  build: null, ...extra,
 });
+const getMiroBoardStatus = vi.fn();
 
 vi.mock("../../utils/api", () => ({
   getMiroStatus: vi.fn().mockResolvedValue({ connected: true }),
   postMiroConnect: vi.fn(),
   postMiroDisconnect: vi.fn(),
-  postMiroExport: (...args: unknown[]) => postMiroExport(...args),
+  startMiroBoard: (...args: unknown[]) => startMiroBoard(...args),
+  getMiroBoardStatus: (...args: unknown[]) => getMiroBoardStatus(...args),
+  cancelMiroBoard: vi.fn().mockResolvedValue({ cancelled: true }),
   apiGet: vi.fn().mockResolvedValue({ project_name: "Kitchen study" }),
 }));
 vi.mock("../../utils/announce", () => ({ announce: vi.fn() }));
@@ -36,16 +39,17 @@ async function exportOnce(language: string): Promise<Record<string, unknown>> {
   render(<MiroExportPanel open onClose={() => {}} />);
   const button = await screen.findByText(i18n.t("miro.createBoard"));
   fireEvent.click(button);
-  await waitFor(() => expect(postMiroExport).toHaveBeenCalled());
+  await waitFor(() => expect(startMiroBoard).toHaveBeenCalled());
   // Index arithmetic, not `.at(-1)`: the build's tsconfig is `lib: ES2020`
   // and `Array.prototype.at` is ES2022, so `tsc -b` refuses it.
-  const calls = postMiroExport.mock.calls;
+  const calls = startMiroBoard.mock.calls;
   return calls[calls.length - 1][0] as Record<string, unknown>;
 }
 
 describe("MiroExportPanel — the board's language travels with the request", () => {
   beforeEach(() => {
-    postMiroExport.mockClear();
+    startMiroBoard.mockClear();
+    getMiroBoardStatus.mockReset().mockResolvedValue(board("completed"));
   });
 
   it("sends the researcher's UI language", async () => {
@@ -68,16 +72,15 @@ describe("MiroExportPanel — the board's language travels with the request", ()
 
 describe("MiroExportPanel — a partial board keeps its address", () => {
   it("shows the localised sentence AND the url the server sent in vars", async () => {
-    // The 502 for a half-built board names its reason and carries the board's
-    // address in `vars.url`. The localised sentence tells the researcher to
-    // open it; without the address that is an instruction nobody can follow,
-    // and the raw English `detail` used to be the only thing carrying it.
-    const err = Object.assign(new Error("POST /miro/export 502"), {
-      detail: "Board created but incomplete — open it: https://miro.com/app/board/x9/",
-      reason: "board_incomplete",
-      vars: { url: "https://miro.com/app/board/x9/" },
-    });
-    postMiroExport.mockRejectedValueOnce(err);
+    // A half-built board's job ends failed, naming its reason and carrying the
+    // board's address. The localised sentence tells the researcher to open it;
+    // without the address that is an instruction nobody can follow.
+    getMiroBoardStatus.mockReset().mockResolvedValueOnce(board("idle")).mockResolvedValue(
+      board("failed", {
+        board_url: "https://miro.com/app/board/x9/",
+        reason: "board_incomplete",
+        vars: { url: "https://miro.com/app/board/x9/" },
+      }));
     await i18n.changeLanguage("es");
     render(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));

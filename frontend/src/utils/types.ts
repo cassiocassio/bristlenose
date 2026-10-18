@@ -403,6 +403,37 @@ export interface ScreensMiroRequest {
   sticky_shape?: "rectangle" | "square";
 }
 
+/**
+ * How far a Miro board build has got — both boards (`routes/miro.py` `BoardBuild`).
+ *
+ * `phase` names what `count_done`/`count_total` count: `preparing` (screenshots, before any Miro
+ * call), `opening` (the board and its first frames; no fraction or estimate is claimed), then
+ * `quotes`, `groups` or `screens`. `fraction` is the share of the board's Miro calls made, null
+ * while there is nothing honest to show; `eta_seconds` is null until this build has measured
+ * enough calls to say.
+ */
+export interface MiroBoardBuild {
+  phase: "preparing" | "opening" | "quotes" | "groups" | "screens" | string;
+  done: number;
+  total: number;
+  count_done: number;
+  count_total: number;
+  waiting: boolean;
+  fraction: number | null;
+  eta_seconds: number | null;
+}
+
+/** GET /miro/board/status: the quotes board, built as a job. */
+export interface MiroBoardStatus {
+  status: "idle" | "running" | "completed" | "failed" | "cancelled";
+  board_url: string | null;
+  stickies: number;
+  /** Why it failed: `board_incomplete` (its address in `vars.url`), `no_quotes_selected`, … */
+  reason: string | null;
+  vars: Record<string, string>;
+  build: MiroBoardBuild | null;
+}
+
 export interface ScreensMiroStatus {
   status: "idle" | "running" | "completed" | "failed" | "cancelled";
   progress: number;
@@ -413,6 +444,7 @@ export interface ScreensMiroStatus {
   board_url: string | null;
   /** Why it failed: the same reasons as the quotes board (`board_incomplete`, …). */
   reason: string | null;
+  build?: MiroBoardBuild | null;
 }
 
 export interface ProposedTagResponse {
@@ -805,12 +837,6 @@ export interface MiroExportRequest {
   /** The board's chrome language. A Miro board is a deliverable, so it follows
    *  the researcher's UI language; the server defaults to English if omitted. */
   locale?: string;
-}
-
-export interface MiroExportResponse {
-  board_id: string;
-  board_url: string;
-  stickies: number;
 }
 
 export interface MiroPreviewResponse {

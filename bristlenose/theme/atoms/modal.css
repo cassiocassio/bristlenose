@@ -247,6 +247,15 @@
     margin-top: 0.15rem;
 }
 
+/* A long export's progress: the browser's own bar, indeterminate until it has a value, sized to
+   the dialog and tinted with the accent where the engine allows it. */
+.bn-export-progress {
+    display: block;
+    width: 100%;
+    margin: var(--bn-space-md) 0 var(--bn-space-xs);
+    accent-color: var(--bn-colour-accent);
+}
+
 .bn-export-error {
     color: var(--bn-colour-error-text);
     font-size: var(--bn-text-label);

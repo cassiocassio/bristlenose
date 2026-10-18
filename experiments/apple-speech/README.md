@@ -394,7 +394,7 @@ Whisper not yet on disk. Today the 1.61 GB Whisper download happens inside that 
 transcription stage, on the critical path, behind a banner on the CLI and a spinner in the Mac
 app; nothing fetches it earlier (the lazy-download rule), and an interrupted fetch starts again
 from zero (hf_xet does not resume, measured 14 Oct 2026). Inputs, all measured on this M2 Max:
-Hugging Face delivered 19–25 MB/s here (two 300 MB range fetches of the real file); Apple's
+Hugging Face delivered 19–25 MB/s here (two 300 MB range fetches of the real file), on a 1 Gbit/s fibre line over Wi-Fi a few metres from the router, so the server or route, not the line, set the pace (the product fetches through hf_xet, which may parallelise better; not measured); Apple's
 models are 138–151 MB; an 18-minute Teams interview went from drop to report in 106 s with
 Whisper cached (transcription 68 s, LLM stages ~38 s); Whisper RTF 0.04 and Apple's 0.012
 (§ 4). Line speeds: typical home broadband taken as 100 Mbit/s (2026 national medians are
@@ -406,6 +406,8 @@ roughly 100–180), weak Wi-Fi as 50, 80% of the line reaching the download.
 | 18-min interview, English | 50 Mbit/s | 5.4 + 0.9 + 0.7 ≈ **7.0 min** | ≈ **1.0 min** | **≈ 6.0 min** |
 | 60-min interview, English | 100 Mbit/s | 2.7 + 2.4 + ~1.7 ≈ **6.8 min** | 0.7 + ~1.7 ≈ **2.4 min** | **≈ 4.4 min** |
 | 60-min interview, English | 50 Mbit/s | 5.4 + 2.4 + ~1.7 ≈ **9.5 min** | ≈ **2.4 min** | **≈ 7.1 min** |
+| 18-min interview, English | 1 Gbit/s (this Mac; HF-limited) | 1.2 + 0.9 + 0.7 ≈ **2.8 min** | ≈ **1.0 min** | **≈ 1.8 min** |
+| 60-min interview, English | 1 Gbit/s (this Mac; HF-limited) | 1.2 + 2.4 + ~1.7 ≈ **5.3 min** | ≈ **2.4 min** | **≈ 2.9 min** |
 | any of the other eight languages | 100 / 50 Mbit/s | as above | add 0.2–0.4 min for Apple's model | ≈ 0.3 min less |
 
 The 60-minute LLM time is scaled from the 18-minute run, not measured. On a slower Apple

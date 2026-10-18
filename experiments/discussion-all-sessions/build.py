@@ -385,7 +385,8 @@ def grid_head(sessions: list[Sess], current: int | None, all_lit: bool) -> str:
         else:
             state = "here" if s.n == current else "present"
         b = (f'<span class="bn-person-badge bn-person-badge-compact"><span class="bn-speaker-badge--split">'
-             f'<span class="bn-speaker-badge-code"><span class="dl-h-hash">#</span>{s.n}</span></span></span>')
+             f'<span class="bn-speaker-badge-code{" dl-h-wide" if s.n >= 10 else ""}">'
+             f'<span class="dl-h-n"><span class="dl-h-hash">#</span>{s.n}</span></span></span></span>')
         if state == "here":
             b = f'<span class="bn-person-badge-here">{b}</span>'
         heads.append(f'<span class="dl-head-cell" title="Session {s.n}">{b}</span>')
@@ -719,6 +720,12 @@ PROPOSED_CSS = r"""
   border-bottom: 1px solid var(--bn-colour-border); }
 .dl-grid-head-l { flex: 1; font-size: var(--bn-text-caption); color: var(--bn-colour-muted); }
 .dl-head-cell { display: inline-flex; justify-content: center; }
+/* PROPOSED: the single-digit badge sets the grid's pitch for every study. Two-digit labels are
+   squeezed into the same box — no side padding, tighter tracking, and a horizontal squash
+   (--dl-sq, measured to fit). Some squished numbers beat a grid too wide to be seen. */
+.dl-grid-head .bn-speaker-badge-code.dl-h-wide { box-sizing: border-box; width: var(--dl-head-w, auto);
+  padding-inline: 0; display: inline-flex; justify-content: center; }
+.dl-h-wide .dl-h-n { display: inline-block; letter-spacing: -0.04em; transform: scaleX(var(--dl-sq, 0.8)); }
 .dl-head-bar { width: 72px; flex: none; }
 .dl-key-cells .dl-cell { display: inline-block; vertical-align: -2px; margin-right: 4px; width: 10px; height: 10px; }
 
@@ -744,18 +751,25 @@ SCRIPT = r"""
 // tier by MEASURING the guide — the rule the lens would ship. (3) Draw the wires the way
 // DiscussionLens does (wirePath in model.ts) in the session view; the All view has none.
 const TEXT_MIN = 130, BAR_W = 72, GAP = 8;
-// The grid's pitch is the widest head badge (the highest session number) plus 4px — measured.
+// The grid's pitch is the SINGLE-DIGIT head badge plus 4px — measured. Two-digit heads are
+// squeezed into that box: --dl-head-w is its width, --dl-sq the squash that fits them.
 function headPitch(lens) {
   const cells = lens.querySelectorAll('.dl-grid-head .dl-head-cell');
   if (!cells.length) return 30;
   const probe = document.createElement('div');
   probe.className = 'dl-grid-head';
   probe.style.cssText = 'display:flex;position:absolute;visibility:hidden;left:-9999px';
-  probe.innerHTML = cells[cells.length - 1].innerHTML;
+  probe.innerHTML = cells[0].innerHTML + cells[cells.length - 1].innerHTML;
   lens.querySelector('.dl-nav').appendChild(probe);
-  const w = probe.firstElementChild.getBoundingClientRect().width;
+  const w1 = probe.children[0].getBoundingClientRect().width;
+  lens.style.setProperty('--dl-head-w', w1 + 'px');
+  const wide = probe.querySelector('.dl-h-wide .dl-h-n');
+  if (wide) {
+    const inner = w1 - 2 - 2;                      // the keyline both sides, a pixel of air each side
+    lens.style.setProperty('--dl-sq', Math.min(1, inner / wide.offsetWidth).toFixed(3));
+  }
   probe.remove();
-  return Math.ceil(w) + 4;
+  return Math.ceil(w1) + 4;
 }
 function needs(n, pitch) {                       // the guide width each tier needs, in px
   const fixed = 16 + 22 + TEXT_MIN + GAP;

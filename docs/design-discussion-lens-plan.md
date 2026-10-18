@@ -441,6 +441,11 @@ overrides keyed on durable ids, never on labels.
   - The grid heads are **regular-size compact badges with no `#`** (`1 2 3`, under a
     *Sessions* label). Measured in the mockup's width lab: an 8-session study needs a
     432px guide for the grid; micro type saves less than dropping the `#` does.
+    **The single-digit badge sets the column width for every study** (18 Oct): a
+    10–12 label goes in the same box with no side padding and tighter tracking (a
+    measured horizontal squash is the fallback; at badge size two mono digits fit
+    without it). Twelve sessions then take a column each the width of a one-digit
+    badge, not a two-digit one.
   - **Cells replace the rows' session chips and `#N ▾` pull-down** (decided 18 Oct).
     Clicking a cell opens that session at that question. The measure grows with the
     guide's width — bar + count → one cell per session → the grid — chosen by

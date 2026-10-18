@@ -46,7 +46,8 @@ enum SidebarSubtitleText {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .importingBatch, .readingScreens, .copyCancelling:
+             .addingInterviews, .copying, .importingBatch, .readingScreens, .copyCancelling,
+             .waitingForWhisper:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -112,6 +113,8 @@ enum SidebarSubtitleText {
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])
         case .copyCancelling:
             return i18n.t("desktop.chrome.copyCancelling")
+        case .waitingForWhisper:
+            return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial,
              .ready, .deltaOnly, .placeholder:
             return nil
@@ -170,6 +173,14 @@ enum SidebarSubtitleText {
     ///
     /// Returns `nil` when there is nothing to add, so the caller can leave
     /// `toolTip` unset rather than showing an empty bubble.
+    /// Why a row is "Waiting for Whisper". What we know and no more: Apple's
+    /// model was not sure (a confidence gate, which muddy audio in the right
+    /// language trips too), so the sentence names no language and claims no
+    /// cause.
+    static func waitingForWhisperHint(i18n: I18n) -> String {
+        i18n.t("desktop.chrome.pipeline.waitingForWhisperHint")
+    }
+
     static func tooltip(for variant: SubtitleVariant,
                         data: UnanalysedState?,
                         progress: PipelineProgress?,
@@ -191,6 +202,11 @@ enum SidebarSubtitleText {
            let ladder = activityText(variant, progress: progress,
                                      separator: " · ", i18n: i18n) {
             parts.append(ladder)
+        }
+        // "Waiting for download" in full: the row's own line, said whole, as
+        // the ladder above is — not a further condition.
+        if case .waitingForWhisper = variant {
+            parts.append(waitingForWhisperHint(i18n: i18n))
         }
         if let count = data?.sessionCount {
             parts.append(deltaText(prefix: "interviewCount", count: count, i18n: i18n))

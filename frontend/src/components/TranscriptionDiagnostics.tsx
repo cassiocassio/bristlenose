@@ -40,6 +40,18 @@ export interface TranscriptionQuality {
     fallback_windows?: number | null;
     mean_confidence: number | null;
     low_confidence_share: number | null;
+    /** Apple's speech model (`backend: "apple-speech"`): the locale it was told to
+     *  hear, which is a guess from the UI language, never a detection. */
+    locale?: string;
+    locale_source?: "assumed";
+    /** Whether the guess held over the whole file (`bristlenose/apple_speech.py`). */
+    gate?: {
+      passed: boolean;
+      reason: string;
+      mean_confidence: number | null;
+      words_per_signal_minute: number | null;
+      signal_minutes: number;
+    };
   };
   repair: {
     silent_dropped?: number;
@@ -87,6 +99,9 @@ const spanSeconds = (spans: [number, number][] | undefined) =>
 /** The two numbers that separated the worst recording from the rest in the trials. */
 export function headline(r: TranscriptionQuality): string {
   if (r.recognition.transcribed === false) return "Not transcribed: no sound above the floor";
+  if (r.recognition.gate && !r.recognition.gate.passed) {
+    return `Left for Whisper: ${r.recognition.gate.reason} under ${r.recognition.locale ?? "the assumed language"}`;
+  }
   const parts: string[] = [];
   const windows = r.recognition.decode_windows ?? 0;
   const retried = r.recognition.fallback_windows;
@@ -130,6 +145,8 @@ export default function TranscriptionDiagnostics({ record: r, durationSeconds, s
 
   const rec = r.recognition;
   const rep = r.repair;
+  // Apple's model: no style prompt, no windows, no loop nets — those rows are Whisper's.
+  const apple = rec.backend === "apple-speech";
   const windows = rec.decode_windows ?? 0;
 
   return (
@@ -204,9 +221,17 @@ export default function TranscriptionDiagnostics({ record: r, durationSeconds, s
               ]} />
             )}
             <Panel title="Recognition" rows={[
-              ["Engine", [rec.backend, rec.model].filter(Boolean).join(" · ") || "—"],
-              ["Language", rec.language ?? "—", rec.language ? (rec.language_set ? "set" : "detected") : undefined],
-              ["Style prompt", rec.prompt ? "on" : "off"],
+              ["Engine", apple
+                ? "Apple speech model"
+                : [rec.backend, rec.model].filter(Boolean).join(" · ") || "—"],
+              apple
+                ? ["Language", rec.locale ?? "—", rec.locale ? "assumed" : undefined]
+                : ["Language", rec.language ?? "—", rec.language ? (rec.language_set ? "set" : "detected") : undefined],
+              ...(apple ? [] : [["Style prompt", rec.prompt ? "on" : "off"]] as Row[]),
+              ...(rec.gate ? [
+                ["Language check", rec.gate.passed ? "passed" : "left for Whisper",
+                  rec.gate.passed ? undefined : rec.gate.reason],
+              ] as Row[] : []),
               ...(windows > 0 ? [
                 ["Windows", String(windows)],
                 rec.fallback_windows == null

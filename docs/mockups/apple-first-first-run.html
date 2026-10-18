@@ -184,7 +184,7 @@
         <div class="chrome"><b>shipped</b> stage.transcribe · sessionsCount · <span class="new">NEW</span> modelDownload.pill</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:3%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:3%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
             <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Transcribing · 1 of 1</div></div><span class="ring det"></span></div>
           </div>
@@ -226,7 +226,7 @@
         <div class="chrome"><b>shipped</b> stage.quotes · sessionsCount · <span class="new">NEW</span> modelDownload.pill</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:28%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:28%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
             <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">Finding quotes · 1 of 1</div></div><span class="ring det"></span></div>
           </div>
@@ -264,7 +264,7 @@
         <div class="chrome"><b>system</b> Progress.localizedAdditionalDescription · <span class="new">NEW</span> modelDownload.pill · .title · .why · .stop · .stopNote</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Checkout study</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:37%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:37%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
             <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Checkout study</div><div class="st">18 Oct 2026</div></div><span></span></div>
           </div>
@@ -274,7 +274,7 @@
             <div class="card"><div class="ln" style="width:70%"></div><div class="ln" style="width:45%"></div></div>
           </div>
           <div class="pop" style="top:44px; right:8px;">
-            <p class="ptitle">Downloading speech model</p>
+            <p class="ptitle">Downloading Whisper</p>
             <p class="pbody">600 MB of 1.6 GB (10 MB/s) — About 2 minutes remaining</p>
             <div class="bar"><i style="width:37%"></i></div>
             <p class="pbody" style="margin-top:8px">For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</p>
@@ -308,12 +308,12 @@
         <div class="chrome"><span class="new">NEW</span> modelDownload.pill · <span class="new">NEW</span> chrome.pipeline.waitingForDownload · …Hint (tooltip)</div>
         <div class="win">
           <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Entrevistas</span>
-            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading speech model<span class="bar"><i style="width:52%"></i></span></span></span></div>
+            <span class="status-zone"><span class="pill"><svg width="12" height="12"><use href="#down"/></svg>Downloading Whisper<span class="bar"><i style="width:52%"></i></span></span></span></div>
           <div class="side"><div class="group">Projects</div>
-            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Entrevistas</div><div class="st">Waiting for download</div></div><span></span></div>
+            <div class="row sel"><svg class="ic"><use href="#doc"/></svg><div><div class="nm">Entrevistas</div><div class="st">Waiting for Whisper</div></div><span></span></div>
           </div>
           <div class="detail"><p class="empty">Nothing to see here, yet.</p></div>
-          <div class="tip" style="top:112px; left:60px;">This recording doesn't sound like English. It will be transcribed once Whisper has downloaded.</div>
+          <div class="tip" style="top:112px; left:60px;">Apple's speech model wasn't sure of what it heard, so Whisper will transcribe it once it's on this Mac.</div>
         </div>
       </div>
     </div>
@@ -321,7 +321,7 @@
   <div class="comment"><span class="lab">Commentary</span>
     Apple's English model on Spanish audio gives itself low confidence (0.10–0.38 over the first two minutes,
     against 0.92 in the right language), so the guess is caught and Apple's text is thrown away. The run
-    finishes with the other sessions; this one is deferred, reads <em>Waiting for download</em> like a queued row
+    finishes with the other sessions; this one is deferred, reads <em>Waiting for Whisper</em> like a queued row
     (information, no glyph), explains itself in the tooltip, and is transcribed by Whisper when it lands. The reverse case, English audio under a Spanish or German UI, came back as English and needs no
     gate. The tooltip sentence is owner-written copy.</div>
 </div>
@@ -402,10 +402,10 @@
   <tr><th>Key</th><th>English</th><th>Status</th></tr>
   <tr><td><code>desktop.chrome.pipeline.*</code> (analysing, stage.transcribe, stage.quotes, sessionsCount, etaMinutes)</td><td>as shipped</td><td>reused</td></tr>
   <tr><td>progress line</td><td>Foundation <code>Progress.localizedAdditionalDescription</code></td><td>system, no key</td></tr>
-  <tr><td><code>desktop.modelDownload.pill</code>, <code>.title</code></td><td>Downloading speech model</td><td class="tag-new">new (Ollama's download keys move here too)</td></tr>
+  <tr><td><code>desktop.modelDownload.pill</code>, <code>.title</code></td><td>Downloading Whisper</td><td class="tag-new">new (Ollama's download keys move here too)</td></tr>
   <tr><td><code>desktop.modelDownload.why</code></td><td>For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.</td><td class="tag-new">new · owner to word</td></tr>
   <tr><td><code>desktop.modelDownload.stop</code>, <code>.stopNote</code></td><td>Stop Download · Starts again from the beginning next time.</td><td class="tag-new">new</td></tr>
-  <tr><td><code>desktop.chrome.pipeline.waitingForDownload</code>, <code>…Hint</code></td><td>Waiting for download · This recording doesn't sound like {{language}}. It will be transcribed once Whisper has downloaded.</td><td class="tag-new">new · owner to word</td></tr>
+  <tr><td><code>desktop.chrome.pipeline.waitingForWhisper</code>, <code>…Hint</code></td><td>Waiting for Whisper · Apple's speech model wasn't sure of what it heard, so Whisper will transcribe it once it's on this Mac.</td><td class="tag-new">new · owner to word</td></tr>
   <tr><td><code>desktop.transcriptionSettings.engine*</code>, <code>whisper*</code>, <code>downloadNow</code></td><td>Transcribe with · Whisper when ready · Whisper only · Apple's speech model · Apple's speech model needs macOS 26. · Whisper · On this Mac · {{size}} · Download Now</td><td class="tag-new">new (replace backendLabel, backendAuto, backendHint)</td></tr>
 </table>
 </div>

@@ -309,7 +309,9 @@
         "render": "Generando informe",
         "pii": "Eliminando informaci\u00f3n personal",
         "discussion": "Relacionando citas con preguntas"
-      }
+      },
+      "waitingForWhisper": "Esperando a Whisper",
+      "waitingForWhisperHint": "El modelo de voz de Apple no estaba seguro de lo que oyó, así que Whisper lo transcribirá cuando esté en este Mac."
     },
     "folderNamePlaceholder": "Nombre de la carpeta",
     "projectNamePlaceholder": "Nombre del proyecto",
@@ -893,7 +895,17 @@
     "backendHint": "Auto detecta el mejor motor para tu Mac.",
     "modelRecommended": "{{model}} (recomendado)",
     "readScreensLabel": "Leer las pantallas compartidas",
-    "readScreensHint": "Lee el texto de las pantallas compartidas en las grabaciones, en este Mac, y lo guarda con peque\u00f1as im\u00e1genes de cada pantalla en la carpeta del proyecto. Nunca se env\u00eda a la IA."
+    "readScreensHint": "Lee el texto de las pantallas compartidas en las grabaciones, en este Mac, y lo guarda con peque\u00f1as im\u00e1genes de cada pantalla en la carpeta del proyecto. Nunca se env\u00eda a la IA.",
+    "engineLabel": "Transcribir con",
+    "engineWhenReady": "Whisper cuando esté listo",
+    "engineWhisperOnly": "Solo Whisper",
+    "engineApple": "El modelo de voz de Apple",
+    "engineHint": "El modelo de voz de Apple viene con macOS y es más rápido. Whisper se las arregla mejor con mal audio, gente que habla a la vez, grupos más grandes e idiomas que el modelo de Apple no tiene.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "En este Mac · {{size}}",
+    "whisperMissing": "No está en este Mac",
+    "whisperFailed": "La descarga no ha terminado.",
+    "downloadNow": "Descargar ahora"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA local",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Forma de las notas:",
     "saveBoardFile": "Guardar archivo de tablero…"
+  },
+  "modelDownload": {
+    "title": "Descargando Whisper",
+    "failedTitle": "Whisper no se ha descargado",
+    "why": "Para tus próximas grabaciones. Whisper se las arregla mejor con mal audio, gente que habla a la vez y grupos más grandes.",
+    "stop": "Detener la descarga",
+    "stopNote": "La próxima vez empieza de nuevo desde el principio."
   }
 }

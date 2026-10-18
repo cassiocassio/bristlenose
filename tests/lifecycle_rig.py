@@ -38,7 +38,7 @@ from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner
 
-from bristlenose.events import StageOutcome
+from bristlenose.events import Cause, CauseCategoryEnum, StageFailure, StageOutcome
 from bristlenose.models import FileType, PiiCleanTranscript, SessionTopicMap, TranscriptSegment
 from tests.conftest import iter_transcribe_from
 from tests.test_serve_project_root import _app, _client, _rows, _sessions, _wait
@@ -100,6 +100,10 @@ class Study:
     work: Path
     #: Per run, the recording file names handed to (fake) Whisper.
     transcribed: list[list[str]] = field(default_factory=list)
+    #: Per run, how many times the Whisper preflight (the model fetch) ran.
+    whisper_preflights: list[int] = field(default_factory=list)
+    #: The last run's terminal output.
+    last_output: str = ""
 
     # ── the researcher's own acts ───────────────────────────────────────────
 
@@ -124,9 +128,21 @@ class Study:
 
     # ── the app's acts ──────────────────────────────────────────────────────
 
-    def run(self, *, clean: bool = False) -> None:
-        """``bristlenose run <folder>`` as the Mac app spawns it."""
+    def run(
+        self, *, clean: bool = False, fail: dict[str, CauseCategoryEnum] | None = None,
+    ) -> None:
+        """``bristlenose run <folder>`` as the Mac app spawns it.
+
+        ``fail`` maps a recording's name to the failure its transcription
+        returns this run (``DEFERRED`` is Apple's model sending a session on
+        to Whisper); the recording still counts as transcribed.
+        """
         recorded: list[str] = []
+        preflights = [0]
+        fail = fail or {}
+
+        def _preflight(**_kw):
+            preflights[0] += 1
 
         async def _passthrough(sessions, _tmp, **_kw):
             for s in sessions:
@@ -140,10 +156,18 @@ class Study:
         def _transcribe(sessions, _settings, **_kw):
             names = [Path(s.audio_path or s.files[0].path).name for s in sessions]
             recorded.extend(names)
+            failed = [
+                StageFailure(session_id=s.session_id, cause=Cause(
+                    category=fail[n], stage="s05_transcribe", session_id=s.session_id,
+                ))
+                for s, n in zip(sessions, names, strict=True) if n in fail
+            ]
             return (
-                {s.session_id: _whisper_text(n) for s, n in zip(sessions, names, strict=True)},
+                {s.session_id: [] if n in fail else _whisper_text(n)
+                 for s, n in zip(sessions, names, strict=True)},
                 {},
-                StageOutcome(attempted=len(sessions), succeeded=len(sessions)),
+                StageOutcome(attempted=len(sessions), succeeded=len(sessions) - len(failed),
+                             failed=failed),
             )
 
         async def _split(segments, _client, errors=None):
@@ -181,7 +205,7 @@ class Study:
             return [], StageOutcome(attempted=1, succeeded=1)
 
         fakes = (
-            _passthrough, lambda **_kw: None, iter_transcribe_from(_transcribe),
+            _passthrough, _preflight, iter_transcribe_from(_transcribe),
             _split, _roles, _topics, _quotes, _cluster, _empty,
         )
         args = ["run", str(self.folder), "--no-serve", "--llm", "claude"]
@@ -199,7 +223,18 @@ class Study:
                 for p in reversed(stack):
                     p.stop()
         self.transcribed.append(recorded)
+        self.whisper_preflights.append(preflights[0])
+        self.last_output = result.output
         assert result.exit_code == 0, f"run exited {result.exit_code}:\n{result.output}"
+
+    def last_summary(self) -> dict:
+        """The summary on the last ``run_completed`` event, as the Mac reads it."""
+        import json
+
+        events = self.folder / "bristlenose-output" / ".bristlenose" / "pipeline-events.jsonl"
+        done = [json.loads(ln) for ln in events.read_text(encoding="utf-8").splitlines()
+                if '"run_completed"' in ln]
+        return done[-1]["summary"]
 
     @contextmanager
     def serve(self) -> Iterator[object]:

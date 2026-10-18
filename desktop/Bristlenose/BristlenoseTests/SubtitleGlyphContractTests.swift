@@ -36,7 +36,8 @@ import Testing
     enum VariantTag: CaseIterable {
         case cantFind, failed, failedDiagnostic, completedPartial, stopping
         case running, queued, stopped, partial, unreachable, addingInterviews
-        case copying, importingBatch, readingScreens, copyCancelling, ready, deltaOnly, placeholder
+        case copying, importingBatch, readingScreens, copyCancelling, waitingForWhisper
+        case ready, deltaOnly, placeholder
     }
 
     /// Every case, once, with a representative payload.
@@ -56,6 +57,7 @@ import Testing
         .importingBatch(done: 3, total: 4),
         .readingScreens(done: 0, total: 4),
         .copyCancelling,
+        .waitingForWhisper,
         .ready(date: Date(timeIntervalSince1970: 1_000_000), delta: nil),
         .deltaOnly(.unanalysed(count: 2)),
         .placeholder,
@@ -135,7 +137,7 @@ import Testing
             .partial(transcribeOnly: true), .addingInterviews(count: 1),
             .copying(fraction: 0.5), .importingBatch(done: 1, total: 2),
             .readingScreens(done: 1, total: 2),
-            .copyCancelling, .placeholder,
+            .copyCancelling, .waitingForWhisper, .placeholder,
         ]
         for variant in progress {
             #expect(variant.glyphAction == .none,
@@ -268,6 +270,7 @@ private extension SubtitleVariant {
         case .importingBatch:   return .importingBatch
         case .readingScreens:   return .readingScreens
         case .copyCancelling:   return .copyCancelling
+        case .waitingForWhisper: return .waitingForWhisper
         case .ready:            return .ready
         case .deltaOnly:        return .deltaOnly
         case .placeholder:      return .placeholder

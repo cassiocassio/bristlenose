@@ -169,8 +169,23 @@ def build_hardware_key(settings: BristlenoseSettings) -> str:
     backend = settings.whisper_backend
     if backend == "auto":
         backend = hw.recommended_whisper_backend
+    model = settings.whisper_model
+    # A run on Apple's speech model transcribes about three times faster than
+    # Whisper on the same Mac; one profile for both would teach each the
+    # other's pace (docs/design-apple-first-transcription.md §3 I). A first
+    # Apple run therefore has no history and shows no estimate, which is honest.
+    try:
+        from bristlenose.stages.s05_transcribe import decide_engine
+
+        if decide_engine(settings).is_apple:
+            backend, model = "apple-speech", "-"
+    except Exception:  # noqa: BLE001 — a timing key must never cost the run
+        import logging
+
+        logging.getLogger(__name__).warning("engine decision for the timing key failed",
+                                            exc_info=True)
     return (
-        f"{chip} | {backend} | {settings.whisper_model}"
+        f"{chip} | {backend} | {model}"
         f" | {settings.llm_provider} | {settings.llm_model}"
     )
 

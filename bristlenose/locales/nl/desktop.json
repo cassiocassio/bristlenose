@@ -309,7 +309,9 @@
         "render": "Rapport bouwen",
         "pii": "Persoonsgegevens verwijderen",
         "discussion": "Citaten aan vragen koppelen"
-      }
+      },
+      "waitingForWhisper": "Wacht op Whisper",
+      "waitingForWhisperHint": "Het spraakmodel van Apple wist niet zeker wat het hoorde, dus Whisper transcribeert het zodra Whisper op deze Mac staat."
     },
     "folderNamePlaceholder": "Mapnaam",
     "projectNamePlaceholder": "Projectnaam",
@@ -893,7 +895,17 @@
     "backendHint": "Automatisch detecteert de beste engine voor je Mac.",
     "modelRecommended": "{{model}} (aanbevolen)",
     "readScreensLabel": "Lees gedeelde schermen",
-    "readScreensHint": "Leest de tekst op schermen die in opnamen worden gedeeld, op deze Mac, en bewaart die met kleine afbeeldingen van elk scherm in de projectmap. Wordt nooit naar de AI gestuurd."
+    "readScreensHint": "Leest de tekst op schermen die in opnamen worden gedeeld, op deze Mac, en bewaart die met kleine afbeeldingen van elk scherm in de projectmap. Wordt nooit naar de AI gestuurd.",
+    "engineLabel": "Transcriberen met",
+    "engineWhenReady": "Whisper zodra die klaar is",
+    "engineWhisperOnly": "Alleen Whisper",
+    "engineApple": "Spraakmodel van Apple",
+    "engineHint": "Het spraakmodel van Apple zit in macOS en is sneller. Whisper kan beter overweg met slechte audio, mensen die door elkaar praten, grotere groepen en talen die het model van Apple niet kent.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Op deze Mac · {{size}}",
+    "whisperMissing": "Niet op deze Mac",
+    "whisperFailed": "De download is niet voltooid.",
+    "downloadNow": "Nu downloaden"
   },
   "ollamaSetup": {
     "pillChoosingModel": "AI op apparaat instellen",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Vorm van de notities:",
     "saveBoardFile": "Bordbestand bewaren…"
+  },
+  "modelDownload": {
+    "title": "Whisper downloaden",
+    "failedTitle": "Whisper is niet gedownload",
+    "why": "Voor je volgende opnamen. Whisper kan beter overweg met slechte audio, mensen die door elkaar praten en grotere groepen.",
+    "stop": "Download stoppen",
+    "stopNote": "Begint de volgende keer opnieuw vanaf het begin."
   }
 }

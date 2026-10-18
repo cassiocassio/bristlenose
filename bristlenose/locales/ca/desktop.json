@@ -309,7 +309,9 @@
         "render": "S'està generant l'informe",
         "pii": "S'est\u00e0 suprimint la informaci\u00f3 personal",
         "discussion": "S'estan relacionant les cites amb les preguntes"
-      }
+      },
+      "waitingForWhisper": "Esperant Whisper",
+      "waitingForWhisperHint": "El model de veu d'Apple no estava segur del que ha sentit, així que Whisper ho transcriurà quan sigui en aquest Mac."
     },
     "folderNamePlaceholder": "Nom de la carpeta",
     "projectNamePlaceholder": "Nom del projecte",
@@ -893,7 +895,17 @@
     "backendHint": "L'opció automàtica detecta el millor motor per al teu Mac.",
     "modelRecommended": "{{model}} (recomanat)",
     "readScreensLabel": "Llegeix les pantalles compartides",
-    "readScreensHint": "Llegeix el text de les pantalles compartides a les gravacions, en aquest Mac, i el desa amb petites imatges de cada pantalla a la carpeta del projecte. No s\u2019envia mai a la IA."
+    "readScreensHint": "Llegeix el text de les pantalles compartides a les gravacions, en aquest Mac, i el desa amb petites imatges de cada pantalla a la carpeta del projecte. No s\u2019envia mai a la IA.",
+    "engineLabel": "Transcriu amb",
+    "engineWhenReady": "Whisper quan estigui a punt",
+    "engineWhisperOnly": "Només Whisper",
+    "engineApple": "El model de veu d'Apple",
+    "engineHint": "El model de veu d'Apple ve amb el macOS i és més ràpid. Whisper es defensa millor amb àudio dolent, gent que parla alhora, grups més grans i idiomes que el model d'Apple no té.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "En aquest Mac · {{size}}",
+    "whisperMissing": "No és en aquest Mac",
+    "whisperFailed": "La baixada no s'ha completat.",
+    "downloadNow": "Baixa ara"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configura la IA al dispositiu",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Forma de les notes:",
     "saveBoardFile": "Desa el fitxer del tauler…"
+  },
+  "modelDownload": {
+    "title": "S'està baixant Whisper",
+    "failedTitle": "Whisper no s'ha baixat",
+    "why": "Per a les properes gravacions. Whisper es defensa millor amb àudio dolent, gent que parla alhora i grups més grans.",
+    "stop": "Atura la baixada",
+    "stopNote": "La propera vegada torna a començar des del principi."
   }
 }

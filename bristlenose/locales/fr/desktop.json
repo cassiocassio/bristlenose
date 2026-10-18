@@ -309,7 +309,9 @@
         "render": "Cr\u00e9ation du rapport",
         "pii": "Suppression des informations personnelles",
         "discussion": "Rattachement des citations aux questions"
-      }
+      },
+      "waitingForWhisper": "En attente de Whisper",
+      "waitingForWhisperHint": "Le modèle vocal d'Apple n'était pas sûr de ce qu'il a entendu : Whisper le transcrira une fois installé sur ce Mac."
     },
     "folderNamePlaceholder": "Nom du dossier",
     "projectNamePlaceholder": "Nom du projet",
@@ -893,7 +895,17 @@
     "backendHint": "Auto détecte le meilleur moteur pour votre Mac.",
     "modelRecommended": "{{model}} (recommandé)",
     "readScreensLabel": "Lire les \u00e9crans partag\u00e9s",
-    "readScreensHint": "Lit le texte des \u00e9crans partag\u00e9s dans les enregistrements, sur ce Mac, et le conserve avec de petites images de chaque \u00e9cran dans le dossier du projet. Il n\u2019est jamais envoy\u00e9 \u00e0 l\u2019IA."
+    "readScreensHint": "Lit le texte des \u00e9crans partag\u00e9s dans les enregistrements, sur ce Mac, et le conserve avec de petites images de chaque \u00e9cran dans le dossier du projet. Il n\u2019est jamais envoy\u00e9 \u00e0 l\u2019IA.",
+    "engineLabel": "Transcrire avec",
+    "engineWhenReady": "Whisper dès qu'il est prêt",
+    "engineWhisperOnly": "Whisper uniquement",
+    "engineApple": "Modèle vocal d'Apple",
+    "engineHint": "Le modèle vocal d'Apple est intégré à macOS et il est plus rapide. Whisper gère mieux un son médiocre, les personnes qui parlent en même temps, les groupes plus nombreux et les langues que le modèle d'Apple ne connaît pas.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Sur ce Mac · {{size}}",
+    "whisperMissing": "Pas sur ce Mac",
+    "whisperFailed": "Le téléchargement n'a pas abouti.",
+    "downloadNow": "Télécharger maintenant"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurer l’IA locale",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Forme des notes :",
     "saveBoardFile": "Enregistrer le fichier de tableau…"
+  },
+  "modelDownload": {
+    "title": "Téléchargement de Whisper",
+    "failedTitle": "Whisper n'a pas été téléchargé",
+    "why": "Pour vos prochains enregistrements. Whisper gère mieux un son médiocre, les personnes qui parlent en même temps et les groupes plus nombreux.",
+    "stop": "Arrêter le téléchargement",
+    "stopNote": "Reprendra depuis le début la prochaine fois."
   }
 }

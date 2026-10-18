@@ -107,3 +107,31 @@ describe("TranscriptionDiagnostics", () => {
     expect(empty.getAttribute("width")).toBe("10");
   });
 });
+
+describe("Apple's speech model", () => {
+  const apple = (gate: { passed: boolean; reason: string }) =>
+    record({
+      recognition: {
+        backend: "apple-speech", transcribed: true, locale: "en-GB", locale_source: "assumed",
+        mean_confidence: 0.92, low_confidence_share: 0.02,
+        gate: { ...gate, mean_confidence: 0.92, words_per_signal_minute: 140, signal_minutes: 2 },
+      },
+    });
+
+  it("says a session was left for Whisper, and why", () => {
+    expect(headline(apple({ passed: false, reason: "low confidence" })))
+      .toBe("Left for Whisper: low confidence under en-GB");
+  });
+
+  it("shows the locale as assumed, never detected, and drops Whisper's rows", () => {
+    render(<TranscriptionDiagnostics record={apple({ passed: true, reason: "ok" })}
+      durationSeconds={120} sPerPx={1} onJump={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /Diagnostics/ }));
+    expect(screen.getByText("Apple speech model")).toBeTruthy();
+    expect(screen.getByText("en-GB")).toBeTruthy();
+    expect(screen.getByText(/assumed/)).toBeTruthy();
+    expect(screen.queryByText(/detected/)).toBeNull();
+    expect(screen.queryByText("Style prompt")).toBeNull();
+    expect(screen.getByText("passed")).toBeTruthy();
+  });
+});

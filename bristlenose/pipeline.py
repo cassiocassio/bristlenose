@@ -1105,6 +1105,10 @@ class Pipeline:
         #: for sessions Whisper transcribed. Recorded as ``(set)`` in the
         #: transcript header, never as a detection.
         self._pinned_languages: dict[str, str] = {}
+        #: The run's transcription engine, chosen at the Whisper preflight so
+        #: the preflight and stage 5 agree (``s05_transcribe.decide_engine``).
+        #: None until then; stage 5 decides for itself if nothing pinned it.
+        self._engine_choice: Any = None
 
         # Logging is configured later (once output_dir is known) via
         # _configure_logging().  Pipeline methods call it at the top of
@@ -1589,6 +1593,7 @@ class Pipeline:
             _needs_whisper = (
                 not self.settings.skip_transcription
                 and any(not s.has_existing_transcript for s in sessions)
+                and not self._apple_speech_run()
             )
             if _needs_whisper:
                 from bristlenose.preflight.whisper import preflight_whisper
@@ -1747,14 +1752,26 @@ class Pipeline:
                     if s.session_id not in _cached_tx_sids
                 ]
 
-                if _cached_tx_sids and _remaining_sessions:
+                # A session the last run tried and failed (or deferred to
+                # Whisper) is a retry, not a new interview: counting it would
+                # say "+1 new session" on every run of a recording that keeps
+                # failing.
+                _prev_tx = _prev_manifest.stages.get(_M_STAGE_TRANSCRIBE) if _prev_manifest else None
+                _retried_tx_sids = {
+                    sid for sid, rec in ((_prev_tx.sessions or {}) if _prev_tx else {}).items()
+                    if rec.status == StageStatus.FAILED
+                }
+                _new_tx_sessions = [
+                    s for s in _remaining_sessions if s.session_id not in _retried_tx_sids
+                ]
+                if _cached_tx_sids and _new_tx_sessions:
                     # Incremental add: new sessions on top of an already-
                     # analysed corpus. Drives the desktop "+N new sessions"
                     # post-completion delta. reflow_scope is conservative —
                     # added material may reshuffle downstream section/theme
                     # membership, so the UX holds (restructure) until the
                     # persistence layer can prove a run purely additive.
-                    self._summary.new_sessions = len(_remaining_sessions)
+                    self._summary.new_sessions = len(_new_tx_sessions)
                     self._summary.reflow_scope = ReflowScopeEnum.RESTRUCTURE
 
                 mark_stage_running(manifest, _M_STAGE_TRANSCRIBE)
@@ -1844,7 +1861,22 @@ class Pipeline:
                     )
                     if _chain is not None:
                         _chain.stop()  # every session was offered; nothing should be left
+                    # A session whose transcription FAILED is not complete: its
+                    # record would make the next run serve the empty result from
+                    # the cache instead of trying again. That made a failed
+                    # Whisper session permanent until 18 Oct 2026, and it is
+                    # what lets a deferred session (Apple's model, wrong
+                    # language) be transcribed by Whisper on the next run.
+                    _tx_failed = {
+                        f.session_id for f in _fresh_transcript_outcome.failed
+                        if f.session_id is not None
+                    }
                     for sid in _fresh_segments:
+                        if sid in _tx_failed:
+                            # FAILED, not absent: absence derives COMPLETE and
+                            # caches the stage whole (`mark_session_failed`).
+                            mark_session_failed(manifest, _M_STAGE_TRANSCRIBE, sid)
+                            continue
                         mark_session_complete(
                             manifest, _M_STAGE_TRANSCRIBE, sid,
                             input_hash=_tx_session_fps.get(sid),
@@ -1971,10 +2003,24 @@ class Pipeline:
             # Abandon only when nothing came back at all. A run of entirely
             # silent recordings is a *stated* outcome, not a crash — the
             # researcher gets a report saying so rather than an abandoned run.
+            # A session deferred to Whisper (Apple's model, the wrong language)
+            # is the same kind of outcome: stated, retryable, and no reason to
+            # throw away a run whose only recording is waiting for a download.
+            _deferred_sids = {
+                f.session_id for f in _fresh_transcript_outcome.failed
+                if f.cause.category == CauseCategoryEnum.DEFERRED
+            }
+            # …but only when nothing else failed: one deferral must not hide a
+            # run whose every other session failed for real.
+            _only_deferred = bool(_deferred_sids) and all(
+                f.cause.category == CauseCategoryEnum.DEFERRED
+                for f in _fresh_transcript_outcome.failed
+            )
             if (
                 self._summary.transcripts.attempted > 0
                 and self._summary.transcripts.succeeded == 0
                 and not _silent_sids
+                and not _only_deferred
             ):
                 raise PipelineAbandonedError(
                     cause=_dominant_cause(
@@ -3272,7 +3318,10 @@ class Pipeline:
             # As in run(): fetch the model here, with its banner and HF's own
             # progress bars, so a first `transcribe` does not download ~1.6 GB
             # silently inside the "Transcribing..." spinner.
-            _needs_whisper = any(not s.has_existing_transcript for s in sessions)
+            _needs_whisper = (
+                any(not s.has_existing_transcript for s in sessions)
+                and not self._apple_speech_run()
+            )
             if _needs_whisper:
                 from bristlenose.preflight.whisper import preflight_whisper
                 preflight_whisper(
@@ -3348,10 +3397,15 @@ class Pipeline:
                 failed=list(_transcript_outcome_t.failed) + _silent_failures_t,
                 duration_ms=int((time.perf_counter() - t0) * 1000),
             )
+            _only_deferred_t = bool(_transcript_outcome_t.failed) and all(
+                f.cause.category == CauseCategoryEnum.DEFERRED
+                for f in _transcript_outcome_t.failed
+            )
             if (
                 self._summary.transcripts.attempted > 0
                 and self._summary.transcripts.succeeded == 0
                 and not _silent_sids_t
+                and not _only_deferred_t
             ):
                 raise PipelineAbandonedError(
                     cause=_dominant_cause(
@@ -4113,6 +4167,12 @@ class Pipeline:
             pinned = (self.settings.whisper_language or "").strip().lower()
             finished: list[float] = []
 
+            from bristlenose.stages.s05_transcribe import RUN_ENGINE
+
+            _engine_token = (
+                RUN_ENGINE.set(self._engine_choice) if self._engine_choice is not None else None
+            )
+
             async def _each() -> AsyncIterator[SessionTranscription]:
                 # With a chain, Whisper runs on its own thread so the chain's
                 # LLM calls for session N run while N+1 decodes. Without one
@@ -4166,8 +4226,39 @@ class Pipeline:
                         await on_session(s.session_id, None)
             if finished:
                 self._transcription_held += max(0.0, time.perf_counter() - finished[0])
+            if _engine_token is not None:
+                RUN_ENGINE.reset(_engine_token)
 
         return session_segments, transcript_outcome
+
+    def _apple_speech_run(self) -> bool:
+        """Choose this run's engine now; True when it is Apple's model.
+
+        Called at the Whisper preflight. On the Apple path Python never fetches
+        Whisper: the Mac app owns the one download, and two fetchers of one
+        repo each write their own partial under hf_xet
+        (docs/design-apple-first-transcription.md §3 C).
+        """
+        from bristlenose.stages.s05_transcribe import decide_engine
+
+        try:
+            self._engine_choice = decide_engine(self.settings)
+        except Exception:  # noqa: BLE001 — never cost the run its Whisper path
+            logger.warning("engine decision failed; using Whisper", exc_info=True)
+            self._engine_choice = None
+            return False
+        import os
+
+        if (
+            os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1"
+            and self.settings.experimental_apple_speech
+        ):
+            # For the Mac app, which starts the one Whisper download when a run
+            # goes to Apple's model (and must not when the run fetches itself).
+            print(
+                f"@transcription-engine {self._engine_choice.engine}", flush=True,
+            )
+        return bool(self._engine_choice.is_apple)
 
     def _recover_languages(self, raw_dir: Path, session_ids: Iterable[str]) -> None:
         """Read back the ``Language:`` line of sessions not transcribed this run.

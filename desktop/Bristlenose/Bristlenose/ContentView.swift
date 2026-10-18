@@ -2894,6 +2894,13 @@ struct ContentView: View {
             OllamaDownloadPill(model: ollamaDownload)
         }
         .withoutSharedBackground()
+        // Sibling app-global pill: the one Whisper download, while Apple's
+        // speech model transcribes a first run (parked behind
+        // `BristlenoseFlags.appleSpeech`; self-hides unless bytes are moving).
+        ToolbarItem(placement: .status) {
+            WhisperDownloadPill(model: WhisperDownloadModel.shared)
+        }
+        .withoutSharedBackground()
         // Sibling app-global pill: the active cloud provider is out of credit.
         // Cloud-only, so it never co-occurs with the Ollama (local) pill above.
         ToolbarItem(placement: .status) {

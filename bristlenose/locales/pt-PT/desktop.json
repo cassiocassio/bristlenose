@@ -309,7 +309,9 @@
         "render": "A criar relatório",
         "pii": "A remover informa\u00e7\u00f5es pessoais",
         "discussion": "A associar cita\u00e7\u00f5es \u00e0s perguntas"
-      }
+      },
+      "waitingForWhisper": "A aguardar o Whisper",
+      "waitingForWhisperHint": "O modelo de fala da Apple não teve a certeza do que ouviu, por isso o Whisper vai transcrevê-lo quando estiver neste Mac."
     },
     "folderNamePlaceholder": "Nome da pasta",
     "projectNamePlaceholder": "Nome do projeto",
@@ -893,7 +895,17 @@
     "backendHint": "O modo automático deteta o melhor motor para o seu Mac.",
     "modelRecommended": "{{model}} (recomendado)",
     "readScreensLabel": "Ler ecr\u00e3s partilhados",
-    "readScreensHint": "L\u00ea o texto dos ecr\u00e3s partilhados nas grava\u00e7\u00f5es, neste Mac, e guarda-o com pequenas imagens de cada ecr\u00e3 na pasta do projeto. Nunca \u00e9 enviado para a IA."
+    "readScreensHint": "L\u00ea o texto dos ecr\u00e3s partilhados nas grava\u00e7\u00f5es, neste Mac, e guarda-o com pequenas imagens de cada ecr\u00e3 na pasta do projeto. Nunca \u00e9 enviado para a IA.",
+    "engineLabel": "Transcrever com",
+    "engineWhenReady": "Whisper quando estiver pronto",
+    "engineWhisperOnly": "Apenas Whisper",
+    "engineApple": "Modelo de fala da Apple",
+    "engineHint": "O modelo de fala da Apple está integrado no macOS e é mais rápido. O Whisper lida melhor com áudio fraco, pessoas a falar ao mesmo tempo, grupos maiores e idiomas que o modelo da Apple não tem.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Neste Mac · {{size}}",
+    "whisperMissing": "Não está neste Mac",
+    "whisperFailed": "A transferência não foi concluída.",
+    "downloadNow": "Transferir agora"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA no dispositivo",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Forma das notas:",
     "saveBoardFile": "Guardar ficheiro do quadro…"
+  },
+  "modelDownload": {
+    "title": "A transferir o Whisper",
+    "failedTitle": "O Whisper não foi transferido",
+    "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio fraco, pessoas a falar ao mesmo tempo e grupos maiores.",
+    "stop": "Parar transferência",
+    "stopNote": "Da próxima vez, recomeça do início."
   }
 }

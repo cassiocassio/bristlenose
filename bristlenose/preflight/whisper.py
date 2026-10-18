@@ -484,3 +484,162 @@ def preflight_whisper(
         + f" [{elapsed:.0f}s]"
     )
     console.print()
+
+
+# ---------------------------------------------------------------------------
+# Machine-readable progress, for the Mac app's download job
+# ---------------------------------------------------------------------------
+
+#: Lines ``bristlenose doctor --fetch --progress-lines`` prints to stdout, for
+#: the Mac app's ``WhisperDownloadModel`` (docs/design-apple-first-transcription.md
+#: §3 D). One line each, space-separated, never localised:
+#:
+#:   @download-start <repo_id> <total_bytes>   (0 when the server gave no sizes)
+#:   @download <done_bytes> <total_bytes>      (at most every PROGRESS_INTERVAL_S)
+#:   @download-done <elapsed_s>
+#:
+#: A failure exits non-zero with an ordinary message on stderr, and no
+#: ``@download-done``. Already on disk: start and done at once.
+PROGRESS_INTERVAL_S = 0.25
+
+
+def _server_total_bytes(repo_id: str) -> int:
+    """The repo's size as the Hub reports it, or 0 when it cannot be asked.
+
+    The sizes come from the server, not from ``_DOWNLOAD_MB`` (measured once,
+    drifts with every re-upload), and not from the download's own bars: their
+    total grows as files are queued ("incomplete total"), so a bar built on it
+    reads 100% on the first 262-byte file (measured 18 Oct 2026).
+    """
+    try:
+        from huggingface_hub import HfApi
+
+        info = HfApi().model_info(repo_id, files_metadata=True)
+        return int(sum((s.size or 0) for s in (info.siblings or [])))
+    except Exception:  # noqa: BLE001 — a missing total is shown as unknown
+        logger.info("could not read %s's size from the Hub", repo_id, exc_info=True)
+        return 0
+
+
+def _bytes_on_disk(repo_id: str) -> int:
+    """Size of the repo's finished blobs in the cache (partials left out)."""
+    blobs = _repo_cache_dir(repo_id) / "blobs"
+    try:
+        return sum(
+            f.stat().st_size for f in blobs.iterdir()
+            if f.is_file() and not f.name.endswith(".incomplete")
+        )
+    except OSError:
+        return 0
+
+
+def whisper_status_line(settings: BristlenoseSettings) -> str:
+    """``@whisper-status <cached|partial|missing> <repo_id> <bytes>`` for the Mac app.
+
+    ``bytes`` is the finished payload on disk, for "On this Mac · 1.6 GB";
+    0 when nothing is there.
+    """
+    repo_id = _resolve_repo_id(settings)
+    state = cache_state(repo_id)
+    size = _bytes_on_disk(repo_id) if state == "cached" else 0
+    return f"@whisper-status {state} {repo_id} {size}"
+
+
+def fetch_with_progress_lines(
+    settings: BristlenoseSettings,
+    write: Any = None,
+    *,
+    clock: Any = time.monotonic,
+) -> None:
+    """Fetch the Whisper model, printing the ``@download`` lines above.
+
+    Bytes done are the bytes hf_xet has written into the cache (its
+    "Reconstructing" bar), or, on a plain-HTTP fetch, the sum of the per-file
+    bars; the wire-bytes bar is only a floor, because with hf_xet's
+    deduplication it can finish below the file sizes.
+
+    Raises:
+        PreflightAbortedError: for a model name the backend does not know.
+        PackageInstallError: when the download fails.
+    """
+    from bristlenose.utils.package_install import ensure_hf_model
+
+    out = write or (lambda line: (sys.stdout.write(line + "\n"), sys.stdout.flush()))
+    if (refusal := unknown_model_message(settings)) is not None:
+        raise PreflightAbortedError(refusal)
+    repo_id = _resolve_repo_id(settings)
+    t0 = clock()
+    if cache_state(repo_id) == "cached":
+        out(f"@download-start {repo_id} 0")
+        out("@download-done 0")
+        return
+    total = _server_total_bytes(repo_id)
+    out(f"@download-start {repo_id} {total}")
+
+    hf_tqdm: Any = importlib.import_module("huggingface_hub.utils.tqdm")
+    bars: dict[int, Any] = {}
+    last = [0.0]
+
+    def done_bytes() -> int:
+        wire = recon = per_file = 0
+        for bar in list(bars.values()):
+            if getattr(bar, "unit", "") != "B":
+                continue
+            desc = str(getattr(bar, "desc", "") or "")
+            n = int(getattr(bar, "n", 0) or 0)
+            if desc.startswith("Downloading bytes"):
+                wire = max(wire, n)
+            elif desc.startswith("Reconstruct"):
+                recon = max(recon, n)
+            else:
+                per_file += n
+        return max(wire, recon, per_file)
+
+    def report(force: bool = False) -> None:
+        now = clock()
+        if force or now - last[0] >= PROGRESS_INTERVAL_S:
+            last[0] = now
+            done = done_bytes()
+            out(f"@download {min(done, total) if total else done} {total}")
+
+    # Off a terminal the bars draw nothing; HF's frozen "bars disabled" flag
+    # is lifted so they still count (see `_native_download_progress`).
+    class _CountingBar(hf_tqdm.tqdm):  # type: ignore[misc]
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            kwargs["disable"] = False
+            kwargs["file"] = _NullStream()
+            super().__init__(*args, **kwargs)
+            bars[id(self)] = self
+
+        def update(self, n: float | None = 1) -> bool | None:
+            result = super().update(n)
+            report()
+            return result  # type: ignore[no-any-return]
+
+    frozen = hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS
+    hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS = None
+    hf_tqdm.enable_progress_bars()
+    try:
+        ensure_hf_model(repo_id, tqdm_class=_CountingBar)
+    finally:
+        for bar in list(bars.values()):
+            bar.close()
+        hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS = frozen
+        hf_tqdm.disable_progress_bars()
+    report(force=True)
+    # Done means the run will find it: the same probe the run asks.
+    if cache_state(repo_id) != "cached":
+        from bristlenose.utils.package_install import PackageInstallError
+
+        raise PackageInstallError(f"{repo_id} is not complete in the cache after the download")
+    out(f"@download-done {clock() - t0:.1f}")
+
+
+class _NullStream:
+    """A file object tqdm can draw to that keeps nothing."""
+
+    def write(self, _s: str) -> int:
+        return 0
+
+    def flush(self) -> None:
+        return None

@@ -309,7 +309,9 @@
         "render": "Bygger rapport",
         "pii": "Tar bort personuppgifter",
         "discussion": "Kopplar citat till frågor"
-      }
+      },
+      "waitingForWhisper": "Väntar på Whisper",
+      "waitingForWhisperHint": "Apples talmodell var inte säker på vad den hörde, så Whisper transkriberar det när den finns på den här Macen."
     },
     "folderNamePlaceholder": "Mappnamn",
     "projectNamePlaceholder": "Projektnamn",
@@ -893,7 +895,17 @@
     "backendHint": "Auto upptäcker den bästa motorn för din Mac.",
     "modelRecommended": "{{model}} (rekommenderas)",
     "readScreensLabel": "L\u00e4s delade sk\u00e4rmar",
-    "readScreensHint": "L\u00e4ser texten p\u00e5 sk\u00e4rmar som delas i inspelningar, p\u00e5 den h\u00e4r Macen, och sparar den med sm\u00e5 bilder av varje sk\u00e4rm i projektmappen. Skickas aldrig till AI:n."
+    "readScreensHint": "L\u00e4ser texten p\u00e5 sk\u00e4rmar som delas i inspelningar, p\u00e5 den h\u00e4r Macen, och sparar den med sm\u00e5 bilder av varje sk\u00e4rm i projektmappen. Skickas aldrig till AI:n.",
+    "engineLabel": "Transkribera med",
+    "engineWhenReady": "Whisper när den är klar",
+    "engineWhisperOnly": "Endast Whisper",
+    "engineApple": "Apples talmodell",
+    "engineHint": "Apples talmodell är inbyggd i macOS och är snabbare. Whisper klarar dåligt ljud, människor som pratar i munnen på varandra, större grupper och språk som Apples modell saknar bättre.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "På den här Macen · {{size}}",
+    "whisperMissing": "Inte på den här Macen",
+    "whisperFailed": "Nedladdningen slutfördes inte.",
+    "downloadNow": "Ladda ned nu"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurera AI på enheten",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Lapparnas form:",
     "saveBoardFile": "Spara tavelfil…"
+  },
+  "modelDownload": {
+    "title": "Laddar ned Whisper",
+    "failedTitle": "Whisper laddades inte ned",
+    "why": "För dina nästa inspelningar. Whisper klarar dåligt ljud, människor som pratar i munnen på varandra och större grupper bättre.",
+    "stop": "Stoppa nedladdningen",
+    "stopNote": "Börjar om från början nästa gång."
   }
 }

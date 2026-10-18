@@ -66,4 +66,53 @@ enum BristlenoseFlags {
     static var figjamExport: Bool {
         UserDefaults.standard.bool(forKey: figjamExportKey)
     }
+
+    /// Transcribe a first run with **Apple's on-device speech model** while
+    /// Whisper downloads behind it (`docs/design-apple-first-transcription.md`).
+    /// **Default off** — parked until the language gate is measured on more than
+    /// five files. Off, nothing on this path runs: no helper is offered to the
+    /// sidecar, no download job starts, and Settings ▸ Transcription keeps its
+    /// shipped layout. Mirrors Python's `experimental_apple_speech`.
+    ///
+    /// Flip with: `defaults write app.bristlenose BristlenoseAppleSpeech -bool YES`
+    static let appleSpeechKey = "BristlenoseAppleSpeech"
+    static var appleSpeech: Bool {
+        UserDefaults.standard.bool(forKey: appleSpeechKey)
+    }
+
+    /// The flag **and** the helper in this bundle. While parked the helper is
+    /// embedded in Debug builds only, so a `defaults write` on a TestFlight or
+    /// `.dmg` build must not offer a choice that does nothing, nor start the
+    /// download job for it. Every Swift caller asks this, not `appleSpeech`.
+    static var appleSpeechAvailable: Bool {
+        appleSpeech && FileManager.default.isExecutableFile(
+            atPath: Bundle.main.bundleURL
+                .appendingPathComponent("Contents/Helpers/bristlenose-speech").path)
+    }
+}
+
+/// Settings ▸ Transcription ▸ Transcribe with (plan §4.5). Stored as the raw
+/// value; each maps to Python's `apple_speech` setting.
+enum TranscriptionEngineChoice: String, CaseIterable {
+    /// Apple's model until Whisper is on disk, then Whisper. The default.
+    case whisperWhenReady
+    /// Never Apple's model.
+    case whisperOnly
+    /// Apple's model in its languages, Whisper for the rest.
+    case apple
+
+    static let key = "transcriptionEngine"
+
+    static func current(_ defaults: UserDefaults = .standard) -> TranscriptionEngineChoice {
+        defaults.string(forKey: key).flatMap(Self.init(rawValue:)) ?? .whisperWhenReady
+    }
+
+    /// `BRISTLENOSE_APPLE_SPEECH`'s value.
+    var pythonMode: String {
+        switch self {
+        case .whisperWhenReady: return "until-whisper"
+        case .whisperOnly: return "never"
+        case .apple: return "prefer"
+        }
+    }
 }

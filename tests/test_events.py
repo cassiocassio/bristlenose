@@ -143,6 +143,9 @@ def test_cause_category_matches_swift_enum():
         # One input file isn't in the report — declined by format, or accepted
         # and then unreadable. Mirrored as `.unusableInput` in Swift.
         "unusable_input",
+        # Apple's first-run model sent the session on to Whisper (wrong
+        # language). Mirrored as `.deferred` in Swift's `CauseCategory`.
+        "deferred",
         "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}

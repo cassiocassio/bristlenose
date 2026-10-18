@@ -94,6 +94,60 @@ enum BristlenoseShared {
         ]
     }
 
+    /// Apple's speech model for a first run (`docs/design-apple-first-transcription.md`).
+    ///
+    /// Nothing unless `BristlenoseFlags.appleSpeechAvailable`. With it, Python
+    /// gets the flag and the Settings choice always, and the helper's path only
+    /// when the choice allows Apple, the sidecar is the bundled one (the helper
+    /// is signed sandbox + inherit, so it can only run under the app's own
+    /// sandboxed sidecar — a dev sidecar would launch it into exit 133), and the
+    /// Mac runs macOS 26 or later. Withholding the path is the whole of
+    /// *Whisper only*: Python's engine decision needs no other wire.
+    static func appleSpeechEnvironment(
+        for mode: SidecarMode,
+        defaults: UserDefaults = .standard,
+        enabled: Bool = BristlenoseFlags.appleSpeechAvailable,
+        osAtLeast26: Bool = ProcessInfo.processInfo.isOperatingSystemAtLeast(
+            OperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)),
+        region: String? = Locale.current.region?.identifier,
+        uiLanguageMatched: Bool = uiLanguageIsResearchers()
+    ) -> [String: String] {
+        guard enabled else { return [:] }
+        let choice = TranscriptionEngineChoice.current(defaults)
+        var env = [
+            "BRISTLENOSE_EXPERIMENTAL_APPLE_SPEECH": "1",
+            "BRISTLENOSE_APPLE_SPEECH": choice.pythonMode,
+        ]
+        if let region, !region.isEmpty { env["BRISTLENOSE_SPEECH_REGION"] = region }
+        // Without it Python never takes Apple's path: a UI language the app
+        // fell back to is not evidence of what anyone in the recording speaks.
+        if uiLanguageMatched { env["BRISTLENOSE_SPEECH_UI_MATCHED"] = "1" }
+        if choice != .whisperOnly, osAtLeast26, case .bundled(let sidecar) = mode {
+            // .../Contents/Resources/bristlenose-sidecar/bristlenose-sidecar
+            //   → .../Contents/Helpers/bristlenose-speech
+            let helper = sidecar.deletingLastPathComponent()  // bristlenose-sidecar/
+                .deletingLastPathComponent()                    // Resources/
+                .deletingLastPathComponent()                    // Contents/
+                .appendingPathComponent("Helpers/bristlenose-speech")
+            env["BRISTLENOSE_SPEECH_HELPER"] = helper.path
+        }
+        return env
+    }
+
+    /// True when the app's language is one the researcher chose or speaks:
+    /// picked in Settings, or among the Mac's preferred languages. False when
+    /// `I18n` fell back to English because the Mac's languages are ones we do
+    /// not render — the Greek or Hindi researcher `cca68462` protected.
+    nonisolated static func uiLanguageIsResearchers(
+        resolved: String = I18n.resolvedLocale,
+        explicit: String? = UserDefaults.standard.string(forKey: "language"),
+        preferred: [String] = Locale.preferredLanguages
+    ) -> Bool {
+        if explicit != nil { return true }
+        let code = Locale(identifier: resolved).language.languageCode?.identifier
+        return preferred.contains { Locale(identifier: $0).language.languageCode?.identifier == code }
+    }
+
     /// Foundation's home for the sandboxed sidecar: the host's container.
     ///
     /// The sidecar inherits this app's sandbox, but Foundation inside an
@@ -207,6 +261,7 @@ enum BristlenoseShared {
         }
         for (key, value) in sslEnvironment(for: mode) { env[key] = value }
         for (key, value) in bundledBinaryEnvironment(for: mode) { env[key] = value }
+        for (key, value) in appleSpeechEnvironment(for: mode) { env[key] = value }
         for (key, value) in foundationHomeEnvironment(for: mode, hostHome: hostHome) { env[key] = value }
         // PII redaction. Yields nothing at all unless the researcher switched it
         // on, and the model-directory half only once a pack has actually

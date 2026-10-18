@@ -185,6 +185,17 @@ class BristlenoseSettings(BaseSettings):
     whisper_device: str = "auto"  # "cpu", "cuda", "auto" (faster-whisper only)
     whisper_compute_type: str = "int8"  # faster-whisper only
 
+    # Apple's on-device speech model as Whisper's first-run stopgap
+    # (bristlenose/apple_speech.py, docs/design-apple-first-transcription.md).
+    # Parked behind this flag, off, until its language gate is measured on more
+    # than five files: BRISTLENOSE_EXPERIMENTAL_APPLE_SPEECH=1. Inert without the
+    # Mac app's bundled helper, so the CLI never takes the path either way.
+    experimental_apple_speech: bool = False
+    #: "until-whisper" (Apple until Whisper is on disk), "prefer" (Apple in its
+    #: nine languages, Whisper for the rest) or "never" (Whisper only). Settings
+    #: ▸ Transcription ▸ Transcribe with, via BRISTLENOSE_APPLE_SPEECH.
+    apple_speech: str = "until-whisper"
+
     # PII
     pii_enabled: bool = False
     # Both unimplemented, and setting either REFUSES the run — `s07_pii_removal`

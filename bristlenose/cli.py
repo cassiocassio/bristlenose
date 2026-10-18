@@ -14,7 +14,7 @@ from rich.console import Console
 from bristlenose import __version__
 from bristlenose.config import load_settings
 from bristlenose.cost import compute_run_cost
-from bristlenose.events import KindEnum, PipelineAbandonedError
+from bristlenose.events import CauseCategoryEnum, KindEnum, PipelineAbandonedError
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
 from bristlenose.preflight import PreflightAbortedError
@@ -1490,6 +1490,28 @@ def run(
     llm_ran = getattr(result, "llm_calls", 0) > 0
     pipeline_errored = llm_ran and getattr(result, "total_quotes", 0) == 0
 
+    # Every recording Apple's first-run model sent on to Whisper (the wrong
+    # language for the one it assumed) is waiting, not empty: the next run once
+    # Whisper is on disk transcribes them (docs/design-apple-first-transcription.md §2).
+    _summary = getattr(result, "summary", None)
+    _deferred = [
+        f for f in (_summary.transcripts.failed if _summary and _summary.transcripts else [])
+        if f.cause.category == CauseCategoryEnum.DEFERRED
+    ]
+    _none_transcribed = bool(_summary and _summary.transcripts) and (
+        _summary.transcripts.succeeded == 0  # type: ignore[union-attr]
+    )
+    if _deferred and _none_transcribed and getattr(result, "total_quotes", 0) == 0:
+        _print_pipeline_summary(result, quiet_errors=True)
+        console.print()
+        _say(
+            MessageKind.INFO,
+            f"Waiting for Whisper: {count_noun(len(_deferred), 'recording')} will be "
+            "transcribed once it has downloaded.",
+            indent="  ",
+        )
+        return
+
     if pipeline_errored:
         _print_pipeline_summary(result, quiet_errors=True)
         console.print()
@@ -2661,6 +2683,22 @@ def doctor(
             ),
         ),
     ] = False,
+    progress_lines: Annotated[
+        bool,
+        typer.Option(
+            "--progress-lines",
+            hidden=True,
+            help="With --fetch: print machine-readable @download lines (the Mac app).",
+        ),
+    ] = False,
+    whisper_status: Annotated[
+        bool,
+        typer.Option(
+            "--whisper-status",
+            hidden=True,
+            help="Print '@whisper-status <cached|partial|missing> <repo>' and exit (the Mac app).",
+        ),
+    ] = False,
 ) -> None:
     """Check dependencies, API keys, and system configuration.
 
@@ -2671,6 +2709,30 @@ def doctor(
     exits non-zero on any failure too, and is used by desktop/scripts/build-all.sh
     step 7a to catch BUG-3/4/5-class packaging bugs at build time.
     """
+    if whisper_status:
+        # The one answer to "is Whisper on disk" (docs/design-apple-first-
+        # transcription.md §3 D): the Mac app asks this rather than computing
+        # the Hugging Face cache path itself, and gets the preflight's own probe,
+        # which checks the weights and not just config.json.
+        from bristlenose.preflight.whisper import whisper_status_line
+        typer.echo(whisper_status_line(load_settings()))
+        return
+    if fetch and progress_lines:
+        # The Mac app's download job: the Whisper model only, as @download lines
+        # (preflight/whisper.py). The voice model is fetched on first use.
+        from bristlenose.preflight.whisper import fetch_with_progress_lines
+        from bristlenose.utils.package_install import PackageInstallError
+        if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+            # A download the app quit on must not go on in the background and
+            # race the next launch's restart (two fetchers of one repo).
+            from bristlenose.server.lifecycle import install_parent_death_watcher
+            install_parent_death_watcher()
+        try:
+            fetch_with_progress_lines(load_settings())
+        except (PreflightAbortedError, PackageInstallError) as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(2) from exc
+        return
     if fetch:
         from bristlenose.preflight.whisper import preflight_whisper
         settings = load_settings()

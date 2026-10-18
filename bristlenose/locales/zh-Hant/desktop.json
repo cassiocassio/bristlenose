@@ -291,7 +291,9 @@
         "render": "正在建立報告",
         "pii": "\u6b63\u5728\u79fb\u9664\u500b\u4eba\u8cc7\u6599",
         "discussion": "\u6b63\u5728\u5c07\u5f15\u8ff0\u5c0d\u61c9\u81f3\u554f\u984c"
-      }
+      },
+      "waitingForWhisper": "等待 Whisper",
+      "waitingForWhisperHint": "Apple 語音模型對聽到的內容不確定，Whisper 安裝到這台 Mac 後就會轉錄。"
     },
     "folderNamePlaceholder": "檔案夾名稱",
     "projectNamePlaceholder": "專案名稱",
@@ -874,7 +876,17 @@
     "backendHint": "自動偵測最適合你 Mac 的引擎。",
     "modelRecommended": "{{model}}（建議）",
     "readScreensLabel": "\u8b80\u53d6\u5171\u4eab\u7684\u756b\u9762",
-    "readScreensHint": "\u5728\u9019\u53f0 Mac \u4e0a\u8b80\u53d6\u9304\u5f71\u4e2d\u5171\u4eab\u756b\u9762\u7684\u6587\u5b57\uff0c\u4e26\u8207\u6bcf\u500b\u756b\u9762\u7684\u5c0f\u5716\u4e00\u8d77\u4fdd\u5b58\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002\u7d55\u4e0d\u6703\u50b3\u9001\u7d66 AI\u3002"
+    "readScreensHint": "\u5728\u9019\u53f0 Mac \u4e0a\u8b80\u53d6\u9304\u5f71\u4e2d\u5171\u4eab\u756b\u9762\u7684\u6587\u5b57\uff0c\u4e26\u8207\u6bcf\u500b\u756b\u9762\u7684\u5c0f\u5716\u4e00\u8d77\u4fdd\u5b58\u5728\u5c08\u6848\u6a94\u6848\u593e\u4e2d\u3002\u7d55\u4e0d\u6703\u50b3\u9001\u7d66 AI\u3002",
+    "engineLabel": "轉錄方式",
+    "engineWhenReady": "Whisper（就緒後）",
+    "engineWhisperOnly": "僅限 Whisper",
+    "engineApple": "Apple 語音模型",
+    "engineHint": "Apple 語音模型內建於 macOS，而且速度更快。Whisper 更能應付音質不佳、多人同時說話、較大群組，以及 Apple 模型不支援的語言。",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "在這台 Mac 上 · {{size}}",
+    "whisperMissing": "不在這台 Mac 上",
+    "whisperFailed": "下載未完成。",
+    "downloadNow": "立即下載"
   },
   "ollamaSetup": {
     "pillChoosingModel": "設定裝置端 AI",
@@ -1186,5 +1198,12 @@
   "figjam": {
     "stickyShapeLabel": "便利貼形狀：",
     "saveBoardFile": "儲存看板檔案⋯"
+  },
+  "modelDownload": {
+    "title": "正在下載 Whisper",
+    "failedTitle": "Whisper 未能下載",
+    "why": "供你之後的錄音使用。Whisper 更能應付音質不佳、多人同時說話和較大群組的錄音。",
+    "stop": "停止下載",
+    "stopNote": "下次會從頭開始。"
   }
 }

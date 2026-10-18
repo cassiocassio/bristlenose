@@ -8,8 +8,9 @@ import SwiftUI
 /// "macOS native entry" + docs/mockups/miro-native-flow.html.
 ///
 /// One constant size across steps (HIG: sheets aren't resized per step). The
-/// 10–30s board push runs in a modal "Creating board…" state with Cancel
-/// (stress-test gate: ~3000 stickies / <30s, else move to a background job).
+/// board is built as a job on the server (both boards, since 18 Oct 2026): the
+/// creating step says what is being counted, shows a bar once there is an honest
+/// fraction and a time left once one is earned, and Cancel stops the build there.
 
 // MARK: - View model
 
@@ -34,6 +35,8 @@ final class MiroSheetModel: ObservableObject {
     @Published private(set) var stickies = 0
     /// Screens the screens board could not show; said under the done line.
     @Published private(set) var skipped = 0
+    /// How far the build has got, from the server's job status; nil before the first read.
+    @Published private(set) var build: MiroBoardBuild?
     // Connected-account identity (from /v1/oauth-token via the server). userName =
     // account holder; teamName = the workspace new boards land in. Both nil if the
     // sidecar predates the feature or Miro identity couldn't be fetched.
@@ -148,6 +151,10 @@ final class MiroSheetModel: ObservableObject {
         // pane can be open with no serve at all. Display strings only.
         MiroConnectionStore.remember(conn)
         step = conn.connected ? .configure : .connect
+        // A board still being built when the sheet was closed is picked up again, not lost.
+        if conn.connected, await api.boardIsBuilding(screens: screens) {
+            follow { api, onProgress in try await api.resumeBoard(screens: self.screens, onProgress: onProgress) }
+        }
     }
 
     func connect() async {
@@ -199,40 +206,53 @@ final class MiroSheetModel: ObservableObject {
     }
 
     func createBoard() {
-        step = .creating
-        error = nil
         // Read the locale here, not inside the Task: `I18n` is `@MainActor` and
         // the board should carry the language the sheet was filled in with.
         let locale = i18n.locale
+        let name = boardName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let colourBy = colourBySentiment ? "sentiment" : "none"
+        let clips = linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        let (screens, split, shape) = (self.screens, splitLongQuotes, stickyShape)
+        follow { api, onProgress in
+            screens
+                ? try await api.exportScreens(boardName: name.isEmpty ? nil : name, colourBy: colourBy,
+                                              locale: locale, splitLongQuotes: split, stickyShape: shape,
+                                              onProgress: onProgress)
+                : try await api.export(boardName: name.isEmpty ? nil : name, colourBy: colourBy,
+                                       clipsBase: clips, locale: locale, splitLongQuotes: split,
+                                       stickyShape: shape, onProgress: onProgress)
+        }
+    }
+
+    /// Run a build — a new one or one already running — showing its progress until it ends.
+    private func follow(_ run: @escaping (MiroAPI, @escaping MiroAPI.ProgressHandler) async throws
+                        -> MiroAPI.ExportResult) {
+        step = .creating
+        error = nil
+        build = nil
+        let api = self.api
         exportTask = Task {
             do {
-                let name = boardName.trimmingCharacters(in: .whitespacesAndNewlines)
-                let colourBy = colourBySentiment ? "sentiment" : "none"
-                let result = screens
-                    ? try await api.exportScreens(boardName: name.isEmpty ? nil : name,
-                                                  colourBy: colourBy, locale: locale,
-                                                  splitLongQuotes: splitLongQuotes, stickyShape: stickyShape)
-                    : try await api.export(
-                        boardName: name.isEmpty ? nil : name,
-                        colourBy: colourBy,
-                        clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : "",
-                        locale: locale,
-                        splitLongQuotes: splitLongQuotes,
-                        stickyShape: stickyShape
-                    )
+                let result = try await run(api) { [weak self] b in self?.build = b }
                 if Task.isCancelled { return }
                 self.boardURL = result.boardURL
                 self.stickies = result.stickies
                 self.skipped = result.skipped
                 self.step = .done
             } catch is CancellationError {
-                // User cancelled the wait; server-side push may still finish.
+                // Stopped: the server was asked to stop after the call in hand; the board keeps
+                // what it has.
             } catch {
                 self.error = Self.text(for: error, i18n) ?? t("exportError")
                 self.step = .configure
             }
         }
     }
+
+    /// The creating step's line, bar and time left (`MiroBoardBuildText`, shared with the web).
+    func buildLine() -> String { MiroBoardBuildText.line(build) { self.i18n.t($0, $1) } }
+    func buildFraction() -> Double? { MiroBoardBuildText.fraction(build) }
+    func buildETA() -> String? { MiroBoardBuildText.eta(build) { self.i18n.t($0, $1) } }
 
     func cancelExport() { exportTask?.cancel() }
 
@@ -424,9 +444,24 @@ struct MiroSheet: View {
 
     private var creating: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(model.t("creatingBoard")).font(.headline)
+            Text(model.buildLine()).font(.headline)
+                .accessibilityAddTraits(.updatesFrequently)
             Spacer()
-            ProgressView().frame(maxWidth: .infinity)
+            // A linear bar throughout, so the indeterminate phases (screenshots being made, the
+            // board opening) turn determinate in place rather than swapping a spinner for a bar.
+            Group {
+                if let fraction = model.buildFraction() {
+                    ProgressView(value: fraction)
+                } else {
+                    ProgressView()
+                }
+            }
+            .progressViewStyle(.linear)
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel(model.t("creatingBoard"))
+            if let eta = model.buildETA() {
+                Text(eta).font(.subheadline).foregroundStyle(.secondary)
+            }
             Spacer()
             HStack {
                 Spacer()

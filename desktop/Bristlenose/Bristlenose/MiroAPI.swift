@@ -45,14 +45,18 @@ struct MiroAPI {
         let team_name: String?
         let org_name: String?
     }
-    private struct ExportResponse: Decodable { let board_url: String; let stickies: Int }
     private struct ScreensStart: Decodable { let status: String; let total: Int }
-    private struct ScreensStatus: Decodable {
+    /// Either board's job status: the quotes board's (`stickies`, `vars`) or the screens board's
+    /// (`completed_count`, `skipped_count`), and the `build` both carry.
+    private struct BoardJobStatus: Decodable {
         let status: String
-        let completed_count: Int
-        let skipped_count: Int
         let board_url: String?
         let reason: String?
+        let stickies: Int?
+        let vars: [String: String]?
+        let completed_count: Int?
+        let skipped_count: Int?
+        let build: MiroBoardBuild?
     }
     private struct ErrorBody: Decodable {
         let detail: String?
@@ -205,26 +209,88 @@ struct MiroAPI {
         }
     }
 
+    /// Called on the main actor with each progress read while a board builds.
+    typealias ProgressHandler = @MainActor (MiroBoardBuild?) -> Void
+
+    private func make(_ url: String, _ method: String, _ body: [String: Any?]? = nil) -> URLRequest? {
+        guard let url = URL(string: url) else { return nil }
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let body {
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: body.compactMapValues { $0 })
+        }
+        return req
+    }
+
+    /// The two boards' job roots: start is POST here, then `/status` and `/cancel`.
+    private func jobRoot(screens: Bool) -> String {
+        let project = "http://127.0.0.1:\(port)/api/projects/\(projectID)"
+        return screens ? project + "/export/screens/miro" : project + "/miro/board"
+    }
+
+    /// Read a board's job until it ends, telling `onProgress` each read. Called inside a
+    /// cancellation handler that asks the server to stop.
+    private func pollUntilDone(screens: Bool, onProgress: ProgressHandler) async throws -> ExportResult {
+        guard let poll = make(jobRoot(screens: screens) + "/status", "GET") else {
+            throw APIError.serverUnreachable()
+        }
+        while true {
+            let (sd, _) = try await URLSession.shared.data(for: poll)
+            let s = try JSONDecoder().decode(BoardJobStatus.self, from: sd)
+            switch s.status {
+            case "running":
+                await onProgress(s.build)
+                try await Task.sleep(nanoseconds: 1_500_000_000)
+            case "completed":
+                return ExportResult(boardURL: s.board_url ?? "",
+                                    stickies: s.completed_count ?? s.stickies ?? 0,
+                                    skipped: s.skipped_count ?? 0)
+            case "cancelled", "idle":
+                throw CancellationError()
+            default:
+                let keys = screens ? Self.screensErrorKeys : Self.errorKeys
+                throw APIError(message: "Miro board \(s.status): \(s.reason ?? "")",
+                               localeKey: s.reason.flatMap { keys[$0] } ?? "common.miro.exportError",
+                               localeVars: s.vars ?? s.board_url.map { ["url": $0] } ?? [:])
+            }
+        }
+    }
+
+    /// Whether a board of this kind is being built right now — a sheet reopened while one builds
+    /// picks it up rather than offering to start another.
+    func boardIsBuilding(screens: Bool) async -> Bool {
+        guard let poll = make(jobRoot(screens: screens) + "/status", "GET"),
+              let (data, resp) = try? await URLSession.shared.data(for: poll),
+              let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let s = try? JSONDecoder().decode(BoardJobStatus.self, from: data)
+        else { return false }
+        return s.status == "running"
+    }
+
+    /// Follow a build already running (see `boardIsBuilding`). Cancelling the Task stops it.
+    func resumeBoard(screens: Bool, onProgress: @escaping ProgressHandler) async throws -> ExportResult {
+        guard let cancel = make(jobRoot(screens: screens) + "/cancel", "POST") else {
+            throw APIError.serverUnreachable()
+        }
+        return try await withTaskCancellationHandler {
+            try await pollUntilDone(screens: screens, onProgress: onProgress)
+        } onCancel: {
+            Task { _ = try? await URLSession.shared.data(for: cancel) }
+        }
+    }
+
     /// The screens as a board, a frame per screengrab (docs/design-screens-export.md §6). A job,
     /// not one request: it starts, then its status is read until it ends. Cancelling the Task asks
-    /// the server to stop after the frame it is building; the board keeps what it has.
+    /// the server to stop after the call it is making; the board keeps what it has.
     func exportScreens(boardName: String?, colourBy: String, locale: String,
-                       splitLongQuotes: Bool = true, stickyShape: String = "rectangle") async throws -> ExportResult {
-        let root = "http://127.0.0.1:\(port)/api/projects/\(projectID)/export/screens/miro"
-        func make(_ suffix: String, _ method: String, _ body: [String: Any?]? = nil) -> URLRequest? {
-            guard let url = URL(string: root + suffix) else { return nil }
-            var req = URLRequest(url: url)
-            req.httpMethod = method
-            if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
-            if let body {
-                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                req.httpBody = try? JSONSerialization.data(withJSONObject: body.compactMapValues { $0 })
-            }
-            return req
-        }
-        guard let start = make("", "POST", ["board_name": boardName, "colour_by": colourBy, "locale": locale,
-                                            "split_long_quotes": splitLongQuotes, "sticky_shape": stickyShape]),
-              let poll = make("/status", "GET"), let cancel = make("/cancel", "POST")
+                       splitLongQuotes: Bool = true, stickyShape: String = "rectangle",
+                       onProgress: @escaping ProgressHandler = { _ in }) async throws -> ExportResult {
+        let root = jobRoot(screens: true)
+        guard let start = make(root, "POST", ["board_name": boardName, "colour_by": colourBy, "locale": locale,
+                                              "split_long_quotes": splitLongQuotes, "sticky_shape": stickyShape]),
+              let cancel = make(root + "/cancel", "POST")
         else { throw APIError.serverUnreachable() }
         // Cancel reaches the server whenever it lands — in the start request, a status read or the
         // pause between them — not only in the pause, where it used to be caught.
@@ -236,27 +302,16 @@ struct MiroAPI {
             if started.total == 0 {
                 throw APIError(message: "No screens to export", localeKey: "common.export.screens.none")
             }
-            while true {
-                try await Task.sleep(nanoseconds: 1_500_000_000)
-                let (sd, _) = try await URLSession.shared.data(for: poll)
-                let s = try JSONDecoder().decode(ScreensStatus.self, from: sd)
-                if s.status == "running" { continue }
-                if s.status == "completed" {
-                    return ExportResult(boardURL: s.board_url ?? "", stickies: s.completed_count,
-                                        skipped: s.skipped_count)
-                }
-                if s.status == "cancelled" { throw CancellationError() }
-                throw APIError(message: "Screens board \(s.status): \(s.reason ?? "")",
-                               localeKey: s.reason.flatMap { Self.screensErrorKeys[$0] } ?? "common.miro.exportError",
-                               localeVars: s.board_url.map { ["url": $0] } ?? [:])
-            }
+            return try await pollUntilDone(screens: true, onProgress: onProgress)
         } onCancel: {
             Task { _ = try? await URLSession.shared.data(for: cancel) }
         }
     }
 
-    /// POST export — create a new board. Throws `APIError` with the server
-    /// `detail` (which on a partial-board 502 includes the recovery URL).
+    /// Build a new quotes board — a job since 18 Oct 2026, like the screens board's: Miro refuses
+    /// a new board's frames for about half a minute and every sticky batch is a round trip, so it
+    /// is never "seconds". Its progress goes to `onProgress`; cancelling the Task stops it on the
+    /// server. A failure carries the server's `reason`, and a part-built board its address.
     ///
     /// `locale` is the board's own language, not the app's convenience: the
     /// board is a deliverable, and its frame titles and per-column counts are
@@ -264,23 +319,22 @@ struct MiroAPI {
     /// is what made every board English (fixed 22 Sep 2026).
     func export(boardName: String?, colourBy: String, clipsBase: String,
                 locale: String, splitLongQuotes: Bool = true,
-                stickyShape: String = "rectangle") async throws -> ExportResult {
-        guard let req = request(
-            "/export", method: "POST",
-            body: ["board_name": boardName, "colour_by": colourBy,
-                   "clips_base": clipsBase, "locale": locale, "split_long_quotes": splitLongQuotes,
-                   "sticky_shape": stickyShape]
-        ) else {
-            throw APIError.serverUnreachable()
+                stickyShape: String = "rectangle",
+                onProgress: @escaping ProgressHandler = { _ in }) async throws -> ExportResult {
+        let root = jobRoot(screens: false)
+        guard let start = make(root, "POST",
+                               ["board_name": boardName, "colour_by": colourBy,
+                                "clips_base": clipsBase, "locale": locale,
+                                "split_long_quotes": splitLongQuotes, "sticky_shape": stickyShape]),
+              let cancel = make(root + "/cancel", "POST")
+        else { throw APIError.serverUnreachable() }
+        return try await withTaskCancellationHandler {
+            let (data, resp) = try await URLSession.shared.data(for: start)
+            guard let http = resp as? HTTPURLResponse else { throw APIError.serverUnreachable() }
+            guard (200..<300).contains(http.statusCode) else { throw apiError(from: data, status: http.statusCode) }
+            return try await pollUntilDone(screens: false, onProgress: onProgress)
+        } onCancel: {
+            Task { _ = try? await URLSession.shared.data(for: cancel) }
         }
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else {
-            throw APIError.serverUnreachable()
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            throw apiError(from: data, status: http.statusCode)
-        }
-        let parsed = try JSONDecoder().decode(ExportResponse.self, from: data)
-        return ExportResult(boardURL: parsed.board_url, stickies: parsed.stickies)
     }
 }

@@ -453,10 +453,15 @@ overrides keyed on durable ids, never on labels.
     no per-participant division and no sub-divided cells (rejected: too complex for a
     6px cell). A row reads as "did this question work", a column as "is this a session
     to read in full". In a mixed study (1:1, 1:2, 1:4) group sessions lean dark, which
-    is true; the tooltip carries "N quotes from n of m people". A zero is rare, so it is
-    a shape (outline with a dot), not a step of the ramp, and it reads "Asked, no
+    is true; the tooltip carries "N quotes from n of m people". A zero is rare and not
+    interesting, so it is only a faint fill, one quiet step above the not-asked
+    outline (no dot: it would draw the eye), and it reads "Asked, no
     quotes", never "not answered" (a dropped quote and a non-answer look the same).
     The thirds move as sessions are added.
+    **Not linear:** some data is much better than none, so none → some is the biggest
+    step. The first filled shade starts well off the paper, and the row's bar is
+    logarithmic (`log(1+q) / log(1+max)`: one quote of a maximum ten fills about a
+    third). The exact count stays as the row's number.
 
   *Proposed in the mockup, not yet decided:* the compact number-only `PersonBadge` (keyline kept, absent = outline)
   replacing Signals' `.p-box`; the session bar's names → codes → pull-down tiers;

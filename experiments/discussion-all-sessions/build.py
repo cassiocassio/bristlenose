@@ -22,6 +22,7 @@ proposed is in ONE separate <style> block, every rule commented "PROPOSED".
 from __future__ import annotations
 
 import html
+import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -322,6 +323,12 @@ def max_quotes(sessions: list[Sess]) -> int:
     return best
 
 
+def bar_pct(q: int, qmax: int) -> int:
+    """PROPOSED: a LOGARITHMIC bar — the first quote is the biggest step. 1 of a maximum 10
+    fills ~30%, not 10%, so a question that drew one quote never looks like one that drew none."""
+    return round(100 * math.log1p(q) / math.log1p(max(qmax, 1))) if q else 0
+
+
 def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int,
             thirds: tuple[int, int]) -> str:
     """PROPOSED: the row's measure. All three tiers are in the markup; the lens's
@@ -345,7 +352,7 @@ def measure(it: Item, sessions: list[Sess], current: int | None, qmax: int,
             cls.append("here")
         cells.append(f'<button type="button" class="{" ".join(cls)}" title="{e(tip)}"></button>')
     bar = ('<span class="tag-bar-area">'
-           + (f'<span class="tag-micro-bar" role="img" style="width:{round(100 * total_q / qmax)}%;'
+           + (f'<span class="tag-micro-bar" role="img" style="width:{bar_pct(total_q, qmax)}%;'
               f'background-color:var(--dl-bar)"></span>' if total_q else "")
            + f'<span class="tag-count">{total_q}</span></span>')
     sr = f'<span class="bn-sr-only">, asked in {len(sids)} of {len(sessions)} sessions, {total_q} quotes</span>'
@@ -504,6 +511,29 @@ def bar_only(sessions, current, tier, width, label, flags="") -> str:
     return frame(label, art, width, None, flags)
 
 
+def scale_specimen() -> str:
+    """The owner's case: one question drew 10 quotes, six drew 1, three drew 0 — linear vs log."""
+    case = [("Favourite object", 10)] + [(f"Question {c}", 1) for c in "BCDEFG"] + \
+           [(f"Question {c}", 0) for c in "HIJ"]
+    def col(title: str, log: bool, old_cells: bool) -> str:
+        rows = []
+        for text, q in case:
+            w = bar_pct(q, 10) if log else round(10 * q)
+            bar = (f'<span class="tag-micro-bar" style="width:{w}%;background-color:var(--dl-bar)"></span>'
+                   if q else "")
+            cell = "z" if q == 0 else ("s3" if q == 10 else ("m-old-s1" if old_cells else "s1"))
+            rows.append(f'<div class="toc-link dl-row"><span class="dl-row-btn"><span class="dl-mk">'
+                        f'<span class="dl-dot"></span></span><span class="dl-tx">{text}</span></span>'
+                        f'<span class="dl-measure"><span class="dl-cells"><span class="dl-cell {cell}"></span>'
+                        f'<span class="dl-cell off"></span></span><span class="tag-bar-area">{bar}'
+                        f'<span class="tag-count">{q}</span></span></span></div>')
+        return (f'<div class="m-scale-col"><div class="m-bs-h">{title}</div>'
+                f'<nav class="dl-nav toc-sidebar-body m-spec-nav">{"".join(rows)}</nav></div>')
+    return ('<div class="dl-lens dl-m-strip m-scale" data-n="2" style="--dl-nav-w:300px">'
+            + col("before: linear bar, light first shade", False, True)
+            + col("now: log bar, first shade well off the paper", True, False) + "</div>")
+
+
 def lead_specimen() -> str:
     it = SECTIONS[0][1][0]
     rows = "".join(session_block(s, it, True, None) for s in [TWELVE[i] for i in (0, 1, 2, 3, 4, 6)])
@@ -596,6 +626,11 @@ body.m-page { margin: 0; padding: 32px 24px 80px; background: light-dark(#e9e9ec
 .m-bs-l { font: 11px var(--bn-font-mono); color: var(--bn-colour-muted); }
 .m-bs-c { display: inline-flex; gap: 3px; align-items: center; }
 .m-bs-n { font-size: 12px; color: var(--bn-colour-muted); }
+.m-scale { display: flex; gap: 24px; padding: 12px; }
+.m-scale-col { width: 400px; }
+.m-scale .dl-nav { width: 400px; height: auto !important; }
+.m-scale .dl-row { display: flex; }
+.m-old-s1 { background: color-mix(in srgb, var(--bn-colour-text) 20%, var(--bn-colour-bg)); }
 .m-card { padding: 8px 10px; border-radius: var(--bn-radius-md); background: var(--bn-emo-1-bg); }
 """
 
@@ -638,7 +673,7 @@ PROPOSED_CSS = r"""
      dl-m-grid  — wide cells under sticky session heads, then the bar + count
    Cell fill is a NEUTRAL ramp of the ink into the paper (no new colour; follows light/dark):
      off = not asked (keyline only — the absent badge's outline) ·
-     z = asked, no quotes (rare: the outline with a dot — a shape, not a step of the ramp) ·
+     z = asked, no quotes (rare, and not interesting: a faint fill, one quiet step above not asked) ·
      s1–s3 = the cell's quote count in the study's lower, middle and upper third. One measure,
      normalised to the study: more people talking and more said both raise it. */
 .dl-lens { --dl-bar: color-mix(in srgb, var(--bn-colour-text) 40%, var(--bn-colour-bg));
@@ -657,11 +692,13 @@ PROPOSED_CSS = r"""
 .dl-cell { appearance: none; padding: 0; margin: 0; border: 0; cursor: pointer;
   width: var(--dl-cell-w); height: var(--dl-cell-h); border-radius: 2px; }
 .dl-cell.off { background: transparent; box-shadow: inset 0 0 0 1px var(--bn-colour-border); cursor: default; }
-.dl-cell.z { background: radial-gradient(circle, var(--bn-colour-muted) 1.5px, transparent 2px);
+.dl-cell.z { background: color-mix(in srgb, var(--bn-colour-text) 8%, var(--bn-colour-bg));
   box-shadow: inset 0 0 0 1px var(--bn-colour-border); }
-.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 20%, var(--bn-colour-bg)); }
-.dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 45%, var(--bn-colour-bg)); }
-.dl-cell.s3 { background: color-mix(in srgb, var(--bn-colour-text) 65%, var(--bn-colour-bg)); }
+/* Not linear: the ramp STARTS well off the paper. Any quote is a clearly filled cell — the big
+   step is none → some; medium and dark are smaller steps above it. */
+.dl-cell.s1 { background: color-mix(in srgb, var(--bn-colour-text) 38%, var(--bn-colour-bg)); }
+.dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 56%, var(--bn-colour-bg)); }
+.dl-cell.s3 { background: color-mix(in srgb, var(--bn-colour-text) 76%, var(--bn-colour-bg)); }
 /* the selected session's column: the accent ring, the "you are here" of a cell */
 .dl-cell.here { outline: 1.5px solid var(--bn-colour-accent); outline-offset: 1px; }
 .dl-cell:not(.off):hover { outline: 1px solid var(--bn-colour-text); outline-offset: 1px; }
@@ -837,6 +874,11 @@ def build() -> str:
                    "<p>Below the grid's width the measure collapses to the <b>strip</b> (8px a session, no heads; "
                    "hover a cell for its session), and below that to the <b>bar + count</b>, which fits any width. "
                    "So nothing has to be designed for the narrow case: the strip is the narrow grid.</p>"))
+    F.append(frame("your case: 10, six at 1, three at 0", scale_specimen(), 900, None, "proposed: not linear",
+                   "<p>Left, the scales as they were: one quote is a 10% sliver of bar and a cell barely darker "
+                   "than nothing, so the six one-quote questions look almost as bad as the three that drew none. "
+                   "Right: the bar is logarithmic (one quote fills about a third), and the first filled shade is "
+                   "already a clear grey. <b>None → some</b> is now the biggest step on both scales.</p>"))
     F.append('<div class="m-part">2 · The navigator measure: drag the guide wider (twelve sessions)</div>')
     F.append(frame("All · 12 sessions · live", lens(TWELVE, None, focus="fav", nav_w=300, tier="codes",
                                                      only=["fav"], total="7h 18m", lid="live12"),
@@ -856,10 +898,14 @@ def build() -> str:
                    "shade is its quote count ranked against every other asked cell in the study, in thirds: light, "
                    "medium, dark. More people talking and more said both raise it, so nothing separate is needed "
                    "for groups. Read a row for the questions that worked, and a column for the sessions to read in "
-                   "full. A zero is rare, so it's a shape (an outline with a dot) rather than a step of the shade. "
+                   "full. A zero is rare and not interesting, so it's only a faint fill, a quiet step above not asked. "
                    "In a mixed study the groups lean dark, which is true: they gave more. The tooltip says how many "
                    "people that was (<i>#3 Bettina and 4 others · 4 quotes from 4 of 5 people</i>). The thirds move "
                    "as sessions are added. The ramp is the ink mixed into the paper, so there's no new colour.</p>"
+                   "<p><b>Not linear.</b> Some data is much better than none, so the biggest visual step is from "
+                   "nothing to one quote: the lightest filled cell is already well off the paper, and the row's bar "
+                   "is logarithmic (one quote against a maximum of ten fills about a third of it, not a tenth). "
+                   "The exact count is the number at the end of the row.</p>"
                    "<p><b>The cells replace the chips and the <code>#N ▾</code> pull-down.</b> Clicking a cell opens that "
                    "session at that question, which is the chips' job. At the bar tier the drill-in is the "
                    "session lead-in in the column.</p>"))

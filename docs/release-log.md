@@ -67,6 +67,59 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.40.0 — 18 Oct 2026 · Tier 1 (minor — All sessions in the Discussion lens, a navigator that measures, a native timeline menu)
+
+**What shipped.** The Discussion lens opens on All (each question once, every session's answers
+under it, "Not asked in" for the rest); the guide's session chips give way to a measure that grows
+from a bar to a strip to a grid; the transcript's Timeline menu is a native menu in the Mac app;
+the Screens lens names screens, screenshots and quotes in the window subtitle; and the
+failed-Re-analyse restore race that cost 0.39.0 three CI re-runs is fixed (`e2e8383d`). An
+overnight, unattended release: before bed the owner asked for the release once two working sessions
+had signed off cleanly. The release session triaged the menu session's review (recommended fixes
+applied, product calls parked in TODO.md) and asked the Discussion session to sign off with its six
+open product and wording decisions recorded as owed, not decided. Both signed off by 02:21; the bump
+kind is the house rule's (a new capability, so minor), and the changelog prose has not been read by
+the owner.
+
+**Verified 9 of 9** (`release.sh verify 0.40.0`) at about 04:05 BST: PyPI (200), GitHub
+Release, Homebrew, TestFlight 5150, `.dmg`, Snap edge, Copr, and the website, deployed from a
+clean worktree of the website repo's committed HEAD (`7d1c870`). Tag `v0.40.0` on `ff0fb8c3`, the
+exact commit strict CI passed. winget, a follower, has no PR for 0.40.0.
+
+**One stop, a flake.**
+
+| stop | cause | fix |
+|---|---|---|
+| tag's release run, attempt 1 | `test_interviews_filed_into_a_subfolder_keep_everything` on Windows 3.12: `PermissionError: [WinError 5]` renaming `pipeline-manifest.tmp` over `pipeline-manifest.json` (1 of 7239) | re-ran the failed jobs; green on attempt 2, PyPI 200 at 04:06. The same cell passed at the same commit in the strict run, and nothing in the range touched the test or the manifest writer |
+
+Run times (all measured): preflight 183 s · inventory 2 s · build-all 499 s · build-dmg 699 s ·
+strict CI 1665 s · TestFlight 398 s · `.dmg` upload 116 s · tag 1 s; tag to PyPI about 43 min
+across two attempts. Driver start to `exit 75` about 62 min against the plan's 1h57, mostly because
+the builds ran while strict CI was queued. No human wait inside the run; the overnight wait for the
+two sessions (00:10 to 02:21) came before it.
+
+**Tricky things.**
+
+- **The strict dispatch sat queued behind two push runs.** Pushing the prose commit and then the
+  bump gave three CI runs on `main` at once. Cancelling the superseded push run (`6cd117f8`) freed
+  the macOS cells. Push the prose commit only when the driver is about to push the bump anyway, or
+  cancel the superseded run straight away.
+- **A Windows atomic rename can hit a transient lock.** The tell: `[WinError 5] Access is denied`
+  on a `.tmp` → `.json` replace inside pytest's temp tree, one test, a cell that passed at the same
+  commit an hour earlier. That's a scanner or indexer holding the file, not a regression. If it comes
+  back, the manifest writer's `os.replace` wants a short retry on `PermissionError` under Windows.
+  It's the first sighting, so no gate yet.
+- **A goal-mode session doesn't sign off on its own when its leftovers are the owner's calls.** The
+  Discussion session looped "waiting on you" for an hour under its own Stop hook. One message asking
+  it to record the decisions as owed and run `/end-session` was enough.
+
+**Owed.** The Discussion lens's six product/wording decisions and its Mac-app hand check (TODO.md
+top entry, `docs/qa-backlog.md`); the native timeline menu's parked calls 6 and 10 and hand checks;
+the owner's read of the 0.40.0 changelog prose. mypy's soft cell failed as before; the ratchet
+cell passed.
+
+---
+
 ## 0.39.0 — 17 Oct 2026 · Tier 1 (minor — the timeline in every Sessions row and the transcript, gutter links, screens exports, four palettes)
 
 **What shipped.** A timeline strip under every Sessions row that springs into the full timeline;

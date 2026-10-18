@@ -489,9 +489,9 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 ## Current status
 
-**Internal TestFlight since 14 Jul 2026** — shipping build **0.39.0 (5120)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
+**Internal TestFlight since 14 Jul 2026** — shipping build **0.40.0 (5150)** — first build accepted by App Store Connect: **0.20.0 (2068)**, App-Sandbox + Hardened-Runtime + arm64-only, signed Apple Distribution.
 
-**Latest release: 0.39.0, 17 Oct 2026** — tag `v0.39.0` on `30245fec`, verified 9 of 9. Each release's account (what shipped, every stop, run times) is in [`docs/release-log.md`](docs/release-log.md), versions in [CHANGELOG.md](CHANGELOG.md), active work in [TODO.md](TODO.md). The paragraphs this section carried release by release, 0.29.0–0.38.0, are kept verbatim in [`docs/status-history.md`](docs/status-history.md). **A release updates the shipping-build and latest-release lines above and writes its account in the release log; it does not add a paragraph here.**
+**Latest release: 0.40.0, 18 Oct 2026** — tag `v0.40.0` on `ff0fb8c3`, verified 9 of 9. Each release's account (what shipped, every stop, run times) is in [`docs/release-log.md`](docs/release-log.md), versions in [CHANGELOG.md](CHANGELOG.md), active work in [TODO.md](TODO.md). The paragraphs this section carried release by release, 0.29.0–0.38.0, are kept verbatim in [`docs/status-history.md`](docs/status-history.md). **A release updates the shipping-build and latest-release lines above and writes its account in the release log; it does not add a paragraph here.**
 
 **Standing facts a release needs:**
 - **Entitlements split, gated by `tests/test_entitlements_split.py`:** the Mac App Store build carries one app group, `group.app.bristlenose`; the Developer-ID `.dmg` must not (a `CODE_SIGN_ENTITLEMENTS` override in `build-dmg.sh`). `associated-domains` (`webcredentials:bristlenose.app`, Zoom's HTTPS sign-in callback) is on the Mac App Store and Debug files and off the `.dmg`; the App-ID capability is on and the `Bristlenose Mac App Store` profile was regenerated with it on 17 Oct 2026 (a release archive needs that profile, not the 12 Sep one). Neither entitlements file is `skip-worktree` (`git ls-files -v | grep "^S"`).

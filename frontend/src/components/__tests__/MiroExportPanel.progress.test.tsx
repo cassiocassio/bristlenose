@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
 import i18n from "../../i18n";
+import { loadLocaleResources } from "../../i18n/localeLoader";
 import type { MiroBoardBuild } from "../../utils/types";
 
 const startMiroBoard = vi.fn();
@@ -71,6 +72,21 @@ describe("MiroExportPanel — a board's progress", () => {
     await building(build({ phase: "groups", count_done: 2, count_total: 9, fraction: 0.9, eta_seconds: 12 }));
     await screen.findByText(i18n.t("miro.progressGroups", { done: 2, total: 9 }));
     expect(screen.getByTestId("bn-miro-build-eta").textContent).toBe(i18n.t("miro.etaUnderMinute"));
+  });
+
+  it("one minute left agrees in number where the language needs it", async () => {
+    // Non-English strings arrive as the app loads them, through the locale loader.
+    const fr = await loadLocaleResources("fr", ["common"]);
+    i18n.addResourceBundle("fr", "common", fr.common, true, true);
+    await i18n.changeLanguage("fr");
+    await building(build({ phase: "groups", count_done: 2, count_total: 90, fraction: 0.5, eta_seconds: 70 }));
+    await waitFor(() => expect(screen.getByTestId("bn-miro-build-eta").textContent).toBe("~1 min restante"));
+    getMiroBoardStatus.mockResolvedValue(status("running", build({
+      phase: "groups", count_done: 2, count_total: 90, fraction: 0.5, eta_seconds: 180 })));
+    // The panel reads the build every 1.5 s, longer than waitFor's default second.
+    await waitFor(() => expect(screen.getByTestId("bn-miro-build-eta").textContent).toBe("~3 min restantes"),
+      { timeout: 4000 });
+    await i18n.changeLanguage("en");
   });
 
   it("a wait for Miro is said as waiting, the count kept on the bar", async () => {

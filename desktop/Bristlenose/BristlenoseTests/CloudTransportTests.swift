@@ -1410,6 +1410,10 @@ struct AdapterRowDerivationTests {
         #expect(listings.count == 2, "the premise: the store's window is two chunks")
         #expect(listing.rows.map(\.id) == ["u3"])
         #expect(listing.arithmetic.eventsInWindow == 1)
+        // A single recording says when it was made, as Meet and Teams rows
+        // do. It was blank unless the meeting split into parts, so three
+        // meetings with Zoom's default topic were three identical rows.
+        #expect(listing.rows.first?.recordedAt == start)
     }
 }
 

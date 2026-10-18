@@ -670,7 +670,11 @@ final class ZoomSource: CloudImportSource {
                     recordingEnded: ended,
                     now: now()),
                 organiser: nil,
-                recordedAt: isSplit ? part.start : nil,
+                // Every row says when it was recorded, as Meet and Teams rows do.
+                // It was set only for a split meeting until 18 Oct 2026, so
+                // three meetings under Zoom's default topic drew as three
+                // identical rows with nothing to tell them apart.
+                recordedAt: part.start ?? start,
                 meetingID: isSplit ? uuid : nil,
                 siblingOrdinal: ordinal
             )

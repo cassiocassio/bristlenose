@@ -108,7 +108,7 @@ procurement; under-listing would be a compliance risk.
 | `catalogue` | 2.0.10 | MIT License | <https://github.com/explosion/catalogue> |
 | `certifi` | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) | <https://github.com/certifi/python-certifi> |
 | `cffi` | 2.1.1 | MIT-0 | <https://cffi.readthedocs.io/en/latest/whatsnew.html> |
-| `chardet` | 7.6.0 | 0BSD | <https://github.com/chardet/chardet> |
+| `chardet` | 7.7.0 | 0BSD | <https://github.com/chardet/chardet> |
 | `charset-normalizer` | 3.5.2 | MIT | <https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md> |
 | `click` | 8.5.0 | BSD-3-Clause | <https://github.com/pallets/click/> |
 | `cloudpathlib` | 0.26.0 | MIT License | <https://github.com/drivendataorg/cloudpathlib> |
@@ -119,7 +119,7 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.143.3 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.2.0 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 4.2.1 | MIT | <https://github.com/tox-dev/py-filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
 | `google-auth` | 2.62.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
@@ -158,7 +158,7 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.0 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.31.0 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.33.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.35.1 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.1 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -191,7 +191,7 @@ procurement; under-listing would be a compliance risk.
 | `rpds-py` | 2026.9.1 | MIT | <https://github.com/crate-py/rpds> |
 | `scipy` | 1.18.1 | BSD License | <https://scipy.org/> |
 | `shellingham` | 1.5.4 | ISC License (ISCL) | <https://github.com/sarugaku/shellingham> |
-| `smart_open` | 8.0.3 | MIT License | <https://github.com/piskvorky/smart_open> |
+| `smart_open` | 8.0.4 | MIT License | <https://github.com/piskvorky/smart_open> |
 | `sniffio` | 1.3.1 | Apache Software License; MIT License | <https://github.com/python-trio/sniffio> |
 | `spacy-legacy` | 3.0.12 | MIT License | <https://spacy.io> |
 | `spacy-loggers` | 1.0.5 | MIT | <https://github.com/explosion/spacy-loggers> |

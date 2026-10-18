@@ -146,13 +146,39 @@ enum CloudImportLocalMatch {
         }
         guard !candidates.isEmpty else { return [] }
 
+        var claimedRows: Set<String> = []
+        var claimedFiles: Set<Int> = []
+
+        // **A file we fetched is claimed by name first.** Its name was computed
+        // from its row (`CloudDownloadNaming`), so it is an exact key, and
+        // duration is only for files a researcher dropped in by hand. Without
+        // this, two interviews of one length plus our download of the second
+        // marked the *first* "In this project", by row-id tie-break, and
+        // withheld it for good (pre-release review, 18 Oct 2026). Compared on
+        // the stem, as `rowsMatching` is, so an `.m4a` matches too.
+        var fileByStem: [String: Int] = [:]
+        for (index, file) in local.enumerated() {
+            let stem = (file.name as NSString).deletingPathExtension
+            if fileByStem[stem] == nil { fileByStem[stem] = index }
+        }
+        for row in rows where row.localState == .notImported && row.hasRecording {
+            let stem = (CloudDownloadNaming.filename(
+                title: row.title, startsAt: row.startsAt,
+                fileExtension: "mp4", part: row.siblingOrdinal) as NSString).deletingPathExtension
+            if let index = fileByStem[stem], !claimedFiles.contains(index) {
+                claimedRows.insert(row.id)
+                claimedFiles.insert(index)
+            }
+        }
+
         var pairs: [(rowID: String, file: Int, delta: TimeInterval)] = []
-        for candidate in candidates {
+        for candidate in candidates where !claimedRows.contains(candidate.id) {
             // Per row, not per platform: a 35-minute interview and a
             // 20-second test recording listed side by side need very
             // different windows, and the flat one was 75% of the short one.
             let tolerance = platform.durationTolerance(forListed: candidate.length)
-            for (index, file) in local.enumerated() where file.duration > 0 {
+            for (index, file) in local.enumerated()
+                where file.duration > 0 && !claimedFiles.contains(index) {
                 let delta = abs(file.duration - candidate.length)
                 if delta <= tolerance {
                     pairs.append((candidate.id, index, delta))
@@ -170,8 +196,6 @@ enum CloudImportLocalMatch {
             return lhs.file < rhs.file
         }
 
-        var claimedRows: Set<String> = []
-        var claimedFiles: Set<Int> = []
         for pair in pairs where !claimedRows.contains(pair.rowID)
             && !claimedFiles.contains(pair.file) {
             claimedRows.insert(pair.rowID)

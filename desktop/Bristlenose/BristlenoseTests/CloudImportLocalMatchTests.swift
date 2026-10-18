@@ -359,6 +359,22 @@ struct CloudImportGoodnessTests {
             fileExtension: ext, part: row.siblingOrdinal)
     }
 
+    @Test("A file we fetched marks its own row, not a same-length sibling")
+    func ownNameBeatsDuration() {
+        // Two different interviews of the same length, and Bristlenose fetched
+        // the second. By duration alone the tie went to the first row id, so
+        // the one already here read as fetchable and the one NOT here read
+        // "In this project", withheld for good (pre-release review, 18 Oct
+        // 2026). The name we wrote is an exact key; duration is for the files
+        // a researcher dropped in by hand.
+        let t0 = Date(timeIntervalSince1970: 1_760_000_000)
+        let first = row("a", title: "P07 Interview", at: t0)
+        let second = row("b", title: "P08 Interview", at: t0.addingTimeInterval(7200))
+        let fetched = LocalRecording(name: writtenName(second), duration: 600)
+        #expect(CloudImportLocalMatch.alreadyPresent(rows: [first, second], local: [fetched],
+                                                     platform: .zoom) == ["b"])
+    }
+
     @Test("A file we wrote that will not open marks its row damaged")
     func unreadableOwnFileIsDamaged() {
         let subject = row("a", title: "P07 Interview", at: Date(timeIntervalSince1970: 1_760_000_000))

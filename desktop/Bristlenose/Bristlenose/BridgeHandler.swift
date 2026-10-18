@@ -1040,20 +1040,26 @@ final class BridgeHandler: ObservableObject {
         case "timeline-menu":
             // The transcript split control's caret: pop the native menu under the
             // control (TimelineMenu.swift). Picks go back as the View menu's own
-            // actions; the close as `timelineMenuClosed`. Deferred a turn so the
-            // menu's tracking loop doesn't run inside WebKit's message callback.
-            guard let request = TimelineMenuRequest(message: body), let webView else {
-                Self.log.error("timeline-menu dropped — unreadable request or no webView")
+            // actions; the close as `timelineMenuClosed`. Already off WebKit's
+            // message callback: WebView's coordinator hands every message here in
+            // its own main-actor Task. A pick's JS can land while the menu is
+            // still on screen, so nothing may depend on `present` having returned.
+            guard let webView else {
+                Self.log.error("timeline-menu dropped — no webView")
                 break
             }
-            Task { @MainActor [weak self, weak webView] in
-                guard let self, let webView else { return }
-                self.timelineMenu.present(request, over: webView, choose: { [weak self] action, payload in
-                    self?.menuAction(action, payload: payload)
-                }, closed: { [weak self] in
-                    self?.menuAction("timelineMenuClosed")
-                })
+            guard let request = TimelineMenuRequest(message: body) else {
+                // The SPA has already marked the caret open: answer, or it stays
+                // pressed and announced "expanded" until the page reloads.
+                Self.log.error("timeline-menu dropped — unreadable request")
+                menuAction("timelineMenuClosed")
+                break
             }
+            timelineMenu.present(request, over: webView, choose: { [weak self] action, payload in
+                self?.menuAction(action, payload: payload)
+            }, closed: { [weak self] in
+                self?.menuAction("timelineMenuClosed")
+            })
 
         case "search-badge-styles":
             // Sole writer, equality-guarded. The SPA posts when the badges it

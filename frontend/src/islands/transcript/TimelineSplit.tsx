@@ -57,7 +57,9 @@ export function TimelineSplit() {
     return () => window.removeEventListener("bn:menu-action", onMenu);
   }, [embedded]);
 
-  // What each detail adds, in the timeline's own lane words.
+  // What each detail adds, in the timeline's own lane words. These keys are borrowed: the speaker
+  // placeholders and the Sentiment column header read as lane names today, in every locale; if one
+  // of them is reworded for its own place, this hint changes with it.
   const hint: Record<TimelineLanes, string> = {
     2: [t("quotes.sections"), t("sessions.speakerPlaceholder.moderator"), t("sessions.speakerPlaceholder.participant")].join(" · "),
     3: `+ ${t("sessions.colSentiment")}`,

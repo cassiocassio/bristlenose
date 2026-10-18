@@ -10,6 +10,10 @@ import WebKit
 // control. A pick goes back as the View menu's own actions
 // (`toggleSessionTimeline`, `setSessionTimelineLanes`), and the close as
 // `timelineMenuClosed`, so the SPA can hand focus back to the caret.
+//
+// Opened from the keyboard, the menu highlights no row until an arrow key: a
+// pull-down has no public way to highlight a row without moving it over the
+// control (passing it as `positioning:` makes a pop-up), so this is accepted.
 
 /// What the SPA asks for: the slot's state and the menu's words.
 struct TimelineMenuRequest: Equatable {
@@ -101,7 +105,8 @@ enum TimelineMenuEntry: Equatable {
     /// Where the menu's top-left goes: its right edge on the control's right
     /// edge (the control sits at the window's trailing edge, so a left-aligned
     /// menu would hang outside the window), a few points below it, as a
-    /// pull-down opens (owner, 18 Oct 2026).
+    /// pull-down opens (owner, 18 Oct 2026). Left-to-right only: a right-to-left
+    /// locale would hang it from the control's leading edge instead (`minX`).
     static func origin(anchor: NSRect, menuWidth: CGFloat, flipped: Bool, gap: CGFloat = 4) -> NSPoint {
         NSPoint(x: anchor.maxX - menuWidth,
                 y: flipped ? anchor.maxY + gap : anchor.minY - gap)
@@ -112,14 +117,26 @@ enum TimelineMenuEntry: Equatable {
 final class TimelineMenuPresenter: NSObject {
     private var picks: [TimelineMenuEntry.Pick] = []
     private var choose: ((_ action: String, _ payload: [String: Any]) -> Void)?
+    /// A menu is tracking. Main-actor work still runs during tracking, so a
+    /// second request (a double-click on the caret) would otherwise build a
+    /// menu inside this one and overwrite `picks`, losing the outer pick.
+    private var isPresenting = false
 
-    /// Pops the menu under the control and returns when it closes.
+    /// Pops the menu under the control and returns when it closes. A request
+    /// while one is open is dropped with no echo: the open menu's own close
+    /// answers for both, and an early echo would tell the SPA the menu had
+    /// closed while it was still on screen.
     func present(_ request: TimelineMenuRequest, over webView: WKWebView,
                  choose: @escaping (_ action: String, _ payload: [String: Any]) -> Void,
                  closed: () -> Void) {
+        guard !isPresenting else { return }
+        isPresenting = true
+        defer { isPresenting = false }
         picks = []
+        // Kept after the menu closes: AppKit may send the item's action after
+        // `popUp` returns, and the next `present` replaces it anyway.
         self.choose = choose
-        let menu = NSMenu()
+        let menu = NSMenu(title: request.detail)
         menu.autoenablesItems = false
         for entry in TimelineMenuEntry.entries(for: request) {
             switch entry {
@@ -143,7 +160,6 @@ final class TimelineMenuPresenter: NSObject {
                                           flipped: webView.isFlipped)
         menu.popUp(positioning: nil, at: at, in: webView)
         closed()
-        self.choose = nil
     }
 
     @objc private func run(_ sender: NSMenuItem) {

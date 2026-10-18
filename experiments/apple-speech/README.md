@@ -394,7 +394,7 @@ Whisper not yet on disk. Today the 1.61 GB Whisper download happens inside that 
 transcription stage, on the critical path, behind a banner on the CLI and a spinner in the Mac
 app; nothing fetches it earlier (the lazy-download rule), and an interrupted fetch starts again
 from zero (hf_xet does not resume, measured 14 Oct 2026). Inputs, all measured on this M2 Max:
-Hugging Face delivered 19–25 MB/s here (two 300 MB range fetches of the real file), on a 1 Gbit/s fibre line over Wi-Fi a few metres from the router, so the server or route, not the line, set the pace (the product fetches through hf_xet, which may parallelise better; not measured); Apple's
+Hugging Face delivered 19–25 MB/s here (two 300 MB range fetches of the real file), on a 1 Gbit/s fibre line over Wi-Fi a few metres from the router. The same fetch from PyPI's CDN ran at 32 MB/s, so the Wi-Fi caps one stream near 260 Mbit/s and Hugging Face sits a little below that: neither is the line (the product fetches through hf_xet, which may parallelise better; not measured); Apple's
 models are 138–151 MB; an 18-minute Teams interview went from drop to report in 106 s with
 Whisper cached (transcription 68 s, LLM stages ~38 s); Whisper RTF 0.04 and Apple's 0.012
 (§ 4). Line speeds: typical home broadband taken as 100 Mbit/s (2026 national medians are

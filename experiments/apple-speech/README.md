@@ -554,3 +554,38 @@ speed, § 9), and the cohort's own recordings. Sources:
 <https://huggingface.co/datasets/legacy-datasets/ami>,
 <https://github.com/revdotcom/speech-datasets>, <https://arxiv.org/abs/2104.11348>.
 
+## 13. Before the large model arrives: a fallback grid (18 Oct 2026)
+
+The owner's framing: the first run says, in effect, *"OK to get the big model?"* with one of three
+reasons — **(1) it improves quality, and Apple's model covers you until then**, **(2) it is needed
+for your language**, or **(3) it is needed on your system** — and fetches it. If the researcher
+transcribes before it lands, give them something in as many cases as possible. Candidate stopgaps,
+best first: a platform transcript; Apple's `SpeechTranscriber`; cloud transcription through the
+researcher's own LLM provider; a small Whisper model. Download sizes are from
+`bristlenose/preflight/whisper.py` (`_DOWNLOAD_MB`).
+
+| Scenario | Message | Stopgap before the large model | Its download | Evidence |
+|---|---|---|---|---|
+| Any platform, platform transcript beside the recording | none | the platform transcript | 0 | shipped; Whisper never loads |
+| Mac app, macOS 26/27, Apple silicon, one of Apple's 9 languages | (1) | Apple `SpeechTranscriber` | 0 (English came with macOS 27 here) or 138–151 MB, 8–16 s | measured here: level with Whisper on 1:1, loses quieter voices in group talk; needs the Swift helper (not built) |
+| Mac app, macOS 26/27, any other language | (2) | small Whisper, or cloud via provider | small 481 MB / base 144 MB | small and base unmeasured on our corpus; Apple Dictation measured and rejected (§ 5) |
+| Mac app, macOS 15.x | (3) | small Whisper, or cloud via provider | as above | no Apple API before 26 |
+| Mac app, 8 GB Apple silicon (any macOS) | (1)/(3) | as the rows above, and possibly *standing*, not just first-run | — | Whisper's peak footprint was 9.2 GB on a 28-min file on a 32 GB Mac (§ 4); behaviour on 8 GB unmeasured |
+| Mac CLI (PyPI, Homebrew), Apple silicon | (3) unless the helper ships | small Whisper, or cloud via provider | small 481 MB | Apple route only if the Swift helper ships in the wheel or formula |
+| Mac CLI, Intel Mac (the app is arm64-only) | (3) | small Whisper on CPU, or cloud via provider | small 486 MB | mlx needs Apple silicon; faster-whisper runs on CPU, speed unmeasured; Apple's engine reported Apple-silicon only (§ 1) |
+| Linux x86_64 CLI (pip, Snap, Fedora Copr), CPU | (3) | small Whisper, or cloud via provider | small 486 MB / base 148 MB | no OS speech engine; large-v3-turbo is 1.62 GB here |
+| Linux or Windows with an NVIDIA GPU | (3) | as above; once downloaded, CUDA float16 makes the large model fast | as above | faster-whisper picks CUDA when present (`_init_faster_whisper_backend`) |
+| Windows x86_64 CLI (pipx/uv) | (3) | small Whisper, or cloud via provider | as Linux | Windows' own speech APIs not explored |
+| Any platform, offline, hotspot or Low Data Mode | — | a model already on the machine (Apple's English with macOS 27; a cached Whisper), else the platform transcript, else wait | 0 | detect with `NWPathMonitor` on the Mac |
+
+**Cloud transcription through the researcher's provider** works on every platform with no
+download, but only for some providers: ChatGPT/OpenAI and Gemini accept audio, and Azure OpenAI
+does with a transcription deployment. Claude, the most common choice, does not take audio input as
+far as we know (re-check before relying on it), and Ollama has no speech model. It also sends
+participants' **voices**, not just transcript text, to the provider: a step up the consent
+gradient (`docs/methodology/consent-gradient.md`), and a cost. None of it is built or measured in
+Bristlenose.
+
+**The biggest unknown in the grid is the small Whisper model**: it is the only stopgap that
+covers every platform and language, and it has not been measured on our corpus. Our prompts,
+loop removal and nets were all tuned on large-v3-turbo.

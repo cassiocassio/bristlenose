@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Keys Xcode's generated Info.plist cannot carry: INFOPLIST_KEY_* covers only
+  Apple's own keys, so the app target merges this file into the generated one
+  (INFOPLIST_FILE, beside GENERATE_INFOPLIST_FILE = YES).
+
+  The cloud-import OAuth clients. These are PUBLIC-client IDs: no secret exists
+  for either registration, and both live in every shipped binary by design
+  (docs/design-cloud-import.md §2). A hand-set UserDefaults value of the same
+  key still wins, so a dev Mac can point at a test client without a rebuild
+  (MicrosoftOAuthConfig.resolve, GoogleOAuthConfig.resolve).
+
+  Changing an ID strands every tester's stored grant: they must sign in again.
+  Zoom is deliberately absent; its production ID comes with Zoom's approval.
+  Pinned by BristlenoseTests/OAuthBundledClientIDTests.swift and by
+  desktop/scripts/check-dmg-shippable.sh.
+-->
+<plist version="1.0">
+<dict>
+	<key>MicrosoftOAuthClientID</key>
+	<string>022bacc2-0573-476e-a0aa-8efa42b78a1b</string>
+	<key>MicrosoftOAuthRedirectURI</key>
+	<string>msauth.app.bristlenose://auth</string>
+	<key>GoogleOAuthClientID</key>
+	<string>335545742339-qqkuglejbs559lu1imjomvhce83uf2qa.apps.googleusercontent.com</string>
+</dict>
+</plist>

@@ -191,6 +191,24 @@ export function itemAnswers(data: DiscussionData): ItemAnswers {
   return out;
 }
 
+/** What All shows outside the guide's questions, per session: quotes before the
+ *  first question, and asks the model never classified with their answers. With
+ *  itemAnswers this accounts for every quote, so All loses none (review, 18 Oct). */
+export interface Leftovers {
+  before: DiscussionQuote[];
+  unclassified: AskWithAnswers[];
+}
+
+export function sessionLeftovers(data: DiscussionData): Map<string, Leftovers> {
+  const out = new Map<string, Leftovers>();
+  for (const s of data.sessions) {
+    const { asked, answers, before } = sessionAnswers(data, s.id);
+    const unclassified = asked.filter((t) => !t.item).map((t) => ({ turn: t, answers: answers.get(t.id) ?? [] }));
+    if (before.length || unclassified.length) out.set(s.id, { before, unclassified });
+  }
+  return out;
+}
+
 /** The quotes one session gave one question. */
 export function cellQuotes(answers: ItemAnswers, item: string, session: string): number {
   return (answers.get(item)?.get(session) ?? []).reduce((n, a) => n + a.answers.length, 0);

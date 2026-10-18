@@ -52,6 +52,53 @@ describe("DiscussionView", () => {
     expect(container.querySelectorAll(".dl-wire")).toHaveLength(0);
   });
 
+  it("All loses no quote: before the first question, under a question, or under an unclassified ask", () => {
+    // one asked turn the model never classified (its answers go with it), and one quote before
+    // the first question — the two places a quote can sit outside the guide's questions
+    const t = data.turns.find((x) => x.session === "s1" && x.item
+      && data.quotes.some((q) => q.session === "s1" && q.sec >= x.sec))!;
+    const first = Math.min(...data.turns.filter((x) => x.session === "s2").map((x) => x.sec));
+    const early = { ...data.quotes.find((q) => q.session === "s2")!, key: "early", sec: Math.max(0, first - 30), text: "Before anything was asked" };
+    const d: DiscussionData = {
+      ...data,
+      turns: data.turns.map((x) => (x.id === t.id ? { ...x, kind: "unclassified" as const, item: null } : x)),
+      quotes: [...data.quotes, early],
+    };
+    const { container } = render(<DiscussionView data={d} />);
+    const cards = container.querySelectorAll(".dl-content blockquote.quote-card:not(.dl-ask)");
+    expect(cards).toHaveLength(d.quotes.length);
+    expect(screen.getByText("Before anything was asked")).toBeInTheDocument();
+    expect(container.querySelector(`.dl-leftovers .dl-ask[data-turn="${t.id}"]`)!.textContent).toContain("not classified");
+    // the header says what the session lines say, summed
+    expect(container.querySelector(".dl-meta .dl-stats")!.textContent).toContain(`${d.quotes.length} quotes`);
+  });
+
+  it("All is the same evidence whichever navigator tab is showing", () => {
+    const { container } = render(<DiscussionView data={data} />);
+    const count = () => container.querySelectorAll(".dl-content .dl-item").length;
+    const quotes = () => container.querySelectorAll(".dl-content blockquote.quote-card:not(.dl-ask)").length;
+    const before = [count(), quotes()];
+    fireEvent.click(screen.getByRole("radio", { name: "Your guide" }));
+    expect([count(), quotes()]).toEqual(before);
+  });
+
+  it("a session that could not be read is never said to be 'not asked'", () => {
+    const sessions = data.sessions.map((s, i) => (i === 0 ? { ...s, state: "no_moderator" as const } : s));
+    // as the stage writes it: the session's turns unclassified, and no question records an ask there
+    const d = {
+      ...data, sessions,
+      turns: data.turns.map((t) => (t.session === "s1" ? { ...t, item: null, kind: "unclassified" as const } : t)),
+      sections: data.sections.map((sec) => ({
+        ...sec, items: sec.items.map((it) => ({ ...it, asks: it.asks.filter((a) => a.session !== "s1") })),
+      })),
+    };
+    const { container } = render(<DiscussionView data={d} />);
+    for (const line of container.querySelectorAll(".dl-notasked")) expect(line.textContent).not.toContain("#1");
+    const cells = [...container.querySelectorAll(".dl-row .dl-cell")].filter((c) => c.getAttribute("aria-label")?.startsWith("#1"));
+    expect(cells.length).toBeGreaterThan(0);
+    for (const c of cells) expect(c.getAttribute("aria-label")).toMatch(/not classified$/);
+  });
+
   it("a session shows that session's questions and quotes, in the order they were asked", () => {
     const { container } = render(<DiscussionView data={data} />);
     onSession(1);

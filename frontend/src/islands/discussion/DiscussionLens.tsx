@@ -41,9 +41,11 @@ import {
   itemAnswers,
   litTurns,
   measureTier,
+  mergedEntries,
   navEntries,
   sessionColumn,
   sessionForFocus,
+  sessionLeftovers,
   sessionStats,
   shadeStep,
   wirePath,
@@ -337,6 +339,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const current = byId.get(session);
   // What each session gave each question — the All column and the measure count the same thing.
   const answers = useMemo(() => itemAnswers(data), [data]);
+  const leftovers = useMemo(() => sessionLeftovers(data), [data]);
+  // A session whose questions could not be classified never reads as "not asked" (types.ts).
+  const readable = useMemo(
+    () => new Set(data.sessions.filter((sess) => !sess.state || sess.state === "ok").map((sess) => sess.id)), [data]);
   const thirds = useMemo(() => {
     const counts: number[] = [];
     for (const bySession of answers.values()) {
@@ -619,7 +625,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           {data.sessions.map((sess) => {
             const asked = r.sessions.includes(sess.id);
             const q = asked ? cellQuotes(answers, r.id, sess.id) : 0;
-            const label = `${sessionName(sess.id)} · ${asked ? S.quotes(q) : S.notAsked}`;
+            const label = `${sessionName(sess.id)} · ${
+              asked ? S.quotes(q) : readable.has(sess.id) ? S.notAsked : S.unclassified}`;
             return (
               // Not a tab stop: twelve per row would bury the guide. The keyboard reaches the
               // same place through the session bar (focus is kept) or the All view's lead-ins.
@@ -748,48 +755,77 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // All: the guide's order, each question once, then one block per session that asked it —
   // the session's lead-in (its badge, which opens that session at this question), the
   // moderator's own wording, the quotes. Sessions that never asked it: one line at the foot.
+  // All is built from the merged record whatever the navigator shows: Your guide lists only
+  // the guide's own lines, and All must not lose the questions asked off it (review, 18 Oct).
+  const allSections = useMemo(() => {
+    const out: { head: Extract<NavEntry, { type: "head" }>; rows: NavRow[] }[] = [];
+    for (const e of mergedEntries(data)) {
+      if (e.type === "head") out.push({ head: e, rows: [] });
+      else out[out.length - 1]?.rows.push(e);
+    }
+    return out.map((x) => ({ ...x, rows: x.rows.filter((r) => r.sessions.length > 0) }))
+      .filter((x) => x.rows.length > 0);
+  }, [data]);
+
+  // A session's lead-in in All: its bar badge, a button that opens that session (at the question).
+  const leadIn = (sess: DiscussionSession, item: string | null) => (
+    <button type="button" className="dl-from" title={S.showSession(sess.number)}
+      onClick={() => {
+        selectSession(sess.id);
+        if (item) setFocus({ item, turn: null });
+      }}>
+      <PersonBadge code={`#${sess.number}`} role="participant" name={namesOf(sess) || undefined} />
+    </button>
+  );
+
+  // All: the guide's order, each question once, then one block per session that asked it —
+  // the session's lead-in, the moderator's own wording, the quotes. Sessions that never asked
+  // it: one line at the foot. Quotes before the first question open the column and asks the
+  // model never classified close it, so every quote a session view shows is here too.
   const allColumn = () => {
     const seconds = data.sessions.reduce((n, sess) => n + (sess.seconds || 0), 0);
-    let quotes = 0;
-    for (const bySession of answers.values()) {
-      for (const asks of bySession.values()) quotes += asks.reduce((n, a) => n + a.answers.length, 0);
-    }
-    const asked = (rows: NavRow[]) => rows.filter((r) => r.sessions.length > 0);
+    // The same counts a session's own line gives, summed: asks, and every quote.
+    const asks = data.turns.filter((t) => t.item).length;
+    const withBefore = data.sessions.filter((sess) => leftovers.get(sess.id)?.before.length);
+    const withUnclassified = data.sessions.filter((sess) => leftovers.get(sess.id)?.unclassified.length);
     return (
       <section>
         <SectionHeading>{S.allSessions}</SectionHeading>
         <div className="dl-meta">
-          <span className="dl-stats">{S.stats(formatDurationHuman(seconds), answers.size, quotes)}</span>
+          <span className="dl-stats">{S.stats(formatDurationHuman(seconds), asks, data.quotes.length)}</span>
         </div>
-        {data.sessions.filter((sess) => sess.state && sess.state !== "ok").map((sess) => (
+        {data.sessions.filter((sess) => !readable.has(sess.id)).map((sess) => (
           // A session that contributes nothing says why here too — never silently absent.
           <p key={sess.id} className="dl-before dl-state" role="note">
             <PersonBadge code={`#${sess.number}`} role="participant" compact /> {S.sessionState(sess.state!)}
           </p>
         ))}
-        {sections.filter(({ rows }) => asked(rows).length > 0).map(({ head, rows }) => (
+        {withBefore.length > 0 && (
+          <div className="dl-part-group">
+            <h2 className="dl-part">{S.before}</h2>
+            {withBefore.map((sess) => (
+              <div key={sess.id} className="dl-group">
+                {leadIn(sess, null)}
+                {leftovers.get(sess.id)!.before.map((q) => quoteCard(q, ""))}
+              </div>
+            ))}
+          </div>
+        )}
+        {allSections.map(({ head, rows }) => (
           <div key={head.id} className="dl-part-group">
             <h2 className="dl-part">{head.id === "standalone" ? S.standalone : head.title}</h2>
-            {asked(rows).map((r) => {
-              const missing = data.sessions.filter((sess) => !r.sessions.includes(sess.id));
+            {rows.map((r) => {
+              const missing = data.sessions.filter((sess) => readable.has(sess.id) && !r.sessions.includes(sess.id));
               return (
                 <div key={r.id} className="dl-item" data-item={r.id}>
                   <h3>{r.text}</h3>
                   {r.sessions.map((sid) => {
                     const sess = byId.get(sid);
                     if (!sess) return null;
-                    const asks = answers.get(r.id)?.get(sid) ?? [];
                     return (
                       <div key={sid} className="dl-group">
-                        {/* Named by its badge ("#3 Bettina and 4 others"); the title says what it does. */}
-                        <button type="button" className="dl-from" title={S.showSession(sess.number)}
-                          onClick={() => {
-                            selectSession(sid);
-                            setFocus({ item: r.id, turn: null });
-                          }}>
-                          <PersonBadge code={`#${sess.number}`} role="participant" name={namesOf(sess) || undefined} />
-                        </button>
-                        {asks.map(({ turn, answers: said }) => [
+                        {leadIn(sess, r.id)}
+                        {(answers.get(r.id)?.get(sid) ?? []).map(({ turn, answers: said }) => [
                           askRow(turn, said.length === 0),
                           ...said.map((q) => quoteCard(q, turn.id)),
                         ])}
@@ -809,6 +845,20 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             })}
           </div>
         ))}
+        {withUnclassified.length > 0 && (
+          // Asks the model never classified: each carries its "not classified" badge (askRow).
+          <div className="dl-part-group dl-leftovers">
+            {withUnclassified.map((sess) => (
+              <div key={sess.id} className="dl-group">
+                {leadIn(sess, null)}
+                {leftovers.get(sess.id)!.unclassified.map(({ turn, answers: said }) => [
+                  askRow(turn, said.length === 0),
+                  ...said.map((q) => quoteCard(q, turn.id)),
+                ])}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     );
   };

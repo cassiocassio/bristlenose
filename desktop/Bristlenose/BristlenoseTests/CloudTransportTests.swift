@@ -1366,6 +1366,89 @@ struct AdapterRowDerivationTests {
         #expect(listing.notice == .zoomCloudRecordingOff)
     }
 
+    /// The booked time arrives from `GET /meetings/{id}`, and an instant
+    /// meeting is labelled from the listing alone, with no extra call.
+    @Test("Zoom: a booked call shows its booking, an instant one says so")
+    func zoomBookingAndInstant() async {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let now = Date()
+        let start = Date(timeIntervalSince1970: floor(now.timeIntervalSince1970) - 3600)
+        let booked = start.addingTimeInterval(-300)
+        func meeting(_ uuid: String, id: Int, type: Int) -> String {
+            """
+            {"uuid":"\(uuid)","id":\(id),"type":\(type),"topic":"P0\(id)",
+             "start_time":"\(iso.string(from: start))","duration":10,
+             "recording_files":[
+               {"id":"a\(id)","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+                "download_url":"https://zoom.example/a\(id)","recording_start":"\(iso.string(from: start))",
+                "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]}
+            """
+        }
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json(
+            #"{"meetings":["# + meeting("s1", id: 91, type: 2) + "," + meeting("i1", id: 92, type: 1)
+            + #"],"total_records":2}"#))
+        StubURLProtocol.enqueue(.json(
+            #"{"type":2,"start_time":"\#(iso.string(from: booked))","duration":45}"#))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: window)
+
+        let scheduled = listing.rows.first { $0.id == "s1" }
+        let instant = listing.rows.first { $0.id == "i1" }
+        #expect(scheduled?.scheduledAt == booked)
+        #expect(scheduled?.scheduledDuration == 2700)
+        #expect(scheduled?.isUnscheduled == false)
+        #expect(instant?.scheduledAt == nil)
+        #expect(instant?.isUnscheduled == true)
+        let asked = StubURLProtocol.requests.compactMap { $0.url?.path }.filter { $0.contains("/meetings/") }
+        #expect(asked == ["/v2/meetings/91"], "only the booked call is looked up")
+    }
+
+    /// A refused lookup costs the Scheduled time and nothing else.
+    @Test("Zoom: a booking lookup that fails leaves the listing whole")
+    func zoomBookingFailureIsQuiet() async {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let start = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970) - 3600)
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true,"recording_audio_transcript":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.invalid"}"#))
+        StubURLProtocol.enqueue(.json("""
+        {"meetings":[{"uuid":"s2","id":93,"type":2,"topic":"P09",
+          "start_time":"\(iso.string(from: start))","duration":10,
+          "recording_files":[
+            {"id":"a1","file_type":"M4A","recording_type":"audio_only","file_size":2048,
+             "download_url":"https://zoom.example/a1","recording_start":"\(iso.string(from: start))",
+             "recording_end":"\(iso.string(from: start.addingTimeInterval(600)))"}]}],"total_records":1}
+        """))
+        // A grant from before the scope was requested: Zoom refuses the call.
+        StubURLProtocol.enqueue(.json(
+            #"{"code":4711,"message":"Invalid access token, does not contain scopes:[meeting:read:meeting]."}"#,
+            status: 400))
+
+        let source = ZoomSource(
+            config: ZoomOAuthConfig(publicClientID: "cid", redirectURI: "https://example.test/cb"),
+            session: StubURLProtocol.session(),
+            restoredTokens: ZoomTokens(accessToken: "T", refreshToken: "R",
+                                       expiresAt: Date().addingTimeInterval(3600),
+                                       scopes: ZoomScopes.requested))
+        let listing = await source.list(window: window)
+
+        #expect(listing.rows.map(\.id) == ["s2"])
+        #expect(listing.rows.first?.scheduledAt == nil)
+        #expect(listing.rows.first?.isUnscheduled == false, "unknown, not instant")
+        #expect(listing.arithmetic.outcome.isComplete)
+    }
+
     /// The window `CloudImportStore.load()` really sends: the days asked for,
     /// plus three hours. That is two month-sized chunks, and Zoom's `from`/`to`
     /// dates are inclusive, so today sits at the end of the first and is all of

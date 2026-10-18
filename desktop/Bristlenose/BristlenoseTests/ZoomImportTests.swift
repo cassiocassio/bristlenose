@@ -782,3 +782,69 @@ struct ZoomVTTParsingTests {
         #expect(ZoomTranscript.cues(fromVTT: bad).isEmpty)
     }
 }
+
+// MARK: - When the call was booked
+
+@Suite("Zoom booking")
+struct ZoomScheduleTests {
+
+    private let recorded = Date(timeIntervalSince1970: 1_760_000_000)
+
+    @Test("A recurring series takes the occurrence nearest the recording")
+    func nearestOccurrence() {
+        // Zoom's top-level start_time on a recurring meeting is reported as
+        // the LAST occurrence; trusting it dates every session of a weekly
+        // study the same day.
+        let week: TimeInterval = 7 * 86_400
+        let booking = ZoomSchedule.booking(
+            start: recorded.addingTimeInterval(3 * week),
+            duration: 3600,
+            occurrences: [
+                .init(start: recorded.addingTimeInterval(-week), duration: 3600),
+                .init(start: recorded.addingTimeInterval(-600), duration: 2700),
+                .init(start: recorded.addingTimeInterval(week), duration: 3600),
+            ],
+            near: recorded)
+        #expect(booking == .init(start: recorded.addingTimeInterval(-600), duration: 2700))
+    }
+
+    @Test("A booking far from the recording is not its booking")
+    func tooFarIsNone() {
+        // A one-off meeting ID can be started days after the time it was booked for.
+        let booking = ZoomSchedule.booking(start: recorded.addingTimeInterval(-2 * 86_400),
+                                           duration: 3600, occurrences: [], near: recorded)
+        #expect(booking == nil)
+    }
+
+    @Test("A scheduled meeting uses its own start time")
+    func scheduledUsesStart() {
+        let booking = ZoomSchedule.booking(start: recorded.addingTimeInterval(-300),
+                                           duration: 1800, occurrences: [], near: recorded)
+        #expect(booking?.start == recorded.addingTimeInterval(-300))
+    }
+
+    @Test("A deleted occurrence was never held")
+    func deletedOccurrenceIgnored() throws {
+        let json = """
+        {"type":8,"occurrences":[
+          {"start_time":"2026-10-18T10:00:00Z","duration":60,"status":"deleted"},
+          {"start_time":"2026-10-18T11:00:00Z","duration":45,"status":"available"}]}
+        """
+        let found = try JSONDecoder().decode(ZoomMeetingBooking.self, from: Data(json.utf8))
+        #expect(found.occurrenceBookings.count == 1)
+        #expect(found.occurrenceBookings.first?.duration == 2700)
+    }
+
+    @Test("Only Zoom's instant meeting is labelled instant")
+    func instantIsTypeOne() {
+        #expect(ZoomSchedule.isInstant(type: 1))
+        // A personal room has no booking, but Zoom does not call it instant.
+        #expect(!ZoomSchedule.isInstant(type: 4))
+        #expect(!ZoomSchedule.isInstant(type: nil))
+        #expect(!ZoomSchedule.mayHaveBooking(type: 1))
+        #expect(!ZoomSchedule.mayHaveBooking(type: 4))
+        #expect(ZoomSchedule.mayHaveBooking(type: 2))
+        #expect(ZoomSchedule.mayHaveBooking(type: 8))
+        #expect(ZoomSchedule.mayHaveBooking(type: nil))
+    }
+}

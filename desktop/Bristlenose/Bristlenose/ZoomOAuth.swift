@@ -79,15 +79,22 @@ enum ZoomScopes {
     /// check is skipped and a recording-disabled account reads as an empty one.
     static let readSettings = "user:read:settings"
 
+    /// `GET /meetings/{id}` — when the call was booked, for the grid's
+    /// Scheduled column and its "Instant meeting" label. Read-only, and asked
+    /// for at the first sign-in rather than added later, so a researcher is
+    /// asked once (decided 18 Oct 2026). A grant without it lists exactly as
+    /// before, minus the scheduled times.
+    static let readMeeting = "meeting:read:meeting"
+
     /// **There is no download scope, and that is not an omission.** The list
     /// response carries `download_url`, and the same bearer token authorises
     /// the fetch. Good news at review time, where Zoom asks you to justify
     /// every scope and removes ones it considers unused.
     ///
-    /// All four must be marked **required** in the Marketplace app. Zoom lets
+    /// All five must be marked **required** in the Marketplace app. Zoom lets
     /// a user decline an optional scope and still install, which leaves a
     /// working token that fails only when the call that needs it is made.
-    static let requested = [listUserRecordings, listRecordingFiles, readUser, readSettings]
+    static let requested = [listUserRecordings, listRecordingFiles, readUser, readSettings, readMeeting]
 }
 
 // MARK: - Configuration

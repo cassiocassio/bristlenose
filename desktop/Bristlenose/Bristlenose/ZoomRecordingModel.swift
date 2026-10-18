@@ -782,3 +782,59 @@ enum ZoomTranscript {
             .replacingOccurrences(of: "&amp;", with: "&")
     }
 }
+
+// MARK: - When the call was booked
+
+/// The booked time of the meeting a recording belongs to, from
+/// `GET /meetings/{id}`.
+///
+/// Zoom meeting `type`: 1 instant, 2 scheduled, 3 recurring with no fixed
+/// time, 4 personal meeting room, 8 recurring with a fixed time.
+enum ZoomSchedule {
+
+    struct Booking: Equatable {
+        let start: Date
+        let duration: TimeInterval?
+    }
+
+    /// How far a booking may sit from the recording and still be its booking.
+    /// The store's listing window already allows three hours in the other
+    /// direction, for the same reason: people start late, and early.
+    static let tolerance: TimeInterval = 3 * 3600
+
+    /// Zoom's "instant meeting" (New Meeting): started, never booked. The one
+    /// type Bristlenose can label as such. A personal room has no booking either,
+    /// but Zoom does not call it instant, so it gets no label.
+    static func isInstant(type: Int?) -> Bool { type == 1 }
+
+    /// Whether a booking is worth asking Zoom for: a scheduled meeting or a
+    /// recurring one with fixed times. An unknown type is asked about too,
+    /// since asking costs one call and guessing costs the column.
+    static func mayHaveBooking(type: Int?) -> Bool {
+        guard let type else { return true }
+        return type == 2 || type == 8
+    }
+
+    /// The booking for a recording that started at `recordingStart`.
+    ///
+    /// **For a recurring meeting, the occurrence nearest the recording — never
+    /// the top-level `start_time`.** Zoom's own forum reports that field as the
+    /// last occurrence (or worse), so trusting it puts every session of a
+    /// weekly study on one date. A booking further than `tolerance` from the
+    /// recording is not its booking: a one-off meeting ID can be started days
+    /// after the time it was booked for.
+    static func booking(
+        start: Date?,
+        duration: TimeInterval?,
+        occurrences: [Booking],
+        near recordingStart: Date
+    ) -> Booking? {
+        let candidates = occurrences.isEmpty
+            ? start.map { [Booking(start: $0, duration: duration)] } ?? []
+            : occurrences
+        guard let nearest = candidates.min(by: {
+            abs($0.start.timeIntervalSince(recordingStart)) < abs($1.start.timeIntervalSince(recordingStart))
+        }) else { return nil }
+        return abs(nearest.start.timeIntervalSince(recordingStart)) <= tolerance ? nearest : nil
+    }
+}

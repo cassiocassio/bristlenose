@@ -612,6 +612,12 @@ Background: the parking brief in the maintainer's private handoffs, and `docs/de
   roster); **no Scheduled column** (no calendar); Recorded shows the start time, with duration in
   whole minutes (*since 17 Oct 2026: the part's `recording_end − recording_start`, falling back to the meeting's whole-minute `duration` only for a single-part meeting*); Size is the chosen file; **Expires comes from `auto_delete_date`**, orange under a
   week as everywhere else.
+  *18 Oct 2026: the Scheduled column now fills for Zoom too. `GET /meetings/{id}`
+  (`meeting:read:meeting`) gives the booked time; a recurring series takes the occurrence nearest the
+  recording, never the top-level `start_time`, and a booking more than 3 h from the recording is
+  ignored (`ZoomSchedule`). Instant meetings (type 1) carry Meet's "Instant meeting" label, read from
+  the listing with no extra call; a personal room shows a dash. A failed lookup costs the row its time,
+  never the listing. Expires appears only when some recording carries a date.*
 - **Media choice:** ~~`ZoomFileSelection.choose` **prefers the audio-only M4A** over the video files,~~
   *18 Oct 2026: it takes the video whenever Zoom made one, and the M4A only for a meeting with no
   video. The researcher is testing a digital product, so the screen is evidence (thumbnails, scene
@@ -695,6 +701,8 @@ serves `200 application/json` with `webcredentials` for `Z56GZVA2QB.app.bristlen
    - Redirect and allow list: `https://bristlenose.app/auth/zoom`, strict match.
    - Scopes, all **required**: `cloud_recording:read:list_user_recordings`,
      `cloud_recording:read:list_recording_files`, `user:read:user`, `user:read:settings`.
+     *18 Oct 2026: a fifth, `meeting:read:meeting`, for the booked time (below). Asked for at the
+     first sign-in so a researcher consents once; it must be added to the Marketplace app too.*
    - Don't submit for review.
 3. **Done 17 Oct 2026** (`0b50d663`; the `.dmg` question is decided: **no**, it does not carry the entitlement). **Apple side (code + portal):**
    - Re-add `com.apple.developer.associated-domains = ["webcredentials:bristlenose.app"]`

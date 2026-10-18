@@ -50,6 +50,9 @@ private struct ZoomRecordingsPage: Decodable {
         /// session, so keying on it collapses a study into a single row.
         let uuid: String?
         let id: Int64?
+        /// Zoom's meeting type: 1 instant, 2 scheduled, 3 recurring with no
+        /// fixed time, 4 personal room, 8 recurring with fixed times.
+        let type: Int?
         let topic: String?
         let start_time: String?
         let duration: Int?
@@ -137,6 +140,11 @@ final class ZoomSource: CloudImportSource {
         let ordinal: Int?
     }
     private var rowPlans: [String: RowPlan] = [:]
+
+    /// What `GET /meetings/{id}` said about each meeting in the current
+    /// listing, keyed by meeting number. Absent means "not asked, or not
+    /// answered", never "not booked".
+    private var bookings: [Int64: ZoomMeetingBooking] = [:]
 
     /// The wall clock, injected so *Expected* versus *No transcript* can be
     /// tested without waiting a day.
@@ -544,6 +552,8 @@ final class ZoomSource: CloudImportSource {
             return seenMeetings.insert(uuid).inserted
         }
 
+        bookings = await fetchBookings(for: meetings)
+
         // The plans describe this listing and no other. Left in place, a row a
         // re-list no longer returns would keep a download URL nothing shows.
         chosenFiles = [:]
@@ -592,6 +602,40 @@ final class ZoomSource: CloudImportSource {
         return try JSONDecoder().decode(ZoomRecordingsPage.self, from: data)
     }
 
+    /// When each meeting was booked, one `GET /meetings/{id}` per meeting
+    /// number that may have a booking.
+    ///
+    /// **Best effort, and silent to the listing.** A failure — a grant from
+    /// before `meeting:read:meeting` was requested, a meeting since deleted,
+    /// a rate limit — costs that row its Scheduled time and nothing else; it
+    /// never fails or shortens the listing. Capped, so a long window cannot
+    /// turn one listing into hundreds of calls.
+    private func fetchBookings(
+        for meetings: [ZoomRecordingsPage.Meeting]
+    ) async -> [Int64: ZoomMeetingBooking] {
+        var ids: [Int64] = []
+        for meeting in meetings {
+            guard let id = meeting.id, ZoomSchedule.mayHaveBooking(type: meeting.type),
+                  !ids.contains(id) else { continue }
+            ids.append(id)
+        }
+        var found: [Int64: ZoomMeetingBooking] = [:]
+        var failed = 0
+        for id in ids.prefix(Self.bookingLookupCap) {
+            do {
+                let data = try await get(
+                    "https://api.zoom.us/v2/meetings/\(id)?show_previous_occurrences=true")
+                found[id] = try JSONDecoder().decode(ZoomMeetingBooking.self, from: data)
+            } catch {
+                failed += 1
+            }
+        }
+        Self.log.notice("zoom_bookings asked=\(min(ids.count, Self.bookingLookupCap), privacy: .public) found=\(found.count, privacy: .public) failed=\(failed, privacy: .public) skipped=\(max(0, ids.count - Self.bookingLookupCap), privacy: .public)")
+        return found
+    }
+
+    static let bookingLookupCap = 60
+
     /// One row per part of the meeting: one for an ordinary call, one for
     /// each stretch when the host stopped and restarted recording.
     ///
@@ -613,6 +657,14 @@ final class ZoomSource: CloudImportSource {
         )
         let meetingDuration = meeting.duration.map { TimeInterval($0 * 60) }
         let isSplit = parts.count > 1
+        // One booking for the whole call, matched on when the meeting started,
+        // so the parts of a split meeting share it.
+        let booking = meeting.id.flatMap { bookings[$0] }.flatMap { found in
+            ZoomSchedule.booking(start: found.start_time.flatMap(Self.parseDate),
+                                 duration: found.duration.map { TimeInterval($0 * 60) },
+                                 occurrences: found.occurrenceBookings,
+                                 near: start)
+        }
 
         return parts.enumerated().compactMap { index, part in
             guard let media = part.choice.media else { return nil }
@@ -670,13 +722,18 @@ final class ZoomSource: CloudImportSource {
                     recordingEnded: ended,
                     now: now()),
                 organiser: nil,
+                scheduledAt: booking?.start,
+                scheduledDuration: booking?.duration,
                 // Every row says when it was recorded, as Meet and Teams rows do.
                 // It was set only for a split meeting until 18 Oct 2026, so
                 // three meetings under Zoom's default topic drew as three
                 // identical rows with nothing to tell them apart.
                 recordedAt: part.start ?? start,
                 meetingID: isSplit ? uuid : nil,
-                siblingOrdinal: ordinal
+                siblingOrdinal: ordinal,
+                // Zoom's own word for a call started with New Meeting. Read
+                // from the listing's type, so it needs no extra call.
+                isUnscheduled: ZoomSchedule.isInstant(type: meeting.type)
             )
         }
     }
@@ -1158,5 +1215,29 @@ enum ZoomDownloadGuard {
 
     static func isUsableMedia(response: URLResponse?) -> Bool {
         inspect(response: response) == .usable
+    }
+}
+
+/// `GET /meetings/{id}`, the parts that say when a call was booked.
+struct ZoomMeetingBooking: Decodable {
+    struct Occurrence: Decodable {
+        let start_time: String?
+        let duration: Int?
+        let status: String?
+    }
+    let type: Int?
+    let start_time: String?
+    let duration: Int?
+    let occurrences: [Occurrence]?
+
+    /// Occurrences that still stand. A deleted one was never held.
+    var occurrenceBookings: [ZoomSchedule.Booking] {
+        (occurrences ?? []).compactMap { occurrence in
+            guard occurrence.status != "deleted",
+                  let start = occurrence.start_time.flatMap(ZoomSource.parseDate)
+            else { return nil }
+            return ZoomSchedule.Booking(start: start,
+                                        duration: occurrence.duration.map { TimeInterval($0 * 60) })
+        }
     }
 }

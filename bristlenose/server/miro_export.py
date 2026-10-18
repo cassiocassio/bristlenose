@@ -44,6 +44,7 @@ from bristlenose.board_layout import (
     attribution,
     fit_miro_sticky,
     layout_board,
+    quote_pauses,
 )
 from bristlenose.board_manifest import FIGJAM_STICKY_SHAPE, build_manifest
 from bristlenose.board_palette import FIGJAM_TOKEN_HEX
@@ -123,6 +124,49 @@ def _clip_url(base: str, q: ExportableQuote) -> str | None:
     return f"{base.rstrip('/')}/{fname}"
 
 
+#: Words a second either side of a quote's span are read too, so its first and last gaps align.
+_WORDS_MARGIN = 1.0
+
+
+def load_pauses(db: Session | None, project_id: int,
+                quotes: list[ExportableQuote]) -> dict[int, dict[int, float]]:
+    """Each quote's pauses (`board_layout.quote_pauses`), by quote row, from the word timings
+    the transcript keeps. A quote whose words are untimed (a docx or an imported transcript
+    without words) is simply absent, and splits on its punctuation alone."""
+    import json
+
+    from bristlenose.server.models import Quote, TranscriptSegment
+    from bristlenose.server.models import Session as StudySession
+
+    ids = [q.quote_id for q in quotes if q.quote_id]
+    if db is None or not ids:
+        return {}
+    rows = db.query(Quote).filter(Quote.id.in_(ids)).all()
+    sessions = {s.session_id: s.id for s in db.query(StudySession).filter_by(project_id=project_id)}
+    words: dict[str, list[dict[str, Any]]] = {}
+    out: dict[int, dict[int, float]] = {}
+    text = {q.quote_id: q.text for q in quotes}
+    for row in rows:
+        if row.session_id not in words:
+            said: list[dict[str, Any]] = []
+            segs = (db.query(TranscriptSegment)
+                    .filter_by(session_id=sessions.get(row.session_id, -1))
+                    .filter(TranscriptSegment.words_json.isnot(None))
+                    .order_by(TranscriptSegment.start_time).all())
+            for seg in segs:
+                try:
+                    said.extend(w for w in json.loads(seg.words_json or "[]") if isinstance(w, dict))
+                except ValueError:
+                    continue
+            words[row.session_id] = said
+        lo, hi = row.start_timecode - _WORDS_MARGIN, row.end_timecode + _WORDS_MARGIN
+        span = [w for w in words[row.session_id]
+                if isinstance(w.get("s"), (int, float)) and lo <= w["s"] <= hi]
+        if span and (pauses := quote_pauses(text[row.id], span)):
+            out[row.id] = pauses
+    return out
+
+
 def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
                   clips_base: str = "", locale: str = "en") -> list[Column]:
     """Bucket the project's (optionally scoped) quotes into section/theme columns,
@@ -134,6 +178,7 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
         logger.warning("Ignoring clips_base for board links: not an http(s) URL")
         clips_base = ""
 
+    pauses = load_pauses(db, project_id, quotes)
     sections: dict[str, Column] = {}
     themes: dict[str, Column] = {}
     for q in quotes:
@@ -144,6 +189,7 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
             start_timecode=_parse_timecode(q.timecode),
             sentiment=(q.sentiment or None),
             link_url=_clip_url(clips_base, q),
+            pauses=pauses.get(q.quote_id),
         )
         label = (q.section or "").strip()
         if label:

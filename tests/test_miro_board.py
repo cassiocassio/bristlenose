@@ -150,6 +150,115 @@ def test_never_more_than_three_parts_and_never_a_split_when_asked_not_to() -> No
     assert quote_part_texts(huge, split=False) == [f"“{huge.strip()}”"]
 
 
+#: An unpunctuated run, as Whisper writes one on a long unbroken stretch: no full stop or comma
+#: anywhere, so where a split falls is down to the words, the elisions and the pauses.
+_RUN = ("we tried every one of the tools they had on offer that year and none of them stayed "
+        "open long enough to finish a single thing we started on a monday morning before the "
+        "coffee ran out and the meeting room filled up with the people from the other floor who "
+        "wanted it for their planning session which always ran over by at least an hour or two "
+        "because nobody ever wrote down what had been decided the week before so it all came round")
+
+
+def _words(text: str, pause_after: int | None = None, pause: float = 1.2) -> list[dict]:
+    """Word timings for ``text`` as the transcript keeps them, edge to edge as Whisper puts
+    them, with one silence after word ``pause_after``."""
+    out, t = [], 10.0
+    for i, w in enumerate(text.split()):
+        out.append({"t": w, "s": t, "e": t + 0.3})
+        t += 0.3 + (pause if i == pause_after else 0.0)
+    return out
+
+
+def test_an_unpunctuated_quote_never_ends_a_part_on_a_word_that_leads_into_the_next() -> None:
+    """The board in the owner's screenshot (18 Oct 2026) broke "back in the… / …day": with no
+    mark to go on, a part may not end on an article, a preposition or a pronoun."""
+    from bristlenose.board_layout import _LEADS, _word, split_quote
+
+    parts = split_quote(_RUN, at=200)
+    assert len(parts) == 3
+    for part in parts[:-1]:
+        assert _word(part.rstrip("…").split()[-1]) not in _LEADS, part[-30:]
+    assert " ".join(p.strip("…") for p in parts) == _RUN
+
+
+def test_an_elision_is_the_break_and_becomes_its_ellipsis() -> None:
+    """The extraction cut words out at " ... "; that seam is where a part breaks, and the parts
+    carry one ellipsis each side, never "..." beside "…"."""
+    from bristlenose.board_layout import split_quote
+
+    words = _RUN.split()
+    # A third of the way in, where an even split would not look.
+    text = " ".join(words[:19]) + " ... " + " ".join(words[19:51])
+    first, second = split_quote(text, at=200)
+    assert first.endswith(" stayed open…")
+    assert second.startswith("…long enough")
+    assert "..." not in first + second
+
+
+def test_a_pause_the_speaker_made_is_where_the_quote_breaks() -> None:
+    from bristlenose.board_layout import quote_pauses, split_quote
+
+    text = _RUN[:300].rsplit(" ", 1)[0]
+    at = text.split().index("finish")  # a bare word, a quarter off the even split
+    assert len(" ".join(text.split()[:at + 1])) < 0.8 * len(text) / 2
+    timed = quote_pauses(text, _words(text, pause_after=at))
+    first, _ = split_quote(text, at=200, pauses=timed)
+    assert first.rstrip("…").split()[-1] == text.split()[at]
+    untimed, _ = split_quote(text, at=200)
+    assert untimed.rstrip("…").split()[-1] != text.split()[at]
+
+
+def test_a_pause_after_an_article_is_a_hesitation_not_a_break() -> None:
+    from bristlenose.board_layout import quote_pauses, split_quote
+
+    text = _RUN[:300].rsplit(" ", 1)[0]
+    at = text.split().index("a")  # "on a | monday": the speaker looking for the word
+    first, _ = split_quote(text, at=200, pauses=quote_pauses(text, _words(text, pause_after=at)))
+    assert first.rstrip("…").split()[-1] != "a"
+
+
+def test_pauses_align_across_a_cut_and_never_time_a_gap_the_quote_made() -> None:
+    """Where the quote cut words, marked " ... " or not (a researcher's edit), the two words
+    either side were not side by side when spoken, so that gap has no pause of its own; the gaps
+    around the cut are still timed from the transcript."""
+    from bristlenose.board_layout import quote_pauses
+
+    said = "one two three four five six seven eight"
+    words = _words(said, pause_after=1, pause=0.8)
+    for w in words[3:]:  # and a silence after "three", before the words the quote cut
+        w["s"] += 2.0
+        w["e"] += 2.0
+    assert quote_pauses("one two three ... six seven eight", words) == {
+        len("one two"): pytest.approx(0.8)}
+    assert quote_pauses("one two three six seven eight", words) == {
+        len("one two"): pytest.approx(0.8)}
+
+
+def test_french_and_german_marks_are_sentence_ends_where_they_stand() -> None:
+    """French sets ? ! ; : and » off with a space and German closes with “: the break goes after
+    the whole mark, never before a "?" standing alone, never after an opening « or „."""
+    from bristlenose.board_layout import _breaks
+
+    def worths(text: str) -> dict[str, float]:
+        return {text[:at].split()[-1]: w for at, w in _breaks(text, None)}
+
+    assert worths("Avez-vous trouvé ? Non") == {"Avez-vous": 0.0, "?": 10.0}
+    assert worths("« Vraiment ? » Oui") == {"»": 10.0}
+    assert worths("Ich dachte: „Wo ist das?“ Dann")["das?“"] == 10.0
+    assert "„Wo" in worths("Ich dachte: „Wo ist das?“ Dann")  # „Wo is a word with its mark
+
+
+def test_japanese_breaks_at_a_sentence_end_never_inside_a_word() -> None:
+    """No spaces to fall back on: before 18 Oct 2026 a Japanese quote was cut at a bare
+    character offset ("どこにあ… / …るのか")."""
+    from bristlenose.board_layout import split_quote
+
+    sentence = "このアプリはとても使いやすいと思いました。でも、設定画面がどこにあるのか分からなくて、最初は少し戸惑いました。"
+    first, second = split_quote(sentence * 7 + "最初は少し戸惑いました。")
+    assert first.endswith("ました…") and second.startswith("…でも、") or second.startswith("…この")
+    assert first.removesuffix("…") + "。" + second.removeprefix("…") == sentence * 7 + "最初は少し戸惑いました。"
+
+
 def test_every_sticky_shows_the_same_size_of_type() -> None:
     """Miro fits type to the box and a rectangle keeps its shape, so the area follows the text:
     the width goes with the square root of the length (the owner's hand: 207 chars → 255 wide)."""

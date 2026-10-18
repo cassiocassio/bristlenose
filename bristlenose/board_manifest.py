@@ -106,7 +106,7 @@ def build_manifest(
                     # One to three parts, split where a researcher would split it
                     # (`board_layout.split_quote`); the plugin draws each as a
                     # sticky and puts the attribution on the last.
-                    "parts": quote_part_texts(q.text, split),
+                    "parts": quote_part_texts(q.text, split, q.pauses),
                     "attribution": attribution(q.participant_id, q.start_timecode),
                     "colour": token,
                     "clip_url": q.link_url,

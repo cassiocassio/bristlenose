@@ -22,9 +22,11 @@ Ported and generalised from experiments/board-layout-poc/.
 
 from __future__ import annotations
 
+import difflib
+import itertools
 import math
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from bristlenose.utils.text import count_noun
@@ -102,6 +104,8 @@ class QuoteCard:
     start_timecode: float
     sentiment: str | None = None
     link_url: str | None = None  # optional clip link
+    #: The speaker's pauses inside the quote (`quote_pauses`), which tell a split where to fall.
+    pauses: Mapping[int, float] | None = None
 
 
 @dataclass
@@ -188,47 +192,182 @@ def fmt_timecode(seconds: float) -> str:
 #: trims a quote to by hand.
 SPLIT_AT = 325
 MAX_PARTS = 3
-#: Where a part may end, best first: a sentence, then a clause, then a phrase, then any word.
-_BREAKS = (
-    re.compile(r"[.?!…][\"”’)]*\s+"),
-    re.compile(r"[;:]\s+|\s+[—–]\s+"),
-    re.compile(r",\s+"),
-    re.compile(r"\s+"),
-)
+#: What a break is worth, as subtitlers rank them (BBC subtitle guidelines, "break at natural
+#: points"; Gerber-Morón & Szarkowska 2018 measured the reading cost of the alternative): the end of
+#: a sentence, then an elision the extraction made (" ... ", words already cut there), a clause or
+#: a speaker trailing off ("but... it's"), a phrase. Japanese and Chinese punctuation counts the
+#: same as its Latin kin.
+#: Closing marks a sentence end may sit inside: English, German („…“), French and Spanish («…»).
+_CLOSERS = "\"”“’)»›」』）"
+_TRAILING_OFF = re.compile(rf"\w(\.\.\.|…)[{_CLOSERS}]*$")
+_SENTENCE_END = re.compile(rf"[.?!…。！？][{_CLOSERS}]*$")
+_CLAUSE_END = re.compile(r"[;:；：—–]$")
+_PHRASE_END = re.compile(r"[,，、]$")
+_ELISION = re.compile(r"^(\.\.\.|…)$")
+#: After a mark a spaceless script runs straight on, so its breaks are found inside the text.
+_CJK_BREAK = re.compile(r"[。！？][」』）)]*|[、，；：]")
+_SCORE = {"sentence": 10.0, "elision": 9.0, "clause": 6.0, "phrase": 4.0}
+#: Seconds of silence between two words are a break the speaker made: worth up to a sentence end,
+#: where the text has no mark to say so. Only there: a pause after a full stop is usual, and
+#: counting it pulled breaks off the even split for nothing (median worst part 8% → 17% off even
+#: across the trial runs). Whisper's word timings put most words edge to edge, so only a real
+#: pause scores.
+PAUSE_WEIGHT = 6.0
+PAUSE_CAP = 1.5
+#: Where no mark or pause says, the subtitlers' rules for a bare word: a part may begin on a word
+#: that opens a clause, and never end on one that leads into the next (an article, a preposition,
+#: a pronoun before its verb). English only; in another language these simply never match.
+_OPENS = {"but": 3.0, "so": 3.0, "because": 3.0, "when": 2.0, "now": 2.0, "then": 2.0,
+          "what": 2.0, "if": 2.0, "though": 2.0, "and": 1.0, "or": 1.0, "which": 1.0}
+_LEADS = frozenset("""a an the to of in on at for with from by into about as than my your his her
+its our their this that these those i i'm i've i'd we they he she you it's is are was were be been
+am very really not don't just""".split())
+_LEAD_PENALTY = 4.0
+#: The parts stay near even: a sentence end about a third off the even split still beats a bare
+#: word right on it, as the owner's ~55-word parts expect, and no part is under 45% of even.
+BALANCE_WEIGHT = 40.0
+MIN_PART = 0.45
 
 
-def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS) -> list[str]:
+_WORDY = re.compile(r"\w")
+_OPENER = re.compile(r"[«‹„“‘(\[¿¡]+")
+
+
+def _word(token: str) -> str:
+    return re.sub(r"[^\w']", "", token.casefold().replace("’", "'"))
+
+
+def _breaks(text: str, pauses: Mapping[int, float] | None) -> list[tuple[int, float]]:
+    """Every place ``text`` could break, as (offset of the end of the part before, worth)."""
+    out: list[tuple[int, float]] = []
+    gaps = list(re.finditer(r"\s+", text))
+
+    def token(k: int) -> str:  # the word after gap k (k = -1: the first)
+        a = gaps[k].end() if k >= 0 else 0
+        return text[a:gaps[k + 1].start() if k + 1 < len(gaps) else len(text)]
+
+    for k, gap in enumerate(gaps):
+        before, after = token(k - 1), token(k)
+        if not _WORDY.search(after) and not _ELISION.match(after):
+            continue  # French sets "?", ";" and "»" off with a space: never break before them
+        if _OPENER.fullmatch(before):
+            continue  # nor after an opening mark standing alone ("« Vraiment")
+        if not _WORDY.search(before) and not _ELISION.match(before) and k:
+            before = token(k - 2) + before  # "Vraiment ? »": the mark belongs to its word
+        if _ELISION.match(before):  # it becomes the part's "…" (`split_quote`)
+            worth = _SCORE["elision"]
+        elif _TRAILING_OFF.search(before):
+            worth = _SCORE["clause"] - (_LEAD_PENALTY if _word(before) in _LEADS else 0.0)
+        elif _SENTENCE_END.search(before):
+            worth = _SCORE["sentence"]
+        elif _CLAUSE_END.search(before) or after[:1] in "—–":
+            worth = _SCORE["clause"]
+        elif _PHRASE_END.search(before):
+            worth = _SCORE["phrase"]
+        else:
+            nxt = _word(after)
+            worth = _OPENS.get(nxt, 0.0)
+            if nxt == "i" and k + 1 < len(gaps) and _word(token(k + 1)) == "mean":
+                worth = 3.0
+            if _word(before) in _LEADS:
+                worth -= _LEAD_PENALTY
+            if pauses:
+                worth += min(pauses.get(gap.start(), 0.0), PAUSE_CAP) * PAUSE_WEIGHT
+        out.append((gap.start(), worth))
+    for m in _CJK_BREAK.finditer(text):
+        if m.end() < len(text) and not text[m.end()].isspace():
+            mark = m.group()[0]
+            out.append((m.end(), _SCORE["sentence"] if mark in "。！？" else _SCORE["phrase"]))
+    return out
+
+
+def _cuts(text: str, n: int, pauses: Mapping[int, float] | None) -> list[int]:
+    """The ``n - 1`` offsets that make the best-reading parts: the breaks' worth, less how far
+    the parts stray from an even split."""
+    length = len(text)
+    even = length / n
+    targets = [round(even * k) for k in range(1, n)]
+    found = sorted(_breaks(text, pauses))
+    if not found:
+        return targets  # a spaceless script with no mark near: an even cut, as before
+    # Bare words differ only in balance, so only the few nearest each even point can win.
+    keep = {i for i, (_, worth) in enumerate(found) if worth > 0}
+    for t in targets:
+        near = sorted(range(len(found)), key=lambda i: abs(found[i][0] - t))[:6]
+        keep.update(near)
+    cands = [found[i] for i in sorted(keep)]
+
+    def cost(cuts: Sequence[tuple[int, float]]) -> float:
+        edges = [0, *(c for c, _ in cuts), length]
+        sizes = [b - a for a, b in zip(edges, edges[1:], strict=False)]
+        if min(sizes) < MIN_PART * even:
+            return math.inf
+        stray = sum(((s - even) / even) ** 2 for s in sizes)
+        return BALANCE_WEIGHT * stray - sum(w for _, w in cuts)
+
+    best = min(itertools.combinations(cands, n - 1), key=cost, default=None)
+    if best is None or cost(best) == math.inf:
+        return targets
+    return [c for c, _ in best]
+
+
+def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS,
+                pauses: Mapping[int, float] | None = None) -> list[str]:
     """A quote as one, two or three parts that each read on their own, as researchers split a
-    long quote by hand: at the most natural break near each even split, a part that goes on ending
-    in "…" and the next beginning with one. The words are never changed, only where they break."""
+    long quote by hand: at the best-reading break near each even split, a part that goes on ending
+    in "…" and the next beginning with one. The words are never changed, only where they break.
+
+    ``pauses`` (`quote_pauses`) is the speaker's silence, in seconds, at the whitespace that
+    starts at each offset — the breaks the speaker made, which an unpunctuated transcript has
+    nothing else to show (Whisper drops punctuation on long unbroken runs)."""
+    lead = len(text) - len(text.lstrip())
+    if pauses and lead:
+        pauses = {at - lead: gap for at, gap in pauses.items()}
     text = text.strip()
     n = max(1, min(max_parts, -(-len(text) // at)))
     if n == 1:
         return [text]
-    cuts: list[int] = []
-    start = 0
-    for k in range(1, n):
-        target = round(len(text) * k / n)
-        window = max(40, (len(text) // n) // 4)
-        lo, hi = max(start + 1, target - window), min(len(text) - 1, target + window)
-        best: int | None = None
-        for pattern in _BREAKS:
-            ends = [m.end() for m in pattern.finditer(text, lo, hi)]
-            if ends:
-                best = min(ends, key=lambda e: abs(e - target))
-                break
-        cuts.append(best if best is not None else target)
-        start = cuts[-1]
+    cuts = _cuts(text, n, pauses)
     parts = [text[a:b].strip() for a, b in zip([0, *cuts], [*cuts, len(text)], strict=True)]
     out: list[str] = []
     for i, part in enumerate(parts):
         if i < len(parts) - 1:
             # "successful." goes on as "successful…": the full stop gives way to the ellipsis, as
-            # in a hand-split quote; a question or an exclamation keeps its mark.
-            part = part.rstrip(",;:—– ").removesuffix(".") + ("" if part.endswith("…") else "…")
+            # in a hand-split quote; a question or an exclamation keeps its mark. An elision at
+            # the break is already an ellipsis, so it becomes this one.
+            part = re.sub(r"\s*(\.\.\.|…)$", "", part).rstrip(",;:—–、，；： ")
+            part = part.removesuffix(".").removesuffix("。") + ("" if part.endswith("…") else "…")
         if i > 0:
-            part = "…" + part
+            part = "…" + re.sub(r"^(\.\.\.|…)\s*", "", part)
         out.append(part)
+    return out
+
+
+def quote_pauses(text: str, words: Sequence[Mapping[str, object]]) -> dict[int, float]:
+    """The speaker's silence at each gap in ``text``, from the transcript's word timings
+    (``words_json``: ``{"t", "s", "e"}``), keyed by the offset where the gap starts.
+
+    The quote is the transcript's words with some cut (" ... ") and perhaps a researcher's edit,
+    so the two are aligned word by word and a gap is timed only where both its words sit side by
+    side in the transcript too. Spaceless scripts have no gaps to time."""
+    tokens = list(re.finditer(r"\S+", text))
+    said = [_word(str(w.get("t", ""))) for w in words]
+    match = difflib.SequenceMatcher(None, [_word(t.group()) for t in tokens], said, autojunk=False)
+    at: dict[int, int] = {}
+    for block in match.get_matching_blocks():
+        for k in range(block.size):
+            at[block.a + k] = block.b + k
+    out: dict[int, float] = {}
+    for i in range(len(tokens) - 1):
+        j = at.get(i)
+        if j is None or at.get(i + 1) != j + 1:
+            continue
+        try:
+            gap = float(words[j + 1]["s"]) - float(words[j]["e"])  # type: ignore[arg-type]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if gap > 0:
+            out[tokens[i].end()] = gap
     return out
 
 
@@ -296,21 +435,23 @@ class QuotePart:
     height: float
 
 
-def quote_part_texts(text: str, split: bool = True) -> list[str]:
+def quote_part_texts(text: str, split: bool = True,
+                     pauses: Mapping[int, float] | None = None) -> list[str]:
     """A quote's words as each sticky shows them, board-neutral: one string, or with ``split`` a
     long quote's two or three parts (`split_quote`), the opening mark on the first and the closing
     mark on the last. The attribution goes on the last part; the board adds it. FigJam and Miro both
     build on this, so a quote breaks in the same places on either board."""
-    parts = split_quote(text, SPLIT_AT, MAX_PARTS) if split else [text.strip()]
+    parts = split_quote(text, SPLIT_AT, MAX_PARTS, pauses) if split else [text.strip()]
     return [("“" if k == 0 else "") + part + ("”" if k == len(parts) - 1 else "")
             for k, part in enumerate(parts)]
 
 
 def quote_parts(text: str, attribution_line: str, split: bool = True,
-                shape: str = STICKY_SHAPE) -> list[QuotePart]:
+                shape: str = STICKY_SHAPE,
+                pauses: Mapping[int, float] | None = None) -> list[QuotePart]:
     """A quote as the stickies a Miro board shows it on (`quote_part_texts`), each sized so the
     type comes out the same."""
-    shown = quote_part_texts(text, split)
+    shown = quote_part_texts(text, split, pauses)
     out: list[QuotePart] = []
     for k, part in enumerate(shown):
         last = k == len(shown) - 1
@@ -347,7 +488,8 @@ def _build_frame(
     header_h = STICKY_W * ASPECT.get(shape, RECT_ASPECT)
     bottom = FRAMES_Y + FRAME_PAD + header_h
     for col in columns:
-        sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split, shape))
+        sets = [(q, quote_parts(q.text, attribution(q.participant_id, q.start_timecode), split, shape,
+                                q.pauses))
                 for q in sorted(col.quotes, key=quote_sort_key)]
         col_w = max([STICKY_W] + [set_extent(parts)[0] for _, parts in sets])
         stickies.append(Sticky(

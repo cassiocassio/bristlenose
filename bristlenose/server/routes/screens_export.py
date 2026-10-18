@@ -244,7 +244,8 @@ def _attribution(q: Any) -> str:
 def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
                    screens: list[dict[str, Any]], videos: dict[str, Path],
                    quotes: dict[str, Any], colour_by: str, split: bool = True,
-                   shape: str = "rectangle") -> None:
+                   shape: str = "rectangle",
+                   pauses: dict[str, dict[int, float]] | None = None) -> None:
     """Render each screen's still, lay the board out, and build it on Miro. Runs in a worker
     thread; the job dict is its only output. A board left part-built names its link, as the quotes
     board does."""
@@ -291,7 +292,8 @@ def _run_miro_sync(job: dict[str, Any], token: str, title: str, out_dir: Path,
             # `total` stays the screens asked for; a screen with no still at all is counted, which
             # both clients say, rather than vanishing with its quotes.
             job["skipped_count"] += 1
-    parts = {d: quote_parts(q.text, _attribution(q), split, shape) for d, q in quotes.items()}
+    parts = {d: quote_parts(q.text, _attribution(q), split, shape, (pauses or {}).get(d))
+             for d, q in quotes.items()}
     frames = lay_out_board(screens, sizes, parts)
     if not frames:
         raise miro_client.MiroError("No screengrab could be made", reason="no_stills")
@@ -422,6 +424,7 @@ async def start_screens_miro(request: Request, project_id: int,
     from bristlenose.i18n import t_in
     from bristlenose.screen_text.shots import journey
     from bristlenose.server.export_core import extract_quotes_for_export, project_display_name
+    from bristlenose.server.miro_export import load_pauses
     from bristlenose.server.routes.miro import _miro_token
     from bristlenose.utils.timecodes import parse_timecode
 
@@ -445,7 +448,8 @@ async def start_screens_miro(request: Request, project_id: int,
     out_dir = project_output_dir(Path(project_dir))
     locale, board_name = body.locale, body.board_name
 
-    def read() -> tuple[list[dict[str, Any]], dict[str, Path], dict[str, Any], str]:
+    def read() -> tuple[list[dict[str, Any]], dict[str, Path], dict[str, Any], str,
+                        dict[str, dict[int, float]]]:
         db = request.app.state.db_factory()
         try:
             project = db.get(Project, project_id)
@@ -454,14 +458,16 @@ async def start_screens_miro(request: Request, project_id: int,
             state, owner = derive_project_screens(request, db, project_id)
             quotes = {f"q-{q.participant_code}-{int(parse_timecode(q.timecode))}": q
                       for q in extract_quotes_for_export(db, project_id)}
+            timed = load_pauses(db, project_id, list(quotes.values()))
+            pauses = {d: timed[q.quote_id] for d, q in quotes.items() if q.quote_id in timed}
             title = ((board_name or "").strip()
                      or f"{project_display_name(project)} · {t_in(locale, 'common.screens.title')}")
             return (journey(state["screens"], owner, _hidden_dom_ids(db, project_id)), video_sessions(db),
-                    quotes, title)
+                    quotes, title, pauses)
         finally:
             db.close()
 
-    screens, videos, quotes, title = await asyncio.to_thread(read)
+    screens, videos, quotes, title, pauses = await asyncio.to_thread(read)
     if not screens:
         return ScreensExportStart(status="no_screens", total=0)
     from bristlenose.board_progress import BoardProgress, default_history_dir
@@ -472,7 +478,7 @@ async def start_screens_miro(request: Request, project_id: int,
     _miro_jobs[project_id] = job
     job["task"] = asyncio.create_task(_run_miro(
         project_id, job, token, title, out_dir, screens, videos, quotes, body.colour_by,
-        body.split_long_quotes, body.sticky_shape))
+        body.split_long_quotes, body.sticky_shape, pauses))
     return ScreensExportStart(status="started", total=len(screens))
 
 

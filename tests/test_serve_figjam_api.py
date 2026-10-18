@@ -175,3 +175,34 @@ def test_a_board_name_titles_the_board_and_names_the_file(client: TestClient) ->
     assert 'Kitchen study, round 2-figjam-board.json' in resp.headers["content-disposition"]
     blank = client.get(_URL, params={"board_name": "   "}).json()
     assert blank["title"] == client.get(_URL).json()["title"]
+
+
+def test_a_long_quote_breaks_where_its_speaker_paused(client: TestClient, monkeypatch) -> None:
+    """The word timings the transcript keeps reach the board: an unpunctuated quote breaks at
+    the speaker's pause, not at whichever word sits nearest the middle."""
+    from bristlenose.server.models import Quote, TranscriptSegment
+    from bristlenose.server.models import Session as StudySession
+
+    said = ("we tried every one of the tools they had on offer that year and none of them stayed "
+            "open long enough to finish a single thing we started on a monday morning before the "
+            "coffee ran out and the meeting room filled up with the people from the other floor")
+    tokens = said.split()
+    at = tokens.index("finish")
+    words, t = [], 10.0
+    for i, w in enumerate(tokens):
+        words.append({"t": w, "s": round(t, 2), "e": round(t + 0.3, 2)})
+        t += 0.3 + (1.2 if i == at else 0.0)
+    db = client.app.state.db_factory()
+    try:
+        quote = db.query(Quote).filter_by(participant_id="p1", start_timecode=10.0).one()
+        quote.text, quote.end_timecode = said, t
+        session = db.query(StudySession).filter_by(session_id=quote.session_id).one()
+        seg = (db.query(TranscriptSegment).filter_by(session_id=session.id)
+               .order_by(TranscriptSegment.start_time).first())
+        seg.words_json = json.dumps(words)
+        db.commit()
+    finally:
+        db.close()
+    monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 200)
+    [quote_doc] = _quotes(client.get(_URL, params={"quote_ids": "q-p1-10"}).json())
+    assert quote_doc["parts"][0].rstrip("…").split()[-1] == "finish"

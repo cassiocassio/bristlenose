@@ -137,6 +137,9 @@ class ExportableQuote:
     timecode: str
     session: str
     source_file: str
+    #: The quote's row, for a board that times its words (`miro_export.load_pauses`); not one of
+    #: the export columns, which `quotes_export` lists by name.
+    quote_id: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +235,7 @@ def extract_quotes_for_export(
                 timecode=format_timecode(q.start_timecode),
                 session=q.session_id,
                 source_file=source_file,
+                quote_id=q.id,
             )
         )
 

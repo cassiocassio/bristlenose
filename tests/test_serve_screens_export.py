@@ -234,3 +234,32 @@ def test_a_back_screengrab_miro_refuses_is_left_out_but_a_refused_front_fails(
         else:
             with pytest.raises(mc.MiroError):
                 se._run_miro_sync(job, "tok", "Board", tmp_path, [screen], {"s1": tmp_path / "v.mp4"}, {}, "none")
+
+
+def test_a_long_quote_on_the_screens_board_breaks_where_its_speaker_paused(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The screens board splits through the same splitter as the quotes board, pauses and all."""
+    from bristlenose import miro_client as mc
+    from bristlenose.board_layout import quote_pauses
+    from bristlenose.server.routes import screens_export as se
+
+    fake = _FakeMiro()
+    fake.install(monkeypatch)
+    made: list[str] = []
+    monkeypatch.setattr(mc, "bulk_create_items", lambda _t, _b, items: made.extend(
+        str(i.get("data", {}).get("content", "")) for i in items) or items)
+    monkeypatch.setattr(se, "render_still", lambda *a, **k: _JPEG)
+    monkeypatch.setattr("bristlenose.board_layout.SPLIT_AT", 200)
+    said = ("we tried every one of the tools they had on offer that year and none of them stayed "
+            "open long enough to finish a single thing we started on a monday morning before the "
+            "coffee ran out and the meeting room filled up with the people from the other floor")
+    at, words, t = said.split().index("finish"), [], 10.0
+    for i, w in enumerate(said.split()):
+        words.append({"t": w, "s": t, "e": t + 0.3})
+        t += 0.3 + (1.2 if i == at else 0.0)
+    quote = _Q("q-p1-1")
+    quote.text = said
+    se._run_miro_sync(_job(), "tok", "Board", tmp_path, _screens(1), {"s1": tmp_path / "v.mp4"},
+                      {"q-p1-1": quote}, "none", True, "rectangle",
+                      {"q-p1-1": quote_pauses(said, words)})
+    assert any("to finish…" in c for c in made), made

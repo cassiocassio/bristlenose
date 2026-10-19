@@ -94,12 +94,22 @@ ENGLISH_ONLY_NAMESPACES: frozenset[str] = frozenset({"preflight"})
 
 _current_locale = "en"
 
+#: A namespace is a bare file stem (``common``, ``server``), never a path.
+_NAMESPACE_NAME = re.compile(r"[a-z][a-z0-9_-]*")
+
 
 @lru_cache(maxsize=64)
 def _load_namespace(locale: str, namespace: str) -> dict[str, object]:
     """Load a single namespace JSON file. Returns {} if missing — the caller
     (`t`) walks the fallback chain, so a thin-override locale that ships only
-    some namespaces resolves the rest through its base, not straight to en."""
+    some namespaces resolves the rest through its base, not straight to en.
+
+    Both arguments become a path, so neither is trusted here: an unsupported
+    locale or a namespace that isn't a plain name reads as missing. Callers
+    already pass ``canonical_locale`` output and code constants; this holds if
+    a future one doesn't."""
+    if locale not in SUPPORTED_LOCALES or not _NAMESPACE_NAME.fullmatch(namespace):
+        return {}
     path = _LOCALE_DIR / locale / f"{namespace}.json"
     if not path.exists():
         return {}

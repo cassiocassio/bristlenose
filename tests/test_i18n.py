@@ -174,3 +174,67 @@ class TestLocaleFiles:
     def test_supported_locales_tuple(self):
         assert "en" in SUPPORTED_LOCALES
         assert len(SUPPORTED_LOCALES) >= 2
+
+
+class TestLoadNamespaceGuard:
+    """``_load_namespace`` builds a path from both arguments, so it reads only
+    a supported locale and a plain namespace name, whatever the caller did."""
+
+    @pytest.fixture
+    def tree_with_a_file_outside(self, tmp_path, monkeypatch):
+        """A locale tree plus a readable file just outside it, so an escape
+        would load something rather than read as merely missing."""
+        import bristlenose.i18n as i18n_module
+
+        locales = tmp_path / "locales"
+        (locales / "en").mkdir(parents=True)
+        (locales / "en" / "common.json").write_text(
+            json.dumps({"hello": "inside"}), encoding="utf-8"
+        )
+        (tmp_path / "outside").mkdir()
+        (tmp_path / "outside" / "common.json").write_text(
+            json.dumps({"hello": "outside"}), encoding="utf-8"
+        )
+        monkeypatch.setattr(i18n_module, "_LOCALE_DIR", locales)
+        i18n_module._load_namespace.cache_clear()
+        yield tmp_path
+        i18n_module._load_namespace.cache_clear()
+
+    def test_a_real_pair_loads(self, tree_with_a_file_outside):
+        from bristlenose.i18n import _load_namespace
+
+        assert _load_namespace("en", "common") == {"hello": "inside"}
+
+    @pytest.mark.parametrize(
+        ("locale", "namespace"),
+        [
+            ("../outside", "common"),
+            ("en", "../../outside/common"),
+        ],
+    )
+    def test_a_path_shaped_argument_reads_as_missing(
+        self, tree_with_a_file_outside, locale, namespace
+    ):
+        from bristlenose.i18n import _load_namespace
+
+        assert _load_namespace(locale, namespace) == {}
+
+    def test_an_absolute_locale_reads_as_missing(self, tree_with_a_file_outside):
+        from bristlenose.i18n import _load_namespace
+
+        assert _load_namespace(str(tree_with_a_file_outside / "outside"), "common") == {}
+
+    def test_an_absolute_namespace_reads_as_missing(self, tree_with_a_file_outside):
+        from bristlenose.i18n import _load_namespace
+
+        assert _load_namespace("en", str(tree_with_a_file_outside / "outside" / "common")) == {}
+
+    def test_the_real_corpus_passes_the_guard(self):
+        """Every locale directory and namespace file shipped is one the guard
+        admits, so it excludes nothing real."""
+        from bristlenose.i18n import _NAMESPACE_NAME
+
+        for locale_dir in (p for p in _LOCALE_DIR.iterdir() if p.is_dir()):
+            assert locale_dir.name in SUPPORTED_LOCALES, locale_dir.name
+            for path in locale_dir.glob("*.json"):
+                assert _NAMESPACE_NAME.fullmatch(path.stem), path

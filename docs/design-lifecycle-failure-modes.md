@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-10-17
-trued-against: HEAD@main (6e7a8a9b) on 2026-10-17
+last-trued: 2026-10-19
+trued-against: HEAD@main (b70db9cb) on 2026-10-19
 ---
 
 ## Changelog
 
+- _2026-10-19_ — row 53 open: row 49's race, one step earlier. The serve records the files its pool is attached to after `init_db` and the startup import, so a restore landing during a slow startup import is recorded as attached while the pool holds the set-aside tree. Inferred from code, not reproduced. Score recomputed.
 - _2026-10-18_ — rows 51–52 designed out, found while building Apple-first transcription ([design-apple-first-transcription.md](design-apple-first-transcription.md)): a session whose transcription failed was marked complete in the manifest, so its empty result was served from the cache on every later run; and the deferred session that work introduces. Score recomputed. Anchors: `mark_session_failed` in the stage-5 loop of `pipeline.py`, `tests/test_lifecycle_deferred_transcription.py`.
 - _2026-10-17_ — rows 49–50 designed out: two races between a failed run's restore and the serve, both seen on CI as intermittent reds of tests that pass locally (`test_serve_while_the_output_is_stashed_then_restored`, scenario `reanalyse-fails-curation-survives`). Each now has a test that injects the restore into the window, so it is red every time without its fix. Score recomputed. Anchors: `_reattach_if_moved` and `_REATTACH_ROUNDS` in `server/app.py`, `completed_run_ids` and `run_event_watcher(imported=…)` in `server/event_watcher.py`.
 - _2026-10-14, evening_ — four defects from one `--clean` Re-analyse in the Mac app: rows 45–47 designed out (the shoal lifted on the previous run's count; the serve's log lost with the set-aside folder; a mid-run pick refused as a recode), rows 44 and 48 open (a pick in the second before the serve reattaches; a 74 s status page the lost log could not explain). Row 8 recounted. Score recomputed. Anchors: `PipelineRunnerProgressTests`, `logging.reopen_log_file`, `refusal.analysis_running`, commit "review fixes: tests that could not fail, a log reopen that could lose the log, a silent paragraph move".
@@ -135,6 +136,7 @@ row 42.
 | 43 | The progressive doc's known gaps: `data_version` restarts at 0 with the server (one refetch skipped); a resumed run imports at stage 6 while the Mac's shoal covers it; the chain can count a session the server refused, and the shoal then drops to an empty status page; a failed Re-analyse's restore reaches the server but not the Mac | indexed by pointer, not copied: [design-progressive-lenses.md](design-progressive-lenses.md) §5.7 "Known, not fixed" and §7 items 16 and 18 |
 | 44 | A pick or rename made in the second after `run --clean` moves the output folder, before the serve's next poll reattaches, returns 200 and lands in the set-aside database, which a successful run deletes | inferred from code (review of `4f6f71d0`), not measured; a run-owned window of about one poll. Fix would be to refuse every curation write until the reattach, or to reattach on the stash itself |
 | 48 | A report mounted while the serve is importing the first sessions showed the "in progress" status page for 74 s, not the ≤3 s its own poll allows (14 Oct 2026, 22:09:22 → 22:10:36). The serve's log for that window was lost (row 46), so the cause is unexplained | not reproduced; re-measure with the log now following the folder |
+| 53 | A restore landing while the serve starts, during its startup import, leaves the report on the set-aside copy: `_install_event_watcher` reads the identities of the files the pool is attached to after `init_db` and the startup import have run, so they name the restored tree while the pool holds the one the restore moved aside, and the reattach sees nothing to do. Row 49's race, one step earlier (in `create_app`, not `_reattach_if_moved`) | inferred from code (17 Oct 2026, while fixing row 49), not reproduced. A test would inject the restore inside `_import_on_startup`, as row 50's does after it. The fix is row 49's: record the folder the pool connected to, and reattach if it moved |
 
 **Checked and not a failure mode:** only the two **Re-analyse…** call sites pass
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
@@ -161,12 +163,12 @@ folder instead.
 
 ## The score
 
-**By count:** of 52 failure modes, 39 are designed out and proven (25 fixed on
+**By count:** of 53 failure modes, 39 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, and rows 51–52 of 18 Oct) — **75%**. Thirteen are
-open: one engineered, twelve not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, and rows 51–52 of 18 Oct) — **74%**. Fourteen are
+open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
-from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription. The denominator moved each time.)_
+from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix. The denominator moved each time.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first

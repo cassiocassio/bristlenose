@@ -1,7 +1,7 @@
 """Does Miro accept an OAuth code exchange with PKCE and no client secret?
 
 Miro documents no PKCE: its token exchange lists `client_secret` as required
-(board-platforms.md §4, 19 Oct 2026). If Miro silently accepts a PKCE
+(Miro developer docs, read 19 Oct 2026). If Miro silently accepts a PKCE
 exchange anyway, Bristlenose can sign in to Miro with no server of its own.
 If it refuses, the route is a broker on bristlenose.app that holds the secret.
 This probe answers that with one sign-in.

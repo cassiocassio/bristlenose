@@ -125,14 +125,19 @@ video { flex: 1; width: 100%; min-height: 0; background: #000; }
     loadAndSeek(pid, fileUri, seconds);
   };
 
-  // Read video source and seek time from URL hash
+  // Read video source and seek time from URL hash. Only src, pid and t are
+  // kept: any other key (__proto__ included) never reaches the object.
   function handleHash() {
     var hash = window.location.hash.substring(1);
     if (!hash) return;
     var params = {};
     hash.split('&').forEach(function(part) {
       var kv = part.split('=');
-      if (kv.length === 2) params[kv[0]] = decodeURIComponent(kv[1]);
+      if (kv.length !== 2) return;
+      var key = kv[0], val = decodeURIComponent(kv[1]);
+      if (key === 'src') params.src = val;
+      else if (key === 'pid') params.pid = val;
+      else if (key === 't') params.t = val;
     });
     if (params.src) {
       loadAndSeek(params.pid || '', params.src, parseFloat(params.t) || 0);

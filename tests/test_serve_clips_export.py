@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -695,3 +696,14 @@ class TestLivePlayerPage:
         assert resp.status_code == 200
         assert 'id="bristlenose-video"' in resp.text
         assert resp.headers.get("cache-control") == "no-store"
+
+    def test_hash_reader_writes_only_the_keys_it_uses(self) -> None:
+        # CodeQL js/remote-property-injection: handleHash() must not write a
+        # key taken from the URL hash into an object; it keeps src, pid and t.
+        template = (
+            Path(__file__).resolve().parent.parent
+            / "bristlenose" / "theme" / "templates" / "player.html"
+        ).read_text(encoding="utf-8")
+        assert not re.search(r"params\[.*\]\s*=", template)
+        for key in ("src", "pid", "t"):
+            assert f"params.{key} = val" in template

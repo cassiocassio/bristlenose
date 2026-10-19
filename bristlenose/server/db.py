@@ -85,6 +85,12 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-
     # it was about to set could apply (macOS CI, 12 Oct 2026).
     cursor.execute("PRAGMA busy_timeout=5000")
     cursor.execute("PRAGMA journal_mode=WAL")
+    # Checkpoint after every commit, not every 1000 pages. The Mac app reads
+    # this database with ``?immutable=1``, which sees only the main file, so a
+    # star or tag left in ``-wal`` was invisible to it for as long as the serve
+    # ran: Re-analyse counted zero curation, skipped its confirmation and
+    # discarded the work (19 Oct 2026, tests/test_serve_wal_visibility.py).
+    cursor.execute("PRAGMA wal_autocheckpoint=1")
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 

@@ -1,11 +1,12 @@
 ---
 status: current
-last-trued: 2026-10-19
-trued-against: HEAD@main (b70db9cb) on 2026-10-19
+last-trued: 2026-10-20
+trued-against: HEAD@main (b2b0f8e2) on 2026-10-20
 ---
 
 ## Changelog
 
+- _2026-10-20_ — row 35 designed out: the serve's connections now checkpoint after every commit, so the Mac app's `?immutable=1` curation count sees this session's stars and tags and **Re-analyse…** asks before discarding them. Found again by the 19 Oct reliability sweep and reproduced against the real serve. Score recomputed. Anchors: `PRAGMA wal_autocheckpoint` in `server/db.py`, `tests/test_serve_wal_visibility.py`.
 - _2026-10-19_ — row 53 open: row 49's race, one step earlier. The serve records the files its pool is attached to after `init_db` and the startup import, so a restore landing during a slow startup import is recorded as attached while the pool holds the set-aside tree. Inferred from code, not reproduced. Score recomputed.
 - _2026-10-18_ — rows 51–52 designed out, found while building Apple-first transcription ([design-apple-first-transcription.md](design-apple-first-transcription.md)): a session whose transcription failed was marked complete in the manifest, so its empty result was served from the cache on every later run; and the deferred session that work introduces. Score recomputed. Anchors: `mark_session_failed` in the stage-5 loop of `pipeline.py`, `tests/test_lifecycle_deferred_transcription.py`.
 - _2026-10-17_ — rows 49–50 designed out: two races between a failed run's restore and the serve, both seen on CI as intermittent reds of tests that pass locally (`test_serve_while_the_output_is_stashed_then_restored`, scenario `reanalyse-fails-curation-survives`). Each now has a test that injects the restore into the window, so it is red every time without its fix. Score recomputed. Anchors: `_reattach_if_moved` and `_REATTACH_ROUNDS` in `server/app.py`, `completed_run_ids` and `run_event_watcher(imported=…)` in `server/event_watcher.py`.
@@ -110,6 +111,7 @@ row 42.
 | 52 | Apple's first-run speech model assumed the UI language and the recording was in another: kept, it would have been a transcript in the wrong language; or, as the run's only recording, the run would have been abandoned. The session is now deferred (`CauseCategoryEnum.DEFERRED`), kept out of the abandon predicate, said plainly ("Waiting for Whisper" in the CLI, *Waiting for download* on the Mac row), and transcribed by Whisper on the run the app starts when the download lands (18 Oct 2026, behind `experimental_apple_speech`) | `test_a_deferred_only_recording_is_not_an_abandoned_run`, `test_a_deferred_session_is_transcribed_on_the_next_run`; `test_stage_5_defers_a_session_in_the_wrong_language`; Swift `WaitingForDownloadRowTests` | red-first (the abandon and the cache); the Mac re-run on download has no unit seam beyond `isWaitingForWhisper` |
 | 27 | After a crash, the previous report stayed hidden until the next run started. The server now puts it back on start, but only over a **stranded** run (started, no terminus, no live owner): an absent output folder or one holding only a log is also a run's own start-up, and reclaiming there would put the old report back under it (15 Oct 2026, `output_backup.reclaim_after_crash`) | scenarios `crash-report-visible-before-rerun`, `server-in-run-start-up-leaves-backup`, `server-under-live-run-leaves-backup`; `server-restarted-mid-reanalyse` is the absent-folder guard | red-first; mutant (each guard alone) |
 | 34 | More than 50 projects: the 51st got no folder lease, so anything borrowing its folder got a bare path with no sandbox scope. The 50 watchers now go to the most recently opened projects, and opening a project or asking for its folder takes a lease on demand, the least recently opened giving way (15 Oct 2026, `ProjectIndex.ensureLease`). Masked in practice by row 39's leaked scope, which is why the cap never showed | `ProjectLeaseOnDemandTests` (4 tests, cap lowered to 1) | mutant (each of order, on-demand and eviction alone) |
+| 35 | The Mac app's `?immutable=1` reads see only the main database file, and the serve checkpointed its WAL only after an import: curation made in this session counted as zero, so **Re-analyse…** skipped its confirmation and discarded it, and a repaired fork's *Report out of date* row stayed until the serve stopped. Every serve connection now checkpoints after each commit (`PRAGMA wal_autocheckpoint=1`, `server/db.py`, 20 Oct 2026) | `tests/test_serve_wal_visibility.py` | b2b0f8e2 |
 | 29 | A folder moved or renamed forked the project, with the app closed or open; the report showed the stale first row. A study's own database now holds one study, found by its marker (`<output>/.bristlenose/study.json`, minted by the first run or serve, kept across Re-analyse), never matched by path; stored paths are healed; a fork left by an older release is removed at the next import unless curation hangs off it (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §3–4, §10) | scenario `moved-while-closed`; `test_lifecycle_end_to_end.py` (`…moved_while_closed_keeps_its_curation`); `tests/test_study_identity.py` | strict xfail flipped; mutant (six changes, each alone) |
 | 30 | A copied folder forked the same way. A copy now opens as the study it was copied from, with its curation, in its own database, so nothing written in one reaches the other; the app re-mints its id on arrival (phase 4) | scenario `copied-elsewhere`; `…a_copy_is_an_independent_duplicate` | strict xfail flipped |
 | 31 | A renamed interview got a new session id, so its stars, tags and edits were deleted, and it was transcribed again. A session is now found by its recording's content first (`utils/fingerprint.py`, registry version 3), then by its last known place (a cloud placeholder), then by name; transcription is keyed by content, and the stored file path is healed. Filing interviews into a subfolder is the same case (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §5–7) | `…renamed_interview_keeps_its_curation…`, `…filed_into_a_subfolder…` (`test_lifecycle_end_to_end.py`); `TestContentKeys`; `test_fingerprint.py`; the 12-Oct manifest migration test | strict xfail flipped; mutant (six of seven changes; the seventh was redundant and removed) |
@@ -126,7 +128,6 @@ row 42.
 |---|---|---|
 | 32 | Two servers, or two app windows on two machines, on one folder at once | no lock exists to test; SQLite serialises writes but imports can still race |
 | 33 | Network shares, ExFAT, iCloud-evicted databases | WAL is unsupported on network filesystems; needs real volumes, not a temp dir |
-| 35 | The Mac readers open the database with `?immutable=1`, which ignores the WAL: after a fork is repaired the *Report out of date* row stays until a checkpoint, and curation made this session can count as zero, so **Re-analyse…** skips its confirmation | a committed-but-uncheckpointed row is invisible to that open (measured against sqlite 3.53); needs a read without `immutable` falling back on `CANTOPEN`, or a Python-side checkpoint after curation writes — review finding, parked 12 Oct 2026 |
 | 36 | A damaged `projects.json` is set aside (row 25) and the next launch is an empty Welcome with nothing on screen; valid JSON from a newer build is treated as damage | no surfacing yet; an older `.dmg` opening a TestFlight-written file strands the sidebar in every build — parked 12 Oct 2026 |
 | 37 | A rename during a live run: Python holds the old path while the app follows and restarts the serve at the new one | product call: follow at once (report honest) or defer until no run (run honest) — open question 12 Oct 2026 |
 | 38 | A serve restart on a path change while the researcher is mid-edit in the report | rare and correct until shown otherwise — open question 12 Oct 2026 |
@@ -163,10 +164,10 @@ folder instead.
 
 ## The score
 
-**By count:** of 53 failure modes, 39 are designed out and proven (25 fixed on
+**By count:** of 53 failure modes, 40 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, and rows 51–52 of 18 Oct) — **74%**. Fourteen are
-open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, rows 51–52 of 18 Oct, and row 35 of 20 Oct) — **75%**. Thirteen are
+open: one engineered, twelve not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
 from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix. The denominator moved each time.)_
 

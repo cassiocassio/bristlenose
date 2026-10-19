@@ -317,7 +317,8 @@ every step is a no-op when already done.
    re-imported from the output on the next run, which is where their data
    came from. The kept row's id is whatever it is; §4's resolver reads it.
    The Mac's fork signal reads the row count with `?immutable=1`, so after a
-   collapse it stays on until the WAL is checkpointed (register row 35).
+   collapse it stayed on until the WAL was checkpointed (register row 35);
+   since 20 Oct 2026 every serve commit checkpoints, so it clears at once.
 3. **Registry v2 to v3** as §6 describes, as far as the bytes on disk allow.
 4. **Manifest fingerprints** are accepted in their old form once and
    rewritten (`fresh_session_ids(accept=…)`, already built).

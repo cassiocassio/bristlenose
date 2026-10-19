@@ -184,6 +184,41 @@ class TestDebug500Envelope:
         assert "Internal Server Error" in resp.text
 
 
+    def test_the_logged_traceback_keeps_its_lines(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The traceback rides as exc_info, not inside the message, so the
+        one-line log formatter leaves it readable."""
+        import logging
+
+        from fastapi import FastAPI
+
+        from bristlenose.logging import _OneLineFormatter
+        from bristlenose.server.app import create_app
+
+        monkeypatch.delenv("BRISTLENOSE_DEBUG_500", raising=False)
+        app: FastAPI = create_app(dev=False, db_url="sqlite://")
+
+        @app.get("/_boom")
+        async def _boom() -> None:
+            raise RuntimeError("kaboom")
+
+        records: list[logging.LogRecord] = []
+        handler = logging.Handler()
+        handler.emit = records.append  # type: ignore[method-assign]
+        log = logging.getLogger("bristlenose.server.app")
+        log.addHandler(handler)
+        try:
+            client = AuthTestClient(app, raise_server_exceptions=False)
+            assert client.get("/_boom").status_code == 500
+        finally:
+            log.removeHandler(handler)
+        [record] = [r for r in records if r.getMessage().startswith("unhandled")]
+        lines = _OneLineFormatter("%(message)s").format(record).splitlines()
+        assert lines[0] == "unhandled RuntimeError on /_boom"
+        assert any(line.endswith("Traceback (most recent call last):") for line in lines[1:])
+        assert lines[-1] == "RuntimeError: kaboom"
+
 class TestMimetypesKnownfilesEmptied:
     """Importing the `bristlenose` package must drop ``mimetypes.knownfiles``
     so any lazy ``mimetypes.init()`` walks an empty list. Reads of

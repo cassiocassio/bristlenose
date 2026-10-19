@@ -158,7 +158,7 @@ def create_app(
     async def _log_unhandled(request: Request, exc: Exception) -> PlainTextResponse:
         tb = traceback.format_exc()
         logger.error(
-            "unhandled %s on %s\n%s", type(exc).__name__, request.url.path, tb
+            "unhandled %s on %s", type(exc).__name__, request.url.path, exc_info=exc
         )
         if _debug_500:
             return PlainTextResponse(tb, status_code=500)
@@ -593,24 +593,22 @@ def _print_dev_urls() -> None:
     """Print all dev-mode URLs on startup (Cmd-clickable in iTerm)."""
     port = int(os.environ.get("_BRISTLENOSE_PORT", "8150"))
     b = f"http://localhost:{port}"
-    logger.info(
-        "\n"
-        "  Dev URLs (Cmd-click to open):\n"
-        "\n"
-        "  Report:           %s/report/\n"
-        "  Database browser: %s/admin/\n"
-        "  API docs:         %s/api/docs\n"
-        "  Sessions API:     %s/api/projects/1/sessions\n"
-        "  Sessions HTML:    %s/api/dev/sessions-table-html?project_id=1\n"
-        "  Dev info:         %s/api/dev/info\n"
-        "  Health:           %s/api/health\n"
-        "\n"
-        "  Design:\n"
-        "  Mockups:          %s/mockups/\n"
-        "  Experiments:      %s/experiments/\n"
-        "  Design system:    %s/design-system/\n",
-        b, b, b, b, b, b, b, b, b, b,
-    )
+    # One record per line: the log formatter escapes newlines inside a message.
+    for line in (
+        "Dev URLs (Cmd-click to open):",
+        f"  Report:           {b}/report/",
+        f"  Database browser: {b}/admin/",
+        f"  API docs:         {b}/api/docs",
+        f"  Sessions API:     {b}/api/projects/1/sessions",
+        f"  Sessions HTML:    {b}/api/dev/sessions-table-html?project_id=1",
+        f"  Dev info:         {b}/api/dev/info",
+        f"  Health:           {b}/api/health",
+        "Design:",
+        f"  Mockups:          {b}/mockups/",
+        f"  Experiments:      {b}/experiments/",
+        f"  Design system:    {b}/design-system/",
+    ):
+        logger.info("%s", line)
 
 
 # The Google-Fonts <link> tags in the Vite-built index.html. Matched on the

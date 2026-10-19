@@ -45,6 +45,27 @@ _BACKUP_COUNT = 2
 _NOISY_LOGGERS = ("httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper")
 
 
+# Control characters (tab aside) and Unicode line breaks, as visible escapes.
+_ONE_LINE = {c: f"\\x{c:02x}" for c in [*range(0x20), *range(0x7F, 0xA0)] if c != 0x09}
+_ONE_LINE |= {0x0A: "\\n", 0x0D: "\\r", 0x2028: "\\u2028", 0x2029: "\\u2029"}
+
+
+class _OneLineFormatter(logging.Formatter):
+    """A formatter that keeps each record's message on one line.
+
+    A newline in a logged value (a URL path parameter, a subprocess's stderr)
+    would otherwise start what reads as a second record in the log, and a
+    terminal escape could rewrite the line above. The message line shows them
+    as visible escapes (``\\n``, ``\\r``, ``\\x1b``) instead; a traceback or
+    stack, which ``format()`` appends after the message, keeps its own lines,
+    and so does an exception's own text. Backslashes are left alone so Windows
+    paths stay readable, which makes the escaping one-way.
+    """
+
+    def formatMessage(self, record: logging.LogRecord) -> str:  # noqa: N802
+        return super().formatMessage(record).translate(_ONE_LINE)
+
+
 def _parse_log_level(level_str: str) -> int:
     """Parse a log level string into a logging constant.
 
@@ -87,7 +108,7 @@ def setup_logging(
     terminal = logging.StreamHandler()
     terminal_level = logging.DEBUG if verbose else logging.WARNING
     terminal.setLevel(terminal_level)
-    terminal.setFormatter(logging.Formatter("%(levelname)s | %(name)s | %(message)s"))
+    terminal.setFormatter(_OneLineFormatter("%(levelname)s | %(name)s | %(message)s"))
     root.addHandler(terminal)
 
     # ── Log file handler ───────────────────────────────────────────
@@ -113,7 +134,7 @@ def _file_handler(output_dir: Path) -> logging.Handler:
     )
     handler.setLevel(_parse_log_level(os.environ.get("BRISTLENOSE_LOG_LEVEL", "INFO")))
     handler.setFormatter(
-        logging.Formatter(
+        _OneLineFormatter(
             "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )

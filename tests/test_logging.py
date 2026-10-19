@@ -255,3 +255,94 @@ class TestParseLogLevel:
         from bristlenose.logging import _parse_log_level
 
         assert _parse_log_level("banana") == logging.INFO
+
+
+class TestOneRecordOneLine:
+    """A newline in a logged value must not start what reads as a new record.
+    Server routes log request-derived strings (a URL path parameter, say) with
+    ``%s``; a ``%0A`` in one used to write a second, forged line to the log."""
+
+    HOSTILE = "a\nFAKE | forged\r\nFAKE2"
+
+    @staticmethod
+    def _log_lines(output_dir: Path) -> list[str]:
+        for h in logging.getLogger().handlers:
+            h.flush()
+        log = output_dir / ".bristlenose" / "bristlenose.log"
+        return log.read_text(encoding="utf-8").splitlines()
+
+    def test_a_newline_in_an_argument_stays_on_the_record_line(self, tmp_path: Path) -> None:
+        from bristlenose.logging import setup_logging
+
+        setup_logging(output_dir=tmp_path)
+        logging.getLogger("bristlenose.test").warning("x %s", self.HOSTILE)
+
+        lines = self._log_lines(tmp_path)
+        assert len(lines) == 1, lines
+        assert lines[0].endswith(r"| bristlenose.test | x a\nFAKE | forged\r\nFAKE2")
+
+    def test_the_terminal_line_is_escaped_too(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        from bristlenose.logging import setup_logging
+
+        setup_logging(output_dir=None)
+        logging.getLogger("bristlenose.test").warning("x %s", self.HOSTILE)
+
+        err = capsys.readouterr().err
+        assert err.splitlines() == [r"WARNING | bristlenose.test | x a\nFAKE | forged\r\nFAKE2"]
+
+    def test_a_traceback_keeps_its_lines(self, tmp_path: Path) -> None:
+        from bristlenose.logging import setup_logging
+
+        setup_logging(output_dir=tmp_path)
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            logging.getLogger("bristlenose.test").exception("failed on %s", "a\nb")
+
+        lines = self._log_lines(tmp_path)
+        assert lines[0].endswith(r"failed on a\nb")
+        assert lines[1] == "Traceback (most recent call last):"
+        assert lines[-1] == "ValueError: boom"
+
+    def test_a_reopened_log_file_is_escaped_too(self, tmp_path: Path) -> None:
+        from bristlenose.logging import reopen_log_file, setup_logging
+
+        out = tmp_path / "bristlenose-output"
+        setup_logging(output_dir=out)
+        out.rename(tmp_path / "set-aside")
+        (out / ".bristlenose").mkdir(parents=True)
+        assert reopen_log_file(out) is True
+        logging.getLogger("bristlenose.test").warning("x %s", self.HOSTILE)
+
+        assert len(self._log_lines(out)) == 1
+
+    def test_other_line_breaks_and_terminal_escapes_are_escaped(self) -> None:
+        from bristlenose.logging import _OneLineFormatter
+
+        record = logging.LogRecord(
+            "bristlenose.test", logging.WARNING, __file__, 1,
+            "x %s", ("a\x0bb\x0cc\x85d\u2028e\u2029f\x1b[1Ag\tTAB",), None,
+        )
+        line = _OneLineFormatter("%(message)s").format(record)
+        assert line == r"x a\x0bb\x0cc\x85d\u2028e\u2029f\x1b[1Ag" + "\tTAB"
+        assert len(line.splitlines()) == 1
+
+    def test_the_dev_url_banner_is_one_record_per_line(self) -> None:
+        from bristlenose.server.app import _print_dev_urls
+
+        records: list[logging.LogRecord] = []
+        handler = logging.Handler()
+        handler.emit = records.append  # type: ignore[method-assign]
+        log = logging.getLogger("bristlenose.server.app")
+        log.addHandler(handler)
+        old_level = log.level
+        log.setLevel(logging.INFO)
+        try:
+            _print_dev_urls()
+        finally:
+            log.removeHandler(handler)
+            log.setLevel(old_level)
+        assert any("/report/" in r.getMessage() for r in records)
+        assert all("\n" not in r.getMessage() for r in records)

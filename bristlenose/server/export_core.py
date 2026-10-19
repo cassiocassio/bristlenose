@@ -239,8 +239,10 @@ def extract_quotes_for_export(
             )
         )
 
-    # ── Sort by section display order, then timecode ───────────────────
-    results.sort(key=lambda eq: (section_order.get(eq.section, 999), eq.timecode))
+    # ── Sort by section display order, then time ───────────────────────
+    # By seconds, not by the formatted timecode: as text "1:00:05" sorts before "59:00".
+    start = {q.id: q.start_timecode for q in quotes}
+    results.sort(key=lambda eq: (section_order.get(eq.section, 999), start[eq.quote_id]))
 
     return results
 

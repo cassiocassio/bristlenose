@@ -244,3 +244,31 @@ class TestExtractQuotesForExport:
             db_session, project_id=1, quote_ids=["invalid-id"]
         )
         assert quotes == []
+
+
+def test_rows_sort_by_time_not_by_the_timecode_as_text(db_session):
+    """An hour-long session: 59:00 comes before 1:00:05. Sorted as text, "1:00:05" came first,
+    which reordered CSV rows and every board's theme columns."""
+    from bristlenose.server.models import Quote
+
+    early, late = (db_session.query(Quote).filter_by(project_id=1)
+                   .order_by(Quote.start_timecode).all()[:2])  # both in Dashboard
+    early.start_timecode, early.end_timecode = 3540.0, 3545.0
+    late.start_timecode, late.end_timecode = 3605.0, 3610.0
+    db_session.commit()
+    rows = [q for q in extract_quotes_for_export(db_session, project_id=1)
+            if q.section == "Dashboard"]
+    assert [q.timecode for q in rows] == ["59:00", "1:00:05"]
+
+
+def test_an_id_two_quotes_share_names_the_earlier(db_session):
+    """Two quotes from one speaker in the same second share a DOM id; it names the earlier, on
+    every export that takes a selection (CSV, XLSX, both boards)."""
+    from bristlenose.server.models import Quote
+
+    first, second = (db_session.query(Quote).filter_by(project_id=1)
+                     .order_by(Quote.start_timecode).all()[:2])
+    second.start_timecode, first.start_timecode = 10.2, 10.7
+    db_session.commit()
+    [row] = extract_quotes_for_export(db_session, project_id=1, quote_ids=["q-p1-10"])
+    assert row.quote_id == second.id

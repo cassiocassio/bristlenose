@@ -4,13 +4,30 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
+## Discussion lens — quotes are the report's own cards; empty questions are quiet
+
+**Date:** 19 Oct 2026
+**Branch:** main (`7940adc7`; the tab-bar fix `4a156328`)
+**Context:** the lens draws the Quotes lens's card through the shared store; hidden quotes leave the counts and are counted beside their question; a question with nothing to show is a grey row and heading (`docs/design-discussion-lens-plan.md` §3). `serve --dev trial-runs/project-ikea`, then `/report/discussion/`.
+
+- [ ] **A card works as on Quotes.** Hover a card: star and hide appear; star it, tag it with + (suggestions, grey completion, Enter), click the words to edit, remove the sentiment and restore it, accept and deny a dashed proposal.
+- [ ] **Links.** A card's timecode opens the player at that moment; its speaker badge opens the transcript there. A question row's timecode plays its session; its `m1` badge opens the transcript at that turn; no star, hide or + on a question row.
+- [ ] **Hiding.** Hide a card: it collapses, the question in All gains a blue "1 hidden quote" on the right, the guide's count drops by one; unhide from that list and it returns. In a session view the counter ends the question's block.
+- [ ] **Quiet empty question.** Hide every answer to one question: its guide row goes grey and in All only its grey heading (with the counter) remains; no "No quotes from this question" anywhere; no "Grey: …" line in the key.
+- [ ] **Keys.** Focus a question in the guide, click a card, press j/k (the cursor moves, the question stays lit), s, h, t; Esc once clears the card, again clears the question. Tab to a guide row with a card focused and press Enter: the row is pressed, nothing plays.
+- [ ] **Loading.** Reload on the Discussion lens: a "Loading" line, never a lens of grey unanswered questions, before the cards arrive.
+- [ ] **Mac app** (after `desktop/scripts/build-sidecar.sh` or a Cmd+R): ⌘A selects the lens's cards; the Quotes menu's Star/Hide/Tag act on a focused Discussion card.
+- [ ] **Tab bar.** In a browser, drag the window slowly across ~1000–1200px on the Project page: the bar changes spacing once at a threshold and holds (owner confirmed in Safari, 19 Oct).
+
+---
+
 ## Discussion lens — All sessions and the navigator measure
 
 **Date:** 18 Oct 2026
 **Branch:** main (`538a2869`…`083a4874`)
 **Context:** All is the first and default session choice from two sessions; the rows' session chips became a measure (bar + count → strip → grid) chosen by the guide's width. Built overnight; reviewed by /usual-suspects (Findings 45–69, `docs/private/reviews/discussion-lens.md`). Checked headless in Chromium and WebKit, never in the app's window. Needs a ⌘R first (the bundled report rebuilds). Try `trial-runs/rockclimbing-fresh` (8 sessions).
 
-- [ ] **Opens on All.** The Discussion lens opens on All with "All" lit in the session bar; each question once, a block per session led by its badge; "Not asked in #N" under questions some sessions skipped.
+- [ ] **Opens on All.** The Discussion lens opens on All with "All" lit in the session bar; each question once, a block per session led by its badge. (Since 19 Oct: only sessions with a quote to show get a block, and there is no "Not asked in" line — see the block below.)
 - [ ] **The measure grows with the guide.** Drag the guide's edge: bar + count → a strip of cells → a grid under one-digit session numbers (10–12 squeezed into the same width). Dragging feels smooth in All (measured 33 ms a step on 1,800 quotes in WebKit).
 - [ ] **Shading reads.** Empty slots are visible on the guide's tint; filled cells are clearly darker; the richest cells darkest. In light and dark. (The ramp changed to muted → ink for contrast — see the owner decisions in TODO.md.)
 - [ ] **Cells and lead-ins open a session at the question.** Click a cell, or a session's badge in All: that session opens with the question lit; a not-asked cell does nothing. After clicking a lead-in with the keyboard, focus is on the question, not the top of the page (VoiceOver too).

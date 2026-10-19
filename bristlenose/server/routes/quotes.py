@@ -473,7 +473,7 @@ def get_quotes(
 
         # Build themes
         themes_db = (
-            db.query(ThemeGroup).filter_by(project_id=project_id).all()
+            db.query(ThemeGroup).filter_by(project_id=project_id).order_by(ThemeGroup.id).all()
         )
         themes: list[ThemeResponse] = []
         for theme in themes_db:

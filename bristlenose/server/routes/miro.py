@@ -58,7 +58,7 @@ class MiroConnectRequest(BaseModel):
 class MiroExportRequest(BaseModel):
     board_name: str | None = None
     quote_ids: list[str] | None = None  # scope; None = all non-hidden
-    colour_by: str = "sentiment"
+    colour_by: str = "none"
     clips_base: str = ""  # opt-in clip-link folder base URL
     # The board is a deliverable, so its chrome follows the caller's UI
     # language. Unknown or absent falls back to English inside `t_in`, which is

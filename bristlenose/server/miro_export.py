@@ -220,7 +220,24 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
         tlabel = (q.theme or "").strip() or t_in(locale, "common.tags.other")
         themes.setdefault(tlabel, Column(tlabel, "theme", [])).quotes.append(card)
 
-    return list(sections.values()) + list(themes.values())
+    return list(sections.values()) + sorted(themes.values(), key=_theme_order(db, project_id))
+
+
+def _theme_order(db: Session | None, project_id: int) -> Callable[[Column], int]:
+    """Theme columns in the order the Quotes lens's Themes navigation lists them (`routes/quotes.py`
+    reads the themes by id), not by which has the earliest quote. A label the lens does not list
+    (the "other" column, a quote in two themes) comes after."""
+    from bristlenose.server.heading_names import HeadingNames
+    from bristlenose.server.models import ThemeGroup
+
+    if db is None:
+        return lambda _col: 0
+    names = HeadingNames.load(db, project_id)
+    rows = db.query(ThemeGroup).filter_by(project_id=project_id).order_by(ThemeGroup.id)
+    order: dict[str, int] = {}
+    for i, theme in enumerate(rows):
+        order.setdefault(names.theme(theme), i)
+    return lambda col: order.get(col.label, len(order))
 
 
 def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
@@ -252,7 +269,7 @@ def miro_board_name(locale: str, project_name: str, n: int) -> str:
 
 
 def build_board(db: Session, project_id: int, project_name: str,
-                quote_ids: list[str] | None, *, colour_by: str = "sentiment",
+                quote_ids: list[str] | None, *, colour_by: str = "none",
                 clips_base: str = "", locale: str = "en", split: bool = True,
                 shape: str = STICKY_SHAPE) -> Board:
     columns = build_columns(db, project_id, quote_ids, clips_base=clips_base, locale=locale)
@@ -288,7 +305,7 @@ def build_figjam_manifest(db: Session, project_id: int, project_name: str,
 
 
 def build_preview_html(db: Session, project_id: int, project_name: str,
-                       quote_ids: list[str] | None, *, colour_by: str = "sentiment",
+                       quote_ids: list[str] | None, *, colour_by: str = "none",
                        clips_base: str = "", locale: str = "en", split: bool = True,
                        shape: str = STICKY_SHAPE) -> str:
     """Creds-free: render exactly what would be pushed, as standalone HTML."""
@@ -361,7 +378,7 @@ def batches(n_items: int) -> int:
 
 
 def push_to_miro(token: str, db: Session, project_id: int, project_name: str,
-                 quote_ids: list[str] | None, *, colour_by: str = "sentiment",
+                 quote_ids: list[str] | None, *, colour_by: str = "none",
                  clips_base: str = "", locale: str = "en", split: bool = True,
                  shape: str = STICKY_SHAPE, progress: BoardProgress | None = None,
                  cancelled: Callable[[], bool] = lambda: False,

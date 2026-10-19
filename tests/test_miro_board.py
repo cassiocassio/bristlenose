@@ -181,18 +181,18 @@ def test_an_unpunctuated_quote_never_ends_a_part_on_a_word_that_leads_into_the_n
     assert " ".join(p.strip("…") for p in parts) == _RUN
 
 
-def test_an_elision_is_the_break_and_becomes_its_ellipsis() -> None:
-    """The extraction cut words out at " ... "; that seam is where a part breaks, and the parts
-    carry one ellipsis each side, never "..." beside "…"."""
+def test_a_part_never_breaks_at_an_elision() -> None:
+    """The extraction cut words out at " ... ". A break there turned that mark into the parts'
+    continuation "…", so the board no longer said anything had been left out (owner, 19 Oct
+    2026): the split goes elsewhere, and the mark stays inside a part, on both sides of it."""
     from bristlenose.board_layout import split_quote
 
     words = _RUN.split()
-    # A third of the way in, where an even split would not look.
-    text = " ".join(words[:19]) + " ... " + " ".join(words[19:51])
-    first, second = split_quote(text, at=200)
-    assert first.endswith(" stayed open…")
-    assert second.startswith("…long enough")
-    assert "..." not in first + second
+    for at in (19, 25, 30):  # off the even split, and right on it
+        text = " ".join(words[:at]) + " ... " + " ".join(words[at:51])
+        parts = split_quote(text, at=200)
+        assert len(parts) == 2
+        assert any(f"{words[at - 1]} ... {words[at]}" in p for p in parts), (at, parts)
 
 
 def test_a_pause_the_speaker_made_is_where_the_quote_breaks() -> None:

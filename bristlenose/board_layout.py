@@ -199,9 +199,10 @@ SPLIT_AT = 325
 MAX_PARTS = 3
 #: What a break is worth, as subtitlers rank them (BBC subtitle guidelines, "break at natural
 #: points"; Gerber-Morón & Szarkowska 2018 measured the reading cost of the alternative): the end of
-#: a sentence, then an elision the extraction made (" ... ", words already cut there), a clause or
-#: a speaker trailing off ("but... it's"), a phrase. Japanese and Chinese punctuation counts the
-#: same as its Latin kin.
+#: a sentence, then a clause or a speaker trailing off ("but... it's"), a phrase. Japanese and
+#: Chinese punctuation counts the same as its Latin kin. Never at an elision the extraction made
+#: (" ... ", words cut there): the break would turn the mark into the parts' "…", and the board would
+#: no longer say anything was left out (owner, 19 Oct 2026; it scored 9 until then).
 #: Closing marks a sentence end may sit inside: English, German („…“), French and Spanish («…»).
 _CLOSERS = "\"”“’)»›」』）"
 _TRAILING_OFF = re.compile(rf"\w(\.\.\.|…)[{_CLOSERS}]*$")
@@ -218,7 +219,7 @@ _KANA = re.compile(r"[\u3040-\u30ff]")
 KINSOKU_NO_START = ("、。，．・：；？！ー〜～…‥⋯」』）〕］｝〉》】〙〗⦆»〟’”)]}‐–—゠!?‼⁇⁈⁉:;.,·‧"
                     "ぁぃぅぇぉっゃゅょゎゕゖァィゥェォッャュョヮヵヶ々〻ゝゞヽヾ")
 KINSOKU_NO_END = "「『（〔［｛〈《【〘〖⦅«〝‘“([{"
-_SCORE = {"sentence": 10.0, "elision": 9.0, "clause": 6.0, "phrase": 4.0}
+_SCORE = {"sentence": 10.0, "clause": 6.0, "phrase": 4.0}
 #: Seconds of silence between two words are a break the speaker made: worth up to a sentence end,
 #: where the text has no mark to say so. Only there: a pause after a full stop is usual, and
 #: counting it pulled breaks off the even split for nothing (median worst part 8% → 17% off even
@@ -380,15 +381,15 @@ def _breaks(text: str, pauses: Mapping[int, float] | None,
 
     for k, gap in enumerate(gaps):
         before, after = token(k - 1), token(k)
-        if not _WORDY.search(after) and not _ELISION.match(after):
+        if _ELISION.match(before) or _ELISION.match(after):
+            continue  # either side of an elision: the mark must stay inside a part
+        if not _WORDY.search(after):
             continue  # French sets "?", ";" and "»" off with a space: never break before them
         if _OPENER.fullmatch(before):
             continue  # nor after an opening mark standing alone ("« Vraiment")
-        if not _WORDY.search(before) and not _ELISION.match(before) and k:
+        if not _WORDY.search(before) and k:
             before = token(k - 2) + before  # "Vraiment ? »": the mark belongs to its word
-        if _ELISION.match(before):  # it becomes the part's "…" (`split_quote`)
-            worth = _SCORE["elision"]
-        elif _TRAILING_OFF.search(before):
+        if _TRAILING_OFF.search(before):
             worth = _SCORE["clause"] - (_LEAD_PENALTY if _word(before) in rules.leads else 0.0)
         elif _SENTENCE_END.search(before):
             worth = _SCORE["sentence"]
@@ -529,9 +530,9 @@ def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS,
     for i, part in enumerate(parts):
         if i < len(parts) - 1:
             # "successful." goes on as "successful…": the full stop gives way to the ellipsis, as
-            # in a hand-split quote; a question or an exclamation keeps its mark. An elision at
-            # the break is already an ellipsis, so it becomes this one.
-            # Marks off first, then the elision they followed ("but...," / "said...;").
+            # in a hand-split quote; a question or an exclamation keeps its mark. A speaker
+            # trailing off ("but...") is already an ellipsis, so it becomes this one.
+            # Marks off first, then the ellipsis they followed ("but...," / "said...;").
             part = re.sub(r"\s*(\.\.\.|…)$", "", part.rstrip(",;:—–、，；： ")).rstrip(",;:—–、，；： ")
             # Only at a gap: a cut inside a token (an address, with no break near) keeps its dot.
             if cuts[i] >= len(text) or text[cuts[i]].isspace():
@@ -758,7 +759,7 @@ def _build_frame(
     return frame, stickies
 
 
-def layout_board(columns: list[Column], title: str, colour_by: str = "sentiment",
+def layout_board(columns: list[Column], title: str, colour_by: str = "none",
                  strings: BoardStrings | None = None, split: bool = True,
                  shape: str = STICKY_SHAPE) -> Board:
     """Two named frames: sections (left) then themes (right). Pure geometry."""

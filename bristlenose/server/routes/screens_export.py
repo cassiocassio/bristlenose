@@ -398,7 +398,7 @@ async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
 class ScreensMiroStart(BaseModel):
     board_name: str | None = None
     locale: str = "en"
-    colour_by: str = "sentiment"
+    colour_by: str = "none"
     #: Break a long quote into up to three grouped stickies, as on the quotes board.
     split_long_quotes: bool = True
     sticky_shape: Literal["rectangle", "square"] = "rectangle"

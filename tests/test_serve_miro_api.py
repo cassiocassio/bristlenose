@@ -328,3 +328,16 @@ def test_a_blank_board_name_falls_back_to_the_projects(client: TestClient) -> No
     url = "/api/projects/1/miro/preview"
     blank = client.post(url, json={"board_name": "   "}).json()["html"]
     assert blank == client.post(url, json={}).json()["html"]
+
+
+def test_a_miro_board_is_flat_unless_sentiment_is_asked_for(client: TestClient) -> None:
+    """Flat on every board by default, pink headers and yellow quotes (owner, 19 Oct 2026:
+    sentiment colouring distracts as often as it helps); the dialog still offers it."""
+    from bristlenose.board_palette import TOKEN_HEX
+
+    url = "/api/projects/1/miro/preview"
+    sentiment = {TOKEN_HEX[t] for t in ("red", "light_blue", "green")}  # the fixture's three
+    flat = client.post(url, json={}).json()["html"]
+    tinted = client.post(url, json={"colour_by": "sentiment"}).json()["html"]
+    assert not any(h in flat for h in sentiment)
+    assert all(h in tinted for h in sentiment)

@@ -19,7 +19,7 @@ trial runs, and split Japanese mid-word, because it knew no Japanese punctuation
 | Kind | Worth | Notes |
 |---|---|---|
 | Sentence end (`.?!` and `。！？`, inside any closing quote) | 10 | French spaced marks and « » stay with their sentence |
-| Elision the extraction made (" ... ") | 9 | becomes the part's "…" |
+| Elision the extraction made (" ... ") | never | 9 until 19 Oct 2026, when the owner ruled it out: a break there turned the omission mark into the parts' "…" |
 | Clause mark, or a speaker trailing off ("but...") | 6 | trailing off was a sentence end before; it isn't |
 | Comma (and `、，`) | 4 | |
 | Bare gap: the speaker's pause | up to 12 | 8 a second, capped at 1.5 s; only where there is no mark and not inside a phrase |

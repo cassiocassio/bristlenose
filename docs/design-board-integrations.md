@@ -385,7 +385,8 @@ set up twice) is unchanged.
 - Colour-by default — **resolved: flat (pink headers, yellow quotes) on every
   board.** Sentiment-colouring demoted to optional; custom-tag colouring (persona /
   cohort / campaign source / A/B) is the genuinely useful version, deferred. (See
-  *Colour* above.)
+  *Colour* above.) **Built 19 Oct 2026:** Miro's route, web panel and Mac sheet default to
+  flat too (they had defaulted to sentiment); sentiment stays offered in the dialog.
 
 ---
 

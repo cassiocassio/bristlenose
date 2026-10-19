@@ -286,3 +286,26 @@ def test_the_sessions_language_reaches_both_boards(db) -> None:
     assert a == b
     [parts] = [q["parts"] for f in b["frames"] for c in f["columns"] for q in c["quotes"]]
     assert len(parts) == 2 and not parts[0].endswith(" v…")
+
+
+def test_theme_columns_follow_the_quotes_lens_order(db) -> None:
+    """Themes read on the board in the order the Quotes lens's Themes navigation lists them, not
+    by whichever theme has the earliest quote: here the second theme's quote comes first."""
+    from bristlenose.server.models import ClusterQuote, Quote, ThemeGroup, ThemeQuote
+
+    client, session = db
+    first = session.query(ThemeGroup).filter_by(project_id=1).order_by(ThemeGroup.id).first()
+    later = ThemeGroup(project_id=1, theme_label="Later theme")
+    session.add(later)
+    session.flush()
+    early_quote = session.query(Quote).filter_by(participant_id="p1", start_timecode=46.0).one()
+    session.query(ClusterQuote).filter_by(quote_id=early_quote.id).delete()
+    session.add(ThemeQuote(quote_id=early_quote.id, theme_id=later.id))
+    session.commit()
+
+    lens = [t["theme_label"] for t in client.get("/api/projects/1/quotes").json()["themes"]]
+    assert lens[:2] == [first.theme_label, "Later theme"]
+    a, b = _both(session, None)
+    assert a == b
+    [themes] = [f["columns"] for f in b["frames"] if f["kind"] == "theme"]
+    assert [c["label"] for c in themes] == lens[:2]

@@ -135,9 +135,9 @@ Bristlenose's advantage: the definitions are in plain YAML, version-controlled, 
 2. Fork the codebook, tweak definitions, immediately get different results
 3. Share their refined codebook with colleagues (email a .yaml file)
 
-> **2 and 3 have no code path (20 Sep 2026).** `_load_template` reads only the
-> packaged directory (`bristlenose/server/codebook/__init__.py:179-183`), and
-> `POST /codebook/import-template` (`routes/codebook.py:694`) imports a *bundled*
+> **2 and 3 have no code path (20 Sep 2026).** `get_template` loads only the
+> bundled templates (`bristlenose/server/codebook/__init__.py:206-227`), and
+> `POST /codebook/import-template` (`routes/codebook.py:696`) imports a *bundled*
 > template into a project — it does not accept a user-supplied file. Both are true
 > of the repository, where anyone can edit a YAML; neither is true of the product.
 > "No shareable codebook artefact" is a long-standing open divergence — see

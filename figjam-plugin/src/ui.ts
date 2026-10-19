@@ -17,20 +17,22 @@ function show(text: string, problem = false): void {
   status.classList.toggle("problem", problem);
 }
 
+function build(text: string): void {
+  // Fonts load before the first sticky, so the count starts only once they have.
+  show("Preparing the board…");
+  bar.classList.add("on");
+  stop.hidden = false;
+  stop.disabled = false;
+  parent.postMessage({ pluginMessage: { type: "build", text } }, "*");
+}
+
 function send(file: File): void {
   if (file.size > MAX_FILE_BYTES) {
     show(REFUSAL_TEXT.too_large, true);
     return;
   }
   const reader = new FileReader();
-  reader.onload = () => {
-    // Fonts load before the first sticky, so the count starts only once they have.
-    show("Preparing the board…");
-    bar.classList.add("on");
-    stop.hidden = false;
-    stop.disabled = false;
-    parent.postMessage({ pluginMessage: { type: "build", text: String(reader.result) } }, "*");
-  };
+  reader.onload = () => build(String(reader.result));
   reader.onerror = () => show("That file couldn't be read. Try choosing it again.", true);
   reader.readAsText(file);
 }
@@ -62,6 +64,19 @@ drop.addEventListener("drop", (e) => {
   drop.classList.remove("over");
   const file = e.dataTransfer?.files?.[0];
   if (file) send(file);
+});
+
+// Bristlenose's Copy for FigJam puts the board on the clipboard; ⌘V in this panel
+// builds it, the same as choosing the file. Only plain text is read.
+document.addEventListener("paste", (e) => {
+  const text = e.clipboardData?.getData("text/plain") ?? "";
+  if (!text) return;
+  e.preventDefault();
+  if (text.length > MAX_FILE_BYTES) {
+    show(REFUSAL_TEXT.too_large, true);
+    return;
+  }
+  build(text);
 });
 
 type FromCode =

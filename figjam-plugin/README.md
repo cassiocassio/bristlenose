@@ -39,6 +39,8 @@ Needs the Figma desktop app. Build first, then in any FigJam board:
 Plugins › Development › Import plugin from manifest… and choose
 `figjam-plugin/manifest.json`. Run **Bristlenose board** and choose a file from
 Bristlenose's FigJam download, or `tests/fixtures/figjam-board-v1.json`.
+Pasting a board file's text into the plugin's window (⌘V) builds it too; tried
+in FigJam on 19 Oct 2026 with `publishing/sample-board.json`.
 
 ## Publishing to Figma Community
 

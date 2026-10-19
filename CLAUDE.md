@@ -116,6 +116,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 - **Any task is a claim about HEAD**: before the first edit, `git log -S` / grep for the fix or feature; a doc comment naming a collaborator is a version stamp; date the session's own commits before reasoning about the log.
 - **`git mv` after an unstaged edit commits the old content** (`R100` is the tell); `git diff --quiet` can't see a staged change (use `HEAD` or `status --porcelain`); compare trees, not commits, to ask whether a branch holds unique work.
 - **`git checkout` is hooked off in the main repo**: resolve conflicts with `git show :3:path > path`, rescue a file with `git show branch:path > path`. The native `pre-push` hook checks every ref; never `pre-commit install --hook-type pre-push`.
+- **During a release freeze, commit in a separate `git clone --local`** (hooks copied in, no `git switch`) and fetch the branch back as `after-pypi/<v>-…`; a fresh clone's first Swift build misses `GeneratedBuildInfo`.
 - **Worktrees** (rare): never remove one from inside it; check absolute paths in Edit calls; they don't inherit gitignored binaries; a sidecar built in one updates only that worktree.
 - **Cloud sessions**: local `main` is stale (read `origin/main`); rescue docs from `claude/…` branches with `git show`; use the GitHub MCP for PRs.
 

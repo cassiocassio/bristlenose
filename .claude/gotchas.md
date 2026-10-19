@@ -368,6 +368,17 @@ the local no longer did.
 - **Inside a cloud session, local `main` is stale — read `origin/main` instead.** The cloud env clones origin/main as the working branch at session start, then leaves the local `main` ref pointing at whatever commit it cloned from. Any subsequent commits to origin/main during the session don't update local `main`. Sitrep and "what shipped in the window" audits via `git log main --since=...` silently return a truncated view (only commits up to the cloud-clone point). Always use `origin/main` (or `HEAD` when on the working branch) for window queries from cloud: `git log origin/main --since="N days ago" --pretty=...`. Confirm at session start: `git rev-parse main` vs `git rev-parse origin/main` — if they differ, local `main` is the stale one
 - **Cloud session, no `gh` CLI — use the GitHub MCP for PR + merge.** When the user asks for a merge from a cloud env, the path is `mcp__github__create_pull_request` then `mcp__github__merge_pull_request` (load via ToolSearch with `select:` query). The MCP repo scope is restricted per the system prompt (`cassiocassio/bristlenose` only) — calls to other repos are denied. After merging from cloud, the version tag should be created from the dev machine (`git tag v<X.Y.Z> <merge-sha>`) before pushing to PyPI — `scripts/bump-version.py` writes and stages the version files for the local dev flow, and the tag belongs on the merge commit, which doesn't exist until the PR lands. (This used to say the script "tags HEAD-before-commit"; it no longer tags at all — 14 Aug 2026. The advice is unchanged, the reason is simpler.)
 
+### Work during a release freeze goes on a hold branch built in a separate CLONE
+
+A live `release.sh run` makes the `release-freeze` hook refuse commits in this checkout **and its worktrees** (the hook resolves `.release/` from `--git-common-dir`). A separate `git clone --local` has its own `.git`, so the hook passes there, and committing there moves neither `main` nor the release's working tree, which is the whole reason for the freeze. Measured 18 Oct 2026, landing three tested Zoom commits while 0.41.0 sat at its confirm prompt:
+
+- **Copy the house hooks in by hand** (`cp .git/hooks/pre-commit .git/hooks/commit-msg <clone>/.git/hooks/`): a clone gets no hooks, and the leak scan is the one you need.
+- **Never `git switch`/`checkout` in the clone either**: the PreToolUse hook matches the command text, not the repo. Use `git clone -b <branch>`, or commit on the clone's `main` and name the branch when you bring it back.
+- **Bring it back with a fetch**, `git -C <main repo> fetch <clone> main:refs/heads/after-pypi/<v>-<topic>`. That writes a ref and leaves HEAD alone. Name it `after-<channel>/<version>-…` so `release.sh verify` lists it.
+- **Run Python tests from inside the clone with `python -m pytest`**, so the clone's `bristlenose/` is first on `sys.path`; check `bristlenose.__file__` once, because the venv's editable install points at the main repo.
+- **The first Swift build of a fresh clone fails with `cannot find 'GeneratedBuildInfo' in scope`.** The Run Script phase writes the gitignored file after Xcode has already planned Compile Sources. Build again (or run `desktop/scripts/generate-build-info.sh` first); a normal checkout never hits it because the file is already there.
+- **Land with `git merge`, not cherry-pick**, so the hold's commit ids stay the ones another session or `verify` sees as merged.
+
 ## Tests, gates and verification
 
 ### Ruff F401 (unused imports) — reports only, won't auto-fix

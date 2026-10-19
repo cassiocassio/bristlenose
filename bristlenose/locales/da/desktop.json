@@ -309,7 +309,9 @@
         "render": "Bygger rapport",
         "pii": "Fjerner personlige oplysninger",
         "discussion": "Knytter citater til spørgsmål"
-      }
+      },
+      "waitingForWhisper": "Venter på Whisper",
+      "waitingForWhisperHint": "Apples talemodel var ikke sikker på, hvad den hørte, så Whisper transskriberer det, når den er på denne Mac."
     },
     "folderNamePlaceholder": "Mappenavn",
     "projectNamePlaceholder": "Projektnavn",
@@ -893,7 +895,17 @@
     "backendHint": "Auto registrerer den bedste motor til din Mac.",
     "modelRecommended": "{{model}} (anbefalet)",
     "readScreensLabel": "L\u00e6s delte sk\u00e6rme",
-    "readScreensHint": "L\u00e6ser teksten p\u00e5 sk\u00e6rme, der deles i optagelser, p\u00e5 denne Mac og gemmer den sammen med sm\u00e5 billeder af hver sk\u00e6rm i projektets mappe. Sendes aldrig til AI\u2019en."
+    "readScreensHint": "L\u00e6ser teksten p\u00e5 sk\u00e6rme, der deles i optagelser, p\u00e5 denne Mac og gemmer den sammen med sm\u00e5 billeder af hver sk\u00e6rm i projektets mappe. Sendes aldrig til AI\u2019en.",
+    "engineLabel": "Transskribér med",
+    "engineWhenReady": "Whisper, når den er klar",
+    "engineWhisperOnly": "Kun Whisper",
+    "engineApple": "Apples talemodel",
+    "engineHint": "Apples talemodel er indbygget i macOS og er hurtigere. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, større grupper og sprog, Apples model mangler, bedre.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "På denne Mac · {{size}}",
+    "whisperMissing": "Ikke på denne Mac",
+    "whisperFailed": "Downloaden blev ikke færdig.",
+    "downloadNow": "Hent nu"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurer AI på enheden",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Sedlernes form:",
     "saveBoardFile": "Gem boardfil …"
+  },
+  "modelDownload": {
+    "title": "Henter Whisper",
+    "failedTitle": "Whisper blev ikke hentet",
+    "why": "Til dine næste optagelser. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, og større grupper bedre.",
+    "stop": "Stop download",
+    "stopNote": "Starter forfra næste gang."
   }
 }

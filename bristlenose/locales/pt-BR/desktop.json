@@ -309,7 +309,9 @@
         "render": "Criando relatório",
         "pii": "Removendo informa\u00e7\u00f5es pessoais",
         "discussion": "Associando cita\u00e7\u00f5es \u00e0s perguntas"
-      }
+      },
+      "waitingForWhisper": "Aguardando o Whisper",
+      "waitingForWhisperHint": "O modelo de fala da Apple não teve certeza do que ouviu, então o Whisper vai transcrever quando estiver neste Mac."
     },
     "folderNamePlaceholder": "Nome da pasta",
     "projectNamePlaceholder": "Nome do projeto",
@@ -893,7 +895,17 @@
     "backendHint": "Automático detecta o melhor motor para o seu Mac.",
     "modelRecommended": "{{model}} (recomendado)",
     "readScreensLabel": "Ler telas compartilhadas",
-    "readScreensHint": "L\u00ea o texto das telas compartilhadas nas grava\u00e7\u00f5es, neste Mac, e o guarda com pequenas imagens de cada tela na pasta do projeto. Nunca \u00e9 enviado \u00e0 IA."
+    "readScreensHint": "L\u00ea o texto das telas compartilhadas nas grava\u00e7\u00f5es, neste Mac, e o guarda com pequenas imagens de cada tela na pasta do projeto. Nunca \u00e9 enviado \u00e0 IA.",
+    "engineLabel": "Transcrever com",
+    "engineWhenReady": "Whisper quando estiver pronto",
+    "engineWhisperOnly": "Somente Whisper",
+    "engineApple": "Modelo de fala da Apple",
+    "engineHint": "O modelo de fala da Apple vem com o macOS e é mais rápido. O Whisper lida melhor com áudio ruim, pessoas falando ao mesmo tempo, grupos maiores e idiomas que o modelo da Apple não tem.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Neste Mac · {{size}}",
+    "whisperMissing": "Não está neste Mac",
+    "whisperFailed": "O download não foi concluído.",
+    "downloadNow": "Baixar agora"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Configurar IA no dispositivo",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Formato das notas:",
     "saveBoardFile": "Salvar arquivo do quadro…"
+  },
+  "modelDownload": {
+    "title": "Baixando o Whisper",
+    "failedTitle": "O Whisper não foi baixado",
+    "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio ruim, pessoas falando ao mesmo tempo e grupos maiores.",
+    "stop": "Parar download",
+    "stopNote": "Da próxima vez, recomeça do início."
   }
 }

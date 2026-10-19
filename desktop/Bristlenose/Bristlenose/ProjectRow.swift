@@ -271,7 +271,7 @@ struct ProjectRow: View {
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .copyCancelling:
+             .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
             subtitleText(prefix: nil,
                          text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
@@ -335,6 +335,8 @@ struct ProjectRow: View {
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])
         case .copyCancelling:
             return i18n.t("desktop.chrome.copyCancelling")
+        case .waitingForWhisper:
+            return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
         case .cantFind, .failed, .failedDiagnostic, .completedPartial,
              .ready, .deltaOnly, .placeholder:
             return nil
@@ -647,6 +649,12 @@ struct ProjectRow: View {
         if case .running = pipelineState, !isStoppingProgress {
             parts.append(runningSubtitle(separator: " · "))
         }
+        // "Waiting for Whisper" said whole — the twin of the AppKit cell's
+        // tooltip (`SidebarSubtitleText.tooltip`), so the shipping sidebar
+        // explains the state too.
+        if case .waitingForWhisper = subtitleVariant {
+            parts.append(SidebarSubtitleText.waitingForWhisperHint(i18n: i18n))
+        }
         if let count = unanalysed?.sessionCount {
             parts.append(interviewCountText(count))
         }
@@ -696,7 +704,7 @@ struct ProjectRow: View {
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .copyCancelling:
+             .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
             // Comma separator: VoiceOver reads commas as pauses
             // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
             return pipelineActivityText(variant, separator: ", ")

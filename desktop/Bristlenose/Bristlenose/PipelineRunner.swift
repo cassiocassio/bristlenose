@@ -344,7 +344,10 @@ final class PipelineRunner: ObservableObject {
     )
 
     @Published private(set) var state: [UUID: PipelineState] = [:] {
-        didSet { syncSleepAssertion() }
+        didSet {
+            syncSleepAssertion()
+            rerunWaitingProjectsIfWhisperIsReady()
+        }
     }
 
     /// Transient "Adding N interviews…" gesture counts, keyed by project. Set by
@@ -523,6 +526,60 @@ final class PipelineRunner: ObservableObject {
 
     init() {
         Self.logger.info("PipelineRunner initialised")
+        // Whisper landed: every project with a session deferred to it (Apple's
+        // first-run model, the wrong language) runs again, and the per-session
+        // fingerprints mean only those sessions are transcribed
+        // (docs/design-apple-first-transcription.md §2).
+        whisperReadyObserver = NotificationCenter.default.addObserver(
+            forName: .bristlenoseWhisperReady, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.rerunDeferredProjects() }
+        }
+    }
+
+    private var whisperReadyObserver: NSObjectProtocol?
+
+    /// The projects whose last run left a session waiting for Whisper.
+    var projectsWaitingForWhisper: [UUID] {
+        state.compactMap { id, s in Self.isWaitingForWhisper(s) ? id : nil }
+    }
+
+    /// True when the run finished with at least one session deferred to
+    /// Whisper. Any other failure beside it keeps the row on its own glyph;
+    /// the re-run is still owed.
+    nonisolated static func isWaitingForWhisper(_ state: PipelineState) -> Bool {
+        guard case .completedPartial(let summary) = state else { return false }
+        return summary.allFailures.contains { $0.cause.category == .deferred }
+    }
+
+    /// Projects already re-run for Whisper in this process. Once each: with
+    /// Whisper on disk the run sends a session Apple's model is unsure of to
+    /// Whisper there and then, so a second "waiting" would be a defect, and a
+    /// defect must not become a loop of paid runs.
+    private var rerunForWhisper: Set<UUID> = []
+
+    private func rerunDeferredProjects() {
+        guard BristlenoseFlags.appleSpeechAvailable, let projects = projectIndex?.projects else { return }
+        for id in projectsWaitingForWhisper where !rerunForWhisper.contains(id) {
+            guard let project = projects.first(where: { $0.id == id }) else { continue }
+            rerunForWhisper.insert(id)
+            Self.logger.info(
+                "re-running for deferred sessions project=\(id.uuidString, privacy: .public)"
+            )
+            start(project: project)
+        }
+    }
+
+    /// Level, not edge: a project can reach "waiting" after Whisper has
+    /// landed — the download finished while its run was still in the LLM
+    /// stages, or a launch scan read it after the status probe. Checked on
+    /// every state change, acted on a turn later (never inside `didSet`).
+    private func rerunWaitingProjectsIfWhisperIsReady() {
+        guard BristlenoseFlags.appleSpeechAvailable,
+              WhisperDownloadModel.shared.phase == .onDisk,
+              projectsWaitingForWhisper.contains(where: { !rerunForWhisper.contains($0) })
+        else { return }
+        Task { @MainActor [weak self] in self?.rerunDeferredProjects() }
     }
 
     /// Inject the shared `ProjectIndex` so `startNextQueued()` can resolve a
@@ -1549,6 +1606,14 @@ var args = ["run", project.path, "--no-serve"]
         guard gen == generation else { return }
 
         let clean = BristlenoseShared.stripANSI(line)
+        // The run's engine, printed once at its Whisper preflight. On Apple's
+        // model the app fetches Whisper behind it; the run itself never does.
+        if clean.hasPrefix("@transcription-engine ") {
+            if clean.hasSuffix(" apple") {
+                NotificationCenter.default.post(name: .bristlenoseAppleSpeechRunStarted, object: nil)
+            }
+            return
+        }
         // Redact key-shaped substrings before buffering — this buffer is shown
         // in the diagnostic popover and copied by "Copy error details", so a
         // Python-side key echo (pydantic SecretStr in a traceback, SDK debug

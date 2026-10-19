@@ -115,6 +115,12 @@ class CauseCategoryEnum(str, Enum):
     # localises from — ``Cause.message`` is the English fallback, not the
     # source. See bristlenose/refusals.py.
     UNUSABLE_INPUT = "unusable_input"
+    # Not transcribed yet, on purpose: Apple's first-run model was asked to
+    # assume the UI language and the recording did not sound like it, so the
+    # session waits for Whisper, which detects the language
+    # (docs/design-apple-first-transcription.md §2). Retryable: the next run
+    # after Whisper is on disk transcribes it. Not a reason to abandon a run.
+    DEFERRED = "deferred"
     UNKNOWN = "unknown"
 
 
@@ -198,6 +204,8 @@ _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     # a media extension. Re-running refuses it identically, like MISSING_INPUT
     # — the remedy is a different file, not another attempt.
     CauseCategoryEnum.UNUSABLE_INPUT: False,
+    # Waiting for Whisper; the run after it lands transcribes the session.
+    CauseCategoryEnum.DEFERRED: True,
     CauseCategoryEnum.UNKNOWN: True,
 }
 

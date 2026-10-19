@@ -309,7 +309,9 @@
         "render": "Rakennetaan raporttia",
         "pii": "Poistetaan henkil\u00f6tietoja",
         "discussion": "Yhdistet\u00e4\u00e4n sitaatteja kysymyksiin"
-      }
+      },
+      "waitingForWhisper": "Odottaa Whisperiä",
+      "waitingForWhisperHint": "Applen puhemalli ei ollut varma kuulemastaan, joten Whisper litteroi sen, kun se on tällä Macilla."
     },
     "folderNamePlaceholder": "Kansion nimi",
     "projectNamePlaceholder": "Projektin nimi",
@@ -893,7 +895,17 @@
     "backendHint": "Automaattinen tunnistaa parhaan moottorin Macillesi.",
     "modelRecommended": "{{model}} (suositeltu)",
     "readScreensLabel": "Lue jaetut n\u00e4yt\u00f6t",
-    "readScreensHint": "Lukee tallenteissa jaettujen n\u00e4ytt\u00f6jen tekstin t\u00e4ll\u00e4 Macilla ja tallentaa sen pienten n\u00e4ytt\u00f6kuvien kanssa projektin kansioon. Teksti\u00e4 ei koskaan l\u00e4hetet\u00e4 teko\u00e4lylle."
+    "readScreensHint": "Lukee tallenteissa jaettujen n\u00e4ytt\u00f6jen tekstin t\u00e4ll\u00e4 Macilla ja tallentaa sen pienten n\u00e4ytt\u00f6kuvien kanssa projektin kansioon. Teksti\u00e4 ei koskaan l\u00e4hetet\u00e4 teko\u00e4lylle.",
+    "engineLabel": "Litteroi käyttäen",
+    "engineWhenReady": "Whisper, kun se on valmis",
+    "engineWhisperOnly": "Vain Whisper",
+    "engineApple": "Applen puhemalli",
+    "engineHint": "Applen puhemalli on osa macOS:ää ja on nopeampi. Whisper selviää paremmin huonosta äänestä, päällekkäisestä puheesta, suuremmista ryhmistä ja kielistä, joita Applen mallissa ei ole.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Tällä Macilla · {{size}}",
+    "whisperMissing": "Ei tällä Macilla",
+    "whisperFailed": "Lataus ei valmistunut.",
+    "downloadNow": "Lataa nyt"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Määritä laitteella toimiva tekoäly",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Lappujen muoto:",
     "saveBoardFile": "Tallenna taulutiedosto…"
+  },
+  "modelDownload": {
+    "title": "Ladataan Whisperiä",
+    "failedTitle": "Whisperin lataus epäonnistui",
+    "why": "Seuraavia tallenteitasi varten. Whisper selviää paremmin huonosta äänestä, päällekkäisestä puheesta ja suuremmista ryhmistä.",
+    "stop": "Pysäytä lataus",
+    "stopNote": "Alkaa ensi kerralla alusta."
   }
 }

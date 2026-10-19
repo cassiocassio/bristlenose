@@ -1,12 +1,14 @@
 ---
-status: proposal
+status: built, parked behind a flag (§8)
 date: 18 Oct 2026
-revised: 18 Oct 2026, after five reviews (§7)
+revised: 18 Oct 2026, after five reviews (§7); built the same day (§8)
 ---
 
 # Apple first, Whisper next: the first recordings on a new Mac
 
-**Proposal, 18 Oct 2026. Nothing here is built.** Evidence:
+**Built 18 Oct 2026 and parked: off unless `BristlenoseAppleSpeech` (Mac) and
+`experimental_apple_speech` (Python) are on. §8 records what was built, where it
+departs from §1–§4, and what is still owed.** Evidence:
 `experiments/apple-speech/README.md` (the trial, 18 Oct 2026). Storyboard:
 `docs/mockups/apple-first-first-run.html`.
 
@@ -77,7 +79,7 @@ locale as **assumed**, never as `detected`, so subtitles and clips don't inherit
 
 | # | Piece | Where | Notes |
 |---|---|---|---|
-| A | **Speech helper** `bristlenose-speech`: WAV + locale in, JSON out (segments, words with time ranges and confidences, asset version) | new `desktop/speech-helper/` | Most of it is `experiments/apple-speech/transcribe.swift`. **Built like `desktop/mcp-helper/`** (embedded Info.plist, `PrivacyInfo.xcprivacy`, minos = the app's 15.0 floor, `Contents/Helpers`), **signed like ffmpeg** (`sign-ffmpeg.sh`: sandbox + inherit, because the sidecar launches it; mcp-helper is sandboxed *without* inherit because a foreign app launches it). Its own gate script, not a copy of `check-mcp-helper.sh`, which asserts the opposite. `if #available(macOS 26, *)`; reports *unavailable* below. Holds its own five locale reservations and releases each after use, by the stored `Locale` object |
+| A | **Speech helper** `bristlenose-speech`: WAV + locale in, JSON out (segments, words with time ranges and confidences, asset version) | new `desktop/speech-helper/` | Most of it is `experiments/apple-speech/transcribe.swift`. **Built like `desktop/mcp-helper/`** (embedded Info.plist, no privacy manifest of its own (§8), minos = the app's 15.0 floor, `Contents/Helpers`), **signed like ffmpeg** (`sign-ffmpeg.sh`: sandbox + inherit, because the sidecar launches it; mcp-helper is sandboxed *without* inherit because a foreign app launches it). Its own gate script, not a copy of `check-mcp-helper.sh`, which asserts the opposite. `if #available(macOS 26, *)`; reports *unavailable* below. Holds its own five locale reservations and releases each after use, by the stored `Locale` object |
 | B | **Engine decision + backend** | `s05_transcribe.py` | A **separate** decision function fed settings, env and the helper's availability. `_resolve_backend` stays as it is: the preflight (`whisper.py:148`) and `doctor` share it, and a third value would pick the wrong repo table. `_init_apple_backend` returns `TranscriptSegment`s with words, `source = "apple-speech"`, **re-segmented** on word gaps over ~0.7 s and sentence ends (Apple's results are long, and stage 5b labels per segment). Keeps the signal gate; skips the style prompt, echo filter and inaudible marker (Whisper-specific). Applies the gate (§2) |
 | C | **No fetch from Python on the Apple path** | `pipeline.py` `_needs_whisper` block | With the helper set, Python never fetches: the app owns the one download. A deferred session waits on that job by its outcome, never by calling `ensure_hf_model` itself (two fetchers of one repo each write their own partial under hf_xet) |
 | D | **The download job** | Swift `WhisperDownloadModel` (app-level `@StateObject`, sibling of `OllamaDownloadModel`), single-flight across windows; Python **`bristlenose doctor --fetch`** (already a sidecar passthrough) | `doctor --fetch` gains one structured progress line per tick from `ensure_hf_model(tqdm_class=)` (the seam `_native_download_progress` already uses), parsed like `ServeManager.handleLine`. Bytes from the wire, total from the server, not `_DOWNLOAD_MB` (which drifts) or blob growth (which hf_xet chunking distorts). Restart on relaunch when `cache_state == "partial"` (the appliance copes). **One probe of "is Whisper on disk"**: Swift asks Python (the job's answer, or `doctor`), never computes the Hugging Face cache path itself; and reconcile the two Python probes that already disagree (`doctor` uses `scan_cache_dir`, which reads a config-only partial as cached; the preflight's `cache_state` checks the heavy blob). Starts at the first Apple run, or at the first welcome screen if the owner prefers (§6) |
@@ -190,3 +192,115 @@ Diagnostics row's missing `backend` render; then one cache probe instead of a th
 settings pane's refit and the interim-picker test, the *Whisper only* wire, no ring on a
 deferred row, and the shipped tilde wording as its own question. Also found: `desktop/CLAUDE.md` put the Whisper
 model in Application Support; it lands in the container's Hugging Face cache (corrected).
+
+## 8. As built (18 Oct 2026)
+
+Built the same day as the plan, on branch `apple-first-transcription`, and parked:
+nothing runs unless `BristlenoseAppleSpeech` is set on the Mac **and** the helper is in
+the bundle (`BristlenoseFlags.appleSpeechAvailable`), which while parked means a Debug
+build. Python's `experimental_apple_speech` is off by default too, and the CLI never has
+the helper, so it never takes the path.
+
+**Where it is.** Python: `bristlenose/apple_speech.py` (locale table, engine decision,
+re-segmentation, gate, helper runner); stage 5's `decide_engine`, `_init_apple_backend` and
+`_with_whisper_fallback`; the pipeline's engine pin and preflight skip; `doctor --fetch
+--progress-lines` and `doctor --whisper-status`. Swift: `desktop/speech-helper/` (the
+helper, its build script) and `desktop/scripts/check-speech-helper.sh`;
+`WhisperDownloadModel.swift`, `WhisperDownloadPill.swift`, the Transcription pane, the
+`.waitingForWhisper` row, `BristlenoseShared.appleSpeechEnvironment`. The JSON contract
+between the two is `tests/fixtures/apple-speech/`. Tests: `tests/test_apple_speech.py`,
+`tests/test_lifecycle_deferred_transcription.py`, `BristlenoseTests/WhisperDownloadTests.swift`.
+
+**Measured on the real helper** (unsandboxed copy, synthetic speech, 18 Oct 2026): English
+under en-GB kept, mean confidence 0.94; German under en-GB deferred at **0.46**, just under
+the 0.5 bar, while words per minute of signal (185) did not trip. The trial's real
+wrong-locale recordings scored 0.10–0.30, so clean audio narrows the margin a lot. The code
+review also ran the gate over the trial's 42 right-locale outputs: it defers **3**
+(es-1 at 0.476, it-3, pt-pt-2). es-1 is arguably right to defer (Apple 841 words against
+Whisper's 2,034). So the gate is as much a quality gate as a language gate, and the copy
+no longer names a language or a cause (below).
+
+**Where it departs from §1–§4, and why.**
+
+- **A deferred session goes to Whisper in the same run when Whisper is on disk** (it landed
+  mid-run, or the mode is *Apple's speech model*). Otherwise it waits. §1's "engine chosen
+  once per run" holds for every session Apple keeps. Without this, *Apple's speech model*
+  mode deferred the same session for ever. Any helper failure (crash, timeout, offline
+  locale fetch) takes the same route instead of being recorded as a Whisper failure, and
+  after an engine-level exit (3, 4, 5) later sessions skip the helper.
+- **Zero words over any sound defers**, however short the file: kept, it was cached as
+  *no speech* and never reached Whisper.
+- **Apple only when the UI language is the researcher's**: picked in Settings, or among the
+  Mac's preferred languages (`BRISTLENOSE_SPEECH_UI_MATCHED`). A Greek or Hindi Mac, which
+  the app shows in English, keeps Whisper's detection, as `cca68462` intended.
+- **Swift learns about a deferral from the run's summary**, not a new `RunProgressEvent`
+  field (§4.4): the `run_completed` summary already carries it, and that is what the row
+  and the re-run read.
+- **The row says *Waiting for Whisper*, not *Waiting for download***: the download may have
+  failed or been stopped, and the first wording would then be false. Its tooltip (both
+  sidebars) says *Apple's speech model wasn't sure of what it heard, so Whisper will
+  transcribe it once it's on this Mac.* No language and no cause, because the gate knows
+  neither. The tooltip builder's own rule says "do not grow this"; this is the row's own
+  line said whole, as the running ladder is, not a further condition. Reviewers suggested a
+  per-session note in the report instead (open, below).
+- **The pill says *Downloading Whisper*** (one name for one thing; Apple's model is also a
+  speech model). It stays up after a failure with Retry, and goes after a deliberate Stop.
+- **A deliberate Stop Download is remembered** across launches: the app does not restart
+  1.6 GB on its own until Download Now. A download the app quits on stops with it, and the
+  sidecar's parent-death watcher is the backstop.
+- **The re-run is level, not edge**: any project that reads *waiting* while Whisper is on
+  disk runs again, once per launch, so the usual case (Whisper lands while the run is still
+  in its LLM stages) is caught when the run ends, and a launch catches what the last
+  session missed.
+- **The helper ships in Debug builds only** while parked; the archive path refuses the
+  override, and `check-pkg-shippable.sh` / `check-dmg-shippable.sh` fail if a copy is ever
+  in a release bundle. It needs no `PrivacyInfo.xcprivacy` (§3 A said one): a bare Mach-O
+  cannot carry one, the app's manifest covers first-party code, and the helper calls no
+  required-reason API. No `NSSpeechRecognitionUsageDescription` either: the trial measured
+  no prompt, and Apple scopes that permission to server recognition.
+- **Settings**: with the flag on and macOS 26 or later, *Transcribe with* and the Whisper
+  row; the engine and model pickers move behind the Diagnostics preference (still
+  reachable, because the model a run uses is still that preference). Below 26, or with the
+  flag off, the pane is as it shipped, so `tests/test_interim_model_pickers.py` stands.
+- **§3 E was already there**: the Diagnostics panel always rendered the engine. What it
+  lacked was Apple's fields; it now shows *Apple speech model*, the locale as *assumed* and
+  the gate's verdict, and drops Whisper's rows.
+
+**Fixed on the way, flag or not.** A session whose transcription **failed** was marked
+complete in the manifest, so every later run served its empty result from the cache and
+the recording never came back. Failed sessions are now recorded FAILED and retried, and a
+retry is not counted as a new session (lifecycle register rows 51–52). `doctor` now asks
+the preflight's own probe, so it no longer calls a stopped download cached.
+
+**Reviews** (18 Oct 2026, four, on the built code: correctness, silent failures, App
+Store, Mac taste). Everything above under *departs* came from them, plus: the helper is
+killed on any abnormal exit and a timeout is named; `@download-done` is printed only when
+the run will find the model; the status probe has a timeout and logs its failures; the
+download's stderr tail is logged; an unknown total shows the bytes; pipes are split on
+newline bytes; the moderator checks now include Apple transcripts; the probe runs only
+when the cheap cache check says it is needed.
+
+**Still owed, or the owner's call.**
+
+- **Owner:** the pop-up labels (a reviewer proposed *Automatic* / *Whisper Only* /
+  *Apple's Model First*); whether the row shows a count (*2 interviews waiting for
+  Whisper*, needs plural keys) and a per-session note in the report; whether re-running a
+  waiting project unasked is the appliance coping or a cost to approve (each re-run
+  re-transcribes only the deferred sessions, then re-runs the LLM stages); the wording of
+  every new string, which all 21 locales carry as first drafts for native review.
+- **Measure** the gate on more files, real ones, before the flag comes off; the margin above
+  is thin.
+- **Run the helper in its shipping position** once, a Debug build with the sidecar launching
+  it, to confirm no prompt and no sandbox denial. Only a standalone sandboxed launcher has
+  been measured.
+- **Two fetchers are still possible** in one case: a run on the Whisper path (*Whisper
+  only*, or a language Apple lacks) while the app's job is downloading. Routing every
+  fetch through the app's job while the flag is on would close it.
+- **At graduation:** the helper's checks belong in `check-pkg-shippable.sh`,
+  `check-dmg-shippable.sh` and `check-release-binary.sh` (not `test_entitlements_split.py`
+  or `check-bundle-integrity.py`, which never see `Contents/Helpers`); replace the stale
+  "four executables" counts with one list; write the Notes for Review paragraph; remove
+  the flag.
+- **Not built:** §3 F's warning when a `--clean`, an un-`-p` copy or a moved folder would
+  re-transcribe an Apple session under Whisper; a Remove action for Whisper on disk; moving
+  the Ollama pill strings into the shared `modelDownload` namespace.

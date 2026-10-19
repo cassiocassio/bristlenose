@@ -285,6 +285,21 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6c. The Apple speech helper — PARKED (design-apple-first-transcription.md §8)
+#
+# Embedded in Debug builds only while BristlenoseAppleSpeech is parked. A copy
+# in a release archive is a leak (an exported override, a stale product), and
+# nothing else here would notice: it is sandboxed like any helper. When the
+# feature graduates, replace this with a run of check-speech-helper.sh.
+# ---------------------------------------------------------------------------
+SPEECH_COPIES="$(find "$APP/Contents" -type f -name bristlenose-speech | wc -l | tr -d ' ')"
+if [ "$SPEECH_COPIES" = 0 ]; then
+    ok "Apple speech helper" "absent (parked)"
+else
+    die "Apple speech helper" "$SPEECH_COPIES parked cop(ies) in a release archive"
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Framework identifiers — ASC rejection #3, 14 Jul 2026
 #
 # sign-sidecar.sh passes --identifier from each framework's CFBundleIdentifier.

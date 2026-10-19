@@ -309,7 +309,9 @@
         "render": "Rapor oluşturuluyor",
         "pii": "Ki\u015fisel bilgiler kald\u0131r\u0131l\u0131yor",
         "discussion": "Al\u0131nt\u0131lar sorularla e\u015fle\u015ftiriliyor"
-      }
+      },
+      "waitingForWhisper": "Whisper bekleniyor",
+      "waitingForWhisperHint": "Apple konuşma modeli duyduğundan emin olamadı; Whisper bu Mac’e geldiğinde yazıya dökecek."
     },
     "folderNamePlaceholder": "Klasör adı",
     "projectNamePlaceholder": "Proje adı",
@@ -893,7 +895,17 @@
     "backendHint": "Otomatik, Mac’iniz için en iyi motoru algılar.",
     "modelRecommended": "{{model}} (önerilen)",
     "readScreensLabel": "Payla\u015f\u0131lan ekranlar\u0131 oku",
-    "readScreensHint": "Kay\u0131tlarda payla\u015f\u0131lan ekranlardaki metni bu Mac\u2019te okur ve her ekran\u0131n k\u00fc\u00e7\u00fck g\u00f6r\u00fcnt\u00fcleriyle birlikte proje klas\u00f6r\u00fcnde saklar. Yapay zek\u00e2ya asla g\u00f6nderilmez."
+    "readScreensHint": "Kay\u0131tlarda payla\u015f\u0131lan ekranlardaki metni bu Mac\u2019te okur ve her ekran\u0131n k\u00fc\u00e7\u00fck g\u00f6r\u00fcnt\u00fcleriyle birlikte proje klas\u00f6r\u00fcnde saklar. Yapay zek\u00e2ya asla g\u00f6nderilmez.",
+    "engineLabel": "Yazıya dökme aracı",
+    "engineWhenReady": "Hazır olduğunda Whisper",
+    "engineWhisperOnly": "Yalnızca Whisper",
+    "engineApple": "Apple konuşma modeli",
+    "engineHint": "Apple konuşma modeli macOS’te yerleşik ve daha hızlı. Whisper ise kötü sesle, aynı anda konuşan kişilerle, daha büyük gruplarla ve Apple modelinin desteklemediği dillerle daha iyi başa çıkar.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Bu Mac’te · {{size}}",
+    "whisperMissing": "Bu Mac’te yok",
+    "whisperFailed": "İndirme tamamlanmadı.",
+    "downloadNow": "Şimdi İndir"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Aygıtta yapay zekâyı ayarla",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Yapışkan not biçimi:",
     "saveBoardFile": "Pano Dosyasını Kaydet…"
+  },
+  "modelDownload": {
+    "title": "Whisper indiriliyor",
+    "failedTitle": "Whisper indirilemedi",
+    "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
+    "stop": "İndirmeyi Durdur",
+    "stopNote": "Bir sonraki sefer baştan başlar."
   }
 }

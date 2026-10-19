@@ -345,7 +345,9 @@
         "render": "Tworzenie raportu",
         "pii": "Usuwanie danych osobowych",
         "discussion": "Przypisywanie cytatów do pytań"
-      }
+      },
+      "waitingForWhisper": "Czeka na Whisper",
+      "waitingForWhisperHint": "Model mowy Apple nie był pewien tego, co usłyszał, więc Whisper przetranskrybuje to, gdy znajdzie się na tym Macu."
     },
     "folderNamePlaceholder": "Nazwa folderu",
     "projectNamePlaceholder": "Nazwa projektu",
@@ -931,7 +933,17 @@
     "backendHint": "Automatycznie wykrywa najlepszy silnik dla Twojego Maca.",
     "modelRecommended": "{{model}} (zalecany)",
     "readScreensLabel": "Odczytuj udost\u0119pnione ekrany",
-    "readScreensHint": "Odczytuje tekst z ekran\u00f3w udost\u0119pnionych w nagraniach, na tym Macu, i przechowuje go wraz z ma\u0142ymi obrazami ka\u017cdego ekranu w folderze projektu. Nigdy nie jest wysy\u0142any do AI."
+    "readScreensHint": "Odczytuje tekst z ekran\u00f3w udost\u0119pnionych w nagraniach, na tym Macu, i przechowuje go wraz z ma\u0142ymi obrazami ka\u017cdego ekranu w folderze projektu. Nigdy nie jest wysy\u0142any do AI.",
+    "engineLabel": "Transkrybuj za pomocą",
+    "engineWhenReady": "Whisper, gdy będzie gotowy",
+    "engineWhisperOnly": "Tylko Whisper",
+    "engineApple": "Model mowy Apple",
+    "engineHint": "Model mowy Apple jest wbudowany w macOS i działa szybciej. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami, większymi grupami i językami, których model Apple nie obsługuje.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Na tym Macu · {{size}}",
+    "whisperMissing": "Nie ma go na tym Macu",
+    "whisperFailed": "Pobieranie nie zostało ukończone.",
+    "downloadNow": "Pobierz teraz"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Skonfiguruj AI na urządzeniu",
@@ -1309,5 +1321,12 @@
   "figjam": {
     "stickyShapeLabel": "Kształt karteczek:",
     "saveBoardFile": "Zapisz plik tablicy…"
+  },
+  "modelDownload": {
+    "title": "Pobieranie Whispera",
+    "failedTitle": "Nie pobrano Whispera",
+    "why": "Do Twoich kolejnych nagrań. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami i większymi grupami.",
+    "stop": "Zatrzymaj pobieranie",
+    "stopNote": "Następnym razem zacznie się od początku."
   }
 }

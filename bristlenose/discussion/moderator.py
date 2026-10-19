@@ -48,7 +48,9 @@ MAX_MODERATOR_SHARE = 0.5
 _WINDOW_FLOOR_S, _WINDOW_SHARE, _WINDOW_CEIL_S = 300.0, 0.18, 480.0
 _SILENT_MARGIN_S = 120.0
 
-_WHISPER_SOURCES = {"whisper", "mlx-whisper", "faster-whisper"}
+# Apple's first-run speech model writes "apple-speech"; its transcripts are
+# machine-split by stage 5b exactly as Whisper's are (apple_speech.SOURCE).
+_WHISPER_SOURCES = {"whisper", "mlx-whisper", "faster-whisper", "apple-speech"}
 
 
 @dataclass

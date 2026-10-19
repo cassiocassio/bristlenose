@@ -309,7 +309,9 @@
         "render": "Bygger rapport",
         "pii": "Fjerner personopplysninger",
         "discussion": "Knytter sitater til spørsmål"
-      }
+      },
+      "waitingForWhisper": "Venter på Whisper",
+      "waitingForWhisperHint": "Apples talemodell var ikke sikker på hva den hørte, så Whisper transkriberer det når den er på denne Mac-en."
     },
     "folderNamePlaceholder": "Mappenavn",
     "projectNamePlaceholder": "Prosjektnavn",
@@ -893,7 +895,17 @@
     "backendHint": "Automatisk finner den beste motoren for Macen din.",
     "modelRecommended": "{{model}} (anbefalt)",
     "readScreensLabel": "Les delte skjermer",
-    "readScreensHint": "Leser teksten p\u00e5 skjermer som deles i opptak, p\u00e5 denne Mac-en, og lagrer den med sm\u00e5 bilder av hver skjerm i prosjektmappen. Sendes aldri til KI-en."
+    "readScreensHint": "Leser teksten p\u00e5 skjermer som deles i opptak, p\u00e5 denne Mac-en, og lagrer den med sm\u00e5 bilder av hver skjerm i prosjektmappen. Sendes aldri til KI-en.",
+    "engineLabel": "Transkriber med",
+    "engineWhenReady": "Whisper når den er klar",
+    "engineWhisperOnly": "Bare Whisper",
+    "engineApple": "Apples talemodell",
+    "engineHint": "Apples talemodell er innebygd i macOS og er raskere. Whisper takler dårlig lyd, folk som snakker i munnen på hverandre, større grupper og språk Apples modell mangler, bedre.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "På denne Mac-en · {{size}}",
+    "whisperMissing": "Ikke på denne Mac-en",
+    "whisperFailed": "Nedlastingen ble ikke fullført.",
+    "downloadNow": "Last ned nå"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Konfigurer KI på enheten",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Lappenes form:",
     "saveBoardFile": "Lagre tavlefil …"
+  },
+  "modelDownload": {
+    "title": "Laster ned Whisper",
+    "failedTitle": "Whisper ble ikke lastet ned",
+    "why": "Til de neste opptakene dine. Whisper takler dårlig lyd, folk som snakker i munnen på hverandre og større grupper bedre.",
+    "stop": "Stopp nedlastingen",
+    "stopNote": "Starter på nytt fra begynnelsen neste gang."
   }
 }

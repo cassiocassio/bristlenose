@@ -167,6 +167,14 @@ else
         fail "native MCP helper" "$(printf '%s' "$MCP_OUT" | grep FAIL | head -1 | sed 's/^ *//')"
     fi
 
+    # The Apple speech helper is parked: Debug builds only
+    # (design-apple-first-transcription.md §8). A copy in a .dmg is a leak.
+    if [ "$(find "$INNER_APP/Contents" -type f -name bristlenose-speech | wc -l | tr -d ' ')" = 0 ]; then
+        pass "Apple speech helper" "absent (parked)"
+    else
+        fail "Apple speech helper" "a parked copy is inside the image"
+    fi
+
     # Assert the reason, not the word. `grep -q accepted` passes on any output
     # containing that substring; we want the specific verdict Gatekeeper gives
     # a notarised Developer-ID app. With the inner app unstapled (by design),

@@ -309,7 +309,9 @@
         "render": "Bericht wird erstellt",
         "pii": "Personenbezogene Daten werden entfernt",
         "discussion": "Zitate werden Fragen zugeordnet"
-      }
+      },
+      "waitingForWhisper": "Wartet auf Whisper",
+      "waitingForWhisperHint": "Das Sprachmodell von Apple war sich nicht sicher, was es gehört hat. Whisper transkribiert es, sobald es auf diesem Mac ist."
     },
     "folderNamePlaceholder": "Ordnername",
     "projectNamePlaceholder": "Projektname",
@@ -893,7 +895,17 @@
     "backendHint": "Auto erkennt die beste Engine für Ihren Mac.",
     "modelRecommended": "{{model}} (empfohlen)",
     "readScreensLabel": "Geteilte Bildschirme lesen",
-    "readScreensHint": "Liest den Text auf Bildschirmen, die in Aufnahmen geteilt wurden, auf diesem Mac und speichert ihn mit kleinen Bildern jedes Bildschirms im Projektordner. Wird nie an die KI gesendet."
+    "readScreensHint": "Liest den Text auf Bildschirmen, die in Aufnahmen geteilt wurden, auf diesem Mac und speichert ihn mit kleinen Bildern jedes Bildschirms im Projektordner. Wird nie an die KI gesendet.",
+    "engineLabel": "Transkribieren mit",
+    "engineWhenReady": "Whisper, sobald verfügbar",
+    "engineWhisperOnly": "Nur Whisper",
+    "engineApple": "Sprachmodell von Apple",
+    "engineHint": "Das Sprachmodell von Apple ist in macOS integriert und schneller. Whisper kommt besser mit schlechtem Ton, durcheinander sprechenden Personen, größeren Gruppen und Sprachen zurecht, die das Modell von Apple nicht kennt.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "Auf diesem Mac · {{size}}",
+    "whisperMissing": "Nicht auf diesem Mac",
+    "whisperFailed": "Der Download wurde nicht abgeschlossen.",
+    "downloadNow": "Jetzt laden"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Lokale KI einrichten",
@@ -1227,5 +1239,12 @@
   "figjam": {
     "stickyShapeLabel": "Form der Haftnotizen:",
     "saveBoardFile": "Board-Datei sichern…"
+  },
+  "modelDownload": {
+    "title": "Whisper wird geladen",
+    "failedTitle": "Whisper wurde nicht geladen",
+    "why": "Für Ihre nächsten Aufnahmen. Whisper kommt besser mit schlechtem Ton, durcheinander sprechenden Personen und größeren Gruppen zurecht.",
+    "stop": "Download stoppen",
+    "stopNote": "Beginnt beim nächsten Mal wieder von vorn."
   }
 }

@@ -14,13 +14,14 @@ import asyncio
 import contextvars
 import importlib
 import logging
+import os
 import re
 import threading
 import time
 from collections.abc import AsyncIterator, Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import (
@@ -677,23 +678,40 @@ def iter_transcribe_sessions(
         logger.info("No sessions need transcription.")
         return
 
-    # Detect hardware and choose backend
-    hw = detect_hardware()
-    backend = _resolve_backend(settings.whisper_backend, hw)
-
-    logger.info(
-        "Transcribing %d sessions | backend=%s | model=%s | %s",
-        len(needs_transcription),
-        backend,
-        settings.whisper_model,
-        hw.summary(),
-    )
-
-    # Initialise the chosen backend
-    if backend == "mlx":
-        transcribe_fn = _init_mlx_backend(settings)
+    # Apple's model or Whisper, decided once for the whole run
+    # (docs/design-apple-first-transcription.md §1). Whisper landing mid-run
+    # does not switch it.
+    choice = decide_engine(settings)
+    transcribe_fn: TranscribeFn
+    if choice.is_apple:
+        assert choice.helper is not None and choice.locale is not None
+        logger.info(
+            "Transcribing %d sessions | backend=apple-speech | locale=%s (assumed from the "
+            "UI language) | why: %s",
+            len(needs_transcription), choice.locale, choice.reason,
+        )
+        transcribe_fn = _with_whisper_fallback(
+            _init_apple_backend(settings, choice.helper, choice.locale), settings,
+        )
     else:
-        transcribe_fn = _init_faster_whisper_backend(settings, hw)
+        # Detect hardware and choose backend
+        hw = detect_hardware()
+        backend = _resolve_backend(settings.whisper_backend, hw)
+
+        logger.info(
+            "Transcribing %d sessions | backend=%s | model=%s | %s | apple-speech: %s",
+            len(needs_transcription),
+            backend,
+            settings.whisper_model,
+            hw.summary(),
+            choice.reason,
+        )
+
+        # Initialise the chosen backend
+        if backend == "mlx":
+            transcribe_fn = _init_mlx_backend(settings)
+        else:
+            transcribe_fn = _init_faster_whisper_backend(settings, hw)
 
     pinned = settings.whisper_language if settings.whisper_language != "auto" else None
     total = len(needs_transcription)
@@ -738,6 +756,26 @@ def iter_transcribe_sessions(
                 "%s: Transcribed %d segments",
                 session.session_id,
                 len(segments),
+            )
+        except TranscriptionDeferredError as deferred:
+            # The assumed language did not hold. Stated, retryable, and left
+            # for Whisper: never a transcript in the wrong language.
+            logger.info(
+                "%s: deferred to Whisper (%s)", session.session_id, deferred.reason,
+            )
+            done = SessionTranscription(
+                session.session_id, [], None,
+                StageFailure(session_id=session.session_id, cause=Cause(
+                    category=CauseCategoryEnum.DEFERRED,
+                    code=deferred.code,
+                    # What we know, no more: the gate is a confidence check,
+                    # and muddy audio in the right language trips it too.
+                    message="Waiting for Whisper: Apple's speech model was not sure "
+                            "of this recording.",
+                    stage="s05_transcribe",
+                    session_id=session.session_id,
+                )),
+                quality=_quality_record(session.session_id, [], sink),
             )
         except Exception as exc:
             logger.error(
@@ -907,6 +945,225 @@ def transcribe_sessions(
         else:
             outcome.failed.append(done.failure)
     return results, languages, outcome
+
+
+# ---------------------------------------------------------------------------
+# Engine decision: Apple's model or Whisper
+# ---------------------------------------------------------------------------
+
+if TYPE_CHECKING:
+    from bristlenose.apple_speech import EngineChoice
+
+#: The run's engine, when the pipeline has already chosen it. Set once per run
+#: (``Pipeline`` sets it before its Whisper preflight) so the preflight and
+#: stage 5 cannot disagree when Whisper finishes downloading between them.
+#: ``aiter_transcribe_sessions`` copies the context onto its thread.
+RUN_ENGINE: contextvars.ContextVar[EngineChoice | None] = contextvars.ContextVar(
+    "bristlenose_run_engine", default=None,
+)
+
+
+def decide_engine(settings: BristlenoseSettings) -> EngineChoice:
+    """The run's engine: the one the pipeline pinned, or decided now.
+
+    Gathers the inputs ``apple_speech.choose_engine`` needs. Probes only when
+    the cheap checks pass, so a CLI run never launches anything.
+    """
+    pinned = RUN_ENGINE.get()
+    if pinned is not None:
+        return pinned
+    from bristlenose import apple_speech
+
+    flag = bool(getattr(settings, "experimental_apple_speech", False))
+    mode = str(getattr(settings, "apple_speech", apple_speech.MODE_UNTIL_WHISPER))
+    helper = apple_speech.helper_path() if flag and mode != apple_speech.MODE_NEVER else None
+    # The cheap check first: with Whisper on disk "until-whisper" needs no
+    # probe, so a Mac past its first run never launches the helper.
+    whisper_on_disk = True
+    if helper is not None and mode != apple_speech.MODE_PREFER:
+        whisper_on_disk = whisper_is_on_disk(settings)
+    probe = None
+    if helper is not None and (mode == apple_speech.MODE_PREFER or not whisper_on_disk):
+        probe = apple_speech.probe_helper(helper)
+    from bristlenose.i18n import get_locale
+
+    return apple_speech.choose_engine(
+        flag=flag, mode=mode, helper=helper, probe=probe,
+        whisper_on_disk=whisper_on_disk,
+        whisper_language=settings.whisper_language,
+        ui_language=get_locale(),
+        region=os.environ.get(apple_speech.REGION_ENV) or None,
+        ui_language_matched=os.environ.get(apple_speech.UI_LANGUAGE_MATCHED_ENV) == "1",
+    )
+
+
+def whisper_is_on_disk(settings: BristlenoseSettings) -> bool:
+    """True when the model stage 5 would load is fully cached.
+
+    The preflight's own probe, so a partial, failed or stopped download counts
+    as absent. A probe that fails reads as present: the Whisper path is the one
+    that has always worked, and guessing "absent" would route around it.
+    """
+    try:
+        from bristlenose.preflight.whisper import _resolve_repo_id, cache_state
+
+        return cache_state(_resolve_repo_id(settings)) == "cached"
+    except Exception:  # noqa: BLE001 — a probe must not cost the run
+        logger.warning("Whisper cache probe failed; assuming it is on disk", exc_info=True)
+        return True
+
+
+class TranscriptionDeferredError(Exception):
+    """A session Apple's model transcribed under a language it did not hold."""
+
+    def __init__(self, reason: str, code: str = "language_unsure") -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.code = code
+
+
+def _with_whisper_fallback(apple_fn: TranscribeFn, settings: BristlenoseSettings) -> TranscribeFn:
+    """Apple's backend, with Whisper for the sessions it cannot keep.
+
+    A session Apple's model defers (the language did not hold), or the helper
+    fails on, goes to Whisper **in this run** when Whisper is on disk: it may
+    have landed mid-run, or the mode is "prefer". Otherwise it is deferred, and
+    the run the app starts when the download lands transcribes it. Python never
+    fetches Whisper here (plan §3 C). After a failure that is about the engine
+    and not the file (helper exit 3, 4 or 5), later sessions skip the helper.
+    """
+    from bristlenose import apple_speech
+
+    whisper_fn: list[TranscribeFn] = []
+    broken: list[str] = []
+
+    def whisper_or_defer(audio_path: Path, on_segment: Any, reason: str, code: str) -> Any:
+        if whisper_is_on_disk(settings):
+            if not whisper_fn:
+                hw = detect_hardware()
+                whisper_fn.append(
+                    _init_mlx_backend(settings)
+                    if _resolve_backend(settings.whisper_backend, hw) == "mlx"
+                    else _init_faster_whisper_backend(settings, hw)
+                )
+            logger.info("%s: to Whisper in this run (%s)", audio_path.name, reason)
+            fn = whisper_fn[0]
+            return fn(audio_path, settings, on_segment=on_segment) if on_segment else fn(
+                audio_path, settings)
+        raise TranscriptionDeferredError(reason, code)
+
+    def transcribe(
+        audio_path: Path,
+        settings: BristlenoseSettings,
+        on_segment: FileSegmentCallback | None = None,
+    ) -> tuple[list[TranscriptSegment], str | None]:
+        if broken:
+            return whisper_or_defer(audio_path, on_segment, broken[0], "helper_unavailable")
+        try:
+            return apple_fn(audio_path, settings, on_segment=on_segment) if on_segment else apple_fn(
+                audio_path, settings)
+        except TranscriptionDeferredError as deferred:
+            return whisper_or_defer(audio_path, on_segment, deferred.reason, deferred.code)
+        except apple_speech.HelperError as err:
+            logger.warning("%s: %s", audio_path.name, err)
+            if err.engine_level:
+                broken.append(f"speech helper unavailable (exit {err.exit_code})")
+            code = "helper_timeout" if err.timed_out else f"helper_exit_{err.exit_code}"
+            return whisper_or_defer(audio_path, on_segment, str(err), code)
+
+    return transcribe
+
+
+def _write_wav_16k(audio: Any, path: Path) -> None:
+    """16 kHz mono 16-bit PCM, the format the helper and AVAudioFile both read."""
+    import wave
+
+    import numpy as np
+
+    pcm = (np.clip(np.asarray(audio, dtype=np.float32), -1.0, 1.0) * 32767.0).astype("<i2")
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(_SAMPLE_RATE)
+        w.writeframes(pcm.tobytes())
+
+
+def _init_apple_backend(
+    settings: BristlenoseSettings, helper: Path, locale: str,
+) -> TranscribeFn:
+    """Apple's ``SpeechTranscriber`` through the bundled helper.
+
+    Keeps the signal gate (a silent file is not transcribed, and a segment over
+    silence is dropped). Skips Whisper's style prompt, echo filter, loop nets
+    and inaudible marker: they answer Whisper's failure modes, which this model
+    does not have (no loops, fewer inserted words; README § 4). Applies the
+    language gate, and defers a session that fails it.
+    """
+    import tempfile
+
+    from bristlenose import apple_speech
+    from bristlenose.stages.s05b_voice import load_audio_16k
+
+    def transcribe_apple(
+        audio_path: Path,
+        settings: BristlenoseSettings,
+        on_segment: FileSegmentCallback | None = None,
+    ) -> tuple[list[TranscriptSegment], str | None]:
+        audio = load_audio_16k(audio_path)
+        levels = window_levels_dbfs(audio)
+        base = {
+            "backend": apple_speech.SOURCE, "locale": locale, "locale_source": "assumed",
+        }
+        if not has_signal(levels):
+            logger.info(
+                "%s: no signal above %.0f dBFS — not transcribed",
+                audio_path.name, _SIGNAL_FLOOR_DBFS,
+            )
+            _report_quality(audio, levels, recognition={**base, "transcribed": False},
+                            name=audio_path.name)
+            return [], None
+
+        with tempfile.TemporaryDirectory(prefix="bn-speech-") as tmp:
+            wav = Path(tmp) / "audio.wav"
+            out = Path(tmp) / "out.json"
+            _write_wav_16k(audio, wav)
+            duration = len(audio) / _SAMPLE_RATE
+            payload = apple_speech.run_helper(
+                helper, wav, locale, out,
+                on_progress=(lambda done, total: on_segment(done, total or duration))
+                if on_segment is not None else None,
+                # ~80x real time measured; this is room for a slow Mac, a cold
+                # model and a first-time locale fetch, not an estimate.
+                timeout=max(300.0, duration * 0.5),
+            )
+
+        segments = [
+            s for s in apple_speech.segments_from_helper(payload)
+            if segment_has_signal(s.start_time, s.end_time, levels)
+        ]
+        verdict = apple_speech.language_gate(payload, segments, apple_speech.signal_minutes(levels))
+        recognition = {
+            **base,
+            "locale": payload.get("locale") or locale,
+            "transcribed": True,
+            "asset_version": payload.get("asset_version"),
+            "os_version": payload.get("os_version"),
+            "install_s": payload.get("install_s"),
+            "gate": verdict.as_record(),
+        }
+        _report_quality(audio, levels, recognition=recognition, name=audio_path.name)
+        if not verdict.passed:
+            raise TranscriptionDeferredError(verdict.reason)
+        logger.info(
+            "%s: apple-speech %s, %d segments, mean confidence %s",
+            audio_path.name, recognition["locale"], len(segments),
+            verdict.as_record()["mean_confidence"],
+        )
+        # No detected language: the locale was assumed, and a guess must not
+        # be recorded as a detection (§2).
+        return segments, None
+
+    return transcribe_apple
 
 
 # ---------------------------------------------------------------------------

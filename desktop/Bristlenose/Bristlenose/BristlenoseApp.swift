@@ -258,6 +258,8 @@ struct BristlenoseApp: App {
                         Task { @MainActor in serveFleet.applyEnvChange() }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
+                    // Parked behind BristlenoseFlags.appleSpeech; once per process.
+                    WhisperDownloadModel.shared.appLaunched()
                     pipelineRunner.scanAllProjects(projectIndex.projects)
                     removalStore.setProjectIndex(projectIndex)
                     // Selection-restore is owned by ContentView (the @State

@@ -279,6 +279,7 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
 
     from bristlenose.preflight.whisper import (
         _resolve_repo_id,
+        cache_state,
         download_size_human,
         unknown_model_message,
     )
@@ -312,14 +313,23 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
     # does not spare the download, so it does not count.
     repo_id = _resolve_repo_id(settings)
 
-    # Try huggingface_hub cache scan
+    # The preflight's own probe decides "cached", so doctor and the run agree.
+    # `scan_cache_dir` lists a repo as soon as its config.json has landed, so
+    # on its own it called an interrupted download cached while the run went
+    # on to fetch it again (docs/design-apple-first-transcription.md §3 D).
+    # It is still the cheapest way to the size on disk.
+    try:
+        state = cache_state(repo_id)
+    except Exception:  # noqa: BLE001 — a probe failure reads as not cached
+        logging.getLogger(__name__).warning("Whisper cache probe failed", exc_info=True)
+        state = "missing"
     try:
         from huggingface_hub import scan_cache_dir
 
         cache_info = scan_cache_dir()
         cached_repos = {r.repo_id: r for r in cache_info.repos}
 
-        if repo_id in cached_repos:
+        if state == "cached" and repo_id in cached_repos:
             size_gb = cached_repos[repo_id].size_on_disk / (1024**3)
             return CheckResult(
                 status=CheckStatus.OK,
@@ -330,6 +340,16 @@ def check_whisper_model(settings: BristlenoseSettings) -> CheckResult:
         pass
     except Exception:
         pass
+    if state == "cached":
+        # On disk by the run's own probe, even when the scan cannot size it.
+        return CheckResult(status=CheckStatus.OK, label="Whisper model", detail=f"{model_name} cached")
+
+    if state == "partial":
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Whisper model",
+            detail=f"{model_name} partly downloaded (starts again from the beginning on the next run)",
+        )
 
     # Model not cached — this is informational, not a failure
     return CheckResult(

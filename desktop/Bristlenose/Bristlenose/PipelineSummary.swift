@@ -234,6 +234,12 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     /// English fallback, not the source to render. Mirrors Python
     /// `CauseCategoryEnum.UNUSABLE_INPUT` (`bristlenose/refusals.py`).
     case unusableInput = "unusable_input"
+    /// Not transcribed yet, on purpose: Apple's first-run speech model assumed
+    /// the UI language and the recording did not sound like it, so the session
+    /// waits for Whisper. Retryable, and not a failure the researcher caused.
+    /// Mirrors Python `CauseCategoryEnum.DEFERRED`
+    /// (`docs/design-apple-first-transcription.md` §2).
+    case deferred
     case unknown
 
     /// Decode an unrecognised category as `.unknown` instead of throwing.

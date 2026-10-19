@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "engine": "speech-transcriber",
+  "locale": "en-GB",
+  "asset_version": null,
+  "os_version": "Version 27.0 (Build 27A100)",
+  "audio_s": 30.0,
+  "install_s": null,
+  "analyse_s": 0.42,
+  "results": [
+    {
+      "start": 1.0,
+      "end": 9.6,
+      "text": "So tell me about the last time you booked a trip. I think it was in March.",
+      "words": [
+        {"start": 1.0, "end": 1.2, "text": "So", "conf": 0.91},
+        {"start": 1.2, "end": 1.5, "text": " tell", "conf": 0.95},
+        {"start": 1.5, "end": 1.6, "text": " me", "conf": 0.97},
+        {"start": 1.6, "end": 1.9, "text": " about", "conf": 0.96},
+        {"start": 1.9, "end": 2.0, "text": " the", "conf": 0.98},
+        {"start": 2.0, "end": 2.3, "text": " last", "conf": 0.94},
+        {"start": 2.3, "end": 2.6, "text": " time", "conf": 0.95},
+        {"start": 2.6, "end": 2.8, "text": " you", "conf": 0.97},
+        {"start": 2.8, "end": 3.2, "text": " booked", "conf": 0.89},
+        {"start": 3.2, "end": 3.3, "text": " a", "conf": 0.9},
+        {"start": 3.3, "end": 3.7, "text": " trip.", "conf": 0.92},
+        {"start": 7.4, "end": 7.6, "text": " I", "conf": 0.88},
+        {"start": 7.6, "end": 7.9, "text": " think", "conf": 0.9},
+        {"start": 7.9, "end": 8.0, "text": " it", "conf": 0.93},
+        {"start": 8.0, "end": 8.2, "text": " was", "conf": 0.94},
+        {"start": 8.2, "end": 8.3, "text": " in", "conf": 0.95},
+        {"start": 8.3, "end": 9.6, "text": " March.", "conf": 0.86}
+      ]
+    },
+    {
+      "start": 10.2,
+      "end": 13.0,
+      "text": "And how did you pay?",
+      "words": [
+        {"start": 10.2, "end": 10.4, "text": "And", "conf": 0.9},
+        {"start": 10.4, "end": 10.6, "text": " how", "conf": 0.93},
+        {"start": 10.6, "end": 10.8, "text": " did", "conf": 0.95},
+        {"start": 10.8, "end": 11.0, "text": " you", "conf": 0.97},
+        {"start": 11.0, "end": 13.0, "text": " pay?", "conf": null}
+      ]
+    }
+  ]
+}

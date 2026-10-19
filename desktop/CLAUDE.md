@@ -711,6 +711,16 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   **previews** it (the dialog offers Uninstall), so a proxy swap is
   uninstall-then-install.
 
+## Apple speech helper (parked, 18 Oct 2026)
+
+`desktop/speech-helper/` builds `bristlenose-speech`, which the **sidecar** launches to transcribe a first run with Apple's `SpeechTranscriber` while Whisper downloads (`docs/design-apple-first-transcription.md`). Three things to know before touching it:
+
+- **Signed like ffmpeg, not like the MCP helper.** The sidecar launches it, so it carries app-sandbox + inherit and nothing else, and ad-hoc signing is allowed; `bristlenose-mcp` is launched by a foreign app and is the opposite. `desktop/scripts/check-speech-helper.sh` gates it, and each of its checks has been shown to fail on its own violation. Run standalone, the signed binary traps with exit 133 (inherit needs a sandboxed parent): to try it by hand, re-sign a copy with `codesign --force --sign - --identifier app.bristlenose.speech <copy>`.
+- **Embedded in Debug builds only** while `BristlenoseFlags.appleSpeech` is parked (the Copy Sidecar Resources phase; `BRISTLENOSE_BUNDLE_SPEECH_HELPER=1` forces it). A release archive ships no new signed binary. Graduating it means the fifth executable in `tests/test_entitlements_split.py` and `check-bundle-integrity.py`, and an app-store-police pass.
+- **The sidecar only gets its path when the bundled sidecar runs** (`BristlenoseShared.appleSpeechEnvironment`): a dev sidecar is unsandboxed, and would launch the helper straight into exit 133. Under the Dev Sidecar scheme the Apple path therefore never engages, and Python falls back to Whisper.
+
+The one Whisper download is `WhisperDownloadModel.shared` (a singleton, so the lazily built Settings window needs no injection). It runs the sidecar's `doctor --fetch --progress-lines` and asks `doctor --whisper-status` whether Whisper is on disk, so it never computes the Hugging Face cache path itself.
+
 ## Code intelligence: sourcekit-lsp does NOT work on this project without a build server
 
 Measured 11 Oct 2026 (`experiments/skills-research/lsp_probe.py`). `sourcekit-lsp`

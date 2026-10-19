@@ -310,7 +310,9 @@
         "render": "Building report",
         "pii": "Redacting personal information",
         "discussion": "Matching quotes to questions"
-      }
+      },
+      "waitingForWhisper": "Waiting for Whisper",
+      "waitingForWhisperHint": "Apple's speech model wasn't sure of what it heard, so Whisper will transcribe it once it's on this Mac."
     },
     "folderNamePlaceholder": "Folder name",
     "projectNamePlaceholder": "Project name",
@@ -898,7 +900,17 @@
     "backendHint": "Auto detects the best engine for your Mac.",
     "modelRecommended": "{{model}} (recommended)",
     "readScreensLabel": "Read shared screens",
-    "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI."
+    "readScreensHint": "Reads the text on screens shared in recordings, on this Mac, and keeps it with small pictures of each screen in the project\u2019s folder. Never sent to the AI.",
+    "engineLabel": "Transcribe with",
+    "engineWhenReady": "Whisper when ready",
+    "engineWhisperOnly": "Whisper only",
+    "engineApple": "Apple's speech model",
+    "engineHint": "Apple's speech model is built into macOS and is faster. Whisper copes better with poor audio, people talking over each other, larger groups, and languages Apple's model lacks.",
+    "whisperLabel": "Whisper",
+    "whisperOnDisk": "On this Mac · {{size}}",
+    "whisperMissing": "Not on this Mac",
+    "whisperFailed": "The download didn't finish.",
+    "downloadNow": "Download Now"
   },
   "ollamaSetup": {
     "pillChoosingModel": "Set up on-device AI",
@@ -1232,5 +1244,12 @@
   "figjam": {
     "stickyShapeLabel": "Sticky shape:",
     "saveBoardFile": "Save Board File…"
+  },
+  "modelDownload": {
+    "title": "Downloading Whisper",
+    "failedTitle": "Whisper didn't download",
+    "why": "For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
+    "stop": "Stop Download",
+    "stopNote": "Starts again from the beginning next time."
   }
 }

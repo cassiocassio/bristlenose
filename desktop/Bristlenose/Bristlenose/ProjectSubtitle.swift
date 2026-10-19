@@ -88,6 +88,14 @@ enum SubtitleVariant: Equatable {
     /// "Cancelling…" + an indeterminate spinner — the immediate ack for the
     /// row's hover-cancel, mirroring what the removed toolbar pill showed.
     case copyCancelling
+    /// The last run finished with every failed session deferred to Whisper:
+    /// Apple's first-run speech model assumed the UI language and the recording
+    /// did not sound like it (`docs/design-apple-first-transcription.md` §2).
+    /// "Waiting for download", the `.queued` row's sibling: **info, no glyph,
+    /// no ring, no door** — nothing went wrong and nothing is the researcher's
+    /// to do; the app runs it again when Whisper lands. The one sentence of why
+    /// is the row's tooltip, as a running row's full ladder is.
+    case waitingForWhisper
     /// The bare last-run date with an optional delta segment — **Schema A, not
     /// emitted since 29 Jul 2026.** `resolveIdle` now returns `.deltaOnly` or
     /// `.placeholder` instead (Schema E: a clean row shows no status line).
@@ -176,7 +184,7 @@ extension SubtitleVariant {
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
              .addingInterviews, .copying, .importingBatch, .readingScreens,
-             .copyCancelling, .placeholder:
+             .copyCancelling, .waitingForWhisper, .placeholder:
             return .none
         }
     }
@@ -230,7 +238,7 @@ extension SubtitleVariant {
             return .info
         case .stopping, .running, .queued, .stopped, .partial,
              .addingInterviews, .copying, .importingBatch, .readingScreens,
-             .copyCancelling, .ready, .placeholder:
+             .copyCancelling, .waitingForWhisper, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
             // nothing, because the act is not the test. They already know.
@@ -331,7 +339,13 @@ enum ProjectSubtitle {
             return .failed(message: message)
         case .failedWithDiagnostic:
             return .failedDiagnostic
-        case .completedPartial:
+        case .completedPartial(let summary):
+            // Every failure a deferral is a session waiting for Whisper, not a
+            // run that went wrong. A real failure beside one keeps the warning.
+            let failures = summary.allFailures
+            if !failures.isEmpty, failures.allSatisfy({ $0.cause.category == .deferred }) {
+                return .waitingForWhisper
+            }
             return .completedPartial
         case .running:
             // Stopping outranks progress — acknowledge the Stop click.

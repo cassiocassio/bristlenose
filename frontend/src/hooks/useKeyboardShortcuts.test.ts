@@ -494,6 +494,66 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
+  // Discussion draws the shared card since 19 Oct 2026 (quoteCardHost.tsx), so the quote keys work
+  // there as on Screens, over the cards it registers.
+  describe("on the Discussion lens — the quote keys, Esc and Enter", () => {
+    const DISCUSSION = "/report/discussion/";
+
+    it("s stars the focused card the lens renders", () => {
+      const { getCtx, storeResult, unmount } = renderWithProviders(undefined, DISCUSSION);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("discussion", ["q-1"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      act(() => pressKey("s"));
+      expect(storeResult.result.current.starred["q-1"]).toBe(true);
+      unmount();
+    });
+
+    it("Esc leaves a cursor carried over from Quotes to the lens, and clears one on its own card", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, DISCUSSION);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("discussion", ["q-2"]);
+        getCtx().setFocus("q-1", { scroll: false }); // not a card this lens shows
+      });
+      let esc!: KeyboardEvent;
+      act(() => {
+        esc = pressKey("Escape");
+      });
+      // unclaimed, so the lens's own Esc (its question focus) gets this press
+      expect(esc.defaultPrevented).toBe(false);
+      act(() => getCtx().setFocus("q-2", { scroll: false }));
+      act(() => {
+        esc = pressKey("Escape");
+      });
+      expect(esc.defaultPrevented).toBe(true);
+      expect(getCtx().focusedId).toBeNull();
+      unmount();
+    });
+
+    it("Enter on a focused control presses it, and does not play the card under the cursor", () => {
+      const { getCtx, unmount } = renderWithProviders(undefined, DISCUSSION);
+      act(() => {
+        getCtx().registerVisibleQuoteIds("discussion", ["q-1"]);
+        getCtx().setFocus("q-1", { scroll: false });
+      });
+      const button = document.body.appendChild(document.createElement("button"));
+      const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+      act(() => {
+        button.dispatchEvent(enter);
+      });
+      expect(enter.defaultPrevented).toBe(false);
+      button.remove();
+      // and with no control in the way, Enter still plays the card
+      let bare!: KeyboardEvent;
+      act(() => {
+        bare = pressKey("Enter");
+      });
+      expect(bare.defaultPrevented).toBe(true);
+      unmount();
+    });
+  });
+
   describe("on the Screens lens — quote keys act only on cards it renders", () => {
     const SCREENS = "/report/screens/";
 

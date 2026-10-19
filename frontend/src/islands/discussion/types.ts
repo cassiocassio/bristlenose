@@ -74,6 +74,9 @@ export interface DiscussionTurn {
 
 export interface DiscussionQuote {
   key: string;
+  /** The report's id for this quote (`q-p1-123`), the quotes store's key: the lens draws the
+   *  store's card for it. Absent when the report does not hold the quote (never then shown). */
+  dom_id?: string;
   session: string;
   participant: string;
   name: string;

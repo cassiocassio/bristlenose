@@ -52,11 +52,13 @@ function pathMatches(pathname: string, route: string): boolean {
 
 /**
  * The lenses whose quote cards the per-quote keys and the native Quotes menu act on: every one
- * renders the shared QuoteCard under FocusContext. Discussion renders transcript turns, with its
- * own focus, so it is not one (verified 15 Oct 2026, docs/design-screens.md).
+ * renders the shared QuoteCard under FocusContext (Screens since 15 Oct 2026; Discussion since
+ * 19 Oct, when its read-only cards became the shared card — quoteCardHost.tsx). Each registers
+ * the cards it shows, in reading order, as its visible quotes.
  */
 function onQuoteLens(pathname: string): boolean {
-  return pathMatches(pathname, "/report/quotes") || pathMatches(pathname, "/report/screens");
+  return pathMatches(pathname, "/report/quotes") || pathMatches(pathname, "/report/screens")
+    || pathMatches(pathname, "/report/discussion");
 }
 
 /** Arrow keys, mapped to the geometric direction they draw. */
@@ -213,8 +215,8 @@ export function useKeyboardShortcuts({
     } else if (focused) {
       // Single quote keeps the registry, because the ghost that flies to the
       // hidden badge is measured off the owning group's layout.
-      // Only the Quotes lens's QuoteGroups register hide handlers; Screens draws QuoteCard
-      // directly, so there the store is the only route (no ghost flies, and that is fine).
+      // Only the Quotes lens's QuoteGroups register hide handlers; Screens and Discussion draw
+      // QuoteCard directly, so there the store is the only route (no ghost flies, and that is fine).
       if (pathMatches(locationRef.current.pathname, "/report/quotes")) hideQuote(focused);
       else hideQuotes([focused]);
       moveFocus(1);
@@ -434,12 +436,18 @@ export function useKeyboardShortcuts({
           e.preventDefault();
           return;
         }
-        if (selectedIdsRef.current.size > 0) {
+        // On a lens that hosts the cards (Screens, Discussion), only a cursor or selection on a
+        // card it shows claims the key: one left behind on Quotes cannot be seen there, and
+        // clearing it would spend the press while the lens's own Esc (Discussion's question
+        // focus) waits for a second one (review, 19 Oct 2026).
+        const path = locationRef.current.pathname;
+        const hosted = onQuoteLens(path) && !pathMatches(path, "/report/quotes");
+        if ((hosted ? scopedSelection() : selectedIdsRef.current).size > 0) {
           e.preventDefault();
           clearSelection();
           return;
         }
-        if (focusedIdRef.current) {
+        if (hosted ? scopedFocus() : focusedIdRef.current) {
           e.preventDefault();
           setFocus(null);
           return;
@@ -459,7 +467,7 @@ export function useKeyboardShortcuts({
       if (helpModalOpenRef.current) return;
       if (settingsModalOpenRef.current) return;
 
-      // ⌘A / Ctrl+A — select all visible quotes (the lenses of quote cards: Quotes and Screens).
+      // ⌘A / Ctrl+A — select all visible quotes (the lenses of quote cards: Quotes, Screens, Discussion).
       // Preempts the browser's native "select all text" so ⌘A acts on
       // quotes as objects (ready to star/hide/tag), not on page text. On
       // other tabs (e.g. transcripts) native text select-all is left intact.
@@ -721,8 +729,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Enter — play video
+      // Enter — play video. Not when a control has the keyboard: Enter is that control's own
+      // press (a guide row, a question, a session's lead-in on Discussion; a card's own star), and
+      // claiming it here cancelled the press and played a card instead (review, 19 Oct 2026).
       if (key === "Enter" && scopedFocus()) {
+        const t = e.target;
+        if (t instanceof Element && t.closest('button, a[href], [role="button"], [role="radio"], [role="link"]')) return;
         e.preventDefault();
         handlePlay();
         return;

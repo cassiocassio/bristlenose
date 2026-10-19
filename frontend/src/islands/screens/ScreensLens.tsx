@@ -31,37 +31,20 @@ import i18n from "../../i18n";
 import { Counter, type CounterItem } from "../../components/Counter";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
-import type { TagVocabularyGroup } from "../../components/TagInput";
 import { TimecodeLink } from "../../components/TimecodeLink";
 import { useFocus } from "../../contexts/FocusContext";
 import { useLastRun } from "../../contexts/LastRunStore";
-import {
-  acceptProposedTag,
-  addTagToQuotes,
-  commitEdit,
-  deleteBadge,
-  denyProposedTag,
-  hideQuotes,
-  initFromQuotes,
-  removeTag,
-  restoreBadges,
-  setStarred,
-  starActionIsUnstar,
-  toggleStar,
-  unhideQuotes,
-  useQuotesStore,
-} from "../../contexts/QuotesContext";
-import { CONTENT_FLOOR_PX, toggleTagGroupHidden, useSidebarStore } from "../../contexts/SidebarStore";
+import { unhideQuotes, useQuotesStore } from "../../contexts/QuotesContext";
+import { CONTENT_FLOOR_PX } from "../../contexts/SidebarStore";
 import { useProjectId } from "../../hooks/useProjectId";
 import { announce } from "../../utils/announce";
 import { pushUndo } from "../../contexts/UndoStore";
-import { apiGet, getCodebook } from "../../utils/api";
+import { apiGet } from "../../utils/api";
 import { formatTimecode } from "../../utils/format";
 import { installLiveResizeWatch, isLiveResizing, subscribeLiveResize } from "../../utils/liveResize";
-import { wholeWordsTerm, type SearchTerm } from "../../utils/searchMatch";
-import { deriveTagVisibility, type TagGroupMeta } from "../../utils/tagVisibility";
-import type { QuoteResponse, QuotesListResponse } from "../../utils/types";
-import { QuoteCard } from "../QuoteCard";
+import { wholeWordsTerm } from "../../utils/searchMatch";
+import type { QuoteResponse } from "../../utils/types";
+import { useQuoteCards, useReportQuotes } from "../quoteCardHost";
 import { MIN_WIDTH, RESIZE_STEP } from "../discussion/split";
 import {
   arrangementFor,
@@ -393,16 +376,9 @@ function writeNavWidth(w: number): void {
   }
 }
 
-interface TagInfo extends TagGroupMeta {
-  colour_set: string;
-  colour_index: number;
-}
-
 /** Draws one quote with the Quotes lens's card, wired to the report's store. */
 type RenderQuote = (q: QuoteResponse, phrase: string) => React.ReactNode;
 
-const NO_FLASH = new Set<string>();
-const noop = () => {};
 
 /** Which version shows for `sid` on this screen: that session's, else the screen's default. */
 function tabIndexOf(sc: Screen, sid: string | null): number {
@@ -435,17 +411,13 @@ export function ScreensLens() {
   // Each load's own failure, cleared by its next success: a 401 while the sidecar restarts must not
   // leave the lens saying "couldn't load" after a refresh has loaded it.
   const [screensError, setScreensError] = useState(false);
-  const [quotesError, setQuotesError] = useState(false);
   // Held by key and session, not by position: the list re-sorts as recordings are read.
   const [curKey, setCurKey] = useState<string | null>(null);
   const [tabSid, setTabSid] = useState<string | null>(null);
-  const [vocabulary, setVocabulary] = useState<string[]>([]);
-  const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
-  const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
-  const [hasModerator, setHasModerator] = useState(false);
-  const store = useQuotesStore();
-  const { selectedIds, clearSelection, focusedId, setFocus } = useFocus();
-  const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
+  // The report's quotes and codebook, and the card that draws them (quoteCardHost.tsx).
+  const host = useReportQuotes("Screens");
+  const { store, byId, failed: quotesError } = host;
+  const { focusedId, setFocus } = useFocus();
 
   // The board holds still during a live window resize and settles once when it ends (E).
   useEffect(() => installLiveResizeWatch(), []);
@@ -541,54 +513,6 @@ export function ScreensLens() {
       if (timer) clearTimeout(timer);
     };
   }, [refreshKey]);
-
-  // Quotes: the report's own store, hydrated as the Quotes lens hydrates it, again on a refresh.
-  const loadedOnce = useRef(false);
-  useEffect(() => {
-    const replace = loadedOnce.current;
-    loadedOnce.current = true;
-    apiGet<QuotesListResponse>("/quotes")
-      .then((json) => {
-        const all = [
-          ...json.sections.flatMap((s) => s.quotes),
-          ...json.themes.flatMap((th) => th.quotes),
-          ...(json.unjoined ?? []),
-        ];
-        initFromQuotes(all, replace, json.uncategorised);
-        setHasModerator(!!json.has_moderator);
-        setQuotesError(false);
-      })
-      // Without the quotes every screen would read "0 quotes": say so instead.
-      .catch((e: unknown) => {
-        console.error("Screens: /quotes failed", e);
-        setQuotesError(true);
-      });
-    getCodebook()
-      .then((cb) => {
-        setVocabulary(cb.all_tag_names);
-        const info: Record<string, TagInfo> = {};
-        const groups: TagVocabularyGroup[] = [];
-        for (const g of cb.groups) {
-          const tags: { name: string; colourIndex: number }[] = [];
-          for (const tg of g.tags) {
-            info[tg.name.toLowerCase()] = {
-              group: g.name, frameworkId: g.framework_id, colour_set: g.colour_set, colour_index: tg.colour_index,
-            };
-            tags.push({ name: tg.name, colourIndex: tg.colour_index });
-          }
-          groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
-        }
-        setTagInfo(info);
-        setGroupedVocabulary(groups);
-      })
-      .catch((e: unknown) => console.warn("Screens: no codebook, so no tag vocabulary", e));
-  }, [refreshKey]);
-
-  const byId = useMemo(() => {
-    const m = new Map<string, QuoteResponse>();
-    for (const q of [...store.quotes, ...(store.uncategorised ?? [])]) m.set(q.dom_id, q);
-    return m;
-  }, [store.quotes, store.uncategorised]);
 
   const screens = useMemo(() => data?.screens ?? [], [data]);
   const cur = Math.max(0, screens.findIndex((sc) => sc.key === curKey));
@@ -837,110 +761,11 @@ export function ScreensLens() {
     return () => window.removeEventListener("bn:menu-action", onMenu);
   }, [go, flip, cur, screen, screens.length]);
 
-  // ── The card's gestures: QuoteGroup's, so a selection acts as one ──
-  const vis = useMemo(
-    () => deriveTagVisibility(tagInfo, hiddenTagGroups, disabledFrameworks),
-    [tagInfo, hiddenTagGroups, disabledFrameworks],
-  );
-  /** The selection the clicked card belongs to, narrowed to this board; else the card alone. */
-  const targets = useCallback(
-    (domId: string) => (selectedIds.has(domId) ? said.filter((d) => selectedIds.has(d)) : [domId]),
-    [selectedIds, said],
-  );
-  const onToggleStar = useCallback(
-    (domId: string, on: boolean) => {
-      const ids = targets(domId);
-      if (ids.length > 1) setStarred(ids, !starActionIsUnstar(new Set(ids), null, store.starred));
-      else toggleStar(domId, on);
-    },
-    [targets, store.starred],
-  );
-  const onToggleHide = useCallback(
-    (domId: string) => {
-      hideQuotes(targets(domId));
-      if (selectedIds.has(domId)) clearSelection();
-    },
-    [targets, selectedIds, clearSelection],
-  );
-  const onTagAdd = useCallback(
-    (domId: string, name: string) => {
-      const info = tagInfo[name.toLowerCase()];
-      const group = info?.group ?? "Uncategorised";
-      addTagToQuotes(targets(domId), {
-        name,
-        codebook_group: group,
-        colour_set: info?.colour_set ?? "",
-        colour_index: info?.colour_index ?? 0,
-        source: "human",
-      });
-      // As on the Quotes lens: a tag picked from an eye-hidden group un-hides the group, or the
-      // badge would vanish the moment it was added (QuoteGroup.handleTagAdd).
-      if (hiddenTagGroups.has(group)) toggleTagGroupHidden(group);
-    },
-    [tagInfo, targets, hiddenTagGroups],
-  );
-  const onProposedAccept = useCallback(
-    (domId: string, proposalId: number, name: string) => {
-      const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
-      acceptProposedTag(domId, proposalId, {
-        name,
-        codebook_group: pt?.group_name ?? "Uncategorised",
-        colour_set: pt?.colour_set ?? "",
-        colour_index: pt?.colour_index ?? 0,
-        source: "autocode",
-      });
-    },
-    [store.proposedTags],
-  );
-
+  // The card's gestures are QuoteGroup's, so a selection acts as one, narrowed to this board.
+  const { renderCard, counterItems } = useQuoteCards(host, said);
   const renderQuote: RenderQuote = (q, phrase) => {
-    const id = q.dom_id;
-    const allTags = store.tags[id] ?? [];
-    const edited = store.edits[id] ?? null;
-    const proposed = store.proposedTags[id] ?? [];
-    const term: SearchTerm | null = phrase ? wholeWordsTerm(phrase) : null;
-    return (
-      <QuoteCard
-        quote={q}
-        displayText={edited ?? q.text}
-        isStarred={!!store.starred[id]}
-        isHidden={false}
-        userTags={allTags.filter((tb) => !vis.hiddenGroups.has(tb.codebook_group))}
-        allTagNames={allTags.map((tb) => tb.name)}
-        hiddenTagNames={vis.decoratedTagNames}
-        disabledTagNames={vis.suppressedTagNames}
-        deletedBadges={store.deletedBadges[id] ?? []}
-        isEdited={edited != null && edited !== q.text}
-        tagVocabulary={vocabulary}
-        groupedVocabulary={groupedVocabulary}
-        sessionId={q.session_id}
-        hasMedia
-        hasModerator={hasModerator}
-        proposedTags={proposed.filter((p) => !vis.hiddenGroups.has(p.group_name))}
-        flashingTags={NO_FLASH}
-        moderatorQuestion={null}
-        isQuestionOpen={false}
-        isPillVisible={false}
-        // The owner, 15 Oct 2026: the "[When asked…]" line is "interesting but new… hide here for
-        // the moment". Only here; the Quotes lens keeps it, and so does the code.
-        showResearcherContext={false}
-        onToggleStar={onToggleStar}
-        onToggleHide={onToggleHide}
-        onEditCommit={commitEdit}
-        onTagAdd={onTagAdd}
-        onTagRemove={removeTag}
-        onBadgeDelete={deleteBadge}
-        onBadgeRestore={restoreBadges}
-        onProposedAccept={(pid, name) => onProposedAccept(id, pid, name)}
-        onProposedDeny={(pid) => denyProposedTag(id, pid)}
-        onToggleQuestion={noop}
-        onQuoteHoverEnter={noop}
-        onQuoteHoverLeave={noop}
-        onPillHoverEnter={noop}
-        onPillHoverLeave={noop}
-        highlight={term ? [term] : undefined}
-      />
-    );
+    const term = phrase ? wholeWordsTerm(phrase) : null;
+    return renderCard(q, { highlight: term ? [term] : undefined });
   };
 
   // Every state carries the zone title, as Discussion's do, so the lens opens at the same height
@@ -1020,6 +845,7 @@ export function ScreensLens() {
           reveal={reveal}
           problems={problemNotes(data)}
           renderQuote={renderQuote}
+          counterItems={counterItems}
         />
       )}
       {progress}
@@ -1148,6 +974,8 @@ interface BoardProps {
   onShowOn: (dom: string, j: number) => void;
   byId: Map<string, QuoteResponse>;
   store: ReturnType<typeof useQuotesStore>;
+  /** The hidden-quotes counter's rows (quoteCardHost.tsx), shared with Discussion. */
+  counterItems: (ids: string[]) => CounterItem[];
   /** Every quote on this screen, once each, in time order (hidden ones not). */
   said: string[];
   focusedId: string | null;
@@ -2085,13 +1913,7 @@ function ScreenBoard(props: BoardProps) {
     return () => document.removeEventListener("contextmenu", onMenu);
   });
 
-  const counterItems: CounterItem[] = hiddenHere.map((d) => {
-    const q = byId.get(d)!;
-    return {
-      domId: d, timecode: formatTimecode(q.start_timecode), seconds: q.start_timecode,
-      participantId: q.participant_id, previewText: store.edits[d] ?? q.text, hasMedia: false,
-    };
-  });
+  const counterItems = props.counterItems(hiddenHere);
 
   // One highlight per line on the screengrab, however many quotes are about it: they share it, and
   // its anchor, and their leaders fan into one point.

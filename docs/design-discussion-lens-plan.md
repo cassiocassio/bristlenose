@@ -517,7 +517,7 @@ overrides keyed on durable ids, never on labels.
   place the file by hand). No drop target. Mockup:
   `docs/mockups/discussion-guide-tabs.html`. *Planned:* drop target + **Add a
   discussion guide**.
-- **Quotes work as they do everywhere else — DECIDED 19 Oct 2026, not built.** The
+- **Quotes work as they do everywhere else — DECIDED and BUILT 19 Oct 2026.** The
   lens's read-only card is replaced by the Quotes lens's own `QuoteCard`, joined to
   the quotes store by report id, as the Screens lens already does: the timecode plays,
   the speaker badge opens the transcript at that moment, and the card stars, hides,
@@ -556,14 +556,22 @@ overrides keyed on durable ids, never on labels.
      own view, which keeps its questions folded forward as shipped and drops only "No
      quotes from this question".
 
-  What the build needs, from the 18 Oct discussion: `/discussion` sends each quote's
-  report id (it already matches every quote to the report's row); hidden and edited
-  state come from the store, not the server's filter, so a hide shows at once, while the
-  export keeps whatever `/quotes` does with hidden quotes; Discussion joins `onQuoteLens`
-  (`useKeyboardShortcuts.ts`, which excludes it today on purpose) and the native Quotes
-  menu; each card sits in a lens-owned wrapper that carries `data-for` and positions
-  star and hide; and All's splitter cost is re-measured with real cards, since the
-  33ms figure above was taken with the light ones.
+  **As built (19 Oct 2026).** `/discussion` gives each quote the report's id
+  (`dom_id`, the quotes store's key) and sends hidden quotes rather than dropping them,
+  as `/quotes` does (so an export carries them the same way, flagged in `/quotes`). The
+  card wiring Screens had is one module now, `frontend/src/islands/quoteCardHost.tsx`
+  (`useReportQuotes` hydrates the store and reads the codebook; `useQuoteCards` draws a
+  card with QuoteGroup's selection-aware gestures), used by both lenses, and a hide
+  collapses the same way on all three (`.bn-hiding`). The lens filters the record's
+  quotes by the store before its model runs, so counts, shading and fold-forward follow
+  hiding with no second rule; `quoteTurns` (model.ts) puts each hidden quote under its
+  question for the counter. Each card sits in a `.dl-card` wrapper carrying `data-for`
+  (and `hot` when its question is focused) that positions star and hide. The cards are
+  registered in drawn order for j/k, ⇧J/K and ⌘A; Discussion joins `onQuoteLens`, the
+  Mac's `onCardLens` (Quotes menu) and `CardLensKeys` (⌘A). The three retired strings
+  (`keyGrey`, `noAnswers`, `notAskedIn`) are deleted from all 21 locales. **Still
+  owed:** All's splitter cost re-measured in WebKit with real cards on a 12-session
+  study — the 33ms figure above was taken with the light ones.
 
 ## 4. The macOS app
 

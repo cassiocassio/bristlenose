@@ -1541,12 +1541,13 @@ private struct QuotesMenuContent: View {
     /// A lens that shows quote cards, so Star, Hide, Tag, Reveal, Play and
     /// Next/Previous act on the selected card there too (the owner, 15 Oct
     /// 2026: "I would expect star and hide and tag to work the same"). Screens
-    /// draws the shared QuoteCard; Discussion draws transcript turns with its
-    /// own focus, so it is not one. The web side acts only on a card the lens
-    /// renders (`useKeyboardShortcuts` scopedFocus), never on a cursor left over
-    /// from Quotes. Export and selection-extend stay on Quotes.
+    /// and Discussion draw the shared QuoteCard (Discussion since 19 Oct 2026).
+    /// The web side acts only on a card the lens renders (`useKeyboardShortcuts`
+    /// scopedFocus), never on a cursor left over from Quotes. Export and
+    /// selection-extend stay on Quotes.
     private var onCardLens: Bool {
         bridgeHandler.activeTab == .quotes || bridgeHandler.activeTab == .screens
+            || bridgeHandler.activeTab == .discussion
     }
 
     private var hasFocus: Bool {

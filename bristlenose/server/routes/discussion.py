@@ -3,9 +3,13 @@
 Read from ``.bristlenose/intermediate/discussion.json``, which the pipeline's
 Discussion stage writes (``bristlenose/discussion/stage.py``). No tables yet:
 they arrive with researcher overrides (plan §2.1), and until then the record is
-the whole truth. Two things are layered on at serve time, so this lens never
-disagrees with the Quotes lens about a quote: a hidden quote is left out, and
-an edited quote shows its edit.
+the whole truth. Each quote is joined at serve time to the report's own row, so
+this lens never disagrees with the Quotes lens about a quote: it carries that
+row's id (``dom_id``), the key the SPA's quotes store uses, and an edited quote
+shows its edit. A hidden quote is sent, not left out: the lens hides it from the
+store, so hiding and unhiding there shows at once and its hidden-quotes counter
+can bring it back (decided 19 Oct 2026, design-discussion-lens-plan.md §3). The
+Quotes lens's own payload carries hidden quotes the same way.
 
 The payload carries speaker codes, never names (plan §9.C): the SPA resolves
 names from ``/sessions``, which an anonymised export already blanks.
@@ -23,7 +27,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
-from bristlenose.server.models import Project, Quote, QuoteEdit, QuoteState
+from bristlenose.server.models import Project, Quote, QuoteEdit
+from bristlenose.server.routes.quotes import _quote_dom_id
 
 logger = logging.getLogger(__name__)
 
@@ -61,26 +66,24 @@ def _current_quotes_sha(intermediate: Path) -> str | None:
 
 
 class _ReportQuote:
-    """One quote as the report holds it: the row, its hidden flag, its edit."""
+    """One quote as the report holds it: its id, its text, its edit."""
 
-    __slots__ = ("hidden", "text", "edit")
+    __slots__ = ("dom_id", "text", "edit")
 
-    def __init__(self, hidden: bool, text: str, edit: str | None) -> None:
-        self.hidden, self.text, self.edit = hidden, text, edit
+    def __init__(self, dom_id: str, text: str, edit: str | None) -> None:
+        self.dom_id, self.text, self.edit = dom_id, text, edit
 
 
 def _report_quotes(db: Session, project_id: int) -> dict[tuple[str, str, float], _ReportQuote]:
     """(session, participant, start rounded to 0.01 s) → the report's quote."""
     rows = speaker_slots.evidence_quotes(db, project_id)
-    hidden = {s.quote_id for s in db.query(QuoteState).join(Quote, QuoteState.quote_id == Quote.id)
-              .filter(Quote.project_id == project_id, QuoteState.is_hidden).all()}
     edited: dict[int, str] = {}
     for e in (db.query(QuoteEdit).join(Quote, QuoteEdit.quote_id == Quote.id)
               .filter(Quote.project_id == project_id).order_by(QuoteEdit.edited_at).all()):
         edited[e.quote_id] = e.edited_text  # the latest edit wins
     return {
         (q.session_id, q.participant_id, round(q.start_timecode, 2)):
-            _ReportQuote(q.id in hidden, q.text, edited.get(q.id))
+            _ReportQuote(_quote_dom_id(q), q.text, edited.get(q.id))
         for q in rows
     }
 
@@ -101,12 +104,18 @@ def _as_the_report_shows_them(
     review, 3 Oct 2026: 24 collisions in 308 quotes on a real project). A quote
     the report does not hold — never clustered or themed — is left out, as
     Quotes leaves it out, so nothing appears here that Quotes cannot hide.
+
+    A report id goes to one record quote only: the id is the start's whole
+    second, so two rows a fraction apart, or a record quote listed twice, would
+    otherwise give two cards one id (review, 19 Oct 2026). The second is counted
+    as not in the report.
     """
     shared: dict[tuple[str, str, float], int] = {}
     for q in quotes:
         shared[_key(q)] = shared.get(_key(q), 0) + 1
     shown: list[dict[str, Any]] = []
     absent = 0
+    given: set[str] = set()
     for q in quotes:
         row = report.get(_key(q))
         if row is None:
@@ -115,8 +124,11 @@ def _as_the_report_shows_them(
         if shared[_key(q)] > 1 and q.get("text") != row.text:
             absent += 1  # the report's row at this key is a different quote
             continue
-        if row.hidden:
+        if row.dom_id in given:
+            absent += 1
             continue
+        given.add(row.dom_id)
+        q["dom_id"] = row.dom_id  # the quotes store's key, for the lens's cards
         if row.edit is not None:
             q["text"] = row.edit
         shown.append(q)

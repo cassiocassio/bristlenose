@@ -114,10 +114,10 @@ export interface AskWithAnswers {
   answers: DiscussionQuote[];
 }
 
+/** One or more questions and the quotes they drew. The last group of a session can hold only
+ *  questions that drew nothing (there was nothing after them to fold into). */
 export interface QuestionGroup {
   asks: AskWithAnswers[];
-  /** The group ended the session with no answers (nothing to fold forward into). */
-  trailing: boolean;
 }
 
 export interface SessionColumn {
@@ -156,11 +156,11 @@ export function sessionColumn(data: DiscussionData, session: string): SessionCol
     const a = answers.get(t.id)!;
     cur.push({ turn: t, answers: a });
     if (a.length) {
-      groups.push({ asks: cur, trailing: false });
+      groups.push({ asks: cur });
       cur = [];
     }
   }
-  if (cur.length) groups.push({ asks: cur, trailing: true });
+  if (cur.length) groups.push({ asks: cur });
   return { before, groups };
 }
 
@@ -187,6 +187,19 @@ export function itemAnswers(data: DiscussionData): ItemAnswers {
       list.push({ turn: t, answers: answers.get(t.id) ?? [] });
       bySession.set(s.id, list);
     }
+  }
+  return out;
+}
+
+/** The question each quote answers, by the quote's report id: the turn it falls under, or "" when
+ *  it came before the session's first question. The session column's own rule, so a hidden quote
+ *  is counted beside the question its card would have sat under. */
+export function quoteTurns(data: DiscussionData): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const s of data.sessions) {
+    const { answers, before } = sessionAnswers(data, s.id);
+    for (const [turn, qs] of answers) for (const q of qs) if (q.dom_id) out.set(q.dom_id, turn);
+    for (const q of before) if (q.dom_id) out.set(q.dom_id, "");
   }
   return out;
 }

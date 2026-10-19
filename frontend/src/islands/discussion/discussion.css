@@ -125,7 +125,7 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
     padding: var(--bn-space-sm);
     border: 1px solid var(--bn-colour-keyline);
     border-radius: var(--bn-radius-md);
-    color: var(--bn-colour-text);   /* the shared key is muted; see .dl-key-grey */
+    color: var(--bn-colour-text);   /* the shared key is muted */
 }
 .dl-key .dl-mk { display: inline-block; cursor: default; }
 /* No guide uploaded: a faint mid dot where the marks go, asserting nothing. */
@@ -133,9 +133,6 @@ span.dl-guide-file { color: var(--bn-colour-muted); cursor: default; }
 /* "Reading your guide…" and the file it is reading, while a run reads it. */
 .dl-reading { margin-bottom: var(--bn-space-sm); }
 .dl-reading-file { color: var(--bn-colour-muted); white-space: nowrap; }
-/* The key in the normal ink, so its grey line shows the grey it explains — the
-   very token the rows use (.dl-row.ghost). Map and chart keys work this way. */
-.dl-key .dl-key-grey { color: var(--bn-colour-muted); }
 /* Each section is a labelled group, so every heading is its group's first child
    and the shipped `.toc-heading:first-child { margin-top: 0 }` matched them all.
    Give back the shipped 1rem between sections (sidebar.css .toc-heading). */
@@ -328,7 +325,17 @@ button.dl-cell:not([aria-disabled="true"]):hover {
 }
 .dl-meta + .dl-group { border-top-color: transparent; margin-top: 0; }
 .dl-group blockquote.quote-card { margin: 0; }
-.dl-group blockquote.dl-ask + blockquote.quote-card:not(.dl-ask) { margin-top: var(--bn-space-xs); }
+/* Every quote is the report's own card (quoteCardHost.tsx), in a wrapper the lens owns, as Screens
+   wraps its cards: the wrapper carries the question it answers and is the box the card's star and
+   hide hang from. The card keeps the Quotes lens's right-hand room for them, and its spacing. */
+.dl-card { position: relative; }
+/* The cursor (j/k, the arrows) scrolls the card itself into view: clear of the sticky bar. */
+.dl-card > blockquote.quote-card {
+    padding-right: 4.5rem;
+    scroll-margin-top: calc(var(--dl-bar-h, 0px) + var(--bn-space-md));
+}
+.dl-group .dl-card + .dl-card > blockquote.quote-card { margin-top: 0.8rem; }
+.dl-group blockquote.dl-ask + .dl-card > blockquote.quote-card { margin-top: var(--bn-space-xs); }
 /* The moderator's turn IS a quote card — same padding, same transparent 1px
    left border, same timecode column — so both text margins line up with the
    participants' cards by construction. */
@@ -345,11 +352,12 @@ button.dl-cell:not([aria-disabled="true"]):hover {
 }
 .dl-ask .moderator-question-text { font-size: var(--bn-text-label); line-height: var(--bn-text-label-lh); color: var(--bn-colour-muted); }
 .dl-ask .speaker, .dl-ask .badge { margin-left: var(--bn-space-xs); }
-.dl-noans, .dl-before {
+.dl-before {
     display: block; color: var(--bn-colour-muted);
     font-size: var(--bn-text-caption); line-height: var(--bn-text-caption-lh);
 }
-.dl-noans { margin-top: var(--bn-space-xs); }
+/* The hidden-quotes counter (the shipped Counter) at the foot of a block, right-aligned. */
+.dl-hidden-foot { display: flex; justify-content: flex-end; max-width: var(--bn-max-width); margin-top: var(--bn-space-xs); }
 .dl-before { padding: var(--bn-space-xs) var(--bn-space-sm); }
 .dl-group blockquote.dl-ask.hot { background: var(--bn-nav-selection-bg); }
 
@@ -366,8 +374,20 @@ button.dl-cell:not([aria-disabled="true"]):hover {
    a WebKit splitter step on that study from 217ms to 33ms, a single session's cost (measured
    18 Oct 2026). Jumps into All go through scrollToLand, which corrects for the placeholders. */
 .dl-lens[data-all="true"] .dl-content .dl-group { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+/* …which implies paint containment and would clip a card's tag suggestions or a counter's list at
+   the block's edge: the block with one open lays itself out (tag-input.css does the same per card). */
+.dl-lens[data-all="true"] .dl-content .dl-group:has(.tag-suggest, .bn-hidden-dropdown) { content-visibility: visible; }
 .dl-content .dl-item > h3 { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); overflow-wrap: anywhere; }
+/* A question with hidden quotes: the Quotes lens's group header, the counter beside the question. */
+.dl-content .dl-item > .bn-group-header { max-width: var(--bn-max-width); margin-top: var(--bn-space-lg); }
+.dl-content .dl-item > .bn-group-header > h3 { margin: 0; overflow-wrap: anywhere; }
+/* A question with nothing to show — not asked, nothing quotable, or every answer hidden — is its
+   heading alone, in the guide's grey (decided 19 Oct 2026). It stays: the guide's row lands on it
+   and the hidden-quotes counter hangs from it. */
+.dl-content .dl-item.empty > h3,
+.dl-content .dl-item.empty > .bn-group-header > h3 { color: var(--bn-colour-muted); }
 .dl-content .dl-item > h3 + .dl-group,
+.dl-content .dl-item > .bn-group-header + .dl-group,
 .dl-content .dl-part + .dl-group { border-top-color: transparent; margin-top: 0; padding-top: var(--bn-space-xs); }
 /* A session's lead-in: its bar badge, a button that opens this session at this question. */
 .dl-from {
@@ -378,11 +398,6 @@ button.dl-cell:not([aria-disabled="true"]):hover {
 .dl-from:hover { background: var(--bn-colour-hover); }
 .dl-from:focus-visible { outline: 2px solid var(--bn-colour-accent); outline-offset: 1px; }
 .dl-from .bn-speaker-badge-name { max-width: 16em; overflow: hidden; text-overflow: ellipsis; }
-/* "Not asked in #4 #11": absence shown, one line, the sessions as absent compact badges. */
-.dl-notasked { display: flex; flex-wrap: wrap; gap: var(--bn-space-xs); align-items: center; margin-top: var(--bn-space-sm); }
-.dl-notasked > span:first-child { margin-right: var(--bn-space-xs); }
-/* Chinese ends the label with a fullwidth colon, which carries its own space. */
-.dl-notasked > span:first-child:lang(zh) { margin-right: 0; }
 /* Asks never classified close All, apart from the last question by a keyline. */
 .dl-content .dl-leftovers { margin-top: var(--bn-space-xl); border-top: 1px solid var(--bn-colour-border); max-width: var(--bn-max-width); }
 .dl-content .dl-leftovers > .dl-group:first-child { border-top-color: transparent; }

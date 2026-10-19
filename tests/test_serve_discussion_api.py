@@ -1,8 +1,10 @@
 """GET /api/projects/{id}/discussion — the Discussion lens's record, as served.
 
-Codes only (names come from /sessions); a hidden quote is left out and an edited
-one shows its edit, so the lens never disagrees with the Quotes lens; a record
-built from other quotes reads as stale, never as current.
+Codes only (names come from /sessions); every quote carries the report's id for
+it, a hidden quote is sent (the lens hides it from the quotes store, so it can be
+unhidden there) and an edited one shows its edit, so the lens never disagrees
+with the Quotes lens; a record built from other quotes reads as stale, never as
+current.
 """
 
 from __future__ import annotations
@@ -88,16 +90,29 @@ def test_partial_and_failed_records_say_so(project):
     assert client.get("/api/projects/1/discussion").json()["status"] == "failed"
 
 
-def test_a_hidden_quote_is_left_out_and_an_edit_is_shown(project):
+def test_each_quote_carries_the_report_id_the_quotes_store_uses(project):
+    intermediate, client, quotes = project
+    _write(intermediate, _record(quotes))
+    served = client.get("/api/projects/1/discussion").json()["record"]["quotes"]
+    body = client.get("/api/projects/1/quotes").json()
+    # everywhere the SPA's store hydrates from (quoteCardHost.useReportQuotes)
+    report_ids = {q["dom_id"] for key in ("sections", "themes") for g in body[key] for q in g["quotes"]}
+    report_ids |= {q["dom_id"] for key in ("unjoined", "uncategorised") for q in body.get(key) or []}
+    assert [q["dom_id"] for q in served] == [f"q-{p}-{int(t)}" for _, p, t, _ in quotes]
+    assert {q["dom_id"] for q in served} <= report_ids
+
+
+def test_a_hidden_quote_is_sent_for_the_lens_to_hide_and_an_edit_is_shown(project):
+    """Hidden state is the quotes store's: the lens leaves a hidden quote out and
+    counts it beside its question, so it can be brought back there (19 Oct 2026)."""
     intermediate, client, quotes = project
     _write(intermediate, _record(quotes))
     first, second = (f"q-{p}-{int(t)}" for _, p, t, _ in quotes[:2])
     assert client.put("/api/projects/1/hidden", json={first: True}).status_code == 200
     assert client.put("/api/projects/1/edits", json={second: "edited words"}).status_code == 200
     served = client.get("/api/projects/1/discussion").json()["record"]["quotes"]
-    secs = [q["sec"] for q in served]
-    assert quotes[0][2] not in secs
-    assert next(q for q in served if q["sec"] == quotes[1][2])["text"] == "edited words"
+    assert first in [q["dom_id"] for q in served]
+    assert next(q for q in served if q["dom_id"] == second)["text"] == "edited words"
 
 
 def test_a_record_built_from_other_quotes_is_stale(project):
@@ -137,9 +152,8 @@ def test_quotes_sharing_a_key_are_matched_by_text(project):
     # the report holds the first; the twin is not in it, so it is left out and counted
     assert [q["text"] for q in served["quotes"] if q["sec"] == t] == [text]
     assert served["stats"]["quotes_not_in_report"] == 1
-    assert client.put("/api/projects/1/hidden", json={f"q-{p}-{int(t)}": True}).status_code == 200
-    served = client.get("/api/projects/1/discussion").json()["record"]
-    assert not [q for q in served["quotes"] if q["sec"] == t]
+    # the one served carries the report's id, so hiding it in the lens hides that row only
+    assert [q["dom_id"] for q in served["quotes"] if q["sec"] == t] == [f"q-{p}-{int(t)}"]
 
 
 def test_a_quote_the_report_does_not_hold_is_left_out(project):
@@ -190,3 +204,16 @@ def test_the_anonymised_export_drops_a_guide_section_nobody_asked_about():
     text = str(endpoints["/discussion"])
     assert "divorce" not in text
     assert [s["id"] for s in endpoints["/discussion"]["record"]["sections"]] == ["s1", "e1"]
+
+
+def test_a_report_id_goes_to_one_record_quote(project):
+    """A record quote listed twice would give two cards one id: the second is
+    counted as not in the report, never drawn twice (review, 19 Oct 2026)."""
+    intermediate, client, quotes = project
+    record = _record(quotes)
+    record["quotes"].append(dict(record["quotes"][0]))
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    ids = [q["dom_id"] for q in served["quotes"]]
+    assert len(ids) == len(set(ids)) == len(quotes)
+    assert served["stats"]["quotes_not_in_report"] == 1

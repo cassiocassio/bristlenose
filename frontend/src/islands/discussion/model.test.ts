@@ -12,6 +12,7 @@ import {
   markOf,
   mergedEntries,
   plannedEntries,
+  quoteTurns,
   sessionColumn,
   sessionForFocus,
   sessionLeftovers,
@@ -98,13 +99,12 @@ describe("sessionColumn", () => {
     const col = sessionColumn(tiny([turn("a", 10, "x"), turn("b", 20, "y"), turn("c", 30, "z")], [quote("q", 35)]), "s1");
     expect(col.groups).toHaveLength(1);
     expect(col.groups[0].asks.map((a) => a.turn.id)).toEqual(["a", "b", "c"]);
-    expect(col.groups[0].trailing).toBe(false);
   });
 
-  it("unanswered questions at the end form a trailing group; quotes before any question are set apart", () => {
+  it("unanswered questions at the end form a last group of their own; quotes before any question are set apart", () => {
     const col = sessionColumn(tiny([turn("a", 10, "x"), turn("b", 50, "y")], [quote("q0", 5), quote("q1", 20)]), "s1");
     expect(col.before.map((q) => q.key)).toEqual(["q0"]);
-    expect(col.groups[1]).toMatchObject({ trailing: true });
+    expect(col.groups[1].asks.map((a) => [a.turn.id, a.answers.length])).toEqual([["b", 0]]);
   });
 
   it("non-question turns never appear in the column", () => {
@@ -222,6 +222,17 @@ describe("all sessions", () => {
     expect(measureTier(fixed + 8 * MEASURE.strip + MEASURE.count - 1, 8, pitch)).toBe("bar");
     expect(measureTier(2000, 1, pitch)).toBe("bar"); // one session: nothing to compare
     expect(measureTier(0, 12, pitch)).toBe("bar");
+  });
+});
+
+describe("quoteTurns", () => {
+  it("puts every quote under the question its card sits under, by report id", () => {
+    const turns = quoteTurns(data);
+    const col = sessionColumn(data, "s1");
+    for (const g of col.groups) for (const a of g.asks) for (const q of a.answers) expect(turns.get(q.dom_id!)).toBe(a.turn.id);
+    for (const q of col.before) expect(turns.get(q.dom_id!)).toBe("");
+    // every quote with an id is placed once
+    expect(turns.size).toBe(data.quotes.filter((q) => q.dom_id).length);
   });
 });
 

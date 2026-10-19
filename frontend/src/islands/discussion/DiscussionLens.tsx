@@ -4,8 +4,10 @@
  *
  * Shipped for beta 3 Oct 2026 (docs/design-discussion-lens-plan.md). It reads the
  * project's record through loadDiscussion() — codes from /discussion, names from
- * /sessions; quote cards are read-only (star, hide and tag arrive with QuoteGroup
- * once quotes have store ids).
+ * /sessions. Every quote is the report's own card (quoteCardHost.tsx), found in the
+ * quotes store by its report id: it plays, opens the transcript, stars, hides, tags
+ * and edits as it does on Quotes and Screens (decided 19 Oct 2026, plan §3). A
+ * hidden quote leaves the lens and its counts, and is counted beside its question.
  *
  * Interaction (decided 3 Oct 2026): focus is sticky and click-driven — a
  * navigator row or a question locks focus until clicked again or Esc; nothing
@@ -21,9 +23,16 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { Badge } from "../../components/Badge";
+import { Counter } from "../../components/Counter";
 import { MicroBar } from "../../components/MicroBar";
 import { PersonBadge } from "../../components/PersonBadge";
 import { SectionHeading } from "../../components/SectionHeading";
+import { TimecodeLink } from "../../components/TimecodeLink";
+import { useFocus } from "../../contexts/FocusContext";
+import { unhideQuotes } from "../../contexts/QuotesContext";
+import { reportHref } from "../../utils/reportHref";
+import { useLastRun } from "../../contexts/LastRunStore";
+import { useQuoteCards, useReportQuotes, type ReportQuotes } from "../quoteCardHost";
 import { announce } from "../../utils/announce";
 import { isExportMode } from "../../utils/exportData";
 import { dt } from "../../utils/platformTranslation";
@@ -43,6 +52,7 @@ import {
   measureTier,
   mergedEntries,
   navEntries,
+  quoteTurns,
   sessionColumn,
   sessionForFocus,
   sessionLeftovers,
@@ -95,10 +105,8 @@ const S = {
   session: (n: number) => d("session", { n }),
   stats: (duration: string, q: number, n: number) =>
     d("stats", { duration, questions: d("questionCount", { count: q }), quotes: d("quoteCount", { count: n }) }),
-  get noAnswers() { return d("noAnswers"); },
   get all() { return d("all"); },
   get allSessions() { return d("allSessions"); },
-  get notAskedIn() { return d("notAskedIn"); },
   get notAsked() { return d("notAsked"); },
   showSession: (n: number) => d("showSession", { n }),
   quotes: (n: number) => d("quoteCount", { count: n }),
@@ -138,7 +146,6 @@ const S = {
   get keyBoth() { return d("keyBoth"); },
   get keyHollow() { return d("keyHollow"); },
   get keyPlus() { return d("keyPlus"); },
-  get keyGrey() { return d("keyGrey"); },
   get tipPlanned() { return d("tipPlanned"); },
   get tipBoth() { return d("tipBoth"); },
   get tipHollow() { return d("tipHollow"); },
@@ -215,14 +222,45 @@ function failedReason(data: DiscussionData | null): string {
   return S.notBuilt;
 }
 
+// Every state carries a titled zone, as Signals' do, so the lens opens at the
+// same height loading, failed or empty as it does with data (lens template).
+const shell = (body: React.ReactNode) => (
+  <section>
+    <SectionHeading>{S.title}</SectionHeading>
+    {body}
+  </section>
+);
+
+/** The report's card focus, for the lens: registers its cards in reading order (j/k, ⇧J/K, ⌘A)
+ *  and says whether one of THEM holds the cursor or the selection — a cursor left on Quotes does
+ *  not. Its own component, so a j/k or a selection re-renders this and not the guide. */
+function CardFocus({ scope, onHeld }: { scope: string[]; onHeld: (held: boolean) => void }) {
+  const { focusedId, selectedIds, registerVisibleQuoteIds } = useFocus();
+  useEffect(() => registerVisibleQuoteIds("discussion", scope), [registerVisibleQuoteIds, scope]);
+  useEffect(() => () => registerVisibleQuoteIds("discussion", []), [registerVisibleQuoteIds]);
+  useEffect(() => {
+    const on = new Set(scope);
+    onHeld((!!focusedId && on.has(focusedId)) || [...selectedIds].some((d) => on.has(d)));
+  }, [focusedId, selectedIds, scope, onHeld]);
+  return null;
+}
+
 export function DiscussionLens() {
   useTranslation();
   const [load, setLoad] = useState<DiscussionLoad | null>(null);
   const [failed, setFailed] = useState(false);
+  // Again on a refresh (a run imported, a re-analyse finished), as the quotes store is: the record
+  // and the store must describe the same quotes, or a quote whose id changed would vanish. The
+  // last load stays on screen while the next one comes.
+  const { refreshKey } = useLastRun();
   useEffect(() => {
     let live = true;
     loadDiscussion().then(
-      (l) => live && setLoad(l),
+      (l) => {
+        if (!live) return;
+        setLoad(l);
+        setFailed(false);
+      },
       (e: unknown) => {
         // A 401, a 500 and an unknown record version all read the same on
         // screen, so the cause has to reach the console.
@@ -233,15 +271,7 @@ export function DiscussionLens() {
     return () => {
       live = false;
     };
-  }, []);
-  // Every state carries a titled zone, as Signals' do, so the lens opens at the
-  // same height loading, failed or empty as it does with data (lens template).
-  const shell = (body: React.ReactNode) => (
-    <section>
-      <SectionHeading>{S.title}</SectionHeading>
-      {body}
-    </section>
-  );
+  }, [refreshKey]);
   if (failed) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
   if (!load) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
   // Each state says what it is and what to do; none reads as "no questions".
@@ -257,8 +287,69 @@ export function DiscussionLens() {
 }
 
 export function DiscussionView({ data }: { data: DiscussionData }) {
+  useTranslation();
+  // The report's quotes store and the card that draws them (quoteCardHost.tsx). Until the store
+  // holds the report's quotes the lens says it is loading, and if they cannot be loaded it says
+  // so: drawn without them, every question would read as unanswered (review, 19 Oct 2026).
+  const host = useReportQuotes("Discussion");
+  if (!host.loaded) {
+    return shell(host.failed
+      ? <p className="bn-empty-state" role="alert">{S.failed}</p>
+      : <p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
+  }
+  return <DiscussionBody data={data} host={host} />;
+}
+
+function DiscussionBody({ data: record, host }: { data: DiscussionData; host: ReportQuotes }) {
   const { i18n: tr } = useTranslation();
-  const order = useMemo(() => data.sessions.map((s) => s.id), [data]);
+  // The lens shows a record quote only when the store holds it, and not while it is hidden: so
+  // every count, shade and fold below follows hiding, and a hidden quote is not evidence (decided
+  // 19 Oct 2026).
+  const { store, byId: quoteById } = host;
+  // Which record quotes the store holds, as a key: a store reload that holds the same quotes (a
+  // refresh, another lens's load) leaves the lens's model untouched rather than rebuilding it.
+  const heldKey = useMemo(
+    () => record.quotes.map((q) => (q.dom_id && quoteById.has(q.dom_id) ? "1" : "0")).join(""),
+    [record.quotes, quoteById]);
+  const held = useMemo(
+    () => record.quotes.filter((_, i) => heldKey[i] === "1"), [record.quotes, heldKey]);
+  // A record quote the store does not hold is not drawn (nothing could star or hide it). Never
+  // silently: the console says how many, so a lens short of quotes can be traced.
+  const notHeld = record.quotes.length - held.length;
+  useEffect(() => {
+    if (notHeld > 0) console.warn(`Discussion: ${notHeld} quote(s) in the record are not in the report, so not shown`);
+  }, [notHeld]);
+  const data = useMemo<DiscussionData>(
+    () => ({ ...record, quotes: held.filter((q) => !store.hidden[q.dom_id!]) }), [record, held, store.hidden]);
+  // Each hidden quote under the question it answers ("" = before the first question): the
+  // hidden-quotes counter sits beside that question, the one way back from hiding its answers.
+  const hiddenAt = useMemo(() => {
+    const turnOf = quoteTurns({ ...record, quotes: held });
+    const out = new Map<string, string[]>();
+    for (const q of held) {
+      if (!store.hidden[q.dom_id!]) continue;
+      const k = `${q.session}|${turnOf.get(q.dom_id!) ?? ""}`;
+      out.set(k, [...(out.get(k) ?? []), q.dom_id!]);
+    }
+    return out;
+  }, [record, held, store.hidden]);
+  // The turns that asked each question in each session, once, for the All view's counters.
+  const turnsAt = useMemo(() => {
+    const out = new Map<string, string[]>();
+    for (const t of record.turns) {
+      const k = `${t.session}|${t.item ?? ""}`;
+      out.set(k, [...(out.get(k) ?? []), t.id]);
+    }
+    return out;
+  }, [record.turns]);
+  const hiddenUnder = useCallback(
+    (session: string, turns: string[]) => turns.flatMap((t) => hiddenAt.get(`${session}|${t}`) ?? []), [hiddenAt]);
+  const [openCounter, setOpenCounter] = useState<string | null>(null);
+  // The cards this lens shows, in reading order (set from the column as drawn, below).
+  const [scope, setScope] = useState<string[]>([]);
+  // From the record, not the shown quotes: hiding a quote changes neither, and the arrival below
+  // must land once, not again on every hide (review, 19 Oct 2026).
+  const order = useMemo(() => record.sessions.map((s) => s.id), [record]);
   const saved = useMemo(() => readLensState(), []);
   // Arriving from a link (the transcript's gutter: docs/design-transcript-gutter.md): the address
   // names a guide item and the turn that asked it, and the lens opens on that asking, in that
@@ -267,15 +358,15 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const arrived = useMemo(() => {
     const want = discussionArrival(appQuery());
     if (!want) return null;
-    const turn = data.turns.find((tt) => tt.id === want.turn);
+    const turn = record.turns.find((tt) => tt.id === want.turn);
     if (turn && order.includes(turn.session)) return { item: want.item, turn: turn.id as string | null, session: turn.session as string | null };
     // The turn has gone (the record was rebuilt, or the address is old): the item, if it is still
     // in the guide, is the next best place to land.
     console.warn("Discussion: the turn asked for is not in this record", want.turn);
-    const known = data.sections.some((sec) => sec.items.some((it) => it.id === want.item))
-      || data.standalone.some((it) => it.id === want.item);
+    const known = record.sections.some((sec) => sec.items.some((it) => it.id === want.item))
+      || record.standalone.some((it) => it.id === want.item);
     return known ? { item: want.item, turn: null, session: null } : null;
-  }, [data, order]);
+  }, [record, order]);
   const [mode, setMode] = useState<Mode>(data.guide ? saved.mode : "merged");
   const [guideView, setGuideView] = useState<GuideView>(saved.guideView);
   const [guideNote, setGuideNote] = useState(false);
@@ -421,6 +512,15 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return () => window.removeEventListener("bn:menu-action", onMenu);
   }, [entries, focus]);
 
+  // Esc clears the card first — its selection, then its focus (the report's own cascade,
+  // useKeyboardShortcuts) — and only then this lens's question (decided 19 Oct 2026).
+  // Whether one of this lens's cards holds the cursor or the selection, kept by CardFocus below
+  // so the lens itself never re-renders on a j/k.
+  const cardHeld = useRef(false);
+  const onHeld = useCallback((held: boolean) => {
+    cardHeld.current = held;
+  }, []);
+
   // Esc clears focus; 1–9 pick a session. Never claims a key someone else handled,
   // a key typed into a field, or one pressed while a dialog owns the keyboard.
   useEffect(() => {
@@ -429,7 +529,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       // the target can be the document itself, which has no closest()
       const t = e.target;
       if (t instanceof Element && t.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (e.key === "Escape" && focus) {
+      if (e.key === "Escape" && focus && !cardHeld.current) {
         setFocus(null);
         announce(S.announceClear);
         e.preventDefault();
@@ -488,6 +588,17 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     const top = lens.getBoundingClientRect().top;
     if (top < 0) window.scrollBy(0, top);
   }, [session, focus]);
+
+  // The cards in reading order: what j/k walk, ⌘A selects and a click on a selected card acts on.
+  // Read from the column as drawn, so it can never disagree with what is on screen.
+  // Re-read whenever what the column draws can change: the session, the quotes it shows (which
+  // follow hiding), the quotes the store holds, and the cards mid-collapse.
+  useLayoutEffect(() => {
+    const ids = Array.from(
+      contentRef.current?.querySelectorAll<HTMLElement>(".dl-card > blockquote.quote-card:not(.bn-hiding)") ?? [],
+      (b) => b.id);
+    setScope((prev) => (prev.length === ids.length && prev.every((x, i) => x === ids[i]) ? prev : ids));
+  }, [session, data, quoteById, store.hiding]);
 
   // ── geometry: bar height, measure, wires ──
   useLayoutEffect(() => {
@@ -723,12 +834,14 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   };
 
   const row = (r: NavRow) => {
-    // In All every session is showing, so nothing is greyed for "not asked in this session".
     const asked = all || r.sessions.includes(session);
+    // Grey is "nothing to show here": not asked, asked with nothing quotable, or every answer
+    // hidden — in this session, or in All in any (decided 19 Oct 2026).
+    const empty = all ? rowTotal(r) === 0 : cellQuotes(answers, r.id, session) === 0;
     const on = !!focus && focus.item === r.id;
     const cls = ["toc-link", "dl-row"];
     if (!r.sessions.length) cls.push("dim");
-    else if (!asked) cls.push("ghost");
+    else if (!asked || empty) cls.push("ghost");
     if (r.mark === "hollow") cls.push("unasked");
     if (on) cls.push("active");
     return (
@@ -765,44 +878,57 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
     return out;
   }, [entries]);
 
-  const quoteCard = (q: DiscussionQuote, forTurn: string) => (
-    <blockquote key={q.key} className={`quote-card${lit.has(forTurn) ? " hot" : ""}`} data-for={forTurn}>
-      <div className="quote-row">
-        <span className="timecode">[{q.time}]</span>
-        <div className="quote-body">
-          <span className="quote-text-wrapper">
-            <span className="smart-quote">{"“"}</span>
-            <span className="quote-text">{q.text}</span>
-            <span className="smart-quote">{"”"}</span>
-          </span>{" "}
-          <span className="speaker">
-            <PersonBadge code={q.participant} role="participant" name={q.name || undefined} />
-          </span>
-          {q.sentiment && (
-            <div className="badges">
-              <Badge text={q.sentiment} variant="ai" sentiment={q.sentiment} />
-            </div>
-          )}
-        </div>
+  // Every quote is the report's own card, wrapped by the lens: the wrapper carries the question it
+  // answers (data-for) and is the box the card's star and hide hang from (discussion.css).
+  const { renderCard, counterItems } = useQuoteCards(host, scope);
+  // Keyed by the record's own key: two quotes in one second can share a report id, and the store
+  // holds one of them, so a card is drawn only where the store's quote is this one (its start).
+  const quoteCard = (q: DiscussionQuote, forTurn: string) => {
+    const card = q.dom_id ? quoteById.get(q.dom_id) : undefined;
+    if (!card || Math.abs(card.start_timecode - q.sec) >= 0.01) return null;
+    return (
+      <div key={q.key} className={`dl-card${lit.has(forTurn) ? " hot" : ""}`} data-for={forTurn}>
+        {renderCard(card, { collapse: true })}
       </div>
-    </blockquote>
-  );
+    );
+  };
 
-  const askRow = (t: DiscussionTurn, noAnswers: boolean) => (
+  // The hidden-quotes counter, shipped Counter, one open at a time.
+  const counter = (key: string, ids: string[]) => ids.length > 0 && (
+    <Counter
+      count={ids.length}
+      items={counterItems(ids, true)}
+      isOpen={openCounter === key}
+      onToggle={() => setOpenCounter((k) => (k === key ? null : key))}
+      onUnhide={(id) => unhideQuotes([id])}
+      onUnhideAll={() => {
+        unhideQuotes(ids);
+        setOpenCounter(null);
+      }}
+    />
+  );
+  // At the foot of a block, right-aligned (a question in a session view is one block).
+  const foot = (key: string, ids: string[]) =>
+    ids.length > 0 && <div className="dl-hidden-foot">{counter(key, ids)}</div>;
+
+  // The moderator's turn: a moment in the recording, so its timecode plays it and its badge opens
+  // the transcript there, as a quote's do. Not a quote: no star, hide or tag. The player is keyed
+  // by session, since a moderator's code is not unique across sessions (PlayerContext's map).
+  const askRow = (t: DiscussionTurn) => (
     <blockquote key={t.id} className={`quote-card dl-ask${lit.has(t.id) ? " hot" : ""}`}
       data-item={t.item ?? ""} data-turn={t.id}>
       <div className="quote-row">
-        <span className="timecode">[{t.time}]</span>
+        <TimecodeLink seconds={t.sec} participantId={t.session} />
         <div className="quote-body">
           <button type="button" className="dl-ask-btn" aria-pressed={!!focus && focus.turn === t.id}
             onClick={() => focusAsk(t)}>
             <span className="moderator-question-text">{t.text}</span>
           </button>
           <span className="speaker">
-            <PersonBadge code={t.speaker ?? "m1"} role="moderator" />
+            <PersonBadge code={t.speaker ?? "m1"} role="moderator"
+              href={reportHref(`/report/sessions/${t.session}#t-${Math.floor(t.sec)}`)} />
           </span>
           {t.kind === "unclassified" && <Badge text={S.unclassified} variant="readonly" />}
-          {noAnswers && <span className="dl-noans">{S.noAnswers}</span>}
         </div>
       </div>
     </blockquote>
@@ -827,13 +953,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   // With no guide, the second tab is only where one is added: no key, no rows.
   const adding = mode === "planned" && !data.guide;
   const shownSections = adding ? [] : sections;
-  // Without a guide the marks say nothing, so the key keeps only its grey line.
+  // Without a guide the marks say nothing, so the key shows only the measure's cells, if any.
   const keyMarks = new Set(data.guide ? shownSections.flatMap(({ rows }) => rows.map((r) => r.mark)) : []);
   // Normalised questions first: it is the view the lens opens on.
   const modes: Mode[] = ["merged", "planned"];
   // All: the guide's order, each question once, then one block per session that asked it —
   // the session's lead-in (its badge, which opens that session at this question), the
-  // moderator's own wording, the quotes. Sessions that never asked it: one line at the foot.
+  // moderator's own wording, the quotes. Only the sessions with a quote to show (19 Oct 2026).
   // All is built from the merged record whatever the navigator shows: Your guide lists only
   // the guide's own lines, and All must not lose the questions asked off it (review, 18 Oct).
   const allSections = useMemo(() => {
@@ -868,17 +994,22 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
 
   // All: the guide's order, each question once, then one block per session that asked it —
   // the session's lead-in, the moderator's own wording, the quotes. Sessions that never asked
-  // it: one line at the foot. Quotes before the first question open the column and asks the
-  // model never classified close it, so every quote a session view shows is here too.
+  // it: nothing — the guide's cells say so (decided 19 Oct 2026). Quotes before the first question
+  // open the column and asks the model never classified close it, so every quote a session view
+  // shows is here too. A block that has only hidden quotes stays, for its counter.
   const allColumn = () => {
     const seconds = data.sessions.reduce((n, sess) => n + (sess.seconds || 0), 0);
     // The same counts a session's own line gives, summed: asks, and every quote.
     const asks = data.turns.filter((t) => t.item).length;
     // "Before the first question" is true only of a session that had questions; an unread
     // session's quotes close the column with its other leftovers instead.
-    const withBefore = data.sessions.filter((sess) => readable.has(sess.id) && leftovers.get(sess.id)?.before.length);
-    const withUnclassified = data.sessions.filter((sess) => leftovers.get(sess.id)?.unclassified.length
-      || (!readable.has(sess.id) && leftovers.get(sess.id)?.before.length));
+    const unclassifiedTurns = (sid: string) => turnsAt.get(`${sid}|`) ?? [];
+    const withBefore = data.sessions.filter((sess) => readable.has(sess.id)
+      && (leftovers.get(sess.id)?.before.length || hiddenUnder(sess.id, [""]).length));
+    const withUnclassified = data.sessions.filter((sess) =>
+      leftovers.get(sess.id)?.unclassified.some((a) => a.answers.length)
+      || (!readable.has(sess.id) && leftovers.get(sess.id)?.before.length)
+      || hiddenUnder(sess.id, [...(readable.has(sess.id) ? [] : [""]), ...unclassifiedTurns(sess.id)]).length);
     return (
       <section>
         <SectionHeading>{S.allSessions}</SectionHeading>
@@ -897,7 +1028,8 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {withBefore.map((sess) => (
               <div key={sess.id} className="dl-group">
                 {leadIn(sess, null)}
-                {leftovers.get(sess.id)!.before.map((q) => quoteCard(q, ""))}
+                {(leftovers.get(sess.id)?.before ?? []).map((q) => quoteCard(q, ""))}
+                {foot(`${sess.id}|`, hiddenUnder(sess.id, [""]))}
               </div>
             ))}
           </div>
@@ -906,31 +1038,34 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
           <div key={head.id} className="dl-part-group">
             <h2 className="dl-part">{head.id === "standalone" ? S.standalone : head.title}</h2>
             {rows.map((r) => {
-              const missing = data.sessions.filter((sess) => readable.has(sess.id) && !r.sessions.includes(sess.id));
+              // Only the sessions with a quote to show here: absence is the guide's cells' to
+              // say, and an empty question is its heading alone (decided 19 Oct 2026).
+              const sids = r.sessions.filter((sid) => cellQuotes(answers, r.id, sid) > 0);
+              const hidden = r.sessions.flatMap((sid) => hiddenUnder(sid, turnsAt.get(`${sid}|${r.id}`) ?? []));
               return (
-                <div key={r.id} className="dl-item" data-item={r.id}>
-                  <h3>{r.text}</h3>
-                  {r.sessions.map((sid) => {
+                <div key={r.id} className={`dl-item${sids.length ? "" : " empty"}`} data-item={r.id}>
+                  {hidden.length ? (
+                    // The Quotes lens's group header: the question, and its hidden quotes beside it.
+                    <div className="bn-group-header">
+                      <h3>{r.text}</h3>
+                      {counter(`item|${r.id}`, hidden)}
+                    </div>
+                  ) : (
+                    <h3>{r.text}</h3>
+                  )}
+                  {sids.map((sid) => {
                     const sess = byId.get(sid);
                     if (!sess) return null;
                     return (
                       <div key={sid} className="dl-group">
                         {leadIn(sess, r.id)}
                         {(answers.get(r.id)?.get(sid) ?? []).map(({ turn, answers: said }) => [
-                          askRow(turn, said.length === 0),
+                          askRow(turn),
                           ...said.map((q) => quoteCard(q, turn.id)),
                         ])}
                       </div>
                     );
                   })}
-                  {missing.length > 0 && (
-                    <p className="dl-before dl-notasked">
-                      <span>{S.notAskedIn}</span>
-                      {missing.map((sess) => (
-                        <PersonBadge key={sess.id} code={`#${sess.number}`} role="participant" compact absent />
-                      ))}
-                    </p>
-                  )}
                 </div>
               );
             })}
@@ -942,11 +1077,13 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             {withUnclassified.map((sess) => (
               <div key={sess.id} className="dl-group">
                 {leadIn(sess, null)}
-                {!readable.has(sess.id) && leftovers.get(sess.id)!.before.map((q) => quoteCard(q, ""))}
-                {leftovers.get(sess.id)!.unclassified.map(({ turn, answers: said }) => [
-                  askRow(turn, said.length === 0),
+                {!readable.has(sess.id) && (leftovers.get(sess.id)?.before ?? []).map((q) => quoteCard(q, ""))}
+                {(leftovers.get(sess.id)?.unclassified ?? []).filter((a) => a.answers.length).map(({ turn, answers: said }) => [
+                  askRow(turn),
                   ...said.map((q) => quoteCard(q, turn.id)),
                 ])}
+                {foot(`${sess.id}|left`, hiddenUnder(sess.id, [
+                  ...(readable.has(sess.id) ? [] : [""]), ...unclassifiedTurns(sess.id)]))}
               </div>
             ))}
           </div>
@@ -961,16 +1098,19 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
   const allView = useMemo(
     () => (all ? allColumn() : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [all, allSections, answers, leftovers, readable, lit, focus, data, byId, names, tr.language],
+    [all, allSections, answers, leftovers, readable, lit, focus, data, byId, names, tr.language,
+      quoteById, renderCard, counterItems, hiddenUnder, turnsAt, openCounter],
   );
 
   // The session bar's choices, in order: All (with two sessions or more), then each session.
   const picks = multi ? [ALL, ...order] : order;
-  const showKey = keyMarks.size > 0 || !all || tier !== "bar";
+  // No line explains the guide's grey: a row with nothing to show reads as empty (19 Oct 2026).
+  const showKey = keyMarks.size > 0 || tier !== "bar";
 
   return (
     <div ref={lensRef} className={`dl-lens dl-m-${tier}${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`}
       style={style} data-testid="discussion-lens" data-all={all ? "true" : "false"}>
+      <CardFocus scope={scope} onHeld={onHeld} />
       <div ref={barRef} className="dl-bar">
         <div className="dl-bar-nav">
         {/* Always both tabs: with no guide, the second is where one is added. An
@@ -1077,7 +1217,7 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
         )}
         {shownSections.length > 0 && showKey && (
           // The key first, so it scrolls away (4 Oct 2026). Only the marks this
-          // view uses: with no guide uploaded, none, so only the grey line. The classes are the
+          // view uses: with no guide uploaded, none, so only the measure's cells. The classes are the
           // Settings ▸ Pipeline symbol key's; the marks are the rows' own.
           <div className="bn-pipeline-key dl-key" role="note" aria-label={S.key}>
             {keyMarks.size > 0 && (
@@ -1109,11 +1249,6 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
                   <span className="dl-cell s1" aria-hidden="true" /><span className="dl-cell s2" aria-hidden="true" />
                   <span className="dl-cell s3" aria-hidden="true" />{S.keyMeasure}
                 </span>
-              </div>
-            )}
-            {!all && (
-              <div className="bn-pipeline-key-group">
-                <span className="bn-pipeline-key-item dl-key-grey">{S.keyGrey}</span>
               </div>
             )}
           </div>
@@ -1197,23 +1332,24 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
             ) : (
               column.groups.length === 0 && <p className="dl-before">{S.noQuestions}</p>
             )}
-            {column.before.length > 0 && (
+            {(column.before.length > 0 || hiddenUnder(current.id, [""]).length > 0) && (
               <div className="dl-group">
                 {column.groups.length > 0 && <div className="dl-before">{S.before}</div>}
                 {column.before.map((q) => quoteCard(q, ""))}
+                {foot(`${current.id}|`, hiddenUnder(current.id, [""]))}
               </div>
             )}
-            {column.groups.map((g) => {
-              const last = g.asks[g.asks.length - 1].turn.id;
-              return (
-                <div key={g.asks[0].turn.id} className="dl-group">
-                  {g.asks.map(({ turn, answers }) => [
-                    askRow(turn, g.trailing && turn.id === last),
-                    ...answers.map((q) => quoteCard(q, turn.id)),
-                  ])}
-                </div>
-              );
-            })}
+            {/* Questions that drew nothing to show fold forward into the next that did, as
+                shipped; the last run of them closes the column, quietly (19 Oct 2026). */}
+            {column.groups.map((g) => (
+              <div key={g.asks[0].turn.id} className="dl-group">
+                {g.asks.map(({ turn, answers }) => [
+                  askRow(turn),
+                  ...answers.map((q) => quoteCard(q, turn.id)),
+                ])}
+                {foot(`${current.id}|${g.asks[0].turn.id}`, hiddenUnder(current.id, g.asks.map((a) => a.turn.id)))}
+              </div>
+            ))}
           </section>
         )}
       </div>

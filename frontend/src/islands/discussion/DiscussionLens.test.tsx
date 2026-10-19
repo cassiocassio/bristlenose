@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fixture from "./fixture.json";
 import { DiscussionLens, DiscussionView } from "./DiscussionLens";
@@ -8,11 +8,46 @@ import enDesktop from "@locales/en/desktop.json";
 import { _resetPlatformCache } from "../../utils/platform";
 import { _resetEmbeddedCache } from "../../utils/embedded";
 import { resetLensState } from "./lensState";
-import { cellQuotes, itemAnswers, shadeStep, yieldThirds } from "./model";
+import { cellQuotes, itemAnswers, quoteTurns, shadeStep, yieldThirds } from "./model";
 import { discussionGuideState, resetDiscussionGuide, setDiscussionGuideOpen, setPendingGuide, toggleDiscussionGuide } from "./guidePanel";
 import type { DiscussionData } from "./types";
+import { getQuotesSnapshot, HIDE_DURATION, hideQuotes, initFromQuotes, resetStore } from "../../contexts/QuotesContext";
+import { FocusProvider, useFocus } from "../../contexts/FocusContext";
+import type { QuoteResponse } from "../../utils/types";
 
 const data = fixture as unknown as DiscussionData;
+
+/** The report's own quotes for a record, as /quotes carries them: the store the lens's cards read
+ *  (quoteCardHost.tsx). A record quote with no report id is one the report does not hold. */
+function quotesFor(d: DiscussionData): QuoteResponse[] {
+  return d.quotes.filter((q) => q.dom_id).map((q) => ({
+    dom_id: q.dom_id!, text: q.text, verbatim_excerpt: q.text, participant_id: q.participant,
+    session_id: q.session, speaker_name: q.name || q.participant, start_timecode: q.sec,
+    end_timecode: q.sec + 5, sentiment: q.sentiment ?? null, intensity: 1, researcher_context: null,
+    quote_type: "screen_specific", topic_label: "", is_starred: false, is_hidden: false, edited_text: null,
+    tags: [], deleted_badges: [], proposed_tags: [], segment_index: 0,
+  }));
+}
+
+/** The record the store was last seeded from: what the mocked /quotes answers with. */
+let seeded: DiscussionData = data;
+function seed(d: DiscussionData) {
+  seeded = d;
+  resetStore();
+  initFromQuotes(quotesFor(d));
+}
+/** The mocked network: /quotes from the seeded record, nothing else. */
+function route(path: string): Promise<unknown> {
+  if (path === "/quotes") {
+    return Promise.resolve({ sections: [{ quotes: quotesFor(seeded) }], themes: [], unjoined: [], has_moderator: true });
+  }
+  return Promise.resolve(undefined);
+}
+/** Render the lens on a record, its quotes in the store. */
+function view(d: DiscussionData) {
+  seed(d);
+  return render(<DiscussionView data={d} />);
+}
 
 function nav() {
   return screen.getByRole("navigation", { name: "Discussion guide" });
@@ -64,6 +99,9 @@ beforeEach(() => {
   resetLensState();
   resetDiscussionGuide();
   document.getElementById("bn-app-root")?.remove();
+  seed(data);
+  api.apiGet.mockImplementation(route);
+  api.getCodebook.mockResolvedValue({ groups: [], all_tag_names: [] });
 });
 
 describe("DiscussionView", () => {
@@ -74,14 +112,18 @@ describe("DiscussionView", () => {
     expect(heading()).toBe("All sessions");
     const asked = data.sections.flatMap((s) => s.items).filter((i) => i.asks.length);
     expect(container.querySelectorAll(".dl-content .dl-item")).toHaveLength(asked.length);
+    const answers = itemAnswers(data);
     for (const it of asked) {
       const block = container.querySelector(`.dl-item[data-item="${it.id}"]`)!;
-      const sessions = new Set(it.asks.map((a) => a.session));
-      // one block per session that asked it, each led by that session's badge
-      expect(block.querySelectorAll(".dl-group")).toHaveLength(sessions.size);
-      const missing = data.sessions.length - sessions.size;
-      expect(block.querySelectorAll(".dl-notasked .bn-person-badge-absent")).toHaveLength(missing);
+      // one block per session with a quote to show, each led by that session's badge; a
+      // question with none is its heading alone (decided 19 Oct 2026)
+      const drew = data.sessions.filter((s) => cellQuotes(answers, it.id, s.id) > 0);
+      expect(block.querySelectorAll(".dl-group")).toHaveLength(drew.length);
+      expect(block.classList.contains("empty")).toBe(drew.length === 0);
     }
+    // absence is the guide's cells' to show: no "Not asked in", no "No quotes from this question"
+    expect(screen.queryByText(/Not asked in/)).toBeNull();
+    expect(screen.queryByText(/No quotes from this question/)).toBeNull();
   });
 
   it("All loses no quote: before the first question, under a question, or under an unclassified ask", () => {
@@ -90,13 +132,13 @@ describe("DiscussionView", () => {
     const t = data.turns.find((x) => x.session === "s1" && x.item
       && data.quotes.some((q) => q.session === "s1" && q.sec >= x.sec))!;
     const first = Math.min(...data.turns.filter((x) => x.session === "s2").map((x) => x.sec));
-    const early = { ...data.quotes.find((q) => q.session === "s2")!, key: "early", sec: Math.max(0, first - 30), text: "Before anything was asked" };
+    const early = { ...data.quotes.find((q) => q.session === "s2")!, key: "early", dom_id: "q-early-1", sec: Math.max(0, first - 30), text: "Before anything was asked" };
     const d: DiscussionData = {
       ...data,
       turns: data.turns.map((x) => (x.id === t.id ? { ...x, kind: "unclassified" as const, item: null } : x)),
       quotes: [...data.quotes, early],
     };
-    const { container } = render(<DiscussionView data={d} />);
+    const { container } = view(d);
     const cards = container.querySelectorAll(".dl-content blockquote.quote-card:not(.dl-ask)");
     expect(cards).toHaveLength(d.quotes.length);
     expect(screen.getByText("Before anything was asked")).toBeInTheDocument();
@@ -127,7 +169,8 @@ describe("DiscussionView", () => {
     const L = layout(800);
     try {
     const { container } = render(<DiscussionView data={d} />);
-    for (const line of container.querySelectorAll(".dl-notasked")) expect(line.textContent).not.toContain("#1");
+    // no "Not asked in" line at all since 19 Oct 2026; its cells say "not classified" (below)
+    expect(screen.queryByText(/Not asked in/)).toBeNull();
     // and its quotes are not "before the first question": it had none
     const beforePart = [...container.querySelectorAll(".dl-part")].find((h) => h.textContent === "Before the first question");
     expect(beforePart?.parentElement?.querySelector(".dl-from")?.textContent ?? "").not.toMatch(/^#1/);
@@ -240,11 +283,11 @@ describe("DiscussionView", () => {
 
   it("clicking a question focuses that one ask, and its quotes, only", () => {
     const { container } = render(<DiscussionView data={data} />);
-    const answered = container.querySelector(".dl-group .dl-ask + blockquote.quote-card:not(.dl-ask)")!
+    const answered = container.querySelector(".dl-group .dl-ask + .dl-card")!
       .previousElementSibling as HTMLElement;
     fireEvent.click(within(answered).getByRole("button", { pressed: false }));
     expect(container.querySelectorAll(".dl-ask.hot")).toHaveLength(1);
-    const lit = container.querySelectorAll(`blockquote.quote-card.hot[data-for="${answered.dataset.turn}"]`);
+    const lit = container.querySelectorAll(`.dl-card.hot[data-for="${answered.dataset.turn}"]`);
     expect(lit.length).toBeGreaterThan(0);
   });
 
@@ -400,6 +443,224 @@ describe("DiscussionView", () => {
   });
 });
 
+describe("quotes work as they do everywhere else (decided 19 Oct 2026)", () => {
+  /** A quote under an asked question, its question and its session. */
+  function answered() {
+    const answers = itemAnswers(data);
+    for (const [item, bySession] of answers) {
+      for (const [sid, asks] of bySession) {
+        for (const a of asks) if (a.answers.length) return { item, sid, turn: a.turn, q: a.answers[0] };
+      }
+    }
+    throw new Error("the fixture has no answered question");
+  }
+  /** Hide through the store, and wait until it has landed (the card collapses first). */
+  async function hide(ids: string[]) {
+    act(() => hideQuotes(ids));
+    await waitFor(() => expect(ids.every((d) => getQuotesSnapshot().hidden[d])).toBe(true),
+      { timeout: HIDE_DURATION * 10 });
+  }
+  const card = (container: HTMLElement, id: string) => container.querySelector(`.dl-card > blockquote#${CSS.escape(id)}`);
+  const total = (container: HTMLElement, item: string) =>
+    Number(container.querySelector(`.dl-row[data-id="${item}"] .tag-count`)!.textContent);
+
+  it("every quote is the report's own card: it plays, opens its transcript, stars, hides and tags", () => {
+    const { q } = answered();
+    const { container } = view(data);
+    const el = card(container, q.dom_id!) as HTMLElement;
+    expect(el).not.toBeNull();
+    expect(el.querySelector("a.timecode")).toHaveAttribute("data-participant", q.participant);
+    expect(el.querySelector("a.speaker-link")!.getAttribute("href")).toContain(`/report/sessions/${q.session}#t-${Math.floor(q.sec)}`);
+    expect(el.querySelector(".hide-btn")).not.toBeNull();
+    expect(el.querySelector(".badge-add")).not.toBeNull();
+    fireEvent.click(el.querySelector(".star-btn")!);
+    expect(getQuotesSnapshot().starred[q.dom_id!]).toBe(true);
+    expect(card(container, q.dom_id!)).toHaveClass("starred");
+  });
+
+  it("a quote the report does not hold is not drawn: nothing could star or hide it", () => {
+    const { q } = answered();
+    const d = { ...data, quotes: data.quotes.map((x) => (x.key === q.key ? { ...x, dom_id: undefined } : x)) };
+    const { container } = view(d);
+    expect(container.querySelectorAll(".dl-content blockquote.quote-card:not(.dl-ask)")).toHaveLength(data.quotes.length - 1);
+  });
+
+  it("a hidden quote leaves the lens and its counts, and is counted beside its question, with a way back", async () => {
+    const { item, q } = answered();
+    const { container } = view(data);
+    const before = total(container, item);
+    await hide([q.dom_id!]);
+    expect(card(container, q.dom_id!)).toBeNull();
+    expect(total(container, item)).toBe(before - 1);
+    // All: the question's heading is the Quotes lens's group header, its counter beside it
+    const head = container.querySelector(`.dl-item[data-item="${item}"] > .bn-group-header`)!;
+    expect(within(head as HTMLElement).getByText(/1 hidden quote/)).toBeInTheDocument();
+    fireEvent.click(within(head as HTMLElement).getByRole("button", { name: /1 hidden quote/ }));
+    fireEvent.click(within(head as HTMLElement).getByRole("button", { name: /Unhide/ }));
+    expect(card(container, q.dom_id!)).not.toBeNull();
+    expect(total(container, item)).toBe(before);
+  });
+
+  it("in a session, a hidden quote is counted at the foot of its question's block", async () => {
+    const { sid, turn, q } = answered();
+    const { container } = view(data);
+    onSession(Number(sid.slice(1)));
+    await hide([q.dom_id!]);
+    const block = container.querySelector(`.dl-ask[data-turn="${CSS.escape(turn.id)}"]`)!.closest(".dl-group")!;
+    expect(block.querySelector(".dl-hidden-foot")!.textContent).toMatch(/1 hidden quote/);
+  });
+
+  it("a question with nothing to show is its grey heading alone, and its guide row is grey", async () => {
+    const { item } = answered();
+    const { container } = view(data);
+    // hide every quote under the question, in every session
+    const answers = itemAnswers(data);
+    const under = [...(answers.get(item)?.values() ?? [])].flatMap((asks) => asks.flatMap((a) => a.answers.map((x) => x.dom_id!)));
+    await hide(under);
+    const block = container.querySelector(`.dl-item[data-item="${item}"]`)!;
+    expect(block).toHaveClass("empty");
+    expect(block.querySelectorAll(".dl-group")).toHaveLength(0);
+    expect(block.querySelector(".bn-group-header h3")!.textContent).toBe(
+      container.querySelector(`.dl-row[data-id="${item}"] .dl-tx`)!.textContent);
+    expect(within(block as HTMLElement).getByText(new RegExp(`${under.length} hidden quote`))).toBeInTheDocument();
+    expect(container.querySelector(`.dl-row[data-id="${item}"]`)).toHaveClass("ghost");
+  });
+
+  it("a session's row is grey where it asked a question that drew nothing to show", async () => {
+    const { item, sid } = answered();
+    const answers = itemAnswers(data);
+    const under = (answers.get(item)?.get(sid) ?? []).flatMap((a) => a.answers.map((x) => x.dom_id!));
+    const { container } = view(data);
+    onSession(Number(sid.slice(1)));
+    expect(container.querySelector(`.dl-row[data-id="${item}"]`)).not.toHaveClass("ghost");
+    await hide(under);
+    expect(container.querySelector(`.dl-row[data-id="${item}"]`)).toHaveClass("ghost");
+    // the question stays in the session's own column, folded forward, and says nothing about it
+    expect(container.querySelector(`.dl-content .dl-ask[data-item="${item}"]`)).not.toBeNull();
+    expect(screen.queryByText(/No quotes from this question/)).toBeNull();
+  });
+
+  it("a question row's timecode plays its session and its badge opens the transcript there", () => {
+    const { turn } = answered();
+    const { container } = view(data);
+    const ask = container.querySelector(`.dl-ask[data-turn="${CSS.escape(turn.id)}"]`)!;
+    // keyed by session: a moderator's code is not unique across sessions
+    expect(ask.querySelector("a.timecode")).toHaveAttribute("data-participant", turn.session);
+    expect(ask.querySelector("a.speaker-link")!.getAttribute("href")).toContain(`/report/sessions/${turn.session}#t-${Math.floor(turn.sec)}`);
+    // a moment in the recording, not a quote
+    expect(ask.querySelector(".star-btn, .hide-btn, .badge-add")).toBeNull();
+  });
+
+  it("says it is loading until the report's quotes are in, and says so if they cannot be loaded", async () => {
+    resetStore();
+    let fail: (e: Error) => void = () => {};
+    api.apiGet.mockImplementation((path: string) =>
+      path === "/quotes" ? new Promise((_, reject) => { fail = reject; }) : route(path));
+    render(<DiscussionView data={data} />);
+    // never a lens of unanswered questions while the quotes are on their way
+    expect(screen.getByText(/Loading/)).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByTestId("discussion-lens")).toBeNull();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    await act(async () => fail(new Error("GET /quotes 500")));
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not be loaded");
+    err.mockRestore();
+  });
+
+  it("two quotes sharing a report id (one second) draw one card, the store's own, once", () => {
+    const { q } = answered();
+    // a second quote half a second later: the same id, other words, and the store holds the first
+    const twin = { ...q, key: "twin", sec: q.sec + 0.5, text: "Words the store does not hold" };
+    const d = { ...data, quotes: [...data.quotes, twin] };
+    const { container } = render(<DiscussionView data={d} />);
+    expect(container.querySelectorAll(`#${CSS.escape(q.dom_id!)}`)).toHaveLength(1);
+    expect(container.querySelector(".dl-content")!.textContent).not.toContain("Words the store does not hold");
+  });
+
+  it("a record quote whose id the report does not hold is neither drawn nor counted", () => {
+    const { item, q } = answered();
+    const d = { ...data, quotes: data.quotes.map((x) => (x.key === q.key ? { ...x, dom_id: "q-nobody-1" } : x)) };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { container } = render(<DiscussionView data={d} />); // the store holds the fixture's ids
+    expect(container.querySelector(".dl-content")!.textContent).not.toContain(q.text);
+    const want = [...(itemAnswers(data).get(item)?.values() ?? [])].flat().reduce((n, a) => n + a.answers.length, 0) - 1;
+    expect(total(container, item)).toBe(want);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/1 quote\(s\) in the record are not in the report/));
+    warn.mockRestore();
+  });
+
+  it("a hidden quote from before the first question is counted there, in All and in its session", async () => {
+    const first = Math.min(...data.turns.filter((x) => x.session === "s2").map((x) => x.sec));
+    const early = { ...data.quotes.find((q) => q.session === "s2")!, key: "early", dom_id: "q-early-1",
+      sec: Math.max(0, first - 30), text: "Before anything was asked" };
+    const d: DiscussionData = { ...data, quotes: [...data.quotes, early] };
+    const { container } = view(d);
+    await hide(["q-early-1"]);
+    const part = [...container.querySelectorAll(".dl-part")].find((h) => h.textContent === "Before the first question")!;
+    expect(part.parentElement!.querySelector(".dl-hidden-foot")!.textContent).toMatch(/1 hidden quote/);
+    onSession(2);
+    const block = container.querySelector(".dl-content .dl-group")!;
+    expect(block.querySelector(".dl-hidden-foot")!.textContent).toMatch(/1 hidden quote/);
+  });
+
+  it("in All, an ask the model never classified shows only with quotes, and its hidden ones are counted", async () => {
+    const t = data.turns.find((x) => x.item && data.quotes.some((q) => q.session === x.session && q.sec >= x.sec))!;
+    const d: DiscussionData = {
+      ...data, turns: data.turns.map((x) => (x.id === t.id ? { ...x, kind: "unclassified" as const, item: null } : x)),
+    };
+    const { container } = view(d);
+    const mine = quoteTurns(d);
+    const under = d.quotes.filter((q) => mine.get(q.dom_id!) === t.id).map((q) => q.dom_id!);
+    expect(under.length).toBeGreaterThan(0);
+    expect(container.querySelector(`.dl-leftovers .dl-ask[data-turn="${CSS.escape(t.id)}"]`)).not.toBeNull();
+    await hide(under);
+    expect(container.querySelector(`.dl-leftovers .dl-ask[data-turn="${CSS.escape(t.id)}"]`)).toBeNull();
+    expect(container.querySelector(".dl-leftovers .dl-hidden-foot")!.textContent)
+      .toMatch(new RegExp(`${under.length} hidden quote`));
+  });
+
+  it("an arrival lands once: hiding a quote afterwards does not scroll back to it", async () => {
+    const { discussionPath } = await import("./discussionLinks");
+    window.history.replaceState(null, "", discussionPath("s5.1", "s2@01:26"));
+    const into = vi.fn();
+    const real = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = into;
+    try {
+      const { container } = view(data);
+      const landed = into.mock.calls.length;
+      expect(landed).toBeGreaterThan(0);
+      const some = container.querySelector(".dl-card > blockquote.quote-card")!.id;
+      await hide([some]);
+      // the hide re-folds the column, so match the asking by its turn, not the element
+      expect(into.mock.calls.length).toBe(landed);
+      expect(into.mock.contexts.filter((el) => (el as Element).getAttribute("data-turn") === "s2@01:26")).toHaveLength(1);
+    } finally {
+      Element.prototype.scrollIntoView = real;
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
+  it("registers its cards in reading order for j/k and ⌘A, and Esc clears the card before the question", () => {
+    let focus: ReturnType<typeof useFocus> | null = null;
+    function Probe() {
+      focus = useFocus();
+      return null;
+    }
+    seed(data);
+    const { container } = render(<FocusProvider><Probe /><DiscussionView data={data} /></FocusProvider>);
+    const drawn = Array.from(container.querySelectorAll(".dl-card > blockquote.quote-card"), (b) => b.id);
+    expect(focus!.getVisibleQuoteIds()).toEqual(drawn);
+    const row = screen.getAllByRole("button", { pressed: false }).find((b) => b.classList.contains("dl-row-btn"))!;
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-pressed", "true");
+    act(() => focus!.setFocus(drawn[0], { scroll: false }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(row).toHaveAttribute("aria-pressed", "true"); // the card goes first (the report's cascade)
+    act(() => focus!.setFocus(null));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(row).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
 describe("review fixes, 3 Oct 2026", () => {
   it("arrow keys move the session radio group, with one tab stop", () => {
     render(<DiscussionView data={data} />);
@@ -515,12 +776,13 @@ describe("review fixes, 3 Oct 2026", () => {
 
   it("each tab carries a key at the top, of the marks it shows", () => {
     render(<DiscussionView data={data} />);
-    // in All nothing is greyed for "not asked in this session"
+    // grey explains itself: no key line says what it means, in All or in a session (19 Oct 2026)
     expect(within(screen.getByRole("note", { name: "Key" })).queryByText(/^Grey:/)).toBeNull();
     onSession(1);
     const key = screen.getByRole("note", { name: "Key" });
     expect(key).toHaveClass("bn-pipeline-key");
-    for (const t of ["Asked as planned", "Planned, never asked", "Not in your guide", "Grey: not asked in this session"]) {
+    expect(within(key).queryByText(/^Grey:/)).toBeNull();
+    for (const t of ["Asked as planned", "Planned, never asked", "Not in your guide"]) {
       expect(within(key).getByText(t, { exact: false })).toBeInTheDocument();
     }
     // above the first section, so it scrolls away
@@ -636,7 +898,12 @@ const sessionList = data.sessions.map((s) => ({
   speakers: s.participants.map((p) => ({ speaker_code: p.code, name: p.name, role: "participant" })),
 }));
 
-const api = vi.hoisted(() => ({ apiGet: vi.fn(), getSessionList: vi.fn() }));
+const api = vi.hoisted(() => ({
+  apiGet: vi.fn(), getSessionList: vi.fn(), getCodebook: vi.fn(),
+  // the quotes store's writes (QuotesContext): fire-and-forget PUTs
+  putHidden: vi.fn(), putStarred: vi.fn(), putEdits: vi.fn(), putTags: vi.fn(), putDeletedBadges: vi.fn(),
+  acceptProposal: vi.fn(), denyProposal: vi.fn(),
+}));
 vi.mock("../../utils/api", () => api);
 const bridge = vi.hoisted(() => ({ postProjectAction: vi.fn() }));
 vi.mock("../../shims/bridge", async (orig) => ({
@@ -650,7 +917,8 @@ vi.mock("../../utils/exportData", async (orig) => ({
 }));
 
 function serve(status: string, rec: unknown) {
-  api.apiGet.mockResolvedValue({ status, record: rec });
+  api.apiGet.mockImplementation((path: string) =>
+    path === "/discussion" ? Promise.resolve({ status, record: rec }) : route(path));
   api.getSessionList.mockResolvedValue(sessionList);
 }
 
@@ -853,8 +1121,7 @@ describe("the guide as a left panel (4 Oct 2026)", () => {
   it("folds when the conversation would fall under its floor, and says so to the app", async () => {
     lensWidth(500); // under 200 guide + 40 wires + 368 floor
     const { container } = render(<DiscussionView data={data} />);
-    await settle();
-    expect(container.querySelector(".dl-lens")).toHaveClass("guide-hidden");
+    await waitFor(() => expect(container.querySelector(".dl-lens")).toHaveClass("guide-hidden"));
     expect(discussionGuideState()).toMatchObject({ wish: true, shown: false });
   });
 
@@ -863,18 +1130,17 @@ describe("the guide as a left panel (4 Oct 2026)", () => {
     const { container } = render(<DiscussionView data={data} />);
     await settle();
     act(() => toggleDiscussionGuide()); // what the toolbar button, ⌥⌘L and [ do
-    await settle();
+    await waitFor(() => expect(discussionGuideState().shown).toBe(true));
     expect(container.querySelector(".dl-lens")).not.toHaveClass("guide-hidden");
-    expect(discussionGuideState().shown).toBe(true);
   });
 
   it("asks the app for the width the pair needs, so the projects column folds first", async () => {
     lensWidth(900);
     render(<DiscussionView data={data} />);
-    await settle();
-    // the opening width (30% of the window, 280–480) + the wires + the conversation's 368 floor
+    // the opening width (30% of the window, 280–480) + the wires + the conversation's 368 floor.
+    // Waited for, not timed: the measure lands on a frame after the cards and the store settle.
     const opening = Math.round(Math.min(480, Math.max(280, 0.3 * window.innerWidth)));
-    expect(discussionGuideState().wanted).toBe(opening + 40 + 368);
+    await waitFor(() => expect(discussionGuideState().wanted).toBe(opening + 40 + 368));
   });
 });
 
@@ -921,11 +1187,10 @@ describe("the guide tabs (4 Oct 2026)", () => {
     expect(container.querySelectorAll(".dl-nav .dl-row .dl-mid")).toHaveLength(rows.length);
     expect(container.querySelector(".dl-nav .dl-row .dl-dot")).toBeNull();
     expect(container.querySelector(".dl-nav .dl-row")?.textContent).not.toMatch(/\+|not in your guide/i);
-    // in All, no guide and no cells: nothing for a key to explain, so no key
+    // no guide and no cells: nothing for a key to explain, so no key — in All or in a session
     expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
     onSession(1);
-    const key = screen.getByRole("note", { name: "Key" });
-    expect(key.textContent).toBe("Grey: not asked in this session");
+    expect(screen.queryByRole("note", { name: "Key" })).toBeNull();
   });
 
   it("in an export with no guide there is nothing to add, so no tabs", () => {

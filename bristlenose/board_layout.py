@@ -533,7 +533,10 @@ def split_quote(text: str, at: int = SPLIT_AT, max_parts: int = MAX_PARTS,
             # the break is already an ellipsis, so it becomes this one.
             # Marks off first, then the elision they followed ("but...," / "said...;").
             part = re.sub(r"\s*(\.\.\.|…)$", "", part.rstrip(",;:—–、，；： ")).rstrip(",;:—–、，；： ")
-            part = part.removesuffix(".").removesuffix("。") + ("" if part.endswith("…") else "…")
+            # Only at a gap: a cut inside a token (an address, with no break near) keeps its dot.
+            if cuts[i] >= len(text) or text[cuts[i]].isspace():
+                part = part.removesuffix(".")
+            part = part.removesuffix("。") + ("" if part.endswith("…") else "…")
         if i > 0:
             part = "…" + re.sub(r"^(\.\.\.|…)\s*", "", part)
         out.append(part)
@@ -583,10 +586,22 @@ def fit_miro_sticky(body: str, rest: str) -> str:
     from html import escape
 
     out = escape(body) + rest
-    while len(out) > MIRO_STICKY_MAX and body:
-        body = body[: max(0, len(body) - (len(out) - MIRO_STICKY_MAX) - 1)].rstrip()
-        out = escape(body + "…") + rest
-    return out
+    if len(out) <= MIRO_STICKY_MAX:
+        return out
+
+    def cut(n: int) -> str:
+        return escape(body[:n].rstrip() + "…") + rest
+
+    # The longest prefix that fits, escaped. Escaping lengthens ``&`` and ``<`` by up to five
+    # times, so the overshoot measured on the escaped text says nothing exact about the raw cut.
+    lo, hi = 0, len(body)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if len(cut(mid)) <= MIRO_STICKY_MAX:
+            lo = mid
+        else:
+            hi = mid - 1
+    return cut(lo)
 
 
 def attribution(participant_id: str, timecode: float) -> str:

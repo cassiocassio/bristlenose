@@ -224,7 +224,10 @@ def build_columns(db: Session, project_id: int, quote_ids: list[str] | None,
 
 
 def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
-    n = sum(len(c.quotes) for c in columns)
+    return _title(locale, project_name, sum(len(c.quotes) for c in columns))
+
+
+def _title(locale: str, project_name: str, n: int) -> str:
     # The count goes through CLDR selection even in English, where the old
     # hand-rolled `({n} quotes)` titled a one-quote board "1 quotes".
     return t_in(
@@ -232,6 +235,20 @@ def board_title(locale: str, project_name: str, columns: list[Column]) -> str:
         project=project_name,
         quotes=plural_in(locale, "common.miro.boardQuoteCount", n),
     )
+
+
+#: Miro keeps this much of a board's name (`miro_client.create_board` cuts it there).
+MIRO_BOARD_NAME_MAX = 60
+
+
+def miro_board_name(locale: str, project_name: str, n: int) -> str:
+    """The board's title as Miro's name for it: the project's name gives way, with "…", so the
+    rest of the title, the count included, survives Miro's limit. The canvas keeps the whole."""
+    name, k = _title(locale, project_name, n), len(project_name)
+    while len(name) > MIRO_BOARD_NAME_MAX and k > 1:
+        k -= 1
+        name = _title(locale, project_name[:k].rstrip(" ,;:—–-") + "…", n)
+    return name
 
 
 def build_board(db: Session, project_id: int, project_name: str,
@@ -397,7 +414,7 @@ def _push(token: str, db: Session, project_id: int, project_name: str,
 
     with miro_client.observe_waits(progress.waiting_for):
         progress.enter("opening")
-        created = miro_client.create_board(token, board.title)
+        created = miro_client.create_board(token, miro_board_name(locale, project_name, n_quotes))
         board_id = created.get("id")
         if not board_id:
             raise miro_client.MiroError("Miro did not return a board id", reason="no_board_id")

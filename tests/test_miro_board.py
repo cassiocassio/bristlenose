@@ -581,3 +581,14 @@ def test_the_search_cap_never_changes_where_a_quote_breaks() -> None:
         with patch.object(board_layout, "_KEEP", 10**9):
             differ += board_layout.split_quote(text, at=at, language=lang) != capped
     assert differ == 0
+
+
+def test_a_cut_inside_a_word_never_drops_a_character() -> None:
+    """With no break to take, the split falls mid-token (a long address read out). The full stop
+    a sentence end gives up for its "…" is not a full stop there, and was lost from the quote."""
+    from bristlenose.board_layout import split_quote
+
+    for text in [("ab." * 120)[:329], "see https://example.com/" + "a.b" * 120]:
+        parts = split_quote(text)
+        assert len(parts) == 2
+        assert "".join(p.removeprefix("…").removesuffix("…") for p in parts) == text

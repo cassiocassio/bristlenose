@@ -303,7 +303,7 @@ def miro_preview(project_id: int, body: MiroExportRequest, request: Request) -> 
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        name = body.board_name or project_display_name(project)
+        name = (body.board_name or "").strip() or project_display_name(project)
         html = miro_export.build_preview_html(
             db, project_id, name, body.quote_ids,
             colour_by=body.colour_by, clips_base=body.clips_base, locale=body.locale,
@@ -333,7 +333,7 @@ def miro_export_board(project_id: int, body: MiroExportRequest,
         logger.info("miro_token_trace event=export persisted_source=%s", get_credential_source("miro"))
         if not token:
             raise HTTPException(status_code=400, detail="Not connected to Miro")
-        name = body.board_name or project_display_name(project)
+        name = (body.board_name or "").strip() or project_display_name(project)
         try:
             result = miro_export.push_to_miro(
                 token, db, project_id, name, body.quote_ids,
@@ -444,7 +444,7 @@ async def start_miro_board(project_id: int, body: MiroExportRequest,
     db = _get_db(request)
     try:
         project = _check_project(db, project_id)
-        name = body.board_name or project_display_name(project)
+        name = (body.board_name or "").strip() or project_display_name(project)
     finally:
         db.close()
     token = _miro_token(request)

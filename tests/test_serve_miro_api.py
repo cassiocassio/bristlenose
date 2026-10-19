@@ -320,3 +320,11 @@ class TestConnectPathsAgree:
                                                     "org_name": None}):
             client.get("/api/miro/callback?code=c&state=state-2")
         assert client.app.state.miro_session_token == "tok-abc"
+
+
+def test_a_blank_board_name_falls_back_to_the_projects(client: TestClient) -> None:
+    """As on the FigJam download: a name of spaces is no name. It titled the board "   — research
+    board (4 quotes)" when a caller sent it untrimmed."""
+    url = "/api/projects/1/miro/preview"
+    blank = client.post(url, json={"board_name": "   "}).json()["html"]
+    assert blank == client.post(url, json={}).json()["html"]

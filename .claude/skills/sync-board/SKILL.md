@@ -59,5 +59,7 @@ Report what was moved to Done and what was struck through. Items already Done on
 - 100days.md is in `docs/private/` (gitignored — contains names and value judgements)
 - Sprint tags in 100days.md use the format `[S1]`–`[S6]` before the bold title
 - Item matching uses normalized title text (lowercase, no punctuation) for fuzzy matching
+- **The default sync trusts the board, so it unstrikes a doc strike whose card isn't Done.** Striking a row by hand in the doc (a verified fix, an umbrella closed as superseded) doesn't move its card; the next `--apply` then removes the strike. Run `mark-done "<title>"` for every hand strike before a default apply, and read the dry run's `UNSTRIKE:` lines first. It also reads a *partial* strike in a title (`**~~A~~ + B**`) as struck. The Keychain row (`~~Keychain ACL prompt at launch~~ + Settings open`) is a deliberate half-strike over an open card: keep it out of applies, or put the line back afterwards (19 Oct 2026, when an apply would have unstruck four rows)
+- There is no `done` argument. Anything other than `mark-done` as the first argument runs the default sync
 - The unified script is `scripts/sync_100days.py` (tests: `tests/test_sync_100days.py`)
 - Old single-direction scripts (`sync-100days-status.py`, `sync-100days-new.py`, `sync-100days-mark-done.py`) are deprecated — do not use

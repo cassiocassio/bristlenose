@@ -313,6 +313,16 @@ _ZOOM_CLOUD_PREFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Zoom web portal download: "GMT20250417-062516_Recording_1920x1200" beside
+# "GMT20250417-062516_Recording.transcript" (observed, devforum.zoom.us thread
+# 132034, 29 Apr 2025). The stamp is the recording's start in GMT, so it stays:
+# it is what keeps two meetings apart. The resolution varies (640x360 in Stony
+# Brook IT's guide). Names Zoom gives extra video layouts are not observed yet,
+# so they are not matched.
+_ZOOM_PORTAL_RE = re.compile(
+    r"^(gmt\d{8}-\d{6})_recording(?:_\d{2,5}x\d{2,5})?(?:\.transcript)?$",
+)
+
 # Zoom local folder: "2026-01-15 14.30.22 Topic 987654321"
 _ZOOM_LOCAL_DIR_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}\s+\d{2}\.\d{2}\.\d{2}\s+.+\s+\d{9,11}$",
@@ -432,6 +442,7 @@ def _normalise_stem(stem: str) -> str:
     # 4. Zoom cloud: strip "Audio Transcript_" prefix and trailing "_ID_DATE"
     stem = _ZOOM_CLOUD_PREFIX_RE.sub("", stem)
     stem = _ZOOM_CLOUD_TAIL_RE.sub("", stem)
+    stem = _ZOOM_PORTAL_RE.sub(r"\1", stem)
 
     # 5. Google Meet: the dated tail first — it needs the trailing kind in order
     #    to match, and `_GMEET_TRANSCRIPT_SUFFIX_RE` would otherwise eat it.

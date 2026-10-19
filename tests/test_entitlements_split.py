@@ -70,32 +70,27 @@ class TestTheSplitExists:
             "but it needs the team group for the MCP handshake."
         )
 
-    def test_store_and_debug_carry_the_zoom_callback_domain(self) -> None:
+    def test_every_build_carries_the_zoom_callback_domain(self) -> None:
         """Zoom's sign-in returns over HTTPS, which needs this exact entry.
 
         Debug matters as much as the store build: it is what a Zoom sign-in is
         tested on, and without the entitlement the consent page completes and
-        nothing comes back, with no error anywhere.
+        nothing comes back, with no error anywhere. The .dmg carries it too
+        since 18 Oct 2026, so Zoom import works where Teams and Meet do.
         """
-        for p in (_MAS, _DEBUG):
+        for p in (_MAS, _DEBUG, _DEV_ID):
             assert _load(p).get(_ASSOCIATED_DOMAINS) == _WEBCREDENTIALS, (
                 f"{p.name} must carry {_WEBCREDENTIALS} — webcredentials, not "
                 "applinks, or the Zoom sign-in hangs after consent"
             )
 
-    def test_developer_id_carries_no_associated_domains(self) -> None:
-        """The .dmg does not import from Zoom, and its profile was never
-        regenerated with the capability."""
-        assert _ASSOCIATED_DOMAINS not in _load(_DEV_ID)
-
     def test_they_differ_by_exactly_the_store_only_entitlements(self) -> None:
         """Anything else diverging is drift, not design."""
         mas, dev = _load(_MAS), _load(_DEV_ID)
-        assert set(mas) - set(dev) == {_ASSOCIATED_DOMAINS}
-        assert set(dev) - set(mas) == set()
+        assert set(mas) == set(dev)
         assert set(mas[_APP_GROUP]) - set(dev[_APP_GROUP]) == {_BA_GROUP}
         assert set(dev[_APP_GROUP]) - set(mas[_APP_GROUP]) == set()
-        for key in set(dev) - {_APP_GROUP, _ASSOCIATED_DOMAINS}:
+        for key in set(dev) - {_APP_GROUP}:
             assert mas[key] == dev[key], f"{key} drifted between the two files"
 
 

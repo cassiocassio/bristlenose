@@ -451,6 +451,14 @@ final class CloudImportStore: ObservableObject {
             // Nor while a listing is in flight: `list()` rebuilds the plans the
             // re-check reads, off the main actor, and the two must not overlap.
             guard phase == .loaded else { continue }
+            // A meeting still recording or processing appears on its own: the
+            // window re-lists quietly while one is pending, as Mail and Photos
+            // update while you watch (asked for 18 Oct 2026). Not while
+            // anything is ticked, so a selection in progress is never moved.
+            if (listing?.arithmetic.stillProcessing ?? 0) > 0, ticked.isEmpty {
+                await load(quietly: true)
+                continue
+            }
             let listingAsked = listTask
             let waiting = rows.filter { $0.transcript.isWaiting }.map(\.id)
             guard !waiting.isEmpty else { continue }
@@ -602,9 +610,13 @@ final class CloudImportStore: ObservableObject {
         phase = .signedOut
     }
 
-    func load() async {
+    /// - Parameter quietly: a background re-list (`watchTranscripts`, while a
+    ///   meeting is still processing). No spinner, "include waiting" left as
+    ///   the researcher set it, and a failure keeps the list already on screen
+    ///   rather than replacing it with "Couldn't load your meetings".
+    func load(quietly: Bool = false) async {
         listTask?.cancel()
-        phase = .loading
+        if !quietly { phase = .loading }
         // **The trailing edge is now + 3h, not now, and it is the same fact as
         // the Meet lookup's 3h lookback seen from the other side.**
         //
@@ -640,6 +652,15 @@ final class CloudImportStore: ObservableObject {
                 Self.log.notice("import_list superseded, result discarded")
                 return
             }
+            if quietly {
+                // A batch that started while Zoom was being asked has its
+                // plans; a failed refresh is not news worth a blank window.
+                if isFetching { return }
+                if case .failed = result.arithmetic.outcome {
+                    Self.log.notice("import_list quiet refresh failed, keeping the list on screen")
+                    return
+                }
+            }
             Self.log.notice("import_list returned, applying")
             listing = result
             accountEmail = source.accountEmail
@@ -647,7 +668,7 @@ final class CloudImportStore: ObservableObject {
             // A new listing is a new batch to decide: the footer's "include
             // the waiting rows" is off again, as it is on every open (§0 item
             // 2), rather than carried over to rows the researcher has not seen.
-            includeWaiting = false
+            if !quietly { includeWaiting = false }
             // Diagnostics ▸ Cloud Import ▸ Every Status: the outcomes and bars
             // a real batch would produce, laid over the fixture's listing.
             if let seed = (source as? FixtureCloudSource)?.diagnosticSeed {

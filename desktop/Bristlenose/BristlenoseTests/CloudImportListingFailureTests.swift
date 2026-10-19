@@ -34,6 +34,30 @@ struct CloudImportListingFailureTests {
         #expect(!store.listingFailed)
     }
 
+    @Test("A quiet refresh keeps the researcher's choices and shows no spinner")
+    func quietRefreshKeepsState() async {
+        let store = await loaded(.populated)
+        store.includeWaiting = true
+        await store.load(quietly: true)
+        #expect(store.phase == .loaded)
+        #expect(store.includeWaiting, "a background refresh is not a new batch")
+    }
+
+    @Test("A quiet refresh that fails keeps the list on screen")
+    func quietFailureKeepsList() async {
+        // The window re-lists by itself while a Zoom meeting processes; a
+        // dropped connection during one of those must not blank the grid.
+        let source = FixtureCloudSource(scenario: .populated, platform: .zoom)
+        let store = CloudImportStore(source: source)
+        await store.load()
+        let shown = store.listing?.rows.map(\.id) ?? []
+        #expect(!shown.isEmpty)
+        source.scenario = .listingFailed
+        await store.load(quietly: true)
+        #expect(store.listing?.rows.map(\.id) == shown)
+        #expect(!store.listingFailed)
+    }
+
     @Test("A partial list keeps its rows rather than reading as failed")
     func partialIsNotFailed() async {
         let store = await loaded(.paginatorCapped)

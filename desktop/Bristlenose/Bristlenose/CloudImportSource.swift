@@ -261,7 +261,9 @@ struct CloudImportDiagnosticSeed {
 /// renders identically on any day — a fixture whose rows drift with the wall
 /// clock stops being a fixture.
 final class FixtureCloudSource: CloudImportSource {
-    private let scenario: CloudImportScenario
+    /// Settable so a test can change what the next listing returns, e.g. a
+    /// background re-list that fails after a good one.
+    var scenario: CloudImportScenario
     private let platform: CloudPlatform
     private let now: Date
     private var signedIn: Bool

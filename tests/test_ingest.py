@@ -191,6 +191,45 @@ class TestNormaliseStem:
         stem = "standup_9876543210_feb_01_2026"
         assert _normalise_stem(stem) == "standup"
 
+    # -- Zoom cloud: real specimens -------------------------------------------
+    #
+    # Every Zoom cloud case above this line is CONSTRUCTED ("Topic_<id>_<date>").
+    # The web portal names its downloads after the recording's start in GMT
+    # instead, so those patterns matched nothing it emits and a downloaded
+    # meeting came out as one session per file (found 18 Oct 2026).
+    #
+    # Cases below this line are names observed on a real account, with the
+    # source and date recorded. Not yet observed, so not handled: the names
+    # Zoom gives a second video layout (gallery, active speaker) when several
+    # are recorded separately.
+
+    def test_zoom_portal_pair_matches(self) -> None:
+        """devforum.zoom.us thread 132034, posted 29 Apr 2025 (account tier
+        not stated): the video and its audio transcript, as downloaded.
+
+        Unpaired, the mp4 is transcribed from scratch and Zoom's transcript,
+        speaker names and all, becomes a session with no recording.
+        """
+        video = _normalise_stem("gmt20250417-062516_recording_1920x1200")
+        transcript = _normalise_stem("gmt20250417-062516_recording.transcript")
+        assert video == transcript == "gmt20250417-062516"
+
+    def test_zoom_portal_video_other_resolution(self) -> None:
+        """Stony Brook IT's guide to downloading Zoom cloud recordings, read
+        18 Oct 2026: the resolution is part of the name and varies."""
+        assert _normalise_stem("gmt20210427-141742_recording_640x360") == "gmt20210427-141742"
+
+    def test_zoom_portal_meetings_stay_apart(self) -> None:
+        """The stamp is the recording's start, so two meetings never share a
+        key; stripping it would merge every Zoom download into one session."""
+        first = _normalise_stem("gmt20250417-062516_recording_1920x1200")
+        second = _normalise_stem("gmt20250418-090000_recording_1920x1200")
+        assert first != second
+
+    def test_zoom_portal_rule_needs_the_stamp(self) -> None:
+        """A researcher's own "interview_recording" is not a Zoom name."""
+        assert _normalise_stem("interview_recording") == "interview_recording"
+
     # -- Google Meet (Phase 2 prep) ------------------------------------------
 
     def test_gmeet_recording(self) -> None:
@@ -396,6 +435,19 @@ class TestGroupIntoSessions:
         ]
         sessions = group_into_sessions(files)
         assert len(sessions) == 1
+        assert sessions[0].has_existing_transcript is True
+
+    def test_zoom_portal_download_is_one_session(self) -> None:
+        """The video and transcript as the Zoom web portal names them
+        (devforum.zoom.us thread 132034, 29 Apr 2025) are one session, and it
+        has Zoom's transcript, so the video is not transcribed again."""
+        files = [
+            _file("GMT20250417-062516_Recording_1920x1200.mp4", FileType.VIDEO),
+            _file("GMT20250417-062516_Recording.transcript.vtt", FileType.SUBTITLE_VTT),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 1
+        assert len(sessions[0].files) == 2
         assert sessions[0].has_existing_transcript is True
 
     def test_zoom_local_folder(self) -> None:

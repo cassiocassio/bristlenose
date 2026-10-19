@@ -287,6 +287,15 @@ cells in the 0.32.0 release (`test_export_writes_a_vtt_built_from_the_transcript
 fixed `56d24a73`); a 0.5 s fake clip reproduces it locally on demand. Tests that
 seed `_jobs` directly and read the status once don't need it.
 
+**Wait for the job to END, then read its status — never assert on a read taken while
+waiting.** A Stop sets a board job's status to `cancelled` at once, and a push that
+finishes anyway overwrites it with `completed`; a poll for `status != "running"` stops on
+the transient value, and a wait for the task that checks *after* reading still hands back
+the stale read. Each failed only on slow CI Macs and held 0.41.0 for a cycle apiece
+(`51625b23`, `91f69ea2`). Wait on `_board_jobs[pid]["task"].done()`, then GET the status
+afresh. Reproduce either shape locally with a `time.sleep` in the fake's last call or
+between the read and the check.
+
 ## React island integration
 
 > **Dead as of 21 Sep 2026 — nothing reads these markers.** `serve_report_html()` does not exist in the tree, and neither does `_REACT_APP_MOUNT`; serve mode emits `<div id="bn-app-root">` directly (`server/app.py:657`) and the browser mounts the whole SPA there. The sealed Jinja2 renderer still *writes* `<!-- bn-app -->` and `<!-- bn-session-table -->` (`s12_render/report.py:189`, `:219`, `:235`, `:485`), but no Python reads either one. Per-island substitution is history; do not copy the pattern for a new island.

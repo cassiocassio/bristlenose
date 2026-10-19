@@ -395,8 +395,10 @@ def test_a_stop_that_lands_during_the_last_call_reports_the_finished_board(
     with client, patch("bristlenose.server.routes.miro._miro_token", return_value="tok"):
         client.post("/api/projects/1/miro/board", json={"split_long_quotes": False})
         # Not `status != "running"`: the Stop reads "cancelled" until the call in hand returns,
-        # and a slow runner polled inside that gap (strict CI, 19 Oct 2026). Wait for the job.
-        s = _wait_for(client, lambda s: miro_routes._board_jobs[1]["task"].done())
+        # and a slow runner polled inside that gap (strict CI, 19 Oct 2026). Wait for the job,
+        # then read the status: a read taken before the job ended can be the transient one.
+        _wait_for(client, lambda _s: miro_routes._board_jobs[1]["task"].done())
+        s = client.get("/api/projects/1/miro/board/status").json()
     assert s["status"] == "completed" and s["board_url"] == "https://miro.com/app/board/b1/"
 
 

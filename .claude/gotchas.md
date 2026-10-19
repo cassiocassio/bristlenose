@@ -378,6 +378,8 @@ A live `release.sh run` makes the `release-freeze` hook refuse commits in this c
 - **Run Python tests from inside the clone with `python -m pytest`**, so the clone's `bristlenose/` is first on `sys.path`; check `bristlenose.__file__` once, because the venv's editable install points at the main repo.
 - **The first Swift build of a fresh clone fails with `cannot find 'GeneratedBuildInfo' in scope`.** The Run Script phase writes the gitignored file after Xcode has already planned Compile Sources. Build again (or run `desktop/scripts/generate-build-info.sh` first); a normal checkout never hits it because the file is already there.
 - **Land with `git merge`, not cherry-pick**, so the hold's commit ids stay the ones another session or `verify` sees as merged.
+- **The freeze guards commits, not your uncommitted edits — and those are the bigger risk.** The release builds the sidecar from the main working tree, so edits you have in progress there when it starts either fail its dirty-tree check (a lost release night) or get bundled into what ships. When `.release/<v>/.lock` appears, move your uncommitted work off main before anything else: back it up (`git diff HEAD > patch`, tar the untracked files), apply it in the clone, compare byte for byte, then put each tracked file back with `git show HEAD:<path> > <path>` and delete your untracked files. Done 18 Oct 2026 for the Apple-first work, at 0.41.0's confirm prompt, before its sidecar build.
+- **`git merge -F -` does not read stdin** (unlike `git commit -F -`): it fails `could not read file '-'` and merges nothing. Write the message to a file and pass its path.
 
 ## Tests, gates and verification
 

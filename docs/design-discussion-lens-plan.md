@@ -517,6 +517,53 @@ overrides keyed on durable ids, never on labels.
   place the file by hand). No drop target. Mockup:
   `docs/mockups/discussion-guide-tabs.html`. *Planned:* drop target + **Add a
   discussion guide**.
+- **Quotes work as they do everywhere else — DECIDED 19 Oct 2026, not built.** The
+  lens's read-only card is replaced by the Quotes lens's own `QuoteCard`, joined to
+  the quotes store by report id, as the Screens lens already does: the timecode plays,
+  the speaker badge opens the transcript at that moment, and the card stars, hides,
+  tags, edits, drops its sentiment and takes AutoCode proposals. The owner's five calls,
+  from the playable mockup `docs/mockups/discussion-quote-parity.html`
+  (`experiments/discussion-all-sessions/quote_parity.py`):
+  1. **A hidden quote is counted beside its question.** In All, the question's heading
+     becomes the Quotes lens's group header with the hidden-quotes `Counter` on the
+     right; in a session view, where a question is one block, the counter ends that
+     block.
+  2. **A hidden quote stops counting.** The navigator's counts and cell shading drop
+     it: hiding says the researcher finds the quote unconvincing as evidence, and the
+     measure is evidence, not a tally of what was said. Consequence: hiding the only
+     answer to a question in a session turns its cell to "Asked, no quotes".
+  3. **AutoCode proposals are shown**, as on Quotes and Screens. One switch that shows
+     or hides proposals in every lens at once is a separate item (100days § 8,
+     "Global show/hide for AutoCode proposals").
+  4. **The moderator's question rows link like a quote's**: the timecode plays the
+     recording, the badge opens the transcript at that turn. They are not quotes: no
+     star, hide or tag.
+  5. **Esc clears the card first**: selection, then card focus, then the lens's own
+     question focus.
+  6. **Nothing to show is quiet** (same day, superseding the consequence noted under
+     2). A question with no quote to show — not asked, asked with nothing quotable, or
+     every answer hidden — is a grey guide row (the existing `.dl-row.ghost` grey, in All
+     and in a session alike) and, in All, its heading alone in the same grey, carrying
+     the hidden-quotes counter when there is one. The heading stays because the guide's
+     row lands on it and the counter is the only way back from hiding everything. In All
+     a session appears under a question only when it has a quote to show, and "Not asked
+     in #1 #3" goes from every question: the guide's cells already say which sessions
+     were absent. **No key line explains the grey** — the owner: "the more times we
+     explain things with 'nothing to read here' we give the user a thing to read …
+     writing is deleting." So "Grey: not asked in this session" is removed, not
+     reworded, and no new string is needed. What stays: the line under All saying a
+     session could not be read (an exception the reader cannot infer), and a session's
+     own view, which keeps its questions folded forward as shipped and drops only "No
+     quotes from this question".
+
+  What the build needs, from the 18 Oct discussion: `/discussion` sends each quote's
+  report id (it already matches every quote to the report's row); hidden and edited
+  state come from the store, not the server's filter, so a hide shows at once, while the
+  export keeps whatever `/quotes` does with hidden quotes; Discussion joins `onQuoteLens`
+  (`useKeyboardShortcuts.ts`, which excludes it today on purpose) and the native Quotes
+  menu; each card sits in a lens-owned wrapper that carries `data-for` and positions
+  star and hide; and All's splitter cost is re-measured with real cards, since the
+  33ms figure above was taken with the light ones.
 
 ## 4. The macOS app
 

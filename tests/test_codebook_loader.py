@@ -67,6 +67,10 @@ class TestGetTemplate:
     def test_nonexistent_returns_none(self) -> None:
         assert get_template("nonexistent") is None
 
+    def test_id_is_case_sensitive(self) -> None:
+        """One spelling per framework, on every platform — macOS's disk would match "Garrett"."""
+        assert get_template("Garrett") is None
+
     def test_every_bundled_id_resolves(self) -> None:
         """The lookup key is the file's stem, so each template's id must match it."""
         for t in load_all_templates():

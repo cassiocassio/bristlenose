@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import additive from "../../tests/fixtures/figjam-board-v1-additive.json";
 import plain from "../../tests/fixtures/figjam-board-v1.json";
+import sample from "../publishing/sample-board.json";
 import { REFUSAL_TEXT, Refusal, parseBoard, safeClipUrl } from "./board";
 import { planBoard, rgb } from "./plan";
 
@@ -185,5 +186,16 @@ describe("the Figma sandbox, not Node", () => {
     } finally {
       missing.forEach((k, i) => (g[k] = saved[i]));
     }
+  });
+});
+
+describe("the sample board linked from the Community listing", () => {
+  // Reviewers and first-time users try the plugin with this file, so it must
+  // always be one the plugin draws in full.
+  it("plans every quote, with its long quote as a set", () => {
+    const p = plan(sample);
+    expect(sets(p).length).toBe(sample.totals.quotes);
+    expect(Math.max(...sets(p).map((q) => q.parts.length))).toBeGreaterThan(1);
+    expect(p.droppedLinks).toBe(0);
   });
 });

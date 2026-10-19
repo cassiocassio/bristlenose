@@ -1,0 +1,149 @@
+{
+ "format": "bristlenose-board",
+ "version": 1,
+ "min_reader_version": 1,
+ "generator": "Bristlenose (sample board)",
+ "locale": "en",
+ "title": "Neighbourhood library app (sample) \u2014 research board (10 quotes)",
+ "sticky_shape": "square",
+ "strings": {
+  "clip": "\u25b6 clip"
+ },
+ "palette": {
+  "light_pink": "#FFA8DB",
+  "light_yellow": "#FFE299"
+ },
+ "totals": {
+  "frames": 2,
+  "columns": 4,
+  "quotes": 10
+ },
+ "requested": null,
+ "frames": [
+  {
+   "kind": "section",
+   "title": "Sections",
+   "columns": [
+    {
+     "label": "Finding a book",
+     "count": "3 quotes",
+     "quote_count": 3,
+     "colour": "light_pink",
+     "quotes": [
+      {
+       "parts": [
+        "\u201cI typed the title exactly and it still showed me cookbooks first.\u201d"
+       ],
+       "attribution": "\u2014 P1 \u00b7 01:14",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cThe map of the shelves is the best bit. I didn't know it had that.\u201d"
+       ],
+       "attribution": "\u2014 P3 \u00b7 06:52",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cI search on my phone, but I'd never reserve on it \u2014 too fiddly.\u201d"
+       ],
+       "attribution": "\u2014 P4 \u00b7 03:53",
+       "colour": "light_yellow",
+       "clip_url": null
+      }
+     ]
+    },
+    {
+     "label": "Reserving and collecting",
+     "count": "3 quotes",
+     "quote_count": 3,
+     "colour": "light_pink",
+     "quotes": [
+      {
+       "parts": [
+        "\u201cThe collection shelf is by the door, so I can be in and out.\u201d"
+       ],
+       "attribution": "\u2014 P1 \u00b7 25:04",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cTen days to collect is generous. Three would make me forget.\u201d"
+       ],
+       "attribution": "\u2014 P2 \u00b7 15:58",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cI wanted a message when it was ready, not an email I'd never open.\u201d"
+       ],
+       "attribution": "\u2014 P5 \u00b7 20:20",
+       "colour": "light_yellow",
+       "clip_url": null
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "theme",
+   "title": "Themes",
+   "columns": [
+    {
+     "label": "Trust in availability",
+     "count": "2 quotes",
+     "quote_count": 2,
+     "colour": "light_pink",
+     "quotes": [
+      {
+       "parts": [
+        "\u201cSaturday morning is the only time I get, so I open the app on the bus and look for the book my daughter wants for school. It says available, so I walk over, and when I get there the shelf is empty and the person at the desk tells me it's in the returns trolley, still to be checked in\u2026",
+        "\u2026She found it in the end. But the app said available, and I'd planned my whole morning around that one word, and now I don't really believe it when it says it any more.\u201d"
+       ],
+       "attribution": "\u2014 P2 \u00b7 10:12",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cIf it says available I want it to mean on the shelf, now.\u201d"
+       ],
+       "attribution": "\u2014 P4 \u00b7 13:21",
+       "colour": "light_yellow",
+       "clip_url": null
+      }
+     ]
+    },
+    {
+     "label": "Fitting it into the week",
+     "count": "2 quotes",
+     "quote_count": 2,
+     "colour": "light_pink",
+     "quotes": [
+      {
+       "parts": [
+        "\u201cLate opening on Thursdays is the only reason I still come in.\u201d"
+       ],
+       "attribution": "\u2014 P3 \u00b7 28:50",
+       "colour": "light_yellow",
+       "clip_url": null
+      },
+      {
+       "parts": [
+        "\u201cI renew everything on Sunday night, all at once.\u201d"
+       ],
+       "attribution": "\u2014 P5 \u00b7 05:44",
+       "colour": "light_yellow",
+       "clip_url": null
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

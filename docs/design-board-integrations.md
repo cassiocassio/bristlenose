@@ -595,8 +595,13 @@ sections, pink headers, wide yellow quotes, italic attributions, the clip link,
 Arabic right to left. So the panel's inline script **does** run under network
 access `none` (closing the one unverified publishing point), and file choice
 works. Development plugins exist only in the desktop app; the browser's Plugins
-menu has no Development item. Still to do: the Bristlenose side of the handoff (web panel, Mac sheet, feature
-flag); the disclosures (review finding 21); the plugin's tests in CI.
+menu has no Development item. Since then (17–19 Oct 2026): the web panel and Mac sheet shipped behind flags;
+the plugin's typecheck, tests and build run in CI (`figjam-plugin` job); the
+disclosures (review finding 21) and the flag flips wait on a `figjam-launch`
+branch in this repo and in the website repo, to merge when the listing is
+approved; and `figjam-plugin/publishing/` holds the submission kit (listing
+copy, icon, a cover drawn by the plugin, and a sample board file pinned by
+`tests/test_figjam_sample_board.py`).
 
 **Plugin build notes, 17 Oct 2026** (research from Figma's docs, review
 guidelines, forum and plugin typings; the probes were run in the scratch board):

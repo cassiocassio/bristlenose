@@ -40,9 +40,9 @@ Plugins › Development › Import plugin from manifest… and choose
 `figjam-plugin/manifest.json`. Run **Bristlenose board** and choose a file from
 Bristlenose's FigJam download, or `tests/fixtures/figjam-board-v1.json`.
 
-## Before publishing to Figma Community
+## Publishing to Figma Community
 
-See "Plugin build notes" in the design doc: two-factor auth on the publishing
-account, a 128×128 icon and a 1920×1080 thumbnail, a support contact, and a
-check that the panel's inline script runs with network access set to none. The
-`id` in `manifest.json` is a placeholder until Figma assigns one.
+`publishing/PUBLISHING.md` has everything for the submission: the listing copy,
+icon, cover image, a sample board file for reviewers, the steps, and the checks
+to do by hand. The `id` in `manifest.json` is a placeholder until Figma assigns
+one at publish.

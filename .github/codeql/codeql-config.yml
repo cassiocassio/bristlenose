@@ -1,0 +1,10 @@
+name: Bristlenose CodeQL config
+
+# Directories that never ship. Nothing here is in the wheel (pyproject.toml
+# packages only bristlenose/) or the sidecar; serve mounts docs/mockups and
+# docs/design-system only under --dev from a source checkout. Keep this list
+# short: every entry is stated in the security evidence we give reviewers.
+paths-ignore:
+  - docs/                # design docs, HTML mockups, style-guide prototypes
+  - experiments/         # throwaway research scripts and lab pages
+  - desktop/mcpb-spike/  # superseded spike; the shipped proxy is desktop/mcpb/

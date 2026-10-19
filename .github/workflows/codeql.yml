@@ -46,6 +46,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
           # security-extended: broader coverage than default suite.
           # Known limitation: does not cover LLM prompt injection
           # (f-string concatenation into prompt templates) or YAML

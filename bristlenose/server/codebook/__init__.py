@@ -203,19 +203,28 @@ def _parse_template(raw: dict[str, Any], filename: str) -> CodebookTemplate:
 # ---------------------------------------------------------------------------
 
 
+def _bundled_template_paths() -> dict[str, Path]:
+    """Map each bundled template id (the YAML file's stem) to its path."""
+    return {path.stem: path for path in _TEMPLATES_DIR.glob("*.yaml")}
+
+
 @cache
-def _load_template(template_id: str) -> CodebookTemplate:
-    path = _TEMPLATES_DIR / f"{template_id}.yaml"
+def _load_template(path: Path) -> CodebookTemplate:
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     return _parse_template(raw, path.name)
 
 
 def get_template(template_id: str) -> CodebookTemplate | None:
-    """Return a template by ID, or None if not found."""
-    path = _TEMPLATES_DIR / f"{template_id}.yaml"
-    if not path.exists():
+    """Return a template by ID, or None if not found.
+
+    The id arrives from HTTP routes and the MCP tool, so it is looked up
+    among the bundled files rather than joined onto a path: an id such as
+    ``../x`` or ``archive/x`` is simply not found.
+    """
+    path = _bundled_template_paths().get(template_id)
+    if path is None:
         return None
-    return _load_template(template_id)
+    return _load_template(path)
 
 
 def load_all_templates() -> list[CodebookTemplate]:
@@ -226,8 +235,8 @@ def load_all_templates() -> list[CodebookTemplate]:
     alphabetically by ``id`` as a tiebreaker.
     """
     templates: list[CodebookTemplate] = []
-    for path in sorted(_TEMPLATES_DIR.glob("*.yaml")):
-        templates.append(_load_template(path.stem))
+    for path in sorted(_bundled_template_paths().values()):
+        templates.append(_load_template(path))
     templates.sort(key=lambda t: (t.sort_order, t.id))
     return templates
 

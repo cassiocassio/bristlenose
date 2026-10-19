@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
+
 import pytest
 
 from bristlenose.server.codebook import (
+    _TEMPLATES_DIR,
     CodebookTemplate,
     TemplateGroup,
     TemplateTag,
@@ -62,6 +66,27 @@ class TestGetTemplate:
 
     def test_nonexistent_returns_none(self) -> None:
         assert get_template("nonexistent") is None
+
+    def test_every_bundled_id_resolves(self) -> None:
+        """The lookup key is the file's stem, so each template's id must match it."""
+        for t in load_all_templates():
+            assert get_template(t.id) is not None, t.id
+
+    def test_only_bundled_ids_are_read(self, tmp_path: Path) -> None:
+        """An id that names a file outside the bundled set is not found.
+
+        Each id points at a loadable template if it were joined onto the
+        templates directory, so a None here means the file was never read,
+        not that it failed to parse. The relative ids stay on the checkout's
+        drive: relpath to tmp_path raises across drives on Windows CI.
+        """
+        planted = tmp_path / "planted.yaml"
+        shutil.copy(_TEMPLATES_DIR / "garrett.yaml", planted)
+        archived = next((_TEMPLATES_DIR / "archive").glob("garrett_*.yaml"))
+
+        assert get_template(f"../{_TEMPLATES_DIR.name}/garrett") is None
+        assert get_template(str(tmp_path / "planted")) is None
+        assert get_template(f"archive/{archived.stem}") is None
 
 
 # ---------------------------------------------------------------------------

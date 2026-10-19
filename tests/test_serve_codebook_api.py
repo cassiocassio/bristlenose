@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bristlenose.server.app import create_app
+from bristlenose.server.codebook import _TEMPLATES_DIR
 from bristlenose.server.models import (
     AutoCodeJob,
     CodebookGroup,
@@ -585,6 +586,17 @@ class TestImportTemplate:
         resp = client.post(
             "/api/projects/1/codebook/import-template",
             json={"template_id": "nonexistent"},
+        )
+        assert resp.status_code == 404
+
+    def test_import_template_outside_bundle_returns_404(self, client: TestClient) -> None:
+        """A template id that walks out of the templates directory is not found.
+
+        Joined onto the directory, this id would load Garrett and import it.
+        """
+        resp = client.post(
+            "/api/projects/1/codebook/import-template",
+            json={"template_id": f"../{_TEMPLATES_DIR.name}/garrett"},
         )
         assert resp.status_code == 404
 

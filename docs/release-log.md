@@ -67,6 +67,62 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.41.0 — 19 Oct 2026 · Tier 1 (minor — Miro and FigJam board progress with Stop, long quotes that break where they read, a lighter selected column in Discussion)
+
+**What shipped.** Building a Miro or FigJam board shows its progress and can be stopped; a long
+quote split over stickies breaks at a sentence end, a marked cut or a pause, by the rules of its
+language; CJK stickies on Miro are sized for their characters; the Discussion lens's selected
+session column is a pale sliding band instead of accent rings. Zoom import changes shipped too and
+are, by decision, not in the notes (Diagnostics-gated beta). An overnight release: the owner asked
+for it at 00:15 and went to bed. An earlier driver (pid 97852, started 16:37 in another session's
+terminal) had sat at its typed-confirmation prompt for seven hours having done nothing; the owner
+had it killed at 00:10. The prose was drafted on 18 Oct by the boards session; this session dated
+it 19 Oct and added the one Discussion line. **The owner has not read the final notes.**
+
+**Verified 9 of 9** (`release.sh verify 0.41.0`) at about 02:55 BST: PyPI (200, wheel + sdist),
+GitHub Release, Homebrew, TestFlight 5206 (delivery `cfe7dd2a-856f-4fc2-a38b-f517f1fb53fd`),
+`.dmg`, Snap edge, Copr, and the website, deployed from a detached worktree of the website repo's
+committed HEAD (`8ec30d2`, carrying two undeployed commits: Meet's own transcript in the import
+docs, and Google's Limited Use statement on the privacy page — both checked against shipped code
+first). Tag `v0.41.0` on `91f69ea2`, the commit strict CI passed. winget, a follower, has no PR.
+
+**Three stops at the strict-CI gate, nothing irreversible done before any of them.**
+
+| stop | cause | fix |
+|---|---|---|
+| strict CI 1 (`d43f1d75`), macOS 3.11/3.12/3.14 | `test_a_stop_that_lands_during_the_last_call_reports_the_finished_board` polled `status != "running"` and read the transient `cancelled` the Stop sets before the finished push overwrites it with `completed` | `51625b23`: wait for the job's task |
+| strict CI 2 (`51625b23`), macOS 3.12–3.14 | the same test: the status was read *before* the done-check, so a job ending between the two still left `cancelled` in hand | `91f69ea2`: read the status afresh after the job has ended. Both shapes reproduced locally with injected delays first |
+| strict CI 3 (`91f69ea2`), Windows 3.12 + Ubuntu 3.12 | Windows: `PermissionError [WinError 5]` replacing `pipeline-manifest.json` while the serve read it (second sighting; the 0.40.0 entry asked for a retry on the second). Ubuntu: a SQLite **bus error** in `ensure_schema` → `create_all` during `test_lifecycle_scenario[reanalyse-fails-curation-survives]` (worker crash). The push run on the same commit passed both cells | `gh run rerun --failed` on the same run (no HEAD move, no rebuild); green. The manifest retry landed after the tag (`6ef00d28`) |
+
+Run times (measured): preflight 198 s · inventory 3 s · build-all 499 / 478 / 479 s · build-dmg
+691 / 675 / 652 s (each HEAD move rebuilt both, as the driver's provenance rule requires) · strict
+CI to first failure ~18 min each time, final re-run 646 s · TestFlight 425 s · `.dmg` upload 92 s ·
+tag 1 s · tag to PyPI ~30 min. Driver start (00:24) to `exit 75` (02:10) 1h46 against the plan's
+1h57, of which about an hour was three CI cycles; no human wait inside the run.
+
+**Tricky things.**
+
+- **A gate wait that reads, then checks, can assert on a stale read.** The second fix's tell: the
+  CI log showed the status GET *before* the job's own "built" line, yet the test had waited for the
+  job. Wait on the event, then read; never assert on the value captured while waiting.
+- **The fail-fast gate stops at the first blocking red and leaves the run going.** Read the whole
+  run once it completes before deciding what to fix; run 2's other cells failed the same test, run
+  3's two reds were unrelated flakes, and `gh run rerun --failed` on the same commit is the right
+  answer for those (it also re-runs dependent jobs, e2e here).
+- **A driver waiting at its confirmation prompt looks like a hang.** No child process, a run folder
+  holding only `.lock`, S+ on a tty: it is asking to have the version typed. Its lock blocks every
+  other run and the freeze blocks every commit, for as long as nobody answers.
+- **SQLite bus error under folder swaps** is new: `create_all` on a database whose `-shm` was
+  likely replaced under the mapping. One sighting, not reproduced; recorded, no gate.
+
+**Owed.** The owner's read of the 0.41.0 notes; two holds now landable, `after-pypi/0.41.0-oauth-ids`
+and `after-pypi/0.41.0-zoom-beta` (other sessions' work, left for their owners); the Discussion
+lens's open product decisions and Mac hand checks (TODO.md, `docs/qa-backlog.md`); mypy's soft cell
+failed as before, and two of its errors (`mcp_server.py:513–514`) are a shadowed `names` variable,
+not a runtime fault.
+
+---
+
 ## 0.40.0 — 18 Oct 2026 · Tier 1 (minor — All sessions in the Discussion lens, a navigator that measures, a native timeline menu)
 
 **What shipped.** The Discussion lens opens on All (each question once, every session's answers

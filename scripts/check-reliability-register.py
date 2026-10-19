@@ -47,10 +47,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REGISTER = ROOT / "docs" / "reliability-register.md"
 
 CLASSES = (
-    # Defects: the door is broken or lies.
     "LOSS", "FAKE", "SILENT", "WEDGE", "SPEND", "STALE", "DEAD", "JUMP", "PROMPT", "CRASH",
-    # Trust signals and mental model: the door works and still does not clunk.
-    "LAG", "BURIED", "UNCLEAR", "SURPRISE",
 )
 FREQS = ("every", "most", "some", "rare")
 COSTS = ("high", "med", "low")

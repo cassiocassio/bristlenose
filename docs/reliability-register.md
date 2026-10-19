@@ -18,11 +18,10 @@ an action that does not land solid, immediate, honest and final. A researcher un
 deadline judges whether to trust the analysis by the small things: whether a star
 stays starred, whether Stop stops, whether "exported" means there is a file.
 
-**What belongs here.** The clunk has three sources, and a row belongs to one of them.
-
-**1. It does the right thing, predictably.** Good engineering: the same action gives
-the same result every time, with no race, no luck and no silent degradation. Most
-rows today are this family.
+**What belongs here.** Functional reliability: it does the right thing, predictably.
+The same action gives the same result every time, with no race, no luck and no silent
+degradation. The aim is to shrink the functional bug surface, so that at launch the
+complaints are about taste, not breakage. A row is one of ten classes:
 
 | Class | The door that does not clunk |
 |---|---|
@@ -33,48 +32,16 @@ rows today are this family.
 | `SPEND` | the researcher's API credit or an hour of their time spent invisibly |
 | `STALE` | the screen shows the old state after an action, until a reload or relaunch |
 | `DEAD` | a control is offered and does nothing |
-| `CRASH` | a crash, a blank page, a traceback, raw wire text or an untranslated key |
-
-**2. It signals clearly.** Trust signals: feedback, stillness, speed, a layout that
-explains itself, and the information offered at the moment it is needed.
-
-| Class | The door that does not clunk |
-|---|---|
-| `LAG` | a click takes longer to show than its budget (below) |
 | `JUMP` | the interface moves under the pointer: flicker, reflow, a vanished selection |
 | `PROMPT` | an operating-system dialog with no lead-in |
-| `BURIED` | what the researcher needs at this step is not offered here, or not yet, or only somewhere else |
-| `UNCLEAR` | the layout makes them hunt, guess or misread what they are looking at |
-
-**3. It does what was expected.** The behaviour matches the researcher's mental model
-and follows the workflow they imagined (download, rename, gather in a folder, drop,
-read, curate, share, come back with more).
-
-| Class | The door that does not clunk |
-|---|---|
-| `SURPRISE` | it does something other than what they expected, or asks for steps out of the order they work in |
-
-**The latency budget** is prior art, not invention (Card, Moran and Newell; Nielsen's
-three limits): **0.1 s** for direct manipulation (star, hide, select, toggle, switch
-lens, type in a search) to show; **1 s** before anything slower shows progress, and
-progress must start within 0.1 s; **10 s** is the limit of attention, past which the
-wait needs determinate progress and a way to cancel. `LAG` rows are measured, never
-read off the code.
-
-**How the families are found.** Family 1 by reading the code and probing it. Family 2
-by measuring (click-to-paint timing) and by looking. Family 3 by walking the
-researcher's workflow step by step against what they would expect. A `SURPRISE` found
-by an agent's walkthrough is a hypothesis about someone else's mental model, so it
-enters as `unproven` and is confirmed on a human walk.
+| `CRASH` | a crash, a blank page, a traceback, raw wire text or an untranslated key |
 
 **What does not belong.** Missing features; release and CI machinery only the
-maintainer sees; security findings (private notes).
-
-**Current focus: family 1.** The first job is to shrink the functional bug surface,
-so that at launch the complaints are about taste, not breakage. The sweeps so far
-cover family 1; families 2 and 3 are defined so a row found along the way has a
-home, and get their own sweeps (a click-to-paint measurement, a workflow walk)
-later.
+maintainer sees; security findings (private notes). The clunk has two other sources,
+**trust signals** (feedback, stillness, click-to-visible latency, clear layout, data
+offered when it is needed) and **the mental model** (it does what the researcher
+expected, in the order of the workflow they imagined). Those are organising principles
+for the 100-day plan, not rows here.
 
 ## How a row is ranked
 

@@ -126,6 +126,12 @@ STAGE_ORDER = [
 # ---------------------------------------------------------------------------
 
 MANIFEST_FILENAME = "pipeline-manifest.json"
+# The previous run's manifest, held for resume until a run completes. Each run
+# writes a fresh manifest and each stage writes its record when it ends, so a
+# run stopped part-way leaves no record of the stages it never reached; without
+# this the next run redid them for every session. Only the resume decision reads
+# it (``resume_manifest``): the manifest itself keeps describing the latest run.
+RESUME_FILENAME = "pipeline-manifest.resume.json"
 
 
 # ---------------------------------------------------------------------------
@@ -170,13 +176,57 @@ def write_manifest(manifest: PipelineManifest, output_dir: Path) -> None:
     Windows a server reading the manifest (`run_condition`) holds it for the length of the
     read and the replace is refused meanwhile (strict CI, 19 Oct 2026).
     """
+    _write_manifest_to(manifest, _manifest_path(output_dir))
+
+
+def _write_manifest_to(manifest: PipelineManifest, path: Path) -> None:
     from bristlenose.utils.fs import replace_retrying
 
-    path = _manifest_path(output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     replace_retrying(tmp, path)
+
+
+def _resume_path(output_dir: Path) -> Path:
+    return output_dir / ".bristlenose" / RESUME_FILENAME
+
+
+def resume_manifest(output_dir: Path) -> PipelineManifest | None:
+    """What the last runs completed, for deciding what this run can reuse.
+
+    The manifest on disk, with every stage it has no record of filled from the
+    held copy (``hold_for_resume``). A record on disk always wins: it is newer.
+    A filled-in stage is still only reused if its inputs and output file pass
+    the checks every cached stage passes, so a stale record costs a recompute,
+    never a wrong result. An unreadable held copy is ignored.
+    """
+    current = load_manifest(output_dir)
+    held_path = _resume_path(output_dir)
+    if not held_path.exists():
+        return current
+    try:
+        held = PipelineManifest.model_validate_json(held_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — a damaged copy only loses reuse
+        logger.warning("resume | held manifest unreadable at %s, ignored", held_path,
+                       exc_info=True)
+        return current
+    if current is None:
+        return held
+    for stage, record in held.stages.items():
+        current.stages.setdefault(stage, record)
+    return current
+
+
+def hold_for_resume(manifest: PipelineManifest | None, output_dir: Path) -> None:
+    """Keep ``manifest`` for the next run's resume until a run completes."""
+    if manifest is not None:
+        _write_manifest_to(manifest, _resume_path(output_dir))
+
+
+def release_resume(output_dir: Path) -> None:
+    """A run completed: its manifest holds everything, so drop the held copy."""
+    _resume_path(output_dir).unlink(missing_ok=True)
 
 
 def mark_stage_running(manifest: PipelineManifest, stage: str) -> None:

@@ -46,11 +46,14 @@ from bristlenose.manifest import (
     create_manifest,
     fresh_session_ids,
     get_completed_session_ids,
+    hold_for_resume,
     load_manifest,
     mark_session_complete,
     mark_session_failed,
     mark_stage_complete,
     mark_stage_running,
+    release_resume,
+    resume_manifest,
     write_manifest,
 )
 from bristlenose.manifest import STAGE_RENDER as _M_STAGE_RENDER
@@ -1470,8 +1473,11 @@ class Pipeline:
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
         # ── Manifest tracking ────────────────────────────────────
-        # Load existing manifest for resume, or create fresh.
-        _prev_manifest = load_manifest(output_dir) if output_dir.exists() else None
+        # Load existing manifest for resume, or create fresh. The previous
+        # run's records are held aside until this run completes, so a stop
+        # part-way does not erase the stages it never reached.
+        _prev_manifest = resume_manifest(output_dir) if output_dir.exists() else None
+        hold_for_resume(_prev_manifest, output_dir)
         manifest = create_manifest(self.settings.project_name, __version__)
 
         # ── Stage 1: Ingest ──────────────────────────────────────
@@ -3201,6 +3207,7 @@ class Pipeline:
             )
             mark_stage_complete(manifest, _M_STAGE_RENDER)
             write_manifest(manifest, output_dir)
+            release_resume(output_dir)
             # The run succeeded: what it did not produce is not in the project.
             prune_stale_session_files(output_dir, (s.session_id for s in sessions))
 

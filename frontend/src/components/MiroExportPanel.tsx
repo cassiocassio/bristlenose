@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
+import { featureFlags } from "../utils/featureFlags";
 import { announce } from "../utils/announce";
 import { postStoreMiroToken } from "../shims/bridge";
 import {
@@ -141,7 +142,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [token, setToken] = useState("");
   const [boardName, setBoardName] = useState("");
   const named = useRef(false); // the researcher has typed a name: don't overwrite it
-  const [colourBy, setColourBy] = useState("sentiment");
+  // Flat by default on every board (owner, 19 Oct 2026); sentiment is offered.
+  const [colourBy, setColourBy] = useState("none");
   const [linkClips, setLinkClips] = useState(false);
   // On by default — it is the right thing for a long quote — and shown, so a researcher arriving
   // at the board knows why a quote runs over two or three stickies (owner, 17 Oct 2026).
@@ -322,7 +324,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     (): MiroExportRequest => ({
       board_name: boardName.trim() || null,
       colour_by: colourBy,
-      clips_base: linkClips ? clipsBase.trim() : "",
+      clips_base: featureFlags.boardClipLinks && linkClips ? clipsBase.trim() : "",
       locale: resolveBrowserLang(i18n.language) ?? "en",
       split_long_quotes: splitLong,
       sticky_shape: shape,
@@ -555,7 +557,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
             </fieldset>
             {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
                 screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
-            {!screens && (
+            {!screens && featureFlags.boardClipLinks && (
               <>
               <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
                 <input

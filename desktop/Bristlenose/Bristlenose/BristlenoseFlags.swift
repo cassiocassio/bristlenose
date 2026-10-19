@@ -67,6 +67,20 @@ enum BristlenoseFlags {
         UserDefaults.standard.bool(forKey: figjamExportKey)
     }
 
+    /// Offer **Link quotes to clips** in both board sheets (Miro and FigJam).
+    /// **Default off** — parked 19 Oct 2026: every link was dead. The board guesses
+    /// a clip's file name and the clip exporter writes another, and matching the
+    /// real one would put the participant's name on a shared board
+    /// (`docs/design-miro-bridge.md` § Enhancement: clip links in stickies). The
+    /// sheets send no clip folder while it is off; the route and its tests stay.
+    /// The SPA's twin is `featureFlags.boardClipLinks`.
+    ///
+    /// Flip with: `defaults write app.bristlenose BristlenoseBoardClipLinks -bool YES`
+    static let boardClipLinksKey = "BristlenoseBoardClipLinks"
+    static var boardClipLinks: Bool {
+        UserDefaults.standard.bool(forKey: boardClipLinksKey)
+    }
+
     /// Transcribe a first run with **Apple's on-device speech model** while
     /// Whisper downloads behind it (`docs/design-apple-first-transcription.md`).
     /// **Default off** — parked until the language gate is measured on more than

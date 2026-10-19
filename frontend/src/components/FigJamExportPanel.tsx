@@ -10,7 +10,7 @@
  * The choices are the Miro export's, and reuse its strings, so the two boards
  * offer the same things: the board name (arriving filled with the project's —
  * owner, 17 Oct 2026), "break long quotes" (ticked), the sticky shape (square
- * by default on FigJam), and clip links.
+ * by default on FigJam), and clip links (parked: `featureFlags.boardClipLinks`).
  *
  * Parked behind `featureFlags.figjamExport` until the plugin is published.
  *
@@ -22,6 +22,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { isExportMode } from "../utils/exportData";
+import { featureFlags } from "../utils/featureFlags";
 import { announce } from "../utils/announce";
 import { apiGet, figjamBoardDownloadUrl, getFigJamBoard } from "../utils/api";
 import type { ApiError, FigJamBoardRequest } from "../utils/api";
@@ -101,7 +102,7 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
       locale: resolveBrowserLang(i18n.language) ?? "en",
       split_long_quotes: splitLong,
       sticky_shape: shape,
-      clips_base: linkClips ? clipsBase.trim() : "",
+      clips_base: featureFlags.boardClipLinks && linkClips ? clipsBase.trim() : "",
     }),
     [boardName, splitLong, shape, linkClips, clipsBase, i18n.language],
   );
@@ -194,6 +195,7 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
                 </label>
               ))}
             </fieldset>
+            {featureFlags.boardClipLinks && (
             <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
               <input
                 type="checkbox"
@@ -205,7 +207,8 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
                 <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
               </span>
             </label>
-            {linkClips && (
+            )}
+            {featureFlags.boardClipLinks && linkClips && (
               <input
                 type="text"
                 value={clipsBase}

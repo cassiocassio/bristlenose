@@ -57,7 +57,7 @@ describe("MiroExportPanel — the screens board", () => {
     expect(screen.queryByText(i18n.t("miro.linkClipsLabel"))).toBeNull();
     fireEvent.click(screen.getByText(i18n.t("miro.createBoard")));
     await screen.findByText(i18n.t("export.screens.done", { count: 9 }));
-    expect(startScreensMiro).toHaveBeenCalledWith(expect.objectContaining({ locale: "en", colour_by: "sentiment" }));
+    expect(startScreensMiro).toHaveBeenCalledWith(expect.objectContaining({ locale: "en", colour_by: "none" }));
     expect(startMiroBoard).not.toHaveBeenCalled();
     expect(screen.getByText(i18n.t("miro.openInMiro")).closest("a")).toHaveAttribute(
       "href", "https://miro.com/app/board/s1/");

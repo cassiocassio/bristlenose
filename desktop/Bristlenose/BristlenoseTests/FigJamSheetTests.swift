@@ -42,9 +42,19 @@ struct FigJamSheetTests {
         ])
     }
 
+    @Test("clip links are parked: no folder is sent, ticked or not")
+    func clipLinksParked() {
+        let m = FigJamSheetModel(port: 8150, token: "t0k", projectName: "p", i18n: I18n(),
+                                 clipLinksOffered: false)
+        m.clipsBase = "https://x.example/c"
+        m.linkClips = true
+        #expect(m.options().clipsBase.isEmpty)
+    }
+
     @Test("a clip folder is sent only when clip links are on")
     func clipsOnlyWhenOn() {
-        let (m, _) = Self.model()
+        let m = FigJamSheetModel(port: 8150, token: "t0k", projectName: "p", i18n: I18n(),
+                                 clipLinksOffered: true)
         m.clipsBase = "https://x.example/c"
         #expect(m.options().clipsBase.isEmpty)
         m.linkClips = true

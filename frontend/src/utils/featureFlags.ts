@@ -121,6 +121,22 @@ export interface FeatureFlags {
    * `docs/design-board-integrations.md` § Weekend build.
    */
   figjamExport: boolean;
+
+  /**
+   * "Link quotes to clips" on both board exports (Miro and FigJam, web panel
+   * and Mac sheet): a clip folder's address, which puts a link to each quote's
+   * clip on its sticky.
+   *
+   * Parked 19 Oct 2026 by the owner — every link was dead. The board guesses a
+   * clip's file name (`s1-p1-10.mp4`, `miro_export._clip_url`), the clip
+   * exporter writes another (`p1 00m10 <speaker> <gist>.mp4`), and matching the
+   * real one would put the participant's name on a shared board; a folder link
+   * from Drive plus a file name never resolves either. The route parameter, the
+   * builders and their tests stay live; only the choice is withheld. The Mac's
+   * twin is `BristlenoseFlags.boardClipLinks`. Design doc:
+   * `docs/design-miro-bridge.md` § Enhancement: clip links in stickies.
+   */
+  boardClipLinks: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -132,6 +148,7 @@ const DEFAULTS: FeatureFlags = {
   sceneNotches: false,
   screensQuoteCount: false,
   figjamExport: false,
+  boardClipLinks: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

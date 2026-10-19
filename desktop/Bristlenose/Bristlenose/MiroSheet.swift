@@ -21,7 +21,8 @@ final class MiroSheetModel: ObservableObject {
     @Published var step: Step = .loading
     @Published var token = ""
     @Published var boardName: String
-    @Published var colourBySentiment = true
+    /// Flat by default on every board (owner, 19 Oct 2026); sentiment is offered.
+    @Published var colourBySentiment = false
     @Published var linkClips = false
     /// On by default and shown, so a researcher arriving at the board knows why a long quote runs
     /// over two or three stickies (owner, 17 Oct 2026).
@@ -50,11 +51,16 @@ final class MiroSheetModel: ObservableObject {
     /// Opened on the Screens lens: the board is the screens, a frame per screengrab
     /// (docs/design-screens-export.md §6), not the quotes in section columns.
     let screens: Bool
+    /// Clip links are parked (`BristlenoseFlags.boardClipLinks`): off, the choice is not shown
+    /// and no folder is sent.
+    let clipLinksOffered: Bool
 
-    init(port: Int, token: String?, projectName: String, i18n: I18n, screens: Bool = false) {
+    init(port: Int, token: String?, projectName: String, i18n: I18n, screens: Bool = false,
+         clipLinksOffered: Bool = BristlenoseFlags.boardClipLinks) {
         self.api = MiroAPI(port: port, token: token)
         self.i18n = i18n
         self.screens = screens
+        self.clipLinksOffered = clipLinksOffered
         // Prefilled with what the board would be called anyway, editable (owner, 17 Oct 2026).
         self.boardName = screens
             ? "\(projectName) · \(i18n.t("common.screens.title"))" : projectName
@@ -211,7 +217,8 @@ final class MiroSheetModel: ObservableObject {
         let locale = i18n.locale
         let name = boardName.trimmingCharacters(in: .whitespacesAndNewlines)
         let colourBy = colourBySentiment ? "sentiment" : "none"
-        let clips = linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+        let clips = clipLinksOffered && linkClips
+            ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
         let (screens, split, shape) = (self.screens, splitLongQuotes, stickyShape)
         follow { api, onProgress in
             screens
@@ -427,7 +434,8 @@ struct MiroSheet: View {
                     .labelsHidden()
                 }
                 // Clip links are a quotes-board option; the screens board's stickies carry none.
-                if !model.screens {
+                // Parked on both (`BristlenoseFlags.boardClipLinks`).
+                if !model.screens && model.clipLinksOffered {
                 GridRow(alignment: .top) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     VStack(alignment: .leading, spacing: 4) {

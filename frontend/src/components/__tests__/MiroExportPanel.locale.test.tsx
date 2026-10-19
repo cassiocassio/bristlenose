@@ -64,9 +64,16 @@ describe("MiroExportPanel — the board's language travels with the request", ()
     expect(await exportOnce("zh-TW")).toMatchObject({ locale: "zh-Hant" });
   });
 
-  it("still sends the other fields it always sent", async () => {
+  it("still sends the other fields it always sent, flat colour by default", async () => {
     const body = await exportOnce("en");
-    expect(body).toMatchObject({ colour_by: "sentiment", clips_base: "", locale: "en" });
+    // Flat on every board unless the researcher picks sentiment (owner, 19 Oct 2026).
+    expect(body).toMatchObject({ colour_by: "none", clips_base: "", locale: "en" });
+  });
+
+  it("offers no clip links while they are parked, and sends no folder", async () => {
+    const body = await exportOnce("en");
+    expect(screen.queryByText(i18n.t("miro.linkClipsLabel"))).toBeNull();
+    expect(body).toMatchObject({ clips_base: "" });
   });
 });
 

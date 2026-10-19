@@ -113,6 +113,9 @@ final class FigJamSheetModel: ObservableObject {
     @Published var square = true
     @Published var linkClips = false
     @Published var clipsBase = ""
+    /// Clip links are parked (`BristlenoseFlags.boardClipLinks`): off, the choice is not shown
+    /// and no folder is sent.
+    let clipLinksOffered: Bool
     @Published var error: String?
     @Published private(set) var quotes = 0
 
@@ -125,9 +128,11 @@ final class FigJamSheetModel: ObservableObject {
     /// The board file and its quote count. Injected so a test needs no server.
     var fetchBoard: (FigJamAPI.Options) async throws -> (data: Data, quotes: Int)
 
-    init(port: Int, token: String?, projectName: String, i18n: I18n) {
+    init(port: Int, token: String?, projectName: String, i18n: I18n,
+         clipLinksOffered: Bool = BristlenoseFlags.boardClipLinks) {
         let api = FigJamAPI(port: port, token: token)
         self.api = api
+        self.clipLinksOffered = clipLinksOffered
         self.i18n = i18n
         self.projectName = projectName
         self.boardName = projectName  // filled, editable — nothing arrives untitled
@@ -143,7 +148,8 @@ final class FigJamSheetModel: ObservableObject {
             locale: i18n.locale,
             splitLongQuotes: splitLongQuotes,
             square: square,
-            clipsBase: linkClips ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
+            clipsBase: clipLinksOffered && linkClips
+                ? clipsBase.trimmingCharacters(in: .whitespacesAndNewlines) : ""
         )
     }
 
@@ -259,6 +265,7 @@ struct FigJamSheet: View {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     Toggle(model.t("common.miro.splitLongQuotes"), isOn: $model.splitLongQuotes)
                 }
+                if model.clipLinksOffered {
                 GridRow(alignment: .top) {
                     Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                     VStack(alignment: .leading, spacing: 4) {
@@ -269,6 +276,7 @@ struct FigJamSheet: View {
                                 .textFieldStyle(.roundedBorder)
                         }
                     }
+                }
                 }
             }
             Text(model.t("common.figjam.notice")).font(.subheadline).foregroundStyle(.secondary)

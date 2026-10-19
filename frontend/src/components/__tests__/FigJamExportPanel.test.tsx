@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { FigJamExportPanel } from "../FigJamExportPanel";
 import i18n from "../../i18n";
+import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 
 const apiGet = vi.fn();
 const getFigJamBoard = vi.fn();
@@ -33,7 +34,26 @@ describe("FigJamExportPanel", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       clicked.push(this.getAttribute("href") ?? "");
     });
+    resetFeatureFlags();
     await i18n.changeLanguage("en");
+  });
+
+  it("offers no clip links while they are parked", async () => {
+    render(<FigJamExportPanel open onClose={() => {}} />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    expect(screen.queryByText(i18n.t("miro.linkClipsLabel"))).toBeNull();
+  });
+
+  it("sends a clip folder once the parked choice is on and ticked", async () => {
+    featureFlags.boardClipLinks = true;
+    render(<FigJamExportPanel open onClose={() => {}} />);
+    await waitFor(() => expect(apiGet).toHaveBeenCalled());
+    fireEvent.click(screen.getByText(i18n.t("miro.linkClipsLabel")));
+    fireEvent.change(screen.getByLabelText(i18n.t("miro.linkClipsLabel")),
+      { target: { value: " https://x.example/c " } });
+    fireEvent.click(screen.getByTestId("bn-figjam-download"));
+    await waitFor(() => expect(getFigJamBoard).toHaveBeenCalled());
+    expect(getFigJamBoard.mock.calls[0][0]).toMatchObject({ clips_base: "https://x.example/c" });
   });
 
   it("arrives with the project's name in the board name, not a hint", async () => {

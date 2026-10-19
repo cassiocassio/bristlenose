@@ -253,15 +253,20 @@ The hard-won constraints. Build against these.
 | Quote | **yellow sticky**, parented into the frame | body leads; `— P1 · 0:10` trails in italic |
 | Board title / colour legend | **text item** | real fontSize/colour |
 
-- **Order:** sections (by `display_order`) then themes — same as the Quotes page.
+- **Order:** sections (by `display_order`) then themes — same as the Quotes page, themes
+  in the order its Themes navigation lists them (by id; until 19 Oct 2026 the board ordered
+  them by earliest quote, and before that by the timecode read as text).
 - **Within a column:** session→time (`session_id` natural sort, then
   `start_timecode`).
 - **Scope:** whatever the current view resolves to — `all` (non-hidden),
   `starred`, a tag slice, or `this section`. Reuses the existing `export_core`
   `quote_ids` selection (starred / tag filter / hidden-exclusion all collapse to
   a quote-id set).
-- **Colour:** sentiment by default (Bristlenose's 7 sentiments → Miro's 16 named
-  colours); participant/theme optional.
+- **Colour:** flat by default — pink headers, yellow quotes — since 19 Oct 2026 (owner:
+  sentiment colouring distracts as often as it helps). Sentiment stays as an option in both
+  dialogs. It was the default until then, contradicting the cross-board decision in
+  `design-board-integrations.md` § Colour. Note the map below predates the current
+  sentiment set: doubt, surprise, satisfaction and confidence fall back to yellow.
 
 ### Sentiment → Miro colour
 
@@ -364,6 +369,20 @@ block third-party app authorisation.
 ---
 
 ## Enhancement: clip links in stickies
+
+> **Parked 19 Oct 2026 (owner).** The choice is hidden on all four surfaces —
+> `featureFlags.boardClipLinks` (both web panels) and `BristlenoseFlags.boardClipLinks`
+> (both Mac sheets), default off, so no client sends a clip folder. Every link was dead:
+> the board guesses `{session}-{code}-{start}.mp4` (`miro_export._clip_url`, assumption A5)
+> while the clip exporter writes `{code} {mm}m{ss} {speaker} {gist}.mp4`
+> (`clip_manifest.build_clip_filename`), and matching that name would put the
+> participant's name on a shared board; a Drive folder link plus a file name never
+> resolves either. The route parameter, the builders and their tests stay live. Before
+> the flag flips: one clip-name convention the exporter and the boards share, with no
+> name in it; a folder shape that resolves on the hosts researchers use; and the
+> bad-folder path agreed across both boards (FigJam refuses with `clips_base_not_http`,
+> Miro drops the links and says nothing, and `figjam.errClipsBase` is wrong for a folder
+> refused for its credentials).
 
 The obvious win — each _shared_ sticky links to a short exported **clip**: the
 curated, snipped-out moment, never the whole recording. Stickies support

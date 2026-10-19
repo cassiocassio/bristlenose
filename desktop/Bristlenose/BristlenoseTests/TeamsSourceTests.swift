@@ -66,9 +66,13 @@ struct MicrosoftOAuthConfigTests {
     func missingClientID() {
         let defaults = UserDefaults(suiteName: "teams-empty-test")!
         defaults.removePersistentDomain(forName: "teams-empty-test")
-        #expect(MicrosoftOAuthConfig.resolve(defaults: defaults, bundle: Bundle(for: TeamsSource.self)) == nil)
+        // The test bundle, not the app's: the app now carries a baked ID, and
+        // `Bundle(for: TeamsSource.self)` is the app bundle in a hosted test.
+        #expect(MicrosoftOAuthConfig.resolve(defaults: defaults, bundle: Bundle(for: TestBundleAnchor.self)) == nil)
     }
 }
+
+private final class TestBundleAnchor {}
 
 // MARK: - Consent refusal
 

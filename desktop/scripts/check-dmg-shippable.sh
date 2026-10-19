@@ -120,6 +120,22 @@ else
         fail "version agreement" "filename says $FILE_VERSION, app says ${APP_VERSION:-<unreadable>}"
     fi
 
+    # Cloud-import sign-in. A tester has no hand-set client ID, so an app built
+    # without the baked ones offers Teams and Meet and cannot start either
+    # sign-in — which on the maintainer's Mac, where the defaults hold the IDs,
+    # looks exactly like working (Bristlenose-OAuth-Info.plist).
+    MISSING_IDS=""
+    for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID; do
+        val="$(/usr/libexec/PlistBuddy -c "Print :$key" \
+                 "$INNER_APP/Contents/Info.plist" 2>/dev/null || echo '')"
+        case "$val" in ''|*__*) MISSING_IDS="$MISSING_IDS $key" ;; esac
+    done
+    if [ -z "$MISSING_IDS" ]; then
+        pass "cloud sign-in IDs" "Teams + Meet client IDs baked"
+    else
+        fail "cloud sign-in IDs" "missing or placeholder:$MISSING_IDS"
+    fi
+
     # THE load-bearing assertion. `create-dmg` copies the .app, so a staple
     # applied to the export-dir original never reaches this copy.
     #

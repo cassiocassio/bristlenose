@@ -289,7 +289,8 @@ def scan_suites(sizes: bool = True) -> list[dict]:
         len(re.findall(r"func test[A-Za-z0-9_]*\(", t)) for t in swift_src
     )
     vitest_files = list((ROOT / "frontend/src").rglob("*.test.*"))
-    e2e = sorted(p.name for p in (ROOT / "e2e/tests").glob("*.spec.ts"))
+    plugin_files = list((ROOT / "figjam-plugin/src").rglob("*.test.*"))
+    e2e =sorted(p.name for p in (ROOT / "e2e/tests").glob("*.spec.ts"))
     return [
         {"suite": "pytest", "kind": "python unit/integration", "runner": "pytest",
          "files": None, "tests": int(py.group(1)) if py else None,
@@ -298,6 +299,9 @@ def scan_suites(sizes: bool = True) -> list[dict]:
         {"suite": "vitest", "kind": "frontend unit", "runner": "vitest",
          "files": len(vitest_files), "tests": None, "basis": "test files",
          "source": "frontend/src/**/*.test.*"},
+        {"suite": "figjam-plugin", "kind": "figjam plugin unit", "runner": "vitest",
+         "files": len(plugin_files), "tests": None, "basis": "test files",
+         "source": "figjam-plugin/src/**/*.test.*"},
         {"suite": "BristlenoseTests", "kind": "swift unit", "runner": "xcodebuild",
          "files": len(swift_files), "tests": swift_n,
          "basis": "declared — a floor; parameterised cases expand at runtime",

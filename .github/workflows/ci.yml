@@ -364,6 +364,40 @@ jobs:
           echo "::endgroup::"
           exit $rc
 
+  # The FigJam plugin (figjam-plugin/) is its own npm project: it ships to Figma
+  # Community, not in the wheel or the app, so no other job installs it. Its
+  # tests read tests/fixtures/figjam-board-v1.json, which pytest generates, so
+  # this is the half of the board-file contract that the plugin keeps.
+  figjam-plugin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version-file: '.tool-versions'
+          cache: "npm"
+          cache-dependency-path: figjam-plugin/package-lock.json
+
+      - name: Install plugin dependencies
+        working-directory: figjam-plugin
+        run: npm ci
+
+      - name: Plugin typecheck
+        working-directory: figjam-plugin
+        run: npm run typecheck
+
+      - name: Plugin tests (Vitest)
+        working-directory: figjam-plugin
+        run: npm test
+
+      - name: Build plugin
+        working-directory: figjam-plugin
+        run: npm run build
+
   frontend-lint-type-test:
     runs-on: ubuntu-latest
     timeout-minutes: 15

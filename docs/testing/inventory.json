@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 6819
+        "tests": 7659
       },
       {
         "basis": "test files",
-        "files": 147,
+        "files": 181,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -20,13 +20,22 @@
         "tests": null
       },
       {
+        "basis": "test files",
+        "files": 1,
+        "kind": "figjam plugin unit",
+        "runner": "vitest",
+        "source": "figjam-plugin/src/**/*.test.*",
+        "suite": "figjam-plugin",
+        "tests": null
+      },
+      {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 142,
+        "files": 167,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1712
+        "tests": 1961
       },
       {
         "basis": "spec files",
@@ -232,6 +241,13 @@
         "suite": "vitest"
       },
       {
+        "basis": "test files",
+        "kind": "figjam plugin unit",
+        "runner": "vitest",
+        "source": "figjam-plugin/src/**/*.test.*",
+        "suite": "figjam-plugin"
+      },
+      {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
         "kind": "swift unit",
         "runner": "xcodebuild",
@@ -322,6 +338,21 @@
             "id": "release-suites",
             "job_colour": "hard",
             "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "figjam-plugin",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": false,
+                "name": "Plugin tests (Vitest)",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
             "runs_on": "ubuntu-latest"
           },
           {

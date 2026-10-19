@@ -536,7 +536,9 @@ board in the maintainer's Figma drafts):
 **F1 built 17 Oct 2026.** `bristlenose/board_manifest.py` (pure) and
 `miro_export.build_figjam_manifest` (the project → document step, sharing
 `build_columns`, `board_title` and `board_strings` with the Miro board).
-Version 1 of the document:
+Version 1 of the document, as first built (superseded in detail the same day: each quote's
+`text` became `parts`, and `quote_count`, `totals`, `requested` and `min_reader_version` were
+added; the current shape is `tests/fixtures/figjam-board-v1.json`, which both sides test against):
 
 ```
 { "format": "bristlenose-board", "version": 1, "generator": "Bristlenose X.Y.Z",
@@ -551,9 +553,9 @@ Version 1 of the document:
 
 The document carries every word, the attribution line and the palette, so the
 plugin only draws and a wording or colour change never waits on a plugin review.
-`sticky_shape` follows the house rule, rectangle stickies on every board
-(`board_layout.STICKY_SHAPE`, `docs/design-screens-export.md`); the plugin draws
-it as FigJam's wide sticky, 416 × 240, since FigJam offers no other rectangle.
+`sticky_shape` was rectangle on every board when this was built; it is now square by
+default on FigJam and rectangle on Miro, both offered (*Sticky shape*, below). The plugin
+draws `rectangle` as FigJam's wide sticky, 416 × 240, since FigJam offers no other rectangle.
 It carries no sentiment, speaker field or timecode beyond the attribution line:
 adding an optional key later is not a version bump. `miro_board.py` became
 `board_layout.py`; the attribution and curly-quote composition, which the Miro

@@ -14,7 +14,8 @@ grows with its text — 12 of 30 quotes in the 17 Oct 2026 spike outgrew it — 
 the layout engine's fixed heights would overlap. The document carries frames →
 columns → quotes in board order, and the plugin stacks each column by the height
 it measures. Order and colour come from `board_layout`, so a FigJam board and a
-Miro board of the same selection agree on both.
+Miro board of the same selection agree on order, and on colour when the Miro
+board is flat, the only colouring FigJam draws (`tests/test_board_parity.py`).
 
 **Everything the board says is in the document.** A published plugin lags
 Bristlenose releases, and it cannot translate. So the words (localised by the

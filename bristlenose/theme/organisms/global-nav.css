@@ -73,12 +73,17 @@
 
 /* Condensed: the first step of the fit cascade (SidebarStore "Fit to width"),
    taken before any panel closes. Both horizontal paddings drop to 0.6 of their
-   normal value. NavBar measures these from probes, so they live only here. */
-.bn-global-nav--condensed .bn-tab {
+   normal value. NavBar measures these from probes, so they live only here.
+   Never on the FULL probe (`.bn-nav-probe > .bn-tab`): it sits inside the bar,
+   so while the bar is condensed it took the condensed padding too, the bar
+   measured its full width as its condensed one, judged full spacing to fit,
+   went back to it, measured again and condensed — every frame, at any width
+   just under full (19 Oct 2026). The condensed probe sits one span deeper. */
+.bn-global-nav--condensed .bn-tab:not(.bn-nav-probe > .bn-tab) {
     padding-left: 0.6rem;
     padding-right: 0.6rem;
 }
-.bn-global-nav--condensed .bn-tab-icon {
+.bn-global-nav--condensed .bn-tab-icon:not(.bn-nav-probe > .bn-tab-icon) {
     padding-left: 0.45rem;
     padding-right: 0.45rem;
 }

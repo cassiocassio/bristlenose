@@ -205,12 +205,49 @@ button.dl-cell[aria-disabled="true"] { cursor: default; }
 .dl-cell.s1 { background: var(--bn-colour-muted); }
 .dl-cell.s2 { background: color-mix(in srgb, var(--bn-colour-text) 50%, var(--bn-colour-muted)); }
 .dl-cell.s3 { background: var(--bn-colour-text); }
-/* The selected session's column: the accent ring is a cell's "you are here". Hover never
-   replaces it. */
-.dl-cell.here { outline: 1.5px solid var(--bn-colour-accent); outline-offset: 1px; }
-button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
+button.dl-cell:not([aria-disabled="true"]):hover {
     outline: 1px solid var(--bn-colour-border-hover); outline-offset: 1px;
 }
+/* The selected session's column (decided 18 Oct 2026, variant D of
+   docs/mockups/discussion-selected-column.html; the 1.5px accent ring it replaces read as heavy
+   blue lozenges in the strip). A pale accent wash behind the column says where, and a quarter of
+   the accent in its cells ties them to it; the shade steps keep their order, so the cell still
+   says how many quotes. The wash is one band painted on each strip of cells (and the grid's
+   heads), placed by --dl-here, the column's index, and stretched through the row's own padding
+   (sidebar.css .toc-link, 0.2rem) so a section's rows read as one band. */
+.dl-nav .dl-row .dl-measure { align-self: stretch; align-items: stretch; }
+.dl-nav .dl-row .dl-measure .tag-bar-area { align-self: center; }
+.dl-nav .dl-row .dl-cells { margin-block: -0.2rem; padding-block: 0.2rem; }
+.dl-grid-head .dl-cells { margin-block: calc(-1 * var(--bn-space-xs)); padding-block: var(--bn-space-xs); }
+.dl-cells.lit {
+    --dl-wash: color-mix(in srgb, var(--bn-colour-accent) 10%, var(--bn-colour-inspector-bg));
+    --dl-wash-w: calc(var(--dl-cell-w) + 2px);
+    background: linear-gradient(var(--dl-wash), var(--dl-wash)) no-repeat;
+    background-size: var(--dl-wash-w) 100%;
+    background-position: calc(var(--dl-here) * var(--dl-cell-pitch) + (var(--dl-cell-pitch) - var(--dl-wash-w)) / 2) 0;
+}
+/* Picking another session slides the band to its column: quick, with a touch of overshoot,
+   there to notice if you are watching and not otherwise. Arriving from All it simply appears. */
+.dl-cells.lit.slide { transition: background-position 240ms cubic-bezier(0.3, 1.35, 0.55, 1); }
+.dl-cell.here.s0 {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bn-colour-accent) 30%,
+        color-mix(in srgb, var(--bn-colour-muted) 50%, var(--bn-colour-inspector-bg)));
+}
+.dl-cell.here.s1 { background: color-mix(in srgb, var(--bn-colour-accent) 25%, var(--bn-colour-muted)); }
+.dl-cell.here.s2 {
+    background: color-mix(in srgb, var(--bn-colour-accent) 25%,
+        color-mix(in srgb, var(--bn-colour-text) 50%, var(--bn-colour-muted)));
+}
+.dl-cell.here.s3 { background: color-mix(in srgb, var(--bn-colour-accent) 25%, var(--bn-colour-text)); }
+/* Window in the background: the accent recedes to ink, the shade steps stay (theme CLAUDE.md,
+   "recede the affordances, preserve the data"). */
+.bn-window-inactive .dl-cells.lit { --dl-wash: color-mix(in srgb, var(--bn-colour-muted) 10%, var(--bn-colour-inspector-bg)); }
+.bn-window-inactive .dl-cell.here.s0 {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bn-colour-muted) 50%, var(--bn-colour-inspector-bg));
+}
+.bn-window-inactive .dl-cell.here.s1 { background: var(--bn-colour-muted); }
+.bn-window-inactive .dl-cell.here.s2 { background: color-mix(in srgb, var(--bn-colour-text) 50%, var(--bn-colour-muted)); }
+.bn-window-inactive .dl-cell.here.s3 { background: var(--bn-colour-text); }
 .dl-measure .tag-bar-area {
     display: inline-flex; align-items: center; justify-content: flex-end;
     gap: var(--bn-space-xs); min-width: 0;   /* the codebook's 50px minimum is not this row's */
@@ -362,5 +399,5 @@ button.dl-cell:not([aria-disabled="true"]):not(.here):hover {
     padding-left: var(--bn-center-pad-left, var(--bn-gutter-left));
 }
 @media (prefers-reduced-motion: reduce) {
-    .dl-wire { transition: none; }
+    .dl-wire, .dl-cells.lit.slide { transition: none; }
 }

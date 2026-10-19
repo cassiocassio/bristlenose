@@ -722,7 +722,7 @@
     "quotesFrom_few": "{{quotes}} od {{people}} z {{count}} lid\u00ed",
     "quotesFrom_many": "{{quotes}} od {{people}} z {{count}} lid\u00ed",
     "quotesFrom_other": "{{quotes}} od {{people}} z {{count}} lid\u00ed",
-    "keyMeasure": "M\u00e9n\u011b \u2192 v\u00edce cit\u00e1t\u016f v t\u00e9to studii",
+    "keyMeasure": "M\u00e9n\u011b \u2192 v\u00edce cit\u00e1t\u016f",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Zm\u011bnit velikost sc\u00e9n\u00e1\u0159e rozhovoru",
     "resizeText": "Sc\u00e9n\u00e1\u0159 na {{pct}} % \u0161\u00ed\u0159ky",

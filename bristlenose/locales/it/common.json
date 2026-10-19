@@ -653,7 +653,7 @@
     "askedNoQuotes": "Chiesta, nessuna citazione",
     "quotesFrom_one": "{{quotes}} da {{people}} su {{count}} persona",
     "quotesFrom_other": "{{quotes}} da {{people}} su {{count}} persone",
-    "keyMeasure": "Meno → più citazioni, in questo studio",
+    "keyMeasure": "Meno → più citazioni",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Ridimensiona la traccia di intervista",
     "resizeText": "Traccia al {{pct}}% della larghezza",

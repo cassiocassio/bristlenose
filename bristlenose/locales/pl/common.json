@@ -733,7 +733,7 @@
     "quotesFrom_few": "{{quotes}} od {{people}} z {{count}} os\u00f3b",
     "quotesFrom_many": "{{quotes}} od {{people}} z {{count}} os\u00f3b",
     "quotesFrom_other": "{{quotes}} od {{people}} z {{count}} osoby",
-    "keyMeasure": "Mniej \u2192 wi\u0119cej cytat\u00f3w w tym badaniu",
+    "keyMeasure": "Mniej \u2192 wi\u0119cej cytat\u00f3w",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Zmie\u0144 rozmiar scenariusza wywiadu",
     "resizeText": "Scenariusz na {{pct}}% szeroko\u015bci",

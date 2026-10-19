@@ -653,7 +653,7 @@
     "askedNoQuotes": "Stillet, ingen citater",
     "quotesFrom_one": "{{quotes}} fra {{people}} af {{count}} person",
     "quotesFrom_other": "{{quotes}} fra {{people}} af {{count}} personer",
-    "keyMeasure": "F\u00e6rre \u2192 flere citater i denne unders\u00f8gelse",
+    "keyMeasure": "F\u00e6rre \u2192 flere citater",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Tilpas st\u00f8rrelsen p\u00e5 interviewguiden",
     "resizeText": "Guiden {{pct}} % af bredden",

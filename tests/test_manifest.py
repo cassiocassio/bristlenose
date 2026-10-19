@@ -86,6 +86,26 @@ def test_atomic_write_creates_no_tmp_file(tmp_path: Path):
     assert files[0].name == "pipeline-manifest.json"
 
 
+def test_a_write_waits_out_a_reader_holding_the_manifest(tmp_path: Path, monkeypatch) -> None:
+    """On Windows a serve reading the manifest refuses the replace until it closes the file:
+    a run must wait, not die (strict CI, 19 Oct 2026). Simulated: the first two replaces are
+    refused, as Windows refuses them."""
+    import os
+
+    real, refusals = os.replace, [2]
+
+    def held(src: object, dst: object) -> None:
+        if refusals[0]:
+            refusals[0] -= 1
+            raise PermissionError(5, "Access is denied")
+        real(src, dst)
+
+    monkeypatch.setattr(os, "replace", held)
+    write_manifest(create_manifest("held", "1.0"), tmp_path)
+    assert refusals == [0]
+    assert (tmp_path / ".bristlenose" / "pipeline-manifest.json").exists()
+
+
 # ---------------------------------------------------------------------------
 # Per-session tracking (Phase 1d)
 # ---------------------------------------------------------------------------

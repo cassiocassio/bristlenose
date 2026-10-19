@@ -166,13 +166,17 @@ def write_manifest(manifest: PipelineManifest, output_dir: Path) -> None:
     `replace`, not `rename`: rename onto an existing file raises
     FileExistsError on Windows, and every stage after the first rewrites the
     manifest, so a Windows run died at its second stage (found by the first
-    Windows CI run, 5 Oct 2026). `replace` overwrites atomically on both.
+    Windows CI run, 5 Oct 2026). `replace` overwrites atomically on both. Retried, because on
+    Windows a server reading the manifest (`run_condition`) holds it for the length of the
+    read and the replace is refused meanwhile (strict CI, 19 Oct 2026).
     """
+    from bristlenose.utils.fs import replace_retrying
+
     path = _manifest_path(output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
-    tmp.replace(path)
+    replace_retrying(tmp, path)
 
 
 def mark_stage_running(manifest: PipelineManifest, stage: str) -> None:

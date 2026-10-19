@@ -621,7 +621,7 @@
     "askedNoQuotes": "\uc9c8\ubb38\ud568, \uc778\uc6a9\ubb38 \uc5c6\uc74c",
     "quotesFrom_one": "{{count}}\uba85 \uc911 {{people}}\uba85, {{quotes}}",
     "quotesFrom_other": "{{count}}\uba85 \uc911 {{people}}\uba85, {{quotes}}",
-    "keyMeasure": "\uc778\uc6a9\ubb38 \uc801\uc74c \u2192 \ub9ce\uc74c, \uc774 \uc5f0\uad6c \uae30\uc900",
+    "keyMeasure": "\uc778\uc6a9\ubb38 \uc801\uc74c \u2192 \ub9ce\uc74c",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "\uc778\ud130\ubdf0 \uac00\uc774\ub4dc \ud06c\uae30 \uc870\uc808",
     "resizeText": "\uac00\uc774\ub4dc \ub108\ube44 {{pct}}%",

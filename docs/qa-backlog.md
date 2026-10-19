@@ -14,6 +14,7 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 - [ ] **The measure grows with the guide.** Drag the guide's edge: bar + count → a strip of cells → a grid under one-digit session numbers (10–12 squeezed into the same width). Dragging feels smooth in All (measured 33 ms a step on 1,800 quotes in WebKit).
 - [ ] **Shading reads.** Empty slots are visible on the guide's tint; filled cells are clearly darker; the richest cells darkest. In light and dark. (The ramp changed to muted → ink for contrast — see the owner decisions in TODO.md.)
 - [ ] **Cells and lead-ins open a session at the question.** Click a cell, or a session's badge in All: that session opens with the question lit; a not-asked cell does nothing. After clicking a lead-in with the keyboard, focus is on the question, not the top of the page (VoiceOver too).
+- [ ] **The selected column reads lightly.** Pick a session in the Mac app: its column is a pale blue band behind the cells (one band per section, no gaps between rows) with the cells tinted blue-grey, no ring. Check strip and grid, light and dark, and with the window in the background (band and tint go grey). Then pick another session: the band should slide over quickly with a slight overshoot, and from All it should simply appear.
 - [ ] **Leaving All lands at the top**, not part-way down the shorter session column; clicking a question whose heading is already in view does not jump.
 - [ ] **A guide project** (Your guide tab): All shows the same questions on either tab, including those asked off the guide.
 

@@ -653,7 +653,7 @@
     "askedNoQuotes": "Pos\u00e9e, aucun verbatim",
     "quotesFrom_one": "{{quotes}} de {{people}} personne sur {{count}}",
     "quotesFrom_other": "{{quotes}} de {{people}} personnes sur {{count}}",
-    "keyMeasure": "Moins \u2192 plus de verbatim, dans cette \u00e9tude",
+    "keyMeasure": "Moins \u2192 plus de verbatim",
     "sessionLabel": "#{{n}} {{names}}",
     "resize": "Redimensionner le guide d\u2019entretien",
     "resizeText": "Guide \u00e0 {{pct}} % de la largeur",

@@ -440,7 +440,18 @@ overrides keyed on durable ids, never on labels.
     session's quotes with their own `pN` badges.
   - In the navigator's grid, with All selected, **the session heads are not lit**
     (variant A): the accent appears once, on All in the bar. A selected session's head
-    takes `.bn-person-badge-here` and its column of cells an accent ring.
+    takes `.bn-person-badge-here`, and its column **a pale accent wash behind the
+    cells with a quarter of the accent in the cells themselves** (decided 18 Oct,
+    variant D of `docs/mockups/discussion-selected-column.html`). The first build's
+    1.5px accent ring read as heavy blue lozenges in the strip, where a cell is 6px on
+    an 8px pitch. The wash runs through each row's padding, so it is one band per
+    section; the shade steps keep their order inside it. With the window in the
+    background the accent recedes to ink. Picking another session **slides the band** to
+    its column (240 ms, a touch of overshoot; meant to be noticed only if you are
+    watching): it is one band per strip of cells, placed by the column's index, so the
+    move is a `background-position` transition. Arriving from All it simply appears;
+    reduced motion turns the slide off. The key's shade legend reads "Fewer → more
+    quotes" ("in this study" dropped, same day).
   - The grid heads are **regular-size compact badges with no `#`** (`1 2 3`, under a
     *Sessions* label). Measured in the mockup's width lab: an 8-session study needs a
     432px guide for the grid; micro type saves less than dropping the `#` does.

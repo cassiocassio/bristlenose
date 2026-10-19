@@ -154,6 +154,38 @@ describe("TagRow", () => {
     expect(container.querySelector(".tag-row")).not.toHaveClass("tag-row-solo-focused");
   });
 
+  describe("count: one digit, never a zero", () => {
+    function countEl(container: HTMLElement) {
+      return container.querySelector(".tag-count") as HTMLElement;
+    }
+
+    it("accepted: shows the accepted count in full ink", () => {
+      const { container } = render(<TagRow {...BASE_PROPS} count={5} tentativeCount={0} />);
+      expect(countEl(container)).toHaveTextContent("5");
+      expect(countEl(container)).toHaveClass("is-accepted");
+    });
+
+    it("accepted and proposed: shows only the accepted count; proposals stay in the bar", () => {
+      const { container } = render(<TagRow {...BASE_PROPS} count={2} tentativeCount={6} />);
+      expect(countEl(container).textContent).toBe("2");
+      expect(countEl(container)).toHaveClass("is-accepted");
+      expect(container.querySelector(".tag-micro-bar-tentative")).toBeInTheDocument();
+    });
+
+    it("proposed only: shows the proposal count, muted", () => {
+      const { container } = render(<TagRow {...BASE_PROPS} count={0} tentativeCount={6} />);
+      expect(countEl(container)).toHaveTextContent("6");
+      expect(countEl(container)).toHaveClass("is-tentative");
+      expect(countEl(container)).not.toHaveClass("is-accepted");
+    });
+
+    it("neither: shows no digit and no bar", () => {
+      const { container } = render(<TagRow {...BASE_PROPS} count={0} tentativeCount={0} />);
+      expect(countEl(container)).toBeEmptyDOMElement();
+      expect(container.querySelector(".tag-micro-bar")).not.toBeInTheDocument();
+    });
+  });
+
   it("Enter key on bar area calls onSoloClick", async () => {
     const onSoloClick = vi.fn();
     render(<TagRow {...BASE_PROPS} onSoloClick={onSoloClick} />);

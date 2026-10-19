@@ -307,6 +307,13 @@
     background: transparent;
 }
 
+/* Accepted count in full ink; a proposals-only count keeps the muted base.
+   Colour, not weight, carries the difference, so the count never outshouts
+   the tag name. */
+.tag-sidebar .tag-count.is-accepted {
+    color: var(--bn-colour-text);
+}
+
 /* Group total row */
 .tag-sidebar .group-total-row {
     display: grid;

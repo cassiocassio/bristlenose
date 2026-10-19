@@ -139,7 +139,7 @@ export function TagGroupCard({
               );
             })}
           </div>
-          {tags.length > 1 && (
+          {tags.length > 1 && groupTotal > 0 && (
             <div className="group-total-row">
               <span className="group-total-label">{t("tags.total")}</span>
               <span className="group-total-count">{groupTotal}</span>

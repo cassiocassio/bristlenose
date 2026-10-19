@@ -95,6 +95,12 @@ export function TagRow({
   );
 
   const hasTentative = tentativeCount > 0;
+  // One digit per row, and never a zero (a "wall of zeros" after AutoCode reads
+  // as broken): accepted in full ink when there is one, else the pending
+  // proposals in muted ink, else nothing. Proposals beside an accepted count
+  // ride in the bar's pale segment, not a second digit.
+  const shownCount = count > 0 ? count : tentativeCount;
+  const countKind = count > 0 ? " is-accepted" : " is-tentative";
   const acceptedFrac = maxCount > 0 ? count / maxCount : 0;
   const tentativeFrac = maxCount > 0 ? tentativeCount / maxCount : 0;
 
@@ -148,8 +154,8 @@ export function TagRow({
         ) : count > 0 ? (
           <MicroBar value={acceptedFrac} colour={barColour} />
         ) : null}
-        <span className={`tag-count${soloFocused ? " tag-solo-focused" : ""}`}>
-          {count}
+        <span className={`tag-count${countKind}${soloFocused ? " tag-solo-focused" : ""}`}>
+          {shownCount > 0 ? shownCount : null}
         </span>
       </span>
     </div>

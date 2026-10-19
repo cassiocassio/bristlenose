@@ -177,7 +177,7 @@ class TestLocaleFiles:
 
 
 class TestLoadNamespaceGuard:
-    """``_load_namespace`` builds a path from both arguments, so it reads only
+    """``_load_namespace`` takes both arguments from callers, so it reads only
     a supported locale and a plain namespace name, whatever the caller did."""
 
     @pytest.fixture

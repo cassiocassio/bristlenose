@@ -104,16 +104,19 @@ def _load_namespace(locale: str, namespace: str) -> dict[str, object]:
     (`t`) walks the fallback chain, so a thin-override locale that ships only
     some namespaces resolves the rest through its base, not straight to en.
 
-    Both arguments become a path, so neither is trusted here: an unsupported
-    locale or a namespace that isn't a plain name reads as missing. Callers
-    already pass ``canonical_locale`` output and code constants; this holds if
-    a future one doesn't."""
-    if locale not in SUPPORTED_LOCALES or not _NAMESPACE_NAME.fullmatch(namespace):
+    Neither argument is trusted, and neither is joined into the path: the
+    locale selects an entry of ``SUPPORTED_LOCALES`` and the namespace selects
+    a file from that directory's listing, so the path read is always one this
+    module built. An unsupported locale or a namespace that isn't a plain name
+    reads as missing. Callers already pass ``canonical_locale`` output and
+    code constants; this holds if a future one doesn't."""
+    known = next((code for code in SUPPORTED_LOCALES if code == locale), None)
+    if known is None or not _NAMESPACE_NAME.fullmatch(namespace):
         return {}
-    path = _LOCALE_DIR / locale / f"{namespace}.json"
-    if not path.exists():
-        return {}
-    return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+    for path in (_LOCALE_DIR / known).glob("*.json"):
+        if path.stem == namespace:
+            return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+    return {}
 
 
 def _resolution_order(locale: str) -> tuple[str, ...]:

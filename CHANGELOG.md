@@ -18,7 +18,7 @@ Miro and FigJam boards show their progress and can be stopped, and a long quote 
 
 **Fixed**
 
-- **On Miro, the stickies of a split quote didn't overlap**, so they read as separate quotes. They now overlap a little, as on FigJam.
+- **On Miro, the stickies of a split quote sat apart**, so they read as separate quotes. They now sit much closer.
 - **A speaker trailing off showed as "that..…"** where a quote was split.
 - **Two labels in the Mac app's Send to Miro window were cut short.**
 

@@ -4515,6 +4515,7 @@ def load_transcripts_from_dir(
     from datetime import datetime, timezone
 
     from bristlenose.models import INAUDIBLE_TOKEN, SpeakerRole
+    from bristlenose.stages.s03_parse_subtitles import read_text_any_encoding
     from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
@@ -4528,7 +4529,8 @@ def load_transcripts_from_dir(
         session_date = datetime.now(tz=timezone.utc)
         duration = 0.0
 
-        for line in path.read_text(encoding="utf-8").splitlines():
+        # A transcript saved from a Windows editor is UTF-16 or 1252 (R118).
+        for line in read_text_any_encoding(path).splitlines():
             line = line.strip()
             if not line:
                 continue

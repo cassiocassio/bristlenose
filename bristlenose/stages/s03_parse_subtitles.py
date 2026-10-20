@@ -11,6 +11,7 @@ invented speaker. ``read_cloud_transcript_note`` is the reader for that block.
 
 from __future__ import annotations
 
+import codecs
 import html
 import logging
 import re
@@ -197,6 +198,32 @@ def _parse_int(value: str | None) -> int | None:
     return int(value)
 
 
+def read_text_any_encoding(path: Path) -> str:
+    """A text file's contents in whichever common encoding a tool saved it.
+
+    A byte-order mark is believed first (UTF-8, UTF-16), then UTF-8, then
+    Windows-1252, which every Windows subtitle tool falls back to. UTF-8 is
+    tried before 1252 because any UTF-8 file also decodes as 1252, as mojibake.
+    Latin-1 takes the five bytes 1252 leaves undefined, so a read never fails
+    on encoding. Until 20 Oct 2026 every reader assumed UTF-8, so these files
+    were refused and one in ``analyze`` crashed it (R118).
+    """
+    data = path.read_bytes()
+    if data.startswith(codecs.BOM_UTF8):
+        return data.decode("utf-8-sig")
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return data.decode("utf-16")
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    logger.info("%s is not UTF-8; read as Windows-1252", path.name)
+    try:
+        return data.decode("cp1252")
+    except UnicodeDecodeError:
+        return data.decode("latin-1")
+
+
 def parse_subtitle_file(input_file: InputFile) -> list[TranscriptSegment]:
     """Parse a subtitle file into transcript segments.
 
@@ -213,7 +240,7 @@ def _parse_srt(path: Path) -> list[TranscriptSegment]:
     """Parse an SRT file."""
     import pysrt
 
-    subs = pysrt.open(str(path), encoding="utf-8")
+    subs = pysrt.from_string(read_text_any_encoding(path))
     segments: list[TranscriptSegment] = []
 
     for sub in subs:
@@ -252,7 +279,7 @@ def _parse_vtt(path: Path) -> list[TranscriptSegment]:
     """Parse a WebVTT file."""
     import webvtt
 
-    vtt = webvtt.read(str(path))
+    vtt = webvtt.from_string(read_text_any_encoding(path))
     note = _note_from_comments(vtt.header_comments)
     is_cloud = note is not None
     source = CLOUD_TRANSCRIPT_SOURCE if is_cloud else "vtt"

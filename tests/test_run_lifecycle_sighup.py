@@ -115,3 +115,18 @@ def test_a_signal_from_before_the_run_does_not_make_its_failure_a_cancel(
         with rl.run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
             raise RuntimeError("boom")
     assert isinstance(read_events(events_path(tmp_path))[-1], RunFailedEvent)
+
+
+def test_the_suite_puts_the_run_handlers_back_after_each_test() -> None:
+    """conftest's `no_run_signal_handlers_left_behind`: a CLI test installs the
+    handlers for good, and a hung suite then could not be ended with SIGTERM."""
+    import bristlenose.run_lifecycle as rl
+    from tests.conftest import no_run_signal_handlers_left_behind
+
+    teardown = no_run_signal_handlers_left_behind.__wrapped__()
+    next(teardown)
+    rl._install_signal_handlers()
+    assert signal.getsignal(signal.SIGTERM) is rl._signal_handler
+    with pytest.raises(StopIteration):
+        next(teardown)
+    assert signal.getsignal(signal.SIGTERM) is not rl._signal_handler

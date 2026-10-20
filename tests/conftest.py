@@ -461,6 +461,21 @@ def london(pin_local_zone):
 
 
 @pytest.fixture(autouse=True)
+def no_run_signal_handlers_left_behind():
+    """A test that runs a CLI command leaves run_lifecycle's SIGINT/SIGTERM/SIGHUP
+    handlers installed, as the CLI does for the life of its process. In pytest
+    that outlives the test: a later real signal became a KeyboardInterrupt, its
+    caught signal turned a later run's failure into a cancel, and a hung suite
+    could not be ended with a plain kill (20 Oct 2026). Put the previous
+    handlers back after every test."""
+    yield
+    from bristlenose.run_lifecycle import _prev_handlers, _restore_signal_handlers
+
+    if _prev_handlers:
+        _restore_signal_handlers()
+
+
+@pytest.fixture(autouse=True)
 def no_scene_strip_thread(monkeypatch):
     """serve's scene-strip job (server/scene_strips.py) starts a thread from the app lifespan and
     after every run_completed. On the shared in-memory connection that thread's session close is

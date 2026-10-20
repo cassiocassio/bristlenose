@@ -36,6 +36,7 @@ interface FormatSpec {
   // filename takes a string.
   cases?: [number | string, string][] | null;
   observed?: Record<string, unknown>;
+  zero?: { inputs: number[]; total: string; cell: string };
 }
 
 const contract = contractJson as unknown as { formats: Record<string, FormatSpec> };
@@ -79,6 +80,20 @@ describe("shared format contract — aligned formats", () => {
       });
     });
   }
+});
+
+describe("shared format contract — duration_human at zero", () => {
+  // A fork by datum, not by language: a total of nothing reads 0m, a row with
+  // no measurement reads a dash. formatDurationHuman is the cell form (R106).
+  const zero = contract.formats.duration_human.zero;
+
+  it("finds the zero block", () => {
+    expect(zero?.inputs.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it.each(zero?.inputs ?? [])("an unknown row length (%s) reads the cell form", (seconds) => {
+    expect(formatDurationHuman(seconds)).toBe(zero?.cell);
+  });
 });
 
 describe("shared format contract — one implementation per language", () => {

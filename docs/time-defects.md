@@ -510,7 +510,15 @@ crash (measured — `format_finder_date` compares calendar dates rather than
 subtracting), but it is the mechanism behind H9 and would raise the moment
 anyone writes a subtraction.
 
-### H12 — Duration zero means two things, and the contract pins neither
+### H12 — ✅ FIXED — Duration zero means two things, and the contract pins neither
+
+_Fixed 20 Oct 2026 (R106): the fork is asserted by datum. The contract's `duration_human.zero`
+block holds `total: "0m"` and `cell: "—"`; pytest asserts `format_duration_human` (total) and the
+new `format_duration_human_cell` (the per-row API field, `routes/dev.py`), vitest asserts
+`formatDurationHuman`, and Swift's `DurationFormat.human` became a cell formatter — its
+zero-reaching callers, the sessions popover and the cloud import list, are rows, and the Mac
+showed `0m` there for an unmeasured session. The record below is the pre-fix finding._
+
 
 TypeScript returns an em-dash for `seconds <= 0` (unknown); Python and Swift
 return `0m` (measured zero). This is **deliberate and documented** in
@@ -532,7 +540,7 @@ A one-line clamp; the case stays in the fixture so it cannot come back.
 | format | pinned cases | ceiling | gap |
 |---|---|---|---|
 | `timecode` | 21 (was 15) | 36000 s (10 h) | closed 12 Sep: `3599.9`, `5999`, `6000`, `10800`, `35999` and `-1` pinned (T0-7, H13) |
-| `duration_human` | 9 | 66180 s | zero catalogued in `divergences`, **unasserted** (H12); negative pinned in pytest |
+| `duration_human` | 9 + zero (total and cell) | 66180 s | closed 20 Oct 2026: zero asserted by datum on all three sides (H12) |
 | `finder_date` | **0** | — | three implementations, nothing pinned (H10) |
 
 Untested entirely: every timezone behaviour in § 3c. (`format_timecode_ms`, the zero-caller

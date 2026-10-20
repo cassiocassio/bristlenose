@@ -8,7 +8,7 @@
       "datum": "An elapsed span — how long a session ran. NOT a position in a recording (see `timecode`).",
       "canonical": "bristlenose/utils/timecodes.py::format_duration_human",
       "implementations": {
-        "python": "bristlenose/utils/timecodes.py::format_duration_human — the canonical implementation (moved from server/routes/dashboard.py on 12 Sep 2026; that module's _format_duration_human now delegates). Feeds the duration_human and total_duration_human API fields and the static report dashboard total",
+        "python": "bristlenose/utils/timecodes.py::format_duration_human — the canonical implementation (moved from server/routes/dashboard.py on 12 Sep 2026; that module's _format_duration_human now delegates). Feeds the total_duration_human API field and the static report dashboard total; its cell twin format_duration_human_cell, in the same module, feeds the per-row duration_human field",
         "typescript": "frontend/src/utils/format.ts::formatDurationHuman — Sessions grid, Dashboard session table, Sessions sidebar",
         "swift": "desktop/Bristlenose/Bristlenose/DurationFormat.swift::DurationFormat.human — window subtitle, sessions popover, cloud import list"
       },
@@ -50,16 +50,18 @@
           "<1m"
         ]
       ],
-      "divergences": [
-        {
-          "inputs": "seconds <= 0",
-          "python": "0m",
-          "swift": "0m",
-          "typescript": "— (em dash)",
-          "deliberate": true,
-          "why": "This is a fork by DATUM, not by language: an aggregate TOTAL renders a real zero as 0m, a per-row CELL renders an unknown as an em-dash. Python and Swift format totals; the TypeScript sites and Python's routes/dev.py format cells, where zero means the duration is unknown — 19 of 236 sessions in the local trial corpus (8%) — and '0m' would assert a measurement nobody made. The em-dash is the SPA's established convention for an absent cell value, shared with formatFinderDate and formatCompactDate. Excluded from `cases` above because there is no single right answer; each side is right for its own context."
-        }
-      ],
+      "divergences": [],
+      "zero": {
+        "inputs": [0, -10],
+        "total": "0m",
+        "cell": "—",
+        "renders_as": {
+          "python": "total — bristlenose/utils/timecodes.py::format_duration_human (the total_duration_human API field, the static report total); cell — bristlenose/utils/timecodes.py::format_duration_human_cell (the per-row duration_human API field, routes/dev.py)",
+          "typescript": "cell — formatDurationHuman (per-row cells; also the Discussion lens's All-sessions stat, a sum of rows that is zero only when no session was measured)",
+          "swift": "cell — DurationFormat.human (the sessions popover and the cloud import list are per-row cells; the window subtitle total omits a zero before formatting)"
+        },
+        "why": "A fork by DATUM, not by language, and asserted on all three sides since 20 Oct 2026: an aggregate TOTAL renders a real zero as 0m, a per-row CELL renders an unknown as an em dash. Zero in a cell means the duration is unknown — 19 of 236 sessions in the local trial corpus (8%) — and '0m' would assert a measurement nobody made. The em dash is the established convention for an absent cell value, shared with formatFinderDate and formatCompactDate. Until 20 Oct 2026 Swift rendered its cells as totals, so the Mac sessions popover read '0m' for an unmeasured session (R106)."
+      },
       "notes": "The h/m abbreviations are knowingly unlocalised on all three sides. Changing that is a separate decision with a 22-locale cost — see docs/design-shared-formats.md."
     },
     "timecode": {

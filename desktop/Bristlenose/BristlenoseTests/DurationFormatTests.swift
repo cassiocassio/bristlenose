@@ -44,8 +44,10 @@ import Testing
         #expect(DurationFormat.human(seconds: 3_661) == "1h 1m")
     }
 
-    @Test func zeroAndNegativeBothZeroM() {
-        #expect(DurationFormat.human(seconds: 0) == "0m")
-        #expect(DurationFormat.human(seconds: -10) == "0m")
+    /// The contract's `duration_human.zero` block, cell form: every caller
+    /// that can pass zero is a per-row cell, where zero means unknown (R106).
+    @Test func zeroAndNegativeReadAsUnknown() {
+        #expect(DurationFormat.human(seconds: 0) == "\u{2014}")
+        #expect(DurationFormat.human(seconds: -10) == "\u{2014}")
     }
 }

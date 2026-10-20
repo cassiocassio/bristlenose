@@ -23,7 +23,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.speaker_slots import slot_map
-from bristlenose.utils.timecodes import format_duration_human, iso_utc
+from bristlenose.utils.timecodes import format_duration_human, format_duration_human_cell, iso_utc
 
 router = APIRouter(prefix="/api")
 
@@ -504,7 +504,8 @@ def get_dashboard(
                     session_number=sess.session_number,
                     session_date=iso_utc(sess.session_date),
                     duration_seconds=sess.duration_seconds,
-                    duration_human=_format_duration_human(sess.duration_seconds),
+                    # A row's length is a cell: unknown reads —, not 0m (R106).
+                    duration_human=format_duration_human_cell(sess.duration_seconds),
                     speakers=speakers_data,
                     source_filename=source_filename,
                     has_media=sess.has_media,

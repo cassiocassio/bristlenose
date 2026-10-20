@@ -257,6 +257,15 @@ import Testing
         #expect(!label.contains(SessionsFinderDate.emDash))
         #expect(label.contains("26m"))
     }
+
+    @Test("An unknown length is omitted from the spoken label rather than read as a dash")
+    func accessibilityOmitsUnknownDuration() {
+        let s = session(1, participants: [("p1", "Yuki")])
+        let label = SessionsPopoverSpec.accessibilityLabel(
+            for: s, title: "Session 1", placeholder: "Participant",
+            duration: DurationFormat.human(seconds: 0), date: "11 Feb 2026, 09:00")
+        #expect(label == "Session 1, p1 Yuki, 11 Feb 2026, 09:00")
+    }
 }
 
 // MARK: - Fetch identity

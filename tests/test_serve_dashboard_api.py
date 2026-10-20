@@ -187,6 +187,22 @@ class TestDashboardSessions:
         assert session["duration_seconds"] == 78.0
         assert session["duration_human"] == "1m"
 
+    def test_an_unmeasured_session_reads_a_dash_and_the_total_0m(
+        self, app_fx, client: TestClient,
+    ) -> None:
+        """A row's length is a cell, so an unknown one reads "—"; the stat is a total (R106)."""
+        from bristlenose.server.models import Session as SessionModel
+
+        db = app_fx.state.db_factory()
+        try:
+            db.query(SessionModel).update({SessionModel.duration_seconds: 0.0})
+            db.commit()
+        finally:
+            db.close()
+        data = client.get("/api/projects/1/dashboard").json()
+        assert data["sessions"][0]["duration_human"] == "—"
+        assert data["stats"]["total_duration_human"] == "0m"
+
     def test_session_speakers(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()
         session = data["sessions"][0]

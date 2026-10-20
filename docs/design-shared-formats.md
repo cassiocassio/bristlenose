@@ -8,6 +8,7 @@ trued-against: HEAD@main on 2026-09-12
 
 ## Changelog
 
+- _2026-10-20_ — `duration_human`'s zero fork asserted (H12 closed, R106): the contract's `divergences` entry became a `zero` block (`total` / `cell`) that pytest, vitest and Swift Testing all read or mirror; Swift's `DurationFormat.human` now renders a cell's unknown as an em dash, because its zero-reaching callers (the sessions popover, the cloud import list) are per-row cells, not totals; Python gained `format_duration_human_cell`, used by the per-row `duration_human` field and `routes/dev.py`. Anchors: `bristlenose/utils/timecodes.py::format_duration_human_cell`, `tests/test_shared_format_contract.py` (zero tests), `frontend/src/utils/sharedFormatContract.test.ts` ("duration_human at zero"), `DurationFormatTests.zeroAndNegativeReadAsUnknown`.
 - _2026-10-08_ — `markdown_speech` added, aligned from birth: the `.md` transcript export and the transcript page's copy escape speech the same way. Anchors: `bristlenose/utils/markdown.py::escape_markdown_speech`, `frontend/src/utils/transcriptCopy.ts::escapeMarkdownSpeech`, `experiments/transcript-copy/`.
 - _2026-09-12_ — trued up against the time audit: timecode entry gains the H5 breach-and-closure and a forward-ref to the prompt-only sibling; duration_human records the canonical move to `utils/timecodes.py` and the superseded `1 h 0 min` shape; the zero fork stated as catalogued-but-unasserted and by-datum; finder_date deferred to Tier 2 with H9/H10; new "Open holes" block; the lint-rule item cites H5. Anchors: `bristlenose/miro_board.py:129-133`, `utils/timecodes.py:68`, `tests/test_shared_format_contract.py:105-120`, `docs/time-defects.md` H5/H7/H9/H10/H12.
 
@@ -164,16 +165,21 @@ human form is also **narrower** than what it replaced (mean 3.28 characters
 against 5.09, max 6 against 7), so terseness argued for the change rather than
 against it.
 
-**One deliberate divergence, recorded in the JSON.** A non-positive duration
-renders `0m` in Python and Swift and an em-dash in TypeScript. Python and Swift
-format aggregate totals, where a real zero is a real answer; the TypeScript
-sites format a per-row cell, where zero means *unknown* — 8% of the corpus — and
-`0m` would assert a measurement nobody made. Each side is right for its context,
-so the case is excluded from the pinned table rather than forced — it is
-catalogued in the entry's `divergences` with both outputs, but **no test reads
-that array**, so nothing mechanical holds the fork in either direction (H12,
-open). And the fork is by *datum*, not by language: Python's `routes/dev.py`
-renders a per-row cell and shows the em-dash too.
+**Zero is a fork by datum, and asserted (since 20 Oct 2026).** A non-positive
+duration renders `0m` as an aggregate *total*, where a real zero is a real
+answer, and an em dash as a per-row *cell*, where zero means *unknown* — 8% of
+the corpus — and `0m` would assert a measurement nobody made. Python has one
+function for each (`format_duration_human` for the `total_duration_human` field
+and the static report total; `format_duration_human_cell` for the per-row
+`duration_human` field and `routes/dev.py`); TypeScript's `formatDurationHuman`
+and Swift's `DurationFormat.human` are cell formatters, since every caller that
+can pass them zero is a row (the Mac window subtitle is a total and omits a zero
+before formatting). The contract's `duration_human.zero` block holds both
+answers; pytest asserts both Python functions against it, vitest asserts the
+TypeScript one, and `DurationFormatTests.swift` mirrors it by hand. Until that
+date the fork was catalogued in `divergences` and asserted by nothing (H12), and
+the register said Swift formatted totals — so the Mac sessions popover read `0m`
+for an unmeasured session (R106).
 
 The `h` / `m` abbreviations are knowingly unlocalised on all three sides.
 Changing that is a separate decision with a 22-locale cost; see §6.
@@ -363,7 +369,12 @@ The register asserts more than it tests. Standing gaps, each with a home in
 - **H5 — the enrolment gate covers 4 of 7 Python import sites.** A copy that
   imports `format_timecode` directly is invisible to it; `miro_board.py` was.
 - **H10 — `finder_date` has three implementations and zero pinned cases.**
-- **H12 — the zero-duration fork is catalogued, not asserted.**
+- ~~**H12 — the zero-duration fork is catalogued, not asserted.**~~ Closed
+  20 Oct 2026: the `zero` block is asserted on all three sides.
+- **A measured zero in a cell.** Zoom reports a recording's length in whole
+  minutes (`ZoomSource.swift`), so a call under a minute reaches the cloud import
+  list as `0` and reads `—` (it read `0m`; `<1m` is the truth). Unknown there is
+  already `nil`. The fix belongs at the source, not in the formatter.
 - **Unregistered renderers in the canonical module and beside it:**
   `format_clip_timecode` (`server/clip_manifest.py:107`, hour-eliding bounded
   by its caller and audited sound — `docs/design-export-clips.md`), and the

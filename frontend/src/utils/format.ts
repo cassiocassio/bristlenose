@@ -70,9 +70,9 @@ export function stripSmartQuotes(text: string): string {
  * Human-readable duration: `"26m"` / `"1h 3m"` / `"1h"` / `"<1m"`.
  *
  * The house format for an elapsed span, and a mirror of two existing
- * implementations that already agree: Python's `_format_duration_human`
- * (`bristlenose/server/routes/dashboard.py`, which feeds the `duration_human`
- * and `total_duration_human` API fields) and Swift's `DurationFormat.human`
+ * implementations that already agree: Python's `format_duration_human`
+ * (`bristlenose/utils/timecodes.py`, which feeds the `total_duration_human`
+ * API field; its cell twin feeds `duration_human`) and Swift's `DurationFormat.human`
  * (`desktop/…/DurationFormat.swift`, the window subtitle and the native
  * sessions popover). Keep all three in step — `DurationFormatTests.swift`
  * pins the Swift side to the same table this file's tests use.
@@ -81,15 +81,17 @@ export function stripSmartQuotes(text: string): string {
  * which read as a *time of day* when sat in a column beside dates and start
  * times (`26:31` is ambiguous at a glance; `1:03:00` more so).
  *
- * ── The one deliberate divergence from Python/Swift ────────────────────
- * A non-positive duration returns an em-dash, NOT `"0m"`. This is not drift.
- * Python and Swift format *aggregate totals* ("16 Sessions · 18h 23m"), where
- * a real zero is a real answer. This function formats a *per-row cell*, where
- * a zero means the duration is unknown — 19 of 236 sessions in the local
- * trial-run corpus (8%) have `duration_seconds == 0`, and rendering those as
- * `"0m"` would assert a measured zero that nobody measured. The em-dash is
- * this file's established convention for an absent cell value, shared with
- * `formatFinderDate` and `formatCompactDate` directly above.
+ * ── Zero: a fork by datum, not by language ──────────────────────────────
+ * A non-positive duration returns an em-dash, NOT `"0m"`. This function
+ * formats a *per-row cell*, where a zero means the duration is unknown — 19 of
+ * 236 sessions in the local trial-run corpus (8%) have `duration_seconds == 0`,
+ * and `"0m"` would assert a measured zero that nobody measured. Swift's
+ * `DurationFormat.human` and Python's `format_duration_human_cell` render a
+ * cell the same way; Python's `format_duration_human` renders an *aggregate
+ * total*, where a real zero is a real answer (`"0m"`). The contract file's
+ * `duration_human.zero` block asserts both halves (R106, 20 Oct 2026). The
+ * em-dash is this file's established convention for an absent cell value,
+ * shared with `formatFinderDate` and `formatCompactDate` directly above.
  *
  * The `h` / `m` abbreviations are knowingly unlocalised, matching the Python
  * source and the note in `DurationFormat.swift`. Changing that is a separate

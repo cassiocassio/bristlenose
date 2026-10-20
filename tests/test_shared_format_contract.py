@@ -99,6 +99,50 @@ def test_aligned_formats_have_cases_and_an_implementation() -> None:
         )
 
 
+# ── duration_human's zero: a fork by datum, asserted ─────────────────────
+
+
+def _zero() -> dict[str, Any]:
+    return _formats()["duration_human"]["zero"]
+
+
+def test_the_zero_block_has_inputs() -> None:
+    """An empty list would skip the parametrized zero tests rather than fail them."""
+    assert _zero()["inputs"], "duration_human.zero.inputs is empty — it pins nothing"
+
+
+@pytest.mark.parametrize("seconds", _zero()["inputs"])
+def test_a_zero_total_reads_0m(seconds: float) -> None:
+    """An aggregate total of nothing is a real zero (R106)."""
+    from bristlenose.utils.timecodes import format_duration_human
+
+    assert format_duration_human(seconds) == _zero()["total"]
+
+
+@pytest.mark.parametrize("seconds", _zero()["inputs"])
+def test_an_unknown_cell_reads_a_dash(seconds: float) -> None:
+    """A per-row cell with no measurement says so, rather than asserting 0m (R106)."""
+    from bristlenose.utils.timecodes import format_duration_human_cell
+
+    assert format_duration_human_cell(seconds) == _zero()["cell"]
+
+
+@pytest.mark.parametrize(("value", "expected"), _formats()["duration_human"]["cases"])
+def test_a_measured_cell_reads_like_a_total(value: float, expected: str) -> None:
+    """The cell twin differs from the total only at zero."""
+    from bristlenose.utils.timecodes import format_duration_human_cell
+
+    assert format_duration_human_cell(value) == expected
+
+
+def test_every_python_per_row_duration_is_a_cell() -> None:
+    """The dev route's per-row formatter is the shared cell helper, not a copy."""
+    from bristlenose.server.routes.dev import _format_duration
+    from bristlenose.utils.timecodes import format_duration_human_cell
+
+    assert _format_duration is format_duration_human_cell
+
+
 # ── The divergent set — catalogue accuracy, not enforcement ──────────────
 
 

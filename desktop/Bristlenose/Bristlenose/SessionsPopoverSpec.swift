@@ -150,7 +150,8 @@ enum SessionsPopoverSpec {
         for p in session.participants {
             parts.append("\(p.code) \(p.name ?? placeholder)")
         }
-        parts.append(duration)
+        // An unknown length or date is left out rather than read as "dash".
+        if duration != SessionsFinderDate.emDash { parts.append(duration) }
         if date != SessionsFinderDate.emDash { parts.append(date) }
         return parts.joined(separator: ", ")
     }

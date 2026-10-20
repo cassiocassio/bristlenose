@@ -73,9 +73,9 @@ def format_duration_human(seconds: float) -> str:
     the static report's dashboard total, which therefore disagreed with the SPA
     for the same number. One shape now.
 
-    ``0`` renders ``0m`` — a real zero for an aggregate total. A per-row cell
-    where zero means *unknown* renders an em-dash at the call site (the SPA and
-    ``routes/dev.py`` do), which is the one deliberate fork in the register.
+    ``0`` renders ``0m`` — a real zero for an aggregate total. A per-row cell,
+    where zero means *unknown*, uses ``format_duration_human_cell`` below: the
+    fork is by datum, and the contract file asserts both halves.
     """
     if seconds <= 0:
         return "0m"
@@ -84,6 +84,16 @@ def format_duration_human(seconds: float) -> str:
     if h > 0:
         return f"{h}h {m}m" if m > 0 else f"{h}h"
     return f"{m}m" if m > 0 else "<1m"
+
+
+def format_duration_human_cell(seconds: float) -> str:
+    """One row's length: an em dash when it is unknown (zero), else ``format_duration_human``.
+
+    The per-row half of the ``duration_human`` zero fork, which TypeScript's
+    ``formatDurationHuman`` and Swift's ``DurationFormat.human`` render the same
+    way (``zero`` in the contract file).
+    """
+    return "\u2014" if seconds <= 0 else format_duration_human(seconds)
 
 
 #: The zone "this machine's clock" means. ``None`` is the operating system's

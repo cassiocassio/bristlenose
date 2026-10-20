@@ -27,6 +27,7 @@ const boom = vi.hoisted(() => ({
   announce: false,
   subtitle: false,
   undo: false,
+  search: false,
   // A modal's content throws through the one translation it alone reads, so the
   // throw happens inside that modal's content and nowhere else.
   tKey: null as string | null,
@@ -91,6 +92,11 @@ vi.mock("./components/UndoSync", async (importOriginal) => {
   return { ...real, UndoSync: throwsWhen(() => boom.undo, real.UndoSync) };
 });
 
+vi.mock("./components/NativeSearchSync", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./components/NativeSearchSync")>();
+  return { ...real, NativeSearchSync: throwsWhen(() => boom.search, real.NativeSearchSync) };
+});
+
 vi.mock("./pages/QuotesTab", () => ({
   QuotesTab: () => <div data-testid="quotes-lens" />,
 }));
@@ -147,6 +153,7 @@ beforeEach(() => {
   boom.announce = false;
   boom.subtitle = false;
   boom.undo = false;
+  boom.search = false;
   boom.tKey = null;
   (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE = "/api/projects/1";
   const root = document.createElement("div");
@@ -459,6 +466,7 @@ describe("a crash in the chrome around the lens", () => {
     ["the announcer", "announce"],
     ["the lens subtitle sync", "subtitle"],
     ["the undo sync", "undo"],
+    ["the native search sync", "search"],
   ] as const) {
     it(`in ${name} (invisible) draws nothing, and the rest stays`, () => {
       boom[flag] = true;

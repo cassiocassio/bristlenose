@@ -1002,7 +1002,9 @@ function AppShell() {
       <PanelErrorBoundary quiet>
         <UndoSync />
       </PanelErrorBoundary>
-      <NativeSearchSync />
+      <PanelErrorBoundary quiet>
+        <NativeSearchSync />
+      </PanelErrorBoundary>
       {IS_DEV && (
         <Suspense fallback={null}>
           <PlaygroundHUD />

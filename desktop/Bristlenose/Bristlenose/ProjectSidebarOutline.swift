@@ -160,6 +160,11 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// notifications this controller used to observe, which arrived in every
     /// open window at once.
     let renameRequest: Int
+    /// The study a drop just landed on, held for the 0.4 s acknowledgement
+    /// `ContentView` times (a re-dropped analysed folder, a moved study, files
+    /// already there). The SwiftUI row strokes it; this sidebar marks the row as
+    /// the drop's target, the highlight the drag itself drew over it (R53).
+    var flashProjectID: UUID? = nil
 
     func makeNSViewController(context: Context) -> SidebarOutlineController {
         let controller = SidebarOutlineController()
@@ -210,6 +215,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         )
         // After `update` — the rows have to exist before a row can enter edit.
         controller.applyRenameRequest(renameRequest)
+        controller.setFlash(projectID: flashProjectID)
     }
 }
 
@@ -605,6 +611,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
         applySelection(lastSelection)
         revealSelectedRowIfNeeded()
+        applyFlash()
 
         // Kick off the one-shot icon reveal for a freshly-created project, if any.
         maybeStartIconReveal()
@@ -1175,6 +1182,40 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return result
     }
 
+    // MARK: - Drop acknowledgement (R53)
+
+    /// The study whose row shows the drop-target highlight, for the 0.4 s
+    /// `ContentView` holds it after a drop it handled without a new row.
+    private var flashProjectID: UUID?
+
+    func setFlash(projectID: UUID?) {
+        guard projectID != flashProjectID else { return }
+        flashProjectID = projectID
+        applyFlash()
+    }
+
+    /// Mark the flashed study's row, and only it, as the drop's target. Run
+    /// after every reload too, which reconfigures the row views.
+    private func applyFlash() {
+        for row in 0..<outlineView.numberOfRows {
+            guard let rowView = outlineView.rowView(atRow: row, makeIfNecessary: false)
+                    as? SidebarRowView else { continue }
+            rowView.acknowledgesDrop = isFlashed(row)
+        }
+    }
+
+    private func isFlashed(_ row: Int) -> Bool {
+        guard let id = flashProjectID,
+              case .project(let pid)? = (outlineView.item(atRow: row) as? OutlineNode)?.kind
+        else { return false }
+        return pid == id
+    }
+
+    /// A row scrolled into view during the flash is marked as it appears.
+    func outlineView(_ outlineView: NSOutlineView, didAdd rowView: NSTableRowView, forRow row: Int) {
+        (rowView as? SidebarRowView)?.acknowledgesDrop = isFlashed(row)
+    }
+
     func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
         // All rows — including the genuinely-selected active lens — use the shared
         // source-list row view, so the table draws every selection (project + active
@@ -1182,7 +1223,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // selection colour is internal to the table and matches no public token
         // (verified by sampling every UI-element-colour), so a hand-placed capsule
         // can't match — genuine selection is the only exact path.
-        SourceListSelectionRowView()
+        SidebarRowView()
     }
 
     // MARK: Folder expansion (persisted)
@@ -2916,6 +2957,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 /// controller can re-snapshot the dynamic `NSColor` → `CGColor` on a system
 /// light↔dark toggle. Without the callback the CALayer's `backgroundColor`
 /// (which is a static CGColor) sticks on the previous appearance's variant.
+/// The sidebar's row view: the shared source-list row, plus the drop
+/// acknowledgement (R53). The table sets `isTargetForDropOperation` itself
+/// while a drag is over a row and resets it when it reconfigures one, so the
+/// acknowledgement is kept apart and drawn as the same native drop highlight.
+final class SidebarRowView: SourceListSelectionRowView {
+    var acknowledgesDrop = false {
+        didSet { if acknowledgesDrop != oldValue { needsDisplay = true } }
+    }
+
+    override var isTargetForDropOperation: Bool {
+        get { super.isTargetForDropOperation || acknowledgesDrop }
+        set { super.isTargetForDropOperation = newValue }
+    }
+}
+
 private final class PaletteTintView: NSView {
     var onAppearanceChange: (() -> Void)?
 

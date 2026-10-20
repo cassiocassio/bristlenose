@@ -14,6 +14,8 @@ import UniformTypeIdentifiers
 ///   could land scrolled out of sight.
 /// - R58: ⌘N's new study lost its icon while its name was typed: the reveal's
 ///   end skips the reload that rebuilds the cell while a rename is open.
+/// - R53 (flash): the drop's 0.4 s acknowledgement never reached this sidebar.
+/// - Add Files offered a `.md`: the panel's types match by conformance.
 @MainActor
 private final class OutlineRig {
     let tempDir: URL
@@ -157,6 +159,64 @@ struct SidebarOutlineDropAndRevealTests {
             let t = try! #require(UTType(filenameExtension: ext))
             #expect(!types.contains { t.conforms(to: $0) }, "Add Files offers .\(ext), which is then dropped")
         }
+    }
+
+    @Test func theAddFilesPanelGreysOutWhatOnlyConformsToAnAcceptedType() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let delegate = ContentView.AddFilesPanelFilter.shared
+        let panel = NSOpenPanel()
+        func enabled(_ name: String) -> Bool {
+            delegate.panel(panel, shouldEnable: rig.tempDir.appendingPathComponent(name))
+        }
+        let md = UTType(filenameExtension: "md")
+        try #require(ContentView.addFilesContentTypes.contains { md?.conforms(to: $0) == true },
+                     "the types alone no longer let a .md through; this test is moot")
+
+        #expect(!enabled("notes.md"), "Add Files offers a .md, which is then dropped")
+        #expect(!enabled("notes.markdown"))
+        for name in ["interview.txt", "interview.vtt", "call.mov", "call.m4a", "brief.docx"] {
+            #expect(enabled(name), "Add Files greys out \(name)")
+        }
+        let folder = rig.tempDir.appendingPathComponent("Round 2", isDirectory: false)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        #expect(enabled("Round 2"), "a folder can't be opened to pick from")
+    }
+
+    // MARK: - R53: the drop's acknowledgement flash
+
+    /// The row as the table shows it: made now if a reload has not laid it out.
+    private func targetMarked(_ rig: OutlineRig, _ id: UUID) -> Bool {
+        guard let r = rig.row(of: id),
+              let rowView = rig.outlineView.rowView(atRow: r, makeIfNecessary: true) else { return false }
+        return rowView.isTargetForDropOperation
+    }
+
+    @Test func aDropOnAKnownStudyFlashesItsRowThroughAReload() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let a = rig.index.addProject(name: "A", path: ""), b = rig.index.addProject(name: "B", path: "")
+        rig.publish()
+
+        rig.controller.setFlash(projectID: a.id)
+        #expect(targetMarked(rig, a.id), "the dropped-on study did not flash")
+        #expect(!targetMarked(rig, b.id))
+
+        rig.publish(selection: [.project(a.id)])   // a progress tick reloads mid-flash
+        #expect(targetMarked(rig, a.id), "a reload during the flash ended it")
+
+        rig.controller.setFlash(projectID: nil)
+        #expect(!targetMarked(rig, a.id), "the flash did not end")
+    }
+
+    @Test func aFlashedStudyScrolledIntoViewArrivesMarked() throws {
+        let rig = scrolledRig(studies: 40); defer { rig.cleanup() }
+        let top = try #require(rig.index.projects.first(where: { $0.name == "Study 39" }))
+        try #require(!rig.isVisible(top.id))
+        rig.controller.setFlash(projectID: top.id)
+
+        rig.publish(selection: [.project(top.id)])   // the reveal scrolls it in
+
+        #expect(rig.isVisible(top.id))
+        #expect(targetMarked(rig, top.id))
     }
 
     // MARK: - R53: a study the model selects is brought into view

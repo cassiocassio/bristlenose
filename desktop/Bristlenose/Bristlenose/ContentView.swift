@@ -1366,6 +1366,8 @@ struct ContentView: View {
         // Only what the drop path keeps: anything else was pickable and then
         // filtered out without a word (R48).
         panel.allowedContentTypes = Self.addFilesContentTypes
+        // …and by extension too: a type lets in everything that conforms to it.
+        panel.delegate = AddFilesPanelFilter.shared
         panel.prompt = i18n.t("desktop.chrome.addFilesPrompt")
         panel.message = String(format: i18n.t("desktop.chrome.addFilesMessage"), projectName)
         // Match the app's appearance (window's forced `.preferredColorScheme`);
@@ -2008,6 +2010,22 @@ struct ContentView: View {
     /// through, which the drop path then filters out.
     static var addFilesContentTypes: [UTType] {
         acceptedExtensions.sorted().compactMap { UTType(filenameExtension: $0) }
+    }
+
+    /// Whether the Add Files panel lets `url` be picked: a folder to open, or a
+    /// file whose own extension the drop path keeps. The types above match by
+    /// conformance, which let a `.md` through as plain text.
+    static func addFilesShouldEnable(_ url: URL) -> Bool {
+        if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true { return true }
+        return acceptedExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    /// The Add Files panel's delegate. Held here because a panel's delegate is weak.
+    final class AddFilesPanelFilter: NSObject, NSOpenSavePanelDelegate {
+        static let shared = AddFilesPanelFilter()
+        func panel(_ sender: Any, shouldEnable url: URL) -> Bool {
+            ContentView.addFilesShouldEnable(url)
+        }
     }
 
     /// Filter URLs to only accepted media types. Directories always pass.
@@ -3063,7 +3081,8 @@ struct ContentView: View {
                 // and the gap is reachable on every start and switch.
                 handshakeProjectPaths: serveFleet.handshakeProjectPaths,
                 lastAgentCallAt: serveFleet.lastAgentCallAt,
-                renameRequest: renameRequest
+                renameRequest: renameRequest,
+                flashProjectID: dropTargetProjectID
             )
             // Run the list up under the toolbar, as a SwiftUI `List` sidebar
             // does by itself. Hosted without this, the scroll view stopped at

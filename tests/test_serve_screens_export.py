@@ -305,3 +305,37 @@ def test_a_reveal_whose_exec_is_refused_says_so_rather_than_failing(
     resp = AuthTestClient(app).post(f"{_BASE}/reveal")
     assert resp.status_code == 200
     assert resp.json()["revealed"] is False
+
+
+def test_a_reveal_whose_open_hangs_is_given_up_on(
+        project: Path, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    """No timeout held the request, and the server's event loop, as long as the
+    command ran. A real `sleep` stands in for the hung `open`."""
+    import time
+
+    from bristlenose.server.routes import screens_export
+
+    folder = _out(project) / "screens"
+    folder.mkdir(parents=True)
+    (folder / "p1-01.jpg").write_bytes(b"x")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    monkeypatch.setitem(screens_export._jobs, 1, {
+        "status": "completed", "output_dir": str(folder), "files": ["p1-01.jpg"],
+    })
+    real_run = subprocess.run
+
+    def hangs(command: list[str], **kwargs: object):  # noqa: ANN202
+        return real_run(["sleep", "30"], **kwargs)  # type: ignore[call-overload]
+
+    monkeypatch.setattr(screens_export.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(screens_export, "_REVEAL_TIMEOUT_S", 0.2)
+    monkeypatch.setattr(screens_export.subprocess, "run", hangs)
+    warned: list[str] = []
+    # Not caplog: create_app's setup_logging removes its handler.
+    monkeypatch.setattr(screens_export.logger, "warning", lambda msg, *a, **k: warned.append(msg))
+    t0 = time.monotonic()
+    resp = AuthTestClient(app).post(f"{_BASE}/reveal")
+    assert time.monotonic() - t0 < 10
+    assert resp.status_code == 200
+    assert resp.json()["revealed"] is False
+    assert any("still running after" in m for m in warned)

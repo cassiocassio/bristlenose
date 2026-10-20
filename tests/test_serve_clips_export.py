@@ -283,6 +283,27 @@ class TestRevealClipsSaysWhatHappened:
         assert resp.status_code == 200
         assert resp.json()["revealed"] is False
 
+    def test_an_open_that_hangs_is_given_up_on_not_waited_for(self, tmp_path: Path) -> None:
+        """No timeout held the request, and the server's event loop, as long as the
+        command ran. A real `sleep` stands in for the hung `open`."""
+        client, _ = self._finished(tmp_path)
+        real_run = clips_export.subprocess.run
+
+        def hangs(command: list[str], **kwargs: object):  # noqa: ANN202
+            return real_run(["sleep", "30"], **kwargs)  # type: ignore[call-overload]
+
+        with patch.object(clips_export.platform, "system", return_value="Darwin"), \
+                patch.object(clips_export, "_REVEAL_TIMEOUT_S", 0.2), \
+                patch.object(clips_export.subprocess, "run", hangs), \
+                patch.object(clips_export.logger, "warning") as warned:
+            t0 = time.monotonic()
+            resp = client.post("/api/projects/1/export/clips/reveal")
+        assert time.monotonic() - t0 < 10
+        assert resp.status_code == 200
+        assert resp.json()["revealed"] is False
+        # Not caplog: create_app's setup_logging removes its handler.
+        assert any("still running after" in c.args[0] for c in warned.call_args_list)
+
 
 # ---------------------------------------------------------------------------
 # Subtitles

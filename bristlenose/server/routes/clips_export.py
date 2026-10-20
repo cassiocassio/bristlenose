@@ -61,6 +61,10 @@ from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
 logger = logging.getLogger(__name__)
 
+# `open -R` / `xdg-open` return at once; one that does not must not hold the reveal
+# request (and, called from an async handler, the server) open with it.
+_REVEAL_TIMEOUT_S = 10.0
+
 router = APIRouter(prefix="/api")
 
 
@@ -930,9 +934,12 @@ async def reveal_clips(
     try:
         # Not capture_output: a file manager xdg-open starts can inherit the pipe and
         # hold it open, and the read would wait for it to quit.
-        code = subprocess.run(command, check=False).returncode
+        code = subprocess.run(command, check=False, timeout=_REVEAL_TIMEOUT_S).returncode
     except OSError:
         logger.warning("Reveal clips: %s could not be run", command[0], exc_info=True)
+        return {"revealed": False, "path": str(reveal_path)}
+    except subprocess.TimeoutExpired:
+        logger.warning("Reveal clips: %s still running after %g s", command[0], _REVEAL_TIMEOUT_S)
         return {"revealed": False, "path": str(reveal_path)}
     if code != 0:
         logger.warning("Reveal clips: %s exited %d", command[0], code)

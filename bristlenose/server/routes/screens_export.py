@@ -38,6 +38,10 @@ from bristlenose.server.scene_strips import video_sessions
 
 logger = logging.getLogger(__name__)
 
+# `open -R` / `xdg-open` return at once; one that does not must not hold the reveal
+# request (and, called from an async handler, the server) open with it.
+_REVEAL_TIMEOUT_S = 10.0
+
 router = APIRouter(prefix="/api")
 
 _jobs: dict[int, dict[str, Any]] = {}  # project_id → job state
@@ -229,9 +233,12 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
     try:
         # Not capture_output: a file manager xdg-open starts can inherit the pipe and
         # hold it open, and the read would wait for it to quit.
-        code = subprocess.run(command, check=False).returncode
+        code = subprocess.run(command, check=False, timeout=_REVEAL_TIMEOUT_S).returncode
     except OSError:
         logger.warning("Reveal screens: %s could not be run", command[0], exc_info=True)
+        return {"revealed": False, "path": str(target)}
+    except subprocess.TimeoutExpired:
+        logger.warning("Reveal screens: %s still running after %g s", command[0], _REVEAL_TIMEOUT_S)
         return {"revealed": False, "path": str(target)}
     if code != 0:
         logger.warning("Reveal screens: %s exited %d", command[0], code)

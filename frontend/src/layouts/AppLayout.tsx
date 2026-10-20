@@ -844,7 +844,11 @@ function AppShell() {
               // interpolated raw `error_message` (the leak e2cb193d fixed in the
               // other two call sites) and would have needed its own partial
               // branch to avoid reintroducing the shortfall bug one file over.
-              return normaliseAutoCode(await getAutoCodeStatus(j.frameworkId));
+              // Without its running count, though: the counts are the
+              // codebook's cumulative totals, so "40/40" would be drawn over a
+              // re-code that has only begun (R12).
+              const norm = normaliseAutoCode(await getAutoCodeStatus(j.frameworkId));
+              return { ...norm, progressLabel: null };
             },
           };
         }

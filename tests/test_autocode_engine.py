@@ -1324,6 +1324,83 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_a_catch_up_that_codes_everything_is_not_a_shortfall(
+        self, project_with_garrett
+    ) -> None:
+        """The catch-up chip reads the job's counts, and a completed job with
+        fewer processed than total quotes is drawn as "some batches failed".
+        The re-apply grew `total_quotes` and never `processed_quotes`, so every
+        catch-up that worked would have said it partly failed (R12 review)."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "completed"
+            assert job.total_quotes == 13
+            assert job.processed_quotes == job.total_quotes
+        finally:
+            db.close()
+
+    def test_a_catch_up_where_every_batch_fails_is_failed_and_keeps_the_watermark(
+        self, project_with_garrett
+    ) -> None:
+        """Every batch failing coded nothing, yet the job said "completed" and
+        the watermark moved past the new sessions, so no later catch-up would
+        ever code them. It is a failure now, and the sessions stay new."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        with _patch_llm(AsyncMock(side_effect=RuntimeError("provider down"))):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert accepted == 0
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "failed"
+            assert job.completed_at == datetime(2020, 1, 1)
+            assert job.total_quotes == 10
+        finally:
+            db.close()
+
+        # The next catch-up codes them.
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+        assert accepted == 3
+
     def test_reapply_active_frameworks_covers_applied(
         self, project_with_garrett
     ) -> None:

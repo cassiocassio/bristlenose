@@ -812,6 +812,21 @@ async def reapply_to_new_quotes(
         results = await asyncio.gather(
             *(_batch(b) for b in batches), return_exceptions=True
         )
+        # Every batch failing coded nothing: a failure, through the except below,
+        # so the watermark stays put and the next catch-up codes these sessions.
+        # Recorded as "completed", the sessions were skipped for good and the chip
+        # said done (R12 review).
+        failures = [r for r in results if isinstance(r, BaseException)]
+        if failures and len(failures) == len(results):
+            raise failures[0]
+        # Only a batch that answered counts as processed, as in run_autocode_job:
+        # the chip reads `processed < total` on a completed job as "some batches
+        # failed", and the re-apply grew `total_quotes` alone, so every catch-up
+        # that worked said it partly failed.
+        processed = sum(
+            len(b) for b, r in zip(batches, results, strict=True)
+            if not isinstance(r, BaseException)
+        )
 
         accepted = 0
         new_proposed = 0
@@ -869,6 +884,7 @@ async def reapply_to_new_quotes(
                     accepted += 1
 
         job.total_quotes += len(batch_items)
+        job.processed_quotes += processed
         job.proposed_count += new_proposed
         job.completed_at = now
         if track_status:

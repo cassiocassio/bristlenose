@@ -21,7 +21,13 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   again (one chip per run, the codebook's last catch-up chip removed), and a
   reload restores a running catch-up as a catch-up chip
   (`ActivityStore.rehydrateActivityJobs`: a running job with `completed_at` set).
-  §4a's mechanics are unchanged. Register: R12.
+  Two server fixes the chip made visible: the re-apply now advances
+  `processed_quotes` by the batches that answered (it grew `total_quotes` alone,
+  so every catch-up that worked read as "some batches failed"), and a re-apply
+  where every batch fails is a failure that leaves `completed_at` where it was,
+  so the next catch-up codes those sessions (it said "completed" and skipped
+  them for good). A partial failure still advances the watermark; that is the
+  deferred per-session stamp below. Register: R12.
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
   **New §4b** records that `PUT /framework-states` is a full replacement, that
   absence means enabled, and that the two together make a partial body both a

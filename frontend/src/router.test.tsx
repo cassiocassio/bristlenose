@@ -250,6 +250,43 @@ describe("AutoCode chip completion", () => {
 });
 
 // ---------------------------------------------------------------------------
+// R12: switching a codebook back on re-codes its new sessions, and the chip for
+// it is numberless by design — the job's counts are the codebook's cumulative
+// totals, not the sessions being coded — so it must not draw them while it runs.
+// ---------------------------------------------------------------------------
+
+describe("Catch-up chip", () => {
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/autocode/norman/status")
+        ? { status: "running", processed_quotes: 40, total_quotes: 40, proposed_count: 12 }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+  });
+
+  it("says what it is doing and draws no counts while it runs", async () => {
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
+    });
+    const chip = await screen.findByTestId("bn-activity-chip");
+    await waitFor(() => expect(chip).toHaveTextContent("Re-coding new sessions for Norman"));
+    expect(chip).toHaveAttribute("data-status", "running");
+    expect(chip).not.toHaveTextContent("40/40");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // R13: a clip export the server no longer holds (it restarted; its jobs live in
 // memory) answers "idle", which the chip read as still running, for ever.
 // ---------------------------------------------------------------------------

@@ -378,6 +378,27 @@ final class BridgeHandler: ObservableObject {
     /// menu-bar answer to "not right now".
     @Published var hasSelectedProject: Bool = false
 
+    /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
+    /// folder-access half — from the facts that decide them.
+    ///
+    /// One writer for both of `ContentView`'s call sites, the selection change
+    /// and the pipeline-state change. They used to write these fields
+    /// separately, and the state-change path skipped `selectedProjectIsAnalysed`,
+    /// so Project ▸ Re-analyse stayed dimmed after a first analysis until the
+    /// study was reselected (R64).
+    func mirrorSelectedProjectRun(project: Project, state: PipelineState?,
+                                  data: UnanalysedState?) {
+        selectedProjectIsRunning = SidebarOutlineController.isRunningOrQueued(state)
+        selectedProjectNeedsFolderAccess = state?.needsFolderAccess == true
+        selectedProjectIsAnalysed = SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: project.inputFiles == nil,
+            hasPath: !project.path.isEmpty,
+            isAvailable: project.isAvailable,
+            state: state,
+            data: data
+        )
+    }
+
     /// Reference to the WKWebView for outbound calls (goBack, switchToTab).
     /// Set by `WebView.makeNSView`; cleared by `WebView.dismantleNSView` under an
     /// identity guard — **not** by `reset()`, which stopped clearing it because two
@@ -418,6 +439,25 @@ final class BridgeHandler: ObservableObject {
     /// stays `.spa` across a channel teardown. Both halves, because they answer
     /// different questions and go false in different states.
     var canDispatch: Bool { hasChannel && documentState == .spa }
+
+    /// The lens a bridge-routed command can act on: the active one while the
+    /// channel is live, none otherwise.
+    ///
+    /// `activeTab` and the other report mirrors (focused quote, player,
+    /// undo) keep their last value when the sidecar dies, because only the
+    /// report writes them and it has gone. A menu gated on them alone stays lit
+    /// over a dead channel and `menuAction` drops the press (R70). Gate on this,
+    /// or on `canDispatch &&` the mirror, the way the Codes and Find menus do.
+    var commandTab: Tab? { canDispatch ? activeTab : nil }
+
+    /// Whether File ▸ Export Report… has a report to export: a live SPA, and
+    /// every lens delivered.
+    ///
+    /// The SPA refuses a partial report (`isReportPartial` in
+    /// `ConditionStore.ts`: some lens withheld), during a first analysis and
+    /// after a stopped one, and its `exportReport` case breaks silently there
+    /// (R61). `lensReadiness` is the native mirror of that same lens map.
+    var canExportReport: Bool { canDispatch && lensReadiness == .all }
 
     /// What the menu bar reads when **no project window is frontmost** — the
     /// Settings window, the Import window, or no window at all.

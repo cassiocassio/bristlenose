@@ -638,12 +638,14 @@ private struct FileMenuContent: View {
         // presentation. Apple splits Export the same way — Preview's
         // document-scoped `exportSelection:` is nil-target and dims; Mail's
         // library-scoped `exportMailbox:` targets a controller and stays live.
-        // This one is document-scoped.
+        // This one is document-scoped. It also dims while the report is partial
+        // (a first analysis still delivering, or a stopped one), because the
+        // SPA refuses a partial export and the press did nothing (R61).
         Button(i18n.t("desktop.menu.file.exportReport"), systemImage: "square.and.arrow.up") {
             bridgeHandler.menuAction("exportReport")
         }
         .keyboardShortcut("e", modifiers: [.command, .shift])
-        .disabled(!bridgeHandler.canDispatch)
+        .disabled(!bridgeHandler.canExportReport)
 
         // The Screens lens's own exports (docs/design-screens-export.md §7). The toolbar's export
         // popover shows them on Screens only; here they dim off it, so they can be found.
@@ -730,9 +732,11 @@ private struct UndoRedoMenuContent: View {
         return bridgeHandler.undoLabel ?? i18n.t("desktop.menu.edit.undo")
     }
 
+    /// The report's undo needs a live channel; a pending sidebar removal is
+    /// native and does not (R70: `canUndo` outlives a dead sidecar).
     private var route: EditUndoRoute {
         EditUndoRoute.resolve(removalPending: removalStore.hasPending,
-                              reportCanUndo: bridgeHandler.canUndo)
+                              reportCanUndo: bridgeHandler.canDispatch && bridgeHandler.canUndo)
     }
 
     var body: some View {
@@ -752,7 +756,7 @@ private struct UndoRedoMenuContent: View {
                 bridgeHandler.menuAction("redo")
             }
             .keyboardShortcut("z", modifiers: [.command, .shift])
-            .disabled(!bridgeHandler.canRedo)
+            .disabled(!(bridgeHandler.canDispatch && bridgeHandler.canRedo))
         }
     }
 }
@@ -911,8 +915,9 @@ private struct ViewMenuContent: View {
         // panel. Deriving membership from a label's nil-ness meant a new lens
         // needed both edited, and the toolbar's own gate was a third copy.
         // `activeTab` is optional here (it is not in ContentView): no tab yet
-        // means no lens, which means no panel.
-        bridgeHandler.activeTab?.hasLeftPanel ?? false
+        // means no lens, which means no panel. `commandTab`: the row is a
+        // `menuAction`, so a dead channel means no panel either (R70).
+        bridgeHandler.commandTab?.hasLeftPanel ?? false
     }
 
     /// Whether Hide/Show All Sidebars should read "Hide". The projects column is
@@ -933,15 +938,17 @@ private struct ViewMenuContent: View {
     /// The tag sidebar and the heatmap inspector each exist on one lens only.
     /// Read once for both the row's label verb and its `.disabled`, so an
     /// unavailable row can't dim and still say "Hide".
+    /// `commandTab`, like every lens gate in this menu that guards a
+    /// `menuAction`: the report's mirrors outlive a dead sidecar (R70).
     private var hasTagPanel: Bool {
-        bridgeHandler.activeTab == .quotes
+        bridgeHandler.commandTab == .quotes
     }
 
     private var hasHeatmapPanel: Bool {
-        bridgeHandler.activeTab == .signals
+        bridgeHandler.commandTab == .signals
     }
 
-    private var onScreens: Bool { bridgeHandler.activeTab == .screens }
+    private var onScreens: Bool { bridgeHandler.commandTab == .screens }
 
     var body: some View {
         // Lens shortcuts ⌘1 onwards — ⌘1–⌘6 for the six shipping lenses, ⌘7 for
@@ -1077,7 +1084,7 @@ private struct ViewMenuContent: View {
         // equivalents: a bare menu key fires before the responder chain and would
         // eat typing; the page's own keys (↑↓ screens, ←→ backdrop) still work, and
         // `?` lists them. Modifier shortcuts can come later, checked against macOS.
-        let tab = bridgeHandler.activeTab
+        let tab = bridgeHandler.commandTab
         Button(i18n.t(LensStep.labelKey(tab: tab, next: true))) {
             bridgeHandler.menuAction(LensStep.action(tab: tab, next: true))
         }
@@ -1117,7 +1124,7 @@ private struct ViewMenuContent: View {
             get: { bridgeHandler.quotesViewMode == "all" },
             set: { _ in bridgeHandler.menuAction("allQuotes") }
         ))
-        .disabled(bridgeHandler.activeTab != .quotes)
+        .disabled(bridgeHandler.commandTab != .quotes)
 
         Toggle(isOn: Binding(
             get: { bridgeHandler.quotesViewMode == "starred" },
@@ -1125,7 +1132,7 @@ private struct ViewMenuContent: View {
         )) {
             Label(i18n.t("desktop.menu.view.starredQuotesOnly"), systemImage: "star")
         }
-        .disabled(bridgeHandler.activeTab != .quotes)
+        .disabled(bridgeHandler.commandTab != .quotes)
 
         Divider()
 
@@ -1148,7 +1155,7 @@ private struct ViewMenuContent: View {
             set: { _ in bridgeHandler.menuAction("focusMode") }
         ))
         .keyboardShortcut("f", modifiers: [.command, .option])
-        .disabled(!(bridgeHandler.activeTab.map(Self.focusModeTabs.contains) ?? false))
+        .disabled(!(bridgeHandler.commandTab.map(Self.focusModeTabs.contains) ?? false))
 
         Divider()
 
@@ -1165,7 +1172,7 @@ private struct ViewMenuContent: View {
                systemImage: "timeline.selection") {
             bridgeHandler.menuAction("toggleSessionTimeline")
         }
-        .disabled(!bridgeHandler.timelineAvailable)
+        .disabled(!(bridgeHandler.canDispatch && bridgeHandler.timelineAvailable))
 
         Menu(i18n.t("desktop.menu.view.timelineDetail")) {
             // Radio-style, like All Quotes / Starred Quotes Only above: the
@@ -1177,7 +1184,7 @@ private struct ViewMenuContent: View {
                 ))
             }
         }
-        .disabled(!bridgeHandler.timelineAvailable)
+        .disabled(!(bridgeHandler.canDispatch && bridgeHandler.timelineAvailable))
 
         Divider()
 
@@ -1259,10 +1266,24 @@ private struct ProjectMenuContent: View {
             }
             .disabled(!enabled(.renameFolder))
 
-            Button(i18n.t("desktop.menu.folder.archive"), systemImage: "archivebox") {
-                // Phase 5
-            }
-            .disabled(true)
+            // Folder ▸ Archive withdrawn 20 Oct 2026 (R66) — same treatment as
+            // `jumpToSelection` in the Find menu: it is not ungated, it is
+            // unimplemented. Its action was an empty closure behind
+            // `.disabled(true)` ("Phase 5"), so it sat dimmed on every folder,
+            // always, which tells the researcher "not right now" when the truth
+            // is "not in this build". Withdrawn rather than dimmed, because a
+            // `.disabled` that will never go live is a lie that reads as
+            // diligence. Blocking question: what archiving a study means (move
+            // the folder? hide the row? keep the serve?) — there is no design.
+            //
+            // Restore is one block here plus a real handler; the
+            // `desktop.menu.folder.archive` key is kept in all 21 locales so it
+            // stays that. Twins: Project ▸ Archive below, and both sidebar
+            // context menus. docs/design-desktop-menu-actions.md § Retired actions.
+            //
+            // Button(i18n.t("desktop.menu.folder.archive"), systemImage: "archivebox") {
+            //     // a real handler
+            // }
 
             Divider()
 
@@ -1374,10 +1395,16 @@ private struct ProjectMenuContent: View {
                       || bridgeHandler.selectedProjectIsRunning
                       || !enabled(.reAnalyseProject))
 
-            Button(i18n.t("desktop.menu.project.archive"), systemImage: "archivebox") {
-                bridgeHandler.menuAction("archive")
-            }
-            .disabled(true)  // Future — Phase 5
+            // Project ▸ Archive withdrawn 20 Oct 2026 (R66), with Folder ▸ Archive
+            // above and for the same reason: unimplemented, not ungated. It
+            // dispatched `menuAction("archive")`, which nothing in `frontend/src`
+            // listens for, behind `.disabled(true)`. The
+            // `desktop.menu.project.archive` key is kept in all 21 locales so
+            // restoring is this block plus a real handler.
+            //
+            // Button(i18n.t("desktop.menu.project.archive"), systemImage: "archivebox") {
+            //     bridgeHandler.menuAction("archive")  // no listener: add one first
+            // }
 
             Divider()
 
@@ -1534,8 +1561,10 @@ private struct QuotesMenuContent: View {
     @ObservedObject var i18n: I18n
     @FocusedValue(\.windowCommands) private var windowCommands
 
+    /// `commandTab`, not `activeTab`: every item here dispatches through
+    /// `menuAction`, and the report's mirrors outlive a dead sidecar (R70).
     private var onQuotesTab: Bool {
-        bridgeHandler.activeTab == .quotes
+        bridgeHandler.commandTab == .quotes
     }
 
     /// A lens that shows quote cards, so Star, Hide, Tag, Reveal, Play and
@@ -1546,8 +1575,8 @@ private struct QuotesMenuContent: View {
     /// scopedFocus), never on a cursor left over from Quotes. Export and
     /// selection-extend stay on Quotes.
     private var onCardLens: Bool {
-        bridgeHandler.activeTab == .quotes || bridgeHandler.activeTab == .screens
-            || bridgeHandler.activeTab == .discussion
+        let tab = bridgeHandler.commandTab
+        return tab == .quotes || tab == .screens || tab == .discussion
     }
 
     private var hasFocus: Bool {
@@ -1762,7 +1791,10 @@ private struct VideoMenuContent: View {
         return PopoutOwners.owner(of: NSApp.keyWindow) === bridgeHandler
     }
 
-    private var active: Bool { bridgeHandler.hasPlayer }
+    /// `canDispatch` too: `hasPlayer` is the report's mirror and keeps its last
+    /// value when the sidecar dies, while every command here is a `menuAction`
+    /// (R70).
+    private var active: Bool { bridgeHandler.canDispatch && bridgeHandler.hasPlayer }
 
     /// The player's keys, shown — and bound — only while the player is in
     /// front. Bare keys on a menu item are taken before any view sees them, so

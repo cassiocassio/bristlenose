@@ -972,6 +972,16 @@ struct ContentView: View {
             for id in CompletionRescan.projectsFinishingRun(old: old, new: new) {
                 projectIndex.recordPipelineRun(id: id)
             }
+            // A finished analysis is proof the provider has credit (R40).
+            if OutOfCreditModel.aRunSucceeded(old: old, new: new) {
+                OutOfCreditModel.noteRunSucceeded()
+            }
+        }
+        // Re-analyse reads the session count, which lands ~1.5 s after the run
+        // ends (`scheduleCountRescan`), so the state change above still sees
+        // the old one (R64).
+        .onChange(of: projectIndex.unanalysed) { _, _ in
+            updateSelectedProjectRunState()
         }
         .onAppear {
             // A new act on this window's report settles a pending sidebar
@@ -1452,19 +1462,11 @@ struct ContentView: View {
                 }
                 bridgeHandler.selectedProjectPath = project.path
                 bridgeHandler.selectedProjectAvailable = project.isAvailable
-                bridgeHandler.selectedProjectNeedsFolderAccess =
-                    pipelineRunner.state[id]?.needsFolderAccess == true
                 bridgeHandler.selectedProjectRevealablePath = revealPath(for: project) ?? ""
                 bridgeHandler.hasSelectedProject = true
-                bridgeHandler.selectedProjectIsRunning =
-                    isRunningOrQueued(pipelineRunner.state[id])
-                bridgeHandler.selectedProjectIsAnalysed =
-                    SidebarOutlineController.reAnalyseIsOffered(
-                        isFolderShaped: project.inputFiles == nil,
-                        hasPath: !project.path.isEmpty,
-                        state: pipelineRunner.state[id],
-                        data: projectIndex.unanalysed[id]
-                    )
+                bridgeHandler.mirrorSelectedProjectRun(
+                    project: project, state: pipelineRunner.state[id],
+                    data: projectIndex.unanalysed[id])
                 projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent + availability — nothing is sent to a
                 // provider before the user has seen the AI data disclosure
@@ -1809,6 +1811,7 @@ struct ContentView: View {
         guard SidebarOutlineController.analyseIsOffered(
             isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
+            isAvailable: project.isAvailable,
             state: pipelineRunner.state[project.id],
             data: projectIndex.unanalysed[project.id]
         ) else { return nil }
@@ -3210,10 +3213,8 @@ struct ContentView: View {
                 Button(i18n.t("desktop.menu.folder.rename")) {
                     renamingFolderID = folder.id
                 }
-                Button(i18n.t("desktop.menu.folder.archive")) {
-                    // Phase 5
-                }
-                .disabled(true)
+                // Archive withdrawn 20 Oct 2026 (R66) — unimplemented, not
+                // ungated. See Folder ▸ Archive in `ProjectMenuContent`.
                 Divider()
                 Button(i18n.t("desktop.menu.folder.delete"), role: .destructive) {
                     deleteFromContextMenu(targetingFolder: folder.id)
@@ -3384,14 +3385,16 @@ struct ContentView: View {
     }
 
     /// Mirror the sole-selected project's run state into the bridge so the
-    /// Project ▸ Stop Analysis (⌘.) menu item dims when there's nothing to
-    /// stop. Called on pipeline-state change; selection-time sync is inline in
-    /// `applySelectionChange`.
+    /// Project menu's Stop Analysis (⌘.) and Re-analyse… follow the run.
+    /// Called on pipeline-state change and when a session count lands;
+    /// selection-time sync is in `applySelectionChange`. Both go through
+    /// `mirrorSelectedProjectRun`, so neither can skip a field (R64).
     private func updateSelectedProjectRunState() {
-        if case .project(let id) = (selection.count == 1 ? selection.first : nil) {
-            bridgeHandler.selectedProjectIsRunning = isRunningOrQueued(pipelineRunner.state[id])
-            bridgeHandler.selectedProjectNeedsFolderAccess =
-                pipelineRunner.state[id]?.needsFolderAccess == true
+        if case .project(let id) = (selection.count == 1 ? selection.first : nil),
+           let project = projectIndex.projects.first(where: { $0.id == id }) {
+            bridgeHandler.mirrorSelectedProjectRun(
+                project: project, state: pipelineRunner.state[id],
+                data: projectIndex.unanalysed[id])
         } else {
             bridgeHandler.selectedProjectNeedsFolderAccess = false
             bridgeHandler.selectedProjectIsRunning = false

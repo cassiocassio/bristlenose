@@ -17,12 +17,12 @@ import Foundation
 /// validation / `revalidateAll` (the pre-existing path), and (2) a run that
 /// fails with the `.outOfCredit` category calls `recordActiveProviderOutOfCredit`
 /// from `PipelineRunner.deriveFailureState` — the authoritative run-failure path,
-/// keyed on the distinct billing category (never a transient `.quota`/429). A
-/// remaining limitation (tracked): the pill clears only when a fresh validation
-/// records `.online`; refocus currently re-reads the cache without revalidating,
-/// so after a browser top-up it lingers until Settings next checks. And the
-/// OpenAI Settings probe is unbilled (GET /v1/models), so Settings can't detect
-/// OpenAI credit-out — the run-failure trigger covers it instead.
+/// keyed on the distinct billing category (never a transient `.quota`/429).
+/// Two things clear it: a fresh validation recording `.online`, and a run
+/// that finishes (`noteRunSucceeded`, R40). Refocus only re-reads the cache, so
+/// after a browser top-up the pill stays lit until one of those happens. And
+/// the OpenAI Settings probe is unbilled (GET /v1/models), so Settings can't
+/// detect OpenAI credit-out — the run-failure trigger covers it instead.
 @MainActor
 final class OutOfCreditModel: ObservableObject {
     /// True when the active provider's cached verdict is `.outOfCredit`.
@@ -78,6 +78,44 @@ final class OutOfCreditModel: ObservableObject {
         else { return }
         LLMValidator.recordVerdict(provider: active, key: key, status: .outOfCredit)
         NotificationCenter.default.post(name: .bristlenoseOutOfCreditChanged, object: nil)
+    }
+
+    /// Whether a run just finished with a whole analysis: `.running` → `.ready`.
+    /// A stopped, failed or partial run proves nothing about credit.
+    static func aRunSucceeded(old: [UUID: PipelineState], new: [UUID: PipelineState]) -> Bool {
+        new.contains { id, state in
+            guard case .running = old[id], case .ready = state else { return false }
+            return true
+        }
+    }
+
+    /// Clear a sticky out-of-credit verdict on the active provider once a run
+    /// has finished on it, then post a refresh so the pill goes out (R40).
+    /// The verdict was sticky with nothing to re-validate it: a top-up happens
+    /// in the browser, and the pill stayed lit through a successful run.
+    ///
+    /// The active provider, as `recordActiveProviderOutOfCredit` attributes a
+    /// failure: the run was spawned with it.
+    static func noteRunSucceeded() {
+        guard
+            let active = UserDefaults.standard.string(forKey: "activeProvider")
+                .flatMap(LLMProvider.init(rawValue:)),
+            active.needsAPIKey,
+            let keychainProvider = active.keychainProvider,
+            let key = KeychainHelper.get(provider: keychainProvider), !key.isEmpty,
+            clearAfterSuccessfulRun(provider: active, key: key)
+        else { return }
+        NotificationCenter.default.post(name: .bristlenoseOutOfCreditChanged, object: nil)
+    }
+
+    /// Replace an `.outOfCredit` verdict with `.online`; leave any other verdict
+    /// alone (an `.invalid` key is not cured by a cached run). True when it
+    /// changed something.
+    static func clearAfterSuccessfulRun(provider: LLMProvider, key: String) -> Bool {
+        guard LLMValidator.cachedVerdict(provider: provider, key: key) == .outOfCredit
+        else { return false }
+        LLMValidator.recordVerdict(provider: provider, key: key, status: .online)
+        return true
     }
 
     deinit {

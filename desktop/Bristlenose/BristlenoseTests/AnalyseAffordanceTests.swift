@@ -193,7 +193,7 @@ import Foundation
         // What the sheet exists for: files arrived in Finder, the watcher saw
         // them, and the sheet can now start the run it is describing.
         #expect(SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle,
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle,
             data: data(newFiles: 3, sessions: 14)))
     }
 
@@ -201,27 +201,40 @@ import Foundation
         // The CLI cannot scope a run to a file list, so the sheet stays
         // informational rather than dimming a control nothing could enable.
         #expect(!SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: false, hasPath: true, state: .idle,
+            isFolderShaped: false, hasPath: true, isAvailable: true, state: .idle,
             data: data(newFiles: 3, sessions: 14)))
     }
 
     @Test func aPlaceholderWithNoFolderIsNotOffered() {
         #expect(!SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: false, state: .idle, data: data(newFiles: 3)))
+            isFolderShaped: true, hasPath: false, isAvailable: true, state: .idle, data: data(newFiles: 3)))
     }
 
     @Test func aRunningProjectIsNotOffered() {
         #expect(!SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .running,
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .running,
             data: data(newFiles: 3, sessions: 14)))
     }
 
     @Test func aStoppedOrFailedProjectKeepsTheRetry() {
         for state in [PipelineState.stopped(stagesComplete: []), .failed(.passthrough("boom"), category: .unknown)] {
             #expect(SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: true, hasPath: true, state: state,
+                isFolderShaped: true, hasPath: true, isAvailable: true, state: state,
                 data: data(newFiles: 5, sessions: 0)),
                 "\(state) must stay retryable")
+        }
+    }
+
+    @Test func aStudyOnAnEjectedDriveIsNotOffered() {
+        // R63. Ejecting the drive leaves the last pipeline state in place, so
+        // every other input still reads "offer it" — new files, a free
+        // pipeline. Only availability knows the folder is not there.
+        for state in [PipelineState.idle, .stopped(stagesComplete: []),
+                      .failed(.passthrough("boom"), category: .unknown)] {
+            #expect(!SidebarOutlineController.analyseIsOffered(
+                isFolderShaped: true, hasPath: true, isAvailable: false, state: state,
+                data: data(newFiles: 3, sessions: 0)),
+                "\(state) on an ejected drive must not offer Analyse")
         }
     }
 
@@ -230,7 +243,7 @@ import Foundation
         // else. The sheet cannot reach this case (it opens on deltas), but the
         // predicate is shared, so it is pinned here too.
         #expect(!SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle,
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle,
             data: data(newFiles: 0, sessions: 14)))
     }
 }
@@ -251,14 +264,23 @@ import Foundation
         )
     }
 
+    @Test func anAnalysedStudyOnAnEjectedDriveIsNotOffered() {
+        // R63, menu-bar half: the Project menu dims Re-analyse on this answer.
+        // An analysed study keeps `.ready` and its session count when its drive
+        // goes, which is everything this predicate otherwise asks for.
+        #expect(!SidebarOutlineController.reAnalyseIsOffered(
+            isFolderShaped: true, hasPath: true, isAvailable: false,
+            state: .ready(Date()), data: data(sessions: 14)))
+    }
+
     @Test func analysedAndIdleIsTheStateItBelongsIn() {
         // The one state where Analyse is a measured no-op is exactly the state
         // Re-analyse is for.
         let d = data(newFiles: 0, sessions: 14)
         #expect(SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: d))
         #expect(!SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: d))
     }
 
     @Test func nothingToReplaceMeansNothingToOffer() {
@@ -267,16 +289,16 @@ import Foundation
         // for one act.
         for sessions in [nil, 0] {
             #expect(!SidebarOutlineController.reAnalyseIsOffered(
-                isFolderShaped: true, hasPath: true, state: .idle,
+                isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle,
                 data: data(sessions: sessions)))
         }
         #expect(!SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: nil))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: nil))
     }
 
     @Test func aRunningProjectIsNotOffered() {
         #expect(!SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .running, data: data(sessions: 14)))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .running, data: data(sessions: 14)))
     }
 
     @Test func aDriftedProjectIsOfferedBoth() {
@@ -286,14 +308,14 @@ import Foundation
         // are what distinguish the two.
         let d = data(newFiles: 3, sessions: 14)
         #expect(SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: d))
         #expect(SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: d))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: d))
     }
 
     @Test func aFileSubsetProjectIsNotOffered() {
         #expect(!SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: false, hasPath: true, state: .idle, data: data(sessions: 14)))
+            isFolderShaped: false, hasPath: true, isAvailable: true, state: .idle, data: data(sessions: 14)))
     }
 
     @Test func aFailedRunCanStillBeRebuiltFromScratch() {
@@ -301,7 +323,7 @@ import Foundation
         // clean rebuild has to stay reachable — it is the only route past an
         // output directory the CLI refuses to overwrite.
         #expect(SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true,
+            isFolderShaped: true, hasPath: true, isAvailable: true,
             state: .failed(.passthrough("boom"), category: .unknown), data: data(sessions: 14)))
     }
 }
@@ -339,9 +361,9 @@ import Foundation
         -> (analyse: Bool, reAnalyse: Bool) {
         (
             SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: true, hasPath: true, state: state, data: data),
+                isFolderShaped: true, hasPath: true, isAvailable: true, state: state, data: data),
             SidebarOutlineController.reAnalyseIsOffered(
-                isFolderShaped: true, hasPath: true, state: state, data: data)
+                isFolderShaped: true, hasPath: true, isAvailable: true, state: state, data: data)
         )
     }
 
@@ -479,7 +501,7 @@ import Foundation
         // watcher → gate → predicate. The F14 trap the original suite named.
         let gated = ProjectIndex.driftGated(state(newFiles: 6, sessions: nil, files: 6))
         #expect(SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .idle, data: gated))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .idle, data: gated))
     }
 
     @Test func analysedAndCleanOffersNothingNew() {
@@ -489,6 +511,6 @@ import Foundation
         let gated = ProjectIndex.driftGated(state(newFiles: 0, sessions: 3))
         #expect(!SidebarOutlineController.hasWorkToDo(gated))
         #expect(SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: true, hasPath: true, state: .ready(Date()), data: gated))
+            isFolderShaped: true, hasPath: true, isAvailable: true, state: .ready(Date()), data: gated))
     }
 }

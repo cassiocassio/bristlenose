@@ -2002,6 +2002,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let offered = !data.databaseForked && Self.analyseIsOffered(
             isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
+            isAvailable: project.isAvailable,
             state: pipelineRunner?.state[id],
             data: data)
         let analyse: (() -> Void)? = offered
@@ -2232,7 +2233,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             menu.addItem(.separator())
         }
         menu.addItem(menuItem("desktop.menu.folder.rename", #selector(menuRename(_:))))
-        menu.addItem(menuItem("desktop.menu.folder.archive", #selector(menuNoop(_:)), enabled: false))  // Phase 5
+        // Archive withdrawn 20 Oct 2026 (R66): it was always present and always
+        // dimmed, wired to a no-op selector — unimplemented, not ungated. The
+        // menu bar's Folder ▸ Archive went the same way (`ProjectMenuContent`,
+        // with the restore path); the locale key is kept.
+        // menu.addItem(menuItem("desktop.menu.folder.archive", #selector(<a real handler>)))
         menu.addItem(.separator())
         menu.addItem(menuItem("desktop.menu.folder.delete", #selector(menuRemoveFolder(_:))))
     }
@@ -2265,6 +2270,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return Self.reAnalyseIsOffered(
             isFolderShaped: p.inputFiles == nil,
             hasPath: !p.path.isEmpty,
+            isAvailable: p.isAvailable,
             state: state,
             data: projectIndex?.unanalysed[id]
         )
@@ -2276,6 +2282,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         return Self.analyseIsOffered(
             isFolderShaped: p.inputFiles == nil,
             hasPath: !p.path.isEmpty,
+            isAvailable: p.isAvailable,
             state: state,
             data: projectIndex?.unanalysed[id]
         )
@@ -2342,20 +2349,25 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// `isAvailable` is `Project.isAvailable` — the folder is there now. A
+    /// study on an ejected drive keeps its last pipeline state (`.ready`,
+    /// `.stopped`), so `pipelineIsFree` alone offered both verbs on a folder a
+    /// run could not reach (R63). Same predicate the serve start and Locate…
+    /// already gate on.
     nonisolated static func reAnalyseIsOffered(
-        isFolderShaped: Bool, hasPath: Bool,
+        isFolderShaped: Bool, hasPath: Bool, isAvailable: Bool,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
-        guard isFolderShaped, hasPath else { return false }
+        guard isFolderShaped, hasPath, isAvailable else { return false }
         guard pipelineIsFree(state) else { return false }
         return (data?.sessionCount ?? 0) > 0
     }
 
     nonisolated static func analyseIsOffered(
-        isFolderShaped: Bool, hasPath: Bool,
+        isFolderShaped: Bool, hasPath: Bool, isAvailable: Bool,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
-        guard isFolderShaped, hasPath else { return false }
+        guard isFolderShaped, hasPath, isAvailable else { return false }
         guard pipelineIsFree(state) else { return false }
         return hasWorkToDo(data)
     }
@@ -2501,7 +2513,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         if let id = menuClickedNodeID { beginRename(nodeID: id) }
     }
 
-    @objc private func menuNoop(_ sender: NSMenuItem) {}   // disabled Archive (Phase 5)
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`) plus the agent badge: run activity > in-flight

@@ -449,6 +449,12 @@ class Quote(Base):
     sentiment: Mapped[str | None] = mapped_column(String(50), default=None)
     intensity: Mapped[int] = mapped_column(Integer, default=1)
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
+    # The quote's rank among this speaker's quotes that start in the same whole second,
+    # by (start, end, verbatim_excerpt): stage 9 cuts two quotes from one paragraph with
+    # one start, and the start alone named only one of them (R86). Minted by the
+    # importer's pre-pass (``rank_quote_ordinals``); 0 for the first, so every id and key
+    # made before the column reads unchanged. Internal: the UI never shows it.
+    ordinal: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 
     # --- Curation persistence (Freeze) ----------------------------------
@@ -466,12 +472,15 @@ class Quote(Base):
     project: Mapped[Project] = relationship(back_populates="quotes")
 
     __table_args__ = (
+        # The stable key, unique: two rows with one start used to be one row.
         Index(
-            "ix_quote_stable_key",
+            "uq_quote_stable_key",
             "project_id",
             "session_id",
             "participant_id",
             "start_timecode",
+            "ordinal",
+            unique=True,
         ),
     )
 

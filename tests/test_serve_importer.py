@@ -1987,3 +1987,106 @@ class TestRedactedSourceHeader:
         meta = _parse_transcript_headers(tmp_path / "transcripts-cooked")
         _resolve_redacted_sources(meta, tmp_path / "transcripts-raw")
         assert meta["s1"]["source"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Two quotes from one speaker with one start (R86)
+# ---------------------------------------------------------------------------
+
+
+def _same_start_pair() -> list[dict]:
+    """Stage 9 cuts two quotes from one paragraph: one start, two ends, two texts."""
+    first = _make_quote("s1", "p1", 53.0, "The first half of the paragraph")
+    second = _make_quote("s1", "p1", 53.0, "And the second half, cut apart")
+    second["end_timecode"] = 71.0
+    return [first, second]
+
+
+class TestSameStartQuotes:
+    """A quote's identity is its start *and* its rank within that second."""
+
+    @staticmethod
+    def _clusters(quotes: list[dict]) -> list[dict]:
+        return [{"screen_label": "Checkout", "description": "", "display_order": 1,
+                 "quotes": quotes}]
+
+    def test_two_quotes_with_one_start_are_two_rows(self, db: Session, tmp_path: Path) -> None:
+        proj = _write_pipeline_output(tmp_path, self._clusters(_same_start_pair()), [])
+        project = import_project(db, proj)
+        rows = (db.query(Quote).filter_by(project_id=project.id)
+                .order_by(Quote.ordinal).all())
+        assert [(r.ordinal, r.text) for r in rows] == [
+            (0, "The first half of the paragraph"),
+            (1, "And the second half, cut apart"),
+        ]
+
+    def test_same_start_pair_keeps_each_star_across_reimport(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        proj = _write_pipeline_output(tmp_path, self._clusters(_same_start_pair()), [])
+        project = import_project(db, proj)
+        rows = db.query(Quote).filter_by(project_id=project.id).order_by(Quote.ordinal).all()
+        assert len(rows) == 2
+        ids = [r.id for r in rows]
+        db.add(QuoteState(quote_id=ids[1], is_starred=True))
+        db.add(QuoteState(quote_id=ids[0], is_hidden=True))
+        db.commit()
+
+        import_project(db, proj)
+
+        again = db.query(Quote).filter_by(project_id=project.id).order_by(Quote.ordinal).all()
+        assert [r.id for r in again] == ids
+        starred = db.query(QuoteState).filter_by(quote_id=ids[1]).one()
+        hidden = db.query(QuoteState).filter_by(quote_id=ids[0]).one()
+        assert starred.is_starred is True and starred.is_hidden is False
+        assert hidden.is_hidden is True and hidden.is_starred is False
+
+    def test_progressive_and_final_paths_agree_on_ordinals(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The quotes a run hands over session by session keep their rows when the
+        whole project lands at the end: both paths rank a same-start pair alike."""
+        from bristlenose.server.importer import import_session_quotes
+
+        opener = _make_quote("s1", "p1", 10.0, "An opener")
+        proj = _write_pipeline_output(tmp_path, self._clusters([opener]), [])
+        project = import_project(db, proj)
+        intermediate = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
+        # Progressive: the session's quotes, pair included, in the order stage 9 wrote them
+        # (second before first, so the rank is not the file order).
+        pair = _same_start_pair()
+        (intermediate / "extracted_quotes.json").write_text(
+            json.dumps([opener, pair[1], pair[0]]), encoding="utf-8")
+        _, counts = import_session_quotes(db, proj, {"s1"})
+        assert counts == {"s1": 3}
+        progressive = {
+            (r.start_timecode, r.ordinal): (r.id, r.text)
+            for r in db.query(Quote).filter_by(project_id=project.id).all()
+        }
+        assert len(progressive) == 3
+
+        # Final: the same quotes, now spread over a section and a theme.
+        (intermediate / "screen_clusters.json").write_text(
+            json.dumps(self._clusters([opener, pair[0]])), encoding="utf-8")
+        (intermediate / "theme_groups.json").write_text(
+            json.dumps([{"theme_label": "Cuts", "description": "", "display_order": 1,
+                         "quotes": [pair[1]]}]), encoding="utf-8")
+        import_project(db, proj)
+        final = {
+            (r.start_timecode, r.ordinal): (r.id, r.text)
+            for r in db.query(Quote).filter_by(project_id=project.id).all()
+        }
+        assert final == progressive
+
+    def test_a_third_way_in_is_refused(self, db: Session, tmp_path: Path) -> None:
+        """The stable key is unique: a duplicate row cannot be written past the importer."""
+        from sqlalchemy.exc import IntegrityError
+
+        proj = _write_pipeline_output(tmp_path, self._clusters(_same_start_pair()), [])
+        project = import_project(db, proj)
+        db.add(Quote(project_id=project.id, session_id="s1", participant_id="p1",
+                     start_timecode=53.0, end_timecode=60.0, text="a third", ordinal=1,
+                     quote_type="screen_specific"))
+        with pytest.raises(IntegrityError):
+            db.flush()
+        db.rollback()

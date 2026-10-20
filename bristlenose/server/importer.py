@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -598,6 +599,13 @@ def import_project(db: Session, project_dir: Path) -> Project:
     _replay_layout_edits(db, session_map)
 
     # --- Import quotes, clusters, themes ---------------------------------
+    # Rank every incoming quote first, sections and themes together, so a
+    # same-start pair gets its two ordinals whichever lens each half landed in.
+    _assign_ordinals(
+        q
+        for group in (*screen_clusters_data, *theme_groups_data)
+        for q in group.get("quotes", [])
+    )
     quote_map = _import_quotes_from_clusters(
         db, project, session_map, screen_clusters_data, now,
     )
@@ -809,8 +817,10 @@ def import_session_quotes(
     wanted = session_ids & present
     now = datetime.now(timezone.utc)
     counts: dict[str, int] = dict.fromkeys(wanted, 0)
-    for quote in data if isinstance(data, list) else []:
-        sid = quote.get("session_id", "") if isinstance(quote, dict) else ""
+    quotes = [q for q in (data if isinstance(data, list) else []) if isinstance(q, dict)]
+    _assign_ordinals(quotes)
+    for quote in quotes:
+        sid = quote.get("session_id", "")
         if sid in wanted:
             _get_or_create_quote(db, project, quote, now)
             counts[sid] += 1
@@ -1737,6 +1747,56 @@ def _import_participant(
             setattr(person, attr, source[key])
 
 
+QuoteRankKey = tuple[str, str, float, float, str]
+"""``(session_id, participant_id, start, end, verbatim_excerpt)`` — what ranks a quote."""
+
+
+def rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]:
+    """Each quote's rank among one speaker's quotes that start in the same whole second.
+
+    Stage 9 can cut two quotes from one paragraph with one start, and the start alone
+    then named only one of them (R86). Within ``(session, participant, int(start))`` the
+    distinct keys are ordered by ``(start, end, verbatim_excerpt)`` and numbered from 0,
+    so the first of every group keeps the id it always had. An identical key is one
+    quote (it may sit in a section and a theme) and gets one ordinal.
+
+    Migration 021 carries a copy of this function for its backfill — a migration must
+    not import code that can change under it — and ``tests/test_migration_021_quote_ordinal.py``
+    holds the two to the same answers. Change both.
+    """
+    groups: dict[tuple[str, str, int], set[QuoteRankKey]] = {}
+    for key in keys:
+        groups.setdefault((key[0], key[1], int(key[2])), set()).add(key)
+    ranks: dict[QuoteRankKey, int] = {}
+    for members in groups.values():
+        for i, key in enumerate(sorted(members, key=lambda k: (k[2], k[3], k[4]))):
+            ranks[key] = i
+    return ranks
+
+
+def _rank_key(quote_data: dict[str, Any]) -> QuoteRankKey:
+    return (
+        str(quote_data.get("session_id", "")),
+        str(quote_data.get("participant_id", "")),
+        float(quote_data.get("start_timecode", 0.0)),
+        float(quote_data.get("end_timecode", 0.0)),
+        str(quote_data.get("verbatim_excerpt", "") or ""),
+    )
+
+
+def _assign_ordinals(quotes: Iterable[dict[str, Any]]) -> None:
+    """Stamp ``ordinal`` on every incoming quote dict, ranked over all of them at once.
+
+    The pre-pass runs over everything an import will hand ``_get_or_create_quote`` —
+    every section's and theme's quotes together, or a whole ``extracted_quotes.json`` —
+    so the progressive and the final path mint the same ordinal for the same quote.
+    """
+    quotes = list(quotes)
+    ranks = rank_quote_ordinals(_rank_key(q) for q in quotes)
+    for q in quotes:
+        q["ordinal"] = ranks[_rank_key(q)]
+
+
 def _get_or_create_quote(
     db: Session,
     project: Project,
@@ -1745,11 +1805,13 @@ def _get_or_create_quote(
 ) -> Quote:
     """Get or create a quote by stable key.
 
-    Stable key: (project_id, session_id, participant_id, start_timecode).
+    Stable key: (project_id, session_id, participant_id, start_timecode, ordinal),
+    the ordinal stamped by ``_assign_ordinals`` before the quote reaches here.
     """
     session_id = quote_data.get("session_id", "")
     participant_id = quote_data.get("participant_id", "")
     start_timecode = float(quote_data.get("start_timecode", 0.0))
+    ordinal = int(quote_data.get("ordinal", 0))
 
     # Try to find existing quote by stable key
     existing = (
@@ -1759,6 +1821,7 @@ def _get_or_create_quote(
             session_id=session_id,
             participant_id=participant_id,
             start_timecode=start_timecode,
+            ordinal=ordinal,
         )
         .first()
     )
@@ -1784,6 +1847,7 @@ def _get_or_create_quote(
         session_id=session_id,
         participant_id=participant_id,
         start_timecode=start_timecode,
+        ordinal=ordinal,
         end_timecode=float(quote_data.get("end_timecode", 0.0)),
         text=quote_data.get("text", ""),
         verbatim_excerpt=quote_data.get("verbatim_excerpt", ""),
@@ -1922,17 +1986,17 @@ def _import_quotes_from_clusters(
     session_map: dict[str, SessionModel],
     screen_clusters_data: list[dict[str, Any]],
     now: datetime,
-) -> dict[tuple[str, str, float], Quote]:
+) -> dict[tuple[str, str, float, int], Quote]:
     """Import screen clusters and their quotes.
 
     Upserts each cluster by *membership* (quote overlap), not label, so a
     renamed section keeps its ``cluster_id`` — and therefore any researcher
     HeadingEdit keyed on that id — across pipeline label drift.
 
-    Returns a quote_map keyed by (session_id, participant_id, start_timecode)
+    Returns a quote_map keyed by (session_id, participant_id, start_timecode, ordinal)
     for deduplication when the same quote appears in themes.
     """
-    quote_map: dict[tuple[str, str, float], Quote] = {}
+    quote_map: dict[tuple[str, str, float, int], Quote] = {}
 
     # Resolve incoming quotes first so we can match clusters by membership.
     incoming_quotes: list[list[Quote]] = []
@@ -1942,7 +2006,7 @@ def _import_quotes_from_clusters(
         member_ids: set[int] = set()
         for q_data in cluster_data.get("quotes", []):
             q = _get_or_create_quote(db, project, q_data, now)
-            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            quote_map[(q.session_id, q.participant_id, q.start_timecode, q.ordinal)] = q
             qs.append(q)
             member_ids.add(q.id)
         incoming_quotes.append(qs)
@@ -2056,7 +2120,7 @@ def _import_quotes_from_themes(
     project: Project,
     session_map: dict[str, SessionModel],
     theme_groups_data: list[dict[str, Any]],
-    quote_map: dict[tuple[str, str, float], Quote],
+    quote_map: dict[tuple[str, str, float, int], Quote],
     now: datetime,
 ) -> None:
     """Import theme groups and their quotes.
@@ -2079,7 +2143,7 @@ def _import_quotes_from_themes(
         member_ids: set[int] = set()
         for q_data in theme_data.get("quotes", []):
             q = _get_or_create_quote(db, project, q_data, now)
-            quote_map[(q.session_id, q.participant_id, q.start_timecode)] = q
+            quote_map[(q.session_id, q.participant_id, q.start_timecode, q.ordinal)] = q
             qs.append(q)
             member_ids.add(q.id)
         incoming_quotes.append(qs)

@@ -245,6 +245,8 @@ def test_signal_minutes_counts_active_windows() -> None:
 def _fake_helper(tmp_path: Path, *, out: dict[str, Any] | None = None, exit_code: int = 0,
                  probe: dict[str, Any] | None = None) -> Path:
     """A script honouring the helper's command line and output contract."""
+    if sys.platform == "win32":
+        pytest.skip("the fake helper is a #! script, which Windows cannot run; the real one is a macOS binary")
     data = tmp_path / "fake-output.json"
     data.write_text(json.dumps(out if out is not None else payload()), encoding="utf-8")
     probe_line = json.dumps(probe if probe is not None else {
@@ -429,6 +431,7 @@ def test_after_an_engine_level_exit_later_sessions_skip_the_helper(tmp_path: Pat
     assert [d.failure.cause.code for d in done] == ["helper_exit_3", "helper_unavailable"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the slow helper is a #! script, which Windows cannot run")
 def test_a_helper_that_runs_too_long_is_killed_and_named(tmp_path: Path) -> None:
     script = tmp_path / "slow-helper"
     script.write_text(f"#!{sys.executable}\nimport time\ntime.sleep(30)\n", encoding="utf-8")

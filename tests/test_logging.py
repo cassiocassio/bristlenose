@@ -306,6 +306,7 @@ class TestOneRecordOneLine:
         assert lines[1] == "Traceback (most recent call last):"
         assert lines[-1] == "ValueError: boom"
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows will not move a folder holding an open log")
     def test_a_reopened_log_file_is_escaped_too(self, tmp_path: Path) -> None:
         from bristlenose.logging import reopen_log_file, setup_logging
 

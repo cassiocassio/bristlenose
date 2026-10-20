@@ -1,6 +1,11 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-speech-helper": {
+      "evidence": "a Debug build's Contents/Helpers/bristlenose-speech passes (1 ok, exit 0). A copy re-signed ad hoc with Hardened Runtime, the right identifier, and app-sandbox + inherit + network.client exits 1 naming only 'unexpected com.apple.security.network.client'. /bin/ls fails all six checks",
+      "how": "manual: copies of a Debug build's helper, the original and one with a single entitlement widened, run through desktop/scripts/check-speech-helper.sh",
+      "observed": "2026-10-20"
+    },
     "check-whisper-sizes": {
       "evidence": "with TOLERANCE_MB raised to 10000 the drift test fails (a 1614 MB table against a 3091 MB Hub is no longer named); restored, 4 passed. The live run needs the network, so only the deciding half is proven: a Hub answer that never arrives is exit 2, not covered here",
       "how": "tests/test_check_whisper_sizes.py, which loads the script and drives compare(); mutated TOLERANCE_MB locally, then restored",

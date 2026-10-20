@@ -189,7 +189,6 @@
       "runIt": "Os intervenientes foram guardados. Para reanalisar, execute isto num terminal:",
       "failed": "O Bristlenose não conseguiu preparar a nova análise. Nada foi alterado."
     },
-    "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "A carregar sessões…"
   },
   "dashboard": {

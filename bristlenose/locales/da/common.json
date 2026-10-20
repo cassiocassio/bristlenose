@@ -189,7 +189,6 @@
       "runIt": "Talerne er gemt. Kør dette i en terminal for at analysere igen:",
       "failed": "Bristlenose kunne ikke forberede den nye analyse. Intet er ændret."
     },
-    "failedToLoad": "Kunne ikke indlæse sessioner: {{error}}",
     "loading": "Indlæser sessioner…"
   },
   "dashboard": {

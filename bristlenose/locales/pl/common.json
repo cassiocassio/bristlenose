@@ -207,7 +207,6 @@
       "runIt": "Mówcy zostali zapisani. Aby przeanalizować ponownie, uruchom w terminalu:",
       "failed": "Bristlenose nie mógł przygotować ponownej analizy. Nic się nie zmieniło."
     },
-    "failedToLoad": "Nie udało się wczytać sesji: {{error}}",
     "loading": "Wczytywanie sesji…"
   },
   "dashboard": {

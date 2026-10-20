@@ -82,11 +82,15 @@ beforeEach(() => {
       dispatchEvent: vi.fn(),
     })),
   });
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    new Response(JSON.stringify({ quotes: [], sessions: [], tags: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    }),
+  // A fresh Response per call: one shared Response's body reads once, so every
+  // later read failed, and the Sessions lens showed its read-failed notice (an
+  // alert since R86) where these tests look for no alert.
+  vi.spyOn(globalThis, "fetch").mockImplementation(
+    async () =>
+      new Response(JSON.stringify({ quotes: [], sessions: [], tags: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
   );
   // React and React Router both log a caught render error; keep the run quiet.
   vi.spyOn(console, "error").mockImplementation(() => {});

@@ -189,7 +189,6 @@
       "runIt": "S’han desat els parlants. Per tornar a analitzar, executa això en un terminal:",
       "failed": "Bristlenose no ha pogut preparar la nova anàlisi. No ha canviat res."
     },
-    "failedToLoad": "No s'han pogut carregar les sessions: {{error}}",
     "loading": "S'estan carregant les sessions…"
   },
   "dashboard": {

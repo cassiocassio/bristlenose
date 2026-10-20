@@ -180,7 +180,6 @@
       "runIt": "發言者已儲存。若要重新分析，請在終端機中執行：",
       "failed": "Bristlenose 無法準備重新分析。沒有任何變更。"
     },
-    "failedToLoad": "無法載入場次：{{error}}",
     "loading": "正在載入場次⋯"
   },
   "dashboard": {

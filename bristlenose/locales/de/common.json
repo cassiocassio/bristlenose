@@ -179,7 +179,6 @@
       "runIt": "Die Sprecher sind gesichert. Führe zum erneuten Analysieren dies in einem Terminal aus:",
       "failed": "Bristlenose konnte die erneute Analyse nicht vorbereiten. Es wurde nichts geändert."
     },
-    "failedToLoad": "Fehler beim Laden der Interviews: {{error}}",
     "loading": "Interviews werden geladen…"
   },
   "dashboard": {

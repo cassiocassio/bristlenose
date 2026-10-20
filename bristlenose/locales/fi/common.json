@@ -189,7 +189,6 @@
       "runIt": "Puhujat on tallennettu. Analysoi uudelleen suorittamalla tämä päätteessä:",
       "failed": "Bristlenose ei pystynyt valmistelemaan uutta analyysia. Mitään ei muutettu."
     },
-    "failedToLoad": "Istuntojen lataus epäonnistui: {{error}}",
     "loading": "Ladataan istuntoja…"
   },
   "dashboard": {

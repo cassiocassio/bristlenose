@@ -189,7 +189,6 @@
       "runIt": "De sprekers zijn bewaard. Voer dit uit in een terminal om opnieuw te analyseren:",
       "failed": "Bristlenose kon de nieuwe analyse niet voorbereiden. Er is niets gewijzigd."
     },
-    "failedToLoad": "Kon sessies niet laden: {{error}}",
     "loading": "Sessies laden…"
   },
   "dashboard": {

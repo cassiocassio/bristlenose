@@ -189,7 +189,6 @@
       "runIt": "The speakers are saved. To re-analyse, run this in a terminal:",
       "failed": "Bristlenose couldn’t prepare the re-analysis. Nothing has changed."
     },
-    "failedToLoad": "Failed to load sessions: {{error}}",
     "loading": "Loading sessions…"
   },
   "dashboard": {

@@ -172,7 +172,6 @@
       "runIt": "발화자가 저장되었습니다. 재분석하려면 터미널에서 다음을 실행하세요:",
       "failed": "Bristlenose가 재분석을 준비하지 못했습니다. 아무것도 변경되지 않았습니다."
     },
-    "failedToLoad": "세션 로드 실패: {{error}}",
     "loading": "세션 로드 중…"
   },
   "dashboard": {

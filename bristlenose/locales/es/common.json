@@ -179,7 +179,6 @@
       "runIt": "Los hablantes se han guardado. Para reanalizar, ejecuta esto en un terminal:",
       "failed": "Bristlenose no ha podido preparar el nuevo análisis. No ha cambiado nada."
     },
-    "failedToLoad": "Error al cargar las sesiones: {{error}}",
     "loading": "Cargando sesiones…"
   },
   "dashboard": {

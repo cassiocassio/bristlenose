@@ -189,7 +189,6 @@
       "runIt": "Konuşmacılar kaydedildi. Yeniden analiz etmek için bunu bir terminalde çalıştırın:",
       "failed": "Bristlenose yeniden analizi hazırlayamadı. Hiçbir şey değişmedi."
     },
-    "failedToLoad": "Oturumlar yüklenemedi: {{error}}",
     "loading": "Oturumlar yükleniyor…"
   },
   "dashboard": {

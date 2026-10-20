@@ -179,7 +179,6 @@
       "runIt": "Les intervenants sont enregistrés. Pour réanalyser, exécutez ceci dans un terminal :",
       "failed": "Bristlenose n’a pas pu préparer la nouvelle analyse. Rien n’a changé."
     },
-    "failedToLoad": "Échec du chargement des entretiens : {{error}}",
     "loading": "Chargement des entretiens…"
   },
   "dashboard": {

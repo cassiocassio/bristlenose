@@ -189,7 +189,6 @@
       "runIt": "Talerne er lagret. Kjør dette i en terminal for å analysere på nytt:",
       "failed": "Bristlenose kunne ikke forberede den nye analysen. Ingenting er endret."
     },
-    "failedToLoad": "Klarte ikke å laste inn økter: {{error}}",
     "loading": "Laster inn økter …"
   },
   "dashboard": {

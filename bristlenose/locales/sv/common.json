@@ -189,7 +189,6 @@
       "runIt": "Talarna har sparats. Kör det här i en terminal för att analysera igen:",
       "failed": "Bristlenose kunde inte förbereda den nya analysen. Inget har ändrats."
     },
-    "failedToLoad": "Kunde inte läsa in sessioner: {{error}}",
     "loading": "Läser in sessioner…"
   },
   "dashboard": {

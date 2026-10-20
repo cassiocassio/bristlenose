@@ -189,7 +189,6 @@
       "runIt": "Gli interlocutori sono salvati. Per rianalizzare, esegui questo comando in un terminale:",
       "failed": "Bristlenose non è riuscito a preparare la nuova analisi. Non è cambiato nulla."
     },
-    "failedToLoad": "Impossibile caricare le sessioni: {{error}}",
     "loading": "Caricamento delle sessioni…"
   },
   "dashboard": {

@@ -114,6 +114,41 @@ describe("SessionsTable", () => {
     expect(screen.getByText("#2")).toBeTruthy();
   });
 
+  it("a failed read says so in the lens's words, with Retry, never the wire (R86)", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500, statusText: "Internal Server Error", json: async () => ({}) }),
+      );
+      render(<SessionsTable projectId="1" />);
+      expect(
+        await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+      expect(screen.queryByText(/500|\/sessions|Failed to load/)).toBeNull();
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("clears a failed read once the next one answers", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500, statusText: "busy", json: async () => ({}) }),
+      );
+      const { rerender } = render(<SessionsTable projectId="1" refreshKey={0} />);
+      await screen.findByRole("button", { name: "Retry" });
+      mockFetchResponses();
+      rerender(<SessionsTable projectId="1" refreshKey={1} />);
+      expect(await screen.findByText("#1")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("renders durations as spans, never as clock times", async () => {
     // The defect this pins: the Duration column used to render MM:SS, so a
     // 30-minute session read "30:00" in a row that also carries a date and a

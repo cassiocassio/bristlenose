@@ -189,7 +189,6 @@
       "runIt": "Os falantes foram salvos. Para reanalisar, execute isto em um terminal:",
       "failed": "O Bristlenose não conseguiu preparar a nova análise. Nada foi alterado."
     },
-    "failedToLoad": "Falha ao carregar sessões: {{error}}",
     "loading": "Carregando sessões…"
   },
   "dashboard": {

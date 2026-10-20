@@ -203,7 +203,6 @@
       "runIt": "Mluvčí jsou uloženi. Pro novou analýzu spusťte v terminálu:",
       "failed": "Bristlenose nemohl novou analýzu připravit. Nic se nezměnilo."
     },
-    "failedToLoad": "Nepodařilo se načíst sezení: {{error}}",
     "loading": "Načítání sezení…"
   },
   "dashboard": {

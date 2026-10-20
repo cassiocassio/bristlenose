@@ -16,6 +16,7 @@ import { Suspense, lazy, useCallback, useContext, useEffect, useRef, useState } 
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { EditableText } from "../components/EditableText";
+import { ErrorNotice } from "../components/RouteError";
 import { JourneyChain } from "../components/JourneyChain";
 import { PersonBadge } from "../components/PersonBadge";
 import { SectionHeading } from "../components/SectionHeading";
@@ -251,8 +252,15 @@ export function SessionsTable({
     // — no separate "is this the initial mount?" tracking needed.
     if (refreshKey > 0) setIsRefetching(true);
     apiGet<SessionsListResponse>("/sessions")
-      .then((json) => setData(json))
-      .catch((err: Error) => setError(err.message))
+      .then((json) => {
+        setData(json);
+        setError(null);
+      })
+      .catch((err: Error) => {
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Sessions read failed:", err);
+        setError(err.message || "read failed");
+      })
       .finally(() => setIsRefetching(false));
 
     // Degraded, not broken: /sessions already carries the server-resolved
@@ -505,9 +513,7 @@ export function SessionsTable({
   if (error) {
     return (
       <section className="bn-session-table">
-        <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          {t("sessions.failedToLoad", { error })}
-        </p>
+        <ErrorNotice scope="lens" />
       </section>
     );
   }

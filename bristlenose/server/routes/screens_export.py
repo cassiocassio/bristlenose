@@ -219,11 +219,18 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
     target = files[0] if files else folder
     system = platform.system()
     if system == "Darwin":
-        done = subprocess.run(["open", "-R", str(target)], check=False).returncode == 0
+        command = ["open", "-R", str(target)]
     elif system == "Linux":
-        done = subprocess.run(["xdg-open", str(folder)], check=False).returncode == 0
+        command = ["xdg-open", str(folder)]
     else:
         return {"revealed": False, "path": str(folder)}
+    # A sandboxed sidecar (the Mac app) may not be allowed to run it: not revealed, not a
+    # 500. The app reveals through its own bridge (R72).
+    try:
+        done = subprocess.run(command, check=False).returncode == 0
+    except OSError:
+        logger.warning("Reveal screens: %s could not be run", command[0], exc_info=True)
+        done = False
     return {"revealed": done, "path": str(target)}
 
 

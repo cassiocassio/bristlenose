@@ -235,6 +235,55 @@ class TestRevealClips:
         assert resp.status_code in (403, 404)
 
 
+class TestRevealClipsSaysWhatHappened:
+    """R72: the reveal answered ``revealed: true`` whatever ``open`` did, and a refused exec
+    (the App Sandbox) was a 500. It says what happened now."""
+
+    @staticmethod
+    def _finished(tmp_path: Path) -> tuple[TestClient, Path]:
+        clips_export._jobs.clear()
+        project = tmp_path / "input"
+        clips_dir = project / "bristlenose-output" / "clips"
+        clips_dir.mkdir(parents=True)
+        (clips_dir / "p1-10.mp4").write_bytes(b"fake")
+        app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+        clips_export._jobs[1] = {"status": "completed", "output_dir": str(clips_dir)}
+        return AuthTestClient(app), clips_dir
+
+    @staticmethod
+    def _open_exits(code: int):  # noqa: ANN205
+        class _Done:
+            returncode = code
+
+        return lambda *a, **k: _Done()
+
+    def test_open_that_succeeds_reveals_the_first_clip(self, tmp_path: Path) -> None:
+        client, clips_dir = self._finished(tmp_path)
+        with patch.object(clips_export.platform, "system", return_value="Darwin"), \
+                patch.object(clips_export.subprocess, "run", self._open_exits(0)):
+            body = client.post("/api/projects/1/export/clips/reveal").json()
+        assert body == {"revealed": True, "path": str((clips_dir / "p1-10.mp4").resolve())}
+
+    def test_open_that_fails_is_not_a_reveal(self, tmp_path: Path) -> None:
+        client, _ = self._finished(tmp_path)
+        with patch.object(clips_export.platform, "system", return_value="Darwin"), \
+                patch.object(clips_export.subprocess, "run", self._open_exits(1)):
+            body = client.post("/api/projects/1/export/clips/reveal").json()
+        assert body["revealed"] is False
+
+    def test_an_exec_the_sandbox_refuses_is_not_a_reveal_or_a_500(self, tmp_path: Path) -> None:
+        client, _ = self._finished(tmp_path)
+
+        def refused(*a: object, **k: object) -> None:
+            raise PermissionError(1, "Operation not permitted")
+
+        with patch.object(clips_export.platform, "system", return_value="Darwin"), \
+                patch.object(clips_export.subprocess, "run", refused):
+            resp = client.post("/api/projects/1/export/clips/reveal")
+        assert resp.status_code == 200
+        assert resp.json()["revealed"] is False
+
+
 # ---------------------------------------------------------------------------
 # Subtitles
 # ---------------------------------------------------------------------------

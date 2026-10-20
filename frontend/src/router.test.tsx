@@ -350,3 +350,69 @@ describe("Activity chips after a reload", () => {
     );
   }, 15_000);
 });
+
+// ---------------------------------------------------------------------------
+// R72: in the Mac app the chip's Reveal asked the sandboxed sidecar to run `open -R`, which does
+// nothing there (and the clips route said it had). The app reveals through its own bridge.
+// ---------------------------------------------------------------------------
+
+describe("Reveal in Finder on a finished export", () => {
+  let postMessage: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage } },
+    };
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/export/clips/status")
+        ? { status: "completed", progress: 3, total: 3, completed_count: 3, skipped_count: 0, current_clip: "", output_dir: "/Users/r/Study A/bristlenose-output/clips" }
+        : url.includes("/export/screens/status")
+          ? { status: "completed", progress: 2, total: 2, completed_count: 2, skipped_count: 0, current: "", output_dir: "/Users/r/Study A/bristlenose-output/screens", files: ["p1-01.jpg", "p1-02.jpg"] }
+          : url.includes("/sessions")
+            ? { sessions: [] }
+            : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+    delete (window as unknown as Record<string, unknown>).webkit;
+  });
+
+  const reveals = () =>
+    postMessage.mock.calls.map((c) => c[0]).filter((m) => m?.action === "reveal-in-finder");
+  const serverReveals = () =>
+    vi.mocked(globalThis.fetch).mock.calls.filter((c) => String(c[0]).includes("/reveal"));
+
+  async function revealFinished(id: string, type: "clips" | "screens") {
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob(id, { type, frameworkId: "", frameworkTitle: "", total: 2 });
+    });
+    const action = await screen.findByTestId("bn-activity-chip-action", {}, { timeout: 5000 });
+    act(() => action.click());
+  }
+
+  it("a clips export is shown in Finder by the app, not the sidecar", async () => {
+    await revealFinished("clips", "clips");
+    await waitFor(() => expect(reveals()).toHaveLength(1));
+    expect(reveals()[0].data).toEqual({ uri: "file:///Users/r/Study%20A/bristlenose-output/clips" });
+    expect(serverReveals()).toHaveLength(0);
+  });
+
+  it("a screens export is shown with its first still selected", async () => {
+    await revealFinished("screens:r72", "screens");
+    await waitFor(() => expect(reveals()).toHaveLength(1));
+    expect(reveals()[0].data).toEqual({
+      uri: "file:///Users/r/Study%20A/bristlenose-output/screens/p1-01.jpg",
+    });
+    expect(serverReveals()).toHaveLength(0);
+  });
+});

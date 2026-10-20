@@ -282,3 +282,26 @@ def test_the_screens_board_splits_by_the_language_the_quote_was_spoken_in(
     se._run_miro_sync(_job(), "tok", "Board", tmp_path, _screens(1), {"s1": tmp_path / "v.mp4"},
                       {"q-p1-1": quote}, "none", True, "rectangle", None, {"s1": "cs"})
     assert made and not any(" v…" in c for c in made), made
+
+
+def test_a_reveal_whose_exec_is_refused_says_so_rather_than_failing(
+        project: Path, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    """R72: a refused exec (the App Sandbox) was a 500; it is ``revealed: false``."""
+    from bristlenose.server.routes import screens_export
+
+    folder = _out(project) / "screens"
+    folder.mkdir(parents=True)
+    (folder / "p1-01.jpg").write_bytes(b"x")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    monkeypatch.setitem(screens_export._jobs, 1, {
+        "status": "completed", "output_dir": str(folder), "files": ["p1-01.jpg"],
+    })
+
+    def refused(*a: object, **k: object) -> None:
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(screens_export.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(screens_export.subprocess, "run", refused)
+    resp = AuthTestClient(app).post(f"{_BASE}/reveal")
+    assert resp.status_code == 200
+    assert resp.json()["revealed"] is False

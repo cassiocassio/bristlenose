@@ -176,6 +176,10 @@ Assistant, and Xcode's legacy key). Bristlenose is already correct.
 fork keys on the **client shell**, so a Mac user running `bristlenose serve` in
 Safari would get Finder from the server but the neutral string from the label.
 `revealMac` was keyed on the wrong axis and could never have worked.
+_Since 20 Oct 2026 (R72) the Mac app no longer asks the server: its sandboxed sidecar
+could not run `open -R`, so the SPA posts the native `reveal-in-finder` action
+(`utils/revealExport.ts`), which selects the clips folder in its parent and the
+first still of a screens export. A browser still gets the server's reveal._
 
 The panel split on what follows. One reading: neutral prose is therefore correct
 and plain `t()` is right, which is what shipped. The other: say "Show in Finder"

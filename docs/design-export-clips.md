@@ -145,7 +145,7 @@ Reuse the persistent cross-tab toast from codebook application (AutoCodeToast pa
 3. Toast updates with progress as clips complete
 4. Toast persists across tab switches
 5. On completion: "Clips ready" with "Reveal in Finder" link
-6. "Reveal" calls `open -R /path/` (macOS) or `xdg-open` parent dir (Linux)
+6. "Reveal" calls `open -R /path/` (macOS) or `xdg-open` parent dir (Linux) from the server — in a browser. In the Mac app the sidecar is sandboxed and cannot, so the SPA posts the native `reveal-in-finder` project action with the clips folder instead (`utils/revealExport.ts`, R72, 20 Oct 2026)
 
 ### Menu placement
 

@@ -917,11 +917,19 @@ async def reveal_clips(
 
     system = platform.system()
     if system == "Darwin":
-        subprocess.run(["open", "-R", str(reveal_path)], check=False)
+        command = ["open", "-R", str(reveal_path)]
     elif system == "Linux":
-        subprocess.run(["xdg-open", str(resolved_clips)], check=False)
+        command = ["xdg-open", str(resolved_clips)]
     else:
         # Windows or unknown — return the path for the caller to handle
         return {"revealed": False, "path": str(resolved_clips)}
 
-    return {"revealed": True, "path": str(reveal_path)}
+    # Say what happened: until R72 this answered "revealed" whatever `open` did. A
+    # sandboxed sidecar (the Mac app) may not be allowed to run it at all, which
+    # raised here as a 500; the app reveals through its own bridge instead.
+    try:
+        done = subprocess.run(command, check=False).returncode == 0
+    except OSError:
+        logger.warning("Reveal clips: %s could not be run", command[0], exc_info=True)
+        done = False
+    return {"revealed": done, "path": str(reveal_path)}

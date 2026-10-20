@@ -121,6 +121,11 @@ def backup_path_for(output_dir: Path) -> Path:
     return output_dir.parent / f".{output_dir.name}-previous"
 
 
+def _discarding_path(backup: Path) -> Path:
+    """Where a spent backup goes to be deleted: never a path `reclaim_stale` reads."""
+    return backup.with_name(f"{backup.name}-discarding")
+
+
 def failed_path_for(output_dir: Path) -> Path:
     """Where a failed run's tree is kept, so a resume is a rename away."""
     return output_dir.parent / f".{output_dir.name}-failed"
@@ -162,6 +167,9 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
         return None
 
     backup = backup_path_for(output_dir)
+    # A spent backup whose delete was cut short (`discard`): already proven
+    # spent, never restorable, so cleared here.
+    shutil.rmtree(_discarding_path(backup), ignore_errors=True)
     if backup.exists():
         if not previous_backup_is_spent:
             logger.warning(
@@ -201,10 +209,33 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
 
 
 def discard(backup: Path | None) -> None:
-    """Delete a stashed backup. Called once the run has produced a replacement."""
+    """Delete a stashed backup. Called once the run has produced a replacement.
+
+    Renamed out of the backup path first, atomically, then deleted. The delete
+    is long (a stash can hold gigabytes), and one cut short used to leave part
+    of the old tree at the backup path, which the next run's `reclaim_stale`
+    put back over the new report (R110). A delete that leaves files says so;
+    the next `stash` clears what is left.
+    """
     if backup is None or not backup.exists():
         return
-    shutil.rmtree(backup, ignore_errors=True)
+    doomed = _discarding_path(backup)
+    shutil.rmtree(doomed, ignore_errors=True)
+    try:
+        backup.rename(doomed)
+    except OSError as exc:
+        logger.warning(
+            "output_backup: could not set %s aside to delete it (%s); it is left in "
+            "place, and the next run will put it back as the previous report",
+            backup, exc,
+        )
+        return
+    shutil.rmtree(doomed, ignore_errors=True)
+    if doomed.exists():
+        logger.warning(
+            "output_backup: could not fully delete %s; the next run removes it", doomed,
+        )
+        return
     logger.info("output_backup: discarded %s", backup)
 
 

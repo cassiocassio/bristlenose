@@ -876,19 +876,15 @@ function AppShell() {
           },
           onAction: () => {
             const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };
-            // Two codebook lenses run side by side (D29). Dispatch in place if
-            // we are already on EITHER — both listen for `bn:autocode-report`.
-            // Otherwise return to the lens this job was started from, not to
-            // whichever one is hardcoded: a researcher who installed from v2
-            // and clicked View Report used to land in v1, a different lens from
-            // the one they were working in, with nothing saying so.
+            // On the Codebook lens, dispatch in place: it listens for
+            // `bn:autocode-report`. From elsewhere, go to the lens the job came
+            // from with the request in the navigation's state, which the lens
+            // reads when it mounts. An event sent after a fixed wait was lost
+            // whenever the lens's chunk took longer to load (R15).
             if (isCodebook) {
               window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
             } else {
-              navigate(j.originRoute ?? "/report/codebook");
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent("bn:autocode-report", { detail }));
-              }, 100);
+              navigate(j.originRoute ?? "/report/codebook", { state: { autocodeReport: detail } });
             }
           },
           actionLabel: i18n.t("codebook.viewReport"),

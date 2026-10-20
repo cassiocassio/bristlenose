@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   getCodebook,
@@ -229,12 +229,26 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     impactFailed?: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // From another lens the activity chip's View Report navigates here carrying
+  // the request in the route's state, rather than announcing it 100 ms later:
+  // this lens is a lazy chunk, and on a first visit the announcement came
+  // before its listener existed, so View Report landed here and opened nothing
+  // (R15). The navigation mounts the lens, so the request is its first state.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const asked = (location.state as {
+    autocodeReport?: { frameworkId?: string; frameworkTitle?: string };
+  } | null)?.autocodeReport;
   // Same shape the original lens used (`CodebookPanel`'s `reportModal`), because
   // it feeds the same component.
   const [reportModal, setReportModal] = useState<{
     frameworkId: string;
     frameworkTitle: string;
-  } | null>(null);
+  } | null>(() =>
+    asked?.frameworkId && asked?.frameworkTitle
+      ? { frameworkId: asked.frameworkId, frameworkTitle: asked.frameworkTitle }
+      : null,
+  );
 
   useEffect(() => {
     let live = true;
@@ -379,6 +393,16 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     window.addEventListener("bn:autocode-report", handler);
     return () => window.removeEventListener("bn:autocode-report", handler);
   }, []);
+
+  // The request above is read once, then dropped from the history entry, so a
+  // reload or Back to it does not open the review again.
+  useEffect(() => {
+    if (!asked) return;
+    navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: null },
+    );
+  }, [asked, location.pathname, location.search, location.hash, navigate]);
 
   /**
    * Report a failed *action* — install, uninstall — as opposed to a failed

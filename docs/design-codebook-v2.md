@@ -2532,7 +2532,10 @@ is durable; the event stream stays where event streams live.
    dispatches `bn:autocode-report` from the toast's *View Report*, which opens
    `ThresholdReviewModal` — the same destination as the codebook page's Review
    door. _(15 Oct 2026: the toast is deleted; `AppLayout.tsx` dispatches
-   `bn:autocode-report` and `CodebookV2.tsx` listens for it.)_ Today's call that the review stays a modal is not a constraint on this;
+   `bn:autocode-report` and `CodebookV2.tsx` listens for it. 20 Oct 2026: from
+   another lens the chip navigates with the request in the route's state, which
+   the lens reads on mount, since an event sent 100 ms later was lost when the
+   lens's chunk loaded slower than that (R15).)_ Today's call that the review stays a modal is not a constraint on this;
    the two doors already converge on it, and keeping the modal is what lets them.
 
 **The Mac half is not wired, and this is the one build-blocking finding in

@@ -151,7 +151,14 @@ def discover_files(
         )
 
     files: list[InputFile] = []
-    _scan_dir(input_dir, 0, files, skipped, set())
+    seen: set[Path] = set()
+    links: list[tuple[Path, int]] = []
+    _scan_dir(input_dir, 0, files, skipped, seen, links)
+    # Links after the real tree, so whatever a link and its target both reach
+    # keeps the target's own path, wherever the link sorts (R123).
+    while links:
+        link, depth = links.pop(0)
+        _scan_entries([link], depth, files, skipped, seen, links, defer_links=False)
 
     # Sort by creation date, then filename as tiebreaker
     files.sort(key=lambda f: (f.created_at, f.path.name))
@@ -171,6 +178,7 @@ def _scan_dir(
     files: list[InputFile],
     skipped: list[SkippedFile] | None,
     seen: set[Path],
+    links: list[tuple[Path, int]],
 ) -> None:
     """Walk *directory*, descending while files stay within _MAX_SCAN_DEPTH.
 
@@ -181,10 +189,7 @@ def _scan_dir(
     zero-byte file that aborted a 42-session run.
     """
     try:
-        # Real entries before links within a folder, so a link beside what it
-        # points at is the one set aside. A link reached before its target's
-        # folder is scanned instead, and the target skipped: one copy either way.
-        entries = sorted(directory.iterdir(), key=lambda e: (e.is_symlink(), e))
+        entries = sorted(directory.iterdir())
     except PermissionError:
         if skipped is not None:
             skipped.append(
@@ -201,7 +206,20 @@ def _scan_dir(
             )
         logger.warning("Skipping unreadable directory %s: %s", directory, exc)
         return
+    _scan_entries(entries, depth, files, skipped, seen, links, defer_links=True)
 
+
+def _scan_entries(
+    entries: list[Path],
+    depth: int,
+    files: list[InputFile],
+    skipped: list[SkippedFile] | None,
+    seen: set[Path],
+    links: list[tuple[Path, int]],
+    *,
+    defer_links: bool,
+) -> None:
+    """Classify *entries* (one folder's, or one deferred link) at *depth*."""
     for entry in entries:
         # Hidden entries — dot-files and dot-directories alike — are tool
         # state (`.claude/`, `.git/`, AppleDouble `._*`, `.DS_Store`), not
@@ -221,6 +239,9 @@ def _scan_dir(
         # Noise the researcher did not create and cannot act on — and it crowds
         # out the refusals that are genuinely theirs.
         if is_bristlenose_artefact(entry):
+            continue
+        if defer_links and entry.is_symlink():
+            links.append((entry, depth))
             continue
         # Each folder and file once, however many links reach it: a symlinked
         # folder inside the interview folder duplicated every session in it
@@ -251,7 +272,7 @@ def _scan_dir(
                 if depth == 0 and is_guide_folder(entry):
                     continue
                 if depth + 1 < _MAX_SCAN_DEPTH:
-                    _scan_dir(entry, depth + 1, files, skipped, seen)
+                    _scan_dir(entry, depth + 1, files, skipped, seen, links)
             elif entry.is_file():
                 _try_add_file(entry, files, skipped)
         except OSError as exc:  # a single unstatable entry must not end the walk

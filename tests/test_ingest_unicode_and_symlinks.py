@@ -90,3 +90,14 @@ def test_a_symlink_loop_is_stepped_over(tmp_path: Path) -> None:
     os.symlink(tmp_path / "loop-b", tmp_path / "loop-a")
     os.symlink(tmp_path / "loop-a", tmp_path / "loop-b")
     assert [f.path.name for f in discover_files(tmp_path)] == ["alice.mp4"]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+def test_a_link_that_sorts_first_still_leaves_the_target_its_own_path(tmp_path: Path) -> None:
+    """`aaa/link` is reached before `zzz/real` in a sorted walk; the session
+    must still carry the real path, not the link's."""
+    _write(tmp_path / "zzz" / "real" / "alice.mp4")
+    (tmp_path / "aaa").mkdir()
+    os.symlink(tmp_path / "zzz" / "real", tmp_path / "aaa" / "link")
+    (f,) = discover_files(tmp_path)
+    assert f.path == tmp_path / "zzz" / "real" / "alice.mp4"

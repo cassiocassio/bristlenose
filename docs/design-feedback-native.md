@@ -237,6 +237,10 @@ default, reversible, receipted.
   `BridgeHandler.openFeedback()` unconditionally posts `.showFeedbackSheet` (the
   probe-then-route that handed off to the web modal when the SPA was up is gone).
   The web `FeedbackModal` is browser-only; the report lens no longer shows it.
+  _20 Oct 2026 (R82): the broadcast is now only the menu's fallback with no
+  project window in front, and exactly one window takes it (`FeedbackFallback`).
+  The status page asks its own window (`BridgeHandler.feedbackRequests`), so one
+  request opens one sheet, never one per window._
 - **Phase 1:** move the native surface from sheet → **non-modal companion panel**
   (see the thing you're commenting on). Add anonymise / fuzzy-greek + preview to
   the text field. Ship the review-before-send manifest.

@@ -20,6 +20,7 @@ The precedent for the button is Claude's desktop app. Nothing else goes in the f
    Today the menu calls `openFeedback()`, which posts `.showFeedbackSheet` to the whole app, and each ContentView answers it (`BridgeHandler.swift:1067`, `ContentView.swift:1023`). With three windows open, three sheets appear.
    The menu fix uses the pattern View ▸ Hide/Show Projects already uses: a scene focused value published by ContentView and read by the menu command.
    The status page's `open-feedback` bridge action stays on the notification. It comes from one webview, so it should target that webview's window. Check this during the build: if the notification still fans out, scope it the same way.
+   _It did still fan out, until 20 Oct 2026 (R82): the bridge action now bumps its own window's `BridgeHandler.feedbackRequests`, and the menu's no-window fallback is claimed by exactly one window (`FeedbackFallback`)._
 2. **Plain text, not a capsule.**
    - It's `Text` with `.caption2`, `.monospacedDigit()` and `.secondary`, with no background and no monospaced design.
    - It is not selectable: selectable text in a sidebar takes keyboard focus away from the project list.

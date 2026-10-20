@@ -1964,18 +1964,22 @@ private struct HelpMenuContent: View {
             Self.open("https://bristlenose.app/docs/changelog.html")
         }
 
-        // Opens the native FeedbackSheet in the FRONT window only, with the
-        // live-serve config or the serve-free `.serverless` fallback when no
-        // project is selected. It used to post the app-wide `.showFeedbackSheet`
-        // broadcast, which every window answered. With no project window in
-        // front (Settings, the Welcome window) it still falls back to that
-        // broadcast, so the item never dims and never goes dead.
+        // Opens ONE native FeedbackSheet (R82), with the live-serve config or
+        // the serve-free `.serverless` fallback when no project is selected:
+        //   - a project window in front: that window;
+        //   - its popout player in front: the report window that owns it;
+        //   - neither (Settings, the Welcome window, no window): the fallback
+        //     broadcast, which exactly one project window claims; with none
+        //     open to claim it, a project window opens and takes it.
+        // So the item never dims, never goes dead, and never opens two.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
             FeedbackTrace.opened(by: "help-menu windowCommands=\(windowCommands != nil)")
             if let windowCommands {
                 windowCommands.perform(.showFeedback)
-            } else {
-                bridgeHandler.openFeedback()
+            } else if bridgeHandler !== BridgeHandler.unattached {
+                bridgeHandler.requestFeedback()
+            } else if !bridgeHandler.openFeedback() {
+                openWindow(id: "main")
             }
         }
 

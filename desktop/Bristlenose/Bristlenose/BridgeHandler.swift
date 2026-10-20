@@ -194,6 +194,12 @@ final class BridgeHandler: ObservableObject {
     /// pins through serve; ContentView starts the ordinary resume run, which
     /// honours them and re-extracts only that session.
     @Published private(set) var reanalyseSessionRequests = 0
+    /// This window's page asked for the native feedback sheet: the status
+    /// page's "Send feedback", or Help ▸ Send Feedback with this report's popout
+    /// player in front. A counter the window observes, as `chooseGuideRequests`
+    /// is, so the sheet opens in the window that asked. It was an app-wide
+    /// `.showFeedbackSheet` broadcast, and every open window answered it (R82).
+    @Published private(set) var feedbackRequests = 0
 
     /// Whether the web layer has an undo action available.
     @Published var canUndo = false
@@ -1388,10 +1394,24 @@ final class BridgeHandler: ObservableObject {
     /// backwards: it made the browser-only modal the "normal path" and only fell
     /// through to native when the SPA was absent, so the report lens showed the
     /// web HTML modal. See `docs/design-feedback-native.md` (Phase 0).
-    func openFeedback() {
+    ///
+    /// Two doors. `requestFeedback()` is the per-window one: this handler's own
+    /// window opens the sheet. `openFeedback()` is the menu's fallback for when
+    /// **no project window is frontmost** and there is no window to ask; it
+    /// broadcasts, and the staged `FeedbackFallback` one-shot makes exactly one
+    /// window take it. Returns whether a window did, so the menu can open one
+    /// when none is open (R82).
+    func requestFeedback() { feedbackRequests += 1 }
+
+    @discardableResult
+    func openFeedback() -> Bool {
+        FeedbackFallback.request()
         FeedbackTrace.opened(by: "menu-fallback-broadcast")
         NotificationCenter.default.post(name: .showFeedbackSheet, object: nil,
                                         userInfo: [FeedbackTrace.sourceKey: "menu-fallback-broadcast"])
+        // Delivery is synchronous on the main thread, so a project window that
+        // heard it has claimed it by now.
+        return !FeedbackFallback.isPending
     }
 
     private func handleProjectAction(_ action: String, data: [String: Any]?) {
@@ -1400,10 +1420,10 @@ final class BridgeHandler: ObservableObject {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
 
         case "open-feedback":
-            // Status page (SPA absent) asked for the native feedback sheet.
+            // Status page (SPA absent) asked for the native feedback sheet — in
+            // this window, the one whose page asked, not in every window.
             FeedbackTrace.opened(by: "status-page-bridge url=\(webView?.url?.absoluteString ?? "nil")")
-            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil,
-                                            userInfo: [FeedbackTrace.sourceKey: "status-page-bridge"])
+            requestFeedback()
 
         case "choose-discussion-guide":
             chooseGuideRequests += 1

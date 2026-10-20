@@ -205,3 +205,41 @@ enum NewItemFallback {
         index.pendingRename = folder.id
     }
 }
+
+/// Help ▸ Send Feedback… with **no project window frontmost** — Settings, the
+/// Welcome window, or no project window open at all.
+///
+/// There is no key project window to route to, so the menu broadcasts
+/// `.showFeedbackSheet`. A broadcast is heard by every project window, and it
+/// used to open a sheet in every one of them, or, with none open, in none (R82).
+/// This is the one-shot that makes it exactly one: the menu stages a request,
+/// the first window to hear the broadcast claims it, and the rest find it gone.
+/// When no window claims it, the menu opens one and that window claims it as it
+/// appears, which is the `NewItemFallback` shape.
+///
+/// It expires. A request nothing claimed (the window that was meant to open
+/// never did) must not surface as a sheet in whatever window opens later; an
+/// unexplained feedback sheet is the very report `FeedbackTrace` is chasing.
+@MainActor
+enum FeedbackFallback {
+    /// Long enough for `openWindow` to build a window and run its `onAppear`,
+    /// short enough that no later, unrelated window inherits the request.
+    static let lifetime: TimeInterval = 5
+
+    private static var requestedAt: Date?
+
+    /// Stage one request.
+    static func request(now: Date = Date()) {
+        requestedAt = now
+    }
+
+    /// Whether a request is staged and nobody has claimed it yet.
+    static var isPending: Bool { requestedAt != nil }
+
+    /// True for exactly one caller per request, and only while it is fresh.
+    static func claim(now: Date = Date()) -> Bool {
+        guard let at = requestedAt else { return false }
+        requestedAt = nil
+        return now.timeIntervalSince(at) <= lifetime
+    }
+}

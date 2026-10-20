@@ -224,6 +224,13 @@ struct FeedbackSheet: View {
                 form
             }
 
+            // In every phase, so Cancel (and Esc, its shortcut) is there while
+            // the sheet waits on `/api/health` too. It lived inside `form`, which
+            // is not drawn until that probe answers, and a wedged serve kept the
+            // sheet on a bare spinner for up to URLSession's 60 s (R81). Send
+            // stays disabled until the probe resolves (`canSend`).
+            buttons
+
             // DIAGNOSTIC — remove with FeedbackTrace. English on purpose: it
             // is a temporary trace for the maintainer, not product copy.
             if let traceReason {
@@ -274,17 +281,19 @@ struct FeedbackSheet: View {
             Text(model.t("anonymous"))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-
-            HStack {
-                Spacer()
-                Button(model.cancelLabel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button(model.t("send")) { Task { await submit() } }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!model.canSend)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var buttons: some View {
+        HStack {
+            Spacer()
+            Button(model.cancelLabel) { dismiss() }
+                .keyboardShortcut(.cancelAction)
+            Button(model.t("send")) { Task { await submit() } }
+                .keyboardShortcut(.defaultAction)
+                .disabled(!model.canSend)
+        }
     }
 
     private func submit() async {

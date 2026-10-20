@@ -106,6 +106,53 @@ struct CopyDiskSpaceAlertState: Identifiable {
 /// Sheet + alert presentation for the drag-onto-project copy flow.
 /// Extracted into a ViewModifier so the ContentView body stays inside the
 /// Swift type-checker's expression-complexity budget.
+/// The doors into this window's feedback sheet that arrive from outside the
+/// view: the menu's no-project-window broadcast, this window's page asking, and
+/// a window opened to take a request nobody else could (R82). Lifted out of
+/// `body` for the type-checker's sake (see `CopyDropPresentation`); the sheet
+/// itself stays in `body`, beside the doors that set the flag directly.
+private struct FeedbackDoors: ViewModifier {
+    @Binding var isShowing: Bool
+    let feedbackRequests: Int
+    let projectName: String
+
+    func body(content: Content) -> some View {
+        content
+            // The menu's fallback with no project window in front. Every window
+            // hears it; the one that claims `FeedbackFallback` opens the sheet.
+            .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { note in
+                let source = note.userInfo?[FeedbackTrace.sourceKey] as? String ?? "unknown-poster"
+                guard FeedbackFallback.claim() else {
+                    FeedbackTrace.log.notice("feedback broadcast not taken by this window from=\(source, privacy: .public) (claimed elsewhere, or expired)")
+                    return
+                }
+                FeedbackTrace.opened(by: "broadcast-received from=\(source) project=\(projectName)")
+                isShowing = true
+            }
+            // This window's page asked: the status page, or Help ▸ Send
+            // Feedback with this report's popout player in front.
+            .onChange(of: feedbackRequests) { _, _ in
+                FeedbackTrace.opened(by: "window-page-request project=\(projectName)")
+                isShowing = true
+            }
+            // The menu opened this window because no project window was open to
+            // take its request: take it now.
+            .onAppear {
+                if FeedbackFallback.claim() {
+                    FeedbackTrace.opened(by: "opened-for-feedback")
+                    isShowing = true
+                }
+            }
+            // Catch-all: logs every false→true flip, so a path nobody thought of
+            // still shows up (it will be the one with no matching "opened by" line).
+            .onChange(of: isShowing) { _, showing in
+                if showing {
+                    FeedbackTrace.log.notice("feedback sheet presenting project=\(projectName, privacy: .public) event=\(FeedbackTrace.describeCurrentEvent(), privacy: .public)")
+                }
+            }
+    }
+}
+
 private struct CopyDropPresentation: ViewModifier {
     @Binding var newFilesSheet: NewFilesSheetState?
     @Binding var copyDiskSpaceAlert: CopyDiskSpaceAlertState?
@@ -1202,24 +1249,22 @@ struct ContentView: View {
                 )
             }
         }
-        // Send Feedback (native) — Help ▸ Send Feedback and the status-page bridge
-        // both post `.showFeedbackSheet`. Present in EVERY state: with a live serve
-        // the sheet reads its config from `/api/health`; with no serve (the welcome
+        // Send Feedback (native). Present in EVERY state: with a live serve the
+        // sheet reads its config from `/api/health`; with no serve (the welcome
         // screen, before any project is selected) it falls back to the serve-free
         // `.serverless` config (canonical endpoint, enabled — same path the alpha
         // expiry flow uses), so the menu item is never a dead click.
-        .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { note in
-            let source = note.userInfo?[FeedbackTrace.sourceKey] as? String ?? "unknown-poster"
-            FeedbackTrace.opened(by: "broadcast-received from=\(source) project=\(selectedProject?.name ?? "none")")
-            showingFeedbackSheet = true
-        }
-        // Catch-all: logs every false→true flip, so a path nobody thought of
-        // still shows up (it will be the one with no matching "opened by" line).
-        .onChange(of: showingFeedbackSheet) { _, isShowing in
-            if isShowing {
-                FeedbackTrace.log.notice("feedback sheet presenting project=\(selectedProject?.name ?? "none", privacy: .public) event=\(FeedbackTrace.describeCurrentEvent(), privacy: .public)")
-            }
-        }
+        //
+        // Four doors, each opening ONE sheet (R82): Help ▸ Send Feedback with
+        // this window in front (`perform(.showFeedback)`), the sidebar ladybug,
+        // this window's page asking, and the menu's no-project-window fallback,
+        // the only broadcast, which one window takes by claiming
+        // `FeedbackFallback`. The last two are `FeedbackDoors`.
+        .modifier(FeedbackDoors(
+            isShowing: $showingFeedbackSheet,
+            feedbackRequests: bridgeHandler.feedbackRequests,
+            projectName: selectedProject?.name ?? "none"
+        ))
         .sheet(isPresented: $showingFeedbackSheet) {
             if let port = serveManager?.runningPort {
                 FeedbackSheet(port: port, i18n: i18n, onToast: { toast.show($0) })

@@ -109,6 +109,46 @@ struct WindowCommandTests {
         #expect(second == nil, "a second window must not also claim it")
     }
 
+    // MARK: - Send Feedback with no project window in front (R82)
+
+    @Test("a feedback request is taken by one window, not every window")
+    func feedbackFallbackIsOneShot() {
+        let now = Date()
+        FeedbackFallback.request(now: now)
+        #expect(FeedbackFallback.isPending)
+
+        // Three windows hear the broadcast; the first takes it.
+        let takers = (0..<3).filter { _ in FeedbackFallback.claim(now: now) }
+
+        #expect(takers.count == 1, "one sheet, not one per window")
+        #expect(!FeedbackFallback.isPending, "taken, so the menu opens no window")
+    }
+
+    @Test("an untaken feedback request stays for the window the menu opens")
+    func feedbackFallbackWaitsForTheOpenedWindow() {
+        let now = Date()
+        FeedbackFallback.request(now: now)
+        // No project window heard it, so the menu opens one; it claims on appear.
+        #expect(FeedbackFallback.isPending, "the menu must see that nobody took it")
+        #expect(FeedbackFallback.claim(now: now.addingTimeInterval(0.5)))
+    }
+
+    @Test("a stale feedback request never surfaces in a later window")
+    func feedbackFallbackExpires() {
+        let now = Date()
+        FeedbackFallback.request(now: now)
+        // The window that was meant to take it never opened; one opens later.
+        let later = now.addingTimeInterval(FeedbackFallback.lifetime + 1)
+        #expect(!FeedbackFallback.claim(now: later))
+        #expect(!FeedbackFallback.claim(now: later), "and it is gone, not retried")
+    }
+
+    @Test("no request, no sheet")
+    func feedbackFallbackNeedsARequest() {
+        _ = FeedbackFallback.claim()   // clear anything an earlier test left
+        #expect(!FeedbackFallback.claim())
+    }
+
     // MARK: - The sink
 
     @Test("sinks compare by window, not by closure")

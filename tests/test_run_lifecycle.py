@@ -566,6 +566,81 @@ def test_lifecycle_pid_file_removed_even_on_exception(tmp_path: Path):
     assert not pid_file_path(tmp_path).exists()
 
 
+def _abandoned() -> BaseException:
+    from bristlenose.events import Cause, CauseCategoryEnum, PipelineAbandonedError, PipelineSummary
+
+    return PipelineAbandonedError(
+        cause=Cause(category=CauseCategoryEnum.QUOTA, message="abandoned"),
+        summary=PipelineSummary(),
+    )
+
+
+@pytest.mark.parametrize(
+    "body_raises",
+    [None, KeyboardInterrupt, SystemExit(0), SystemExit(2), _abandoned, RuntimeError("boom")],
+    ids=["clean", "interrupt", "exit-0", "exit-2", "abandoned", "exception"],
+)
+def test_pid_file_removed_when_the_terminus_append_fails(
+    tmp_path: Path, monkeypatch, body_raises,
+):
+    """A full disk fails the terminus append too. run.pid is written before
+    run_started, so every handler must still remove it, or it names a dead
+    process until the next run."""
+    import bristlenose.run_lifecycle as rl
+
+    real_append = rl.append_event
+
+    def failing_terminus(path, event):
+        if isinstance(event, RunStartedEvent):
+            return real_append(path, event)
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(rl, "append_event", failing_terminus)
+    pid_during_body: list[bool] = []
+    with pytest.raises(OSError) as raised:
+        with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+            pid_during_body.append(pid_file_path(tmp_path).exists())
+            if body_raises is _abandoned:
+                raise _abandoned()
+            if body_raises is not None:
+                raise body_raises
+    assert raised.value.errno == 28, raised.value
+    assert pid_during_body == [True]
+    assert not pid_file_path(tmp_path).exists()
+
+
+def test_pid_file_removed_when_run_started_and_terminus_both_fail(
+    tmp_path: Path, monkeypatch,
+):
+    import bristlenose.run_lifecycle as rl
+
+    def no_space(path, event):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(rl, "append_event", no_space)
+    body_ran = False
+    with pytest.raises(OSError):
+        with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+            body_ran = True
+    assert not body_ran, "the body ran although run_started was never written"
+    assert not pid_file_path(tmp_path).exists()
+
+
+def test_a_pid_file_that_will_not_go_does_not_replace_the_cancel(tmp_path: Path, monkeypatch):
+    """The removal sits in a finally: a failed unlink must not turn a Ctrl-C
+    into a crash, nor leave the rest of the cleanup undone."""
+    import bristlenose.run_lifecycle as rl
+
+    def locked(output_dir):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(rl, "_remove_pid_file", locked)
+    with pytest.raises(KeyboardInterrupt):
+        with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+            raise KeyboardInterrupt
+    assert rl._hosted_backstop is None
+
+
 # ---------------------------------------------------------------------------
 # Stranded-run reconciliation
 # ---------------------------------------------------------------------------

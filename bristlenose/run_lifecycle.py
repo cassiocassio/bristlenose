@@ -1037,7 +1037,7 @@ def run_lifecycle(
     #
     # run.pid is written BEFORE run_started. A reader that sees run_started with
     # no live pid file reads the run as stranded, and a Mac scan landing in that
-    # gap kept the verdict (20 Oct 2026). Every handler below removes the pid file.
+    # gap kept the verdict (20 Oct 2026). The outer finally removes the pid file.
     telemetry_tokens: tuple[object, object] | None = None
     _hosted_backstop = _backstop
     try:
@@ -1065,7 +1065,6 @@ def run_lifecycle(
             ))
             log.info("run_cancelled run_id=%s signal=%s", run_id, cancel_cause.signal_name)
             telemetry.trim_run_terminus()
-            _remove_pid_file(output_dir)
             raise
         except SystemExit as exc:
             code = exc.code if isinstance(exc.code, int) else (1 if exc.code else 0)
@@ -1090,7 +1089,6 @@ def run_lifecycle(
                 _append_terminus(terminus)
                 log.info("%s run_id=%s exit_code=%s", terminus.event.value, run_id, code)
             telemetry.trim_run_terminus()
-            _remove_pid_file(output_dir)
             raise
         except PipelineAbandonedError as exc:
             # Abandon path: stage produced no usable data. The exception
@@ -1107,7 +1105,6 @@ def run_lifecycle(
                     run_id, exc.cause.category.value,
                 )
             telemetry.trim_run_terminus()
-            _remove_pid_file(output_dir)
             raise
         except BaseException as exc:
             ended = _now_iso()
@@ -1116,7 +1113,6 @@ def run_lifecycle(
             _append_terminus(terminus)
             log.info("%s run_id=%s category=%s", terminus.event.value, run_id, cause.category.value)
             telemetry.trim_run_terminus()
-            _remove_pid_file(output_dir)
             raise
         else:
             ended = _now_iso()
@@ -1126,8 +1122,16 @@ def run_lifecycle(
             ))
             log.info("run_completed run_id=%s", run_id)
             telemetry.trim_run_terminus()
-            _remove_pid_file(output_dir)
     finally:
+        # Here, not in each handler: a terminus append that raises (a full disk
+        # fails it as surely as run_started) skipped the handler's removal and
+        # left run.pid naming a dead process. Guarded so a failed unlink neither
+        # replaces the exception unwinding nor skips the rest of this block;
+        # readers take a dead pid's file as stale.
+        try:
+            _remove_pid_file(output_dir)
+        except OSError:
+            log.warning("run.pid not removed run_id=%s", run_id, exc_info=True)
         # An armed timer keeps its own reference: a hosted exit that hangs
         # after this point is still ended.
         _hosted_backstop = None

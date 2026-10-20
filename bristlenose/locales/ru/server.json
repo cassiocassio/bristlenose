@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Пока нет интервью для анализа.",
     "noRunDesktopLong": "Перетащите сюда папку с интервью, чтобы начать.",
+    "noRunDesktopHasInterviews": "Ещё не проанализировано.",
     "noRunCliShort": "Здесь пока пусто.",
     "cancelledShort": "Последний запуск был отменён.",
     "cancelledLong": "Запустите снова, когда будете готовы.",

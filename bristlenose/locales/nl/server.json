@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Nog geen interviews om te analyseren.",
     "noRunDesktopLong": "Sleep hier een map met interviews om te beginnen.",
+    "noRunDesktopHasInterviews": "Nog niet geanalyseerd.",
     "noRunCliShort": "Hier is nog niets te zien.",
     "cancelledShort": "Laatste run is geannuleerd.",
     "cancelledLong": "Voer opnieuw uit wanneer je klaar bent.",

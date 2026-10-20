@@ -132,6 +132,8 @@ extension FailureMessage {
         "desktop.pipeline.failure.missingInput": "A required input file is missing.",
         "desktop.pipeline.failure.missingBinary": "FFmpeg couldn't be found.",
         "desktop.pipeline.failure.outputExists": "Already analysed — re-analysing would replace the existing results.",
+        "desktop.pipeline.failure.providerNotSetUp": "{{provider}} isn't set up yet.",
+        "desktop.pipeline.failure.providerNotSetUpGeneric": "No AI provider is set up yet.",
         "desktop.pipeline.failure.unusableInput": "Some files couldn't be analysed.",
         "desktop.pipeline.failure.unknown": "Something went wrong during analysis.",
         "desktop.boot.failure.sidecarMissing": "Bristlenose can’t find its analysis engine at {{path}}.",

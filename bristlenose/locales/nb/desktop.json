@@ -338,6 +338,7 @@
       "missingInput": "Manglende inndata",
       "missingBinary": "Manglende verkt\u00f8y",
       "outputExists": "Allerede analysert",
+      "providerNotSetUp": "Leverandør ikke satt opp",
       "outputTruncated": "Utdatagrense n\u00e5dd",
       "unusableInput": "Ikke analysert",
       "unknown": "Mislyktes"
@@ -367,6 +368,8 @@
       "missingInput": "En n\u00f8dvendig inndatafil mangler.",
       "missingBinary": "Fant ikke FFmpeg.",
       "outputExists": "Allerede analysert \u2013 en ny analyse ville erstatte de eksisterende resultatene.",
+      "providerNotSetUp": "{{provider}} er ikke satt opp ennå.",
+      "providerNotSetUpGeneric": "Ingen KI-leverandør er satt opp ennå.",
       "unusableInput": "Noen filer kunne ikke analyseres.",
       "unknown": "Noe gikk galt under analysen."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Kopier detaljer",
         "showLog": "Vis logg",
-        "showLogTooltip": "Vis analyseloggfilen"
+        "showLogTooltip": "Vis analyseloggfilen",
+        "setUpProvider": "Sett opp leverandør…"
       },
       "tooltip": {
         "completed_partial": "Analysen ble fullført med feil for {{project}}"

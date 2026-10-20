@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "還沒有可分析的訪談。",
     "noRunDesktopLong": "把訪談資料夾拖到這裡即可開始。",
+    "noRunDesktopHasInterviews": "尚未分析。",
     "noRunCliShort": "這裡還沒有內容。",
     "cancelledShort": "上次執行已取消。",
     "cancelledLong": "準備好後再重新執行。",

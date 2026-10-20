@@ -26,6 +26,10 @@ struct ProjectDiagnosticPopover: View {
     /// in `Show Log`'s place — the log lives in the folder that can't be read.
     /// The caller closes the popover (an AppKit-hosted one ignores `dismiss`).
     var onLocate: (() -> Void)? = nil
+    /// Closes the popover before Settings opens over it. Supplied by the
+    /// presenter for the same reason as `onLocate`: an AppKit-hosted popover
+    /// ignores `dismiss`.
+    var closePopover: (() -> Void)? = nil
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
@@ -84,6 +88,13 @@ struct ProjectDiagnosticPopover: View {
                 Button(i18n.t("desktop.chrome.locate")) { onLocate() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+            } else if state.needsProvider {
+                Button(i18n.t("desktop.pipeline.diagnostic.action.setUpProvider")) {
+                    closePopover?()
+                    SettingsWindow.shared.show(pane: .llm)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             } else if FileManager.default.fileExists(
                 atPath: PipelineRunner.logFileURL(for: project).path
             ) {

@@ -338,6 +338,7 @@
       "missingInput": "Ontbrekende invoer",
       "missingBinary": "Ontbrekend hulpmiddel",
       "outputExists": "Al geanalyseerd",
+      "providerNotSetUp": "Provider niet ingesteld",
       "outputTruncated": "Uitvoerlimiet bereikt",
       "unusableInput": "Niet geanalyseerd",
       "unknown": "Mislukt"
@@ -367,6 +368,8 @@
       "missingInput": "Er ontbreekt een vereist invoerbestand.",
       "missingBinary": "FFmpeg is niet gevonden.",
       "outputExists": "Al geanalyseerd \u2014 opnieuw analyseren zou de bestaande resultaten vervangen.",
+      "providerNotSetUp": "{{provider}} is nog niet ingesteld.",
+      "providerNotSetUpGeneric": "Er is nog geen AI-provider ingesteld.",
       "unusableInput": "Sommige bestanden konden niet worden geanalyseerd.",
       "unknown": "Er is iets misgegaan tijdens de analyse."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Kopieer details",
         "showLog": "Toon logboek",
-        "showLogTooltip": "Toon het logbestand van de analyse"
+        "showLogTooltip": "Toon het logbestand van de analyse",
+        "setUpProvider": "Stel provider in…"
       },
       "tooltip": {
         "completed_partial": "Analyse voltooid met fouten voor {{project}}"

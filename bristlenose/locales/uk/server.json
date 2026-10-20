@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Ще немає інтерв’ю для аналізу.",
     "noRunDesktopLong": "Перетягніть сюди теку з інтерв’ю, щоб почати.",
+    "noRunDesktopHasInterviews": "Ще не проаналізовано.",
     "noRunCliShort": "Тут поки що нічого немає.",
     "cancelledShort": "Останній запуск скасовано.",
     "cancelledLong": "Запустіть повторно, коли будете готові.",

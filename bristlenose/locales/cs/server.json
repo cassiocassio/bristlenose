@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Zatím žádné rozhovory k analýze.",
     "noRunDesktopLong": "Začněte přetažením složky s rozhovory sem.",
+    "noRunDesktopHasInterviews": "Zatím neanalyzováno.",
     "noRunCliShort": "Tady zatím nic není.",
     "cancelledShort": "Poslední běh byl zrušen.",
     "cancelledLong": "Až budete připraveni, spusťte znovu.",

@@ -339,6 +339,7 @@
       "missingInput": "Missing input",
       "missingBinary": "Missing tool",
       "outputExists": "Already analysed",
+      "providerNotSetUp": "Provider not set up",
       "outputTruncated": "Output limit reached",
       "unusableInput": "Not analysed",
       "unknown": "Failed"
@@ -368,6 +369,8 @@
       "missingInput": "A required input file is missing.",
       "missingBinary": "FFmpeg couldn't be found.",
       "outputExists": "Already analysed \u2014 re-analysing would replace the existing results.",
+      "providerNotSetUp": "{{provider}} isn't set up yet.",
+      "providerNotSetUpGeneric": "No AI provider is set up yet.",
       "unusableInput": "Some files couldn't be analysed.",
       "unknown": "Something went wrong during analysis."
     },
@@ -400,7 +403,8 @@
       "action": {
         "copy": "Copy details",
         "showLog": "Show Log",
-        "showLogTooltip": "Show the analysis log file"
+        "showLogTooltip": "Show the analysis log file",
+        "setUpProvider": "Set Up Provider…"
       },
       "tooltip": {
         "completed_partial": "Analysis finished with failures for {{project}}"

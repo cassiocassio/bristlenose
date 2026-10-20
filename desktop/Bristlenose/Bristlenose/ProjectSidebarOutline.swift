@@ -1971,7 +1971,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             onLocate: { [weak self] in
                 self?.activePopover?.close()
                 self?.onLocate(id)
-            })
+            },
+            closePopover: { [weak self] in self?.activePopover?.close() })
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize

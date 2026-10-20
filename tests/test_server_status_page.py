@@ -141,6 +141,32 @@ class TestDetectStatus:
         assert "Drop a folder" in info.long
         assert info.outcome == "no-run"
 
+    def test_no_run_with_interviews_does_not_say_there_are_none(self, tmp_path: Path) -> None:
+        """Found by the 20 Oct 2026 guest walk: a run refused before it began
+        (no AI provider) left "No interviews to analyse yet. Drop a folder of
+        interviews here" over a folder holding the interview just added."""
+        project = tmp_path / "project"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        (project / "Session 1.vtt").write_text("WEBVTT\n", encoding="utf-8")
+        (project / "._Session 1.vtt").write_bytes(b"\x00")  # Finder's, not an interview
+        info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        assert info is not None
+        assert info.short == "Not analysed yet."
+        assert info.long is None
+        assert info.outcome == "no-run"
+
+    def test_no_run_with_only_os_metadata_still_invites_a_drop(self, tmp_path: Path) -> None:
+        project = tmp_path / "project"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        (project / ".DS_Store").write_bytes(b"\x00")
+        (project / "._clip.mp4").write_bytes(b"\x00")
+        (project / "notes.txt").write_text("not an interview", encoding="utf-8")
+        info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        assert info is not None
+        assert "No interviews" in info.short
+
     def test_completed_lets_spa_render(self, tmp_path: Path) -> None:
         _seed_completed(tmp_path)
         assert detect_status(tmp_path, _cond(tmp_path)) is None
@@ -727,6 +753,19 @@ class TestProdIntercept:
         assert "Nothing to see here" in resp.text
         # SPA root must NOT mount
         assert 'id="bn-app-root"' not in resp.text
+
+    def test_desktop_never_run_page_sees_the_interviews_in_the_project(
+        self, prod_app_factory, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The serve hands its own project folder to the page: without it the
+        Mac shows "No interviews to analyse yet" beside an added interview."""
+        monkeypatch.setenv("BRISTLENOSE_PLATFORM", "desktop")
+        (tmp_path / "Session 1.vtt").write_text("WEBVTT\n", encoding="utf-8")
+        client, _ = prod_app_factory()
+        resp = client.get("/report/")
+        assert resp.status_code == 200
+        assert "Not analysed yet." in resp.text
+        assert "No interviews to analyse yet" not in resp.text
 
     def test_failed_run_intercepts(self, prod_app_factory, tmp_path: Path) -> None:
         # Seed BEFORE app creation so the event watcher's startup pass picks it up.

@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Brak wywiadów do analizy.",
     "noRunDesktopLong": "Przeciągnij tutaj folder z wywiadami, aby rozpocząć.",
+    "noRunDesktopHasInterviews": "Jeszcze nie przeanalizowano.",
     "noRunCliShort": "Na razie nie ma tu nic do zobaczenia.",
     "cancelledShort": "Ostatnie uruchomienie zostało anulowane.",
     "cancelledLong": "Uruchom ponownie, gdy będziesz gotów.",

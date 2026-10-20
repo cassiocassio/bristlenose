@@ -338,6 +338,7 @@
       "missingInput": "Eingabe fehlt",
       "missingBinary": "Werkzeug fehlt",
       "outputExists": "Bereits analysiert",
+      "providerNotSetUp": "Anbieter nicht eingerichtet",
       "outputTruncated": "Ausgabelimit erreicht",
       "unusableInput": "Nicht analysiert",
       "unknown": "Fehlgeschlagen"
@@ -367,6 +368,8 @@
       "missingInput": "Eine ben\u00f6tigte Eingabedatei fehlt.",
       "missingBinary": "FFmpeg wurde nicht gefunden.",
       "outputExists": "Bereits analysiert \u2013 eine erneute Analyse w\u00fcrde die vorhandenen Ergebnisse ersetzen.",
+      "providerNotSetUp": "{{provider}} ist noch nicht eingerichtet.",
+      "providerNotSetUpGeneric": "Es ist noch kein KI-Anbieter eingerichtet.",
       "unusableInput": "Einige Dateien konnten nicht analysiert werden.",
       "unknown": "Bei der Analyse ist etwas schiefgelaufen."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Details kopieren",
         "showLog": "Protokoll anzeigen",
-        "showLogTooltip": "Analyseprotokolldatei anzeigen"
+        "showLogTooltip": "Analyseprotokolldatei anzeigen",
+        "setUpProvider": "Anbieter einrichten…"
       },
       "tooltip": {
         "completed_partial": "Analyse für {{project}} mit Fehlern beendet"

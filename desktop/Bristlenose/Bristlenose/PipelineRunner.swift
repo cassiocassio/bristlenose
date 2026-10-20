@@ -45,6 +45,13 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     /// to re-analyse* was blocked. UX surfaces this with a "Re-analyse
     /// (replaces existing output)" CTA that spawns with `--clean`.
     case outputExists = "output_exists"
+    /// No AI provider the run could use: the active cloud provider has no key,
+    /// or none was ever chosen and the default has none. Mac-only, like
+    /// `outputExists` — Python's setup check refuses before the run's lifecycle
+    /// opens, so no terminus carries it. Usually nothing is spawned at all
+    /// (`PipelineRunner.start` refuses first); `categoriseFailure` catches the
+    /// cases the Keychain read can't see, such as an Azure endpoint left blank.
+    case providerNotSetUp = "provider_not_set_up"
     /// Quote extraction produced more output than the model's cap allows,
     /// even after the pipeline split the session into smaller chunks.
     /// Recovery is a larger-output model or manual pre-segmentation.
@@ -90,6 +97,7 @@ enum PipelineFailureCategory: String, Codable, Equatable {
         case .missingInput: leaf = "missingInput"
         case .missingBinary: leaf = "missingBinary"
         case .outputExists: leaf = "outputExists"
+        case .providerNotSetUp: leaf = "providerNotSetUp"
         case .outputTruncated: leaf = "outputTruncated"
         case .unusableInput: leaf = "unusableInput"
         case .unknown: leaf = "unknown"
@@ -121,7 +129,7 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     var namesProvider: Bool {
         switch self {
         case .auth, .outOfCredit, .network, .quota, .apiRequest, .apiServer,
-             .outputTruncated:
+             .outputTruncated, .providerNotSetUp:
             return true
         case .disk, .whisper, .userSignal, .missingDep, .missingInput,
              .missingBinary, .outputExists, .unusableInput, .unknown:
@@ -239,6 +247,15 @@ extension PipelineState {
     /// machine stays awake until the subprocess actually exits.
     var keepsMachineAwake: Bool {
         if case .running = self { return true }
+        return false
+    }
+
+    /// The analysis couldn't start for want of an AI provider. The diagnostic
+    /// popover offers Settings ▸ LLM Provider in `Show Log`'s place, as it
+    /// offers Locate… for a folder it can't read: the one act that fixes what
+    /// it is showing.
+    var needsProvider: Bool {
+        if case .failed(_, .providerNotSetUp) = self { return true }
         return false
     }
 }
@@ -535,16 +552,28 @@ final class PipelineRunner: ObservableObject {
     /// records instead. The closure reads errno itself — Swift does not keep it
     /// across a closure's return.
     private let sendSignal: (pid_t, Int32) -> Int32
+    private let hasConsent: @MainActor () -> Bool
+    private let keyReadiness: @MainActor () -> BristlenoseShared.APIKeyReadiness
 
     /// - Parameters:
     ///   - notificationCenter: where Quit is observed. A test passes its own,
     ///     so posting Quit there reaches no other object in the test host.
     ///   - sendSignal: how a signal is sent to a run at Quit; returns 0 or the errno.
+    ///   - hasConsent: whether the AI disclosure has been acknowledged.
+    ///   - keyReadiness: what the key overlay would inject into a run now.
+    ///     A test passes both so it can drive `start` without the app's own
+    ///     defaults or Keychain.
     init(
         notificationCenter: NotificationCenter = .default,
-        sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno }
+        sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno },
+        hasConsent: @escaping @MainActor () -> Bool = { PipelineRunner.hasAIConsent },
+        keyReadiness: @escaping @MainActor () -> BristlenoseShared.APIKeyReadiness = {
+            BristlenoseShared.apiKeyReadiness(using: KeychainHelper.liveStore)
+        }
     ) {
         self.sendSignal = sendSignal
+        self.hasConsent = hasConsent
+        self.keyReadiness = keyReadiness
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language) runs again, and the per-session
@@ -1314,7 +1343,7 @@ final class PipelineRunner: ObservableObject {
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
     func start(project: Project, clean: Bool = false) {
-        guard Self.hasAIConsent else {
+        guard hasConsent() else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
             )
@@ -1330,6 +1359,22 @@ final class PipelineRunner: ObservableObject {
             Self.logger.warning(
                 "start ignored — orphan attached for project=\(project.id.uuidString, privacy: .public)"
             )
+            return
+        }
+
+        // No key to inject → the run could only fail, in Python's setup check,
+        // after a sidecar launch. Say so now instead: the row takes the failure
+        // glyph, its popover offers Settings ▸ LLM Provider, and Analyse retries
+        // once a key is saved. Not for a project already running or queued:
+        // starting one of those does nothing, and must not overwrite its state.
+        let chosen = UserDefaults.standard.string(forKey: "activeProvider")
+            .flatMap(LLMProvider.init(rawValue:))
+        if currentlyRunning != project.id, !queue.contains(project.id),
+           let refusal = Self.providerRefusal(keyReadiness(), chosen: chosen) {
+            Self.logger.notice(
+                "start refused — no API key for the active provider (project=\(project.id.uuidString, privacy: .public))"
+            )
+            state[project.id] = refusal
             return
         }
 
@@ -2001,6 +2046,20 @@ var args = ["run", project.path, "--no-serve"]
 
     // MARK: - Failure categorisation
 
+    /// The state a run is refused with when it has no key to carry, or nil to
+    /// let it start. `chosen` is the provider the researcher picked, if any: the
+    /// fallback to Python's default is not a choice, and "Claude isn't set up
+    /// yet" said to someone who never picked Claude would be a small lie.
+    nonisolated static func providerRefusal(
+        _ readiness: BristlenoseShared.APIKeyReadiness, chosen: LLMProvider?
+    ) -> PipelineState? {
+        guard case .missing = readiness else { return nil }
+        return .failed(
+            FailureMessage.failure(for: .providerNotSetUp, provider: chosen),
+            category: .providerNotSetUp
+        )
+    }
+
     /// Regex-based mapping from stderr tail + exit status to a
     /// `PipelineFailureCategory`. Keep heuristics here so display code stays
     /// category-only.
@@ -2019,6 +2078,17 @@ var args = ["run", project.path, "--no-serve"]
         // name in some locales, and we want it classified before the broader
         // "model" / "whisper" matches accidentally fire on unrelated output.
         if matches(tail, #"output directory already exists"#) { return .outputExists }
+        // No provider the run could use. The setup check prints it in its table
+        // ("✗ API key  No Anthropic API key") and exits before the run's
+        // lifecycle opens, so no terminus carries a cause. A healthy row names
+        // the key instead ("✓ API key  Claude (sk-…)"), so "no … api key" is
+        // only ever the failure.
+        if matches(
+            tail,
+            #"no (anthropic|openai|azure openai|google gemini) api key|no azure openai (endpoint|deployment name)|no ai provider configured"#
+        ) {
+            return .providerNotSetUp
+        }
         if matches(tail, #"401|invalid api key|authentication"#) { return .auth }
         // Out of credit (billing) BEFORE the transient rate-limit bucket —
         // Anthropic serves it as a 400 + "credit balance is too low", OpenAI as
@@ -2163,7 +2233,7 @@ var args = ["run", project.path, "--no-serve"]
     /// Mirror of `ContentView.hasConsent` — same UserDefaults key the AppStorage
     /// property wraps. Pipeline guard is defence-in-depth; the real gate is
     /// the modal-blocking AIConsentView sheet.
-    private static var hasAIConsent: Bool {
+    static var hasAIConsent: Bool {
         UserDefaults.standard.integer(forKey: "aiConsentVersion")
             >= AIConsentView.currentVersion
     }

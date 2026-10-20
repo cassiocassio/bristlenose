@@ -320,6 +320,7 @@
       "missingInput": "\u7f3a\u5c11\u8f38\u5165",
       "missingBinary": "\u7f3a\u5c11\u5de5\u5177",
       "outputExists": "\u5df2\u5206\u6790",
+      "providerNotSetUp": "供應商未設定",
       "outputTruncated": "\u9054\u5230\u8f38\u51fa\u4e0a\u9650",
       "unusableInput": "\u672a\u5206\u6790",
       "unknown": "\u5931\u6557"
@@ -349,6 +350,8 @@
       "missingInput": "\u7f3a\u5c11\u5fc5\u8981\u7684\u8f38\u5165\u6a94\u6848\u3002",
       "missingBinary": "\u627e\u4e0d\u5230 FFmpeg\u3002",
       "outputExists": "\u5df2\u5206\u6790\u5b8c\u6210\uff1b\u91cd\u65b0\u5206\u6790\u6703\u53d6\u4ee3\u73fe\u6709\u7d50\u679c\u3002",
+      "providerNotSetUp": "{{provider}} 尚未設定。",
+      "providerNotSetUpGeneric": "尚未設定 AI 供應商。",
       "unusableInput": "\u6709\u4e9b\u6a94\u6848\u7121\u6cd5\u5206\u6790\u3002",
       "unknown": "\u5206\u6790\u904e\u7a0b\u4e2d\u767c\u751f\u554f\u984c\u3002"
     },
@@ -381,7 +384,8 @@
       "action": {
         "copy": "拷貝詳細資訊",
         "showLog": "顯示記錄",
-        "showLogTooltip": "顯示分析記錄檔案"
+        "showLogTooltip": "顯示分析記錄檔案",
+        "setUpProvider": "設定供應商⋯"
       },
       "tooltip": {
         "completed_partial": "{{project}} 的分析已完成，但有失敗"

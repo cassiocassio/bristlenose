@@ -338,6 +338,7 @@
       "missingInput": "Saknad indata",
       "missingBinary": "Saknat verktyg",
       "outputExists": "Redan analyserad",
+      "providerNotSetUp": "Leverantör inte konfigurerad",
       "outputTruncated": "Utdatagr\u00e4ns n\u00e5dd",
       "unusableInput": "Inte analyserad",
       "unknown": "Misslyckades"
@@ -367,6 +368,8 @@
       "missingInput": "En n\u00f6dv\u00e4ndig indatafil saknas.",
       "missingBinary": "FFmpeg hittades inte.",
       "outputExists": "Redan analyserad \u2013 en ny analys skulle ers\u00e4tta de befintliga resultaten.",
+      "providerNotSetUp": "{{provider}} är inte konfigurerad ännu.",
+      "providerNotSetUpGeneric": "Ingen AI-leverantör är konfigurerad ännu.",
       "unusableInput": "Vissa filer kunde inte analyseras.",
       "unknown": "N\u00e5got gick fel under analysen."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Kopiera information",
         "showLog": "Visa logg",
-        "showLogTooltip": "Visa analysens loggfil"
+        "showLogTooltip": "Visa analysens loggfil",
+        "setUpProvider": "Konfigurera leverantör…"
       },
       "tooltip": {
         "completed_partial": "Analysen slutfördes med fel för {{project}}"

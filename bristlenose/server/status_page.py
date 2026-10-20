@@ -194,6 +194,27 @@ def _build_details(cause: Cause | None) -> str | None:
     return _format_cause(cause) or None
 
 
+def _holds_interviews(project_dir: Path) -> bool:
+    """Whether a file Bristlenose analyses sits at the folder's top level.
+
+    Top level only, as the Mac's own work-to-do check counts: one listing per
+    page view, with no walk into subfolders.
+    """
+    from bristlenose.models import classify_file
+    from bristlenose.utils.fs import is_os_metadata
+
+    try:
+        return any(
+            entry.is_file()
+            and not entry.name.startswith(".")
+            and not is_os_metadata(entry)
+            and classify_file(entry) is not None
+            for entry in project_dir.iterdir()
+        )
+    except OSError:
+        return False
+
+
 def detect_status(
     output_dir: Path,
     condition: Condition,
@@ -203,12 +224,14 @@ def detect_status(
     importing: bool = False,
     has_data: bool = True,
     sessions_imported: bool = False,
+    project_dir: Path | None = None,
 ) -> StatusInfo | None:
     """Decide whether to intercept the SPA route, from the project's condition.
 
     Returns ``None`` when the SPA should render; a :class:`StatusInfo`
     otherwise. The decision is :func:`page_for`; this builds the page for it,
-    reading the cause of the *same* run the decision was about.
+    reading the cause of the *same* run the decision was about. ``project_dir``
+    lets the never-run page see whether interviews are already there.
     """
     outcome = page_for(condition, policy, importing=importing, has_data=has_data,
                        sessions_imported=sessions_imported)
@@ -217,6 +240,18 @@ def detect_status(
     latest = condition.latest
 
     if outcome == "no-run":
+        if platform == "desktop" and project_dir is not None and _holds_interviews(project_dir):
+            # Interviews are there and nothing ran: the Mac refused the run (no
+            # AI provider), or Python's setup check stopped it before the run
+            # began. "No interviews" would send the researcher looking for
+            # files they have already added; the Mac's row says why.
+            return StatusInfo(
+                kind=MessageKind.INFO,
+                short=t("server.statusPage.noRunDesktopHasInterviews"),
+                long=None,
+                details=None,
+                outcome="no-run",
+            )
         if platform == "desktop":
             return StatusInfo(
                 kind=MessageKind.INFO,

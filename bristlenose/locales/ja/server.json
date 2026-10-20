@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "分析するインタビューがまだありません。",
     "noRunDesktopLong": "インタビューのフォルダをここにドラッグして始めましょう。",
+    "noRunDesktopHasInterviews": "まだ分析されていません。",
     "noRunCliShort": "まだ何もありません。",
     "cancelledShort": "前回の実行はキャンセルされました。",
     "cancelledLong": "準備ができたら再実行してください。",

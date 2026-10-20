@@ -338,6 +338,7 @@
       "missingInput": "Sy\u00f6te puuttuu",
       "missingBinary": "Ty\u00f6kalu puuttuu",
       "outputExists": "Jo analysoitu",
+      "providerNotSetUp": "Palveluntarjoajaa ei määritetty",
       "outputTruncated": "Tulosteraja saavutettu",
       "unusableInput": "Ei analysoitu",
       "unknown": "Ep\u00e4onnistui"
@@ -367,6 +368,8 @@
       "missingInput": "Tarvittava sy\u00f6tetiedosto puuttuu.",
       "missingBinary": "FFmpegi\u00e4 ei l\u00f6ytynyt.",
       "outputExists": "Jo analysoitu \u2013 uusi analyysi korvaisi nykyiset tulokset.",
+      "providerNotSetUp": "Palvelua {{provider}} ei ole vielä määritetty.",
+      "providerNotSetUpGeneric": "Tekoälypalvelua ei ole vielä määritetty.",
       "unusableInput": "Joitakin tiedostoja ei voitu analysoida.",
       "unknown": "Analyysin aikana tapahtui virhe."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Kopioi tiedot",
         "showLog": "Näytä loki",
-        "showLogTooltip": "Näytä analyysin lokitiedosto"
+        "showLogTooltip": "Näytä analyysin lokitiedosto",
+        "setUpProvider": "Määritä palveluntarjoaja…"
       },
       "tooltip": {
         "completed_partial": "Analyysi valmistui virheineen projektille {{project}}"

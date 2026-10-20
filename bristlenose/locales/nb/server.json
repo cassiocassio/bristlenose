@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Ingen intervjuer å analysere ennå.",
     "noRunDesktopLong": "Slipp en mappe med intervjuer her for å starte.",
+    "noRunDesktopHasInterviews": "Ikke analysert ennå.",
     "noRunCliShort": "Ingenting å se her ennå.",
     "cancelledShort": "Forrige kjøring ble avbrutt.",
     "cancelledLong": "Kjør på nytt når du er klar.",

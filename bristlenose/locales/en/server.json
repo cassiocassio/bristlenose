@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "No interviews to analyse yet.",
     "noRunDesktopLong": "Drop a folder of interviews here to start.",
+    "noRunDesktopHasInterviews": "Not analysed yet.",
     "noRunCliShort": "Nothing to see here, yet.",
     "cancelledShort": "Last run was cancelled.",
     "cancelledLong": "Re-run when ready.",

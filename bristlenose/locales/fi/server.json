@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Ei vielä analysoitavia haastatteluja.",
     "noRunDesktopLong": "Aloita pudottamalla haastattelukansio tähän.",
+    "noRunDesktopHasInterviews": "Ei vielä analysoitu.",
     "noRunCliShort": "Täällä ei ole vielä mitään nähtävää.",
     "cancelledShort": "Edellinen ajo peruutettiin.",
     "cancelledLong": "Aja uudelleen, kun olet valmis.",

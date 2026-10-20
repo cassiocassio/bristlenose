@@ -338,6 +338,7 @@
       "missingInput": "Falta la entrada",
       "missingBinary": "Falta una herramienta",
       "outputExists": "Ya analizado",
+      "providerNotSetUp": "Proveedor sin configurar",
       "outputTruncated": "L\u00edmite de salida alcanzado",
       "unusableInput": "No analizado",
       "unknown": "Fall\u00f3"
@@ -367,6 +368,8 @@
       "missingInput": "Falta un archivo de entrada necesario.",
       "missingBinary": "No se ha encontrado FFmpeg.",
       "outputExists": "Ya analizado: volver a analizar sustituir\u00eda los resultados existentes.",
+      "providerNotSetUp": "{{provider}} aún no está configurado.",
+      "providerNotSetUpGeneric": "Aún no hay ningún proveedor de IA configurado.",
       "unusableInput": "No se han podido analizar algunos archivos.",
       "unknown": "Algo ha salido mal durante el an\u00e1lisis."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Copiar detalles",
         "showLog": "Mostrar registro",
-        "showLogTooltip": "Mostrar el archivo de registro del an\u00e1lisis"
+        "showLogTooltip": "Mostrar el archivo de registro del an\u00e1lisis",
+        "setUpProvider": "Configurar proveedor…"
       },
       "tooltip": {
         "completed_partial": "El an\u00e1lisis termin\u00f3 con fallos en {{project}}"

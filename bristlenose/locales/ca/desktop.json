@@ -338,6 +338,7 @@
       "missingInput": "Falta l'entrada",
       "missingBinary": "Falta una eina",
       "outputExists": "Ja analitzat",
+      "providerNotSetUp": "Proveïdor sense configurar",
       "outputTruncated": "L\u00edmit de sortida assolit",
       "unusableInput": "No analitzat",
       "unknown": "Execuci\u00f3 fallida"
@@ -367,6 +368,8 @@
       "missingInput": "Falta un fitxer d'entrada necessari.",
       "missingBinary": "No s'ha trobat FFmpeg.",
       "outputExists": "Ja s'ha analitzat: tornar a analitzar substituiria els resultats existents.",
+      "providerNotSetUp": "{{provider}} encara no està configurat.",
+      "providerNotSetUpGeneric": "Encara no hi ha cap proveïdor d'IA configurat.",
       "unusableInput": "No s'han pogut analitzar alguns fitxers.",
       "unknown": "Alguna cosa ha anat malament durant l'an\u00e0lisi."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Copia els detalls",
         "showLog": "Mostra el registre",
-        "showLogTooltip": "Mostra el fitxer de registre de l'anàlisi"
+        "showLogTooltip": "Mostra el fitxer de registre de l'anàlisi",
+        "setUpProvider": "Configura el proveïdor…"
       },
       "tooltip": {
         "completed_partial": "L'anàlisi ha acabat amb errors per a {{project}}"

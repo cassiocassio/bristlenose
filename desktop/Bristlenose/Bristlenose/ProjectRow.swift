@@ -437,7 +437,8 @@ struct ProjectRow: View {
                         project: project, state: state, liveData: liveData,
                         onLocate: onLocate.map { locate in
                             { isShowingDiagnostics = false; locate() }
-                        }
+                        },
+                        closePopover: { isShowingDiagnostics = false }
                     )
                 }
             }

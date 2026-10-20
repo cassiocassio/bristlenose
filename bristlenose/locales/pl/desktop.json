@@ -374,6 +374,7 @@
       "missingInput": "Brak danych wej\u015bciowych",
       "missingBinary": "Brak narz\u0119dzia",
       "outputExists": "Ju\u017c przeanalizowano",
+      "providerNotSetUp": "Dostawca nieskonfigurowany",
       "outputTruncated": "Osi\u0105gni\u0119to limit wyj\u015bcia",
       "unusableInput": "Nieprzeanalizowane",
       "unknown": "Niepowodzenie"
@@ -403,6 +404,8 @@
       "missingInput": "Brakuje wymaganego pliku wej\u015bciowego.",
       "missingBinary": "Nie znaleziono FFmpeg.",
       "outputExists": "Ju\u017c przeanalizowano \u2013 ponowna analiza zast\u0105pi\u0142aby istniej\u0105ce wyniki.",
+      "providerNotSetUp": "Dostawca {{provider}} nie jest jeszcze skonfigurowany.",
+      "providerNotSetUpGeneric": "Nie skonfigurowano jeszcze żadnego dostawcy AI.",
       "unusableInput": "Niekt\u00f3rych plik\u00f3w nie uda\u0142o si\u0119 przeanalizowa\u0107.",
       "unknown": "Co\u015b posz\u0142o nie tak podczas analizy."
     },
@@ -435,7 +438,8 @@
       "action": {
         "copy": "Kopiuj szczegóły",
         "showLog": "Pokaż dziennik",
-        "showLogTooltip": "Pokaż plik dziennika analizy"
+        "showLogTooltip": "Pokaż plik dziennika analizy",
+        "setUpProvider": "Skonfiguruj dostawcę…"
       },
       "tooltip": {
         "completed_partial": "Analiza zakończona z niepowodzeniami dla {{project}}"

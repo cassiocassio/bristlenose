@@ -338,6 +338,7 @@
       "missingInput": "Girdi eksik",
       "missingBinary": "Ara\u00e7 eksik",
       "outputExists": "Zaten analiz edildi",
+      "providerNotSetUp": "Sağlayıcı ayarlanmadı",
       "outputTruncated": "\u00c7\u0131kt\u0131 s\u0131n\u0131r\u0131na ula\u015f\u0131ld\u0131",
       "unusableInput": "Analiz edilmedi",
       "unknown": "Ba\u015far\u0131s\u0131z"
@@ -367,6 +368,8 @@
       "missingInput": "Gerekli bir girdi dosyas\u0131 eksik.",
       "missingBinary": "FFmpeg bulunamad\u0131.",
       "outputExists": "Zaten analiz edildi \u2014 yeniden analiz mevcut sonu\u00e7lar\u0131n yerini al\u0131r.",
+      "providerNotSetUp": "{{provider}} henüz ayarlanmadı.",
+      "providerNotSetUpGeneric": "Henüz bir yapay zekâ sağlayıcısı ayarlanmadı.",
       "unusableInput": "Baz\u0131 dosyalar analiz edilemedi.",
       "unknown": "Analiz s\u0131ras\u0131nda bir sorun olu\u015ftu."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Ayrıntıları kopyala",
         "showLog": "Günlüğü Göster",
-        "showLogTooltip": "Analiz günlüğü dosyasını göster"
+        "showLogTooltip": "Analiz günlüğü dosyasını göster",
+        "setUpProvider": "Sağlayıcıyı Ayarla…"
       },
       "tooltip": {
         "completed_partial": "{{project}} için analiz hatalarla tamamlandı"

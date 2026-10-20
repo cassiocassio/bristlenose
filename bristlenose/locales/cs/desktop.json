@@ -373,6 +373,7 @@
       "missingInput": "Chyb\u00ed vstup",
       "missingBinary": "Chyb\u00ed n\u00e1stroj",
       "outputExists": "Ji\u017e analyzov\u00e1no",
+      "providerNotSetUp": "Poskytovatel není nastaven",
       "outputTruncated": "Dosa\u017een limit v\u00fdstupu",
       "unusableInput": "Neanalyzov\u00e1no",
       "unknown": "Selhalo"
@@ -402,6 +403,8 @@
       "missingInput": "Chyb\u00ed pot\u0159ebn\u00fd vstupn\u00ed soubor.",
       "missingBinary": "FFmpeg nebyl nalezen.",
       "outputExists": "Ji\u017e analyzov\u00e1no \u2013 op\u011btovn\u00e1 anal\u00fdza by nahradila st\u00e1vaj\u00edc\u00ed v\u00fdsledky.",
+      "providerNotSetUp": "Poskytovatel {{provider}} ještě není nastaven.",
+      "providerNotSetUpGeneric": "Zatím není nastaven žádný poskytovatel AI.",
       "unusableInput": "N\u011bkter\u00e9 soubory se nepoda\u0159ilo analyzovat.",
       "unknown": "P\u0159i anal\u00fdze se n\u011bco pokazilo."
     },
@@ -434,7 +437,8 @@
       "action": {
         "copy": "Kopírovat podrobnosti",
         "showLog": "Zobrazit protokol",
-        "showLogTooltip": "Zobrazit soubor protokolu analýzy"
+        "showLogTooltip": "Zobrazit soubor protokolu analýzy",
+        "setUpProvider": "Nastavit poskytovatele…"
       },
       "tooltip": {
         "completed_partial": "Analýza projektu {{project}} skončila s chybami"

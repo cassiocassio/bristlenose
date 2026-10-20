@@ -338,6 +338,7 @@
       "missingInput": "Manglende input",
       "missingBinary": "Manglende v\u00e6rkt\u00f8j",
       "outputExists": "Allerede analyseret",
+      "providerNotSetUp": "Udbyder ikke sat op",
       "outputTruncated": "Outputgr\u00e6nse n\u00e5et",
       "unusableInput": "Ikke analyseret",
       "unknown": "Mislykkedes"
@@ -367,6 +368,8 @@
       "missingInput": "En n\u00f8dvendig inputfil mangler.",
       "missingBinary": "FFmpeg blev ikke fundet.",
       "outputExists": "Allerede analyseret \u2013 en ny analyse ville erstatte de eksisterende resultater.",
+      "providerNotSetUp": "{{provider}} er ikke sat op endnu.",
+      "providerNotSetUpGeneric": "Der er ikke sat nogen AI-udbyder op endnu.",
       "unusableInput": "Nogle filer kunne ikke analyseres.",
       "unknown": "Noget gik galt under analysen."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Kopiér detaljer",
         "showLog": "Vis log",
-        "showLogTooltip": "Vis analyselogfilen"
+        "showLogTooltip": "Vis analyselogfilen",
+        "setUpProvider": "Opsæt udbyder…"
       },
       "tooltip": {
         "completed_partial": "Analysen blev færdig med fejl for {{project}}"

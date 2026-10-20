@@ -443,10 +443,38 @@ enum BristlenoseShared {
         into env: inout [String: String], using store: any KeychainStore,
         defaults: UserDefaults = .standard
     ) {
+        switch apiKeyReadiness(using: store, defaults: defaults) {
+        case .keyless(let active):
+            log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")
+        case .missing(let active):
+            log.info("no API key in Keychain for active provider=\(active, privacy: .public)")
+        case .present(let active, let value):
+            env["BRISTLENOSE_\(active.uppercased())_API_KEY"] = value
+            log.info("injected API key for active provider=\(active, privacy: .public)")
+        }
+    }
+
+    /// What the key overlay will carry into the next spawn.
+    enum APIKeyReadiness: Equatable {
+        /// The provider takes no key (Ollama), or is not one we know.
+        case keyless(provider: String)
+        /// A cloud provider with no key in the Keychain: a run can only fail.
+        case missing(provider: String)
+        /// A cloud provider and its key.
+        case present(provider: String, key: String)
+    }
+
+    /// The one decision about the active provider's key, read by
+    /// `overlayAPIKeys` (which injects it) and by `PipelineRunner.start` (which
+    /// refuses to spawn a run with nothing to inject), so the two cannot
+    /// disagree about whether a run can reach an LLM.
+    static func apiKeyReadiness(
+        using store: any KeychainStore, defaults: UserDefaults = .standard
+    ) -> APIKeyReadiness {
         // Scope to the active provider only. Eager fetch of all four cloud
         // keys (sandbox walk #7) caused 3× Keychain prompts the moment a
         // local-only user dropped a project — the loudest possible "I chose
-        // local-only" failure. Ollama is keyless: nothing to inject; bail.
+        // local-only" failure. Ollama is keyless: nothing to inject.
         // Miro is not an LLM provider key — it's injected separately by
         // overlayMiroToken (called from childEnvironment), so it's absent here.
         // Nil-case coupling: `overlayPreferences` injects NO
@@ -457,18 +485,11 @@ enum BristlenoseShared {
         // change to either side is greppable across the Swift/Python boundary.
         let active = defaults.string(forKey: "activeProvider")
             ?? Self.pythonDefaultProvider
-        let cloudProviders: Set<String> = ["anthropic", "openai", "azure", "google"]
-        guard cloudProviders.contains(active) else {
-            log.info("active provider=\(active, privacy: .public) is keyless — no API key injection")
-            return
-        }
+        guard cloudProviders.contains(active) else { return .keyless(provider: active) }
         guard let value = store.get(provider: active), !value.isEmpty else {
-            log.info("no API key in Keychain for active provider=\(active, privacy: .public)")
-            return
+            return .missing(provider: active)
         }
-        let envKey = "BRISTLENOSE_\(active.uppercased())_API_KEY"
-        env[envKey] = value
-        log.info("injected API key for active provider=\(active, privacy: .public)")
+        return .present(provider: active, key: value)
     }
 
     /// Overlay the Miro access token (if connected) as

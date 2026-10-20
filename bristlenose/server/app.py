@@ -847,6 +847,7 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
         # A server fact, not the manifest's: a session can be readable on disk
         # before its rows are in the database. The per-session import sets it.
         sessions_imported=bool(getattr(app.state, "sessions_imported", False)),
+        project_dir=project_dir,
     )
     if status is None:
         return None

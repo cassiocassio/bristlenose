@@ -14,6 +14,7 @@ trued-against: HEAD@main (6562c7be) on 2026-10-14
 
 ## Changelog
 
+- _2026-10-20_ — new §4.3: with no AI provider set up, the Mac no longer spawns a run that can only fail. Found by the guest walk on 0.42.0 (`experiments/guest-walk/`): adding an interview with no key started a run, Python's setup check stopped it, the Mac classified it `unknown`, and the detail pane said "No interviews to analyse yet" over the interview just added. The owner chose *refuse, don't spawn* over keeping the doomed run or asking first. Anchors: `PipelineRunner.providerRefusal`, `BristlenoseShared.apiKeyReadiness`, `PipelineFailureCategory.providerNotSetUp`, `status_page._holds_interviews`.
 - _2026-10-14_ — trued up against progressive lenses (12–13 Oct): a first analysis — and so every Mac Re-analyse — now delivers each session as it is readable, which no section said. Pointers added in the owners table, §1.1, §2, §3.1–§3.3 and §5.4; the progressive doc owns the detail. Anchors: `bristlenose/readable_chain.py`, `server/progressive.py`, `server/status_page.py` (`sessions_imported`), commits "progressive lenses phase 1: a first analysis delivers each session's transcript as whisper finishes it" and "progressive lenses: the Mac's lens rail leaves a withheld lens for Sessions; a clean re-analyse is a first analysis".
 - _2026-10-13_ — trued up: §2 names the `SubtitleDelta` cases including the forked state and adds the Forked transition; the Re-analyse sequence says stash, not delete. Anchors: `ProjectSubtitle.swift` `SubtitleDelta`, register row 29.
 - _2026-10-04_ — **Analyse** gained a fourth reason to appear: an analysed project
@@ -492,6 +493,27 @@ These were those placeholders. What kept them alive was that no mockup had ever
 drawn them — the rule was in a memory file, and the review happens on the
 drawing.
 
+### 4.3 No AI provider — refused before a spawn
+
+**Decided 20 Oct 2026.** Every route to a run (Add Files, a drop, Analyse,
+Re-analyse…, the discussion rerun) goes through `PipelineRunner.start`, and with
+no key for the active cloud provider it now refuses there instead of spawning.
+The project takes `.failed(category: .providerNotSetUp)`: the row's failure glyph,
+"No AI provider is set up yet." (or "ChatGPT isn't set up yet." when one was
+chosen), and a **Set Up Provider…** button in the diagnostic popover that opens
+Settings ▸ LLM Provider, in Show Log's place, as Locate… is for a folder it can't
+read. Analyse is the retry once a key is saved.
+
+The question is answered by `BristlenoseShared.apiKeyReadiness`, the same
+decision `overlayAPIKeys` injects from, so the refusal and the spawn cannot
+disagree about whether a key is there. It covers the key only. An Azure endpoint
+or deployment left blank still spawns, and the classifier names that run's
+failure the same category from Python's setup-check output.
+
+Two things it does not do, on purpose: it does not start the run when a key is
+later saved (Analyse does), and the row still reads "Run failed", the existing
+header for *the analysis you asked for didn't happen*.
+
 ---
 
 ## 5. Failure modes
@@ -567,6 +589,7 @@ what this violates at session granularity.
 | Fifteen silent recordings dropped under `succeeded=57` | **outcome 3b** | `NO_SPEECH` — stated, counted out of `succeeded`, excluded from the abandon check |
 | The same loss in **`transcribe`**, reported as `42/57` with `failed: 0` | **outcome 3** — honest count, no account | the sibling rollup mirrored: silent sessions stated, and kept out of the abandon predicate |
 | A failed **re-analysis** read as *never analysed* after relaunch | the failure recorded and never read | `parseManifest` consults the events log when the manifest is absent |
+| No AI provider set up: a run spawned, failed in setup, read as `unknown`, under "No interviews to analyse yet" beside the interview | a dead end with the CLI's advice | §4.3: refused before a spawn; `providerNotSetUp`; the never-run page says "Not analysed yet." when interviews are there |
 
 ### 5.3 Open
 

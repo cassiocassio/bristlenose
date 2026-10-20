@@ -338,6 +338,7 @@
       "missingInput": "Entrada ausente",
       "missingBinary": "Ferramenta ausente",
       "outputExists": "J\u00e1 analisado",
+      "providerNotSetUp": "Provedor não configurado",
       "outputTruncated": "Limite de sa\u00edda atingido",
       "unusableInput": "N\u00e3o analisado",
       "unknown": "Falhou"
@@ -367,6 +368,8 @@
       "missingInput": "Falta um arquivo de entrada necess\u00e1rio.",
       "missingBinary": "FFmpeg n\u00e3o foi encontrado.",
       "outputExists": "J\u00e1 analisado \u2014 uma nova an\u00e1lise substituiria os resultados existentes.",
+      "providerNotSetUp": "{{provider}} ainda não está configurado.",
+      "providerNotSetUpGeneric": "Nenhum provedor de IA está configurado ainda.",
       "unusableInput": "N\u00e3o foi poss\u00edvel analisar alguns arquivos.",
       "unknown": "Algo deu errado durante a an\u00e1lise."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Copiar detalhes",
         "showLog": "Mostrar log",
-        "showLogTooltip": "Mostrar o arquivo de log da análise"
+        "showLogTooltip": "Mostrar o arquivo de log da análise",
+        "setUpProvider": "Configurar provedor…"
       },
       "tooltip": {
         "completed_partial": "A análise terminou com falhas para {{project}}"

@@ -51,7 +51,7 @@ struct PipelineRunnerCopyTests {
         let categories: [PipelineFailureCategory] = [
             .auth, .outOfCredit, .network, .quota, .disk, .whisper, .userSignal,
             .apiRequest, .apiServer, .missingDep, .missingInput, .missingBinary,
-            .outputExists, .outputTruncated, .unusableInput, .unknown,
+            .outputExists, .providerNotSetUp, .outputTruncated, .unusableInput, .unknown,
         ]
         for category in categories {
             for provider in [LLMProvider.claude, nil] {

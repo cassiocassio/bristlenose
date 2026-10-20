@@ -338,6 +338,7 @@
       "missingInput": "Entr\u00e9e manquante",
       "missingBinary": "Outil manquant",
       "outputExists": "D\u00e9j\u00e0 analys\u00e9",
+      "providerNotSetUp": "Fournisseur non configuré",
       "outputTruncated": "Limite de sortie atteinte",
       "unusableInput": "Non analys\u00e9",
       "unknown": "\u00c9chec"
@@ -367,6 +368,8 @@
       "missingInput": "Un fichier d\u2019entr\u00e9e n\u00e9cessaire est manquant.",
       "missingBinary": "FFmpeg est introuvable.",
       "outputExists": "D\u00e9j\u00e0 analys\u00e9 : une nouvelle analyse remplacerait les r\u00e9sultats existants.",
+      "providerNotSetUp": "{{provider}} n'est pas encore configuré.",
+      "providerNotSetUpGeneric": "Aucun fournisseur d'IA n'est encore configuré.",
       "unusableInput": "Certains fichiers n\u2019ont pas pu \u00eatre analys\u00e9s.",
       "unknown": "Une erreur s\u2019est produite pendant l\u2019analyse."
     },
@@ -399,7 +402,8 @@
       "action": {
         "copy": "Copier les d\u00e9tails",
         "showLog": "Afficher le journal",
-        "showLogTooltip": "Afficher le fichier journal de l'analyse"
+        "showLogTooltip": "Afficher le fichier journal de l'analyse",
+        "setUpProvider": "Configurer le fournisseur…"
       },
       "tooltip": {
         "completed_partial": "Analyse termin\u00e9e avec des erreurs pour {{project}}"

@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Non ci sono ancora interviste da analizzare.",
     "noRunDesktopLong": "Trascina qui una cartella di interviste per iniziare.",
+    "noRunDesktopHasInterviews": "Non ancora analizzato.",
     "noRunCliShort": "Qui non c’è ancora niente.",
     "cancelledShort": "L’ultima esecuzione è stata annullata.",
     "cancelledLong": "Riesegui quando vuoi.",

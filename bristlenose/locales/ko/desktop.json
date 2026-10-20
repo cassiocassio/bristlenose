@@ -320,6 +320,7 @@
       "missingInput": "\uc785\ub825 \uc5c6\uc74c",
       "missingBinary": "\ub3c4\uad6c \uc5c6\uc74c",
       "outputExists": "\uc774\ubbf8 \ubd84\uc11d\ub428",
+      "providerNotSetUp": "제공자 미설정",
       "outputTruncated": "\ucd9c\ub825 \ud55c\ub3c4 \ub3c4\ub2ec",
       "unusableInput": "\ubd84\uc11d \uc548 \ub428",
       "unknown": "\uc2e4\ud328"
@@ -349,6 +350,8 @@
       "missingInput": "\ud544\uc694\ud55c \uc785\ub825 \ud30c\uc77c\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
       "missingBinary": "FFmpeg\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
       "outputExists": "\uc774\ubbf8 \ubd84\uc11d\ub418\uc5c8\uc2b5\ub2c8\ub2e4. \ub2e4\uc2dc \ubd84\uc11d\ud558\uba74 \uae30\uc874 \uacb0\uacfc\uac00 \ub300\uccb4\ub429\ub2c8\ub2e4.",
+      "providerNotSetUp": "{{provider}} 설정이 아직 완료되지 않았습니다.",
+      "providerNotSetUpGeneric": "아직 설정된 AI 제공자가 없습니다.",
       "unusableInput": "\uc77c\ubd80 \ud30c\uc77c\uc744 \ubd84\uc11d\ud560 \uc218 \uc5c6\uc5c8\uc2b5\ub2c8\ub2e4.",
       "unknown": "\ubd84\uc11d \uc911 \ubb38\uc81c\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4."
     },
@@ -381,7 +384,8 @@
       "action": {
         "copy": "\uc138\ubd80\uc815\ubcf4 \ubcf5\uc0ac",
         "showLog": "\ub85c\uadf8 \ubcf4\uae30",
-        "showLogTooltip": "\ubd84\uc11d \ub85c\uadf8 \ud30c\uc77c \ubcf4\uae30"
+        "showLogTooltip": "\ubd84\uc11d \ub85c\uadf8 \ud30c\uc77c \ubcf4\uae30",
+        "setUpProvider": "제공업체 설정…"
       },
       "tooltip": {
         "completed_partial": "{{project}} \ubd84\uc11d\uc774 \uc2e4\ud328\uc640 \ud568\uaed8 \uc644\ub8cc\ub428"

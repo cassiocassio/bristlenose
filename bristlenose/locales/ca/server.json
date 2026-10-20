@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Encara no hi ha entrevistes per analitzar.",
     "noRunDesktopLong": "Arrossega-hi una carpeta d'entrevistes per començar.",
+    "noRunDesktopHasInterviews": "Encara no s’ha analitzat.",
     "noRunCliShort": "Aquí encara no hi ha res.",
     "cancelledShort": "S'ha cancel·lat l'última execució.",
     "cancelledLong": "Torna-ho a executar quan vulguis.",

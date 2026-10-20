@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Henüz analiz edilecek görüşme yok.",
     "noRunDesktopLong": "Başlamak için buraya bir görüşme klasörü bırakın.",
+    "noRunDesktopHasInterviews": "Henüz analiz edilmedi.",
     "noRunCliShort": "Burada henüz görülecek bir şey yok.",
     "cancelledShort": "Son çalıştırma iptal edildi.",
     "cancelledLong": "Hazır olduğunuzda yeniden çalıştırın.",

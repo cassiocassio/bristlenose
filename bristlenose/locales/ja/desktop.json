@@ -383,6 +383,7 @@
       "missingInput": "\u5165\u529b\u306a\u3057",
       "missingBinary": "\u30c4\u30fc\u30eb\u306a\u3057",
       "outputExists": "\u5206\u6790\u6e08\u307f",
+      "providerNotSetUp": "プロバイダー未設定",
       "outputTruncated": "\u51fa\u529b\u4e0a\u9650\u306b\u5230\u9054",
       "unusableInput": "\u672a\u5206\u6790",
       "unknown": "\u5931\u6557"
@@ -412,6 +413,8 @@
       "missingInput": "\u5fc5\u8981\u306a\u5165\u529b\u30d5\u30a1\u30a4\u30eb\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
       "missingBinary": "FFmpeg \u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
       "outputExists": "\u5206\u6790\u6e08\u307f\u3067\u3059\u3002\u518d\u5206\u6790\u3059\u308b\u3068\u65e2\u5b58\u306e\u7d50\u679c\u304c\u7f6e\u304d\u63db\u308f\u308a\u307e\u3059\u3002",
+      "providerNotSetUp": "{{provider}} はまだ設定されていません。",
+      "providerNotSetUpGeneric": "AIプロバイダーがまだ設定されていません。",
       "unusableInput": "\u4e00\u90e8\u306e\u30d5\u30a1\u30a4\u30eb\u3092\u5206\u6790\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
       "unknown": "\u5206\u6790\u4e2d\u306b\u554f\u984c\u304c\u767a\u751f\u3057\u307e\u3057\u305f\u3002"
     },
@@ -444,7 +447,8 @@
       "action": {
         "copy": "\u8a73\u7d30\u3092\u30b3\u30d4\u30fc",
         "showLog": "\u30ed\u30b0\u3092\u8868\u793a",
-        "showLogTooltip": "\u89e3\u6790\u30ed\u30b0\u30d5\u30a1\u30a4\u30eb\u3092\u8868\u793a"
+        "showLogTooltip": "\u89e3\u6790\u30ed\u30b0\u30d5\u30a1\u30a4\u30eb\u3092\u8868\u793a",
+        "setUpProvider": "プロバイダを設定…"
       },
       "tooltip": {
         "completed_partial": "{{project}} \u306e\u5206\u6790\u306f\u5931\u6557\u3092\u542b\u3093\u3067\u7d42\u4e86\u3057\u307e\u3057\u305f"

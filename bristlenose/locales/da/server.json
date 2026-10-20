@@ -2,6 +2,7 @@
   "statusPage": {
     "noRunDesktopShort": "Ingen interviews at analysere endnu.",
     "noRunDesktopLong": "Træk en mappe med interviews hertil for at starte.",
+    "noRunDesktopHasInterviews": "Ikke analyseret endnu.",
     "noRunCliShort": "Der er ikke noget at se her endnu.",
     "cancelledShort": "Sidste kørsel blev annulleret.",
     "cancelledLong": "Kør igen, når du er klar.",

@@ -87,7 +87,7 @@ export interface ActivityJob {
   onCancel?: () => void;
   /**
    * Custom poll function. If provided, called instead of getAutoCodeStatus().
-   * Must return a NormalisedJobStatus (or throw to be silently ignored).
+   * Must return a NormalisedJobStatus. A throw is a failed poll; a run of them ends the job.
    */
   pollFn?: () => Promise<NormalisedJobStatus>;
 }
@@ -174,11 +174,29 @@ function toChipJob(job: ActivityJob, norm: NormalisedJobStatus | null): Activity
 
 const POLL_INTERVAL = 2000;
 
+/**
+ * Failed polls in a row after which a job is ended as failed (about eight seconds).
+ * A server that restarted has forgotten its clip and screens jobs and failed its AutoCode
+ * ones, and one that went away answers nothing, so a chip that waited for an answer
+ * spun for ever (R13). One answer in between starts the count again.
+ */
+const MAX_POLL_FAILURES = 5;
+
+/** The status of a job nothing can report on any more: the chip's existing failed state. */
+const LOST: NormalisedJobStatus = {
+  status: "failed",
+  progressLabel: null,
+  durationLabel: null,
+  errorMessage: null,
+  partialMessage: null,
+};
+
 export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, NormalisedJobStatus | null>>({});
   const [expanded, setExpanded] = useState(false);
   const completeFired = useRef<Set<string>>(new Set());
+  const pollFailures = useRef<Record<string, number>>({});
   // Ref mirror of statuses so the interval callback can read current values
   // without restarting the timer on every status change.
   const statusesRef = useRef(statuses);
@@ -192,10 +210,20 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
 
     promise
       .then((norm) => {
+        pollFailures.current[job.id] = 0;
         setStatuses((prev) => ({ ...prev, [job.id]: norm }));
       })
       .catch(() => {
-        // Silently ignore — endpoint may not exist yet.
+        // One failure may be a blip; a run of them is a job nothing can report on.
+        const n = (pollFailures.current[job.id] ?? 0) + 1;
+        pollFailures.current[job.id] = n;
+        // A job that already finished keeps its outcome: a chip stays up until dismissed, and
+        // every change to the job list polls each job once more.
+        if (n >= MAX_POLL_FAILURES) {
+          setStatuses((prev) =>
+            isTerminal(prev[job.id]?.status) ? prev : { ...prev, [job.id]: LOST },
+          );
+        }
       });
   }, []);
 

@@ -744,7 +744,9 @@ function AppShell() {
             },
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getClipExtractionStatus();
-              const status = s.status === "idle" ? "running" : s.status;
+              // The server holds the job before the export's start returns, so "idle" means it
+              // has forgotten it (it restarted): the export ended, it is not still running (R13).
+              const status = s.status === "idle" ? "failed" : s.status;
               return {
                 status: status as "running" | "completed" | "failed" | "cancelled",
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,

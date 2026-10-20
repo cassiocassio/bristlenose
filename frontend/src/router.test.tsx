@@ -248,3 +248,45 @@ describe("AutoCode chip completion", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// R13: a clip export the server no longer holds (it restarted; its jobs live in
+// memory) answers "idle", which the chip read as still running, for ever.
+// ---------------------------------------------------------------------------
+
+describe("Clip export chip after a server restart", () => {
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/export/clips/status")
+        ? { status: "idle", progress: 0, total: 0, completed_count: 0, skipped_count: 0, current_clip: "", output_dir: null }
+        : url.includes("/quotes")
+          ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
+          : url.includes("/sessions")
+            ? { sessions: [] }
+            : url.includes("/codebook")
+              ? { groups: [], ungrouped: [], all_tag_names: [] }
+              : {};
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+  });
+
+  it("ends as failed rather than spinning", async () => {
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob("clips", { type: "clips", frameworkId: "", frameworkTitle: "", total: 3 });
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed"),
+    );
+  });
+});

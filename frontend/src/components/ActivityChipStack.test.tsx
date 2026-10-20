@@ -582,4 +582,75 @@ describe("ActivityChipStack", () => {
     expect(screen.getByText(/Tagging failed/)).toBeInTheDocument();
     expect(screen.queryByText(/boom/)).not.toBeInTheDocument();
   });
+
+  // R13: a job whose status can no longer be read (the server restarted or went away, or
+  // no longer knows the job) used to spin for ever, because every failed poll was ignored.
+  describe("a job whose status can no longer be read", () => {
+    it("ends in the failed state, offers a dismiss, and stops polling", async () => {
+      const onComplete = vi.fn();
+      mockGetStatus.mockRejectedValue(new Error("Failed to fetch"));
+      render(<ActivityChipStack jobs={[makeJob({ onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+      expect(screen.getByTestId("bn-activity-chip-close")).toBeInTheDocument();
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      const calls = mockGetStatus.mock.calls.length;
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(mockGetStatus.mock.calls.length).toBe(calls);
+    });
+
+    it("ends a custom-polled job (clips, screens) the same way", async () => {
+      const pollFn = vi.fn(() => Promise.reject(new Error("Failed to fetch")));
+      render(<ActivityChipStack jobs={[makeJob({ id: "screens:1", pollFn })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+    });
+
+    it("never turns a job that already finished into a failure", async () => {
+      // A finished chip stays up until dismissed, and every change to the job list polls each
+      // job once more: with the server gone, those failures must not add up to "failed".
+      mockGetStatus.mockResolvedValueOnce(
+        makeStatus({ status: "completed", processed_quotes: 10, completed_at: "2026-02-20T10:01:30Z" }),
+      );
+      mockGetStatus.mockRejectedValue(new Error("Failed to fetch"));
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      for (let i = 0; i < 6; i++) {
+        rerender(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+        await act(async () => {});
+      }
+      expect(mockGetStatus.mock.calls.length).toBeGreaterThanOrEqual(6);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+    });
+
+    it("keeps running through a few failed polls that are followed by an answer", async () => {
+      // Four failures, an answer, four more: never five in a row.
+      const fail = () => mockGetStatus.mockRejectedValueOnce(new Error("Failed to fetch"));
+      for (let i = 0; i < 4; i++) fail();
+      mockGetStatus.mockResolvedValueOnce(makeStatus());
+      for (let i = 0; i < 4; i++) fail();
+      mockGetStatus.mockResolvedValue(makeStatus());
+      render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      for (let i = 0; i < 9; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+      expect(mockGetStatus.mock.calls.length).toBeGreaterThanOrEqual(10);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+    });
+  });
 });

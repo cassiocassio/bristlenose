@@ -45,6 +45,13 @@
     margin-top: var(--bn-space-md);
 }
 
+/* The same fallback inside a sidebar (PanelErrorBoundary.tsx) is panel
+   chrome, so it takes the chrome size, not the body size. */
+.bn-empty-state.bn-panel-error {
+    font-size: var(--bn-text-label);
+    line-height: var(--bn-text-label-lh);
+}
+
 /* Refetch overlay — dim existing data while a refetch is in flight.
    `inert` is set on the same element from the React hook to block AT
    and keyboard input; this rule covers visual dim + pointer cursor.

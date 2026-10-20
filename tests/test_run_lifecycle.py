@@ -962,6 +962,72 @@ def test_subprocess_hosted_second_signal_does_not_lose_the_cancel(tmp_path: Path
     )
 
 
+_HOST_LEFT_INTERMEDIATE = """
+import subprocess, sys, time
+from pathlib import Path
+child = subprocess.Popen([sys.executable, "-c", sys.argv[1]], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+events = Path(sys.argv[2])
+deadline = time.time() + 60
+while time.time() < deadline:
+    if events.exists() and "run_started" in events.read_text():
+        break
+    time.sleep(0.02)
+"""
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
+def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: Path):
+    """The app that started the run exits, and the run then fails — a print to
+    the dead pipe, inside the watcher's window (R19, 20 Oct 2026). It ended
+    because the researcher left, so it reads Stopped, not "CLI exited with code
+    1". Deterministic: the stand-in app waits for run_started, exits, and only
+    then does the run fail.
+    """
+    repo_root = Path(__file__).parent.parent
+    go = tmp_path / "go"
+    script = textwrap.dedent(f"""
+        import sys, time
+        sys.path.insert(0, {str(repo_root)!r})
+        from pathlib import Path
+        from bristlenose.events import KindEnum
+        from bristlenose.run_lifecycle import run_lifecycle
+        with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN):
+            while not Path({str(go)!r}).exists():
+                time.sleep(0.02)
+            raise SystemExit(1)
+    """)
+    f = events_path(tmp_path)
+    subprocess.run(
+        [sys.executable, "-c", _HOST_LEFT_INTERMEDIATE, script, str(f)],
+        env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR",
+             "_BRISTLENOSE_HOSTED_BY_DESKTOP": "1"},
+        check=True, timeout=90,
+    )
+    go.write_text("app gone")
+    landed = _wait_for_event(
+        f, lambda e: isinstance(e, (RunCancelledEvent, RunFailedEvent)), timeout=60.0,
+    )
+    assert landed, "the run wrote no terminus"
+    terminus = [e for e in read_events(f) if isinstance(e, (RunCancelledEvent, RunFailedEvent))]
+    assert len(terminus) == 1
+    assert isinstance(terminus[0], RunCancelledEvent), terminus[0]
+    assert terminus[0].cause.category == CauseCategoryEnum.USER_SIGNAL
+    assert "exited with code 1" in (terminus[0].cause.message or ""), "the original cause is kept"
+
+
+def test_subprocess_hosted_run_whose_app_is_alive_still_fails(tmp_path: Path):
+    """The control: the app is still there, so a failure is a failure."""
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path, body="raise SystemExit(1)",
+        env={"_BRISTLENOSE_HOSTED_BY_DESKTOP": "1"},
+    )
+    proc.wait(timeout=60)
+    events = read_events(events_path(tmp_path))
+    assert any(isinstance(e, RunFailedEvent) for e in events)
+    assert not any(isinstance(e, RunCancelledEvent) for e in events)
+
+
 def test_subprocess_clean_exit_writes_run_completed(tmp_path: Path):
     proc = _spawn_lifecycle_subprocess(tmp_path, body="pass")
     proc.wait(timeout=30)

@@ -822,6 +822,44 @@ def run_lifecycle(
         started_at=started_at,
     )
 
+    # The Mac app's pid, for a run it started. A hosted run is never launchd's
+    # child, so a parent of 1 at entry means the app had already gone.
+    host_ppid = os.getppid() if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1" else None
+
+    def _failure_terminus(ended: str, cause: Cause, kw: _TerminusKwargs) -> AnyEvent:
+        """``run_failed`` — unless the app that started this run has gone.
+
+        A run outliving the Mac app fails at its next print (stdout was a pipe
+        to the app) or is cut short by the parent-death watcher, and a print
+        inside the watcher's 0.5 s window used to win: "CLI exited with code
+        1" for a run the researcher had quit (R19). Whatever it ended with, it
+        ended because they left, so it is recorded as stopped, and resuming
+        surfaces any real failure again. The original cause stays in the
+        message and the log.
+        """
+        if host_ppid is not None and (host_ppid == 1 or os.getppid() != host_ppid):
+            log.warning(
+                "run_cancelled run_id=%s host_left — the run ended with category=%s",
+                run_id, cause.category.value,
+            )
+            return RunCancelledEvent(
+                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                ended_at=ended,
+                cause=Cause(
+                    category=CauseCategoryEnum.USER_SIGNAL,
+                    # A forensic record: English whatever the CLI locale.
+                    message=(
+                        "The app running this analysis exited; the run then "
+                        f"ended with: {cause.message or cause.category.value}"
+                    ),
+                ),
+                **kw,
+            )
+        return RunFailedEvent(
+            ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+            ended_at=ended, cause=cause, **kw,
+        )
+
     def _terminus_kwargs() -> _TerminusKwargs:
         """Render handle-attached cost + summary as terminus-event kwargs."""
         out: _TerminusKwargs = {}
@@ -893,16 +931,15 @@ def run_lifecycle(
                 ))
                 log.info("run_completed run_id=%s exit_code=0", run_id)
             else:
-                append_event(events_file, RunFailedEvent(
-                    ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                    ended_at=ended,
-                    cause=Cause(
+                append_event(events_file, _failure_terminus(
+                    ended,
+                    Cause(
                         category=CauseCategoryEnum.UNKNOWN,
                         # A forensic record: English whatever the CLI locale.
                         message=t_in("en", "server.statusPage.cliExitedWithCode", code=code),
                         exit_code=code,
                     ),
-                    **_terminus_kwargs(),
+                    _terminus_kwargs(),
                 ))
                 log.info("run_failed run_id=%s exit_code=%s", run_id, code)
             telemetry.trim_run_terminus()
@@ -915,10 +952,7 @@ def run_lifecycle(
             ended = _now_iso()
             kw = _terminus_kwargs()
             kw["summary"] = exc.summary
-            append_event(events_file, RunFailedEvent(
-                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended, cause=exc.cause, **kw,
-            ))
+            append_event(events_file, _failure_terminus(ended, exc.cause, kw))
             log.error(
                 "run_abandoned run_id=%s category=%s",
                 run_id, exc.cause.category.value,
@@ -929,10 +963,7 @@ def run_lifecycle(
         except BaseException as exc:
             ended = _now_iso()
             cause = categorise_exception(exc)
-            append_event(events_file, RunFailedEvent(
-                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
-                ended_at=ended, cause=cause, **_terminus_kwargs(),
-            ))
+            append_event(events_file, _failure_terminus(ended, cause, _terminus_kwargs()))
             log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)

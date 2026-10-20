@@ -27,7 +27,10 @@ distinguish "key valid + paid" from "key valid + no balance" — both return
 State (finding 8): :func:`state_path` returns ``~/Library/Application
 Support/Bristlenose/state.json`` on macOS and ``$XDG_DATA_HOME/Bristlenose/
 state.json`` on Linux. The 24-hour TTL means a successful validation skips
-the network on subsequent runs within the window.
+the network on subsequent runs within the window — for the same request only:
+each record carries :func:`request_fingerprint` (the model and the
+``request_params``), so a model or ``llm_max_tokens`` changed the same day is
+checked again. Until 20 Oct 2026 the record was keyed by provider alone.
 
 Whitelist (finding 4): the preflight is only called from LLM-touching
 commands (``run``, ``analyze``, ``transcribe-only``). Read-only commands
@@ -44,6 +47,7 @@ keychain/store, or fresh paste).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -136,19 +140,40 @@ def write_state(state: dict[str, Any]) -> None:
         f.write(payload)
 
 
-def _is_recently_validated(state: dict[str, Any], provider: str) -> bool:
+def request_fingerprint(model: str, params: dict[str, Any]) -> str:
+    """A short digest of the request a validation sent: the model and the
+    parameters from ``request_params``. The 24-hour cache holds only for the
+    same request; a model or ``llm_max_tokens`` changed the same day is a new
+    request, which the provider may refuse, so it is checked again."""
+    blob = json.dumps({"model": model, "params": params}, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def _is_recently_validated(
+    state: dict[str, Any], provider: str, request: str | None = None
+) -> bool:
     info = state.get("providers", {}).get(provider, {})
     last = info.get("last_validated_epoch")
     if not isinstance(last, (int, float)):
         return False
+    # A record from another request, or from before records named one (the
+    # one-token ping that sent none of the run's parameters), proves nothing
+    # about this request.
+    if request is not None and info.get("request") != request:
+        return False
     return (time.time() - last) < _TTL_SECONDS
 
 
-def _mark_validated(state: dict[str, Any], provider: str, *, source: str) -> None:
-    state.setdefault("providers", {})[provider] = {
+def _mark_validated(
+    state: dict[str, Any], provider: str, *, source: str, request: str | None = None
+) -> None:
+    info: dict[str, Any] = {
         "last_validated_epoch": int(time.time()),
         "source": source,
     }
+    if request is not None:
+        info["request"] = request
+    state.setdefault("providers", {})[provider] = info
     state["first_run"] = False
 
 
@@ -608,7 +633,8 @@ def preflight_api_key(
     - **Provider with no rich support** (azure, google): skip rich validation;
       let downstream LLM calls surface failure naturally with the generic
       "Provider says: ..." copy on the call-site.
-    - **Recently validated** (24h TTL): skip the network call.
+    - **Recently validated** (24h TTL) with the same request (model and
+      parameters, :func:`request_fingerprint`): skip the network call.
     - **No key at all**: skip — the existing ``_maybe_guide_provider_setup``
       handles missing-key UX; the preflight only validates *present* keys.
     - **Non-TTY**: skip the first-run *banner* but still validate. A CI run
@@ -640,9 +666,19 @@ def preflight_api_key(
     ):
         return
 
+    # The request this run will send — the model on the wire and every parameter
+    # the pipeline's calls carry — which the cache below is keyed by.
+    _wire_model = settings.azure_deployment if provider == "azure" else (
+        settings.local_model if provider == "local" else settings.llm_model
+    )
+    params = request_params(
+        provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
+    )
+    request = request_fingerprint(_wire_model, params)
+
     state = read_state()
     first_run = bool(state.get("first_run", True))
-    if _is_recently_validated(state, provider):
+    if _is_recently_validated(state, provider, request):
         return
 
     facts = billing_for(provider)
@@ -664,9 +700,6 @@ def preflight_api_key(
     # The moment the provider/model pair is sent on the wire — this is where a
     # provider≠model mismatch (e.g. anthropic endpoint + gpt-4o) surfaces as a
     # 404. Logged so the run log pinpoints which pair was validated.
-    _wire_model = settings.azure_deployment if provider == "azure" else (
-        settings.local_model if provider == "local" else settings.llm_model
-    )
     logger.info(
         "llm_preflight_validate | provider=%s | model=%s | event=preflight_api_key "
         "[preflight/api_key.py] validator=_validate_%s",
@@ -679,10 +712,6 @@ def preflight_api_key(
     # tests monkeypatch ``_validate_*`` by name, and a captured-at-import
     # dict reference would not pick that up.
     validator = globals()[f"_validate_{provider}"]
-    # The run's own parameters, from the run's settings and the client's builder.
-    params = request_params(
-        provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
-    )
     if provider == "azure":
         result = validator(
             api_key,
@@ -696,7 +725,7 @@ def preflight_api_key(
     else:
         result = validator(api_key, settings.llm_model, params=params)
     if result.ok:
-        _mark_validated(state, provider, source=source)
+        _mark_validated(state, provider, source=source, request=request)
         try:
             write_state(state)
         except OSError as exc:

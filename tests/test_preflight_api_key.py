@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from rich.console import Console
 
+from bristlenose.llm.client import request_params
 from bristlenose.preflight.api_key import (
     ApiKeyPreflightAbortedError,
     ValidationResult,
@@ -21,6 +22,7 @@ from bristlenose.preflight.api_key import (
     _validate_openai,
     preflight_api_key,
     read_state,
+    request_fingerprint,
     state_path,
     write_state,
 )
@@ -717,19 +719,93 @@ class TestPreflightApiKey:
         monkeypatch.setattr(
             "bristlenose.preflight.api_key.state_path", lambda: path,
         )
+        # The record names the request it checked: this run's model and params.
+        settings = _settings(anthropic_api_key="sk")
+        request = request_fingerprint(
+            settings.llm_model,
+            request_params(
+                "anthropic", settings.llm_model,
+                settings.llm_max_tokens, settings.llm_temperature,
+            ),
+        )
+        write_state({
+            "first_run": False,
+            "providers": {
+                "anthropic": {
+                    "last_validated_epoch": int(time.time()), "request": request,
+                },
+            },
+        })
+        with patch(
+            "bristlenose.preflight.api_key._validate_anthropic"
+        ) as validator:
+            preflight_api_key(settings=settings, console=_console())
+        validator.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            {"llm_model": "claude-opus-4-1-20250805"},
+            {"llm_max_tokens": 8000},
+            {"llm_temperature": 0.7},
+        ],
+        ids=["model", "max_tokens", "temperature"],
+    )
+    def test_a_changed_request_is_checked_again_the_same_day(
+        self, monkeypatch, tmp_path, change
+    ):
+        """The 24-hour cache was keyed by provider alone, so a model or output
+        cap changed the same day was never sent to the provider before the run
+        sent it, and a request the model refuses failed the run instead."""
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
+        )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        with patch(
+            "bristlenose.preflight.api_key._validate_anthropic",
+            return_value=ValidationResult(ok=True),
+        ) as validator:
+            preflight_api_key(
+                settings=_settings(anthropic_api_key="sk"), console=_console(),
+            )
+            preflight_api_key(
+                settings=_settings(anthropic_api_key="sk"), console=_console(),
+            )
+            assert validator.call_count == 1  # unchanged: the cache holds
+            preflight_api_key(
+                settings=_settings(anthropic_api_key="sk", **change),
+                console=_console(),
+            )
+        assert validator.call_count == 2
+
+    def test_a_check_recorded_before_the_request_was_is_made_again(
+        self, monkeypatch, tmp_path
+    ):
+        """A record from before the cache knew the request (the one-token ping
+        that sent none of the run's parameters) proves nothing about this one."""
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
+        )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
         path.write_text(
             '{"first_run": false, "providers": '
             f'{{"anthropic": {{"last_validated_epoch": {int(time.time())}}}}}}}',
             encoding="utf-8",
         )
         with patch(
-            "bristlenose.preflight.api_key._validate_anthropic"
+            "bristlenose.preflight.api_key._validate_anthropic",
+            return_value=ValidationResult(ok=True),
         ) as validator:
             preflight_api_key(
-                settings=_settings(anthropic_api_key="sk"),
-                console=_console(),
+                settings=_settings(anthropic_api_key="sk"), console=_console(),
             )
-        validator.assert_not_called()
+        validator.assert_called_once()
 
     def test_ok_writes_state(self, monkeypatch, tmp_path):
         monkeypatch.setattr(

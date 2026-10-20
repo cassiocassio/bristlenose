@@ -568,11 +568,14 @@ final class PipelineRunner: ObservableObject {
     private let outputDrainLimit: Duration
     private let foreignRunPollInterval: Duration
     private let foreignRunPatience: Int
-    /// The read that settles a finished run's state from disk. A test passes
-    /// a slow one; the app reads the manifest with its 5 s timeout.
-    private let endStateRead: @Sendable (URL) async -> PipelineState
-    /// How long to wait between reads of a finished run whose end-state read
-    /// timed out (R29).
+    /// The read of a project's manifest that settles a finished or stopped
+    /// run's state. A test passes a slow one.
+    private let manifestRead: @Sendable (URL) async -> PipelineState
+    /// How long that read may take at a run's end before the row says it
+    /// timed out.
+    private let endStateTimeout: Duration
+    /// The wait between reads of a run whose end-state read timed out, and how
+    /// long each read is waited on before the next wait (R29).
     private let slowEndRereadInterval: Duration
 
     /// A run this app neither spawned nor attached — a CLI run on a sidebar
@@ -582,8 +585,11 @@ final class PipelineRunner: ObservableObject {
     /// read "Analysing" until quit, holding the Mac awake.
     private var foreignRunWatches: [UUID: Task<Void, Never>] = [:]
 
-    /// Re-reads of a finished run whose end-state read timed out (R29).
+    /// Re-reads of a run whose end-state read timed out (R29), and the token
+    /// of the one in flight, so an older loop ending does not drop a newer
+    /// one's handle.
     private var slowEndRereads: [UUID: Task<Void, Never>] = [:]
+    private var slowEndRereadTokens: [UUID: UUID] = [:]
 
     /// Whether the project's live run is this app's: the one in the slot, or
     /// an attached orphan.
@@ -665,13 +671,15 @@ final class PipelineRunner: ObservableObject {
         outputDrainLimit: Duration = .seconds(2),
         foreignRunPollInterval: Duration = .seconds(2),
         foreignRunPatience: Int = 15,
-        endStateRead: @escaping @Sendable (URL) async -> PipelineState = {
-            await PipelineRunner.readManifestState(at: $0, timeout: .seconds(5))
+        manifestRead: @escaping @Sendable (URL) async -> PipelineState = {
+            await PipelineRunner.parseManifest(at: $0)
         },
+        endStateTimeout: Duration = .seconds(5),
         slowEndRereadInterval: Duration = .seconds(5)
     ) {
         self.foreignRunPatience = foreignRunPatience
-        self.endStateRead = endStateRead
+        self.manifestRead = manifestRead
+        self.endStateTimeout = endStateTimeout
         self.slowEndRereadInterval = slowEndRereadInterval
         self.sidecarLookup = sidecarLookup
         self.outputDrainLimit = outputDrainLimit
@@ -1439,17 +1447,18 @@ final class PipelineRunner: ObservableObject {
     ///   trusted local disk don't need it, and creating a sleep-task per
     ///   poll cycle was a real wakeup amplifier — see perf review).
     static func readManifestState(
-        at url: URL, timeout: Duration, allowTimeout: Bool = true
+        at url: URL, timeout: Duration, allowTimeout: Bool = true,
+        read: @escaping @Sendable (URL) async -> PipelineState = { await parseManifest(at: $0) }
     ) async -> PipelineState {
         guard allowTimeout else {
-            return await parseManifest(at: url)
+            return await read(url)
         }
         do {
             return try await withThrowingTaskGroup(
                 of: PipelineState.self
             ) { group in
                 group.addTask {
-                    await parseManifest(at: url)
+                    await read(url)
                 }
                 group.addTask {
                     try await Task.sleep(for: timeout)
@@ -1622,6 +1631,9 @@ final class PipelineRunner: ObservableObject {
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
     func start(project: Project, clean: Bool = false) {
+        // A new run owns the row: a re-read of the last run's end state must
+        // not land on it (R29).
+        slowEndRereads.removeValue(forKey: project.id)?.cancel()
         guard hasConsent() else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
@@ -2281,7 +2293,8 @@ var args = ["run", project.path, "--no-serve"]
             var stopped = PipelineState.idle
             if let project {
                 stopped = await Self.readManifestState(
-                    at: Self.manifestURL(for: project), timeout: .seconds(5)
+                    at: Self.manifestURL(for: project), timeout: endStateTimeout,
+                    read: manifestRead
                 )
             }
             guard gen == generation else {
@@ -2294,6 +2307,9 @@ var args = ["run", project.path, "--no-serve"]
             if case .running = stopped { stopped = .idle }
             releaseSlot()
             state[projectID] = stopped
+            if stopped == .unreachable(reason: .timedOut), let project {
+                rereadAfterSlowEnd(project)
+            }
             Self.logger.info(
                 "run cancelled project=\(projectID.uuidString, privacy: .public) state=\(String(describing: stopped), privacy: .public)"
             )
@@ -2349,7 +2365,7 @@ var args = ["run", project.path, "--no-serve"]
         case .accept(let final):
             state[projectID] = final
             if final == .unreachable(reason: .timedOut), let project {
-                rereadAfterSlowEnd(project)
+                rereadAfterSlowEnd(project, provider: provider)
             }
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
@@ -2374,39 +2390,68 @@ var args = ["run", project.path, "--no-serve"]
         startNextQueued()
     }
 
-    /// Read a finished run's end state again after its read timed out (R29).
+    /// Read a run's end state again after its read timed out (R29).
     ///
-    /// The run succeeded; the disk was slow (a sleeping drive, a network
-    /// share), so the 5 s read gave up and the row said "Not responding". The
+    /// The run ended; the disk was slow (a sleeping drive, a network share),
+    /// so the 5 s read gave up and the row said "Not responding". The
     /// termination path accepted that on the promise of a later passive scan,
     /// and there is none: the row stayed until relaunch. Read again every
-    /// `slowEndRereadInterval`, at most `slowEndRereadLimit` times, and take
-    /// the first answer that is not another time-out. Only while the row still
-    /// shows the time-out: a run started meanwhile, or a scan that settled it,
-    /// owns the row. One read at a time; a read that hangs holds the loop, not
-    /// a pile of reads.
-    private func rereadAfterSlowEnd(_ project: Project) {
+    /// `slowEndRereadInterval`, at most `slowEndRereadLimit` times. One read at
+    /// a time: a read slower than the wait is waited on again, not discarded
+    /// or stacked, so a share that always takes longer than the timeout still
+    /// answers. Applied only while the row still shows the time-out; starting
+    /// the study again cancels it (`start`). What it finds is applied as a
+    /// scan's would be: a run another process owns gets its watch, and a run
+    /// that finished whole clears a stale out-of-credit verdict for
+    /// `provider`, as the termination path does on `.ready`.
+    private func rereadAfterSlowEnd(_ project: Project, provider: LLMProvider? = nil) {
         let projectID = project.id
         let url = Self.manifestURL(for: project)
-        let read = endStateRead
+        let read = manifestRead
         let interval = slowEndRereadInterval
+        let priorRunId = priorRunIds[projectID]
+        let token = UUID()
         slowEndRereads[projectID]?.cancel()
+        slowEndRereadTokens[projectID] = token
         slowEndRereads[projectID] = Task { @MainActor [weak self] in
+            var pending: Task<PipelineState, Never>?
             for _ in 0..<Self.slowEndRereadLimit {
                 try? await Task.sleep(for: interval)
                 guard !Task.isCancelled,
                       self?.state[projectID] == .unreachable(reason: .timedOut) else { break }
-                let resolved = await Task.detached { await read(url) }.value
+                let reading = pending ?? Task.detached { await read(url) }
+                pending = reading
+                guard let resolved = await Self.value(of: reading, within: interval) else {
+                    continue
+                }
+                pending = nil
                 guard !Task.isCancelled, let self,
                       self.state[projectID] == .unreachable(reason: .timedOut) else { break }
-                if resolved == .unreachable(reason: .timedOut) { continue }
                 Self.logger.info(
-                    "a finished run's end state read on a second try project=\(projectID.uuidString, privacy: .public) state=\(String(describing: resolved), privacy: .public)"
+                    "a run's end state read on a later try project=\(projectID.uuidString, privacy: .public) state=\(String(describing: resolved), privacy: .public)"
                 )
                 self.applyScanResult(resolved, for: projectID)
+                if case .running = self.state[projectID], !self.ownsRun(projectID) {
+                    self.watchForeignRun(project)
+                }
+                if case .ready = resolved {
+                    self.noteCreditIfTheRunUsedAnLLM(
+                        provider: provider, project: project,
+                        terminus: EventLogReader.tailEvent(at: Self.eventsURL(for: project)),
+                        priorRunId: priorRunId
+                    )
+                }
                 break
             }
-            self?.slowEndRereads[projectID] = nil
+            if let self, self.slowEndRereadTokens[projectID] == token {
+                if self.state[projectID] == .unreachable(reason: .timedOut) {
+                    Self.logger.warning(
+                        "a run's end state still did not read after \(Self.slowEndRereadLimit, privacy: .public) tries project=\(projectID.uuidString, privacy: .public)"
+                    )
+                }
+                self.slowEndRereads[projectID] = nil
+                self.slowEndRereadTokens[projectID] = nil
+            }
         }
     }
 
@@ -2464,7 +2509,9 @@ var args = ["run", project.path, "--no-serve"]
         projectID: UUID, project: Project?
     ) async -> PipelineState {
         guard let project else { return .idle }
-        let derived = await endStateRead(Self.manifestURL(for: project))
+        let derived = await Self.readManifestState(
+            at: Self.manifestURL(for: project), timeout: endStateTimeout, read: manifestRead
+        )
         if case .ready = derived {
             return derived
         }

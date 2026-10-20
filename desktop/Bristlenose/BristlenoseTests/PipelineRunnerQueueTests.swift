@@ -80,11 +80,13 @@ struct PipelineRunnerQueueTests {
         /// - Parameter lookup: where the sidecar is, when a test asks the
         ///   runner to look (R28).
         ///   - foreignPoll / patience: the watch on a run another process owns.
-        ///   - endStateRead / slowEndReread: the read that settles a finished
-        ///     run, and the wait before reading again when it timed out (R29).
+        ///   - manifestRead / endStateTimeout / slowEndReread: the read that
+        ///     settles a run's end, how long it may take, and the wait before
+        ///     reading again when it timed out (R29).
         init(lookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
              foreignPoll: Duration = .milliseconds(50), patience: Int = 15,
-             endStateRead: (@Sendable (URL) async -> PipelineState)? = nil,
+             manifestRead: (@Sendable (URL) async -> PipelineState)? = nil,
+             endStateTimeout: Duration = .seconds(5),
              slowEndReread: Duration = .milliseconds(50)) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
@@ -125,9 +127,8 @@ struct PipelineRunnerQueueTests {
                 outputDrainLimit: .seconds(1),
                 foreignRunPollInterval: foreignPoll,
                 foreignRunPatience: patience,
-                endStateRead: endStateRead ?? {
-                    await PipelineRunner.readManifestState(at: $0, timeout: .seconds(5))
-                },
+                manifestRead: manifestRead ?? { await PipelineRunner.parseManifest(at: $0) },
+                endStateTimeout: endStateTimeout,
                 slowEndRereadInterval: slowEndReread
             )
             runner.setProjectIndex(index)
@@ -511,21 +512,30 @@ struct PipelineRunnerQueueTests {
         var count: Int { lock.lock(); defer { lock.unlock() }; return n }
     }
 
-    /// R29: a run that succeeded on a disk too slow for the 5 s end-state read
+    /// A disk whose first `slow` reads of the manifest each take `delay`.
+    static func slowDisk(_ reads: ReadLog, slow: Int, delay: Duration = .milliseconds(150))
+        -> @Sendable (URL) async -> PipelineState {
+        { url in
+            if reads.next() <= slow { try? await Task.sleep(for: delay) }
+            return await PipelineRunner.parseManifest(at: url)
+        }
+    }
+
+    /// R29: a run that succeeded on a disk too slow for the end-state read
     /// read "Not responding" for good. The termination path accepted the
     /// timed-out read, said the next passive scan would settle it, and there
-    /// is no passive scan. It is read again until it answers.
+    /// is no passive scan. It is read again, and a read slower than the wait
+    /// is waited on again rather than thrown away, so a share that is always
+    /// slower than the timeout still settles.
     @Test func aSuccessfulRunWhoseEndReadTimedOutIsReadAgain() async {
         let reads = ReadLog()
-        // The end read and the first re-read both time out; the next answers.
-        let rig = Rig(endStateRead: { url in
-            if reads.next() <= 2 { return .unreachable(reason: .timedOut) }
-            return await PipelineRunner.readManifestState(at: url, timeout: .seconds(5))
-        })
+        // The end read and the first re-read are both slower than every wait.
+        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 2),
+                      endStateTimeout: .milliseconds(50))
         defer { rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
-        rig.writeFinishedRun(in: a, tokens: nil)
+        rig.writeFinishedRun(in: a, tokens: 120)
 
         rig.launches[0].exit()
         await until {
@@ -536,17 +546,19 @@ struct PipelineRunnerQueueTests {
         guard case .ready = rig.runner.state[a.id] else {
             Issue.record("expected .ready, got \(String(describing: rig.runner.state[a.id]))"); return
         }
-        #expect(reads.count == 3)
+        // The run made an LLM call: as on the termination path, its provider's
+        // out-of-credit verdict goes.
+        #expect(rig.noted == [.claude])
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(reads.count == 2, "one end read and one re-read, waited on, and none after")
     }
 
-    /// The second read is the row's only while the row still says the read
-    /// timed out: a run started meanwhile is not overwritten by it.
+    /// The re-read is the row's only while the row still says the read timed
+    /// out: a run started meanwhile is not overwritten by it.
     @Test func aRereadDoesNotOverwriteARunStartedMeanwhile() async {
         let reads = ReadLog()
-        let rig = Rig(endStateRead: { url in
-            if reads.next() == 1 { return .unreachable(reason: .timedOut) }
-            return await PipelineRunner.readManifestState(at: url, timeout: .seconds(5))
-        }, slowEndReread: .milliseconds(300))
+        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+                      endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
         defer { rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
@@ -561,6 +573,56 @@ struct PipelineRunnerQueueTests {
         try? await Task.sleep(for: .milliseconds(600))
         #expect(rig.runner.state[a.id] == .running)
         #expect(reads.count == 1, "nothing read the finished run again once a new one held the row")
+    }
+
+    /// Stop on a slow disk: the same single read, the same "Not responding".
+    @Test func aStoppedRunWhoseEndReadTimedOutIsReadAgain() async {
+        let reads = ReadLog()
+        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+                      endStateTimeout: .milliseconds(50))
+        defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: 120)
+
+        rig.runner.cancel(project: a)
+        rig.launches[0].exit(.exited(code: 130))
+        await until {
+            if case .ready = rig.runner.state[a.id] { return true }
+            return false
+        }
+
+        #expect(rig.runner.state[a.id] == .ready(Date(timeIntervalSince1970: 1_792_490_400)))
+        #expect(rig.noted.isEmpty, "a stopped run proves nothing about credit")
+    }
+
+    /// The re-read finds a CLI run started on the study meanwhile: it reads as
+    /// a scan's would, and is watched until it ends (R22), not left "Analysing".
+    @Test func aRereadThatFindsACLIRunWatchesIt() async throws {
+        let reads = ReadLog()
+        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+                      endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
+        defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: nil)
+
+        rig.launches[0].exit()
+        await until { rig.runner.state[a.id] == .unreachable(reason: .timedOut) }
+        try #require(rig.runner.state[a.id] == .unreachable(reason: .timedOut))
+        let dir = URL(fileURLWithPath: a.path).appendingPathComponent("bristlenose-output/.bristlenose")
+        try append(#"{"schema_version":5,"ts":"2026-10-20T11:00:00Z","event":"run_started","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z"}"#, to: dir)
+        try writePythonPID(getpid(), in: dir)
+
+        await until { rig.runner.state[a.id] == .running }
+        try #require(rig.runner.state[a.id] == .running, "the re-read did not find the CLI run")
+        try append(#"{"schema_version":5,"ts":"2026-10-20T12:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z","ended_at":"2026-10-20T12:00:00Z","outcome":"completed","cause":null}"#, to: dir)
+        await until({ rig.runner.state[a.id] != .running }, seconds: 5)
+
+        guard case .ready = rig.runner.state[a.id] else {
+            Issue.record("still \(String(describing: rig.runner.state[a.id])) after the CLI run finished")
+            return
+        }
     }
 
     @Test func aRunFinishedFromCacheClearsNothing() async {

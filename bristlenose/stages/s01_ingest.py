@@ -250,7 +250,6 @@ def _scan_entries(
         if real in seen:
             logger.debug("Skipping %s: already scanned as %s", entry, real)
             continue
-        seen.add(real)
         try:
             if entry.is_dir():
                 # Never descend into our own output, and never report what is
@@ -272,8 +271,12 @@ def _scan_entries(
                 if depth == 0 and is_guide_folder(entry):
                     continue
                 if depth + 1 < _MAX_SCAN_DEPTH:
+                    # Marked only once walked: a folder too deep to walk here
+                    # can still be reached by a shallower link.
+                    seen.add(real)
                     _scan_dir(entry, depth + 1, files, skipped, seen, links)
             elif entry.is_file():
+                seen.add(real)
                 _try_add_file(entry, files, skipped)
         except OSError as exc:  # a single unstatable entry must not end the walk
             logger.warning("Skipping unreadable entry %s: %s", entry, exc)

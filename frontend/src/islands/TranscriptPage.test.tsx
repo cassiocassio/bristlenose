@@ -1090,11 +1090,26 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
     fireEvent.click(
       (await screen.findByTestId("annotation-q-p1-10-tag-usability")).querySelector(".badge-delete")!,
     );
-    expect(vi.mocked(patchTags)).toHaveBeenLastCalledWith({ "q-p1-10": { remove: ["usability"] } });
+    expect(vi.mocked(patchTags)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(patchTags)).toHaveBeenCalledWith({ "q-p1-10": { remove: ["usability"] } });
     fireEvent.click(await screen.findByTestId("annotation-q-p1-26-sentiment"));
-    expect(vi.mocked(patchDeletedBadges)).toHaveBeenLastCalledWith({
+    expect(vi.mocked(patchDeletedBadges)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(patchDeletedBadges)).toHaveBeenCalledWith({
       "q-p1-26": { add: ["frustration"] },
     });
+  });
+
+  it("a margin delete that fails reads the transcript again", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const badge = await screen.findByTestId("annotation-q-p1-10-sentiment");
+    const reads = mockedGetTranscript.mock.calls.length;
+    vi.mocked(patchDeletedBadges).mockImplementationOnce(() => Promise.reject(new Error("refused")));
+    fireEvent.click(badge);
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+    // The server still has the badge: the re-read draws it again.
+    expect(await screen.findByTestId("annotation-q-p1-10-sentiment")).toBeTruthy();
+    expect(mockedGetTranscript.mock.calls.length).toBeGreaterThan(reads);
   });
 
   it("does not bring back a badge deleted while a re-read was in flight", async () => {

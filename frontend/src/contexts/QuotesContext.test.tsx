@@ -412,6 +412,7 @@ describe("QuotesStore", () => {
     it("a star names one quote", () => {
       initFromQuotes([other(), mine()]);
       setStarred(["q-b"], true);
+      expect(mockPatchStarred).toHaveBeenCalledTimes(1);
       expect(mockPatchStarred).toHaveBeenCalledWith({ "q-b": true });
     });
 
@@ -421,6 +422,7 @@ describe("QuotesStore", () => {
         initFromQuotes([other(), mine()]);
         hideQuotes(["q-b"]);
         vi.advanceTimersByTime(HIDE_DURATION);
+        expect(mockPatchHidden).toHaveBeenCalledTimes(1);
         expect(mockPatchHidden).toHaveBeenCalledWith({ "q-b": true });
       } finally {
         vi.useRealTimers();
@@ -430,18 +432,21 @@ describe("QuotesStore", () => {
     it("an edit names one key", () => {
       initFromQuotes([other(), mine()]);
       commitEdit("q-b", "b's words");
+      expect(mockPatchEdits).toHaveBeenCalledTimes(1);
       expect(mockPatchEdits).toHaveBeenCalledWith({ "q-b": "b's words" });
     });
 
     it("a tag names one quote and one tag", () => {
       initFromQuotes([other(), mine()]);
       addTag("q-b", TAG_FRUSTRATION);
+      expect(mockPatchTags).toHaveBeenCalledTimes(1);
       expect(mockPatchTags).toHaveBeenCalledWith({ "q-b": { add: ["Frustration"] } });
     });
 
     it("a badge names one quote and one sentiment", () => {
       initFromQuotes([other(), mine()]);
       deleteBadge("q-b", "positive");
+      expect(mockPatchDeletedBadges).toHaveBeenCalledTimes(1);
       expect(mockPatchDeletedBadges).toHaveBeenCalledWith({ "q-b": { add: ["positive"] } });
     });
   });

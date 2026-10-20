@@ -132,6 +132,33 @@ describe("curation writes", () => {
     await expect(second).resolves.toBeUndefined();
   });
 
+  it("a failed write says so once", async () => {
+    fetchMock.mockResolvedValue(answer(500, { detail: "boom" }));
+    await expect(patchStarred({ "q-p1-10": true })).rejects.toThrow();
+    await settle();
+    expect(said()).not.toMatch(/connection/i);
+  });
+
+  it("a write that never answers fails, so the next one is sent", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation((_url: string, init: RequestInit) => new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new DOMException("timed out", "TimeoutError")));
+      }));
+      const first = patchStarred({ "q-p1-10": true });
+      const second = patchStarred({ "q-p1-26": true });
+      const firstFailed = expect(first).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await firstFailed;
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const secondFailed = expect(second).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await secondFailed; // and leaves the queue free for the next test
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not hold a write to another path", async () => {
     const answers = held();
     void patchStarred({ "q-p1-10": true });

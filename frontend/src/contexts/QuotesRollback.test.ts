@@ -161,13 +161,52 @@ describe("a failed write takes the screen back", () => {
 });
 
 describe("a rollback leaves a later gesture alone", () => {
-  it("a star that failed after its unstar was made stays unstarred", async () => {
+  it("an undo inside the hide's collapse writes nothing, so nothing can fail", async () => {
+    vi.useFakeTimers();
+    try {
+      initFromQuotes([quote()]);
+      failNext(patchHidden);
+      hideQuotes(["q1"]);
+      await undo();
+      await vi.runAllTimersAsync();
+      expect(patchHidden).not.toHaveBeenCalled();
+      expect(getQuotesSnapshot().hidden.q1).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a load that answers before a tag write lands keeps the tag drawn", async () => {
     initFromQuotes([quote()]);
+    let land: () => void = () => {};
+    vi.mocked(patchTags).mockImplementationOnce(() => new Promise<void>((r) => { land = r; }));
+    addTag("q1", tag("Trust"));
+    initFromQuotes([quote({ tags: [] })]); // a merge load whose answer predates the write
+    expect(getQuotesSnapshot().tags.q1.map((t) => t.name)).toEqual(["Trust"]);
+    land();
+    await settle();
+    initFromQuotes([quote({ tags: [] })]); // once it has landed, the server's answer counts
+    expect(getQuotesSnapshot().tags.q1).toBeUndefined();
+  });
+
+  it("two failures in a row go back to before both", async () => {
+    initFromQuotes([quote()]);
+    failNext(patchStarred);
     failNext(patchStarred);
     setStarred(["q1"], true);
     setStarred(["q1"], false);
     await settle();
     expect(getQuotesSnapshot().starred.q1).toBeUndefined();
+  });
+
+  it("a failure after a write that landed goes back to what landed", async () => {
+    initFromQuotes([quote()]);
+    vi.mocked(patchStarred).mockImplementationOnce(() => Promise.resolve());
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    setStarred(["q1"], false);
+    await settle();
+    expect(getQuotesSnapshot().starred.q1).toBe(true);
   });
 
   it("a star that failed, then an unstar and a star again, stays starred", async () => {

@@ -254,7 +254,11 @@ export function initFromQuotes(
       if (q.is_hidden) hidden[q.dom_id] = true;
       if (q.is_starred) starred[q.dom_id] = true;
       if (q.edited_text) edits[q.dom_id] = q.edited_text;
-      if (q.tags.length > 0) tags[q.dom_id] = [...q.tags];
+      if (tagWriteUnanswered(q.dom_id)) {
+        // The response may predate it: keep what the screen shows.
+        if (prev.tags[q.dom_id]) tags[q.dom_id] = prev.tags[q.dom_id];
+        else delete tags[q.dom_id];
+      } else if (q.tags.length > 0) tags[q.dom_id] = [...q.tags];
       else delete tags[q.dom_id];
       if (q.deleted_badges.length > 0) deletedBadges[q.dom_id] = [...q.deleted_badges];
       if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
@@ -317,6 +321,7 @@ export function initHeadingEdits(
 /** Clear all state. Used for test isolation and before re-fetch. */
 export function resetStore(): void {
   state = emptyState();
+  unsettled.clear();
   searchPeople = undefined;
   lastUsedTag = null;
   listeners.forEach((l) => l());
@@ -324,82 +329,143 @@ export function resetStore(): void {
 
 // ── Writes ───────────────────────────────────────────────────────────────
 
-// The latest gesture to write each value, by key (`starred:q1`, `tags:q1:trust`).
-const lastWrite = new Map<string, number>();
-let gestures = 0;
+type Updater = (s: QuotesState) => QuotesState;
+
+/** One value a gesture changes, keyed (`starred:q1`, `tags:q1:trust`), with the
+ *  store as it was before the gesture and as the gesture leaves it. */
+interface Change {
+  key: string;
+  before: Updater;
+  after: Updater;
+}
+
+/** A key with writes not yet answered: how many, the value the server is
+ *  known to hold, and whether any write since that value failed. */
+interface Unsettled {
+  count: number;
+  server: Updater;
+  failed: boolean;
+}
+
+const unsettled = new Map<string, Unsettled>();
 
 /**
  * Send a gesture's change. A write that fails has already said why ("Couldn't
- * save"); `rollback` then takes the screen back to what the server holds, so
- * the star, hide, tag or edit does not stay drawn as if it had saved.
+ * save"); once every write on a key is answered, a key whose last answer was
+ * a failure is put back to the value the server is known to hold, so the
+ * star, hide, tag or edit does not stay drawn as if it had saved.
  *
- * It is handed only the keys no later gesture has written since: a later
- * gesture is the researcher's latest word, and the value it set stays (a value
- * check could not tell a star made again from the one that failed). The
- * gesture's undo entry stays on the stack; its inverse finds nothing to change
- * and sends nothing. Known limit: if a later write on the same key fails too,
- * the screen keeps the failed gesture's value; the next load heals it.
+ * That value is the one before the first unanswered write, moved on by each
+ * write that lands, so a later gesture that saved keeps its value (a star made
+ * again after a failed one stays), and two failures in a row go back to before
+ * both. The gesture's undo entry stays on the stack; its inverse finds nothing
+ * to change and sends nothing.
  */
-function send(write: Promise<void>, keys: string[], rollback: (keys: Set<string>) => void): void {
-  gestures += 1;
-  const gesture = gestures;
-  for (const k of keys) lastWrite.set(k, gesture);
-  write.catch(() => {
-    const own = new Set(keys.filter((k) => lastWrite.get(k) === gesture));
-    if (own.size > 0) rollback(own);
-  });
-}
-
-const tagKey = (id: string, name: string) => `tags:${id}:${name.toLowerCase()}`;
-const badgeKey = (id: string, sentiment: string) => `badges:${id}:${sentiment}`;
-
-/** Send a star or hide change, and on failure put the ids it still owns back. */
-function sendFlag(key: "starred" | "hidden", ids: string[], value: boolean): void {
-  const write = key === "starred" ? patchStarred(each(ids, value)) : patchHidden(each(ids, value));
-  send(write, ids.map((id) => `${key}:${id}`), (own) =>
-    setState((prev) => {
-      const map = { ...prev[key] };
-      for (const id of ids) {
-        if (!own.has(`${key}:${id}`)) continue;
-        if (value) delete map[id];
-        else map[id] = true;
+function send(write: Promise<void>, changes: Change[]): void {
+  for (const c of changes) {
+    const u = unsettled.get(c.key);
+    if (u) u.count += 1;
+    else unsettled.set(c.key, { count: 1, server: c.before, failed: false });
+  }
+  const answered = (landed: boolean) => {
+    for (const c of changes) {
+      const u = unsettled.get(c.key);
+      if (!u) continue; // the store was reset meanwhile
+      u.count -= 1;
+      if (landed) {
+        u.server = c.after;
+        u.failed = false;
+      } else {
+        u.failed = true;
       }
-      return { ...prev, [key]: map };
-    }),
-  );
+      if (u.count > 0) continue;
+      unsettled.delete(c.key);
+      if (u.failed) setState(u.server);
+    }
+  };
+  write.then(() => answered(true), () => answered(false));
 }
 
-/** Take a tag a failed write added back off the quotes it still owns. */
-function revertTagAdd(ids: string[], tagName: string, own: Set<string>): void {
-  const lower = tagName.toLowerCase();
-  setState((prev) => {
-    const tags = { ...prev.tags };
-    for (const id of ids) {
-      if (!own.has(tagKey(id, tagName))) continue;
-      const kept = (tags[id] || []).filter((t) => t.name.toLowerCase() !== lower);
+/** Whether a tag write on this quote is still unanswered. */
+function tagWriteUnanswered(domId: string): boolean {
+  const prefix = `tags:${domId}:`;
+  for (const k of unsettled.keys()) if (k.startsWith(prefix)) return true;
+  return false;
+}
+
+function withFlag(key: "starred" | "hidden", id: string, on: boolean): Updater {
+  return (s) => {
+    if (!!s[key][id] === on) return s;
+    const map = { ...s[key] };
+    if (on) map[id] = true;
+    else delete map[id];
+    return { ...s, [key]: map };
+  };
+}
+
+function withEdit(key: string, text: string | undefined): Updater {
+  return (s) => {
+    if (s.edits[key] === text) return s;
+    const edits = { ...s.edits };
+    if (text === undefined) delete edits[key];
+    else edits[key] = text;
+    return { ...s, edits };
+  };
+}
+
+function withTag(id: string, tag: TagResponse, index: number, on: boolean): Updater {
+  const lower = tag.name.toLowerCase();
+  return (s) => {
+    const list = s.tags[id] || [];
+    const has = list.some((t) => t.name.toLowerCase() === lower);
+    if (has === on) return s;
+    const tags = { ...s.tags };
+    if (on) {
+      const next = [...list];
+      next.splice(Math.min(index, next.length), 0, tag);
+      tags[id] = next;
+    } else {
+      const kept = list.filter((t) => t.name.toLowerCase() !== lower);
       if (kept.length > 0) tags[id] = kept;
       else delete tags[id];
     }
-    return { ...prev, tags };
-  });
+    return { ...s, tags };
+  };
 }
 
-/** Put back tags a failed write removed, where it still owns them. */
-function revertTagRemove(
-  removed: Record<string, { tag: TagResponse; index: number }>,
-  own: Set<string>,
-): void {
-  setState((prev) => {
-    const tags = { ...prev.tags };
-    for (const [id, { tag, index }] of Object.entries(removed)) {
-      if (!own.has(tagKey(id, tag.name))) continue;
-      const list = [...(tags[id] || [])];
-      if (list.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) continue;
-      list.splice(Math.min(index, list.length), 0, tag);
-      tags[id] = list;
-    }
-    return { ...prev, tags };
-  });
+function withBadge(id: string, sentiment: string, deleted: boolean): Updater {
+  return (s) => {
+    const list = s.deletedBadges[id] || [];
+    if (list.includes(sentiment) === deleted) return s;
+    const deletedBadges = { ...s.deletedBadges };
+    const next = deleted ? [...list, sentiment] : list.filter((b) => b !== sentiment);
+    if (next.length > 0) deletedBadges[id] = next;
+    else delete deletedBadges[id];
+    return { ...s, deletedBadges };
+  };
+}
+
+const flagChange = (key: "starred" | "hidden", id: string, on: boolean): Change => ({
+  key: `${key}:${id}`, before: withFlag(key, id, !on), after: withFlag(key, id, on),
+});
+
+const tagChange = (id: string, tag: TagResponse, index: number, on: boolean): Change => ({
+  key: `tags:${id}:${tag.name.toLowerCase()}`,
+  before: withTag(id, tag, index, !on),
+  after: withTag(id, tag, index, on),
+});
+
+const badgeChange = (id: string, sentiment: string, deleted: boolean): Change => ({
+  key: `badges:${id}:${sentiment}`,
+  before: withBadge(id, sentiment, !deleted),
+  after: withBadge(id, sentiment, deleted),
+});
+
+/** Send a star or hide change for these quotes. */
+function sendFlag(key: "starred" | "hidden", ids: string[], on: boolean): void {
+  if (ids.length === 0) return;
+  const write = key === "starred" ? patchStarred(each(ids, on)) : patchHidden(each(ids, on));
+  send(write, ids.map((id) => flagChange(key, id, on)));
 }
 
 /** `{ id: value }` for each id. */
@@ -475,6 +541,8 @@ export function unhideQuotes(domIds: string[], record = true): void {
 
   const targets = domIds.filter((id) => state.hidden[id] || state.hiding.has(id));
   if (targets.length === 0) return;
+  // A quote still mid-collapse was never sent as hidden: nothing to write.
+  const landed = targets.filter((id) => state.hidden[id]);
 
   setState((prev) => {
     const hidden = { ...prev.hidden };
@@ -487,7 +555,7 @@ export function unhideQuotes(domIds: string[], record = true): void {
     }
     return { ...prev, hidden, hiding };
   });
-  sendFlag("hidden", targets, false);
+  sendFlag("hidden", landed, false);
   announce(i18n.t("announce.restored"));
   if (record) {
     pushUndo({
@@ -596,14 +664,9 @@ function setEdit(key: string, text: string | undefined, record: boolean): void {
     else edits[key] = text;
     return { ...prev, edits };
   });
-  send(patchEdits({ [key]: text ?? null }), [`edits:${key}`], () =>
-    setState((prev) => {
-      const edits = { ...prev.edits };
-      if (before === undefined) delete edits[key];
-      else edits[key] = before;
-      return { ...prev, edits };
-    }),
-  );
+  send(patchEdits({ [key]: text ?? null }), [
+    { key: `edits:${key}`, before: withEdit(key, before), after: withEdit(key, text) },
+  ]);
   if (record) {
     pushUndo({
       action: editAction(key),
@@ -656,8 +719,7 @@ export function addTagToQuotes(domIds: string[], tag: TagResponse, record = true
   });
   send(
     patchTags(each(targets, { add: [tag.name] })),
-    targets.map((id) => tagKey(id, tag.name)),
-    (own) => revertTagAdd(targets, tag.name, own),
+    targets.map((id) => tagChange(id, tag, Infinity, true)),
   );
   lastUsedTag = tag;
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
@@ -692,8 +754,7 @@ function removeTagFromQuotes(domIds: string[], tagName: string): void {
   });
   send(
     patchTags(each(targets, { remove: [tagName] })),
-    targets.map((id) => tagKey(id, tagName)),
-    (own) => revertTagRemove(removed, own),
+    targets.map((id) => tagChange(id, removed[id].tag, removed[id].index, false)),
   );
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
 }
@@ -712,9 +773,7 @@ export function removeTag(domId: string, tagName: string, record = true): void {
     if (tags[domId].length === 0) delete tags[domId];
     return { ...prev, tags };
   });
-  send(patchTags({ [domId]: { remove: [tagName] } }), [tagKey(domId, tagName)], (own) =>
-    revertTagRemove({ [domId]: { tag: removed, index } }, own),
-  );
+  send(patchTags({ [domId]: { remove: [tagName] } }), [tagChange(domId, removed, index, false)]);
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
   if (record) {
     pushUndo({
@@ -737,9 +796,7 @@ function restoreTag(domId: string, tag: TagResponse, index: number): void {
     tags[domId] = list;
     return { ...prev, tags };
   });
-  send(patchTags({ [domId]: { add: [tag.name] } }), [tagKey(domId, tag.name)], (own) =>
-    revertTagAdd([domId], tag.name, own),
-  );
+  send(patchTags({ [domId]: { add: [tag.name] } }), [tagChange(domId, tag, index, true)]);
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
 }
 
@@ -752,17 +809,9 @@ export function deleteBadge(domId: string, sentiment: string): void {
     deletedBadges[domId] = [...(deletedBadges[domId] || []), sentiment];
     return { ...prev, deletedBadges };
   });
-  send(patchDeletedBadges({ [domId]: { add: [sentiment] } }), [badgeKey(domId, sentiment)], () =>
-    setState((prev) => {
-      const list = prev.deletedBadges[domId] || [];
-      if (!list.includes(sentiment)) return prev;
-      const deletedBadges = { ...prev.deletedBadges };
-      const kept = list.filter((b) => b !== sentiment);
-      if (kept.length > 0) deletedBadges[domId] = kept;
-      else delete deletedBadges[domId];
-      return { ...prev, deletedBadges };
-    }),
-  );
+  send(patchDeletedBadges({ [domId]: { add: [sentiment] } }), [
+    badgeChange(domId, sentiment, true),
+  ]);
 }
 
 export function restoreBadges(domId: string): void {
@@ -778,14 +827,7 @@ export function restoreBadges(domId: string): void {
   });
   send(
     patchDeletedBadges({ [domId]: { remove: restored } }),
-    restored.map((b) => badgeKey(domId, b)),
-    (own) =>
-      setState((prev) => {
-        const back = restored.filter((b) => own.has(badgeKey(domId, b)));
-        const list = prev.deletedBadges[domId] || [];
-        const merged = [...list, ...back.filter((b) => !list.includes(b))];
-        return { ...prev, deletedBadges: { ...prev.deletedBadges, [domId]: merged } };
-      }),
+    restored.map((b) => badgeChange(domId, b, false)),
   );
 }
 

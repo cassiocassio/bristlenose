@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
@@ -144,6 +145,21 @@ class BadgeDelta(BaseModel):
 
     add: list[_BadgeName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     remove: list[_BadgeName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+
+
+def _quote_state(db: Session, quote_id: int) -> QuoteState:
+    """The quote's state row, made if it has none.
+
+    Insert-or-ignore, then read: a star and a hide on a quote that had neither
+    are written at once on two paths, and each found no row and made one, so
+    the second commit hit the unique index and its gesture was refused.
+    """
+    db.execute(
+        sqlite_insert(QuoteState)
+        .values(quote_id=quote_id, is_hidden=False, is_starred=False)
+        .on_conflict_do_nothing(index_elements=["quote_id"])
+    )
+    return db.query(QuoteState).filter_by(quote_id=quote_id).one()
 
 
 def _check_delta_size(data: dict[str, Any]) -> None:
@@ -1046,12 +1062,22 @@ def patch_tags(
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
                 continue
-            for tag_name in delta.remove:
-                td_id = tag_defs.get(tag_name.lower())
-                if td_id is not None:
-                    db.query(QuoteTag).filter_by(
-                        quote_id=quote.id, tag_definition_id=td_id
-                    ).delete(synchronize_session=False)
+            if delta.remove:
+                # By name across every definition: two codebooks can hold the
+                # same name, and the quote may carry either one.
+                names = {n.lower() for n in delta.remove}
+                gone = [
+                    qt.id
+                    for qt, td_name in db.query(QuoteTag, TagDefinition.name)
+                    .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+                    .filter(QuoteTag.quote_id == quote.id)
+                    .all()
+                    if td_name.lower() in names
+                ]
+                if gone:
+                    db.query(QuoteTag).filter(QuoteTag.id.in_(gone)).delete(
+                        synchronize_session=False
+                    )
             for tag_name in delta.add:
                 td_id = tag_defs.get(tag_name.lower())
                 if td_id is None:
@@ -1164,12 +1190,13 @@ def patch_hidden(
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
                 continue
-            qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
+            if is_hidden:
+                qs: QuoteState | None = _quote_state(db, quote.id)
+            else:
+                qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
             if qs:
                 qs.is_hidden = is_hidden
                 qs.hidden_at = _now() if is_hidden else None
-            elif is_hidden:
-                db.add(QuoteState(quote_id=quote.id, is_hidden=True, hidden_at=_now()))
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1265,12 +1292,13 @@ def patch_starred(
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
                 continue
-            qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
+            if is_starred:
+                qs: QuoteState | None = _quote_state(db, quote.id)
+            else:
+                qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
             if qs:
                 qs.is_starred = is_starred
                 qs.starred_at = _now() if is_starred else None
-            elif is_starred:
-                db.add(QuoteState(quote_id=quote.id, is_starred=True, starred_at=_now()))
             if is_starred:
                 _mint_pin(db, quote)  # freeze on first human touch
         db.commit()

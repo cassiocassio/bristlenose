@@ -769,8 +769,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       });
       // Only this quote's change. A one-quote map sent as the whole map wiped
       // every other quote's deleted badges (and, below, tags) in the project.
-      // A write that fails has already said why.
-      patchDeletedBadges({ [quoteId]: { add: [sentiment] } }).catch(() => undefined);
+      // A write that fails has already said why; reading the transcript again
+      // draws what the server kept.
+      patchDeletedBadges({ [quoteId]: { add: [sentiment] } }).catch(() => rereadRef.current());
     },
     [data],
   );
@@ -789,7 +790,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
           [quoteId]: { ...ann, tags: updated },
         },
       });
-      patchTags({ [quoteId]: { remove: [tagName] } }).catch(() => undefined);
+      patchTags({ [quoteId]: { remove: [tagName] } }).catch(() => rereadRef.current());
     },
     [data],
   );

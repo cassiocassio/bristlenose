@@ -158,10 +158,10 @@ export function buildVisibleFrameworks(
 /** Fold tag names that live on quotes but not yet in the fetched codebook into
  * the floor's default group.
  *
- * The codebook is a mount-time snapshot: ``PUT /tags`` is fire-and-forget
- * (``firePut`` returns void), so a tag the researcher just typed exists on the
- * quote — and in ``QuotesStore`` — before any refetch could see its new
- * ``TagDefinition``. Without this the tag was simply absent from the sidebar
+ * The codebook is a mount-time snapshot, and a tag write is optimistic (the
+ * store draws it before ``patchTags`` lands), so a tag the researcher just
+ * typed exists on the quote — and in ``QuotesStore`` — before any refetch
+ * could see its new ``TagDefinition``. Without this the tag was simply absent from the sidebar
  * tree, which read as "my tag vanished" (the floor's card still rendered,
  * because ``GET /codebook`` emits ``Uncategorised`` unconditionally — so it
  * looked like an empty group rather than a missing one).

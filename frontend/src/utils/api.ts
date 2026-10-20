@@ -224,12 +224,18 @@ export function sendPut(path: string, body: unknown): Promise<void> {
   return sendWrite("PUT", path, body);
 }
 
-function sendWrite(method: "PUT" | "PATCH", path: string, body: unknown): Promise<void> {
+function sendWrite(
+  method: "PUT" | "PATCH",
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<void> {
   if (isExportMode()) return Promise.resolve(); // No server in export mode
   return fetch(`${apiBase()}${path}`, {
     method,
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+    signal,
   })
     .then(async (resp) => {
       // fetch only rejects on a network-layer failure — a 401/403/5xx *resolves*
@@ -281,7 +287,9 @@ export function toastSaveFailed(err: unknown): void {
 // Writes to one path go out one at a time, in the order they were made. Sent
 // together they reach the server's threadpool together, and a star and its
 // unstar (or an act and its ⌘Z) could commit the wrong way round, leaving the
-// server opposite to the screen. Each still toasts on failure and rejects.
+// server opposite to the screen. Each still toasts on failure and rejects, and
+// one that has not answered in WRITE_TIMEOUT_MS fails, so a hung request cannot
+// hold every later write on its path unsent.
 
 export interface CurationDelta {
   add?: string[];
@@ -289,11 +297,16 @@ export interface CurationDelta {
 }
 
 const writeQueues = new Map<string, Promise<void>>();
+const WRITE_TIMEOUT_MS = 30_000;
+
+function timedPatch(path: string, body: unknown): Promise<void> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), WRITE_TIMEOUT_MS);
+  return sendWrite("PATCH", path, body, abort.signal).finally(() => clearTimeout(timer));
+}
 
 function queuedPatch(path: string, body: unknown): Promise<void> {
-  const next = (writeQueues.get(path) ?? Promise.resolve()).then(() =>
-    sendWrite("PATCH", path, body),
-  );
+  const next = (writeQueues.get(path) ?? Promise.resolve()).then(() => timedPatch(path, body));
   // A failed write has already said why; the queue must outlive it, or every
   // later write to the path would be skipped.
   writeQueues.set(path, next.catch(() => undefined));

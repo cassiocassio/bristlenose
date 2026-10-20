@@ -156,6 +156,20 @@ class TestPatchTags:
         finally:
             db.close()
 
+    def test_remove_finds_the_quotes_tag_when_two_definitions_share_its_name(
+        self, client: TestClient,
+    ) -> None:
+        client.patch(f"{_P}/tags", json={"q-p1-10": {"add": ["Shared"]}})
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            first = db.query(TagDefinition).filter_by(name="Shared").one()
+            db.add(TagDefinition(name="shared", codebook_group_id=first.codebook_group_id))
+            db.commit()
+        finally:
+            db.close()
+        client.patch(f"{_P}/tags", json={"q-p1-10": {"remove": ["Shared"]}})
+        assert _tags(client) == {}
+
     def test_new_name_is_created_in_uncategorised_as_human_and_pins(
         self, client: TestClient,
     ) -> None:
@@ -337,11 +351,15 @@ def test_r2_curation_of_recoded_out_quotes_survives_gestures_and_comes_back(
     assert r.status_code == 200, r.text
 
     # Gestures on the other session's quote, as the SPA sends them.
-    client.patch(f"{_P}/starred", json={"q-p2-10": True})
-    client.patch(f"{_P}/hidden", json={"q-p2-10": True})
-    client.patch(f"{_P}/tags", json={"q-p2-10": {"add": ["other"]}})
-    client.patch(f"{_P}/edits", json={"q-p2-10": "p2 edit"})
-    client.patch(f"{_P}/deleted-badges", json={"q-p2-10": {"add": ["delight"]}})
+    for path, body in (
+        ("starred", {"q-p2-10": True}),
+        ("hidden", {"q-p2-10": True}),
+        ("tags", {"q-p2-10": {"add": ["other"]}}),
+        ("edits", {"q-p2-10": "p2 edit"}),
+        ("deleted-badges", {"q-p2-10": {"add": ["delight"]}}),
+    ):
+        assert client.patch(f"{_P}/{path}", json=body).status_code == 200, path
+    assert client.get(f"{_P}/starred").json().get("q-p2-10") is True  # the gestures landed
 
     r = client.put(f"{_P}/sessions/s1/speakers/p1",
                    json={"kind": "participant", "confirmed": True})
@@ -371,3 +389,50 @@ def test_r3_an_uninstalled_codebooks_tag_does_not_come_back(tmp_path: Path) -> N
     finally:
         db.close()
     assert _tags(client) == {"q-p1-26": ["my tag"], "q-p1-10": ["my tag"]}
+
+
+@pytest.mark.asyncio
+async def test_a_star_and_a_hide_at_once_on_a_fresh_quote_both_land(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two paths are written concurrently. Each found no QuoteState for a quote
+    never starred or hidden and made one; the second commit hit the unique
+    index, answered 500, and the client rolled back a gesture that was fine.
+    Forced here: the star is held for a moment after its look-up while the hide
+    is sent."""
+    import threading
+
+    import httpx
+
+    import bristlenose.server.routes.data as data
+
+    app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url=f"sqlite:///{tmp_path}/s.db")
+    held = threading.Event()
+    calls = {"n": 0}
+    real_now = data._now
+
+    def now_holding_the_first_caller() -> datetime:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            held.wait(5)
+        return real_now()
+
+    monkeypatch.setattr(data, "_now", now_holding_the_first_caller)
+    headers = {"Authorization": f"Bearer {app.state.auth_token}"}
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8150") as c:
+        star = asyncio.create_task(
+            c.patch(f"{_P}/starred", json={"q-p1-10": True}, headers=headers)
+        )
+        await asyncio.sleep(0.2)
+        hide_task = asyncio.create_task(
+            c.patch(f"{_P}/hidden", json={"q-p1-10": True}, headers=headers)
+        )
+        await asyncio.sleep(0.3)  # the hide has committed, or waits on the star's write
+        held.set()
+        star_answer = await star
+        hide = await hide_task
+        assert hide.status_code == 200, hide.text
+        assert star_answer.status_code == 200, star_answer.text
+        assert (await c.get(f"{_P}/starred", headers=headers)).json() == {"q-p1-10": True}
+        assert (await c.get(f"{_P}/hidden", headers=headers)).json() == {"q-p1-10": True}

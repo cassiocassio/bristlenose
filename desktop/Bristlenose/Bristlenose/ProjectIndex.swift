@@ -381,6 +381,16 @@ final class ProjectIndex: ObservableObject {
     /// making fifty folders.
     var watcherCap: Int = ProjectIndex.maxConcurrentWatchers
 
+    /// Projects whose folder was not at its path when `syncWatchers` last
+    /// looked.
+    private var unreachable: Set<UUID> = []
+
+    /// Told of a project whose folder has come back since `syncWatchers` last
+    /// looked (a drive remounted, a cloud folder restored, a Locate…), after
+    /// its lease is taken, so whatever was read while it was away is read
+    /// again. Set once, by `PipelineRunner.setProjectIndex`.
+    var onFolderReturned: ((Project) -> Void)?
+
     private let fileURL: URL
 
     /// Create a project index backed by `projects.json` in Application Support.
@@ -443,7 +453,25 @@ final class ProjectIndex: ObservableObject {
                 // runs is followed by the watcher's `presentedItemDidMove`;
                 // launch and volume mount still heal the rest.
                 for watcher in self.watchers.values { watcher.refresh() }
+                self.syncIfAFolderReturned()
             }
+        }
+    }
+
+    /// Activation's look at the folders that were away: one existence check
+    /// each, off the main actor, and `syncWatchers` only if one is back. A
+    /// folder can come back with no event of ours: a cloud folder restored, a
+    /// Finder Put Back. Not `refreshAvailability()` (above), and not a bare
+    /// `syncWatchers()`, which would check every project on the main actor at
+    /// every ⌘-Tab.
+    func syncIfAFolderReturned() {
+        let paths = projects.filter { unreachable.contains($0.id) }.map(\.path)
+        guard !paths.isEmpty else { return }
+        Task { [weak self] in
+            let back = await Task.detached {
+                paths.contains { FileManager.default.fileExists(atPath: $0) }
+            }.value
+            if back { self?.syncWatchers() }
         }
     }
 
@@ -1343,12 +1371,15 @@ final class ProjectIndex: ObservableObject {
         for stale in leases.keys where !liveIDs.contains(stale) {
             releaseLeaseAndWatcher(for: stale)
         }
+        unreachable.formIntersection(liveIDs)
+        var returned: [Project] = []
         // Most recently opened first, so the cap leaves out the projects the
         // researcher has not touched for longest, not whichever sit lowest in
         // the list (register row 34).
         for project in Self.watcherOrder(projects) {
             switch project.availability {
             case .ready:
+                if unreachable.remove(project.id) != nil { returned.append(project) }
                 if watchers[project.id] != nil { continue }
                 if watchers.count >= watcherCap {
                     log.notice("watcher cap reached; skipping new presenter")
@@ -1356,9 +1387,12 @@ final class ProjectIndex: ObservableObject {
                 }
                 startLeaseAndWatcher(for: project)
             case .cantFind, .inCloud:
+                unreachable.insert(project.id)
                 releaseLeaseAndWatcher(for: project.id)
             }
         }
+        // After the loop, so each is read under the lease just taken.
+        for project in returned { onFolderReturned?(project) }
     }
 
     /// Projects in the order the watcher cap should favour them: most recently

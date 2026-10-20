@@ -781,6 +781,10 @@ final class PipelineRunner: ObservableObject {
     /// `.onAppear`, after both `@StateObject`s exist.
     func setProjectIndex(_ index: ProjectIndex) {
         self.projectIndex = index
+        // A state read while the folder was away ("Folder not found") is read
+        // again when it comes back. A run the runner owns is not touched:
+        // `applyScanResult` keeps it.
+        index.onFolderReturned = { [weak self] project in self?.scan(project: project) }
     }
 
     // MARK: - Progressive sidebar scan

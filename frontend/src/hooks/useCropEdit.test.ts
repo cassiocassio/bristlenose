@@ -46,13 +46,25 @@ describe("useCropEdit", () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it("commitEdit from hybrid calls onCommit with the text", () => {
+  it("commitEdit from hybrid calls onCommit with the edited text", () => {
     const { result, onCommit } = makeHook("hello world");
     act(() => result.current.enterEditMode());
+    const el = document.createElement("span");
+    el.textContent = " hello there ";
+    act(() => result.current.commitEdit(el));
+    expect(result.current.mode).toBe("idle");
+    expect(onCommit).toHaveBeenCalledWith("hello there");
+  });
+
+  // An edit opened and left unchanged is not an edit: no write, no Undo entry.
+  it("commitEdit with the text unchanged leaves edit mode and commits nothing", () => {
+    const { result, onCommit, onCancel } = makeHook("hello world");
+    act(() => result.current.enterEditMode());
+    // Without an editable element, it falls back to currentText
     act(() => result.current.commitEdit());
     expect(result.current.mode).toBe("idle");
-    // Without an editable element, it falls back to currentText
-    expect(onCommit).toHaveBeenCalledWith("hello world");
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 
   it("commitEdit with empty text calls onCancel", () => {

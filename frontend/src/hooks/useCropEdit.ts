@@ -133,7 +133,10 @@ export function useCropEdit({
       setMode("idle");
       suppressBlurRef.current = false;
 
-      if (newText.length > 0) {
+      // An edit opened and left as it was (clicked into, then blurred, clicked
+      // outside or Enter) is not an edit: it writes nothing and adds no Undo.
+      // The same test as the card's unmount path (QuoteCard, R88).
+      if (newText.length > 0 && newText !== words.join(" ")) {
         onCommit(newText);
       } else {
         onCancel();

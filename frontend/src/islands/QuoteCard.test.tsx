@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { QuoteCard } from "./QuoteCard";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { QuoteResponse, ModeratorQuestionResponse, TranscriptSegmentResponse } from "../utils/types";
@@ -608,6 +608,45 @@ describe("QuoteCard — an edit in progress survives the card going away", () =>
     expect(document.querySelector(".crop-editable")).toBeTruthy();
     unmount();
     expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  // Clicking into a quote and out again added a pointless "Undo Edit Quote".
+  it("writes nothing when an unchanged edit loses focus", () => {
+    vi.useFakeTimers();
+    try {
+      const onEditCommit = vi.fn<Commit>();
+      renderEditableCard({}, { onEditCommit });
+      fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));
+      const editor = document.querySelector(".crop-editable") as HTMLElement;
+      fireEvent.blur(editor);
+      act(() => { vi.advanceTimersByTime(500); });
+      expect(document.querySelector(".crop-editable")).toBeNull();
+      expect(onEditCommit).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("writes nothing when an unchanged edit is left by clicking outside", () => {
+    const onEditCommit = vi.fn<Commit>();
+    renderEditableCard({}, { onEditCommit });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));
+    fireEvent.pointerDown(document.body);
+    expect(document.querySelector(".crop-editable")).toBeNull();
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
+  it("still commits what was typed when it loses focus", () => {
+    vi.useFakeTimers();
+    try {
+      const onEditCommit = vi.fn<Commit>();
+      const { editor } = startEditing(onEditCommit);
+      fireEvent.blur(editor);
+      vi.advanceTimersByTime(500);
+      expect(onEditCommit).toHaveBeenCalledWith("q-p1-26", TYPED);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("writes nothing on unmount when no edit was open", () => {

@@ -19,6 +19,7 @@ trued-against: HEAD@main on 2026-10-04
 
 ## Changelog
 
+- _2026-10-20_ — three follow-ups to the delta writes. The eye toggle's `/hidden-tag-groups` takes a `PATCH` of the groups it changed (the SPA no longer sends the whole set, which erased groups hidden on the server when an eye was clicked before the first read landed). A failed undo or redo of a speaker name says so (a failed `/people` read used to be silent) and puts the name back on screen. A quote edit opened and left unchanged records nothing, by blur, click outside or Enter as well as by unmount.
 - _2026-10-04_ — trued against the build: status `partial`; the 28 Jul "what exists" table kept beside a 4 Oct one; the substrate section records that deltas shipped instead of snapshots; the divide's points 1–4 and the open questions annotated with what was decided. New finding recorded under point 2: a pending sidebar removal shadowed the whole report stack, indefinitely — fixed the same day (a new report act settles it).
 - _2026-10-04_ — built: the report stack (`contexts/UndoStore.ts`, `components/UndoSync.tsx`, the `undo-state` channel live both ways with named Undo and Redo), first for speaker names, then star/hide/tag, then text edits.
 - _2026-07-28_ — created. Companion to `design-undo-debt.md`, which owns the *sidebar* register and the "nothing confirms, everything ⌘Z's" principle. This doc owns the **full** mutable-state inventory (five ownership domains, ~50 mutations), the candidate history stacks, and the Swift↔Python boundary problems that doc explicitly declines to cover ("the report's own undo domain… Don't conflate the two").
@@ -147,6 +148,9 @@ snapshot-and-replay undo without any new server vocabulary.
 > failed write puts the value back to what the server is known to hold, once
 > its writes are all answered — so the second caveat below is now narrower: a
 > value the server never held is taken off the screen when its write fails.
+> `/hidden-tag-groups` followed the same day (`SidebarStore.ts`, not on the
+> stack: view state), and a speaker name's failed undo or redo puts the name
+> back unless a later act on that slot moved it (`speakerNames.ts`).
 
 Two caveats that stop it being free:
 

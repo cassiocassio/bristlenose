@@ -4098,7 +4098,10 @@ class Pipeline:
         """
         import time
 
-        from bristlenose.stages.s03_parse_subtitles import parse_subtitle_file
+        from bristlenose.stages.s03_parse_subtitles import (
+            empty_subtitle_reason,
+            parse_subtitle_file,
+        )
         from bristlenose.stages.s04_parse_docx import DocxParseRefusedError, parse_docx_file
         from bristlenose.stages.transcript_choice import (
             ParsedTranscriptFile,
@@ -4174,6 +4177,17 @@ class Pipeline:
                 chosen, superseded = choose_transcript(candidates)
                 if chosen.segments:
                     session_segments[session.session_id] = chosen.segments
+                elif (
+                    session.audio_path is None
+                    and chosen.file.file_type in (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT)
+                    and (empty := empty_subtitle_reason(chosen.file.path)) is not None
+                ):
+                    # Read, and nothing in it: said as an empty or unreadable
+                    # file, not as a recording in which nothing was said (R117).
+                    parse_failures.append(refusal_stage_failure(
+                        source_file=chosen.file.path.name, reason=empty,
+                        stage="s03_parse_subtitles", session_id=session.session_id,
+                    ))
                 for other in superseded:
                     # Stated, never silent: the researcher dropped this file in
                     # and would otherwise believe it was read.

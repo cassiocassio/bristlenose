@@ -27,6 +27,7 @@ from bristlenose.models import (
     InputFile,
     TranscriptSegment,
 )
+from bristlenose.refusals import UnusableReason
 from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import parse_timecode
 
@@ -246,6 +247,27 @@ def read_text_any_encoding(path: Path) -> str:
         )
     logger.warning("%s is not UTF-8; read as Windows-1252", path.name)
     return text
+
+
+def empty_subtitle_reason(path: Path) -> UnusableReason | None:
+    """Why a subtitle file that parsed to no segments holds no speech, or None.
+
+    ``EMPTY`` when it holds nothing (0 bytes, or a VTT header alone);
+    ``UNREADABLE`` when it has no cue timing at all, so it is not a subtitle
+    file; None when it has cues and no words, which is "nothing was said".
+    Until 20 Oct 2026 all three were stated as nothing said (R117).
+    """
+    try:
+        body = read_text_any_encoding(path).strip()
+    except (OSError, UnicodeDecodeError):
+        return UnusableReason.UNREADABLE
+    if body[:6].upper() == "WEBVTT":
+        body = body[6:].strip()
+    if not body:
+        return UnusableReason.EMPTY
+    if "-->" not in body:
+        return UnusableReason.UNREADABLE
+    return None
 
 
 def parse_subtitle_file(input_file: InputFile) -> list[TranscriptSegment]:

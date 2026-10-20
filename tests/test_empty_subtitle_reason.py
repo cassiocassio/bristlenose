@@ -62,3 +62,22 @@ def test_cues_with_no_words_are_still_nothing_said(tmp_path: Path) -> None:
     segments, outcome = _gather(path, FileType.SUBTITLE_SRT)
     assert segments == {}
     assert outcome.failed == []
+
+
+@pytest.mark.parametrize("name, data, reason", [
+    # A YouTube-style export with header lines and no cues: empty, not "not a subtitle".
+    ("headers.vtt", b"WEBVTT\nKind: captions\nLanguage: en\n\nNOTE exported\n\n",
+     UnusableReason.EMPTY),
+    # Every cue's timing malformed (R124 skips them all): it could not be read.
+    ("bad-timings.srt", b"1\n00:00:aa,000 --> 00:00:02,000\nHello\n\n"
+     b"2\n00;00;03,000 --> 00;00;04,000\nThere\n\n", UnusableReason.UNREADABLE),
+])
+def test_the_reason_holds_for_real_world_shapes(
+    tmp_path: Path, name: str, data: bytes, reason: UnusableReason,
+) -> None:
+    path = tmp_path / name
+    path.write_bytes(data)
+    kind = FileType.SUBTITLE_VTT if name.endswith(".vtt") else FileType.SUBTITLE_SRT
+    _segments, outcome = _gather(path, kind)
+    (failure,) = outcome.failed
+    assert failure.cause.reason == reason

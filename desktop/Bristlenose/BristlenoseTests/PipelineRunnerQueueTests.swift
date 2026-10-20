@@ -462,7 +462,7 @@ struct PipelineRunnerQueueTests {
                     return alive ? 0 : ESRCH
                 }
                 recorder.sent.append((pid, sig))
-                return 0
+                return sig == SIGINT ? recorder.sigintResult : 0
             },
             escalationSleep: { _ in },
             signalTarget: { $0 == getpid() ? -$0 : $0 },
@@ -492,6 +492,8 @@ struct PipelineRunnerQueueTests {
         var leaderProbes = 0
         var groupAlive = true
         var leaderAlive = true
+        /// What Stop's SIGINT returns: ESRCH for a run already gone.
+        var sigintResult: Int32 = 0
     }
 
     @Test func stopOnAnAttachedOrphanEscalatesOnItsGroup() async throws {
@@ -856,6 +858,87 @@ struct PipelineRunnerQueueTests {
 
         #expect(runner.state[p.id] == .unreachable(reason: .timedOut),
                 "the run's end was never noticed")
+    }
+
+    /// A reconnected run that ends while its poll holds a hung read (a dead
+    /// mount): the end read used to start beside the held one, so the study
+    /// held two blocked threads of the shared pool, not one. The held read is
+    /// a snapshot from before the end and cannot stand in for the end state,
+    /// so the end read waits for it to settle and then reads. Both routes to
+    /// the exit path: the poll's liveness probe, and Stop finding the run gone.
+    @Test(arguments: [false, true])
+    func aReconnectedRunThatEndsDuringAHungReadHoldsOneRead(stoppedAfterItEnded: Bool)
+        async throws {
+        let disk = HungDisk()
+        let (runner, p, recorder, url) = try await attachedOrphan(
+            manifestRead: disk.read, endStateTimeout: .milliseconds(50),
+            pollInterval: .milliseconds(100)
+        )
+        defer { disk.release(); try? FileManager.default.removeItem(at: url) }
+        await until { disk.reads >= 1 }
+        try #require(disk.reads == 1, "the poll never held a read")
+
+        if stoppedAfterItEnded {
+            recorder.sigintResult = ESRCH
+            runner.cancel(project: p)
+        } else {
+            recorder.leaderAlive = false
+        }
+        await until { runner.state[p.id] == .unreachable(reason: .timedOut) }
+
+        #expect(runner.state[p.id] == .unreachable(reason: .timedOut),
+                "the run's end was never noticed")
+        // Past the end read's time-out and several of the re-read's waits.
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(disk.reads == 1, "the end read started beside the poll's hung read")
+    }
+
+    /// The other half: a held read that does land (a slow disk, not a dead
+    /// one) lets the end read go ahead, and the row settles from it.
+    @Test func anEndReadWaitingOnAHeldReadReadsOnceItLands() async throws {
+        let disk = HungDisk()
+        let (runner, p, recorder, url) = try await attachedOrphan(
+            manifestRead: disk.read, endStateTimeout: .milliseconds(50),
+            pollInterval: .milliseconds(100)
+        )
+        defer { disk.release(); try? FileManager.default.removeItem(at: url) }
+        await until { disk.reads >= 1 }
+        try #require(disk.reads == 1, "the poll never held a read")
+
+        recorder.leaderAlive = false
+        await until { runner.state[p.id] == .unreachable(reason: .timedOut) }
+        try #require(runner.state[p.id] == .unreachable(reason: .timedOut))
+        disk.release()
+        await until { runner.state[p.id] != .unreachable(reason: .timedOut) }
+
+        #expect(runner.state[p.id] != .unreachable(reason: .timedOut),
+                "the end state never settled once the disk answered")
+        #expect(disk.reads == 2, "the end read never read once the held read landed")
+    }
+
+    /// And a re-read that gave up on the dead mount leaves no read behind for
+    /// the mount to wake: the end read it was waiting on is cancelled, and
+    /// does not read once the held read finally lands.
+    @Test func aRereadThatGaveUpLeavesNoReadForTheMountToWake() async throws {
+        let disk = HungDisk()
+        let (runner, p, recorder, url) = try await attachedOrphan(
+            manifestRead: disk.read, endStateTimeout: .milliseconds(50),
+            pollInterval: .milliseconds(100)
+        )
+        defer { disk.release(); try? FileManager.default.removeItem(at: url) }
+        await until { disk.reads >= 1 }
+        try #require(disk.reads == 1, "the poll never held a read")
+
+        recorder.leaderAlive = false
+        await until { runner.state[p.id] == .unreachable(reason: .timedOut) }
+        try #require(runner.state[p.id] == .unreachable(reason: .timedOut))
+        // Past the re-read's tries (12 of 50 ms waits each way, 1.2 s).
+        try? await Task.sleep(for: .milliseconds(2500))
+        disk.release()
+        try? await Task.sleep(for: .milliseconds(300))
+
+        #expect(disk.reads == 1, "a read nobody waits on any more went ahead")
+        #expect(runner.state[p.id] == .unreachable(reason: .timedOut))
     }
 
     @Test func aRunFinishedFromCacheClearsNothing() async {

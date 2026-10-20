@@ -508,6 +508,11 @@ final class PipelineRunner: ObservableObject {
     /// Cancelled when the orphan finishes or the user clicks Stop.
     private var orphanPollTasks: [UUID: Task<Void, Never>] = [:]
 
+    /// The read an attached run's poll is holding across ticks while it hangs.
+    /// The exit path (`handleOrphanExit`) waits for it before its own end read,
+    /// so a study on a dead mount blocks one thread of the shared pool, not two.
+    private var orphanPollReads: [UUID: Task<OrphanPollRead, Never>] = [:]
+
     /// Phase 0b: per-project task polling `pipeline-events.jsonl` for
     /// `run_progress` while a run is live, so the determinate ring updates
     /// during quiet stages (a long transcription emits little stdout).
@@ -1238,6 +1243,7 @@ final class PipelineRunner: ObservableObject {
                     )
                 }
                 pending = reading
+                self.orphanPollReads[projectID] = reading
                 guard let tick = await Self.value(of: reading, within: interval) else {
                     if !held {
                         Self.logger.notice(
@@ -1247,6 +1253,9 @@ final class PipelineRunner: ObservableObject {
                     continue
                 }
                 pending = nil
+                if self.orphanPollReads[projectID] == reading {
+                    self.orphanPollReads[projectID] = nil
+                }
                 guard !Task.isCancelled, self.attachedOrphanPIDs[projectID] == pid else { return }
 
                 let newLines = tick.lines
@@ -1283,6 +1292,9 @@ final class PipelineRunner: ObservableObject {
         let provider = runProviders.removeValue(forKey: projectID)
         let priorTerminus = orphanPriorTerminus.removeValue(forKey: projectID)
         let eventsURL = Self.eventsURL(for: project)
+        // A read the poll was holding when the run ended: the end read waits
+        // for it rather than start a second beside it.
+        let held = orphanPollReads.removeValue(forKey: projectID)
         attachedOrphanPIDs[projectID] = nil
         orphanPollTasks[projectID]?.cancel()
         orphanPollTasks[projectID] = nil
@@ -1301,7 +1313,9 @@ final class PipelineRunner: ObservableObject {
 
         // Read the manifest to derive .ready vs .idle, and again if that read
         // times out (`settleOrphanEndRead`, R29). Through the same seam and
-        // timeout as a spawned run's end read.
+        // timeout as a spawned run's end read, after the poll's held read: that
+        // read began before the run ended, so its answer is not the end state,
+        // and a second read beside it on a dead mount blocks a second thread.
         // Brief delay so a clean SIGINT exit has time to flush atexit
         // handlers (manifest write); a SIGKILL/crash won't benefit but won't
         // be made worse either.
@@ -1310,7 +1324,7 @@ final class PipelineRunner: ObservableObject {
         Task.detached { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             let (resolved, leftBehind) = await Self.readEndState(
-                at: Self.manifestURL(for: project), timeout: timeout, read: read
+                at: Self.manifestURL(for: project), timeout: timeout, read: read, after: held
             )
             guard let self else { leftBehind?.cancel(); return }
             await self.settleOrphanEndRead(
@@ -1562,11 +1576,23 @@ final class PipelineRunner: ObservableObject {
     /// The timed read, handing back a read that timed out still running, for
     /// `rereadAfterSlowEnd` to wait on rather than start a second beside it:
     /// on a dead mount each blocked read holds a thread of the shared pool.
+    /// `held` is an attached run's poll read still out when the run ended: the
+    /// read starts only once it has settled (its value is thrown away), and
+    /// the time-out covers that wait.
     static func readEndState(
         at url: URL, timeout: Duration,
-        read: @escaping @Sendable (URL) async -> PipelineState
+        read: @escaping @Sendable (URL) async -> PipelineState,
+        after held: Task<OrphanPollRead, Never>? = nil
     ) async -> (state: PipelineState, leftBehind: Task<PipelineState, Never>?) {
-        let reading = Task.detached { await read(url) }
+        let reading = Task.detached { () -> PipelineState in
+            if let held {
+                _ = await held.value
+                // Cancelled while it waited: nobody will take this value, so
+                // start no read for it.
+                if Task.isCancelled { return .unreachable(reason: .timedOut) }
+            }
+            return await read(url)
+        }
         guard let state = await value(of: reading, within: timeout) else {
             return (.unreachable(reason: .timedOut), reading)
         }

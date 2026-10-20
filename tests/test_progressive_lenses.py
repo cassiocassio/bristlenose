@@ -726,6 +726,7 @@ def test_parsed_transcripts_are_identified_together_and_delivered_in_order(
 
     class _Pass:
         split_records: dict[str, dict[str, object]] = {}
+        failed: set[str] = set()
 
         async def run(self, _sid, _segments):
             in_flight["now"] += 1

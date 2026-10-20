@@ -2280,6 +2280,15 @@ class Pipeline:
                     ))
                     for sid, infos in _results_5b:
                         all_speaker_infos[sid] = infos
+                        if sid in _speakers.failed:
+                            # Its heuristic roles stand for this run; recorded
+                            # failed so the next run asks again (R97).
+                            mark_session_failed(
+                                manifest, STAGE_IDENTIFY_SPEAKERS, sid,
+                                provider=self.settings.llm_provider,
+                                model=self.settings.llm_model,
+                            )
+                            continue
                         mark_session_complete(
                             manifest, STAGE_IDENTIFY_SPEAKERS, sid,
                             provider=self.settings.llm_provider,

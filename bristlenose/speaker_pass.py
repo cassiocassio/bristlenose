@@ -67,6 +67,10 @@ class SpeakerPass:
         self._voice_off = ""
         #: Errors from the LLM passes, for the stage's one summary warning.
         self.errors: list[str] = []
+        #: Sessions whose split or role call failed: their heuristic roles
+        #: stand for this run, and they are recorded failed so the next run
+        #: asks again (R97).
+        self.failed: set[str] = set()
         #: What produced each session's speaker labels, written to the speaker
         #: cache so a later stage (or a person) can tell a voice-checked split
         #: from a text-only one.
@@ -162,6 +166,19 @@ class SpeakerPass:
 
     async def run(self, sid: str, segments: list[TranscriptSegment]) -> list[SpeakerInfo]:
         """Identify one session's speakers, in place on *segments*."""
+        # This session's errors, apart from the shared list, so a failure is
+        # known per session while sessions run concurrently.
+        errors: list[str] = []
+        try:
+            return await self._run(sid, segments, errors)
+        finally:
+            self.errors.extend(errors)
+            if errors:
+                self.failed.add(sid)
+
+    async def _run(
+        self, sid: str, segments: list[TranscriptSegment], errors: list[str],
+    ) -> list[SpeakerInfo]:
         from bristlenose.stages.s05b_identify_speakers import (
             identify_speaker_roles_heuristic,
             identify_speaker_roles_llm,
@@ -174,7 +191,7 @@ class SpeakerPass:
                 await self._ensure_voice()
                 async with self._sem_split:
                     await split_single_speaker_llm(
-                        segments, self.llm_client, errors=self.errors,
+                        segments, self.llm_client, errors=errors,
                     )
                 async with self._sem_voice:
                     rec = await asyncio.to_thread(
@@ -194,5 +211,5 @@ class SpeakerPass:
             identify_speaker_roles_heuristic(segments)
             async with self._sem_roles:
                 return await identify_speaker_roles_llm(
-                    segments, self.llm_client, errors=self.errors,
+                    segments, self.llm_client, errors=errors,
                 )

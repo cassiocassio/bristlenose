@@ -59,6 +59,7 @@ from bristlenose.manifest import (
     STAGE_TRANSCRIBE,
     PipelineManifest,
     mark_session_complete,
+    mark_session_failed,
     write_manifest,
 )
 
@@ -362,11 +363,19 @@ class ReadableChain:
         data = speaker_cache_bytes(infos, work, self.speaker_pass.split_records.get(sid))
         self._si_dir.mkdir(parents=True, exist_ok=True)
         (self._si_dir / f"{sid}.json").write_bytes(data)
-        mark_session_complete(
-            self._manifest, STAGE_IDENTIFY_SPEAKERS, sid,
-            provider=self.settings.llm_provider, model=self.settings.llm_model,
-            content_hash=hash_bytes(data), input_hash=fp,
-        )
+        if sid in self.speaker_pass.failed:
+            # Its heuristic roles stand for this run; recorded failed so the
+            # next run asks again (R97).
+            mark_session_failed(
+                self._manifest, STAGE_IDENTIFY_SPEAKERS, sid,
+                provider=self.settings.llm_provider, model=self.settings.llm_model,
+            )
+        else:
+            mark_session_complete(
+                self._manifest, STAGE_IDENTIFY_SPEAKERS, sid,
+                provider=self.settings.llm_provider, model=self.settings.llm_model,
+                content_hash=hash_bytes(data), input_hash=fp,
+            )
         self.identified[sid] = fp
 
         # Codes, then the transcript files. No placeholder participant here: a

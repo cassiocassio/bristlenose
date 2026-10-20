@@ -812,6 +812,60 @@ describe("SessionsTable moderators are named per session", () => {
   });
 });
 
+// The grid draws a rename at once and writes after. A write that failed toasted
+// but left the new name on screen, so the grid showed a name the server never
+// took (20 Oct 2026).
+describe("SessionsTable — a rename that fails", () => {
+  function mockFailing(fail: { put?: boolean; people?: () => boolean }) {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+      (url: string, opts?: { method?: string }) => {
+        if (opts?.method === "PUT" && fail.put) {
+          return Promise.resolve({ ok: false, status: 500, json: async () => ({}) });
+        }
+        if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => twoModerators });
+        if (url.includes("/people")) {
+          return fail.people?.()
+            ? Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+            : Promise.resolve({ ok: true, json: async () => peopleResponse });
+        }
+        return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
+      },
+    );
+  }
+
+  it("puts a moderator's name back when the write is refused, and says so", async () => {
+    mockFailing({ put: true });
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(screen.getAllByTestId("bn-name-pencil-m1")[1]);
+    const editing = screen.getAllByTestId("bn-name-m1")[1];
+    editing.textContent = "Joanna";
+    fireEvent.keyDown(editing, { key: "Enter" });
+    expect(screen.getAllByTestId("bn-name-m1")[1].textContent).toBe("Joanna");
+
+    expect(await screen.findByText("Couldn’t save your change.")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getAllByTestId("bn-name-m1").map((n) => n.textContent)).toEqual(["Martin", "Jo"]),
+    );
+  });
+
+  it("puts a participant's name back when /people can't be read", async () => {
+    let failing = false;
+    mockFailing({ people: () => failing });
+    render(<SessionsTable projectId="1" />);
+    await screen.findByText("#1");
+    failing = true;
+    fireEvent.click(screen.getByTestId("bn-name-pencil-p1"));
+    const nameEl = screen.getByTestId("bn-name-p1");
+    nameEl.textContent = "Alicia";
+    fireEvent.keyDown(nameEl, { key: "Enter" });
+    expect(screen.getByTestId("bn-name-p1").textContent).toBe("Alicia");
+
+    await waitFor(() => expect(screen.getByTestId("bn-name-p1").textContent).toBe("Alice"));
+    expect(putCalls()).toHaveLength(0);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Person picker — who is this speaker? (design-people.md § UX iteration 3)
 // ---------------------------------------------------------------------------

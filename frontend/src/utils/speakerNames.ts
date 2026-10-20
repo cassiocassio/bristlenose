@@ -144,6 +144,16 @@ function announce(sessionId: string, code: string, state: SpeakerNameState): voi
   );
 }
 
+/** A write that failed puts the screen back to `from`, as a quote's does (R7),
+ *  unless a later act or step has moved the slot since (`at` is the move the
+ *  write belongs to). A participant's write is two requests, and the first may
+ *  have landed: views read the slot again rather than trust the guess. */
+function putBack(sessionId: string, code: string, at: number, from: SpeakerNameState): void {
+  if (slotMoves.get(slotKey(sessionId, code)) !== at) return;
+  announce(sessionId, code, from);
+  written();
+}
+
 export interface NameSpeakerArgs {
   sessionId: string;
   code: string;
@@ -153,24 +163,24 @@ export interface NameSpeakerArgs {
 
 /**
  * Write a speaker slot and make the write undoable. A no-op when nothing
- * changes. Resolves when the forward write has landed (callers may ignore it).
+ * changes. Resolves when the forward write has landed; rejects when it failed,
+ * which the write has already said, so a caller may catch and ignore it.
  */
 export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs): Promise<void> {
   if (isExportMode() || sameState(before, after)) return Promise.resolve();
-  moved(sessionId, code);
-  const done = enqueue(() => writeSlot(sessionId, code, after, before));
-  // The screen moves at once; a write that fails puts it back, as a quote's
-  // does (R7), unless a later act or step has moved the slot since.
+  // The caller has drawn `after` already (the Sessions grid does); a write
+  // that fails puts it back.
+  const acted = moved(sessionId, code);
+  const done = enqueue(() => writeSlot(sessionId, code, after, before)).catch((err: unknown) => {
+    putBack(sessionId, code, acted, before);
+    throw err;
+  });
+  // An undo or redo moves the screen at once, and puts it back the same way.
   const step = (to: SpeakerNameState, from: SpeakerNameState) => {
     announce(sessionId, code, to);
     const at = moved(sessionId, code);
     return enqueue(() => writeSlot(sessionId, code, to, from)).catch((err: unknown) => {
-      if (slotMoves.get(slotKey(sessionId, code)) === at) {
-        announce(sessionId, code, from);
-        // A participant's write is two requests, and the first may have landed:
-        // views read the slot again rather than trust the guess.
-        written();
-      }
+      putBack(sessionId, code, at, from);
       throw err;
     });
   };

@@ -261,6 +261,64 @@ describe("nameSpeaker — an undo or redo that fails", () => {
   });
 });
 
+// The Sessions grid draws a rename at once and writes after; a forward write
+// that failed toasted but left the new name on screen (20 Oct 2026).
+describe("nameSpeaker — a rename that fails", () => {
+  const ann: SpeakerNameState = { full_name: "Ann Archer", short_name: "Ann", confirmed: false };
+  const annie: SpeakerNameState = { full_name: "Ann Archer", short_name: "Annie", confirmed: true };
+
+  function listen() {
+    const seen: SpeakerNameState[] = [];
+    const reread = vi.fn();
+    const on = (e: Event) => seen.push((e as CustomEvent<PeopleChangedDetail>).detail.state);
+    window.addEventListener(PEOPLE_CHANGED_EVENT, on);
+    window.addEventListener("bn:speakers-written", reread);
+    return {
+      seen,
+      reread,
+      stop: () => {
+        window.removeEventListener(PEOPLE_CHANGED_EVENT, on);
+        window.removeEventListener("bn:speakers-written", reread);
+      },
+    };
+  }
+
+  it("puts the name back on screen when the write is refused", async () => {
+    putMock.mockRejectedValueOnce(new Error("PUT 409"));
+    const { seen, reread, stop } = listen();
+    await expect(nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked })).rejects.toThrow();
+    stop();
+    expect(toastMock).not.toHaveBeenCalled(); // sendPut has already toasted
+    expect(seen).toEqual([proposed]);
+    expect(reread).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when a participant's read fails, and puts the name back", async () => {
+    const err = new Error("GET /people 500");
+    peopleMock.mockRejectedValueOnce(err);
+    const { seen, reread, stop } = listen();
+    await expect(nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: annie })).rejects.toThrow();
+    stop();
+    expect(toastMock).toHaveBeenCalledWith(err);
+    expect(seen).toEqual([ann]);
+    // Half of a participant's write may have landed: views read the slot again.
+    expect(reread).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the screen alone when a later act moved the slot meanwhile", async () => {
+    let fail!: (e: unknown) => void;
+    putMock.mockReturnValueOnce(new Promise<void>((_, rej) => { fail = rej; }));
+    const first = nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    const { seen, reread, stop } = listen();
+    void nameSpeaker({ sessionId: "s1", code: "m1", before: picked, after: { ...picked, short_name: "Jo" } });
+    fail(new Error("offline"));
+    await expect(first).rejects.toThrow();
+    stop();
+    expect(seen).toEqual([]);
+    expect(reread).not.toHaveBeenCalled();
+  });
+});
+
 describe("nameSpeaker — the undo entry", () => {
   it("names the act for the Edit menu", async () => {
     await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });

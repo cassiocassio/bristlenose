@@ -407,7 +407,8 @@ export function SessionsTable({
       if (!before) return;
       const after = change(before);
       drawSlot(sessionId, code, after);
-      void nameSpeaker({ sessionId, code, before, after });
+      // A failed write has said why and put the slot back (nameSpeaker).
+      void nameSpeaker({ sessionId, code, before, after }).catch(() => undefined);
     },
     [slotState, drawSlot],
   );

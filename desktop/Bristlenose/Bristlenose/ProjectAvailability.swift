@@ -17,8 +17,11 @@ enum ProjectAvailability: Equatable {
     /// Path doesn't resolve. Reason hints why (for telemetry / copy) but the
     /// UI affordance is the same: a single "Locate…" action.
     case cantFind(reason: CantFindReason)
-    /// File lives in iCloud / cloud storage and is currently evicted. Optional
-    /// Progress is the active download, if one's in flight.
+    /// The folder is in a cloud provider's storage and is not at its path:
+    /// deleted or moved in the cloud, or its provider signed out. Not an
+    /// evicted folder — that is still there and resolves `.ready` (measured,
+    /// `docs/design-project-storage.md` §3). `downloading` is never set; no
+    /// download is offered (`docs/design-desktop-project-status.md`).
     case inCloud(downloading: Progress?)
 }
 

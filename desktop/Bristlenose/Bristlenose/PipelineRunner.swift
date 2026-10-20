@@ -1939,18 +1939,40 @@ final class PipelineRunner: ObservableObject {
 
     // MARK: - Spawn
 
+    /// The state a spawn writes instead of running, or nil to run (R63).
+    ///
+    /// Any study whose folder isn't at its path is refused, `.inCloud` as well
+    /// as `.cantFind`: availability returns `.inCloud` only after the folder
+    /// itself failed `fileExists`, so it is a cloud folder that has gone
+    /// (deleted, moved, its provider signed out), never an evicted one. An
+    /// evicted folder is still there, resolves `.ready`, and runs: the sidecar
+    /// fetches its files on demand (`docs/design-project-storage.md` §3). The
+    /// refusal reads what a scan of the folder reads, "Folder not found".
+    nonisolated static func spawnRefusal(for availability: ProjectAvailability) -> PipelineState? {
+        switch availability {
+        case .ready:
+            return nil
+        case .cantFind, .inCloud:
+            return .unreachable(reason: .folderMissing)
+        }
+    }
+
     /// Spawn the subprocess. When `clean` is true, `--clean` is added — used
     /// by Re-analyse. Queued spawns carry the flag through the queue (R18).
-    private func spawn(project: Project, clean: Bool = false) {
+    private func spawn(project requested: Project, clean: Bool = false) {
+        // The index's copy, not the caller's: a sheet holds the `Project` it
+        // opened with, and a rename since then would refuse a folder that is
+        // there, or launch against the old path. The queue already re-reads.
+        let project = projectIndex?.projects.first { $0.id == requested.id } ?? requested
         // A study whose folder has gone — a drive ejected while it waited, or
         // before Analyse — is not run against the missing path (R63). It reads
         // as a scan of that folder would (`parseManifest`), and the next study
         // in the queue goes ahead.
-        if case .cantFind = project.availability {
+        if let refusal = Self.spawnRefusal(for: project.availability) {
             Self.logger.notice(
                 "spawn refused — folder not found project=\(project.id.uuidString, privacy: .public)"
             )
-            state[project.id] = .unreachable(reason: .folderMissing)
+            state[project.id] = refusal
             startNextQueued()
             return
         }

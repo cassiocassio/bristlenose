@@ -121,7 +121,6 @@ struct BristlenoseApp: App {
     @StateObject private var cloudImport = CloudImportCoordinator()
     @StateObject private var pipelineRunner = PipelineRunner()
     @StateObject private var volumeWatcher = VolumeWatcher()
-    @StateObject private var toast = ToastStore()
     @StateObject private var removalStore = UndoableRemovalStore()
     @StateObject private var copyMachinery = CopyMachinery()
     // Ambient local-model pull (Beat 3). Owned at app level so the download
@@ -164,7 +163,6 @@ struct BristlenoseApp: App {
                 .environmentObject(serveFleet)
                 .environmentObject(projectIndex)
                 .environmentObject(pipelineRunner)
-                .environmentObject(toast)
                 .environmentObject(removalStore)
                 .environmentObject(copyMachinery)
                 // The main window reads this so a sidebar row can show a cloud
@@ -177,7 +175,6 @@ struct BristlenoseApp: App {
                 .environmentObject(ollamaDownload)
                 .environmentObject(outOfCredit)
                 .environmentObject(i18n)
-                .overlay { ToastOverlay().environmentObject(toast) }
                 .onAppear {
                     // The AppKit Settings window is built lazily on first open;
                     // hand it the app's i18n so its SwiftUI panes can translate.
@@ -288,9 +285,9 @@ struct BristlenoseApp: App {
                 .tint(paletteAccent)
                 // Expired-alpha `.dmg` modal sequence (Expired → feedback sheet
                 // → Thanks → quit). No-op unless this is an expired alpha build;
-                // i18n + toast passed explicitly (the modifier isn't inside their
-                // .environmentObject scope).
-                .alphaExpiryFlow(i18n: i18n, toast: toast)
+                // i18n passed explicitly (the modifier isn't inside its
+                // .environmentObject scope); the flow draws its own toasts.
+                .alphaExpiryFlow(i18n: i18n)
                 // Opens the cloud-import scene. Lives here rather than in
                 // ContentView so it is alive even with no project selected.
                 .modifier(CloudImportOpener(

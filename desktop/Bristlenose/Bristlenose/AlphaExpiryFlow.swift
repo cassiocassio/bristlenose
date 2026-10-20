@@ -20,7 +20,9 @@ import SwiftUI
 /// a well-known SwiftUI race).
 struct AlphaExpiryFlow: ViewModifier {
     let i18n: I18n
-    let toast: ToastStore
+    /// The flow's own, per window: each window owns its toasts (R90), and this
+    /// modifier sits outside the window's root view, so it cannot reach that one.
+    @StateObject private var toast = ToastStore()
 
     private enum Route { case expired, feedback, thanks }
 
@@ -31,6 +33,7 @@ struct AlphaExpiryFlow: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .overlay { ToastOverlay().environmentObject(toast) }
             .onAppear { if AlphaBuild.isExpired() { route = .expired } }
             .alert("This Bristlenose beta has expired", isPresented: presenting(.expired)) {
                 Button("Get Bristlenose") { openSiteAndQuit() }
@@ -83,10 +86,10 @@ struct AlphaExpiryFlow: ViewModifier {
 }
 
 extension View {
-    /// Attach the expired-alpha modal sequence. Pass the app-level `I18n` +
-    /// `ToastStore` explicitly (the modifier isn't inside their
-    /// `.environmentObject` scope). No-op unless this is an expired alpha build.
-    func alphaExpiryFlow(i18n: I18n, toast: ToastStore) -> some View {
-        modifier(AlphaExpiryFlow(i18n: i18n, toast: toast))
+    /// Attach the expired-alpha modal sequence. Pass the app-level `I18n`
+    /// explicitly (the modifier isn't inside its `.environmentObject` scope).
+    /// No-op unless this is an expired alpha build.
+    func alphaExpiryFlow(i18n: I18n) -> some View {
+        modifier(AlphaExpiryFlow(i18n: i18n))
     }
 }

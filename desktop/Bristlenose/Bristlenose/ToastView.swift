@@ -1,9 +1,12 @@
 import SwiftUI
 
 /// Shared bottom-of-window toast surface. **One consumer today:**
-/// `ToastStore` + `ToastOverlay` — informational toasts (3s auto-dismiss),
-/// attached at `BristlenoseApp.swift` and driven from `ContentView` /
-/// `AlphaExpiryFlow`.
+/// `ToastStore` + `ToastOverlay` — informational toasts (3s auto-dismiss).
+/// **One store per window, never one for the app:** `ContentView` and
+/// `AlphaExpiryFlow` each own theirs as a `@StateObject` and draw it with their
+/// own overlay, so a toast shows in the window whose action raised it. An
+/// app-level store drew every toast in every open window (R90, 20 Oct 2026);
+/// `tests/test_desktop_toast_scope.py` holds the shape.
 ///
 /// The second consumer is gone. `UndoableRemovalStore` + `RemoveToast` — the
 /// undoable removal toast with an 8s fuse — was **deleted** on 19 Aug 2026

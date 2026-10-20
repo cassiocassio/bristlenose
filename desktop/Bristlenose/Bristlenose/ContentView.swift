@@ -199,7 +199,10 @@ struct ContentView: View {
     @StateObject private var bridgeHandler = BridgeHandler()
     @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var pipelineRunner: PipelineRunner
-    @EnvironmentObject var toast: ToastStore
+    /// This window's toasts. Each window owns its store and draws only it: there was
+    /// one for the app, so a drop refused in one window put its toast in every
+    /// window (R90). Every `toast.show` here is this window's own act.
+    @StateObject private var toast = ToastStore()
     @EnvironmentObject var removalStore: UndoableRemovalStore
     @EnvironmentObject var copyMachinery: CopyMachinery
     /// Read only to hand to the sidebar, so a row can show a cloud batch after
@@ -1064,6 +1067,7 @@ struct ContentView: View {
 
     var body: some View {
         splitViewCore
+        .overlay { ToastOverlay().environmentObject(toast) }
         // Every window-scoped menu command arrives through here, routed to
         // whichever window is key rather than broadcast to all of them — see
         // `WindowCommandFocus.swift`. Scene-scoped, not view-scoped, for the

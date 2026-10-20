@@ -42,6 +42,7 @@ def _make_spec(**overrides) -> ClipSpec:  # type: ignore[no-untyped-def]
 def _make_quote(**overrides) -> _QuoteLike:  # type: ignore[no-untyped-def]
     defaults = {
         "quote_id": "q-p1-42",
+        "row_id": 1,
         "participant_id": "p1",
         "session_id": "s1",
         "start_timecode": 42.0,
@@ -288,6 +289,25 @@ class TestBuildClipManifest:
             session_durations={"s1": 300.0},
         )
         assert len(result) == 1
+
+    def test_two_quotes_in_the_same_second_are_both_clipped(self) -> None:
+        """They share a DOM id (participant + whole second) but are two rows (R77).
+
+        Keyed on the DOM id, the later one was dropped before the merge, so the
+        clip ended where the first quote did and cut the second one short.
+        """
+        q1 = _make_quote(row_id=1, start_timecode=42.2, end_timecode=44.0)
+        q2 = _make_quote(row_id=2, start_timecode=42.8, end_timecode=90.0)
+        result = build_clip_manifest(
+            [q1, q2],
+            speaker_map={("s1", "p1"): "Sarah"},
+            session_media={"s1": (Path("/media/v.mp4"), False)},
+            session_durations={"s1": 300.0},
+        )
+        assert len(result) == 2
+        merged = merge_adjacent_clips(result)
+        assert len(merged) == 1
+        assert merged[0].end >= q2.end_timecode
 
     def test_no_media_filtered(self) -> None:
         q = _make_quote()

@@ -227,6 +227,10 @@ class _QuoteLike:
     """Minimal interface expected from a quote object for manifest building."""
 
     quote_id: str
+    #: The quote's row. Two quotes from one speaker in the same second share a
+    #: ``quote_id`` (the DOM id is participant + whole second), so the row is
+    #: what tells them apart (R77).
+    row_id: int
     participant_id: str
     session_id: str
     start_timecode: float
@@ -265,13 +269,13 @@ def build_clip_manifest(
     list[ClipSpec]
         Deduplicated, padded clip specs (not yet merged).
     """
-    seen: set[str] = set()
+    seen: set[int] = set()
     specs: list[ClipSpec] = []
 
     for q in quotes:
-        if q.quote_id in seen:
+        if q.row_id in seen:
             continue
-        seen.add(q.quote_id)
+        seen.add(q.row_id)
 
         # Skip quotes with no media
         media_info = session_media.get(q.session_id)

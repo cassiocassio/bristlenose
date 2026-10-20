@@ -110,6 +110,40 @@ class TestStartClipExtraction:
             # Exactly-these-quotes selection must not fall back to featured heroes.
             mock_featured.assert_not_called()
 
+    def test_two_quotes_in_one_second_are_both_handed_to_the_clipper(
+        self, client: TestClient, tmp_path: Path,
+    ) -> None:
+        """Two rows share the DOM id ``q-p1-10``; the manifest keeps both (R77)."""
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            first = db.query(Quote).filter(Quote.participant_id == "p1").order_by(
+                Quote.start_timecode).first()
+            assert first is not None and int(first.start_timecode) == 10
+            db.add(Quote(
+                project_id=first.project_id, session_id=first.session_id,
+                participant_id="p1", start_timecode=first.start_timecode + 0.001,
+                end_timecode=first.end_timecode + 40.0, text="A second quote in the same second",
+                quote_type=first.quote_type, topic_label=first.topic_label,
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        built: list[list[ClipSpec]] = []
+        real_build = clips_export.build_clip_manifest
+
+        def spy(*args, **kwargs):  # type: ignore[no-untyped-def]
+            built.append(real_build(*args, **kwargs))
+            return built[-1]
+
+        media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 300.0})
+        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+                patch.object(clips_export, "_load_session_media", return_value=media), \
+                patch.object(clips_export, "build_clip_manifest", spy):
+            resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10"]})
+        assert resp.status_code == 200
+        assert len(built) == 1 and len(built[0]) == 2
+
     def test_no_ids_uses_featured_union(self, client: TestClient) -> None:
         """With no ids (legacy no-scope caller), the featured union still runs."""
         with patch(

@@ -204,6 +204,7 @@ def _quotes_to_quotelike(
         dom_id = f"q-{q.participant_id}-{int(q.start_timecode)}"
         result.append(_QuoteLike(
             quote_id=dom_id,
+            row_id=q.id,
             participant_id=q.participant_id,
             session_id=q.session_id,
             start_timecode=q.start_timecode,

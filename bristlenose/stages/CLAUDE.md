@@ -10,7 +10,7 @@ Stages that shell out to FFmpeg/ffprobe (`s02_extract_audio.py`, `utils/video.py
 - **Speaker labels**: Original Whisper labels (`Speaker A`, `Speaker B`) kept in parentheses in raw transcripts only
 - **Timecodes**: `MM:SS` for segments under 1 hour, `HH:MM:SS` at or above 1 hour. Mixed formats in the same file is correct
 - **Timecodes are floats internally**: All data structures store seconds as `float`. String formatting happens only at output. Never parse formatted timecodes back within the same session
-- **`.txt` is canonical**: The parser (`load_transcripts_from_dir`) reads only `.txt` files. `.md` files are human-readable companions, not parsed back
+- **`.txt` is canonical**: The parser (`load_transcripts_from_dir`) reads only `.txt` files. `.md` files are human-readable companions, not parsed back. A `.txt` with no timecoded line yields nothing; `analyze` names it in the files bucket as `unsupported_format` rather than dropping it (R119, 20 Oct 2026). Reading untimed text would be a feature
 - **Legacy format support**: Parser also accepts old-format files with `[PARTICIPANT]`/`[RESEARCHER]` role labels, and old files where all segments use `[p1]` (role will be UNKNOWN)
 - **Speaker code inference**: Parser derives role from prefix: `m` → RESEARCHER, `o` → OBSERVER, `p` → UNKNOWN (backward compat). Code validation checks first char + remaining digits (e.g. `m1` valid, `misc` not)
 

@@ -3748,8 +3748,24 @@ class Pipeline:
         self._configure_logging(output_dir)
         write_pipeline_metadata(output_dir, self.settings.project_name)
 
-        # Load existing transcripts from text files
-        clean_transcripts = load_transcripts_from_dir(transcripts_dir)
+        # Load existing transcripts from text files. One with no timecoded
+        # line is refused by name in the files bucket, as `run` refuses a
+        # format it declines, never dropped without a word (R119).
+        declined: list[SkippedFile] = []
+        clean_transcripts = load_transcripts_from_dir(transcripts_dir, skipped=declined)
+        if declined:
+            refused = [
+                refusal_stage_failure(
+                    source_file=entry.path.name, reason=entry.reason, stage="s01_ingest"
+                )
+                for entry in declined
+            ]
+            self._summary.ingest = StageOutcome(
+                attempted=len(clean_transcripts) + len(refused),
+                succeeded=len(clean_transcripts),
+                failed=refused,
+            )
+            _print_refusals(refused)
         if not clean_transcripts:
             # A failed run, as `run` has it on an empty folder (R116).
             console.print("[red]No transcript files found.[/red]")
@@ -4663,6 +4679,7 @@ class Pipeline:
 
 def load_transcripts_from_dir(
     transcripts_dir: Path,
+    skipped: list[SkippedFile] | None = None,
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.
 
@@ -4679,6 +4696,10 @@ def load_transcripts_from_dir(
     The bracket token after the timecode is the speaker code (e.g. ``p1``,
     ``m1``).  Legacy files with speaker roles (e.g. ``[PARTICIPANT]``) are
     also accepted.
+
+    A file with no timecoded line (a plain-text transcript, "Interviewer: …")
+    yields nothing, and goes in *skipped*, when given, as a format this reader
+    does not read, so `analyze` can say so by name rather than drop it (R119).
     """
     import re
     from datetime import datetime, timezone
@@ -4812,6 +4833,12 @@ def load_transcripts_from_dir(
                     duration_seconds=duration,
                     segments=segments,
                 )
+            )
+        elif skipped is not None:
+            from bristlenose.stages.s01_ingest import SkippedFile
+
+            skipped.append(
+                SkippedFile(path, UnusableReason.UNSUPPORTED_FORMAT, "no timecoded lines")
             )
 
     return transcripts

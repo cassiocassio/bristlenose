@@ -303,6 +303,21 @@ struct WebView: NSViewRepresentable {
         /// `?anonymise=…` URL when the user toggles in the panel.
         @MainActor private var pendingRequestURL: [ObjectIdentifier: URL] = [:]
 
+        /// Where the researcher already chose to save a download that was
+        /// re-fired after they changed Anonymise in the save panel (R74). Its
+        /// destination is decided; the panel is not shown again.
+        @MainActor private var chosenDestination: [ObjectIdentifier: URL] = [:]
+
+        /// Run the save panel and return where to save, or nil for Cancel. A
+        /// seam so a test can stand in for the researcher; the accessory's
+        /// controller is passed so it can tick Anonymise.
+        @MainActor var chooseSaveDestination: (NSSavePanel, ExportAccessoryController?) -> URL? = { panel, _ in
+            panel.runModal() == .OK ? panel.url : nil
+        }
+
+        /// Show an alert. A seam so a test can see one without a modal loop.
+        @MainActor var showAlert: (NSAlert) -> Void = { _ = $0.runModal() }
+
         init(bridgeHandler: BridgeHandler, i18n: I18n) {
             self.bridgeHandler = bridgeHandler
             self.i18n = i18n
@@ -595,6 +610,25 @@ struct WebView: NSViewRepresentable {
             let id = ObjectIdentifier(download)
             let requestURL = pendingRequestURL[id] ?? response.url
             defer { pendingRequestURL.removeValue(forKey: id) }
+            let alreadyChosen = chosenDestination.removeValue(forKey: id)
+
+            // An error answer is not the export. WebKit hands a download its
+            // response whatever the status (measured 20 Oct 2026: a 500 reached
+            // here as `export.json`), so without this the panel offered the
+            // server's error and saved it as the report (R75).
+            if let status = Self.failedStatus(of: response) {
+                log.error("export download refused: HTTP \(status, privacy: .public) path=\(requestURL?.path ?? "?", privacy: .public) refetch=\(alreadyChosen != nil, privacy: .public)")
+                completionHandler(nil)
+                showSaveFailed(detail: HTTPURLResponse.localizedString(forStatusCode: status))
+                return
+            }
+
+            // The anonymised copy of an export whose place was chosen in the
+            // panel that asked for it (R74): no second panel.
+            if let alreadyChosen {
+                completionHandler(alreadyChosen)
+                return
+            }
 
             let suggested = suggestedFilename.isEmpty
                 ? (requestURL?.lastPathComponent ?? "export")
@@ -630,8 +664,7 @@ struct WebView: NSViewRepresentable {
                 panel.message = i18n.t("common.export.savePanelMessage")
             }
 
-            let result = panel.runModal()
-            guard result == .OK, let chosen = panel.url else {
+            guard let chosen = chooseSaveDestination(panel, controller) else {
                 completionHandler(nil)
                 return
             }
@@ -641,18 +674,29 @@ struct WebView: NSViewRepresentable {
                 forExt: chosen.pathExtension.lowercased()
             )
 
-            // Mid-panel anonymise toggle: cancel this download and re-fire a
-            // fresh navigation against the alternate URL. The new download
-            // re-enters the delegate.
-            if isHTMLReport,
-               let c = controller,
-               c.anonymise != initialAnonymise,
-               let original = requestURL,
-               let alternate = Self.urlWithAnonymise(c.anonymise, basedOn: original),
-               let webView = self.webView {
-                download.cancel { _ in }
-                webView.load(URLRequest(url: alternate))
+            // Mid-panel anonymise toggle: this download is the other copy, so
+            // drop it and fetch the one asked for, as a download to the place
+            // already chosen. It was a page load until 20 Oct 2026, which put
+            // up a second save panel after the researcher had clicked Save, and
+            // could replace the report with an error page (R74).
+            if isHTMLReport, let c = controller, c.anonymise != initialAnonymise {
                 completionHandler(nil)
+                guard let original = requestURL,
+                      let alternate = Self.urlWithAnonymise(c.anonymise, basedOn: original),
+                      let webView = self.webView else {
+                    // This download is the copy they turned down; never save
+                    // it in place of the one they asked for.
+                    log.error("export: the \(c.anonymise ? "anonymised" : "named", privacy: .public) copy could not be fetched")
+                    showSaveFailed(detail: nil)
+                    return
+                }
+                webView.startDownload(using: URLRequest(url: alternate)) { [weak self] refetch in
+                    guard let self else { return }
+                    let refetchID = ObjectIdentifier(refetch)
+                    self.chosenDestination[refetchID] = chosen
+                    self.pendingRequestURL[refetchID] = alternate
+                    refetch.delegate = self
+                }
                 return
             }
 
@@ -686,6 +730,13 @@ struct WebView: NSViewRepresentable {
                                   didFailWithError error: Error,
                                   resumeData: Data?) {
             let nsError = error as NSError
+            // A download that ends before its destination is decided leaves
+            // its entries behind, and an ObjectIdentifier is only an address:
+            // a later download could inherit a chosen place.
+            Task { @MainActor in
+                self.chosenDestination.removeValue(forKey: ObjectIdentifier(download))
+                self.pendingRequestURL.removeValue(forKey: ObjectIdentifier(download))
+            }
             if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                 return  // user-initiated cancel
             }
@@ -699,11 +750,30 @@ struct WebView: NSViewRepresentable {
                 // make that resolve. Adding one here hardcoded English into an
                 // otherwise translated alert. Native primitives first: the
                 // stock control already does this job.
-                alert.runModal()
+                self.showAlert(alert)
             }
         }
 
+        /// The existing "The export could not be saved." alert.
+        @MainActor
+        private func showSaveFailed(detail: String?) {
+            let alert = NSAlert()
+            alert.messageText = i18n.t("common.export.saveFailedAlert")
+            if let detail { alert.informativeText = detail }
+            alert.alertStyle = .warning
+            showAlert(alert)
+        }
+
         // MARK: - Download helpers
+
+        /// The status of an HTTP answer that is not a success, or nil. A
+        /// download that isn't HTTP (a `blob:` the SPA built) has no status
+        /// and is never refused here.
+        nonisolated static func failedStatus(of response: URLResponse) -> Int? {
+            guard let http = response as? HTTPURLResponse,
+                  !(200..<300).contains(http.statusCode) else { return nil }
+            return http.statusCode
+        }
 
         private static func contentTypes(forExt ext: String) -> [UTType] {
             switch ext {

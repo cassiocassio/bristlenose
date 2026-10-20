@@ -46,8 +46,14 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   `_CATCH_UP_IN_FLIGHT` names), the run's re-apply waits for a live catch-up,
   and no catch-up starts over a run's (the loser of the race hit the
   `(job, quote)` unique constraint and rolled back). A catch-up that works
-  clears the last failed one's `failure_kind` and `error_message`. And a
-  catch-up that fails after a Stop leaves the job `cancelled`.
+  clears the last failed one's `failure_kind` and `error_message`. And a Stop
+  on a catch-up is honoured: it was never read, so the catch-up went on spending,
+  wrote its tags, and wrote `completed` over the Stop. It now checks before each
+  batch (as `run_autocode_job` does), keeps nothing it coded (its final write is
+  one `UPDATE` a cancelled row refuses), and the Stop route sets `completed_at`
+  only on a job that has none, so a stopped catch-up leaves the watermark where
+  it was and the next catch-up or run codes those sessions. A catch-up that
+  fails after a Stop leaves the job `cancelled` too.
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
   **New §4b** records that `PUT /framework-states` is a full replacement, that
   absence means enabled, and that the two together make a partial body both a

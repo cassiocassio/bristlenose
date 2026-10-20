@@ -527,6 +527,31 @@ class TestCancelAutoCodeJob:
         assert data["status"] == "cancelled"
         assert data["completed_at"] is not None
 
+    def test_a_stopped_catch_up_keeps_its_watermark(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """A Stop moved completed_at to the Stop time, past sessions the catch-up
+        never coded, so no later re-apply would code them (R12 wave 6). A Stop
+        sets the time only on a job that has none: the first apply's."""
+        from datetime import datetime
+
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(
+                project_id=1, framework_id="garrett", status="running",
+                completed_at=datetime(2026, 10, 20, 10, 0, 0),
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        resp = client_with_garrett.post(
+            "/api/projects/1/autocode/garrett/cancel"
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "cancelled"
+        assert resp.json()["completed_at"] == "2026-10-20T10:00:00"
+
     def test_cancel_pending_job(
         self, client_with_garrett: TestClient
     ) -> None:

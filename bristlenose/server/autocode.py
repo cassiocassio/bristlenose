@@ -746,6 +746,7 @@ async def reapply_to_new_quotes(
         )
         if job is None:
             return 0  # framework never applied → nothing to reproduce
+        job_id = job.id
 
         template = get_template(framework_id)
         if not template:
@@ -823,10 +824,24 @@ async def reapply_to_new_quotes(
         ]
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
 
+        def _stopped() -> bool:
+            """A Stop on the catch-up (its job set "cancelled"), read fresh."""
+            check = db_factory()
+            try:
+                j = check.get(AutoCodeJob, job_id)
+                return j is not None and j.status == "cancelled"
+            finally:
+                check.close()
+
         async def _batch(
             batch: list[QuoteBatchItem],
-        ) -> list[tuple[int, int, float, str]]:
+        ) -> list[tuple[int, int, float, str]] | None:
             async with semaphore:
+                # A catch-up can be stopped: check before each batch, as
+                # run_autocode_job does, so a Stop ends the spending (R12 wave 6).
+                # None = not sent, which neither answered nor failed.
+                if track_status and _stopped():
+                    return None
                 user_prompt = prompt_tmpl.user.format(
                     codebook_title=template.title,
                     codebook_preamble=template.preamble,
@@ -868,7 +883,7 @@ async def reapply_to_new_quotes(
         # that worked said it partly failed.
         processed = sum(
             len(b) for b, r in zip(batches, results, strict=True)
-            if not isinstance(r, BaseException)
+            if r is not None and not isinstance(r, BaseException)
         )
 
         accepted = 0
@@ -887,6 +902,8 @@ async def reapply_to_new_quotes(
             if isinstance(res, BaseException):
                 logger.error("Re-apply batch failed: %s", res)
                 continue
+            if res is None:
+                continue  # not sent: the catch-up was stopped
             for quote_id, tag_def_id, confidence, rationale in res:
                 prev = best_by_quote.get(quote_id)
                 if prev is None or confidence > prev[2]:
@@ -926,20 +943,35 @@ async def reapply_to_new_quotes(
                     )
                     accepted += 1
 
-        job.total_quotes += len(batch_items)
-        job.processed_quotes += processed
-        job.proposed_count += new_proposed
-        job.completed_at = now
+        values: dict[Any, Any] = {
+            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + len(batch_items),
+            AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + processed,
+            AutoCodeJob.proposed_count: AutoCodeJob.proposed_count + new_proposed,
+            AutoCodeJob.completed_at: now,
+        }
+        finish = db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id)
         if track_status:
             # Route set this to "running" for the chip; restore it now, with no
             # failure left from an earlier catch-up, and this catch-up's own
             # counts, which the chip reads: the cumulative pair above keeps any
             # earlier shortfall for good (R12 wave 6).
-            job.status = "completed"
-            job.error_message = ""
-            job.failure_kind = ""
-            job.catch_up_total = len(batch_items)
-            job.catch_up_processed = processed
+            values.update({
+                AutoCodeJob.status: "completed",
+                AutoCodeJob.error_message: "",
+                AutoCodeJob.failure_kind: "",
+                AutoCodeJob.catch_up_total: len(batch_items),
+                AutoCodeJob.catch_up_processed: processed,
+            })
+            # Unless it was stopped: one UPDATE that a Stop's row refuses, so a
+            # Stop landing at any moment before this commit is never written
+            # over (an ORM assignment reloaded the job and replaced it).
+            finish = finish.filter(AutoCodeJob.status != "cancelled")
+        if finish.update(values, synchronize_session=False) == 0:
+            # Stopped: its proposals and tags go with it, and the watermark stays
+            # where it was, so the next catch-up or run codes these sessions.
+            db.rollback()
+            logger.info("Re-apply %s: stopped, nothing kept", framework_id)
+            return 0
         db.commit()
         logger.info(
             "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",

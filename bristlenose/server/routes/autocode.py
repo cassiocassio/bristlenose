@@ -417,7 +417,11 @@ def cancel_autocode_job(
             )
 
         job.status = "cancelled"
-        job.completed_at = datetime.now(timezone.utc)
+        # Only a first apply's Stop sets the time. A catch-up's job already has
+        # one, its watermark: moved to the Stop, it passed sessions the catch-up
+        # never coded, and no later re-apply would code them (R12 wave 6).
+        if job.completed_at is None:
+            job.completed_at = datetime.now(timezone.utc)
         db.commit()
         return _job_to_out(job)
 

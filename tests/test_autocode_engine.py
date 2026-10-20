@@ -1467,6 +1467,55 @@ class TestReapplyToNewQuotes:
             )
         assert self._job(db_factory, project_id, framework_id).status == "cancelled"
 
+    def test_a_catch_up_stopped_while_it_codes_stops_and_stays_cancelled(
+        self, project_with_garrett, monkeypatch
+    ) -> None:
+        """A Stop during a catch-up was never read: it went on spending, wrote its
+        tags, and then wrote "completed" over the Stop (R12 wave 6). It now stops
+        before the next batch, keeps nothing, leaves the job cancelled, and
+        leaves the watermark where it was, so the sessions are coded next time."""
+        import bristlenose.server.autocode as ac
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        monkeypatch.setattr(ac, "BATCH_SIZE", 2)
+        self._add_quotes(db_factory, project_id, 4)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        async def stop_then_answer(*_a, **_k):
+            db = db_factory()
+            try:
+                job = (
+                    db.query(AutoCodeJob)
+                    .filter_by(project_id=project_id, framework_id=framework_id)
+                    .one()
+                )
+                job.status = "cancelled"
+                db.commit()
+            finally:
+                db.close()
+            return _make_batch_result(2, "user need", 0.85)
+
+        analyze = AsyncMock(side_effect=stop_then_answer)
+        with _patch_llm(analyze):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert accepted == 0
+        assert analyze.await_count == 1  # the second batch was never sent
+        job = self._job(db_factory, project_id, framework_id)
+        assert job.status == "cancelled"
+        assert job.completed_at == datetime(2020, 1, 1)
+        assert job.total_quotes == 10
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 0
+        finally:
+            db.close()
+
     def test_a_catch_up_records_its_own_counts(
         self, project_with_garrett
     ) -> None:

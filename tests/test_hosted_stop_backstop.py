@@ -56,6 +56,27 @@ def _stuck_body(sentinel: Path) -> str:
     """
 
 
+def _exit_held_elsewhere() -> bool:
+    """Whether another thread holds the exit hold (it is re-entrant, so ask from
+    a thread of our own, and release there what we take)."""
+    import threading
+
+    import bristlenose.run_lifecycle as rl
+
+    free: list[bool] = []
+
+    def _probe() -> None:
+        ok = rl._exit_hold.acquire(blocking=False)
+        if ok:
+            rl._exit_hold.release()
+        free.append(ok)
+
+    t = threading.Thread(target=_probe)
+    t.start()
+    t.join()
+    return not free[0]
+
+
 def _wait_exit(proc, timeout: float) -> int | None:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -226,7 +247,6 @@ def test_the_backstop_waits_for_a_restore_under_way(tmp_path: Path) -> None:
 
 
 def test_restore_holds_the_exit(tmp_path: Path, monkeypatch) -> None:
-    import bristlenose.run_lifecycle as rl
     from bristlenose.utils import output_backup
 
     out = tmp_path / "bristlenose-output"
@@ -237,11 +257,50 @@ def test_restore_holds_the_exit(tmp_path: Path, monkeypatch) -> None:
     held: list[bool] = []
     real = output_backup._restore
 
+    def _held_elsewhere() -> bool:
+        return _exit_held_elsewhere()
+
     def _spy(b, o):
-        held.append(rl._exit_hold.locked())
+        held.append(_held_elsewhere())
         return real(b, o)
 
     monkeypatch.setattr(output_backup, "_restore", _spy)
     assert output_backup.restore(backup, out).report_is_back
     assert held == [True]
-    assert not rl._exit_hold.locked()
+    assert not _held_elsewhere()
+
+
+def test_the_cli_holds_the_exit_until_it_has_said_how_the_restore_went(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    from typer.testing import CliRunner
+
+    from bristlenose.cli import app
+
+    monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
+    monkeypatch.setattr("bristlenose.cli._maybe_guide_provider_setup", lambda s: None)
+    monkeypatch.setattr("bristlenose.cli._maybe_auto_doctor", lambda s, c: True)
+    monkeypatch.setattr("bristlenose.preflight.api_key.preflight_api_key", lambda **kw: None)
+
+    async def _boom(*a, **k):
+        raise RuntimeError("transcription died")
+
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _boom)
+    input_dir = tmp_path / "interviews"
+    out = input_dir / "bristlenose-output"
+    out.mkdir(parents=True)
+    (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+
+    said_while_held: list[bool] = []
+    import bristlenose.cli as cli
+
+    real_say = cli._say
+
+    def _spy(kind, text, **kw):
+        if "previous report" in text:
+            said_while_held.append(_exit_held_elsewhere())
+        return real_say(kind, text, **kw)
+
+    monkeypatch.setattr(cli, "_say", _spy)
+    CliRunner().invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    assert said_while_held == [True]

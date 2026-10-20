@@ -98,7 +98,7 @@ _hosted_backstop: Callable[[int], None] | None = None
 #: Held while a stashed report is put back (``output_backup.restore``): the
 #: backstop's exit waits for it, or a restore cut in half leaves the report
 #: set aside until the next run. Bounded, so a stuck restore cannot hold it.
-_exit_hold = threading.Lock()
+_exit_hold = threading.RLock()  # re-entered: the CLI holds it around restore
 _EXIT_HOLD_TIMEOUT_S = 30.0
 
 

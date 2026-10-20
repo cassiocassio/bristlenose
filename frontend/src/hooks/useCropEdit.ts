@@ -135,8 +135,11 @@ export function useCropEdit({
 
       // An edit opened and left as it was (clicked into, then blurred, clicked
       // outside or Enter) is not an edit: it writes nothing and adds no Undo.
-      // The same test as the card's unmount path (QuoteCard, R88).
-      if (newText.length > 0 && newText !== words.join(" ")) {
+      // The card's unmount path commits through here too (QuoteCard, R88).
+      // Compared with the text before the edit, not `words`: a bracket drag
+      // re-bases `words` on what was typed, which would read as unchanged.
+      const unchanged = preEditTextRef.current.split(/\s+/).filter(Boolean).join(" ");
+      if (newText.length > 0 && newText !== unchanged) {
         onCommit(newText);
       } else {
         onCancel();

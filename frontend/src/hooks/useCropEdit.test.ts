@@ -67,6 +67,29 @@ describe("useCropEdit", () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
+  // A bracket drag re-bases `words` on the typed text, so "unchanged" must mean
+  // unchanged from before the edit, or a typed edit followed by a drag that
+  // puts the bracket back is thrown away (review, 20 Oct 2026).
+  it("commits what was typed when a bracket drag leaves the crop as it was", () => {
+    const { result, onCommit, onCancel } = makeHook("one two three");
+    act(() => result.current.enterEditMode());
+    const span = document.createElement("span");
+    const editable = document.createElement("span");
+    editable.className = "crop-editable";
+    editable.textContent = "one two three four";
+    span.appendChild(editable);
+    const down = { clientX: 100, preventDefault: () => {}, stopPropagation: () => {} };
+    act(() => result.current.handleBracketPointerDown("end", down as unknown as React.PointerEvent, span));
+    act(() => {
+      document.dispatchEvent(new MouseEvent("pointermove", { clientX: 120 }));
+      document.dispatchEvent(new MouseEvent("pointerup"));
+    });
+    expect(result.current.mode).toBe("crop");
+    act(() => result.current.commitEdit());
+    expect(onCommit).toHaveBeenCalledWith("one two three four");
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
   it("commitEdit with empty text calls onCancel", () => {
     const { result, onCancel } = makeHook("hello world");
     act(() => result.current.enterEditMode());

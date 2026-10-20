@@ -87,6 +87,11 @@ struct LLMSettingsView: View {
         .frame(width: 660)
         .onAppear {
             if measuring { return }
+            // Quit has no exit of its own here, so it asks for the drafts (R38).
+            // Never cleared: the pane outlives its tab and window, so a paste
+            // whose save failed on close is still there for quit to try again,
+            // and the latest pane to appear is the one asked.
+            APIKeyQuitSave.shared.drafts = { keyDrafts }
             // What the running serve and the last validation already have, so
             // the first commit compares against it rather than posting blind.
             // Only the first appear counts: the Settings package re-adds the
@@ -465,7 +470,7 @@ struct LLMSettingsView: View {
         // A measurement must not write. The focus handler fires during a
         // headless render, and on 4 Sep 2026 that wrote a key back into the
         // developer's keychain from inside the test suite.
-        guard !measuring else { return }
+        guard commitsAllowed else { return }
         var runKeyChanged = false
         for provider in providers {
             let outcome = keyDrafts.commit(provider, store: KeychainHelper.liveStore)
@@ -723,16 +728,25 @@ struct LLMSettingsView: View {
 
     /// Restart the serve only if an env-var pref actually changed.
     private func commitEnvPrefs() {
-        guard !measuring else { return }
+        guard commitsAllowed else { return }
         if envGate.commit(envPrefs) {
             NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
         }
     }
 
     private func commitAzure() {
-        guard !measuring else { return }
+        guard commitsAllowed else { return }
         commitEnvPrefs()
         if azureCheckGate.commit(azureCheck) { revalidateAzure() }
+    }
+
+    /// A measurement never commits, and nor does the pane once the app is
+    /// quitting: the quit saves the keys itself, and a Keychain dialog during it
+    /// takes key from this window, whose resign-key commit would write again and
+    /// restart the serve mid-quit. The env-var prefs are `@AppStorage`, already
+    /// stored; the next launch reads them.
+    private var commitsAllowed: Bool {
+        !measuring && !APIKeyQuitSave.shared.isTerminating
     }
 
     /// Every exit from the pane: keys, then the env-var prefs.

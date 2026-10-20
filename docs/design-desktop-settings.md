@@ -7,6 +7,8 @@ trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 
 ## Changelog
 
+- _2026-10-20_ — **⌘Q saves a pasted API key.** A key pasted and quit before Return, Tab or a window close was lost. Quit now commits it through `APIKeyDrafts` without a serve restart, and waits for a Keychain dialog. §Validation invariants gains the paragraph. Anchors: `APIKeyQuitSave.swift`, `BristlenoseApp.swift` (`applicationShouldTerminate`), `LLMSettingsView.swift` (`commitsAllowed`), `APIKeyQuitSaveTests`.
+
 - _2026-10-20_ — **Settings ▸ LLM Provider commits at a gesture's end.** The key field used to save on every focus loss (rewriting the key, billing a validation and reloading the report on a mere Tab), kept showing a key whose save had failed, and lost a paste on ⌘W or a row change; the slider and the Azure fields posted the prefs change per step and per keystroke, and an API-version edit never posted at all. §Validation invariants now describes `APIKeyDrafts` and `CommitGate`. Anchors: `APIKeyDrafts.swift`, `CommitGate.swift`, `LLMSettingsView.swift` (`commitAPIKeys`, `commitPending`), `APIKeyDraftsTests`, `CommitGateTests`.
 
 - _2026-10-14_ — **Read shared screens joins the Transcription pane** (on by default, `BRISTLENOSE_SCREEN_TEXT`), as the Screens lens leaves Diagnostics. Tab 3 and the env table gain a row each.
@@ -311,6 +313,23 @@ the outcome, never `set`'s return: a failed save keeps the pasted key on screen
 with `desktop.llmSettings.keyNotSaved` under the field, posts nothing and
 validates nothing (R36), and a pasted key left without Return is saved on a row
 change or window close rather than overwritten when the row is shown again (R38).
+
+**Quit saves the key too, but does not restart the serve.** AppKit closes no
+window on terminate, so no exit above fires on ⌘Q, Dock ▸ Quit or logout.
+`AppDelegate.applicationShouldTerminate` asks `APIKeyQuitSave` instead. It runs
+the same `APIKeyDrafts.commit` over the drafts the pane registered when it last appeared,
+so what a close would not save, quit does not save either, and an emptied field
+is deleted. The write runs off the main thread behind `.terminateLater`, and the
+reply comes on the main thread once it finishes. Rewriting a login-keychain copy
+`bristlenose configure` made raises the system's Keychain dialog, so the app
+waits for the answer rather than exiting under it. A quit save validates nothing
+and posts no `.bristlenosePrefsChanged`: the next launch reads the key, and the
+verdict cache, keyed on the key's hash, checks it then. Once quitting, the pane's
+own commits stand down (`isTerminating`), because the dialog takes key from the
+Settings window and its resign-key commit would write twice and restart the serve.
+A failed save is logged and the quit goes on, with no alert. The env-var prefs
+need nothing at quit: they are `@AppStorage`. (R36/R38 follow-up, 20 Oct 2026;
+`APIKeyQuitSave.swift`, `APIKeyQuitSaveTests`.)
 
 **Consent recorded BEFORE the prefs notification on Ollama setup.** The
 invariant that matters is `recordConsent` → post, so a prefs-change-driven serve

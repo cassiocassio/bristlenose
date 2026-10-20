@@ -84,6 +84,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showSettingsWindow(_ sender: Any?) {
         SettingsWindow.shared.show()
     }
+
+    /// ⌘Q, Dock ▸ Quit and logout. Saves an API key pasted into Settings and not
+    /// yet committed, then quits; the run and serve teardown stays on
+    /// `willTerminate`, which follows the reply. See `APIKeyQuitSave`.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        MainActor.assumeIsolated {
+            APIKeyQuitSave.shared.shouldTerminate { sender.reply(toApplicationShouldTerminate: $0) }
+        }
+    }
 }
 
 @main

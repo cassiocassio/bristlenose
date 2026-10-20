@@ -81,23 +81,40 @@ def runner(monkeypatch):
     return CliRunner()
 
 
-def _pipeline_returns(monkeypatch, marker: str, *, quotes: int, failed_sessions: int) -> None:
+def _pipeline_returns(
+    monkeypatch, marker: str, *, quotes: int, failed_sessions: int
+) -> dict[str, bool]:
+    """Stub the run. Records whether the old report was still in the output
+    folder when it started, which is false only if `--clean` set it aside."""
+    seen: dict[str, bool] = {}
+
     async def _run(_self, _in, out, *a, **k):
+        seen["old_marker_present"] = (Path(out) / _MARKER).exists()
         _seed_report(Path(out), marker)
         return _Result(total_quotes=quotes, summary=_summary(failed_sessions=failed_sessions))
 
     monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _run)
+    return seen
 
 
-def _reanalyse(runner: CliRunner, input_dir: Path):
-    return runner.invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+def _reanalyse(runner: CliRunner, input_dir: Path, seen: dict[str, bool]) -> None:
+    """Run `--clean` and assert it really set the old report aside, so a
+    verdict below is about the outcome and never about a refused stash."""
+    result = runner.invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    # `pytest.fail`, not `assert`: the xfail below is met only by an
+    # AssertionError, so a broken precondition must fail the test outright.
+    if result.exit_code != 0 or "Could not set" in result.output:
+        pytest.fail(f"the run did not complete cleanly:\n{result.output}")
+    if seen.get("old_marker_present") is not False:
+        pytest.fail("the old report was not set aside before the run")
 
 
 class TestTheDegradedRunKeepsThePreviousReport:
     @pytest.mark.xfail(
         strict=True,
+        raises=AssertionError,
         reason="R108 open, needs a decision: what becomes of a kept backup at the "
-        "next run (docs/design-lifecycle-failure-modes.md, open rows)",
+        "next run (docs/design-lifecycle-failure-modes.md, row 54)",
     )
     def test_the_previous_report_and_its_database_survive(
         self, runner, tmp_path: Path, monkeypatch
@@ -106,17 +123,16 @@ class TestTheDegradedRunKeepsThePreviousReport:
         input_dir = tmp_path / "interviews"
         out_dir = input_dir / "bristlenose-output"
         _seed_report(out_dir, "good")
-        _pipeline_returns(monkeypatch, "degraded", quotes=4, failed_sessions=9)
+        seen = _pipeline_returns(monkeypatch, "degraded", quotes=4, failed_sessions=9)
 
-        _reanalyse(runner, input_dir)
+        _reanalyse(runner, input_dir, seen)
 
-        kept = output_backup.backup_path_for(out_dir)
-        assert (kept / _MARKER).read_text(encoding="utf-8") == "good", (
-            "the degraded run discarded the previous report"
-        )
-        assert (kept / ".bristlenose" / "bristlenose.db").read_text(encoding="utf-8") == "db:good"
-        # Not restored: that is R109's decision. The new report is what is on show.
+        # Not restored either way (R109). The new report is what is on show.
         assert (out_dir / _MARKER).read_text(encoding="utf-8") == "degraded"
+        kept = output_backup.backup_path_for(out_dir)
+        assert kept.is_dir(), "the degraded run discarded the previous report"
+        assert (kept / _MARKER).read_text(encoding="utf-8") == "good"
+        assert (kept / ".bristlenose" / "bristlenose.db").read_text(encoding="utf-8") == "db:good"
 
     def test_a_clean_success_still_discards_it(
         self, runner, tmp_path: Path, monkeypatch
@@ -124,9 +140,9 @@ class TestTheDegradedRunKeepsThePreviousReport:
         input_dir = tmp_path / "interviews"
         out_dir = input_dir / "bristlenose-output"
         _seed_report(out_dir, "good")
-        _pipeline_returns(monkeypatch, "new", quotes=353, failed_sessions=0)
+        seen = _pipeline_returns(monkeypatch, "new", quotes=353, failed_sessions=0)
 
-        _reanalyse(runner, input_dir)
+        _reanalyse(runner, input_dir, seen)
 
         assert not output_backup.backup_path_for(out_dir).exists()
         assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new"

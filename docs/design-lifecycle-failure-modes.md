@@ -6,6 +6,7 @@ trued-against: HEAD@main (b2b0f8e2) on 2026-10-20
 
 ## Changelog
 
+- _2026-10-20, evening_ — row 54 open: a degraded Re-analyse discards the previous report. Not fixed, because keeping the backup forces a decision about the next run; the decision's options are in the row. Anchors: `tests/test_cli_degraded_reanalyse.py` (strict xfail), `cli.py` run outcome block.
 - _2026-10-20_ — row 35 designed out: the serve's connections now checkpoint after every commit, so the Mac app's `?immutable=1` curation count sees this session's stars and tags and **Re-analyse…** asks before discarding them. Found again by the 19 Oct reliability sweep and reproduced against the real serve. Score recomputed. Anchors: `PRAGMA wal_autocheckpoint` in `server/db.py`, `tests/test_serve_wal_visibility.py`.
 - _2026-10-19_ — row 53 open: row 49's race, one step earlier. The serve records the files its pool is attached to after `init_db` and the startup import, so a restore landing during a slow startup import is recorded as attached while the pool holds the set-aside tree. Inferred from code, not reproduced. Score recomputed.
 - _2026-10-18_ — rows 51–52 designed out, found while building Apple-first transcription ([design-apple-first-transcription.md](design-apple-first-transcription.md)): a session whose transcription failed was marked complete in the manifest, so its empty result was served from the cache on every later run; and the deferred session that work introduces. Score recomputed. Anchors: `mark_session_failed` in the stage-5 loop of `pipeline.py`, `tests/test_lifecycle_deferred_transcription.py`.
@@ -138,6 +139,7 @@ row 42.
 | 44 | A pick or rename made in the second after `run --clean` moves the output folder, before the serve's next poll reattaches, returns 200 and lands in the set-aside database, which a successful run deletes | inferred from code (review of `4f6f71d0`), not measured; a run-owned window of about one poll. Fix would be to refuse every curation write until the reattach, or to reattach on the stash itself |
 | 48 | A report mounted while the serve is importing the first sessions showed the "in progress" status page for 74 s, not the ≤3 s its own poll allows (14 Oct 2026, 22:09:22 → 22:10:36). The serve's log for that window was lost (row 46), so the cause is unexplained | not reproduced; re-measure with the log now following the folder |
 | 53 | A restore landing while the serve starts, during its startup import, leaves the report on the set-aside copy: `_install_event_watcher` reads the identities of the files the pool is attached to after `init_db` and the startup import have run, so they name the restored tree while the pool holds the one the restore moved aside, and the reattach sees nothing to do. Row 49's race, one step earlier (in `create_app`, not `_reattach_if_moved`) | inferred from code (17 Oct 2026, while fixing row 49). **Seen on 20 Oct 2026, probably this:** `TestTheStashCycle::test_serve_while_the_output_is_stashed_then_restored` failed on CI (macOS, 3.14, run 39363175721) with "the report the SPA reads (project 1) stayed empty after the restore", and fails about 1 run in 12 locally; the same message failed `test_serve_project_root::test_serve_started_before_the_first_run` on 19 Oct (ubuntu, run 39178789781). Present before and after 07f97aa5's checkpoint pragma (1/12 with, 0/12 without: not distinguishable). A test would inject the restore inside `_import_on_startup`, as row 50's does after it. The fix is row 49's: record the folder the pool connected to, and reattach if it moved |
+| 54 | A Re-analyse that comes back **degraded** — some quotes, most sessions failed — discards the previous report and its database: `cli.py` counts any quote as a replacement and calls `output_backup.discard`, and `run_condition.summary_is_degraded` is never consulted. Reproduced 19 Oct 2026 (9 of 10 sessions failed, 4 quotes back against 353; "Done", exit 0) | a product call before a fix (20 Oct 2026): `stash` refuses over an unmarked backup by design, so a kept backup forces a choice for the next run — restore it automatically, refuse and resume in place, or sweep it at the next `--clean` as the `-failed` tree is swept; and `summary_is_degraded` counts a declined file (a stray PDF), so a keep fires on ordinary Re-analyses. Pinned as a strict xfail: `tests/test_cli_degraded_reanalyse.py` |
 
 **Checked and not a failure mode:** only the two **Re-analyse…** call sites pass
 `clean: true` (`ContentView.swift`, the confirmation sheet and the no-curation
@@ -164,12 +166,12 @@ folder instead.
 
 ## The score
 
-**By count:** of 53 failure modes, 40 are designed out and proven (25 fixed on
+**By count:** of 54 failure modes, 40 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, rows 51–52 of 18 Oct, and row 35 of 20 Oct) — **75%**. Thirteen are
-open: one engineered, twelve not. _(13 Oct 2026: rows 35–40 added from the review
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, rows 51–52 of 18 Oct, and row 35 of 20 Oct) — **74%**. Fourteen are
+open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
-from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix. The denominator moved each time.)_
+from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix; 20 Oct: row 54, a degraded Re-analyse. The denominator moved each time.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first

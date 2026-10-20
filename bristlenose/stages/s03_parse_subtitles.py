@@ -18,6 +18,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from bristlenose.models import (
     CLOUD_TRANSCRIPT_SOURCE,
@@ -26,6 +27,7 @@ from bristlenose.models import (
     InputFile,
     TranscriptSegment,
 )
+from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import parse_timecode
 
 __all__ = [
@@ -236,11 +238,55 @@ def parse_subtitle_file(input_file: InputFile) -> list[TranscriptSegment]:
     raise ValueError(f"Not a subtitle file: {input_file.file_type}")
 
 
+# One SRT time, as loosely as pysrt reads a well-formed one (``0:0:3,0``,
+# a dot for the comma), but every component digits.
+_SRT_TIME = r"\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3}"
+_SRT_TIMING_RE = re.compile(rf"^\s*{_SRT_TIME}\s*-->\s*{_SRT_TIME}(?:\s.*)?$")
+
+
+def _srt_cues(path: Path) -> list[Any]:
+    """The cues of an SRT file, skipping any whose timing will not read.
+
+    pysrt reads a time component that is not digits as 0, so ``00:00:aa,000``
+    put a cue at 0:00, where the merge pass then folded the speaker's next cue
+    into it; a timing line it cannot split drops the cue with nothing said
+    (R124). Blocks are split as ``pysrt.stream`` splits them, each timing is
+    checked first, and the skipped cues are said once per file.
+    """
+    from pysrt import SubRipItem
+    from pysrt.srtexc import Error as SrtError
+
+    cues: list[Any] = []
+    skipped: list[int] = []  # the cue's place in the file, never its text
+    block: list[str] = []
+    seen = 0
+    for line in [*read_text_any_encoding(path).splitlines(), ""]:
+        if line.strip():
+            block.append(line)
+            continue
+        if not block:
+            continue
+        seen += 1
+        # A timing is the first line, or the second after an index.
+        timing = block[0] if "-->" in block[0] or len(block) < 2 else block[1]
+        try:
+            if not _SRT_TIMING_RE.match(timing):
+                raise SrtError(timing)
+            cues.append(SubRipItem.from_lines(block))
+        except SrtError:
+            skipped.append(seen)
+        block = []
+    if skipped:
+        logger.warning(
+            "%s: skipped %s whose timing will not read (first: cue %d)",
+            path.name, count_noun(len(skipped), "subtitle cue"), skipped[0],
+        )
+    return cues
+
+
 def _parse_srt(path: Path) -> list[TranscriptSegment]:
     """Parse an SRT file."""
-    import pysrt
-
-    subs = pysrt.from_string(read_text_any_encoding(path))
+    subs = _srt_cues(path)
     segments: list[TranscriptSegment] = []
 
     for sub in subs:

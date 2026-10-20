@@ -74,6 +74,7 @@ proposals with confidence + rationale).
 |--------|------|---------|
 | POST | `/projects/{id}/autocode/{framework_id}` | Start job |
 | GET | `/projects/{id}/autocode/{framework_id}/status` | Poll progress |
+| GET | `/projects/{id}/autocode/jobs` | Runs still pending or running, read once on report load to put back their chips (R14) |
 | POST | `/projects/{id}/autocode/{framework_id}/cancel` | Cancel a running job |
 | GET | `/projects/{id}/autocode/{framework_id}/proposals` | List proposals (min_confidence filter) |
 | POST | `/projects/{id}/autocode/proposals/{id}/accept` | Accept → creates QuoteTag |

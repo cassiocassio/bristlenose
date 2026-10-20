@@ -33,7 +33,7 @@ import { UndoSync } from "../components/UndoSync";
 import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
-import { useActivityJobs, removeJob } from "../contexts/ActivityStore";
+import { useActivityJobs, removeJob, rehydrateActivityJobs } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useAnchorReporter } from "../hooks/useAnchorReporter";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
@@ -322,6 +322,11 @@ function AppShell() {
   // every lens, so it lives in the shell, not in each tab.
   useEffect(() => {
     startConditionPolling(projectId);
+  }, [projectId]);
+
+  // The chips of jobs still running on the server, which a reload dropped (R14).
+  useEffect(() => {
+    void rehydrateActivityJobs(projectId);
   }, [projectId]);
 
   // Push the focused quote to native so the Quotes menu's focus-gated items

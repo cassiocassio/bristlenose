@@ -303,6 +303,61 @@ async def start_autocode_job(
 
 
 # ---------------------------------------------------------------------------
+# GET /projects/{id}/autocode/jobs — the runs in flight
+# ---------------------------------------------------------------------------
+
+
+class AutoCodeJobSummary(BaseModel):
+    framework_id: str
+    #: The codebook's title, for the chip's label; the id if the template is gone.
+    title: str
+    status: str
+    #: Set on a catch-up (a finished run re-coding new sessions), None on a first run.
+    completed_at: str | None
+
+
+class AutoCodeJobsResponse(BaseModel):
+    jobs: list[AutoCodeJobSummary]
+
+
+@router.get("/projects/{project_id}/autocode/jobs")
+def list_autocode_jobs(project_id: int, request: Request) -> AutoCodeJobsResponse:
+    """The project's AutoCode runs still pending or running.
+
+    A reloaded report asks this once to put back the chips the reload lost (R14): the
+    chip list lives only in the page, and the per-framework status read cannot say
+    which frameworks to ask about.
+    """
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        rows = (
+            db.query(AutoCodeJob)
+            .filter(
+                AutoCodeJob.project_id == project_id,
+                AutoCodeJob.status.in_(("pending", "running")),
+            )
+            .order_by(AutoCodeJob.started_at)
+            .all()
+        )
+        jobs = []
+        for job in rows:
+            template = get_template(job.framework_id)
+            if template is None:
+                logger.warning("AutoCode job for framework %r has no template; titled by its id",
+                               job.framework_id)
+            jobs.append(AutoCodeJobSummary(
+                framework_id=job.framework_id,
+                title=template.title if template else job.framework_id,
+                status=job.status,
+                completed_at=job.completed_at.isoformat() if job.completed_at else None,
+            ))
+        return AutoCodeJobsResponse(jobs=jobs)
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # GET /projects/{id}/autocode/{framework_id}/status — poll progress
 # ---------------------------------------------------------------------------
 

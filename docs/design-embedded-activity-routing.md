@@ -195,6 +195,10 @@ Web keeps its HTTP poll; embedded, `useBridgeActivitySync` posts
   queries a status/list endpoint on load and repopulates `ActivityStore`, so both
   switch-back and browser-refresh recover. That's a separate "activity
   persistence" concern (needs a list endpoint) worth pulling in if Strategy 2 ships.
+  **Built 20 Oct 2026 (R14):** `rehydrateActivityJobs` (`ActivityStore.ts`), called
+  from `AppLayout` on load, reads the clip and screens status routes and
+  `GET …/autocode/jobs` and puts back the chips of jobs still running. Running jobs
+  only; a restored Copy Screens is a plain export (the server does not record the copy).
 
 ### Option B — Native polls the sidecar HTTP directly
 

@@ -99,6 +99,7 @@ SERVER_ONLY_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/signals/elaborations",
         "/projects/{project_id}/autocode/{framework_id}/proposals",
         "/projects/{project_id}/autocode/{framework_id}/status",
+        "/projects/{project_id}/autocode/jobs",  # runs in flight, for a reload's chips; live only
         "/projects/{project_id}/codebook/remove-framework/{framework_id}/impact",
         "/projects/{project_id}/codebook/tags/{tag_id}/builder",
         "/projects/{project_id}/codebook/templates",

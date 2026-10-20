@@ -1,6 +1,6 @@
 """Tests for the AutoCode API endpoints.
 
-Exercises all eight endpoints: start, status, cancel, proposals, accept,
+Exercises all nine endpoints: start, status, jobs, cancel, proposals, accept,
 deny, accept-all, deny-all.  Uses in-memory SQLite with smoke-test data.
 No real LLM calls — the background job is mocked.
 
@@ -440,6 +440,64 @@ class TestGetAutoCodeStatus:
             "/api/projects/999/autocode/garrett/status"
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /autocode/jobs — the runs in flight, so a reloaded report gets its chips back (R14)
+# ---------------------------------------------------------------------------
+
+
+class TestListAutoCodeJobs:
+    def _add(self, client: TestClient, **rows: str) -> None:
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            for framework_id, status in rows.items():
+                db.add(AutoCodeJob(project_id=1, framework_id=framework_id, status=status))
+            db.commit()
+        finally:
+            db.close()
+
+    def test_empty_when_no_jobs(self, client: TestClient) -> None:
+        resp = client.get("/api/projects/1/autocode/jobs")
+        assert resp.status_code == 200
+        assert resp.json() == {"jobs": []}
+
+    def test_lists_running_and_pending_with_titles_only(self, client: TestClient) -> None:
+        self._add(client, garrett="running", norman="pending", morville="completed",
+                  nielsen="failed", yablonski="cancelled")
+        resp = client.get("/api/projects/1/autocode/jobs")
+        assert resp.status_code == 200
+        jobs = {j["framework_id"]: j for j in resp.json()["jobs"]}
+        assert set(jobs) == {"garrett", "norman"}
+        garrett = get_template("garrett")
+        assert garrett is not None
+        assert jobs["garrett"]["title"] == garrett.title
+        assert jobs["garrett"]["status"] == "running"
+        assert jobs["norman"]["status"] == "pending"
+        assert jobs["garrett"]["completed_at"] is None
+
+    def test_an_unknown_framework_falls_back_to_its_id(self, client: TestClient) -> None:
+        self._add(client, retired="running")
+        jobs = client.get("/api/projects/1/autocode/jobs").json()["jobs"]
+        assert jobs == [{"framework_id": "retired", "title": "retired", "status": "running",
+                         "completed_at": None}]
+
+    def test_a_catch_up_carries_its_completed_at(self, client: TestClient) -> None:
+        from datetime import datetime
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="running",
+                               completed_at=datetime(2026, 10, 20, 10, 0, 0)))
+            db.commit()
+        finally:
+            db.close()
+        (job,) = client.get("/api/projects/1/autocode/jobs").json()["jobs"]
+        assert job["status"] == "running"
+        assert job["completed_at"] == "2026-10-20T10:00:00"
+
+    def test_returns_404_for_wrong_project(self, client: TestClient) -> None:
+        assert client.get("/api/projects/999/autocode/jobs").status_code == 404
 
 
 # ---------------------------------------------------------------------------

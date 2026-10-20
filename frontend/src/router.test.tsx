@@ -310,3 +310,43 @@ describe("Clip export chip after a server restart", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// R14: a reload during a job lost its chip, and the job's end was never shown. The report asks the
+// server on load what is still running and puts the chip back.
+// ---------------------------------------------------------------------------
+
+describe("Activity chips after a reload", () => {
+  let clipsStatus = "running";
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    clipsStatus = "running";
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/export/clips/status")
+        ? { status: clipsStatus, progress: 2, total: 5, completed_count: 2, skipped_count: 0, current_clip: "", output_dir: null }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+  });
+
+  it("a clip export still running comes back as its chip, and its end is shown", async () => {
+    renderRoute("/report/sessions/");
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running"),
+    );
+    clipsStatus = "completed";
+    await waitFor(
+      () => expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed"),
+      // The next poll is up to 2 s away; a wide budget, since CI runners are slow on real timers.
+      { timeout: 10_000 },
+    );
+  }, 15_000);
+});

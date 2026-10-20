@@ -7,6 +7,7 @@
 
 import type {
   AutoCodeJobStatus,
+  AutoCodeJobsResponse,
   ClipJobStartResponse,
   ClipJobStatus,
   ScreensExportStart,
@@ -611,6 +612,11 @@ const STATUS_READ_TIMEOUT_MS = 5_000;
 
 export function getAutoCodeStatus(frameworkId: string): Promise<AutoCodeJobStatus> {
   return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`, STATUS_READ_TIMEOUT_MS);
+}
+
+/** The runs in flight, read once when the report loads (R14). */
+export function listAutoCodeJobs(): Promise<AutoCodeJobsResponse> {
+  return apiGet<AutoCodeJobsResponse>("/autocode/jobs", STATUS_READ_TIMEOUT_MS);
 }
 
 export function cancelAutoCode(frameworkId: string): Promise<AutoCodeJobStatus> {

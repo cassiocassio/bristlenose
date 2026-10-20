@@ -325,6 +325,12 @@ export interface TranscriptPageResponse {
 // AutoCode API
 // ---------------------------------------------------------------------------
 
+/** `GET /autocode/jobs`: the project's runs still pending or running, so a reloaded report can put
+ *  their chips back (R14). `completed_at` is set on a catch-up re-coding new sessions. */
+export interface AutoCodeJobsResponse {
+  jobs: { framework_id: string; title: string; status: "pending" | "running"; completed_at: string | null }[];
+}
+
 export interface AutoCodeJobStatus {
   id: number;
   framework_id: string;

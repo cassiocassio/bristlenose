@@ -8,7 +8,7 @@
  * - Bulk apply: accept above upper, deny below lower, leave middle as pending
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
@@ -19,7 +19,9 @@ import {
   acceptProposal,
   denyAllProposals,
   denyProposal,
+  toastSaveFailed,
 } from "../utils/api";
+import type { ApiError } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
@@ -141,39 +143,58 @@ export function ThresholdReviewModal({
     return { accepted: acc, tentative: tent, excluded: excl };
   }, [pendingProposals, lower, upper]);
 
-  // Per-row accept — calls API immediately
-  const handleAccept = useCallback((proposalId: number) => {
-    setRemoving((prev) => new Set(prev).add(proposalId));
-    acceptProposal(proposalId).catch((err) =>
-      console.error("Accept proposal failed:", err),
-    );
-    setTimeout(() => {
-      setRemoved((prev) => new Set(prev).add(proposalId));
-      setRemoving((prev) => {
-        const next = new Set(prev);
-        next.delete(proposalId);
-        return next;
-      });
-      setAcceptedCount((prev) => prev + 1);
-    }, 200);
-  }, []);
+  // Per-row accept and deny call the API at once and slide the row out. One
+  // that fails said nothing and left as if saved (R5): now it says so and the
+  // row comes back. A row the server says was decided already leaves either
+  // way, counted only when it went the way this click asked.
+  const outcome = useRef(new Map<number, "landed" | "back" | "gone">());
+  const left = useRef(new Set<number>());
+  const review = useCallback(
+    (
+      proposalId: number,
+      call: (id: number) => Promise<unknown>,
+      same: string,
+      count: React.Dispatch<React.SetStateAction<number>>,
+    ) => {
+      outcome.current.delete(proposalId);
+      left.current.delete(proposalId);
+      setRemoving((prev) => new Set(prev).add(proposalId));
+      const settle = (o: "landed" | "back" | "gone") => {
+        outcome.current.set(proposalId, o);
+        if (!left.current.has(proposalId)) return; // the timer applies it
+        if (o === "back") setRemoved((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
+        if (o !== "landed") count((prev) => prev - 1);
+      };
+      call(proposalId).then(
+        () => settle("landed"),
+        (err: ApiError) => {
+          console.error("Review proposal failed:", err);
+          if (err?.reason === same) return settle("landed");
+          toastSaveFailed(err);
+          settle(err?.reason?.startsWith("proposal_") ? "gone" : "back");
+        },
+      );
+      setTimeout(() => {
+        left.current.add(proposalId);
+        const o = outcome.current.get(proposalId);
+        setRemoving((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
+        if (o === "back") return;
+        setRemoved((prev) => new Set(prev).add(proposalId));
+        if (o !== "gone") count((prev) => prev + 1);
+      }, 200);
+    },
+    [],
+  );
 
-  // Per-row deny — calls API immediately
-  const handleDeny = useCallback((proposalId: number) => {
-    setRemoving((prev) => new Set(prev).add(proposalId));
-    denyProposal(proposalId).catch((err) =>
-      console.error("Deny proposal failed:", err),
-    );
-    setTimeout(() => {
-      setRemoved((prev) => new Set(prev).add(proposalId));
-      setRemoving((prev) => {
-        const next = new Set(prev);
-        next.delete(proposalId);
-        return next;
-      });
-      setDeniedCount((prev) => prev + 1);
-    }, 200);
-  }, []);
+  const handleAccept = useCallback(
+    (proposalId: number) => review(proposalId, acceptProposal, "proposal_accepted", setAcceptedCount),
+    [review],
+  );
+
+  const handleDeny = useCallback(
+    (proposalId: number) => review(proposalId, denyProposal, "proposal_denied", setDeniedCount),
+    [review],
+  );
 
   // Bulk apply: accept above upper, deny below lower
   const handleApply = useCallback(async () => {

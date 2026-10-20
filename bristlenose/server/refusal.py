@@ -37,6 +37,11 @@ class RefusalReason(str, Enum):
     # a swap, a new speaker code, a re-analyse pin).
     RUN_IN_PROGRESS = "run_in_progress"
 
+    # An AutoCode proposal reviewed already, so this accept or deny changes
+    # nothing. Which way it went decides what the client keeps on screen.
+    PROPOSAL_ACCEPTED = "proposal_accepted"
+    PROPOSAL_DENIED = "proposal_denied"
+
 
 class RefusalError(Exception):
     """A refusal that names itself.

@@ -892,21 +892,27 @@ def patch_edits(
     project_id: int,
     request: Request,
     data: dict[str, str | None],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Change the edits named, and only those: text sets one, ``null`` clears it.
 
     The SPA's write. ``PUT`` replaces the whole map, so it erased the edits of
     any quote the client didn't hold (one a speaker recode keeps off
     ``/quotes``, R2); a ``PATCH`` names one gesture's keys.
+
+    Every curation PATCH answers ``unresolved``: the quote ids it named that the
+    project no longer has (a re-run removed them), for which nothing was
+    written, so the client takes that change back rather than drawing it.
     """
     _check_delta_size(data)
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        unresolved: list[str] = []  # quotes the server no longer has
         for key, text in data.items():
             if key.startswith("q-"):
                 quote = _resolve_quote(db, project_id, key)
                 if not quote:
+                    unresolved.append(key)
                     continue
                 db.query(QuoteEdit).filter_by(quote_id=quote.id).delete(
                     synchronize_session=False
@@ -928,7 +934,7 @@ def patch_edits(
                         )
                     )
         db.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "unresolved": unresolved}
     finally:
         db.close()
 
@@ -1037,7 +1043,7 @@ def patch_tags(
     project_id: int,
     request: Request,
     data: dict[str, TagDelta],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Add and remove tags by name on the quotes named, and touch nothing else.
 
     The SPA's write. ``PUT`` deletes every tag of the project and re-inserts
@@ -1052,6 +1058,7 @@ def patch_tags(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        unresolved: list[str] = []  # quotes the server no longer has
 
         tag_defs: dict[str, int] = {}
         for td in db.query(TagDefinition).all():
@@ -1061,6 +1068,7 @@ def patch_tags(
         for dom_id, delta in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
+                unresolved.append(dom_id)
                 continue
             if delta.remove:
                 # By name across every definition: two codebooks can hold the
@@ -1098,7 +1106,7 @@ def patch_tags(
                     _mint_pin(db, quote)
 
         db.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "unresolved": unresolved}
     finally:
         db.close()
 
@@ -1176,7 +1184,7 @@ def patch_hidden(
     project_id: int,
     request: Request,
     data: dict[str, bool],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Hide (``true``) or restore (``false``) the quotes named, and no others.
 
     The SPA's write; ``PUT`` resets every project quote, including the ones a
@@ -1186,9 +1194,11 @@ def patch_hidden(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        unresolved: list[str] = []  # quotes the server no longer has
         for dom_id, is_hidden in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
+                unresolved.append(dom_id)
                 continue
             if is_hidden:
                 qs: QuoteState | None = _quote_state(db, quote.id)
@@ -1198,7 +1208,7 @@ def patch_hidden(
                 qs.is_hidden = is_hidden
                 qs.hidden_at = _now() if is_hidden else None
         db.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "unresolved": unresolved}
     finally:
         db.close()
 
@@ -1278,7 +1288,7 @@ def patch_starred(
     project_id: int,
     request: Request,
     data: dict[str, bool],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Star (``true``) or unstar (``false``) the quotes named, and no others.
 
     The SPA's write; ``PUT`` resets every project quote, including the ones a
@@ -1288,9 +1298,11 @@ def patch_starred(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        unresolved: list[str] = []  # quotes the server no longer has
         for dom_id, is_starred in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
+                unresolved.append(dom_id)
                 continue
             if is_starred:
                 qs: QuoteState | None = _quote_state(db, quote.id)
@@ -1302,7 +1314,7 @@ def patch_starred(
             if is_starred:
                 _mint_pin(db, quote)  # freeze on first human touch
         db.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "unresolved": unresolved}
     finally:
         db.close()
 
@@ -1471,7 +1483,7 @@ def patch_deleted_badges(
     project_id: int,
     request: Request,
     data: dict[str, BadgeDelta],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Delete (``add``) or restore (``remove``) sentiment badges on the quotes named.
 
     The SPA's write; ``PUT`` clears every project quote's deleted badges, so
@@ -1481,9 +1493,11 @@ def patch_deleted_badges(
     db = _get_db(request)
     try:
         _check_project(db, project_id)
+        unresolved: list[str] = []  # quotes the server no longer has
         for dom_id, delta in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
+                unresolved.append(dom_id)
                 continue
             if delta.remove:
                 db.query(DeletedBadge).filter(
@@ -1500,7 +1514,7 @@ def patch_deleted_badges(
                         )
                     )
         db.commit()
-        return {"status": "ok"}
+        return {"status": "ok", "unresolved": unresolved}
     finally:
         db.close()
 

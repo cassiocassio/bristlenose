@@ -685,6 +685,7 @@ class TestAcceptProposal:
         )
         assert resp.status_code == 409
         assert "already accepted" in resp.json()["detail"].lower()
+        assert resp.json()["reason"] == "proposal_accepted"
 
 
 # ---------------------------------------------------------------------------
@@ -754,6 +755,7 @@ class TestDenyProposal:
         )
         assert resp.status_code == 409
         assert "already denied" in resp.json()["detail"].lower()
+        assert resp.json()["reason"] == "proposal_denied"
 
 
 # ---------------------------------------------------------------------------

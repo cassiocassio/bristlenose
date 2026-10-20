@@ -239,7 +239,9 @@ export function CodebookV2Sidebar() {
   const readOnly = isExportMode();
   const [, setSearchParams] = useSearchParams();
 
-  const load = useCallback(() => {
+  // `adopt`: also put the store's mirror of the switch back to what the server
+  // holds — after a switch that did not save, the badges follow the mirror.
+  const load = useCallback((adopt = false) => {
     // One pass. `/codebook/templates` is SERVER_ONLY, so it is absent from an
     // export — tolerated separately (Q14): unavailable offline is not the same
     // as broken, and the navigator must still list what the reader has.
@@ -251,11 +253,11 @@ export function CodebookV2Sidebar() {
       getFrameworkStates(),
       apiGet<{ project_name: string }>("/info").catch(() => null),
     ])
-      .then(([codebook, templates, states, info]) =>
-        setBooks(
-          buildBooks(codebook, templates, states, info?.project_name ?? ""),
-        ),
-      )
+      .then(([codebook, templates, states, info]) => {
+        const built = buildBooks(codebook, templates, states, info?.project_name ?? "");
+        setBooks(built);
+        if (adopt) adoptFrameworkDisabled(new Set(disabledIds(built)));
+      })
       .catch(() => setBooks([]));
   }, []);
 
@@ -289,9 +291,13 @@ export function CodebookV2Sidebar() {
       // tag sidebar and autocomplete keep showing a switched-off codebook until
       // a reload. v1 got this for free: its one writer did both.
       adoptFrameworkDisabled(new Set(off));
-      putFrameworkStates(Object.fromEntries(off.map((id) => [id, false])))
-        .then(() => window.dispatchEvent(new CustomEvent("codebook-changed")))
-        .catch(() => load());
+      // putFrameworkStates never rejects: a write that did not save has said
+      // so ("Couldn't save") and answers `status: "error"`, and the switch and
+      // the badges go back to what the server holds.
+      putFrameworkStates(Object.fromEntries(off.map((id) => [id, false]))).then((res) => {
+        if (res.status === "error") load(true);
+        else window.dispatchEvent(new CustomEvent("codebook-changed"));
+      });
     },
     [books, load],
   );

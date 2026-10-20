@@ -259,6 +259,39 @@ describe("a write carries the whole disabled set, not the switch that moved", ()
   });
 });
 
+// A switch whose write fails said "Couldn't save" (putFrameworkStates toasts and
+// resolves, it never rejects), and the switch and every badge stayed at the
+// value the server refused: the `.catch` that meant to re-read could not run (R8).
+describe("a switch that does not save goes back to what the server holds", () => {
+  it("re-reads the codebook and the store's mirror", async () => {
+    resetSidebarStore();
+    function Probe() {
+      const { disabledFrameworks } = useSidebarStore();
+      return <span data-testid="off">{[...disabledFrameworks].sort().join(",")}</span>;
+    }
+    vi.mocked(putFrameworkStates).mockResolvedValueOnce({ status: "error", catchUp: [] });
+    render(
+      <MemoryRouter initialEntries={["/report/codebook-v2"]}>
+        <CodebookV2Sidebar />
+        <Probe />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+    fireEvent.click(
+      screen
+        .getByTestId("bn-v2-nav-row-sentiment")
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+    // The server still has only nielsen off.
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-v2-nav-row-sentiment").className).not.toContain(
+        "codebook-disabled",
+      ),
+    );
+    await waitFor(() => expect(screen.getByTestId("off").textContent).toBe("nielsen"));
+  });
+});
+
 describe("the switch reaches the lenses that read it from the store", () => {
   // The navigator is not the only surface that obeys the switch. Quote badges
   // (QuoteGroup), the Quotes tag sidebar and autocomplete all read

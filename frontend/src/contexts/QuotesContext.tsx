@@ -43,7 +43,9 @@ import {
   patchDeletedBadges,
   acceptProposal,
   denyProposal,
+  toastSaveFailed,
 } from "../utils/api";
+import type { ApiError } from "../utils/api";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { isExportMode } from "../utils/exportData";
@@ -335,6 +337,8 @@ type Updater = (s: QuotesState) => QuotesState;
  *  store as it was before the gesture and as the gesture leaves it. */
 interface Change {
   key: string;
+  /** The quote (or edits key) it is about, as the server names it back. */
+  id: string;
   before: Updater;
   after: Updater;
 }
@@ -367,12 +371,12 @@ function send(write: Promise<void>, changes: Change[]): void {
     if (u) u.count += 1;
     else unsettled.set(c.key, { count: 1, server: c.before, failed: false });
   }
-  const answered = (landed: boolean) => {
+  const answered = (landedFor: (c: Change) => boolean) => {
     for (const c of changes) {
       const u = unsettled.get(c.key);
       if (!u) continue; // the store was reset meanwhile
       u.count -= 1;
-      if (landed) {
+      if (landedFor(c)) {
         u.server = c.after;
         u.failed = false;
       } else {
@@ -383,7 +387,15 @@ function send(write: Promise<void>, changes: Change[]): void {
       if (u.failed) setState(u.server);
     }
   };
-  write.then(() => answered(true), () => answered(false));
+  write.then(
+    () => answered(() => true),
+    (err: unknown) => {
+      // A write the server could only partly place names the quotes it could
+      // not (a re-run removed them); the rest landed.
+      const unresolved = (err as ApiError | null)?.unresolved;
+      answered(unresolved ? (c) => !unresolved.includes(c.id) : () => false);
+    },
+  );
 }
 
 /** Whether a tag write on this quote is still unanswered. */
@@ -445,18 +457,42 @@ function withBadge(id: string, sentiment: string, deleted: boolean): Updater {
   };
 }
 
+/** Put a reviewed suggestion back where it was, unless it is there already. */
+function withProposal(id: string, proposal: ProposedTagBrief, index: number): Updater {
+  return (s) => {
+    const list = s.proposedTags[id] || [];
+    if (list.some((p) => p.id === proposal.id)) return s;
+    const next = [...list];
+    next.splice(Math.min(index, next.length), 0, proposal);
+    return { ...s, proposedTags: { ...s.proposedTags, [id]: next } };
+  };
+}
+
+/** The tag an accepted suggestion becomes, as the quote card builds it. */
+function tagOf(proposal: ProposedTagBrief): TagResponse {
+  return {
+    name: proposal.tag_name,
+    codebook_group: proposal.group_name,
+    colour_set: proposal.colour_set,
+    colour_index: proposal.colour_index,
+    source: "autocode",
+  };
+}
+
 const flagChange = (key: "starred" | "hidden", id: string, on: boolean): Change => ({
-  key: `${key}:${id}`, before: withFlag(key, id, !on), after: withFlag(key, id, on),
+  key: `${key}:${id}`, id, before: withFlag(key, id, !on), after: withFlag(key, id, on),
 });
 
 const tagChange = (id: string, tag: TagResponse, index: number, on: boolean): Change => ({
   key: `tags:${id}:${tag.name.toLowerCase()}`,
+  id,
   before: withTag(id, tag, index, !on),
   after: withTag(id, tag, index, on),
 });
 
 const badgeChange = (id: string, sentiment: string, deleted: boolean): Change => ({
   key: `badges:${id}:${sentiment}`,
+  id,
   before: withBadge(id, sentiment, !deleted),
   after: withBadge(id, sentiment, deleted),
 });
@@ -665,7 +701,7 @@ function setEdit(key: string, text: string | undefined, record: boolean): void {
     return { ...prev, edits };
   });
   send(patchEdits({ [key]: text ?? null }), [
-    { key: `edits:${key}`, before: withEdit(key, before), after: withEdit(key, text) },
+    { key: `edits:${key}`, id: key, before: withEdit(key, before), after: withEdit(key, text) },
   ]);
   if (record) {
     pushUndo({
@@ -839,6 +875,9 @@ export function acceptProposedTag(
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
+  const offered = state.proposedTags[domId] || [];
+  const index = offered.findIndex((p) => p.id === proposalId);
+  const proposal = offered[index];
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);
@@ -849,9 +888,19 @@ export function acceptProposedTag(
     // No tag write: acceptProposal makes the tag on the server.
     return { ...prev, proposedTags, tags };
   });
-  acceptProposal(proposalId).catch((err) =>
-    console.error("Accept proposal failed:", err),
-  );
+  // A failure said nothing and left the tag drawn (R5). Now it says so and the
+  // screen follows the server: accepted elsewhere keeps the tag (no message:
+  // that is what was asked), denied elsewhere drops it, anything else puts the
+  // suggestion back as well.
+  acceptProposal(proposalId).catch((err: ApiError) => {
+    console.error("Accept proposal failed:", err);
+    if (err?.reason === "proposal_accepted") return;
+    toastSaveFailed(err);
+    setState(withTag(domId, tag, Infinity, false));
+    if (err?.reason !== "proposal_denied" && proposal) {
+      setState(withProposal(domId, proposal, index));
+    }
+  });
 }
 
 export function denyProposedTag(domId: string, proposalId: number): void {
@@ -860,15 +909,24 @@ export function denyProposedTag(domId: string, proposalId: number): void {
   // a document-level `d` shortcut while hovered or focused, which no CSS rule
   // can reach.
   if (isExportMode()) return;
+  const offered = state.proposedTags[domId] || [];
+  const index = offered.findIndex((p) => p.id === proposalId);
+  const proposal = offered[index];
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);
     if (proposedTags[domId].length === 0) delete proposedTags[domId];
     return { ...prev, proposedTags };
   });
-  denyProposal(proposalId).catch((err) =>
-    console.error("Deny proposal failed:", err),
-  );
+  // As accept: say so, and follow the server. Accepted elsewhere shows the tag.
+  denyProposal(proposalId).catch((err: ApiError) => {
+    console.error("Deny proposal failed:", err);
+    if (err?.reason === "proposal_denied") return;
+    toastSaveFailed(err);
+    if (!proposal) return;
+    if (err?.reason === "proposal_accepted") setState(withTag(domId, tagOf(proposal), Infinity, true));
+    else setState(withProposal(domId, proposal, index));
+  });
 }
 
 // ── Toolbar actions (Step 4) ─────────────────────────────────────────

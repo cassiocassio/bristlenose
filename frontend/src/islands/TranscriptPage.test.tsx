@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll, afterEach } from "vites
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { bumpRefreshKey, resetLastRunStore } from "../contexts/LastRunStore";
 import { TranscriptPage } from "./TranscriptPage";
+import { _resetExportCache } from "../utils/exportData";
 import type { TranscriptPageResponse } from "../utils/types";
 
 // ---------------------------------------------------------------------------
@@ -1097,6 +1098,29 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
     expect(vi.mocked(patchDeletedBadges)).toHaveBeenCalledWith({
       "q-p1-26": { add: ["frustration"] },
     });
+  });
+
+  // An exported report has no server: a margin delete drew the badge away and
+  // it came back on reload, with nothing said. The margin offers no delete there.
+  it("an exported report's margin offers no delete", async () => {
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
+      version: 1, exported_at: "2026-10-20T00:00:00Z", health: {}, endpoints: {},
+    };
+    _resetExportCache();
+    try {
+      mockedGetTranscript.mockResolvedValue(mockData);
+      render(<TranscriptPage projectId="1" sessionId="s1" />);
+      const tag = await screen.findByTestId("annotation-q-p1-10-tag-usability");
+      expect(tag.querySelector(".badge-delete")).toBeNull();
+      const badge = screen.getByTestId("annotation-q-p1-10-sentiment");
+      expect(badge.getAttribute("role")).toBeNull();
+      fireEvent.click(badge);
+      expect(screen.getByTestId("annotation-q-p1-10-sentiment")).toBeTruthy();
+      expect(vi.mocked(patchDeletedBadges)).not.toHaveBeenCalled();
+    } finally {
+      delete (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT;
+      _resetExportCache();
+    }
   });
 
   it("a margin delete that fails reads the transcript again", async () => {

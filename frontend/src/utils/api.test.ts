@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { patchStarred, patchTags, putFrameworkStates, sendPut } from "./api";
+import {
+  deleteCodebookTag,
+  patchStarred,
+  patchTags,
+  putFrameworkStates,
+  sendPut,
+  toastSaveFailed,
+  updateCodebookTag,
+} from "./api";
 import { toast } from "./toast";
 
 vi.mock("./toast", () => ({ toast: vi.fn() }));
@@ -166,5 +174,46 @@ describe("curation writes", () => {
     await settle();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const a of answers) a(answer(200, { status: "ok" }));
+  });
+});
+
+/**
+ * A codebook edit refused by the server says it was refused, not that the
+ * connection failed: the error carries the server's status, which is what
+ * `toastSaveFailed` reads (R6). PATCH and DELETE threw a bare Error.
+ */
+describe("a codebook write's error carries the server's answer", () => {
+  it("a refused rename", async () => {
+    fetchMock.mockResolvedValue(answer(409, { detail: "Tag name already exists" }));
+    const err = await updateCodebookTag(1, { name: "Taken" }).catch((e: unknown) => e);
+    expect((err as { status?: number }).status).toBe(409);
+    toastSaveFailed(err);
+    expect(said()).not.toMatch(/connection/i);
+  });
+
+  it("a refused delete", async () => {
+    fetchMock.mockResolvedValue(answer(500, { detail: "boom" }));
+    const err = await deleteCodebookTag(1).catch((e: unknown) => e);
+    expect((err as { status?: number }).status).toBe(500);
+  });
+});
+
+/**
+ * A curation write naming a quote the server no longer has (a re-run removed
+ * it) wrote nothing for it. The server names it back, and the write is refused
+ * for that quote, so the store can take the change back instead of drawing it.
+ */
+describe("a curation write that the server could not place", () => {
+  it("is refused, names the quotes, and says so once", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: ["q-p9-1"] }));
+    const err = await patchStarred({ "q-p9-1": true, "q-p1-10": true }).catch((e: unknown) => e);
+    expect((err as { unresolved?: string[] }).unresolved).toEqual(["q-p9-1"]);
+    expect(said()).not.toMatch(/connection/i);
+  });
+
+  it("resolves when the server placed everything", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
+    await expect(patchStarred({ "q-p1-10": true })).resolves.toBeUndefined();
+    expect(toastMock).not.toHaveBeenCalled();
   });
 });

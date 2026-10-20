@@ -62,6 +62,8 @@ export interface ApiError extends Error {
   reason?: string;
   /** The reason's variables (a partial Miro board's `url`), when the route sent any. */
   vars?: Record<string, string>;
+  /** A curation PATCH's quotes the server no longer has; nothing was written for them. */
+  unresolved?: string[];
 }
 
 /**
@@ -191,7 +193,7 @@ async function apiPatch(path: string, body: unknown): Promise<void> {
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw new Error(`PATCH ${path} ${resp.status}`);
+  if (!resp.ok) throw await httpError("PATCH", path, resp);
 }
 
 async function apiDelete(path: string): Promise<void> {
@@ -199,7 +201,7 @@ async function apiDelete(path: string): Promise<void> {
     method: "DELETE",
     headers: authHeaders(),
   });
-  if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
+  if (!resp.ok) throw await httpError("DELETE", path, resp);
 }
 
 async function apiDeleteJson<T>(path: string): Promise<T> {
@@ -207,7 +209,7 @@ async function apiDeleteJson<T>(path: string): Promise<T> {
     method: "DELETE",
     headers: authHeaders(),
   });
-  if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
+  if (!resp.ok) throw await httpError("DELETE", path, resp);
   return resp.json() as Promise<T>;
 }
 
@@ -243,6 +245,19 @@ function sendWrite(
       // background sync is fully silent (DB never written, UI diverges on reload —
       // the dropped-auth-token masquerade). Surface it so it's at least greppable.
       if (!resp.ok) throw await httpError(method, path, resp);
+      if (method === "PATCH") {
+        // A curation PATCH names back the quotes it could not place (a re-run
+        // removed them). Nothing was written for those: refuse, so the store
+        // takes them back rather than drawing a change that never saved.
+        const answer = (await resp.json().catch(() => null)) as { unresolved?: unknown } | null;
+        const unresolved = Array.isArray(answer?.unresolved) ? (answer.unresolved as string[]) : [];
+        if (unresolved.length > 0) {
+          throw Object.assign(new Error(`${method} ${path}: no such quote`), {
+            status: resp.status,
+            unresolved,
+          }) as ApiError;
+        }
+      }
     })
     .catch((err) => {
       console.error(`${method} ${path} failed:`, err);

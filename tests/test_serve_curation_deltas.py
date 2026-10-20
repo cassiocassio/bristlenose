@@ -259,18 +259,31 @@ class TestPatchEditsStarsBadges:
         client.patch(f"{_P}/deleted-badges", json={"q-p1-10": {"remove": ["x"]}})
         assert client.get(f"{_P}/deleted-badges").json() == {"q-p1-10": ["confusion"]}
 
-    def test_an_unknown_quote_is_skipped(self, client: TestClient) -> None:
-        for path, body in (
-            ("starred", {"q-p9-999": True}),
-            ("hidden", {"q-p9-999": True}),
-            ("edits", {"q-p9-999": "x"}),
-            ("tags", {"q-p9-999": {"add": ["x"]}}),
-            ("deleted-badges", {"q-p9-999": {"add": ["x"]}}),
+    def test_an_unknown_quote_is_named_back_and_nothing_written(
+        self, client: TestClient,
+    ) -> None:
+        """A quote a re-run removed: the write lands nothing, and says which, so
+        the client can take it back instead of drawing a change that never saved."""
+        for path, body, known in (
+            ("starred", {"q-p9-999": True, "q-p1-10": True}, True),
+            ("hidden", {"q-p9-999": True, "q-p1-10": True}, True),
+            ("edits", {"q-p9-999": "x", "q-p1-10": "y"}, "y"),
+            ("tags", {"q-p9-999": {"add": ["x"]}, "q-p1-10": {"add": ["x"]}}, None),
+            ("deleted-badges", {"q-p9-999": {"add": ["x"]}, "q-p1-10": {"add": ["x"]}}, ["x"]),
         ):
-            before = client.get(f"{_P}/{path}").json()
             r = client.patch(f"{_P}/{path}", json=body)
             assert r.status_code == 200, (path, r.text)
-            assert client.get(f"{_P}/{path}").json() == before, path
+            assert r.json() == {"status": "ok", "unresolved": ["q-p9-999"]}, path
+            got = client.get(f"{_P}/{path}").json()
+            assert "q-p9-999" not in got, path
+            if known is not None:
+                assert got["q-p1-10"] == known, path
+
+    def test_a_write_that_resolves_names_nothing_back(self, client: TestClient) -> None:
+        r = client.patch(f"{_P}/starred", json={"q-p1-10": True})
+        assert r.json() == {"status": "ok", "unresolved": []}
+        r = client.patch(f"{_P}/edits", json={"section-cluster-1:title": "Head"})
+        assert r.json() == {"status": "ok", "unresolved": []}
 
 
 class TestPatchLimits:

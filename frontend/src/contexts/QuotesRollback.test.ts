@@ -8,9 +8,11 @@
 import type { QuoteResponse, TagResponse } from "../utils/types";
 import {
   HIDE_DURATION,
+  acceptProposedTag,
   addTag,
   commitEdit,
   deleteBadge,
+  denyProposedTag,
   getQuotesSnapshot,
   hideQuotes,
   initFromQuotes,
@@ -31,14 +33,18 @@ vi.mock("../utils/api", () => ({
   patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
+  toastSaveFailed: vi.fn(),
 }));
 
 import {
+  acceptProposal,
+  denyProposal,
   patchDeletedBadges,
   patchEdits,
   patchHidden,
   patchStarred,
   patchTags,
+  toastSaveFailed,
 } from "../utils/api";
 
 function quote(overrides: Partial<QuoteResponse> = {}): QuoteResponse {
@@ -256,5 +262,89 @@ describe("a rollback leaves a later gesture alone", () => {
     await undo();
     expect(patchStarred).not.toHaveBeenCalled();
     expect(getQuotesSnapshot().starred.q1).toBeUndefined();
+  });
+});
+
+describe("a write the server could only partly place", () => {
+  it("takes back only the quotes it could not place", async () => {
+    initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
+    vi.mocked(patchStarred).mockImplementationOnce(() =>
+      Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q2"] })),
+    );
+    setStarred(["q1", "q2"], true);
+    await settle();
+    expect(getQuotesSnapshot().starred).toEqual({ q1: true });
+  });
+});
+
+// Accepting or denying a suggestion looked done when it failed: the console
+// heard, the researcher did not (R5). A refusal now says so, and the screen
+// follows what the server decided: "already accepted" keeps the tag, "already
+// denied" drops it, anything else puts the suggestion back.
+describe("accepting or denying a suggestion that does not save", () => {
+  const proposal = { id: 7, tag_name: "Trust", group_name: "UX", colour_set: "ux",
+    colour_index: 2, confidence: 0.8, rationale: "r" };
+  const trust: TagResponse = { name: "Trust", codebook_group: "UX", colour_set: "ux",
+    colour_index: 2, source: "autocode" };
+  const refusedAs = (reason?: string) =>
+    Object.assign(new Error("refused"), reason ? { status: 409, reason } : {});
+  const names = () => (getQuotesSnapshot().tags.q1 || []).map((t) => t.name);
+  const offered = () => (getQuotesSnapshot().proposedTags.q1 || []).map((p) => p.id);
+
+  it("an accept that fails puts the suggestion back and says so", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(acceptProposal).mockRejectedValueOnce(refusedAs());
+    acceptProposedTag("q1", 7, trust);
+    expect(names()).toEqual(["Trust"]);
+    await settle();
+    expect(names()).toEqual([]);
+    expect(offered()).toEqual([7]);
+    expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+  });
+
+  it("an accept of one denied elsewhere drops the tag, and the suggestion stays gone", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(acceptProposal).mockRejectedValueOnce(refusedAs("proposal_denied"));
+    acceptProposedTag("q1", 7, trust);
+    await settle();
+    expect(names()).toEqual([]);
+    expect(offered()).toEqual([]);
+  });
+
+  it("an accept of one accepted elsewhere keeps the tag", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(acceptProposal).mockRejectedValueOnce(refusedAs("proposal_accepted"));
+    acceptProposedTag("q1", 7, trust);
+    await settle();
+    expect(names()).toEqual(["Trust"]);
+    expect(offered()).toEqual([]);
+  });
+
+  it("a deny that fails puts the suggestion back and says so", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(denyProposal).mockRejectedValueOnce(refusedAs());
+    denyProposedTag("q1", 7);
+    expect(offered()).toEqual([]);
+    await settle();
+    expect(offered()).toEqual([7]);
+    expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+  });
+
+  it("a deny of one accepted elsewhere shows the tag", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(denyProposal).mockRejectedValueOnce(refusedAs("proposal_accepted"));
+    denyProposedTag("q1", 7);
+    await settle();
+    expect(names()).toEqual(["Trust"]);
+    expect(offered()).toEqual([]);
+  });
+
+  it("a deny of one denied elsewhere changes nothing more", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(denyProposal).mockRejectedValueOnce(refusedAs("proposal_denied"));
+    denyProposedTag("q1", 7);
+    await settle();
+    expect(offered()).toEqual([]);
+    expect(names()).toEqual([]);
   });
 });

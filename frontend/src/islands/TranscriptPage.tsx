@@ -761,7 +761,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // Deleted badge / tag callbacks
   const handleDeleteBadge = useCallback(
     (quoteId: string, sentiment: string) => {
-      if (!data) return;
+      if (!data || isExportMode()) return;
       const ann = data.annotations[quoteId];
       if (!ann) return;
       const updated = [...ann.deleted_badges, sentiment];
@@ -784,7 +784,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   const handleDeleteTag = useCallback(
     (quoteId: string, tagName: string) => {
-      if (!data) return;
+      if (!data || isExportMode()) return;
       const ann = data.annotations[quoteId];
       if (!ann) return;
       const updated = ann.tags.filter((t) => t.name !== tagName);
@@ -1255,7 +1255,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                                 variant="ai"
                                 text={ann.sentiment}
                                 sentiment={ann.sentiment}
-                                onDelete={() => handleDeleteBadge(qid, ann.sentiment)}
+                                // An exported report has no server to save to.
+                                onDelete={isExportMode() ? undefined : () => handleDeleteBadge(qid, ann.sentiment)}
                                 data-testid={withIds ? `annotation-${qid}-sentiment` : undefined}
                               />
                             )}
@@ -1265,7 +1266,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                                 variant="user"
                                 text={tag.name}
                                 colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
-                                onDelete={() => handleDeleteTag(qid, tag.name)}
+                                onDelete={isExportMode() ? undefined : () => handleDeleteTag(qid, tag.name)}
                                 data-testid={withIds ? `annotation-${qid}-tag-${tag.name}` : undefined}
                               />
                             ))}

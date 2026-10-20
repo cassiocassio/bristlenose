@@ -14,10 +14,10 @@
  * state of its own except the pending merge, which is a question awaiting an
  * answer rather than data.
  *
- * Failures `console.error` and stop, exactly as the shipped lens did. That is
- * quieter than it should be — see the extraction note in
- * `docs/design-codebook-v2-plan.md` — but making it noisier here would be a
- * behaviour change smuggled into a move.
+ * A failure says "Couldn't save" and re-reads (20 Oct 2026, R6). It used to
+ * `console.error` and stop, as the shipped lens did when this was extracted
+ * (`docs/design-codebook-v2-plan.md`), which left a refused rename looking
+ * like nothing had happened.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -28,6 +28,7 @@ import {
   deleteCodebookGroup,
   deleteCodebookTag,
   mergeCodebookTags,
+  toastSaveFailed,
   updateCodebookGroup,
   updateCodebookTag,
 } from "../utils/api";
@@ -73,6 +74,18 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
   const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(null);
   const [nameClash, setNameClash] = useState<string | null>(null);
 
+  // An edit that did not save says why ("Couldn't save"; a name another tag
+  // holds is the server's 409), then re-reads, so the screen shows what saved.
+  // These went to the console only, and a refused rename looked like nothing.
+  const failed = useCallback(
+    (err: unknown) => {
+      console.error("Codebook edit failed:", err);
+      toastSaveFailed(err);
+      onChanged();
+    },
+    [onChanged],
+  );
+
   const nextColourSet = useCallback(() => {
     const usedSets = new Set(groups?.map((g) => g.colour_set) ?? []);
     return COLOUR_SET_ORDER.find((s) => !usedSets.has(s)) ?? "ux";
@@ -110,25 +123,25 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
       }
       updateCodebookGroup(groupId, fields)
         .then(onChanged)
-        .catch((err) => console.error("Update group failed:", err));
+        .catch(failed);
     },
-    [groups, onChanged],
+    [groups, onChanged, failed],
   );
 
   const onDeleteGroup = useCallback(
     (group: CodebookGroupResponse) => {
       deleteCodebookGroup(group.id)
         .then(onChanged)
-        .catch((err) => console.error("Delete group failed:", err));
+        .catch(failed);
     },
-    [onChanged],
+    [onChanged, failed],
   );
 
   const onCreateGroup = useCallback(() => {
     createCodebookGroup(nextGroupName(), nextColourSet())
       .then(onChanged)
-      .catch((err) => console.error("Create group failed:", err));
-  }, [nextGroupName, nextColourSet, onChanged]);
+      .catch(failed);
+  }, [nextGroupName, nextColourSet, onChanged, failed]);
 
   // --- Tag mutations ---
 
@@ -136,27 +149,27 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
     (name: string, groupId: number) => {
       createCodebookTag(name, groupId)
         .then(onChanged)
-        .catch((err) => console.error("Create tag failed:", err));
+        .catch(failed);
     },
-    [onChanged],
+    [onChanged, failed],
   );
 
   const onDeleteTag = useCallback(
     (tag: CodebookTagResponse) => {
       deleteCodebookTag(tag.id)
         .then(onChanged)
-        .catch((err) => console.error("Delete tag failed:", err));
+        .catch(failed);
     },
-    [onChanged],
+    [onChanged, failed],
   );
 
   const onRenameTag = useCallback(
     (tag: CodebookTagResponse, newName: string) => {
       updateCodebookTag(tag.id, { name: newName })
         .then(onChanged)
-        .catch((err) => console.error("Rename tag failed:", err));
+        .catch(failed);
     },
-    [onChanged],
+    [onChanged, failed],
   );
 
   // --- Drag and drop ---
@@ -177,9 +190,9 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
       dragTagRef.current = null;
       updateCodebookTag(dragInfo.tag.id, { group_id: targetGroupId })
         .then(onChanged)
-        .catch((err) => console.error("Move tag failed:", err));
+        .catch(failed);
     },
-    [onChanged],
+    [onChanged, failed],
   );
 
   const onMergeDrop = useCallback((targetTag: CodebookTagResponse) => {
@@ -194,9 +207,9 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
     if (!pendingMerge) return;
     mergeCodebookTags(pendingMerge.source.id, pendingMerge.target.id)
       .then(onChanged)
-      .catch((err) => console.error("Merge tags failed:", err));
+      .catch(failed);
     setPendingMerge(null);
-  }, [pendingMerge, onChanged]);
+  }, [pendingMerge, onChanged, failed]);
 
   const onCancelMerge = useCallback(() => setPendingMerge(null), []);
 
@@ -211,9 +224,9 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
       createCodebookGroup(nextGroupName(), nextColourSet())
         .then((newGroup) => updateCodebookTag(dragInfo.tag.id, { group_id: newGroup.id }))
         .then(onChanged)
-        .catch((err) => console.error("Create group from drag failed:", err));
+        .catch(failed);
     },
-    [nextGroupName, nextColourSet, onChanged],
+    [nextGroupName, nextColourSet, onChanged, failed],
   );
 
   // Memoised so the bundle has the same reference stability the ten separate

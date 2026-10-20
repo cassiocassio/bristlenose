@@ -454,6 +454,14 @@ def get_proposals(
         db.close()
 
 
+def _already_reviewed(status: str) -> RefusalError:
+    """409 for a proposal reviewed already, naming which way it went."""
+    reason = (
+        RefusalReason.PROPOSAL_ACCEPTED if status == "accepted" else RefusalReason.PROPOSAL_DENIED
+    )
+    return RefusalError(409, reason, f"Proposal already {status}")
+
+
 # ---------------------------------------------------------------------------
 # POST /projects/{id}/autocode/proposals/{proposal_id}/accept
 # ---------------------------------------------------------------------------
@@ -475,10 +483,7 @@ def accept_proposal(
             raise HTTPException(status_code=404, detail="Proposal not found")
 
         if proposal.status != "pending":
-            raise HTTPException(
-                status_code=409,
-                detail=f"Proposal already {proposal.status}",
-            )
+            raise _already_reviewed(proposal.status)
 
         # Create the QuoteTag (may fail on unique constraint if already exists)
         existing_qt = (
@@ -526,10 +531,7 @@ def deny_proposal(
             raise HTTPException(status_code=404, detail="Proposal not found")
 
         if proposal.status != "pending":
-            raise HTTPException(
-                status_code=409,
-                detail=f"Proposal already {proposal.status}",
-            )
+            raise _already_reviewed(proposal.status)
 
         proposal.status = "denied"
         proposal.reviewed_at = datetime.now(timezone.utc)

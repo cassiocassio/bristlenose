@@ -11,6 +11,7 @@ vi.mock("../utils/api", () => ({
   acceptProposal: vi.fn(),
   denyAllProposals: vi.fn(),
   denyProposal: vi.fn(),
+  toastSaveFailed: vi.fn(),
 }));
 
 import {
@@ -20,6 +21,7 @@ import {
   acceptProposal,
   denyAllProposals,
   denyProposal,
+  toastSaveFailed,
 } from "../utils/api";
 
 const mockGetStatus = vi.mocked(getAutoCodeStatus);
@@ -64,6 +66,7 @@ describe("ThresholdReviewModal", () => {
     mockAcceptProposal.mockReset();
     mockDenyAll.mockReset();
     mockDenyProposal.mockReset();
+    vi.mocked(toastSaveFailed).mockReset();
   });
 
   it("shows loading state initially", () => {
@@ -288,6 +291,63 @@ describe("ThresholdReviewModal", () => {
     expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
 
     vi.useRealTimers();
+  });
+
+  // A per-row accept or deny that failed went to the console, and the row left
+  // as if it had saved (R5). It now says so and comes back — unless the server
+  // says it was already decided, which removes it either way.
+  describe("a per-row review that does not save", () => {
+    const renderModal = async () => {
+      mockGetProposals.mockResolvedValue({
+        proposals: [makeProposal({ id: 1, confidence: 0.5 })],
+        total: 1,
+      });
+      render(
+        <ThresholdReviewModal open={true} frameworkId="garrett" frameworkTitle="Garrett"
+          onClose={vi.fn()} onApply={vi.fn()} />,
+      );
+      await act(async () => {});
+    };
+    const click = (action: "accept" | "deny") =>
+      fireEvent.click(
+        screen.getByTestId("bn-proposal-row-1").querySelector(`.threshold-action-${action}`)!,
+      );
+
+    it.each([["before", 0], ["after", 300]] as const)(
+      "comes back and says so when the answer lands %s the row leaves",
+      async (_when, before) => {
+        vi.useFakeTimers();
+        try {
+          let refuse: (e: unknown) => void = () => {};
+          mockAcceptProposal.mockImplementation(() => new Promise((_, r) => { refuse = r; }));
+          await renderModal();
+          click("accept");
+          await act(async () => { vi.advanceTimersByTime(before); });
+          await act(async () => { refuse(new Error("offline")); });
+          await act(async () => { vi.advanceTimersByTime(300); });
+          expect(screen.getByTestId("bn-proposal-row-1")).toBeInTheDocument();
+          expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("leaves, quietly, when it was already decided the same way", async () => {
+      vi.useFakeTimers();
+      try {
+        mockDenyProposal.mockRejectedValue(
+          Object.assign(new Error("409"), { status: 409, reason: "proposal_denied" }),
+        );
+        await renderModal();
+        click("deny");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
+        expect(toastSaveFailed).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   // Parked behind `proposalRationaleTooltip` (see utils/featureFlags.ts):

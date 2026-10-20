@@ -210,15 +210,19 @@ class TestValidateAnthropic:
         assert result.error_class == "billing_empty"
         assert "credit balance" in result.raw_message.lower()
 
-    def test_other_bad_request_maps_to_model_unavailable(self, monkeypatch):
+    def test_other_bad_request_is_said_in_the_providers_words(self, monkeypatch):
+        # The 400s the run's own request can meet — a cap above the model's
+        # ceiling, a refused sampling parameter — are about the request, not
+        # the account. "Not available for your account" sent the researcher to
+        # the wrong console; the generic copy carries the provider's message.
         bad_req = type("BadRequestError", (Exception,), {})
-        fake = self._fake_anthropic(
-            exc_class=bad_req, exc=bad_req("400 model not found"),
-        )
+        msg = "max_tokens: 65536 > 64000, which is the maximum allowed"
+        fake = self._fake_anthropic(exc_class=bad_req, exc=bad_req(msg))
         monkeypatch.setitem(__import__("sys").modules, "anthropic", fake)
-        result = _validate_anthropic("sk-key", "gibberish-model")
+        result = _validate_anthropic("sk-key", "claude-sonnet-4-6")
         assert not result.ok
-        assert result.error_class == "model_unavailable"
+        assert result.error_class is None
+        assert msg in result.raw_message
 
     def test_rate_limit_maps_to_rate_limit(self, monkeypatch):
         rl = type("RateLimitError", (Exception,), {})
@@ -922,10 +926,9 @@ class TestPreflightSendsThePipelinesRequest:
             {"llm_provider": "openai", "openai_api_key": "sk", "llm_model": "gpt-5.6-terra"},
             {"llm_provider": "azure", "azure_api_key": "az",
              "azure_endpoint": "https://x.openai.azure.com/", "azure_deployment": "prod-eastus"},
-            {"llm_provider": "local", "local_model": "llama3.2:3b"},
         ],
         ids=["claude-sampling", "claude-no-sampling", "claude-raised-cap",
-             "chatgpt-legacy", "chatgpt-modern", "azure", "local"],
+             "chatgpt-legacy", "chatgpt-modern", "azure"],
     )
     def test_same_model_and_parameters_as_the_pipeline(self, monkeypatch, tmp_path, kw):
         settings = _real_settings(**kw)
@@ -934,6 +937,16 @@ class TestPreflightSendsThePipelinesRequest:
         assert {k: v for k, v in sent.items() if k not in _PROMPT_KEYS} == {
             k: v for k, v in pipeline.items() if k not in _PROMPT_KEYS
         }
+
+    def test_ollama_same_parameters_but_a_one_token_cap(self, monkeypatch, tmp_path):
+        # Ollama refuses no cap, so the run's proves nothing there, and a small
+        # local model rambling on "." could hold setup for minutes.
+        settings = _real_settings(llm_provider="local", local_model="llama3.2:3b")
+        pipeline = _pipeline_kwargs(settings)
+        sent = _preflight_kwargs(monkeypatch, tmp_path, settings)
+        assert sent["max_tokens"] == 1
+        keep = lambda d: {k: v for k, v in d.items() if k not in _PROMPT_KEYS | {"max_tokens"}}  # noqa: E731
+        assert keep(sent) == keep(pipeline)
 
     def test_gemini_same_model_and_generation_parameters(self, monkeypatch, tmp_path):
         settings = _real_settings(llm_provider="google", google_api_key="g",

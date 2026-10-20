@@ -252,9 +252,12 @@ def _validate_anthropic(
             return ValidationResult(
                 ok=False, error_class="billing_empty", raw_message=str(exc)
             )
-        return ValidationResult(
-            ok=False, error_class="model_unavailable", raw_message=str(exc)
-        )
+        # Any other 400 is the request itself: an output cap above the model's
+        # ceiling, a sampling parameter the model refuses (R104 sends both, as the
+        # run does). Said in the provider's own words; "the model is not available
+        # for your account" sent researchers to the wrong console. An unknown
+        # model is a 404, handled below.
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except anthropic.RateLimitError as exc:
         return ValidationResult(
             ok=False, error_class="rate_limit", raw_message=str(exc)
@@ -512,7 +515,10 @@ def _validate_local(
     """
     import openai
 
-    params = _params_for("local", model, params)
+    # The run's parameters, but not its output cap: Ollama refuses no cap, so
+    # sending 64000 proves nothing, and a small model that rambles on "." could
+    # hold setup for minutes on a laptop.
+    params = {**_params_for("local", model, params), "max_tokens": 1}
     client = openai.OpenAI(
         base_url=local_url,
         api_key="ollama",  # required by SDK, ignored by Ollama

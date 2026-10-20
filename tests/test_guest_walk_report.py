@@ -89,3 +89,51 @@ def test_every_mask_names_a_screen_the_walk_takes_and_says_why() -> None:
 def test_every_menu_mask_says_why() -> None:
     for path, why in report.MENU_MASKS.items():
         assert "▸" in path and why.strip()
+
+
+def test_a_night_with_new_and_missing_screens_still_writes_its_page(tmp_path: Path) -> None:
+    # 20 Oct 2026: the first real night had six lens screens the baseline lacked,
+    # and the page died on a KeyError building a "% changed" label for them.
+    png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\x0f"
+        b"\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    base, tonight, out = tmp_path / "base", tmp_path / "tonight", tmp_path / "out"
+    base.mkdir()
+    tonight.mkdir()
+    (base / "01-about.png").write_bytes(png)
+    (tonight / "02-lens-quotes.png").write_bytes(png)
+    (base / "verdict.txt").write_text("COMPLETED 1 screens\n")
+    (tonight / "verdict.txt").write_text("COMPLETED 1 screens\n")
+    import sys
+
+    argv = sys.argv
+    sys.argv = ["report.py", str(base), str(tonight), str(out)]
+    try:
+        assert report.main() == 0
+    finally:
+        sys.argv = argv
+    page = (out / "index.html").read_text()
+    assert "NEW" in page and "missing tonight" in page
+
+
+def test_a_step_only_tonight_has_adds_no_menu_changes(tmp_path: Path) -> None:
+    # 20 Oct 2026: six new lens steps were each diffed against an empty tree, and
+    # the page reported 1081 menu changes for a night whose menus had not moved.
+    base, tonight, out = tmp_path / "base", tmp_path / "tonight", tmp_path / "out"
+    base.mkdir()
+    tonight.mkdir()
+    line = '{"path": "File ▸ New Project", "enabled": true, "shortcut": "⌘N", "checked": false}\n'
+    (base / "01-about.menus.jsonl").write_text(line)
+    (tonight / "01-about.menus.jsonl").write_text(line)
+    (tonight / "02-lens-quotes.menus.jsonl").write_text(line)
+    import sys
+
+    argv = sys.argv
+    sys.argv = ["report.py", str(base), str(tonight), str(out)]
+    try:
+        assert report.main() == 0
+    finally:
+        sys.argv = argv
+    assert "0 menu changes" in (out / "index.html").read_text()

@@ -142,7 +142,9 @@ def main() -> int:
     b_menus = {p.name.split("-", 1)[1]: p for p in base.glob("*.menus.jsonl")}
     t_menus = {p.name.split("-", 1)[1]: p for p in tonight.glob("*.menus.jsonl")}
     menu_rows = []
-    for k in sorted(set(b_menus) | set(t_menus)):
+    # Only steps both walks took: a step only one walk has is already a new or
+    # missing screen, and diffing it against nothing would count every item.
+    for k in sorted(set(b_menus) & set(t_menus)):
         for r in menu_diff(menus(b_menus.get(k, Path("-"))), menus(t_menus.get(k, Path("-")))):
             menu_rows.append((k.removesuffix(".menus.jsonl"), r))
 
@@ -163,8 +165,12 @@ def main() -> int:
             x, y, w, h = map(int, e["bbox"].split(","))
             iw, ih = e["dims"]
             style = f' style="object-position:{(x + w / 2) / iw * 100:.0f}% {(y + h / 2) / ih * 100:.0f}%"'
-        tag = {"changed": f"{e['frac'] * 100:.2f}% changed", "new": "NEW", "missing": "missing tonight",
-               "same": "same" + (" · masked" if e["masks"] else "")}[st]
+        # Built for this state only: a new or missing screen has no change fraction.
+        if st == "changed":
+            tag = f"{e['frac'] * 100:.2f}% changed"
+        else:
+            tag = {"new": "NEW", "missing": "missing tonight",
+                   "same": "same" + (" · masked" if e["masks"] else "")}[st]
         return (f'<a class="tile {st}" href="#d-{html.escape(s)}" title="{html.escape(s)}">'
                 f'<span class="frame"><img loading="lazy" src="{src}" alt=""{style}></span>'
                 f'<span class="cap">{html.escape(s)}'

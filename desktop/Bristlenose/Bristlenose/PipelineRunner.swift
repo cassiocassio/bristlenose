@@ -2055,10 +2055,28 @@ var args = ["run", project.path, "--no-serve"]
         // raced the cancel and finished cleanly anyway, we keep the result.
         if status != 0, cancellationRequested {
             cancellationRequested = false
+            // Say what the run left, as Stop on a reconnected run does
+            // (`handleOrphanExit`): "Stopped" from its `run_cancelled`. This
+            // wrote `.idle` until 20 Oct 2026, so the app's own Stop left the
+            // row blank (R21). The slot is held across the read, as below (R23).
+            var stopped = PipelineState.idle
+            if let project {
+                stopped = await Self.readManifestState(
+                    at: Self.manifestURL(for: project), timeout: .seconds(5)
+                )
+            }
+            guard gen == generation else {
+                Self.logger.error(
+                    "stop superseded during its end-state read project=\(projectID.uuidString, privacy: .public) — state not written"
+                )
+                return
+            }
+            // The run has exited; nothing it left can make it running.
+            if case .running = stopped { stopped = .idle }
             releaseSlot()
-            state[projectID] = .idle
+            state[projectID] = stopped
             Self.logger.info(
-                "run cancelled project=\(projectID.uuidString, privacy: .public)"
+                "run cancelled project=\(projectID.uuidString, privacy: .public) state=\(String(describing: stopped), privacy: .public)"
             )
             startNextQueued()
             return

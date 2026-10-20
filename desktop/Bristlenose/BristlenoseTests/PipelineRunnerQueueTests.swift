@@ -499,7 +499,10 @@ struct PipelineRunnerQueueTests {
         rig.launches[0].exit(.exited(code: 130))
         await until { rig.runner.state[a.id] != .running }
 
-        #expect(rig.runner.state[a.id] == .idle)
+        // A stopped run's row says what it left on disk, here a finished
+        // report, as a reconnected run's does (R21; it was always `.idle`).
+        // Stopped, it proves nothing about credit.
+        #expect(rig.runner.state[a.id] == .ready(Date(timeIntervalSince1970: 1_792_490_400)))
         #expect(rig.noted.isEmpty)
     }
 

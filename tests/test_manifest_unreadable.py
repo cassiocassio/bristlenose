@@ -44,6 +44,8 @@ class TestTheReader:
         with caplog.at_level(logging.WARNING, logger="bristlenose.manifest"):
             assert load_manifest(tmp_path) is None
         assert any(str(path) in r.getMessage() for r in caplog.records)
+        # One line: a traceback on the terminal is the crash this replaces.
+        assert not any(r.exc_info for r in caplog.records)
 
     def test_strict_still_raises_for_the_reader_that_waits(self, tmp_path: Path) -> None:
         """The progressive importer tells "not yet readable" from "absent"."""

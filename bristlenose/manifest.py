@@ -177,9 +177,11 @@ def load_manifest(output_dir: Path, *, strict: bool = False) -> PipelineManifest
         return PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
     try:
         return PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):  # ValidationError and UnicodeDecodeError are ValueErrors
-        logger.warning("manifest | unreadable at %s, treated as absent", path,
-                       exc_info=True)
+    except (OSError, ValueError) as exc:  # ValidationError, UnicodeDecodeError
+        # One line, no traceback: `status` has no log handler, so a traceback
+        # here reaches the terminal, which is the crash this replaces.
+        logger.warning("manifest | unreadable at %s (%s), treated as absent",
+                       path, type(exc).__name__)
         return None
 
 

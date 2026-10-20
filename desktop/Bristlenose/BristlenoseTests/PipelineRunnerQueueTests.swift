@@ -405,7 +405,11 @@ struct PipelineRunnerQueueTests {
     /// Every signal goes through the recorder, so none reaches this process.
     private func attachedOrphan(
         path: String? = nil, providerLine: String? = nil,
-        noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = { _ in }
+        noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = { _ in },
+        manifestRead: @escaping @Sendable (URL) async -> PipelineState = {
+            await PipelineRunner.parseManifest(at: $0)
+        },
+        endStateTimeout: Duration = .seconds(5)
     ) async throws -> (PipelineRunner, Project, SignalRecorder, URL) {
         let recorder = SignalRecorder()
         let runner = PipelineRunner(
@@ -421,7 +425,10 @@ struct PipelineRunnerQueueTests {
             },
             escalationSleep: { _ in },
             signalTarget: { $0 == getpid() ? -$0 : $0 },
-            noteRunSucceeded: noteRunSucceeded
+            noteRunSucceeded: noteRunSucceeded,
+            manifestRead: manifestRead,
+            endStateTimeout: endStateTimeout,
+            slowEndRereadInterval: .milliseconds(50)
         )
         let p = Project(id: UUID(), name: "Orphan", path: path ?? "/p/orphan-\(UUID().uuidString)")
         let url = PipelineRunner.pidFileURL(for: p)
@@ -625,6 +632,89 @@ struct PipelineRunnerQueueTests {
         }
     }
 
+    /// A dead mount: every read of the manifest blocks until the test lets it
+    /// go, and cancelling it does nothing, as with a read stuck in the kernel.
+    final class HungDisk: @unchecked Sendable {
+        private let lock = NSLock()
+        private var waiting: [CheckedContinuation<Void, Never>] = []
+        private var released = false
+        private var n = 0
+        var reads: Int { lock.withLock { n } }
+        var read: @Sendable (URL) async -> PipelineState {
+            { [self] url in
+                await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                    let go = lock.withLock { () -> Bool in
+                        n += 1
+                        if released { return true }
+                        waiting.append(c)
+                        return false
+                    }
+                    if go { c.resume() }
+                }
+                return await PipelineRunner.parseManifest(at: url)
+            }
+        }
+        func release() {
+            let all = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
+                released = true
+                defer { waiting = [] }
+                return waiting
+            }
+            all.forEach { $0.resume() }
+        }
+    }
+
+    /// R29 follow-up: on a hung mount the end-state read timed out and the run
+    /// slot stayed held anyway, because the timeout's task group waited for
+    /// the hung read before returning. The study queued behind never started.
+    @Test func aHungEndReadStillFreesTheSlot() async {
+        let disk = HungDisk()
+        let rig = Rig(manifestRead: disk.read, endStateTimeout: .milliseconds(50))
+        defer { disk.release(); rig.cleanUp() }
+        let a = rig.project("A")
+        let b = rig.project("B")
+        rig.runner.start(project: a)
+        rig.runner.start(project: b)
+        #expect(rig.launches.count == 1)
+
+        rig.launches[0].exit()
+        await until { rig.launches.count == 2 }
+
+        #expect(rig.launches.count == 2, "the next study never started: the hung read held the slot")
+        #expect(rig.runner.state[a.id] == .unreachable(reason: .timedOut))
+        #expect(rig.runner.state[b.id] == .running)
+    }
+
+    /// R29 on a reconnected run: its exit path read the end state once, so a
+    /// read that timed out on a slow disk read "Not responding" until relaunch.
+    @Test func anAttachedRunWhoseEndReadTimedOutIsReadAgain() async throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("orphan-r29-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let reads = ReadLog()
+        var noted: [LLMProvider] = []
+        let (runner, p, _, url) = try await attachedOrphan(
+            path: root.path, providerLine: "openai",
+            noteRunSucceeded: { noted.append($0) },
+            manifestRead: Self.slowDisk(reads, slow: 1),
+            endStateTimeout: .milliseconds(50)
+        )
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        Self.writeFinishedRun(at: root.path, runId: "orphan-run", tokens: 300)
+        await until({
+            if case .ready = runner.state[p.id] { return true }
+            return false
+        }, seconds: 8)
+
+        guard case .ready = runner.state[p.id] else {
+            Issue.record("expected .ready, got \(String(describing: runner.state[p.id]))"); return
+        }
+        #expect(noted == [.chatGPT])
+        #expect(reads.count == 2, "one end read that timed out, and one re-read")
+    }
+
     @Test func aRunFinishedFromCacheClearsNothing() async {
         let rig = Rig(); defer { rig.cleanUp() }
         let a = rig.project("A")
@@ -673,7 +763,10 @@ struct PipelineRunnerQueueTests {
         #expect(rig.noted.isEmpty, "credited the earlier run's tokens to this one")
     }
 
-    @Test func anAttachedRunIsNotCreditedWithThePreviousRunsTokens() async throws {
+    /// `slowEnd`: the end read times out and the re-read settles it (R29),
+    /// which must judge credit against the same earlier terminus.
+    @Test(arguments: [false, true])
+    func anAttachedRunIsNotCreditedWithThePreviousRunsTokens(slowEnd: Bool) async throws {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("orphan-prior-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -684,14 +777,18 @@ struct PipelineRunnerQueueTests {
         var noted: [LLMProvider] = []
         let (runner, _, _, url) = try await attachedOrphan(
             path: root.path, providerLine: "openai",
-            noteRunSucceeded: { noted.append($0) }
+            noteRunSucceeded: { noted.append($0) },
+            manifestRead: slowEnd ? Self.slowDisk(ReadLog(), slow: 1) : { await PipelineRunner.parseManifest(at: $0) },
+            endStateTimeout: slowEnd ? .milliseconds(50) : .seconds(5)
         )
         defer { try? FileManager.default.removeItem(at: url) }
 
         // The poll reads ready (the earlier run's) and calls the run over.
         await until({ !FileManager.default.fileExists(atPath: url.path) }, seconds: 6)
-        await until({ runner.state.values.contains { if case .ready = $0 { true } else { false } } }, seconds: 3)
+        let ready = { runner.state.values.contains { if case .ready = $0 { true } else { false } } }
+        await until(ready, seconds: 3)
 
+        #expect(ready(), "the attached run's end never settled")
         #expect(noted.isEmpty, "credited the earlier run's tokens to the attached one")
     }
 

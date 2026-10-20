@@ -1231,16 +1231,22 @@ final class PipelineRunner: ObservableObject {
             state[projectID] = .idle
         }
 
-        // Re-read the manifest one final time to derive .ready vs .idle.
+        // Read the manifest to derive .ready vs .idle, and again if that read
+        // times out (`settleOrphanEndRead`, R29). Through the same seam and
+        // timeout as a spawned run's end read.
         // Brief delay so a clean SIGINT exit has time to flush atexit
         // handlers (manifest write); a SIGKILL/crash won't benefit but won't
         // be made worse either.
+        let read = manifestRead
+        let timeout = endStateTimeout
         Task.detached { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             let resolved = await Self.readManifestState(
-                at: Self.manifestURL(for: project), timeout: Self.scanTimeout
+                at: Self.manifestURL(for: project), timeout: timeout, read: read
             )
-            await self?.applyScanResult(resolved, for: projectID)
+            await self?.settleOrphanEndRead(
+                resolved, project: project, provider: provider, priorTerminus: priorTerminus
+            )
             if case .ready = resolved {
                 // `.ready` here came from the run's own terminus: with an
                 // events log, a tail of `run_started` reads as running or
@@ -1251,6 +1257,19 @@ final class PipelineRunner: ObservableObject {
                     terminus: terminus, priorRunId: priorTerminus
                 )
             }
+        }
+    }
+
+    /// Write an attached run's end read, and read it again if it timed out, as
+    /// a spawned run's is (R29): on a slow disk the row otherwise read "Not
+    /// responding" until relaunch.
+    private func settleOrphanEndRead(
+        _ resolved: PipelineState, project: Project,
+        provider: LLMProvider?, priorTerminus: String?
+    ) {
+        applyScanResult(resolved, for: project.id)
+        if state[project.id] == .unreachable(reason: .timedOut) {
+            rereadAfterSlowEnd(project, provider: provider, priorRunId: priorTerminus)
         }
     }
 
@@ -1441,8 +1460,9 @@ final class PipelineRunner: ObservableObject {
     ///   incrementally so absence of the last stage is the canonical
     ///   "pipeline never finished" signal — see manifest.py STAGE_ORDER)
     /// - read error / timeout → `.unreachable(reason:)`
-    /// - Parameter allowTimeout: when `true`, a 5 s hard timeout via
-    ///   `withThrowingTaskGroup` guards against a dead network mount; when
+    /// - Parameter allowTimeout: when `true`, a hard timeout (5 s on a scan)
+    ///   guards against a dead network mount, and returns on time even when
+    ///   the read never does; when
     ///   `false`, skip the timeout machinery entirely (in-poll reads against
     ///   trusted local disk don't need it, and creating a sleep-task per
     ///   poll cycle was a real wakeup amplifier — see perf review).
@@ -1453,28 +1473,18 @@ final class PipelineRunner: ObservableObject {
         guard allowTimeout else {
             return await read(url)
         }
-        do {
-            return try await withThrowingTaskGroup(
-                of: PipelineState.self
-            ) { group in
-                group.addTask {
-                    await read(url)
-                }
-                group.addTask {
-                    try await Task.sleep(for: timeout)
-                    throw CancellationError()
-                }
-                guard let first = try await group.next() else {
-                    return .unreachable(reason: .scanFailed)
-                }
-                group.cancelAll()
-                return first
-            }
-        } catch is CancellationError {
+        // Raced, not grouped. A task group waits for every child before it
+        // returns, so a read hung on a dead mount held the caller past its own
+        // timeout, and at a run's end the slot with it: the queue stopped
+        // behind a study whose row already said "Not responding" (R29). The
+        // losing read is cancelled and left behind; one blocked in the kernel
+        // ignores that and stays blocked, which is the price of the slot.
+        let reading = Task.detached { await read(url) }
+        guard let state = await value(of: reading, within: timeout) else {
+            reading.cancel()
             return .unreachable(reason: .timedOut)
-        } catch {
-            return .unreachable(reason: .unreadable)
         }
+        return state
     }
 
     /// Read `stages` from the manifest and return names of those marked complete.
@@ -2308,7 +2318,7 @@ var args = ["run", project.path, "--no-serve"]
             releaseSlot()
             state[projectID] = stopped
             if stopped == .unreachable(reason: .timedOut), let project {
-                rereadAfterSlowEnd(project)
+                rereadAfterSlowEnd(project, priorRunId: priorRunIds[projectID])
             }
             Self.logger.info(
                 "run cancelled project=\(projectID.uuidString, privacy: .public) state=\(String(describing: stopped), privacy: .public)"
@@ -2365,7 +2375,7 @@ var args = ["run", project.path, "--no-serve"]
         case .accept(let final):
             state[projectID] = final
             if final == .unreachable(reason: .timedOut), let project {
-                rereadAfterSlowEnd(project, provider: provider)
+                rereadAfterSlowEnd(project, provider: provider, priorRunId: priorRunIds[projectID])
             }
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
@@ -2403,13 +2413,17 @@ var args = ["run", project.path, "--no-serve"]
     /// the study again cancels it (`start`). What it finds is applied as a
     /// scan's would be: a run another process owns gets its watch, and a run
     /// that finished whole clears a stale out-of-credit verdict for
-    /// `provider`, as the termination path does on `.ready`.
-    private func rereadAfterSlowEnd(_ project: Project, provider: LLMProvider? = nil) {
+    /// `provider`, as the termination path does on `.ready`. `priorRunId` is
+    /// the terminus newest when the run began: `priorRunIds` for a spawned run,
+    /// `orphanPriorTerminus` for an attached one. The attached run's exit path
+    /// (`handleOrphanExit`) re-reads the same way.
+    private func rereadAfterSlowEnd(
+        _ project: Project, provider: LLMProvider? = nil, priorRunId: String?
+    ) {
         let projectID = project.id
         let url = Self.manifestURL(for: project)
         let read = manifestRead
         let interval = slowEndRereadInterval
-        let priorRunId = priorRunIds[projectID]
         let token = UUID()
         slowEndRereads[projectID]?.cancel()
         slowEndRereadTokens[projectID] = token

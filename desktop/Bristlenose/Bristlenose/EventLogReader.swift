@@ -8,11 +8,11 @@ import os
 /// for `.partial` / `.stopped` cases is read from the manifest at display
 /// time, not the events log.
 ///
-/// Read is bounded: at most 64 KB from the tail of the file. A run-started
-/// event line is small (~200 B); a terminus event with a 4 KB capped
-/// `cause.message` is well under 5 KB. 64 KB comfortably contains a few
-/// dozen events — enough to find the most recent `run_*` line in any
-/// realistic file. See `docs/design-pipeline-resilience.md` §"Phase 4a-pre".
+/// Read is bounded: the last 64 KB of the file, widened (to at most
+/// `tailLimit`) only while it holds no matching line. A run-started event line
+/// is small (~200 B); a terminus event with a 4 KB capped `cause.message` is
+/// well under 5 KB; but a live run's `run_progress` lines can fill 64 KB in
+/// under a minute. See `docs/design-pipeline-resilience.md` §"Phase 4a-pre".
 ///
 /// This file is the Swift mirror of `bristlenose/events.py`; case names
 /// (`run_started` / `run_completed` / `run_cancelled` / `run_failed`) are
@@ -153,14 +153,45 @@ enum EventLogReader {
     }
 
     /// Read from the tail and return the newest decodable event satisfying
-    /// `predicate`. Bounded 64 KB read; drops a chopped first slice.
+    /// `predicate`. Starts with the last 64 KB and widens fourfold, to at most
+    /// `tailLimit`, while nothing in the window matches: a running study's log
+    /// can end in thousands of `run_progress` lines (up to four a second during
+    /// a model download), which pushed its `run_started` out of a fixed 64 KB
+    /// window and made a live run read as never started (R22 review). Drops a
+    /// chopped first slice.
     private static func tailMatching(
         at url: URL, where predicate: (Event) -> Bool
     ) -> Event? {
-        let maxBytes = 65_536
-        guard let (data, wasTruncated) = readBoundedTail(url: url, maxBytes: maxBytes) else {
-            return nil
+        var maxBytes = 65_536
+        while true {
+            guard let (data, wasTruncated) = readBoundedTail(url: url, maxBytes: maxBytes) else {
+                return nil
+            }
+            switch newestMatching(in: data, wasTruncated: wasTruncated, where: predicate) {
+            case .found(let event):
+                return event
+            case .refused:
+                return nil
+            case .noMatch:
+                guard wasTruncated, maxBytes < tailLimit else { return nil }
+                maxBytes *= 4
+            }
         }
+    }
+
+    /// The widest tail `tailMatching` reads: about ten hours of progress lines.
+    static let tailLimit = 64 * 1_048_576
+
+    private enum TailScan {
+        case found(Event)
+        /// Valid JSON that doesn't fit `Event`: refuse to answer (see below).
+        case refused
+        case noMatch
+    }
+
+    private static func newestMatching(
+        in data: Data, wasTruncated: Bool, where predicate: (Event) -> Bool
+    ) -> TailScan {
         // JSONL: split on newlines, parse from the tail back.
         let text = String(data: data, encoding: .utf8) ?? ""
         var lines = Array(text.split(separator: "\n", omittingEmptySubsequences: true))
@@ -182,7 +213,7 @@ enum EventLogReader {
                 // Parseable. Either it's what we're looking for, or it's an
                 // event of another kind (`run_progress`, or a forward-compat
                 // type from a newer sidecar) and we keep walking back.
-                if predicate(event) { return event }
+                if predicate(event) { return .found(event) }
                 continue
             }
             // The decode failed, and the two reasons want opposite handling:
@@ -215,11 +246,11 @@ enum EventLogReader {
                     state from an older event. line_bytes=\(lineData.count, privacy: .public)
                     """
                 )
-                return nil
+                return .refused
             }
             // (a) — torn line, keep walking.
         }
-        return nil
+        return .noMatch
     }
 
     /// Map the most recent event + PID-file liveness + manifest stages-complete
@@ -323,14 +354,49 @@ enum EventLogReader {
     /// Returns `true` iff `<output>/.bristlenose/run.pid` exists, parses,
     /// and its `(pid, start_time)` matches a live process.
     static func pythonOwnedRunIsAlive(at pidURL: URL) -> Bool {
+        pythonRunPID(at: pidURL) == .alive
+    }
+
+    /// What `run.pid` says about its run, with "can't read it" kept apart from
+    /// "it's gone": a watch may end a run only on the second.
+    enum PIDVerdict: Equatable { case alive, gone, unreadable }
+
+    /// A run another process owns, judged from disk alone (R22).
+    enum ForeignRunVerdict: Equatable {
+        /// Its `run_started` is newest and its process is alive.
+        case live
+        /// A terminus is newest, or `run.pid` names a process that is gone.
+        case ended
+        /// Neither can be told: no lifecycle line found, or `run.pid` missing
+        /// or unreadable. Not an end.
+        case unknown
+    }
+
+    static func foreignRunVerdict(eventsURL: URL, pidURL: URL) -> ForeignRunVerdict {
+        guard let tail = tailEvent(at: eventsURL) else { return .unknown }
+        guard tail.event == "run_started" else { return .ended }
+        switch pythonRunPID(at: pidURL) {
+        case .alive: return .live
+        case .gone: return .ended
+        case .unreadable: return .unknown
+        }
+    }
+
+    static func pythonRunPID(at pidURL: URL) -> PIDVerdict {
         guard let data = try? Data(contentsOf: pidURL),
               let payload = try? JSONDecoder().decode(PIDFile.self, from: data) else {
-            return false
+            return .unreadable
         }
-        guard kill(payload.pid, 0) == 0 else { return false }
+        // Signal 0 asks whether the process exists, and only ESRCH says no.
+        // App Sandbox answers EPERM for any process outside the app's sandbox
+        // (measured 20 Oct 2026 from the sandboxed test host: Dock, Finder),
+        // and a CLI run started in Terminal is one. Read as gone, a live CLI
+        // run on a sidebar study showed "Analysis stopped unexpectedly" (R22).
+        // The start time below still rules out a reused pid.
+        guard kill(payload.pid, 0) == 0 || errno == EPERM else { return .gone }
         // Verify start_time matches — defeats PID reuse.
-        guard let start = procStartTime(pid: payload.pid) else { return false }
-        return start == payload.startTime
+        guard let start = procStartTime(pid: payload.pid) else { return .gone }
+        return start == payload.startTime ? .alive : .gone
     }
 
     /// Returns the process start time as `"<tvsec>.<tvusec>"`, byte-identical

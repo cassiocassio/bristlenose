@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Bristlenose
@@ -366,6 +367,45 @@ struct EventLogReaderTests {
         let body = "{\"pid\":\(getpid()),\"start_time\":\"Wrong Date\",\"run_id\":\"X\"}"
         try? body.data(using: .utf8)?.write(to: url, options: .atomic)
         #expect(EventLogReader.pythonOwnedRunIsAlive(at: url) == false)
+    }
+
+    /// A CLI run in Terminal is outside the app's sandbox, which refuses even
+    /// signal 0 to it (EPERM). Any live process of this user's outside the
+    /// sandbox stands in for it (R22).
+    @MainActor
+    @Test func aRunOutsideTheSandboxIsAlive() async throws {
+        let pid = try #require(await Self.processOutsideTheSandbox(),
+                               "no process of this user's that the sandbox refuses a signal")
+        let start = try #require(EventLogReader.procStartTime(pid: pid))
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent(EventLogReader.pidFilename)
+        try Data(#"{"pid":\#(pid),"start_time":"\#(start)","run_id":"X"}"#.utf8).write(to: url)
+
+        #expect(EventLogReader.pythonOwnedRunIsAlive(at: url), "a live run outside the sandbox read as gone")
+
+        try Data(#"{"pid":\#(pid),"start_time":"1.0","run_id":"X"}"#.utf8).write(to: url)
+        #expect(!EventLogReader.pythonOwnedRunIsAlive(at: url), "a reused pid read as the run")
+    }
+
+    /// A live process of this user's that the sandbox refuses even signal 0:
+    /// a running app other than this one. NSWorkspace fills its list
+    /// asynchronously (it can be empty early in a run), so this waits for it;
+    /// libproc's process list is refused under the sandbox.
+    @MainActor
+    static func processOutsideTheSandbox() async -> pid_t? {
+        for _ in 0..<40 {
+            for app in NSWorkspace.shared.runningApplications {
+                let pid = app.processIdentifier
+                guard pid > 1, pid != getpid(),
+                      EventLogReader.procUID(pid: pid) == getuid(),
+                      EventLogReader.procStartTime(pid: pid) != nil,
+                      kill(pid, 0) == -1, errno == EPERM else { continue }
+                return pid
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return nil
     }
 
     // MARK: - State derivation × live PID file

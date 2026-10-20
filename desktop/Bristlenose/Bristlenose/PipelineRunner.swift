@@ -564,6 +564,23 @@ final class PipelineRunner: ObservableObject {
     private let signalTarget: (pid_t) -> pid_t
     private let activeProvider: @MainActor () -> LLMProvider?
     private let noteRunSucceeded: @MainActor (LLMProvider) -> Void
+    private let sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)?
+    private let outputDrainLimit: Duration
+    private let foreignRunPollInterval: Duration
+    private let foreignRunPatience: Int
+
+    /// A run this app neither spawned nor attached — a CLI run on a sidebar
+    /// study — reads `.running` from its own `run.pid` (`EventLogReader.deriveState`),
+    /// and disk is all there is to go on: there is no process to wait for and
+    /// none we may signal. Re-read until disk says it is over (R22). It used to
+    /// read "Analysing" until quit, holding the Mac awake.
+    private var foreignRunWatches: [UUID: Task<Void, Never>] = [:]
+
+    /// Whether the project's live run is this app's: the one in the slot, or
+    /// an attached orphan.
+    private func ownsRun(_ projectID: UUID) -> Bool {
+        currentlyRunning == projectID || attachedOrphanPIDs[projectID] != nil
+    }
 
     /// The provider each run was spawned with — read back from the PID file
     /// for an attached orphan. A finished run clears an out-of-credit verdict
@@ -578,6 +595,9 @@ final class PipelineRunner: ObservableObject {
         let pid: pid_t
         /// False once the process has exited and been reaped.
         let isRunning: () -> Bool
+        /// The run's stdout and stderr a line at a time, finished when the
+        /// pipe closes. Nil for a launch with nothing to read.
+        var output: AsyncStream<String>? = nil
     }
 
     /// Starts a `bristlenose run` for a project, `--clean` or not, and calls
@@ -603,6 +623,15 @@ final class PipelineRunner: ObservableObject {
     ///   - activeProvider: the provider a run is spawned with.
     ///   - noteRunSucceeded: what a finished run that made an LLM call does to
     ///     its provider's out-of-credit verdict.
+    ///   - sidecarLookup: where the sidecar is. Nil, the app's, resolves it
+    ///     from the bundle, and only when no `launcher` is passed; a test passes
+    ///     one beside its launcher to reach a failed lookup (R28).
+    ///   - outputDrainLimit: how long a failed run's verdict waits for the
+    ///     rest of its output (R25).
+    ///   - foreignRunPollInterval: how often a run another process owns is
+    ///     re-read from disk (R22).
+    ///   - foreignRunPatience: how many reads in a row that can't tell whether
+    ///     such a run has ended before the row takes what disk says.
     init(
         notificationCenter: NotificationCenter = .default,
         sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno },
@@ -622,8 +651,16 @@ final class PipelineRunner: ObservableObject {
         },
         noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = {
             OutOfCreditModel.noteRunSucceeded(provider: $0)
-        }
+        },
+        sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
+        outputDrainLimit: Duration = .seconds(2),
+        foreignRunPollInterval: Duration = .seconds(2),
+        foreignRunPatience: Int = 15
     ) {
+        self.foreignRunPatience = foreignRunPatience
+        self.sidecarLookup = sidecarLookup
+        self.outputDrainLimit = outputDrainLimit
+        self.foreignRunPollInterval = foreignRunPollInterval
         self.sendSignal = sendSignal
         self.hasConsent = hasConsent
         self.keyReadiness = keyReadiness
@@ -789,9 +826,106 @@ final class PipelineRunner: ObservableObject {
                 return
             }
             attachOrphan(project: project, pid: pid)
-        case .manifest(let state):
-            applyScanResult(state, for: projectID)
+        case .manifest(let resolved):
+            applyScanResult(resolved, for: projectID)
+            if case .running = state[projectID], !ownsRun(projectID) {
+                watchForeignRun(project)
+            }
         }
+    }
+
+    /// Re-read a run another process owns until disk says it has ended (R22):
+    /// its terminus, or `run.pid` naming a process that is gone
+    /// (`EventLogReader.foreignRunVerdict`). Nothing else ends the watch: a
+    /// read that can't tell (`run.pid` unreadable, no lifecycle line, the
+    /// folder unreachable, a read that hangs) is polled again, and only after
+    /// `foreignRunPatience` such polls in a row is the row settled to whatever
+    /// disk then says, so a run that never says is not watched for ever. Ends early when the row stops being that run's (the app
+    /// took the study over, or a scan settled it). One read at a time: a hung
+    /// one is waited on again, not stacked.
+    private func watchForeignRun(_ project: Project) {
+        let projectID = project.id
+        guard foreignRunWatches[projectID] == nil else { return }
+        let manifestURL = Self.manifestURL(for: project)
+        let dotBristlenose = manifestURL.deletingLastPathComponent()
+        let eventsURL = dotBristlenose.appendingPathComponent(EventLogReader.filename)
+        let pidURL = dotBristlenose.appendingPathComponent(EventLogReader.pidFilename)
+        let interval = foreignRunPollInterval
+        let patience = foreignRunPatience
+        Self.logger.info(
+            "a run this app does not own is live project=\(projectID.uuidString, privacy: .public) — watching it on disk"
+        )
+        foreignRunWatches[projectID] = Task { @MainActor [weak self] in
+            var read: Task<(EventLogReader.ForeignRunVerdict, PipelineState), Never>?
+            var undecided = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                guard let self, self.isForeignRunning(projectID) else { break }
+                let pending = read ?? Task.detached {
+                    let verdict = EventLogReader.foreignRunVerdict(eventsURL: eventsURL, pidURL: pidURL)
+                    return (verdict, await Self.parseManifest(at: manifestURL))
+                }
+                read = pending
+                guard let (verdict, resolved) = await Self.value(of: pending, within: Self.scanTimeout) else {
+                    undecided += 1
+                    Self.logger.notice("a read of a run this app does not own is taking long project=\(projectID.uuidString, privacy: .public)")
+                    continue
+                }
+                read = nil
+                guard self.isForeignRunning(projectID) else { break }
+                if verdict == .live {
+                    undecided = 0
+                    continue
+                }
+                // Ended, and disk reads clearly: settle. Otherwise wait, and
+                // once patience runs out take any answer but "running".
+                if !(verdict == .ended && Self.isSettled(resolved)) {
+                    undecided += 1
+                    guard undecided >= patience, Self.isReadable(resolved) else { continue }
+                }
+                Self.logger.info(
+                    "a run this app does not own has ended project=\(projectID.uuidString, privacy: .public) verdict=\(String(describing: verdict), privacy: .public) state=\(String(describing: resolved), privacy: .public)"
+                )
+                self.applyScanResult(resolved, for: projectID)
+                break
+            }
+            self?.foreignRunWatches[projectID] = nil
+        }
+    }
+
+    /// A read of disk that can end a watch: not "still going", and not "could
+    /// not read".
+    private nonisolated static func isSettled(_ state: PipelineState) -> Bool {
+        if case .unreachable = state { return false }
+        return isReadable(state)
+    }
+
+    /// Any answer but "still going".
+    private nonisolated static func isReadable(_ state: PipelineState) -> Bool {
+        switch state {
+        case .running, .scanning: return false
+        default: return true
+        }
+    }
+
+    /// The task's value, or nil if it takes longer than `limit`. The task is
+    /// left running, for the caller to wait on again.
+    private nonisolated static func value<T: Sendable>(
+        of task: Task<T, Never>, within limit: Duration
+    ) async -> T? {
+        await withCheckedContinuation { (done: CheckedContinuation<T?, Never>) in
+            let once = ResumeOnce<T?>(done)
+            Task { once.resume(await task.value) }
+            Task {
+                try? await Task.sleep(for: limit)
+                once.resume(nil)
+            }
+        }
+    }
+
+    private func isForeignRunning(_ projectID: UUID) -> Bool {
+        if case .running = state[projectID] { return !ownsRun(projectID) }
+        return false
     }
 
     // MARK: - Orphan attach (Slice 7)
@@ -1188,10 +1322,16 @@ final class PipelineRunner: ObservableObject {
     }
 
     /// Apply a scan result, but don't clobber a live `.running` / `.queued`
-    /// state — those come from the runner, not the manifest. (The manifest
-    /// polling strategy for attached orphans lands in Slice 7.)
+    /// state the runner owns — those come from the runner, not the manifest.
+    /// A `.running` that a scan read off another process's run is disk's, and
+    /// disk may end it (R22).
     private func applyScanResult(_ resolved: PipelineState, for projectID: UUID) {
         switch state[projectID] {
+        case .running where !ownsRun(projectID):
+            // A run another process owns, read off disk in the first place:
+            // disk is the only witness to its end (R22). Kept, this read
+            // "Analysing" until quit.
+            state[projectID] = resolved
         case .running, .queued, .stopped, .partial, .failed,
              .completedPartial, .failedWithDiagnostic:
             // .running/.queued: live state owned by the runner, not the manifest.
@@ -1485,6 +1625,15 @@ final class PipelineRunner: ObservableObject {
             )
             return
         }
+        // Nor over a run another process owns (a CLI run): it holds the output
+        // folder, so ours could only fail, as "another run is in progress",
+        // and that failure would stick over the CLI run's own end (R22).
+        if isForeignRunning(project.id) {
+            Self.logger.warning(
+                "start ignored — a run this app does not own is live for project=\(project.id.uuidString, privacy: .public)"
+            )
+            return
+        }
 
         // No key to inject → the run could only fail, in Python's setup check,
         // after a sidecar launch. Say so now instead: the row takes the failure
@@ -1520,6 +1669,16 @@ final class PipelineRunner: ObservableObject {
     /// resume — then SIGTERM and SIGKILL if the run does not end
     /// (`cancelLadder`).
     func cancel(project: Project) {
+        // A run this app can't signal: nothing is sent, so nothing may read
+        // "Stopping…" — a progress left by an earlier run of ours would.
+        if isForeignRunning(project.id) {
+            // A CLI run, say: App Sandbox refuses a signal to a process outside
+            // it. What Stop should offer here is open (R22).
+            Self.logger.notice(
+                "Stop on a run this app does not own project=\(project.id.uuidString, privacy: .public) — nothing sent"
+            )
+            return
+        }
         // Acknowledge the click immediately on the UI so the user
         // doesn't keep mashing Stop while signals propagate.
         liveData.mutateProgress(for: project.id) { p in
@@ -1758,7 +1917,9 @@ final class PipelineRunner: ObservableObject {
             return
         }
         let sidecar: (binary: URL, mode: SidecarMode)?
-        if launcher == nil {
+        // A test passes a lookup beside its launcher to reach a failed one;
+        // otherwise a launcher means there is no sidecar to find.
+        if launcher == nil || sidecarLookup != nil {
             guard let resolved = resolveSidecar(for: project) else {
                 startNextQueued()
                 return
@@ -1801,6 +1962,9 @@ final class PipelineRunner: ObservableObject {
                 preconditionFailure("spawn: no launcher and no sidecar")
             }
             currentRun = run
+            if let output = run.output {
+                currentReadTask = readOutput(output, for: projectID, generation: gen)
+            }
             // Tiny race here: if the app crashes between the launch returning
             // and writePIDFile completing, the orphan exists but is
             // unattachable on next launch. Window is single-process-spawn
@@ -1856,7 +2020,7 @@ final class PipelineRunner: ObservableObject {
         // path is bundle/environment. No fitting case in `PipelineFailureCategory`
         // today; revisit when the enum next grows (or a third miscategorised
         // call site appears).
-        let resolved = SidecarMode.resolve(
+        let resolved = sidecarLookup?() ?? SidecarMode.resolve(
             externalPortRaw: externalPortRaw,
             sidecarPathRaw: sidecarPathRaw,
             bundleResourceURL: Bundle.main.resourceURL
@@ -1947,8 +2111,10 @@ var args = ["run", project.path, "--no-serve"]
         proc.standardInput = FileHandle.nullDevice
         let handle = pipe.fileHandleForReading
 
-        let projectID = project.id
-        currentReadTask = Task.detached { [weak self] in
+        // Read off-main into a stream the runner consumes (`readOutput`), so the
+        // runner can tell when the last line has been delivered (R25).
+        let (output, lines) = AsyncStream<String>.makeStream()
+        Task.detached {
             let fh = handle
             // Accumulate across read boundaries so a `✓ stage name` line
             // straddling two `availableData` chunks is delivered intact.
@@ -1958,7 +2124,7 @@ var args = ["run", project.path, "--no-serve"]
                 if data.isEmpty {
                     // EOF — flush any unterminated final line.
                     if !buffer.isEmpty {
-                        await self?.handleLine(buffer, for: projectID, generation: gen)
+                        lines.yield(buffer)
                     }
                     break
                 }
@@ -1968,10 +2134,11 @@ var args = ["run", project.path, "--no-serve"]
                     let line = String(buffer[..<nl])
                     buffer = String(buffer[buffer.index(after: nl)...])
                     if !line.isEmpty {
-                        await self?.handleLine(line, for: projectID, generation: gen)
+                        lines.yield(line)
                     }
                 }
             }
+            lines.finish()
         }
 
         proc.terminationHandler = { p in
@@ -1984,8 +2151,43 @@ var args = ["run", project.path, "--no-serve"]
         try proc.run()
         return LaunchedRun(
             pid: proc.processIdentifier,
-            isRunning: { proc.isRunning }
+            isRunning: { proc.isRunning },
+            output: output
         )
+    }
+
+    /// Deliver a run's output to `handleLine` on the main actor, in order. The
+    /// task ends when the pipe closes, which is how `handleTermination` knows
+    /// the last line is in (R25).
+    private func readOutput(
+        _ output: AsyncStream<String>, for projectID: UUID, generation gen: Int
+    ) -> Task<Void, Never> {
+        Task { @MainActor [weak self] in
+            for await line in output {
+                self?.handleLine(line, for: projectID, generation: gen)
+            }
+        }
+    }
+
+    /// Wait for a run's output to be read to its end, but no longer than
+    /// `outputDrainLimit`: a child the run left behind can hold the pipe open.
+    private func waitForOutput(_ reader: Task<Void, Never>?) async {
+        guard let reader else { return }
+        let limit = outputDrainLimit
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            let once = ResumeOnce<Void>(done)
+            Task { @MainActor in
+                await reader.value
+                once.resume(())
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: limit)
+                if !once.resumed {
+                    Self.logger.notice("run output still open \(limit, privacy: .public) after exit — deciding without the rest")
+                }
+                once.resume(())
+            }
+        }
     }
 
     private func handleLine(_ line: String, for projectID: UUID, generation gen: Int) {
@@ -2035,7 +2237,9 @@ var args = ["run", project.path, "--no-serve"]
         }
         let provider = runProviders.removeValue(forKey: projectID)
         currentRun = nil
-        currentReadTask?.cancel()
+        // Not cancelled: a failed run's verdict waits below for its last lines
+        // (R25), and anything later still reaches the popover's output.
+        let reader = currentReadTask
         currentReadTask = nil
         progressPollTasks[projectID]?.cancel()
         progressPollTasks[projectID] = nil
@@ -2082,7 +2286,18 @@ var args = ["run", project.path, "--no-serve"]
             return
         }
 
-        let lines = status == 0 ? [] : liveData.snapshotOutput(for: projectID)
+        // The process can end before its last lines are read: the reader hands
+        // them over one main-actor turn at a time, and a traceback is many
+        // lines. Snapshotted at once, a run that died explaining why read
+        // "Failed" (unknown), and the explanation landed a moment later
+        // (R25, 20 Oct 2026: 16 of 30 real exits missed their last line).
+        let lines: [String]
+        if status == 0 {
+            lines = []
+        } else {
+            await waitForOutput(reader)
+            lines = liveData.snapshotOutput(for: projectID)
+        }
         // looksLikeSuccess on a non-zero exit is a *trigger to re-derive*,
         // not a verdict. (Sidecar exits 1 after SIGINT even on a clean run
         // — uvicorn graceful shutdown.) Combine with exit-0 into a single
@@ -2567,5 +2782,21 @@ var args = ["run", project.path, "--no-serve"]
     static var hasAIConsent: Bool {
         UserDefaults.standard.integer(forKey: "aiConsentVersion")
             >= AIConsentView.currentVersion
+    }
+}
+
+/// Resumes a continuation once, whichever of two racing tasks gets there
+/// first.
+private final class ResumeOnce<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Never>?
+    init(_ continuation: CheckedContinuation<T, Never>) { self.continuation = continuation }
+    var resumed: Bool { lock.withLock { continuation == nil } }
+    func resume(_ value: T) {
+        let pending = lock.withLock { () -> CheckedContinuation<T, Never>? in
+            defer { continuation = nil }
+            return continuation
+        }
+        pending?.resume(returning: value)
     }
 }

@@ -15,6 +15,9 @@ import Testing
 ///   study started in that moment took it, and the finished one stayed
 ///   "Analysing" for good.
 /// - R63: Analyse ran against a folder that was no longer there.
+/// - R22: a run the app doesn't own (a CLI run) read "Analysing" until quit.
+/// - R25: a failed run was judged before its last lines had been read.
+/// - R28: no test reached the sidecar lookup, so its failure path was unpinned.
 @MainActor
 struct PipelineRunnerQueueTests {
 
@@ -24,6 +27,9 @@ struct PipelineRunnerQueueTests {
         let clean: Bool
         let pid: pid_t
         let onExit: @Sendable (ProcessOutcome) -> Void
+        /// The run's output, as its pipe would carry it.
+        let output: AsyncStream<String>
+        let lines: AsyncStream<String>.Continuation
         var running = true
         /// Whether anything in the run's process group is still alive — the
         /// run itself, or a worker it left behind.
@@ -34,11 +40,17 @@ struct PipelineRunnerQueueTests {
             self.clean = clean
             self.pid = pid
             self.onExit = onExit
+            (output, lines) = AsyncStream<String>.makeStream()
         }
-        func exit(_ outcome: ProcessOutcome = .exited(code: 0), groupLingers: Bool = false) {
+        /// The run ends. Its pipe closes with it unless `pipeStaysOpen`: a
+        /// test then writes what was still in flight, or leaves it open as a
+        /// child the run left behind would.
+        func exit(_ outcome: ProcessOutcome = .exited(code: 0), groupLingers: Bool = false,
+                  pipeStaysOpen: Bool = false) {
             running = false
             groupAlive = groupLingers
             onExit(outcome)
+            if !pipeStaysOpen { lines.finish() }
         }
     }
 
@@ -65,7 +77,11 @@ struct PipelineRunnerQueueTests {
         // Above any pid macOS hands out, so no signal can reach a real process.
         private var nextPID: pid_t = 900_000
 
-        init() {
+        /// - Parameter lookup: where the sidecar is, when a test asks the
+        ///   runner to look (R28).
+        ///   - foreignPoll / patience: the watch on a run another process owns.
+        init(lookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
+             foreignPoll: Duration = .milliseconds(50), patience: Int = 15) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -93,14 +109,18 @@ struct PipelineRunnerQueueTests {
                     let launch = Launch(project: project, clean: clean, pid: self.nextPID, onExit: onExit)
                     self.launches.append(launch)
                     return PipelineRunner.LaunchedRun(
-                        pid: launch.pid, isRunning: { launch.running }
+                        pid: launch.pid, isRunning: { launch.running }, output: launch.output
                     )
                 },
                 escalationSleep: { _ in },
                 // Each run leads its own group, as Foundation makes every child.
                 signalTarget: { -$0 },
                 activeProvider: { [weak self] in self?.providerNow },
-                noteRunSucceeded: { [weak self] in self?.noted.append($0) }
+                noteRunSucceeded: { [weak self] in self?.noted.append($0) },
+                sidecarLookup: lookup,
+                outputDrainLimit: .seconds(1),
+                foreignRunPollInterval: foreignPoll,
+                foreignRunPatience: patience
             )
             runner.setProjectIndex(index)
         }
@@ -609,6 +629,266 @@ struct PipelineRunnerQueueTests {
 
         #expect(rig.launches.map(\.project.name) == ["A", "C"])
         #expect(rig.runner.state[b.id] == .unreachable(reason: .folderMissing))
+    }
+
+    // MARK: - R22: a run the app doesn't own settles from disk
+
+    /// A run another process owns, as a CLI run on a sidebar study leaves it:
+    /// its own `run_started`, and Python's `run.pid` naming a live process
+    /// (this one). The app has no PID file of its own for it.
+    private func foreignRun(_ rig: Rig, _ name: String = "CLI",
+                            pid: pid_t = getpid()) async throws -> (Project, URL) {
+        let p = rig.project(name)
+        let dir = URL(fileURLWithPath: p.path).appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let started = #"{"schema_version":5,"ts":"2026-10-20T09:00:00Z","event":"run_started","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z"}"#
+        try Data((started + "\n").utf8).write(to: dir.appendingPathComponent(EventLogReader.filename))
+        try writePythonPID(pid, in: dir)
+        rig.runner.scan(project: p)
+        await until { rig.runner.state[p.id] == .running }
+        try #require(rig.runner.state[p.id] == .running, "the CLI run was not read as running")
+        return (p, dir)
+    }
+
+    private func writePythonPID(_ pid: pid_t, in dir: URL) throws {
+        let start = EventLogReader.procStartTime(pid: pid) ?? "0.0"
+        let json = #"{"pid":\#(pid),"start_time":"\#(start)","run_id":"cli-run"}"#
+        try Data(json.utf8).write(to: dir.appendingPathComponent(EventLogReader.pidFilename))
+    }
+
+    private func append(_ line: String, to dir: URL) throws {
+        let h = try FileHandle(forWritingTo: dir.appendingPathComponent(EventLogReader.filename))
+        defer { try? h.close() }
+        try h.seekToEnd()
+        try h.write(contentsOf: Data((line + "\n").utf8))
+    }
+
+    @Test func aRunTheAppDoesNotOwnSettlesWhenItFinishes() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+
+        try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"completed","cause":null}"#, to: dir)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+
+        guard case .ready = rig.runner.state[p.id] else {
+            Issue.record("still \(String(describing: rig.runner.state[p.id])) after the CLI run finished")
+            return
+        }
+        #expect(rig.launches.isEmpty)
+    }
+
+    /// The case as it is met: the CLI run is outside the app's sandbox, which
+    /// refuses signal 0 to it. Another process of this user's stands in for it
+    /// (`EventLogReaderTests.processOutsideTheSandbox`).
+    @Test func aCLIRunOutsideTheSandboxReadsAsRunningAndThenSettles() async throws {
+        let outside = try #require(await EventLogReaderTests.processOutsideTheSandbox())
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig, pid: outside)
+
+        try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_cancelled","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"cancelled","cause":null}"#, to: dir)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+
+        #expect(rig.runner.state[p.id] == .stopped(stagesComplete: []))
+    }
+
+    @Test func aRunTheAppDoesNotOwnThatDiedReadsAsStranded() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+
+        // Killed, no terminus written: run.pid names a process that is gone.
+        try writePythonPID(999_999, in: dir)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+
+        #expect(rig.runner.state[p.id] == .failed(
+            .keyed("desktop.pipeline.failure.stranded"), category: .unknown))
+    }
+
+    @Test func aRunTheAppDoesNotOwnStaysRunningWhileItRuns() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, _) = try await foreignRun(rig)
+
+        try? await Task.sleep(for: .milliseconds(400))  // several polls
+
+        #expect(rig.runner.state[p.id] == .running)
+    }
+
+    /// The passive rescan half: a scan after the run ended settles it too.
+    /// The watch is slowed right down, so only the rescan can.
+    @Test func aRescanSettlesARunTheAppDoesNotOwn() async throws {
+        let rig = Rig(foreignPoll: .seconds(60)); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+        try writePythonPID(999_999, in: dir)
+
+        rig.runner.scan(project: p)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 2)
+
+        #expect(rig.runner.state[p.id] != .running)
+    }
+
+    /// A long run's progress lines push its `run_started` far back in the log:
+    /// past the first 64 KB the reader looks at, it read as never started.
+    @Test func aLongRunsProgressDoesNotEndItsWatch() async throws {
+        // Short patience: a run_started not found reads "can't tell", which
+        // would settle the row within the wait below.
+        let rig = Rig(patience: 2); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+        let pad = String(repeating: "x", count: 300)
+        let progress = (0..<400).map { i in
+            #"{"schema_version":5,"ts":"2026-10-20T09:00:00Z","event":"run_progress","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","stage":"transcribe","sessions_complete":\#(i),"note":"\#(pad)"}"#
+        }
+        try append(progress.joined(separator: "\n"), to: dir)
+        let size = try FileManager.default.attributesOfItem(
+            atPath: dir.appendingPathComponent(EventLogReader.filename).path)[.size] as? Int ?? 0
+        try #require(size > 65_536 * 2, "the progress does not reach past the first window")
+
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(rig.runner.state[p.id] == .running, "a live run read as over")
+
+        try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"completed","cause":null}"#, to: dir)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        guard case .ready = rig.runner.state[p.id] else {
+            Issue.record("\(String(describing: rig.runner.state[p.id])) after the run finished")
+            return
+        }
+    }
+
+    /// A read that can't tell (`run.pid` torn mid-write) is not an end, and
+    /// the watch outlives it.
+    @Test func aReadThatCannotTellDoesNotEndTheRun() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+        let pidURL = dir.appendingPathComponent(EventLogReader.pidFilename)
+        try Data("{\"pid\":".utf8).write(to: pidURL)
+
+        try? await Task.sleep(for: .milliseconds(300))   // ~6 polls, under the patience
+        #expect(rig.runner.state[p.id] == .running, "a torn read ended a live run")
+
+        try writePythonPID(getpid(), in: dir)
+        try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_cancelled","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"cancelled","cause":null}"#, to: dir)
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        #expect(rig.runner.state[p.id] == .stopped(stagesComplete: []), "the watch did not outlive the torn read")
+    }
+
+    /// A `run.pid` gone for good (its run killed before writing one, say) is
+    /// waited out, not watched for ever.
+    @Test func aRunThatNeverSaysIsSettledAfterThePatienceRunsOut() async throws {
+        let rig = Rig(patience: 4); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+        try FileManager.default.removeItem(at: dir.appendingPathComponent(EventLogReader.pidFilename))
+
+        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+
+        #expect(rig.runner.state[p.id] == .failed(
+            .keyed("desktop.pipeline.failure.stranded"), category: .unknown))
+    }
+
+    /// Stop on a run the app can't signal sends nothing, so it must not read
+    /// "Stopping…", even over progress an earlier run of ours left.
+    @Test func stopOnARunTheAppDoesNotOwnClaimsNothing() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, _) = try await foreignRun(rig)
+        rig.runner.liveData.setProgress(PipelineProgress(startedAt: Date()), for: p.id)
+
+        rig.runner.cancel(project: p)
+
+        #expect(rig.runner.liveData.progress[p.id]?.isStopping == false)
+        #expect(rig.signals.isEmpty)
+        #expect(rig.runner.state[p.id] == .running)
+    }
+
+    /// Analyse over a CLI run would only fail ("another run is in progress")
+    /// and pin that failure over the CLI run's own end.
+    @Test func analyseOverARunTheAppDoesNotOwnStartsNothing() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, _) = try await foreignRun(rig)
+
+        rig.runner.start(project: p)
+
+        #expect(rig.launches.isEmpty)
+        #expect(rig.runner.state[p.id] == .running)
+    }
+
+    /// The app's own run keeps "Analysing" through a rescan, whatever disk says.
+    @Test func aRescanLeavesTheAppsOwnRunRunning() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try? FileManager.default.removeItem(at: PipelineRunner.pidFileURL(for: a))
+
+        rig.runner.scan(project: a)
+        try? await Task.sleep(for: .milliseconds(300))
+
+        #expect(rig.runner.state[a.id] == .running)
+    }
+
+    // MARK: - R25: a failed run is judged on all of its output
+
+    @Test func aFailureIsJudgedOnLinesStillInThePipeAtExit() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+
+        let run = rig.launches[0]
+        run.exit(.exited(code: 1), pipeStaysOpen: true)
+        // The termination handler gets there first; the traceback is still
+        // being handed over.
+        try? await Task.sleep(for: .milliseconds(100))
+        run.lines.yield("Traceback (most recent call last):")
+        run.lines.yield("openai.RateLimitError: Error code: 429 - rate limit reached")
+        run.lines.finish()
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false }, seconds: 3)
+
+        guard case .failed(_, let category) = rig.runner.state[a.id] else {
+            Issue.record("not failed: \(String(describing: rig.runner.state[a.id]))")
+            return
+        }
+        #expect(category == .quota, "judged before the traceback was read")
+        let log = URL(fileURLWithPath: a.path)
+            .appendingPathComponent("bristlenose-output/.bristlenose/last-run-failure.log")
+        #expect((try? String(contentsOf: log, encoding: .utf8))?.contains("429") == true)
+    }
+
+    /// A child the run left behind can hold the pipe open: the verdict waits a
+    /// bounded time, then the queue moves on.
+    @Test func aPipeLeftOpenDelaysTheVerdictOnlySoLong() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A"), b = rig.project("B")
+        rig.runner.start(project: a)
+        rig.runner.start(project: b)
+
+        rig.launches[0].exit(.exited(code: 1), pipeStaysOpen: true)
+        await until({ rig.launches.count == 2 }, seconds: 3)
+
+        #expect(rig.launches.count == 2, "the queue waited on a pipe that never closed")
+        if case .failed = rig.runner.state[a.id] {} else {
+            Issue.record("A is \(String(describing: rig.runner.state[a.id]))")
+        }
+    }
+
+    // MARK: - R28: a failed sidecar lookup moves the queue on
+
+    @Test func aFailedSidecarLookupFailsThatStudyAndTheNextOneRuns() async {
+        var lookups = 0
+        let rig = Rig(lookup: {
+            lookups += 1
+            return lookups == 2
+                ? .failure(.bundledSidecarMissing(expectedPath: "/nowhere/bristlenose-sidecar"))
+                : .success(.bundled(path: URL(fileURLWithPath: "/nowhere/bristlenose-sidecar")))
+        })
+        defer { rig.cleanUp() }
+        let a = rig.project("A"), b = rig.project("B"), c = rig.project("C")
+        rig.runner.start(project: a)
+        rig.runner.start(project: b)
+        rig.runner.start(project: c)
+
+        rig.launches[0].exit()
+        await until { rig.launches.count == 2 }
+
+        #expect(lookups == 3, "the lookup was never asked")
+        #expect(rig.launches.map(\.project.name) == ["A", "C"])
+        if case .failed(_, .unknown) = rig.runner.state[b.id] {} else {
+            Issue.record("B is \(String(describing: rig.runner.state[b.id]))")
+        }
     }
 
     // MARK: - The pure parts

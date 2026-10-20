@@ -103,6 +103,8 @@ def test_the_only_broadcast_is_the_menu_fallback_and_it_stages_one_shot() -> Non
     fallback = _block_after(bridge, "func openFeedback()")
     assert "FeedbackFallback.request()" in fallback
     assert fallback.index("FeedbackFallback.request()") < fallback.index(".showFeedbackSheet")
+    # The menu opens a window only when nobody took it, so the answer must be read.
+    assert "return !FeedbackFallback.isPending" in fallback
 
 
 def test_a_window_takes_the_broadcast_only_by_claiming_it() -> None:
@@ -125,6 +127,9 @@ def test_a_window_opened_for_feedback_takes_it_on_appear() -> None:
     assert 'openWindow(id: "main")' in help_button
     assert "windowCommands.perform(.showFeedback)" in help_button
     # A popout player in front: the report window that owns it, not a broadcast.
+    # `.unattached` is observed by no window, so asking it would open nothing.
+    assert "} else if bridgeHandler !== BridgeHandler.unattached {" in help_button
+    assert "} else if !bridgeHandler.openFeedback() {" in help_button
     assert help_button.index("bridgeHandler.requestFeedback()") < help_button.index(
         "bridgeHandler.openFeedback()"
     )

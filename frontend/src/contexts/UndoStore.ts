@@ -64,6 +64,8 @@ const EMPTY: UndoState = {
 };
 let snapshot: UndoState = EMPTY;
 let pushes = 0;
+/** Bumped by every clear, so a write that fails after one puts nothing back. */
+let clears = 0;
 
 const listeners = new Set<() => void>();
 
@@ -104,28 +106,54 @@ export function pushUndo(entry: UndoEntry): void {
   emit();
 }
 
-/** Reverse the top act. Resolves false when there was nothing to undo. */
-export async function undo(): Promise<boolean> {
-  const entry = undoStack.pop();
-  if (!entry) return false;
-  redoStack.push(entry);
-  emit();
-  await entry.undo();
-  return true;
+/** Reverse the top act. Resolves false when there was nothing to undo, or
+ *  the undo's write failed. */
+export function undo(): Promise<boolean> {
+  return step("undo");
 }
 
-/** Re-do the last undone act. Resolves false when there was nothing to redo. */
-export async function redo(): Promise<boolean> {
-  const entry = redoStack.pop();
+/** Re-do the last undone act. Resolves false when there was nothing to redo,
+ *  or the redo's write failed. */
+export function redo(): Promise<boolean> {
+  return step("redo");
+}
+
+/**
+ * Move the top act across, then run its write. The label moves at once, so a
+ * second ⌘Z takes the next entry; if the write fails the act goes back where it
+ * was — beneath any act done meanwhile — because what it describes is still
+ * true (R9: Edit used to offer Redo for a split the server never undid). The
+ * entry's own write says why it failed (`toastSaveFailed`); the stack only keeps
+ * its place, so the rejection stops here.
+ */
+async function step(kind: "undo" | "redo"): Promise<boolean> {
+  // Read through a function: a new act replaces the redo array, a clear both.
+  const stacks = () => (kind === "undo" ? [undoStack, redoStack] : [redoStack, undoStack]);
+  const [from, to] = stacks();
+  const entry = from.pop();
   if (!entry) return false;
-  undoStack.push(entry);
+  const at = from.length;
+  const clearedAt = clears;
+  to.push(entry);
   emit();
-  await entry.redo();
-  return true;
+  try {
+    await (kind === "undo" ? entry.undo() : entry.redo());
+    return true;
+  } catch {
+    // A clear means the data the entry describes was replaced: nothing to put back.
+    if (clears !== clearedAt) return false;
+    const [home, away] = stacks();
+    const i = away.lastIndexOf(entry);
+    if (i >= 0) away.splice(i, 1);
+    if (!home.includes(entry)) home.splice(Math.min(at, home.length), 0, entry);
+    emit();
+    return false;
+  }
 }
 
 /** Forget both stacks — the data the entries describe has been replaced. */
 export function clearUndo(): void {
+  clears += 1;
   if (undoStack.length === 0 && redoStack.length === 0) return;
   undoStack = [];
   redoStack = [];
@@ -134,6 +162,7 @@ export function clearUndo(): void {
 
 /** Test seam. */
 export function resetUndoStore(): void {
+  clears += 1;
   undoStack = [];
   redoStack = [];
   pushes = 0;

@@ -77,9 +77,10 @@ function written(): void {
   window.dispatchEvent(new CustomEvent(TRANSCRIPT_WRITTEN_EVENT));
 }
 
-/** The edit's first write, saying why when it does not land: a move to a new
+/** An edit's write, saying why when it does not land: a move to a new
  *  moderator is refused while an analysis runs, and the callers' `.catch`
- *  used to make that refusal silent — the paragraph just stayed put. */
+ *  used to make that refusal silent — the paragraph just stayed put. Undo and
+ *  redo go through it too (R9), and the undo stack keeps the act in place. */
 async function said<T>(write: Promise<T>): Promise<T> {
   try {
     return await write;
@@ -98,8 +99,8 @@ export async function splitParagraph(
   written();
   pushUndo({
     action: "splitParagraph",
-    undo: () => deleteParagraphEdit(sessionId, id).then(written),
-    redo: () => postParagraphSplit(sessionId, position, token, verify).then((r) => {
+    undo: () => said(deleteParagraphEdit(sessionId, id)).then(written),
+    redo: () => said(postParagraphSplit(sessionId, position, token, verify)).then((r) => {
       id = r.id;
       written();
     }),
@@ -112,8 +113,8 @@ export async function joinParagraphs(sessionId: string, position: number, verify
   written();
   pushUndo({
     action: "joinParagraphs",
-    undo: () => deleteParagraphEdit(sessionId, id).then(written),
-    redo: () => postParagraphJoin(sessionId, position, verify).then((r) => {
+    undo: () => said(deleteParagraphEdit(sessionId, id)).then(written),
+    redo: () => said(postParagraphJoin(sessionId, position, verify)).then((r) => {
       id = r.id;
       written();
     }),
@@ -130,8 +131,8 @@ export async function reassignParagraph(
   written();
   pushUndo({
     action: "reassignParagraph",
-    undo: () => deleteParagraphEdit(sessionId, id).then(written),
-    redo: () => postParagraphReassign(sessionId, position, verify, to).then((r) => {
+    undo: () => said(deleteParagraphEdit(sessionId, id)).then(written),
+    redo: () => said(postParagraphReassign(sessionId, position, verify, to)).then((r) => {
       id = r.id;
       written();
     }),

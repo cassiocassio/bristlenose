@@ -56,6 +56,10 @@ the bridge over `NSUndoManager`; (2) false — the channel is live both ways and
 and a fuse removed") — no undo toast ships. Also learned building it: WebKit
 fires no `focusout` when a focused editor is removed, so `isEditing` needs a DOM
 re-check or Edit ▸ Undo stays hidden after an inline edit (`desktop/CLAUDE.md`).
+And since 20 Oct 2026 (R9) an undo or redo whose write fails puts its act back
+where it was, beneath any act done meanwhile, so Edit offers the same Undo again
+rather than a Redo for something never undone. The entry's write says why it
+failed (paragraph edits through `toastSaveFailed`, like their first write).
 
 **28 Jul 2026 survey, kept as written:**
 

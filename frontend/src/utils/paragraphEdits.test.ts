@@ -6,13 +6,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
-import { deleteParagraphEdit, postParagraphJoin, postParagraphSplit, toastSaveFailed } from "./api";
+import {
+  deleteParagraphEdit,
+  postParagraphJoin,
+  postParagraphReassign,
+  postParagraphSplit,
+  toastSaveFailed,
+} from "./api";
 import {
   TRANSCRIPT_WRITTEN_EVENT,
   caretAtStart,
   caretWords,
   drawnTokens,
   joinParagraphs,
+  reassignParagraph,
   splitParagraph,
   verifyOf,
 } from "./paragraphEdits";
@@ -32,6 +39,7 @@ vi.mock("./api", async (importOriginal) => {
 beforeEach(() => {
   vi.mocked(postParagraphSplit).mockReset().mockResolvedValue({ id: 7 });
   vi.mocked(postParagraphJoin).mockReset().mockResolvedValue({ id: 8 });
+  vi.mocked(postParagraphReassign).mockReset().mockResolvedValue({ id: 6 });
   vi.mocked(deleteParagraphEdit).mockReset().mockResolvedValue(undefined);
   vi.mocked(toastSaveFailed).mockReset();
 });
@@ -141,6 +149,47 @@ describe("splitParagraph and joinParagraphs", () => {
     expect(getUndoState().undoAction).toBe("joinParagraphs");
     await undo();
     expect(deleteParagraphEdit).toHaveBeenCalledWith("s1", 8);
+  });
+});
+
+// R9: an undo or redo the server refuses used to be silent, and the store had
+// already moved the act across, so Edit offered Redo for a split still standing.
+describe("an undo or redo that does not land says why and keeps its place", () => {
+  const refused = () => Object.assign(new Error("DELETE 409"), { status: 409, reason: "run_in_progress" });
+  const acts = [
+    ["splitParagraph", () => splitParagraph("s1", 3, 4, "it is good"), postParagraphSplit],
+    ["joinParagraphs", () => joinParagraphs("s1", 2, "it is good"), postParagraphJoin],
+    [
+      "reassignParagraph",
+      () => reassignParagraph("s1", 2, "it is good", { slot: "p2" }),
+      postParagraphReassign,
+    ],
+  ] as const;
+
+  it.each(acts)("%s: a refused undo toasts, and Edit still offers the same Undo", async (action, act) => {
+    await act();
+    const written = vi.fn();
+    window.addEventListener(TRANSCRIPT_WRITTEN_EVENT, written);
+    try {
+      const err = refused();
+      vi.mocked(deleteParagraphEdit).mockRejectedValueOnce(err);
+      expect(await undo()).toBe(false);
+      expect(toastSaveFailed).toHaveBeenCalledWith(err);
+      expect(getUndoState()).toMatchObject({ undoAction: action, canRedo: false });
+      expect(written).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(TRANSCRIPT_WRITTEN_EVENT, written);
+    }
+  });
+
+  it.each(acts)("%s: a refused redo toasts, and Edit still offers the same Redo", async (action, act, post) => {
+    await act();
+    await undo();
+    const err = new TypeError("Load failed");
+    vi.mocked(post).mockRejectedValueOnce(err);
+    expect(await redo()).toBe(false);
+    expect(toastSaveFailed).toHaveBeenCalledWith(err);
+    expect(getUndoState()).toMatchObject({ redoAction: action, canUndo: false });
   });
 });
 

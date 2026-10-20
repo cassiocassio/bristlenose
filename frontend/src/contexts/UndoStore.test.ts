@@ -99,6 +99,53 @@ describe("UndoStore", () => {
     expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
   });
 
+  // R9: a write that fails used to leave its act on the other stack, so Edit
+  // offered Redo for something never undone. The entry's write says why; the
+  // stack keeps the act where it was.
+  it("a failed undo leaves the act to undo, and offers no redo", async () => {
+    pushUndo({ action: "first", undo: () => {}, redo: () => {} });
+    let refuse = true;
+    pushUndo({
+      action: "second",
+      undo: () => (refuse ? Promise.reject(new Error("refused")) : undefined),
+      redo: () => {},
+    });
+    expect(await undo()).toBe(false);
+    expect(getUndoState()).toMatchObject({ undoAction: "second", canRedo: false });
+    refuse = false;
+    expect(await undo()).toBe(true);
+    expect(getUndoState()).toMatchObject({ undoAction: "first", redoAction: "second" });
+  });
+
+  it("a failed redo leaves the act to redo", async () => {
+    pushUndo({ action: "first", undo: () => {}, redo: () => Promise.reject(new Error("refused")) });
+    await undo();
+    expect(await redo()).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
+  });
+
+  it("an act done while an undo fails stays on top of it", async () => {
+    let fail!: (e: Error) => void;
+    pushUndo({ action: "first", undo: () => new Promise<void>((_, rej) => { fail = rej; }), redo: () => {} });
+    const pending = undo();
+    pushUndo({ action: "second", undo: () => {}, redo: () => {} });
+    fail(new Error("refused"));
+    expect(await pending).toBe(false);
+    expect(getUndoState()).toMatchObject({ undoAction: "second", canRedo: false });
+    await undo();
+    expect(getUndoState().undoAction).toBe("first");
+  });
+
+  it("a failed undo after the stack was cleared puts nothing back", async () => {
+    let fail!: (e: Error) => void;
+    pushUndo({ action: "first", undo: () => new Promise<void>((_, rej) => { fail = rej; }), redo: () => {} });
+    const pending = undo();
+    clearUndo(); // a new run replaced what the entry describes
+    fail(new Error("refused"));
+    expect(await pending).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
   it("the label moves before the write finishes, so a second ⌘Z takes the next entry", async () => {
     let release!: () => void;
     const slow = new Promise<void>((r) => { release = r; });

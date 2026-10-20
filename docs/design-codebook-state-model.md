@@ -35,6 +35,19 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   can say `running` with no task behind it until a restart); and a failed catch-up records `failure_kind`, as
   `run_autocode_job` does, so its chip says which failure it was (out of
   credit, rate limited…) instead of the generic "Tagging failed.".
+  And four more (wave 6). The chip judges a catch-up by its own counts,
+  `catch_up_total` / `catch_up_processed` on the job (migration 020; zeroed when
+  `_start_catch_ups` starts one, written when it completes): the cumulative
+  `processed_quotes < total_quotes` keeps an earlier apply's shortfall for good,
+  so once any apply had come up short every later catch-up that worked said
+  "some batches failed". A run that finishes while a catch-up codes no longer
+  re-applies the same codebook alongside it: both re-apply paths register their
+  task in one registry (`autocode._REAPPLY_IN_FLIGHT`, which `routes/data.py`'s
+  `_CATCH_UP_IN_FLIGHT` names), the run's re-apply waits for a live catch-up,
+  and no catch-up starts over a run's (the loser of the race hit the
+  `(job, quote)` unique constraint and rolled back). A catch-up that works
+  clears the last failed one's `failure_kind` and `error_message`. And a
+  catch-up that fails after a Stop leaves the job `cancelled`.
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
   **New §4b** records that `PUT /framework-states` is a full replacement, that
   absence means enabled, and that the two together make a partial body both a
@@ -263,8 +276,10 @@ lifecycle that can't happen — `completed_at` only advances on a **completed** 
 failed/cancelled runs leave the watermark where it was, so those sessions get picked up
 next time. Disable simply freezes the watermark (the codebook stops running), new
 sessions pile above the line, and re-enable fires one delta over everything above it —
-unless that codebook's previous catch-up is still running, in which case the re-enable
-starts nothing and the running one codes the same sessions (20 Oct 2026).
+unless that codebook's previous catch-up, or a finished run's re-apply of it, is still
+running, in which case the re-enable starts nothing and the running one codes the same
+sessions (20 Oct 2026). A run that finishes while a catch-up codes waits for it, then
+re-applies whatever is left, which is nothing as a rule.
 
 The one abnormal path where the watermark *could* lie — a **serve crash** mid-run
 that strands a job `running`/`pending` — is handled separately, not by the deferred

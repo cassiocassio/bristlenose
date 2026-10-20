@@ -1359,6 +1359,182 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def _job(self, db_factory, project_id, framework_id):
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            db.expunge(job)
+            return job
+        finally:
+            db.close()
+
+    def _mark_failed_before(self, db_factory, project_id, framework_id) -> None:
+        """An earlier catch-up failed and named why; this one starts "running"."""
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.status = "running"
+            job.failure_kind = LLMFailureKind.OUT_OF_CREDIT.value
+            job.error_message = "Your credit balance is too low"
+            db.commit()
+        finally:
+            db.close()
+
+    def test_a_catch_up_that_works_clears_the_last_failure(
+        self, project_with_garrett
+    ) -> None:
+        """A catch-up that failed out of credit, then one that worked: the job
+        still carried the old failure_kind and error_message, so anything reading
+        them said the codebook was out of credit (R12 wave 6)."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_failed_before(db_factory, project_id, framework_id)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        job = self._job(db_factory, project_id, framework_id)
+        assert job.status == "completed"
+        assert job.failure_kind == ""
+        assert job.error_message == ""
+
+    def test_a_catch_up_with_nothing_to_code_clears_the_last_failure(
+        self, project_with_garrett
+    ) -> None:
+        """The no-delta path ends "completed" through the finally's restore; it
+        is a catch-up that worked, and clears the old failure the same way."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._mark_failed_before(db_factory, project_id, framework_id)
+
+        with _patch_llm(AsyncMock()):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        job = self._job(db_factory, project_id, framework_id)
+        assert job.status == "completed"
+        assert job.failure_kind == ""
+        assert job.error_message == ""
+
+    def test_a_failed_catch_up_leaves_a_cancelled_job_cancelled(
+        self, project_with_garrett
+    ) -> None:
+        """Cancelled while it coded, then failed: the failed write replaced the
+        researcher's "cancelled" with "failed" (R12 wave 6)."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        async def cancel_then_fail(*_a, **_k):
+            db = db_factory()
+            try:
+                job = (
+                    db.query(AutoCodeJob)
+                    .filter_by(project_id=project_id, framework_id=framework_id)
+                    .one()
+                )
+                job.status = "cancelled"
+                db.commit()
+            finally:
+                db.close()
+            raise RuntimeError("provider down")
+
+        with _patch_llm(AsyncMock(side_effect=cancel_then_fail)):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        assert self._job(db_factory, project_id, framework_id).status == "cancelled"
+
+    def test_a_catch_up_records_its_own_counts(
+        self, project_with_garrett
+    ) -> None:
+        """The chip read the job's cumulative counts, so once any apply had come
+        up short every later clean catch-up said "some batches failed". A
+        catch-up now records its own total and processed (R12 wave 6)."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        # The original apply came up short: 10 quotes, 7 answered.
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.processed_quotes = 7
+            job.status = "running"
+            db.commit()
+        finally:
+            db.close()
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(3, "user need", 0.85))
+        ):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        job = self._job(db_factory, project_id, framework_id)
+        assert job.processed_quotes < job.total_quotes  # the history stands
+        assert job.catch_up_total == 3
+        assert job.catch_up_processed == 3
+
+    def test_a_catch_up_that_comes_up_short_records_its_shortfall(
+        self, project_with_garrett, monkeypatch
+    ) -> None:
+        import bristlenose.server.autocode as ac
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        monkeypatch.setattr(ac, "BATCH_SIZE", 2)
+        self._add_quotes(db_factory, project_id, 4)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        calls = {"n": 0}
+
+        async def second_fails(*_a, **_k):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("one batch down")
+            return _make_batch_result(2, "user need", 0.85)
+
+        with _patch_llm(AsyncMock(side_effect=second_fails)):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        job = self._job(db_factory, project_id, framework_id)
+        assert job.status == "completed"
+        assert job.catch_up_total == 4
+        assert job.catch_up_processed == 2
+
     def test_a_catch_up_that_codes_everything_is_not_a_shortfall(
         self, project_with_garrett
     ) -> None:
@@ -1764,6 +1940,116 @@ class TestStartCatchUps:
             assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
         finally:
             db.close()
+
+    def test_a_new_catch_up_starts_its_counts_from_nothing(
+        self, project_with_garrett
+    ) -> None:
+        """The chip reads the catch-up's own counts; the last catch-up's are not
+        this one's, so starting one zeroes them."""
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            job.catch_up_total = 5
+            job.catch_up_processed = 2
+            db.commit()
+            assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
+            db.refresh(job)
+            assert (job.catch_up_total, job.catch_up_processed) == (0, 0)
+        finally:
+            db.close()
+
+    def test_a_run_finishing_during_a_catch_up_waits_for_it(
+        self, project_with_garrett
+    ) -> None:
+        """A run that ends while an on-enable catch-up codes the same new
+        sessions started reapply_active_frameworks over them at once; the loser
+        hit the (job, quote) unique constraint and rolled back. The run's re-apply
+        now waits for the live catch-up, and then finds nothing left to code
+        (R12 wave 6)."""
+        from bristlenose.server.routes import data as data_routes
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        order: list[str] = []
+
+        async def scenario() -> None:
+            release = asyncio.Event()
+
+            async def catch_up() -> None:
+                order.append("catch-up begins")
+                await release.wait()
+                order.append("catch-up ends")
+
+            async def fake_reapply(*_a, **_k) -> int:
+                order.append("run re-apply")
+                return 0
+
+            live = asyncio.create_task(catch_up())
+            with (
+                patch.dict(
+                    data_routes._CATCH_UP_IN_FLIGHT, {(project_id, framework_id): live}
+                ),
+                patch("bristlenose.server.autocode.reapply_to_new_quotes", fake_reapply),
+            ):
+                run = asyncio.create_task(
+                    reapply_active_frameworks(db_factory, project_id, _mock_settings())
+                )
+                for _ in range(5):
+                    await asyncio.sleep(0)
+                assert "run re-apply" not in order
+                release.set()
+                await run
+            await live
+
+        asyncio.run(scenario())
+        assert order == ["catch-up begins", "catch-up ends", "run re-apply"]
+
+    def test_a_catch_up_is_not_started_while_a_run_re_applies_the_codebook(
+        self, project_with_garrett
+    ) -> None:
+        """The other way round: off and on again while a run's re-apply codes the
+        new sessions would start a catch-up over the same sessions. The run's
+        re-apply is in the same registry, so no second one starts."""
+        from bristlenose.server.routes import data as data_routes
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+
+        async def scenario() -> list[str]:
+            release = asyncio.Event()
+
+            async def slow_reapply(*_a, **_k) -> int:
+                await release.wait()
+                return 0
+
+            with patch("bristlenose.server.autocode.reapply_to_new_quotes", slow_reapply):
+                run = asyncio.create_task(
+                    reapply_active_frameworks(db_factory, project_id, _mock_settings())
+                )
+                for _ in range(5):
+                    await asyncio.sleep(0)
+                db = db_factory()
+                try:
+                    during = data_routes._start_catch_ups(db, project_id, [framework_id])
+                finally:
+                    db.close()
+                release.set()
+                await run
+            return during
+
+        assert asyncio.run(scenario()) == []
+        assert (project_id, framework_id) not in data_routes._CATCH_UP_IN_FLIGHT
 
     def test_no_catch_up_when_never_applied(
         self, project_with_garrett

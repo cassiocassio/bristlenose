@@ -19,7 +19,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bristlenose.llm.failure_classifier import classify_exception
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
@@ -556,6 +556,34 @@ async def run_autocode_job(
 DEFAULT_ACCEPT_THRESHOLD = 0.70
 
 
+# The live re-apply task per (project, framework). Both re-apply paths register
+# here: the on-enable catch-up (routes/data.py `_schedule_catch_up`) and a
+# finished run's (`reapply_active_frameworks`). Each asks before coding a
+# framework, so two never code the same new sessions at once; the loser of that
+# race hit the (job, quote) unique constraint and rolled back (R12 wave 6). The
+# task, never the job row, answers: a row can say "running" with no task behind
+# it (a failed status write, a schedule that raised), 06cceb97.
+_REAPPLY_IN_FLIGHT: dict[tuple[int, str], Any] = {}
+
+
+def live_reapply(project_id: int, framework_id: str) -> Any | None:
+    """The re-apply task still coding this framework, or None."""
+    task = _REAPPLY_IN_FLIGHT.get((project_id, framework_id))
+    return task if task is not None and not task.done() else None
+
+
+def register_reapply(project_id: int, framework_id: str, task: Any) -> None:
+    """Record ``task`` as the one coding this framework until it ends."""
+    key = (project_id, framework_id)
+    _REAPPLY_IN_FLIGHT[key] = task
+
+    def _forget(t: Any) -> None:
+        if _REAPPLY_IN_FLIGHT.get(key) is t:
+            del _REAPPLY_IN_FLIGHT[key]
+
+    task.add_done_callback(_forget)
+
+
 def _set_job_status(
     db: SASession,
     project_id: int,
@@ -569,7 +597,10 @@ def _set_job_status(
 
     ``when`` guards the write to fire only if the job is currently in that status —
     used by the finally-restore, which flips a *still-"running"* job to "completed"
-    but leaves an already-terminal (failed/completed) one alone. Never raises.
+    but leaves an already-terminal (failed/completed) one alone. A "cancelled" job
+    is never overwritten: the researcher's Stop stands, whatever the catch-up then
+    met. "completed" clears an earlier failure's ``error_message`` and
+    ``failure_kind``. Never raises.
     """
     from bristlenose.server.models import AutoCodeJob
 
@@ -581,7 +612,16 @@ def _set_job_status(
         )
         if j is None or (when is not None and j.status != when):
             return
+        if j.status == "cancelled":
+            # Terminal: a catch-up that fails after a Stop wrote "failed" over it
+            # (R12 wave 6).
+            return
         j.status = status
+        if status == "completed":
+            # A catch-up that worked has nothing to report; the last failed one's
+            # kind and message would be read as this one's (R12 wave 6).
+            j.error_message = ""
+            j.failure_kind = ""
         if error is not None:
             j.error_message = error
         if failure_kind is not None:
@@ -891,8 +931,15 @@ async def reapply_to_new_quotes(
         job.proposed_count += new_proposed
         job.completed_at = now
         if track_status:
-            # Route set this to "running" for the chip; restore it now.
+            # Route set this to "running" for the chip; restore it now, with no
+            # failure left from an earlier catch-up, and this catch-up's own
+            # counts, which the chip reads: the cumulative pair above keeps any
+            # earlier shortfall for good (R12 wave 6).
             job.status = "completed"
+            job.error_message = ""
+            job.failure_kind = ""
+            job.catch_up_total = len(batch_items)
+            job.catch_up_processed = processed
         db.commit()
         logger.info(
             "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
@@ -947,6 +994,10 @@ async def reapply_active_frameworks(
     one-shot catch-up over everything added since (routes/data.py `put_framework_
     states`). "Stop tracking entirely" is still **Remove** (drops the link). Runs
     the frameworks sequentially so spend stays legible in the logs.
+
+    A framework an on-enable catch-up is still coding is waited for first, then
+    re-applied (finding nothing left, as a rule), and each re-apply here is
+    registered while it runs so no catch-up starts over it (``_REAPPLY_IN_FLIGHT``).
     """
     from bristlenose.server.models import (
         AutoCodeJob,
@@ -1003,7 +1054,14 @@ async def reapply_active_frameworks(
 
     results: dict[str, int] = {}
     for framework_id in framework_ids:
-        results[framework_id] = await reapply_to_new_quotes(
-            db_factory, project_id, framework_id, settings
+        # A loop, not one wait: another catch-up may start between this one
+        # ending and this coroutine resuming. Waited with asyncio.wait, which
+        # never cancels the catch-up if this run's re-apply is itself cancelled.
+        while (live := live_reapply(project_id, framework_id)) is not None:
+            await asyncio.wait({live})
+        task = asyncio.ensure_future(
+            reapply_to_new_quotes(db_factory, project_id, framework_id, settings)
         )
+        register_reapply(project_id, framework_id, task)
+        results[framework_id] = await task
     return results

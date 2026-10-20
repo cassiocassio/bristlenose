@@ -846,8 +846,16 @@ function AppShell() {
               // branch to avoid reintroducing the shortfall bug one file over.
               // Without its running count, though: the counts are the
               // codebook's cumulative totals, so "40/40" would be drawn over a
-              // re-code that has only begun (R12).
-              const norm = normaliseAutoCode(await getAutoCodeStatus(j.frameworkId));
+              // re-code that has only begun (R12). And judged on the catch-up's
+              // own counts: the cumulative pair keeps an earlier apply's
+              // shortfall for good, so every catch-up after one said "some
+              // batches failed" (R12 wave 6).
+              const s = await getAutoCodeStatus(j.frameworkId);
+              const norm = normaliseAutoCode({
+                ...s,
+                total_quotes: s.catch_up_total ?? 0,
+                processed_quotes: s.catch_up_processed ?? 0,
+              });
               return { ...norm, progressLabel: null };
             },
           };

@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
+from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
@@ -1638,11 +1639,11 @@ def get_framework_states(
 
 # Strong references to in-flight catch-up tasks (see _schedule_catch_up).
 _CATCH_UP_TASKS: set[Any] = set()
-# The live catch-up task per (project, framework), which _start_catch_ups asks
-# before starting another. The task, not the job row: a row can say "running"
-# with no task behind it (a failed status write, a schedule that raised), and
-# trusting it would refuse every later catch-up until a restart.
-_CATCH_UP_IN_FLIGHT: dict[tuple[int, str], Any] = {}
+# The live re-apply task per (project, framework), which _start_catch_ups asks
+# before starting another. The same dict as autocode's: a finished run's
+# re-apply registers there too, so no catch-up starts over a run's re-apply,
+# and a run's re-apply waits for a live catch-up (R12 wave 6).
+_CATCH_UP_IN_FLIGHT = _REAPPLY_IN_FLIGHT
 
 
 def _schedule_catch_up(
@@ -1687,14 +1688,7 @@ def _schedule_catch_up(
     task = asyncio.create_task(_run())
     _CATCH_UP_TASKS.add(task)
     task.add_done_callback(_CATCH_UP_TASKS.discard)
-    key = (project_id, framework_id)
-    _CATCH_UP_IN_FLIGHT[key] = task
-
-    def _forget(t: Any) -> None:
-        if _CATCH_UP_IN_FLIGHT.get(key) is t:
-            del _CATCH_UP_IN_FLIGHT[key]
-
-    task.add_done_callback(_forget)
+    register_reapply(project_id, framework_id, task)
 
 
 def _start_catch_ups(
@@ -1708,9 +1702,10 @@ def _start_catch_ups(
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
     where it would otherwise see the stale "completed" and resolve instantly. A
-    catch-up whose task is still live (off and on again while it codes) is not
-    started twice; a row left "running" with no task behind it is started again. Cheap: two indexed queries per framework,
-    no LLM.
+    catch-up whose task is still live (off and on again while it codes), or a
+    codebook a finished run's re-apply is coding, is not started again; a row left
+    "running" with no task behind it is started again. Zeroes the catch-up's own
+    counts, which the chip reads. Cheap: two indexed queries per framework, no LLM.
     """
     from bristlenose.server.models import AutoCodeJob
     from bristlenose.server.models import Session as SessionModel
@@ -1724,11 +1719,11 @@ def _start_catch_ups(
         )
         if job is None or job.completed_at is None:
             continue  # never applied → nothing to catch up
-        in_flight = _CATCH_UP_IN_FLIGHT.get((project_id, fid))
-        if in_flight is not None and not in_flight.done():
-            # A catch-up still coding this delta (the switch went off and on
-            # while it ran): a second one would code the same sessions again on
-            # the same job. Its chip is already up and resolves when it ends.
+        if live_reapply(project_id, fid) is not None:
+            # A re-apply still coding this delta: a catch-up (the switch went off
+            # and on while it ran), whose chip is already up and resolves when it
+            # ends, or a finished run's, which codes these sessions without one.
+            # A second would code the same sessions again on the same job.
             continue
         has_new = (
             db.query(SessionModel.session_id)
@@ -1744,6 +1739,8 @@ def _start_catch_ups(
             continue  # no new sessions since last apply → silent no-op
         job.status = "running"
         job.started_at = _now()
+        job.catch_up_total = 0
+        job.catch_up_processed = 0
         started.append(fid)
     if started:
         db.commit()

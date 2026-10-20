@@ -338,6 +338,14 @@ export interface AutoCodeJobStatus {
   total_quotes: number;
   processed_quotes: number;
   proposed_count: number;
+  /**
+   * The last on-enable catch-up's own counts: the quotes it sent and the ones
+   * whose batch answered. The catch-up chip reads these; the cumulative pair
+   * above keeps an earlier apply's shortfall for good (migration 020). Absent
+   * reads as zero, a catch-up with nothing to code.
+   */
+  catch_up_total?: number;
+  catch_up_processed?: number;
   error_message: string;
   /**
    * `LLMFailureKind` value naming *why* the job died, or "" when it did not

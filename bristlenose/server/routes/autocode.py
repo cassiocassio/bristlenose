@@ -48,6 +48,10 @@ class AutoCodeJobOut(BaseModel):
     total_quotes: int
     processed_quotes: int
     proposed_count: int
+    #: The last on-enable catch-up's own counts (sent, answered). The catch-up
+    #: chip reads these: the cumulative pair above keeps any earlier shortfall.
+    catch_up_total: int = 0
+    catch_up_processed: int = 0
     error_message: str
     #: ``LLMFailureKind`` value, or "" when the job did not fail or the
     #: classifier declined to name it. The UI localises from this; it must never
@@ -132,6 +136,8 @@ def _job_to_out(job: AutoCodeJob) -> AutoCodeJobOut:
         total_quotes=job.total_quotes,
         processed_quotes=job.processed_quotes,
         proposed_count=job.proposed_count,
+        catch_up_total=job.catch_up_total or 0,
+        catch_up_processed=job.catch_up_processed or 0,
         error_message=job.error_message,
         failure_kind=job.failure_kind,
         llm_provider=job.llm_provider,

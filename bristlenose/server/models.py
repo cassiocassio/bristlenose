@@ -843,6 +843,11 @@ class AutoCodeJob(Base):
     total_quotes: Mapped[int] = mapped_column(default=0)
     processed_quotes: Mapped[int] = mapped_column(default=0)
     proposed_count: Mapped[int] = mapped_column(default=0)
+    # The last on-enable catch-up's own counts: the quotes it sent and the ones
+    # whose batch answered. The catch-up chip reads these, never the cumulative
+    # pair above, which keeps any earlier shortfall for good (migration 020).
+    catch_up_total: Mapped[int] = mapped_column(default=0)
+    catch_up_processed: Mapped[int] = mapped_column(default=0)
     error_message: Mapped[str] = mapped_column(Text, default="")
     # Why it died, as an ``LLMFailureKind`` value. ``error_message`` is the raw
     # exception text and is written for a log; this is what a surface reads to

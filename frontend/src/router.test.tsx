@@ -286,6 +286,59 @@ describe("Catch-up chip", () => {
   });
 });
 
+// R12 wave 6: the chip read the job's cumulative counts, which keep an earlier
+// apply's shortfall for good, so every later catch-up that worked said "some
+// batches failed". A catch-up's own counts decide its chip.
+describe("Catch-up chip outcome", () => {
+  function serve(status: Record<string, unknown>) {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/autocode/norman/status")
+        ? status
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  }
+
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+  });
+
+  it("says done when the catch-up coded everything, whatever an earlier apply missed", async () => {
+    serve({
+      status: "completed", processed_quotes: 38, total_quotes: 43,
+      catch_up_processed: 3, catch_up_total: 3, proposed_count: 12, failure_kind: "",
+    });
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
+    });
+    const chip = await screen.findByTestId("bn-activity-chip");
+    await waitFor(() => expect(chip).toHaveAttribute("data-status", "completed"));
+    expect(chip).not.toHaveTextContent("some batches failed");
+  });
+
+  it("names its own shortfall when the catch-up came up short", async () => {
+    serve({
+      status: "completed", processed_quotes: 40, total_quotes: 44,
+      catch_up_processed: 2, catch_up_total: 4, proposed_count: 12, failure_kind: "",
+    });
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
+    });
+    const chip = await screen.findByTestId("bn-activity-chip");
+    await waitFor(() => expect(chip).toHaveTextContent("Tagged 2 of 4 quotes"));
+  });
+});
+
 // ---------------------------------------------------------------------------
 // R13: a clip export the server no longer holds (it restarted; its jobs live in
 // memory) answers "idle", which the chip read as still running, for ever.

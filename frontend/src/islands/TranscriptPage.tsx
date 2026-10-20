@@ -649,17 +649,23 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   // session; the split control appears only when there is one to show.
   const timeline = useTranscriptTimeline();
   const [tapestry, setTapestry] = useState<TapestrySession | null>(null);
-  // Once per session to learn whether there is a timeline; while it shows, again on every re-read
-  // (during a first analysis its sections and quotes arrive with the transcript's).
-  const tapestryKey = timeline.on ? data?.segments : null;
+  // A failed read keeps what was known and looks again on the next re-read: one failure used to
+  // take the Timeline control away, or a showing timeline, for the rest of the view (R92).
+  const [tapestryFailed, setTapestryFailed] = useState(false);
+  // Once per session to learn whether there is a timeline; while it shows, or after a failed
+  // read, again on every re-read (during a first analysis its sections and quotes arrive with the
+  // transcript's).
+  const tapestryKey = timeline.on || tapestryFailed ? data?.segments : null;
   useEffect(() => {
     let live = true;
     apiGet<TapestryResponse>("/tapestry")
       .then((r) => {
-        if (live) setTapestry((r.sessions ?? []).find((x) => x.session_id === sessionId) ?? null);
+        if (!live) return;
+        setTapestry((r.sessions ?? []).find((x) => x.session_id === sessionId) ?? null);
+        setTapestryFailed(false);
       })
       .catch(() => {
-        if (live) setTapestry(null);
+        if (live) setTapestryFailed(true);
       });
     return () => {
       live = false;

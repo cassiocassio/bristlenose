@@ -1426,4 +1426,50 @@ describe("TranscriptPage — the session timeline in the sticky slot", () => {
     });
     expect(screen.queryByTestId("transcript-timeline")).toBeNull();
   });
+
+  // R92: one failed read of /tapestry used to take the Timeline control away for the rest of
+  // the page's view, and a failed re-read took away a timeline that was showing.
+  const reread = async () => {
+    const before = mockedGetTranscript.mock.calls.length;
+    mockedGetTranscript.mockResolvedValue({ ...mockData, segments: [...mockData.segments] });
+    window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+    await waitFor(() => expect(mockedGetTranscript.mock.calls.length).toBe(before + 1));
+  };
+
+  it("offers the control after a failed read, once the page reads again", async () => {
+    let fail = true;
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/tapestry") return fail ? Promise.reject(new Error("Failed to fetch")) : Promise.resolve({ sessions: [tapestry] });
+      return Promise.resolve({ enabled: false, unavailable: null, screens: [] });
+    }) as typeof apiGet);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await screen.findByTestId("transcript-journey-chain");
+    await waitFor(() => expect(apiGet).toHaveBeenCalledWith("/tapestry"));
+    expect(screen.queryByTestId("timeline-split")).toBeNull();
+    fail = false;
+    await reread();
+    expect(await screen.findByTestId("timeline-split")).toBeInTheDocument();
+    // Recovered: with the timeline off, a further re-read no longer reads /tapestry.
+    const tapestryReads = () => vi.mocked(apiGet).mock.calls.filter(([p]) => p === "/tapestry").length;
+    await act(async () => {});
+    const settled = tapestryReads();
+    await reread();
+    await act(async () => {});
+    expect(tapestryReads()).toBe(settled);
+  });
+
+  it("keeps a showing timeline through a failed re-read", async () => {
+    timelineStore.setTimelineOn(true);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    await screen.findByTestId("transcript-timeline");
+    vi.mocked(apiGet).mockImplementation(((path: string) =>
+      path === "/tapestry" ? Promise.reject(new Error("Failed to fetch")) : Promise.resolve({ screens: [] })) as typeof apiGet);
+    const tapestryReads = () => vi.mocked(apiGet).mock.calls.filter(([p]) => p === "/tapestry").length;
+    const before = tapestryReads();
+    await reread();
+    await waitFor(() => expect(tapestryReads()).toBeGreaterThan(before));
+    await act(async () => {});
+    expect(screen.getByTestId("transcript-timeline")).toBeInTheDocument();
+    expect(screen.getByTestId("timeline-split")).toBeInTheDocument();
+  });
 });

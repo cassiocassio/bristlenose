@@ -43,6 +43,7 @@ import { patchHidden, patchStarred } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   apiGet: vi.fn().mockResolvedValue({ video_map: {} }),
   getModeratorQuestion: vi.fn().mockResolvedValue(null),
   patchHidden: vi.fn(() => Promise.resolve()),

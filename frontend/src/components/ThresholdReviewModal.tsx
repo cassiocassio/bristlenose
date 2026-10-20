@@ -23,6 +23,8 @@ import {
 } from "../utils/api";
 import type { ApiError } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
+import { isExportMode } from "../utils/exportData";
+import { reviewedElsewhere } from "../contexts/QuotesContext";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
 import { ProposalZoneList } from "./ProposalZoneList";
@@ -66,9 +68,13 @@ export function ThresholdReviewModal({
   const [acceptedCount, setAcceptedCount] = useState(0);
   const [deniedCount, setDeniedCount] = useState(0);
 
+  // Moves each time the modal opens (see `review`).
+  const opening = useRef(0);
+
   // Fetch all proposals when opened (min_confidence=0 to get everything)
   useEffect(() => {
     if (!open) return;
+    opening.current += 1;
     setLoading(true);
     setAllProposals([]);
     setRemoved(new Set());
@@ -147,6 +153,9 @@ export function ThresholdReviewModal({
   // that fails said nothing and left as if saved (R5): now it says so and the
   // row comes back. A row the server says was decided already leaves either
   // way, counted only when it went the way this click asked.
+  //
+  // `opening` moves each time the modal opens and re-reads its counts, so an
+  // answer from an earlier opening still says so but changes no row or count.
   const outcome = useRef(new Map<number, "landed" | "back" | "gone">());
   const left = useRef(new Set<number>());
   const review = useCallback(
@@ -156,10 +165,13 @@ export function ThresholdReviewModal({
       same: string,
       count: React.Dispatch<React.SetStateAction<number>>,
     ) => {
+      if (isExportMode()) return; // no server in an exported report
+      const mine = opening.current;
       outcome.current.delete(proposalId);
       left.current.delete(proposalId);
       setRemoving((prev) => new Set(prev).add(proposalId));
       const settle = (o: "landed" | "back" | "gone") => {
+        if (opening.current !== mine) return;
         outcome.current.set(proposalId, o);
         if (!left.current.has(proposalId)) return; // the timer applies it
         if (o === "back") setRemoved((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
@@ -171,10 +183,11 @@ export function ThresholdReviewModal({
           console.error("Review proposal failed:", err);
           if (err?.reason === same) return settle("landed");
           toastSaveFailed(err);
-          settle(err?.reason?.startsWith("proposal_") ? "gone" : "back");
+          settle(reviewedElsewhere(err) ? "gone" : "back");
         },
       );
       setTimeout(() => {
+        if (opening.current !== mine) return;
         left.current.add(proposalId);
         const o = outcome.current.get(proposalId);
         setRemoving((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });

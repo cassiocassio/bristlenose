@@ -1,5 +1,6 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { ThresholdReviewModal } from "./ThresholdReviewModal";
+import { _resetExportCache } from "../utils/exportData";
 import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import type { ProposedTagResponse } from "../utils/types";
 
@@ -327,11 +328,88 @@ describe("ThresholdReviewModal", () => {
           await act(async () => { vi.advanceTimersByTime(300); });
           expect(screen.getByTestId("bn-proposal-row-1")).toBeInTheDocument();
           expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+          // Nothing was accepted, so nothing is counted as accepted.
+          expect(screen.getByTestId("bn-threshold-subtitle").textContent).not.toMatch(/accepted/i);
         } finally {
           vi.useRealTimers();
         }
       },
     );
+
+    it("a review that lands is counted", async () => {
+      vi.useFakeTimers();
+      try {
+        mockAcceptProposal.mockResolvedValue(undefined);
+        await renderModal();
+        click("accept");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(screen.getByTestId("bn-threshold-subtitle").textContent).toMatch(/1 accepted/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("leaves uncounted, and says so, when it was decided the other way", async () => {
+      vi.useFakeTimers();
+      try {
+        mockDenyProposal.mockRejectedValue(
+          Object.assign(new Error("409"), { status: 409, reason: "proposal_accepted" }),
+        );
+        await renderModal();
+        click("deny");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
+        expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId("bn-threshold-subtitle").textContent).not.toMatch(/excluded/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("an answer from before the modal was closed and opened again changes nothing", async () => {
+      vi.useFakeTimers();
+      try {
+        let refuse: (e: unknown) => void = () => {};
+        mockAcceptProposal.mockImplementation(() => new Promise((_, r) => { refuse = r; }));
+        mockGetProposals.mockResolvedValue({
+          proposals: [makeProposal({ id: 1, confidence: 0.5 })], total: 1,
+        });
+        const props = { frameworkId: "garrett", frameworkTitle: "Garrett",
+          onClose: vi.fn(), onApply: vi.fn() };
+        const { rerender } = render(<ThresholdReviewModal open={true} {...props} />);
+        await act(async () => {});
+        click("accept");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        rerender(<ThresholdReviewModal open={false} {...props} />);
+        rerender(<ThresholdReviewModal open={true} {...props} />);
+        await act(async () => {});
+        await act(async () => { refuse(new Error("offline")); });
+        expect(toastSaveFailed).toHaveBeenCalledTimes(1); // it still says so
+        // A review in this opening is counted from zero, not from the stale -1.
+        mockAcceptProposal.mockResolvedValue(undefined);
+        click("accept");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        expect(screen.getByTestId("bn-threshold-subtitle").textContent).toMatch(/1 accepted/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does nothing in an exported report, which has no server", async () => {
+      (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = {
+        version: 1, exported_at: "2026-10-20T00:00:00Z", health: {}, endpoints: {},
+      };
+      _resetExportCache();
+      try {
+        await renderModal();
+        click("accept");
+        expect(mockAcceptProposal).not.toHaveBeenCalled();
+        expect(screen.getByTestId("bn-proposal-row-1")).toBeInTheDocument();
+      } finally {
+        delete (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT;
+        _resetExportCache();
+      }
+    });
 
     it("leaves, quietly, when it was already decided the same way", async () => {
       vi.useFakeTimers();

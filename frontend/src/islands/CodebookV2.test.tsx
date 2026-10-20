@@ -87,6 +87,7 @@ vi.mock("../hooks/useCodebookAuthoring", async (importActual) => {
 });
 
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   // The navigator titles the floor row with the project name, from /info.
   apiGet: vi.fn(() => Promise.resolve({ project_name: "Ikea" })),
   getCodebook: vi.fn(() => Promise.resolve(codebook)),

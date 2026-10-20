@@ -44,6 +44,7 @@ import { _resetExportCache } from "../utils/exportData";
 // ── Mocks ────────────────────────────────────────────────────────────────
 
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),
   patchEdits: vi.fn(() => Promise.resolve()),

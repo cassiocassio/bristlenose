@@ -9,6 +9,7 @@ import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 
 // Mock API
 vi.mock("../../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   authHeaders: vi.fn(() => ({ Authorization: "Bearer test-token" })),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),

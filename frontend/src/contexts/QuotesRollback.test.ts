@@ -320,6 +320,27 @@ describe("accepting or denying a suggestion that does not save", () => {
     expect(offered()).toEqual([]);
   });
 
+  it("a failed accept of a tag the quote already had leaves that tag", async () => {
+    initFromQuotes([quote({ tags: [trust], proposed_tags: [proposal] })]);
+    vi.mocked(acceptProposal).mockRejectedValueOnce(refusedAs());
+    acceptProposedTag("q1", 7, trust);
+    expect(names()).toEqual(["Trust"]); // one badge, not two
+    await settle();
+    expect(names()).toEqual(["Trust"]);
+  });
+
+  it("a suggestion the server no longer has (404) stays gone", async () => {
+    initFromQuotes([quote({ proposed_tags: [proposal] })]);
+    vi.mocked(acceptProposal).mockRejectedValueOnce(
+      Object.assign(new Error("404"), { status: 404 }),
+    );
+    acceptProposedTag("q1", 7, trust);
+    await settle();
+    expect(names()).toEqual([]);
+    expect(offered()).toEqual([]);
+    expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+  });
+
   it("a deny that fails puts the suggestion back and says so", async () => {
     initFromQuotes([quote({ proposed_tags: [proposal] })]);
     vi.mocked(denyProposal).mockRejectedValueOnce(refusedAs());

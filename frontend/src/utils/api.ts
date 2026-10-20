@@ -218,7 +218,9 @@ async function apiDeleteJson<T>(path: string): Promise<T> {
     method: "DELETE",
     headers: authHeaders(),
   });
-  if (!resp.ok) throw await httpError("DELETE", path, resp);
+  // Status only: its caller (the codebook lens's uninstall) shows the message,
+  // and `httpError` would carry the server's English detail into it.
+  if (!resp.ok) throw new Error(`DELETE ${path} ${resp.status}`);
   return resp.json() as Promise<T>;
 }
 
@@ -258,7 +260,12 @@ function sendWrite(
         // A curation PATCH names back the quotes it could not place (a re-run
         // removed them). Nothing was written for those: refuse, so the store
         // takes them back rather than drawing a change that never saved.
-        const answer = (await resp.json().catch(() => null)) as { unresolved?: unknown } | null;
+        // The server committed (200); an unreadable answer only loses the
+        // "unresolved" list, so it counts as placed, and says so in the log.
+        const answer = (await resp.json().catch((e: unknown) => {
+          console.warn(`${method} ${path}: answer unreadable, taken as placed`, e);
+          return null;
+        })) as { unresolved?: unknown } | null;
         const unresolved = Array.isArray(answer?.unresolved) ? (answer.unresolved as string[]) : [];
         if (unresolved.length > 0) {
           throw Object.assign(new Error(`${method} ${path}: no such quote`), {

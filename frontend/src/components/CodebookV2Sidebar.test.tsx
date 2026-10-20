@@ -7,7 +7,7 @@ import {
   selectCodebookV2,
 } from "../contexts/CodebookV2Store";
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
-import { putFrameworkStates } from "../utils/api";
+import { getCodebook, putFrameworkStates } from "../utils/api";
 import {
   resetSidebarStore,
   useSidebarStore,
@@ -290,6 +290,36 @@ describe("a switch that does not save goes back to what the server holds", () =>
     );
     await waitFor(() => expect(screen.getByTestId("off").textContent).toBe("nielsen"));
   });
+
+  it("keeps the rows, and goes back, when the server cannot be read either", async () => {
+    resetSidebarStore();
+    function Probe() {
+      const { disabledFrameworks } = useSidebarStore();
+      return <span data-testid="off">{[...disabledFrameworks].sort().join(",")}</span>;
+    }
+    render(
+      <MemoryRouter initialEntries={["/report/codebook-v2"]}>
+        <CodebookV2Sidebar />
+        <Probe />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("bn-v2-nav-row-sentiment");
+    // The connection is down: the write fails, and so does the re-read.
+    vi.mocked(putFrameworkStates).mockResolvedValueOnce({ status: "error", catchUp: [] });
+    vi.mocked(getCodebook).mockClear();
+    vi.mocked(getCodebook).mockRejectedValueOnce(new TypeError("Load failed"));
+    fireEvent.click(
+      screen
+        .getByTestId("bn-v2-nav-row-sentiment")
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+    await waitFor(() => expect(getCodebook).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(screen.getByTestId("bn-v2-nav-row-sentiment").className).not.toContain(
+      "codebook-disabled",
+    );
+    expect(screen.getByTestId("off").textContent).toBe("nielsen");
+  });
 });
 
 describe("the switch reaches the lenses that read it from the store", () => {
@@ -320,10 +350,11 @@ describe("the switch reaches the lenses that read it from the store", () => {
     );
     await screen.findByTestId("bn-v2-nav-row-sentiment");
 
-    // Nothing has mounted TagSidebar, so the store has never been hydrated —
-    // which is exactly the deep-link case that makes deriving the payload from
-    // the store unsafe, and why the navigator owns the write.
-    expect(screen.getByTestId("disabled-ids").textContent).toBe("");
+    // Nothing has mounted TagSidebar, so the store was never hydrated by it —
+    // the deep-link case that makes deriving the payload from the store unsafe,
+    // and why the navigator owns the write. Since 20 Oct 2026 the navigator's
+    // own read sets the mirror to what the server holds (R8).
+    expect(screen.getByTestId("disabled-ids").textContent).toBe("nielsen");
 
     fireEvent.click(
       screen

@@ -128,6 +128,7 @@ const mockData: TranscriptPageResponse = {
 // ---------------------------------------------------------------------------
 
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   // /screens, read for the gutter's screen marks: off unless a test says otherwise.
   apiGet: vi.fn().mockResolvedValue({ enabled: false, unavailable: null, screens: [] }),
   getTranscript: vi.fn(),

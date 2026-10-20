@@ -17,6 +17,7 @@ vi.mock("react-i18next", () => ({
 vi.mock("../hooks/useProjectId", () => ({ useProjectId: () => "1" }));
 vi.mock("../contexts/FocusContext", () => ({ useFocus: () => ({ selectedIds: new Set() }) }));
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),
   patchEdits: vi.fn(() => Promise.resolve()),

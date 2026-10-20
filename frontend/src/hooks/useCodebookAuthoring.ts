@@ -32,6 +32,7 @@ import {
   updateCodebookGroup,
   updateCodebookTag,
 } from "../utils/api";
+import type { ApiError } from "../utils/api";
 import type { CodebookGroupHandlers } from "../components/CodebookAuthoring";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 
@@ -77,11 +78,13 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
   // An edit that did not save says why ("Couldn't save"; a name another tag
   // holds is the server's 409), then re-reads, so the screen shows what saved.
   // These went to the console only, and a refused rename looked like nothing.
+  // Only when the server answered: with the connection down, a re-read would
+  // fail the same way and put up an error of its own.
   const failed = useCallback(
     (err: unknown) => {
       console.error("Codebook edit failed:", err);
       toastSaveFailed(err);
-      onChanged();
+      if (typeof (err as ApiError | null)?.status === "number") onChanged();
     },
     [onChanged],
   );

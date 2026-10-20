@@ -468,6 +468,13 @@ function withProposal(id: string, proposal: ProposedTagBrief, index: number): Up
   };
 }
 
+/** The server has no pending suggestion to review: decided already, or gone
+ *  (a re-run or an uninstall removed it, 404). Putting it back would only
+ *  fail the same way again. */
+export function reviewedElsewhere(err: ApiError | null | undefined): boolean {
+  return !!err?.reason?.startsWith("proposal_") || err?.status === 404;
+}
+
 /** The tag an accepted suggestion becomes, as the quote card builds it. */
 function tagOf(proposal: ProposedTagBrief): TagResponse {
   return {
@@ -878,28 +885,31 @@ export function acceptProposedTag(
   const offered = state.proposedTags[domId] || [];
   const index = offered.findIndex((p) => p.id === proposalId);
   const proposal = offered[index];
+  // A suggestion can name a tag the quote already has (the server allows it):
+  // then the accept adds nothing, and a failure must not take that tag away.
+  const had = (state.tags[domId] || []).some(
+    (t) => t.name.toLowerCase() === tag.name.toLowerCase(),
+  );
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);
     if (proposedTags[domId].length === 0) delete proposedTags[domId];
 
     const tags = { ...prev.tags };
-    tags[domId] = [...(tags[domId] || []), tag];
+    if (!had) tags[domId] = [...(tags[domId] || []), tag];
     // No tag write: acceptProposal makes the tag on the server.
     return { ...prev, proposedTags, tags };
   });
   // A failure said nothing and left the tag drawn (R5). Now it says so and the
   // screen follows the server: accepted elsewhere keeps the tag (no message:
-  // that is what was asked), denied elsewhere drops it, anything else puts the
-  // suggestion back as well.
+  // that is what was asked), denied elsewhere or gone (404) drops it, anything
+  // else puts the suggestion back as well.
   acceptProposal(proposalId).catch((err: ApiError) => {
     console.error("Accept proposal failed:", err);
     if (err?.reason === "proposal_accepted") return;
     toastSaveFailed(err);
-    setState(withTag(domId, tag, Infinity, false));
-    if (err?.reason !== "proposal_denied" && proposal) {
-      setState(withProposal(domId, proposal, index));
-    }
+    if (!had) setState(withTag(domId, tag, Infinity, false));
+    if (!reviewedElsewhere(err) && proposal) setState(withProposal(domId, proposal, index));
   });
 }
 
@@ -925,7 +935,7 @@ export function denyProposedTag(domId: string, proposalId: number): void {
     toastSaveFailed(err);
     if (!proposal) return;
     if (err?.reason === "proposal_accepted") setState(withTag(domId, tagOf(proposal), Infinity, true));
-    else setState(withProposal(domId, proposal, index));
+    else if (!reviewedElsewhere(err)) setState(withProposal(domId, proposal, index));
   });
 }
 

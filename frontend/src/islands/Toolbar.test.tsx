@@ -10,6 +10,7 @@ import type { QuoteResponse } from "../utils/types";
 vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
 
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   getPeople: vi.fn().mockResolvedValue({}),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),

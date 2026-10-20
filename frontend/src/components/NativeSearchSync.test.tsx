@@ -17,6 +17,7 @@ vi.mock("../shims/bridge", () => ({
   postSearchBadgeStyles: vi.fn(),
 }));
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   getPeople: vi.fn().mockResolvedValue({}),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),

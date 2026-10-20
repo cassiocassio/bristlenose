@@ -93,6 +93,17 @@ describe("a codebook edit that does not save says so", () => {
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
+  it("with the connection down it says so, and does not re-read into the same failure", async () => {
+    vi.mocked(updateCodebookTag).mockImplementationOnce(() =>
+      Promise.reject(new TypeError("Load failed")),
+    );
+    const { result, onChanged } = setup();
+    act(() => result.current.groupProps.onRenameTag(tag, "Ease"));
+    await settle();
+    expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
   it("a write that saves says nothing", async () => {
     const { result, onChanged } = setup();
     act(() => result.current.groupProps.onRenameTag(tag, "Ease"));

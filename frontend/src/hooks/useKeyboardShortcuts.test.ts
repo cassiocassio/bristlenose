@@ -29,6 +29,7 @@ import { patchTags } from "../utils/api";
 
 // Mock API calls (addTag calls patchTags internally).
 vi.mock("../utils/api", () => ({
+  toastSaveFailed: vi.fn(),
   apiGet: vi.fn().mockResolvedValue({ video_map: {} }),
   patchHidden: vi.fn(() => Promise.resolve()),
   patchStarred: vi.fn(() => Promise.resolve()),

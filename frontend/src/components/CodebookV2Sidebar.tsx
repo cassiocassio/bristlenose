@@ -239,9 +239,11 @@ export function CodebookV2Sidebar() {
   const readOnly = isExportMode();
   const [, setSearchParams] = useSearchParams();
 
-  // `adopt`: also put the store's mirror of the switch back to what the server
-  // holds — after a switch that did not save, the badges follow the mirror.
-  const load = useCallback((adopt = false) => {
+  // Each load also sets the store's mirror of the switch (the badges, the tag
+  // sidebar and autocomplete read it) to what the server holds, so after a
+  // switch that did not save, or two toggles answered out of order, the
+  // badges agree with the server.
+  const load = useCallback(() => {
     // One pass. `/codebook/templates` is SERVER_ONLY, so it is absent from an
     // export — tolerated separately (Q14): unavailable offline is not the same
     // as broken, and the navigator must still list what the reader has.
@@ -256,9 +258,13 @@ export function CodebookV2Sidebar() {
       .then(([codebook, templates, states, info]) => {
         const built = buildBooks(codebook, templates, states, info?.project_name ?? "");
         setBooks(built);
-        if (adopt) adoptFrameworkDisabled(new Set(disabledIds(built)));
+        adoptFrameworkDisabled(new Set(disabledIds(built)));
       })
-      .catch(() => setBooks([]));
+      // A read that fails keeps what is shown (none, on a first load).
+      .catch((err: unknown) => {
+        console.error("Codebook navigator read failed:", err);
+        setBooks((prev) => prev ?? []);
+      });
   }, []);
 
   useEffect(() => {
@@ -294,9 +300,16 @@ export function CodebookV2Sidebar() {
       // putFrameworkStates never rejects: a write that did not save has said
       // so ("Couldn't save") and answers `status: "error"`, and the switch and
       // the badges go back to what the server holds.
+      const before = books;
       putFrameworkStates(Object.fromEntries(off.map((id) => [id, false]))).then((res) => {
-        if (res.status === "error") load(true);
-        else window.dispatchEvent(new CustomEvent("codebook-changed"));
+        if (res.status !== "error") {
+          window.dispatchEvent(new CustomEvent("codebook-changed"));
+          return;
+        }
+        // Back to before the switch, then re-read in case the server moved.
+        setBooks(before);
+        adoptFrameworkDisabled(new Set(disabledIds(before)));
+        load();
       });
     },
     [books, load],

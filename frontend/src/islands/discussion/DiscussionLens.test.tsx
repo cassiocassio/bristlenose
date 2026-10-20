@@ -900,9 +900,9 @@ const sessionList = data.sessions.map((s) => ({
 
 const api = vi.hoisted(() => ({
   apiGet: vi.fn(), getSessionList: vi.fn(), getCodebook: vi.fn(),
-  // the quotes store's writes (QuotesContext): fire-and-forget PUTs
+  // the quotes store's writes (QuotesContext): each gesture's PATCH
   patchHidden: vi.fn(() => Promise.resolve()), patchStarred: vi.fn(() => Promise.resolve()), patchEdits: vi.fn(() => Promise.resolve()), patchTags: vi.fn(() => Promise.resolve()), patchDeletedBadges: vi.fn(() => Promise.resolve()),
-  acceptProposal: vi.fn(), denyProposal: vi.fn(),
+  acceptProposal: vi.fn(), denyProposal: vi.fn(), toastSaveFailed: vi.fn(),
 }));
 vi.mock("../../utils/api", () => api);
 const bridge = vi.hoisted(() => ({ postProjectAction: vi.fn() }));

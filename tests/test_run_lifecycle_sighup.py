@@ -99,3 +99,19 @@ def test_a_stopped_run_whose_unwind_then_fails_is_still_a_cancel(tmp_path: Path)
             proc.kill()
         proc.wait(timeout=10)
     assert landed, [type(e).__name__ for e in read_events(f)] if f.exists() else "no events"
+
+
+def test_a_signal_from_before_the_run_does_not_make_its_failure_a_cancel(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """`_caught_signal` is module state: one left by an earlier run in the same
+    process (or a stray SIGINT while the handler was installed) must not turn
+    this run's failure into a cancel. Found by the full suite's order."""
+    import bristlenose.run_lifecycle as rl
+    from bristlenose.events import KindEnum, RunFailedEvent
+
+    monkeypatch.setattr(rl, "_caught_signal", signal.SIGINT)
+    with pytest.raises(RuntimeError):
+        with rl.run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+            raise RuntimeError("boom")
+    assert isinstance(read_events(events_path(tmp_path))[-1], RunFailedEvent)

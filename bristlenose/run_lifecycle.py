@@ -837,6 +837,10 @@ def run_lifecycle(
         - On other exceptions: appends ``run_failed`` with categorised
           cause, removes PID file, re-raises.
     """
+    global _caught_signal, _hosted_backstop
+    # This run has not been signalled: a signal recorded before it (an earlier
+    # run in this process) must not make its failure read as a cancel.
+    _caught_signal = None
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / ".bristlenose").mkdir(parents=True, exist_ok=True)
 
@@ -1011,7 +1015,6 @@ def run_lifecycle(
     # run_started plus a cancel is fine — read_events already tolerates a
     # partial tail line.
     telemetry_tokens: tuple[object, object] | None = None
-    global _hosted_backstop
     _hosted_backstop = _backstop
     try:
         try:

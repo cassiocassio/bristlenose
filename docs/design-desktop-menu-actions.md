@@ -217,7 +217,7 @@ These are in the `handleMenuAction` switch inside `useKeyboardShortcuts.ts`, sha
 | `extendSelectionUp` | `handleShiftMove(-1)` |
 | `toggleSelection` | `toggleSelection(focusedId)` + anchor |
 | `clearSelection` | `clearSelection()` |
-| `revealInTranscript` | `navigate(/report/sessions/:pid#anchor)` |
+| `revealInTranscript` | `navigate(/report/sessions/<session_id>#t-<seconds>)` from the focused quote in the store, where the card's speaker link lands. It read a `data-anchor` no card set until 20 Oct 2026 (R68) |
 
 Video player commands use `sendCommand()` from `PlayerContext` which posts `bristlenose-command` messages to the popout player window. The popout `player.html` handles all commands (skip, speed, volume, PiP, fullscreen). Bridge `getState()` reports live `hasPlayer` / `playerPlaying` from module-level getters in `PlayerContext.tsx` — Swift uses these to dim/enable the Video menu's player commands. Video ▸ Subtitles is the exception: it is a preference, gated on `canDispatch`, so it can be set before a player opens.
 

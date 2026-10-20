@@ -848,14 +848,12 @@ export function useKeyboardShortcuts({
           clearSelection();
           break;
         case "revealInTranscript": {
+          // Where the card's own speaker link lands (QuoteCard `transcriptHref`): the quote's
+          // session, at its timecode. Read from the store, which every quote lens fills — not the
+          // card's DOM, which carries the participant code and no anchor (R68).
           const fid = scopedFocus();
-          if (!fid) break;
-          const bq = document.getElementById(fid);
-          const pid = bq?.getAttribute("data-participant");
-          const anchor = bq?.getAttribute("data-anchor");
-          if (pid && anchor) {
-            navigate(`/report/sessions/${pid}#${anchor}`);
-          }
+          const q = fid ? storeRef.current.quotes.find((x) => x.dom_id === fid) : undefined;
+          if (q) navigate(`/report/sessions/${q.session_id}#t-${Math.floor(q.start_timecode)}`);
           break;
         }
       }

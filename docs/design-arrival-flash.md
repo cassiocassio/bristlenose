@@ -67,8 +67,10 @@ navigation back.
 - Codebook tag bar → Quotes: solos a tag. Nothing to find. Out.
 - Dashboard stat `signals:section-x-sentiment` → `scrollToAnchor` on an id the React Signals lens
   never renders, so it gives up after 5 s. A separate bug, spun off.
-- `useKeyboardShortcuts.ts` `revealInTranscript` never fires: QuoteCard sets no `data-anchor`, and
-  `data-participant` is a speaker code, not a session. A separate bug, spun off.
+- `useKeyboardShortcuts.ts` `revealInTranscript` never fired: QuoteCard sets no `data-anchor`, and
+  `data-participant` is a speaker code, not a session. A separate bug, spun off; fixed 20 Oct 2026
+  (R68), it now reads the quote from the store and lands on `#t-<seconds>`, so it gets the
+  transcript's own arrival flash.
 
 ### Other flashes (stay separate, deliberately)
 
@@ -294,6 +296,6 @@ reflow in `markArrived`, which jsdom can't observe.
 ## Out of scope
 
 - Signals stat anchor `section-x-sentiment` (the lens has no such id).
-- `revealInTranscript` dead path, already logged in TODO.md (16 Oct).
+- `revealInTranscript` dead path, already logged in TODO.md (16 Oct); fixed 20 Oct 2026 (R68).
 - Unused `badge-bulk-flash`.
 - O7, parked in TODO.md.

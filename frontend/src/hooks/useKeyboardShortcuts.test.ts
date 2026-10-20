@@ -19,6 +19,7 @@ import {
   addSearchToken,
   getQuotesSnapshot,
   setSearchQuery,
+  initFromQuotes,
 } from "../contexts/QuotesContext";
 import { tagToken } from "../utils/searchTokens";
 import { resetSidebarStore } from "../contexts/SidebarStore";
@@ -99,7 +100,12 @@ function renderWithProviders(
   }
 
   const routePath = initialRoute.replace(/\/$/, "") || "/report/quotes";
-  const routes = [{ path: routePath, element: createElement(Wrapper) }];
+  // The catch-all lets a test follow a navigation away from the lens (Reveal in
+  // Transcript) and read where it landed from `router.state.location`.
+  const routes = [
+    { path: routePath, element: createElement(Wrapper) },
+    { path: "*", element: null },
+  ];
   const router = createMemoryRouter(routes, {
     initialEntries: [initialRoute],
   });
@@ -126,6 +132,7 @@ function renderWithProviders(
     getCtx: () => ctx!,
     storeResult: result,
     unmount: result.unmount,
+    router,
   };
 }
 
@@ -680,6 +687,63 @@ describe("useKeyboardShortcuts", () => {
       });
       expect(storeResult.result.current.starred["q-1"]).toBe(true);
       expect(getCtx().focusedId).toBe("q-2");
+      unmount();
+    });
+  });
+
+  // R68: the handler read a `data-anchor` no card sets, and built the path from the participant
+  // code where the route wants the session id, so the menu item did nothing. It now lands where
+  // the card's own speaker link does: the quote's session, at its timecode.
+  describe("Quotes ▸ Reveal in Transcript", () => {
+    const quote = {
+      dom_id: "q-p2-61", text: "It was hidden", participant_id: "p2", session_id: "s3",
+      speaker_name: "p2", start_timecode: 61.7, end_timecode: 64, tags: [], deleted_badges: [],
+      proposed_tags: [],
+    } as unknown as Parameters<typeof initFromQuotes>[0][number];
+    const reveal = () =>
+      window.dispatchEvent(
+        new CustomEvent("bn:menu-action", { detail: { action: "revealInTranscript" } }),
+      );
+
+    it("opens the focused quote's session at its timecode", () => {
+      initFromQuotes([quote]);
+      const { getCtx, router, unmount } = renderWithProviders();
+      act(() => getCtx().setFocus("q-p2-61", { scroll: false }));
+      act(() => reveal());
+      expect(router.state.location.pathname).toBe("/report/sessions/s3");
+      expect(router.state.location.hash).toBe("#t-61");
+      unmount();
+    });
+
+    it("does the same from a card the Screens lens renders", () => {
+      initFromQuotes([quote]);
+      const { getCtx, router, unmount } = renderWithProviders(undefined, "/report/screens/");
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", ["q-p2-61"]);
+        getCtx().setFocus("q-p2-61", { scroll: false });
+      });
+      act(() => reveal());
+      expect(router.state.location.pathname).toBe("/report/sessions/s3");
+      unmount();
+    });
+
+    it("ignores a cursor carried over from Quotes that Screens does not render", () => {
+      initFromQuotes([quote]);
+      const { getCtx, router, unmount } = renderWithProviders(undefined, "/report/screens/");
+      act(() => {
+        getCtx().registerVisibleQuoteIds("screens", []);
+        getCtx().setFocus("q-p2-61", { scroll: false });
+      });
+      act(() => reveal());
+      expect(router.state.location.pathname).toBe("/report/screens/");
+      unmount();
+    });
+
+    it("stays put with no focused quote", () => {
+      initFromQuotes([quote]);
+      const { router, unmount } = renderWithProviders();
+      act(() => reveal());
+      expect(router.state.location.pathname).toBe("/report/quotes/");
       unmount();
     });
   });

@@ -1363,6 +1363,9 @@ struct ContentView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = true
+        // Only what the drop path keeps: anything else was pickable and then
+        // filtered out without a word (R48).
+        panel.allowedContentTypes = Self.addFilesContentTypes
         panel.prompt = i18n.t("desktop.chrome.addFilesPrompt")
         panel.message = String(format: i18n.t("desktop.chrome.addFilesMessage"), projectName)
         // Match the app's appearance (window's forced `.preferredColorScheme`);
@@ -1985,7 +1988,9 @@ struct ContentView: View {
     /// File extensions accepted by the Bristlenose pipeline.
     /// Matches `ALL_EXTENSIONS` in `bristlenose/models.py` (includes `.txt` transcripts).
     /// Directories are always accepted (they become project roots).
-    private static let acceptedExtensions: Set<String> = [
+    /// Also what the AppKit sidebar refuses a drag by, and what File ▸ Add
+    /// Files… offers (R48), so all three answer from this one list.
+    static let acceptedExtensions: Set<String> = [
         // Audio
         "wav", "mp3", "m4a", "flac", "ogg", "wma", "aac",
         "aiff", "aif", "caf",
@@ -1998,8 +2003,15 @@ struct ContentView: View {
         "docx", "txt",
     ]
 
+    /// The Add Files panel's types, from the same list. A type is offered
+    /// with everything that conforms to it, so `.txt` also lets a `.md`
+    /// through, which the drop path then filters out.
+    static var addFilesContentTypes: [UTType] {
+        acceptedExtensions.sorted().compactMap { UTType(filenameExtension: $0) }
+    }
+
     /// Filter URLs to only accepted media types. Directories always pass.
-    private static func filterAcceptedURLs(_ urls: [URL]) -> [URL] {
+    static func filterAcceptedURLs(_ urls: [URL]) -> [URL] {
         urls.filter { url in
             if url.hasDirectoryPath { return true }
             let ext = url.pathExtension.lowercased()

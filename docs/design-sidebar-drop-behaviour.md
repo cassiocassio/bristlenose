@@ -214,6 +214,15 @@ no subtitle or document types). Updating one and believing you are done is
 exactly what happened: `0cfc99da` gave drag-drop the full set, `10680cbd` gave
 the watcher nine, and nobody ever saw both lists at once.
 
+**The "Other → refuse during drag" row reads the same list.** Since 20 Oct
+2026 (R48) the AppKit sidebar's `validateDrop` refuses a Finder drag in which
+no URL survives `ContentView.filterAcceptedURLs` (a folder, or a file of an
+accepted extension), so a drag of PDFs gets the no-entry pointer instead of a
+"+" and a silent discard; and File ▸ Add Files… sets `allowedContentTypes`
+from `ContentView.addFilesContentTypes`, built from the same set. The panel
+matches by conformance, so `.txt` lets a `.md` through, which the drop path
+then drops. Pinned by `SidebarOutlineDropAndRevealTests`.
+
 **Drift is silent, not mild.** ~~If it ever drifts, the failure mode is "we
 don't light up green plus for a format we technically support" — mild.~~ That
 was wrong in direction and in severity. The real drift was *accept-but-don't-

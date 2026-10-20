@@ -328,6 +328,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// The last selection pushed by `update()`. Held so the post-animation reload can
     /// restore it without needing SwiftUI to push another update.
     private var lastSelection: Set<SidebarSelection> = []
+    /// The selection the researcher just made in the outline, which the next
+    /// `update()` echoes back. Theirs, so it is never scrolled to: a row they
+    /// clicked is on screen, and one at the far end of a shift-click range
+    /// should not pull the list away from where they are.
+    private var selectionFromOutline: Set<SidebarSelection>?
+    /// The model changed the selection — a new study, a re-dropped folder —
+    /// and its row may be out of sight. `reloadAndRestore` brings it into
+    /// view (R53).
+    private var revealSelection = false
 
     /// True when the click currently being delivered CHANGED the selection. Set in
     /// `outlineViewSelectionDidChange`, consumed by the click action. The slow-second-
@@ -561,6 +570,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         self.activeTab = activeTab
         self.lensesEnabled = lensesEnabled
         self.disabledLenses = disabledLenses
+        if selection != lastSelection {
+            revealSelection = !selection.isEmpty && selection != selectionFromOutline
+            selectionFromOutline = nil
+        }
         self.lastSelection = selection
 
         // Reload guard: a `reloadData` while a name field is being edited destroys
@@ -591,12 +604,29 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
 
         applySelection(lastSelection)
+        revealSelectedRowIfNeeded()
 
         // Kick off the one-shot icon reveal for a freshly-created project, if any.
         maybeStartIconReveal()
 
         // Begin inline rename for a just-created folder / a menu-triggered rename.
         maybeStartRename()
+    }
+
+    /// Scroll a selection the model made into view. A drop inserts a new study
+    /// at the top of its scope, and a re-dropped folder selects its existing
+    /// row; either can be far from where the list is scrolled.
+    private func revealSelectedRowIfNeeded() {
+        guard revealSelection else { return }
+        revealSelection = false
+        for node in allSelectableNodes() {
+            guard let sel = node.selection, lastSelection.contains(sel) else { continue }
+            let row = outlineView.row(forItem: node)
+            if row >= 0 {
+                outlineView.scrollRowToVisible(row)
+                return
+            }
+        }
     }
 
     // MARK: - Icon reveal
@@ -661,6 +691,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // icon self-heals on the rename commit's reload.
             if self.editingNodeID == nil {
                 self.outlineView.reloadData()   // rebuild the cell with its icon visible (alpha 1)
+            } else if let row = self.projectRow(forID: id),
+                      let cell = self.outlineView.view(atColumn: 0, row: row, makeIfNecessary: false)
+                        as? NSTableCellView {
+                // No reload while a name is being typed — and ⌘N names the new
+                // study while its icon flips — so show the icon on the cell
+                // that is there. Left to the rename's commit, the slot stayed
+                // empty until Return (R58).
+                cell.imageView?.alphaValue = 1
             }
             overlay.removeFromSuperview()    // reveal the identical static icon underneath
             if self.revealOverlay === overlay { self.revealOverlay = nil }
@@ -1197,6 +1235,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 selection.insert(sel)
             }
         }
+        selectionFromOutline = selection
         onSelectionChange(selection)
     }
 
@@ -1217,6 +1256,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // path (the two payload types are mutually exclusive on the pasteboard).
         if pasteboardHasFileURLs(info.draggingPasteboard) {
             guard let target = externalDropTarget(item: item) else { return [] }
+            // Nothing in the drag that a study can take (a PDF, a zip, a
+            // Keynote): refuse it here, where the pointer says so, rather than
+            // accept it and have the drop handlers discard every file (R48).
+            guard Self.acceptsFinderFiles(readFileURLs(from: info.draggingPasteboard)) else {
+                return []
+            }
             // Answer during the drag, not after it. Returning `[]` makes AppKit
             // draw no row highlight, swap the pointer to operation-not-allowed,
             // and spring the item back — the whole refusal, in every language,
@@ -1411,6 +1456,13 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         default:
             return true
         }
+    }
+
+    /// Whether a Finder drag carries anything the drop handlers keep: a
+    /// folder, or a file of a type the pipeline ingests. The same filter the
+    /// handlers apply (`ContentView.filterAcceptedURLs`), asked before the drop.
+    static func acceptsFinderFiles(_ urls: [URL]) -> Bool {
+        !ContentView.filterAcceptedURLs(urls).isEmpty
     }
 
     private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {

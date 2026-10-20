@@ -1,0 +1,261 @@
+import AppKit
+import Foundation
+import Testing
+import UniformTypeIdentifiers
+@testable import Bristlenose
+
+/// The AppKit sidebar's answers to a drop, and what it does with a row the
+/// model selects or reveals, driven through the real `SidebarOutlineController`
+/// (20 Oct 2026).
+///
+/// - R48: a Finder drag of files the pipeline can't ingest got a "+" pointer,
+///   was accepted, and then vanished without a word.
+/// - R53: a study the model selected (a new one, or a re-dropped known folder)
+///   could land scrolled out of sight.
+/// - R58: ⌘N's new study lost its icon while its name was typed: the reveal's
+///   end skips the reload that rebuilds the cell while a rename is open.
+@MainActor
+private final class OutlineRig {
+    let tempDir: URL
+    let index: ProjectIndex
+    let controller = SidebarOutlineController()
+
+    init() {
+        tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-outline-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        index = ProjectIndex(fileURL: tempDir.appendingPathComponent("projects.json"))
+        controller.projectIndex = index
+        _ = controller.view
+        controller.view.frame = NSRect(x: 0, y: 0, width: 240, height: 600)
+    }
+
+    var outlineView: NSOutlineView { controller.outlineView }
+
+    func publish(selection: Set<SidebarSelection> = []) {
+        controller.update(
+            roots: OutlineTree.build(lenses: LensItem.all,
+                                     projects: index.projects,
+                                     folders: index.folders),
+            selection: selection,
+            activeTab: nil,
+            lensesEnabled: true
+        )
+        controller.view.layoutSubtreeIfNeeded()
+    }
+
+    func row(of id: UUID) -> Int? {
+        for r in 0..<outlineView.numberOfRows {
+            if case .project(let pid)? = (outlineView.item(atRow: r) as? OutlineNode)?.kind, pid == id {
+                return r
+            }
+        }
+        return nil
+    }
+
+    func isVisible(_ id: UUID) -> Bool {
+        guard let r = row(of: id) else { return false }
+        return outlineView.visibleRect.contains(outlineView.rect(ofRow: r))
+    }
+
+    func cleanup() { try? FileManager.default.removeItem(at: tempDir) }
+}
+
+/// A Finder drag carrying `urls`, as `validateDrop` sees one.
+private final class FakeDrag: NSObject, NSDraggingInfo {
+    let pasteboard: NSPasteboard
+
+    init(_ urls: [URL]) {
+        pasteboard = NSPasteboard(name: NSPasteboard.Name("bn-test-drag-\(UUID().uuidString)"))
+        pasteboard.clearContents()
+        pasteboard.writeObjects(urls.map { $0 as NSURL })
+    }
+
+    var draggingPasteboard: NSPasteboard { pasteboard }
+    var draggingDestinationWindow: NSWindow? { nil }
+    var draggingSourceOperationMask: NSDragOperation { .copy }
+    var draggingLocation: NSPoint { .zero }
+    var draggedImageLocation: NSPoint { .zero }
+    var draggedImage: NSImage? { nil }
+    var draggingSource: Any? { nil }
+    var draggingSequenceNumber: Int { 1 }
+    func slideDraggedImage(to screenPoint: NSPoint) {}
+    var draggingFormation: NSDraggingFormation = .default
+    var animatesToDestination: Bool = false
+    var numberOfValidItemsForDrop: Int = 0
+    func enumerateDraggingItems(
+        options enumOpts: NSDraggingItemEnumerationOptions = [],
+        for view: NSView?,
+        classes classArray: [AnyClass],
+        searchOptions: [NSPasteboard.ReadingOptionKey: Any] = [:],
+        using block: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
+    ) {}
+    var springLoadingHighlight: NSSpringLoadingHighlight { .none }
+    func resetSpringLoading() {}
+
+    func release() { pasteboard.releaseGlobally() }
+}
+
+@MainActor
+@Suite("Sidebar drops and reveals")
+struct SidebarOutlineDropAndRevealTests {
+
+    // MARK: - R48: a drop of nothing ingestible is refused during the drag
+
+    private func validate(_ rig: OutlineRig, _ urls: [URL], onto item: Any?) -> NSDragOperation {
+        let drag = FakeDrag(urls)
+        defer { drag.release() }
+        return rig.controller.outlineView(
+            rig.outlineView, validateDrop: drag,
+            proposedItem: item, proposedChildIndex: NSOutlineViewDropOnItemIndex
+        )
+    }
+
+    @Test func filesNothingCanIngestAreRefusedOnTheSidebar() {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        rig.publish()
+        let pdf = rig.tempDir.appendingPathComponent("brief.pdf")
+        let zip = rig.tempDir.appendingPathComponent("notes.zip")
+
+        #expect(validate(rig, [pdf, zip], onto: nil) == [],
+                "a drag the drop would discard showed the '+' pointer")
+    }
+
+    @Test func filesNothingCanIngestAreRefusedOnAStudy() {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let study = rig.index.addProject(name: "Study", path: rig.tempDir.path)
+        rig.publish()
+        let row = try! #require(rig.row(of: study.id))
+        let item = rig.outlineView.item(atRow: row)
+        let pdf = rig.tempDir.appendingPathComponent("brief.pdf")
+
+        #expect(validate(rig, [pdf], onto: item) == [])
+    }
+
+    @Test func aRecordingOrAFolderIsStillTaken() {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        rig.publish()
+        let video = rig.tempDir.appendingPathComponent("Session 1.MOV")
+        let folder = URL(fileURLWithPath: rig.tempDir.appendingPathComponent("Study").path,
+                         isDirectory: true)
+        let pdf = rig.tempDir.appendingPathComponent("brief.pdf")
+
+        #expect(validate(rig, [video], onto: nil) == .copy)
+        #expect(validate(rig, [folder], onto: nil) == .copy)
+        // One ingestible file is enough; the drop handlers filter the rest.
+        #expect(validate(rig, [pdf, video], onto: nil) == .copy)
+    }
+
+    @Test func theAddFilesPanelOffersWhatTheDropAccepts() {
+        let types = ContentView.addFilesContentTypes
+        #expect(!types.isEmpty)
+        for ext in ["mov", "mp4", "m4a", "wav", "vtt", "srt", "docx", "txt"] {
+            let t = try! #require(UTType(filenameExtension: ext))
+            #expect(types.contains { t.conforms(to: $0) }, "Add Files greys out .\(ext)")
+        }
+        for ext in ["pdf", "zip", "key", "png"] {
+            let t = try! #require(UTType(filenameExtension: ext))
+            #expect(!types.contains { t.conforms(to: $0) }, "Add Files offers .\(ext), which is then dropped")
+        }
+    }
+
+    // MARK: - R53: a study the model selects is brought into view
+
+    private func scrolledRig(studies n: Int) -> OutlineRig {
+        let rig = OutlineRig()
+        for i in 0..<n { rig.index.addProject(name: "Study \(i)", path: "") }
+        rig.publish()
+        rig.outlineView.scrollRowToVisible(rig.outlineView.numberOfRows - 1)
+        return rig
+    }
+
+    @Test func aNewStudyTheModelSelectsIsScrolledIntoView() throws {
+        let rig = scrolledRig(studies: 40); defer { rig.cleanup() }
+        // A drop inserts at the top of its scope, as `addProject` does.
+        let new = rig.index.addProject(name: "Dropped", path: "")
+        rig.index.consumeIconReveal(new.id)
+        rig.publish()
+        try #require(!rig.isVisible(new.id), "the fixture should start with it out of sight")
+
+        rig.publish(selection: [.project(new.id)])
+
+        #expect(rig.isVisible(new.id), "the new study was selected out of sight")
+    }
+
+    @Test func aKnownStudyReselectedByTheModelIsScrolledIntoView() throws {
+        let rig = scrolledRig(studies: 40); defer { rig.cleanup() }
+        let first = try #require(rig.index.projects.first(where: { $0.name == "Study 39" }))
+        try #require(!rig.isVisible(first.id), "the fixture should start with it out of sight")
+
+        rig.publish(selection: [.project(first.id)])
+
+        #expect(rig.isVisible(first.id))
+    }
+
+    /// A republish whose selection hasn't changed (a progress tick) must not
+    /// pull the list back to the selected row after the researcher scrolled away.
+    @Test func anUnchangedSelectionDoesNotMoveTheList() throws {
+        let rig = scrolledRig(studies: 40); defer { rig.cleanup() }
+        let top = try #require(rig.index.projects.first(where: { $0.name == "Study 39" }))
+        rig.publish(selection: [.project(top.id)])
+        rig.outlineView.scrollRowToVisible(rig.outlineView.numberOfRows - 1)
+        let before = rig.outlineView.visibleRect
+
+        rig.publish(selection: [.project(top.id)])
+
+        #expect(rig.outlineView.visibleRect == before)
+    }
+
+    /// The researcher's own click comes back as a republish of the same
+    /// selection; it is theirs, so the list stays where they left it.
+    @Test func theResearchersOwnSelectionDoesNotMoveTheList() throws {
+        let rig = scrolledRig(studies: 40); defer { rig.cleanup() }
+        let last = rig.outlineView.numberOfRows - 1
+        var echoed: Set<SidebarSelection> = []
+        rig.controller.onSelectionChange = { echoed = $0 }
+        rig.outlineView.selectRowIndexes(IndexSet(integer: last), byExtendingSelection: false)
+        try #require(!echoed.isEmpty)
+        rig.outlineView.scrollRowToVisible(0)
+        let before = rig.outlineView.visibleRect
+
+        rig.publish(selection: echoed)
+
+        #expect(rig.outlineView.visibleRect == before)
+    }
+
+    // MARK: - R58: ⌘N's icon stays visible while the name is typed
+
+    @Test func theNewStudysIconIsVisibleWhileItsNameIsTyped() async throws {
+        try #require(!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+                     "Reduce Motion skips the reveal, so there is nothing to test")
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        // The rename needs a window to hold its field editor.
+        let window = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 240, height: 600),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = rig.controller.view
+        defer { window.close() }
+
+        let new = rig.index.addProject(name: "Untitled", path: "")
+        try #require(rig.index.pendingIconReveal == new.id, "random icons are off in this host")
+        rig.index.pendingRename = new.id          // as ⌘N does
+        rig.publish(selection: [.project(new.id)])
+        let row = try #require(rig.row(of: new.id))
+        let cell = try #require(rig.outlineView.view(atColumn: 0, row: row, makeIfNecessary: false)
+                                as? NSTableCellView)
+        try #require(cell.textField?.currentEditor() != nil, "the rename did not open")
+        try #require(cell.imageView?.alphaValue == 0, "the reveal took its static fallback")
+
+        // The flip runs about two seconds; the trigger is consumed when it ends.
+        let deadline = Date().addingTimeInterval(6)
+        while rig.index.pendingIconReveal != nil, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        try #require(rig.index.pendingIconReveal == nil, "the reveal never finished")
+        try #require(cell.textField?.currentEditor() != nil, "the rename closed under the test")
+
+        let shown = try #require(rig.outlineView.view(atColumn: 0, row: row, makeIfNecessary: false)
+                                 as? NSTableCellView)
+        #expect(shown.imageView?.alphaValue == 1, "the icon slot is empty while the name is typed")
+    }
+}

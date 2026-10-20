@@ -474,14 +474,16 @@ final class PipelineRunner: ObservableObject {
     /// why this lives in a separate `ObservableObject`.
     let liveData = PipelineLiveData()
 
-    /// FIFO queue of project IDs waiting to run. `currentlyRunning` holds the
-    /// active run; any new `start()` while that's set enqueues.
-    private var queue: [UUID] = []
+    /// FIFO queue of studies waiting to run, each with its `--clean`.
+    /// `currentlyRunning` holds the slot; any new `start()` while that's set
+    /// enqueues. The slot is held from spawn until the run's end state has
+    /// been written, not just while its process lives (R23).
+    private var queue = RunQueue()
     private var currentlyRunning: UUID?
 
-    /// The current live `Process()`, if any. Cleared in the termination
-    /// handler and by `cancel()`.
-    private var currentProcess: Process?
+    /// The run in flight, if any: its process is live. Cleared when the
+    /// termination handler starts, before the exit is resolved.
+    private var currentRun: LaunchedRun?
     private var currentReadTask: Task<Void, Never>?
     private var currentProject: Project?
 
@@ -554,6 +556,27 @@ final class PipelineRunner: ObservableObject {
     private let sendSignal: (pid_t, Int32) -> Int32
     private let hasConsent: @MainActor () -> Bool
     private let keyReadiness: @MainActor () -> BristlenoseShared.APIKeyReadiness
+    private let launcher: RunLauncher?
+    private let escalationSleep: @Sendable (Duration) async -> Void
+
+    /// A launched run, as the runner sees it once it is going.
+    struct LaunchedRun {
+        let pid: pid_t
+        /// False once the process has exited and been reaped.
+        let isRunning: () -> Bool
+        /// `getpgid` of the run, read at launch: Foundation makes each child
+        /// the leader of its own group.
+        let processGroup: pid_t
+    }
+
+    /// Starts a `bristlenose run` for a project, `--clean` or not, and calls
+    /// `onExit` once when it ends. The app's own launches the sidecar; a test
+    /// passes one that records the request and ends the run by hand, because
+    /// the test host's bundle may hold a real sidecar, a 0-byte stub or none.
+    typealias RunLauncher = @MainActor (
+        _ project: Project, _ clean: Bool,
+        _ onExit: @escaping @Sendable (ProcessOutcome) -> Void
+    ) throws -> LaunchedRun
 
     /// - Parameters:
     ///   - notificationCenter: where Quit is observed. A test passes its own,
@@ -563,17 +586,25 @@ final class PipelineRunner: ObservableObject {
     ///   - keyReadiness: what the key overlay would inject into a run now.
     ///     A test passes both so it can drive `start` without the app's own
     ///     defaults or Keychain.
+    ///   - launcher: how a run is started. Nil, the app's, launches the sidecar.
+    ///   - escalationSleep: the wait between Stop's signals; a test passes none.
     init(
         notificationCenter: NotificationCenter = .default,
         sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno },
         hasConsent: @escaping @MainActor () -> Bool = { PipelineRunner.hasAIConsent },
         keyReadiness: @escaping @MainActor () -> BristlenoseShared.APIKeyReadiness = {
             BristlenoseShared.apiKeyReadiness(using: KeychainHelper.liveStore)
+        },
+        launcher: RunLauncher? = nil,
+        escalationSleep: @escaping @Sendable (Duration) async -> Void = {
+            try? await Task.sleep(for: $0)
         }
     ) {
         self.sendSignal = sendSignal
         self.hasConsent = hasConsent
         self.keyReadiness = keyReadiness
+        self.launcher = launcher
+        self.escalationSleep = escalationSleep
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language) runs again, and the per-session
@@ -1380,8 +1411,12 @@ final class PipelineRunner: ObservableObject {
 
         if currentlyRunning == nil {
             spawn(project: project, clean: clean)
-        } else if currentlyRunning != project.id, !queue.contains(project.id) {
-            queue.append(project.id)
+        } else if currentlyRunning != project.id || currentRun == nil {
+            // The second case: this study's run has ended and its end state is
+            // being read. A start now — a drop onto it in its last moment — is
+            // a new request and waits its turn. Starting a study whose run is
+            // live does nothing, as before.
+            queue.enqueue(project.id, clean: clean)
             renumberQueue()
         }
     }
@@ -1389,17 +1424,57 @@ final class PipelineRunner: ObservableObject {
     /// Cancel the current run (if it's for `project`) or remove it from the
     /// queue. SIGINT for graceful Python shutdown — the CLI flushes manifest
     /// writes in its `atexit` handlers, so cancelled runs are still safe to
-    /// resume.
+    /// resume — then SIGTERM and SIGKILL if the run does not end
+    /// (`cancelLadder`).
     func cancel(project: Project) {
         // Acknowledge the click immediately on the UI so the user
         // doesn't keep mashing Stop while signals propagate.
         liveData.mutateProgress(for: project.id) { p in
             p.isStopping = true
         }
-        if currentlyRunning == project.id {
-            if let proc = currentProcess, proc.isRunning {
+        if currentlyRunning == project.id, let run = currentRun {
+            // Once per run: a second click sends nothing more and starts no
+            // second ladder.
+            if run.isRunning(), !cancellationRequested {
                 cancellationRequested = true
-                proc.interrupt()
+                // The run's whole process group, as `Process.interrupt()` did
+                // (measured 20 Oct 2026: it reaches a forked child too), so
+                // SIGKILL also takes the run's own children.
+                let target = Self.ownedSignalTarget(
+                    pid: run.pid, processGroup: run.processGroup, ownGroup: getpgrp()
+                )
+                let err = sendSignal(target, SIGINT)
+                if err == 0 {
+                    Self.logger.info(
+                        "SIGINT to run project=\(project.id.uuidString, privacy: .public) target=\(target, privacy: .public)"
+                    )
+                } else if err != ESRCH {
+                    // Nothing was sent: leave Stop free to try again.
+                    Self.logger.error(
+                        "SIGINT to run failed errno=\(err, privacy: .public) project=\(project.id.uuidString, privacy: .public) target=\(target, privacy: .public)"
+                    )
+                    cancellationRequested = false
+                    return
+                }
+                // SIGINT alone waits for a long C call to return — Stop during
+                // transcription sat on "Stopping…" for minutes (R20). The same
+                // ladder as an attached orphan's. A hosted run already
+                // stopping ignores SIGTERM (`run_lifecycle._signal_handler`);
+                // SIGKILL needs no handler.
+                let gen = generation
+                let signal = sendSignal
+                escalateCancel(
+                    pid: target, projectID: project.id,
+                    stillRunning: { [weak self] in
+                        guard let self, self.generation == gen else { return false }
+                        // A group outlives its leader while any member lives,
+                        // and its id is not reused until then, so a worker the
+                        // leader left behind still gets the rest of the ladder.
+                        if target < 0 { return signal(target, 0) == 0 }
+                        return self.currentRun?.isRunning() == true
+                    },
+                    send: { signal(target, $0) }
+                )
             }
             // The termination handler will clear currentlyRunning and dequeue.
         } else if let pid = attachedOrphanPIDs[project.id] {
@@ -1447,39 +1522,79 @@ final class PipelineRunner: ObservableObject {
                     "SIGINT failed errno=\(errno, privacy: .public) project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
                 )
             }
-        } else if let idx = queue.firstIndex(of: project.id) {
-            queue.remove(at: idx)
+        } else if queue.remove(project.id) {
             state[project.id] = .idle
             renumberQueue()
         }
     }
 
     /// Escalate from SIGINT to SIGTERM to SIGKILL if the orphan won't
-    /// die. Whisper / torch / ctranslate2 hold the GIL during long C
-    /// calls, so a Python signal handler can be deferred 30–60s during
-    /// model load. The user clicked Stop; their contract is "this
-    /// stops". Bail out at any step if the PID is already dead or the
+    /// die. Bail out at any step if the PID is already dead or the
     /// attach has changed (project was re-cancelled with a new run, or
     /// orphan poll task already ran handleOrphanExit).
     private func scheduleOrphanCancelEscalation(pid: pid_t, projectID: UUID) {
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(5))
-            guard let self else { return }
-            guard kill(pid, 0) == 0 else { return }
-            guard self.attachedOrphanPIDs[projectID] == pid else { return }
-            kill(pid, SIGTERM)
-            Self.logger.warning(
-                "SIGTERM escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGINT didn't take in 5s"
-            )
+        escalateCancel(
+            pid: pid, projectID: projectID,
+            stillRunning: { [weak self] in
+                kill(pid, 0) == 0 && self?.attachedOrphanPIDs[projectID] == pid
+            },
+            send: { kill(pid, $0) == 0 ? 0 : errno }
+        )
+    }
 
-            try? await Task.sleep(for: .seconds(3))
-            guard kill(pid, 0) == 0 else { return }
-            guard self.attachedOrphanPIDs[projectID] == pid else { return }
-            kill(pid, SIGKILL)
-            Self.logger.error(
-                "SIGKILL escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGTERM didn't take in 3s"
-            )
+    /// Stop's ladder after SIGINT: SIGTERM at +5 s, SIGKILL 3 s later.
+    /// Whisper / torch / ctranslate2 hold the GIL during long C calls, so a
+    /// Python signal handler can be deferred 30–60s during model load. The
+    /// user clicked Stop; their contract is "this stops".
+    nonisolated static let cancelLadder: [(signal: Int32, after: Duration)] = [
+        (SIGTERM, .seconds(5)), (SIGKILL, .seconds(3)),
+    ]
+
+    /// Run `cancelLadder`, checking before each step that the run is still
+    /// the one Stop was for and still alive.
+    private func escalateCancel(
+        pid: pid_t, projectID: UUID,
+        stillRunning: @escaping @MainActor () -> Bool,
+        send: @escaping @MainActor (Int32) -> Int32
+    ) {
+        let sleep = escalationSleep
+        Task { @MainActor in
+            for step in Self.cancelLadder {
+                await sleep(step.after)
+                guard stillRunning() else { return }
+                let err = send(step.signal)
+                if err != 0 {
+                    Self.logger.error(
+                        "escalation signal=\(step.signal, privacy: .public) failed errno=\(err, privacy: .public) pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public)"
+                    )
+                } else if step.signal == SIGKILL {
+                    Self.logger.error(
+                        "SIGKILL escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGTERM didn't take"
+                    )
+                } else {
+                    Self.logger.warning(
+                        "SIGTERM escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGINT didn't take"
+                    )
+                }
+            }
+            // SIGKILL cannot be caught, but a process in an uninterruptible
+            // wait (a dataless iCloud read) takes it only when the wait ends.
+            await sleep(.seconds(1))
+            if stillRunning() {
+                Self.logger.fault(
+                    "run survived SIGKILL pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — Stop cannot finish"
+                )
+            }
         }
+    }
+
+    /// Where Stop's signals go for a run this process spawned: its process
+    /// group when it leads one (Foundation makes each child a group leader),
+    /// never the app's own group, otherwise the pid alone.
+    nonisolated static func ownedSignalTarget(
+        pid: pid_t, processGroup: pid_t, ownGroup: pid_t
+    ) -> pid_t {
+        processGroup == pid && processGroup != ownGroup ? -pid : pid
     }
 
     // MARK: - Quit
@@ -1499,7 +1614,7 @@ final class PipelineRunner: ObservableObject {
     /// wedged in a C call takes the signal when the call returns. The queue
     /// lives in memory and is not kept; it is logged so the loss is on record.
     func stopAllForQuit() {
-        let owned = currentProcess.flatMap { $0.isRunning ? $0.processIdentifier : nil }
+        let owned = currentRun.flatMap { $0.isRunning() ? $0.pid : nil }
         let targets = Self.quitSignalTargets(
             owned: owned, orphans: Array(attachedOrphanPIDs.values)
         )
@@ -1527,15 +1642,102 @@ final class PipelineRunner: ObservableObject {
     // MARK: - Spawn
 
     /// Spawn the subprocess. When `clean` is true, `--clean` is added — used
-    /// by the Re-analyse CTA on `outputExists` failures. Queued spawns
-    /// (`startNextQueued`) don't preserve the flag; the queue + Re-analyse
-    /// interaction is a follow-up if it surfaces.
+    /// by Re-analyse. Queued spawns carry the flag through the queue (R18).
     private func spawn(project: Project, clean: Bool = false) {
-        // Resolve the sidecar binary the same way ServeManager does. Three
-        // shapes of failure: external-server scheme has no binary to spawn,
-        // resolver itself can fail (bundle missing, dev path invalid), and
-        // both surface as `.failed` state on the project so the GUI shows
-        // something actionable.
+        // A study whose folder has gone — a drive ejected while it waited, or
+        // before Analyse — is not run against the missing path (R63). It reads
+        // as a scan of that folder would (`parseManifest`), and the next study
+        // in the queue goes ahead.
+        if case .cantFind = project.availability {
+            Self.logger.notice(
+                "spawn refused — folder not found project=\(project.id.uuidString, privacy: .public)"
+            )
+            state[project.id] = .unreachable(reason: .folderMissing)
+            startNextQueued()
+            return
+        }
+        let sidecar: (binary: URL, mode: SidecarMode)?
+        if launcher == nil {
+            guard let resolved = resolveSidecar(for: project) else {
+                startNextQueued()
+                return
+            }
+            sidecar = resolved
+        } else {
+            sidecar = nil
+        }
+
+        generation += 1
+        let gen = generation
+        currentlyRunning = project.id
+        currentProject = project
+        currentParser = StdoutProgressParser()
+        cancellationRequested = false
+        beginSpawnedRun(project)
+        startProgressPoll(for: project, generation: gen)
+
+        let projectID = project.id
+        let onExit: @Sendable (ProcessOutcome) -> Void = { [weak self] outcome in
+            Task { @MainActor in
+                await self?.handleTermination(
+                    projectID: projectID, outcome: outcome, generation: gen
+                )
+            }
+        }
+
+        do {
+            let run: LaunchedRun
+            if let launcher {
+                run = try launcher(project, clean, onExit)
+            } else if let sidecar {
+                run = try launchSidecar(
+                    sidecar.binary, mode: sidecar.mode, project: project,
+                    clean: clean, generation: gen, onExit: onExit
+                )
+            } else {
+                preconditionFailure("spawn: no launcher and no sidecar")
+            }
+            currentRun = run
+            // Tiny race here: if the app crashes between the launch returning
+            // and writePIDFile completing, the orphan exists but is
+            // unattachable on next launch. Window is single-process-spawn
+            // wide (~ms); accepted rather than working around it with a
+            // separate `lsof`-style argv sweep on launch.
+            Self.writePIDFile(for: project, pid: run.pid)
+            Self.logger.info(
+                "spawned bristlenose run project=\(projectID.uuidString, privacy: .public) pid=\(run.pid, privacy: .public)"
+            )
+        } catch {
+            Self.logger.error(
+                "launch failed project=\(projectID.uuidString, privacy: .public): \(error.localizedDescription, privacy: .public)"
+            )
+            currentlyRunning = nil
+            currentProject = nil
+            currentRun = nil
+            currentReadTask?.cancel()
+            currentReadTask = nil
+            progressPollTasks[projectID]?.cancel()
+            progressPollTasks[projectID] = nil
+            state[projectID] = .failed(
+                // `localizedDescription` is Foundation's, already in the user's
+                // language — it passes through as a variable rather than being
+                // re-described by us.
+                FailureMessage.keyed(
+                    "desktop.pipeline.failure.launchFailed",
+                    vars: ["reason": error.localizedDescription]
+                ),
+                category: .unknown
+            )
+            startNextQueued()
+        }
+    }
+
+    /// Resolve the sidecar binary the same way ServeManager does. Three
+    /// shapes of failure: external-server scheme has no binary to spawn,
+    /// resolver itself can fail (bundle missing, dev path invalid), and
+    /// both surface as `.failed` state on the project so the GUI shows
+    /// something actionable. Nil after writing that state.
+    private func resolveSidecar(for project: Project) -> (binary: URL, mode: SidecarMode)? {
         let binary: URL
         let resolvedMode: SidecarMode
         #if DEBUG
@@ -1581,7 +1783,7 @@ final class PipelineRunner: ObservableObject {
                 // this sentence can only be read by someone running from Xcode.
                 // English by decision (`docs/design-i18n.md` §"Which surfaces").
                 state[project.id] = .failed(.passthrough(message), category: .unknown)
-                return
+                return nil
             }
         case .failure(let err):
             Self.logger.error(
@@ -1594,18 +1796,17 @@ final class PipelineRunner: ObservableObject {
             state[project.id] = .failed(
                 .passthrough(err.localizedDescription), category: .unknown
             )
-            return
+            return nil
         }
+        return (binary, resolvedMode)
+    }
 
-        generation += 1
-        let gen = generation
-        currentlyRunning = project.id
-        currentProject = project
-        currentParser = StdoutProgressParser()
-        cancellationRequested = false
-        beginSpawnedRun(project)
-        startProgressPoll(for: project, generation: gen)
-
+    /// Launch the sidecar's `run` for `project`: the app's `RunLauncher`.
+    private func launchSidecar(
+        _ binary: URL, mode resolvedMode: SidecarMode, project: Project,
+        clean: Bool, generation gen: Int,
+        onExit: @escaping @Sendable (ProcessOutcome) -> Void
+    ) throws -> LaunchedRun {
         let proc = Process()
         proc.executableURL = binary
         // --no-serve makes `bristlenose run` exit after the pipeline completes
@@ -1669,50 +1870,19 @@ var args = ["run", project.path, "--no-serve"]
             }
         }
 
-        proc.terminationHandler = { [weak self] p in
+        proc.terminationHandler = { p in
             // BOTH fields, always. terminationStatus carries the SIGNAL NUMBER
             // when the process was killed, and only terminationReason says
             // which of the two numbers this is. See ProcessOutcome.
-            let outcome = ProcessOutcome(
-                status: p.terminationStatus, reason: p.terminationReason
-            )
-            Task { @MainActor in
-                await self?.handleTermination(
-                    projectID: projectID, outcome: outcome, generation: gen
-                )
-            }
+            onExit(ProcessOutcome(status: p.terminationStatus, reason: p.terminationReason))
         }
 
-        do {
-            try proc.run()
-            currentProcess = proc
-            // Tiny race here: if the app crashes between proc.run() returning
-            // and writePIDFile completing, the orphan exists but is
-            // unattachable on next launch. Window is single-process-spawn
-            // wide (~ms); accepted rather than working around it with a
-            // separate `lsof`-style argv sweep on launch.
-            Self.writePIDFile(for: project, pid: proc.processIdentifier)
-            Self.logger.info(
-                "spawned bristlenose run project=\(projectID.uuidString, privacy: .public) pid=\(proc.processIdentifier, privacy: .public)"
-            )
-        } catch {
-            currentlyRunning = nil
-            currentProject = nil
-            currentProcess = nil
-            currentReadTask?.cancel()
-            currentReadTask = nil
-            state[projectID] = .failed(
-                // `localizedDescription` is Foundation's, already in the user's
-                // language — it passes through as a variable rather than being
-                // re-described by us.
-                FailureMessage.keyed(
-                    "desktop.pipeline.failure.launchFailed",
-                    vars: ["reason": error.localizedDescription]
-                ),
-                category: .unknown
-            )
-            startNextQueued()
-        }
+        try proc.run()
+        return LaunchedRun(
+            pid: proc.processIdentifier,
+            isRunning: { proc.isRunning },
+            processGroup: getpgid(proc.processIdentifier)
+        )
     }
 
     private func handleLine(_ line: String, for projectID: UUID, generation gen: Int) {
@@ -1746,7 +1916,12 @@ var args = ["run", project.path, "--no-serve"]
     private func handleTermination(
         projectID: UUID, outcome: ProcessOutcome, generation gen: Int
     ) async {
-        guard gen == generation else { return }
+        guard gen == generation else {
+            Self.logger.error(
+                "termination of a superseded run project=\(projectID.uuidString, privacy: .public) — ignored"
+            )
+            return
+        }
         // Everything downstream has always keyed off this number; ProcessOutcome
         // adds the meaning the number was missing, it does not redefine it.
         let status = outcome.rawStatus
@@ -1755,24 +1930,28 @@ var args = ["run", project.path, "--no-serve"]
         if let project {
             Self.removePIDFile(for: project)
         }
-        currentProcess = nil
+        currentRun = nil
         currentReadTask?.cancel()
         currentReadTask = nil
         progressPollTasks[projectID]?.cancel()
         progressPollTasks[projectID] = nil
-        currentlyRunning = nil
-        currentProject = nil
         // NOTE: state[projectID] stays `.running` until the manifest-read
-        // await below resolves. cancel() guards on `proc.isRunning`, so a
-        // Stop click during this window is a clean no-op (no signal sent,
-        // no crash). The spinner-into-the-void is a sub-5s papercut on
-        // slow disks; flipping to a transient state here would race with
-        // any concurrent passive sidebar scan that preserves .running.
+        // await below resolves, and so does the slot (`currentlyRunning`):
+        // a `start` in this window queues behind it rather than spawning.
+        // Freed before the await, the slot went to whatever started next,
+        // which moved `generation`, and the guard after the await then left
+        // this study on "Analysing" for good — holding the sleep assertion
+        // until quit (R23, 20 Oct 2026). cancel() finds no `currentRun`, so a
+        // Stop click here is a clean no-op. The spinner-into-the-void is a
+        // sub-5s papercut on slow disks; flipping to a transient state here
+        // would race with any concurrent passive sidebar scan that preserves
+        // .running.
 
         // Cancellation only takes effect on a non-zero exit — if the sidecar
         // raced the cancel and finished cleanly anyway, we keep the result.
         if status != 0, cancellationRequested {
             cancellationRequested = false
+            releaseSlot()
             state[projectID] = .idle
             Self.logger.info(
                 "run cancelled project=\(projectID.uuidString, privacy: .public)"
@@ -1794,7 +1973,14 @@ var args = ["run", project.path, "--no-serve"]
             derived = await resolveTerminationState(
                 projectID: projectID, project: project
             )
-            guard gen == generation else { return }
+            // Unreachable while the slot is held: nothing can spawn until
+            // `releaseSlot` below. If it ever fires, a newer run owns the slot.
+            guard gen == generation else {
+                Self.logger.error(
+                    "termination superseded during its end-state read project=\(projectID.uuidString, privacy: .public) — state not written"
+                )
+                return
+            }
         } else {
             // Non-zero exit + no success markers — skip the disk read.
             derived = .idle
@@ -1805,6 +1991,7 @@ var args = ["run", project.path, "--no-serve"]
             sidecarReportedSuccess: sidecarReportedSuccess,
             derived: derived
         )
+        releaseSlot()
 
         switch decision {
         case .accept(let final):
@@ -2016,30 +2203,47 @@ var args = ["run", project.path, "--no-serve"]
         }
     }
 
+    /// The run is over and its end state is about to be written: the slot is
+    /// free for the next.
+    private func releaseSlot() {
+        currentlyRunning = nil
+        currentProject = nil
+    }
+
     private func startNextQueued() {
-        guard !queue.isEmpty else { return }
-        let nextID = queue.removeFirst()
+        guard let next = queue.popFirst() else { return }
+        let nextID = next.id
         renumberQueue()
 
-        guard let index = projectIndex,
-              let project = index.projects.first(where: { $0.id == nextID }) else {
-            // Index not wired or project disappeared — keep the ID visible as
-            // queued so we don't silently drop the user's request, and log so
-            // a missing setProjectIndex() call shows up.
+        guard let index = projectIndex else {
+            // Index not wired — keep the ID visible as queued so we don't
+            // silently drop the user's request, and log so a missing
+            // setProjectIndex() call shows up.
             Self.logger.error(
-                "startNextQueued: no projectIndex or project=\(nextID.uuidString, privacy: .public) missing — leaving queued"
+                "startNextQueued: no projectIndex for project=\(nextID.uuidString, privacy: .public) — leaving queued"
             )
-            queue.insert(nextID, at: 0)
+            queue.pushFront(next)
             renumberQueue()
             return
         }
-        spawn(project: project)
+        guard let project = index.projects.first(where: { $0.id == nextID }) else {
+            // Removed from the sidebar while it waited. Put back at the head,
+            // it was popped and re-inserted at every turn and nothing behind
+            // it ever ran.
+            Self.logger.notice(
+                "startNextQueued: project=\(nextID.uuidString, privacy: .public) no longer in the sidebar — dropped from the queue"
+            )
+            state[nextID] = nil
+            startNextQueued()
+            return
+        }
+        spawn(project: project, clean: next.clean)
     }
 
     // MARK: - Queue management
 
     private func renumberQueue() {
-        for (offset, id) in queue.enumerated() {
+        for (offset, id) in queue.ids.enumerated() {
             state[id] = .queued(position: offset + 1)
         }
     }

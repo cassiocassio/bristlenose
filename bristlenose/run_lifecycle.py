@@ -135,9 +135,11 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
         # SIGINT and then the parent-death watcher's SIGTERM, and a second
         # interrupt raised mid-unwind escaped the cancel write or was wrapped
         # by pydantic as an ordinary error: a cancel recorded as a failure
-        # (R19). The CLI keeps a second Ctrl-C as the user's force. The app's
-        # Stop on an attached run escalates to SIGKILL, which no handler sees;
-        # its own run's Stop, and Quit, send SIGINT only.
+        # (R19). The CLI keeps a second Ctrl-C as the user's force. Quit sends
+        # SIGINT only. The app's Stop, on its own run or an attached one,
+        # escalates: SIGINT, SIGTERM at +5 s (ignored here), SIGKILL at +8 s,
+        # which no handler sees and which is what ends a stopping hosted run.
+        # Nothing escalates after Quit: `_arm_hosted_backstop` ends a stuck unwind.
         return
     _caught_signal = signum
     if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":

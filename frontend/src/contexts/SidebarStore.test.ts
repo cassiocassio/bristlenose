@@ -8,7 +8,7 @@ import {
   resetSidebarStore,
   toggleTagGroupHidden,
   setTagGroupsHidden,
-  initHiddenTagGroups,
+  hydrateHiddenTagGroups,
   hydrateFrameworkStates,
   setFrameworkDisabled,
   dropFrameworkDisabled,
@@ -43,6 +43,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 
 // Mock the API module so fire-and-forget PUTs don't hit the network.
 vi.mock("../utils/api", () => ({
+  getHiddenTagGroups: vi.fn(() => Promise.resolve([])),
   putHiddenTagGroups: vi.fn(),
   putFrameworkStates: vi.fn(),
   getFrameworkStates: vi.fn(() => Promise.resolve({})),
@@ -50,6 +51,7 @@ vi.mock("../utils/api", () => ({
 
 import {
   getFrameworkStates,
+  getHiddenTagGroups,
   putFrameworkStates,
   putHiddenTagGroups,
 } from "../utils/api";
@@ -115,33 +117,37 @@ describe("hiddenTagGroups", () => {
   });
 });
 
-describe("initHiddenTagGroups", () => {
-  it("hydrates from API data", () => {
+describe("hydrateHiddenTagGroups", () => {
+  it("applies the persisted set, without writing it back", async () => {
+    vi.mocked(getHiddenTagGroups).mockResolvedValueOnce(["Behaviour", "Trust"]);
     const { result } = renderHook(() => useSidebarStore());
-    act(() => initHiddenTagGroups(["Behaviour", "Trust"]));
-    expect(result.current.hiddenTagGroups.size).toBe(2);
+    act(() => hydrateHiddenTagGroups());
+    await waitFor(() => expect(result.current.hiddenTagGroups.size).toBe(2));
     expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
-    expect(result.current.hiddenTagGroups.has("Trust")).toBe(true);
-  });
-
-  it("replaces existing hidden groups", () => {
-    const { result } = renderHook(() => useSidebarStore());
-    act(() => toggleTagGroupHidden("Old"));
-    act(() => initHiddenTagGroups(["New"]));
-    expect(result.current.hiddenTagGroups.has("Old")).toBe(false);
-    expect(result.current.hiddenTagGroups.has("New")).toBe(true);
-  });
-
-  it("empty array clears all", () => {
-    const { result } = renderHook(() => useSidebarStore());
-    act(() => initHiddenTagGroups(["A", "B"]));
-    act(() => initHiddenTagGroups([]));
-    expect(result.current.hiddenTagGroups.size).toBe(0);
-  });
-
-  it("does not call putHiddenTagGroups (hydration is read-only)", () => {
-    act(() => initHiddenTagGroups(["A"]));
     expect(putHiddenTagGroups).not.toHaveBeenCalled();
+  });
+
+  it("discards a read that was in flight when an eye was toggled", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => setTagGroupsHidden(["A"], true));
+    await act(async () => {
+      answer([]);
+      await Promise.resolve();
+    });
+    expect(result.current.hiddenTagGroups.has("A")).toBe(true);
+  });
+
+  it("reads once per session, and again after a failed read", async () => {
+    vi.mocked(getHiddenTagGroups).mockRejectedValueOnce(new Error("offline"));
+    act(() => hydrateHiddenTagGroups());
+    await waitFor(() => expect(getHiddenTagGroups).toHaveBeenCalledTimes(1));
+    await act(async () => { await Promise.resolve(); });
+    act(() => hydrateHiddenTagGroups());
+    act(() => hydrateHiddenTagGroups());
+    expect(getHiddenTagGroups).toHaveBeenCalledTimes(2);
   });
 });
 

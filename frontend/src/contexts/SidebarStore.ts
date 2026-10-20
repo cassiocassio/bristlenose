@@ -17,7 +17,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { getFrameworkStates, putFrameworkStates, putHiddenTagGroups } from "../utils/api";
+import { getFrameworkStates, getHiddenTagGroups, putFrameworkStates, putHiddenTagGroups } from "../utils/api";
 import type { FrameworkStatesPutResult } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 
@@ -222,6 +222,16 @@ let frameworkStatesHydrated = false;
  * just-made choice. Closes the initial-load-latency race the guard alone can't.
  */
 let frameworkEditGeneration = 0;
+
+/**
+ * Hidden tag groups follow the same two rules (R93). Every TagSidebar mount used
+ * to re-read them and replace the set wholesale, so an eye clicked while that
+ * read was in flight, or just before a remount whose read beat the click's PUT,
+ * snapped back. Read once per session; a toggle bumps the generation so a read
+ * already in flight discards its answer.
+ */
+let hiddenTagGroupsHydrated = false;
+let hiddenTagGroupsEditGeneration = 0;
 
 /**
  * The arrangement stashed by the last `hideAllSidebars()`, put back by the next
@@ -571,14 +581,23 @@ export function setTagsWidth(width: number): void {
 }
 
 /**
- * Hydrate hidden tag groups from the API on mount.
- * Replaces any existing set wholesale.
+ * Read the persisted hidden tag groups once per session and apply them, unless
+ * an eye was toggled while the read was in flight. Safe to call from every
+ * TagSidebar mount — the first caller wins, and a failed read lets a later
+ * mount retry.
  */
-export function initHiddenTagGroups(groupNames: string[]): void {
-  setState((prev) => ({
-    ...prev,
-    hiddenTagGroups: new Set(groupNames),
-  }));
+export function hydrateHiddenTagGroups(): void {
+  if (hiddenTagGroupsHydrated) return;
+  hiddenTagGroupsHydrated = true;
+  const genAtFetch = hiddenTagGroupsEditGeneration;
+  getHiddenTagGroups()
+    .then((groupNames) => {
+      if (hiddenTagGroupsEditGeneration !== genAtFetch) return;
+      setState((prev) => ({ ...prev, hiddenTagGroups: new Set(groupNames) }));
+    })
+    .catch(() => {
+      hiddenTagGroupsHydrated = false;
+    });
 }
 
 /**
@@ -587,6 +606,7 @@ export function initHiddenTagGroups(groupNames: string[]): void {
  * Persists to SQLite via fire-and-forget PUT.
  */
 export function toggleTagGroupHidden(groupName: string): void {
+  hiddenTagGroupsEditGeneration += 1;
   setState((prev) => {
     const next = new Set(prev.hiddenTagGroups);
     if (next.has(groupName)) next.delete(groupName);
@@ -602,6 +622,7 @@ export function toggleTagGroupHidden(groupName: string): void {
  * Persists to SQLite via fire-and-forget PUT.
  */
 export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void {
+  hiddenTagGroupsEditGeneration += 1;
   setState((prev) => {
     const next = new Set(prev.hiddenTagGroups);
     for (const name of groupNames) {
@@ -785,6 +806,8 @@ export function resetSidebarStore(): void {
   };
   frameworkStatesHydrated = false;
   frameworkEditGeneration = 0;
+  hiddenTagGroupsHydrated = false;
+  hiddenTagGroupsEditGeneration = 0;
   allSidebarsStash = null;
   listeners.forEach((l) => l());
 }

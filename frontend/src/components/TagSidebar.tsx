@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { apiGet, getCodebook, getHiddenTagGroups } from "../utils/api";
+import { apiGet, getCodebook } from "../utils/api";
 import { getGroupBg } from "../utils/colours";
 import type {
   CodebookResponse,
@@ -37,7 +37,7 @@ import {
   exitSoloMode,
   clearPendingSoloTag,
   hydrateFrameworkStates,
-  initHiddenTagGroups,
+  hydrateHiddenTagGroups,
   setTagGroupsHidden,
   toggleTagGroupHidden,
   useSidebarStore,
@@ -305,11 +305,10 @@ export function TagSidebar() {
       .catch(() => {});
   }, []);
 
-  // Hydrate hidden tag groups from API on mount
+  // Hydrate hidden tag groups once per session — guarded in the store, so a
+  // remount or an eye clicked mid-read is not undone by a stale answer (R93).
   useEffect(() => {
-    getHiddenTagGroups()
-      .then((groups) => initHiddenTagGroups(groups))
-      .catch(() => {});
+    hydrateHiddenTagGroups();
   }, []);
 
   // Hydrate framework enable/disable state so disabled frameworks' badges are

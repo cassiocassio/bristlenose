@@ -10,7 +10,7 @@
  *     codebook snapshot predates it
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TagSidebar, buildVisibleFrameworks, mergePendingTags } from "./TagSidebar";
@@ -30,6 +30,8 @@ import {
   enterSoloMode,
   requestSoloTag,
   resetSidebarStore,
+  toggleTagGroupHidden,
+  useSidebarStore,
 } from "../contexts/SidebarStore";
 
 const t = (k: string) => k;
@@ -194,6 +196,7 @@ vi.mock("../utils/api", async (importOriginal) => {
     ...actual,
     getCodebook: vi.fn(),
     getHiddenTagGroups: vi.fn(),
+    putHiddenTagGroups: vi.fn(),
     getFrameworkStates: vi.fn(),
     apiGet: vi.fn(),
   };
@@ -305,5 +308,34 @@ describe("TagSidebar", () => {
     await waitFor(() => expect(screen.getByText("Pricing")).toBeTruthy());
     expect(getQuotesSnapshot().tagFilter).toBe(soloed);
     expect(container.querySelector(".tag-solo-active")).toBeTruthy();
+  });
+
+  // R93: every mount re-read the hidden groups and replaced the set wholesale,
+  // so an eye clicked while that read was in flight — or just before the
+  // sidebar remounted, its PUT not yet landed — snapped back.
+  it("keeps an eye toggled while the hidden-groups read is in flight", async () => {
+    let answer!: (groups: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const store = renderHook(() => useSidebarStore());
+    render(<TagSidebar />);
+    await waitFor(() => expect(getHiddenTagGroups).toHaveBeenCalled());
+    act(() => toggleTagGroupHidden("Behaviour"));
+    await act(async () => {
+      answer([]); // the server's set from before the click
+      await Promise.resolve();
+    });
+    expect(store.result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
+  });
+
+  it("keeps an eye toggled before the sidebar remounts", async () => {
+    const store = renderHook(() => useSidebarStore());
+    const first = render(<TagSidebar />);
+    await waitFor(() => expect(getHiddenTagGroups).toHaveBeenCalledTimes(1));
+    await act(async () => { await Promise.resolve(); });
+    first.unmount();
+    act(() => toggleTagGroupHidden("Behaviour"));
+    render(<TagSidebar />); // the PUT has not landed: a re-read would say []
+    await act(async () => { await Promise.resolve(); });
+    expect(store.result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
   });
 });

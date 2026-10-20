@@ -35,7 +35,8 @@
     "search": "Search",
     "loading": "Loading…",
     "noResults": "No results",
-    "error": "Error"
+    "error": "Error",
+    "lensError": "This lens couldn’t be shown. Try again, or choose another lens."
   },
   "header": {
     "logoAlt": "Bristlenose logo",

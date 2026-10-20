@@ -35,7 +35,8 @@
     "search": "Szukaj",
     "loading": "Wczytywanie…",
     "noResults": "Brak wyników",
-    "error": "Błąd"
+    "error": "Błąd",
+    "lensError": "Nie udało się wyświetlić tego widoku. Spróbuj ponownie lub wybierz inny widok."
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

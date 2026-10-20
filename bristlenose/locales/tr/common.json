@@ -35,7 +35,8 @@
     "search": "Ara",
     "loading": "Yükleniyor…",
     "noResults": "Sonuç yok",
-    "error": "Hata"
+    "error": "Hata",
+    "lensError": "Bu görünüm gösterilemedi. Yeniden deneyin veya başka bir görünüm seçin."
   },
   "header": {
     "logoAlt": "Bristlenose logosu",

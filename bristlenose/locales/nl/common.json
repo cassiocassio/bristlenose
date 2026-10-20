@@ -35,7 +35,8 @@
     "search": "Zoek",
     "loading": "Laden…",
     "noResults": "Geen resultaten",
-    "error": "Fout"
+    "error": "Fout",
+    "lensError": "Deze weergave kon niet worden getoond. Probeer het opnieuw of kies een andere weergave."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

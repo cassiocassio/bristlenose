@@ -35,7 +35,8 @@
     "search": "Sök",
     "loading": "Läser in…",
     "noResults": "Inga resultat",
-    "error": "Fel"
+    "error": "Fel",
+    "lensError": "Den här vyn kunde inte visas. Försök igen eller välj en annan vy."
   },
   "header": {
     "logoAlt": "Bristlenose-logotyp",

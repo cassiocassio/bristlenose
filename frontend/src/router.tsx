@@ -30,42 +30,53 @@ export const routes = [
   {
     path: "/report",
     element: <AppLayout />,
-    // Single route-level boundary — catches render errors in the layout and
-    // every tab (and loader/action rejections), so a crash shows a calm
-    // fallback instead of a white screen or dev-facing stack trace.
+    // Layout-level boundary — catches render errors in AppLayout itself (and
+    // loader/action rejections), so a crash shows a calm fallback instead of a
+    // white screen or dev-facing stack trace. Lens crashes stop one level down.
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <ProjectTab /> },
-      { path: "sessions", element: <SessionsTab /> },
-      { path: "sessions/:sessionId", element: <TranscriptTab /> },
-      { path: "quotes", element: <QuotesTab /> },
-      // The codebook lens is what was built as "v2"; it replaced the original
-      // on 31 Aug 2026 and took its route, its label and its translations.
-      // `/report/codebook-v2` is deliberately NOT kept as an alias: it was
-      // dev-gated and never reachable by a researcher, so nothing in the wild
-      // holds that URL.
-      { path: "codebook", element: <CodebookV2Tab /> },
-      { path: "signals", element: <SignalsTab /> },
-      // Renamed 20 Sep 2026. Bookmarks and already-exported reports still
-      // point at the old path, so it redirects rather than 404s.
-      { path: "analysis", element: <Navigate to="/report/signals/" replace /> },
-      // Debug lens — test content on a visible grid (dev-gated NavBar link;
-      // desktop entry via Diagnostics menu). Route always registered: the
-      // page is benign specimen content and lazy-loads only when visited.
-      { path: "specimen", element: <SpecimenTab /> },
-      // Web half of Diagnostics ▸ Picker Lab (the moderator-identity picker,
-      // beside its AppKit twin). Same terms as Specimen: always registered,
-      // lazy, reachable only from the Diagnostics menu.
-      { path: "picker-specimen", element: <PickerSpecimenTab /> },
-      // Discussion lens — the researcher's guide merged with what was asked
-      // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
-      { path: "discussion", element: <DiscussionTab /> },
-      // Screens lens (docs/design-screens.md S5). Always registered, lazy; the nav offers it when
-      // the project has screens (islands/screens/availability.ts).
-      { path: "screens", element: <ScreensTab /> },
-      { path: "about", element: <Navigate to="/report/" replace /> },
-      // Catch-all: unknown sub-paths redirect to project tab
-      { path: "*", element: <Navigate to="/report/" replace /> },
+      {
+        // One boundary per lens (R85): a crash in a lens shows its fallback
+        // inside AppLayout's Outlet, so the header, nav, sidebars and the other
+        // lenses keep working. A pathless route with no element renders its
+        // children through an implicit Outlet; React Router resets the
+        // boundary when the location changes, so choosing another lens clears
+        // it. The `/report` boundary above still catches a crash in the layout.
+        errorElement: <RouteError scope="lens" />,
+        children: [
+          { index: true, element: <ProjectTab /> },
+          { path: "sessions", element: <SessionsTab /> },
+          { path: "sessions/:sessionId", element: <TranscriptTab /> },
+          { path: "quotes", element: <QuotesTab /> },
+          // The codebook lens is what was built as "v2"; it replaced the original
+          // on 31 Aug 2026 and took its route, its label and its translations.
+          // `/report/codebook-v2` is deliberately NOT kept as an alias: it was
+          // dev-gated and never reachable by a researcher, so nothing in the wild
+          // holds that URL.
+          { path: "codebook", element: <CodebookV2Tab /> },
+          { path: "signals", element: <SignalsTab /> },
+          // Renamed 20 Sep 2026. Bookmarks and already-exported reports still
+          // point at the old path, so it redirects rather than 404s.
+          { path: "analysis", element: <Navigate to="/report/signals/" replace /> },
+          // Debug lens — test content on a visible grid (dev-gated NavBar link;
+          // desktop entry via Diagnostics menu). Route always registered: the
+          // page is benign specimen content and lazy-loads only when visited.
+          { path: "specimen", element: <SpecimenTab /> },
+          // Web half of Diagnostics ▸ Picker Lab (the moderator-identity picker,
+          // beside its AppKit twin). Same terms as Specimen: always registered,
+          // lazy, reachable only from the Diagnostics menu.
+          { path: "picker-specimen", element: <PickerSpecimenTab /> },
+          // Discussion lens — the researcher's guide merged with what was asked
+          // (docs/design-discussion-lens-plan.md). Lazy-loaded when visited.
+          { path: "discussion", element: <DiscussionTab /> },
+          // Screens lens (docs/design-screens.md S5). Always registered, lazy; the nav offers it when
+          // the project has screens (islands/screens/availability.ts).
+          { path: "screens", element: <ScreensTab /> },
+          { path: "about", element: <Navigate to="/report/" replace /> },
+          // Catch-all: unknown sub-paths redirect to project tab
+          { path: "*", element: <Navigate to="/report/" replace /> },
+        ],
+      },
     ],
   },
 ];

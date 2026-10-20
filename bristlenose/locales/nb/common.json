@@ -35,7 +35,8 @@
     "search": "Søk",
     "loading": "Laster inn …",
     "noResults": "Ingen treff",
-    "error": "Feil"
+    "error": "Feil",
+    "lensError": "Denne visningen kunne ikke vises. Prøv igjen, eller velg en annen visning."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

@@ -35,7 +35,8 @@
     "search": "Haku",
     "loading": "Ladataan…",
     "noResults": "Ei tuloksia",
-    "error": "Virhe"
+    "error": "Virhe",
+    "lensError": "Tätä näkymää ei voitu näyttää. Yritä uudelleen tai valitse toinen näkymä."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

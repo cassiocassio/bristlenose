@@ -35,7 +35,8 @@
     "search": "검색",
     "loading": "로드 중…",
     "noResults": "결과 없음",
-    "error": "오류"
+    "error": "오류",
+    "lensError": "이 보기를 표시할 수 없습니다. 다시 시도하거나 다른 보기를 선택하세요."
   },
   "titlebar": {
     "quotes_other": "{{count}}\uac1c\u00a0\uc778\uc6a9\ubb38",

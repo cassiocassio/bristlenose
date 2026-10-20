@@ -35,7 +35,8 @@
     "search": "Suchen",
     "loading": "Laden…",
     "noResults": "Keine Ergebnisse",
-    "error": "Fehler"
+    "error": "Fehler",
+    "lensError": "Diese Ansicht konnte nicht angezeigt werden. Versuchen Sie es erneut oder wählen Sie eine andere Ansicht."
   },
   "titlebar": {
     "quotes_one": "{{count}} Zitat",

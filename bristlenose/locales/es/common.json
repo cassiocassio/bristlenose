@@ -35,7 +35,8 @@
     "search": "Buscar",
     "loading": "Cargando…",
     "noResults": "Sin resultados",
-    "error": "Error"
+    "error": "Error",
+    "lensError": "No se ha podido mostrar esta vista. Vuelve a intentarlo o elige otra vista."
   },
   "titlebar": {
     "quotes_one": "{{count}} Cita",

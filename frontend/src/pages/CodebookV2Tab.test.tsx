@@ -57,10 +57,15 @@ function renderAt(path: string) {
   );
 }
 
+// Every path under `/report`, at any depth: the lenses sit inside a pathless
+// boundary route (R85), so they are grandchildren, not children.
+type RouteNode = { path?: string; children?: RouteNode[] };
+const descendants = (r: RouteNode): RouteNode[] =>
+  (r.children ?? []).flatMap((c) => [c, ...descendants(c)]);
 const childPaths = () =>
-  routes
-    .flatMap((r) => ("children" in r && r.children ? r.children : []))
-    .map((c) => (c as { path?: string }).path)
+  (routes as RouteNode[])
+    .flatMap(descendants)
+    .map((c) => c.path)
     .filter(Boolean);
 
 describe("the codebook lens", () => {

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import sys
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -150,11 +151,18 @@ def discover_files(
         )
 
     files: list[InputFile] = []
-    _scan_dir(input_dir, 0, files, skipped)
+    _scan_dir(input_dir, 0, files, skipped, set())
 
     # Sort by creation date, then filename as tiebreaker
     files.sort(key=lambda f: (f.created_at, f.path.name))
     return files
+
+
+def _resolved(path: Path) -> Path:
+    try:
+        return path.resolve()
+    except OSError:  # a link loop, or a target that vanished mid-scan
+        return path.absolute()
 
 
 def _scan_dir(
@@ -162,6 +170,7 @@ def _scan_dir(
     depth: int,
     files: list[InputFile],
     skipped: list[SkippedFile] | None,
+    seen: set[Path],
 ) -> None:
     """Walk *directory*, descending while files stay within _MAX_SCAN_DEPTH.
 
@@ -172,7 +181,9 @@ def _scan_dir(
     zero-byte file that aborted a 42-session run.
     """
     try:
-        entries = sorted(directory.iterdir())
+        # Real entries before links, so a link to something already here is
+        # the one set aside, and the session keeps its original's path.
+        entries = sorted(directory.iterdir(), key=lambda e: (e.is_symlink(), e))
     except PermissionError:
         if skipped is not None:
             skipped.append(
@@ -210,6 +221,14 @@ def _scan_dir(
         # out the refusals that are genuinely theirs.
         if is_bristlenose_artefact(entry):
             continue
+        # Each folder and file once, however many links reach it: a symlinked
+        # folder inside the interview folder duplicated every session in it
+        # (R123).
+        real = _resolved(entry)
+        if real in seen:
+            logger.debug("Skipping %s: already scanned as %s", entry, real)
+            continue
+        seen.add(real)
         try:
             if entry.is_dir():
                 # Never descend into our own output, and never report what is
@@ -231,7 +250,7 @@ def _scan_dir(
                 if depth == 0 and is_guide_folder(entry):
                     continue
                 if depth + 1 < _MAX_SCAN_DEPTH:
-                    _scan_dir(entry, depth + 1, files, skipped)
+                    _scan_dir(entry, depth + 1, files, skipped, seen)
             elif entry.is_file():
                 _try_add_file(entry, files, skipped)
         except OSError as exc:  # a single unstatable entry must not end the walk
@@ -458,6 +477,17 @@ def _is_zoom_local_dir(dir_name: str) -> bool:
     return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))
 
 
+def _stem_of(path: Path) -> str:
+    """The lowercased, NFC-composed stem every grouping key starts from.
+
+    macOS keeps a name as the tool wrote it, composed (``é``) or decomposed
+    (``e`` + combining acute), so a recording and its transcript can look the
+    same and differ byte for byte; until 20 Oct 2026 they became two sessions
+    and the recording was transcribed beside its own transcript (R123).
+    """
+    return unicodedata.normalize("NFC", path.stem).lower()
+
+
 def _stamp_and_title(stem: str) -> tuple[str | None, str]:
     """Split a lowercased stem into Bristlenose's download stamp and its key.
 
@@ -485,7 +515,7 @@ def _group_by_stem(files: list[InputFile]) -> list[list[InputFile]]:
     stamped: dict[tuple[str, str], list[InputFile]] = {}
     unstamped: dict[str, list[InputFile]] = {}
     for f in files:
-        stamp, key = _stamp_and_title(f.path.stem.lower())
+        stamp, key = _stamp_and_title(_stem_of(f.path))
         if stamp is not None:
             stamped.setdefault((stamp, key), []).append(f)
         else:
@@ -550,10 +580,10 @@ def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
         if parent and _is_zoom_local_dir(parent):
             return f"zoom:{parent}"
     for f in files:
-        stamp, key = _stamp_and_title(f.path.stem.lower())
+        stamp, key = _stamp_and_title(_stem_of(f.path))
         if stamp is not None:
             return f"stamp:{stamp}|{key}"
-    _stamp, key = _stamp_and_title(files[0].path.stem.lower())
+    _stamp, key = _stamp_and_title(_stem_of(files[0].path))
     if qualified:
         return f"stem:{key}@{files[0].path.parent.name}"
     return f"stem:{key}"

@@ -27,10 +27,13 @@ distinguish "key valid + paid" from "key valid + no balance" — both return
 State (finding 8): :func:`state_path` returns ``~/Library/Application
 Support/Bristlenose/state.json`` on macOS and ``$XDG_DATA_HOME/Bristlenose/
 state.json`` on Linux. The 24-hour TTL means a successful validation skips
-the network on subsequent runs within the window — for the same model and
-parameters only (not the key or the endpoint): each record carries :func:`request_fingerprint` (the model and the
-``request_params``), so a model or ``llm_max_tokens`` changed the same day is
-checked again. Until 20 Oct 2026 the record was keyed by provider alone.
+the network on subsequent runs within the window — for the same request only:
+each record carries :func:`request_fingerprint` (the model, the
+``request_params``, a hash of the key, and where it goes: the Azure endpoint
+and API version, or the Ollama address), so a model, ``llm_max_tokens``, key or
+endpoint changed the same day is checked again. The key itself is never
+written. Until 20 Oct 2026 the record was keyed by provider alone, and until
+the next day by model and parameters alone.
 
 Whitelist (finding 4): the preflight is only called from LLM-touching
 commands (``run``, ``analyze``, ``transcribe-only``). Read-only commands
@@ -140,12 +143,26 @@ def write_state(state: dict[str, Any]) -> None:
         f.write(payload)
 
 
-def request_fingerprint(model: str, params: dict[str, Any]) -> str:
-    """A short digest of the request a validation sent: the model and the
-    parameters from ``request_params``. The 24-hour cache holds only for the
-    same request; a model or ``llm_max_tokens`` changed the same day is a new
-    request, which the provider may refuse, so it is checked again."""
-    blob = json.dumps({"model": model, "params": params}, sort_keys=True, default=str)
+def request_fingerprint(
+    model: str,
+    params: dict[str, Any],
+    *,
+    key: str = "",
+    endpoint: tuple[str, ...] = (),
+) -> str:
+    """A short digest of the request a validation sent: the model, the
+    parameters from ``request_params``, the key, and where it was sent
+    (``endpoint``: the Azure endpoint and API version, or the Ollama address;
+    empty for a provider with one fixed address). The 24-hour cache holds only
+    for the same request; a model, ``llm_max_tokens``, key or endpoint changed
+    the same day is a new request, which the provider may refuse, so it is
+    checked again. The key enters as its own SHA-256, never as itself."""
+    key_hash = hashlib.sha256(key.encode("utf-8")).hexdigest() if key else ""
+    blob = json.dumps(
+        {"model": model, "params": params, "key": key_hash, "endpoint": list(endpoint)},
+        sort_keys=True,
+        default=str,
+    )
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
 
 
@@ -633,8 +650,9 @@ def preflight_api_key(
     - **Provider with no rich support** (azure, google): skip rich validation;
       let downstream LLM calls surface failure naturally with the generic
       "Provider says: ..." copy on the call-site.
-    - **Recently validated** (24h TTL) with the same request (model and
-      parameters, :func:`request_fingerprint`): skip the network call.
+    - **Recently validated** (24h TTL) with the same request (model,
+      parameters, key and endpoint, :func:`request_fingerprint`): skip the
+      network call.
     - **No key at all**: skip — the existing ``_maybe_guide_provider_setup``
       handles missing-key UX; the preflight only validates *present* keys.
     - **Non-TTY**: skip the first-run *banner* but still validate. A CI run
@@ -666,15 +684,24 @@ def preflight_api_key(
     ):
         return
 
-    # The request this run will send — the model on the wire and every parameter
-    # the pipeline's calls carry — which the cache below is keyed by.
+    # The request this run will send — the model on the wire, every parameter
+    # the pipeline's calls carry, the key and the address it goes to — which the
+    # cache below is keyed by.
     _wire_model = settings.azure_deployment if provider == "azure" else (
         settings.local_model if provider == "local" else settings.llm_model
     )
     params = request_params(
         provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
     )
-    request = request_fingerprint(_wire_model, params)
+    if provider == "azure":
+        endpoint: tuple[str, ...] = (
+            str(settings.azure_endpoint), str(settings.azure_api_version),
+        )
+    elif provider == "local":
+        endpoint = (str(settings.local_url),)
+    else:
+        endpoint = ()
+    request = request_fingerprint(_wire_model, params, key=api_key, endpoint=endpoint)
 
     state = read_state()
     first_run = bool(state.get("first_run", True))

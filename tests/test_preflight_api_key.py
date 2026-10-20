@@ -719,7 +719,7 @@ class TestPreflightApiKey:
         monkeypatch.setattr(
             "bristlenose.preflight.api_key.state_path", lambda: path,
         )
-        # The record names the request it checked: this run's model and params.
+        # The record names the request it checked: this run's model, params and key.
         settings = _settings(anthropic_api_key="sk")
         request = request_fingerprint(
             settings.llm_model,
@@ -727,6 +727,7 @@ class TestPreflightApiKey:
                 "anthropic", settings.llm_model,
                 settings.llm_max_tokens, settings.llm_temperature,
             ),
+            key="sk",
         )
         write_state({
             "first_run": False,
@@ -806,6 +807,76 @@ class TestPreflightApiKey:
                 settings=_settings(anthropic_api_key="sk"), console=_console(),
             )
         validator.assert_called_once()
+
+    @pytest.mark.parametrize(
+        ("provider", "base", "change"),
+        [
+            ("anthropic", {"anthropic_api_key": "sk-one"}, {"anthropic_api_key": "sk-two"}),
+            (
+                "azure",
+                {"azure_api_key": "az-key"},
+                {"azure_api_key": "az-key", "azure_endpoint": "https://other.openai.azure.com/"},
+            ),
+            (
+                "azure",
+                {"azure_api_key": "az-key"},
+                {"azure_api_key": "az-key", "azure_api_version": "2025-01-01-preview"},
+            ),
+            ("local", {}, {"local_url": "http://192.168.1.20:11434/v1"}),
+        ],
+        ids=["key", "azure_endpoint", "azure_api_version", "local_url"],
+    )
+    def test_a_changed_key_or_endpoint_is_checked_again_the_same_day(
+        self, monkeypatch, tmp_path, provider, base, change
+    ):
+        """The fingerprint held the model and parameters only, so a new key, Azure
+        endpoint or API version, or Ollama address the same day skipped the check
+        and the run met the refusal at its first stage (R104 wave 6)."""
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
+        )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        with patch(
+            f"bristlenose.preflight.api_key._validate_{provider}",
+            return_value=ValidationResult(ok=True),
+        ) as validator:
+            preflight_api_key(
+                settings=_settings(llm_provider=provider, **base), console=_console(),
+            )
+            preflight_api_key(
+                settings=_settings(llm_provider=provider, **base), console=_console(),
+            )
+            assert validator.call_count == 1  # unchanged: the cache holds
+            preflight_api_key(
+                settings=_settings(llm_provider=provider, **change), console=_console(),
+            )
+        assert validator.call_count == 2
+
+    def test_the_state_file_never_holds_the_key(self, monkeypatch, tmp_path):
+        """The record is keyed by the key too, by a hash of it: the key itself is
+        never written to the state file."""
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.sys.stdin.isatty", lambda: True,
+        )
+        path = tmp_path / "state.json"
+        monkeypatch.setattr(
+            "bristlenose.preflight.api_key.state_path", lambda: path,
+        )
+        secret = "sk-ant-api03-a-very-particular-secret"
+        with patch(
+            "bristlenose.preflight.api_key._validate_anthropic",
+            return_value=ValidationResult(ok=True),
+        ):
+            preflight_api_key(
+                settings=_settings(anthropic_api_key=secret), console=_console(),
+            )
+        written = path.read_text(encoding="utf-8")
+        assert "request" in written
+        assert secret not in written
+        assert "a-very-particular-secret" not in written
 
     def test_ok_writes_state(self, monkeypatch, tmp_path):
         monkeypatch.setattr(

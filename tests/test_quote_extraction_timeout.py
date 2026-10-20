@@ -20,13 +20,12 @@ from __future__ import annotations
 import asyncio
 import functools
 import heapq
+import importlib
 import json
 import re
 from datetime import datetime, timezone
 
-import anthropic
 import httpx2
-import openai
 import pytest
 
 from bristlenose.config import BristlenoseSettings
@@ -199,7 +198,10 @@ def _run(
     # The production constructors run unchanged — retry budget and all — with
     # only the HTTP transport swapped for the fake endpoint.
     http_client = httpx2.AsyncClient(transport=httpx2.MockTransport(endpoint))
-    sdk = anthropic if provider == "anthropic" else openai
+    # Patch the SDK module the client will import NOW, not the one this file
+    # imported at collection: other tests swap SDK modules in sys.modules, and a
+    # patch on a stale module object sends the request to the real API.
+    sdk = importlib.import_module("anthropic" if provider == "anthropic" else "openai")
     name = "AsyncAnthropic" if provider == "anthropic" else "AsyncOpenAI"
     real = getattr(sdk, name)
     monkeypatch.setattr(sdk, name, functools.partial(real, http_client=http_client))
@@ -213,6 +215,8 @@ def _run(
         )
         secs = loop.time()
         loop.run_until_complete(http_client.aclose())
+        # Every request must have gone to the fake endpoint, never the network.
+        assert endpoint.jobs, "no request reached the fake endpoint"
         return quotes, outcome, secs
     finally:
         loop.close()

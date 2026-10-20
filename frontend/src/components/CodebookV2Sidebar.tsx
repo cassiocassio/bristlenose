@@ -60,8 +60,12 @@ import {
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
 import { adoptFrameworkDisabled } from "../contexts/SidebarStore";
+import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
 import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
+
+/** Numbers each catch-up's activity job (see onToggle). */
+let catchUpJobSeq = 0;
 
 // ── The platform switch ────────────────────────────────────────────────────
 
@@ -303,6 +307,21 @@ export function CodebookV2Sidebar() {
       const before = books;
       putFrameworkStates(Object.fromEntries(off.map((id) => [id, false]))).then((res) => {
         if (res.status !== "error") {
+          // Switching a codebook back on re-codes the sessions added while it was
+          // off, which is LLM spend (§4a), and the server names the codebooks that
+          // began one. Each becomes a chip, or the spend runs unseen and its tags
+          // arrive unannounced (R12). One chip per run, and the codebook's last
+          // catch-up chip goes, as for AutoCode runs.
+          for (const fid of res.catchUp) {
+            for (const [jobId, job] of getJobs()) {
+              if (job.type === "catchup" && job.frameworkId === fid) removeJob(jobId);
+            }
+            addJob(`catchup:${fid}:${++catchUpJobSeq}`, {
+              type: "catchup",
+              frameworkId: fid,
+              frameworkTitle: next.find((b) => b.id === fid)?.title ?? fid,
+            });
+          }
           window.dispatchEvent(new CustomEvent("codebook-changed"));
           return;
         }

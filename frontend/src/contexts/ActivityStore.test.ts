@@ -118,7 +118,10 @@ describe("rehydrateActivityJobs", () => {
     });
   });
 
-  it("puts back each AutoCode run in flight under its codebook's title, but not a catch-up", async () => {
+  it("puts back each AutoCode run in flight under its codebook's title, and a catch-up as one", async () => {
+    // A running job that finished once is the on-enable catch-up (the only path
+    // that sets a finished job running again), so it comes back as the chip it
+    // was given when the switch went on (R12), not as an AutoCode run.
     autocode.mockResolvedValue({
       jobs: [
         { framework_id: "garrett", title: "Garrett", status: "running", completed_at: null },
@@ -127,10 +130,24 @@ describe("rehydrateActivityJobs", () => {
       ],
     });
     await rehydrateActivityJobs("1");
-    expect([...getJobs().keys()]).toEqual(["autocode:garrett:restored", "autocode:norman:restored"]);
+    expect([...getJobs().keys()]).toEqual([
+      "autocode:garrett:restored", "autocode:norman:restored", "catchup:morville:restored",
+    ]);
     expect(getJobs().get("autocode:garrett:restored")).toEqual({
       type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett", originRoute: "/report/codebook/",
     });
+    expect(getJobs().get("catchup:morville:restored")).toEqual({
+      type: "catchup", frameworkId: "morville", frameworkTitle: "Morville",
+    });
+  });
+
+  it("does not double a catch-up whose chip the page already has", async () => {
+    addJob("catchup:morville:3", { type: "catchup", frameworkId: "morville", frameworkTitle: "Morville" });
+    autocode.mockResolvedValue({
+      jobs: [{ framework_id: "morville", title: "Morville", status: "running", completed_at: "2026-10-20T10:00:00" }],
+    });
+    await rehydrateActivityJobs("1");
+    expect([...getJobs().keys()]).toEqual(["catchup:morville:3"]);
   });
 
   it("adds nothing for a job that is idle, finished, failed or cancelled", async () => {

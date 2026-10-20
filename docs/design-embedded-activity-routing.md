@@ -47,7 +47,7 @@ that's worth the plumbing is the question this doc answers.
 | Activity | Trigger | Poll | Poll key |
 |---|---|---|---|
 | **AutoCode** | ✦ button, `CodebookPanel` | `GET /api/projects/{pid}/autocode/{framework_id}/status` (2 s) | `frameworkId` |
-| **Catch-up re-apply** | codebook re-enable, `CodebookPanel` | same autocode endpoint | `frameworkId` |
+| **Catch-up re-apply** | codebook re-enable, `CodebookPanel` (`CodebookV2Sidebar` since 20 Oct 2026, R12; nothing produced it between v1's deletion on 31 Aug and then) | same autocode endpoint | `frameworkId` |
 | **Clip export** | export dialog, `exportActions` | `GET /api/projects/{pid}/export/clips/status` (2 s) | *(none — per-project singleton)* |
 
 `ActivityJobEntry` (`contexts/ActivityStore.ts`) today is

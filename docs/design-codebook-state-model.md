@@ -13,6 +13,15 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
 
 ## Changelog
 
+- _2026-10-20_ — the on-enable catch-up's chip lost its producer with v1
+  (`baa1aa0e`, 31 Aug): `CodebookPanel` added it, and the v2 navigator that took
+  over the switch read `catchUp` from `PUT /framework-states` and dropped it, so
+  from 0.29.0 re-enabling a codebook with new sessions spent on the LLM with no
+  chip, and its tags arrived unannounced. `CodebookV2Sidebar` is the producer
+  again (one chip per run, the codebook's last catch-up chip removed), and a
+  reload restores a running catch-up as a catch-up chip
+  (`ActivityStore.rehydrateActivityJobs`: a running job with `completed_at` set).
+  §4a's mechanics are unchanged. Register: R12.
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
   **New §4b** records that `PUT /framework-states` is a full replacement, that
   absence means enabled, and that the two together make a partial body both a

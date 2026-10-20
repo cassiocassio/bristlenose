@@ -94,7 +94,8 @@ function hasJob(test: (job: ActivityJobEntry) => boolean): boolean {
  * with its Reveal or View Report, was never shown. Once per project, when the report loads.
  *
  * Running jobs only: a finished one's chip, once dismissed, would come back on every reload, since
- * nothing records a dismissal. A job a producer has added meanwhile is kept, not doubled (the
+ * nothing records a dismissal. A codebook's catch-up (switched back on with new sessions to code)
+ * comes back as a catch-up chip. A job a producer has added meanwhile is kept, not doubled (the
  * server holds one export of each kind per project, and one AutoCode run per codebook), and the
  * producers remove a restored chip by type, as they do their own, when they start the next run.
  * A restored Copy Screens is a plain export: the server does not record that it was a copy.
@@ -139,8 +140,18 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
     if (!Array.isArray(runs)) return;
     for (const run of runs) {
       if (typeof run?.framework_id !== "string") continue;
-      // A catch-up (a finished run re-coding new sessions) has no chip of its own today.
-      if (run.completed_at) continue;
+      // A running job that finished once is a catch-up: switching a codebook back on is the
+      // only path that sets a finished job running again (§4a). It comes back as the chip the
+      // switch gave it (R12).
+      if (run.completed_at) {
+        if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) continue;
+        addJob(`catchup:${run.framework_id}:restored`, {
+          type: "catchup",
+          frameworkId: run.framework_id,
+          frameworkTitle: run.title,
+        });
+        continue;
+      }
       if (hasJob((j) => j.type === "autocode" && j.frameworkId === run.framework_id)) continue;
       addJob(`autocode:${run.framework_id}:restored`, {
         type: "autocode",

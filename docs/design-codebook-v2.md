@@ -2722,7 +2722,9 @@ and naming it is the deliverable — not doing it inside a codebook mockup.
 > `autocode.chip.recoded`, exist in **no** locale file; English renders only
 > through `defaultValue`, so it is untranslated in every other language and
 > `check-locales.py` cannot see it (found 15 Oct, not fixed). Finding 5 is
-> still open.
+> still open. _20 Oct:_ the chip had no producer from v1's deletion until R12
+> gave it one in `CodebookV2Sidebar`, so the English-only strings are now on
+> screen in every language; the keys are still missing.
 
 Built 30 Aug. Every message the install-and-autotag path can produce, drawn in
 both renderings that carry it: the SPA toast and the macOS project-sidebar row

@@ -12,6 +12,7 @@ import {
   resetSidebarStore,
   useSidebarStore,
 } from "../contexts/SidebarStore";
+import { addJob, getJobs, resetActivityStore } from "../contexts/ActivityStore";
 
 const group = (over: Record<string, unknown> = {}) =>
   ({
@@ -256,6 +257,68 @@ describe("a write carries the whole disabled set, not the switch that moved", ()
 
     await waitFor(() => expect(putFrameworkStates).toHaveBeenCalledTimes(1));
     expect(putFrameworkStates).toHaveBeenCalledWith({});
+  });
+});
+
+// Switching a codebook back on can start paid re-coding of the sessions added while
+// it was off. The server answers which codebooks began one (`catchUp`), and the
+// navigator dropped the answer, so the spend ran with no chip and its tags arrived
+// unannounced (R12). The chip has had a renderer since July (AppLayout, type
+// "catchup"); this is its producer.
+describe("switching a codebook back on shows its catch-up (R12)", () => {
+  const flip = (id: string) =>
+    fireEvent.click(
+      screen
+        .getByTestId(`bn-v2-nav-row-${id}`)
+        .querySelector('[role="switch"], input[type="checkbox"]')!,
+    );
+
+  beforeEach(() => resetActivityStore());
+
+  it("adds a catch-up chip, titled, for each codebook the server says is catching up", async () => {
+    vi.mocked(putFrameworkStates).mockResolvedValueOnce({ status: "ok", catchUp: ["nielsen"] });
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    flip("nielsen");
+    await waitFor(() => expect(getJobs().size).toBe(1));
+    expect([...getJobs().values()]).toEqual([
+      { type: "catchup", frameworkId: "nielsen", frameworkTitle: "10 Usability Heuristics" },
+    ]);
+  });
+
+  it("adds none when the write starts no catch-up, or does not save", async () => {
+    vi.mocked(putFrameworkStates).mockClear();
+    vi.mocked(putFrameworkStates)
+      .mockResolvedValueOnce({ status: "ok", catchUp: [] })
+      .mockResolvedValueOnce({ status: "error", catchUp: [] });
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    flip("nielsen");
+    await waitFor(() => expect(putFrameworkStates).toHaveBeenCalledTimes(1));
+    flip("sentiment");
+    await waitFor(() => expect(putFrameworkStates).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(getJobs().size).toBe(0);
+  });
+
+  it("a second catch-up for the codebook is its own chip, and its last one goes", async () => {
+    // As for AutoCode runs (5aec70b9): under one id, a new run would join the
+    // last one's finished chip and could stay "Done" over a failure.
+    addJob("catchup:nielsen:restored", {
+      type: "catchup", frameworkId: "nielsen", frameworkTitle: "10 Usability Heuristics",
+    });
+    addJob("autocode:sentiment:1", {
+      type: "autocode", frameworkId: "sentiment", frameworkTitle: "Signals",
+    });
+    vi.mocked(putFrameworkStates).mockResolvedValueOnce({ status: "ok", catchUp: ["nielsen"] });
+    renderSidebar();
+    await screen.findByTestId("bn-v2-nav-row-nielsen");
+    flip("nielsen");
+    await waitFor(() => expect(getJobs().has("catchup:nielsen:restored")).toBe(false));
+    const ids = [...getJobs().keys()];
+    expect(ids).toHaveLength(2);
+    expect(ids).toContain("autocode:sentiment:1");
+    expect(ids.find((id) => id.startsWith("catchup:nielsen:"))).toBeDefined();
   });
 });
 

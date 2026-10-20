@@ -47,6 +47,8 @@ def _settings(**kwargs) -> MagicMock:
     s.local_url = kwargs.get("local_url", "http://localhost:11434/v1")
     s.local_model = kwargs.get("local_model", "llama3.2:3b")
     s.local_api_key = ""
+    s.llm_max_tokens = kwargs.get("llm_max_tokens", 64000)
+    s.llm_temperature = kwargs.get("llm_temperature", 0.1)
     return s
 
 
@@ -272,7 +274,10 @@ class TestValidateOpenai:
     # pin what is sent rather than whether the call "worked": on 4 Sep 2026 the
     # client was gated and the default moved to a GPT-5-class model while this
     # validator kept sending `max_tokens=1`, and every ChatGPT run aborted at
-    # preflight with a 400 the mocked suite could not see.
+    # preflight with a 400 the mocked suite could not see. Since R104 the
+    # validator sends the client's own parameters (`request_params`), so the
+    # shape per model class is pinned once, in test_llm_sampling_params.py;
+    # these pin that the validator sends it.
 
     def _sent_kwargs(self, monkeypatch, model: str) -> dict:
         fake = self._fake_openai()
@@ -282,21 +287,10 @@ class TestValidateOpenai:
         return dict(fake.OpenAI.return_value.chat.completions.create.call_args.kwargs)
 
     def test_gpt5_class_model_sends_max_completion_tokens(self, monkeypatch):
-        from bristlenose.preflight.api_key import _OPENAI_MODERN_CAP
-
         kwargs = self._sent_kwargs(monkeypatch, "gpt-5.6-terra")
-        assert kwargs["max_completion_tokens"] == _OPENAI_MODERN_CAP
+        assert kwargs["max_completion_tokens"] == 64000
         assert "max_tokens" not in kwargs
-
-    def test_modern_cap_is_not_one_token(self):
-        # A reasoning model cannot finish even "." in one token and the API
-        # returns 400 "Could not finish the message" — an error, not a
-        # truncated success — so a cap of 1 fails a perfectly good key
-        # (measured live 5 Sep 2026: cap=1 → 400, cap=16 → 12 tokens). Only
-        # the legacy models get the literal one-token ping.
-        from bristlenose.preflight.api_key import _OPENAI_MODERN_CAP
-
-        assert _OPENAI_MODERN_CAP >= 16
+        assert "temperature" not in kwargs
 
     def test_unknown_model_fails_closed_to_the_modern_name(self, monkeypatch):
         # Every future ChatGPT model refuses the old name; an unlisted model
@@ -308,17 +302,18 @@ class TestValidateOpenai:
 
     def test_legacy_model_keeps_max_tokens(self, monkeypatch):
         kwargs = self._sent_kwargs(monkeypatch, "gpt-4o-mini")
-        assert kwargs["max_tokens"] == 1
+        assert kwargs["max_tokens"] == 16384  # the model's ceiling, as the client clamps
+        assert kwargs["temperature"] == 0.1
         assert "max_completion_tokens" not in kwargs
 
-    def test_the_gate_is_the_clients_not_a_copy(self):
+    def test_the_parameters_are_the_clients_not_a_copy(self, monkeypatch):
         # Two request builders for one provider drift the moment one is edited
         # alone — which is exactly how the 4 Sep regression happened. The
-        # preflight must read the client's list by identity, never its own.
+        # preflight must call the client's builder, never carry its own.
         from bristlenose.llm import client
         from bristlenose.preflight import api_key
 
-        assert api_key._OPENAI_LEGACY_PARAMS is client._OPENAI_LEGACY_PARAMS
+        assert api_key.request_params is client.request_params
 
     def test_both_cap_names_exist_on_the_installed_sdk(self):
         # The gap a mock cannot close: does the SDK actually installed accept
@@ -667,7 +662,10 @@ class TestPreflightApiKey:
                 ),
                 console=_console(),
             )
-        validator.assert_called_once_with("g-key", "gemini-2.5-pro")
+        validator.assert_called_once_with(
+            "g-key", "gemini-2.5-pro",
+            params={"max_output_tokens": 64000, "temperature": 0.1},
+        )
 
     def test_azure_provider_validates_when_key_present(self, monkeypatch, tmp_path):
         # Azure now has a real validator — confirm it runs and threads
@@ -689,6 +687,9 @@ class TestPreflightApiKey:
             )
         validator.assert_called_once_with(
             "az-key", "https://example.openai.azure.com/", "gpt-4o", "2024-10-21",
+            # The deployment is named gpt-4o, and the clamp reads the request
+            # model, as the client's does.
+            params={"max_tokens": 16384, "temperature": 0.1},
         )
 
     def test_no_key_skips(self, monkeypatch):
@@ -821,3 +822,137 @@ class TestPreflightApiKey:
         out = capsys.readouterr().out
         # No "Using ... from" attribution on subsequent runs.
         assert "Using Claude API key from" not in out
+
+
+# ---------------------------------------------------------------------------
+# The preflight's request is the pipeline's request (R104)
+# ---------------------------------------------------------------------------
+#
+# Setup said the key was fine, then the run failed on it: the one-token ping
+# sent none of the parameters a pipeline call carries, so a model that refuses
+# `temperature`, or an output cap above the model's ceiling, passed here and
+# failed at the first stage. Each case below captures what the pipeline's own
+# client sends for the same settings and what the preflight sends, and asserts
+# they agree on everything but the prompt. A mock accepts any keyword, so these
+# compare the two requests rather than asking whether either "worked".
+
+
+class _SentError(Exception):
+    """Raised by a fake SDK call once it has recorded its keyword arguments."""
+
+
+def _real_settings(**kw):
+    from bristlenose.config import BristlenoseSettings
+
+    return BristlenoseSettings(**kw)  # type: ignore[arg-type]
+
+
+def _pipeline_kwargs(settings) -> dict:
+    """What one pipeline call sends for ``settings``, captured at the SDK."""
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.structured import QuoteExtractionResult
+
+    client = LLMClient(settings)
+    create = AsyncMock(side_effect=_SentError)
+    sdk = MagicMock()
+    provider = settings.llm_provider
+    if provider == "anthropic":
+        sdk.messages.create = create
+        client._anthropic_client = sdk
+    elif provider == "google":
+        sdk.aio.models.generate_content = create
+        client._google_client = sdk
+    else:
+        sdk.chat.completions.create = create
+        setattr(client, {"openai": "_openai_client", "azure": "_azure_client",
+                         "local": "_local_client"}[provider], sdk)
+    with pytest.raises(_SentError):
+        asyncio.run(client.analyze(system_prompt="s", user_prompt="u",
+                                   response_model=QuoteExtractionResult))
+    return dict(create.await_args.kwargs)
+
+
+def _preflight_kwargs(monkeypatch, tmp_path, settings) -> dict:
+    """What the preflight sends for ``settings``, captured at the SDK."""
+    import sys
+
+    monkeypatch.setattr("bristlenose.preflight.api_key.sys.stdin.isatty", lambda: False)
+    monkeypatch.setattr("bristlenose.preflight.api_key.state_path",
+                        lambda: tmp_path / "state.json")
+    provider = settings.llm_provider
+    if provider == "anthropic":
+        fake = TestValidateAnthropic()._fake_anthropic()
+        monkeypatch.setitem(sys.modules, "anthropic", fake)
+        preflight_api_key(settings=settings, console=_console())
+        return dict(fake.Anthropic.return_value.messages.create.call_args.kwargs)
+    if provider == "google":
+        import google.genai
+
+        client = MagicMock()
+        monkeypatch.setattr(google.genai, "Client", lambda **_: client)
+        preflight_api_key(settings=settings, console=_console())
+        return dict(client.models.generate_content.call_args.kwargs)
+    fake = TestValidateOpenai()._fake_openai()
+    monkeypatch.setitem(sys.modules, "openai", fake)
+    preflight_api_key(settings=settings, console=_console())
+    factory = fake.AzureOpenAI if provider == "azure" else fake.OpenAI
+    return dict(factory.return_value.chat.completions.create.call_args.kwargs)
+
+
+_PROMPT_KEYS = {"system", "messages", "tools", "tool_choice", "response_format", "contents"}
+
+
+class TestPreflightSendsThePipelinesRequest:
+    @pytest.mark.parametrize(
+        "kw",
+        [
+            # In the sampling list: temperature rides in extra_body.
+            {"llm_provider": "anthropic", "anthropic_api_key": "sk",
+             "llm_model": "claude-sonnet-4-6"},
+            # Outside it: no temperature.
+            {"llm_provider": "anthropic", "anthropic_api_key": "sk",
+             "llm_model": "claude-opus-4-8"},
+            # An output cap the researcher raised past a model's ceiling.
+            {"llm_provider": "anthropic", "anthropic_api_key": "sk",
+             "llm_model": "claude-sonnet-4-6", "llm_max_tokens": 65536},
+            {"llm_provider": "openai", "openai_api_key": "sk", "llm_model": "gpt-4o"},
+            {"llm_provider": "openai", "openai_api_key": "sk", "llm_model": "gpt-5.6-terra"},
+            {"llm_provider": "azure", "azure_api_key": "az",
+             "azure_endpoint": "https://x.openai.azure.com/", "azure_deployment": "prod-eastus"},
+            {"llm_provider": "local", "local_model": "llama3.2:3b"},
+        ],
+        ids=["claude-sampling", "claude-no-sampling", "claude-raised-cap",
+             "chatgpt-legacy", "chatgpt-modern", "azure", "local"],
+    )
+    def test_same_model_and_parameters_as_the_pipeline(self, monkeypatch, tmp_path, kw):
+        settings = _real_settings(**kw)
+        pipeline = _pipeline_kwargs(settings)
+        sent = _preflight_kwargs(monkeypatch, tmp_path, settings)
+        assert {k: v for k, v in sent.items() if k not in _PROMPT_KEYS} == {
+            k: v for k, v in pipeline.items() if k not in _PROMPT_KEYS
+        }
+
+    def test_gemini_same_model_and_generation_parameters(self, monkeypatch, tmp_path):
+        settings = _real_settings(llm_provider="google", google_api_key="g",
+                                  llm_model="gemini-2.5-flash")
+        pipeline = _pipeline_kwargs(settings)
+        sent = _preflight_kwargs(monkeypatch, tmp_path, settings)
+        assert sent["model"] == pipeline["model"]
+        for field in ("max_output_tokens", "temperature"):
+            assert getattr(sent["config"], field) == getattr(pipeline["config"], field), field
+
+    def test_still_one_call(self, monkeypatch, tmp_path):
+        settings = _real_settings(llm_provider="anthropic", anthropic_api_key="sk",
+                                  llm_model="claude-sonnet-4-6")
+        import sys
+
+        fake = TestValidateAnthropic()._fake_anthropic()
+        monkeypatch.setitem(sys.modules, "anthropic", fake)
+        monkeypatch.setattr("bristlenose.preflight.api_key.sys.stdin.isatty", lambda: False)
+        monkeypatch.setattr("bristlenose.preflight.api_key.state_path",
+                            lambda: tmp_path / "state.json")
+        preflight_api_key(settings=settings, console=_console())
+        assert fake.Anthropic.return_value.messages.create.call_count == 1

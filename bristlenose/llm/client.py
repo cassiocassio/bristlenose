@@ -216,6 +216,53 @@ _ANTHROPIC_ACCEPTS_SAMPLING: frozenset[str] = frozenset(
 )
 
 
+# Explicit, so the Anthropic SDK does not refuse a non-streaming request whose
+# output cap it guesses could run past ten minutes (above ~21K tokens).
+_ANTHROPIC_TIMEOUT_S = 600.0
+
+
+def request_params(
+    provider: str, model: str, max_tokens: int, temperature: float
+) -> dict[str, Any]:
+    """The parameters a call to ``model`` carries, besides its prompt and schema.
+
+    The one builder of them: every ``_analyze_*`` below reads it, and so does
+    the key preflight (``preflight/api_key.py``), which makes the run's request
+    with an inert prompt. A model that refuses one of them, or an output cap
+    above the model's ceiling, then fails at setup and not at the run's first
+    stage (R104). Before 20 Oct 2026 the preflight built its own one-token
+    request, said the key was fine, and the run failed on it.
+
+    ``max_tokens`` is clamped to the model's known ceiling here. ``model`` is
+    the request model: Azure's deployment, Ollama's local model.
+    """
+    max_tokens = _clamp_max_tokens(model, max_tokens)
+    if provider == "anthropic":
+        return {
+            "max_tokens": max_tokens,
+            "timeout": _ANTHROPIC_TIMEOUT_S,
+            # See _ANTHROPIC_ACCEPTS_SAMPLING, and `extra_body` in
+            # _analyze_anthropic for why it is not a named kwarg.
+            "extra_body": (
+                {"temperature": temperature}
+                if model in _ANTHROPIC_ACCEPTS_SAMPLING
+                else None
+            ),
+        }
+    if provider == "openai":
+        # See _OPENAI_LEGACY_PARAMS. GPT-5 onward renames the output cap
+        # and refuses a non-default temperature; older models refuse the
+        # new name. No single shape satisfies both.
+        if model in _OPENAI_LEGACY_PARAMS:
+            return {"max_tokens": max_tokens, "temperature": temperature}
+        return {"max_completion_tokens": max_tokens}
+    if provider == "google":
+        return {"max_output_tokens": max_tokens, "temperature": temperature}
+    # Azure (a deployment name cannot say which model is behind it, so the
+    # legacy shape — see _analyze_azure) and Ollama.
+    return {"max_tokens": max_tokens, "temperature": temperature}
+
+
 # Cloud-provider client retry budget. The Anthropic / OpenAI / Azure SDKs all
 # retry 429 / 408 / 409 / 5xx / connection errors with exponential backoff,
 # honouring the server's `Retry-After` (and `retry-after-ms`) header — we don't
@@ -641,10 +688,10 @@ class LLMClient:
         messages: list[MessageParam] = [{"role": "user", "content": user_prompt}]
         tool_choice: ToolChoiceToolParam = {"type": "tool", "name": tool_name}
 
-        sampling: dict[str, float] = {}
-        if request_model in _ANTHROPIC_ACCEPTS_SAMPLING:
-            sampling["temperature"] = self.settings.llm_temperature
-        else:
+        params = request_params(
+            "anthropic", request_model, max_tokens, self.settings.llm_temperature
+        )
+        if params["extra_body"] is None:
             logger.info(
                 "llm_sampling_omitted | model=%s | temperature=%s not sent "
                 "(model does not accept sampling parameters)",
@@ -655,15 +702,15 @@ class LLMClient:
         try:
             response = await client.messages.create(
                 model=request_model,
-                max_tokens=max_tokens,
+                max_tokens=params["max_tokens"],
                 system=system_prompt,
                 messages=messages,
                 tools=[tool],
                 tool_choice=tool_choice,
                 # Explicit timeout bypasses the SDK's heuristic that rejects
                 # non-streaming requests when max_tokens is high (>~21K).
-                timeout=600.0,
-                extra_body=sampling or None,
+                timeout=params["timeout"],
+                extra_body=params["extra_body"],
             )
         except asyncio.CancelledError:
             raise
@@ -781,16 +828,11 @@ class LLMClient:
 
         request_model = self.settings.llm_model
         try:
-            # See _OPENAI_LEGACY_PARAMS. GPT-5 onward renames the output cap
-            # and refuses a non-default temperature; older models refuse the
-            # new name. No single shape satisfies both.
-            if request_model in _OPENAI_LEGACY_PARAMS:
-                params: dict[str, Any] = {
-                    "max_tokens": max_tokens,
-                    "temperature": self.settings.llm_temperature,
-                }
-            else:
-                params = {"max_completion_tokens": max_tokens}
+            # See _OPENAI_LEGACY_PARAMS and request_params.
+            params = request_params(
+                "openai", request_model, max_tokens, self.settings.llm_temperature
+            )
+            if request_model not in _OPENAI_LEGACY_PARAMS:
                 logger.info(
                     "llm_sampling_omitted | model=%s | temperature=%s not sent "
                     "(model accepts only the default)",
@@ -937,10 +979,13 @@ class LLMClient:
             # deployment needs `max_completion_tokens`, and that pass is
             # bigger than a rename — `azure_api_version` is still pinned to
             # 2024-10-21, which predates those models entirely.
+            params = request_params(
+                "azure", request_model, max_tokens, self.settings.llm_temperature
+            )
             response = await client.chat.completions.create(
                 model=request_model,
-                max_tokens=max_tokens,
-                temperature=self.settings.llm_temperature,
+                max_tokens=params["max_tokens"],
+                temperature=params["temperature"],
                 # Structured Outputs, not JSON mode. JSON mode guarantees only
                 # that the text parses; the schema matches ~80% of the time, and
                 # the other 20% surfaced here as a ValidationError that failed
@@ -1069,6 +1114,9 @@ class LLMClient:
         logger.info("Calling Gemini API: model=%s", self.settings.llm_model)
 
         request_model = self.settings.llm_model
+        params = request_params(
+            "google", request_model, max_tokens, self.settings.llm_temperature
+        )
         try:
             response = await client.models.generate_content(
                 model=request_model,
@@ -1077,8 +1125,8 @@ class LLMClient:
                     system_instruction=system_prompt,
                     response_mime_type="application/json",
                     response_schema=schema,
-                    max_output_tokens=max_tokens,
-                    temperature=self.settings.llm_temperature,
+                    max_output_tokens=params["max_output_tokens"],
+                    temperature=params["temperature"],
                 ),
             )
         except asyncio.CancelledError:
@@ -1201,6 +1249,9 @@ class LLMClient:
 
         model = self.settings.local_model
         logger.info("Calling local API: url=%s model=%s", self.settings.local_url, model)
+        params = request_params(
+            "local", model, max_tokens, self.settings.llm_temperature
+        )
 
         # Retry logic for JSON parsing failures.
         # Token / elapsed accumulators sum across retries; one terminal
@@ -1221,8 +1272,8 @@ class LLMClient:
                 try:
                     response = await client.chat.completions.create(
                         model=model,
-                        max_tokens=max_tokens,
-                        temperature=self.settings.llm_temperature,
+                        max_tokens=params["max_tokens"],
+                        temperature=params["temperature"],
                         response_format={"type": "json_object"},
                         messages=[
                             {"role": "system", "content": system_prompt + schema_instruction},

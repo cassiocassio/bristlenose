@@ -8,13 +8,17 @@ stage actually ran, several minutes into the pipeline.
 
 This preflight runs a paid ``/messages`` call up-front. Per finding 15:
 
-- Single token: ``max_tokens=1`` — or ``max_completion_tokens=1`` for the
-  ChatGPT models that refuse the old name, decided by the *client's* own
-  ``_OPENAI_LEGACY_PARAMS`` rather than a copy of it (see ``_validate_openai``)
+- The run's own request: the model and every parameter a pipeline call
+  carries (output cap, sampling, the cap's name), from the client's
+  ``request_params`` rather than a copy of it. Until 20 Oct 2026 this was a
+  one-token ping that sent none of them, so a model refusing ``temperature``,
+  or a cap above the model's ceiling, passed here and failed the run at its
+  first stage (R104). A high cap costs nothing by itself: billing is per token
+  produced, and the reply to ``"."`` is a few tokens.
 - Locked inert prompt: ``"."`` (constant; never user-derived — so the call
   is greppable and cannot leak transcript content)
 - ``User-Agent: bristlenose/<version>`` so server-side logs identify us
-- Cost: ~$0.0001 per call
+- One call per validation
 
 The point is to *exercise billing*. A free probe (e.g. ``/models``) can't
 distinguish "key valid + paid" from "key valid + no balance" — both return
@@ -57,7 +61,7 @@ if TYPE_CHECKING:
 from bristlenose import __version__
 from bristlenose.i18n import t
 from bristlenose.llm.billing_hints import billing_for, recovery_message
-from bristlenose.llm.client import _OPENAI_LEGACY_PARAMS
+from bristlenose.llm.client import request_params
 from bristlenose.preflight import PreflightAbortedError
 
 # Back-compat alias — see preflight/whisper.py for the unification rationale.
@@ -162,6 +166,19 @@ class ValidationResult:
     raw_message: str = ""
 
 
+def _params_for(provider: str, model: str, params: dict[str, Any] | None) -> dict[str, Any]:
+    """The pipeline's parameters for ``model``: given by the orchestrator from the
+    run's settings, or, for a direct call, at the settings' defaults."""
+    if params is not None:
+        return params
+    from bristlenose.config import BristlenoseSettings
+
+    fields = BristlenoseSettings.model_fields
+    return request_params(
+        provider, model, fields["llm_max_tokens"].default, fields["llm_temperature"].default
+    )
+
+
 def _classify_network_error(exc: BaseException) -> ValidationResult | None:
     """Return a ValidationResult for transport-layer errors, or None.
 
@@ -205,9 +222,13 @@ def _classify_network_error(exc: BaseException) -> ValidationResult | None:
     return None
 
 
-def _validate_anthropic(api_key: str, model: str) -> ValidationResult:
-    """Exercise billing via a 1-token ``/messages`` call to the Anthropic API."""
+def _validate_anthropic(
+    api_key: str, model: str, *, params: dict[str, Any] | None = None
+) -> ValidationResult:
+    """Exercise billing with the run's own ``/messages`` request to the Anthropic API."""
     import anthropic
+
+    params = _params_for("anthropic", model, params)
 
     client = anthropic.Anthropic(
         api_key=api_key,
@@ -216,8 +237,10 @@ def _validate_anthropic(api_key: str, model: str) -> ValidationResult:
     try:
         client.messages.create(
             model=model,
-            max_tokens=1,
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+            max_tokens=params["max_tokens"],
+            timeout=params["timeout"],
+            extra_body=params["extra_body"],
         )
     except anthropic.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
@@ -269,41 +292,21 @@ def _openai_error_code(exc: BaseException) -> str | None:
     return code if isinstance(code, str) else None
 
 
-# Output cap for the GPT-5-class ping. Not 1: a reasoning model cannot finish
-# even "." inside one token and the API answers 400 "Could not finish the
-# message" rather than a truncated 200 (measured 5 Sep 2026 on gpt-5.6-terra:
-# cap=1 → 400; cap=16 → 12 tokens; cap=64 → 24 tokens, 10 of them reasoning).
-# Billing is per token produced, so a roomy cap costs nothing on the common
-# path and bounds the rare one at a few thousandths of a dollar.
-_OPENAI_MODERN_CAP = 256
+def _validate_openai(
+    api_key: str, model: str, *, params: dict[str, Any] | None = None
+) -> ValidationResult:
+    """Exercise billing with the run's own chat-completion request to the OpenAI API.
 
-
-def _openai_token_cap(model: str) -> dict[str, Any]:
-    """The output cap for the ping, under the name and size this model accepts.
-
-    GPT-5 onward refuses ``max_tokens`` outright (400 ``unsupported_parameter``:
-    "Use 'max_completion_tokens' instead"); the models before it refuse the
-    new name. The client already decides this per model in
-    ``_OPENAI_LEGACY_PARAMS``; this preflight is a *second* request builder for
-    the same provider and must read the same list, never carry its own.
-
-    Measured 4 Sep 2026: the client was gated and the ChatGPT default moved to
-    ``gpt-5.6-terra`` in one commit that left this function on ``max_tokens=1``.
-    Every ChatGPT run then aborted here, before stage 1, with a message that
-    told the researcher to top up their credit. Mocked tests passed throughout,
-    because a mock accepts any keyword; the first real run through this path
-    (the acceptance matrix's ``run:openai`` cell) failed at once. The first
-    fix, ``max_completion_tokens=1``, passed the same mocks and failed the same
-    live call for the reason on ``_OPENAI_MODERN_CAP``.
+    The parameters, and their names, are the client's (``request_params``):
+    GPT-5 onward refuses ``max_tokens`` and a non-default temperature, the
+    models before it refuse ``max_completion_tokens``. On 4 Sep 2026 the client
+    was gated and this validator was not, and every ChatGPT run aborted here on
+    a good key; mocked tests passed throughout, because a mock accepts any
+    keyword.
     """
-    if model in _OPENAI_LEGACY_PARAMS:
-        return {"max_tokens": 1}
-    return {"max_completion_tokens": _OPENAI_MODERN_CAP}
-
-
-def _validate_openai(api_key: str, model: str) -> ValidationResult:
-    """Exercise billing via a 1-token chat-completion to the OpenAI API."""
     import openai
+
+    params = _params_for("openai", model, params)
 
     client = openai.OpenAI(
         api_key=api_key,
@@ -312,8 +315,8 @@ def _validate_openai(api_key: str, model: str) -> ValidationResult:
     try:
         client.chat.completions.create(
             model=model,
-            **_openai_token_cap(model),
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+            **params,
         )
     except openai.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
@@ -349,9 +352,14 @@ def _validate_openai(api_key: str, model: str) -> ValidationResult:
 
 
 def _validate_azure(
-    api_key: str, endpoint: str, deployment: str, api_version: str
+    api_key: str,
+    endpoint: str,
+    deployment: str,
+    api_version: str,
+    *,
+    params: dict[str, Any] | None = None,
 ) -> ValidationResult:
-    """Exercise the Azure OpenAI deployment via a 1-token chat-completion.
+    """Exercise the Azure OpenAI deployment with the run's own chat-completion request.
 
     Shares the openai SDK; differs from OpenAI in needing endpoint URL,
     deployment name (distinct from model id), and api version. The
@@ -361,6 +369,7 @@ def _validate_azure(
     """
     import openai
 
+    params = _params_for("azure", deployment, params)
     client = openai.AzureOpenAI(
         api_key=api_key,
         azure_endpoint=endpoint,
@@ -368,14 +377,14 @@ def _validate_azure(
         default_headers={"User-Agent": f"bristlenose/{__version__}"},
     )
     try:
-        # Deliberately NOT gated like ``_validate_openai``: a deployment name is
-        # the customer's own word and cannot say whether a GPT-5-class model
-        # sits behind it. Mirrors ``LLMClient._analyze_azure``, which keeps the
-        # legacy shape for the same reason — the two must move together.
+        # The legacy shape, as ``LLMClient._analyze_azure`` sends it: a
+        # deployment name is the customer's own word and cannot say whether a
+        # GPT-5-class model sits behind it. One builder (``request_params``),
+        # so the two move together.
         client.chat.completions.create(
             model=deployment,
-            max_tokens=1,
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+            **params,
         )
     except openai.AuthenticationError as exc:
         return ValidationResult(ok=False, error_class="invalid_key", raw_message=str(exc))
@@ -417,8 +426,10 @@ def _validate_azure(
     return ValidationResult(ok=True)
 
 
-def _validate_google(api_key: str, model: str) -> ValidationResult:
-    """Exercise the Gemini API via a minimal ``generate_content`` call.
+def _validate_google(
+    api_key: str, model: str, *, params: dict[str, Any] | None = None
+) -> ValidationResult:
+    """Exercise the Gemini API with the run's own ``generate_content`` parameters.
 
     Reads structured ``.code`` / ``.status`` fields on ``APIError`` instead
     of substring-matching the message. Gemini has no billing-empty concept
@@ -428,12 +439,16 @@ def _validate_google(api_key: str, model: str) -> ValidationResult:
     from google.genai import errors as genai_errors
     from google.genai import types
 
+    params = _params_for("google", model, params)
     client = genai.Client(api_key=api_key)
     try:
         client.models.generate_content(
             model=model,
             contents=_VALIDATION_PROMPT,
-            config=types.GenerateContentConfig(max_output_tokens=1),
+            config=types.GenerateContentConfig(
+                max_output_tokens=params["max_output_tokens"],
+                temperature=params["temperature"],
+            ),
         )
     except genai_errors.APIError as exc:
         status = (getattr(exc, "status", "") or "").upper()
@@ -485,8 +500,10 @@ def _validate_google(api_key: str, model: str) -> ValidationResult:
     return ValidationResult(ok=True)
 
 
-def _validate_local(local_url: str, model: str) -> ValidationResult:
-    """Exercise a local Ollama-compatible endpoint via a 1-token call.
+def _validate_local(
+    local_url: str, model: str, *, params: dict[str, Any] | None = None
+) -> ValidationResult:
+    """Exercise a local Ollama-compatible endpoint with the run's own request.
 
     Runtime path uses the openai SDK pointed at ``local_url`` (Ollama is
     OpenAI-compatible); the preflight does the same — keeps the dep
@@ -495,6 +512,7 @@ def _validate_local(local_url: str, model: str) -> ValidationResult:
     """
     import openai
 
+    params = _params_for("local", model, params)
     client = openai.OpenAI(
         base_url=local_url,
         api_key="ollama",  # required by SDK, ignored by Ollama
@@ -503,8 +521,8 @@ def _validate_local(local_url: str, model: str) -> ValidationResult:
     try:
         client.chat.completions.create(
             model=model,
-            max_tokens=1,
             messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+            **params,
         )
     except openai.APIConnectionError as exc:
         # Server down is the dominant local failure — surface as a
@@ -589,8 +607,8 @@ def preflight_api_key(
       handles missing-key UX; the preflight only validates *present* keys.
     - **Non-TTY**: skip the first-run *banner* but still validate. A CI run
       with an expired key should abort here, not burn LLM cost at stage 8.
-    - **Otherwise**: call the provider's paid validation endpoint with a
-      1-token request. On failure raise :class:`PreflightAbortedError` with
+    - **Otherwise**: call the provider's paid validation endpoint with the
+      run's own request (model and parameters) and an inert prompt. On failure raise :class:`PreflightAbortedError` with
       the recovery copy from :mod:`billing_hints`. On success, update the
       state file with the validation timestamp.
     """
@@ -655,17 +673,22 @@ def preflight_api_key(
     # tests monkeypatch ``_validate_*`` by name, and a captured-at-import
     # dict reference would not pick that up.
     validator = globals()[f"_validate_{provider}"]
+    # The run's own parameters, from the run's settings and the client's builder.
+    params = request_params(
+        provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
+    )
     if provider == "azure":
         result = validator(
             api_key,
             settings.azure_endpoint,
             settings.azure_deployment,
             settings.azure_api_version,
+            params=params,
         )
     elif provider == "local":
-        result = validator(settings.local_url, settings.local_model)
+        result = validator(settings.local_url, settings.local_model, params=params)
     else:
-        result = validator(api_key, settings.llm_model)
+        result = validator(api_key, settings.llm_model, params=params)
     if result.ok:
         _mark_validated(state, provider, source=source)
         try:

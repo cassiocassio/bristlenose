@@ -152,6 +152,40 @@ describe("FeedbackModal", () => {
     });
   });
 
+  it.each([
+    ["rejects", () => ({ writeText: vi.fn().mockRejectedValue(new Error("denied")) })],
+    ["is unavailable", () => undefined],
+  ])(
+    "keeps the text in the form when the send fails and the clipboard %s",
+    async (_label, clipboard) => {
+      const onClose = vi.fn();
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+      Object.defineProperty(navigator, "clipboard", {
+        value: clipboard(),
+        configurable: true,
+      });
+
+      render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+      fireEvent.click(screen.getByRole("button", { name: /Needs work/ }));
+      const textarea = screen.getByLabelText("Help us improve") as HTMLTextAreaElement;
+      fireEvent.change(textarea, { target: { value: "Long careful feedback." } });
+      const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
+      fireEvent.click(send);
+
+      await waitFor(() => {
+        expect(vi.mocked(toast)).toHaveBeenCalledWith(
+          "Could not copy — please submit feedback manually.",
+        );
+      });
+      expect(onClose).not.toHaveBeenCalled();
+      expect(textarea.value).toBe("Long careful feedback.");
+      expect(screen.getByRole("button", { name: /Needs work/ }).className).toContain("selected");
+      expect(send.disabled).toBe(false);
+      const saved = JSON.parse(localStorage.getItem("bristlenose-feedback-draft") || "{}");
+      expect(saved.message).toBe("Long careful feedback.");
+    },
+  );
+
   it("closes on Escape and overlay click", () => {
     const onClose = vi.fn();
     render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);

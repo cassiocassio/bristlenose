@@ -104,17 +104,23 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     const ratingLabel = feedbackLabelByValue[rating] ?? rating;
     let text = `Bristlenose feedback (v${health.version || "unknown"})\nRating: ${ratingLabel}\n`;
     if (message.trim()) text += `Message: ${message.trim()}\n`;
+    // Neither the send nor the copy took the feedback, so it exists only in
+    // this form: keep it open with the draft intact rather than clearing it.
+    const keepForm = () => {
+      setSending(false);
+      toast(t("feedback.copyFailed"));
+    };
     if (!navigator.clipboard?.writeText) {
-      clearAndClose(t("feedback.copyFailed"));
+      keepForm();
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
       clearAndClose(t("feedback.copiedToClipboard"));
     } catch {
-      clearAndClose(t("feedback.copyFailed"));
+      keepForm();
     }
-  }, [clearAndClose, feedbackLabelByValue, health.version, message, rating]);
+  }, [clearAndClose, feedbackLabelByValue, health.version, message, rating, t]);
 
   const submit = useCallback(async () => {
     if (!rating || sending) return;

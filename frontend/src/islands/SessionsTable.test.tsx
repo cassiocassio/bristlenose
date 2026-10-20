@@ -149,6 +149,28 @@ describe("SessionsTable", () => {
     }
   });
 
+  it("keeps the drawn table when a later refetch fails, and logs it (R86 wave 6)", async () => {
+    // One failed background refetch (after a run, a speaker write) replaced a good
+    // table with the lens's error notice. The table stays; the console says why.
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mockFetchResponses();
+      const { rerender } = render(<SessionsTable projectId="1" refreshKey={0} />);
+      expect(await screen.findByText("#1")).toBeTruthy();
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500, statusText: "busy", json: async () => ({}) }),
+      );
+      rerender(<SessionsTable projectId="1" refreshKey={1} />);
+      await waitFor(() =>
+        expect(consoleError).toHaveBeenCalledWith("Sessions read failed:", expect.anything()),
+      );
+      expect(screen.getByText("#1")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("renders durations as spans, never as clock times", async () => {
     // The defect this pins: the Duration column used to render MM:SS, so a
     // 30-minute session read "30:00" in a row that also carries a date and a

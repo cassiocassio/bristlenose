@@ -513,7 +513,10 @@ export function SessionsTable({
   );
 
 
-  if (error) {
+  // Only when there is no table to show. A failed refetch (after a run, a speaker
+  // write) keeps the table already drawn and says why in the console above: one
+  // failed background read replaced a good table with this notice (R86 wave 6).
+  if (error && !data) {
     return (
       <section className="bn-session-table">
         <ErrorNotice scope="lens" />

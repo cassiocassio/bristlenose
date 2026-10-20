@@ -67,6 +67,8 @@ case "$1" in
   stop) touch "$FAKE_DIR/stopped-$vm"; exit 0 ;;
   exec) [ "$3" = /usr/bin/true ] && { [ -f "$FAKE_DIR/noboot-$vm" ] && exit 1; exit 0; }
         [ -f "$FAKE_DIR/hang-$vm" ] && exec sleep 30
+        # A release that starts while the suite runs, for the walk's re-asked gate.
+        [ -f "$FAKE_DIR/release-during-suite" ] && { mkdir -p "$FAKE_REPO/.release/1.0.0"; printf '{"step":"run","status":"started"}\n' > "$FAKE_REPO/.release/1.0.0/events.jsonl"; }
         cat "$FAKE_DIR/guest-$vm.out" 2>/dev/null; exit "$(cat "$FAKE_DIR/guest-$vm.rc" 2>/dev/null || echo 0)" ;;
 esac
 EOF
@@ -84,7 +86,7 @@ reset_env() {
 gm() {
     local sub="$1"; shift
     env PATH="$BIN:$PATH" GM_REPO="$REPO" GM_IONA="$IONA" GM_STATE="$ST" GM_TART="$BIN/tart" \
-        GM_CLAUDE_DIR="$CL" FAKE_DIR="$W/fake" GM_HOUR=02 GM_MINUTE=00 GM_NIGHT=2026-10-08 \
+        GM_CLAUDE_DIR="$CL" FAKE_DIR="$W/fake" FAKE_REPO="$REPO" GM_WALK_SCRIPT="$W/walkstub" GM_HOUR=02 GM_MINUTE=00 GM_NIGHT=2026-10-08 \
         GM_BOOT_TIMEOUT_S=5 GM_GUEST_TIMEOUT_MIN=1 GM_NO_CAFFEINATE=1 "$@" /bin/bash "$GM" $sub
 }
 report() { cat "$ST/reports/2026-10-08.txt" 2>/dev/null; }
@@ -124,6 +126,14 @@ eq "pytest running (as python, so by command line)" yes \
    "$(has 'busy: pytest' "$(gm check FAKE_PS='/opt/homebrew/bin/python3.12 -m pytest tests/')")"
 eq "vitest running under node"        yes "$(has 'vitest' "$(gm check FAKE_PS='node /x/node_modules/vitest/vitest.mjs run')")"
 eq "an editor with pytest.ini open is not a test run" yes "$(has 'go:' "$(gm check FAKE_PS='/usr/bin/vim pytest.ini')")"
+# Claude Desktop keeps Playwright MCP servers alive all night; they are not a test
+# run, and counting them skipped 10 of the 11 nights reported from 8 to 19 Oct 2026.
+eq "the Playwright MCP server is not a test run" yes \
+   "$(has 'go:' "$(gm check FAKE_PS='npm exec @playwright/mcp@latest')")"
+eq "…nor its node binary"             yes \
+   "$(has 'go:' "$(gm check FAKE_PS='node /Users/x/.npm/_npx/98/node_modules/.bin/playwright-mcp')")"
+eq "a Playwright test run still is"   yes \
+   "$(has 'busy: playwright' "$(gm check FAKE_PS='node /x/node_modules/@playwright/test/cli.js test')")"
 eq "a sustained load"                 yes "$(has '5-min load 9.50' "$(gm check FAKE_LOAD=9.50)")"
 eq "a guest already running"          yes "$(has 'already running: seq' "$(gm check FAKE_RUNNING=seq)")"
 out="$(gm check FAKE_POWER='Battery Power' FAKE_LOAD=9.50)"
@@ -265,6 +275,92 @@ reset_env; mkdir -p "$IONA"; : > "$IONA/share"
 gm run GM_NO_NOTIFY=1 >/dev/null 2>&1
 eq "the line says what failed"    yes "$(has 'error: cannot write to' "$(report)")"
 eq "…and report exits 1"          1 "$(gm report >/dev/null; echo $?)"
+
+# --- the walk (docs/design-guest-walk.md) ------------------------------------
+# A stub stands in for guest-walk.sh, one seam up from the walker: it writes what a
+# real walk leaves in the night's directory. The cases are the lines that would lie.
+cat > "$BIN/curl" <<'EOF2'
+#!/bin/bash
+[ "${FAKE_OLLAMA:-up}" = up ] && exit 0; exit 7
+EOF2
+cat > "$W/walkstub" <<'EOF2'
+#!/bin/bash
+d="$1"; mkdir -p "$d"; echo "$d" >> "$FAKE_DIR/walked"
+trap 'echo termed >> "$FAKE_DIR/walk-termed"; exit 143' TERM
+printf 'walk x: 27.0 guest, app 0.42.0 (5269)\n' > "$d/walk.log"
+[ -f "$FAKE_DIR/walk-verdict" ] && cp "$FAKE_DIR/walk-verdict" "$d/verdict.txt"
+[ -f "$FAKE_DIR/walk-summary" ] && cp "$FAKE_DIR/walk-summary" "$d/summary.txt"
+if [ -f "$FAKE_DIR/walk-release" ]; then
+    mkdir -p "$FAKE_REPO/.release/1.0.0"; printf '{"step":"run","status":"started"}\n' > "$FAKE_REPO/.release/1.0.0/events.jsonl"
+fi
+[ -f "$FAKE_DIR/walk-sleep" ] && { sleep 30 & wait $!; }
+exit "$(cat "$FAKE_DIR/walk-rc" 2>/dev/null || echo 0)"
+EOF2
+chmod +x "$BIN/curl" "$W/walkstub"
+walk_env() { reset_env; printf 'WALK_BASE=wb\n' >> "$IONA/guest-matrix.conf"; rm -rf "$REPO/.release"; }
+walked() { [ -f "$W/fake/walked" ] && echo yes || echo no; }
+W1() { gm run GM_NO_NOTIFY=1 GM_POLL_S=1 "$@" >/dev/null 2>&1; }
+
+head_ "the walk: a night with a walk"
+walk_env
+echo "COMPLETED 22 screens in 200s" > "$W/fake/walk-verdict"
+echo "1 of 26 screens changed · 0 menu changes vs 2026-10-07" > "$W/fake/walk-summary"
+W1; HEAD8="$(git -C "$REPO" rev-parse --short=8 HEAD)"
+eq "the suite's line is unchanged and the walk follows it" \
+   "2026-10-08 · tested $HEAD8 (first run) · ✓ 15.7.3 1569 passed · ✓ 26.6.2 1569 passed · walk: 1 of 26 screens changed · 0 menu changes vs 2026-10-07 · app 0.42.0 (5269)" "$(report)"
+eq "…in the night's own directory" yes "$(has "$IONA/walks/2026-10-08" "$(cat "$W/fake/walked" 2>/dev/null)")"
+eq "…and report still exits 0"   0 "$(gm report >/dev/null; echo $?)"
+
+head_ "the walk: what it says when it does not finish"
+walk_env; echo "HALTED step 14: save sheet up" > "$W/fake/walk-verdict"; W1
+eq "a halted walk names the step"  yes "$(has 'walk: halted at step 14: save sheet up' "$(report)")"
+eq "…and is not a red suite: report exits 0" 0 "$(gm report >/dev/null; echo $?)"
+walk_env; echo 2 > "$W/fake/walk-rc"; W1
+eq "a walk that died writing nothing is 'no verdict', never an absent segment" \
+   yes "$(has 'walk: no verdict (the walk wrote nothing, exit 2)' "$(report)")"
+walk_env; touch "$W/fake/walk-sleep"; W1 GM_WALK_TIMEOUT_S=2
+eq "a walk that hangs is stopped at its deadline" yes "$(has 'walk: stopped (timed out after' "$(report)")"
+eq "…by a TERM it can clean up after"  yes "$([ -f "$W/fake/walk-termed" ] && echo yes || echo no)"
+walk_env; echo "HALTED step 3: error: tart said ✗" > "$W/fake/walk-verdict"; W1
+eq "the suite's vocabulary inside a reason is scrubbed" yes "$(has 'walk: no verdict (segment malformed)' "$(report)")"
+eq "…so report still exits 0, not 1"   0 "$(gm report >/dev/null; echo $?)"
+
+head_ "the walk: when it should not start"
+walk_env; W1 FAKE_OLLAMA=down
+eq "Ollama not answering is a named reason" yes "$(has 'walk: not run (Ollama not answering)' "$(report)")"
+eq "…and no walk is started"          no "$(walked)"
+walk_env; W1 GM_HOUR=05 GM_MINUTE=50
+eq "too little of the night left"     yes "$(has 'walk: not run (too late in the night to finish)' "$(report)")"
+eq "…and no walk is started"          no "$(walked)"
+walk_env; touch "$W/fake/release-during-suite"; W1
+eq "a release that started during the suite stops the walk before it starts" \
+   yes "$(has 'walk: not run (release 1.0.0 started and has not completed' "$(report)")"
+eq "…and no walk is started"          no "$(walked)"
+
+head_ "the walk: a release that starts while it runs"
+walk_env; touch "$W/fake/walk-release" "$W/fake/walk-sleep"; W1
+eq "the walk is stopped and says why" yes "$(has 'walk: stopped (release 1.0.0 started and has not completed' "$(report)")"
+eq "…the walk got its TERM"           yes "$([ -f "$W/fake/walk-termed" ] && echo yes || echo no)"
+rm -rf "$REPO/.release"
+
+head_ "the walk: the runner is killed while it walks"
+# The suite has its verdict by then; a TERM must stop the walk and keep the line.
+walk_env; touch "$W/fake/walk-sleep"
+( W1 GM_WALK_TIMEOUT_S=60 ) &
+for i in $(seq 1 100); do [ -f "$W/fake/walked" ] && [ -f "$ST/.lock/pid" ] && break; sleep 0.2; done
+kill -TERM "$(cat "$ST/.lock/pid" 2>/dev/null)" 2>/dev/null; wait $! 2>/dev/null
+eq "the walk got its TERM"            yes "$([ -f "$W/fake/walk-termed" ] && echo yes || echo no)"
+eq "…and the suite's verdict is not lost" yes \
+   "$(has '✓ 15.7.3 1569 passed · ✓ 26.6.2 1569 passed · walk: stopped (the runner was interrupted)' "$(report)")"
+eq "…and the lock is released"        no "$([ -d "$ST/.lock" ] && echo yes || echo no)"
+
+head_ "the walk: the next night carries the suite, not the walk"
+walk_env; echo "HALTED step 9: Open panel up" > "$W/fake/walk-verdict"; W1
+printf 'more\n' >> "$REPO/README.md"; gitc commit -qam "docs again"
+gm run GM_NO_NOTIFY=1 GM_NIGHT=2026-10-09 >/dev/null 2>&1
+eq "the carried line is the suite's"  no "$(has 'walk:' "$(cat "$ST/reports/2026-10-09.txt" 2>/dev/null)")"
+eq "…and a halted walk never turns a skipped night red" 3 \
+   "$(gm report GM_NIGHT=2026-10-09 >/dev/null; echo $?)"
 
 head_ "outside the window, and the morning with no report"
 reset_env

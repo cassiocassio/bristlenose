@@ -147,7 +147,11 @@ gate_idle() {
     # space or `@` before, a path separator or space after — so
     # `node_modules/@playwright/test` and `node_modules/vitest/vitest.mjs` count,
     # and an editor with `pytest.ini` open does not.
+    # The Playwright MCP server (`npm exec @playwright/mcp`, `.bin/playwright-mcp`)
+    # is not a test run: Claude Desktop keeps it alive all night, and counting it
+    # skipped 10 of the 11 nights reported from 8 to 19 Oct 2026.
     procs="$(ps -axo command= 2>/dev/null \
+        | grep -vE '@play[w]right/mcp|play[w]right-mcp' \
         | grep -oE '(^|[/ @])(xcode[b]uild|py[t]est|vi[t]est|play[w]right|swift-fronten[d]|pyinstalle[r])([ /]|$)' \
         | tr -d '/ @' | sort -u | tr '\n' ' ')"
     procs="${procs% }"
@@ -167,11 +171,24 @@ gate_iona() {
     [ -n "${GUESTS:-}" ] || { echo "guest-matrix.conf names no GUESTS"; return; }
     export TART_HOME="${TART_HOME:-}"
     [ -x "$TART" ] || { echo "tart not found at $TART"; return; }
+    # A running gw-* clone is a walk a killed night left behind, never a guest to
+    # wait for: left alone it would block every later night. Housekeeping, so it
+    # says nothing. Only the gw- prefix, and never WALK_BASE (its grants were
+    # given by hand).
+    # Only from the nightly run, which holds the lock: a daytime `check` must not
+    # take down a walk someone is running by hand.
+    local old
+    [ "$SWEEP_LEFTOVERS" = 1 ] && for old in $("$TART" list 2>/dev/null | awk '$1=="local" && $2 ~ /^gw-/ && $NF=="running" {print $2}'); do
+        [ "$old" = "${WALK_BASE:-}" ] && continue
+        with_timeout 60 "$TART" stop "$old" >/dev/null 2>&1
+        "$TART" delete "$old" >/dev/null 2>&1
+    done
     local running
     running="$("$TART" list 2>/dev/null | awk '$NF=="running" {print $2}' | tr '\n' ' ')"
     [ -n "$running" ] && echo "a guest is already running: ${running% }"
 }
 
+SWEEP_LEFTOVERS=0
 # Ask every gate, not just the first: "on battery · Iona not attached" tells the
 # owner both things to change, where the first alone costs another night.
 GATE_REASONS=""
@@ -311,6 +328,97 @@ run_guest() {
     stop_guest
 }
 
+# --- the walk (docs/design-guest-walk.md) ------------------------------------
+# The night's second job, after the suite: a click-through of the shipped app in
+# a clean guest, compared with the last completed walk. On only when the drive's
+# config names WALK_BASE. It is QA, subordinate to the suite and to any release:
+# its segment never carries a token cmd_report or cmd_run classify on, so a
+# halted walk cannot turn the suite's line red, and a release that starts while
+# it runs stops it.
+GM_WALK_SCRIPT="${GM_WALK_SCRIPT:-$SCRIPT_DIR/guest-walk/guest-walk.sh}"
+# Measured 20 Oct 2026: about 4 min a walk including clone, boot and teardown.
+GM_WALK_TIMEOUT_MIN="${GM_WALK_TIMEOUT_MIN:-20}"
+GM_WALK_TIMEOUT_S="${GM_WALK_TIMEOUT_S:-$((GM_WALK_TIMEOUT_MIN * 60))}"
+GM_OLLAMA_URL="${GM_OLLAMA_URL:-http://127.0.0.1:11434/api/tags}"
+WALK_PID=""
+
+# walk_segment <night-dir> <exit-status> — pure: the walk's files become one segment.
+walk_segment() {
+    local d="$1" rc="$2" v s app
+    v="$(head -1 "$d/verdict.txt" 2>/dev/null)"
+    s="$(head -1 "$d/summary.txt" 2>/dev/null)"
+    app="$(grep -o -m1 'app [0-9.]* ([0-9]*)' "$d/walk.log" 2>/dev/null)"
+    case "$v" in
+        COMPLETED*) v="${s:-completed, not compared}" ;;
+        HALTED*)    v="halted at ${v#HALTED }${s:+ ($s)}" ;;
+        STOPPED*)   v="stopped by the caller" ;;
+        "")         v="no verdict (the walk wrote nothing, exit $rc)" ;;
+        *)          v="no verdict ($v)" ;;
+    esac
+    echo "$v${app:+ · $app}"
+}
+# A reason string nobody anticipated (tart's stderr, a halt message) must not
+# carry the suite's vocabulary into the line.
+scrub_segment() {
+    case "$1" in
+        *"✓"*|*"✗"*|*"skipped:"*|*"error:"*) echo "no verdict (segment malformed)" ;;
+        *) echo "$1" ;;
+    esac
+}
+# walk_fits — enough of the night is left to finish a walk before the window closes.
+walk_fits() {
+    local h m left; h="$(hour)"; m="${GM_MINUTE:-$(date +%M)}"; m=$((10#$m))
+    if [ "$h" -lt "$GM_WINDOW_END" ]; then left=$(( (GM_WINDOW_END - h) * 60 - m ))
+    elif [ "$h" -ge "$GM_WINDOW_START" ]; then left=$(( (24 - h + GM_WINDOW_END) * 60 - m ))
+    else return 0   # a daytime trial (run --now) has no window to close
+    fi
+    [ "$left" -ge $((GM_WALK_TIMEOUT_MIN + 5)) ]
+}
+stop_walk() {
+    [ -n "$WALK_PID" ] || return 0
+    kill -TERM "$WALK_PID" 2>/dev/null
+    local i=0
+    # Its TERM trap stops and deletes the clone; give that time, then insist.
+    while kill -0 "$WALK_PID" 2>/dev/null && [ "$i" -lt 150 ]; do sleep 1; i=$((i + 1)); done
+    kill -9 "$WALK_PID" 2>/dev/null
+    WALK_PID=""
+}
+# run_walk — sets WALK_SEGMENT to the walk's segment, or empty when no walk is
+# configured. A global, not output: run in a `$(…)` the walk's pid would stay in
+# the subshell, the EXIT trap's stop_walk would find nothing, and a TERM to the
+# runner would wait for the whole walk and then overwrite the suite's line.
+WALK_SEGMENT=""
+run_walk() {
+    WALK_SEGMENT=""
+    [ -n "${WALK_BASE:-}" ] || return 0
+    local r d rc running deadline why=""
+    r="$(release_engaged "$REPO")"; [ -n "$r" ] && { WALK_SEGMENT="not run ($r)"; return; }
+    walk_fits || { WALK_SEGMENT="not run (too late in the night to finish)"; return; }
+    curl -s -m 3 -o /dev/null "$GM_OLLAMA_URL" || { WALK_SEGMENT="not run (Ollama not answering)"; return; }
+    running="$("$TART" list 2>/dev/null | awk '$NF=="running" {print $2}' | tr '\n' ' ')"
+    [ -n "$running" ] && { WALK_SEGMENT="not run (a guest is still running: ${running% })"; return; }
+    d="$GM_IONA/walks/$(run_name)"
+    mkdir -p "$GM_IONA/walks" 2>/dev/null || { WALK_SEGMENT="not run (cannot write $GM_IONA/walks)"; return; }
+    WALK_BASE="$WALK_BASE" TART_HOME="${TART_HOME:-}" GW_TART="$TART" \
+        "$GM_WALK_SCRIPT" "$d" >> "$STATE/logs/$(run_name)/walk.out" 2>&1 &
+    WALK_PID=$!
+    deadline=$(( $(date +%s) + GM_WALK_TIMEOUT_S ))
+    while kill -0 "$WALK_PID" 2>/dev/null; do
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+            # From the seconds, which is what fired: a short GM_WALK_TIMEOUT_S
+            # must not read as "0 min".
+            why="timed out after $((GM_WALK_TIMEOUT_S / 60)) min"
+            [ "$GM_WALK_TIMEOUT_S" -lt 120 ] && why="timed out after ${GM_WALK_TIMEOUT_S}s"
+            break
+        fi
+        r="$(release_engaged "$REPO")"; [ -n "$r" ] && { why="$r"; break; }
+        sleep "$GM_POLL_S"
+    done
+    if [ -n "$why" ]; then stop_walk; WALK_SEGMENT="stopped ($why)"; return; fi
+    wait "$WALK_PID"; rc=$?; WALK_PID=""
+    WALK_SEGMENT="$(walk_segment "$d" "$rc")"
+}
+
 # --- the report --------------------------------------------------------------
 
 write_report() { # write_report <line>
@@ -360,7 +468,7 @@ cmd_check() {
 }
 
 cmd_run() {
-    local now="${1:-}" head last n shortlog cells cell sha share vm verdict all_ran=1
+    local now="${1:-}" head last n shortlog cells cell sha share vm walk all_ran=1
     local f lockpid
     if [ "$now" = "--now" ] && ! in_window; then RUN_NAME="trial-$(date +%F-%H%M)"; fi
     if [ "$now" != "--now" ]; then
@@ -387,12 +495,15 @@ cmd_run() {
         mkdir "$STATE/.lock" 2>/dev/null || run_error "cannot take the lock in $STATE"
     fi
     echo $$ > "$STATE/.lock/pid"
-    trap 'stop_guest; rm -rf "$STATE/.lock"' EXIT
+    trap 'stop_walk; stop_guest; rm -rf "$STATE/.lock"' EXIT
     # A run stopped by a signal says so; with no line, the morning would blame
-    # the trigger. The EXIT trap then stops the guest and drops the lock.
-    trap 'write_report "$(run_name) · error: interrupted by a signal"; exit 143' TERM
-    trap 'write_report "$(run_name) · error: interrupted by a signal"; exit 130' INT
+    # the trigger. Once the suite has its verdict, that verdict stays and only
+    # the walk is reported stopped. The EXIT trap then stops the guest and the
+    # walk and drops the lock.
+    trap 'on_signal 143' TERM
+    trap 'on_signal 130' INT
 
+    SWEEP_LEFTOVERS=1
     run_gates
     if [ -n "$GATE_REASONS" ]; then
         write_report "$(night) · skipped: $GATE_REASONS"
@@ -435,14 +546,27 @@ cmd_run() {
         # must retry rather than read this commit as covered.
         case "$cell" in *"did not boot"*|*"timed out"*|*"no verdict"*|*"could not"*|*"not in the bundle"*) all_ran=0 ;; esac
     done
-    verdict="$(run_name) · tested ${head:0:8} ($shortlog)${GM_IGNORE_IDLE:+, idle gate overridden} · $cells"
-    write_report "$verdict"
+    # The suite's verdict is settled here, before the walk: a signal from now on
+    # keeps it (on_signal), and the tested commit is recorded whatever the walk does.
+    SUITE_LINE="$(run_name) · tested ${head:0:8} ($shortlog)${GM_IGNORE_IDLE:+, idle gate overridden} · $cells"
     if [ "$all_ran" = 1 ]; then
         printf '%s\n' "$head" > "$STATE/last-tested-sha"
         printf '%s\n' "$cells" > "$STATE/last-verdict"
     fi
-    notify "$cells"
+    run_walk; walk="$(scrub_segment "$WALK_SEGMENT")"
+    write_report "$SUITE_LINE${walk:+ · walk: $walk}"
+    notify "$cells${walk:+ · walk: $walk}"
     return 0
+}
+# on_signal <exit-status> — the TERM/INT trap of cmd_run.
+SUITE_LINE=""
+on_signal() {
+    if [ -n "$SUITE_LINE" ]; then
+        write_report "$SUITE_LINE · walk: stopped (the runner was interrupted)"
+    else
+        write_report "$(run_name) · error: interrupted by a signal"
+    fi
+    exit "$1"
 }
 
 # install / uninstall — the LaunchAgent that ticks `run` on :00 and :30. A
@@ -516,5 +640,6 @@ case "${1:-}" in
     report) cmd_report ;;
     behind) cmd_behind ;;
     summarise) summarise_guest "$2" "$3" ;;   # the test's seam; pure
+    walk-segment) scrub_segment "$(walk_segment "$2" "${3:-0}")" ;;   # the test's seam; pure
     *) echo "usage: $(basename "$0") check | run [--now] | report | install | uninstall" >&2; exit 2 ;;
 esac

@@ -8,7 +8,7 @@
 # `up` proves the forward answers INSIDE the guest on both loopback families
 # (the app asks 127.0.0.1 for /api/tags and localhost for /v1), or fails.
 set -uo pipefail
-export TART_HOME=/Volumes/Iona/tart
+export TART_HOME="${TART_HOME:-/Volumes/Iona/tart}"
 VM="${GUEST:-bn-walk}"
 PIDF="/tmp/bn-walk-tunnel-$VM.pid"
 case "${1:-}" in

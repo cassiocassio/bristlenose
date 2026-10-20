@@ -14,12 +14,14 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-WALKER = Path(__file__).with_name("walker-host")
+# The host-built walker does the pixel work; guest-walk.sh passes it as WALKER.
+WALKER = Path(os.environ.get("WALKER") or Path(__file__).with_name("walker-host"))
 
 # Regions where a difference is noise by construction, in capture pixels.
 # Every mask carries its reason, which the page prints: masking is a decision,

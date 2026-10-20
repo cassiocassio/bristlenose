@@ -1,5 +1,9 @@
 # Guest walk — proof of concept (20 Oct 2026)
 
+**Productionised the same day:** the scripts moved to `desktop/scripts/guest-walk/` and run
+nightly from `guest-matrix.sh`; the design is `docs/design-guest-walk.md`. This folder keeps
+the spike's record (this file, `COVERAGE.md`) and `vision-probe.swift`.
+
 A nightly click-through of the Mac app inside a tart guest, diffed against the
 last accepted walk, with the changed screens painted pink. Two halves:
 

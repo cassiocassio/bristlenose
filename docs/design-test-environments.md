@@ -214,6 +214,11 @@ tests pass), so no ssh key is needed. Before that run the guest script lacked
 CI's two stub steps (an empty sidecar executable and `generate-build-info.sh`)
 that `/Volumes/Iona/tart/bin/guest-run.sh` already did; it has them now.
 
+**A second job, the guest walk (20 Oct 2026).** When the drive's `guest-matrix.conf` names
+`WALK_BASE`, the night then clones a clean macOS 27 vanilla base, clicks through the shipped
+app, compares every screen with the last completed walk, and appends ` · walk: …` to the line.
+It never changes the suite's verdict and stops if a release starts. `docs/design-guest-walk.md`.
+
 **What it tests.** The committed HEAD, never the working tree, which a concurrent
 session may be half-way through. HEAD goes into the guest as a `git bundle` on a
 read-only tart share, named for its commit: VirtioFS has served the old bytes

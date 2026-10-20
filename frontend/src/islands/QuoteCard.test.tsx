@@ -568,7 +568,8 @@ describe("QuoteCard — editing (trim handles)", () => {
 // 150 ms later from an editor that was gone, writing the old text back.
 describe("QuoteCard — an edit in progress survives the card going away", () => {
   const TYPED = "The navigation was hidden";
-  function startEditing(onEditCommit: ReturnType<typeof vi.fn>) {
+  type Commit = (domId: string, newText: string) => void;
+  function startEditing(onEditCommit: Commit) {
     const view = renderEditableCard({}, { onEditCommit });
     fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));
     const editor = document.querySelector(".crop-editable") as HTMLElement;
@@ -578,7 +579,7 @@ describe("QuoteCard — an edit in progress survives the card going away", () =>
   }
 
   it("commits what was typed when the card unmounts with no blur", () => {
-    const onEditCommit = vi.fn();
+    const onEditCommit = vi.fn<Commit>();
     const { unmount } = startEditing(onEditCommit);
     unmount();
     expect(onEditCommit).toHaveBeenCalledTimes(1);
@@ -588,7 +589,7 @@ describe("QuoteCard — an edit in progress survives the card going away", () =>
   it("commits what was typed, once, when a blur is followed by the unmount", () => {
     vi.useFakeTimers();
     try {
-      const onEditCommit = vi.fn();
+      const onEditCommit = vi.fn<Commit>();
       const { unmount, editor } = startEditing(onEditCommit);
       fireEvent.blur(editor);
       unmount();

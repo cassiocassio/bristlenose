@@ -1324,6 +1324,41 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_a_failed_catch_up_names_its_failure(
+        self, project_with_garrett
+    ) -> None:
+        """The catch-up chip says why a job failed from ``failure_kind``, as the
+        AutoCode chip does. The catch-up wrote "failed" with no kind, so an
+        exhausted account read as the generic "Tagging failed." (R12)."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        self._mark_running(db_factory, project_id, framework_id)
+
+        boom = RuntimeError(
+            "Error code: 400 - {'type': 'error', 'error': {'type': "
+            "'invalid_request_error', 'message': 'Your credit balance is too "
+            "low to access the Anthropic API.'}}"
+        )
+        with _patch_llm(AsyncMock(side_effect=boom)):
+            asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings(),
+                    track_status=True,
+                )
+            )
+        db = db_factory()
+        try:
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "failed"
+            assert job.failure_kind == LLMFailureKind.OUT_OF_CREDIT.value
+        finally:
+            db.close()
+
     def test_a_catch_up_that_codes_everything_is_not_a_shortfall(
         self, project_with_garrett
     ) -> None:
@@ -1624,6 +1659,32 @@ class TestStartCatchUps:
             )
             assert started == []
             assert job.status == "completed"  # untouched
+        finally:
+            db.close()
+
+    def test_a_catch_up_already_running_is_not_started_again(
+        self, project_with_garrett
+    ) -> None:
+        """Off and on again while a catch-up is still coding: the second PUT
+        found the same new sessions and started a second catch-up on the same
+        job, two passes coding one delta and racing on its proposals."""
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+
+        db = db_factory()
+        try:
+            assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
+            # The first catch-up is still running when the switch goes off and on.
+            assert _start_catch_ups(db, project_id, [framework_id]) == []
+            job = (
+                db.query(AutoCodeJob)
+                .filter_by(project_id=project_id, framework_id=framework_id)
+                .one()
+            )
+            assert job.status == "running"
         finally:
             db.close()
 

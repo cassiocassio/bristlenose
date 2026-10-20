@@ -563,6 +563,7 @@ def _set_job_status(
     status: str,
     error: str | None = None,
     when: str | None = None,
+    failure_kind: str | None = None,
 ) -> None:
     """Best-effort update of an AutoCodeJob's status for the on-enable catch-up chip.
 
@@ -583,6 +584,8 @@ def _set_job_status(
         j.status = status
         if error is not None:
             j.error_message = error
+        if failure_kind is not None:
+            j.failure_kind = failure_kind
         db.commit()
     except Exception:
         logger.exception("Could not set catch-up job status for %s", framework_id)
@@ -906,7 +909,12 @@ async def reapply_to_new_quotes(
         db.rollback()
         failed = True
         if track_status:
-            _set_job_status(db, project_id, framework_id, "failed", str(exc)[:500])
+            # Named as run_autocode_job names it, so the chip can say which failure
+            # this was (out of credit, rate limited…) and not only "Tagging failed."
+            _set_job_status(
+                db, project_id, framework_id, "failed", str(exc)[:500],
+                failure_kind=classify_exception(settings.llm_provider or None, exc).value,
+            )
         return 0
     finally:
         # Any early `return 0` left the job as the route set it ("running"); restore

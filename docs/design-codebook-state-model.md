@@ -28,6 +28,12 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   so the next catch-up codes those sessions (it said "completed" and skipped
   them for good). A partial failure still advances the watermark; that is the
   deferred per-session stamp below. Register: R12.
+  Then two more (wave 5): switching a codebook off and on while its catch-up is
+  still coding no longer starts a second catch-up on the same job
+  (`_start_catch_ups` skips a job already `running` or `pending`, so the
+  running one's chip stands); and a failed catch-up records `failure_kind`, as
+  `run_autocode_job` does, so its chip says which failure it was (out of
+  credit, rate limited…) instead of the generic "Tagging failed.".
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.
   **New §4b** records that `PUT /framework-states` is a full replacement, that
   absence means enabled, and that the two together make a partial body both a
@@ -255,7 +261,9 @@ that stamped `completed_at` while its run was actually incomplete. In the normal
 lifecycle that can't happen — `completed_at` only advances on a **completed** run;
 failed/cancelled runs leave the watermark where it was, so those sessions get picked up
 next time. Disable simply freezes the watermark (the codebook stops running), new
-sessions pile above the line, and re-enable fires one delta over everything above it.
+sessions pile above the line, and re-enable fires one delta over everything above it —
+unless that codebook's previous catch-up is still running, in which case the re-enable
+starts nothing and the running one codes the same sessions (20 Oct 2026).
 
 The one abnormal path where the watermark *could* lie — a **serve crash** mid-run
 that strands a job `running`/`pending` — is handled separately, not by the deferred

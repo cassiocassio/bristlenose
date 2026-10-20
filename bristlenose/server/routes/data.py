@@ -1694,8 +1694,10 @@ def _start_catch_ups(
     was imported since that job finished (the frozen watermark; §4a). Setting the
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
-    where it would otherwise see the stale "completed" and resolve instantly. Cheap:
-    two indexed queries per framework, no LLM.
+    where it would otherwise see the stale "completed" and resolve instantly. A job
+    already "running" is a catch-up still in flight (off and on again while it
+    codes), so it is not started twice. Cheap: two indexed queries per framework,
+    no LLM.
     """
     from bristlenose.server.models import AutoCodeJob
     from bristlenose.server.models import Session as SessionModel
@@ -1709,6 +1711,11 @@ def _start_catch_ups(
         )
         if job is None or job.completed_at is None:
             continue  # never applied → nothing to catch up
+        if job.status in ("running", "pending"):
+            # A catch-up already coding this delta (the switch went off and on
+            # while it ran): a second one would code the same sessions again on
+            # the same job. Its chip is already up and resolves when it ends.
+            continue
         has_new = (
             db.query(SessionModel.session_id)
             .filter(

@@ -1,3 +1,6 @@
+// AppKit for one symbol, `NSApplication.willTerminateNotification` (see
+// `stopAllForQuit`), as in ServeManager.
+import AppKit
 import Foundation
 import os
 
@@ -528,7 +531,20 @@ final class PipelineRunner: ObservableObject {
     /// is the canonical "pipeline finished" signal for `parseManifest`.
     nonisolated private static let terminalStage = "render"
 
-    init() {
+    /// How a signal reaches a run: 0, or the errno. `kill` in the app; a test
+    /// records instead. The closure reads errno itself — Swift does not keep it
+    /// across a closure's return.
+    private let sendSignal: (pid_t, Int32) -> Int32
+
+    /// - Parameters:
+    ///   - notificationCenter: where Quit is observed. A test passes its own,
+    ///     so posting Quit there reaches no other object in the test host.
+    ///   - sendSignal: how a signal is sent to a run at Quit; returns 0 or the errno.
+    init(
+        notificationCenter: NotificationCenter = .default,
+        sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno }
+    ) {
+        self.sendSignal = sendSignal
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language) runs again, and the per-session
@@ -539,9 +555,17 @@ final class PipelineRunner: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in self?.rerunDeferredProjects() }
         }
+        // The object that owns the process owns its shutdown (ServeManager's
+        // rule). Synchronous: Quit exits straight after posting this.
+        terminationObserver = notificationCenter.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopAllForQuit() }
+        }
     }
 
     private var whisperReadyObserver: NSObjectProtocol?
+    private var terminationObserver: NSObjectProtocol?
 
     /// The projects whose last run left a session waiting for Whisper.
     var projectsWaitingForWhisper: [UUID] {
@@ -1411,6 +1435,48 @@ final class PipelineRunner: ObservableObject {
                 "SIGKILL escalation pid=\(pid, privacy: .public) project=\(projectID.uuidString, privacy: .public) — SIGTERM didn't take in 3s"
             )
         }
+    }
+
+    // MARK: - Quit
+
+    /// Quitting the app stops every run it knows about: the run it spawned and
+    /// any orphan it attached to (`docs/design-subprocess-lifecycle.md`
+    /// §Quit propagation, planned there as `stopAll`). Without this a run
+    /// outlived the app until its next print — its stdout is a pipe to us, the
+    /// write failed with EPIPE, and Python recorded `run_failed` — so a
+    /// relaunch read "Resuming…" and then "CLI exited with code 1" (R19,
+    /// 20 Oct 2026). SIGINT records `run_cancelled` instead, which reads
+    /// "Stopped" and resumes from the cache, even with the pipe closing a
+    /// moment later (measured against the real CLI, mid-transcription
+    /// included).
+    ///
+    /// No escalation: the app is gone before a timer could fire, and a run
+    /// wedged in a C call takes the signal when the call returns. The queue
+    /// lives in memory and is not kept; it is logged so the loss is on record.
+    func stopAllForQuit() {
+        let owned = currentProcess.flatMap { $0.isRunning ? $0.processIdentifier : nil }
+        let targets = Self.quitSignalTargets(
+            owned: owned, orphans: Array(attachedOrphanPIDs.values)
+        )
+        for pid in targets {
+            let err = sendSignal(pid, SIGINT)
+            if err == 0 {
+                Self.logger.info("quit: SIGINT to run pid=\(pid, privacy: .public)")
+            } else if err == ESRCH {
+                // Already gone between polls — the outcome Quit wanted.
+                Self.logger.info("quit: run pid=\(pid, privacy: .public) already exited")
+            } else {
+                Self.logger.error("quit: SIGINT to run pid=\(pid, privacy: .public) failed errno=\(err, privacy: .public)")
+            }
+        }
+        if !queue.isEmpty {
+            Self.logger.warning("quit: \(self.queue.count, privacy: .public) queued run(s) not kept across launches")
+        }
+    }
+
+    /// Each live run once, in a stable order.
+    nonisolated static func quitSignalTargets(owned: pid_t?, orphans: [pid_t]) -> [pid_t] {
+        Set(orphans + (owned.map { [$0] } ?? [])).sorted()
     }
 
     // MARK: - Spawn

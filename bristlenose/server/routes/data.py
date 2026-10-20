@@ -1575,6 +1575,42 @@ def put_hidden_tag_groups(
         db.close()
 
 
+@router.patch("/projects/{project_id}/hidden-tag-groups")
+def patch_hidden_tag_groups(
+    project_id: int,
+    request: Request,
+    data: dict[_TagName, bool],
+) -> dict[str, Any]:
+    """Hide (``true``) or show (``false``) the groups named, and no others.
+
+    The SPA's write. ``PUT`` replaces the whole set, so an eye clicked before the
+    client's first read landed, or after a failed one, erased every other group
+    hidden on the server. Groups are names, not rows, so nothing is unresolved;
+    the answer keeps the curation PATCH's shape.
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        for name, hidden in data.items():
+            if hidden:
+                # Insert-or-ignore: a second client hiding the same group at once
+                # would otherwise hit the unique index and be refused.
+                db.execute(
+                    sqlite_insert(HiddenTagGroup)
+                    .values(project_id=project_id, group_name=name, hidden_at=_now())
+                    .on_conflict_do_nothing(index_elements=["project_id", "group_name"])
+                )
+            else:
+                db.query(HiddenTagGroup).filter_by(
+                    project_id=project_id, group_name=name
+                ).delete(synchronize_session=False)
+        db.commit()
+        return {"status": "ok", "unresolved": []}
+    finally:
+        db.close()
+
+
 @router.get("/projects/{project_id}/framework-states")
 def get_framework_states(
     project_id: int,

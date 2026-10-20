@@ -369,8 +369,11 @@ export function getHiddenTagGroups(): Promise<string[]> {
   return apiGet<string[]>("/hidden-tag-groups");
 }
 
-export function putHiddenTagGroups(groupNames: string[]): void {
-  firePut("/hidden-tag-groups", groupNames);
+/** Hide (`true`) or show (`false`) the groups named, and no others. The `PUT`
+ *  replaced the whole set, so an eye clicked before the first read landed, or
+ *  after a failed one, erased every other group hidden on the server. */
+export function patchHiddenTagGroups(data: Record<string, boolean>): Promise<void> {
+  return queuedPatch("/hidden-tag-groups", data);
 }
 
 /**

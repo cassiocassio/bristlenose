@@ -32,7 +32,7 @@ vi.mock("../../utils/api", () => ({
   patchHidden: vi.fn(() => Promise.resolve()),
   patchTags: vi.fn(() => Promise.resolve()),
   patchEdits: vi.fn(() => Promise.resolve()),
-  putHiddenTagGroups: vi.fn(),
+  patchHiddenTagGroups: vi.fn(() => Promise.resolve()),
   putFrameworkStates: vi.fn(),
   getFrameworkStates: vi.fn(),
   sendPut: vi.fn(() => Promise.resolve()),

@@ -7,7 +7,7 @@
  *
  * State is persisted to localStorage so sidebar open/close and widths
  * survive page reloads. `hiddenTagGroups` is persisted to SQLite via
- * the `/hidden-tag-groups` API (fire-and-forget PUTs).
+ * the `/hidden-tag-groups` API (a PATCH naming only the groups an eye changed).
  *
  * Left sidebar (TOC) has three modes: closed, overlay (temporary peek),
  * and push (permanent, content narrows). Overlay is transient — never
@@ -17,7 +17,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { getFrameworkStates, getHiddenTagGroups, putHiddenTagGroups } from "../utils/api";
+import { getFrameworkStates, getHiddenTagGroups, patchHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -223,14 +223,25 @@ let frameworkStatesHydrated = false;
 let frameworkEditGeneration = 0;
 
 /**
- * Hidden tag groups follow the same two rules (R93). Every TagSidebar mount used
+ * Hidden tag groups are read once per session (R93): every TagSidebar mount used
  * to re-read them and replace the set wholesale, so an eye clicked while that
- * read was in flight, or just before a remount whose read beat the click's PUT,
- * snapped back. Read once per session; a toggle bumps the generation so a read
- * already in flight discards its answer.
+ * read was in flight snapped back. An eye writes only its own groups (a PATCH),
+ * and a read that answers after an eye moved keeps the eye's value for the
+ * groups it touched and the server's for the rest. `hiddenGroupsTouched` is the
+ * groups an eye moved since the read in flight was sent (null when none is).
  */
 let hiddenTagGroupsHydrated = false;
-let hiddenTagGroupsEditGeneration = 0;
+let hiddenGroupsTouched: Set<string> | null = null;
+
+/**
+ * Eye writes not yet answered, by group: how many, and what the server is known
+ * to hold. Once a group's writes are all answered and the last one failed, the
+ * eye goes back to the server's value (the shape of QuotesContext's `send`, R7).
+ */
+const hiddenGroupWrites = new Map<
+  string,
+  { count: number; server: boolean; failed: boolean; landed: boolean }
+>();
 
 /**
  * The arrangement stashed by the last `hideAllSidebars()`, put back by the next
@@ -580,57 +591,110 @@ export function setTagsWidth(width: number): void {
 }
 
 /**
- * Read the persisted hidden tag groups once per session and apply them, unless
- * an eye was toggled while the read was in flight. Safe to call from every
- * TagSidebar mount — the first caller wins, and a failed read lets a later
- * mount retry.
+ * Read the persisted hidden tag groups once per session and apply them, keeping
+ * the eye's value for any group an eye moved while the read was in flight or
+ * whose write is unanswered. Safe to call from every TagSidebar mount — the
+ * first caller wins, and a failed read lets a later mount retry.
  */
 export function hydrateHiddenTagGroups(): void {
   if (hiddenTagGroupsHydrated) return;
   hiddenTagGroupsHydrated = true;
-  const genAtFetch = hiddenTagGroupsEditGeneration;
+  const touched = new Set<string>();
+  hiddenGroupsTouched = touched;
   getHiddenTagGroups()
     .then((groupNames) => {
-      if (hiddenTagGroupsEditGeneration !== genAtFetch) return;
-      setState((prev) => ({ ...prev, hiddenTagGroups: new Set(groupNames) }));
+      if (hiddenGroupsTouched !== touched) return; // the store was reset meanwhile
+      hiddenGroupsTouched = null;
+      const server = new Set(groupNames);
+      // What the server holds beneath the unanswered writes, unless one has
+      // landed since: its answer is newer than a read it may have overtaken.
+      for (const [name, write] of hiddenGroupWrites) {
+        if (!write.landed) write.server = server.has(name);
+      }
+      setState((prev) => {
+        const next = new Set(server);
+        for (const name of [...touched, ...hiddenGroupWrites.keys()]) {
+          if (prev.hiddenTagGroups.has(name)) next.add(name);
+          else next.delete(name);
+        }
+        return { ...prev, hiddenTagGroups: next };
+      });
     })
     .catch(() => {
+      if (hiddenGroupsTouched !== touched) return;
+      hiddenGroupsTouched = null;
       hiddenTagGroupsHydrated = false;
     });
+}
+
+/** Show the groups named as hidden or not, and save only those (a PATCH). */
+function writeHiddenGroups(change: Record<string, boolean>): void {
+  const names = Object.keys(change);
+  if (names.length === 0) return;
+  const writes = names.map((name) => {
+    hiddenGroupsTouched?.add(name);
+    let write = hiddenGroupWrites.get(name);
+    if (write) write.count += 1;
+    else {
+      const server = state.hiddenTagGroups.has(name);
+      write = { count: 1, server, failed: false, landed: false };
+      hiddenGroupWrites.set(name, write);
+    }
+    return write;
+  });
+  const show = (values: Record<string, boolean>) =>
+    setState((prev) => {
+      const next = new Set(prev.hiddenTagGroups);
+      for (const [name, hidden] of Object.entries(values)) {
+        if (hidden) next.add(name);
+        else next.delete(name);
+      }
+      return { ...prev, hiddenTagGroups: next };
+    });
+  show(change);
+  // The write toasts its own failure (sendWrite → toastSaveFailed).
+  const answered = (landed: boolean) => {
+    const back: Record<string, boolean> = {};
+    names.forEach((name, i) => {
+      const write = writes[i];
+      if (hiddenGroupWrites.get(name) !== write) return; // the store was reset meanwhile
+      write.count -= 1;
+      if (landed) {
+        write.server = change[name];
+        write.failed = false;
+        write.landed = true;
+      } else {
+        write.failed = true;
+      }
+      if (write.count > 0) return;
+      hiddenGroupWrites.delete(name);
+      if (!write.failed) return;
+      back[name] = write.server;
+      // The eye no longer claims this group, so a read still in flight decides it.
+      hiddenGroupsTouched?.delete(name);
+    });
+    if (Object.keys(back).length > 0) show(back);
+  };
+  patchHiddenTagGroups(change).then(
+    () => answered(true),
+    () => answered(false),
+  );
 }
 
 /**
  * Toggle a tag group's badge visibility on quote cards.
  * When hidden, badges for tags in this group are suppressed.
- * Persists to SQLite via fire-and-forget PUT.
  */
 export function toggleTagGroupHidden(groupName: string): void {
-  hiddenTagGroupsEditGeneration += 1;
-  setState((prev) => {
-    const next = new Set(prev.hiddenTagGroups);
-    if (next.has(groupName)) next.delete(groupName);
-    else next.add(groupName);
-    putHiddenTagGroups([...next]);
-    return { ...prev, hiddenTagGroups: next };
-  });
+  writeHiddenGroups({ [groupName]: !state.hiddenTagGroups.has(groupName) });
 }
 
 /**
- * Hide all tag groups within a framework (bulk eye toggle).
+ * Hide or show all tag groups within a framework (bulk eye toggle).
  * Pass the group names belonging to that framework.
- * Persists to SQLite via fire-and-forget PUT.
  */
 export function setTagGroupsHidden(groupNames: string[], hidden: boolean): void {
-  hiddenTagGroupsEditGeneration += 1;
-  setState((prev) => {
-    const next = new Set(prev.hiddenTagGroups);
-    for (const name of groupNames) {
-      if (hidden) next.add(name);
-      else next.delete(name);
-    }
-    putHiddenTagGroups([...next]);
-    return { ...prev, hiddenTagGroups: next };
-  });
+  writeHiddenGroups(Object.fromEntries(groupNames.map((name) => [name, hidden])));
 }
 
 // ── Framework enable/disable (codebook switch) ────────────────────────────
@@ -787,7 +851,8 @@ export function resetSidebarStore(): void {
   frameworkStatesHydrated = false;
   frameworkEditGeneration = 0;
   hiddenTagGroupsHydrated = false;
-  hiddenTagGroupsEditGeneration = 0;
+  hiddenGroupsTouched = null;
+  hiddenGroupWrites.clear();
   allSidebarsStash = null;
   listeners.forEach((l) => l());
 }

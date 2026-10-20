@@ -41,10 +41,10 @@ import {
 
 import { renderHook, act, waitFor } from "@testing-library/react";
 
-// Mock the API module so fire-and-forget PUTs don't hit the network.
+// Mock the API module so the store's writes don't hit the network.
 vi.mock("../utils/api", () => ({
   getHiddenTagGroups: vi.fn(() => Promise.resolve([])),
-  putHiddenTagGroups: vi.fn(),
+  patchHiddenTagGroups: vi.fn(() => Promise.resolve()),
   putFrameworkStates: vi.fn(),
   getFrameworkStates: vi.fn(() => Promise.resolve({})),
 }));
@@ -52,8 +52,8 @@ vi.mock("../utils/api", () => ({
 import {
   getFrameworkStates,
   getHiddenTagGroups,
+  patchHiddenTagGroups,
   putFrameworkStates,
-  putHiddenTagGroups,
 } from "../utils/api";
 
 // Standalone mock for the setTagFilter callback passed to solo functions.
@@ -124,7 +124,7 @@ describe("hydrateHiddenTagGroups", () => {
     act(() => hydrateHiddenTagGroups());
     await waitFor(() => expect(result.current.hiddenTagGroups.size).toBe(2));
     expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
-    expect(putHiddenTagGroups).not.toHaveBeenCalled();
+    expect(patchHiddenTagGroups).not.toHaveBeenCalled();
   });
 
   it("discards a read that was in flight when an eye was toggled", async () => {
@@ -148,6 +148,141 @@ describe("hydrateHiddenTagGroups", () => {
     act(() => hydrateHiddenTagGroups());
     act(() => hydrateHiddenTagGroups());
     expect(getHiddenTagGroups).toHaveBeenCalledTimes(2);
+  });
+
+  // An eye clicked before the read landed used to drop the read and PUT the
+  // one group it knew, erasing every other group hidden on the server.
+  it("an eye clicked before the read lands keeps the server's other groups", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => toggleTagGroupHidden("Behaviour"));
+    expect(patchHiddenTagGroups).toHaveBeenCalledWith({ Behaviour: true });
+    await act(async () => {
+      answer(["Trust", "Feedback"]);
+      await Promise.resolve();
+    });
+    expect([...result.current.hiddenTagGroups].sort()).toEqual(["Behaviour", "Feedback", "Trust"]);
+  });
+
+  it("a group shown while the read was in flight stays shown", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => setTagGroupsHidden(["A"], false));
+    await act(async () => {
+      answer(["A", "B"]);
+      await Promise.resolve();
+    });
+    expect([...result.current.hiddenTagGroups]).toEqual(["B"]);
+  });
+
+  it("after a failed read an eye sends only its group, and the next read fills in the rest", async () => {
+    vi.mocked(getHiddenTagGroups).mockRejectedValueOnce(new Error("offline"));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    act(() => toggleTagGroupHidden("Behaviour"));
+    expect(patchHiddenTagGroups).toHaveBeenLastCalledWith({ Behaviour: true });
+    vi.mocked(getHiddenTagGroups).mockResolvedValueOnce(["Behaviour", "Trust"]);
+    await act(async () => { hydrateHiddenTagGroups(); await Promise.resolve(); });
+    await waitFor(() =>
+      expect([...result.current.hiddenTagGroups].sort()).toEqual(["Behaviour", "Trust"]),
+    );
+  });
+});
+
+// A failed save takes the eye back to what the server holds (as R7 does for
+// quotes); a later click is the researcher's latest word.
+describe("hidden tag groups — a failed save", () => {
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (e: unknown) => void;
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  }
+
+  it("puts the eye back", async () => {
+    vi.mocked(patchHiddenTagGroups).mockRejectedValueOnce(new Error("500"));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleTagGroupHidden("Behaviour"));
+    expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
+    await waitFor(() => expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(false));
+  });
+
+  it("a failed show after a hide that landed shows the group hidden again", async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(patchHiddenTagGroups)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleTagGroupHidden("Behaviour"));
+    act(() => toggleTagGroupHidden("Behaviour"));
+    expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(false);
+    await act(async () => { first.resolve(); await first.promise; });
+    await act(async () => { second.reject(new Error("500")); await second.promise.catch(() => {}); });
+    expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(true);
+  });
+
+  it("a failed eye clicked before the read landed goes back to what the read says", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const write = deferred();
+    vi.mocked(patchHiddenTagGroups).mockReturnValueOnce(write.promise);
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => setTagGroupsHidden(["Trust"], false)); // the server has it hidden
+    await act(async () => { answer(["Trust"]); await Promise.resolve(); });
+    expect(result.current.hiddenTagGroups.has("Trust")).toBe(false);
+    await act(async () => { write.reject(new Error("500")); await write.promise.catch(() => {}); });
+    expect(result.current.hiddenTagGroups.has("Trust")).toBe(true);
+  });
+
+  it("an eye whose save fails before the read lands shows what the read says", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    vi.mocked(patchHiddenTagGroups).mockRejectedValueOnce(new Error("500"));
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => toggleTagGroupHidden("Trust"));
+    await waitFor(() => expect(result.current.hiddenTagGroups.has("Trust")).toBe(false));
+    await act(async () => { answer(["Trust"]); await Promise.resolve(); });
+    expect(result.current.hiddenTagGroups.has("Trust")).toBe(true);
+  });
+
+  it("a read overtaken by a write that landed does not become the eye's fallback", async () => {
+    let answer!: (v: string[]) => void;
+    vi.mocked(getHiddenTagGroups).mockReturnValueOnce(new Promise((res) => { answer = res; }));
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(patchHiddenTagGroups)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => hydrateHiddenTagGroups());
+    act(() => toggleTagGroupHidden("Trust")); // hide: lands
+    act(() => toggleTagGroupHidden("Trust")); // show: fails
+    await act(async () => { first.resolve(); await first.promise; });
+    await act(async () => { answer([]); await Promise.resolve(); }); // read from before the hide
+    await act(async () => { second.reject(new Error("500")); await second.promise.catch(() => {}); });
+    expect(result.current.hiddenTagGroups.has("Trust")).toBe(true);
+  });
+
+  it("a failed hide followed by a show that landed stays shown", async () => {
+    const first = deferred();
+    const second = deferred();
+    vi.mocked(patchHiddenTagGroups)
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    const { result } = renderHook(() => useSidebarStore());
+    act(() => toggleTagGroupHidden("Behaviour"));
+    act(() => toggleTagGroupHidden("Behaviour"));
+    await act(async () => { first.reject(new Error("500")); await first.promise.catch(() => {}); });
+    await act(async () => { second.resolve(); await second.promise; });
+    expect(result.current.hiddenTagGroups.has("Behaviour")).toBe(false);
   });
 });
 
@@ -234,30 +369,28 @@ describe("disabledFrameworks (codebook switch)", () => {
 });
 
 describe("persistence", () => {
-  it("toggleTagGroupHidden calls putHiddenTagGroups", () => {
+  it("toggleTagGroupHidden sends that one group", () => {
     act(() => toggleTagGroupHidden("Behaviour"));
-    expect(putHiddenTagGroups).toHaveBeenCalledWith(["Behaviour"]);
+    expect(patchHiddenTagGroups).toHaveBeenCalledWith({ Behaviour: true });
   });
 
-  it("toggleTagGroupHidden off sends empty array", () => {
+  it("toggleTagGroupHidden off shows that one group", () => {
     act(() => toggleTagGroupHidden("Behaviour"));
     vi.clearAllMocks();
     act(() => toggleTagGroupHidden("Behaviour"));
-    expect(putHiddenTagGroups).toHaveBeenCalledWith([]);
+    expect(patchHiddenTagGroups).toHaveBeenCalledWith({ Behaviour: false });
   });
 
-  it("setTagGroupsHidden calls putHiddenTagGroups", () => {
+  it("setTagGroupsHidden sends the groups it names", () => {
     act(() => setTagGroupsHidden(["A", "B"], true));
-    expect(putHiddenTagGroups).toHaveBeenCalledWith(
-      expect.arrayContaining(["A", "B"]),
-    );
+    expect(patchHiddenTagGroups).toHaveBeenCalledWith({ A: true, B: true });
   });
 
-  it("setTagGroupsHidden unhide calls putHiddenTagGroups", () => {
+  it("setTagGroupsHidden unhide names only the groups it shows", () => {
     act(() => setTagGroupsHidden(["A", "B"], true));
     vi.clearAllMocks();
     act(() => setTagGroupsHidden(["A"], false));
-    expect(putHiddenTagGroups).toHaveBeenCalledWith(["B"]);
+    expect(patchHiddenTagGroups).toHaveBeenCalledWith({ A: false });
   });
 });
 

@@ -196,7 +196,7 @@ vi.mock("../utils/api", async (importOriginal) => {
     ...actual,
     getCodebook: vi.fn(),
     getHiddenTagGroups: vi.fn(),
-    putHiddenTagGroups: vi.fn(),
+    patchHiddenTagGroups: vi.fn(() => Promise.resolve()),
     getFrameworkStates: vi.fn(),
     apiGet: vi.fn(),
   };

@@ -624,7 +624,7 @@ This is fundamentally different from unchecking (which says "this quote isn't pa
 
 - `hiddenTagGroups: Set<string>` lives in `SidebarStore` (module-level store, same pattern as QuotesStore)
 - Persisted to SQLite via `HiddenTagGroup` table (one row per hidden group, project-scoped, `UniqueConstraint`)
-- API: `GET/PUT /projects/{id}/hidden-tag-groups` — full-state replacement, fire-and-forget PUT from frontend
+- API: `GET/PATCH /projects/{id}/hidden-tag-groups` — the SPA sends a `PATCH` of the groups an eye changed, queued and put back on failure (since 20 Oct 2026; the whole-set `PUT` stays for tests and erased other groups when an eye beat the first read)
 - `initHiddenTagGroups()` hydrates from API on TagSidebar mount
 - `TagGroupCard` reads eye state from store (no local `useState`) — eye open/closed is derived from `hiddenTagGroups.has(name)`
 - Framework-level hidden is derived in TagSidebar via `useMemo`: a framework is hidden when all its groups are in `hiddenTagGroups`

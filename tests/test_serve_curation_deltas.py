@@ -286,6 +286,41 @@ class TestPatchEditsStarsBadges:
         assert r.json() == {"status": "ok", "unresolved": []}
 
 
+class TestPatchHiddenTagGroups:
+    """The eye toggle: one group hidden or shown, and no other.
+
+    The SPA used to ``PUT`` the whole set it held, so an eye clicked before its
+    first read landed, or after a failed one, erased every other group hidden
+    on the server.
+    """
+
+    def test_hiding_one_group_keeps_the_others(self, client: TestClient) -> None:
+        client.put(f"{_P}/hidden-tag-groups", json=["Trust", "Feedback"])
+        r = client.patch(f"{_P}/hidden-tag-groups", json={"Behaviour": True})
+        assert r.status_code == 200, r.text
+        assert r.json() == {"status": "ok", "unresolved": []}
+        got = client.get(f"{_P}/hidden-tag-groups").json()
+        assert sorted(got) == ["Behaviour", "Feedback", "Trust"]
+
+    def test_showing_one_group_keeps_the_others(self, client: TestClient) -> None:
+        client.put(f"{_P}/hidden-tag-groups", json=["Trust", "Feedback"])
+        client.patch(f"{_P}/hidden-tag-groups", json={"Trust": False})
+        assert client.get(f"{_P}/hidden-tag-groups").json() == ["Feedback"]
+
+    def test_repeats_and_unknown_names_are_no_ops(self, client: TestClient) -> None:
+        client.patch(f"{_P}/hidden-tag-groups", json={"Trust": True})
+        client.patch(f"{_P}/hidden-tag-groups", json={"Trust": True, "Nobody": False})
+        assert client.get(f"{_P}/hidden-tag-groups").json() == ["Trust"]
+
+    def test_limits_and_unknown_project(self, client: TestClient) -> None:
+        r = client.patch(f"{_P}/hidden-tag-groups", json={"x" * 201: True})
+        assert r.status_code == 422
+        body = {f"g{i}": True for i in range(10_001)}
+        assert client.patch(f"{_P}/hidden-tag-groups", json=body).status_code == 422
+        r = client.patch("/api/projects/999/hidden-tag-groups", json={"A": True})
+        assert r.status_code == 404
+
+
 class TestPatchLimits:
     def test_too_many_quotes_is_refused(self, client: TestClient) -> None:
         body = {f"q-p1-{i}": True for i in range(10_001)}

@@ -846,6 +846,7 @@
     "pricingLink": "요금제",
     "lastVerified": "마지막 확인 %@",
     "revalidating": "마지막 검증이 거부됨 — 다시 확인 중…",
+    "keyNotSaved": "이 키를 키체인에 저장하지 못해 사용되지 않습니다. Return 키를 눌러 다시 시도하십시오.",
     "activate": {
       "generic": "이 제공자 사용",
       "ollama": "로컬 Ollama 모델 사용"

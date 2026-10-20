@@ -903,6 +903,7 @@
     "pricingLink": "Cennik",
     "lastVerified": "Ostatnio zweryfikowano %@",
     "revalidating": "Ostatnia weryfikacja została odrzucona — ponowne sprawdzanie…",
+    "keyNotSaved": "Nie udało się zapisać tego klucza w pęku kluczy, więc nie jest używany. Naciśnij Return, aby spróbować ponownie.",
     "activate": {
       "generic": "Użyj tego dostawcy",
       "ollama": "Użyj lokalnego modelu Ollama"

@@ -846,6 +846,7 @@
     "pricingLink": "定價",
     "lastVerified": "上次驗證於 %@",
     "revalidating": "上次驗證遭拒 — 正在重新檢查⋯",
+    "keyNotSaved": "無法將這把金鑰儲存到你的鑰匙圈，因此並未使用。請按 Return 鍵再試一次。",
     "activate": {
       "generic": "使用此供應商",
       "ollama": "使用本機 Ollama 模型"

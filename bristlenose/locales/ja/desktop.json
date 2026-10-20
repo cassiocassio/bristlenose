@@ -846,6 +846,7 @@
     "pricingLink": "料金",
     "lastVerified": "最終確認 %@",
     "revalidating": "最後の検証が拒否されました — 再確認中…",
+    "keyNotSaved": "このキーをキーチェーンに保存できなかったため、使用されていません。Returnキーを押してもう一度お試しください。",
     "activate": {
       "generic": "このプロバイダを使用",
       "ollama": "ローカルのOllamaモデルを使用"

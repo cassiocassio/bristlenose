@@ -865,6 +865,7 @@
     "pricingLink": "Prezzi",
     "lastVerified": "Ultima verifica %@",
     "revalidating": "L'ultima convalida è stata rifiutata — nuovo controllo in corso…",
+    "keyNotSaved": "Impossibile salvare questa chiave nel Portachiavi, quindi non viene utilizzata. Premi A capo per riprovare.",
     "activate": {
       "generic": "Usa questo provider",
       "ollama": "Usa il modello Ollama locale"

@@ -870,6 +870,7 @@
     "pricingLink": "Pricing",
     "lastVerified": "Last verified %@",
     "revalidating": "Last validation was rejected — re-checking…",
+    "keyNotSaved": "Couldn’t save this key to your Keychain, so it isn’t being used. Press Return to try again.",
     "activate": {
       "generic": "Use this provider",
       "ollama": "Use the local Ollama model"

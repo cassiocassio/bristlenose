@@ -865,6 +865,7 @@
     "pricingLink": "Preus",
     "lastVerified": "Última verificació: %@",
     "revalidating": "L'última validació s'ha rebutjat — s'està tornant a comprovar…",
+    "keyNotSaved": "No s’ha pogut desar aquesta clau al Clauer, així que no s’està fent servir. Prem Retorn per tornar-ho a provar.",
     "activate": {
       "generic": "Utilitza aquest proveïdor",
       "ollama": "Utilitza el model local d'Ollama"

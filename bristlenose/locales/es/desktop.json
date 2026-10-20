@@ -865,6 +865,7 @@
     "pricingLink": "Precios",
     "lastVerified": "Última verificación %@",
     "revalidating": "La última validación falló: volviendo a comprobar…",
+    "keyNotSaved": "No se ha podido guardar esta clave en tu Llavero, así que no se está usando. Pulsa Retorno para volver a intentarlo.",
     "activate": {
       "generic": "Usar este proveedor",
       "ollama": "Usar el modelo local de Ollama"

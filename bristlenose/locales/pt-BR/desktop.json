@@ -865,6 +865,7 @@
     "pricingLink": "Preços",
     "lastVerified": "Última verificação %@",
     "revalidating": "A última validação foi rejeitada — verificando novamente…",
+    "keyNotSaved": "Não foi possível salvar esta chave no seu Keychain, então ela não está sendo usada. Pressione Return para tentar novamente.",
     "activate": {
       "generic": "Usar este provedor",
       "ollama": "Usar o modelo Ollama local"

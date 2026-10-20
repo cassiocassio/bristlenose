@@ -865,6 +865,7 @@
     "pricingLink": "Hinnoittelu",
     "lastVerified": "Viimeksi vahvistettu %@",
     "revalidating": "Viimeisin vahvistus hylättiin — tarkistetaan uudelleen…",
+    "keyNotSaved": "Tätä avainta ei voitu tallentaa avainnippuusi, joten sitä ei käytetä. Yritä uudelleen painamalla rivinvaihtonäppäintä.",
     "activate": {
       "generic": "Käytä tätä palveluntarjoajaa",
       "ollama": "Käytä paikallista Ollama-mallia"

@@ -865,6 +865,7 @@
     "pricingLink": "Preise",
     "lastVerified": "Zuletzt überprüft %@",
     "revalidating": "Letzte Überprüfung wurde abgelehnt – wird erneut geprüft…",
+    "keyNotSaved": "Dieser Schlüssel konnte nicht im Schlüsselbund gespeichert werden und wird daher nicht verwendet. Drücken Sie die Eingabetaste, um es erneut zu versuchen.",
     "activate": {
       "generic": "Diesen Anbieter verwenden",
       "ollama": "Lokales Ollama-Modell verwenden"

@@ -112,9 +112,23 @@ struct LLMSettingsView: View {
         // sidebar, that's the moment we touch Keychain for it. This is the
         // entry point for the per-row "open the account" prompt — Mail
         // Accounts pattern.
-        .onChange(of: selectedProvider) { _, _ in
+        .onChange(of: selectedProvider) { previous, _ in
+            // Save the row being left before anything else. Here, not on the
+            // key field: picking Ollama removes the field, and with it any
+            // handler it carried (R38).
+            commitAPIKeys([previous])
             applyPresenceAndCache(provider: selectedProvider)
             revalidateSelectedIfNeeded()
+        }
+        // Leaving the pane, or closing the window with ⌘W, saves a key that was
+        // pasted and never committed with Return (R38). The window close is
+        // matched by identity rather than trusted to `onDisappear`, whose
+        // firing rule belongs to the Settings package (desktop/CLAUDE.md).
+        .onDisappear { commitAPIKeys(LLMProvider.allCases) }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { note in
+            guard !measuring, let closing = note.object as? NSWindow,
+                  closing === SettingsWindow.shared.window else { return }
+            commitAPIKeys(LLMProvider.allCases)
         }
         // One hook rather than four, so it can say what it means: when the
         // content changes shape, the window follows. Covers the provider switch
@@ -139,6 +153,7 @@ struct LLMSettingsView: View {
         [selectedProvider.rawValue,
          String(describing: statusFor(selectedProvider)),
          statusErrors[selectedProvider]?.resolved(i18n) ?? "",
+         keyDrafts.failed.contains(selectedProvider) ? "keyNotSaved" : "",
          useCustomModel ? "custom" : "listed"].joined(separator: "|")
     }
 
@@ -310,7 +325,7 @@ struct LLMSettingsView: View {
 
     // MARK: - API Key section
 
-    @State private var apiKeyInputs: [LLMProvider: String] = [:]
+    @State private var keyDrafts = APIKeyDrafts()
     @State private var apiKeyRevealed: [LLMProvider: Bool] = [:]
     @FocusState private var apiKeyFocused: Bool
 
@@ -324,16 +339,20 @@ struct LLMSettingsView: View {
                 // source of the height jump on eye-toggle.
                 let revealed = apiKeyRevealed[selectedProvider, default: false]
                 if revealed {
-                    TextField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"), text: apiKeyBinding)
+                    TextField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"),
+                              text: apiKeyBinding(for: selectedProvider))
                         .textFieldStyle(.roundedBorder)
                         .focused($apiKeyFocused)
                         .labelsHidden()
                         .lineLimit(1)
+                        .id(selectedProvider)
                 } else {
-                    SecureField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"), text: apiKeyBinding)
+                    SecureField(i18n.t("desktop.llmSettings.apiKeyPlaceholder"),
+                                text: apiKeyBinding(for: selectedProvider))
                         .textFieldStyle(.roundedBorder)
                         .focused($apiKeyFocused)
                         .labelsHidden()
+                        .id(selectedProvider)
                 }
 
                 Button {
@@ -347,7 +366,7 @@ struct LLMSettingsView: View {
                       ? i18n.t("desktop.llmSettings.hideApiKey")
                       : i18n.t("desktop.llmSettings.showApiKey"))
 
-                if apiKeyInputs[selectedProvider]?.isEmpty == false {
+                if !keyDrafts.text(selectedProvider).isEmpty {
                     // macOS inline-clear convention: xmark.circle.fill
                     // glyph, borderless. Matches Spotlight, Safari URL bar,
                     // every NSSearchField in System Settings.
@@ -363,17 +382,32 @@ struct LLMSettingsView: View {
             }
             .onAppear { loadAPIKey() }
             .onChange(of: selectedProvider) { _, _ in loadAPIKey() }
-            .onSubmit { saveAPIKey() }
+            .onSubmit { commitAPIKeys([selectedProvider]) }
             .onChange(of: apiKeyFocused) { _, focused in
-                if !focused { saveAPIKey() }
+                if !focused { commitAPIKeys([selectedProvider]) }
+            }
+
+            if keyDrafts.failed.contains(selectedProvider) {
+                Label {
+                    Text(i18n.t("desktop.llmSettings.keyNotSaved"))
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
     }
 
-    private var apiKeyBinding: Binding<String> {
+    /// Bound to the row it was built for, and one field per row (`.id`): a
+    /// write that lands after a row change goes to the row it was typed in, not
+    /// to whichever row is selected by then.
+    private func apiKeyBinding(for provider: LLMProvider) -> Binding<String> {
         Binding(
-            get: { apiKeyInputs[selectedProvider, default: ""] },
-            set: { apiKeyInputs[selectedProvider] = $0 }
+            get: { keyDrafts.text(provider) },
+            set: { keyDrafts.edit(provider, $0) }
         )
     }
 
@@ -382,43 +416,52 @@ struct LLMSettingsView: View {
     /// adopted here — one dialog, for this provider — and never by the eager
     /// board, which paints every row quietly from the app's own copies (the
     /// per-row "open the account" moment: Mail Accounts pattern). A measuring
-    /// render asks nothing.
+    /// render asks nothing. A field holding an unsaved edit keeps it.
     private func loadAPIKey() {
         guard let keychainKey = selectedProvider.keychainProvider else { return }
         let existing = KeychainHelper.get(provider: keychainKey,
-                                          interaction: measuring ? .quiet : .allowed) ?? ""
-        apiKeyInputs[selectedProvider] = existing
+                                          interaction: measuring ? .quiet : .allowed)
+        keyDrafts.load(selectedProvider, stored: existing)
         // An adoption just changed what the app holds; repaint this row from it.
         applyPresenceAndCache(provider: selectedProvider)
     }
 
-    private func saveAPIKey() {
-        // A measurement must not write. The focus handler below fires during a
+    /// Save whichever of `providers` hold an edit. Safe to call from every exit
+    /// the field has, in any order: `APIKeyDrafts.commit` acts only on an edit.
+    /// The serve restarts (reloading the report) only when the key a run reads
+    /// actually changed — never for a failed save, never for a Tab.
+    private func commitAPIKeys(_ providers: [LLMProvider]) {
+        // A measurement must not write. The focus handler fires during a
         // headless render, and on 4 Sep 2026 that wrote a key back into the
         // developer's keychain from inside the test suite.
-        guard !measuring, let keychainKey = selectedProvider.keychainProvider else { return }
-        let value = apiKeyInputs[selectedProvider, default: ""]
-        if value.isEmpty {
-            KeychainHelper.delete(provider: keychainKey)
-            LLMValidator.clearCache(provider: selectedProvider)
-            validationTasks[selectedProvider]?.cancel()
-            validationTasks[selectedProvider] = nil
-            applyPresenceAndCache(provider: selectedProvider)
-        } else {
-            // Validate the *persisted* key, never the in-memory value — a green
-            // "Online" must not outrun what actually reached the Keychain. If the
-            // write silently fails (e.g. a future sandbox/entitlement regression),
-            // the read-back mismatches and we reflect real Keychain state instead
-            // of flashing green for a key that isn't stored.
-            let saved = KeychainHelper.set(provider: keychainKey, value: value)
-            if saved, KeychainHelper.get(provider: keychainKey, interaction: .allowed) == value {
-                applyPresenceAndCache(provider: selectedProvider)
-                kickOffValidation(provider: selectedProvider, key: value)
-            } else {
-                applyPresenceAndCache(provider: selectedProvider)
+        guard !measuring else { return }
+        var runKeyChanged = false
+        for provider in providers {
+            let outcome = keyDrafts.commit(provider, store: KeychainHelper.liveStore)
+            switch outcome {
+            case .unchanged:
+                continue
+            case .deleted:
+                LLMValidator.clearCache(provider: provider)
+                validationTasks[provider]?.cancel()
+                validationTasks[provider] = nil
+                applyPresenceAndCache(provider: provider)
+            case .saved(let readBack):
+                // Validate what reached the Keychain, never the typed value.
+                applyPresenceAndCache(provider: provider)
+                kickOffValidation(provider: provider, key: readBack)
+            case .failed:
+                // The status keeps describing the key the Keychain still holds;
+                // the error under the field says the pasted one isn't it.
+                Self.logger.error(
+                    "API key for \(provider.rawValue, privacy: .public) did not reach the Keychain")
+                applyPresenceAndCache(provider: provider)
             }
+            runKeyChanged = runKeyChanged || outcome.changesWhatRunsUse
         }
-        NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        if runKeyChanged {
+            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        }
     }
 
     private func clearAPIKey() {
@@ -427,7 +470,7 @@ struct LLMSettingsView: View {
         LLMValidator.clearCache(provider: selectedProvider)
         validationTasks[selectedProvider]?.cancel()
         validationTasks[selectedProvider] = nil
-        apiKeyInputs[selectedProvider] = ""
+        keyDrafts.cleared(selectedProvider)
         applyPresenceAndCache(provider: selectedProvider)
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
     }
@@ -795,7 +838,7 @@ struct LLMSettingsView: View {
         // (called from radio toggle, active toggle, etc.) would strand
         // providers in `.checking` forever because those callers don't
         // follow up with a kickoff. SwiftUI batches state writes within
-        // a tick, so when caller is saveAPIKey (applyPresenceAndCache
+        // a tick, so when caller is commitAPIKeys (applyPresenceAndCache
         // then kickOffValidation back-to-back), only `.checking` renders.
         if provider == .ollama {
             let urlStr = ollamaURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -824,7 +867,7 @@ struct LLMSettingsView: View {
         } else {
             // Key present but no cached verdict yet. Leave the existing status
             // (typically `.notSetUp`) — a follow-up `kickOffValidation` paints
-            // the real state. Two callers reach here: `saveAPIKey` (kickoff in
+            // the real state. Two callers reach here: `commitAPIKeys` (kickoff in
             // the same tick → only `.checking` renders) and the eager board's
             // `revalidateAllStale` (a separate function, but it runs
             // synchronously in the same `.onAppear` pass and calls

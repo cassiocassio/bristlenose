@@ -865,6 +865,7 @@
     "pricingLink": "Preços",
     "lastVerified": "Última verificação %@",
     "revalidating": "A última validação foi rejeitada — a verificar novamente…",
+    "keyNotSaved": "Não foi possível guardar esta chave no seu Keychain, pelo que não está a ser utilizada. Prima Return para tentar novamente.",
     "activate": {
       "generic": "Usar este fornecedor",
       "ollama": "Usar o modelo Ollama local"

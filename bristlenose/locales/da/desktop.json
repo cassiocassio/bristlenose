@@ -865,6 +865,7 @@
     "pricingLink": "Priser",
     "lastVerified": "Senest bekræftet %@",
     "revalidating": "Seneste validering blev afvist — tjekker igen…",
+    "keyNotSaved": "Nøglen kunne ikke gemmes i din nøglering, så den bliver ikke brugt. Tryk på Retur for at prøve igen.",
     "activate": {
       "generic": "Brug denne udbyder",
       "ollama": "Brug den lokale Ollama-model"

@@ -865,6 +865,7 @@
     "pricingLink": "Fiyatlandırma",
     "lastVerified": "Son doğrulama %@",
     "revalidating": "Son doğrulama reddedildi — yeniden denetleniyor…",
+    "keyNotSaved": "Bu anahtar Anahtar Zinciri’ne kaydedilemediği için kullanılmıyor. Yeniden denemek için Return tuşuna basın.",
     "activate": {
       "generic": "Bu sağlayıcıyı kullan",
       "ollama": "Yerel Ollama modelini kullan"

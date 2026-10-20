@@ -865,6 +865,7 @@
     "pricingLink": "Prijzen",
     "lastVerified": "Laatst geverifieerd %@",
     "revalidating": "Laatste validatie is geweigerd — opnieuw controleren…",
+    "keyNotSaved": "Deze sleutel kon niet in je sleutelhanger worden bewaard en wordt dus niet gebruikt. Druk op Return om het opnieuw te proberen.",
     "activate": {
       "generic": "Gebruik deze provider",
       "ollama": "Gebruik het lokale Ollama-model"

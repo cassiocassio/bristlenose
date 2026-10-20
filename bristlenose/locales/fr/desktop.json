@@ -865,6 +865,7 @@
     "pricingLink": "Tarifs",
     "lastVerified": "Dernière vérification %@",
     "revalidating": "La dernière validation a été rejetée — nouvelle vérification…",
+    "keyNotSaved": "Impossible d’enregistrer cette clé dans votre trousseau, elle n’est donc pas utilisée. Appuyez sur Retour pour réessayer.",
     "activate": {
       "generic": "Utiliser ce fournisseur",
       "ollama": "Utiliser le modèle Ollama local"

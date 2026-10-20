@@ -902,6 +902,7 @@
     "pricingLink": "Ceník",
     "lastVerified": "Naposledy ověřeno %@",
     "revalidating": "Poslední ověření bylo zamítnuto — opětovná kontrola…",
+    "keyNotSaved": "Tento klíč se nepodařilo uložit do Klíčenky, takže se nepoužívá. Zkuste to znovu stisknutím klávesy Return.",
     "activate": {
       "generic": "Použít tohoto poskytovatele",
       "ollama": "Použít místní model Ollama"

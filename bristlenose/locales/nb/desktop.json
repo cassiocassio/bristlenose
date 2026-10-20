@@ -865,6 +865,7 @@
     "pricingLink": "Priser",
     "lastVerified": "Sist bekreftet %@",
     "revalidating": "Forrige validering ble avvist – sjekker på nytt…",
+    "keyNotSaved": "Kunne ikke lagre denne nøkkelen i nøkkelringen din, så den brukes ikke. Trykk på returtasten for å prøve igjen.",
     "activate": {
       "generic": "Bruk denne leverandøren",
       "ollama": "Bruk den lokale Ollama-modellen"

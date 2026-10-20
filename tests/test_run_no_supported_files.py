@@ -52,3 +52,22 @@ def test_a_folder_with_nothing_to_read_fails_rather_than_finishing(
     terminus = _terminus(input_dir)
     assert terminus["event"] == "run_failed", terminus
     assert terminus["cause"]["category"] == "missing_input", terminus
+
+
+def test_analyze_on_a_folder_with_no_transcripts_fails_rather_than_finishing(
+    runner, tmp_path: Path
+) -> None:
+    """The same class on `analyze`: an empty transcripts folder ended "Done"."""
+    transcripts = tmp_path / "transcripts-raw"
+    transcripts.mkdir()
+    out_dir = tmp_path / "out"
+
+    result = runner.invoke(app, ["analyze", str(transcripts), "-o", str(out_dir)])
+
+    assert result.exit_code == 1, result.output
+    assert "Done" not in result.output, result.output
+    assert "No transcript files found" in result.output
+    events = out_dir / ".bristlenose" / "pipeline-events.jsonl"
+    terminus = json.loads(events.read_text(encoding="utf-8").splitlines()[-1])
+    assert terminus["event"] == "run_failed", terminus
+    assert terminus["cause"]["category"] == "missing_input", terminus

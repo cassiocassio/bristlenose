@@ -3616,8 +3616,15 @@ class Pipeline:
         # Load existing transcripts from text files
         clean_transcripts = load_transcripts_from_dir(transcripts_dir)
         if not clean_transcripts:
+            # A failed run, as `run` has it on an empty folder (R116).
             console.print("[red]No transcript files found.[/red]")
-            return self._empty_result(output_dir)
+            raise PipelineAbandonedError(
+                cause=Cause(
+                    category=CauseCategoryEnum.MISSING_INPUT,
+                    message="No transcript files found.",
+                ),
+                summary=self._summary,
+            )
 
         # `analyze` has no stage 7 — it starts at topic segmentation — so a
         # requested redaction cannot be *performed* here, only honoured or

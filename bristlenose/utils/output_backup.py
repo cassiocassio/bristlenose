@@ -70,6 +70,7 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import glob
 import logging
 import os
 import shutil
@@ -121,9 +122,25 @@ def backup_path_for(output_dir: Path) -> Path:
     return output_dir.parent / f".{output_dir.name}-previous"
 
 
+#: Written into a backup before `discard` moves it: a backup carrying it is
+#: spent, and `reclaim_stale` deletes it rather than restoring it.
+_SPENT_MARKER = ".bristlenose-backup-spent"
+
+
 def _discarding_path(backup: Path) -> Path:
-    """Where a spent backup goes to be deleted: never a path `reclaim_stale` reads."""
-    return backup.with_name(f"{backup.name}-discarding")
+    """Where a spent backup goes to be deleted: never a path `reclaim_stale` reads.
+
+    Per process, so the rename never lands on a leftover it could not clear.
+    """
+    return backup.with_name(f"{backup.name}-discarding-{os.getpid()}")
+
+
+def _clear_discarding(backup: Path) -> None:
+    """Delete what earlier cut-short discards left. Said when something stays."""
+    for leftover in backup.parent.glob(f"{glob.escape(backup.name)}-discarding*"):
+        shutil.rmtree(leftover, ignore_errors=True)
+        if leftover.exists():
+            logger.warning("output_backup: could not clear %s, a spent backup", leftover)
 
 
 def failed_path_for(output_dir: Path) -> Path:
@@ -167,9 +184,9 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
         return None
 
     backup = backup_path_for(output_dir)
-    # A spent backup whose delete was cut short (`discard`): already proven
+    # Spent backups whose delete was cut short (`discard`): already proven
     # spent, never restorable, so cleared here.
-    shutil.rmtree(_discarding_path(backup), ignore_errors=True)
+    _clear_discarding(backup)
     if backup.exists():
         if not previous_backup_is_spent:
             logger.warning(
@@ -219,15 +236,17 @@ def discard(backup: Path | None) -> None:
     """
     if backup is None or not backup.exists():
         return
+    try:
+        (backup / _SPENT_MARKER).touch()
+    except OSError as exc:
+        logger.warning("output_backup: could not mark %s spent (%s)", backup, exc)
     doomed = _discarding_path(backup)
-    shutil.rmtree(doomed, ignore_errors=True)
     try:
         backup.rename(doomed)
     except OSError as exc:
         logger.warning(
             "output_backup: could not set %s aside to delete it (%s); it is left in "
-            "place, and the next run will put it back as the previous report",
-            backup, exc,
+            "place, marked spent, for the next run to delete", backup, exc,
         )
         return
     shutil.rmtree(doomed, ignore_errors=True)
@@ -377,6 +396,16 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
     """
     backup = backup_path_for(output_dir)
     if not backup.exists():
+        return RestoreOutcome.NOTHING_TO_DO
+
+    if (backup / _SPENT_MARKER).exists():
+        # A run produced its report and `discard` could not move this out of
+        # the way: it is spent, and restoring it would put the old report over
+        # the new one (R110).
+        logger.warning("output_backup: deleting %s, a spent backup", backup)
+        shutil.rmtree(backup, ignore_errors=True)
+        if backup.exists():
+            logger.warning("output_backup: could not delete %s", backup)
         return RestoreOutcome.NOTHING_TO_DO
 
     if project_is_locked(output_dir):

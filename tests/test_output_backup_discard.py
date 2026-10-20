@@ -91,3 +91,37 @@ def test_a_clean_discard_says_so(tmp_path: Path, caplog: pytest.LogCaptureFixtur
     assert not backup.exists()
     assert not [p for p in tmp_path.iterdir() if p.name.startswith(".")]
     assert any("discarded" in r.getMessage() for r in caplog.records)
+
+
+def test_a_backup_that_cannot_be_set_aside_is_still_never_restored(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The rename fails (Windows with a file held open, or a full volume): the
+    backup stays where `reclaim_stale` looks, so it is marked spent first."""
+    out, backup = _rerun(tmp_path)
+    real_rename = Path.rename
+
+    def _refuse(self, target):
+        if self == backup:
+            raise PermissionError(13, "in use")
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", _refuse)
+    output_backup.discard(backup)
+    monkeypatch.undo()
+    assert backup.exists()
+    assert output_backup.reclaim_stale(out) is output_backup.RestoreOutcome.NOTHING_TO_DO
+    assert (out / "report.html").read_text(encoding="utf-8") == "new"
+    assert not backup.exists(), "a spent backup is deleted, not kept"
+
+
+def test_a_leftover_the_next_stash_cannot_clear_is_said(
+    tmp_path: Path, monkeypatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    out, backup = _rerun(tmp_path)
+    monkeypatch.setattr(output_backup.shutil, "rmtree", lambda *a, **k: None)
+    output_backup.discard(backup)
+    with caplog.at_level(logging.WARNING, logger="bristlenose.utils.output_backup"):
+        output_backup.stash(out)
+    assert any("could not clear" in r.getMessage() and "discarding" in r.getMessage()
+               for r in caplog.records)

@@ -740,7 +740,9 @@ private struct UndoRedoMenuContent: View {
     }
 
     var body: some View {
-        if !bridgeHandler.isEditing {
+        // `isEditing` is a report mirror too, and survives a dead sidecar; with
+        // no channel there is no editor to hand ⌘Z to (R70).
+        if !(bridgeHandler.canDispatch && bridgeHandler.isEditing) {
             Button(undoLabel, systemImage: "arrow.uturn.backward") {
                 switch route {
                 case .removal: removalStore.undoLastRemoval()
@@ -1969,6 +1971,7 @@ private struct HelpMenuContent: View {
         // front (Settings, the Welcome window) it still falls back to that
         // broadcast, so the item never dims and never goes dead.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
+            FeedbackTrace.opened(by: "help-menu windowCommands=\(windowCommands != nil)")
             if let windowCommands {
                 windowCommands.perform(.showFeedback)
             } else {

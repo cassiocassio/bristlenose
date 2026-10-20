@@ -28,7 +28,7 @@ struct OutOfCreditModelTests {
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
 
             #expect(OutOfCreditModel.clearAfterSuccessfulRun(provider: .claude, key: key))
-            #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .ok,
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == nil,
                     "the pill's verdict survived a run that worked")
         }
     }

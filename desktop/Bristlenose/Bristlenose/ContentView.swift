@@ -1205,8 +1205,17 @@ struct ContentView: View {
         // screen, before any project is selected) it falls back to the serve-free
         // `.serverless` config (canonical endpoint, enabled — same path the alpha
         // expiry flow uses), so the menu item is never a dead click.
-        .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { note in
+            let source = note.userInfo?[FeedbackTrace.sourceKey] as? String ?? "unknown-poster"
+            FeedbackTrace.opened(by: "broadcast-received from=\(source) project=\(selectedProject?.name ?? "none")")
             showingFeedbackSheet = true
+        }
+        // Catch-all: logs every false→true flip, so a path nobody thought of
+        // still shows up (it will be the one with no matching "opened by" line).
+        .onChange(of: showingFeedbackSheet) { _, isShowing in
+            if isShowing {
+                FeedbackTrace.log.notice("feedback sheet presenting project=\(selectedProject?.name ?? "none", privacy: .public) event=\(FeedbackTrace.describeCurrentEvent(), privacy: .public)")
+            }
         }
         .sheet(isPresented: $showingFeedbackSheet) {
             if let port = serveManager?.runningPort {
@@ -1636,6 +1645,7 @@ struct ContentView: View {
         case .showSessionsSwitcher:
             sessionsSwitcherRequest += 1
         case .showFeedback:
+            FeedbackTrace.opened(by: "window-command")
             showingFeedbackSheet = true
         case .applyDebugFixture(let scenario):
             applyDebugFixture(named: scenario)
@@ -2940,7 +2950,10 @@ struct ContentView: View {
     private var sidebarWithFooter: some View {
         // Sets THIS window's sheet flag. The menu item's old app-wide
         // broadcast opened a sheet in every window.
-        let footer = SidebarFooter(i18n: i18n) { showingFeedbackSheet = true }
+        let footer = SidebarFooter(i18n: i18n) {
+            FeedbackTrace.opened(by: "sidebar-footer-ladybug")
+            showingFeedbackSheet = true
+        }
         if #available(macOS 26, *) {
             if BristlenoseFlags.appKitSidebar {
                 // The outline runs under the accessory, as it already runs up
@@ -3956,6 +3969,8 @@ private struct ExportPopoverContent: View {
                 title: i18n.t("desktop.menu.file.exportReport"),
                 subtitle: i18n.t("desktop.menu.quotes.reportHint")
             ) { dispatch("exportReport") }
+            // The File menu's twin gate (R61): the SPA refuses a partial report.
+            .disabled(!bridgeHandler.canExportReport)
 
             if bridgeHandler.activeTab == .quotes {
                 // Copy Quotes: a plain "copy all visible" action by default; it

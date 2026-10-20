@@ -60,12 +60,13 @@ struct MenuGateTests {
 
     /// The report's mirrors outlive a dead sidecar; `commandTab` does not.
     @Test func aDeadChannelTakesTheLensAwayFromCommands() {
-        let (bridge, _) = liveBridge(on: "/report/quotes")
+        let (bridge, webView) = liveBridge(on: "/report/quotes")
         #expect(bridge.commandTab == .quotes)
 
         bridge.webView = nil  // `dismantleNSView`, after the sidecar died
         #expect(bridge.activeTab == .quotes, "precondition: the mirror outlives the channel")
         #expect(bridge.commandTab == nil)
+        withExtendedLifetime(webView) {}
     }
 
     /// A status page has a channel and no `window.__bristlenose`.
@@ -97,8 +98,10 @@ struct MenuGateTests {
     }
 
     @Test func exportReportDimsWithoutAChannel() {
-        let (bridge, _) = liveBridge()
+        let (bridge, webView) = liveBridge()
+        #expect(bridge.canExportReport, "precondition: a whole report on a live channel exports")
         bridge.webView = nil
         #expect(!bridge.canExportReport)
+        withExtendedLifetime(webView) {}
     }
 }

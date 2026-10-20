@@ -108,13 +108,16 @@ final class OutOfCreditModel: ObservableObject {
         NotificationCenter.default.post(name: .bristlenoseOutOfCreditChanged, object: nil)
     }
 
-    /// Replace an `.outOfCredit` verdict with `.online`; leave any other verdict
-    /// alone (an `.invalid` key is not cured by a cached run). True when it
-    /// changed something.
+    /// Drop an `.outOfCredit` verdict; leave any other verdict alone (an
+    /// `.invalid` key is not cured by a run). True when it changed something.
+    ///
+    /// Cleared, not replaced with `.ok`: a run that finished from cache made
+    /// no LLM call, and a fresh `.ok` would also let `revalidateAll` skip the
+    /// key for its whole TTL. With no verdict, Settings re-checks next time.
     static func clearAfterSuccessfulRun(provider: LLMProvider, key: String) -> Bool {
         guard LLMValidator.cachedVerdict(provider: provider, key: key) == .outOfCredit
         else { return false }
-        LLMValidator.recordVerdict(provider: provider, key: key, status: .online)
+        LLMValidator.clearCache(provider: provider)
         return true
     }
 

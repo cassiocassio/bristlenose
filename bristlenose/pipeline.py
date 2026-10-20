@@ -47,7 +47,6 @@ from bristlenose.manifest import (
     fresh_session_ids,
     get_completed_session_ids,
     hold_for_resume,
-    load_manifest,
     mark_session_complete,
     mark_session_failed,
     mark_stage_complete,
@@ -561,6 +560,30 @@ def _session_metadata_fingerprint(session: InputSession, input_dir: Path | None)
     if session.has_existing_transcript:
         parts += f"|parser={_transcript_parser_version()}"
     return hash_bytes(parts.encode("utf-8"))
+
+
+def _transcription_fingerprints(
+    sessions: list[InputSession], input_dir: Path, registry: SessionRegistry,
+) -> tuple[dict[str, str], list[dict[str, str]]]:
+    """Per session, what its transcription was computed from, and the older
+    spellings of the same thing a manifest may still carry.
+
+    The current form is keyed by content (``_session_input_fingerprint``); the
+    legacy forms are the relative-path metadata form (12–15 Oct 2026) and the
+    absolute-path form before it, for ``fresh_session_ids(accept=…)``. Shared
+    by ``run`` and ``transcribe`` so the two agree on what is unchanged.
+    """
+    current = {
+        s.session_id: _session_input_fingerprint(
+            s, input_dir, lambda f: registry.last_known_fingerprint(f, input_dir),
+        )
+        for s in sessions
+    }
+    legacy = [
+        {s.session_id: _session_metadata_fingerprint(s, input_dir) for s in sessions},
+        {s.session_id: _session_metadata_fingerprint(s, None) for s in sessions},
+    ]
+    return current, legacy
 
 
 def _json_dumps_sorted(obj: object) -> str:
@@ -1697,20 +1720,11 @@ class Pipeline:
             # per-session resume below can keep the sessions whose files did
             # not change and redo only the ones whose did — a transcript
             # dropped beside an analysed video, a parser bump.
-            _tx_session_fps = {
-                s.session_id: _session_input_fingerprint(
-                    s, input_dir,
-                    lambda f: session_registry.last_known_fingerprint(f, input_dir),
-                )
-                for s in sessions
-            }
-            # The older spellings of the same thing, for a manifest written
-            # before transcription was keyed by content: the relative-path form
-            # (12–15 Oct 2026) and the absolute-path form before it.
-            _tx_session_fps_legacy = [
-                {s.session_id: _session_metadata_fingerprint(s, input_dir) for s in sessions},
-                {s.session_id: _session_metadata_fingerprint(s, None) for s in sessions},
-            ]
+            # With the older spellings of the same thing, for a manifest
+            # written before transcription was keyed by content.
+            _tx_session_fps, _tx_session_fps_legacy = _transcription_fingerprints(
+                sessions, input_dir, session_registry,
+            )
             # A session the transcription cache will serve is not decoded: on
             # iCloud a decode is a download, and until 12 Oct 2026 every run
             # re-decoded every video whatever the cache held. Anything the
@@ -3389,6 +3403,31 @@ class Pipeline:
             ingest_elapsed,
         )
 
+        # ── Transcription cache ──
+        # A project `run` has transcribed: reuse its transcription for every
+        # session whose inputs have not changed, the per-session check run()
+        # makes, rather than send every recording through Whisper again
+        # (R115). Read only: `transcribe` writes no manifest and no cache.
+        _prev = resume_manifest(output_dir) if output_dir.exists() else None
+        _ss_path = output_dir / ".bristlenose" / "intermediate" / "session_segments.json"
+        _tx_fps, _tx_fps_legacy = _transcription_fingerprints(
+            sessions, input_dir, session_registry,
+        )
+        _cached_segments: dict[str, list[TranscriptSegment]] = {}
+        if _ss_path.exists():
+            _cached_sids = fresh_session_ids(
+                _prev, _M_STAGE_TRANSCRIBE, _tx_fps, accept=_tx_fps_legacy,
+            )
+            _ss_raw = _load_cached_json(_ss_path) if _cached_sids else None
+            if isinstance(_ss_raw, dict):
+                # A session the file does not hold is transcribed, not lost.
+                _cached_segments = {
+                    sid: [TranscriptSegment.model_validate(seg) for seg in segs]
+                    for sid, segs in _ss_raw.items()
+                    if sid in _cached_sids
+                }
+        _remaining = [s for s in sessions if s.session_id not in _cached_segments]
+
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
 
@@ -3397,7 +3436,7 @@ class Pipeline:
             # progress bars, so a first `transcribe` does not download ~1.6 GB
             # silently inside the "Transcribing..." spinner.
             _needs_whisper = (
-                any(not s.has_existing_transcript for s in sessions)
+                any(not s.has_existing_transcript for s in _remaining)
                 and not self._apple_speech_run()
             )
             if _needs_whisper:
@@ -3416,9 +3455,13 @@ class Pipeline:
             t0 = time.perf_counter()
             temp_dir = output_dir / ".bristlenose" / "temp"
             temp_dir.mkdir(parents=True, exist_ok=True)
-            sessions = await extract_audio_for_sessions(sessions, temp_dir)
+            await extract_audio_for_sessions(_remaining, temp_dir)
             _print_step(
-                f"Extracted audio from {count_noun(len(sessions), 'session')}",
+                f"Extracted audio from {count_noun(len(_remaining), 'session')}"
+                + (
+                    f" ({count_noun(len(_cached_segments), 'session')} cached)"
+                    if _cached_segments else ""
+                ),
                 time.perf_counter() - t0,
             )
             self._record_ingest_outcome(sessions, declined, elapsed_s=ingest_elapsed)
@@ -3431,9 +3474,14 @@ class Pipeline:
                 word = "file" if total == 1 else "files"
                 status.update(f"[dim]Transcribing... ({current}/{total} {word})[/dim]")
 
-            session_segments, _transcript_outcome_t = await self._gather_all_segments(
-                sessions, on_progress=_on_transcribe_progress, quality_output_dir=output_dir,
-            )
+            if _remaining:
+                _fresh_segments, _transcript_outcome_t = await self._gather_all_segments(
+                    _remaining, on_progress=_on_transcribe_progress,
+                    quality_output_dir=output_dir,
+                )
+            else:
+                _fresh_segments, _transcript_outcome_t = {}, StageOutcome()
+            session_segments = {**_cached_segments, **_fresh_segments}
             # Mirror the run() rollup — and it must be the *post-6497711a*
             # shape, not the one this comment used to describe. Counting
             # success as "has segments" is right as far as it goes, but it
@@ -3524,8 +3572,10 @@ class Pipeline:
             status.update("[dim]Merging transcripts...[/dim]")
             t0 = time.perf_counter()
             raw_dir = output_dir / "transcripts-raw"
+            # A session served from the cache was not detected this run; its
+            # language is in the header about to be rewritten.
+            self._recover_languages(raw_dir, _cached_segments)
             # An earlier full run's analysis says which sessions are not new.
-            _prev = load_manifest(output_dir) if output_dir.exists() else None
             sentence_paragraphs = sentence_paragraph_sessions(
                 raw_dir, [s.session_id for s in sessions],
                 analysed=(

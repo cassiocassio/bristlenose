@@ -73,3 +73,29 @@ def test_a_nohup_run_keeps_ignoring_sighup(tmp_path: Path) -> None:
             proc.kill()
         proc.wait(timeout=10)
     assert landed
+
+
+def test_a_stopped_run_whose_unwind_then_fails_is_still_a_cancel(tmp_path: Path) -> None:
+    """Closing the terminal makes the next write to it fail (EIO), which replaces
+    the stop with an OSError mid-unwind; the run ended because it was stopped."""
+    sentinel = tmp_path / "ready"
+    body = f"""
+        import signal
+        Path({str(sentinel)!r}).write_text("ready")
+        try:
+            signal.pause()
+        finally:
+            raise OSError(5, "Input/output error")
+    """
+    proc = _spawn_lifecycle_subprocess(tmp_path, body)
+    f = events_path(tmp_path)
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        proc.send_signal(signal.SIGHUP)
+        landed = _wait_for_event(f, _cancelled_by("SIGHUP"), timeout=60.0)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert landed, [type(e).__name__ for e in read_events(f)] if f.exists() else "no events"

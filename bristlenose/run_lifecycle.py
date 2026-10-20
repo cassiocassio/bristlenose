@@ -86,6 +86,9 @@ _prev_handlers: dict[int, object] = {}
 
 #: How long a hosted run may take to stop before the backstop ends it.
 _HOSTED_STOP_GRACE_S = 20.0
+#: How long the backstop waits for a terminus write already under way: one
+#: stuck on a stalled disk must not hold the exit too.
+_BACKSTOP_LOCK_TIMEOUT_S = 5.0
 #: Held by every terminus write, so the backstop and the normal path never
 #: both write one.
 _terminus_lock = threading.Lock()
@@ -109,6 +112,8 @@ def _arm_hosted_backstop(signum: int) -> None:
     def _fire() -> None:
         try:
             backstop(signum)
+        except Exception:  # noqa: BLE001 — said, then the exit goes ahead
+            log.exception("hosted stop backstop could not record the cancel")
         finally:
             os._exit(128 + signum)
 
@@ -888,6 +893,28 @@ def run_lifecycle(
         surfaces any real failure again. The original cause stays in the
         message and the log.
         """
+        if _caught_signal is not None:
+            # Stopped, and the unwind then failed: a print to the terminal that
+            # had just closed raises EIO in place of the stop (R122). It ended
+            # because it was stopped.
+            name = signal.Signals(_caught_signal).name
+            log.warning(
+                "run_cancelled run_id=%s by %s — the unwind then ended with category=%s",
+                run_id, name, cause.category.value,
+            )
+            return RunCancelledEvent(
+                ts=ended, run_id=run_id, kind=kind, started_at=started_at,
+                ended_at=ended,
+                cause=Cause(
+                    category=CauseCategoryEnum.USER_SIGNAL,
+                    signal=int(_caught_signal),
+                    signal_name=name,
+                    # A forensic record: English whatever the CLI locale.
+                    message=f"stopped; the run then ended with: "
+                            f"{cause.message or cause.category.value}",
+                ),
+                **kw,
+            )
         if host_ppid is not None and (host_ppid == 1 or os.getppid() != host_ppid):
             log.warning(
                 "run_cancelled run_id=%s host_left — the run ended with category=%s",
@@ -925,15 +952,20 @@ def run_lifecycle(
 
     terminus_written = False
 
-    def _append_terminus(event: AnyEvent) -> bool:
-        """Append the run's one terminus; False if one is already written."""
+    def _append_terminus(event: AnyEvent, *, timeout: float = -1) -> bool:
+        """Append the run's one terminus; False if one is written, or the lock
+        is not had within *timeout* seconds."""
         nonlocal terminus_written
-        with _terminus_lock:
+        if not _terminus_lock.acquire(timeout=timeout):
+            return False
+        try:
             if terminus_written:
                 return False
             append_event(events_file, event)
             terminus_written = True
             return True
+        finally:
+            _terminus_lock.release()
 
     def _backstop(signum: int) -> None:
         ended = _now_iso()
@@ -947,11 +979,11 @@ def run_lifecycle(
                 message=f"still stopping {_HOSTED_STOP_GRACE_S:g} s after the signal",
             ),
             **_terminus_kwargs(),
-        ))
+        ), timeout=_BACKSTOP_LOCK_TIMEOUT_S)
         log.warning(
             "run_cancelled run_id=%s backstop — still running %g s after %s%s",
             run_id, _HOSTED_STOP_GRACE_S, signal.Signals(signum).name,
-            "" if wrote else " (terminus already written)",
+            "" if wrote else " (terminus already written, or its write stuck)",
         )
         _remove_pid_file(output_dir)
 

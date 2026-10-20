@@ -37,7 +37,8 @@ import signal
 import socket
 import subprocess
 import sys
-from collections.abc import Iterator
+import threading
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, TypedDict
@@ -83,6 +84,38 @@ log = logging.getLogger("bristlenose")
 _caught_signal: int | None = None
 _prev_handlers: dict[int, object] = {}
 
+#: How long a hosted run may take to stop before the backstop ends it.
+_HOSTED_STOP_GRACE_S = 20.0
+#: Held by every terminus write, so the backstop and the normal path never
+#: both write one.
+_terminus_lock = threading.Lock()
+#: The live run's backstop (write run_cancelled unless a terminus is written),
+#: set by ``run_lifecycle`` while its run is live.
+_hosted_backstop: Callable[[int], None] | None = None
+
+
+def _arm_hosted_backstop(signum: int) -> None:
+    """End a hosted run still alive ``_HOSTED_STOP_GRACE_S`` after its first signal.
+
+    A hosted run already stopping ignores further signals (below), so a quit
+    whose unwind blocks, such as a pool joining a stalled first-run Whisper
+    download, waited out huggingface_hub's own timeouts. A daemon timer, so it
+    never holds the process open itself.
+    """
+    backstop = _hosted_backstop
+    if backstop is None:
+        return
+
+    def _fire() -> None:
+        try:
+            backstop(signum)
+        finally:
+            os._exit(128 + signum)
+
+    timer = threading.Timer(_HOSTED_STOP_GRACE_S, _fire)
+    timer.daemon = True
+    timer.start()
+
 
 def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
     """Record the signal and re-raise KeyboardInterrupt for the main loop.
@@ -102,6 +135,8 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
         # its own run's Stop, and Quit, send SIGINT only.
         return
     _caught_signal = signum
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        _arm_hosted_backstop(signum)
     raise KeyboardInterrupt()
 
 
@@ -888,6 +923,38 @@ def run_lifecycle(
             out["summary"] = handle.summary
         return out
 
+    terminus_written = False
+
+    def _append_terminus(event: AnyEvent) -> bool:
+        """Append the run's one terminus; False if one is already written."""
+        nonlocal terminus_written
+        with _terminus_lock:
+            if terminus_written:
+                return False
+            append_event(events_file, event)
+            terminus_written = True
+            return True
+
+    def _backstop(signum: int) -> None:
+        ended = _now_iso()
+        wrote = _append_terminus(RunCancelledEvent(
+            ts=ended, run_id=run_id, kind=kind, started_at=started_at, ended_at=ended,
+            cause=Cause(
+                category=CauseCategoryEnum.USER_SIGNAL,
+                signal=signum,
+                signal_name=signal.Signals(signum).name,
+                # A forensic record: English whatever the CLI locale.
+                message=f"still stopping {_HOSTED_STOP_GRACE_S:g} s after the signal",
+            ),
+            **_terminus_kwargs(),
+        ))
+        log.warning(
+            "run_cancelled run_id=%s backstop — still running %g s after %s%s",
+            run_id, _HOSTED_STOP_GRACE_S, signal.Signals(signum).name,
+            "" if wrote else " (terminus already written)",
+        )
+        _remove_pid_file(output_dir)
+
     # `append_event` itself is INSIDE the guard, and that placement is the whole
     # point. A signal arriving during startup used to raise KeyboardInterrupt
     # straight out of __enter__ with no terminus ever written: the run read as
@@ -910,6 +977,8 @@ def run_lifecycle(
     # run_started plus a cancel is fine — read_events already tolerates a
     # partial tail line.
     telemetry_tokens: tuple[object, object] | None = None
+    global _hosted_backstop
+    _hosted_backstop = _backstop
     try:
         try:
             append_event(events_file, started_event)
@@ -929,7 +998,7 @@ def run_lifecycle(
                 signal_name=signal.Signals(sig).name,
                 message=str(exc) or None,
             )
-            append_event(events_file, RunCancelledEvent(
+            _append_terminus(RunCancelledEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
                 ended_at=ended, cause=cancel_cause, **_terminus_kwargs(),
             ))
@@ -941,7 +1010,7 @@ def run_lifecycle(
             code = exc.code if isinstance(exc.code, int) else (1 if exc.code else 0)
             ended = _now_iso()
             if code == 0:
-                append_event(events_file, RunCompletedEvent(
+                _append_terminus(RunCompletedEvent(
                     ts=ended, run_id=run_id, kind=kind, started_at=started_at,
                     ended_at=ended, **_terminus_kwargs(),
                 ))
@@ -957,7 +1026,7 @@ def run_lifecycle(
                     ),
                     _terminus_kwargs(),
                 )
-                append_event(events_file, terminus)
+                _append_terminus(terminus)
                 log.info("%s run_id=%s exit_code=%s", terminus.event.value, run_id, code)
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
@@ -970,7 +1039,7 @@ def run_lifecycle(
             kw = _terminus_kwargs()
             kw["summary"] = exc.summary
             terminus = _failure_terminus(ended, exc.cause, kw)
-            append_event(events_file, terminus)
+            _append_terminus(terminus)
             if isinstance(terminus, RunFailedEvent):
                 log.error(
                     "run_abandoned run_id=%s category=%s",
@@ -983,14 +1052,14 @@ def run_lifecycle(
             ended = _now_iso()
             cause = categorise_exception(exc)
             terminus = _failure_terminus(ended, cause, _terminus_kwargs())
-            append_event(events_file, terminus)
+            _append_terminus(terminus)
             log.info("%s run_id=%s category=%s", terminus.event.value, run_id, cause.category.value)
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
             raise
         else:
             ended = _now_iso()
-            append_event(events_file, RunCompletedEvent(
+            _append_terminus(RunCompletedEvent(
                 ts=ended, run_id=run_id, kind=kind, started_at=started_at,
                 ended_at=ended, **_terminus_kwargs(),
             ))
@@ -998,6 +1067,9 @@ def run_lifecycle(
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
     finally:
+        # An armed timer keeps its own reference: a hosted exit that hangs
+        # after this point is still ended.
+        _hosted_backstop = None
         # None when the signal landed before set_run_context ran — there is
         # then no contextvar state to restore.
         if telemetry_tokens is not None:

@@ -1768,6 +1768,13 @@ class Pipeline:
                     f"{_tx_input_hashes['source_files']}|parser={_transcript_parser_version()}"
                     .encode()
                 )
+            if self.settings.skip_transcription:
+                # A run that skipped Whisper left its recordings untranscribed
+                # and unrecorded. Watched only when on, so the next run without
+                # it reads as changed inputs and transcribes them, rather than
+                # verify the stage and call every recording silent; a project
+                # never run with it keeps its record as it is.
+                _tx_input_hashes["skip_transcription"] = "on"
             # Outer-scope defaults — both branches below populate these.
             # ``_transcribe_elapsed`` stays None on full-cache-hit (stage
             # didn't run this invocation; ``duration_ms`` reflects only
@@ -1977,6 +1984,11 @@ class Pipeline:
                             manifest, _M_STAGE_TRANSCRIBE, sid,
                             input_hash=_tx_session_fps.get(sid),
                         )
+                    # A session whose only transcript failed to parse produced
+                    # nothing, so the loop above never saw it. Unrecorded, the
+                    # stage verified whole next run and said "no speech" for it.
+                    for sid in sorted(_tx_failed - set(_fresh_segments)):
+                        mark_session_failed(manifest, _M_STAGE_TRANSCRIBE, sid)
                 else:
                     _fresh_segments = {}
                     _fresh_transcript_outcome = StageOutcome()
@@ -2004,7 +2016,8 @@ class Pipeline:
                 audio_str = (
                     _format_duration(total_audio) if total_audio else ""
                 )
-                _n_new_tx = len(_remaining_sessions)
+                # New as the summary counts it: a retry is not a new session.
+                _n_new_tx = len(_new_tx_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
                         f"Transcribed {count_noun(len(sessions), 'session')}"
@@ -3600,11 +3613,17 @@ class Pipeline:
             ):
                 _si_file = _si_dir / f"{sid}.json"
                 _si_data = _load_cached_json(_si_file) if _si_file.exists() else None
+                _si_segments: list[TranscriptSegment] | None = None
                 if isinstance(_si_data, dict) and "segments_with_roles" in _si_data:
-                    session_segments[sid] = [
-                        TranscriptSegment.model_validate(seg)
-                        for seg in _si_data["segments_with_roles"]
-                    ]
+                    try:
+                        _si_segments = [
+                            TranscriptSegment.model_validate(seg)
+                            for seg in _si_data["segments_with_roles"]
+                        ]
+                    except (TypeError, ValueError):  # pydantic's error is a ValueError
+                        _si_segments = None
+                if _si_segments is not None:
+                    session_segments[sid] = _si_segments
                     _si_kept.add(sid)
                 else:
                     # run() would ask the model again; transcribe has none.

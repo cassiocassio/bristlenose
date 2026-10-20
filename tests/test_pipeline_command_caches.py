@@ -31,31 +31,59 @@ from typer.testing import CliRunner
 from bristlenose.cli import app
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import Cause, CauseCategoryEnum, PipelineAbandonedError, StageOutcome
-from bristlenose.models import FileType, PipelineResult, SessionTopicMap
+from bristlenose.models import (
+    FileType,
+    InputFile,
+    InputSession,
+    PipelineResult,
+    SessionTopicMap,
+)
 from bristlenose.pipeline import Pipeline
 from tests.conftest import iter_transcribe_from
-from tests.test_pipeline_platform_transcripts import _quote, _whisper_segments, audio_session
+from tests.test_pipeline_platform_transcripts import (
+    _T0,
+    _quote,
+    _whisper_segments,
+    audio_session,
+)
+
+
+def _broken_docx_session(input_dir: Path, n: int) -> InputSession:
+    """A session whose only transcript is a .docx that cannot be read."""
+    path = input_dir / f"notes{n}.docx"
+    if not path.exists():
+        path.write_bytes(b"not a docx at all")
+    docx = InputFile(
+        path=path, file_type=FileType.DOCX, created_at=_T0, size_bytes=path.stat().st_size,
+    )
+    return InputSession(
+        session_id=f"s{n}", session_number=n, participant_id=f"p{n}", participant_number=n,
+        files=[docx], audio_path=None, has_existing_transcript=True, session_date=_T0,
+    )
 
 
 def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
-    llm_researcher: str | None = None,
+    llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
     output_dir = tmp_path / "output"
     settings = BristlenoseSettings(
-        project_name="caches", skip_transcription=False, write_intermediate=True,
+        project_name="caches", skip_transcription=skip, write_intermediate=True,
         llm_concurrency=1, no_fetch=True, pii_enabled=False, whisper_language="auto",
     )
 
     def _ingest(_d, _declined=None, **_kw):
-        return [audio_session(input_dir, i, f"rec{i}") for i in range(1, n_sessions + 1)]
+        sessions = [audio_session(input_dir, i, f"rec{i}") for i in range(1, n_sessions + 1)]
+        if broken_docx:
+            sessions.append(_broken_docx_session(input_dir, n_sessions + 1))
+        return sessions
 
     async def _stage2(sess, _tmp, **_kw):
         log.setdefault("decoded", []).append([s.session_id for s in sess])
         for s in sess:
-            if s.audio_path is None:
+            if s.audio_path is None and not s.has_existing_transcript:
                 s.audio_path = next(f.path for f in s.files if f.file_type == FileType.AUDIO)
         return sess
 
@@ -440,3 +468,86 @@ def test_transcribe_logs_a_speaker_cache_it_cannot_use(
     assert any("s1: speaker cache missing" in r.getMessage() for r in caplog.records), (
         [r.getMessage() for r in caplog.records]
     )
+
+
+# ── run(): what one run did not transcribe, the next one is told ─────────────
+
+
+def test_a_plain_run_transcribes_what_a_skip_transcription_run_left(tmp_path: Path) -> None:
+    # --skip-transcription transcribes nothing and records no session as
+    # failed; the stage still verified on the next plain run, which then said
+    # "No speech found" for every recording, on every run.
+    _drive(tmp_path, "run", 2, {}, skip=True)
+
+    after: dict = {}
+    result = _drive(tmp_path, "run", 2, after)
+
+    assert after.get("transcribed") == [["s1", "s2"]], after
+    assert result is not None and result.summary.transcripts.failed == [], result.summary
+    again: dict = {}
+    _drive(tmp_path, "run", 2, again)
+    assert "transcribed" not in again, again
+
+
+def test_a_transcript_that_cannot_be_read_says_so_on_every_run(tmp_path: Path) -> None:
+    first = _drive(tmp_path, "run", 1, {}, broken_docx=True)
+    assert first is not None
+    first_causes = [
+        (f.session_id, f.cause.category, f.cause.stage)
+        for f in first.summary.transcripts.failed
+    ]
+    assert first_causes == [("s2", CauseCategoryEnum.MISSING_INPUT, "s04_parse_docx")]
+
+    second = _drive(tmp_path, "run", 1, {}, broken_docx=True)
+
+    assert second is not None
+    # Before the fix: the stage verified whole, and s2 was "no speech".
+    assert [
+        (f.session_id, f.cause.category, f.cause.stage)
+        for f in second.summary.transcripts.failed
+    ] == first_causes
+    # A file that fails again is a retry, not a new interview, every time.
+    assert second.summary.new_sessions is None, second.summary
+
+
+def test_the_transcribed_line_counts_new_sessions_as_the_summary_does(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    # A session the cache file lost, and a transcript that fails again, are
+    # retries: the summary never called them new, and neither does the line.
+    _drive(tmp_path, "run", 2, {}, broken_docx=True)
+    _drop_s2_from_the_cache_and_restamp(tmp_path)
+    capsys.readouterr()
+
+    result = _drive(tmp_path, "run", 2, {}, broken_docx=True)
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert result is not None and result.summary.new_sessions is None, result.summary
+    assert "Transcribed 3 sessions" in out, out
+    assert "new session" not in out, out
+
+    # A recording that really is new is still counted, and only it.
+    result = _drive(tmp_path, "run", 3, {}, broken_docx=True)
+    out = " ".join(capsys.readouterr().out.split())
+    assert result is not None and result.summary.new_sessions == 1, result.summary
+    assert "1 new session)" in out, out
+
+
+@pytest.mark.parametrize("bad", [[{"start_time": "not a time"}], "not a list"])
+def test_transcribe_falls_back_over_a_malformed_speaker_cache(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture, bad: object,
+) -> None:
+    # As a missing file does: the heuristic and one log line, not a traceback.
+    _drive(tmp_path, "run", 2, {}, llm_researcher="Speaker B")
+    path = _intermediate(tmp_path, "speaker-info/s1.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["segments_with_roles"] = bad
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+    with caplog.at_level("WARNING", logger="bristlenose.pipeline"):
+        _drive(tmp_path, "transcribe", 2, {})
+
+    assert any("s1: speaker cache missing" in r.getMessage() for r in caplog.records)
+    raw = tmp_path / "output" / "transcripts-raw"
+    assert "Welcome" in (raw / "s1.txt").read_text(encoding="utf-8")
+    assert "[m1] (Speaker B)" in (raw / "s2.txt").read_text(encoding="utf-8")

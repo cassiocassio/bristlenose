@@ -971,6 +971,9 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
+    /// Whether the AI disclosure has been acknowledged, asked as `start` asks it.
+    var hasAIConsentNow: Bool { hasConsent() }
+
     /// A run this launch did not start is live for the project: an attached
     /// orphan or a CLI run. `start` turns a study away while one is.
     func hasOutsideRun(_ projectID: UUID) -> Bool {

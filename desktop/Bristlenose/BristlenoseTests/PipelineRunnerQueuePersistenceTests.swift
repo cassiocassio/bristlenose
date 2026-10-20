@@ -257,6 +257,27 @@ struct PipelineRunnerQueuePersistenceTests {
         #expect(rig.runner.state[b.id] == .queued(position: 1))
     }
 
+    @Test func aRestoredQueueWaitsForTheAIDisclosureAndThenRuns() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = Self.study(rig, "A"), b = Self.study(rig, "B")
+        rig.consented = false
+        let saved = PersistedRunQueue(entries: [
+            .init(projectID: a.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: true),
+            .init(projectID: b.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: false),
+        ])
+        let store = InMemoryRunQueueStore(saved)
+        rig.runner.queueJournal.now = { Self.now }
+        let restoring = Task { await rig.runner.restoreQueue(from: store, index: rig.index) }
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(rig.launches.isEmpty, "a run started before the disclosure was acknowledged")
+        #expect(store.saved == saved, "the queue was given up while the disclosure was showing")
+
+        rig.consented = true
+        await restoring.value
+        #expect(rig.launches.map(\.project.id) == [a.id])
+        #expect(rig.runner.state[b.id] == .queued(position: 1))
+    }
+
     @Test func aSecondWindowDoesNotRestoreTheQueueAgain() async {
         let rig = Rig(); defer { rig.cleanUp() }
         let a = Self.study(rig, "A")

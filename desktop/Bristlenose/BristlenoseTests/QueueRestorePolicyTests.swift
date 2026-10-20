@@ -91,8 +91,11 @@ struct QueueRestorePolicyTests {
         }
     }
 
-    @Test func aFolderOffloadedToICloudIsDropped() {
-        #expect(Self.decide(age: Self.hour, availability: .inCloud(downloading: nil)) == .drop(.folderInCloud))
+    /// `.inCloud` is a cloud folder no longer at its path (deleted, moved, its
+    /// provider signed out), never an evicted one: an evicted folder is
+    /// `.ready` and restored. Same rule as the spawn's (`spawnRefusal`).
+    @Test func aCloudFolderThatHasGoneIsDropped() {
+        #expect(Self.decide(age: Self.hour, availability: .inCloud(downloading: nil)) == .drop(.folderNotFound))
     }
 
     @Test func aFolderNowCarryingAnotherStudyIsDropped() {

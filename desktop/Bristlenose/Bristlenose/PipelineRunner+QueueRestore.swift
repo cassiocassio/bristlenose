@@ -52,6 +52,16 @@ extension PipelineRunner {
                 )
             }
         }
+        // A relaunch that needs the AI disclosure acknowledged again (a new
+        // consent version) shows it as at any launch; the queue waits for it
+        // rather than being turned away by `start` and lost. The sheet cannot
+        // be dismissed any other way, so this wait has no limit.
+        if !kept.isEmpty, !hasAIConsentNow {
+            log.notice("run queue: \(kept.count, privacy: .public) queued run(s) waiting for the AI disclosure")
+            while !hasAIConsentNow {
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
         // Let the launch scan of these studies finish first: it reads, and may
         // sweep, the PID file the stopped run left, and a run started under it
         // writes a new one there.

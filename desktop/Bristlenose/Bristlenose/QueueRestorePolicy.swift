@@ -33,7 +33,8 @@ struct PersistedRunQueue: Codable, Equatable, Sendable {
 /// `window`: Friday 4 pm to Tuesday noon, so a queue left at the end of the
 /// week is picked up on Monday. Past that it lapses; the researcher can ask
 /// again. A study that is gone, moved out of reach, or has nothing left to
-/// analyse is dropped. Every drop is logged and none is shown.
+/// analyse is dropped. Files offloaded to iCloud are not "gone": nothing here
+/// asks whether a file is local. Every drop is logged and none is shown.
 enum QueueRestorePolicy {
     /// Friday 4 pm to Tuesday noon.
     static let window: TimeInterval = 92 * 60 * 60
@@ -52,7 +53,6 @@ enum QueueRestorePolicy {
         case stampedInFuture
         case notInSidebar
         case folderNotFound
-        case folderInCloud
         case differentStudy
         case nothingToAnalyse
     }
@@ -95,10 +95,13 @@ enum QueueRestorePolicy {
     ) -> Decision {
         if let reason = timeliness(enqueuedAt: entry.enqueuedAt, now: now) { return .drop(reason) }
         guard project != nil else { return .drop(.notInSidebar) }
-        switch availability ?? .ready {
-        case .ready: break
-        case .cantFind: return .drop(.folderNotFound)
-        case .inCloud: return .drop(.folderInCloud)
+        // The spawn's own rule (R63): a folder that isn't at its path, local or
+        // a cloud folder that has gone, is not run. An evicted iCloud folder is
+        // still there, resolves `.ready` and is restored like any other: the
+        // sidecar fetches its files as it reads them, and nothing here
+        // special-cases it (docs/design-project-storage.md §3).
+        if PipelineRunner.spawnRefusal(for: availability ?? .ready) != nil {
+            return .drop(.folderNotFound)
         }
         guard let evidence else { return .restore }
         // A study is its marker id, never its path (docs/design-project-identity.md):

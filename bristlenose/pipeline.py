@@ -1588,7 +1588,9 @@ class Pipeline:
         )
         if not sessions:
             # A failed run, as `run_transcription_only` has it: returning an
-            # empty result ended "Done" with an empty report (R116).
+            # empty result ended "Done" with an empty report (R116). The files
+            # it declined are named first, in the files bucket too (R119's twin).
+            self._record_ingest_outcome([], declined)
             console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
@@ -3425,6 +3427,8 @@ class Pipeline:
             input_dir, declined, order_by_start=_may_order_by_start(output_dir)
         )
         if not sessions:
+            # Named first, in the files bucket too (R119's twin).
+            self._record_ingest_outcome([], declined)
             console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(

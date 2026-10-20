@@ -71,3 +71,40 @@ def test_analyze_on_a_folder_with_no_transcripts_fails_rather_than_finishing(
     terminus = json.loads(events.read_text(encoding="utf-8").splitlines()[-1])
     assert terminus["event"] == "run_failed", terminus
     assert terminus["cause"]["category"] == "missing_input", terminus
+
+
+@pytest.mark.parametrize("command", ["run", "transcribe"])
+def test_a_folder_of_only_declined_files_names_each_one(
+    runner, tmp_path: Path, command: str
+) -> None:
+    """The run-side twin of R119: the files it declined went unnamed.
+
+    Ingest found nothing to analyse and the run stopped before the files
+    bucket was written, so `guide.pdf` and `notes.xlsx` were never said, in
+    the terminal or in `summary.ingest`. They are named with the existing
+    refusal reason, as when a run goes ahead beside them.
+    """
+    input_dir = tmp_path / "interviews"
+    input_dir.mkdir()
+    for name in ("guide.pdf", "notes.xlsx"):
+        (input_dir / name).write_text("x", encoding="utf-8")
+
+    args = [command, str(input_dir)] + (["--no-serve"] if command == "run" else [])
+    result = runner.invoke(app, args)
+
+    assert result.exit_code == 1, result.output
+    # The scan's own log lines named them already; the refusal block is the
+    # summary a run that goes ahead prints, and what the Mac reads.
+    assert "2 files not analysed" in result.output, result.output
+    assert "guide.pdf — Not a format Bristlenose reads." in result.output, result.output
+    assert "notes.xlsx — Not a format Bristlenose reads." in result.output, result.output
+    assert "No supported files found" in result.output
+    ingest = _terminus(input_dir)["summary"]["ingest"]
+    assert ingest is not None
+    assert ingest["succeeded"] == 0, ingest
+    assert sorted(
+        (f["source_file"], f["cause"]["category"], f["cause"]["reason"]) for f in ingest["failed"]
+    ) == [
+        ("guide.pdf", "unusable_input", "unsupported_format"),
+        ("notes.xlsx", "unusable_input", "unsupported_format"),
+    ]

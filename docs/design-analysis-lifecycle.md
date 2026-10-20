@@ -590,6 +590,8 @@ what this violates at session granularity.
 | The same loss in **`transcribe`**, reported as `42/57` with `failed: 0` | **outcome 3** — honest count, no account | the sibling rollup mirrored: silent sessions stated, and kept out of the abandon predicate |
 | A failed **re-analysis** read as *never analysed* after relaunch | the failure recorded and never read | `parseManifest` consults the events log when the manifest is absent |
 | No AI provider set up: a run spawned, failed in setup, read as `unknown`, under "No interviews to analyse yet" beside the interview | a dead end with the CLI's advice | §4.3: refused before a spawn; `providerNotSetUp`; the never-run page says "Not analysed yet." when interviews are there |
+| A folder of **only** declined files: `run` and `transcribe` stopped before `summary.ingest` was written, so the refusals reached only the log | outcome 3 at the moment the researcher most needs the names | `_record_ingest_outcome` runs before the abort; the "No supported files found." line is unchanged (20 Oct 2026, R119's twin) |
+| `analyze` dropped a `.txt` with no timecoded line | outcome 3 | refused by name as `unsupported_format` in `summary.ingest` (20 Oct 2026, R119) |
 
 ### 5.3 Open
 

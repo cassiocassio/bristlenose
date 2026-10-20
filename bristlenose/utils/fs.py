@@ -61,10 +61,13 @@ def is_os_metadata(path: Path) -> bool:
     will happily try to decode `._foo.mp4` as a video or `._s1.txt` as a
     transcript — both fail (binary blob, not the format the extension claims).
 
-    Also filters ``.DS_Store`` for symmetry with Finder.
+    Also filters ``.DS_Store`` for symmetry with Finder, and Office's owner
+    files (``~$<name>.docx``): while a document is open Word writes one beside
+    it, a few hundred bytes naming who has it open, wearing the document's
+    extension, and discovery made a session of it (R120).
     """
     name = path.name
-    return name.startswith("._") or name == ".DS_Store"
+    return name.startswith(("._", "~$")) or name == ".DS_Store"
 
 
 #: The per-run state directory, written inside every output dir.

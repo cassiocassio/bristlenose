@@ -19,7 +19,7 @@ from bristlenose.models import (
 )
 from bristlenose.refusals import MESSAGES, UnusableReason
 from bristlenose.utils.audio import probe_media
-from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless
+from bristlenose.utils.fs import is_bristlenose_artefact, is_dataless, is_os_metadata
 from bristlenose.utils.session_start import resolve_session_start
 
 logger = logging.getLogger(__name__)
@@ -229,9 +229,9 @@ def _scan_entries(
         # `.claude/settings.local.json` demoted every otherwise-clean run to
         # "Partial completion" that way (29 Aug 2026). Matches
         # `ProjectFolderWatcher`'s `.skipsHiddenFiles`, so the two scanners
-        # agree on what a folder holds; subsumes `is_os_metadata` at this
-        # site (both its patterns are dot-prefixed).
-        if entry.name.startswith("."):
+        # agree on what a folder holds. `is_os_metadata` adds Office's `~$`
+        # owner files, which are not dot-prefixed (R120).
+        if entry.name.startswith(".") or is_os_metadata(entry):
             continue
         # Our own artefacts, wherever they sit. The `OUTPUT_DIR_NAME` guard
         # below covers the default layout; this covers `--output` pointing

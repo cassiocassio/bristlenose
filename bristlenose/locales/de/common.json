@@ -109,7 +109,6 @@
     "starredQuotes": "Markierte Zitate",
     "sections": "Abschnitte",
     "themes": "Themen",
-    "failedToLoad": "Fehler beim Laden der Zitate: {{error}}",
     "loading": "Zitate werden geladen…",
     "contents": "Inhalt",
     "toggleContents": "Inhaltsverzeichnis ein-/ausblenden",
@@ -210,7 +209,6 @@
     "nothingOmitted": "Nichts ausgelassen — alle Teilnehmerbeiträge sind im Bericht enthalten.",
     "showOmitted": "Ausgelassene Zitate anzeigen",
     "coverageSession": "Interview {{number}}",
-    "failedToLoad": "Fehler beim Laden des Dashboards: {{error}}",
     "loading": "Dashboard wird geladen…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Beobachter",
     "observers": "Beobachter",
     "loading": "Transkript wird geladen…",
-    "failedToLoad": "Fehler beim Laden des Transkripts",
     "noData": "Keine Transkriptdaten verfügbar.",
     "inaudible": "Unverst\u00e4ndlich"
   },

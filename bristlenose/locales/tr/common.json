@@ -119,7 +119,6 @@
     "starredQuotes": "Yıldızlı alıntılar",
     "sections": "Bölümler",
     "themes": "Temalar",
-    "failedToLoad": "Alıntılar yüklenemedi: {{error}}",
     "loading": "Alıntılar yükleniyor…",
     "contents": "İçindekiler",
     "toggleContents": "İçindekileri aç/kapat",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Hiçbir şey atlanmadı — tüm katılımcı konuşmaları raporda.",
     "showOmitted": "Atlanan alıntıları göster",
     "coverageSession": "Oturum {{number}}",
-    "failedToLoad": "Pano yüklenemedi: {{error}}",
     "loading": "Pano yükleniyor…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Gözlemci",
     "observers": "Gözlemciler",
     "loading": "Deşifre yükleniyor…",
-    "failedToLoad": "Deşifre yüklenemedi",
     "noData": "Kullanılabilir deşifre verisi yok.",
     "inaudible": "Anla\u015f\u0131lm\u0131yor"
   },

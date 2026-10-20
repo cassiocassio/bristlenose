@@ -119,7 +119,6 @@
     "starredQuotes": "Stjernemerkede sitater",
     "sections": "Seksjoner",
     "themes": "Temaer",
-    "failedToLoad": "Klarte ikke å laste inn sitater: {{error}}",
     "loading": "Laster inn sitater …",
     "contents": "Innhold",
     "toggleContents": "Vis/skjul innholdsfortegnelsen",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Ingenting utelatt – all deltakertale er med i rapporten.",
     "showOmitted": "Vis utelatte sitater",
     "coverageSession": "Økt {{number}}",
-    "failedToLoad": "Klarte ikke å laste inn dashbordet: {{error}}",
     "loading": "Laster inn dashbord …"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observatør",
     "observers": "Observatører",
     "loading": "Laster inn transkripsjon …",
-    "failedToLoad": "Klarte ikke å laste inn transkripsjon",
     "noData": "Ingen transkripsjonsdata tilgjengelig.",
     "inaudible": "Uh\u00f8rbart"
   },

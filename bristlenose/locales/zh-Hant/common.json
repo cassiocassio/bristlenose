@@ -112,7 +112,6 @@
     "starredQuotes": "已標示的引述",
     "sections": "區段",
     "themes": "主題",
-    "failedToLoad": "無法載入引述：{{error}}",
     "loading": "正在載入引述⋯",
     "contents": "目錄",
     "toggleContents": "切換目錄",
@@ -205,7 +204,6 @@
     "nothingOmitted": "未略過任何內容——所有參與者的發言皆在報告中。",
     "showOmitted": "顯示已略過的引述",
     "coverageSession": "場次 {{number}}",
-    "failedToLoad": "無法載入儀表板：{{error}}",
     "loading": "正在載入儀表板⋯"
   },
   "toolbar": {
@@ -572,7 +570,6 @@
     "observer": "觀察員",
     "observers": "觀察員",
     "loading": "正在載入逐字稿⋯",
-    "failedToLoad": "無法載入逐字稿",
     "noData": "沒有可用的逐字稿資料。",
     "inaudible": "\u807d\u4e0d\u6e05\u695a"
   },

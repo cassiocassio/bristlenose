@@ -119,7 +119,6 @@
     "starredQuotes": "Stjernemarkerede citater",
     "sections": "Afsnit",
     "themes": "Temaer",
-    "failedToLoad": "Kunne ikke indlæse citater: {{error}}",
     "loading": "Indlæser citater…",
     "contents": "Indhold",
     "toggleContents": "Vis/skjul indholdsfortegnelse",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Intet udeladt — al deltagertale er med i rapporten.",
     "showOmitted": "Vis udeladte citater",
     "coverageSession": "Session {{number}}",
-    "failedToLoad": "Kunne ikke indlæse dashboard: {{error}}",
     "loading": "Indlæser dashboard…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observatør",
     "observers": "Observatører",
     "loading": "Indlæser transskription…",
-    "failedToLoad": "Kunne ikke indlæse transskription",
     "noData": "Ingen transskriptionsdata tilgængelige.",
     "inaudible": "Uh\u00f8rligt"
   },

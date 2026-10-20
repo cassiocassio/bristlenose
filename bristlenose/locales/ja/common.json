@@ -114,7 +114,6 @@
     "starredQuotes": "スター付きの発言",
     "sections": "セクション",
     "themes": "テーマ",
-    "failedToLoad": "発言の読み込みに失敗しました: {{error}}",
     "loading": "発言を読み込み中…",
     "contents": "目次",
     "toggleContents": "目次を表示/非表示",
@@ -215,7 +214,6 @@
     "nothingOmitted": "除外された発言はありません — 参加者の発言はすべてレポートに含まれています。",
     "showOmitted": "除外された発言を表示",
     "coverageSession": "セッション {{number}}",
-    "failedToLoad": "ダッシュボードの読み込みに失敗しました: {{error}}",
     "loading": "ダッシュボードを読み込み中…"
   },
   "toolbar": {
@@ -591,7 +589,6 @@
     "observer": "オブザーバー",
     "observers": "オブザーバー",
     "loading": "トランスクリプトを読み込み中…",
-    "failedToLoad": "トランスクリプトの読み込みに失敗しました",
     "noData": "トランスクリプトデータはありません。",
     "inaudible": "\u805e\u304d\u53d6\u308a\u4e0d\u80fd"
   },

@@ -129,7 +129,6 @@
     "starredQuotes": "Citáty s hvězdičkou",
     "sections": "Sekce",
     "themes": "Témata",
-    "failedToLoad": "Nepodařilo se načíst citáty: {{error}}",
     "loading": "Načítání citátů…",
     "contents": "Obsah",
     "toggleContents": "Přepnout obsah",
@@ -246,7 +245,6 @@
     "nothingOmitted": "Nic nebylo vynecháno — veškerá řeč účastníků je ve zprávě.",
     "showOmitted": "Zobrazit vynechané citáty",
     "coverageSession": "Sezení {{number}}",
-    "failedToLoad": "Nepodařilo se načíst přehled: {{error}}",
     "loading": "Načítání přehledu…"
   },
   "toolbar": {
@@ -663,7 +661,6 @@
     "observer": "Pozorovatel",
     "observers": "Pozorovatelé",
     "loading": "Načítání přepisu…",
-    "failedToLoad": "Nepodařilo se načíst přepis",
     "noData": "Nejsou k dispozici žádná data přepisu.",
     "inaudible": "Nesrozumiteln\u00e9"
   },

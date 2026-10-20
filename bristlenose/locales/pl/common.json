@@ -133,7 +133,6 @@
     "starredQuotes": "Cytaty z gwiazdką",
     "sections": "Sekcje",
     "themes": "Tematy",
-    "failedToLoad": "Nie udało się wczytać cytatów: {{error}}",
     "loading": "Wczytywanie cytatów…",
     "contents": "Spis treści",
     "toggleContents": "Przełącz spis treści",
@@ -250,7 +249,6 @@
     "nothingOmitted": "Nic nie pominięto — cała wypowiedź uczestnika jest w raporcie.",
     "showOmitted": "Pokaż pominięte cytaty",
     "coverageSession": "Sesja {{number}}",
-    "failedToLoad": "Nie udało się wczytać pulpitu: {{error}}",
     "loading": "Wczytywanie pulpitu…"
   },
   "toolbar": {
@@ -674,7 +672,6 @@
     "observer": "Obserwator",
     "observers": "Obserwatorzy",
     "loading": "Wczytywanie transkrypcji…",
-    "failedToLoad": "Nie udało się wczytać transkrypcji",
     "noData": "Brak dostępnych danych transkrypcji.",
     "inaudible": "Niezrozumia\u0142e"
   },

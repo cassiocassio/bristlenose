@@ -119,7 +119,6 @@
     "starredQuotes": "Citaten met ster",
     "sections": "Secties",
     "themes": "Thema's",
-    "failedToLoad": "Kon citaten niet laden: {{error}}",
     "loading": "Citaten laden…",
     "contents": "Inhoud",
     "toggleContents": "Inhoudsopgave in-/uitschakelen",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Niets weggelaten — alle uitspraken van deelnemers staan in het rapport.",
     "showOmitted": "Weggelaten citaten tonen",
     "coverageSession": "Sessie {{number}}",
-    "failedToLoad": "Kon dashboard niet laden: {{error}}",
     "loading": "Dashboard laden…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Waarnemer",
     "observers": "Waarnemers",
     "loading": "Transcript laden…",
-    "failedToLoad": "Kon transcript niet laden",
     "noData": "Geen transcriptgegevens beschikbaar.",
     "inaudible": "Onverstaanbaar"
   },

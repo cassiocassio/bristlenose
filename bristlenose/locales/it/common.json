@@ -119,7 +119,6 @@
     "starredQuotes": "Citazioni contrassegnate",
     "sections": "Sezioni",
     "themes": "Temi",
-    "failedToLoad": "Impossibile caricare le citazioni: {{error}}",
     "loading": "Caricamento delle citazioni…",
     "contents": "Contenuti",
     "toggleContents": "Mostra/nascondi indice",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Nulla è stato omesso — tutto il parlato dei partecipanti è nel report.",
     "showOmitted": "Mostra citazioni omesse",
     "coverageSession": "Sessione {{number}}",
-    "failedToLoad": "Impossibile caricare la dashboard: {{error}}",
     "loading": "Caricamento della dashboard…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Osservatore",
     "observers": "Osservatori",
     "loading": "Caricamento della trascrizione…",
-    "failedToLoad": "Impossibile caricare la trascrizione",
     "noData": "Nessun dato di trascrizione disponibile.",
     "inaudible": "Incomprensibile"
   },

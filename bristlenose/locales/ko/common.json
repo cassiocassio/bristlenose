@@ -104,7 +104,6 @@
     "starredQuotes": "즐겨찾기 인용문",
     "sections": "섹션",
     "themes": "테마",
-    "failedToLoad": "인용문 로드 실패: {{error}}",
     "loading": "인용문 로드 중…",
     "contents": "목차",
     "toggleContents": "목차 표시/숨기기",
@@ -197,7 +196,6 @@
     "nothingOmitted": "제외된 내용 없음 — 모든 참가자 발화가 보고서에 포함되어 있습니다.",
     "showOmitted": "제외된 인용문 보기",
     "coverageSession": "세션 {{number}}",
-    "failedToLoad": "대시보드 로드 실패: {{error}}",
     "loading": "대시보드 로드 중…"
   },
   "toolbar": {
@@ -572,7 +570,6 @@
     "observer": "관찰자",
     "observers": "관찰자",
     "loading": "전사 로드 중…",
-    "failedToLoad": "전사 로드 실패",
     "noData": "전사 데이터가 없습니다.",
     "inaudible": "\ub4e4\ub9ac\uc9c0 \uc54a\uc74c"
   },

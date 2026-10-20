@@ -119,7 +119,6 @@
     "starredQuotes": "Stjärnmärkta citat",
     "sections": "Avsnitt",
     "themes": "Teman",
-    "failedToLoad": "Kunde inte läsa in citat: {{error}}",
     "loading": "Läser in citat…",
     "contents": "Innehåll",
     "toggleContents": "Växla innehållsförteckning",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Inget utelämnat — allt deltagartal finns i rapporten.",
     "showOmitted": "Visa utelämnade citat",
     "coverageSession": "Session {{number}}",
-    "failedToLoad": "Kunde inte läsa in översikten: {{error}}",
     "loading": "Läser in översikt…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observatör",
     "observers": "Observatörer",
     "loading": "Läser in transkription…",
-    "failedToLoad": "Kunde inte läsa in transkription",
     "noData": "Ingen transkriptionsdata tillgänglig.",
     "inaudible": "Oh\u00f6rbart"
   },

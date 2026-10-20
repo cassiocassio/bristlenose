@@ -119,7 +119,6 @@
     "starredQuotes": "Starred quotes",
     "sections": "Sections",
     "themes": "Themes",
-    "failedToLoad": "Failed to load quotes: {{error}}",
     "loading": "Loading quotes…",
     "contents": "Contents",
     "toggleContents": "Toggle table of contents",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Nothing omitted — all participant speech is in the report.",
     "showOmitted": "Show omitted quotes",
     "coverageSession": "Session {{number}}",
-    "failedToLoad": "Failed to load dashboard: {{error}}",
     "loading": "Loading dashboard…"
   },
   "toolbar": {
@@ -605,7 +603,6 @@
     "observer": "Observer",
     "observers": "Observers",
     "loading": "Loading transcript…",
-    "failedToLoad": "Failed to load transcript",
     "noData": "No transcript data available.",
     "inaudible": "Inaudible"
   },

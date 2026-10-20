@@ -119,7 +119,6 @@
     "starredQuotes": "Citações com estrela",
     "sections": "Seções",
     "themes": "Temas",
-    "failedToLoad": "Falha ao carregar citações: {{error}}",
     "loading": "Carregando citações…",
     "contents": "Conteúdo",
     "toggleContents": "Alternar sumário",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Nada omitido — toda a fala dos participantes está no relatório.",
     "showOmitted": "Mostrar citações omitidas",
     "coverageSession": "Sessão {{number}}",
-    "failedToLoad": "Falha ao carregar painel: {{error}}",
     "loading": "Carregando painel…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observador",
     "observers": "Observadores",
     "loading": "Carregando transcrição…",
-    "failedToLoad": "Falha ao carregar transcrição",
     "noData": "Nenhum dado de transcrição disponível.",
     "inaudible": "Inaud\u00edvel"
   },

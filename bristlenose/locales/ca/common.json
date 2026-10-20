@@ -119,7 +119,6 @@
     "starredQuotes": "Cites destacades",
     "sections": "Seccions",
     "themes": "Temes",
-    "failedToLoad": "No s'han pogut carregar les cites: {{error}}",
     "loading": "S'estan carregant les cites…",
     "contents": "Contingut",
     "toggleContents": "Commuta la taula de continguts",
@@ -220,7 +219,6 @@
     "nothingOmitted": "No s'ha omès res — tot el que diuen els participants és a l'informe.",
     "showOmitted": "Mostra les cites omeses",
     "coverageSession": "Sessió {{number}}",
-    "failedToLoad": "No s'ha pogut carregar el tauler: {{error}}",
     "loading": "S'està carregant el tauler…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observador",
     "observers": "Observadors",
     "loading": "S'està carregant la transcripció…",
-    "failedToLoad": "No s'ha pogut carregar la transcripció",
     "noData": "No hi ha dades de transcripció disponibles.",
     "inaudible": "Inaudible"
   },

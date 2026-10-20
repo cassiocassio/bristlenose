@@ -119,7 +119,6 @@
     "starredQuotes": "Tähdellä merkityt sitaatit",
     "sections": "Osiot",
     "themes": "Teemat",
-    "failedToLoad": "Sitaattien lataus epäonnistui: {{error}}",
     "loading": "Ladataan sitaatteja…",
     "contents": "Sisältö",
     "toggleContents": "Näytä tai piilota sisällysluettelo",
@@ -220,7 +219,6 @@
     "nothingOmitted": "Mitään ei jätetty pois — kaikki osallistujien puhe on raportissa.",
     "showOmitted": "Näytä pois jätetyt sitaatit",
     "coverageSession": "Istunto {{number}}",
-    "failedToLoad": "Koontinäkymän lataus epäonnistui: {{error}}",
     "loading": "Ladataan koontinäkymää…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Tarkkailija",
     "observers": "Tarkkailijat",
     "loading": "Ladataan litterointia…",
-    "failedToLoad": "Litteroinnin lataus epäonnistui",
     "noData": "Litterointitietoja ei ole saatavilla.",
     "inaudible": "Ep\u00e4selv\u00e4"
   },

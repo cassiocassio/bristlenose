@@ -109,7 +109,6 @@
     "starredQuotes": "Verbatim favoris",
     "sections": "Sections",
     "themes": "Thèmes",
-    "failedToLoad": "Échec du chargement des verbatim : {{error}}",
     "loading": "Chargement des verbatim…",
     "contents": "Sommaire",
     "toggleContents": "Afficher/masquer le sommaire",
@@ -210,7 +209,6 @@
     "nothingOmitted": "Rien d'omis — toutes les paroles des participants figurent dans le rapport.",
     "showOmitted": "Afficher les verbatim omis",
     "coverageSession": "Entretien {{number}}",
-    "failedToLoad": "Échec du chargement du tableau de bord : {{error}}",
     "loading": "Chargement du tableau de bord…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observateur",
     "observers": "Observateurs",
     "loading": "Chargement de la transcription…",
-    "failedToLoad": "Échec du chargement de la transcription",
     "noData": "Aucune donnée de transcription disponible.",
     "inaudible": "Inaudible"
   },

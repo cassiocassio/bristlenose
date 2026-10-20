@@ -109,7 +109,6 @@
     "starredQuotes": "Citas destacadas",
     "sections": "Secciones",
     "themes": "Temas",
-    "failedToLoad": "Error al cargar las citas: {{error}}",
     "loading": "Cargando citas…",
     "contents": "Contenidos",
     "toggleContents": "Mostrar/ocultar tabla de contenidos",
@@ -210,7 +209,6 @@
     "nothingOmitted": "Nada omitido — todo el discurso de los participantes está en el informe.",
     "showOmitted": "Mostrar citas omitidas",
     "coverageSession": "Sesión {{number}}",
-    "failedToLoad": "Error al cargar el panel: {{error}}",
     "loading": "Cargando panel…"
   },
   "toolbar": {
@@ -604,7 +602,6 @@
     "observer": "Observador",
     "observers": "Observadores",
     "loading": "Cargando transcripción…",
-    "failedToLoad": "Error al cargar la transcripción",
     "noData": "No hay datos de transcripción disponibles.",
     "inaudible": "Inaudible"
   },

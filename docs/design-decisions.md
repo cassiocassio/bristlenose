@@ -167,6 +167,8 @@ _See also: `bristlenose/server/CLAUDE.md`_
 
 **GET/PUT of full state maps, not per-item PATCH.** Each data endpoint mirrors one localStorage key — `PUT /projects/{id}/starred` replaces the entire starred map, just like `localStorage.setItem()` replaces the entire JSON blob. Larger payloads but simpler code: no partial-state bugs, no optimistic-update rollback, no PATCH merge logic. The tradeoff works because these maps are small (hundreds of entries, not thousands) and writes are infrequent (user clicks, not real-time streaming).
 
+**Reversed for curation, 20 Oct 2026.** "No partial-state bugs" held only while the client held the whole state, and it stopped holding: AutoCode re-applied tags the client never loaded, a speaker recode kept quotes off `/quotes`, and a codebook delete left stale names in the client's map. Each whole-map write then erased what the client didn't hold or put back what the server had removed. The curation maps now take a `PATCH` of one gesture's change, queued per path, with rollback on failure; the `PUT`s stay as the whole-map contract.
+
 _See also: `bristlenose/server/CLAUDE.md` §Bulk maps_
 
 ### Pipeline as build system + event store

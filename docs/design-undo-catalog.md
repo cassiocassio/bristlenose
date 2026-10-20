@@ -136,10 +136,11 @@ snapshot-and-replay undo without any new server vocabulary.
 > the same store call with recording off, over only the quotes or keys it
 > changed (`QuotesContext.tsx`, the comment above `toggleStar`). A replayed
 > snapshot would also revert whatever changed since by a path not on the stack —
-> an AutoCode accept, a refetch. The writes are still the full-map PUTs below,
-> so the server shape is unchanged, and the first caveat holds: the delta is
-> computed from store state, and `firePut` still never reverts (it toasts on
-> failure). Accepted at localhost stakes, as that caveat proposed.
+> an AutoCode accept, a refetch. Since 20 Oct 2026 the writes are deltas too
+> (`PATCH` of the quotes and keys a gesture changed, queued per path), and a
+> failed write puts the value back to what the server is known to hold, once
+> its writes are all answered — so the second caveat below is now narrower: a
+> value the server never held is taken off the screen when its write fails.
 
 Two caveats that stop it being free:
 

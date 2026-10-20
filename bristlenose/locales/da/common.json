@@ -36,7 +36,8 @@
     "loading": "Indlæser…",
     "noResults": "Ingen resultater",
     "error": "Fejl",
-    "lensError": "Denne visning kunne ikke vises. Prøv igen, eller vælg en anden visning."
+    "lensError": "Denne visning kunne ikke vises. Prøv igen, eller vælg en anden visning.",
+    "panelError": "Dette sidepanel kunne ikke vises."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

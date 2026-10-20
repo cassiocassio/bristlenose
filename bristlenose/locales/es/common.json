@@ -36,7 +36,8 @@
     "loading": "Cargando…",
     "noResults": "Sin resultados",
     "error": "Error",
-    "lensError": "No se ha podido mostrar esta vista. Vuelve a intentarlo o elige otra vista."
+    "lensError": "No se ha podido mostrar esta vista. Vuelve a intentarlo o elige otra vista.",
+    "panelError": "No se ha podido mostrar esta barra lateral."
   },
   "titlebar": {
     "quotes_one": "{{count}} Cita",

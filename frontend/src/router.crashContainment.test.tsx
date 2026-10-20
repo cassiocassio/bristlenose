@@ -5,12 +5,46 @@ import { createHashRouter, createMemoryRouter, RouterProvider } from "react-rout
 import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
 
-// R85: a crash in one lens must stay in that lens. The report around it — the
-// header, nav, footer, sidebars — keeps working, and so do the other lenses.
-// These tests mount the real route table and AppLayout, with only the Signals
-// lens swapped for one that throws on demand.
+// R85: a crash in one lens must stay in that lens, and a crash in a sidebar
+// must stay in that sidebar. The report around it — the header, nav, footer,
+// the other panels — keeps working, and so do the other lenses. These tests
+// mount the real route table and AppLayout, with only the Signals lens, the
+// Quotes lens and two sidebars swapped for stand-ins that throw on demand.
 
-const boom = vi.hoisted(() => ({ mode: "none" as "none" | "first-render" | "on-click" }));
+const boom = vi.hoisted(() => ({
+  mode: "none" as "none" | "first-render" | "on-click",
+  tagSidebar: false,
+  signalsSidebar: false,
+  minimap: false,
+}));
+
+vi.mock("./pages/QuotesTab", () => ({
+  QuotesTab: () => <div data-testid="quotes-lens" />,
+}));
+
+vi.mock("./components/TagSidebar", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./components/TagSidebar")>()),
+  TagSidebar: function TagSidebar() {
+    if (boom.tagSidebar) throw new Error("kaboom-secret-stack-detail");
+    return <div data-testid="tag-sidebar-body" />;
+  },
+}));
+
+vi.mock("./components/Minimap", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./components/Minimap")>()),
+  Minimap: function Minimap() {
+    if (boom.minimap) throw new Error("kaboom-secret-stack-detail");
+    return <div data-testid="minimap" />;
+  },
+}));
+
+vi.mock("./components/SignalsSidebar", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./components/SignalsSidebar")>()),
+  SignalsSidebar: function SignalsSidebar() {
+    if (boom.signalsSidebar) throw new Error("kaboom-secret-stack-detail");
+    return <div data-testid="signals-sidebar-body" />;
+  },
+}));
 
 vi.mock("./pages/SignalsTab", () => ({
   SignalsTab: function SignalsTab() {
@@ -30,6 +64,9 @@ vi.mock("./pages/SignalsTab", () => ({
 
 beforeEach(() => {
   boom.mode = "none";
+  boom.tagSidebar = false;
+  boom.signalsSidebar = false;
+  boom.minimap = false;
   (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE = "/api/projects/1";
   const root = document.createElement("div");
   root.id = "bn-app-root";
@@ -152,5 +189,89 @@ describe("a crash in one lens", () => {
       // Resetting the hash in afterEach fires popstate; a live router would follow it.
       router.dispose();
     }
+  });
+});
+
+function expectContainedPanelFallback(panel: Element) {
+  const alert = within(panel as HTMLElement).getByRole("alert");
+  expect(alert).toHaveTextContent(/sidebar couldn.t be shown/i);
+  expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
+  expect(console.error).toHaveBeenCalledWith("[PanelError]", expect.any(Error));
+}
+
+describe("a crash in one sidebar", () => {
+  beforeEach(() => {
+    // Real shapes: the catch-all stub has no `sections`, and the real contents
+    // list (TocSidebar) would crash on it once its fetch lands, adding a second
+    // panel crash to every test here.
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/quotes")
+        ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : url.includes("/codebook")
+            ? { groups: [], ungrouped: [], all_tag_names: [] }
+            : {};
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    // jsdom has no scrollIntoView; the contents list's scroll spy calls it.
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  });
+
+  it("in the tag sidebar is contained to it; the lens and nav stay", () => {
+    boom.tagSidebar = true;
+    const { container } = renderAt("/report/quotes/");
+    expectContainedPanelFallback(container.querySelector(".tag-sidebar")!);
+    expect(screen.getByTestId("quotes-lens")).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+    expect(container.querySelector(".bn-route-error:not(.bn-panel-error)")).toBeNull();
+  });
+
+  it("in a lens's left panel is contained to it; the lens and nav stay", () => {
+    boom.signalsSidebar = true;
+    const { container } = renderAt("/report/signals/");
+    expectContainedPanelFallback(container.querySelector(".toc-sidebar")!);
+    expect(screen.getByTestId("signals-lens")).toBeInTheDocument();
+    expect(screen.getByRole("navigation")).toBeInTheDocument();
+  });
+
+  it("comes back on Retry once it stops throwing", async () => {
+    boom.tagSidebar = true;
+    const { container } = renderAt("/report/quotes/");
+    const panel = container.querySelector(".tag-sidebar")!;
+    expectContainedPanelFallback(panel);
+    boom.tagSidebar = false;
+    fireEvent.click(within(panel as HTMLElement).getByRole("button", { name: "Retry" }));
+    expect(await screen.findByTestId("tag-sidebar-body")).toBeInTheDocument();
+    expect(within(panel as HTMLElement).queryByRole("alert")).toBeNull();
+  });
+
+  it("is cleared by choosing another lens", async () => {
+    boom.signalsSidebar = true;
+    const { container } = renderAt("/report/signals/");
+    expectContainedPanelFallback(container.querySelector(".toc-sidebar")!);
+    boom.signalsSidebar = false;
+    fireEvent.click(screen.getByRole("link", { name: "Quotes" }));
+    fireEvent.click(screen.getByRole("link", { name: "Signals" }));
+    expect(await screen.findByTestId("signals-sidebar-body")).toBeInTheDocument();
+  });
+
+  it("in the minimap leaves an empty column, not a message, and the rest stays", () => {
+    boom.minimap = true;
+    const { container } = renderAt("/report/quotes/");
+    expect(screen.queryByTestId("minimap")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByTestId("quotes-lens")).toBeInTheDocument();
+    expect(within(container.querySelector(".tag-sidebar") as HTMLElement).getByTestId("tag-sidebar-body")).toBeInTheDocument();
+    expect(console.error).toHaveBeenCalledWith("[PanelError]", expect.any(Error));
   });
 });

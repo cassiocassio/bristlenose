@@ -36,7 +36,8 @@
     "loading": "Yükleniyor…",
     "noResults": "Sonuç yok",
     "error": "Hata",
-    "lensError": "Bu görünüm gösterilemedi. Yeniden deneyin veya başka bir görünüm seçin."
+    "lensError": "Bu görünüm gösterilemedi. Yeniden deneyin veya başka bir görünüm seçin.",
+    "panelError": "Bu kenar çubuğu gösterilemedi."
   },
   "header": {
     "logoAlt": "Bristlenose logosu",

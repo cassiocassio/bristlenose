@@ -36,7 +36,8 @@
     "loading": "載入中⋯",
     "noResults": "沒有結果",
     "error": "錯誤",
-    "lensError": "無法顯示這個檢視。請重試，或選擇其他檢視。"
+    "lensError": "無法顯示這個檢視。請重試，或選擇其他檢視。",
+    "panelError": "無法顯示這個側邊欄。"
   },
   "header": {
     "logoAlt": "Bristlenose 標誌",

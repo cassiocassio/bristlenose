@@ -36,7 +36,8 @@
     "loading": "Carregando…",
     "noResults": "Nenhum resultado",
     "error": "Erro",
-    "lensError": "Não foi possível mostrar esta visualização. Tente novamente ou escolha outra visualização."
+    "lensError": "Não foi possível mostrar esta visualização. Tente novamente ou escolha outra visualização.",
+    "panelError": "Não foi possível mostrar esta barra lateral."
   },
   "header": {
     "logoAlt": "Logotipo do Bristlenose",

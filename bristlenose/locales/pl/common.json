@@ -36,7 +36,8 @@
     "loading": "Wczytywanie…",
     "noResults": "Brak wyników",
     "error": "Błąd",
-    "lensError": "Nie udało się wyświetlić tego widoku. Spróbuj ponownie lub wybierz inny widok."
+    "lensError": "Nie udało się wyświetlić tego widoku. Spróbuj ponownie lub wybierz inny widok.",
+    "panelError": "Nie udało się wyświetlić tego paska bocznego."
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

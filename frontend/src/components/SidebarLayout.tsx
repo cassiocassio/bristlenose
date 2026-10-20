@@ -44,6 +44,7 @@ import { useSidebarTuning } from "../contexts/sidebarTuning";
 import { TocSidebar } from "./TocSidebar";
 import { TagSidebar } from "./TagSidebar";
 import { Minimap } from "./Minimap";
+import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { useDragResize, MIN_WIDTH, MAX_WIDTH } from "../hooks/useDragResize";
 import { useTocOverlay } from "../hooks/useTocOverlay";
 import { Tooltip } from "./Tooltip";
@@ -488,7 +489,9 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
           </div>
         )}
         <div className="toc-sidebar-body">
-          {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
+          <PanelErrorBoundary>
+            {leftPanel ?? <TocSidebar onOverlayClose={closeTocOverlayAnimated} />}
+          </PanelErrorBoundary>
         </div>
         {(tocPush || tocMode === "overlay") && (
           // Drag-resize handle; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown.
@@ -520,7 +523,9 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
       {showRightSidebar && (
         <>
           {/* Column 4: Minimap (between center content and tag sidebar) */}
-          <Minimap />
+          <PanelErrorBoundary quiet>
+            <Minimap />
+          </PanelErrorBoundary>
 
           {/* Column 5: Tag sidebar panel */}
           <div
@@ -541,7 +546,9 @@ export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHead
                 </button>
               )}
             </div>
-            <TagSidebar />
+            <PanelErrorBoundary>
+              <TagSidebar />
+            </PanelErrorBoundary>
             {tagsOpen && (
               // Drag-resize handle; pointer-driven separator, keyboard-resizable via tabIndex/onKeyDown.
               // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions

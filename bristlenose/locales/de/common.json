@@ -36,7 +36,8 @@
     "loading": "Laden…",
     "noResults": "Keine Ergebnisse",
     "error": "Fehler",
-    "lensError": "Diese Ansicht konnte nicht angezeigt werden. Versuchen Sie es erneut oder wählen Sie eine andere Ansicht."
+    "lensError": "Diese Ansicht konnte nicht angezeigt werden. Versuchen Sie es erneut oder wählen Sie eine andere Ansicht.",
+    "panelError": "Diese Seitenleiste konnte nicht angezeigt werden."
   },
   "titlebar": {
     "quotes_one": "{{count}} Zitat",

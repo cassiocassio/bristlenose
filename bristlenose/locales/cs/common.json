@@ -36,7 +36,8 @@
     "loading": "Načítání…",
     "noResults": "Žádné výsledky",
     "error": "Chyba",
-    "lensError": "Toto zobrazení se nepodařilo načíst. Zkuste to znovu, nebo zvolte jiné zobrazení."
+    "lensError": "Toto zobrazení se nepodařilo načíst. Zkuste to znovu, nebo zvolte jiné zobrazení.",
+    "panelError": "Tento panel se nepodařilo zobrazit."
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

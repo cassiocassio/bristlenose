@@ -416,7 +416,9 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   `wouldPrompt`, the app's own copy serves, and nothing is recorded — so a spawn
   path, a launch-time model and `hasAnyAPIKey` never block on a dialog. In
   Settings ▸ LLM Provider only **the selected row's key field** reads with
-  `.allowed` (`loadAPIKey`, plus the read-back after a save) — and not even that
+  `.allowed` (`loadAPIKey`; since 20 Oct 2026 the read-back after a save is
+  quiet, the same read a run makes, and it decides whether the save worked —
+  `APIKeyDrafts.commit`) — and not even that
 row when the pane was built with `init(measuring:)`, the layout-measurement
 path, which reads `.quiet` (`LLMSettingsView.swift`, the `measuring` flag); the eager status
   board paints every row quietly from the app's own copies. So a CLI-written key

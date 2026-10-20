@@ -7,6 +7,8 @@ trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
 
 ## Changelog
 
+- _2026-10-20_ — **Settings ▸ LLM Provider commits at a gesture's end.** The key field used to save on every focus loss (rewriting the key, billing a validation and reloading the report on a mere Tab), kept showing a key whose save had failed, and lost a paste on ⌘W or a row change; the slider and the Azure fields posted the prefs change per step and per keystroke, and an API-version edit never posted at all. §Validation invariants now describes `APIKeyDrafts` and `CommitGate`. Anchors: `APIKeyDrafts.swift`, `CommitGate.swift`, `LLMSettingsView.swift` (`commitAPIKeys`, `commitPending`), `APIKeyDraftsTests`, `CommitGateTests`.
+
 - _2026-10-14_ — **Read shared screens joins the Transcription pane** (on by default, `BRISTLENOSE_SCREEN_TEXT`), as the Screens lens leaves Diagnostics. Tab 3 and the env table gain a row each.
 
 - _2026-09-03_ — **Truing pass (`--doc`): three claims in the body were describing code that had moved, and one of them had survived four previous passes.** (1) **§Preferences → serve process said `ServeManager` subscribes to `bristlenosePrefsChanged` and calls `restartIfRunning()`.** It has had no subscription of its own since `4ec46822` (19 Aug) — *two days before the 21 Aug pass, inside its own window.* `BristlenoseApp` registers the observer and hands it to `ServeFleet.applyEnvChange()`, which fans out per serve on `ServeEnvStaleness.action`. The load-bearing arm was absent entirely: a serve **exposed to agents** restarts eagerly even unfronted, because deferring it would let an external agent keep receiving real participant names after Anonymise was switched on — the reader who must not be stale is not the human. (2) **§Validation invariants printed the Ollama consent sequence backwards** — doc said `recordConsent` → `activeProvider` → post; shipped is `activeProvider` → `ollamaModel` → `syncGlobalModel` → `recordConsent` → post, and has been since `da612872` (4 May 2026). The headline invariant (consent before the post) was right, which is exactly why four passes read straight past the body: **a correct summary is camouflage for a wrong detail underneath it.** The *reason* for the real order is now recorded, because it is the thing that stops someone "fixing" it back — `recordConsent` reads `activeProvider` to write the audit trail. (3) **`overlayAPIKeys` was attributed to `ServeManager`**; it is `BristlenoseShared`, and the cited threat-model comment line was dead. That sentence is the immediate sibling of the one `fe145d32` corrected — the fix stopped one sentence short. Also: the refocus-recheck for credit top-ups was listed ⬜ unshipped when it ships on the out-of-credit pill and only the Settings board lacks it (now 🟡); `scripts/llm-weather.py` was named as a call site and does not exist; the out-of-credit pill no longer goes through the responder chain; the register cross-ref pointed at §3.7 rather than §5a-bis/ter/quater. **Same-day self-correction:** the 3 Sep entry below and its body bullet both said "growth is never deadbanded", which overstates the code — the growth arm is `fitting > current + refitNoise`, and this doc's own test `layoutNoiseNeverMovesTheWindow` pins a 0.2pt growth returning `nil`. Corrected in the doc, in both code comments, and in the test name. That is the 21 Aug lesson recurring inside its own file: a claim that reads as a guarantee it does not make. **Method note:** body `file.swift:NNN` anchors were converted to symbol names. Nine of them had rotted, most by this session's own `+66` lines in `LLMSettingsView.swift`, which makes line anchors a recurring cost rather than a one-off error. Changelog-entry anchors were left alone — they are dated records of what was true when written. Anchors: `BristlenoseApp.swift` (the observer), `ServeFleet.swift` (`applyEnvChange`), `AIConsentView.swift` (`installAndUse`), `BristlenoseShared.swift` (`overlayAPIKeys`), `OutOfCreditModel.swift`, `SettingsRefitTests.swift`.
@@ -288,13 +290,27 @@ by the verdict cache; immediately surfaced for Ollama because Ollama doesn't
 use the cache. The comment block above `applyPresenceAndCache` (`LLMSettingsView.swift`) is the
 load-bearing record.
 
-**Azure revalidation fires on focus blur, not per-keystroke.** Typing
-`https://my-instance.openai.azure.com` would otherwise issue ~30 validation
-requests, each one a billed Azure call plus a rate-limit hit. `revalidateAzure()`
-(`revalidateAzure`, `LLMSettingsView.swift`) is wired through `@FocusState` for the
-endpoint and `apiVersion` fields with `onSubmit` (Enter) as the secondary
-trigger. Per-keystroke `.onChange` is retained only for the prefs notification
-(cheap UI signal, no network round-trip).
+**Settings that restart the serve commit at a gesture's end, and only when they changed.**
+`.bristlenosePrefsChanged` restarts the serve, which reloads the report, so the
+concurrency slider commits on release (`onEditingChanged`) and each Azure field
+on Return or focus loss — never per step or per keystroke. Every exit runs the
+same commit (the field's blur, a provider-row change, the pane disappearing, the
+Settings window resigning key or closing), so a value is compared against the
+last one committed by a `CommitGate`, settled once when the pane first appears;
+a Tab through an unedited field posts nothing. Azure revalidation (a billed call)
+runs only when the endpoint or API version actually changed — typing
+`https://my-instance.openai.azure.com` used to be ~30 calls, and a Tab through
+the fields one per field. A keyboard change to the slider has no release event,
+so it commits when the pane is left or the window resigns key. (R34, 20 Oct 2026;
+`commitEnvPrefs`, `commitAzure`, `commitPending` in `LLMSettingsView.swift`.)
+
+**The API key field commits the same way, through `APIKeyDrafts`.** Each row's
+text is held against what the Keychain had when the row was loaded; a commit
+acts only on an edit, so it is safe from every exit above. The read-back decides
+the outcome, never `set`'s return: a failed save keeps the pasted key on screen
+with `desktop.llmSettings.keyNotSaved` under the field, posts nothing and
+validates nothing (R36), and a pasted key left without Return is saved on a row
+change or window close rather than overwritten when the row is shown again (R38).
 
 **Consent recorded BEFORE the prefs notification on Ollama setup.** The
 invariant that matters is `recordConsent` → post, so a prefs-change-driven serve
@@ -453,7 +469,7 @@ the eager board.
 first validation on key paste.** Key entry is the high-anxiety step (a trailing
 space, a fat-fingered paste — everyone has the story), so the user wants live
 "Checking…" feedback *there*. Hence the split in `kickOffValidation`:
-`silent: false` on the paste/`saveAPIKey` path (spinner shown — reassurance),
+`silent: false` on the paste/`commitAPIKeys` path (spinner shown — reassurance),
 `silent: true` on background reconfirm of an already-cached provider (no spinner
 wall).
 

@@ -87,6 +87,13 @@ struct LLMSettingsView: View {
         .frame(width: 660)
         .onAppear {
             if measuring { return }
+            // What the running serve and the last validation already have, so
+            // the first commit compares against it rather than posting blind.
+            // Only the first appear counts: the Settings package re-adds the
+            // pane on every tab switch, and re-settling then would swallow a
+            // change no exit had committed yet.
+            envGate.settle(envPrefs)
+            azureCheckGate.settle(azureCheck)
             if let active = LLMProvider(rawValue: activeProvider) {
                 selectedProvider = active
             }
@@ -117,6 +124,7 @@ struct LLMSettingsView: View {
             // key field: picking Ollama removes the field, and with it any
             // handler it carried (R38).
             commitAPIKeys([previous])
+            commitAzure()
             applyPresenceAndCache(provider: selectedProvider)
             revalidateSelectedIfNeeded()
         }
@@ -124,11 +132,18 @@ struct LLMSettingsView: View {
         // pasted and never committed with Return (R38). The window close is
         // matched by identity rather than trusted to `onDisappear`, whose
         // firing rule belongs to the Settings package (desktop/CLAUDE.md).
-        .onDisappear { commitAPIKeys(LLMProvider.allCases) }
+        .onDisappear { commitPending() }
+        // Clicking back into the report leaves Settings open with the field
+        // still focused, so no blur fires: resigning key is the exit there.
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)) { note in
             guard !measuring, let closing = note.object as? NSWindow,
                   closing === SettingsWindow.shared.window else { return }
-            commitAPIKeys(LLMProvider.allCases)
+            commitPending()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
+            guard !measuring, let resigning = note.object as? NSWindow,
+                  resigning === SettingsWindow.shared.window else { return }
+            commitPending()
         }
         // One hook rather than four, so it can say what it means: when the
         // content changes shape, the window follows. Covers the provider switch
@@ -605,13 +620,15 @@ struct LLMSettingsView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            Slider(value: $concurrency, in: 1...10, step: 1)
+            // Commits on release, not per step: each commit that changes the
+            // value restarts the serve (R34). A keyboard change has no release
+            // event, so it commits when the pane is left or the window closes.
+            Slider(value: $concurrency, in: 1...10, step: 1) { editing in
+                if !editing { commitEnvPrefs() }
+            }
             Text(i18n.t("desktop.llmSettings.concurrencyHint"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-        }
-        .onChange(of: concurrency) { _, _ in
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
         }
     }
 
@@ -621,6 +638,7 @@ struct LLMSettingsView: View {
     @AppStorage("azureDeployment") private var azureDeployment: String = ""
     @AppStorage("azureAPIVersion") private var azureAPIVersion: String = "2024-10-21"
     @FocusState private var azureEndpointFocused: Bool
+    @FocusState private var azureDeploymentFocused: Bool
     @FocusState private var azureAPIVersionFocused: Bool
 
     private var azureSection: some View {
@@ -628,30 +646,77 @@ struct LLMSettingsView: View {
             TextField(i18n.t("desktop.llmSettings.azureEndpoint"), text: $azureEndpoint)
                 .textFieldStyle(.roundedBorder)
                 .focused($azureEndpointFocused)
-                .onSubmit { revalidateAzure() }
+                .onSubmit { commitAzure() }
             TextField(i18n.t("desktop.llmSettings.azureDeployment"), text: $azureDeployment)
                 .textFieldStyle(.roundedBorder)
+                .focused($azureDeploymentFocused)
+                .onSubmit { commitAzure() }
             TextField(i18n.t("desktop.llmSettings.azureAPIVersion"), text: $azureAPIVersion)
                 .textFieldStyle(.roundedBorder)
                 .focused($azureAPIVersionFocused)
-                .onSubmit { revalidateAzure() }
+                .onSubmit { commitAzure() }
         }
-        // Prefs notification still fires on every change (cheap UI signal so
-        // ServeManager can rebuild env vars when the user finishes typing).
-        // Validation only fires on focus blur or Enter, so dragging through
-        // a 30-character endpoint URL doesn't fire 30 billed round-trips.
-        .onChange(of: azureEndpoint) { _, _ in
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
-        .onChange(of: azureDeployment) { _, _ in
-            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
-        }
+        // Each field commits on Return or focus loss, never per keystroke: a
+        // commit that changes a value restarts the serve, and one that changes
+        // the endpoint or API version runs a billed validation (R34).
         .onChange(of: azureEndpointFocused) { _, focused in
-            if !focused { revalidateAzure() }
+            if !focused { commitAzure() }
+        }
+        .onChange(of: azureDeploymentFocused) { _, focused in
+            if !focused { commitAzure() }
         }
         .onChange(of: azureAPIVersionFocused) { _, focused in
-            if !focused { revalidateAzure() }
+            if !focused { commitAzure() }
         }
+    }
+
+    // MARK: - Committing env-var prefs
+
+    /// The settings on this pane that reach the sidecar as env vars
+    /// (`BristlenoseShared.overlayPreferences`), compared as one value.
+    private struct EnvPrefs: Equatable {
+        var concurrency: Int
+        var azureEndpoint: String
+        var azureDeployment: String
+        var azureAPIVersion: String
+    }
+
+    /// What an Azure validation depends on besides the key.
+    private struct AzureCheck: Equatable {
+        var endpoint: String
+        var apiVersion: String
+    }
+
+    @State private var envGate = CommitGate<EnvPrefs>()
+    @State private var azureCheckGate = CommitGate<AzureCheck>()
+
+    private var envPrefs: EnvPrefs {
+        EnvPrefs(concurrency: Int(concurrency), azureEndpoint: azureEndpoint,
+                 azureDeployment: azureDeployment, azureAPIVersion: azureAPIVersion)
+    }
+
+    private var azureCheck: AzureCheck {
+        AzureCheck(endpoint: azureEndpoint, apiVersion: azureAPIVersion)
+    }
+
+    /// Restart the serve only if an env-var pref actually changed.
+    private func commitEnvPrefs() {
+        guard !measuring else { return }
+        if envGate.commit(envPrefs) {
+            NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
+        }
+    }
+
+    private func commitAzure() {
+        guard !measuring else { return }
+        commitEnvPrefs()
+        if azureCheckGate.commit(azureCheck) { revalidateAzure() }
+    }
+
+    /// Every exit from the pane: keys, then the env-var prefs.
+    private func commitPending() {
+        commitAPIKeys(LLMProvider.allCases)
+        commitAzure()
     }
 
     /// Re-run validation for Azure (endpoint or API version changed).

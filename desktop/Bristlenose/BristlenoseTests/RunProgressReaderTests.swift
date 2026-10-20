@@ -87,6 +87,55 @@ import Testing
         #expect(EventLogReader.currentRunProgress(at: url, priorRunId: nil)?.runId == "RUN1")
     }
 
+    /// R26: on a large study the ring and the readable count froze partway.
+    /// faster-whisper writes a progress line per decoded segment (~420 B, one
+    /// every few seconds of audio), so a run's own `run_started` fell out of
+    /// the fixed 64 KB tail after ~150 lines, `currentRunProgress` returned nil
+    /// from then on, and the 1 Hz poll stopped folding anything in. Fixed by
+    /// the widening tail read in 9eb4dafc; this drives the ring's own path
+    /// through a study-sized log (40 sessions × 500 segments, ~8 MB).
+    @Test func aLargeStudysProgressKeepsMovingTheRingAndTheReadableCount() throws {
+        let sessions = 40, segmentsPerSession = 500
+        var lines = [runStarted.replacingOccurrences(of: "RUN1", with: "RUN0"), runStarted]
+        lines.reserveCapacity(sessions * segmentsPerSession + 2)
+        for s in 0..<sessions {
+            for seg in 0..<segmentsPerSession {
+                let fraction = (Double(s) + Double(seg) / Double(segmentsPerSession)) / Double(sessions)
+                lines.append(
+                    #"{"schema_version":1,"ts":"2026-06-16T10:01:00Z","event":"run_progress","run_id":"RUN1","kind":"run","started_at":"2026-06-16T10:00:00Z","stage":"transcribe","sessions_complete":\#(s),"sessions_total":\#(sessions),"sessions_new":\#(sessions),"sessions_cached":0,"sessions_readable":\#(s),"stage_fraction":\#(fraction),"eta_remaining_seconds":null,"predicted_total_seconds":null,"elapsed_seconds":\#(Double(s * segmentsPerSession + seg))}"#
+                )
+            }
+        }
+        let url = try writeEvents(lines)
+        let size = try #require(
+            try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int
+        )
+        try #require(size > 4 * 1_048_576, "the log must reach well past the first windows")
+
+        let ev = try #require(
+            EventLogReader.currentRunProgress(at: url, priorRunId: "RUN0"),
+            "a long run's newest progress line must still be read as this run's"
+        )
+        #expect(ev.runId == "RUN1")
+        #expect(ev.sessionsComplete == sessions - 1)
+        #expect(ev.sessionsReadable == sessions - 1)
+
+        // Folded into the ring as the poll does: it moves past where a frozen
+        // read would have left it.
+        let started = Date(timeIntervalSince1970: 0)
+        var early = PipelineProgress(startedAt: started)
+        early.ringFraction = 0.01
+        let folded = RunProgressMath.apply(
+            stage: ev.stage, sessionsComplete: ev.sessionsComplete,
+            sessionsTotal: ev.sessionsTotal, stageFraction: ev.stageFraction,
+            etaRemainingSeconds: ev.etaRemainingSeconds,
+            predictedTotalSeconds: ev.predictedTotalSeconds,
+            to: early, startedAt: started, now: started.addingTimeInterval(60)
+        )
+        #expect(folded.sessionsComplete == sessions - 1)
+        #expect((folded.ringFraction ?? 0) > 0.9)
+    }
+
     @Test func tailEventSkipsTrailingProgress() throws {
         // run_started then a trailing run_progress: the lifecycle read returns
         // the run_started, not the progress line — so a live run isn't read as

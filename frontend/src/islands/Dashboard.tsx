@@ -259,6 +259,12 @@ function StatsRow({ stats }: { stats: StatsResponse }) {
 
 // ---------- Compact sessions table ----------
 
+// What inside a session row handles its own click, so the row's click-to-open
+// stands aside: the #N link, the media link, the speaker pickers and their menu.
+// The Sessions lens grid's rule (SessionsTable.tsx ROW_OWN_CLICK).
+const ROW_OWN_CLICK =
+  'a, button, input, textarea, select, [contenteditable="true"], [role="menu"]';
+
 function CompactSessionRow({
   session,
 }: {
@@ -307,8 +313,20 @@ function CompactSessionRow({
     }
   }
 
+  // A click anywhere on the row opens its transcript, as the hover wash and
+  // pointer promise (R65; the Sessions lens grid since 729033bb). Controls in the
+  // row keep their own click, and a drag that selected text is a selection, not
+  // a click.
+  const onRowClick = (e: React.MouseEvent<HTMLTableRowElement>) => {
+    const own = (e.target as HTMLElement).closest(ROW_OWN_CLICK);
+    if (own && e.currentTarget.contains(own)) return;
+    if (window.getSelection()?.toString()) return;
+    navigateTo(`/report/sessions/${session_id}`);
+  };
+
   return (
-    <tr data-session={session_id}>
+    // The row click is a pointer convenience; the keyboard route is the #N link.
+    <tr data-session={session_id} onClick={onRowClick}>
       <td className="bn-session-id">
         <a href={reportHref(`/report/sessions/${session_id}`)}>
           #{session_number}

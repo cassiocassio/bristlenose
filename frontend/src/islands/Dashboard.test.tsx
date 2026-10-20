@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { NavigateFunction } from "react-router-dom";
+import { installNavigationShims } from "../shims/navigation";
 import { Dashboard } from "./Dashboard";
 import type { DashboardResponse } from "../utils/types";
 
@@ -262,6 +264,47 @@ describe("Dashboard sessions table — the person picker (design-people.md §J8.
       expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before + 1),
     );
     expect(String((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[before][0])).toContain("/dashboard");
+  });
+});
+
+describe("Dashboard sessions table — row click (R65)", () => {
+  const navigate = vi.fn();
+  beforeEach(() => {
+    navigate.mockClear();
+    installNavigationShims(navigate as unknown as NavigateFunction, () => {});
+  });
+  const row = () => screen.getByText("#1").closest("tr") as HTMLElement;
+
+  it("a click anywhere on a row opens that session's transcript", async () => {
+    mockFetch(baseDashboard);
+    render(<Dashboard projectId="1" />);
+    await screen.findByText("#1");
+    fireEvent.click(row().querySelector(".bn-session-duration")!);
+    expect(navigate).toHaveBeenCalledWith("/report/sessions/s1", undefined);
+  });
+
+  it("a control inside the row keeps its own click", async () => {
+    mockFetch(baseDashboard);
+    render(<Dashboard projectId="1" />);
+    await screen.findByText("#1");
+    // The media link opens the player; the #N link is the keyboard route.
+    fireEvent.click(screen.getByText("session1.mp4"));
+    fireEvent.click(screen.getByText("#1"));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("a drag that selected text is a selection, not a click", async () => {
+    mockFetch(baseDashboard);
+    render(<Dashboard projectId="1" />);
+    await screen.findByText("#1");
+    const cell = row().querySelector(".bn-session-duration")!;
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    fireEvent.click(cell);
+    window.getSelection()!.removeAllRanges();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
 

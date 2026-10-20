@@ -93,7 +93,7 @@ for (const lens of LENSES) {
       const isAppRequest = /\/(api|report|static|assets)\//.test(url);
       if (!isAppRequest || status < 400) return; // unrelated favicon 404 etc. — not ours
       // ci-allowlist: CI-A3 — `autocode/*/status` 404s when no job has been started;
-      // REST-correct "resource absent", CodebookPanel treats it as idle. See ALLOWLIST.md.
+      // REST-correct "resource absent". See ALLOWLIST.md.
       if (status === 404 && /\/autocode\/[^/]+\/status/.test(url)) return;
       failedRequests.push(`${status} ${url}`);
     });

@@ -39,18 +39,21 @@ Sequential `CI-A1`, `CI-A2`, ... **Retired IDs are never reused** — this prese
 |---|---|---|---|---|---|
 | CI-A1 | `infra` | `console.spec.ts` (favicon check) | Browsers automatically request `/favicon.ico`; our smoke fixture doesn't ship one. Never a product bug. | n/a | pre-existing |
 | CI-A2 | `by-design` | `links.spec.ts` (`role=button` skip) | Interactive elements (modal openers, toggles) legitimately have no `href`; using `<a role="button">` is an intentional WAI-ARIA pattern. | n/a | pre-existing |
-| CI-A3 | `by-design` | `network.spec.ts` + `lenses-load-clean.spec.ts` (autocode status 404) | `GET /api/projects/*/autocode/*/status` returns 404 when no autocode job has been started for a framework — REST-correct ("resource absent"). The frontend at `CodebookPanel.tsx` treats the 404 as null-equivalent (`status: idle`). Changing the endpoint to 200+idle would be cosmetic churn on a working path. | n/a | 2026-04-18 (2026-07-07: shared by the every-lens-loads-clean spec) |
-| CI-A4 | `deferred-fix` | `console.spec.ts` (codebook route 404) | `/report/codebook/` emits a console error for a 404 subresource whose URL is truncated by `msg.text()`. Local `curl` of the page + listed assets all return 200; the culprit is runtime (likely route-chunk prefetch, CSS sprite, or font). Root cause not yet known. | `docs/private/100days.md` §2 Could → [S3] Codebook subresource | 2026-04-18 |
+| CI-A3 | `by-design` | `network.spec.ts` + `lenses-load-clean.spec.ts` (autocode status 404) | `GET /api/projects/*/autocode/*/status` returns 404 when no autocode job has been started for a framework — REST-correct ("resource absent"). No lens reads it on load since v1 `CodebookPanel.tsx` was deleted (`baa1aa0e`, 31 Aug 2026); the activity chip counts a 404 as a failed poll and ends the job after five. Changing the endpoint to 200+idle would be cosmetic churn on a working path. | n/a | 2026-04-18 (2026-07-07: shared by the every-lens-loads-clean spec) |
 
 ## Retired
 
-_None yet. When an entry is removed, move its row here with `removed: YYYY-MM-DD` and a one-sentence reason (bug fixed / stack upgraded / obsolete test / etc.). Do not reuse the ID._
+_When an entry is removed, move its row here with `removed: YYYY-MM-DD` and a one-sentence reason (bug fixed / stack upgraded / obsolete test / etc.). Do not reuse the ID._
+
+| ID | Category | Spec | Was | Removed | Reason |
+|---|---|---|---|---|---|
+| CI-A4 | `deferred-fix` | `console.spec.ts` (codebook route 404) | A 404 subresource on `/report/codebook/` whose URL `msg.text()` truncated. | removed: 2026-10-20 | Not reproducible: every response of 400 or above on the codebook route, on Chromium and WebKit, came back clean, and the spec passes on both without the suppression. Probable cause, gone with it: v1 `CodebookPanel.tsx` read AutoCode status per framework on load (the CI-A3 404), deleted in `baa1aa0e`. |
 
 ## Future v2 (not yet in place)
 
 These were reviewed and explicitly deferred to keep v1 shippable with ci-cleanup. Tracked in `docs/private/100days.md` §11 Operations:
 
 - **Validator script** (`scripts/check-ci-allowlists.py`) — parse both sides, fail CI on drift (code comment with no register entry, or register entry with no code comment). Trigger: ~10th entry, or before first external contributor, whichever comes first.
-- **Staleness gate** — flag any `deferred-fix` entry with `added` > 90 days unless renewed. Trigger: first entry crosses 60 days. Oldest entry today (CI-A4) is brand new.
+- **Staleness gate** — flag any `deferred-fix` entry with `added` > 90 days unless renewed. Trigger: first entry crosses 60 days. Oldest `deferred-fix` entry today: none (CI-A4 retired 20 Oct 2026).
 - **Regex-shape lint** — reject unanchored `.*` / `.+` patterns in suppression regexes. Mitigates the regex-widening attack that security review flagged. Ships with the validator.
 - **CODEOWNERS on `e2e/tests/*.spec.ts`** — enforces review obligation. Tracked separately under supply-chain hardening in 100days.md §11.

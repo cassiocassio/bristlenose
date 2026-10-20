@@ -854,6 +854,10 @@ function AppShell() {
           frameworkId: j.frameworkId,
           onComplete: () => {
             window.dispatchEvent(new Event("codebook-changed"));
+            // The proposals live on the quotes, and the lenses that draw them reload on
+            // `bn:tags-changed`, not `codebook-changed`. Without it the chip said "Coded"
+            // over a Quotes lens, and a tag sidebar, that showed nothing new until a reload.
+            document.dispatchEvent(new CustomEvent("bn:tags-changed"));
           },
           onAction: () => {
             const detail = { frameworkId: j.frameworkId, frameworkTitle: j.frameworkTitle };

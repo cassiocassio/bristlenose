@@ -5,6 +5,7 @@ import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
 import { closeToc, openTocPush, resetSidebarStore } from "./contexts/SidebarStore";
 import { resetQuoteGroupingSlot } from "./contexts/QuoteGroupingSlot";
+import { addJob, resetActivityStore } from "./contexts/ActivityStore";
 import { act } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -193,5 +194,57 @@ describe("Quotes grouping control placement", () => {
     const { container } = renderRoute("/report/signals/");
     await waitFor(() => expect(container.querySelector(".toc-sidebar")).not.toBeNull());
     expect(container.querySelector(".bn-quote-grouping")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// An AutoCode run that finishes tells the lenses that draw quotes, not only the
+// codebook: the proposals live on the quotes, which reload on `bn:tags-changed`.
+// ---------------------------------------------------------------------------
+
+describe("AutoCode chip completion", () => {
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/autocode/norman/status")
+        ? {
+            status: "completed",
+            processed_quotes: 4,
+            total_quotes: 4,
+            started_at: "2026-10-20T10:00:00Z",
+            completed_at: "2026-10-20T10:01:00Z",
+          }
+        : url.includes("/quotes")
+          ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
+          : url.includes("/sessions")
+            ? { sessions: [] }
+            : url.includes("/codebook")
+              ? { groups: [], ungrouped: [], all_tag_names: [] }
+              : {};
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+  });
+
+  it("announces bn:tags-changed when the run completes", async () => {
+    const heard = vi.fn();
+    document.addEventListener("bn:tags-changed", heard);
+    try {
+      renderRoute("/report/sessions/");
+      act(() => {
+        addJob("autocode-norman", { type: "autocode", frameworkId: "norman", frameworkTitle: "Norman" });
+      });
+      await waitFor(() => expect(heard).toHaveBeenCalled());
+    } finally {
+      document.removeEventListener("bn:tags-changed", heard);
+    }
   });
 });

@@ -78,6 +78,15 @@ export function useReportQuotes(lens: string): ReportQuotes {
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
   const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
 
+  // Tags changed somewhere else (an AutoCode run or catch-up finishing, a report applied): reload
+  // as the Quotes lens does, or this lens keeps its old tags and proposals until a run.
+  const [tagsChanged, setTagsChanged] = useState(0);
+  useEffect(() => {
+    const handler = () => setTagsChanged((n) => n + 1);
+    document.addEventListener("bn:tags-changed", handler);
+    return () => document.removeEventListener("bn:tags-changed", handler);
+  }, []);
+
   // Hydrated as the Quotes lens hydrates it, and again on a refresh.
   const loadedOnce = useRef(false);
   useEffect(() => {
@@ -118,7 +127,7 @@ export function useReportQuotes(lens: string): ReportQuotes {
         setGroupedVocabulary(groups);
       })
       .catch((e: unknown) => console.warn(`${lens}: no codebook, so no tag vocabulary`, e));
-  }, [refreshKey, lens]);
+  }, [refreshKey, tagsChanged, lens]);
 
   const byId = useMemo(() => {
     const m = new Map<string, QuoteResponse>();

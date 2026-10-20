@@ -274,7 +274,10 @@ def test_a_stopped_board_keeps_what_it_has_and_says_cancelled(
         # The researcher presses Stop while the first sticky batch is in hand.
         fake.before_bulk = lambda: client.post("/api/projects/1/miro/board/cancel")
         client.post("/api/projects/1/miro/board", json={})
-        s = _wait_for(client, lambda s: s["status"] != "running")
+        # Wait for the job, then read: the Stop reads "cancelled" while the batch is still in
+        # hand, and a slow runner polled before it was recorded (Windows CI, 20 Oct 2026).
+        _wait_for(client, lambda _s: miro_routes._board_jobs[1]["task"].done())
+        s = client.get("/api/projects/1/miro/board/status").json()
         assert s["status"] == "cancelled" and s["reason"] is None
         assert s["board_url"] == "https://miro.com/app/board/b1/"  # where to find what was made
         assert fake.calls.count("bulk") == 1 and "text" not in fake.calls

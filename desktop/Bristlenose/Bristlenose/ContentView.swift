@@ -1401,7 +1401,10 @@ struct ContentView: View {
                 } catch {
                     let alert = NSAlert()
                     alert.messageText = i18n.t("desktop.discussion.copyFailed")
-                    alert.informativeText = error.localizedDescription
+                    // Our own refusal reads in the app's language; a system
+                    // error keeps the sentence macOS already localised.
+                    alert.informativeText = (error as? DiscussionGuide.InstallError)
+                        .map { i18n.t($0.localeKey) } ?? error.localizedDescription
                     if let host = PanelHost.window {
                         alert.beginSheetModal(for: host)
                     } else {

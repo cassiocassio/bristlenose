@@ -1234,6 +1234,7 @@
     "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. Bei der n\u00e4chsten Analyse des Projekts wird es erneut versucht.",
     "choosePanelMessage": "W\u00e4hlen Sie Ihren Gespr\u00e4chsleitfaden: Word, Markdown oder reiner Text.",
     "copyFailed": "Ihr Leitfaden konnte nicht in den Projektordner kopiert werden.",
+    "guideNotDownloaded": "Er ist noch nicht auf diesen Mac geladen. Laden Sie ihn im Finder und w\u00e4hlen Sie ihn dann erneut aus.",
     "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste.",
     "guideProblem": {
       "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste."

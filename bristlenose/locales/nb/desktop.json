@@ -1234,6 +1234,7 @@
     "notBuilt": "Kunne ikke lage diskusjonen for dette prosjektet. Det pr\u00f8ves igjen neste gang prosjektet analyseres.",
     "choosePanelMessage": "Velg intervjuguiden din \u2013 Word, Markdown eller ren tekst.",
     "copyFailed": "Kunne ikke kopiere guiden din til prosjektmappen.",
+    "guideNotDownloaded": "Den er ikke lastet ned til denne Macen enn\u00e5. Last den ned i Finder, og velg den p\u00e5 nytt.",
     "guideHowTo": "Legg guiden din (Word, Markdown eller ren tekst) i en mappe som heter \u00abDiscussion guide\u00bb ved siden av opptakene, og velg Analyser i prosjektets meny i sidepanelet.",
     "guideProblem": {
       "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes, og velg Analyser i prosjektets meny i sidepanelet."

@@ -1316,6 +1316,7 @@
     "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Przy nast\u0119pnej analizie projektu nast\u0105pi kolejna pr\u00f3ba.",
     "choosePanelMessage": "Wybierz sw\u00f3j scenariusz wywiadu \u2013 Word, Markdown lub zwyk\u0142y tekst.",
     "copyFailed": "Nie uda\u0142o si\u0119 skopiowa\u0107 Twojego scenariusza do folderu projektu.",
+    "guideNotDownloaded": "Nie zosta\u0142 jeszcze pobrany na tego Maca. Pobierz go w Finderze, a potem wybierz ponownie.",
     "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144, a potem wybierz Analizuj w menu projektu na pasku bocznym.",
     "guideProblem": {
       "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem wybierz Analizuj w menu projektu na pasku bocznym."

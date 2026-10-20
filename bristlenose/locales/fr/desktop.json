@@ -1234,6 +1234,7 @@
     "notBuilt": "Impossible de cr\u00e9er la discussion de ce projet. Une nouvelle tentative aura lieu \u00e0 la prochaine analyse du projet.",
     "choosePanelMessage": "Choisissez votre guide d\u2019entretien : Word, Markdown ou texte brut.",
     "copyFailed": "Impossible de copier votre guide dans le dossier du projet.",
+    "guideNotDownloaded": "Il n\u2019est pas encore t\u00e9l\u00e9charg\u00e9 sur ce Mac. T\u00e9l\u00e9chargez-le dans le Finder, puis choisissez-le \u00e0 nouveau.",
     "guideHowTo": "Placez votre guide (Word, Markdown ou texte brut) dans un dossier nomm\u00e9 \u00ab Discussion guide \u00bb \u00e0 c\u00f4t\u00e9 de vos enregistrements, puis choisissez Analyser dans le menu du projet, dans la barre lat\u00e9rale.",
     "guideProblem": {
       "unreadable": "Impossible de lire votre guide. V\u00e9rifiez qu\u2019il s\u2019ouvre, puis choisissez Analyser dans le menu du projet, dans la barre lat\u00e9rale."

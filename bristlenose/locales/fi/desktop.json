@@ -1234,6 +1234,7 @@
     "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Sit\u00e4 yritet\u00e4\u00e4n uudelleen, kun projekti analysoidaan seuraavan kerran.",
     "choosePanelMessage": "Valitse haastattelurunko \u2013 Word, Markdown tai pelkk\u00e4 teksti.",
     "copyFailed": "Runkoa ei voitu kopioida projektikansioon.",
+    "guideNotDownloaded": "Sit\u00e4 ei ole viel\u00e4 ladattu t\u00e4h\u00e4n Maciin. Lataa se Finderissa ja valitse se uudelleen.",
     "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja valitse sitten Analysoi projektin valikosta sivupalkissa.",
     "guideProblem": {
       "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja valitse sitten Analysoi projektin valikosta sivupalkissa."

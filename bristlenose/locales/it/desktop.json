@@ -1234,6 +1234,7 @@
     "notBuilt": "Impossibile creare la discussione per questo progetto. Si riprover\u00e0 alla prossima analisi del progetto.",
     "choosePanelMessage": "Scegli la tua traccia di intervista: Word, Markdown o testo semplice.",
     "copyFailed": "Impossibile copiare la tua traccia nella cartella del progetto.",
+    "guideNotDownloaded": "Non \u00e8 ancora scaricata su questo Mac. Scaricala nel Finder, poi sceglila di nuovo.",
     "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata \u201cDiscussion guide\u201d accanto alle registrazioni, poi scegli Analizza dal menu del progetto nella barra laterale.",
     "guideProblem": {
       "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi scegli Analizza dal menu del progetto nella barra laterale."

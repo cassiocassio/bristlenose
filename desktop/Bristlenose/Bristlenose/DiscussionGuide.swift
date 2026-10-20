@@ -23,6 +23,21 @@ enum DiscussionGuide {
         return entries.first { $0.lastPathComponent.lowercased() == folderName.lowercased() }
     }
 
+    enum InstallError: LocalizedError {
+        /// The chosen guide is still in the cloud (dataless). Refused rather
+        /// than fetched: a copy of a dataless file waits with no timeout, and
+        /// this one runs on the main actor, so it would freeze the whole app
+        /// (`desktop/CLAUDE.md`, the `copyItem` gotcha; R45 for the drop path).
+        case notDownloaded
+
+        /// English, for logs and bug reports; the alert reads `localeKey`.
+        nonisolated var errorDescription: String? {
+            "Your guide isn’t downloaded to this Mac yet."
+        }
+
+        nonisolated var localeKey: String { "desktop.discussion.guideNotDownloaded" }
+    }
+
     /// Copy `source` into the project's guide folder, creating it if needed,
     /// and stamp it with the current time so the folder reads as changed after
     /// the last discussion record (`ProjectFolderWatcher.discussionWanted`).
@@ -30,8 +45,18 @@ enum DiscussionGuide {
     /// A file of the same name is replaced — that is what choosing a guide again
     /// means. Other files are left alone: the stage reads the newest and reports
     /// the rest, and deleting a researcher's file is not ours to do.
+    ///
+    /// A guide still in the cloud is refused before anything is touched, so a
+    /// guide already in the project stays as it was. `isDataless` is injectable
+    /// because no test can make a real cloud placeholder.
     @discardableResult
-    static func install(_ source: URL, into projectRoot: URL, fileManager: FileManager = .default) throws -> URL {
+    static func install(
+        _ source: URL,
+        into projectRoot: URL,
+        fileManager: FileManager = .default,
+        isDataless: (URL) -> Bool = CopyMachinery.isDataless
+    ) throws -> URL {
+        if isDataless(source) { throw InstallError.notDownloaded }
         let folder = existingFolder(in: projectRoot, fileManager: fileManager)
             ?? projectRoot.appendingPathComponent(folderName, isDirectory: true)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)

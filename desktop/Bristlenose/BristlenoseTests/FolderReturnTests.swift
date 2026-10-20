@@ -18,7 +18,14 @@ import Testing
         return (root, ProjectIndex(fileURL: root.appendingPathComponent("projects.json")))
     }
 
-    private func until(_ condition: () -> Bool, seconds: Double = 5) async {
+    /// The queue suite's ceiling (30 s). A return reaches the row through
+    /// main-actor hops (sync, scan, apply), and under the full suite the main
+    /// actor is saturated: the 5 s ceiling ran out with the scan still queued
+    /// (21 Oct 2026, reproduced beside 40 tests holding it 100 ms at a time).
+    /// A green wait returns as soon as its condition holds.
+    private func until(
+        _ condition: () -> Bool, seconds: Double = PipelineRunnerQueueTests.patience
+    ) async {
         let deadline = Date().addingTimeInterval(seconds)
         while !condition(), Date() < deadline {
             try? await Task.sleep(for: .milliseconds(10))

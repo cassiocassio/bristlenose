@@ -159,7 +159,7 @@ describe("FeedbackModal", () => {
     "keeps the text in the form when the send fails and the clipboard %s",
     async (_label, clipboard) => {
       const onClose = vi.fn();
-      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
       Object.defineProperty(navigator, "clipboard", {
         value: clipboard(),
         configurable: true,
@@ -177,6 +177,7 @@ describe("FeedbackModal", () => {
           "Could not copy — please submit feedback manually.",
         );
       });
+      expect(fetchSpy).toHaveBeenCalledOnce();
       expect(onClose).not.toHaveBeenCalled();
       expect(textarea.value).toBe("Long careful feedback.");
       expect(screen.getByRole("button", { name: /Needs work/ }).className).toContain("selected");

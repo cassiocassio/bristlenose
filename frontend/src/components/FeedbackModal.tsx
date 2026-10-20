@@ -117,7 +117,8 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     try {
       await navigator.clipboard.writeText(text);
       clearAndClose(t("feedback.copiedToClipboard"));
-    } catch {
+    } catch (err) {
+      console.warn("Bristlenose feedback: clipboard write failed; keeping the form", err);
       keepForm();
     }
   }, [clearAndClose, feedbackLabelByValue, health.version, message, rating, t]);

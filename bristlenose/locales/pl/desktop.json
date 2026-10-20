@@ -337,6 +337,7 @@
       "screens": "Ekrany \u00b7 {{done}} z {{total}}",
       "copying": "Kopiowanie · {{percent}}%",
       "stage": {
+        "download": "Pobieranie modelu mowy",
         "transcribe": "Transkrybowanie",
         "speakers": "Identyfikowanie rozmówców",
         "topics": "Wyszukiwanie tematów",

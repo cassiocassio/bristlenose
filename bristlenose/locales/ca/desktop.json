@@ -301,6 +301,7 @@
       "screens": "Pantalles \u00b7 {{done}} de {{total}}",
       "copying": "S'està copiant · {{percent}}%",
       "stage": {
+        "download": "S'està baixant el model de veu",
         "transcribe": "S'està transcrivint",
         "speakers": "S'estan identificant els parlants",
         "topics": "S'estan cercant els temes",

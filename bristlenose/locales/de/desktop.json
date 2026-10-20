@@ -301,6 +301,7 @@
       "screens": "Bildschirme \u00b7 {{done}} von {{total}}",
       "copying": "Wird kopiert \u00b7 {{percent}} %",
       "stage": {
+        "download": "Sprachmodell wird heruntergeladen",
         "transcribe": "Wird transkribiert",
         "speakers": "Sprecher werden erkannt",
         "topics": "Themen werden erkannt",

@@ -301,6 +301,7 @@
       "screens": "Skjermer \u00b7 {{done}} av {{total}}",
       "copying": "Kopierer · {{percent}} %",
       "stage": {
+        "download": "Laster ned talemodellen",
         "transcribe": "Transkriberer",
         "speakers": "Identifiserer talere",
         "topics": "Finner emner",

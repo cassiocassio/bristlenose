@@ -301,6 +301,7 @@
       "screens": "Sk\u00e6rme \u00b7 {{done}} af {{total}}",
       "copying": "Kopierer · {{percent}}%",
       "stage": {
+        "download": "Henter talemodellen",
         "transcribe": "Transskriberer",
         "speakers": "Identificerer talere",
         "topics": "Finder emner",

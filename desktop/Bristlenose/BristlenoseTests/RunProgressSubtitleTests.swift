@@ -126,7 +126,8 @@ import Testing
     @Test func nonSessionStagesAreClusterDiscussionAndRender() {
         // Pins the suppression set. If Python ever emits a live count for one of
         // these, remove it here (and vice-versa for a new count-less stage).
-        #expect(RunProgressSubtitle.nonSessionStages == ["cluster", "discussion", "render"])
+        #expect(RunProgressSubtitle.nonSessionStages
+            == ["download", "cluster", "discussion", "render"])
     }
 
     // MARK: - Edge cases
@@ -160,10 +161,12 @@ import Testing
     /// vocabulary of `run_progress.stage`. If Python adds/renames an estimator
     /// stage, this fails loudly rather than silently dropping its verb (the bug
     /// that shipped the first cut: the manifest ids didn't match the wire ids).
+    /// The estimator's stages plus `download`, which the run emits before them
+    /// and the estimator never counts (R32).
     @Test func knownStagesMatchEstimatorVocabulary() {
         #expect(RunProgressSubtitle.knownStages
-            == ["transcribe", "speakers", "pii", "topics", "quotes", "cluster", "discussion",
-                "render"])
+            == ["download", "transcribe", "speakers", "pii", "topics", "quotes", "cluster",
+                "discussion", "render"])
     }
 
     @Test func zeroTotalOmitsCount() {

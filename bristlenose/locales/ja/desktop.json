@@ -283,6 +283,7 @@
       "screens": "\u753b\u9762 \u00b7 {{total}} \u4ef6\u4e2d {{done}} \u4ef6",
       "copying": "\u30b3\u30d4\u30fc\u4e2d \u00b7 {{percent}}%",
       "stage": {
+        "download": "音声モデルをダウンロード中",
         "transcribe": "\u6587\u5b57\u8d77\u3053\u3057\u4e2d",
         "speakers": "\u8a71\u8005\u3092\u8b58\u5225\u4e2d",
         "topics": "\u30c8\u30d4\u30c3\u30af\u3092\u691c\u51fa\u4e2d",

@@ -302,6 +302,7 @@
       "screens": "Screens \u00b7 {{done}} of {{total}}",
       "copying": "Copying \u00b7 {{percent}}%",
       "stage": {
+        "download": "Downloading speech model",
         "transcribe": "Transcribing",
         "speakers": "Identifying speakers",
         "topics": "Finding topics",

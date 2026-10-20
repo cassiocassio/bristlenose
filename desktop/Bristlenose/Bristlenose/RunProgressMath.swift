@@ -46,6 +46,14 @@ enum RunProgressMath {
     /// a tail that runs as long again as its estimate still leaves visible gap.
     static let overrunTau = 0.6
 
+    /// The `run_progress` stage a first run's speech-model download reports.
+    /// Not an estimator stage: the Welford total never contains it, so the
+    /// ring fills from the bytes received while it runs and the time estimate
+    /// starts where it ends. Before this the download ran under the time
+    /// estimate, and a ring timed for the analysis alone sat near full for the
+    /// whole ~1.6 GB, which read as hung (R32, 20 Oct 2026).
+    static let downloadStage = "download"
+
     /// Monotonic + asymptote clamp. Never runs backwards (`max(previous, …)`)
     /// and never reaches 1.0 (`min(cap, …)`). `raw` may be any value; it is
     /// bounded into `[0, cap]` first.
@@ -109,13 +117,30 @@ enum RunProgressMath {
         now: Date
     ) -> PipelineProgress {
         var p = previous
+        let leavingDownload = previous.stage == downloadStage
+            && stage != nil && stage != downloadStage
         if let stage { p.stage = stage }
         if let sessionsComplete { p.sessionsComplete = sessionsComplete }
         if let sessionsTotal { p.sessionsTotal = sessionsTotal }
         if let etaRemainingSeconds { p.etaRemainingSeconds = etaRemainingSeconds }
         if let predictedTotalSeconds { p.predictedTotalSeconds = predictedTotalSeconds }
 
-        let elapsed = now.timeIntervalSince(startedAt)
+        if p.stage == downloadStage {
+            if let stageFraction {
+                p.ringFraction = clampedFraction(raw: stageFraction, previous: p.ringFraction ?? 0)
+            } else if stage == downloadStage {
+                p.ringFraction = nil  // the Hub gave no size: a spinner, not a guess
+            }
+            return p
+        }
+        if leavingDownload {
+            // A new phase, named by the row's new verb: the ring starts again
+            // and times the analysis alone.
+            p.timeBaseline = now
+            p.ringFraction = 0
+        }
+
+        let elapsed = now.timeIntervalSince(p.timeBaseline ?? startedAt)
         // Fall back to the last-known predicted total so the ring keeps advancing
         // through the render tail, where the pipeline stops re-emitting it (the
         // Welford remaining-estimate drops below its 10s floor and goes nil).

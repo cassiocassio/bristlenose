@@ -153,6 +153,10 @@ struct PipelineProgress: Equatable {
     var elapsed: TimeInterval = 0
     var lastLine: String = ""
     var startedAt: Date = Date()
+    /// Where the ring's time estimate starts counting, when not `startedAt`:
+    /// the end of a first run's speech-model download, which the estimate
+    /// never contains (R32). `elapsed` still counts from `startedAt`.
+    var timeBaseline: Date?
     /// True when this run was attached from an existing PID at app
     /// launch (orphan recovery), false for runs we spawned ourselves.
     /// Drives popover copy ("Resuming…" vs "Starting up…") and lets

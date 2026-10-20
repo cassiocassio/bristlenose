@@ -301,6 +301,7 @@
       "screens": "Pantallas \u00b7 {{done}} de {{total}}",
       "copying": "Copiando \u00b7 {{percent}} %",
       "stage": {
+        "download": "Descargando modelo de voz",
         "transcribe": "Transcribiendo",
         "speakers": "Identificando hablantes",
         "topics": "Detectando temas",

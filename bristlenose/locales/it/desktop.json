@@ -301,6 +301,7 @@
       "screens": "Schermate \u00b7 {{done}} di {{total}}",
       "copying": "Copia · {{percent}}%",
       "stage": {
+        "download": "Download del modello vocale",
         "transcribe": "Trascrizione",
         "speakers": "Identificazione degli interlocutori",
         "topics": "Individuazione degli argomenti",

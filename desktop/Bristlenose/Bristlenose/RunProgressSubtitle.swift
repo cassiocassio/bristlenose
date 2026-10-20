@@ -27,10 +27,12 @@ enum RunProgressSubtitle {
     /// `speakers` / `topics`, not `identify_speakers` / `topic_segmentation`.
     /// The verb for each is localised via `desktop.chrome.pipeline.stage.<id>`.
     /// An id outside this set yields no verb: the guard stops an unexpected id
-    /// from rendering as a raw key. Keep in sync with `timing.py ALL_STAGES`.
+    /// from rendering as a raw key. Keep in sync with `timing.py ALL_STAGES`,
+    /// plus `download` (`RunProgressMath.downloadStage`), which the run emits
+    /// before them for a first run's speech model and the estimator never counts.
     static let knownStages: Set<String> = [
-        "transcribe", "speakers", "pii", "topics", "quotes", "cluster", "discussion",
-        "render",
+        "download", "transcribe", "speakers", "pii", "topics", "quotes", "cluster",
+        "discussion", "render",
     ]
 
     /// Localisation key for a stage verb, or nil when the id is unknown/absent.
@@ -64,7 +66,7 @@ enum RunProgressSubtitle {
     /// this display, which never names one; do not build a "now processing X"
     /// on top of it. And the denominator is the **remaining** work on a
     /// resumed run, with `sessions_cached` carrying the rest.
-    static let nonSessionStages: Set<String> = ["cluster", "discussion", "render"]
+    static let nonSessionStages: Set<String> = ["download", "cluster", "discussion", "render"]
 
     /// Stages during which a first analysis's sessions are still becoming
     /// readable (progressive lenses): transcription, and speaker identification
@@ -129,7 +131,11 @@ enum RunProgressSubtitle {
             stage.map(arrivalStages.contains) ?? true {
             detail.append(pluralize("desktop.chrome.pipeline.sessionsReadable", readable))
         }
-        if let eta = etaText(etaRemainingSeconds, localize: localize) {
+        // The ETA carried into a first run's speech-model download is the
+        // analysis estimate, which does not move while the bytes arrive; the
+        // ring shows the download's own progress instead.
+        if stage != RunProgressMath.downloadStage,
+            let eta = etaText(etaRemainingSeconds, localize: localize) {
             detail.append(eta)
         }
         // Lead with the stage verb when the event names a known stage.

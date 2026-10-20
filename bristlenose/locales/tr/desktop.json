@@ -301,6 +301,7 @@
       "screens": "Ekranlar \u00b7 {{total}} \u00f6\u011feden {{done}}",
       "copying": "Kopyalanıyor · %{{percent}}",
       "stage": {
+        "download": "Konuşma modeli indiriliyor",
         "transcribe": "Döküm yapılıyor",
         "speakers": "Konuşmacılar belirleniyor",
         "topics": "Konular bulunuyor",

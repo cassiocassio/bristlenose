@@ -301,6 +301,7 @@
       "screens": "Ecr\u00e3s \u00b7 {{done}} de {{total}}",
       "copying": "A copiar · {{percent}}%",
       "stage": {
+        "download": "A transferir o modelo de fala",
         "transcribe": "A transcrever",
         "speakers": "A identificar intervenientes",
         "topics": "A encontrar tópicos",

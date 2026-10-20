@@ -301,6 +301,7 @@
       "screens": "N\u00e4yt\u00f6t \u00b7 {{done}} / {{total}}",
       "copying": "Kopioidaan · {{percent}} %",
       "stage": {
+        "download": "Ladataan puhemallia",
         "transcribe": "Litteroidaan",
         "speakers": "Tunnistetaan puhujia",
         "topics": "Etsitään aiheita",

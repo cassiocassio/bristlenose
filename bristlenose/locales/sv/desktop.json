@@ -301,6 +301,7 @@
       "screens": "Sk\u00e4rmar \u00b7 {{done}} av {{total}}",
       "copying": "Kopierar · {{percent}} %",
       "stage": {
+        "download": "Laddar ned talmodellen",
         "transcribe": "Transkriberar",
         "speakers": "Identifierar talare",
         "topics": "Hittar ämnen",

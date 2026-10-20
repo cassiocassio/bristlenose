@@ -283,6 +283,7 @@
       "screens": "\u756b\u9762 \u00b7 {{total}} \u500b\u4e2d\u7684 {{done}} \u500b",
       "copying": "正在拷貝 · {{percent}}%",
       "stage": {
+        "download": "正在下載語音模型",
         "transcribe": "正在轉錄逐字稿",
         "speakers": "正在辨識說話者",
         "topics": "正在尋找主題",

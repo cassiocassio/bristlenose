@@ -301,6 +301,7 @@
       "screens": "Schermen \u00b7 {{done}} van {{total}}",
       "copying": "Kopiëren · {{percent}}%",
       "stage": {
+        "download": "Spraakmodel downloaden",
         "transcribe": "Transcriberen",
         "speakers": "Sprekers identificeren",
         "topics": "Onderwerpen zoeken",

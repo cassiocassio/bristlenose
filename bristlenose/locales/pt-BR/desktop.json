@@ -301,6 +301,7 @@
       "screens": "Telas \u00b7 {{done}} de {{total}}",
       "copying": "Copiando · {{percent}}%",
       "stage": {
+        "download": "Baixando modelo de fala",
         "transcribe": "Transcrevendo",
         "speakers": "Identificando falantes",
         "topics": "Encontrando tópicos",

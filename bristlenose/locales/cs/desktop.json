@@ -336,6 +336,7 @@
       "screens": "Obrazovky \u00b7 {{done}} z {{total}}",
       "copying": "Kop\u00edrov\u00e1n\u00ed \u00b7 {{percent}} %",
       "stage": {
+        "download": "Stahování řečového modelu",
         "transcribe": "P\u0159epis",
         "speakers": "Rozpozn\u00e1v\u00e1n\u00ed mluv\u010d\u00edch",
         "topics": "Hled\u00e1n\u00ed t\u00e9mat",

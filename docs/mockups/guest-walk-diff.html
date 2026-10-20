@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<!--
+  Mockup: guest-walk diff report, for the guest-walk proof of concept (20 Oct 2026).
+  A nightly tart guest installs the day's Mac app, walks every screen, and this page
+  compares the walk with the last accepted baseline. All data on this page is invented.
+  The thumbnails and detail panes are CSS/SVG wireframes; real captures from the spike
+  will replace them. Quick/loose mode: hand-rolled tokens, not the Bristlenose design system.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest walk diff</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#f5f5f7; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b72; --line:#dcdce1;
+  --wf-bg:#fbfbfc; --wire:#ececf0; --wire-2:#d6d6dc; --wire-ink:#a3a3ab;
+  --strong:#3a3a3f;
+  /* pink is reserved for "changed" and nothing else */
+  --pink:#ff2d95;          /* borders, fills: 3.5:1 on white, 5.1:1 on the dark panel */
+  --pink-ink:#c4006a;      /* text: 5.9:1 on white */
+  --pink-tint:rgba(255,45,149,.30);
+  --pink-wash:rgba(255,45,149,.10);  /* row wash, light enough to keep pink text readable */
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121214; --panel:#1b1b1e; --ink:#ececf0; --muted:#9b9ba4; --line:#323238;
+    --wf-bg:#202024; --wire:#2a2a2f; --wire-2:#3b3b42; --wire-ink:#61616a;
+    --strong:#d0d0d6;
+    --pink-ink:#ff6fb5;    /* 6.9:1 on the dark panel */
+    --pink-tint:rgba(255,45,149,.38);
+    --pink-wash:rgba(255,45,149,.13);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 64px}
+h1{font-size:15px;font-weight:600;margin:0}
+h2{font-size:13px;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+h3{font-size:13px;font-weight:600;margin:0}
+section{margin-top:28px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.mono{font-family:var(--mono);font-size:12px}
+.muted{color:var(--muted)}
+.pk{color:var(--pink-ink);font-weight:600}
+button{font:inherit;color:inherit}
+
+/* ── header ───────────────────────────── */
+.head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-bottom:10px}
+.state-tag{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;
+  padding:4px 7px;border-radius:4px;border:1px solid var(--line);color:var(--strong)}
+.verdict{font-size:16px;line-height:1.5;margin:0}
+.verdict .sep{color:var(--muted);padding:0 4px}
+.verdict .meta{color:var(--muted);font-size:13px}
+.key{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--muted)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:18px;height:12px;border-radius:2px;background:var(--wf-bg);border:1px solid var(--wire-2)}
+.sw.c{border:2.5px solid var(--pink);background:var(--pink-tint)}
+.sw.n{border:2px solid var(--strong)}
+.sw.m{border:1.5px dashed var(--muted);background:transparent}
+.sw.u{opacity:.5}
+
+/* ── contact sheet ─────────────────────── */
+.bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:none;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--wire);color:var(--ink);font-weight:600}
+.phase{margin-top:18px}
+.phase-h{display:flex;gap:10px;align-items:baseline;margin-bottom:8px}
+.phase-h .n{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px}
+.t{display:block;text-decoration:none;color:inherit;min-width:0}
+.t .cap{font-size:11px;line-height:1.3;margin-top:5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t .cap b{font-family:var(--mono);font-weight:400;margin-right:4px}
+.t.u .win{opacity:.48;filter:saturate(0)}
+.t.u:hover .win{opacity:.8}
+.t.c .win{outline:3px solid var(--pink);outline-offset:1px}
+.t.c .cap{color:var(--pink-ink);font-weight:600}
+.t.n .win{outline:2px solid var(--strong);outline-offset:1px}
+.t.n .cap{color:var(--strong);font-weight:600}
+.flag{position:absolute;bottom:4px;right:4px;font:600 9px/1 var(--mono);letter-spacing:.04em;padding:3px 4px;border-radius:3px;
+  background:var(--strong);color:var(--panel);z-index:3}
+.t.c .flag{background:var(--pink);color:#fff}
+.missing{aspect-ratio:16/10;border:1.5px dashed var(--muted);border-radius:6px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;text-align:center;padding:6px;font-size:10px;color:var(--muted)}
+.missing strong{font:600 10px/1.2 var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.grid.only-c .t:not(.c){display:none}
+.grid.only-nm .t:not(.n):not(.m){display:none}
+.phase.empty{display:none}
+
+/* ── wireframe Mac window (thumbnails) ── */
+.win{position:relative;aspect-ratio:16/10;background:var(--wf-bg);border:1px solid var(--wire-2);border-radius:6px;
+  overflow:hidden;display:flex;flex-direction:column}
+.tb{height:11%;min-height:8px;display:flex;align-items:center;gap:3px;padding-left:6px;background:var(--wire);border-bottom:1px solid var(--wire-2);flex:none}
+.tb i{width:5px;height:5px;border-radius:50%;background:var(--wire-ink)}
+.bd{flex:1;display:flex;min-height:0;position:relative}
+.sb{width:25%;background:var(--wire);border-right:1px solid var(--wire-2);padding:6px 4px;display:flex;flex-direction:column;gap:4px;flex:none}
+.sb i{display:block;height:3px;border-radius:2px;background:var(--wire-2)}
+.sb i.on{background:var(--wire-ink)}
+.mn{flex:1;padding:6px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lb{display:flex;gap:2px;margin-bottom:2px}
+.lb i{flex:1;height:4px;border-radius:2px;background:var(--wire-2)}
+.lb i.on{background:var(--wire-ink)}
+.ln{height:3px;border-radius:2px;background:var(--wire-2)}
+.ln.s{width:55%}.ln.xs{width:30%}.ln.d{background:var(--wire-ink)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.cards div{height:14px;border:1px solid var(--wire-2);border-radius:2px}
+.rows div{height:6px;border-bottom:1px solid var(--wire-2)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.tiles div{aspect-ratio:4/3;background:var(--wire-2);border-radius:2px}
+.heat{display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
+.heat div{height:6px;background:var(--wire-2);border-radius:1px}
+.heat div:nth-child(3n){background:var(--wire-ink)}
+.stats{display:flex;gap:3px}.stats div{flex:1;height:16px;border:1px solid var(--wire-2);border-radius:2px}
+.status{position:absolute;left:25%;right:0;bottom:0;height:9px;border-top:1px solid var(--wire-2);background:var(--wire);display:flex;align-items:center;padding:0 5px}
+.status span{height:3px;border-radius:2px;background:var(--wire-ink)}
+.tabs{display:flex;justify-content:center;gap:4px;padding:5px 0 4px;border-bottom:1px solid var(--wire-2);background:var(--wire)}
+.tabs i{width:9%;aspect-ratio:1;border-radius:2px;background:var(--wire-2)}
+.tabs i.on{background:var(--wire-ink)}
+.form{padding:6px 14%;display:flex;flex-direction:column;gap:5px}
+.form div{display:flex;justify-content:space-between;gap:6px}
+.form div i{height:3px;border-radius:2px;background:var(--wire-2);width:35%}
+.form div i+i{width:25%}
+.welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.welcome .ic{width:16%;aspect-ratio:1;border-radius:22%;background:var(--wire-2)}
+.welcome .btn,.alert .btn,.sheet .btn{width:24%;height:6px;border-radius:2px;background:var(--wire-ink)}
+.veil{position:absolute;inset:0;background:rgba(0,0,0,.18);z-index:1}
+.sheet{position:absolute;top:0;left:22%;right:22%;height:62%;background:var(--wf-bg);border:1px solid var(--wire-2);border-top:0;
+  border-radius:0 0 4px 4px;z-index:2;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.sheet .btn{align-self:flex-end;margin-top:auto}
+.alert{position:absolute;top:18%;left:32%;right:32%;bottom:18%;background:var(--wf-bg);border:1px solid var(--wire-2);border-radius:5px;
+  z-index:2;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,.22)}
+.alert .ic{width:22%;aspect-ratio:1;border-radius:22%;background:var(--wire-2)}
+.alert .ln{width:90%}
+.alert .btn{width:90%;margin-top:auto}
+.menu{position:absolute;top:0;left:30%;width:34%;background:var(--wf-bg);border:1px solid var(--wire-2);border-radius:0 0 4px 4px;z-index:2;
+  padding:4px;display:flex;flex-direction:column;gap:4px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.toast{position:absolute;bottom:14%;left:38%;right:14%;height:10%;background:var(--wire-ink);border-radius:3px;z-index:2}
+.empty-c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.empty-c .ln{width:40%}
+.chg{position:absolute;background:var(--pink-tint);border:1.5px solid var(--pink);z-index:4;border-radius:2px}
+
+/* ── detail ────────────────────────────── */
+.detail-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.detail-h .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn-p,.btn-s{border-radius:7px;padding:7px 13px;font-size:13px;cursor:pointer;font-weight:500}
+.btn-p{background:var(--ink);color:var(--panel);border:1px solid var(--ink)}
+.btn-s{background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.panes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.pane figcaption{font:600 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
+.pane figcaption .pk{text-transform:none;letter-spacing:0}
+.pane{margin:0}
+.pane svg{display:block;width:100%;height:auto;border-radius:8px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px 24px;margin-top:16px;font-size:13px}
+.facts dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px}
+.facts dd{margin:0}
+.facts ul{margin:0;padding:0;list-style:none}
+.facts li{margin:2px 0}
+.rb{display:inline-block;font:600 10px/1 var(--mono);padding:2px 4px;border-radius:3px;border:1.5px solid var(--pink);color:var(--pink-ink);margin-right:5px}
+.mb{display:inline-block;width:22px;height:11px;vertical-align:-1px;margin-right:6px;border:1px solid var(--muted);border-radius:2px;
+  background:repeating-linear-gradient(45deg,transparent 0 3px,var(--muted) 3px 4px)}
+
+/* svg classes */
+.s-win{fill:var(--wf-bg);stroke:var(--wire-2)}
+.s-bar{fill:var(--wire)}
+.s-line{stroke:var(--wire-2)}
+.s-dot{fill:var(--wire-ink)}
+.s-tab{fill:var(--wire-2)}
+.s-tabon{fill:var(--wire-2);opacity:.6}
+.s-ink{fill:var(--ink);font:12px var(--sans)}
+.s-mut{fill:var(--muted);font:11px var(--sans)}
+.s-ttl{fill:var(--ink);font:600 12px var(--sans)}
+.s-btn{fill:var(--panel);stroke:var(--wire-ink)}
+.s-segon{fill:var(--panel);stroke:var(--wire-2)}
+.s-seg{fill:var(--wire)}
+.s-hatch{fill:url(#hatch);stroke:var(--muted);stroke-dasharray:3 2}
+.s-mlab{fill:var(--muted);font:600 9.5px var(--mono)}
+.s-pk{fill:var(--pink);font:600 12px var(--sans)}
+.s-pkbox{fill:var(--pink-tint);stroke:var(--pink);stroke-width:2}
+.s-pklab{fill:var(--pink-ink);font:700 10px var(--mono)}
+.s-dim{opacity:.28}
+
+/* ── menu diff ─────────────────────────── */
+.mstate{border-top:1px solid var(--line);padding:10px 0}
+.mstate:first-of-type{border-top:0;padding-top:0}
+.mstate summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;list-style:none}
+.mstate summary::-webkit-details-marker{display:none}
+.mstate summary::before{content:"▸";color:var(--muted);font-size:11px;width:10px}
+.mstate[open] summary::before{content:"▾"}
+.mrows{margin-top:8px;font-family:var(--mono);font-size:12px}
+.mr{display:grid;grid-template-columns:16px minmax(0,1fr) 56px minmax(0,auto);gap:8px;padding:3px 6px;border-radius:4px;align-items:baseline}
+.mr .p{color:var(--muted)}
+.mr .k{color:var(--muted);text-align:right}
+.mr.ctx{color:var(--muted)}
+.mr.ch{background:var(--pink-wash);box-shadow:inset 3px 0 0 var(--pink)}
+.mr.ch .p,.mr.ch .v{color:var(--pink-ink);font-weight:700}
+.mr.ch .t{color:var(--ink)}
+.mfold{color:var(--muted);font-size:11px;padding:2px 6px 2px 30px}
+
+/* ── timing ────────────────────────────── */
+.timing{display:grid;gap:5px;font-size:12px}
+.tr{display:grid;grid-template-columns:120px minmax(0,1fr) 92px;gap:10px;align-items:center}
+.tr .lab{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{position:relative;height:8px;background:var(--wire);border-radius:4px}
+.track .now{position:absolute;left:0;top:0;bottom:0;background:var(--wire-ink);border-radius:4px}
+.track .prev{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--strong)}
+.tr .num{font-family:var(--mono);text-align:right;color:var(--muted);white-space:nowrap}
+.tr.slow .num{color:var(--ink);font-weight:600}
+.tr.slow .lab{color:var(--ink)}
+
+/* ── alternate states ──────────────────── */
+.alts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.alt{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:start}
+.alt p{margin:6px 0 0;font-size:13px}
+.alt ul{margin:8px 0 0;padding:0;list-style:none;font-size:12px}
+.alt li{margin:3px 0;font-family:var(--mono)}
+.alt .x{font-weight:700}
+.ring{outline:2px solid var(--strong);outline-offset:1px}
+.gatebox{aspect-ratio:16/10;border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font:600 11px/1.3 var(--mono);color:var(--muted);text-align:center;background:var(--wf-bg);padding:8px}
+
+@media (max-width:520px){ .grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px} }
+@media (max-width:760px){
+  .panes{grid-template-columns:1fr}
+  .tr{grid-template-columns:92px minmax(0,1fr) 80px}
+  .mr{grid-template-columns:14px auto minmax(0,1fr);row-gap:0}
+  .mr .t{grid-column:2 / 4}
+  .mr .k{text-align:left;grid-column:2}
+  .mr .v{grid-column:3}
+  .alt{grid-template-columns:1fr}
+  .alt .win,.alt .gatebox{max-width:220px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;scroll-behavior:auto!important} }
+html{scroll-behavior:smooth}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="6" height="6" fill="var(--panel)"/>
+      <line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--muted)" stroke-width="1.6"/>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- 1. Verdict -->
+  <header>
+    <div class="head">
+      <h1>Guest walk · night of 20 Oct 2026</h1>
+      <span class="state-tag">Walk completed</span>
+      <span class="muted mono">01:04 – 02:01</span>
+    </div>
+    <p class="verdict">
+      <span class="pk">3 of 104 screens changed</span><span class="sep">·</span>1 new<span class="sep">·</span>1 missing<span class="sep">·</span><span class="pk">1 menu item now disabled</span><span class="sep">·</span>1 new menu item<span class="sep">·</span>walk 57 min
+      <br><span class="meta mono">0.42.0 (5281) at 8f8b64fc vs baseline 0.42.0 (5269) at 7cefa0b3 · macOS 26.6 guest</span>
+    </p>
+    <div class="key" aria-label="Key">
+      <span><i class="sw c"></i>changed since baseline</span>
+      <span><i class="sw n"></i>new screen, no baseline yet</span>
+      <span><i class="sw m"></i>missing tonight</span>
+      <span><i class="sw u"></i>unchanged</span>
+    </div>
+  </header>
+
+  <!-- 2. Contact sheet -->
+  <section aria-labelledby="sheet-h">
+    <div class="bar">
+      <h2 id="sheet-h" style="margin:0">Contact sheet</h2>
+      <div class="seg" role="group" aria-label="Filter screens">
+        <button type="button" data-f="all" aria-pressed="true">All 105</button>
+        <button type="button" data-f="c" aria-pressed="false">Changed only 3</button>
+        <button type="button" data-f="nm" aria-pressed="false">New &amp; missing 2</button>
+      </div>
+    </div>
+    <div id="sheet"></div>
+  </section>
+
+  <!-- 3. Detail -->
+  <section id="detail" aria-labelledby="detail-h">
+    <h2>Changed screen</h2>
+    <div class="panel">
+      <div class="detail-h">
+        <div>
+          <h3 id="detail-h">Settings ▸ MCP Agents · Claude tab</h3>
+          <div class="sub mono">step 59 of 104 · window “MCP Agents” · 640 × 400 pt @2x</div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-p">Accept as new baseline</button>
+          <button type="button" class="btn-s">Looks like a regression</button>
+        </div>
+      </div>
+      <div class="panes">
+        <figure class="pane"><figcaption><span>Baseline · 5269</span></figcaption><div id="p-base"></div></figure>
+        <figure class="pane"><figcaption><span>Tonight · 5281</span></figcaption><div id="p-now"></div></figure>
+        <figure class="pane"><figcaption><span>Diff</span><span class="pk">1.8% of pixels</span></figcaption><div id="p-diff"></div></figure>
+      </div>
+      <dl class="facts">
+        <div>
+          <dt>Changed regions</dt>
+          <dd><ul class="mono">
+            <li><span class="rb">r1</span>420,140 · 170×22 pt</li>
+            <li><span class="rb">r2</span>430,296 · 150×28 pt</li>
+          </ul></dd>
+        </div>
+        <div>
+          <dt>Accessibility text, same regions</dt>
+          <dd><ul class="mono">
+            <li><span class="rb">r1</span>AXStaticText “Installed” → “Native helper · installed”</li>
+            <li><span class="rb">r2</span>AXButton “Reinstall Extension” → “Reinstall Helper”</li>
+          </ul></dd>
+        </div>
+        <div>
+          <dt>Masked, excluded on purpose</dt>
+          <dd><ul>
+            <li><span class="mb"></span>relative time · “Last verified 4 minutes ago”</li>
+            <li><span class="mb"></span>rotating port · “127.0.0.1:52184”</li>
+          </ul></dd>
+        </div>
+        <div>
+          <dt>Threshold</dt>
+          <dd class="mono">0.10% of unmasked pixels, per-channel tolerance 8</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- 4. Menu diff -->
+  <section aria-labelledby="menu-h">
+    <h2 id="menu-h">Menu tree</h2>
+    <div class="panel">
+      <p class="muted" style="margin:0 0 12px;font-size:13px">9 app states · 1,214 items recorded · <span class="pk">2 changes</span> in 1 state</p>
+
+      <details class="mstate" open>
+        <summary><h3>project open · run idle</h3><span class="muted mono">138 items</span><span class="pk mono">2 changed</span></summary>
+        <div class="mrows">
+          <div class="mfold">… File ▸ 11 items unchanged</div>
+          <div class="mr ctx"><span class="p"></span><span class="t">File ▸ Export ▸ Quotes…</span><span class="k">⇧⌘E</span><span class="v">enabled</span></div>
+          <div class="mr ctx"><span class="p"></span><span class="t">File ▸ Export ▸ Clips…</span><span class="k"></span><span class="v">enabled</span></div>
+          <div class="mr ch"><span class="p">+</span><span class="t">File ▸ Export ▸ Screens…</span><span class="k"></span><span class="v">new item · enabled</span></div>
+          <div class="mr ctx"><span class="p"></span><span class="t">File ▸ Export ▸ Miro Board…</span><span class="k"></span><span class="v">enabled</span></div>
+          <div class="mfold">… Edit, View: 34 items unchanged</div>
+          <div class="mr ctx"><span class="p"></span><span class="t">Project ▸ Analyse</span><span class="k">⌘R</span><span class="v">enabled</span></div>
+          <div class="mr ch"><span class="p">~</span><span class="t">Project ▸ Reanalyse…</span><span class="k">⇧⌘R</span><span class="v">enabled → disabled</span></div>
+          <div class="mr ctx"><span class="p"></span><span class="t">Project ▸ Locate Study…</span><span class="k"></span><span class="v">enabled</span></div>
+          <div class="mfold">… Codes, Quotes, Video, Diagnostics, Window, Help: 77 items unchanged</div>
+        </div>
+      </details>
+      <details class="mstate"><summary><h3>run in progress</h3><span class="muted mono">141 items · unchanged</span></summary><div class="mfold" style="padding-left:16px">No differences.</div></details>
+      <details class="mstate"><summary><h3>project open · run failed</h3><span class="muted mono">138 items · unchanged</span></summary><div class="mfold" style="padding-left:16px">No differences.</div></details>
+      <details class="mstate"><summary><h3>no project selected</h3><span class="muted mono">122 items · unchanged</span></summary><div class="mfold" style="padding-left:16px">No differences.</div></details>
+      <details class="mstate"><summary><h3>5 more states</h3><span class="muted mono">675 items · unchanged</span></summary><div class="mfold" style="padding-left:16px">first launch · welcome window · settings key window · sheet open · video window key</div></details>
+    </div>
+  </section>
+
+  <!-- 5. Timing -->
+  <section aria-labelledby="time-h">
+    <h2 id="time-h">Timing · tonight vs last night</h2>
+    <div class="panel"><div class="timing" id="timing"></div></div>
+  </section>
+
+  <!-- Alternate states -->
+  <section aria-labelledby="alt-h">
+    <h2 id="alt-h">Other ways a night ends (examples)</h2>
+    <div class="alts">
+      <div class="panel alt">
+        <div id="halt-thumb"></div>
+        <div>
+          <div class="head" style="margin:0"><span class="state-tag">Walk halted</span><span class="mono muted">step 67 of 104</span></div>
+          <p><strong>Dialogs &amp; sheets ▸ Discussion guide picker.</strong> Expected an open panel; found an unexpected dialog: <span class="mono">“Bristlenose” would like to access files in your Documents folder.</span></p>
+          <p class="muted">Steps 1–66 diffed (0 changed). 38 steps not reached. Guest kept for 24 h as <span class="mono">walk-1021-halted</span>.</p>
+        </div>
+      </div>
+      <div class="panel alt">
+        <div class="gatebox">no walk<br>tonight</div>
+        <div>
+          <div class="head" style="margin:0"><span class="state-tag">Walk did not run</span></div>
+          <p><strong>Gate: Iona not attached.</strong> The guest image lives on the external drive.</p>
+          <ul>
+            <li>✓ build 5281 notarised</li>
+            <li>✓ host on mains power</li>
+            <li class="x">✗ /Volumes/Iona not mounted</li>
+          </ul>
+          <p class="muted">Last completed walk: 19 Oct. Next attempt 02:00.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ── thumbnail wireframes ─────────────────────────── */
+const tb = '<div class="tb"><i></i><i></i><i></i></div>';
+const sb = (on=1, n=5) => '<div class="sb">' + Array.from({length:n},(_,i)=>`<i class="${i===on?'on':''}" style="width:${60+((i*37)%35)}%"></i>`).join('') + '</div>';
+const lens = on => '<div class="lb">' + [0,1,2,3,4,5,6].map(i=>`<i class="${i===on?'on':''}"></i>`).join('') + '</div>';
+const body = {
+  stats:'<div class="ln d s"></div><div class="stats"><div></div><div></div><div></div></div><div class="ln"></div><div class="ln s"></div>',
+  rows:'<div class="rows"><div></div><div></div><div></div><div></div><div></div></div>',
+  cards:'<div class="ln xs d"></div><div class="cards"><div></div><div></div><div></div><div></div></div>',
+  heat:'<div class="ln xs d"></div><div class="heat">'+'<div></div>'.repeat(18)+'</div>',
+  tiles:'<div class="ln xs d"></div><div class="tiles">'+'<div></div>'.repeat(8)+'</div>',
+  disc:'<div class="ln s"></div><div class="ln"></div><div class="ln xs"></div><div class="ln s"></div><div class="ln"></div>',
+};
+const lensBody = ['stats','rows','cards','rows','heat','disc','tiles'];
+function report(o){
+  const l = o.lens ?? 0;
+  return sb(o.sel ?? 1) + `<div class="mn">${lens(l)}${body[o.body || lensBody[l]]}</div>`;
+}
+function wf(kind, o={}){
+  let inner = '';
+  switch(kind){
+    case 'welcome': inner = '<div class="welcome"><div class="ic"></div><div class="ln" style="width:40%"></div><div class="ln" style="width:28%"></div><div class="btn"></div></div>'; break;
+    case 'empty': inner = sb(-1,0) + '<div class="empty-c"><div class="ln d"></div><div class="ln" style="width:30%"></div></div>'; break;
+    case 'report': inner = report(o); break;
+    case 'run': inner = report(o) + `<div class="status"><span style="width:${o.p||40}%"></span></div>`; break;
+    case 'sheet': inner = report(o) + '<div class="veil"></div><div class="sheet"><div class="ln d s"></div><div class="ln"></div><div class="ln s"></div><div class="btn"></div></div>'; break;
+    case 'alert': inner = report(o) + '<div class="veil"></div><div class="alert"><div class="ic"></div><div class="ln"></div><div class="ln" style="width:70%"></div><div class="btn"></div></div>'; break;
+    case 'menu': inner = report(o) + '<div class="menu"><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln xs"></div><div class="ln s"></div></div>'; break;
+    case 'toast': inner = report(o) + '<div class="toast"></div>'; break;
+    case 'settings': inner = '<div style="flex:1;display:flex;flex-direction:column"><div class="tabs">'+[0,1,2,3,4,5].map(i=>`<i class="${i===o.tab?'on':''}"></i>`).join('')+'</div><div class="form">'+'<div><i></i><i></i></div>'.repeat(4)+'</div></div>'; break;
+  }
+  const chg = o.region ? `<div class="chg" style="left:${o.region[0]}%;top:${o.region[1]}%;width:${o.region[2]}%;height:${o.region[3]}%"></div>` : '';
+  const flag = o.flag ? `<span class="flag">${o.flag}</span>` : '';
+  return `<div class="win">${tb}<div class="bd">${inner}</div>${chg}${flag}</div>`;
+}
+
+/* ── walk data (invented) ─────────────────────────── */
+const L = ['Project','Sessions','Quotes','Codebooks','Signals','Discussion','Screens'];
+const phases = [
+  ['First launch', [
+    ['Welcome window','welcome'],['Welcome · choose provider','welcome'],['Welcome · key entry','welcome'],
+    ['Empty sidebar','empty'],['First project prompt','alert',{sel:-1}],['About Bristlenose','alert'],
+    ['Diagnostics menu','menu'],['Help menu','menu']]],
+  ['Sidebar & projects', [
+    ['Fixture imported','report'],['Project selected','report',{sel:2}],['Rename inline','report',{sel:2}],
+    ['Context menu','menu',{sel:2}],['Drop target','report',{sel:0}],['Agent access on','report',{sel:3}],
+    ['Relocate…','sheet'],['Sidebar collapsed','report'],['Project info popover','sheet'],
+    ['Two projects','report',{sel:3}],['Sidebar search','report',{sel:0}],['Missing folder','report',{sel:4}]]],
+  ['Lenses', L.flatMap((n,i)=>[
+    [n, 'report', {lens:i}],
+    [n+' · scrolled','report',{lens:i}],
+    [n+' · filtered','report',{lens:i}],
+    [n+' · inspector','report',{lens:i}],
+  ])],
+  ['Settings', [
+    ['General','settings',{tab:0}],['Appearance','settings',{tab:1}],['Appearance · dark','settings',{tab:1}],
+    ['LLM Provider','settings',{tab:2}],['LLM Provider · Claude','settings',{tab:2}],['LLM Provider · Ollama','settings',{tab:2}],
+    ['Transcription','settings',{tab:3}],['Transcription · model','settings',{tab:3}],['Accounts','settings',{tab:4}],
+    ['Accounts · Zoom','settings',{tab:4}],['MCP Agents · Claude','settings',{tab:5}],['MCP Agents · ChatGPT','settings',{tab:5}],
+    ['MCP Agents · off','settings',{tab:5}],['Settings · resized','settings',{tab:0}]]],
+  ['Dialogs & sheets', [
+    ['Open folder panel','sheet'],['New project sheet','sheet'],['Delete project confirm','alert'],['Rename session','sheet',{lens:1}],
+    ['Discussion guide picker','sheet',{lens:5}],['Codebook import','sheet',{lens:3}],['Codebook enable confirm','alert',{lens:3}],
+    ['Hide quote confirm','alert',{lens:2}],['Tag editor popover','sheet',{lens:2}],['Speaker edit sheet','sheet',{lens:1}],
+    ['Locate Study…','missing'],['Turn On Agent Access','alert'],['Turn Off Agent Access','alert'],['Keyboard shortcuts','sheet'],
+    ['Find bar','report',{lens:2}],['Video window','report',{lens:1}],['Provider key error','alert'],['Feedback sheet','sheet']]],
+  ['Run lifecycle', [
+    ['Analyse confirm','alert'],['Run started','run',{p:8}],['Transcribing 1 of 3','run',{p:22}],['Transcribing 3 of 3','run',{p:48}],
+    ['Extracting quotes','run',{p:70}],['Pipeline popover','sheet'],['Warning pill','run',{p:80}],['Run complete','run',{p:100}],
+    ['Quit during run · confirm','alert'],['Reopen · resume prompt','alert'],['Reanalyse confirm','alert'],
+    ['Cancel run confirm','alert'],['Run failed · retry','run',{p:64}],['Run log window','report',{body:'disc'}]]],
+  ['Exports', [
+    ['Export HTML sheet','sheet'],['Export HTML saved','toast'],['Quotes CSV','sheet',{lens:2}],['Quotes XLS','sheet',{lens:2}],
+    ['Clips folder','sheet'],['Miro board sheet','sheet'],['Export Screens…','sheet',{lens:6}],['Copied to clipboard','toast',{lens:2}],
+    ['Downloads popover','sheet'],['Slides export','sheet'],['Reveal in Finder','toast']]],
+];
+/* status per screen: c changed, n new, m missing */
+const status = {
+  'Lenses|Screens':        {s:'c', d:'0.6%', region:[60,13,28,14]},
+  'Settings|MCP Agents · Claude': {s:'c', d:'1.8%', region:[50,42,34,12], detail:true},
+  'Run lifecycle|Quit during run · confirm': {s:'c', d:'3.1%', region:[33,42,34,18]},
+  'Exports|Export Screens…': {s:'n'},
+  'Dialogs & sheets|Locate Study…': {s:'m', why:'sheet did not appear in 10 s'},
+};
+
+let step = 0;
+const sheet = document.getElementById('sheet');
+sheet.innerHTML = phases.map(([pn, items]) => {
+  const cells = items.map(([name, kind, o={}]) => {
+    const st = status[pn+'|'+name];
+    const s = st ? st.s : 'u';
+    if (s !== 'm') step++;
+    const num = s === 'm' ? '—' : String(step).padStart(3,'0');
+    if (s === 'm') {
+      return `<a class="t m" href="#" aria-label="${name}: missing tonight"><div class="missing"><strong>missing tonight</strong>${st.why}</div><div class="cap"><b>${num}</b>${name}</div></a>`;
+    }
+    const opts = Object.assign({}, o);
+    if (s === 'c') { opts.region = st.region; opts.flag = 'Δ ' + st.d; }
+    if (s === 'n') { opts.flag = 'NEW'; }
+    const label = s === 'c' ? 'changed' : s === 'n' ? 'new, no baseline' : 'unchanged';
+    const href = st && st.detail ? '#detail' : '#';
+    return `<a class="t ${s}" href="${href}" aria-label="${name}: ${label}">${wf(kind, opts)}<div class="cap"><b>${num}</b>${name}</div></a>`;
+  }).join('');
+  const nc = items.filter(([n]) => (status[pn+'|'+n]||{}).s === 'c').length;
+  const note = nc ? `<span class="n pk">${nc} changed</span>` : '';
+  return `<div class="phase"><div class="phase-h"><h3>${pn}</h3><span class="n">${items.length} screens</span>${note}</div><div class="grid">${cells}</div></div>`;
+}).join('');
+
+/* filter */
+document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.seg button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  const f = b.dataset.f;
+  document.querySelectorAll('.phase').forEach(p => {
+    const g = p.querySelector('.grid');
+    g.classList.toggle('only-c', f === 'c');
+    g.classList.toggle('only-nm', f === 'nm');
+    const sel = f === 'c' ? '.t.c' : f === 'nm' ? '.t.n,.t.m' : '.t';
+    p.classList.toggle('empty', !g.querySelector(sel));
+  });
+}));
+
+/* ── detail panes: Settings ▸ MCP Agents ──────────── */
+function mcp(v){
+  const tabs = ['General','Appearance','LLM Provider','Transcription','Accounts','MCP Agents'];
+  const tonight = v !== 'base';
+  const diff = v === 'diff';
+  const t = (x,y,s,cls='s-ink',a='start') => `<text x="${x}" y="${y}" class="${cls}" text-anchor="${a}">${s}</text>`;
+  let g = '';
+  g += '<rect x="0.5" y="0.5" width="639" height="399" rx="10" class="s-win"/>';
+  g += '<path d="M0.5 28 V10.5 a10 10 0 0 1 10 -10 H629.5 a10 10 0 0 1 10 10 V28 Z" class="s-bar"/>';
+  g += [16,32,48].map(x=>`<circle cx="${x}" cy="14" r="5" class="s-dot"/>`).join('');
+  g += t(320,18,'MCP Agents','s-ttl','middle');
+  g += '<rect x="0" y="28" width="640" height="64" class="s-bar"/><line x1="0" y1="92" x2="640" y2="92" class="s-line"/>';
+  tabs.forEach((n,i)=>{ const cx = 110 + i*84;
+    if (i===5) g += `<rect x="${cx-38}" y="33" width="76" height="54" rx="6" class="s-tabon"/>`;
+    g += `<rect x="${cx-11}" y="40" width="22" height="22" rx="5" class="s-tab"/>` + t(cx,78,n,'s-mut','middle'); });
+  g += '<rect x="240" y="104" width="160" height="24" rx="6" class="s-seg"/><rect x="242" y="106" width="78" height="20" rx="5" class="s-segon"/>';
+  g += t(281,120,'Claude','s-ink','middle') + t(360,120,'ChatGPT','s-mut','middle');
+  const rows = [
+    ['Claude Desktop extension', tonight ? 'Native helper · installed' : 'Installed', 'r1'],
+    ['Agent access', '1 project'],
+    ['Handshake', '127.0.0.1:52184', 'mask'],
+    ['Status', 'Last verified 4 minutes ago', 'mask'],
+  ];
+  rows.forEach(([k,val,f],i)=>{ const y = 156 + i*36;
+    g += `<line x1="56" y1="${y+14}" x2="584" y2="${y+14}" class="s-line"/>` + t(60,y,k);
+    g += t(584,y,val, (diff && f==='r1') ? 's-pk' : 's-mut','end'); });
+  g += '<rect x="430" y="296" width="150" height="28" rx="6" class="s-btn"/>';
+  g += t(505,314, tonight ? 'Reinstall Helper' : 'Reinstall Extension', diff ? 's-pk' : 's-ink','middle');
+  g += t(60,314,'Agents read this project through four read-only tools.','s-mut');
+  g += t(60,350,'Turn On Agent Access per project from the sidebar.','s-mut');
+
+  let out = diff ? `<g class="s-dim">${g}</g>` : g;
+  if (diff){
+    // re-draw the changed glyphs at full strength over the dimmed frame
+    out += t(584,156,'Native helper · installed','s-pk','end');
+    out += t(505,314,'Reinstall Helper','s-pk','middle');
+    out += '<rect x="420" y="140" width="170" height="22" rx="2" class="s-pkbox"/>' + t(420,135,'r1','s-pklab');
+    out += '<rect x="430" y="296" width="150" height="28" rx="2" class="s-pkbox"/>' + t(430,338,'r2','s-pklab');
+  }
+  // masks, identical in all three panes
+  out += '<rect x="440" y="214" width="148" height="22" class="s-hatch"/>';
+  out += '<rect x="404" y="250" width="184" height="22" class="s-hatch"/>';
+  out += '<rect x="443" y="217" width="126" height="16" rx="2" fill="var(--panel)"/>' + t(447,228,'masked: rotating port','s-mlab');
+  out += '<rect x="407" y="253" width="126" height="16" rx="2" fill="var(--panel)"/>' + t(411,264,'masked: relative time','s-mlab');
+  return `<svg viewBox="0 0 640 400" role="img" aria-label="Settings MCP Agents, ${v}">${out}</svg>`;
+}
+document.getElementById('p-base').innerHTML = mcp('base');
+document.getElementById('p-now').innerHTML  = mcp('now');
+document.getElementById('p-diff').innerHTML = mcp('diff');
+
+/* ── timing ───────────────────────────────────────── */
+const T = [ // [phase, tonight s, last night s]
+  ['First launch',220,218],['Sidebar & projects',310,312],['Lenses',750,761],['Settings',260,258],
+  ['Dialogs & sheets',495,489],['Run lifecycle',1070,825],['Exports',315,320]];
+const mx = 1100, mmss = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+document.getElementById('timing').innerHTML = T.map(([n,a,b]) => {
+  const d = a - b, slow = d >= 60;
+  const ds = Math.abs(d) < 30 ? '±0' : (d>0?'+':'−') + mmss(Math.abs(d));
+  return `<div class="tr ${slow?'slow':''}"><span class="lab">${n}</span>
+    <span class="track" aria-hidden="true"><span class="now" style="width:${a/mx*100}%"></span><span class="prev" style="left:${b/mx*100}%"></span></span>
+    <span class="num">${mmss(a)} <span>${ds}</span></span></div>`;
+}).join('') + `<div class="tr"><span class="lab">Total</span><span class="muted" style="font-size:11px">bar = tonight · tick = last night</span><span class="num">57:00 +3:57</span></div>`;
+
+/* ── halted thumb ─────────────────────────────────── */
+document.getElementById('halt-thumb').innerHTML = wf('alert',{lens:5, flag:'STEP 67'}).replace('class="win"','class="win ring"');
+</script>
+</body>
+</html>

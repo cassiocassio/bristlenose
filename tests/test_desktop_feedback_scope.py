@@ -147,3 +147,32 @@ def test_cancel_and_esc_are_there_while_the_sheet_loads() -> None:
     # `buttons` is drawn by the body itself, outside the loading/form branch.
     assert re.search(r"^\s*buttons\s*$", body, flags=re.M)
     assert "buttons" not in loading
+
+
+def test_cancel_stops_a_send_in_flight() -> None:
+    # Cancel (and Esc with it) left the send running: a failure then wrote the
+    # clipboard and toasted "copied", and in the expired-alpha flow a success
+    # routed to "Thanks", after the person had cancelled. The model owns the
+    # send so Cancel can stop it (`FeedbackSheetModelTests` pins the model);
+    # this pins the sheet's wiring to it.
+    sheet = _sources()["FeedbackSheet.swift"]
+    buttons = _block_after(sheet, "private var buttons: some View")
+    cancel = buttons[buttons.index("Button(model.cancelLabel)") : buttons.index(".cancelAction")]
+    assert "model.cancelSend()" in cancel
+    assert cancel.index("model.cancelSend()") < cancel.index("dismiss()")
+    assert "model.startSend(then: deliver)" in buttons
+    # An unstructured send the sheet cannot reach is the bug's shape.
+    assert "Task {" not in buttons
+    body = _block_after(_block_after(sheet, "struct FeedbackSheet: View"), "var body: some View")
+    assert re.search(r"\.onDisappear \{ model\.cancelSend\(\) \}", body)
+
+
+def test_the_sheet_is_one_view_whatever_the_serve_does() -> None:
+    # It was `if let port { FeedbackSheet(port:) } else { FeedbackSheet(config:) }`,
+    # so a serve starting or stopping mid-send swapped the view, and the old one's
+    # `.onDisappear` cancelled a send the person never cancelled.
+    view = _sources()["ContentView.swift"]
+    sheet = _block_after(view, ".sheet(isPresented: $showingFeedbackSheet)")
+    assert sheet.count("FeedbackSheet(") == 1, sheet
+    assert "FeedbackSheet(port: serveManager?.runningPort" in sheet
+    assert not re.search(r"\bif\b|\?\s*FeedbackSheet|\bswitch\b", sheet), sheet

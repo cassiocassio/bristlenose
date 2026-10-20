@@ -1266,11 +1266,9 @@ struct ContentView: View {
             projectName: selectedProject?.name ?? "none"
         ))
         .sheet(isPresented: $showingFeedbackSheet) {
-            if let port = serveManager?.runningPort {
-                FeedbackSheet(port: port, i18n: i18n, onToast: { toast.show($0) })
-            } else {
-                FeedbackSheet(config: .serverless, i18n: i18n, onToast: { toast.show($0) })
-            }
+            // One view whatever the serve does while it is up: see
+            // `FeedbackSheet.init(port:)`.
+            FeedbackSheet(port: serveManager?.runningPort, i18n: i18n, onToast: { toast.show($0) })
         }
         // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
         // `columnVisibility` binding as a scene focused value and let the menu

@@ -38,9 +38,10 @@ struct AlphaExpiryFlow: ViewModifier {
             .alert("This Bristlenose beta has expired", isPresented: presenting(.expired)) {
                 Button("Get Bristlenose") { openSiteAndQuit() }
                     .keyboardShortcut(.defaultAction)
-                // Reset here (not only in onDismiss) so a stale `true` from a
-                // cancel-during-in-flight-send can't leak a false "Thanks" into
-                // a fresh feedback attempt.
+                // Reset here as well as in onDismiss. Cancel stops a send in
+                // flight (`FeedbackSheetModel.cancelSend`), so a send that ends
+                // after it never calls onSent; this keeps a fresh attempt clean
+                // whatever the order.
                 Button("Send Feedback…") {
                     FeedbackTrace.opened(by: "alpha-expiry-alert")
                     didSend = false; route = .feedback

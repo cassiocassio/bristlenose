@@ -81,9 +81,16 @@ final class FeedbackSheetModel: ObservableObject {
     @Published var message: String = ""
     @Published private(set) var config: FeedbackConfig = .unavailable
 
+    /// Posts a payload and answers sent/failed. A seam so a test can hold a
+    /// send in flight; the app always passes `FeedbackClient().submit`.
+    typealias Sender = (FeedbackPayload, URL) async -> SubmissionResult
+
     private let port: Int
     private let i18n: I18n
-    private let client: FeedbackClient
+    private let sender: Sender
+    /// Writes the clipboard fallback and answers whether it took. A seam for
+    /// the same reason; the app always writes `NSPasteboard.general`.
+    private let copy: @MainActor (String) -> Bool
     private let bundleVersion: String
     /// True when `config` was supplied directly (no `/api/health` probe) — the
     /// serve-free path used by the expired-alpha `.dmg` flow.
@@ -92,13 +99,15 @@ final class FeedbackSheetModel: ObservableObject {
     init(
         port: Int,
         i18n: I18n,
-        client: FeedbackClient = FeedbackClient(),
+        sender: @escaping Sender = { await FeedbackClient().submit($0, to: $1) },
+        copy: @escaping @MainActor (String) -> Bool = FeedbackSheetModel.copyToPasteboard,
         bundleVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
             as? String ?? "unknown"
     ) {
         self.port = port
         self.i18n = i18n
-        self.client = client
+        self.sender = sender
+        self.copy = copy
         self.bundleVersion = bundleVersion
         self.preresolved = false
     }
@@ -108,13 +117,15 @@ final class FeedbackSheetModel: ObservableObject {
     init(
         config: FeedbackConfig,
         i18n: I18n,
-        client: FeedbackClient = FeedbackClient(),
+        sender: @escaping Sender = { await FeedbackClient().submit($0, to: $1) },
+        copy: @escaping @MainActor (String) -> Bool = FeedbackSheetModel.copyToPasteboard,
         bundleVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
             as? String ?? "unknown"
     ) {
         self.port = 0
         self.i18n = i18n
-        self.client = client
+        self.sender = sender
+        self.copy = copy
         self.bundleVersion = bundleVersion
         self.config = config
         self.preresolved = true
@@ -151,6 +162,8 @@ final class FeedbackSheetModel: ObservableObject {
     /// returned on BOTH outcomes — `t("sent")` on success, the clipboard-copy
     /// message on failure — never from `onDismiss`.
     func send() async -> (dismiss: Bool, toast: String?) {
+        // Cancelled before it began: nothing at all, the clipboard included.
+        if Task.isCancelled { return (false, nil) }
         guard let rating else { return (false, nil) }
         // No reachable/validated endpoint (disabled, unreachable, off-host) →
         // clipboard, honouring a disabled config without silently POSTing.
@@ -161,8 +174,13 @@ final class FeedbackSheetModel: ObservableObject {
         let payload = FeedbackPayload(
             version: version, rating: rating.rawValue, message: trimmedMessage
         )
-        let result = await client.submit(payload, to: url)
+        let result = await sender(payload, url)
         phase = .ready
+        // Cancelled while it was out (Cancel, Esc, the sheet closing): the
+        // person has left, so nothing is shown and the clipboard is not
+        // touched. A request the server already had cannot be recalled; only
+        // what follows it here is dropped.
+        if Task.isCancelled { return (false, nil) }
         switch result {
         case .sent:
             return (true, t("sent"))
@@ -171,14 +189,37 @@ final class FeedbackSheetModel: ObservableObject {
         }
     }
 
+    /// The send in flight, owned here so Cancel can stop it (`cancelSend`).
+    private(set) var sendTask: Task<Void, Never>?
+
+    /// Send, and hand the outcome to `deliver`. Cancelled first
+    /// (`cancelSend`), the outcome is empty: no toast, no dismiss, and
+    /// `send` has written nothing to the clipboard.
+    /// One at a time: a second press before the first send has begun (Send
+    /// is disabled only once it has) is ignored rather than orphaning it.
+    func startSend(then deliver: @escaping @MainActor ((dismiss: Bool, toast: String?)) -> Void) {
+        guard sendTask == nil else { return }
+        sendTask = Task {
+            deliver(await send())
+            sendTask = nil
+        }
+    }
+
+    /// Stop the send in flight, if any, so it has no visible after-effects.
+    func cancelSend() {
+        sendTask?.cancel()
+    }
+
     private func copyToClipboard(rating: FeedbackRating) -> String {
         var text = "Bristlenose feedback (v\(version))\nRating: \(label(rating))\n"
         if !trimmedMessage.isEmpty { text += "Message: \(trimmedMessage)\n" }
+        return copy(text) ? t("copiedToClipboard") : t("copyFailed")
+    }
+
+    static func copyToPasteboard(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         return pasteboard.setString(text, forType: .string)
-            ? t("copiedToClipboard")
-            : t("copyFailed")
     }
 }
 
@@ -193,8 +234,15 @@ struct FeedbackSheet: View {
     /// route to its "Thanks" step; nil for the normal Help ▸ Send Feedback path.
     private let onSent: (() -> Void)?
 
-    init(port: Int, i18n: I18n, onToast: @escaping (String) -> Void, onSent: (() -> Void)? = nil) {
-        _model = StateObject(wrappedValue: FeedbackSheetModel(port: port, i18n: i18n))
+    /// `port` is the window's running serve, or nil for none (the serve-free
+    /// `.serverless` config). One initialiser for both on purpose: the caller
+    /// passes whatever the port is, so a serve starting or stopping while the
+    /// sheet is up never swaps it for a different view, whose `onDisappear`
+    /// would cancel a send nobody cancelled. The model is made once, from the
+    /// port at opening.
+    init(port: Int?, i18n: I18n, onToast: @escaping (String) -> Void, onSent: (() -> Void)? = nil) {
+        _model = StateObject(wrappedValue: port.map { FeedbackSheetModel(port: $0, i18n: i18n) }
+            ?? FeedbackSheetModel(config: .serverless, i18n: i18n))
         self.onToast = onToast
         self.onSent = onSent
     }
@@ -244,6 +292,9 @@ struct FeedbackSheet: View {
         .padding(20)
         .frame(width: sheetWidth)
         .task { await model.load() }
+        // However the sheet goes (Cancel, Esc, its window closing), a send
+        // still out must not toast, copy or confirm after it.
+        .onDisappear { model.cancelSend() }
         .onAppear {
             if traceReason == nil { traceReason = FeedbackTrace.consume() }
         }
@@ -288,16 +339,15 @@ struct FeedbackSheet: View {
     private var buttons: some View {
         HStack {
             Spacer()
-            Button(model.cancelLabel) { dismiss() }
+            Button(model.cancelLabel) { model.cancelSend(); dismiss() }
                 .keyboardShortcut(.cancelAction)
-            Button(model.t("send")) { Task { await submit() } }
+            Button(model.t("send")) { model.startSend(then: deliver) }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.canSend)
         }
     }
 
-    private func submit() async {
-        let outcome = await model.send()
+    private func deliver(_ outcome: (dismiss: Bool, toast: String?)) {
         // Suppress the redundant "sent" toast when a caller owns the success
         // confirmation itself (onSent wired → the expiry flow's "Thanks" step).
         // The clipboard-fallback toast on failure always fires — it's the only

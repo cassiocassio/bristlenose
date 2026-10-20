@@ -1193,6 +1193,16 @@ def run(
     ] = False,
 ) -> None:
     """Analyse a folder of interviews and open the report in your browser."""
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        # Leaving the app stops the run, a force-quit or crash included (R19).
+        # Our stdout is a pipe to the app, so a run that outlived it failed at
+        # its next print ("CLI exited with code 1") after a relaunch had read
+        # "Resuming…". The watcher's SIGTERM is our own cancel: run_cancelled,
+        # "Stopped", resumed from the cache. 0.5 s, not the serve's 2 s: a
+        # print inside the window still fails, and a run prints at every stage.
+        from bristlenose.server.lifecycle import install_parent_death_watcher
+
+        install_parent_death_watcher(poll_interval_sec=0.5)
     # Default output location: inside the input folder
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"

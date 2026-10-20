@@ -641,7 +641,7 @@ def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path):
 
 
 def _spawn_lifecycle_subprocess(
-    tmp_path: Path, body: str, *, preamble: str = "",
+    tmp_path: Path, body: str, *, preamble: str = "", env: dict[str, str] | None = None,
 ) -> subprocess.Popen:
     """Spawn a Python subprocess that enters run_lifecycle, then runs `body`.
 
@@ -676,7 +676,7 @@ def _spawn_lifecycle_subprocess(
         # BRISTLENOSE_LOG_LEVEL=ERROR cuts cold-import logging chatter on
         # slow CI runners — the subprocess body waits in signal.pause()
         # so we don't need INFO/DEBUG noise here.
-        env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR"},
+        env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR", **(env or {})},
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -909,6 +909,56 @@ def test_subprocess_sigint_inside_append_event_is_cancelled(tmp_path: Path):
         "A run interrupted while run_started was still being flushed wrote no "
         "terminus event — the guard must cover append_event itself, not start "
         "after it returns."
+    )
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="os.kill cannot deliver SIGINT on Windows")
+def test_subprocess_hosted_second_signal_does_not_lose_the_cancel(tmp_path: Path):
+    """Quitting the Mac app sends a run two signals: the app's SIGINT, then the
+    parent-death watcher's SIGTERM once the app is gone (R19, 20 Oct 2026). A
+    second KeyboardInterrupt raised while the first is being recorded escapes
+    the terminus write — no run_cancelled, a stranded run the app shows as
+    failed. Measured 1 in 5 at a stage boundary through the real CLI, where it
+    also surfaced wrapped by pydantic as "Error serializing to JSON".
+
+    Deterministic here: the second signal is sent from inside the write of the
+    cancel event itself.
+    """
+    sentinel = tmp_path / "ready"
+    preamble = """
+        import os, signal, time
+        _real_append = _rl_mod.append_event
+        def _append_under_fire(f, ev):
+            if type(ev).__name__ == "RunCancelledEvent":
+                os.kill(os.getpid(), signal.SIGTERM)
+                time.sleep(0.2)
+            _real_append(f, ev)
+        _rl_mod.append_event = _append_under_fire
+    """
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path, _paused_body(sentinel), preamble=preamble,
+        env={"_BRISTLENOSE_HOSTED_BY_DESKTOP": "1"},
+    )
+    f = events_path(tmp_path)
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        proc.send_signal(signal.SIGINT)
+        landed = _wait_for_event(
+            f,
+            lambda e: (
+                isinstance(e, RunCancelledEvent)
+                and e.cause.signal_name == "SIGINT"
+            ),
+            timeout=60.0,
+        )
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert landed, (
+        "A second signal during the cancel write lost the terminus: a hosted "
+        "run that is already stopping must ignore further cancel signals."
     )
 
 

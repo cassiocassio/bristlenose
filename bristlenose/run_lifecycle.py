@@ -92,6 +92,14 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
     write from the handler — the wrapper handles that on the way out.
     """
     global _caught_signal
+    if _caught_signal is not None and os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        # Already stopping. Quitting the Mac app sends two signals, its own
+        # SIGINT and then the parent-death watcher's SIGTERM, and a second
+        # interrupt raised mid-unwind escaped the cancel write or was wrapped
+        # by pydantic as an ordinary error: a cancel recorded as a failure
+        # (R19). The CLI keeps a second Ctrl-C as the user's force; the app
+        # escalates to SIGKILL when it needs one.
+        return
     _caught_signal = signum
     raise KeyboardInterrupt()
 

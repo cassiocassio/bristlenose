@@ -191,7 +191,7 @@ def test_transcribe_sessions_records_failures(monkeypatch, tmp_path: Path) -> No
 
     audio_files = [tmp_path / f"s{i}.wav" for i in range(1, 4)]
     for f in audio_files:
-        f.write_bytes(b"fake")
+        f.write_bytes(b"fake " + f.name.encode())  # its own bytes: identical files fold (R49)
 
     sessions = [_StubSession(f"s{i}", audio_files[i - 1]) for i in range(1, 4)]
 
@@ -277,9 +277,9 @@ def test_pipeline_run_abandons_when_all_transcribe_fail(tmp_path: Path) -> None:
     sessions: list[InputSession] = []
     for i in range(1, 4):
         video_path = input_dir / f"vid{i}.mov"
-        video_path.write_bytes(b"fake-video")
+        video_path.write_bytes(b"fake-video " + video_path.name.encode())
         audio_path = input_dir / f"vid{i}.wav"
-        audio_path.write_bytes(b"fake-audio")
+        audio_path.write_bytes(b"fake-audio " + audio_path.name.encode())
         sess = InputSession(
             session_id=f"s{i}",
             session_number=i,

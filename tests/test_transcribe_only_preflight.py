@@ -19,7 +19,7 @@ from bristlenose.pipeline import Pipeline
 
 def _session(input_dir: Path, i: int, *, has_transcript: bool) -> InputSession:
     media = input_dir / f"rec{i}.wav"
-    media.write_bytes(b"fake")
+    media.write_bytes(b"fake " + media.name.encode())  # its own bytes: identical files fold (R49)
     return InputSession(
         session_id=f"s{i}", session_number=i,
         participant_id=f"p{i}", participant_number=i,

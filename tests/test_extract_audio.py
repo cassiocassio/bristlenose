@@ -223,3 +223,39 @@ async def test_a_video_beside_the_audio_file_is_not_a_duplicate(tmp_path: Path) 
     await extract_audio_for_sessions([session], tmp_path)
     assert session.audio_path == Path("/input/recording.m4a")
     assert [f.error for f in session.files] == [None, None]
+
+
+@pytest.mark.asyncio
+async def test_a_file_set_aside_at_ingest_is_neither_used_nor_stated_twice(
+    tmp_path: Path,
+) -> None:
+    """A copy of the recording the session registry folded in arrives already
+    marked ``DUPLICATE_RECORDING`` (R49, 20 Oct 2026). Stage 2 chooses only
+    among the files not set aside — or the copy's own audio sibling would be
+    the file transcribed — and leaves the mark as it found it."""
+    from bristlenose.refusals import UnusableReason
+
+    session = _session()
+    session.files.append(
+        InputFile(
+            path=Path("/input/recording (1).m4a"),
+            file_type=FileType.AUDIO,
+            created_at=datetime(2026, 1, 15, 14, 0, 0, tzinfo=timezone.utc),
+            size_bytes=9_000_000,
+            error=UnusableReason.DUPLICATE_RECORDING.value,
+        )
+    )
+    extracted = tmp_path / "s1_extracted.wav"
+    with (
+        patch("bristlenose.stages.s02_extract_audio.has_audio_stream", return_value=True),
+        patch(
+            "bristlenose.stages.s02_extract_audio.extract_audio_from_video",
+            return_value=extracted,
+        ),
+        patch("bristlenose.stages.s02_extract_audio._record_unusable") as record,
+    ):
+        await extract_audio_for_sessions([session], tmp_path)
+
+    assert session.audio_path == extracted, "the set-aside copy was used for transcription"
+    record.assert_not_called()
+    assert [f.error for f in session.files] == [None, UnusableReason.DUPLICATE_RECORDING.value]

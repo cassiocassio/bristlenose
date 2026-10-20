@@ -6,6 +6,7 @@ trued-against: HEAD@main (b2b0f8e2) on 2026-10-20
 
 ## Changelog
 
+- _2026-10-20, night_ — row 55 designed out: the same recording under two names was two sessions, transcribed twice and counted as agreement; the registry now folds the copy into the session that owns its bytes and states it as `duplicate_recording` (reliability wave 7, R49). Anchors: `tests/test_pipeline_duplicate_recording.py`, `TestDuplicateRecordings`, [design-project-identity.md](design-project-identity.md) §11a.
 - _2026-10-20, evening_ — row 54 open: a degraded Re-analyse discards the previous report. Not fixed, because keeping the backup forces a decision about the next run; the decision's options are in the row. Anchors: `tests/test_cli_degraded_reanalyse.py` (strict xfail), `cli.py` run outcome block.
 - _2026-10-20_ — row 35 designed out: the serve's connections now checkpoint after every commit, so the Mac app's `?immutable=1` curation count sees this session's stars and tags and **Re-analyse…** asks before discarding them. Found again by the 19 Oct reliability sweep and reproduced against the real serve. Score recomputed. Anchors: `PRAGMA wal_autocheckpoint` in `server/db.py`, `tests/test_serve_wal_visibility.py`.
 - _2026-10-19_ — row 53 open: row 49's race, one step earlier. The serve records the files its pool is attached to after `init_db` and the startup import, so a restore landing during a slow startup import is recorded as attached while the pool holds the set-aside tree. Inferred from code, not reproduced. Score recomputed.
@@ -115,6 +116,7 @@ row 42.
 | 35 | The Mac app's `?immutable=1` reads see only the main database file, and the serve checkpointed its WAL only after an import: curation made in this session counted as zero, so **Re-analyse…** skipped its confirmation and discarded it, and a repaired fork's *Report out of date* row stayed until the serve stopped. Every serve connection now checkpoints after each commit (`PRAGMA wal_autocheckpoint=1`, `server/db.py`, 20 Oct 2026) | `tests/test_serve_wal_visibility.py` | b2b0f8e2 |
 | 29 | A folder moved or renamed forked the project, with the app closed or open; the report showed the stale first row. A study's own database now holds one study, found by its marker (`<output>/.bristlenose/study.json`, minted by the first run or serve, kept across Re-analyse), never matched by path; stored paths are healed; a fork left by an older release is removed at the next import unless curation hangs off it (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §3–4, §10) | scenario `moved-while-closed`; `test_lifecycle_end_to_end.py` (`…moved_while_closed_keeps_its_curation`); `tests/test_study_identity.py` | strict xfail flipped; mutant (six changes, each alone) |
 | 30 | A copied folder forked the same way. A copy now opens as the study it was copied from, with its curation, in its own database, so nothing written in one reaches the other; the app re-mints its id on arrival (phase 4) | scenario `copied-elsewhere`; `…a_copy_is_an_independent_duplicate` | strict xfail flipped |
+| 55 | The same recording under two names (`P3.mp4` and `P3 (1).mp4`, a Finder copy, a renamed download) was two sessions: transcribed and paid for twice, and the copy's quotes counted as a second participant agreeing. Identical bytes are now one session: the registry folds the copy that does not own the content key into the one that does, sets its recording aside as `duplicate_recording` (stated, as row 15 asks), and keeps set-aside files out of the transcription fingerprint, so adding or removing the copy later runs nothing again; deleting the used copy leaves the session to the other, found by content (20 Oct 2026, [design-project-identity.md](design-project-identity.md) §5 and §11a) | `tests/test_pipeline_duplicate_recording.py` (real `Pipeline.run`); `TestDuplicateRecordings` (`test_session_registry.py`); `…set_aside_at_ingest…` (`test_extract_audio.py`) | red-first; mutant (five anchored, each killed) |
 | 31 | A renamed interview got a new session id, so its stars, tags and edits were deleted, and it was transcribed again. A session is now found by its recording's content first (`utils/fingerprint.py`, registry version 3), then by its last known place (a cloud placeholder), then by name; transcription is keyed by content, and the stored file path is healed. Filing interviews into a subfolder is the same case (15 Oct 2026, [design-project-identity.md](design-project-identity.md) §5–7) | `…renamed_interview_keeps_its_curation…`, `…filed_into_a_subfolder…` (`test_lifecycle_end_to_end.py`); `TestContentKeys`; `test_fingerprint.py`; the 12-Oct manifest migration test | strict xfail flipped; mutant (six of seven changes; the seventh was redundant and removed) |
 
 ### Open, engineered (strict xfail in the scenario table)
@@ -166,12 +168,12 @@ folder instead.
 
 ## The score
 
-**By count:** of 54 failure modes, 40 are designed out and proven (25 fixed on
+**By count:** of 55 failure modes, 41 are designed out and proven (25 fixed on
 12 Oct 2026, one that already held and is now guarded, row 41's progressive
-fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, rows 51–52 of 18 Oct, and row 35 of 20 Oct) — **74%**. Fourteen are
+fixes of 13 Oct counted as one, rows 45–47 of 14 Oct, rows 27, 29, 30, 31 and 34 of 15 Oct, rows 49–50 of 17 Oct, rows 51–52 of 18 Oct, and rows 35 and 55 of 20 Oct) — **75%**. Fourteen are
 open: one engineered, thirteen not. _(13 Oct 2026: rows 35–40 added from the review
 of the Mac half; 14 Oct: rows 41–43 from the progressive-lenses truing, then 44–48
-from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix; 20 Oct: row 54, a degraded Re-analyse. The denominator moved each time.)_
+from a `--clean` Re-analyse in the app; 17 Oct: rows 49–50 from two CI flakes; 18 Oct: rows 51–52 from Apple-first transcription; 19 Oct: row 53 from the row 49 fix; 20 Oct: row 54, a degraded Re-analyse, and row 55, the same recording under two names. The denominator moved each time.)_
 
 **By how often a researcher would meet them**, which is the number that
 matters, it is higher. Rows 1–4 sat on the path every Mac user takes: a first

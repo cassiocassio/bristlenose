@@ -301,7 +301,7 @@ class SessionRegistry:
         a weaker key. ``input_dir`` lets the registry remember places relative
         to the interview folder; without it nothing is remembered.
         """
-        from bristlenose.stages.s01_ingest import session_key
+        from bristlenose.stages.s01_ingest import fold_duplicate_recording, session_key
 
         used = {_number(sid) for sid in self.sessions.values()}
         next_n = max(used, default=0) + 1
@@ -356,6 +356,44 @@ class SessionRegistry:
             if fp_i is not None:
                 first_with_fp.setdefault(fp_i, i)
 
+        # Identical bytes under two names are one recording (§5): the copy
+        # that does not own the content key is folded into the one that does
+        # — `first_with_fp`, by `owner_rank` — so the interview is transcribed
+        # once, paid for once and counted once (R49, 20 Oct 2026). Until then
+        # both were sessions, the second keyed by name, and the copy's quotes
+        # read as a second participant agreeing. The set-aside copy is stated
+        # on the run's summary, never dropped silently (register row 15).
+        folded: set[int] = set()
+
+        def fold(i: int, owner: int) -> None:
+            if not (_is_media(primaries[i]) and _is_media(primaries[owner])):
+                # Identical transcript files, say: kept as two sessions, and
+                # said so (whether to fold those is an open product call).
+                logger.warning(
+                    "%r and %r hold the same bytes but are not recordings; kept apart",
+                    named[i], named[owner],
+                )
+                return
+            fold_duplicate_recording(sessions[owner], sessions[i])
+            folded.add(i)
+            # A study analysed before 20 Oct 2026 keyed the copy by name as
+            # its own session. That session is retired — its key goes, so
+            # the copy can never be found by it again (deleting the kept
+            # copy would otherwise hand the survivor the copy's old number)
+            # — and its number stays reserved, as every vanished session's
+            # does; its speakers, pins and starts are left where they are.
+            stale = self.sessions.get(named[i])
+            if stale is not None and stale not in content_keyed:
+                del self.sessions[named[i]]
+                self.sessions.setdefault(f"retired:{stale}", stale)
+                logger.warning(
+                    "%s was the copy's own session; retired, its number kept", stale,
+                )
+
+        for i, fp in enumerate(fps):
+            if fp is not None and first_with_fp[fp] != i:
+                fold(i, first_with_fp[fp])
+
         claimed: set[str] = set()
         resolved: list[str | None] = [None] * len(sessions)
 
@@ -398,18 +436,24 @@ class SessionRegistry:
                     or not _is_dataless(primaries[i])):
                 continue
             fp = _fingerprint_after_download(primaries[i])
-            if fp is None or fp in first_with_fp:
+            if fp is None:
+                continue
+            sid = self.sessions.get(FP_PREFIX + fp)
+            owner = first_with_fp.get(fp)
+            if owner is None and sid is not None and sid in claimed:
+                owner = resolved.index(sid)
+            if owner is not None:
+                # A copy of a recording that is here — resident, or held by
+                # its place while evicted: one recording, as above.
+                fps[i] = fp
+                fold(i, owner)
                 continue
             fps[i] = fp
             first_with_fp[fp] = i
-            # A duplicate of a live session's recording finds that sid claimed
-            # and becomes a new session; the owner rank above keeps the
-            # original's session when both are resident.
-            sid = self.sessions.get(FP_PREFIX + fp)
             if sid in missing and claim(i, sid):
                 missing.discard(sid)
         for i in range(len(sessions)):
-            if resolved[i] is None:
+            if resolved[i] is None and i not in folded:
                 sid = self.sessions.get(named[i])
                 # A recording whose bytes are known and differ from the ones
                 # this sid was keyed by is a different recording (§5): a
@@ -431,6 +475,8 @@ class SessionRegistry:
                 claim(i, sid)
 
         for i, session in enumerate(sessions):
+            if i in folded:
+                continue
             sid = resolved[i]
             if sid is None:
                 sid = f"s{next_n}"
@@ -457,7 +503,8 @@ class SessionRegistry:
             session.session_number = n
             session.participant_id = f"p{n}"  # provisional, as before — reassigned after 5b
             session.participant_number = n
-        return sorted(sessions, key=lambda s: s.session_number)
+        kept = [s for i, s in enumerate(sessions) if i not in folded]
+        return sorted(kept, key=lambda s: s.session_number)
 
     def _holds_media_key(self, sid: str) -> bool:
         """Whether ``sid`` holds a content key taken from a recording."""

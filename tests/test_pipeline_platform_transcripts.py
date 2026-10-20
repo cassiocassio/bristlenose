@@ -31,6 +31,7 @@ from bristlenose.models import (
     InputFile,
     InputSession,
     PiiCleanTranscript,
+    PipelineResult,
     SessionTopicMap,
     SpeakerRole,
     TranscriptSegment,
@@ -141,6 +142,9 @@ class Harness:
     quoted_by_run: dict[int, set[str]] = field(default_factory=dict)
     #: Per run, the session ids handed to (stubbed) stage 2 audio extraction.
     extracted: list[list[str]] = field(default_factory=list)
+    #: Per run, what ``Pipeline.run`` returned — its ``summary`` is the terminus
+    #: the CLI prints and the Mac popover reads.
+    results: list[PipelineResult] = field(default_factory=list)
 
     @property
     def quoted(self) -> list[list[str]]:
@@ -297,7 +301,7 @@ def run_pipeline(
     ):
         for i in range(runs):
             run_index["n"] = i
-            asyncio.run(pipeline.run(input_dir, output_dir))
+            h.results.append(asyncio.run(pipeline.run(input_dir, output_dir)))
 
     return h
 

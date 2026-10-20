@@ -28,7 +28,7 @@ def _sessions(input_dir: Path, n: int) -> list[InputSession]:
     out = []
     for i in range(1, n + 1):
         media = input_dir / f"rec{i}.wav"
-        media.write_bytes(b"fake")
+        media.write_bytes(b"fake " + media.name.encode())  # its own bytes: identical files fold (R49)
         out.append(InputSession(
             session_id=f"s{i}", session_number=i,
             participant_id=f"p{i}", participant_number=i,

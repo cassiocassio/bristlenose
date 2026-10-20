@@ -6,6 +6,8 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-10-20_ — §11a's first departure closed (R49): identical bytes under two names are one session again, as §5 said; the copy is set aside and stated, its transcription never paid for. Anchors: register row 55; `tests/test_pipeline_duplicate_recording.py`.
+
 - _2026-10-15_ — phases 2, 4 and 5 built: the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry (2); the sidebar reads the marker, follows a moved folder and re-mints a copy (4); agent access keyed by study (5). Phase 3 is obviated. Phase 6 built the same day: Locate… searches for a study by id through a visible beacon file, and a copy's row says where it came from (§13a). §11a records where the build departed from this note.
 
 - _2026-10-13_ — trued up: §2 carries the live S9 reproduction and the watcher route; §7 the Bin rule; §10 the WAL lag on the fork signal. Anchors: register rows 29, 35; `eb8509e1`.
@@ -345,10 +347,36 @@ not the folder, and are unchanged.
 
 ## 11a. As built, 15 Oct 2026 — where phase 2 departed from this note
 
-- **Identical files stay two sessions** (§5 said one recording, the second an
+- ~~**Identical files stay two sessions**~~ (§5 said one recording, the second an
   alias). Ingest finds two, and register row 15 is "never drop a recording
-  silently"; the registry keys only the first by content and the second by
-  name. A re-drop of copies is stopped earlier on the Mac.
+  silently"; the registry keyed only the first by content and the second by
+  name. A re-drop of copies is stopped earlier on the Mac. **Closed 20 Oct
+  2026 (R49):** identical bytes under two names are one session, as §5 said.
+  `SessionRegistry.apply` folds the copy that does not own the content key
+  into the one that does (`s01_ingest.fold_duplicate_recording`): its
+  recording is set aside as `duplicate_recording` — the row the Files bucket
+  already shows for a second recording in one session, so row 15 holds — its
+  transcript files join the session, and set-aside files are left out of the
+  transcription fingerprint (`pipeline._transcribed_files`), so a copy added
+  or removed beside an analysed interview does not run Whisper again. Which
+  copy is used follows `owner_rank`: the key's owner, else name order; the
+  set-aside copy's name is not remembered, so once the used copy is renamed
+  name order decides between the two, and the session is unchanged either
+  way. A fetched placeholder whose bytes are a resident recording's is folded
+  too. Different bytes (a re-export, a trim) are still a different recording.
+  A study analysed before this with the copy as its own session loses that
+  session on its next run, as it would a removed interview — its stars sat
+  on a duplicate: the fold retires that session (its name key becomes
+  `retired:<sid>`, so deleting the kept copy cannot hand the survivor the
+  copy's old number; the number stays reserved and its speakers, pins and
+  starts are left in place). The run's totals — files by type, hours of
+  audio, the time estimate — count the interview once. Identical
+  *transcript* files are not folded (an open product call); the run says
+  so. **Known limit:** a copy folded while resident has no place of its own
+  in `hints`, so if both copies are later evicted it is a placeholder with
+  no bytes, no place and no name — a new session for that run, downloaded
+  and transcribed at transcription. Register row 55;
+  `tests/test_pipeline_duplicate_recording.py`.
 - **A session keeps a name key beside its content key** (§6 said fingerprint →
   sid). Content first, then the last known place, then the name, and a sid a
   stronger key claimed is never handed on by a weaker one. The name key is
@@ -421,6 +449,7 @@ not the folder, and are unchanged.
   absent and a copy under a new name appears (both renamed in one run, or
   one deleted in one run and the other renamed in a later one), the registry
   cannot tell which copy it is, so two identical copies may swap sessions.
+  _(Moot since 20 Oct 2026: identical copies are one session.)_
 - **Final whole-body review, 15 Oct 2026.** `run --skip-transcription` never
   fetches a placeholder (nothing would read it). A recording re-exported in
   place is no longer the old session's media: the importer checks its bytes
@@ -445,7 +474,9 @@ not the folder, and are unchanged.
   session with no content key of its own (one from before content keys, or
   the unkeyed one of two identical copies, which stays unkeyed even after its
   twin is deleted) can still play a recording re-exported over its file.
-  The alias model for duplicates would close this with the rest.
+  The alias model for duplicates would close this with the rest. _(The
+  unkeyed twin is gone since 20 Oct 2026 — identical copies are one session;
+  the session from before content keys remains.)_
 - **Last whole-body review, 16 Oct 2026.** A recording arriving for a
   session analysed from its transcript alone joins that session (its
   content key held the transcript's bytes, so the re-export rule had
@@ -467,9 +498,8 @@ not the folder, and are unchanged.
   **Still open, presentational:** on the command line the fetch timeout ends
   with Python's traceback rather than a plain sentence (the Mac app shows a
   failed run with the reason), and the up-to-30-minute wait prints nothing. §5 called a duplicate one
-  recording with an alias; the build keeps two sessions, one keyed. Making
-  the duplicate a key-less alias would close this class, and is the owner's
-  call.
+  recording with an alias; the build kept two sessions, one keyed, until
+  20 Oct 2026 (the first bullet of this section).
 
 ## 12. What this does not do
 

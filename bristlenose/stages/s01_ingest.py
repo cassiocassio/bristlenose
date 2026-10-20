@@ -584,6 +584,36 @@ def _split_by_folder_if_colliding(group: list[InputFile]) -> list[list[InputFile
     return list(by_parent.values())
 
 
+def fold_duplicate_recording(owner: InputSession, duplicate: InputSession) -> None:
+    """Fold *duplicate* — a session whose recording is byte for byte *owner*'s
+    — into *owner*, so the interview is transcribed once, paid for once and
+    counted once.
+
+    ``P3.mp4`` and ``P3 (1).mp4``, a Finder copy, a download renamed: one
+    recording (``docs/design-project-identity.md`` §5). Until 20 Oct 2026 the
+    two were two sessions, both sent through Whisper, and the copy's quotes
+    read as a second participant agreeing (R49). The duplicate's recordings
+    are set aside with ``DUPLICATE_RECORDING`` — the reason stage 2 gives a
+    second recording inside one session — so the file is stated on the run's
+    summary, never silently dropped; its transcript files join the owner, as
+    they are transcripts of this recording. The owner's files stay first, so
+    what is used does not change. The session registry decides which copy is
+    the owner (``SessionRegistry.apply``), because only it knows which one
+    the study already keys.
+    """
+    for f in duplicate.files:
+        if f.file_type in _MEDIA_TYPES:
+            f.error = UnusableReason.DUPLICATE_RECORDING.value
+        owner.files.append(f)
+    owner.has_existing_transcript = (
+        owner.has_existing_transcript or duplicate.has_existing_transcript
+    )
+    logger.warning(
+        "%s is the same recording as %s — set aside; %s is used",
+        duplicate.files[0].path.name, owner.files[0].path.name, owner.files[0].path.name,
+    )
+
+
 def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
     """The stable identity of a session's file group — what the grouping keys on.
 

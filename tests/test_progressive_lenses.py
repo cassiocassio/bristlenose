@@ -352,7 +352,7 @@ def _audio_sessions(input_dir: Path, n: int) -> list:
     sessions = []
     for i in range(1, n + 1):
         audio = input_dir / f"s{i}.wav"
-        audio.write_bytes(b"")
+        audio.write_bytes(audio.name.encode())  # its own bytes: identical files fold (R49)
         sessions.append(InputSession(
             session_id=f"s{i}", session_number=i, participant_id=f"p{i}", participant_number=i,
             files=[InputFile(path=audio, file_type=FileType.AUDIO,

@@ -51,8 +51,11 @@ async def extract_audio_for_sessions(
     tasks: list[asyncio.Task[None]] = []
 
     for session in sessions:
-        audio_files = [f for f in session.files if f.file_type == FileType.AUDIO]
-        video_files = [f for f in session.files if f.file_type == FileType.VIDEO]
+        # A file already set aside — a copy of the recording the session
+        # registry folded in — is neither used nor stated twice.
+        usable = [f for f in session.files if f.error is None]
+        audio_files = [f for f in usable if f.file_type == FileType.AUDIO]
+        video_files = [f for f in usable if f.file_type == FileType.VIDEO]
         # One recording per session is used — the first audio file, else the
         # first video. A second of either kind is stated, never silently
         # dropped (12 Oct 2026). A video beside an audio file is not a second

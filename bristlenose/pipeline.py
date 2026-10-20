@@ -542,7 +542,7 @@ def _session_input_fingerprint(
 
     fps = [
         content_fingerprint(f.path) or (last_known(f.path) if last_known else None)
-        for f in session.files
+        for f in _transcribed_files(session)
     ]
     if not fps or any(fp is None for fp in fps):
         return _session_metadata_fingerprint(session, input_dir)
@@ -557,10 +557,22 @@ def _session_metadata_fingerprint(session: InputSession, input_dir: Path | None)
     with ``input_dir=None``), size and mtime, plus the parser for transcript
     files. The transcription key from 12 to 15 Oct 2026, and the fallback for
     a session whose bytes are not on disk."""
-    parts = hash_file_metadata([f.path for f in session.files], relative_to=input_dir)
+    parts = hash_file_metadata(
+        [f.path for f in _transcribed_files(session)], relative_to=input_dir,
+    )
     if session.has_existing_transcript:
         parts += f"|parser={_transcript_parser_version()}"
     return hash_bytes(parts.encode("utf-8"))
+
+
+def _transcribed_files(session: InputSession) -> list[InputFile]:
+    """The files transcription reads: not one set aside at ingest. A copy of
+    the recording folded into the session (``fold_duplicate_recording``) is
+    not an input, so a copy added or removed beside an analysed interview
+    does not send it through Whisper again, and the run's totals (files by
+    type, hours of audio, the time estimate) count the interview once. Before
+    stage 2 nothing else sets ``error``."""
+    return [f for f in session.files if f.error is None]
 
 
 def _transcription_fingerprints(
@@ -1623,7 +1635,7 @@ class Pipeline:
             f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.resolve().name}/[/dim]\n",
         )
         type_counts = Counter(
-            f.file_type.value for s in sessions for f in s.files
+            f.file_type.value for s in sessions for f in _transcribed_files(s)
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
@@ -1650,7 +1662,7 @@ class Pipeline:
             )
 
             total_audio_mins = sum(
-                (f.duration_seconds or 0) for s in sessions for f in s.files
+                (f.duration_seconds or 0) for s in sessions for f in _transcribed_files(s)
             ) / 60.0
 
             _est = None
@@ -2041,7 +2053,7 @@ class Pipeline:
                 )
                 total_audio = sum(
                     f.duration_seconds or 0
-                    for s in sessions for f in s.files
+                    for s in sessions for f in _transcribed_files(s)
                 )
                 audio_str = (
                     _format_duration(total_audio) if total_audio else ""
@@ -3450,7 +3462,7 @@ class Pipeline:
             f"  [dim]{count_noun(len(sessions), 'session')} in {input_dir.resolve().name}/[/dim]\n",
         )
         type_counts = Counter(
-            f.file_type.value for s in sessions for f in s.files
+            f.file_type.value for s in sessions for f in _transcribed_files(s)
         )
         type_parts = [f"{n} {t}" for t, n in type_counts.most_common()]
         _print_step(
@@ -3600,7 +3612,7 @@ class Pipeline:
                 )
             total_segments = sum(len(s) for s in session_segments.values())
             total_audio = sum(
-                f.duration_seconds or 0 for s in sessions for f in s.files
+                f.duration_seconds or 0 for s in sessions for f in _transcribed_files(s)
             )
             audio_str = _format_duration(total_audio) if total_audio else ""
             if _cached_segments and not _remaining:

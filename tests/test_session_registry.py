@@ -609,8 +609,9 @@ class TestContentKeys:
     ) -> None:
         """A recording found by its place while evicted, a deleted one (so
         something is missing), and a Finder duplicate of the first, evicted
-        too: the duplicate is fetched, its bytes are the live session's, and
-        that session keeps its key (Fable review of the fetch, 15 Oct 2026)."""
+        too: the duplicate is fetched, its bytes are the live session's, so it
+        is folded into that session (R49, 20 Oct 2026), which keeps its key
+        (Fable review of the fetch, 15 Oct 2026)."""
         import bristlenose.utils.fingerprint as fingerprint_mod
         import bristlenose.utils.fs as fs_mod
 
@@ -631,23 +632,25 @@ class TestContentKeys:
         d = InputFile(path=dup, file_type=FileType.AUDIO, created_at=_T0 + timedelta(days=2),
                       size_bytes=dup.stat().st_size)
         reg = SessionRegistry.load(out)
-        reg.apply(_ingest([a, d]), tmp_path, fetch=True)
+        fetched_run = reg.apply(_ingest([a, d]), tmp_path, fetch=True)
         reg.save()
+        assert [s.session_id for s in fetched_run] == [first["a.wav"]], "the copy became a session"
+        assert [f.error is None for f in fetched_run[0].files] == [True, False]
 
         evicted.clear()
         reg = SessionRegistry.load(out)
         settled = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest([a, d]), tmp_path)}
         reg.save()
-        assert settled["a.wav"] == first["a.wav"], "the live recording lost its session"
-        # And it keeps it through a rename: its content key was never handed
-        # to the duplicate (Fable review, 15 Oct 2026).
+        assert settled == {"a.wav": first["a.wav"]}, "the live recording lost its session"
+        # And it keeps it through a rename: one session, found by its bytes
+        # (Fable review, 15 Oct 2026). Which of the two copies is then used is
+        # name order, as the copy's name is not remembered.
         renamed = tmp_path / "p1 sarah.wav"
         a.path.rename(renamed)
         a2 = InputFile(path=renamed, file_type=FileType.AUDIO, created_at=a.created_at,
                        size_bytes=a.size_bytes)
-        after = {s.files[0].path.name: s.session_id
-                 for s in SessionRegistry.load(out).apply(_ingest([a2, d]), tmp_path)}
-        assert after["p1 sarah.wav"] == first["a.wav"], "the renamed original was orphaned"
+        after = SessionRegistry.load(out).apply(_ingest([a2, d]), tmp_path)
+        assert [s.session_id for s in after] == [first["a.wav"]], "the renamed original was orphaned"
 
     def test_a_restored_original_returns_to_its_session_after_a_re_export(
         self, tmp_path: Path,
@@ -672,34 +675,6 @@ class TestContentKeys:
         assert trimmed != original
         assert run(b"original recording") == original
         assert run(b"trimmed recording") == trimmed
-
-    def test_deleting_the_keyed_copy_does_not_move_its_session_to_the_other(
-        self, tmp_path: Path,
-    ) -> None:
-        """Of two identical copies, deleting the keyed one leaves the other its
-        own session; the deleted one's session waits for it to come back
-        (Fable review, 15 Oct 2026)."""
-        out = tmp_path / "out"
-        files = []
-        for name, day in (("a.wav", 0), ("b.wav", 1)):
-            path = tmp_path / name
-            path.write_bytes(b"one recording")
-            files.append(InputFile(path=path, file_type=FileType.AUDIO,
-                                   created_at=_T0 + timedelta(days=day), size_bytes=13))
-        reg = SessionRegistry.load(out)
-        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
-        reg.save()
-        held = files[0].path.read_bytes()
-        files[0].path.unlink()
-        reg = SessionRegistry.load(out)
-        alone = {s.files[0].path.name: s.session_id
-                 for s in reg.apply(_ingest([files[1]]), tmp_path)}
-        reg.save()
-        assert alone == {"b.wav": first["b.wav"]}, "b took the deleted copy's session"
-        files[0].path.write_bytes(held)
-        back = {s.files[0].path.name: s.session_id
-                for s in SessionRegistry.load(out).apply(_ingest(files), tmp_path)}
-        assert back == first
 
     def test_a_fetch_that_times_out_stops_the_run_rather_than_guess(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -746,68 +721,6 @@ class TestContentKeys:
                             lambda p, *a, **k: fetched.append(p) or True)
         SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b]), tmp_path, fetch=True)
         assert fetched == []
-
-    def test_two_copies_of_one_recording_keep_their_sessions_when_dates_flip(
-        self, tmp_path: Path,
-    ) -> None:
-        """Ingest orders by date, and cloud sync rewrites dates. Which copy owns
-        the content key must not follow that order, or each flip mints a new
-        session and pays to transcribe it (Fable review, 15 Oct 2026)."""
-        out = tmp_path / "out"
-
-        def copies(day_a: int, day_b: int) -> list[InputFile]:
-            files = []
-            for name, day in (("a.wav", day_a), ("b.wav", day_b)):
-                path = tmp_path / name
-                path.write_bytes(b"one recording")
-                files.append(InputFile(path=path, file_type=FileType.AUDIO,
-                                       created_at=_T0 + timedelta(days=day), size_bytes=13))
-            return files
-
-        def sids(files: list[InputFile]) -> dict[str, str]:
-            reg = SessionRegistry.load(out)
-            sessions = reg.apply(_ingest(files), tmp_path)
-            reg.save()
-            return {s.files[0].path.name: s.session_id for s in sessions}
-
-        first = sids(copies(0, 1))
-        assert sids(copies(1, 0)) == first
-        assert sids(copies(0, 1)) == first
-
-    def test_renaming_one_of_two_identical_copies_keeps_both_sessions(
-        self, tmp_path: Path,
-    ) -> None:
-        """The copy that owns the content key keeps it after a rename; name
-        order only breaks a fresh tie (Fable review, 15 Oct 2026)."""
-        out = tmp_path / "out"
-        files = []
-        for name, day in (("a.wav", 0), ("b.wav", 1)):
-            path = tmp_path / name
-            path.write_bytes(b"one recording")
-            files.append(InputFile(path=path, file_type=FileType.AUDIO,
-                                   created_at=_T0 + timedelta(days=day), size_bytes=13))
-        reg = SessionRegistry.load(out)
-        first = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
-        reg.save()
-        renamed = tmp_path / "z.wav"
-        files[0].path.rename(renamed)
-        files[0] = InputFile(path=renamed, file_type=FileType.AUDIO,
-                             created_at=files[0].created_at, size_bytes=13)
-        reg = SessionRegistry.load(out)
-        again = {s.files[0].path.name: s.session_id for s in reg.apply(_ingest(files), tmp_path)}
-        assert again == {"z.wav": first["a.wav"], "b.wav": first["b.wav"]}
-        reg.save()
-        # Now rename the other copy: the key stays with its owner, even though
-        # the newcomer's name sorts first. (The renamed non-owner has nothing
-        # to be found by and becomes a new session: one copy is keyed.)
-        moved = tmp_path / "c.wav"
-        files[1].path.rename(moved)
-        files[1] = InputFile(path=moved, file_type=FileType.AUDIO,
-                             created_at=files[1].created_at, size_bytes=13)
-        third = {s.files[0].path.name: s.session_id
-                 for s in SessionRegistry.load(out).apply(_ingest(files), tmp_path)}
-        assert third["z.wav"] == first["a.wav"], "the owner lost its session to the other copy"
-
 
     def test_a_renamed_recording_keeps_its_session(self, tmp_path: Path) -> None:
         out = tmp_path / "out"
@@ -943,6 +856,167 @@ class TestContentKeys:
         data = json.loads(path.read_text())
         assert data["version"] == 3
         assert any(k.startswith("fp:v1:") and v == "s7" for k, v in data["sessions"].items())
+
+
+def _copies(tmp_path: Path, *names: str, data: bytes = b"one recording") -> list[InputFile]:
+    """Byte-identical recordings under *names*, a day apart in date order."""
+    files = []
+    for day, name in enumerate(names):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        files.append(InputFile(path=path, file_type=FileType.AUDIO,
+                               created_at=_T0 + timedelta(days=day), size_bytes=len(data)))
+    return files
+
+
+class TestDuplicateRecordings:
+    """Identical bytes under two names are one recording (design-project-identity
+    §5): one session, the copy set aside and stated, never a second participant
+    (R49, 20 Oct 2026). Until then both were sessions, both were transcribed,
+    and the copy's quotes read as agreement."""
+
+    def test_two_identical_recordings_are_one_session(self, tmp_path: Path) -> None:
+        from bristlenose.events import UnusableReason
+
+        files = _copies(tmp_path, "P3.wav", "P3 (1).wav")
+        with _Capture("bristlenose.stages.s01_ingest") as said:
+            sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        kept, aside = sessions[0].files
+        assert (kept.path.name, kept.error) == ("P3.wav", None)
+        assert (aside.path.name, aside.error) == (
+            "P3 (1).wav", UnusableReason.DUPLICATE_RECORDING.value,
+        )
+        assert any("P3 (1).wav" in m and "P3.wav" in m for m in said), said
+
+    def test_identical_recordings_in_two_folders_are_one_session(self, tmp_path: Path) -> None:
+        """Two folders both holding ``interview.wav`` are two sessions when the
+        bytes differ (12 Oct 2026); when the bytes are the same they are one
+        recording, whatever the folders say."""
+        files = _copies(tmp_path, "alice/interview.wav", "bob/interview.wav")
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert [f.error is None for f in sessions[0].files] == [True, False]
+
+    def test_the_copy_that_owns_the_key_is_the_one_used(self, tmp_path: Path) -> None:
+        """Which copy is used follows the registry's own rank — the key's
+        owner, then a renamed one, then name order — never ingest's date
+        order, which cloud sync rewrites (§11a)."""
+        out = tmp_path / "out"
+
+        def used(files: list[InputFile]) -> tuple[list[str], str]:
+            reg = SessionRegistry.load(out)
+            sessions = reg.apply(_ingest(files), tmp_path)
+            reg.save()
+            return [s.session_id for s in sessions], sessions[0].files[0].path.name
+
+        files = _copies(tmp_path, "b.wav", "a.wav")
+        assert used(files) == (["s1"], "a.wav"), "a fresh tie is broken by name"
+        files[0].created_at, files[1].created_at = files[1].created_at, files[0].created_at
+        assert used(files) == (["s1"], "a.wav"), "the used copy followed the date order"
+        # Renaming the used copy: still one session, found by its bytes. (Which
+        # copy is then used is name order — the set-aside copy's name is not
+        # remembered, so nothing says the renamed one was the owner.)
+        renamed = tmp_path / "z.wav"
+        files[1].path.rename(renamed)
+        files[1] = InputFile(path=renamed, file_type=FileType.AUDIO,
+                             created_at=files[1].created_at, size_bytes=13)
+        assert used(files)[0] == ["s1"], "renaming the used copy minted a session"
+
+    def test_deleting_the_kept_copy_leaves_the_session_to_the_other(
+        self, tmp_path: Path,
+    ) -> None:
+        """The other copy is the same bytes, so it is the same session, with
+        the same number and everything keyed by it."""
+        out = tmp_path / "out"
+        files = _copies(tmp_path, "a.wav", "b.wav")
+        reg = SessionRegistry.load(out)
+        assert [s.session_id for s in reg.apply(_ingest(files), tmp_path)] == ["s1"]
+        reg.save()
+        files[0].path.unlink()
+        reg = SessionRegistry.load(out)
+        alone = reg.apply(_ingest([files[1]]), tmp_path)
+        reg.save()
+        assert [(s.session_id, s.files[0].path.name) for s in alone] == [("s1", "b.wav")]
+        # And the next run still reads the file it wrote.
+        assert [s.session_id for s in SessionRegistry.load(out).apply(_ingest([files[1]]), tmp_path)] == ["s1"]
+
+    def test_a_transcript_beside_the_copy_joins_the_session(self, tmp_path: Path) -> None:
+        """The copy's companions are the recording's companions: its transcript
+        file is read for the one session, so the recording is not transcribed."""
+        files = _copies(tmp_path, "P3.wav", "P3 (1).wav")
+        vtt = _file(tmp_path, "P3 (1).vtt", 1, FileType.SUBTITLE_VTT)
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files + [vtt]), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert sessions[0].has_existing_transcript
+        assert [f.path.name for f in sessions[0].files if f.error is None] == ["P3.wav", "P3 (1).vtt"]
+
+    def test_a_study_from_before_the_fold_retires_the_copys_old_session(
+        self, tmp_path: Path,
+    ) -> None:
+        """Until 20 Oct 2026 the copy was its own session, keyed by name only.
+        On the first run after, it is folded and that session retired: its
+        name can never find the copy again — or deleting the kept copy would
+        hand the survivor the copy's old number — and its number is kept, as
+        every vanished session's is, so nothing new is numbered over it."""
+        out = tmp_path / "out"
+        a = _copies(tmp_path, "P3.wav", data=b"the interview")[0]
+        b = _copies(tmp_path, "P3 (1).wav", data=b"something else for now")[0]
+        b.created_at = a.created_at + timedelta(days=1)
+        reg = SessionRegistry.load(out)
+        assert [s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)] == ["s1", "s2"]
+        reg.save()
+        # What a pre-fold registry holds for the copy: its name, no content key.
+        data = json.loads(registry_path(out).read_text())
+        data["sessions"] = {k: v for k, v in data["sessions"].items()
+                            if not (k.startswith("fp:") and v == "s2")}
+        registry_path(out).write_text(json.dumps(data))
+        b.path.write_bytes(a.path.read_bytes())
+        b.size_bytes = a.size_bytes
+
+        reg = SessionRegistry.load(out)
+        with _Capture("bristlenose.session_registry") as said:
+            folded = reg.apply(_ingest([a, b]), tmp_path)
+        reg.save()
+        assert [s.session_id for s in folded] == ["s1"]
+        assert any("s2" in m and "retired" in m for m in said), said
+        keys = json.loads(registry_path(out).read_text())["sessions"]
+        assert "stem:p3 (1)" not in keys and keys.get("retired:s2") == "s2"
+
+        a.path.unlink()
+        reg = SessionRegistry.load(out)
+        survivor = reg.apply(_ingest([b]), tmp_path)
+        reg.save()
+        assert [s.session_id for s in survivor] == ["s1"], "the survivor took the copy's old number"
+
+        c = _copies(tmp_path, "P4.wav", data=b"a new interview")[0]
+        c.created_at = b.created_at + timedelta(days=1)
+        later = SessionRegistry.load(out).apply(_ingest([b, c]), tmp_path)
+        assert [s.session_id for s in later] == ["s1", "s3"], "the retired number was reused"
+
+    def test_identical_transcript_files_are_kept_apart_and_said(self, tmp_path: Path) -> None:
+        """Only recordings fold. Two identical transcript files stay two
+        sessions (an open product call), and the run says so."""
+        files = [
+            _copies(tmp_path, name, data=b"WEBVTT the same")[0]
+            for name in ("ann.vtt", "ann (1).vtt")
+        ]
+        for f in files:
+            f.file_type = FileType.SUBTITLE_VTT
+        files[1].created_at = files[0].created_at + timedelta(days=1)
+        with _Capture("bristlenose.session_registry") as said:
+            sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1", "s2"]
+        assert any("not recordings" in m for m in said), said
+
+    def test_different_bytes_under_two_names_stay_two_sessions(self, tmp_path: Path) -> None:
+        """A re-export or a trim is a different recording (§5): out of scope."""
+        a = _copies(tmp_path, "P3.wav", data=b"the export")[0]
+        b = _copies(tmp_path, "P3 (1).wav", data=b"the export, trimmed")[0]
+        b.created_at = a.created_at + timedelta(days=1)
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b]), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1", "s2"]
 
 
 class TestCarriedStarts:

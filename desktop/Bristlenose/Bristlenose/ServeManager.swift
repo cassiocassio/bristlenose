@@ -703,13 +703,36 @@ final class ServeManager: ObservableObject {
             return
         }
 
+        // Watch the start, not the wall clock (R31): a first launch can spend
+        // well over 15 s in code-signature checks before Python prints a line.
+        // An exit is `handleTermination`'s to report; a live process gets
+        // `ServeStartPolicy.ceiling`, measured on a clock that stops while the
+        // Mac sleeps. `generation` keeps a watchdog from an earlier start from
+        // failing this one.
+        timeoutTask?.cancel()
+        let launched = SuspendingClock.now
+        let startGeneration = generation
         timeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(15))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                guard let self, case .starting = self.state else { return }
-                self.state = .failed(error: .keyed(Self.B + "startTimeout"))
-                self.process?.terminate()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: ServeStartPolicy.pollInterval)
+                guard !Task.isCancelled, let self,
+                      self.generation == startGeneration else { return }
+                let verdict = ServeStartPolicy.verdict(for: .init(
+                    elapsed: SuspendingClock.now - launched,
+                    stillStarting: self.state == .starting,
+                    processAlive: self.process?.isRunning ?? false
+                ))
+                switch verdict {
+                case .keepWaiting, .processExited:
+                    continue
+                case .settled:
+                    return
+                case .timedOut:
+                    log.warning("serve did not report its port within \(Int(ServeStartPolicy.ceiling.components.seconds), privacy: .public)s — giving up")
+                    self.state = .failed(error: .keyed(Self.B + "startTimeout"))
+                    self.process?.terminate()
+                    return
+                }
             }
         }
     }
@@ -1007,8 +1030,9 @@ final class ServeManager: ObservableObject {
         }
 
         // Wait for transition out of .starting (to .running or .failed) so
-        // callers can await the switch. Bounded by start()'s 15s timeout (cold)
-        // or the probe (warm-failed→cold). Bail if a newer switch cancels us.
+        // callers can await the switch. Bounded at 20 s: a cold start may still
+        // be starting then (its watchdog allows `ServeStartPolicy.ceiling`), and
+        // the wait just returns. Bail if a newer switch cancels us.
         let deadline = ContinuousClock.now.advanced(by: .seconds(20))
         while case .starting = state, !Task.isCancelled, ContinuousClock.now < deadline {
             try? await Task.sleep(for: .milliseconds(50))

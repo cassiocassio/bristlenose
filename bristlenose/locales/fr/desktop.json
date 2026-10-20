@@ -429,7 +429,7 @@
     "failure": {
       "sidecarMissing": "Bristlenose ne trouve pas son moteur d\u2019analyse \u00e0 {{path}}.",
       "launchFailed": "Impossible de lancer le moteur d\u2019analyse. {{reason}}",
-      "startTimeout": "Bristlenose n\u2019a pas fini de d\u00e9marrer en 15 secondes.",
+      "startTimeout": "Bristlenose n\u2019a pas fini de d\u00e9marrer en 90 secondes.",
       "exitedWithCode": "Bristlenose s\u2019est arr\u00eat\u00e9 avec le code {{status}}.\n{{details}}",
       "exitedBeforeReady": "Bristlenose s\u2019est arr\u00eat\u00e9 avant d\u2019avoir fini de d\u00e9marrer (code {{status}}).\n{{details}}"
     },

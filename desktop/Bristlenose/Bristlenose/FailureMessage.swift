@@ -136,7 +136,7 @@ extension FailureMessage {
         "desktop.pipeline.failure.unknown": "Something went wrong during analysis.",
         "desktop.boot.failure.sidecarMissing": "Bristlenose can’t find its analysis engine at {{path}}.",
         "desktop.boot.failure.launchFailed": "Couldn’t launch the analysis engine. {{reason}}",
-        "desktop.boot.failure.startTimeout": "Bristlenose didn’t finish starting within 15 seconds.",
+        "desktop.boot.failure.startTimeout": "Bristlenose didn’t finish starting within 90 seconds.",
         "desktop.boot.failure.exitedWithCode": "Bristlenose stopped with code {{status}}.\n{{details}}",
         "desktop.boot.failure.exitedBeforeReady": "Bristlenose stopped before it finished starting (code {{status}}).\n{{details}}",
         "desktop.llmSettings.revalidating": "Last validation was rejected — re-checking…",

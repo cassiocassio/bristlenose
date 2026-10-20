@@ -241,8 +241,9 @@ def test_owner_dying_without_a_terminus_is_noticed(tmp_path: Path, fast_watcher)
 
 
 def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> None:
-    """run_started lands before run.pid is written; a poll in that gap must not
-    pin the run as stranded for its whole life."""
+    """run_started seen before run.pid (the writer's order until 20 Oct 2026, and
+    still what an older CLI writes); a poll in that gap must not pin the run as
+    stranded for its whole life."""
     out = tmp_path / "bristlenose-output"
     _started(out, "A")
     app = _app(tmp_path, tmp_path)

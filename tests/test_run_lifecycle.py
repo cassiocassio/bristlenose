@@ -411,6 +411,28 @@ def test_lifecycle_clean_exit_writes_started_then_completed(tmp_path: Path):
     assert not pid_file_path(tmp_path).exists()
 
 
+def test_pid_file_exists_before_run_started_is_visible(tmp_path: Path, monkeypatch):
+    """A reader that sees ``run_started`` with no live ``run.pid`` reads the run
+    as stranded, and on the Mac that verdict stuck. So the pid file goes first:
+    at the moment ``run_started`` is appended, the file already names this run."""
+    import bristlenose.run_lifecycle as rl
+
+    real_append = rl.append_event
+    seen: list[dict | None] = []
+
+    def observing_append(path, event):
+        if isinstance(event, RunStartedEvent):
+            seen.append(_read_pid_file(tmp_path))
+        return real_append(path, event)
+
+    monkeypatch.setattr(rl, "append_event", observing_append)
+    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False) as handle:
+        pass
+    assert len(seen) == 1
+    assert seen[0] is not None, "run_started was appended before run.pid existed"
+    assert seen[0]["run_id"] == handle.run_id
+
+
 def test_lifecycle_writes_pid_file_with_our_pid_and_start_time(tmp_path: Path):
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         data = _read_pid_file(tmp_path)

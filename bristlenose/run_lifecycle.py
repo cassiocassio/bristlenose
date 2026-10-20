@@ -1034,12 +1034,16 @@ def run_lifecycle(
     # So: everything from the append onwards is guarded. A partially-written
     # run_started plus a cancel is fine — read_events already tolerates a
     # partial tail line.
+    #
+    # run.pid is written BEFORE run_started. A reader that sees run_started with
+    # no live pid file reads the run as stranded, and a Mac scan landing in that
+    # gap kept the verdict (20 Oct 2026). Every handler below removes the pid file.
     telemetry_tokens: tuple[object, object] | None = None
     _hosted_backstop = _backstop
     try:
         try:
-            append_event(events_file, started_event)
             _write_pid_file(output_dir, run_id, proc_start_time)
+            append_event(events_file, started_event)
             log.info("run_started run_id=%s kind=%s", run_id, kind.value)
             _mint_study_marker(output_dir)
             telemetry_tokens = telemetry.set_run_context(

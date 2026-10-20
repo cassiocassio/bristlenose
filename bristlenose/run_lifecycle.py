@@ -95,6 +95,18 @@ _terminus_lock = threading.Lock()
 #: The live run's backstop (write run_cancelled unless a terminus is written),
 #: set by ``run_lifecycle`` while its run is live.
 _hosted_backstop: Callable[[int], None] | None = None
+#: Held while a stashed report is put back (``output_backup.restore``): the
+#: backstop's exit waits for it, or a restore cut in half leaves the report
+#: set aside until the next run. Bounded, so a stuck restore cannot hold it.
+_exit_hold = threading.Lock()
+_EXIT_HOLD_TIMEOUT_S = 30.0
+
+
+@contextmanager
+def holding_exit() -> Iterator[None]:
+    """Keep the hosted backstop from exiting the process until this block ends."""
+    with _exit_hold:
+        yield
 
 
 def _arm_hosted_backstop(signum: int) -> None:
@@ -115,7 +127,15 @@ def _arm_hosted_backstop(signum: int) -> None:
         except Exception:  # noqa: BLE001 — said, then the exit goes ahead
             log.exception("hosted stop backstop could not record the cancel")
         finally:
-            os._exit(128 + signum)
+            held = _exit_hold.acquire(timeout=_EXIT_HOLD_TIMEOUT_S)
+            if not held:
+                log.warning("hosted stop backstop: a restore held the exit for %g s; "
+                            "exiting anyway", _EXIT_HOLD_TIMEOUT_S)
+            try:
+                os._exit(128 + signum)
+            finally:  # only reached where _exit is stubbed (tests)
+                if held:
+                    _exit_hold.release()
 
     timer = threading.Timer(_HOSTED_STOP_GRACE_S, _fire)
     timer.daemon = True

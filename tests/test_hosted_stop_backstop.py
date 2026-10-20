@@ -191,3 +191,57 @@ def test_a_writer_stuck_holding_the_lock_does_not_hold_the_exit(tmp_path: Path) 
             proc.kill()
         proc.wait(timeout=10)
     assert code == 128 + signal.SIGINT, code
+
+
+def test_the_backstop_waits_for_a_restore_under_way(tmp_path: Path) -> None:
+    """Cut mid-restore, the report would sit set aside until the next run."""
+    sentinel = tmp_path / "ready"
+    marker = tmp_path / "restored"
+    body = f"""
+        import signal, time
+        Path({str(sentinel)!r}).write_text("ready")
+        try:
+            signal.pause()
+        finally:
+            with _rl_mod.holding_exit():
+                time.sleep(2.0)
+                Path({str(marker)!r}).write_text("done")
+    """
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path, body, preamble=GRACE.format(grace=0.5), env=HOSTED,
+    )
+    f = events_path(tmp_path)
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        proc.send_signal(signal.SIGINT)
+        code = _wait_exit(proc, 30.0)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert code is not None
+    assert marker.exists(), "the backstop exited in the middle of the restore"
+    assert len(_termini(f)) == 1
+
+
+def test_restore_holds_the_exit(tmp_path: Path, monkeypatch) -> None:
+    import bristlenose.run_lifecycle as rl
+    from bristlenose.utils import output_backup
+
+    out = tmp_path / "bristlenose-output"
+    out.mkdir()
+    (out / "report.html").write_text("old", encoding="utf-8")
+    backup = output_backup.stash(out)
+    assert backup is not None
+    held: list[bool] = []
+    real = output_backup._restore
+
+    def _spy(b, o):
+        held.append(rl._exit_hold.locked())
+        return real(b, o)
+
+    monkeypatch.setattr(output_backup, "_restore", _spy)
+    assert output_backup.restore(backup, out).report_is_back
+    assert held == [True]
+    assert not rl._exit_hold.locked()

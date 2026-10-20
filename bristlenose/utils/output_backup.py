@@ -209,9 +209,21 @@ def discard(backup: Path | None) -> None:
 
 
 def restore(backup: Path | None, output_dir: Path) -> RestoreOutcome:
-    """Put the stashed report back, keeping the failed run's history."""
+    """Put the stashed report back, keeping the failed run's history.
+
+    Holds the exit (``run_lifecycle.holding_exit``) throughout: a hosted run's
+    backstop that exited between the two renames would leave the report set
+    aside until the next run.
+    """
     if backup is None or not backup.exists():
         return RestoreOutcome.NOTHING_TO_DO
+    from bristlenose.run_lifecycle import holding_exit
+
+    with holding_exit():
+        return _restore(backup, output_dir)
+
+
+def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
 
     failed = failed_path_for(output_dir)
     moved_failed = False

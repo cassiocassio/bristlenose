@@ -161,7 +161,7 @@ def discover_files(
 def _resolved(path: Path) -> Path:
     try:
         return path.resolve()
-    except OSError:  # a link loop, or a target that vanished mid-scan
+    except (OSError, RuntimeError):  # a link loop (RuntimeError on 3.12), a vanished target
         return path.absolute()
 
 
@@ -181,8 +181,9 @@ def _scan_dir(
     zero-byte file that aborted a 42-session run.
     """
     try:
-        # Real entries before links, so a link to something already here is
-        # the one set aside, and the session keeps its original's path.
+        # Real entries before links within a folder, so a link beside what it
+        # points at is the one set aside. A link reached before its target's
+        # folder is scanned instead, and the target skipped: one copy either way.
         entries = sorted(directory.iterdir(), key=lambda e: (e.is_symlink(), e))
     except PermissionError:
         if skipped is not None:

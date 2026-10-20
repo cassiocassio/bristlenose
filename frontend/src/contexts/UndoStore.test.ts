@@ -136,6 +136,19 @@ describe("UndoStore", () => {
     expect(getUndoState().undoAction).toBe("first");
   });
 
+  it("a failed redo after a new act is dropped: the new act ended the redo branch", async () => {
+    let fail!: (e: Error) => void;
+    pushUndo({ action: "first", undo: () => {}, redo: () => new Promise<void>((_, rej) => { fail = rej; }) });
+    await undo();
+    const pending = redo();
+    pushUndo({ action: "second", undo: () => {}, redo: () => {} });
+    fail(new Error("refused"));
+    expect(await pending).toBe(false);
+    expect(getUndoState()).toMatchObject({ undoAction: "second", canRedo: false });
+    await undo();
+    expect(getUndoState().canUndo).toBe(false);
+  });
+
   it("a failed undo after the stack was cleared puts nothing back", async () => {
     let fail!: (e: Error) => void;
     pushUndo({ action: "first", undo: () => new Promise<void>((_, rej) => { fail = rej; }), redo: () => {} });

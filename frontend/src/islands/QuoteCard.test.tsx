@@ -601,6 +601,15 @@ describe("QuoteCard — an edit in progress survives the card going away", () =>
     }
   });
 
+  it("writes nothing when an edit was opened and left unchanged", () => {
+    const onEditCommit = vi.fn<Commit>();
+    const { unmount } = renderEditableCard({}, { onEditCommit });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));
+    expect(document.querySelector(".crop-editable")).toBeTruthy();
+    unmount();
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+
   it("writes nothing on unmount when no edit was open", () => {
     const onEditCommit = vi.fn();
     const { unmount } = renderEditableCard({}, { onEditCommit });

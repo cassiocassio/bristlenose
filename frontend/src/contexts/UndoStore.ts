@@ -122,9 +122,10 @@ export function redo(): Promise<boolean> {
  * Move the top act across, then run its write. The label moves at once, so a
  * second ⌘Z takes the next entry; if the write fails the act goes back where it
  * was — beneath any act done meanwhile — because what it describes is still
- * true (R9: Edit used to offer Redo for a split the server never undid). The
- * entry's own write says why it failed (`toastSaveFailed`); the stack only keeps
- * its place, so the rejection stops here.
+ * true (R9: Edit used to offer Redo for a split the server never undid). A
+ * failed redo after a new act is dropped instead: the new act ended the redo
+ * branch. The entry's own write tells the researcher why (`toastSaveFailed`);
+ * the stack keeps its place and logs, so the rejection stops here.
  */
 async function step(kind: "undo" | "redo"): Promise<boolean> {
   // Read through a function: a new act replaces the redo array, a clear both.
@@ -134,18 +135,21 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
   if (!entry) return false;
   const at = from.length;
   const clearedAt = clears;
+  const pushedAt = pushes;
   to.push(entry);
   emit();
   try {
     await (kind === "undo" ? entry.undo() : entry.redo());
     return true;
-  } catch {
+  } catch (err) {
+    console.error(`${kind} ${entry.action} failed`, err);
     // A clear means the data the entry describes was replaced: nothing to put back.
     if (clears !== clearedAt) return false;
     const [home, away] = stacks();
     const i = away.lastIndexOf(entry);
     if (i >= 0) away.splice(i, 1);
-    if (!home.includes(entry)) home.splice(Math.min(at, home.length), 0, entry);
+    const branchEnded = kind === "redo" && pushes !== pushedAt;
+    if (!branchEnded && !home.includes(entry)) home.splice(Math.min(at, home.length), 0, entry);
     emit();
     return false;
   }

@@ -298,8 +298,10 @@ export function QuoteCard({
   // WebKit fires no blur for a removed editor, and a blur that did fire
   // committed 150 ms later, after the editor was gone, writing the old text
   // back. So as the card goes, drop any pending blur and commit what is on
-  // screen, the way blur does (R88). Layout effects: their cleanup runs while
-  // the editor is still in the DOM, and the ref is written outside render.
+  // screen, the way blur does (R88) — unless nothing changed, so that merely
+  // clicking into a quote and switching lens writes nothing and adds no Undo.
+  // Layout effects: their cleanup runs while the editor is still in the DOM,
+  // and the ref is written outside render.
 
   const commitOnLeave = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
@@ -312,6 +314,11 @@ export function QuoteCard({
               crop.blurTimeoutRef.current = null;
             }
             const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
+            const onScreen =
+              crop.mode === "hybrid"
+                ? editableEl?.textContent?.trim()
+                : crop.words.slice(crop.cropStart, crop.cropEnd).join(" ");
+            if (onScreen === crop.words.join(" ")) return;
             crop.commitEdit(editableEl);
           };
   });

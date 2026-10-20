@@ -49,6 +49,21 @@ _FAIL_THRESHOLD = 3  # Stop stage after this many consecutive LLM failures
 # the output each level, so a chunk that fits at depth N never truncates at
 # N+1; the 15-call worst case is therefore nearly unreachable in practice.
 _SPLIT_MAX_DEPTH = 3
+
+# Smart-split on a call that runs too long (R33). A non-streaming call answers
+# only when the whole response is written, so its time grows with the session:
+# a dense 94-minute interview (FOSSDA s3) needs ~671 s against the providers'
+# 600 s read timeout, and the SDKs then re-send the SAME job until their retries
+# run out — 7 × 600 s = 70 minutes on Claude, ChatGPT and Azure (3 × 600 s on a
+# local model), then the session fails with no quotes. Split in two it took
+# 522 s + 293 s. So a pass that runs past this deadline is cut short and the
+# session split, exactly as on truncation. The deadline sits BELOW the SDKs'
+# 600 s so the SDK never sees a timeout and never re-sends the job whole; the
+# 30 s gap keeps the two clocks from racing. A normal hour takes 230–300 s.
+# A provider that never answers costs one deadline per level down the left-hand
+# spine (chunks run in order and one failure ends the session): 4 × 570 s ≈ 38
+# minutes, not 70.
+_PASS_DEADLINE_S = 570.0
 _SPLIT_OVERLAP_FRACTION = 0.1  # 10% boundary overlap absorbs cross-seam quotes
 _BOUNDARY_MIDDLE_FRACTION = 0.2  # eligible topic boundaries sit in middle 60%
 
@@ -422,50 +437,86 @@ async def _extract_with_split(
     min_quote_words: int,
     depth: int = 0,
 ) -> list[ExtractedQuote]:
-    """Extract quotes, splitting the session on output-cap truncation.
+    """Extract quotes, splitting the session on truncation or an overlong call.
 
-    Reactive: one normal pass first; only on ``TruncatedResponseError`` do we
-    split and re-extract per chunk (Map-Reduce, no cross-chunk context). The
-    per-session semaphore slot is held across the whole recursive chain by the
-    caller (``extract_quotes._process``) — never released between sub-calls, so
+    Reactive: one normal pass first; only on ``TruncatedResponseError``, or a
+    pass that runs past ``_PASS_DEADLINE_S``, do we split and re-extract per
+    chunk (Map-Reduce, no cross-chunk context). The per-session semaphore slot
+    is held across the whole recursive chain by the caller
+    (``extract_quotes._process``) — never released between sub-calls, so
     depth-N chains don't concurrently hammer the API.
     """
     try:
-        return await _extract_one_pass(
-            transcript, topic_map, llm_client, min_quote_words
+        quotes = await asyncio.wait_for(
+            _extract_one_pass(transcript, topic_map, llm_client, min_quote_words),
+            timeout=_PASS_DEADLINE_S,
         )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "quote_extraction_pass_deadline | session=%s | depth=%d | segments=%d | "
+            "deadline_s=%.0f",
+            transcript.session_id, depth, len(transcript.segments), _PASS_DEADLINE_S,
+        )
+        if depth >= _SPLIT_MAX_DEPTH:
+            raise _pass_timeout(depth) from None
+        trigger = "timeout"
     except TruncatedResponseError:
         if depth >= _SPLIT_MAX_DEPTH:
             # Re-raise: the outer _process records exactly ONE StageFailure for
             # this session (Finding 10), categorised OUTPUT_TRUNCATED.
             raise
+        trigger = "truncated"
+    else:
+        return quotes
+
+    try:
         chunks, reason = _split_transcript(
             transcript, topic_map, _SPLIT_OVERLAP_FRACTION
         )
-        logger.info(
-            "quote_extraction_split | session=%s | depth=%d | chunks=%d | reason=%s",
-            transcript.session_id,
-            depth + 1,
-            len(chunks),
-            reason,
-        )
-        # ALL-OR-NOTHING per session: if any chunk re-raises after exhausting
-        # its own depth budget, the whole session fails (Decision F3). The full
-        # topic map is passed down; each pass scopes it to its own span.
-        results: list[ExtractedQuote] = []
-        for chunk in chunks:
-            results.extend(
-                await _extract_with_split(
-                    chunk, topic_map, llm_client, min_quote_words, depth + 1
-                )
+    except ValueError:
+        if trigger == "timeout":
+            # Can't be split (one turn, or a half with no participant): the
+            # session still failed by running too long, so say that.
+            raise _pass_timeout(depth) from None
+        raise
+    logger.info(
+        "quote_extraction_split | session=%s | depth=%d | chunks=%d | reason=%s | "
+        "trigger=%s",
+        transcript.session_id,
+        depth + 1,
+        len(chunks),
+        reason,
+        trigger,
+    )
+    # ALL-OR-NOTHING per session: if any chunk re-raises after exhausting
+    # its own depth budget, the whole session fails (Decision F3). The full
+    # topic map is passed down; each pass scopes it to its own span.
+    results: list[ExtractedQuote] = []
+    for chunk in chunks:
+        results.extend(
+            await _extract_with_split(
+                chunk, topic_map, llm_client, min_quote_words, depth + 1
             )
-        # Dedup runs at every recursion level; each re-resolves segment_index
-        # against *this* level's segments. The outermost call (depth 0) resolves
-        # against the full transcript and is authoritative — intermediate
-        # resolutions are harmless but not globally final. Don't add an
-        # early-return that would let an intermediate (chunk-local) resolution
-        # be the last word.
-        return _dedupe_overlapping_quotes(results, transcript.segments)
+        )
+    # Dedup runs at every recursion level; each re-resolves segment_index
+    # against *this* level's segments. The outermost call (depth 0) resolves
+    # against the full transcript and is authoritative — intermediate
+    # resolutions are harmless but not globally final. Don't add an
+    # early-return that would let an intermediate (chunk-local) resolution
+    # be the last word.
+    return _dedupe_overlapping_quotes(results, transcript.segments)
+
+
+def _pass_timeout(depth: int) -> TimeoutError:
+    """The session's failure when a pass overran and could not be split further.
+
+    Bristlenose-authored, no provider text. The word "timeout" categorises it
+    NETWORK, the category an SDK timeout carried before R33.
+    """
+    return TimeoutError(
+        f"quote extraction timeout: a pass at split depth {depth} ran past "
+        f"{_PASS_DEADLINE_S:.0f} s"
+    )
 
 
 def _boundaries_in_range(
@@ -587,11 +638,10 @@ def _split_transcript(
     start = min(s.start_time for s in segments)
     end = max(s.end_time for s in segments)
     span = end - start
-    if span <= 0:
-        # No temporal extent to split on (e.g. a non-timecoded transcript where
-        # every segment starts at 0.0). Splitting can't reduce output here —
-        # fail loudly rather than recurse fruitlessly to the depth cap.
-        raise ValueError("empty chunk")
+    # An untimed transcript (a plain Word document, every segment at 0.0) has
+    # no span, so the topic tier is out of reach — but the halves tier cuts by
+    # turn count and needs no clock, so it still halves the output. Refusing
+    # here failed every long untimed interview outright (R33).
 
     split_time, reason = _choose_split_time(topic_map, segments, start, end, span)
 

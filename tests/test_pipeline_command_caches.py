@@ -3,7 +3,11 @@
 ``transcribe`` had no cache: on a project a full run had transcribed, it sent
 every recording through Whisper again (the researcher's time, and on a laptop
 their battery). It now reuses run()'s transcription for every session whose
-inputs have not changed, and transcribes only the rest.
+inputs have not changed, and transcribes only the rest. A session it serves
+from run's transcription also keeps the speakers run identified.
+
+``run`` itself, given a session its manifest records as transcribed but the
+cache file does not hold, transcribes it rather than report it as silent.
 
 ``analyze`` into a run's output overwrites the intermediate files the run's
 manifest vouches for, so the next ``run`` reads them as corrupt and re-pays
@@ -27,7 +31,7 @@ from typer.testing import CliRunner
 from bristlenose.cli import app
 from bristlenose.config import BristlenoseSettings
 from bristlenose.events import Cause, CauseCategoryEnum, PipelineAbandonedError, StageOutcome
-from bristlenose.models import FileType, SessionTopicMap
+from bristlenose.models import FileType, PipelineResult, SessionTopicMap
 from bristlenose.pipeline import Pipeline
 from tests.conftest import iter_transcribe_from
 from tests.test_pipeline_platform_transcripts import _quote, _whisper_segments, audio_session
@@ -35,7 +39,8 @@ from tests.test_pipeline_platform_transcripts import _quote, _whisper_segments, 
 
 def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
-) -> None:
+    llm_researcher: str | None = None,
+) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
     output_dir = tmp_path / "output"
@@ -66,6 +71,15 @@ def _drive(
         return segments
 
     async def _roles(segments, _c, errors=None):
+        # A model that disagrees with the heuristic, as a real one can.
+        if llm_researcher is not None:
+            from bristlenose.models import SpeakerRole
+
+            for seg in segments:
+                seg.speaker_role = (
+                    SpeakerRole.RESEARCHER if seg.speaker_label == llm_researcher
+                    else SpeakerRole.PARTICIPANT
+                )
         return []
 
     async def _topics(transcripts, *_a, **_kw):
@@ -102,8 +116,8 @@ def _drive(
     ):
         pipeline = Pipeline(settings)
         if mode == "run":
-            asyncio.run(pipeline.run(input_dir, output_dir))
-        elif mode == "transcribe":
+            return asyncio.run(pipeline.run(input_dir, output_dir))
+        if mode == "transcribe":
             asyncio.run(pipeline.run_transcription_only(
                 input_dir, output_dir, reuse_transcription=reuse,
             ))
@@ -111,6 +125,7 @@ def _drive(
             asyncio.run(pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir))
         else:
             raise AssertionError(mode)
+    return None
 
 
 def test_transcribe_on_a_run_project_transcribes_nothing_again(tmp_path: Path) -> None:
@@ -280,3 +295,107 @@ def test_a_run_after_analyze_does_not_re_pay_the_analysis(tmp_path: Path) -> Non
     # At HEAD: {'quoted': [['s1', 's2']]} — every session's quotes re-paid.
     assert "quoted" not in after, after
     assert "topics" not in after, after
+
+
+# ── transcribe keeps the speakers run identified ─────────────────────────────
+
+
+def test_transcribe_on_a_run_project_keeps_the_speakers_run_identified(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    # run() split each recording into two speakers and gave them codes; the
+    # heuristic transcribe uses without a model sees one speaker. Served from
+    # run's transcription, a session keeps run's speakers: transcribe must not
+    # rewrite them into the heuristic's, nor number new participants. The
+    # model here calls Speaker B the researcher, where the heuristic says A.
+    _drive(tmp_path, "run", 2, {}, llm_researcher="Speaker B")
+    raw = tmp_path / "output" / "transcripts-raw"
+    before = {p.name: p.read_text(encoding="utf-8") for p in raw.iterdir()}
+    registry = tmp_path / "output" / ".bristlenose" / "sessions.json"
+    registry_before = registry.read_text(encoding="utf-8")
+    assert "[m1] (Speaker B)" in before["s1.txt"], before["s1.txt"]
+
+    capsys.readouterr()
+    _drive(tmp_path, "transcribe", 2, {})
+
+    after = {p.name: p.read_text(encoding="utf-8") for p in raw.iterdir()}
+    # Before the fix: every turn `[p3]`, the split and the m1 code gone.
+    assert after == before
+    assert registry.read_text(encoding="utf-8") == registry_before
+    # Nothing was identified by the heuristic, and the line does not say it was.
+    out = " ".join(capsys.readouterr().out.split())
+    assert "Identified speakers (cached)" in out, out
+
+    # A new recording beside them: it alone is identified by the heuristic.
+    _drive(tmp_path, "transcribe", 3, {})
+    assert (raw / "s1.txt").read_text(encoding="utf-8") == before["s1.txt"]
+    assert "(Speaker A)" not in (raw / "s3.txt").read_text(encoding="utf-8")
+    assert "Identified speakers (heuristic)" in capsys.readouterr().out
+
+
+def test_transcribe_identifies_a_changed_session_by_heuristic(tmp_path: Path) -> None:
+    # A session transcribed again has segments run never identified: its
+    # speakers come from the heuristic, never from run's stale record.
+    _drive(tmp_path, "run", 2, {})
+
+    _drive(tmp_path, "transcribe", 2, {}, reuse=False)
+
+    text = (tmp_path / "output" / "transcripts-raw" / "s1.txt").read_text(encoding="utf-8")
+    assert "(Speaker A)" not in text, text
+
+
+# ── run(): recorded complete, missing from the cache file ────────────────────
+
+
+def _drop_s2_from_the_cache_and_restamp(tmp_path: Path) -> None:
+    """s2 recorded COMPLETE, absent from a session_segments.json the manifest
+    vouches for: what a run before this fix left behind once it had lost one."""
+    from bristlenose.hashing import hash_bytes
+
+    path = _intermediate(tmp_path, "session_segments.json")
+    cached = json.loads(path.read_text(encoding="utf-8"))
+    del cached["s2"]
+    path.write_text(json.dumps(cached), encoding="utf-8")
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["stages"]["transcribe"]["sessions"]["s2"]["status"] == "complete"
+    manifest["stages"]["transcribe"]["content_hash"] = hash_bytes(path.read_bytes())
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_run_transcribes_a_session_the_cache_file_does_not_hold(tmp_path: Path) -> None:
+    # A new recording sends run() down the per-session path, which trusted the
+    # manifest's record for s2 and found nothing in the file to serve.
+    _drive(tmp_path, "run", 2, {})
+    _drop_s2_from_the_cache_and_restamp(tmp_path)
+
+    after: dict = {}
+    result = _drive(tmp_path, "run", 3, after)
+
+    # Before the fix: [["s3"]], and s2 reported as a recording with no speech.
+    assert after["transcribed"] == [["s2", "s3"]], after
+    assert result is not None
+    assert result.summary.transcripts.failed == [], result.summary.transcripts
+    # s3 is the one new interview; s2 is one the project already had.
+    assert result.summary.new_sessions == 1, result.summary
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+
+
+def test_run_transcribes_a_session_a_verified_cache_file_does_not_hold(
+    tmp_path: Path,
+) -> None:
+    # Nothing changed, so the stage verifies whole; s2 is still not in it.
+    _drive(tmp_path, "run", 2, {})
+    _drop_s2_from_the_cache_and_restamp(tmp_path)
+
+    after: dict = {}
+    result = _drive(tmp_path, "run", 2, after)
+
+    assert after["transcribed"] == [["s2"]], after
+    assert result is not None and result.summary.new_sessions is None, result
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+    # And the run heals the file, so the next one serves s2 from it.
+    assert "s2" in json.loads(_intermediate(tmp_path, "session_segments.json").read_text())
+    again: dict = {}
+    _drive(tmp_path, "run", 2, again)
+    assert "transcribed" not in again, again

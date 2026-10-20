@@ -1777,13 +1777,22 @@ class Pipeline:
             # stages 5b and 6 pick up what it did.
             _chain: ReadableChain | None = None
             _transcribe_elapsed: float | None = None
-            if _is_stage_verified(
+            _ss_verified = _is_stage_verified(
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
                 current_input_hashes=_tx_input_hashes,
-            ):
+            )
+            if _ss_verified:
                 import json as _json
 
                 _ss_raw = _json.loads(_ss_path.read_text(encoding="utf-8"))
+                # A session recorded complete that the file does not hold was
+                # lost by an earlier run: the per-session path below
+                # transcribes it rather than report it as silent.
+                _ss_verified = not (
+                    get_completed_session_ids(_prev_manifest, _M_STAGE_TRANSCRIBE)
+                    & {s.session_id for s in sessions}
+                ) - set(_ss_raw)
+            if _ss_verified:
                 session_segments = {
                     sid: [TranscriptSegment.model_validate(s) for s in segs]
                     for sid, segs in _ss_raw.items()
@@ -1828,6 +1837,11 @@ class Pipeline:
                             for sid, segs in _ss_raw.items()
                             if sid in _cached_tx_sids
                         }
+                # Cached means served: a session recorded complete that the
+                # file does not hold (or no file at all) is transcribed, not
+                # reported as a recording with no speech, as transcribe does.
+                _lost_tx_sids = _cached_tx_sids - set(_cached_segments)
+                _cached_tx_sids = set(_cached_segments)
 
                 _remaining_sessions = [
                     s for s in sessions
@@ -1837,12 +1851,12 @@ class Pipeline:
                 # A session the last run tried and failed (or deferred to
                 # Whisper) is a retry, not a new interview: counting it would
                 # say "+1 new session" on every run of a recording that keeps
-                # failing.
+                # failing. Nor is one the cache file lost.
                 _prev_tx = _prev_manifest.stages.get(_M_STAGE_TRANSCRIBE) if _prev_manifest else None
                 _retried_tx_sids = {
                     sid for sid, rec in ((_prev_tx.sessions or {}) if _prev_tx else {}).items()
                     if rec.status == StageStatus.FAILED
-                }
+                } | _lost_tx_sids
                 _new_tx_sessions = [
                     s for s in _remaining_sessions if s.session_id not in _retried_tx_sids
                 ]
@@ -3574,13 +3588,36 @@ class Pipeline:
             # ── Heuristic speaker identification (no LLM) ──
             status.update("[dim]Identifying speakers...[/dim]")
             t0 = time.perf_counter()
-            for segments in session_segments.values():
-                identify_speaker_roles_heuristic(segments)
+            # A session served from run's transcription keeps the speakers
+            # run identified, read from its speaker cache by the check run()'s
+            # resume makes. The heuristic sees one speaker where run split two,
+            # and its turns would be coded as new participants.
+            _si_dir = output_dir / ".bristlenose" / "intermediate" / "speaker-info"
+            _si_kept: set[str] = set()
+            for sid in fresh_session_ids(
+                _prev, STAGE_IDENTIFY_SPEAKERS,
+                {sid: _segments_fingerprint(segs) for sid, segs in _cached_segments.items()},
+            ):
+                _si_file = _si_dir / f"{sid}.json"
+                _si_data = _load_cached_json(_si_file) if _si_file.exists() else None
+                if isinstance(_si_data, dict) and "segments_with_roles" in _si_data:
+                    session_segments[sid] = [
+                        TranscriptSegment.model_validate(seg)
+                        for seg in _si_data["segments_with_roles"]
+                    ]
+                    _si_kept.add(sid)
+            for sid, segments in session_segments.items():
+                if sid not in _si_kept:
+                    identify_speaker_roles_heuristic(segments)
             # Code them as a full run does, and record the codes: an unrecorded
             # number would be issued again to someone else by the next run.
             _assign_session_codes(sessions, session_segments, session_registry)
             session_registry.save()
-            _print_step("Identified speakers (heuristic)", time.perf_counter() - t0)
+            if _si_kept and _si_kept >= set(session_segments):
+                # As run() says it: nothing was identified this time.
+                _print_cached_step("Identified speakers")
+            else:
+                _print_step("Identified speakers (heuristic)", time.perf_counter() - t0)
 
             # ── Merge and write transcripts ──
             status.update("[dim]Merging transcripts...[/dim]")

@@ -22,16 +22,20 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from typer.testing import CliRunner
 
+from bristlenose.cli import app
 from bristlenose.config import BristlenoseSettings
-from bristlenose.events import StageOutcome
+from bristlenose.events import Cause, CauseCategoryEnum, PipelineAbandonedError, StageOutcome
 from bristlenose.models import FileType, SessionTopicMap
 from bristlenose.pipeline import Pipeline
 from tests.conftest import iter_transcribe_from
 from tests.test_pipeline_platform_transcripts import _quote, _whisper_segments, audio_session
 
 
-def _drive(tmp_path: Path, mode: str, n_sessions: int, log: dict) -> None:
+def _drive(
+    tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
+) -> None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
     output_dir = tmp_path / "output"
@@ -100,7 +104,9 @@ def _drive(tmp_path: Path, mode: str, n_sessions: int, log: dict) -> None:
         if mode == "run":
             asyncio.run(pipeline.run(input_dir, output_dir))
         elif mode == "transcribe":
-            asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+            asyncio.run(pipeline.run_transcription_only(
+                input_dir, output_dir, reuse_transcription=reuse,
+            ))
         elif mode == "analyze":
             asyncio.run(pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir))
         else:
@@ -154,6 +160,99 @@ def test_transcribe_on_a_run_project_redoes_a_session_whose_inputs_changed(
     _drive(tmp_path, "transcribe", 2, after)
 
     assert after["transcribed"] == [["s2"]], after
+
+
+def _intermediate(tmp_path: Path, name: str) -> Path:
+    return tmp_path / "output" / ".bristlenose" / "intermediate" / name
+
+
+def test_transcribe_redoes_a_session_the_cache_file_does_not_hold(tmp_path: Path) -> None:
+    _drive(tmp_path, "run", 2, {})
+    path = _intermediate(tmp_path, "session_segments.json")
+    cached = json.loads(path.read_text(encoding="utf-8"))
+    del cached["s2"]
+    path.write_text(json.dumps(cached), encoding="utf-8")
+
+    after: dict = {}
+    _drive(tmp_path, "transcribe", 2, after)
+
+    # Recorded complete in the manifest but not in the file: transcribed, not
+    # lost (and not reported as a silent recording).
+    assert after["transcribed"] == [["s2"]], after
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s2.txt").read_text()
+
+
+def test_transcribe_redoes_everything_over_a_corrupt_cache_file(tmp_path: Path) -> None:
+    _drive(tmp_path, "run", 2, {})
+    _intermediate(tmp_path, "session_segments.json").write_text('{"s1": [', encoding="utf-8")
+
+    after: dict = {}
+    _drive(tmp_path, "transcribe", 2, after)
+
+    assert after["transcribed"] == [["s1", "s2"]], after
+
+
+def test_transcribe_redoes_a_session_the_run_recorded_as_failed(tmp_path: Path) -> None:
+    _drive(tmp_path, "run", 2, {})
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["stages"]["transcribe"]["sessions"]["s2"]["status"] = "failed"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    after: dict = {}
+    _drive(tmp_path, "transcribe", 2, after)
+
+    assert after["transcribed"] == [["s2"]], after
+
+
+def test_transcribe_says_what_it_did_not_transcribe(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    _drive(tmp_path, "run", 2, {})
+    capsys.readouterr()
+
+    _drive(tmp_path, "transcribe", 2, {})
+    out = capsys.readouterr().out
+    assert "Transcribed 2 sessions (12 segments) (cached)" in " ".join(out.split()), out
+
+    # transcribe writes no cache of its own, so the third is new each time.
+    _drive(tmp_path, "transcribe", 3, {})
+    out = capsys.readouterr().out
+    assert "1 new session" in out, out
+
+
+def test_transcribe_asked_not_to_reuse_transcribes_everything(tmp_path: Path) -> None:
+    _drive(tmp_path, "run", 2, {})
+
+    after: dict = {}
+    _drive(tmp_path, "transcribe", 2, after, reuse=False)
+
+    assert after["transcribed"] == [["s1", "s2"]], after
+
+
+@pytest.mark.parametrize(
+    ("options", "reuse"),
+    [([], True), (["-w", "tiny"], False), (["--whisper-language", "de"], False)],
+)
+def test_the_cli_reuses_a_transcription_unless_a_model_or_language_is_asked_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, options: list[str], reuse: bool,
+) -> None:
+    monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
+    monkeypatch.setattr("bristlenose.cli._maybe_auto_doctor", lambda s, c: True)
+    seen: dict = {}
+
+    async def _capture(self, input_dir, output_dir, **kw):
+        seen.update(kw)
+        raise PipelineAbandonedError(
+            cause=Cause(category=CauseCategoryEnum.UNKNOWN, message="stop here"),
+        )
+
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run_transcription_only", _capture)
+    interviews = tmp_path / "interviews"
+    interviews.mkdir()
+    CliRunner().invoke(app, ["transcribe", str(interviews), *options])
+
+    assert seen == {"reuse_transcription": reuse}
 
 
 def test_transcribe_with_no_earlier_run_transcribes_everything(tmp_path: Path) -> None:

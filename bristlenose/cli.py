@@ -1651,7 +1651,12 @@ def transcribe(
     pipeline = Pipeline(settings, verbose=verbose)
     try:
         with run_lifecycle(output_dir, KindEnum.TRANSCRIBE_ONLY) as _run_handle:
-            result = asyncio.run(pipeline.run_transcription_only(input_dir, output_dir))
+            # A model or language asked for is a transcription asked for again:
+            # the cache's fingerprint carries neither (R115).
+            result = asyncio.run(pipeline.run_transcription_only(
+                input_dir, output_dir,
+                reuse_transcription=whisper_model is None and whisper_language is None,
+            ))
             _run_handle.set_summary(result.summary)
     except ConcurrentRunError as exc:
         _say(MessageKind.ERROR, str(exc))

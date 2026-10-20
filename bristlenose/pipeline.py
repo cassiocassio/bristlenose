@@ -3343,11 +3343,16 @@ class Pipeline:
         )
 
     async def run_transcription_only(
-        self, input_dir: Path, output_dir: Path
+        self, input_dir: Path, output_dir: Path, *, reuse_transcription: bool = True,
     ) -> PipelineResult:
         """Run only ingestion and transcription (no LLM analysis).
 
         Useful for producing raw transcripts without needing an API key.
+
+        ``reuse_transcription``: serve unchanged sessions from an earlier run's
+        transcription. The CLI turns it off when ``--whisper-model`` or
+        ``--whisper-language`` is given: the fingerprint does not carry either,
+        and asking for them is asking for the recordings to be transcribed again.
         """
         import time
         from collections import Counter
@@ -3414,7 +3419,7 @@ class Pipeline:
             sessions, input_dir, session_registry,
         )
         _cached_segments: dict[str, list[TranscriptSegment]] = {}
-        if _ss_path.exists():
+        if reuse_transcription and _ss_path.exists():
             _cached_sids = fresh_session_ids(
                 _prev, _M_STAGE_TRANSCRIBE, _tx_fps, accept=_tx_fps_legacy,
             )
@@ -3548,14 +3553,23 @@ class Pipeline:
                 f.duration_seconds or 0 for s in sessions for f in s.files
             )
             audio_str = _format_duration(total_audio) if total_audio else ""
-            msg = (
-                f"Transcribed {count_noun(len(sessions), 'session')}"
-                f" ({count_noun(total_segments, 'segment')}"
-            )
-            if audio_str:
-                msg += f", {audio_str} audio"
-            msg += ")"
-            _print_step(msg, time.perf_counter() - t0)
+            if _cached_segments and not _remaining:
+                # As run() says it: nothing was transcribed this time.
+                _print_cached_step(
+                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f" ({count_noun(total_segments, 'segment')})",
+                )
+            else:
+                msg = (
+                    f"Transcribed {count_noun(len(sessions), 'session')}"
+                    f" ({count_noun(total_segments, 'segment')}"
+                )
+                if _cached_segments:
+                    msg += f", {count_noun(len(_remaining), 'new session')}"
+                elif audio_str:
+                    msg += f", {audio_str} audio"
+                msg += ")"
+                _print_step(msg, time.perf_counter() - t0)
 
             # ── Heuristic speaker identification (no LLM) ──
             status.update("[dim]Identifying speakers...[/dim]")

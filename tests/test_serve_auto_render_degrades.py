@@ -131,3 +131,15 @@ def test_a_truncated_topic_map_still_imports(db, project: Path) -> None:
     (_intermediate(project) / "topic_boundaries.json").write_text('[{"sess', encoding="utf-8")
     project_row = import_project(db, project)
     assert db.query(SessionModel).filter_by(project_id=project_row.id).count() == 1
+
+
+@pytest.mark.parametrize("name", ["screen_clusters.json", "theme_groups.json"])
+def test_half_the_quotes_are_never_shown_as_the_whole(db, project: Path, name: str) -> None:
+    """With one quote file unreadable, a first import shows no quotes rather than
+    the other file's share of them, which would look like the complete report."""
+    from bristlenose.server.importer import import_project
+    from bristlenose.server.models import Quote
+
+    (_intermediate(project) / name).write_text('[{"screen_label": "Dash', encoding="utf-8")
+    project_row = import_project(db, project)
+    assert db.query(Quote).filter_by(project_id=project_row.id).count() == 0

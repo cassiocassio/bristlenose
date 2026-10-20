@@ -516,9 +516,10 @@ def import_project(db: Session, project_dir: Path) -> Project:
     tg_path = intermediate / "theme_groups.json"
     sc_raw = _read_intermediate_json(sc_path)
     tg_raw = _read_intermediate_json(tg_path)
-    screen_clusters_data: list[dict[str, Any]] = sc_raw or []
-    theme_groups_data: list[dict[str, Any]] = tg_raw or []
     quote_files_readable = sc_raw is not None and tg_raw is not None
+    # Both or neither: one file's share of the quotes would read as the whole.
+    screen_clusters_data: list[dict[str, Any]] = (sc_raw or []) if quote_files_readable else []
+    theme_groups_data: list[dict[str, Any]] = (tg_raw or []) if quote_files_readable else []
 
     # --- Parse transcripts for session metadata --------------------------
     transcripts_dir = _find_transcripts_dir(project_dir, output_dir)

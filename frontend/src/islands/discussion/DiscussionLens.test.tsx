@@ -1128,7 +1128,9 @@ describe("the guide as a left panel (4 Oct 2026)", () => {
   it("opened by hand where it does not fit, it stays open: never folded for you", async () => {
     lensWidth(500);
     const { container } = render(<DiscussionView data={data} />);
-    await settle();
+    // Waited for, not timed: on a slow runner a 50 ms settle toggled the guide
+    // before the fold landed, so the toggle closed it instead of opening it.
+    await waitFor(() => expect(container.querySelector(".dl-lens")).toHaveClass("guide-hidden"));
     act(() => toggleDiscussionGuide()); // what the toolbar button, ⌥⌘L and [ do
     await waitFor(() => expect(discussionGuideState().shown).toBe(true));
     expect(container.querySelector(".dl-lens")).not.toHaveClass("guide-hidden");

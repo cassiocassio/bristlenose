@@ -333,7 +333,9 @@ function useStills(tabs: ScreenTab[], cur: number, w: number): { src: string | n
   useEffect(() => {
     let live = true;
     for (const url of want.split("\n")) {
-      if (!url || stills.has(url) || stillFailed.has(url)) continue;
+      // A still that failed is asked for again on the next view (R91); it reads as unavailable
+      // until one succeeds, so a still that is truly missing never flickers to loading.
+      if (!url || stills.has(url)) continue;
       fetchStill(url).then(() => {
         if (live) loaded();
       });

@@ -2370,3 +2370,31 @@ describe("ScreensLens — arriving from the transcript's gutter", () => {
     expect(document.querySelector("[data-arrived]")).toBeNull();
   });
 });
+
+describe("a screengrab that failed once (R91)", () => {
+  it("is asked for again on the next view, and shows once it arrives", async () => {
+    // Stills are cached for the page's life: a time no other test asks for.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let failNext = true;
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse({ screens: [{ key: "url:/r91", name: "/r91", quotes: 1, tabs: [{ ...TAB, t: 43 }] }] }));
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      if (path.includes("session_id=s1&t=43&w=1600")) {
+        if (failNext) {
+          failNext = false;
+          return Promise.reject(new Error("Failed to fetch"));
+        }
+        return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      }
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+    const first = render(<ScreensLens />);
+    await waitFor(() => expect(screen.getByText("Screenshot unavailable.")).toBeInTheDocument());
+    first.unmount();
+    render(<ScreensLens />);
+    await waitFor(() => expect(document.querySelector("img.screens-slide.is-current")).not.toBeNull());
+    expect(screen.queryByText("Screenshot unavailable.")).toBeNull();
+  });
+});

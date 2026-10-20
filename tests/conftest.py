@@ -476,6 +476,30 @@ def no_run_signal_handlers_left_behind():
 
 
 @pytest.fixture(autouse=True)
+def no_run_log_handlers_left_behind():
+    """`run` calls ``setup_logging``, which puts a StreamHandler on the root
+    logger bound to the ``sys.stderr`` of that moment. Under ``CliRunner`` that
+    is the runner's capture stream, closed when ``invoke`` returns, and a CLI
+    process keeps the handler for its life. In pytest the handler outlived the
+    test: the next command to log a warning (``transcribe``/``analyze``, which
+    do not call ``setup_logging``) wrote to the closed stream, and logging's
+    "--- Logging error ---" traceback landed in that command's output
+    (test_cli_give_up_banner.py failed after any ``run`` test, 20 Oct 2026).
+    Remove and close the handlers a test's ``setup_logging`` added; pytest's
+    own capture handlers are subclasses, so ``type(...) in`` leaves them be."""
+    import logging
+    from logging.handlers import RotatingFileHandler
+
+    root = logging.getLogger()
+    before = set(root.handlers)
+    yield
+    for handler in root.handlers[:]:
+        if handler not in before and type(handler) in (logging.StreamHandler, RotatingFileHandler):
+            root.removeHandler(handler)
+            handler.close()
+
+
+@pytest.fixture(autouse=True)
 def no_scene_strip_thread(monkeypatch):
     """serve's scene-strip job (server/scene_strips.py) starts a thread from the app lifespan and
     after every run_completed. On the shared in-memory connection that thread's session close is

@@ -45,26 +45,37 @@ from tests.test_pipeline_platform_transcripts import (
     _quote,
     _whisper_segments,
     audio_session,
+    write_vtt,
 )
 
 
-def _broken_docx_session(input_dir: Path, n: int) -> InputSession:
-    """A session whose only transcript is a .docx that cannot be read."""
+def _broken_docx_session(input_dir: Path, n: int, *, beside: str | None = None) -> InputSession:
+    """A session with a .docx transcript that cannot be read: alone, or
+    ``beside`` a recording ("audio") or a transcript that reads ("vtt")."""
     path = input_dir / f"notes{n}.docx"
     if not path.exists():
         path.write_bytes(b"not a docx at all")
-    docx = InputFile(
+    files = [InputFile(
         path=path, file_type=FileType.DOCX, created_at=_T0, size_bytes=path.stat().st_size,
-    )
+    )]
+    if beside == "audio":
+        files.insert(0, audio_session(input_dir, n, f"notes{n}").files[0])
+    elif beside == "vtt":
+        vtt = write_vtt(input_dir, f"notes{n}", [("Ana", "Hello there."), ("Ben", "Hi, thanks.")])
+        files.insert(0, InputFile(
+            path=vtt, file_type=FileType.SUBTITLE_VTT, created_at=_T0,
+            size_bytes=vtt.stat().st_size,
+        ))
     return InputSession(
         session_id=f"s{n}", session_number=n, participant_id=f"p{n}", participant_number=n,
-        files=[docx], audio_path=None, has_existing_transcript=True, session_date=_T0,
+        files=files, audio_path=None, has_existing_transcript=True, session_date=_T0,
     )
 
 
 def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
+    beside: str | None = None,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -77,14 +88,17 @@ def _drive(
     def _ingest(_d, _declined=None, **_kw):
         sessions = [audio_session(input_dir, i, f"rec{i}") for i in range(1, n_sessions + 1)]
         if broken_docx:
-            sessions.append(_broken_docx_session(input_dir, n_sessions + 1))
+            sessions.append(_broken_docx_session(input_dir, n_sessions + 1, beside=beside))
         return sessions
 
     async def _stage2(sess, _tmp, **_kw):
         log.setdefault("decoded", []).append([s.session_id for s in sess])
         for s in sess:
-            if s.audio_path is None and not s.has_existing_transcript:
-                s.audio_path = next(f.path for f in s.files if f.file_type == FileType.AUDIO)
+            # As stage 2 does: an audio file is used even beside a transcript.
+            if s.audio_path is None:
+                s.audio_path = next(
+                    (f.path for f in s.files if f.file_type == FileType.AUDIO), None,
+                )
         return sess
 
     def _transcribe(sessions, _settings, **_kw):
@@ -99,6 +113,7 @@ def _drive(
         return segments
 
     async def _roles(segments, _c, errors=None):
+        log.setdefault("roles", []).append(segments[0].text if segments else "")
         # A model that disagrees with the heuristic, as a real one can.
         if llm_researcher is not None:
             from bristlenose.models import SpeakerRole
@@ -498,9 +513,12 @@ def test_a_transcript_that_cannot_be_read_says_so_on_every_run(tmp_path: Path) -
     ]
     assert first_causes == [("s2", CauseCategoryEnum.MISSING_INPUT, "s04_parse_docx")]
 
-    second = _drive(tmp_path, "run", 1, {}, broken_docx=True)
+    log: dict = {}
+    second = _drive(tmp_path, "run", 1, log, broken_docx=True)
 
     assert second is not None
+    # Re-read, and nothing else redone or re-paid.
+    assert not {"transcribed", "topics", "quoted"} & set(log), log
     # Before the fix: the stage verified whole, and s2 was "no speech".
     assert [
         (f.session_id, f.cause.category, f.cause.stage)
@@ -547,7 +565,70 @@ def test_transcribe_falls_back_over_a_malformed_speaker_cache(
     with caplog.at_level("WARNING", logger="bristlenose.pipeline"):
         _drive(tmp_path, "transcribe", 2, {})
 
-    assert any("s1: speaker cache missing" in r.getMessage() for r in caplog.records)
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("s1: speaker cache missing" in m for m in messages), messages
+    assert any("s1.json unusable: ValidationError" in m for m in messages), messages
     raw = tmp_path / "output" / "transcripts-raw"
     assert "Welcome" in (raw / "s1.txt").read_text(encoding="utf-8")
     assert "[m1] (Speaker B)" in (raw / "s2.txt").read_text(encoding="utf-8")
+
+
+def test_plain_then_skip_then_plain_redoes_nothing(tmp_path: Path) -> None:
+    # Watching skip_transcription costs a project that was transcribed nothing:
+    # a skip run serves the cache, and the plain run after it does too.
+    _drive(tmp_path, "run", 2, {})
+
+    for skip in (True, False):
+        log: dict = {}
+        _drive(tmp_path, "run", 2, log, skip=skip)
+        assert not {"transcribed", "roles", "topics", "quoted"} & set(log), (skip, log)
+
+
+@pytest.mark.parametrize("beside", ["audio", "vtt"])
+def test_an_unreadable_transcript_beside_one_that_worked_is_not_a_failed_session(
+    tmp_path: Path, beside: str,
+) -> None:
+    # The session ended with segments (Whisper on the recording, or the .vtt),
+    # so it is complete. Recorded failed, it was transcribed again every run.
+    _drive(tmp_path, "run", 1, {}, broken_docx=True, beside=beside)
+    manifest = json.loads(
+        (tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json").read_text()
+    )
+    assert manifest["stages"]["transcribe"]["sessions"]["s2"]["status"] == "complete"
+
+    again: dict = {}
+    _drive(tmp_path, "run", 1, again, broken_docx=True, beside=beside)
+    assert not {"transcribed", "roles", "topics", "quoted"} & set(again), again
+
+
+def _break_s1_speaker_cache(tmp_path: Path, *, restamp: bool) -> None:
+    from bristlenose.hashing import hash_bytes
+
+    path = _intermediate(tmp_path, "speaker-info/s1.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["segments_with_roles"] = [{"start_time": "not a time"}]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    if restamp:
+        manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["stages"]["identify_speakers"]["sessions"]["s1"]["content_hash"] = (
+            hash_bytes(path.read_bytes())
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+@pytest.mark.parametrize(("restamp", "n_after"), [(True, 2), (False, 3)])
+def test_run_identifies_again_over_a_malformed_speaker_cache(
+    tmp_path: Path, restamp: bool, n_after: int,
+) -> None:
+    # restamp: the file passes the stage's hash check (the verified path).
+    # Otherwise a new recording sends the stage down the per-session path.
+    _drive(tmp_path, "run", 2, {})
+    _break_s1_speaker_cache(tmp_path, restamp=restamp)
+
+    log: dict = {}
+    _drive(tmp_path, "run", n_after, log)
+
+    # Before the fix: a ValidationError out of run(). Now s1 is asked again.
+    assert any("s1 session" in text for text in log.get("roles", [])), log
+    assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s1.txt").read_text()

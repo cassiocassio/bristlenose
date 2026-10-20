@@ -90,6 +90,7 @@ if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
         SegmentCallback,
         SessionTranscription,
     )
+    from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
     from bristlenose.timing import PipelineEvent, TimingEstimator
 
     #: ``(session_id, segments or None)`` — one session's transcript, handed on.
@@ -938,6 +939,32 @@ def _load_cached_json(path: Path) -> Any | None:
         return None
 
 
+def _read_speaker_cache(
+    path: Path,
+) -> tuple[list[SpeakerInfo], list[TranscriptSegment]] | None:
+    """One session's speaker cache (``speaker-info/<sid>.json``): its speaker
+    infos and its segments with roles, or ``None`` if the file is missing,
+    unreadable, or holds data of the wrong shape.
+
+    A wrong shape used to escape as a traceback from ``run`` and
+    ``transcribe`` alike; ``None`` sends the session back to be identified
+    (``run``) or to the heuristic (``transcribe``), as a missing file does.
+    """
+    from bristlenose.stages.s05b_identify_speakers import speaker_info_from_dict
+
+    data = _load_cached_json(path) if path.exists() else None
+    if data is None:
+        return None
+    try:
+        return (
+            [speaker_info_from_dict(d) for d in data["speaker_infos"]],
+            [TranscriptSegment.model_validate(seg) for seg in data["segments_with_roles"]],
+        )
+    except (KeyError, TypeError, ValueError) as exc:  # pydantic's error is a ValueError
+        logger.warning("speaker cache | %s unusable: %s", path.name, type(exc).__name__)
+        return None
+
+
 _printed_warnings: set[str] = set()
 
 
@@ -1507,10 +1534,6 @@ class Pipeline:
         from bristlenose.llm.client import LLMClient
         from bristlenose.stages.s01_ingest import ingest
         from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
-        from bristlenose.stages.s05b_identify_speakers import (
-            SpeakerInfo,
-            speaker_info_from_dict,
-        )
         from bristlenose.stages.s06_merge_transcript import (
             merge_transcripts,
             sentence_paragraph_sessions,
@@ -1975,7 +1998,12 @@ class Pipeline:
                         if f.session_id is not None
                     }
                     for sid in _fresh_segments:
-                        if sid in _tx_failed:
+                        # Judged by how the session ended, not by whether a
+                        # failure names it: an unreadable .docx beside a
+                        # recording Whisper transcribed, or beside a .vtt that
+                        # read, is a complete session. Recorded failed, it was
+                        # transcribed again on every run.
+                        if sid in _tx_failed and not _fresh_segments[sid]:
                             # FAILED, not absent: absence derives COMPLETE and
                             # caches the stage whole (`mark_session_failed`).
                             mark_session_failed(manifest, _M_STAGE_TRANSCRIBE, sid)
@@ -2177,28 +2205,30 @@ class Pipeline:
             # check below (no enable-gate), so this is the one site that fires
             # on every run including cache-verified / transcript-only.
             self._emit_stage_entry(STAGE_SPEAKERS)
-            if _is_speaker_stage_verified(
+            _si_verified = _is_speaker_stage_verified(
                 _prev_manifest, STAGE_IDENTIFY_SPEAKERS, _si_session_files,
                 current_input_hashes=_si_input_hashes,
-            ):
+            )
+            _si_loaded: dict[str, tuple[list[SpeakerInfo], list[TranscriptSegment]]] = {}
+            all_speaker_infos: dict[str, list[SpeakerInfo]] = {}
+            if _si_verified:
                 # Load all cached speaker info + segments with roles
-                all_speaker_infos: dict[str, list[SpeakerInfo]] = {}
                 for s in sessions:
                     sid = s.session_id
                     if sid not in session_segments:
                         continue
-                    _si_data = _json.loads(
-                        (_si_dir / f"{sid}.json").read_text(encoding="utf-8")
-                    )
-                    all_speaker_infos[sid] = [
-                        speaker_info_from_dict(d)
-                        for d in _si_data["speaker_infos"]
-                    ]
+                    _si_read = _read_speaker_cache(_si_dir / f"{sid}.json")
+                    if _si_read is None:
+                        # Passed its hash check and still unreadable: the
+                        # per-session path below identifies it again.
+                        _si_verified = False
+                        break
+                    _si_loaded[sid] = _si_read
+            if _si_verified:
+                for sid, (_si_infos, _si_segs) in _si_loaded.items():
+                    all_speaker_infos[sid] = _si_infos
                     # Restore segments with speaker roles
-                    session_segments[sid] = [
-                        TranscriptSegment.model_validate(seg)
-                        for seg in _si_data["segments_with_roles"]
-                    ]
+                    session_segments[sid] = _si_segs
                 _print_cached_step("Identified speakers")
                 carry_forward_sessions(
                     manifest, _prev_manifest, STAGE_IDENTIFY_SPEAKERS,
@@ -2223,27 +2253,16 @@ class Pipeline:
                 if _cached_si_sids and _si_dir.is_dir():
                     _usable_si_sids: set[str] = set()
                     for sid in _cached_si_sids:
-                        _si_file = _si_dir / f"{sid}.json"
-                        _si_data = (
-                            _load_cached_json(_si_file)
-                            if _si_file.exists() else None
-                        )
-                        if _si_data is None:
-                            # Missing or corrupt per-session cache (e.g. power
-                            # loss mid-write): leave this sid out of the cached
+                        _si_read = _read_speaker_cache(_si_dir / f"{sid}.json")
+                        if _si_read is None:
+                            # Missing, corrupt (e.g. power loss mid-write) or
+                            # the wrong shape: leave this sid out of the cached
                             # set so it falls into _remaining_si_sids and is
                             # recomputed, rather than silently dropped.
                             continue
                         _usable_si_sids.add(sid)
-                        all_speaker_infos[sid] = [
-                            speaker_info_from_dict(d)
-                            for d in _si_data["speaker_infos"]
-                        ]
                         # Restore segments with speaker roles
-                        session_segments[sid] = [
-                            TranscriptSegment.model_validate(seg)
-                            for seg in _si_data["segments_with_roles"]
-                        ]
+                        all_speaker_infos[sid], session_segments[sid] = _si_read
                     _cached_si_sids = _usable_si_sids
 
                 _remaining_si_sids = {
@@ -3611,19 +3630,9 @@ class Pipeline:
                 _prev, STAGE_IDENTIFY_SPEAKERS,
                 {sid: _segments_fingerprint(segs) for sid, segs in _cached_segments.items()},
             ):
-                _si_file = _si_dir / f"{sid}.json"
-                _si_data = _load_cached_json(_si_file) if _si_file.exists() else None
-                _si_segments: list[TranscriptSegment] | None = None
-                if isinstance(_si_data, dict) and "segments_with_roles" in _si_data:
-                    try:
-                        _si_segments = [
-                            TranscriptSegment.model_validate(seg)
-                            for seg in _si_data["segments_with_roles"]
-                        ]
-                    except (TypeError, ValueError):  # pydantic's error is a ValueError
-                        _si_segments = None
-                if _si_segments is not None:
-                    session_segments[sid] = _si_segments
+                _si_read = _read_speaker_cache(_si_dir / f"{sid}.json")
+                if _si_read is not None:
+                    session_segments[sid] = _si_read[1]
                     _si_kept.add(sid)
                 else:
                     # run() would ask the model again; transcribe has none.

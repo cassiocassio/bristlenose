@@ -932,7 +932,7 @@ def run_lifecycle(
                 ))
                 log.info("run_completed run_id=%s exit_code=0", run_id)
             else:
-                append_event(events_file, _failure_terminus(
+                terminus = _failure_terminus(
                     ended,
                     Cause(
                         category=CauseCategoryEnum.UNKNOWN,
@@ -941,8 +941,9 @@ def run_lifecycle(
                         exit_code=code,
                     ),
                     _terminus_kwargs(),
-                ))
-                log.info("run_failed run_id=%s exit_code=%s", run_id, code)
+                )
+                append_event(events_file, terminus)
+                log.info("%s run_id=%s exit_code=%s", terminus.event.value, run_id, code)
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
             raise
@@ -953,19 +954,22 @@ def run_lifecycle(
             ended = _now_iso()
             kw = _terminus_kwargs()
             kw["summary"] = exc.summary
-            append_event(events_file, _failure_terminus(ended, exc.cause, kw))
-            log.error(
-                "run_abandoned run_id=%s category=%s",
-                run_id, exc.cause.category.value,
-            )
+            terminus = _failure_terminus(ended, exc.cause, kw)
+            append_event(events_file, terminus)
+            if isinstance(terminus, RunFailedEvent):
+                log.error(
+                    "run_abandoned run_id=%s category=%s",
+                    run_id, exc.cause.category.value,
+                )
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
             raise
         except BaseException as exc:
             ended = _now_iso()
             cause = categorise_exception(exc)
-            append_event(events_file, _failure_terminus(ended, cause, _terminus_kwargs()))
-            log.info("run_failed run_id=%s category=%s", run_id, cause.category.value)
+            terminus = _failure_terminus(ended, cause, _terminus_kwargs())
+            append_event(events_file, terminus)
+            log.info("%s run_id=%s category=%s", terminus.event.value, run_id, cause.category.value)
             telemetry.trim_run_terminus()
             _remove_pid_file(output_dir)
             raise

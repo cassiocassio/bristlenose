@@ -960,6 +960,9 @@ def test_subprocess_hosted_second_signal_does_not_lose_the_cancel(tmp_path: Path
         "A second signal during the cancel write lost the terminus: a hosted "
         "run that is already stopping must ignore further cancel signals."
     )
+    termini = [e for e in read_events(f)
+               if isinstance(e, (RunCancelledEvent, RunFailedEvent, RunCompletedEvent))]
+    assert len(termini) == 1, termini
 
 
 _HOST_LEFT_INTERMEDIATE = """
@@ -976,14 +979,9 @@ while time.time() < deadline:
 """
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
-def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: Path):
-    """The app that started the run exits, and the run then fails — a print to
-    the dead pipe, inside the watcher's window (R19, 20 Oct 2026). It ended
-    because the researcher left, so it reads Stopped, not "CLI exited with code
-    1". Deterministic: the stand-in app waits for run_started, exits, and only
-    then does the run fail.
-    """
+def _run_whose_parent_leaves(tmp_path: Path, host_env: dict[str, str]):
+    """Start a run under a stand-in parent that exits once run_started is
+    written; the run then fails. Returns its one terminus event."""
     repo_root = Path(__file__).parent.parent
     go = tmp_path / "go"
     script = textwrap.dedent(f"""
@@ -993,27 +991,49 @@ def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: 
         from bristlenose.events import KindEnum
         from bristlenose.run_lifecycle import run_lifecycle
         with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN):
-            while not Path({str(go)!r}).exists():
+            deadline = time.time() + 120  # never outlive a failed test
+            while not Path({str(go)!r}).exists() and time.time() < deadline:
                 time.sleep(0.02)
             raise SystemExit(1)
     """)
     f = events_path(tmp_path)
-    subprocess.run(
-        [sys.executable, "-c", _HOST_LEFT_INTERMEDIATE, script, str(f)],
-        env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR",
-             "_BRISTLENOSE_HOSTED_BY_DESKTOP": "1"},
-        check=True, timeout=90,
-    )
-    go.write_text("app gone")
+    try:
+        subprocess.run(
+            [sys.executable, "-c", _HOST_LEFT_INTERMEDIATE, script, str(f)],
+            env={**os.environ, "BRISTLENOSE_LOG_LEVEL": "ERROR", **host_env},
+            check=True, timeout=90,
+        )
+    finally:
+        go.write_text("app gone")
     landed = _wait_for_event(
         f, lambda e: isinstance(e, (RunCancelledEvent, RunFailedEvent)), timeout=60.0,
     )
     assert landed, "the run wrote no terminus"
     terminus = [e for e in read_events(f) if isinstance(e, (RunCancelledEvent, RunFailedEvent))]
     assert len(terminus) == 1
-    assert isinstance(terminus[0], RunCancelledEvent), terminus[0]
-    assert terminus[0].cause.category == CauseCategoryEnum.USER_SIGNAL
-    assert "exited with code 1" in (terminus[0].cause.message or ""), "the original cause is kept"
+    return terminus[0]
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
+def test_subprocess_hosted_run_whose_app_left_is_cancelled_not_failed(tmp_path: Path):
+    """The app that started the run exits, and the run then fails — a print to
+    the dead pipe, inside the watcher's window (R19, 20 Oct 2026). It ended
+    because the researcher left, so it reads Stopped, not "CLI exited with code
+    1". Deterministic: the stand-in app waits for run_started, exits, and only
+    then does the run fail.
+    """
+    terminus = _run_whose_parent_leaves(tmp_path, {"_BRISTLENOSE_HOSTED_BY_DESKTOP": "1"})
+    assert isinstance(terminus, RunCancelledEvent), terminus
+    assert terminus.cause.category == CauseCategoryEnum.USER_SIGNAL
+    assert "exited with code 1" in (terminus.cause.message or ""), "the original cause is kept"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no reparenting on Windows")
+def test_subprocess_cli_run_whose_parent_left_still_fails(tmp_path: Path):
+    """Only a run the Mac app started is relabelled: a CLI run whose shell
+    went away and then failed is a failure."""
+    terminus = _run_whose_parent_leaves(tmp_path, {})
+    assert isinstance(terminus, RunFailedEvent), terminus
 
 
 def test_subprocess_hosted_run_whose_app_is_alive_still_fails(tmp_path: Path):

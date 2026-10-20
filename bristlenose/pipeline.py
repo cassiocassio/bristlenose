@@ -4401,6 +4401,9 @@ class Pipeline:
 
         Returns:
             PipelineResult (with empty transcripts — only clusters/themes populated).
+
+        Raises:
+            FileNotFoundError: screen_clusters.json or theme_groups.json is missing.
         """
         import json as _json
         import time
@@ -4427,7 +4430,11 @@ class Pipeline:
                 "Expected screen_clusters.json and theme_groups.json in "
                 f"{intermediate}"
             )
-            return self._empty_result(output_dir)
+            # Raised, not an empty result: serve's caller printed "Rendered
+            # report 0 quotes" straight after the red line above.
+            raise FileNotFoundError(
+                f"screen_clusters.json or theme_groups.json missing in {intermediate}"
+            )
 
         screen_clusters = [
             ScreenCluster.model_validate(obj)
@@ -4516,18 +4523,6 @@ class Pipeline:
             report_path=report_path,
             people=people,
             total_quotes=len(all_quotes),
-        )
-
-    def _empty_result(self, output_dir: Path) -> PipelineResult:
-        """Return an empty pipeline result."""
-        return PipelineResult(
-            project_name=self.settings.project_name,
-            participants=[],
-            raw_transcripts=[],
-            clean_transcripts=[],
-            screen_clusters=[],
-            theme_groups=[],
-            output_dir=output_dir,
         )
 
 

@@ -143,3 +143,18 @@ def test_half_the_quotes_are_never_shown_as_the_whole(db, project: Path, name: s
     (_intermediate(project) / name).write_text('[{"screen_label": "Dash', encoding="utf-8")
     project_row = import_project(db, project)
     assert db.query(Quote).filter_by(project_id=project_row.id).count() == 0
+
+
+def test_missing_intermediate_files_are_not_reported_as_rendered(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """An intermediate folder without the cluster files printed the red
+    "Missing intermediate files" and then "✓ Rendered report 0 quotes": the
+    render returned an empty result instead of failing."""
+    project = tmp_path / "input"
+    (project / "bristlenose-output" / ".bristlenose" / "intermediate").mkdir(parents=True)
+    records = _render_capturing(project)
+    out = capsys.readouterr().out
+    assert "Missing intermediate files" in out, out
+    assert "Rendered report" not in out, out
+    assert any("static report" in r.getMessage() for r in records)

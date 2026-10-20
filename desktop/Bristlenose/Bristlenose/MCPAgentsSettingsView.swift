@@ -1,4 +1,5 @@
 import AppKit
+import os
 import SwiftUI
 
 /// Settings ▸ MCP Agents — the global home for connecting agents
@@ -1317,6 +1318,8 @@ enum MCPExtensionInstaller {
 
     static let filename = "Bristlenose.mcpb"
 
+    private static let log = Logger(subsystem: "app.bristlenose", category: "mcp-install")
+
     static var bundledURL: URL? {
         Bundle.main.resourceURL?.appendingPathComponent(filename)
     }
@@ -1427,17 +1430,30 @@ enum MCPExtensionInstaller {
     /// (measured 29 Sep 2026, §6.7 P0.4). Returns false if it could not be built.
     @MainActor @discardableResult
     static func installNative() -> Bool {
-        guard let helper = helperURL,
-              let container = MCPHandshake.defaultDirectory(),
-              let release = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        else { return false }
+        guard let helper = helperURL else {
+            log.error("native extension: no helper in the bundle")
+            return false
+        }
+        guard let container = MCPHandshake.defaultDirectory() else {
+            log.error("native extension: no container to write it to")
+            return false
+        }
+        guard let release = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else {
+            log.error("native extension: the bundle names no release")
+            return false
+        }
         do {
             let data = try NativeExtensionPackage.build(helper: helper, iconPNG: iconPNG, version: release)
             try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
             let dest = container.appendingPathComponent(filename)
             try data.write(to: dest, options: .atomic)
-            return NSWorkspace.shared.open(dest)
+            guard NSWorkspace.shared.open(dest) else {
+                log.error("native extension: built, but nothing opened it")
+                return false
+            }
+            return true
         } catch {
+            log.error("native extension: could not be built: \(error.localizedDescription, privacy: .public)")
             return false
         }
     }
@@ -1446,8 +1462,17 @@ enum MCPExtensionInstaller {
     /// token travels in the handshake, not the extension).
     @MainActor static func install() {
         if usesNativeHelper, installNative() { return }
+        // What a researcher sees here is unchanged, and says nothing: the
+        // Node extension in place of the native one, or no install at all
+        // (R42, open — it needs words). The log at least records which.
+        if usesNativeHelper {
+            log.error("native extension failed — falling back to the Node extension")
+        }
         guard let bundled = bundledURL,
-              let container = MCPHandshake.defaultDirectory() else { return }
+              let container = MCPHandshake.defaultDirectory() else {
+            log.error("no extension to install: no bundled Node extension or no container")
+            return
+        }
         let dest = container.appendingPathComponent(filename)
         let fm = FileManager.default
         do {
@@ -1463,11 +1488,16 @@ enum MCPExtensionInstaller {
             } else {
                 try fm.copyItem(at: bundled, to: dest)
             }
-            NSWorkspace.shared.open(dest)
+            if !NSWorkspace.shared.open(dest) {
+                log.error("Node extension: copied, but nothing opened it")
+            }
         } catch {
             // Degraded, not broken: last resort is opening the bundled copy
             // directly — worse (path churns on update) but not wrong.
-            NSWorkspace.shared.open(bundled)
+            log.error("Node extension could not be copied: \(error.localizedDescription, privacy: .public) — opening the bundled copy")
+            if !NSWorkspace.shared.open(bundled) {
+                log.error("the bundled Node extension did not open either")
+            }
         }
     }
 }

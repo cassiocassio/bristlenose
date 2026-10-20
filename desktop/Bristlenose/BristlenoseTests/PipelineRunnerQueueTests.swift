@@ -69,6 +69,8 @@ struct PipelineRunnerQueueTests {
         let center = NotificationCenter()
         /// The provider a run would be spawned with now.
         var providerNow: LLMProvider? = .claude
+        /// Whether the AI disclosure has been acknowledged.
+        var consented = true
         /// Providers whose out-of-credit verdict a finished run cleared.
         var noted: [LLMProvider] = []
         let root: URL
@@ -109,7 +111,7 @@ struct PipelineRunnerQueueTests {
                     if err == 0, let launch { self.onSignal(launch, sig) }
                     return err
                 },
-                hasConsent: { true },
+                hasConsent: { [weak self] in self?.consented ?? true },
                 keyReadiness: { .keyless(provider: "local") },
                 launcher: { [weak self] project, clean, onExit in
                     guard let self else { throw CancellationError() }
@@ -615,6 +617,33 @@ struct PipelineRunnerQueueTests {
         #expect(rig.noted.isEmpty, "a stopped run proves nothing about credit")
     }
 
+    /// A Start that starts nothing (here, no AI consent) leaves the row as it
+    /// was, so it must leave its re-read going too. It cancelled it first, and
+    /// the row read "Not responding" for good.
+    @Test func aStartThatStartsNothingKeepsTheReread() async {
+        let reads = ReadLog()
+        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+                      endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
+        defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: nil)
+
+        rig.launches[0].exit()
+        await until { rig.runner.state[a.id] == .unreachable(reason: .timedOut) }
+        rig.consented = false
+        rig.runner.start(project: a)
+        #expect(rig.launches.count == 1)
+        await until {
+            if case .ready = rig.runner.state[a.id] { return true }
+            return false
+        }
+
+        guard case .ready = rig.runner.state[a.id] else {
+            Issue.record("still \(String(describing: rig.runner.state[a.id]))"); return
+        }
+    }
+
     /// The re-read finds a CLI run started on the study meanwhile: it reads as
     /// a scan's would, and is watched until it ends (R22), not left "Analysing".
     @Test func aRereadThatFindsACLIRunWatchesIt() async throws {
@@ -801,6 +830,8 @@ struct PipelineRunnerQueueTests {
         await until(ready)
 
         #expect(ready(), "the attached run's end never settled")
+        // Credit is judged a hop after the row is written: give it the time.
+        try? await Task.sleep(for: .milliseconds(300))
         #expect(noted.isEmpty, "credited the earlier run's tokens to the attached one")
     }
 

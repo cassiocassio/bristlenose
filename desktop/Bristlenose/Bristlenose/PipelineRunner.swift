@@ -1641,9 +1641,6 @@ final class PipelineRunner: ObservableObject {
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
     func start(project: Project, clean: Bool = false) {
-        // A new run owns the row: a re-read of the last run's end state must
-        // not land on it (R29).
-        slowEndRereads.removeValue(forKey: project.id)?.cancel()
         guard hasConsent() else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
@@ -1671,6 +1668,10 @@ final class PipelineRunner: ObservableObject {
             )
             return
         }
+        // From here the start writes the row, so a re-read of the last run's
+        // end state must not land on it (R29). Not before: a start the guards
+        // above turn away leaves the row, and its re-read, as they were.
+        slowEndRereads.removeValue(forKey: project.id)?.cancel()
 
         // No key to inject → the run could only fail, in Python's setup check,
         // after a sidecar launch. Say so now instead: the row takes the failure

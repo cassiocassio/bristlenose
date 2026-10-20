@@ -18,6 +18,7 @@ import pytest
 from typer.testing import CliRunner
 
 from bristlenose.cli import app
+from bristlenose.events import PipelineSummary
 from bristlenose.utils import output_backup
 
 _MARKER = "bristlenose-report.html"
@@ -31,7 +32,9 @@ class _Result:
     llm_output_tokens = 0
     llm_calls = 1
     total_quotes = 3
-    summary: dict = {}
+    # A real empty rollup, as a clean run returns; a bare dict made any
+    # `summary_is_degraded(result.summary)` gate raise AttributeError.
+    summary = PipelineSummary()
 
 
 def _seed_report(out_dir: Path, marker: str) -> None:

@@ -24,6 +24,7 @@ import {
   importCodebookTemplate,
   removeCodebookFramework,
   startAutoCode,
+  toastSaveFailed,
 } from "../utils/api";
 import type { ApiError } from "../utils/api";
 // A refused install names itself on the wire (`server/refusal.py`), and this
@@ -59,6 +60,7 @@ import { postCodebookFocus, postCodebookPage } from "../shims/bridge";
 // By path, not the barrel — the barrel rides in the always-loaded chunk, so
 // a feature only lazy routes reach must be imported directly (frontend/CLAUDE.md).
 import { SectionHeading } from "../components/SectionHeading";
+import { ErrorNotice } from "../components/RouteError";
 import { CodebookV2Browse, type BrowseBook } from "./CodebookV2Browse";
 import { CodebookV2UninstallSheet } from "../components/CodebookV2UninstallSheet";
 // Q15: the threshold review is the EXISTING modal, not a v2 rebuild. Imported
@@ -252,7 +254,12 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         setTemplates(tpl);
         setStates(st);
       })
-      .catch((e: Error) => live && setError(e.message));
+      .catch((e: Error) => {
+        if (!live) return;
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Codebook read failed:", e);
+        setError(e.message);
+      });
     return () => {
       live = false;
     };
@@ -311,7 +318,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         setTemplates(tpl);
         setStates(st);
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => {
+        console.error("Codebook read failed:", e);
+        setError(e.message);
+      });
   }, []);
 
   /**
@@ -381,8 +391,10 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
    *
    * — a shell-shaped instruction, inside a Mac app, under a heading that
    * misdescribes what happened. A refusal is transient and about the click, so
-   * it goes to a toast carrying its own message kind; anything unrecognised
-   * still falls through to the banner rather than being swallowed.
+   * it goes to a toast carrying its own message kind. Anything unrecognised is
+   * still said, never swallowed, by the "Couldn't save" family, which blames
+   * the connection only when the request never arrived (R86; it fell through
+   * to the banner, wire string and all, until 20 Oct 2026).
    */
   const reportActionError = useCallback((e: Error) => {
     const refusal = autocodeRefusal((e as ApiError).reason);
@@ -390,7 +402,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       toast(refusal.message, 4000, refusal.kind);
       return;
     }
-    setError(e.message);
+    console.error("Codebook change failed:", e);
+    toastSaveFailed(e);
   }, []);
 
   const onInstall = useCallback(
@@ -776,7 +789,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
               defect Codebook v2 shipped with on 30 Aug. */}
           {view === "browse" ? "Codebooks" : "Codebook"}
         </SectionHeading>
-        {error && <p className="pg-stat">Could not load the codebook: {error}</p>}
+        {error && <ErrorNotice scope="lens" />}
         {/* No rail here. Codebook navigation is the standard left sidebar
             (`CodebookV2Sidebar`, mounted by AppLayout), which brings the
             toolbar toggle, the `[` key, drag-to-resize, hover-peek and the

@@ -18,7 +18,6 @@ import { useTranslation } from "react-i18next";
  */
 export function RouteError({ scope = "report" }: { scope?: "report" | "lens" }) {
   const error = useRouteError();
-  const { t } = useTranslation();
 
   if (error) {
     const detail = isRouteErrorResponse(error)
@@ -27,6 +26,18 @@ export function RouteError({ scope = "report" }: { scope?: "report" | "lens" }) 
     console.error("[RouteError]", detail);
   }
 
+  return <ErrorNotice scope={scope} />;
+}
+
+/**
+ * The fallback itself: a calm sentence and Retry. RouteError renders it for a
+ * crash; a lens renders it with `scope="lens"` when its own read fails (R86),
+ * which used to print the wire string ("GET /transcripts/s3 404: …") in
+ * English, with nothing to do about it. The caller logs the error; this shows
+ * none of it.
+ */
+export function ErrorNotice({ scope = "report" }: { scope?: "report" | "lens" }) {
+  const { t } = useTranslation();
   return (
     <div className="bn-empty-state bn-route-error" role="alert">
       <p>{scope === "lens" ? t("labels.lensError") : t("labels.error")}</p>

@@ -1,5 +1,6 @@
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { QuoteSections } from "./QuoteSections";
+import { QuoteThemes } from "./QuoteThemes";
 import type { QuotesListResponse } from "../utils/types";
 import { commitHeadingEdit, resetStore } from "../contexts/QuotesContext";
 import { redo, resetUndoStore, undo } from "../contexts/UndoStore";
@@ -192,4 +193,22 @@ describe("QuoteSections", () => {
       expect(screen.getByText("Frustration")).toBeInTheDocument();
     });
   });
+});
+
+
+// R86: a read that fails said "Failed to load quotes: GET /quotes 500: …", the
+// wire string in a sentence, and offered nothing to do about it.
+describe("a failed read says so in the lens's words, with Retry", () => {
+  for (const [name, Lens] of [["sections", QuoteSections], ["themes", QuoteThemes]] as const) {
+    it(`on the ${name} grouping`, async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mockApiGet.mockRejectedValue(new Error("GET /quotes 500: Internal Server Error"));
+      render(<Lens projectId="1" />);
+      expect(
+        await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(screen.queryByText(/500|\/quotes/)).toBeNull();
+    });
+  }
 });

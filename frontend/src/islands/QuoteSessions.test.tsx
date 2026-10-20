@@ -102,6 +102,17 @@ describe("QuoteSessions", () => {
     expect(container.querySelector(".bn-group-header .edit-pencil")).toBeNull();
   });
 
+  it("a failed read says so in the lens's words, with Retry, never the wire (R86)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(apiGet).mockRejectedValueOnce(new Error("GET /quotes 500: Internal Server Error"));
+    render(<QuoteSessions projectId="1" />);
+    expect(
+      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText(/500|\/quotes/)).toBeNull();
+  });
+
   it("clears a failed refetch once the next one answers", async () => {
     vi.mocked(apiGet).mockRejectedValueOnce(new Error("busy")).mockResolvedValue(DURING_THE_RUN);
     const { rerender, container } = render(<QuoteSessions projectId="1" refreshKey={0} />);

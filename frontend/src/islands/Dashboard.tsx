@@ -12,6 +12,7 @@
 
 import { useCallback, useContext, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../components/RouteError";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
@@ -682,7 +683,11 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
     if (refreshKey > 0) setIsRefetching(true);
     apiGet<DashboardResponse>("/dashboard")
       .then((json) => setData(json))
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => {
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Dashboard read failed:", err);
+        setError(err.message);
+      })
       .finally(() => setIsRefetching(false));
   }, [projectId, refreshKey]);
 
@@ -695,9 +700,7 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   if (error) {
     return (
       <div className="bn-dashboard">
-        <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          {t("dashboard.failedToLoad", { error })}
-        </p>
+        <ErrorNotice scope="lens" />
       </div>
     );
   }

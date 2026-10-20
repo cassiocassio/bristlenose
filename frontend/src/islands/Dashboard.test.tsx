@@ -80,6 +80,27 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
 });
 
+// R86: a read that fails said "Failed to load dashboard: GET /dashboard 500: …",
+// the wire string in a sentence, and offered nothing to do about it.
+describe("Dashboard — a failed read", () => {
+  it("says so in the lens's words, with Retry, never the wire", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      json: async () => ({ detail: "boom" }),
+      text: async () => "boom",
+    });
+    render(<Dashboard projectId="1" />);
+    expect(
+      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+    expect(screen.queryByText(/500|\/dashboard|boom/)).toBeNull();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Coverage box tests
 // ---------------------------------------------------------------------------

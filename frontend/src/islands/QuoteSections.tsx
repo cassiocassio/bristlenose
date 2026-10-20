@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../components/RouteError";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
@@ -65,7 +66,11 @@ export function QuoteSections({ projectId, refreshKey = 0, headingAction }: Quot
         initFromQuotes([...allQuotes, ...(json.unjoined ?? [])], replace, json.uncategorised);
         initHeadingEdits(json.sections, json.themes);
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => {
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Quotes read failed:", err);
+        setError(err.message);
+      })
       .finally(() => endRefetch());
     getCodebook()
       .then((cb) => {
@@ -185,9 +190,7 @@ export function QuoteSections({ projectId, refreshKey = 0, headingAction }: Quot
     return (
       <section>
         <SectionHeading id="sections">{t("quotes.sections")}</SectionHeading>
-        <p style={{ color: "var(--bn-colour-danger, #c00)", padding: "1rem" }}>
-          {t("quotes.failedToLoad", { error })}
-        </p>
+        <ErrorNotice scope="lens" />
       </section>
     );
   }

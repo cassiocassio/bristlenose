@@ -73,6 +73,7 @@ import { getTagBg } from "../utils/colours";
 import { markArrived } from "../utils/arrival";
 import { segmentIndexAt } from "../utils/segmentAt";
 import { announce } from "../utils/announce";
+import { ErrorNotice } from "../components/RouteError";
 import type {
   TapestryResponse,
   TapestrySession,
@@ -406,7 +407,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
       })
       .catch((err) => {
         if (ticket !== readTicket.current) return;
-        setError(err.message || i18n.t("transcript.failedToLoad"));
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Transcript read failed:", err);
+        setError(String(err?.message ?? err));
       })
       .finally(() => {
         if (ticket === readTicket.current) setLoading(false);
@@ -897,7 +900,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   if (error || !data) {
     return (
       <div className="bn-error" data-testid="transcript-error">
-        {error || t("transcript.noData")}
+        {error ? <ErrorNotice scope="lens" /> : t("transcript.noData")}
       </div>
     );
   }

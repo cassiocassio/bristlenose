@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ErrorNotice } from "../components/RouteError";
 import { apiGet, getCodebook } from "../utils/api";
 import { useTranscriptCache } from "../hooks/useTranscriptCache";
 import type { QuotesListResponse } from "../utils/types";
@@ -77,7 +78,11 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
         );
         initHeadingEdits(json.sections, json.themes);
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => {
+        // The wire string is for the console; the lens says it in its own words (R86).
+        console.error("Quotes read failed:", err);
+        setError(err.message);
+      })
       .finally(() => endRefetch());
     getCodebook()
       .then((cb) => {
@@ -161,7 +166,7 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
     return (
       <section>
         {heading}
-        <p className="bn-empty-state">{t("quotes.failedToLoad", { error })}</p>
+        <ErrorNotice scope="lens" />
       </section>
     );
   }

@@ -17,8 +17,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { getFrameworkStates, getHiddenTagGroups, putFrameworkStates, putHiddenTagGroups } from "../utils/api";
-import type { FrameworkStatesPutResult } from "../utils/api";
+import { getFrameworkStates, getHiddenTagGroups, putHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -668,27 +667,6 @@ export function hydrateFrameworkStates(): void {
 }
 
 /**
- * Toggle a framework's disabled state (the codebook switch). Disable is functional —
- * "off means off" (design-codebook-state-model.md §8): it folds the section, hides
- * badges report-wide, drops the codebook from the sidebar + autocomplete, and gates
- * re-apply. Persists the full disabled set as {fid: false} (absence = enabled) and
- * returns the PUT result so the caller can surface an on-enable catch-up chip.
- */
-export function setFrameworkDisabled(
-  frameworkId: string,
-  disabled: boolean,
-): Promise<FrameworkStatesPutResult> {
-  frameworkEditGeneration += 1; // mark a local edit so an in-flight hydrate defers
-  const next = new Set(state.disabledFrameworks);
-  if (disabled) next.add(frameworkId);
-  else next.delete(frameworkId);
-  setState((prev) => ({ ...prev, disabledFrameworks: next }));
-  const map: Record<string, boolean> = {};
-  for (const fid of next) map[fid] = false;
-  return putFrameworkStates(map);
-}
-
-/**
  * Forget a framework's disabled opinion locally — no network call. Used when a
  * codebook is **uninstalled**: the server drops its ProjectFrameworkState row
  * (absence = enabled), so the in-memory set must shed it too, or a same-session
@@ -708,13 +686,15 @@ export function dropFrameworkDisabled(frameworkId: string): void {
  * Adopt an authoritative disabled set computed elsewhere — the codebook
  * navigator, which has owned the switch since v1's deletion (`baa1aa0e`).
  *
- * `setFrameworkDisabled` cannot serve that caller. It derives its payload from
- * `state.disabledFrameworks`, which stays empty until `hydrateFrameworkStates`
- * runs — and hydration is called from `TagSidebar`'s mount alone. Opening the
- * codebook lens by deep link therefore reaches the switch with an empty set, and
- * a derive-then-PUT would send an incomplete map to a replacement endpoint: the
- * same wipe as the A5 defect, by a different route. So the navigator owns the
- * write and this owns the mirror.
+ The store does not write framework states itself, and must not. A writer here
+ * would derive its payload from `state.disabledFrameworks`, which stays empty
+ * until `hydrateFrameworkStates` runs — and hydration is called from
+ * `TagSidebar`'s mount alone. Opening the codebook lens by deep link therefore
+ * reaches the switch with an empty set, and a derive-then-PUT would send an
+ * incomplete map to a replacement endpoint: the same wipe as the A5 defect, by a
+ * different route. So the navigator owns the write and this owns the mirror.
+ * (`setFrameworkDisabled`, which had that shape and no callers, was deleted on
+ * 20 Oct 2026.)
  *
  * Without it the once-per-session hydration guard means the opposite of what its
  * comment claims: switching to Quotes after toggling on the Codebook lens shows

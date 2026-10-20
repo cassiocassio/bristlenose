@@ -10,7 +10,7 @@ import {
   setTagGroupsHidden,
   hydrateHiddenTagGroups,
   hydrateFrameworkStates,
-  setFrameworkDisabled,
+  adoptFrameworkDisabled,
   dropFrameworkDisabled,
   toggleToc,
   toggleTags,
@@ -157,25 +157,20 @@ describe("disabledFrameworks (codebook switch)", () => {
     expect(result.current.disabledFrameworks.size).toBe(0);
   });
 
-  it("setFrameworkDisabled(true) adds a framework and PUTs {fid: false}", () => {
+  // The store mirrors the navigator's set and never writes it (the navigator
+  // owns the PUT); see adoptFrameworkDisabled.
+  it("adoptFrameworkDisabled mirrors the navigator's set without a PUT", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => setFrameworkDisabled("garrett", true));
+    act(() => adoptFrameworkDisabled(new Set(["garrett"])));
     expect(result.current.disabledFrameworks.has("garrett")).toBe(true);
-    expect(putFrameworkStates).toHaveBeenCalledWith({ garrett: false });
-  });
-
-  it("setFrameworkDisabled(false) removes it and PUTs the shrunk map", () => {
-    const { result } = renderHook(() => useSidebarStore());
-    act(() => setFrameworkDisabled("garrett", true));
-    act(() => setFrameworkDisabled("garrett", false));
-    expect(result.current.disabledFrameworks.has("garrett")).toBe(false);
-    expect(putFrameworkStates).toHaveBeenLastCalledWith({});
+    act(() => adoptFrameworkDisabled(new Set()));
+    expect(result.current.disabledFrameworks.size).toBe(0);
+    expect(putFrameworkStates).not.toHaveBeenCalled();
   });
 
   it("dropFrameworkDisabled forgets a framework locally without a PUT", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => setFrameworkDisabled("garrett", true));
-    (putFrameworkStates as ReturnType<typeof vi.fn>).mockClear();
+    act(() => adoptFrameworkDisabled(new Set(["garrett"])));
     // Uninstall path: forget the disabled opinion locally (server drops its row).
     act(() => dropFrameworkDisabled("garrett"));
     expect(result.current.disabledFrameworks.has("garrett")).toBe(false);
@@ -191,7 +186,7 @@ describe("disabledFrameworks (codebook switch)", () => {
 
   it("resetSidebarStore clears disabledFrameworks", () => {
     const { result } = renderHook(() => useSidebarStore());
-    act(() => setFrameworkDisabled("garrett", true));
+    act(() => adoptFrameworkDisabled(new Set(["garrett"])));
     act(() => resetSidebarStore());
     expect(result.current.disabledFrameworks.size).toBe(0);
   });
@@ -216,7 +211,7 @@ describe("disabledFrameworks (codebook switch)", () => {
     );
     const { result } = renderHook(() => useSidebarStore());
     act(() => hydrateFrameworkStates()); // GET in flight
-    act(() => setFrameworkDisabled("garrett", true)); // user toggles before it resolves
+    act(() => adoptFrameworkDisabled(new Set(["garrett"]))); // user toggles before it resolves
     // The in-flight GET now resolves with the pre-toggle (empty) server state:
     await act(async () => {
       resolveFetch({});

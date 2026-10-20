@@ -480,7 +480,9 @@ set now lives in **`SidebarStore.disabledFrameworks`** (module-level, beside
 `hiddenTagGroups`), so the codebook fold and the quote-card badge hide read one source
 of truth. Shipped:
 - `SidebarStore`: `disabledFrameworks` state + `setFrameworkDisabled(fid, disabled)`
-  (updates the set + PUTs `{fid: false}`) + `hydrateFrameworkStates()` (fetch-once,
+  (updates the set + PUTs `{fid: false}`; deleted 20 Oct 2026 with no callers left —
+  the v2 navigator owns the write and mirrors it through `adoptFrameworkDisabled`)
+  + `hydrateFrameworkStates()` (fetch-once,
   **guarded** so a Codebook↔Quotes remount can't refetch stale state and clobber an
   in-flight local toggle).
 - `CodebookPanel`: local `useState` replaced by the store — the fold reads

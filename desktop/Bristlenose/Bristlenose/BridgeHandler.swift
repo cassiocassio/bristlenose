@@ -383,6 +383,12 @@ final class BridgeHandler: ObservableObject {
     /// let the researcher pick files, and then told them off. Dimming is the
     /// menu-bar answer to "not right now".
     @Published var hasSelectedProject: Bool = false
+    /// Whether the selected study can take files now: not running, queued,
+    /// failed or unreachable. Read by File ▸ Add Files… beside
+    /// `hasSelectedProject`; the same rule the sidebars ask of a Finder drop
+    /// (`StudyFinderDrop.accepts`), which springs back on a busy study. The
+    /// panel used to open, take the pick, and do nothing (R47 follow-up).
+    @Published var selectedProjectTakesFiles: Bool = false
 
     /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
     /// folder-access half — from the facts that decide them.
@@ -395,6 +401,7 @@ final class BridgeHandler: ObservableObject {
     func mirrorSelectedProjectRun(project: Project, state: PipelineState?,
                                   data: UnanalysedState?) {
         selectedProjectIsRunning = SidebarOutlineController.isRunningOrQueued(state)
+        selectedProjectTakesFiles = StudyFinderDrop.accepts(state: state)
         selectedProjectNeedsFolderAccess = state?.needsFolderAccess == true
         selectedProjectIsAnalysed = SidebarOutlineController.reAnalyseIsOffered(
             isFolderShaped: project.inputFiles == nil,
@@ -1363,6 +1370,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectIsRunning = false
         selectedProjectIsAnalysed = false
         hasSelectedProject = false
+        selectedProjectTakesFiles = false
         // `webView` is deliberately NOT cleared here. It is the outbound
         // channel, and its lifetime belongs to the VIEW (`makeNSView`
         // registers, `dismantleNSView` deregisters identity-guarded), not to

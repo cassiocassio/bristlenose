@@ -56,6 +56,26 @@ struct MenuGateTests {
         #expect(!bridge.selectedProjectIsAnalysed)
     }
 
+    // MARK: R47 follow-up — Add Files… dims on a study that can't take files
+
+    /// The panel opened on a running study, took the pick and did nothing.
+    @Test func addFilesDimsWhileTheStudyCannotTakeFiles() {
+        let bridge = BridgeHandler()
+        let study = Project(id: UUID(), name: "Study", path: NSTemporaryDirectory())
+
+        bridge.mirrorSelectedProjectRun(project: study, state: .idle, data: data(sessions: nil))
+        #expect(bridge.selectedProjectTakesFiles)
+        for busy in StudyFinderDropTests.busy {
+            bridge.mirrorSelectedProjectRun(project: study, state: busy, data: data(sessions: nil))
+            #expect(!bridge.selectedProjectTakesFiles, "Add Files… stayed lit on \(busy)")
+        }
+        bridge.mirrorSelectedProjectRun(project: study, state: .ready(Date()), data: data(sessions: 6))
+        #expect(bridge.selectedProjectTakesFiles, "Add Files… stayed dimmed after the run")
+
+        bridge.reset()
+        #expect(!bridge.selectedProjectTakesFiles)
+    }
+
     // MARK: R70 — report commands need the channel
 
     /// The report's mirrors outlive a dead sidecar; `commandTab` does not.

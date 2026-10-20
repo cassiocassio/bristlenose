@@ -540,8 +540,8 @@ private struct FileMenuContent: View {
         .keyboardShortcut("n", modifiers: [.command, .option])
 
         // Add Files… — the menu twin of drag-drop. ⇧⌘A mirrors Apple Mail's
-        // File ▸ Attach Files. Fires unconditionally (like New Project/Folder);
-        // the window resolves its own selection and toasts if none.
+        // File ▸ Attach Files. Dims without a selected study, or when the
+        // study can't take files now (the gate below).
         Button(i18n.t("desktop.menu.file.addFiles"), systemImage: "plus.rectangle.on.folder") {
             windowCommands?.perform(.addFiles)
         }
@@ -549,7 +549,10 @@ private struct FileMenuContent: View {
         // Selection-targeted (group 3), so it needs a selected project as well
         // as a window — it was gated on the window alone, which let a
         // researcher pick files with nothing selected and then be told off.
+        // …and a study that can take files: a busy one would accept the pick
+        // and do nothing, as a drop on it is refused (R47).
         .disabled(!bridgeHandler.hasSelectedProject
+                  || !bridgeHandler.selectedProjectTakesFiles
                   || !WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))
 
         // Import ▸ — cloud sources, beside Add Files… because that is the same

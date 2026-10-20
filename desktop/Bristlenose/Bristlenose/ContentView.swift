@@ -2539,7 +2539,13 @@ struct ContentView: View {
         // toolbar") signposted a control that is one right-click away.
         // `docs/design-analysis-lifecycle.md` §4.2.
         guard SidebarOutlineController.acceptsFinderDrop(state: pipelineRunner.state[id])
-        else { return }
+        else {
+            // Reachable from Add Files… when a run starts while its panel is
+            // open: the menu item was lit when it opened. Say so in the log.
+            Logger(subsystem: "app.bristlenose", category: "drop").notice(
+                "files for a study that can't take them now were not added: \(filteredURLs.count, privacy: .public)")
+            return
+        }
 
         let alreadyAnalysed: Bool = {
             if case .ready = pipelineRunner.state[id] { return true }
@@ -3492,6 +3498,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectIsRunning = false
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
+            bridgeHandler.selectedProjectTakesFiles = false
         }
     }
 

@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Ikke nok diskplads",
     "copyNoImportableItems": "Ingen af de sluppede emner er en fil, som Bristlenose kan importere.",
     "copyAlreadyInFlight": "Der er allerede en anden kopiering i gang.",
+    "copySourceNotDownloaded": "Intet blev kopieret: En del af det, du slap, er endnu ikke hentet til denne Mac. Hent det i Finder, og slip det igen.",
     "copyDiskSpaceMessage": "Denne kopiering kræver %@ ledig plads, men der er kun %@ tilgængelig på destinationsdisken.",
     "filesPopover": {
       "unanalysedTitle": "Ikke-analyserede arkiver",

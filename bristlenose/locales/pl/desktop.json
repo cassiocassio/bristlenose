@@ -303,6 +303,7 @@
     "copyDiskSpaceTitle": "Za mało miejsca na dysku",
     "copyNoImportableItems": "\u017baden z upuszczonych element\u00f3w nie jest plikiem, kt\u00f3ry Bristlenose mo\u017ce zaimportowa\u0107.",
     "copyAlreadyInFlight": "Inne kopiowanie jest ju\u017c w toku.",
+    "copySourceNotDownloaded": "Niczego nie skopiowano: cz\u0119\u015b\u0107 upuszczonych element\u00f3w nie zosta\u0142a jeszcze pobrana na tego Maca. Pobierz j\u0105 w Finderze, a potem upu\u015b\u0107 ponownie.",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
     "filesPopover": {
       "unanalysedTitle": "Nieprzeanalizowane pliki",

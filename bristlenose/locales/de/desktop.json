@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
     "copyNoImportableItems": "Keines der abgelegten Objekte ist eine Datei, die Bristlenose importieren kann.",
     "copyAlreadyInFlight": "Es l\u00e4uft bereits ein anderer Kopiervorgang.",
+    "copySourceNotDownloaded": "Es wurde nichts kopiert: Ein Teil der abgelegten Objekte ist noch nicht auf diesen Mac geladen. Laden Sie ihn im Finder und legen Sie ihn dann erneut ab.",
     "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
     "filesPopover": {
       "unanalysedTitle": "Nicht analysierte Dateien",

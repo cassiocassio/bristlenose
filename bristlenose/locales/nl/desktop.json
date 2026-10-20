@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Onvoldoende schijfruimte",
     "copyNoImportableItems": "Geen van de neergezette items is een bestand dat Bristlenose kan importeren.",
     "copyAlreadyInFlight": "Er is al een andere kopieerbewerking bezig.",
+    "copySourceNotDownloaded": "Er is niets gekopieerd: een deel van wat je hebt neergezet, is nog niet naar deze Mac gedownload. Download het in de Finder en zet het daarna opnieuw neer.",
     "copyDiskSpaceMessage": "Deze kopie heeft %@ vrij nodig, maar er is slechts %@ beschikbaar op het doelvolume.",
     "filesPopover": {
       "unanalysedTitle": "Niet-geanalyseerde bestanden",

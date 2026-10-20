@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Espacio en disco insuficiente",
     "copyNoImportableItems": "Ninguno de los elementos soltados es un archivo que Bristlenose pueda importar.",
     "copyAlreadyInFlight": "Ya hay otra copia en curso.",
+    "copySourceNotDownloaded": "No se ha copiado nada: parte de lo que has soltado a\u00fan no est\u00e1 descargado en este Mac. Desc\u00e1rgalo en el Finder y vuelve a soltarlo.",
     "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino.",
     "filesPopover": {
       "unanalysedTitle": "Archivos sin analizar",

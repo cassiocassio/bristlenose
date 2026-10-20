@@ -42,6 +42,12 @@ final class CopyMachinery: ObservableObject {
         case insufficientDiskSpace(needed: Int64, available: Int64)
         case noItemsAfterFiltering
         case alreadyInFlight
+        /// At least one source is still in the cloud (dataless), so nothing was
+        /// copied. Refused rather than fetched: under this app's materialisation
+        /// policy a copy of a dataless file waits with no timeout and cannot be
+        /// cancelled (`desktop/CLAUDE.md`, the `copyItem` gotcha). The count is
+        /// for the log and the English sentence; the row's key is count-neutral.
+        case sourceNotDownloaded(count: Int)
         /// The error a file operation threw, carried whole so a caller can
         /// discriminate by domain and code. The sentence is the error's own.
         case underlying(Error)
@@ -57,6 +63,10 @@ final class CopyMachinery: ObservableObject {
                 return "None of the dropped items is a file Bristlenose can import."
             case .alreadyInFlight:
                 return "Another copy is already in flight."
+            case .sourceNotDownloaded(let count):
+                return count == 1
+                    ? "Nothing was copied: 1 dropped item is in the cloud and not downloaded to this Mac yet."
+                    : "Nothing was copied: \(count) dropped items are in the cloud and not downloaded to this Mac yet."
             case .underlying(let error):
                 return error.localizedDescription
             }
@@ -83,6 +93,7 @@ final class CopyMachinery: ObservableObject {
             case .insufficientDiskSpace: return "desktop.chrome.copyDiskSpaceTitle"
             case .noItemsAfterFiltering: return "desktop.chrome.copyNoImportableItems"
             case .alreadyInFlight:       return "desktop.chrome.copyAlreadyInFlight"
+            case .sourceNotDownloaded:   return "desktop.chrome.copySourceNotDownloaded"
             case .underlying:            return nil
             }
         }
@@ -103,21 +114,49 @@ final class CopyMachinery: ObservableObject {
 
     /// Plan + execute one copy. Returns the destination URLs of every
     /// successfully-copied file (suitable for `addFiles`).
+    ///
+    /// `isDataless` is injectable because no test can make a real cloud
+    /// placeholder; production always uses `CopyMachinery.isDataless`.
     func copy(
         urls: [URL],
         into projectFolder: URL,
         projectID: UUID,
         projectName: String,
-        acceptedExtensions: Set<String>
+        acceptedExtensions: Set<String>,
+        isDataless: @escaping @Sendable (URL) -> Bool = CopyMachinery.isDataless
     ) async throws -> [URL] {
         guard inFlight == nil else {
             throw CopyError.alreadyInFlight
+        }
+
+        // A dropped folder whose own listing is still in the cloud would make
+        // the walk below fetch it, on the main thread, with no timeout.
+        let offloadedFolders = urls.filter { $0.hasDirectoryPath && isDataless($0) }.count
+        if offloadedFolders > 0 {
+            logger.notice(
+                "copy refused: \(offloadedFolders, privacy: .public) dropped folders not downloaded"
+            )
+            throw CopyError.sourceNotDownloaded(count: offloadedFolders)
         }
 
         // Planning + precheck — all on main; cheap.
         let items = Self.planItems(urls: urls, acceptedExtensions: acceptedExtensions)
         guard !items.isEmpty else {
             throw CopyError.noItemsAfterFiltering
+        }
+        // Never start a copy that could wait forever. A dataless source makes
+        // `copyItem` fetch it on the fly with no timeout, and a synchronous
+        // `copyItem` cannot be cancelled, so the row would sit at "Copying"
+        // until a force-quit. Refuse the whole drop before anything is
+        // written: a half-imported folder that then auto-runs is worse than
+        // "download it, then drop it again" (a re-drop skips what landed).
+        // Reading the flag is a `stat`, which never fetches.
+        let notDownloaded = items.filter { isDataless($0.source) }.count
+        if notDownloaded > 0 {
+            logger.notice(
+                "copy refused: \(notDownloaded, privacy: .public) of \(items.count, privacy: .public) sources not downloaded"
+            )
+            throw CopyError.sourceNotDownloaded(count: notDownloaded)
         }
         let sameVolume = Self.sourcesShareVolume(
             with: projectFolder, sources: items.map(\.source)
@@ -160,6 +199,13 @@ final class CopyMachinery: ObservableObject {
                         skipped += 1
                         copiedBytes += CopyMachinery.fileSize(of: source) ?? 0
                     case .copy(let item):
+                        // Asked again here, not just at planning: Optimise Mac
+                        // Storage can evict a source while earlier files in a
+                        // long batch copy, and the planning answer is stale by
+                        // then. Thrown here, it rolls back like any failure.
+                        if isDataless(item.source) {
+                            throw CopyError.sourceNotDownloaded(count: 1)
+                        }
                         try FileManager.default.createDirectory(
                             at: item.destination.deletingLastPathComponent(),
                             withIntermediateDirectories: true
@@ -187,6 +233,11 @@ final class CopyMachinery: ObservableObject {
             } catch is CancellationError {
                 await CopyMachinery.rollback(written: written, logger: machineryLogger)
                 throw CancellationError()
+            } catch let error as CopyError {
+                // Our own refusal, thrown as itself rather than wrapped in
+                // `.underlying`, so the row reads its key and not a system sentence.
+                await CopyMachinery.rollback(written: written, logger: machineryLogger)
+                throw error
             } catch {
                 await CopyMachinery.rollback(written: written, logger: machineryLogger)
                 throw CopyError.underlying(error)
@@ -487,6 +538,25 @@ final class CopyMachinery: ObservableObject {
         return values?.volumeIdentifier
     }
 
+    /// Whether `url` is a cloud placeholder whose bytes are not on this Mac.
+    ///
+    /// The Swift twin of `fs.is_dataless` (same stem, house casing). Two
+    /// signals: the `SF_DATALESS` flag from `<sys/stat.h>` (no data extents;
+    /// the kernel faults the bytes in on read), which every File Provider sets (iCloud
+    /// Drive, Dropbox, Google Drive, OneDrive), and iCloud's own
+    /// `.notDownloaded` status via `ProjectFolderWatcher.isCloudEvicted`. Both
+    /// are metadata reads and never fetch. A file still downloading stays
+    /// dataless until the provider swaps it in whole, so it reads `true`.
+    ///
+    /// Deliberately not `CloudImportLocalMatch.isMaterialised`, whose extra
+    /// allocated-size-zero test is a guess that suits "is this a match?" but
+    /// would refuse a real local file that happens to allocate no blocks.
+    nonisolated static func isDataless(_ url: URL) -> Bool {
+        var st = stat()
+        if stat(url.path, &st) == 0, st.st_flags & UInt32(SF_DATALESS) != 0 { return true }
+        return ProjectFolderWatcher.isCloudEvicted(url)
+    }
+
     nonisolated static func fileSize(of url: URL) -> Int64? {
         let values = try? url.resourceValues(forKeys: [.fileSizeKey])
         return values?.fileSize.map(Int64.init)
@@ -506,7 +576,8 @@ final class CopyMachinery: ObservableObject {
             do {
                 try FileManager.default.removeItem(at: url)
             } catch {
-                logger.error("rollback: failed to remove \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                // The path names the participant's file, so it stays private.
+                logger.error("rollback: failed to remove \(url.path, privacy: .private): \(error.localizedDescription, privacy: .public)")
             }
         }
     }

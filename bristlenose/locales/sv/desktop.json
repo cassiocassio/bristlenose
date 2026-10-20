@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Inte tillräckligt med diskutrymme",
     "copyNoImportableItems": "Inget av de sl\u00e4ppta objekten \u00e4r en fil som Bristlenose kan importera.",
     "copyAlreadyInFlight": "En annan kopiering p\u00e5g\u00e5r redan.",
+    "copySourceNotDownloaded": "Inget kopierades: En del av det du sl\u00e4ppte \u00e4r inte h\u00e4mtat till den h\u00e4r Macen \u00e4n. H\u00e4mta det i Finder och sl\u00e4pp det igen.",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
     "filesPopover": {
       "unanalysedTitle": "Oanalyserade filer",

@@ -302,6 +302,7 @@
     "copyDiskSpaceTitle": "Nedostatek místa na disku",
     "copyNoImportableItems": "\u017d\u00e1dn\u00e1 z p\u0159eta\u017een\u00fdch polo\u017eek nen\u00ed soubor, kter\u00fd by Bristlenose mohl importovat.",
     "copyAlreadyInFlight": "U\u017e prob\u00edh\u00e1 jin\u00e9 kop\u00edrov\u00e1n\u00ed.",
+    "copySourceNotDownloaded": "Nic nebylo zkop\u00edrov\u00e1no: \u010d\u00e1st p\u0159eta\u017een\u00fdch polo\u017eek je\u0161t\u011b nen\u00ed sta\u017een\u00e1 do tohoto Macu. St\u00e1hn\u011bte ji ve Finderu a pak ji p\u0159et\u00e1hn\u011bte znovu.",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
     "filesPopover": {
       "unanalysedTitle": "Neanalyzovan\u00e9 soubory",

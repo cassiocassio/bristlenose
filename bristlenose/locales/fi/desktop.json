@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Levytila ei riitä",
     "copyNoImportableItems": "Mik\u00e4\u00e4n pudotetuista kohteista ei ole tiedosto, jonka Bristlenose voi tuoda.",
     "copyAlreadyInFlight": "Toinen kopiointi on jo k\u00e4ynniss\u00e4.",
+    "copySourceNotDownloaded": "Mit\u00e4\u00e4n ei kopioitu: Osaa pudotetuista kohteista ei ole viel\u00e4 ladattu t\u00e4h\u00e4n Maciin. Lataa ne Finderissa ja pudota ne uudelleen.",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
     "filesPopover": {
       "unanalysedTitle": "Analysoimattomat tiedostot",

@@ -269,6 +269,7 @@
     "copyDiskSpaceTitle": "Yeterli disk alanı yok",
     "copyNoImportableItems": "B\u0131rak\u0131lan \u00f6\u011felerin hi\u00e7biri Bristlenose'un i\u00e7e aktarabilece\u011fi bir dosya de\u011fil.",
     "copyAlreadyInFlight": "Zaten ba\u015fka bir kopyalama s\u00fcr\u00fcyor.",
+    "copySourceNotDownloaded": "Hi\u00e7bir \u015fey kopyalanmad\u0131: B\u0131rakt\u0131\u011f\u0131n\u0131z \u00f6\u011felerin bir k\u0131sm\u0131 hen\u00fcz bu Mac\u2019e indirilmedi. Finder\u2019da indirin, sonra yeniden b\u0131rak\u0131n.",
     "copyDiskSpaceMessage": "Bu kopyalama %@ boş alan gerektiriyor, ancak hedef birimde yalnızca %@ kullanılabilir.",
     "filesPopover": {
       "unanalysedTitle": "\u00c7\u00f6z\u00fcmlenmemi\u015f dosyalar",

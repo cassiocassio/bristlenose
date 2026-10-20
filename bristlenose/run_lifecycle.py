@@ -97,8 +97,9 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
         # SIGINT and then the parent-death watcher's SIGTERM, and a second
         # interrupt raised mid-unwind escaped the cancel write or was wrapped
         # by pydantic as an ordinary error: a cancel recorded as a failure
-        # (R19). The CLI keeps a second Ctrl-C as the user's force; the app
-        # escalates to SIGKILL when it needs one.
+        # (R19). The CLI keeps a second Ctrl-C as the user's force. The app's
+        # Stop on an attached run escalates to SIGKILL, which no handler sees;
+        # its own run's Stop, and Quit, send SIGINT only.
         return
     _caught_signal = signum
     raise KeyboardInterrupt()

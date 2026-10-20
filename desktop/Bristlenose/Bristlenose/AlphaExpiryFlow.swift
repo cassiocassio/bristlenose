@@ -38,7 +38,10 @@ struct AlphaExpiryFlow: ViewModifier {
                 // Reset here (not only in onDismiss) so a stale `true` from a
                 // cancel-during-in-flight-send can't leak a false "Thanks" into
                 // a fresh feedback attempt.
-                Button("Send Feedback…") { didSend = false; route = .feedback }
+                Button("Send Feedback…") {
+                    FeedbackTrace.opened(by: "alpha-expiry-alert")
+                    didSend = false; route = .feedback
+                }
                 Button("Quit", role: .cancel) { NSApp.terminate(nil) }
             } message: {
                 Text("This was a time-limited preview. Get the latest at bristlenose.app. If you have a minute, I'd love to hear how it went.")

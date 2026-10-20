@@ -1,5 +1,60 @@
 import AppKit
+import OSLog
 import SwiftUI
+
+/// DIAGNOSTIC (19 Oct 2026): the sheet was reported popping up unexpectedly.
+/// Every door that opens it logs its source and the input event that led
+/// there, so the culprit can be read off the log:
+///
+///     /usr/bin/log show --last 1h --predicate 'subsystem == "app.bristlenose" && category == "feedback"' --info
+///
+/// Remove once the cause is found.
+@MainActor
+enum FeedbackTrace {
+    static let log = Logger(subsystem: "app.bristlenose", category: "feedback")
+
+    /// The notification's userInfo key carrying who posted `.showFeedbackSheet`.
+    static let sourceKey = "source"
+
+    /// The trigger chain since the last sheet appeared, shown in the sheet
+    /// itself. A broadcast logs twice (poster, then receiver), so entries
+    /// accumulate rather than overwrite.
+    private static var pending: [String] = []
+
+    static func opened(by source: String) {
+        let event = describeCurrentEvent()
+        log.notice("feedback opened by=\(source, privacy: .public) event=\(event, privacy: .public)")
+        pending.append("\(source) · \(event)")
+    }
+
+    /// Read and clear the pending chain. Empty means the sheet was presented
+    /// by a path with no trace call — which is itself the answer.
+    static func consume() -> String {
+        defer { pending.removeAll() }
+        let reason = pending.isEmpty
+            ? "UNTRACED PATH · \(describeCurrentEvent())"
+            : pending.joined(separator: "\n→ ")
+        log.notice("feedback sheet shown reason=\(reason, privacy: .public)")
+        return reason
+    }
+
+    /// What AppKit is processing right now: a key (with its keyCode and
+    /// characters), a click (with the window it landed in), or nothing — the
+    /// last means the open was not driven by user input at all.
+    static func describeCurrentEvent() -> String {
+        guard let e = NSApp.currentEvent else { return "none" }
+        let window = e.window.map { "\(type(of: $0)) '\($0.title)'" } ?? "nil"
+        switch e.type {
+        case .keyDown, .keyUp:
+            let chars = e.charactersIgnoringModifiers ?? ""
+            return "key type=\(e.type.rawValue) keyCode=\(e.keyCode) chars=\(chars.debugDescription) mods=\(e.modifierFlags.rawValue) repeat=\(e.isARepeat) window=\(window)"
+        case .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp:
+            return "mouse type=\(e.type.rawValue) at=\(e.locationInWindow) clicks=\(e.clickCount) window=\(window)"
+        default:
+            return "other type=\(e.type.rawValue) window=\(window)"
+        }
+    }
+}
 
 /// Native "Send Feedback" sheet — the macOS rendering of the React
 /// `FeedbackModal`, used when the SPA isn't mounted (the server-rendered status
@@ -168,11 +223,26 @@ struct FeedbackSheet: View {
             } else {
                 form
             }
+
+            // DIAGNOSTIC — remove with FeedbackTrace. English on purpose: it
+            // is a temporary trace for the maintainer, not product copy.
+            if let traceReason {
+                Text("Opened by: \(traceReason)")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(20)
         .frame(width: sheetWidth)
         .task { await model.load() }
+        .onAppear {
+            if traceReason == nil { traceReason = FeedbackTrace.consume() }
+        }
     }
+
+    @State private var traceReason: String?
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 12) {

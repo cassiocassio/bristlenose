@@ -1389,7 +1389,9 @@ final class BridgeHandler: ObservableObject {
     /// through to native when the SPA was absent, so the report lens showed the
     /// web HTML modal. See `docs/design-feedback-native.md` (Phase 0).
     func openFeedback() {
-        NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+        FeedbackTrace.opened(by: "menu-fallback-broadcast")
+        NotificationCenter.default.post(name: .showFeedbackSheet, object: nil,
+                                        userInfo: [FeedbackTrace.sourceKey: "menu-fallback-broadcast"])
     }
 
     private func handleProjectAction(_ action: String, data: [String: Any]?) {
@@ -1399,7 +1401,9 @@ final class BridgeHandler: ObservableObject {
 
         case "open-feedback":
             // Status page (SPA absent) asked for the native feedback sheet.
-            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil)
+            FeedbackTrace.opened(by: "status-page-bridge url=\(webView?.url?.absoluteString ?? "nil")")
+            NotificationCenter.default.post(name: .showFeedbackSheet, object: nil,
+                                            userInfo: [FeedbackTrace.sourceKey: "status-page-bridge"])
 
         case "choose-discussion-guide":
             chooseGuideRequests += 1

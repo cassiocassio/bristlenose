@@ -307,7 +307,10 @@ struct SidebarOutlineDropAndRevealTests {
         try #require(cell.imageView?.alphaValue == 0, "the reveal took its static fallback")
 
         // The flip runs about two seconds; the trigger is consumed when it ends.
-        let deadline = Date().addingTimeInterval(6)
+        // Each of its steps is a main-actor sleep, so in the full suite on a
+        // 4-core guest it took longer than a 6 s ceiling (20 Oct 2026). The
+        // loop returns as soon as the flip ends.
+        let deadline = Date().addingTimeInterval(30)
         while rig.index.pendingIconReveal != nil, Date() < deadline {
             try await Task.sleep(for: .milliseconds(50))
         }

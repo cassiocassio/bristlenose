@@ -83,11 +83,13 @@ struct PipelineRunnerQueueTests {
         ///   - manifestRead / endStateTimeout / slowEndReread: the read that
         ///     settles a run's end, how long it may take, and the wait before
         ///     reading again when it timed out (R29).
+        ///   - drainLimit: how long a failed run's verdict waits for its output.
         init(lookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
              foreignPoll: Duration = .milliseconds(50), patience: Int = 15,
              manifestRead: (@Sendable (URL) async -> PipelineState)? = nil,
              endStateTimeout: Duration = .seconds(5),
-             slowEndReread: Duration = .milliseconds(50)) {
+             slowEndReread: Duration = .milliseconds(50),
+             drainLimit: Duration = .seconds(1)) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -124,7 +126,7 @@ struct PipelineRunnerQueueTests {
                 activeProvider: { [weak self] in self?.providerNow },
                 noteRunSucceeded: { [weak self] in self?.noted.append($0) },
                 sidecarLookup: lookup,
-                outputDrainLimit: .seconds(1),
+                outputDrainLimit: drainLimit,
                 foreignRunPollInterval: foreignPoll,
                 foreignRunPatience: patience,
                 manifestRead: manifestRead ?? { await PipelineRunner.parseManifest(at: $0) },
@@ -170,7 +172,15 @@ struct PipelineRunnerQueueTests {
             .write(to: dir.appendingPathComponent(EventLogReader.filename))
     }
 
-    private func until(_ condition: () -> Bool, seconds: Double = 3) async {
+    /// How long a wait for something that must happen may take. Every step
+    /// the runner takes is a main-actor hop, and the full suite runs hundreds
+    /// of main-actor tests beside these: on a 4-core guest the main actor was
+    /// held for seconds at a time, and 3 s ceilings failed 30 tests together
+    /// (20 Oct 2026, guest matrix). A green wait returns as soon as its
+    /// condition holds, so the ceiling costs nothing unless the test is red.
+    static let patience: Double = 30
+
+    private func until(_ condition: () -> Bool, seconds: Double = patience) async {
         let deadline = Date().addingTimeInterval(seconds)
         while !condition(), Date() < deadline {
             try? await Task.sleep(for: .milliseconds(10))
@@ -367,7 +377,9 @@ struct PipelineRunnerQueueTests {
         try #require(rig.runner.state[a.id] == .running)
         rig.runner.start(project: a)
         rig.runner.cancel(project: a)
-        await until({ rig.runner.state[a.id] != .running && rig.launches.count > 1 }, seconds: 1)
+        // The state settles in the same turn as the queue moves on, so once
+        // it is not running, whether anything started is decided.
+        await until { rig.runner.state[a.id] != .running }
 
         #expect(rig.launches.count == 1, "the run Stop took out of the queue started anyway")
         #expect(rig.runner.state[a.id] == .idle)
@@ -624,7 +636,7 @@ struct PipelineRunnerQueueTests {
         await until { rig.runner.state[a.id] == .running }
         try #require(rig.runner.state[a.id] == .running, "the re-read did not find the CLI run")
         try append(#"{"schema_version":5,"ts":"2026-10-20T12:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z","ended_at":"2026-10-20T12:00:00Z","outcome":"completed","cause":null}"#, to: dir)
-        await until({ rig.runner.state[a.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[a.id] != .running })
 
         guard case .ready = rig.runner.state[a.id] else {
             Issue.record("still \(String(describing: rig.runner.state[a.id])) after the CLI run finished")
@@ -706,7 +718,7 @@ struct PipelineRunnerQueueTests {
         await until({
             if case .ready = runner.state[p.id] { return true }
             return false
-        }, seconds: 8)
+        })
 
         guard case .ready = runner.state[p.id] else {
             Issue.record("expected .ready, got \(String(describing: runner.state[p.id]))"); return
@@ -784,9 +796,9 @@ struct PipelineRunnerQueueTests {
         defer { try? FileManager.default.removeItem(at: url) }
 
         // The poll reads ready (the earlier run's) and calls the run over.
-        await until({ !FileManager.default.fileExists(atPath: url.path) }, seconds: 6)
+        await until({ !FileManager.default.fileExists(atPath: url.path) })
         let ready = { runner.state.values.contains { if case .ready = $0 { true } else { false } } }
-        await until(ready, seconds: 3)
+        await until(ready)
 
         #expect(ready(), "the attached run's end never settled")
         #expect(noted.isEmpty, "credited the earlier run's tokens to the attached one")
@@ -825,7 +837,7 @@ struct PipelineRunnerQueueTests {
 
         // The run finishes: its terminus lands, and the poll reads it as ready.
         Self.writeFinishedRun(at: root.path, runId: "orphan-run", tokens: 300)
-        await until({ !noted.isEmpty }, seconds: 8)
+        await until({ !noted.isEmpty })
 
         #expect(noted == [.chatGPT])
         _ = (runner, p)
@@ -896,7 +908,7 @@ struct PipelineRunnerQueueTests {
         let (p, dir) = try await foreignRun(rig)
 
         try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"completed","cause":null}"#, to: dir)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
 
         guard case .ready = rig.runner.state[p.id] else {
             Issue.record("still \(String(describing: rig.runner.state[p.id])) after the CLI run finished")
@@ -914,7 +926,7 @@ struct PipelineRunnerQueueTests {
         let (p, dir) = try await foreignRun(rig, pid: outside)
 
         try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_cancelled","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"cancelled","cause":null}"#, to: dir)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
 
         #expect(rig.runner.state[p.id] == .stopped(stagesComplete: []))
     }
@@ -925,7 +937,7 @@ struct PipelineRunnerQueueTests {
 
         // Killed, no terminus written: run.pid names a process that is gone.
         try writePythonPID(999_999, in: dir)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
 
         #expect(rig.runner.state[p.id] == .failed(
             .keyed("desktop.pipeline.failure.stranded"), category: .unknown))
@@ -948,7 +960,7 @@ struct PipelineRunnerQueueTests {
         try writePythonPID(999_999, in: dir)
 
         rig.runner.scan(project: p)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 2)
+        await until({ rig.runner.state[p.id] != .running })
 
         #expect(rig.runner.state[p.id] != .running)
     }
@@ -973,7 +985,7 @@ struct PipelineRunnerQueueTests {
         #expect(rig.runner.state[p.id] == .running, "a live run read as over")
 
         try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"completed","cause":null}"#, to: dir)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
         guard case .ready = rig.runner.state[p.id] else {
             Issue.record("\(String(describing: rig.runner.state[p.id])) after the run finished")
             return
@@ -993,7 +1005,7 @@ struct PipelineRunnerQueueTests {
 
         try writePythonPID(getpid(), in: dir)
         try append(#"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_cancelled","run_id":"cli-run","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"cancelled","cause":null}"#, to: dir)
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
         #expect(rig.runner.state[p.id] == .stopped(stagesComplete: []), "the watch did not outlive the torn read")
     }
 
@@ -1004,7 +1016,7 @@ struct PipelineRunnerQueueTests {
         let (p, dir) = try await foreignRun(rig)
         try FileManager.default.removeItem(at: dir.appendingPathComponent(EventLogReader.pidFilename))
 
-        await until({ rig.runner.state[p.id] != .running }, seconds: 5)
+        await until({ rig.runner.state[p.id] != .running })
 
         #expect(rig.runner.state[p.id] == .failed(
             .keyed("desktop.pipeline.failure.stranded"), category: .unknown))
@@ -1052,7 +1064,9 @@ struct PipelineRunnerQueueTests {
     // MARK: - R25: a failed run is judged on all of its output
 
     @Test func aFailureIsJudgedOnLinesStillInThePipeAtExit() async throws {
-        let rig = Rig(); defer { rig.cleanUp() }
+        // The pipe closes once the traceback is in, so a long limit costs
+        // nothing; a 1 s one lost the race to a held main actor on a guest.
+        let rig = Rig(drainLimit: .seconds(30)); defer { rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
 
@@ -1064,7 +1078,7 @@ struct PipelineRunnerQueueTests {
         run.lines.yield("Traceback (most recent call last):")
         run.lines.yield("openai.RateLimitError: Error code: 429 - rate limit reached")
         run.lines.finish()
-        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false }, seconds: 3)
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
 
         guard case .failed(_, let category) = rig.runner.state[a.id] else {
             Issue.record("not failed: \(String(describing: rig.runner.state[a.id]))")
@@ -1085,7 +1099,7 @@ struct PipelineRunnerQueueTests {
         rig.runner.start(project: b)
 
         rig.launches[0].exit(.exited(code: 1), pipeStaysOpen: true)
-        await until({ rig.launches.count == 2 }, seconds: 3)
+        await until({ rig.launches.count == 2 })
 
         #expect(rig.launches.count == 2, "the queue waited on a pipe that never closed")
         if case .failed = rig.runner.state[a.id] {} else {

@@ -423,14 +423,16 @@ struct PipelineRunnerQueueTests {
         manifestRead: @escaping @Sendable (URL) async -> PipelineState = {
             await PipelineRunner.parseManifest(at: $0)
         },
-        endStateTimeout: Duration = .seconds(5)
+        endStateTimeout: Duration = .seconds(5),
+        pollInterval: Duration = .seconds(2)
     ) async throws -> (PipelineRunner, Project, SignalRecorder, URL) {
         let recorder = SignalRecorder()
         let runner = PipelineRunner(
             notificationCenter: NotificationCenter(),
             sendSignal: { pid, sig in
                 if sig == 0 {
-                    recorder.probes += 1
+                    // The ladder probes the group; the poll probes the run.
+                    if pid < 0 { recorder.probes += 1 } else { recorder.leaderProbes += 1 }
                     let alive = pid < 0 ? recorder.groupAlive : recorder.leaderAlive
                     return alive ? 0 : ESRCH
                 }
@@ -442,7 +444,8 @@ struct PipelineRunnerQueueTests {
             noteRunSucceeded: noteRunSucceeded,
             manifestRead: manifestRead,
             endStateTimeout: endStateTimeout,
-            slowEndRereadInterval: .milliseconds(50)
+            slowEndRereadInterval: .milliseconds(50),
+            orphanPollInterval: pollInterval
         )
         let p = Project(id: UUID(), name: "Orphan", path: path ?? "/p/orphan-\(UUID().uuidString)")
         let url = PipelineRunner.pidFileURL(for: p)
@@ -458,7 +461,10 @@ struct PipelineRunnerQueueTests {
 
     final class SignalRecorder {
         var sent: [(pid: pid_t, sig: Int32)] = []
+        /// The ladder's probes of the run's group.
         var probes = 0
+        /// The poll's probes of the run itself.
+        var leaderProbes = 0
         var groupAlive = true
         var leaderAlive = true
     }
@@ -542,6 +548,31 @@ struct PipelineRunnerQueueTests {
         }
     }
 
+    /// Where an attached run's PID file is, once the test knows.
+    final class PIDFileBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored: URL?
+        var url: URL? {
+            get { lock.withLock { stored } }
+            set { lock.withLock { stored = newValue } }
+        }
+    }
+
+    /// A disk whose first read after an attached run has ended (its PID file
+    /// gone: the end read) takes `delay`. The poll's reads before the end stay
+    /// quick, and only reads after the end are counted in `endReads`.
+    static func slowAtEnd(_ endReads: ReadLog, pidFile: PIDFileBox,
+                          delay: Duration = .milliseconds(150))
+        -> @Sendable (URL) async -> PipelineState {
+        { url in
+            if let f = pidFile.url, !FileManager.default.fileExists(atPath: f.path),
+               endReads.next() <= 1 {
+                try? await Task.sleep(for: delay)
+            }
+            return await PipelineRunner.parseManifest(at: url)
+        }
+    }
+
     /// R29: a run that succeeded on a disk too slow for the end-state read
     /// read "Not responding" for good. The termination path accepted the
     /// timed-out read, said the next passive scan would settle it, and there
@@ -550,7 +581,7 @@ struct PipelineRunnerQueueTests {
     /// slower than the timeout still settles.
     @Test func aSuccessfulRunWhoseEndReadTimedOutIsReadAgain() async {
         let reads = ReadLog()
-        // The end read and the first re-read are both slower than every wait.
+        // The end read is slower than every wait: the re-read waits on it.
         let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 2),
                       endStateTimeout: .milliseconds(50))
         defer { rig.cleanUp() }
@@ -571,16 +602,20 @@ struct PipelineRunnerQueueTests {
         // out-of-credit verdict goes.
         #expect(rig.noted == [.claude])
         try? await Task.sleep(for: .milliseconds(300))
-        #expect(reads.count == 2, "one end read and one re-read, waited on, and none after")
+        #expect(reads.count == 1,
+                "the re-read waited on the end read the time-out left, and started none of its own")
     }
 
     /// The re-read is the row's only while the row still says the read timed
     /// out: a run started meanwhile is not overwritten by it.
     @Test func aRereadDoesNotOverwriteARunStartedMeanwhile() async {
-        let reads = ReadLog()
-        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+        // The end read is held, so the row stays on the time-out until the
+        // test has started the study again; a fixed delay let a held main
+        // actor miss that window in the full suite.
+        let disk = HungDisk()
+        let rig = Rig(manifestRead: disk.read,
                       endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
-        defer { rig.cleanUp() }
+        defer { disk.release(); rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
         rig.writeFinishedRun(in: a, tokens: nil)
@@ -590,10 +625,11 @@ struct PipelineRunnerQueueTests {
         #expect(rig.runner.state[a.id] == .unreachable(reason: .timedOut))
         rig.runner.start(project: a)
         #expect(rig.runner.state[a.id] == .running)
+        disk.release()
 
         try? await Task.sleep(for: .milliseconds(600))
         #expect(rig.runner.state[a.id] == .running)
-        #expect(reads.count == 1, "nothing read the finished run again once a new one held the row")
+        #expect(disk.reads == 1, "nothing read the finished run again once a new one held the row")
     }
 
     /// Stop on a slow disk: the same single read, the same "Not responding".
@@ -615,25 +651,30 @@ struct PipelineRunnerQueueTests {
 
         #expect(rig.runner.state[a.id] == .ready(Date(timeIntervalSince1970: 1_792_490_400)))
         #expect(rig.noted.isEmpty, "a stopped run proves nothing about credit")
+        #expect(reads.count == 1, "the re-read waited on the end read, and started none of its own")
     }
 
     /// A Start that starts nothing (here, no AI consent) leaves the row as it
     /// was, so it must leave its re-read going too. It cancelled it first, and
     /// the row read "Not responding" for good.
     @Test func aStartThatStartsNothingKeepsTheReread() async {
-        let reads = ReadLog()
-        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+        // Held until the refused start, so the re-read cannot settle the row
+        // before it, which would pass this test without testing it.
+        let disk = HungDisk()
+        let rig = Rig(manifestRead: disk.read,
                       endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
-        defer { rig.cleanUp() }
+        defer { disk.release(); rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
         rig.writeFinishedRun(in: a, tokens: nil)
 
         rig.launches[0].exit()
         await until { rig.runner.state[a.id] == .unreachable(reason: .timedOut) }
+        #expect(rig.runner.state[a.id] == .unreachable(reason: .timedOut))
         rig.consented = false
         rig.runner.start(project: a)
         #expect(rig.launches.count == 1)
+        disk.release()
         await until {
             if case .ready = rig.runner.state[a.id] { return true }
             return false
@@ -647,10 +688,13 @@ struct PipelineRunnerQueueTests {
     /// The re-read finds a CLI run started on the study meanwhile: it reads as
     /// a scan's would, and is watched until it ends (R22), not left "Analysing".
     @Test func aRereadThatFindsACLIRunWatchesIt() async throws {
-        let reads = ReadLog()
-        let rig = Rig(manifestRead: Self.slowDisk(reads, slow: 1),
+        // The end read is held until the CLI run is on disk: the re-read adopts
+        // that read, which says what disk holds when it runs. Slowed by a fixed
+        // delay instead, a held main actor could land the CLI run after it.
+        let disk = HungDisk()
+        let rig = Rig(manifestRead: disk.read,
                       endStateTimeout: .milliseconds(50), slowEndReread: .milliseconds(300))
-        defer { rig.cleanUp() }
+        defer { disk.release(); rig.cleanUp() }
         let a = rig.project("A")
         rig.runner.start(project: a)
         rig.writeFinishedRun(in: a, tokens: nil)
@@ -661,6 +705,7 @@ struct PipelineRunnerQueueTests {
         let dir = URL(fileURLWithPath: a.path).appendingPathComponent("bristlenose-output/.bristlenose")
         try append(#"{"schema_version":5,"ts":"2026-10-20T11:00:00Z","event":"run_started","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z"}"#, to: dir)
         try writePythonPID(getpid(), in: dir)
+        disk.release()
 
         await until { rig.runner.state[a.id] == .running }
         try #require(rig.runner.state[a.id] == .running, "the re-read did not find the CLI run")
@@ -734,13 +779,15 @@ struct PipelineRunnerQueueTests {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let reads = ReadLog()
+        let pidFile = PIDFileBox()
         var noted: [LLMProvider] = []
         let (runner, p, _, url) = try await attachedOrphan(
             path: root.path, providerLine: "openai",
             noteRunSucceeded: { noted.append($0) },
-            manifestRead: Self.slowDisk(reads, slow: 1),
+            manifestRead: Self.slowAtEnd(reads, pidFile: pidFile),
             endStateTimeout: .milliseconds(50)
         )
+        pidFile.url = url
         defer { try? FileManager.default.removeItem(at: url) }
 
         Self.writeFinishedRun(at: root.path, runId: "orphan-run", tokens: 300)
@@ -753,7 +800,37 @@ struct PipelineRunnerQueueTests {
             Issue.record("expected .ready, got \(String(describing: runner.state[p.id]))"); return
         }
         #expect(noted == [.chatGPT])
-        #expect(reads.count == 2, "one end read that timed out, and one re-read")
+        #expect(reads.count == 1,
+                "one end read that timed out, waited on by the re-read, and none beside it")
+    }
+
+    /// A reconnected run on a dead mount: its 2 s poll read the folder with
+    /// no time-out, so the first hung read stopped the poll before its next
+    /// liveness check, and a run that then ended read "Analysing" until quit,
+    /// holding the Mac awake.
+    @Test func aReconnectedRunWhoseFolderHangsIsStillSeenToEnd() async throws {
+        let disk = HungDisk()
+        let (runner, p, recorder, url) = try await attachedOrphan(
+            manifestRead: disk.read, endStateTimeout: .milliseconds(50),
+            pollInterval: .milliseconds(100)
+        )
+        defer { disk.release(); try? FileManager.default.removeItem(at: url) }
+        await until { disk.reads >= 1 }
+        try #require(disk.reads >= 1, "the poll never read the folder")
+        // Several ticks go by on the one hung read: each probes the run, and
+        // none starts a read beside it.
+        let probesBefore = recorder.leaderProbes
+        await until { recorder.leaderProbes >= probesBefore + 3 }
+        #expect(recorder.leaderProbes >= probesBefore + 3, "the poll stopped on the hung read")
+        #expect(disk.reads == 1, "a tick started a second read beside the hung one")
+
+        recorder.leaderAlive = false
+        // The exit path drops the row to idle, then its end read (hung too)
+        // times out.
+        await until { runner.state[p.id] == .unreachable(reason: .timedOut) }
+
+        #expect(runner.state[p.id] == .unreachable(reason: .timedOut),
+                "the run's end was never noticed")
     }
 
     @Test func aRunFinishedFromCacheClearsNothing() async {
@@ -816,12 +893,17 @@ struct PipelineRunnerQueueTests {
         // written its own start yet, so that terminus is still the tail.
         Self.writeFinishedRun(at: root.path, runId: "earlier", tokens: 300)
         var noted: [LLMProvider] = []
+        let endReads = ReadLog()
+        let pidFile = PIDFileBox()
         let (runner, _, _, url) = try await attachedOrphan(
             path: root.path, providerLine: "openai",
             noteRunSucceeded: { noted.append($0) },
-            manifestRead: slowEnd ? Self.slowDisk(ReadLog(), slow: 1) : { await PipelineRunner.parseManifest(at: $0) },
+            manifestRead: slowEnd
+                ? Self.slowAtEnd(endReads, pidFile: pidFile)
+                : { await PipelineRunner.parseManifest(at: $0) },
             endStateTimeout: slowEnd ? .milliseconds(50) : .seconds(5)
         )
+        pidFile.url = url
         defer { try? FileManager.default.removeItem(at: url) }
 
         // The poll reads ready (the earlier run's) and calls the run over.
@@ -830,6 +912,7 @@ struct PipelineRunnerQueueTests {
         await until(ready)
 
         #expect(ready(), "the attached run's end never settled")
+        if slowEnd { #expect(endReads.count >= 1, "no end read was slowed") }
         // Credit is judged a hop after the row is written: give it the time.
         try? await Task.sleep(for: .milliseconds(300))
         #expect(noted.isEmpty, "credited the earlier run's tokens to the attached one")

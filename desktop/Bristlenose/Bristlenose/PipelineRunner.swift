@@ -568,6 +568,9 @@ final class PipelineRunner: ObservableObject {
     private let outputDrainLimit: Duration
     private let foreignRunPollInterval: Duration
     private let foreignRunPatience: Int
+    /// How often an attached run is polled, and how long a tick's read of its
+    /// folder is waited on before the next tick.
+    private let orphanPollInterval: Duration
     /// The read of a project's manifest that settles a finished or stopped
     /// run's state. A test passes a slow one.
     private let manifestRead: @Sendable (URL) async -> PipelineState
@@ -604,6 +607,14 @@ final class PipelineRunner: ObservableObject {
     /// For an attached run: the terminus already newest in its events log when
     /// it was attached, i.e. a previous run's. Its tokens are not this run's.
     private var orphanPriorTerminus: [UUID: String] = [:]
+
+    /// One tick of an attached run's poll: what it read off disk.
+    struct OrphanPollRead: Sendable {
+        let lines: [String]
+        let offset: UInt64
+        let state: PipelineState
+        let event: EventLogReader.Event?
+    }
 
     /// A launched run, as the runner sees it once it is going.
     struct LaunchedRun {
@@ -675,8 +686,10 @@ final class PipelineRunner: ObservableObject {
             await PipelineRunner.parseManifest(at: $0)
         },
         endStateTimeout: Duration = .seconds(5),
-        slowEndRereadInterval: Duration = .seconds(5)
+        slowEndRereadInterval: Duration = .seconds(5),
+        orphanPollInterval: Duration = .seconds(2)
     ) {
+        self.orphanPollInterval = orphanPollInterval
         self.foreignRunPatience = foreignRunPatience
         self.manifestRead = manifestRead
         self.endStateTimeout = endStateTimeout
@@ -938,10 +951,16 @@ final class PipelineRunner: ObservableObject {
     ) async -> T? {
         await withCheckedContinuation { (done: CheckedContinuation<T?, Never>) in
             let once = ResumeOnce<T?>(done)
-            Task { once.resume(await task.value) }
-            Task {
+            let timer = Task {
                 try? await Task.sleep(for: limit)
                 once.resume(nil)
+            }
+            // A value that arrives first ends the timer, so a quick read
+            // leaves nothing to wake later (the orphan poll waits this way
+            // every tick).
+            Task {
+                once.resume(await task.value)
+                timer.cancel()
             }
         }
     }
@@ -1097,6 +1116,11 @@ final class PipelineRunner: ObservableObject {
         let event = await Task.detached {
             EventLogReader.currentRunProgress(at: eventsURL, priorRunId: prior)
         }.value
+        foldProgress(event, for: projectID)
+    }
+
+    /// Fold a `run_progress` event, read off-main, into the project's progress.
+    private func foldProgress(_ event: EventLogReader.Event?, for projectID: UUID) {
         guard let event, let current = liveData.progress[projectID] else { return }
         if let readable = event.sessionsReadable, readable > (sessionsReadable[projectID] ?? 0) {
             sessionsReadable[projectID] = readable
@@ -1154,28 +1178,61 @@ final class PipelineRunner: ObservableObject {
         let projectID = project.id
         let manifestURL = Self.manifestURL(for: project)
 
+        let eventsURL = Self.eventsURL(for: project)
+        let read = manifestRead
+        let interval = orphanPollInterval
+
         let task = Task { @MainActor [weak self] in
             // Poll every 2s until the manifest reports all-complete or the
-            // orphan dies (kill(pid,0) fails) or we're cancelled.
+            // orphan dies (signal 0 fails) or we're cancelled. A tick's disk
+            // reads are one task, held across ticks while it hangs (a dead
+            // mount), never stacked: awaited outright, the first hung read
+            // stopped the poll before its next liveness check, and a run that
+            // then ended read "Analysing" until quit.
+            var pending: Task<OrphanPollRead, Never>?
+            defer { pending?.cancel() }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: interval)
                 guard let self else { return }
                 guard self.attachedOrphanPIDs[projectID] == pid else { return }
 
                 // Did the orphan die between polls?
-                if kill(pid, 0) != 0 {
+                if self.sendSignal(pid, 0) != 0 {
                     self.handleOrphanExit(projectID: projectID, project: project)
                     return
                 }
 
                 // Tail the CLI log file off disk so the popover technical
-                // details has real progress lines, not "Polling…" placeholder.
+                // details has real progress lines, not "Polling…" placeholder;
+                // read the manifest; and the newest run_progress for the ring
+                // (Phase 0b). The tick's wait cancels its timer when the read
+                // lands, so a healthy disk adds no wakeup.
                 let priorOffset = self.orphanLogOffsets[projectID] ?? 0
-                let (newLines, newOffset) = await Task.detached {
-                    Self.readLogTail(url: logURL, offset: priorOffset)
-                }.value
+                let prior = self.priorRunIds[projectID]
+                let held = pending != nil
+                let reading = pending ?? Task.detached {
+                    let tail = Self.readLogTail(url: logURL, offset: priorOffset)
+                    let state = await read(manifestURL)
+                    let event = EventLogReader.currentRunProgress(at: eventsURL, priorRunId: prior)
+                    return OrphanPollRead(
+                        lines: tail.lines, offset: tail.newOffset, state: state, event: event
+                    )
+                }
+                pending = reading
+                guard let tick = await Self.value(of: reading, within: interval) else {
+                    if !held {
+                        Self.logger.notice(
+                            "a read of a reconnected run's folder is taking long project=\(projectID.uuidString, privacy: .public)"
+                        )
+                    }
+                    continue
+                }
+                pending = nil
+                guard !Task.isCancelled, self.attachedOrphanPIDs[projectID] == pid else { return }
+
+                let newLines = tick.lines
                 if !newLines.isEmpty {
-                    self.orphanLogOffsets[projectID] = newOffset
+                    self.orphanLogOffsets[projectID] = tick.offset
                     for line in newLines {
                         // Same redaction as handleLine — the on-disk CLI log can
                         // carry a key-shaped echo, and this feeds the same
@@ -1186,12 +1243,7 @@ final class PipelineRunner: ObservableObject {
                     }
                 }
 
-                // Read manifest off-main; map to PipelineState. We trust the
-                // local disk on these in-poll reads — no timeout machinery.
-                let resolved = await Self.readManifestState(
-                    at: manifestURL, timeout: Self.scanTimeout, allowTimeout: false
-                )
-                if case .ready = resolved {
+                if case .ready = tick.state {
                     self.handleOrphanExit(projectID: projectID, project: project)
                     return
                 }
@@ -1201,12 +1253,9 @@ final class PipelineRunner: ObservableObject {
                         p.lastLine = last
                     }
                 }
-
-                // Phase 0b: fold the newest run_progress into the ring too.
-                await self.applyEventProgress(
-                    from: Self.eventsURL(for: project), for: projectID
-                )
+                self.foldProgress(tick.event, for: projectID)
             }
+            pending?.cancel()
         }
         orphanPollTasks[project.id] = task
     }
@@ -1241,18 +1290,20 @@ final class PipelineRunner: ObservableObject {
         let timeout = endStateTimeout
         Task.detached { [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
-            let resolved = await Self.readManifestState(
+            let (resolved, leftBehind) = await Self.readEndState(
                 at: Self.manifestURL(for: project), timeout: timeout, read: read
             )
-            await self?.settleOrphanEndRead(
-                resolved, project: project, provider: provider, priorTerminus: priorTerminus
+            guard let self else { leftBehind?.cancel(); return }
+            await self.settleOrphanEndRead(
+                resolved, project: project, provider: provider, priorTerminus: priorTerminus,
+                leftBehind: leftBehind
             )
             if case .ready = resolved {
                 // `.ready` here came from the run's own terminus: with an
                 // events log, a tail of `run_started` reads as running or
                 // stranded, never ready (`EventLogReader.deriveState`).
                 let terminus = EventLogReader.tailEvent(at: eventsURL)
-                await self?.noteCreditIfTheRunUsedAnLLM(
+                await self.noteCreditIfTheRunUsedAnLLM(
                     provider: provider, project: project,
                     terminus: terminus, priorRunId: priorTerminus
                 )
@@ -1265,11 +1316,16 @@ final class PipelineRunner: ObservableObject {
     /// responding" until relaunch.
     private func settleOrphanEndRead(
         _ resolved: PipelineState, project: Project,
-        provider: LLMProvider?, priorTerminus: String?
+        provider: LLMProvider?, priorTerminus: String?,
+        leftBehind: Task<PipelineState, Never>?
     ) {
         applyScanResult(resolved, for: project.id)
         if state[project.id] == .unreachable(reason: .timedOut) {
-            rereadAfterSlowEnd(project, provider: provider, priorRunId: priorTerminus)
+            rereadAfterSlowEnd(
+                project, provider: provider, priorRunId: priorTerminus, adopting: leftBehind
+            )
+        } else {
+            leftBehind?.cancel()
         }
     }
 
@@ -1479,12 +1535,23 @@ final class PipelineRunner: ObservableObject {
         // behind a study whose row already said "Not responding" (R29). The
         // losing read is cancelled and left behind; one blocked in the kernel
         // ignores that and stays blocked, which is the price of the slot.
+        let (state, leftBehind) = await readEndState(at: url, timeout: timeout, read: read)
+        leftBehind?.cancel()
+        return state
+    }
+
+    /// The timed read, handing back a read that timed out still running, for
+    /// `rereadAfterSlowEnd` to wait on rather than start a second beside it:
+    /// on a dead mount each blocked read holds a thread of the shared pool.
+    static func readEndState(
+        at url: URL, timeout: Duration,
+        read: @escaping @Sendable (URL) async -> PipelineState
+    ) async -> (state: PipelineState, leftBehind: Task<PipelineState, Never>?) {
         let reading = Task.detached { await read(url) }
         guard let state = await value(of: reading, within: timeout) else {
-            reading.cancel()
-            return .unreachable(reason: .timedOut)
+            return (.unreachable(reason: .timedOut), reading)
         }
-        return state
+        return (state, nil)
     }
 
     /// Read `stages` from the manifest and return names of those marked complete.
@@ -1784,7 +1851,7 @@ final class PipelineRunner: ObservableObject {
                     p.lastLine = "Stopping…"
                 }
                 // Don't clear state here — the orphan poll task
-                // (kill(pid,0) every 2s) will detect the exit and call
+                // (signal 0 every 2s) will detect the exit and call
                 // handleOrphanExit, which tears down attachedOrphanPIDs,
                 // removes the PID file, and resolves the final state
                 // from the manifest. ≤2s pill lag is acceptable.
@@ -2324,13 +2391,15 @@ var args = ["run", project.path, "--no-serve"]
             // wrote `.idle` until 20 Oct 2026, so the app's own Stop left the
             // row blank (R21). The slot is held across the read, as below (R23).
             var stopped = PipelineState.idle
+            var leftBehind: Task<PipelineState, Never>?
             if let project {
-                stopped = await Self.readManifestState(
+                (stopped, leftBehind) = await Self.readEndState(
                     at: Self.manifestURL(for: project), timeout: endStateTimeout,
                     read: manifestRead
                 )
             }
             guard gen == generation else {
+                leftBehind?.cancel()
                 Self.logger.error(
                     "stop superseded during its end-state read project=\(projectID.uuidString, privacy: .public) — state not written"
                 )
@@ -2341,7 +2410,9 @@ var args = ["run", project.path, "--no-serve"]
             releaseSlot()
             state[projectID] = stopped
             if stopped == .unreachable(reason: .timedOut), let project {
-                rereadAfterSlowEnd(project, priorRunId: priorRunIds[projectID])
+                rereadAfterSlowEnd(
+                    project, priorRunId: priorRunIds[projectID], adopting: leftBehind
+                )
             }
             Self.logger.info(
                 "run cancelled project=\(projectID.uuidString, privacy: .public) state=\(String(describing: stopped), privacy: .public)"
@@ -2370,13 +2441,15 @@ var args = ["run", project.path, "--no-serve"]
         let sidecarReportedSuccess = (status == 0) || Self.looksLikeSuccess(lines: lines)
 
         let derived: PipelineState
+        let leftBehind: Task<PipelineState, Never>?
         if sidecarReportedSuccess {
-            derived = await resolveTerminationState(
+            (derived, leftBehind) = await resolveTerminationState(
                 projectID: projectID, project: project
             )
             // Unreachable while the slot is held: nothing can spawn until
             // `releaseSlot` below. If it ever fires, a newer run owns the slot.
             guard gen == generation else {
+                leftBehind?.cancel()
                 Self.logger.error(
                     "termination superseded during its end-state read project=\(projectID.uuidString, privacy: .public) — state not written"
                 )
@@ -2385,6 +2458,7 @@ var args = ["run", project.path, "--no-serve"]
         } else {
             // Non-zero exit + no success markers — skip the disk read.
             derived = .idle
+            leftBehind = nil
         }
 
         let decision = Self.decideTermination(
@@ -2398,7 +2472,10 @@ var args = ["run", project.path, "--no-serve"]
         case .accept(let final):
             state[projectID] = final
             if final == .unreachable(reason: .timedOut), let project {
-                rereadAfterSlowEnd(project, provider: provider, priorRunId: priorRunIds[projectID])
+                rereadAfterSlowEnd(
+                    project, provider: provider, priorRunId: priorRunIds[projectID],
+                    adopting: leftBehind
+                )
             }
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
@@ -2414,6 +2491,7 @@ var args = ["run", project.path, "--no-serve"]
                 )
             }
         case .treatAsFailure:
+            leftBehind?.cancel()
             state[projectID] = deriveFailureState(
                 projectID: projectID, project: project,
                 outcome: outcome, lines: lines
@@ -2439,9 +2517,12 @@ var args = ["run", project.path, "--no-serve"]
     /// `provider`, as the termination path does on `.ready`. `priorRunId` is
     /// the terminus newest when the run began: `priorRunIds` for a spawned run,
     /// `orphanPriorTerminus` for an attached one. The attached run's exit path
-    /// (`handleOrphanExit`) re-reads the same way.
+    /// (`handleOrphanExit`) re-reads the same way. `leftBehind` is the end read
+    /// that timed out, still running: it is the first read waited on, so the
+    /// end read and its re-reads are one read at a time too.
     private func rereadAfterSlowEnd(
-        _ project: Project, provider: LLMProvider? = nil, priorRunId: String?
+        _ project: Project, provider: LLMProvider? = nil, priorRunId: String?,
+        adopting leftBehind: Task<PipelineState, Never>? = nil
     ) {
         let projectID = project.id
         let url = Self.manifestURL(for: project)
@@ -2451,7 +2532,9 @@ var args = ["run", project.path, "--no-serve"]
         slowEndRereads[projectID]?.cancel()
         slowEndRereadTokens[projectID] = token
         slowEndRereads[projectID] = Task { @MainActor [weak self] in
-            var pending: Task<PipelineState, Never>?
+            var pending = leftBehind
+            // Bookkeeping: a read blocked in the kernel ignores the cancel.
+            defer { pending?.cancel() }
             for _ in 0..<Self.slowEndRereadLimit {
                 try? await Task.sleep(for: interval)
                 guard !Task.isCancelled,
@@ -2544,13 +2627,13 @@ var args = ["run", project.path, "--no-serve"]
     /// flip exit-0 to `.unreachable` for users with audio on network shares.
     private func resolveTerminationState(
         projectID: UUID, project: Project?
-    ) async -> PipelineState {
-        guard let project else { return .idle }
-        let derived = await Self.readManifestState(
+    ) async -> (state: PipelineState, leftBehind: Task<PipelineState, Never>?) {
+        guard let project else { return (.idle, nil) }
+        let (derived, leftBehind) = await Self.readEndState(
             at: Self.manifestURL(for: project), timeout: endStateTimeout, read: manifestRead
         )
         if case .ready = derived {
-            return derived
+            return (derived, nil)
         }
         Self.logger.warning(
             """
@@ -2559,7 +2642,7 @@ var args = ["run", project.path, "--no-serve"]
             derived=\(String(describing: derived), privacy: .public)
             """
         )
-        return derived
+        return (derived, leftBehind)
     }
 
     /// Categorise a non-zero exit into `.failed(summary, category:)`. Extracted

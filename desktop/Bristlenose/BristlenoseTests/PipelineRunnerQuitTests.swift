@@ -21,7 +21,9 @@ struct PipelineRunnerQuitTests {
 
     private func runner(center: NotificationCenter, log: SignalLog) -> PipelineRunner {
         PipelineRunner(notificationCenter: center, sendSignal: { pid, sig in
-            log.sent.append((pid, sig))
+            // Signal 0 is a liveness probe (an attached run's poll), not a
+            // signal Quit sent.
+            if sig != 0 { log.sent.append((pid, sig)) }
             return 0
         })
     }

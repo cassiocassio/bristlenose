@@ -84,4 +84,36 @@ import Foundation
     @Test func externalDrop_onLens_isRejected() {
         #expect(SidebarExternalDrop.resolve(droppedOn: .lens(.project)) == nil)
     }
+
+    // MARK: - R56: rows redrawn around an open name field
+
+    @Test func rowKinds_layOutOpenFoldersOnly() {
+        let open = Folder(id: UUID(), name: "Open"), shut = Folder(id: UUID(), name: "Shut", collapsed: true)
+        let a = project("A", folder: open.id), b = project("B", folder: shut.id)
+        let tree = OutlineTree.build(lenses: [], projects: [a, b], folders: [open, shut])
+        let rows = OutlineTree.rowKinds(tree) { node in
+            node.kind == .folder(open.id)
+        }
+        #expect(rows.contains(.project(a.id)))
+        #expect(!rows.contains(.project(b.id)), "a closed folder's study was laid out")
+        #expect(rows.first == .group(OutlineTree.projectsGroupKey))
+    }
+
+    @Test func rowsToRefreshDuringRename_skipsOnlyTheEditedRow() {
+        let a = UUID(), b = UUID()
+        let next: [OutlineNode.Kind] = [.group("Projects"), .project(a), .project(b)]
+        let rows = OutlineTree.rowsToRefreshDuringRename(displayed: next.map(Optional.some),
+                                                         next: next, editing: a)
+        #expect(rows == IndexSet([0, 2]))
+    }
+
+    @Test func rowsToRefreshDuringRename_waitsWhenTheRowsChange() {
+        let a = UUID(), b = UUID()
+        let shown: [OutlineNode.Kind?] = [.group("Projects"), .project(a)]
+        #expect(OutlineTree.rowsToRefreshDuringRename(
+            displayed: shown, next: [.group("Projects"), .project(b), .project(a)], editing: a) == nil)
+        #expect(OutlineTree.rowsToRefreshDuringRename(
+            displayed: shown, next: [.group("Projects"), .project(a)], editing: b) == nil,
+                "no edited row to protect, so nothing may be redrawn")
+    }
 }

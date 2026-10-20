@@ -134,3 +134,33 @@ enum OutlineTree {
         return roots
     }
 }
+
+extension OutlineTree {
+    /// The rows `roots` lays out, top to bottom: each node, then a group's
+    /// children always, and a folder's when `isExpanded` says it is open. The
+    /// rule `SidebarOutlineController.reloadAndRestore` expands by.
+    static func rowKinds(_ roots: [OutlineNode],
+                         isExpanded: (OutlineNode) -> Bool) -> [OutlineNode.Kind] {
+        roots.flatMap { node -> [OutlineNode.Kind] in
+            let open = node.isGroup || isExpanded(node)
+            return [node.kind] + (open ? rowKinds(node.children, isExpanded: isExpanded) : [])
+        }
+    }
+
+    /// The rows to redraw while the name field in `editing`'s row is open
+    /// (R56): every row but that one, since a reload of the edited row tears
+    /// its field editor down. Nil when the rows themselves differ (a study
+    /// added, removed, moved, a folder opened), because then the rows would
+    /// shift under the field; the list waits for the name, and the commit's
+    /// full reload catches up.
+    static func rowsToRefreshDuringRename(displayed: [OutlineNode.Kind?],
+                                          next: [OutlineNode.Kind],
+                                          editing: UUID) -> IndexSet? {
+        guard displayed == next.map(Optional.some),
+              let edited = next.firstIndex(where: { $0 == .project(editing) || $0 == .folder(editing) })
+        else { return nil }
+        var rows = IndexSet(integersIn: 0..<next.count)
+        rows.remove(edited)
+        return rows
+    }
+}

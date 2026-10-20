@@ -312,8 +312,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Load-bearing for the reload guard: `update()` calls a full `reloadData()` on
     /// every model tick (`liveData` fires at run frequency), which would tear down
     /// the active `NSText` field editor mid-type and eat keystrokes. While this is
-    /// non-nil, `update()` / `paletteDidChange()` skip the reload; the commit path
-    /// re-runs `update()` once editing ends (the rename mutation republishes).
+    /// non-nil, `update()` / `paletteDidChange()` skip the full reload (`update()`
+    /// redraws every other row in place, `refreshRowsAroundRename`); the commit
+    /// path re-runs `update()` once editing ends (the rename mutation republishes).
     private var editingNodeID: UUID?
 
     /// Set true for the duration of an Escape-driven end so `controlTextDidEndEditing`
@@ -583,16 +584,46 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         self.lastSelection = selection
 
         // Reload guard: a `reloadData` while a name field is being edited destroys
-        // its field editor and drops the in-flight keystrokes. Freeze the table
-        // (model is already stored above) until the edit commits — the commit path
-        // republishes and re-enters `update()` with `editingNodeID == nil`.
-        guard editingNodeID == nil else { return }
+        // its field editor and drops the in-flight keystrokes. So the edited row
+        // is never reloaded until the edit commits — the commit path republishes
+        // and re-enters `update()` with `editingNodeID == nil`. Every OTHER row
+        // is redrawn in place, so a run's progress and subtitles keep moving
+        // while a name is typed (R56).
+        guard editingNodeID == nil else {
+            refreshRowsAroundRename()
+            return
+        }
         // Same shape, different owner: a drop animation is mid-slide and the view's row
         // order is ahead of the tree. The release work item reloads against whatever
         // tree landed while suppressed.
         guard !reloadSuppressed else { return }
 
         reloadAndRestore()
+    }
+
+    /// While a name field is open: redraw every row but the edited one, in place
+    /// (`reloadData(forRowIndexes:)` re-asks `viewFor` for just those rows, and
+    /// the cells read the model by id). Only when the rows are the same rows —
+    /// a study added, removed or moved would shift them under the field, so then
+    /// nothing moves until the name is committed, as before (R56).
+    private func refreshRowsAroundRename() {
+        guard !reloadSuppressed, let id = editingNodeID else { return }
+        let displayed = (0..<outlineView.numberOfRows).map {
+            (outlineView.item(atRow: $0) as? OutlineNode)?.kind
+        }
+        let next = OutlineTree.rowKinds(roots, isExpanded: isFolderExpanded)
+        guard let rows = OutlineTree.rowsToRefreshDuringRename(
+            displayed: displayed, next: next, editing: id), !rows.isEmpty else { return }
+        // Belt-and-braces: the row AppKit says it is editing is never among them.
+        guard outlineView.editedRow < 0 || !rows.contains(outlineView.editedRow) else { return }
+        outlineView.reloadData(forRowIndexes: rows, columnIndexes: IndexSet(integer: 0))
+        // A row can gain or lose its subtitle. Unanimated, so the open field
+        // moves at most once rather than sliding while the name is typed.
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0
+            outlineView.noteHeightOfRows(withIndexesChanged: rows)
+        }
+        applyFlash()
     }
 
     /// Reload the table and put back everything a `reloadData` drops: expansion,
@@ -1491,10 +1522,12 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// the *grammar* of the refusal, not the set of things refused. Whether a
     /// failed project should accept files at all is a separate question.
     nonisolated static func acceptsFinderDrop(state: PipelineState?) -> Bool {
+        guard let state else { return true }
+        // Exhaustive on purpose: a new state is decided here, not defaulted in.
         switch state {
         case .running, .queued, .failed, .failedWithDiagnostic, .unreachable:
             return false
-        default:
+        case .scanning, .idle, .ready, .partial, .stopped, .completedPartial:
             return true
         }
     }

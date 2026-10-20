@@ -2440,14 +2440,14 @@ struct ContentView: View {
     /// Adds the dropped interviews to that project's input list and — when
     /// appropriate — kicks off a pipeline run on them.
     ///
-    /// Drop-policy matrix (plan §Phase 5 finding 40):
-    /// - target `.running` / `.queued`: reject (toast); never silently queue
-    ///   another drop on a busy project
-    /// - target `.ready` (already analysed): accept the addFiles, show the
-    ///   "extra interviews not supported yet" toast, do NOT re-run
-    /// - target `.idle` / `.failed` / `.scanning` / `.unreachable`: accept,
-    ///   addFiles, kick off pipeline (`PipelineRunner` will queue if another
-    ///   project is currently running)
+    /// Drop-policy matrix (plan §Phase 5 finding 40; the refusals moved into
+    /// the drag on 19 Aug 2026, `docs/design-analysis-lifecycle.md` §4.2):
+    /// - target `.running` / `.queued` / `.failed` / `.failedWithDiagnostic` /
+    ///   `.unreachable`: refused during the drag on both sidebars
+    ///   (`StudyFinderDrop`, R47); a drop that still arrives returns silently
+    /// - anything else: copy the files. A folder-shaped study then runs
+    ///   (incrementally if already analysed; `PipelineRunner` queues it behind
+    ///   another run); a file-subset study registers them and does not run
     private func handleDropOnProject(id: UUID, urls: [URL]) {
         let accepted = Self.filterAcceptedURLs(urls)
         guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
@@ -2525,12 +2525,14 @@ struct ContentView: View {
         // `.ready` is intentionally NOT an early return; we copy the files
         // into the project folder (so they live alongside the analysed
         // sources) but don't auto-run — re-analysis is post-TF.
-        // Belt-and-braces only. `SidebarOutlineController.acceptsFinderDrop`
-        // refuses these three during the drag — no row highlight, the
-        // operation-not-allowed pointer, the item springing back — so a drop
-        // in these states should never arrive here. It is kept because the
-        // pane's own `.dropDestination` is a second door, and because a silent
-        // return is the correct answer either way.
+        // Belt-and-braces only. Both sidebars refuse these states during the
+        // drag (`SidebarOutlineController.acceptsFinderDrop`, which the
+        // SwiftUI row asks through `StudyFinderDrop`): no row highlight, the
+        // item springing back, and on the AppKit outline the
+        // operation-not-allowed pointer. So a drop in these states should
+        // never arrive here (the empty study's pane asks the same, R47). It is
+        // kept because File ▸ Add Files… is another door, and because a
+        // silent return is the correct answer either way.
         //
         // The three toasts that used to live here are gone. They announced at
         // drop-time what the drag now says, and one of them ("Use Retry on the
@@ -3549,16 +3551,20 @@ struct ContentView: View {
         // the reject-toast if the dropped folder is itself a project.
         // SwiftUI's per-row .dropDestination handles all hit-testing —
         // no GeometryReader frame capture, no coordinate-space gymnastics.
-        // isTargeted drives the hover-highlight on the row.
+        // isTargeted drives the hover-highlight on the row. A study that is
+        // running, queued, failed or unreachable neither lights nor takes the
+        // drop, and a drag of nothing it can ingest is sprung back, as on the
+        // AppKit outline (`StudyFinderDrop`, R47, R48). The destination stays:
+        // without it the List's own would take the drop and make a new study.
         .dropDestination(for: URL.self) { urls, _ in
+            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id], urls: urls)
+            else { return false }
             handleDropOnProject(id: project.id, urls: urls)
             return true
         } isTargeted: { isOver in
-            if isOver {
-                dropTargetProjectID = project.id
-            } else if dropTargetProjectID == project.id {
-                dropTargetProjectID = nil
-            }
+            dropTargetProjectID = StudyFinderDrop.highlight(
+                isOver: isOver, study: project.id, current: dropTargetProjectID,
+                state: pipelineRunner.state[project.id])
         }
         .tag(SidebarSelection.project(project.id))
         .draggable(ProjectDragID(id: project.id))
@@ -3902,6 +3908,10 @@ struct ContentView: View {
             }
         }
         .dropDestination(for: URL.self) { urls, _ in
+            // The pane shows only for an idle study (`DetailPaneKind`), but the
+            // study can start under the drag; refuse as the sidebar does (R47).
+            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id], urls: urls)
+            else { return false }
             handleDropOnProject(id: project.id, urls: urls)
             return true
         } isTargeted: { emptyProjectDropTargeted = $0 }

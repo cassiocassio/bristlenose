@@ -321,4 +321,115 @@ struct SidebarOutlineDropAndRevealTests {
                                  as? NSTableCellView)
         #expect(shown.imageView?.alphaValue == 1, "the icon slot is empty while the name is typed")
     }
+
+    // MARK: - R47: a study that can't take files refuses the drag here too
+
+    /// The AppKit half of the rule `StudyFinderDropTests` pins for the SwiftUI
+    /// row: no highlight, the not-allowed pointer, the files spring back.
+    @Test func aBusyStudyRefusesTheDrag() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let runner = PipelineRunner()            // the controller holds it weakly
+        rig.controller.pipelineRunner = runner
+        let study = rig.index.addProject(name: "Study", path: rig.tempDir.path)
+        rig.publish()
+        let item = rig.outlineView.item(atRow: try #require(rig.row(of: study.id)))
+        let video = rig.tempDir.appendingPathComponent("Session 1.MOV")
+        try #require(validate(rig, [video], onto: item) == .copy)
+
+        for state in StudyFinderDropTests.busy {
+            runner._debugSetState(state, for: study.id)
+            #expect(validate(rig, [video], onto: item) == [], "\(state) took the drag")
+        }
+    }
+
+    // MARK: - R56: the other rows keep updating while a name is typed
+
+    private func cell(_ rig: OutlineRig, _ id: UUID) -> NSTableCellView? {
+        guard let r = rig.row(of: id) else { return nil }
+        return rig.outlineView.view(atColumn: 0, row: r, makeIfNecessary: false) as? NSTableCellView
+    }
+
+    /// A rig with study A's name field open and half typed, and study B beside it.
+    private func renaming() throws -> (OutlineRig, NSWindow, a: UUID, b: UUID) {
+        let rig = OutlineRig()
+        let window = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 240, height: 600),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = rig.controller.view
+        let a = rig.index.addProject(name: "A", path: ""), b = rig.index.addProject(name: "B", path: "")
+        rig.index.consumeIconReveal(a.id)
+        rig.index.consumeIconReveal(b.id)
+        rig.index.pendingRename = a.id
+        rig.publish(selection: [.project(a.id)])
+        let editor = try #require(cell(rig, a.id)?.textField?.currentEditor(), "the rename did not open")
+        editor.string = "Half-typ"
+        return (rig, window, a.id, b.id)
+    }
+
+    @Test func anotherStudyKeepsUpdatingWhileANameIsTyped() throws {
+        let (rig, window, a, b) = try renaming()
+        defer { window.close(); rig.cleanup() }
+        let field = try #require(cell(rig, a))
+
+        rig.index.renameProject(id: b, newName: "B, changed elsewhere")
+        rig.publish(selection: [.project(a)])
+
+        #expect(cell(rig, b)?.textField?.stringValue == "B, changed elsewhere",
+                "the other study's row froze while a name was typed")
+        #expect(cell(rig, a) === field, "the row being named was rebuilt")
+        #expect(field.textField?.currentEditor()?.string == "Half-typ", "the typing was lost")
+    }
+
+    /// The symptom itself: a study starts its run while another's name is
+    /// being typed. Its row gains the run's subtitle and grows to two lines,
+    /// and the typing survives.
+    @Test func aRunStartingWhileANameIsTypedShowsOnItsRow() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let window = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 240, height: 600),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = rig.controller.view
+        defer { window.close() }
+        let runner = PipelineRunner(), live = PipelineLiveData(), i18n = I18n()
+        rig.controller.pipelineRunner = runner   // all three are held weakly
+        rig.controller.liveData = live
+        rig.controller.i18n = i18n
+        let a = rig.index.addProject(name: "A", path: "")
+        let b = rig.index.addProject(name: "B", path: rig.tempDir.path)
+        rig.index.consumeIconReveal(a.id)
+        rig.index.consumeIconReveal(b.id)
+        rig.index.pendingRename = a.id
+        rig.publish(selection: [.project(a.id)])
+        let field = try #require(cell(rig, a.id))
+        let editor = try #require(field.textField?.currentEditor(), "the rename did not open")
+        editor.string = "Half-typ"
+        let bRow = try #require(rig.row(of: b.id))
+        let before = rig.outlineView.rect(ofRow: bRow).height
+
+        runner._debugSetState(.running, for: b.id)
+        defer { runner._debugSetState(.idle, for: b.id) }   // let the sleep assertion go
+        rig.publish(selection: [.project(a.id)])
+
+        #expect(rig.outlineView.rect(ofRow: bRow).height > before,
+                "the running study's row did not gain its subtitle while a name was typed")
+        #expect(cell(rig, a.id) === field, "the row being named was rebuilt")
+        #expect(field.textField?.currentEditor()?.string == "Half-typ", "the typing was lost")
+    }
+
+    /// Rows that come or go would move under the field, so the list waits for
+    /// the name, as it did before.
+    @Test func aStudyAddedWhileANameIsTypedWaitsForTheName() throws {
+        let (rig, window, a, _) = try renaming()
+        defer { window.close(); rig.cleanup() }
+        let field = try #require(cell(rig, a))
+        let rows = rig.outlineView.numberOfRows
+
+        let c = rig.index.addProject(name: "C", path: "")
+        rig.index.consumeIconReveal(c.id)
+        rig.publish(selection: [.project(a)])
+
+        #expect(rig.outlineView.numberOfRows == rows)
+        #expect(cell(rig, a) === field)
+        #expect(field.textField?.currentEditor()?.string == "Half-typ", "the typing was lost")
+    }
 }

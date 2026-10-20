@@ -46,6 +46,9 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   const fetchQuotes = useCallback((replace = false) => {
     apiGet<QuotesListResponse>("/quotes")
       .then((json) => {
+        // A failed read is not left over the good one that follows (as in
+        // QuoteSessions): during a run there is a re-read per import.
+        setError(null);
         setData(json);
         const allQuotes = [
           ...json.sections.flatMap((s) => s.quotes),
@@ -59,7 +62,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
       .catch((err: Error) => {
         // The wire string is for the console; the lens says it in its own words (R86).
         console.error("Quotes read failed:", err);
-        setError(err.message);
+        setError(err.message || "read failed");
       })
       .finally(() => endRefetch());
     // Also fetch codebook tag names for auto-suggest vocabulary

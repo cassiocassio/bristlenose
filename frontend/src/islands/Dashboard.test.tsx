@@ -84,20 +84,40 @@ beforeEach(() => {
 // the wire string in a sentence, and offered nothing to do about it.
 describe("Dashboard — a failed read", () => {
   it("says so in the lens's words, with Retry, never the wire", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: "Internal Server Error",
-      json: async () => ({ detail: "boom" }),
-      text: async () => "boom",
-    });
-    render(<Dashboard projectId="1" />);
-    expect(
-      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
-    expect(screen.queryByText(/500|\/dashboard|boom/)).toBeNull();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+        json: async () => ({ detail: "boom" }),
+        text: async () => "boom",
+      });
+      render(<Dashboard projectId="1" />);
+      expect(
+        await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+      expect(screen.queryByText(/500|\/dashboard|boom/)).toBeNull();
+      expect(logged).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("clears once the next read answers", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new TypeError("Load failed"));
+      mockFetch(baseDashboard);
+      const { rerender } = render(<Dashboard projectId="1" refreshKey={0} />);
+      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens.");
+      rerender(<Dashboard projectId="1" refreshKey={1} />);
+      expect(await screen.findByText("Transcript coverage")).toBeTruthy();
+      expect(screen.queryByText("This lens couldn’t be shown. Try again, or choose another lens.")).toBeNull();
+    } finally {
+      logged.mockRestore();
+    }
   });
 });
 

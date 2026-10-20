@@ -33,6 +33,7 @@ import type { ApiError } from "../utils/api";
 // refusal since has rendered its raw English `detail`, which for a missing key
 // tells a Mac-app user to edit a `.env` file.
 import { autocodeRefusal } from "../utils/autocodeRefusal";
+import { autocodeFailure } from "../utils/autocodeFailure";
 import { toast } from "../utils/toast";
 import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
 import type {
@@ -250,6 +251,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     ])
       .then(([cb, tpl, st]) => {
         if (!live) return;
+        // A failed read is not left over a good one that follows.
+        setError(null);
         setCodebook(cb);
         setTemplates(tpl);
         setStates(st);
@@ -258,7 +261,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         if (!live) return;
         // The wire string is for the console; the lens says it in its own words (R86).
         console.error("Codebook read failed:", e);
-        setError(e.message);
+        setError(e.message || "read failed");
       });
     return () => {
       live = false;
@@ -314,13 +317,14 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const reload = useCallback(() => {
     Promise.all([getCodebook(), getCodebookTemplates(), getFrameworkStates()])
       .then(([cb, tpl, st]) => {
+        setError(null);
         setCodebook(cb);
         setTemplates(tpl);
         setStates(st);
       })
       .catch((e: Error) => {
         console.error("Codebook read failed:", e);
-        setError(e.message);
+        setError(e.message || "read failed");
       });
   }, []);
 
@@ -406,6 +410,19 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     toastSaveFailed(e);
   }, []);
 
+  /** Tagging did not start on a codebook that installed: a refusal names itself;
+   *  anything else is "Tagging failed.", never "Couldn't save your change". */
+  const reportStartError = useCallback((e: Error) => {
+    const refusal = autocodeRefusal((e as ApiError).reason);
+    if (refusal) {
+      toast(refusal.message, 4000, refusal.kind);
+      return;
+    }
+    console.error("AutoCode did not start:", e);
+    const failure = autocodeFailure(undefined);
+    toast(failure.message, 4000, failure.kind);
+  }, []);
+
   const onInstall = useCallback(
     (id: string, title: string) => {
       // **Install IS apply** (D4), and that is two calls, not one. Importing the
@@ -416,37 +433,46 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       // No confirmation, deliberately: it spends, but the researcher asked by
       // clicking, and a dialog on an additive act teaches them to dismiss
       // dialogs — which is what makes the destructive one stop working.
-      importCodebookTemplate(id)
-        .then(() => startAutoCode(id))
-        .then(() => {
-          // Register with the activity store so the chip stack shows progress.
-          // Autotagging is not instant; without this the researcher clicks
-          // Install and nothing appears to happen for minutes.
-          //
-          // Each run is its own job, and this codebook's last chip goes, as
-          // for clip exports: under one id per codebook, a reinstall joined
-          // the last run's finished chip, and a run that failed before its
-          // first read stayed "Done".
-          for (const [jobId, job] of getJobs()) {
-            if (job.type === "autocode" && job.frameworkId === id) removeJob(jobId);
-          }
-          addJob(`autocode:${id}:${++autocodeJobSeq}`, {
-            type: "autocode",
-            frameworkId: id,
-            frameworkTitle: title,
-            // Was "/report/codebook-v2/", which stopped resolving when this
-            // lens took the codebook route on 31 Aug 2026 — the activity
-            // chip's "View Report" would have 404'd. The field itself was
-            // added while two lenses ran side by side and the chip sent
-            // everyone to the shipped one; with one lens it is redundant but
-            // harmless, and explicit beats an implicit default.
-            originRoute: "/report/codebook/",
-          });
-          announce();
-        })
-        .catch(reportActionError);
+      //
+      // A failed import saved nothing ("Couldn't save your change"). A failed
+      // start leaves the codebook installed and uncoded, so everyone is told it
+      // is there, and the failure is tagging's.
+      const started = () => {
+        // Register with the activity store so the chip stack shows progress.
+        // Autotagging is not instant; without this the researcher clicks
+        // Install and nothing appears to happen for minutes.
+        //
+        // Each run is its own job, and this codebook's last chip goes, as
+        // for clip exports: under one id per codebook, a reinstall joined
+        // the last run's finished chip, and a run that failed before its
+        // first read stayed "Done".
+        for (const [jobId, job] of getJobs()) {
+          if (job.type === "autocode" && job.frameworkId === id) removeJob(jobId);
+        }
+        addJob(`autocode:${id}:${++autocodeJobSeq}`, {
+          type: "autocode",
+          frameworkId: id,
+          frameworkTitle: title,
+          // Was "/report/codebook-v2/", which stopped resolving when this
+          // lens took the codebook route on 31 Aug 2026 — the activity
+          // chip's "View Report" would have 404'd. The field itself was
+          // added while two lenses ran side by side and the chip sent
+          // everyone to the shipped one; with one lens it is redundant but
+          // harmless, and explicit beats an implicit default.
+          originRoute: "/report/codebook/",
+        });
+        announce();
+      };
+      importCodebookTemplate(id).then(
+        () =>
+          startAutoCode(id).then(started, (e: Error) => {
+            announce();
+            reportStartError(e);
+          }),
+        reportActionError,
+      );
     },
-    [announce, reportActionError],
+    [announce, reportActionError, reportStartError],
   );
 
   const onAskUninstall = useCallback((id: string, title: string) => {

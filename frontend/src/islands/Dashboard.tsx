@@ -682,11 +682,15 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   useEffect(() => {
     if (refreshKey > 0) setIsRefetching(true);
     apiGet<DashboardResponse>("/dashboard")
-      .then((json) => setData(json))
+      .then((json) => {
+        // A failed read is not left over a good one that follows.
+        setError(null);
+        setData(json);
+      })
       .catch((err: Error) => {
         // The wire string is for the console; the lens says it in its own words (R86).
         console.error("Dashboard read failed:", err);
-        setError(err.message);
+        setError(err.message || "read failed");
       })
       .finally(() => setIsRefetching(false));
   }, [projectId, refreshKey]);

@@ -540,44 +540,86 @@ describe("phase 5 — the destructive edge", () => {
     expect(screen.queryByText(/\.env/)).not.toBeInTheDocument();
   });
 
-  it("an unnamed failure still reaches the researcher, not a swallow", async () => {
-    // The refusal mapper returns null for anything it does not recognise —
-    // a 500, a dropped connection. That must still say something rather than
-    // disappearing because the toast path did not match: the "Couldn't save"
-    // family, which says why and blames the connection only when the request
-    // never arrived. Until R86 it fell through to "Could not load the
-    // codebook: POST /autocode/cliux 500", the wire string under a heading
-    // that misdescribed what happened.
+  // The refusal mapper returns null for anything it does not recognise — a
+  // 500, a dropped connection. That must still say something, and say the
+  // right thing. Until R86 both fell through to "Could not load the codebook:
+  // POST /autocode/cliux 500", the wire string under a heading that
+  // misdescribed what happened.
+  it("an unnamed failure to install says the change was not saved", async () => {
     const { fireEvent } = await import("@testing-library/react");
     const api = await import("../utils/api");
-    const failure = Object.assign(new Error("POST /autocode/cliux 500"), { status: 500 });
-    vi.mocked(api.startAutoCode).mockRejectedValueOnce(failure);
-    vi.mocked(api.toastSaveFailed).mockClear();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const failure = Object.assign(new Error("POST /codebook/import 500"), { status: 500 });
+      vi.mocked(api.importCodebookTemplate).mockRejectedValueOnce(failure);
+      vi.mocked(api.toastSaveFailed).mockClear();
+      vi.mocked(api.startAutoCode).mockClear();
 
-    render(<Lens projectId="1" projectName="Ikea" />);
-    await waitFor(() => screen.getByTestId("bn-v2-nav"));
-    fireEvent.click(screen.getByTestId("bn-v2-browse"));
-    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      fireEvent.click(screen.getByTestId("bn-v2-browse"));
+      fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
 
-    await waitFor(() => expect(api.toastSaveFailed).toHaveBeenCalledWith(failure));
-    expect(screen.queryByText(/Could not load the codebook/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/autocode\/cliux/)).not.toBeInTheDocument();
+      await waitFor(() => expect(api.toastSaveFailed).toHaveBeenCalledWith(failure));
+      expect(api.startAutoCode).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Could not load the codebook|codebook\/import/)).not.toBeInTheDocument();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("an unnamed failure to start tagging says tagging failed, and the install is announced", async () => {
+    // The codebook installed; only the coding did not start. "Couldn't save
+    // your change" would be false, and the navigator must still learn the
+    // codebook is there.
+    const { fireEvent } = await import("@testing-library/react");
+    const api = await import("../utils/api");
+    const { toast } = await import("../utils/toast");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const heard = vi.fn();
+    window.addEventListener("codebook-changed", heard);
+    try {
+      vi.mocked(api.startAutoCode).mockRejectedValueOnce(
+        Object.assign(new Error("POST /autocode/cliux 500"), { status: 500 }),
+      );
+      vi.mocked(api.toastSaveFailed).mockClear();
+      vi.mocked(toast).mockClear();
+
+      render(<Lens projectId="1" projectName="Ikea" />);
+      await waitFor(() => screen.getByTestId("bn-v2-nav"));
+      fireEvent.click(screen.getByTestId("bn-v2-browse"));
+      fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+
+      await waitFor(() => expect(toast).toHaveBeenCalledWith("Tagging failed.", 4000, "error"));
+      expect(heard).toHaveBeenCalled();
+      expect(api.toastSaveFailed).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Could not load the codebook|autocode\/cliux/)).not.toBeInTheDocument();
+    } finally {
+      window.removeEventListener("codebook-changed", heard);
+      logged.mockRestore();
+    }
   });
 
   it("a failed read says so in the lens's words, with Retry, never the wire (R86)", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const api = await import("../utils/api");
-    vi.mocked(api.getCodebook).mockRejectedValueOnce(new Error("GET /codebook 500: boom"));
-    rtlRender(
-      <MemoryRouter>
-        <CodebookV2 projectId="1" projectName="Ikea" />
-      </MemoryRouter>,
-    );
-    expect(
-      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText(/500|\/codebook|Could not load/)).toBeNull();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const api = await import("../utils/api");
+      const wire = new Error("GET /codebook 500: boom");
+      vi.mocked(api.getCodebook).mockRejectedValueOnce(wire);
+      rtlRender(
+        <MemoryRouter>
+          <CodebookV2 projectId="1" projectName="Ikea" />
+        </MemoryRouter>,
+      );
+      expect(
+        await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(screen.queryByText(/500|\/codebook|Could not load/)).toBeNull();
+      expect(logged).toHaveBeenCalledWith(expect.any(String), wire);
+    } finally {
+      logged.mockRestore();
+    }
   });
 });
 

@@ -103,14 +103,20 @@ describe("QuoteSessions", () => {
   });
 
   it("a failed read says so in the lens's words, with Retry, never the wire (R86)", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.mocked(apiGet).mockRejectedValueOnce(new Error("GET /quotes 500: Internal Server Error"));
-    render(<QuoteSessions projectId="1" />);
-    expect(
-      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText(/500|\/quotes/)).toBeNull();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const wire = new Error("GET /quotes 500: Internal Server Error");
+      vi.mocked(apiGet).mockRejectedValueOnce(wire);
+      render(<QuoteSessions projectId="1" />);
+      expect(
+        await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(screen.queryByText(/500|\/quotes/)).toBeNull();
+      expect(logged).toHaveBeenCalledWith(expect.any(String), wire);
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it("clears a failed refetch once the next one answers", async () => {

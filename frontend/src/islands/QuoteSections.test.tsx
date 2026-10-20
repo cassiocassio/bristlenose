@@ -201,14 +201,31 @@ describe("QuoteSections", () => {
 describe("a failed read says so in the lens's words, with Retry", () => {
   for (const [name, Lens] of [["sections", QuoteSections], ["themes", QuoteThemes]] as const) {
     it(`on the ${name} grouping`, async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
-      mockApiGet.mockRejectedValue(new Error("GET /quotes 500: Internal Server Error"));
+      const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+      const wire = new Error("GET /quotes 500: Internal Server Error");
+      mockApiGet.mockRejectedValue(wire);
       render(<Lens projectId="1" />);
       expect(
         await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens."),
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
       expect(screen.queryByText(/500|\/quotes/)).toBeNull();
+      expect(logged).toHaveBeenCalledWith(expect.any(String), wire);
+    });
+
+    it(`on the ${name} grouping, clears once the next read answers`, async () => {
+      // During a run there is a re-read per import; one that fails must not stay
+      // over the good one that follows (as QuoteSessions already did).
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      mockApiGet.mockRejectedValueOnce(new Error("busy")).mockResolvedValue(MOCK_QUOTES);
+      const { rerender } = render(<Lens projectId="1" refreshKey={0} />);
+      await screen.findByText("This lens couldn’t be shown. Try again, or choose another lens.");
+      rerender(<Lens projectId="1" refreshKey={1} />);
+      await waitFor(() =>
+        expect(
+          screen.queryByText("This lens couldn’t be shown. Try again, or choose another lens."),
+        ).toBeNull(),
+      );
     });
   }
 });

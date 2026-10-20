@@ -203,13 +203,32 @@ describe("TranscriptPage", () => {
   });
 
   it("a failed read says so in the lens's words, with Retry, never the wire (R86)", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    mockedGetTranscript.mockRejectedValue(new Error("GET /transcripts/s3 404: Not Found"));
-    render(<TranscriptPage projectId="1" sessionId="s3" />);
-    const box = await screen.findByTestId("transcript-error");
-    expect(box).toHaveTextContent("This lens couldn’t be shown. Try again, or choose another lens.");
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText(/404|\/transcripts/)).toBeNull();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const wire = new Error("GET /transcripts/s3 404: Not Found");
+      mockedGetTranscript.mockRejectedValue(wire);
+      render(<TranscriptPage projectId="1" sessionId="s3" />);
+      const box = await screen.findByTestId("transcript-error");
+      expect(box).toHaveTextContent("This lens couldn’t be shown. Try again, or choose another lens.");
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      expect(screen.queryByText(/404|\/transcripts/)).toBeNull();
+      // The detail goes to the console, where it can still be read.
+      expect(logged).toHaveBeenCalledWith(expect.any(String), wire);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("a failure with no message is still a failure, not an empty transcript", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mockedGetTranscript.mockRejectedValue(new Error(""));
+      render(<TranscriptPage projectId="1" sessionId="s3" />);
+      const box = await screen.findByTestId("transcript-error");
+      expect(box).toHaveTextContent("This lens couldn’t be shown.");
+    } finally {
+      logged.mockRestore();
+    }
   });
 
   it("renders correct number of segments", async () => {

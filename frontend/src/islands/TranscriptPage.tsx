@@ -409,7 +409,9 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         if (ticket !== readTicket.current) return;
         // The wire string is for the console; the lens says it in its own words (R86).
         console.error("Transcript read failed:", err);
-        setError(String(err?.message ?? err));
+        // Never empty: an empty string reads as "no error" and the page would
+        // say there is no transcript.
+        setError(String(err?.message || "read failed"));
       })
       .finally(() => {
         if (ticket === readTicket.current) setLoading(false);

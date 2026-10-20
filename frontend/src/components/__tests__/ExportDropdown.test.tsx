@@ -10,11 +10,11 @@ import { featureFlags, resetFeatureFlags } from "../../utils/featureFlags";
 // Mock API
 vi.mock("../../utils/api", () => ({
   authHeaders: vi.fn(() => ({ Authorization: "Bearer test-token" })),
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
   getCodebook: vi.fn().mockResolvedValue({ groups: [], ungrouped: [], all_tag_names: [] }),

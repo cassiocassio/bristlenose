@@ -25,21 +25,21 @@ import { getUndoState, redo, resetUndoStore, undo } from "./UndoStore";
 import { _resetExportCache } from "../utils/exportData";
 
 vi.mock("../utils/api", () => ({
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { putEdits, putHidden, putStarred, putTags } from "../utils/api";
+import { patchEdits, patchHidden, patchStarred, patchTags } from "../utils/api";
 
-const putStarredMock = vi.mocked(putStarred);
-const putHiddenMock = vi.mocked(putHidden);
-const putTagsMock = vi.mocked(putTags);
-const putEditsMock = vi.mocked(putEdits);
+const patchStarredMock = vi.mocked(patchStarred);
+const patchHiddenMock = vi.mocked(patchHidden);
+const patchTagsMock = vi.mocked(patchTags);
+const patchEditsMock = vi.mocked(patchEdits);
 
 function quote(dom_id: string, tags: TagResponse[] = []): QuoteResponse {
   return {
@@ -88,7 +88,7 @@ describe("star", () => {
     expect(getQuotesSnapshot().starred.q1).toBeUndefined();
     await redo();
     expect(getQuotesSnapshot().starred.q1).toBe(true);
-    expect(putStarredMock).toHaveBeenCalledTimes(3);
+    expect(patchStarredMock).toHaveBeenCalledTimes(3);
   });
 
   it("a bulk star undoes only the quotes it changed", async () => {
@@ -107,7 +107,7 @@ describe("star", () => {
   it("starring what is already starred records nothing", () => {
     setStarred(["q1"], true);
     setStarred(["q1"], true);
-    expect(putStarredMock).toHaveBeenCalledTimes(1);
+    expect(patchStarredMock).toHaveBeenCalledTimes(1);
   });
 
   it("unstar is its own act", () => {
@@ -128,7 +128,7 @@ describe("hide", () => {
     expect(getUndoState().undoAction).toBe("hide");
     await undo();
     expect(getQuotesSnapshot().hidden).toEqual({});
-    expect(putHiddenMock).toHaveBeenLastCalledWith({});
+    expect(patchHiddenMock).toHaveBeenLastCalledWith({ q1: false, q2: false });
   });
 
   it("undo during the collapse stops the hide landing", async () => {
@@ -164,9 +164,9 @@ describe("tags", () => {
     addTag("q2", tag("Trust"));
     vi.clearAllMocks();
     addTagToQuotes(["q1", "q2", "q3"], tag("Trust"));
-    expect(putTagsMock).toHaveBeenCalledTimes(1);
+    expect(patchTagsMock).toHaveBeenCalledTimes(1);
     await undo();
-    expect(putTagsMock).toHaveBeenCalledTimes(2);
+    expect(patchTagsMock).toHaveBeenCalledTimes(2);
     // q2 had the tag before the gesture, so the undo leaves it.
     expect(tagNames("q1")).toEqual([]);
     expect(tagNames("q2")).toEqual(["Trust"]);
@@ -203,7 +203,7 @@ describe("text edits", () => {
     expect(getUndoState().undoAction).toBe("editQuote");
     await undo();
     expect("q1" in edits()).toBe(false);
-    expect(putEditsMock).toHaveBeenLastCalledWith({});
+    expect(patchEditsMock).toHaveBeenLastCalledWith({ q1: null });
     await redo();
     expect(edits().q1).toBe("Edited");
   });
@@ -226,7 +226,7 @@ describe("text edits", () => {
     commitEdit("q1", "Same");
     vi.clearAllMocks();
     commitEdit("q1", "Same");
-    expect(putEditsMock).not.toHaveBeenCalled();
+    expect(patchEditsMock).not.toHaveBeenCalled();
     expect(getUndoState().undoAction).toBe("editQuote");
   });
 

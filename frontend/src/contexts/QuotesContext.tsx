@@ -8,8 +8,8 @@
  * without needing a shared context provider.
  *
  * Mutation flow: update store → notify subscribers (re-render) →
- * fire-and-forget PUT to API (same pattern as the old QuoteGroup
- * local state, but now shared).
+ * PATCH the gesture's change to the API (only the quotes it changed, never
+ * the whole map; see "Curation writes" in utils/api.ts).
  */
 
 import { useSyncExternalStore } from "react";
@@ -36,11 +36,11 @@ import { EMPTY_TAG_FILTER, filterQuotes } from "../utils/filter";
 import { foldKey } from "../utils/searchMatch";
 import type { SearchPerson } from "../utils/searchSuggest";
 import {
-  putHidden,
-  putStarred,
-  putEdits,
-  putTags,
-  putDeletedBadges,
+  patchHidden,
+  patchStarred,
+  patchEdits,
+  patchTags,
+  patchDeletedBadges,
   acceptProposal,
   denyProposal,
 } from "../utils/api";
@@ -241,17 +241,24 @@ export function initFromQuotes(
     const deletedBadges = { ...base.deletedBadges };
     const proposedTags = { ...base.proposedTags };
 
-    // The floor's quotes seed the state maps too. Every write is a full-map
-    // PUT (`put_starred` sets `is_starred = qid in map` for every quote), so a
-    // floor quote missing from these maps lost its star, hide, tags or edit on
-    // the first gesture anywhere, and with them the pin that keeps it.
+    // The floor's quotes seed the state maps too: the maps are what draws a
+    // star, a hide or a tag, and what each gesture reads to decide what it
+    // changes (and what its undo puts back).
+    //
+    // Tags and proposals are taken as the server has them, empty included, for
+    // every quote in the response, merge or not: the codebook can delete a tag
+    // or uninstall a framework, and AutoCode can review a proposal, behind the
+    // screen's back, and a merge that only ever added kept them drawn (R3).
+    // Quotes not in the response are left as they are.
     for (const q of [...quotes, ...(uncategorised ?? [])]) {
       if (q.is_hidden) hidden[q.dom_id] = true;
       if (q.is_starred) starred[q.dom_id] = true;
       if (q.edited_text) edits[q.dom_id] = q.edited_text;
       if (q.tags.length > 0) tags[q.dom_id] = [...q.tags];
+      else delete tags[q.dom_id];
       if (q.deleted_badges.length > 0) deletedBadges[q.dom_id] = [...q.deleted_badges];
       if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
+      else delete proposedTags[q.dom_id];
     }
 
     // Merge quotes by dom_id (idempotent): both islands call this with the
@@ -281,11 +288,9 @@ export function initFromQuotes(
  * `edits` map as quote edits, keyed by the durable id
  * (`section-cluster-{id}:title`, `theme-group-{id}:desc`, ...).
  *
- * They MUST share the edits map because `PUT /edits` is a full-replace: a
- * commit sends the entire map, so if heading edits weren't held here a quote
- * edit would wipe them (and vice versa). Display still reads the server-
- * resolved `edited_label`/`edited_description` fields; this seeding is what
- * keeps the write side whole.
+ * Display reads the server-resolved `edited_label`/`edited_description`
+ * fields; this seeding is what a rename's undo reads to put the previous name
+ * back (`setEdit`'s `before`), so without it an undo cleared the heading.
  */
 export function initHeadingEdits(
   sections: SectionResponse[],
@@ -317,14 +322,16 @@ export function resetStore(): void {
   listeners.forEach((l) => l());
 }
 
-// ── Tag-name extraction helper ───────────────────────────────────────────
+// ── Writes ───────────────────────────────────────────────────────────────
 
-function tagNamesMap(tags: Record<string, TagResponse[]>): Record<string, string[]> {
-  const result: Record<string, string[]> = {};
-  for (const [id, ts] of Object.entries(tags)) {
-    if (ts.length > 0) result[id] = ts.map((t) => t.name);
-  }
-  return result;
+/** Send a gesture's change. A write that fails has already said why. */
+function send(write: Promise<void>): void {
+  write.catch(() => undefined);
+}
+
+/** `{ id: value }` for each id. */
+function each<T>(ids: string[], value: T): Record<string, T> {
+  return Object.fromEntries(ids.map((id) => [id, value]));
 }
 
 // ── Action functions ─────────────────────────────────────────────────────
@@ -344,9 +351,9 @@ export function toggleStar(domId: string, newState: boolean): void {
 /**
  * Star or unstar one or more quotes as a single gesture.
  *
- * One state write and one PUT however many quotes are passed. `toggleStar`
- * per quote cost a full-map PUT each, fire-and-forget, so a bulk star of n
- * quotes sent n racing replacements of the same map.
+ * One state write and one PATCH however many quotes are passed. `toggleStar`
+ * per quote once cost a full-map write each, fire-and-forget, so a bulk star
+ * of n quotes sent n racing replacements of the same map.
  *
  * Direction is the caller's, but every caller should take it from
  * `starActionIsUnstar` — see the note there.
@@ -365,9 +372,9 @@ export function setStarred(domIds: string[], newState: boolean, record = true): 
       if (newState) starred[id] = true;
       else delete starred[id];
     }
-    putStarred(starred);
     return { ...prev, starred };
   });
+  send(patchStarred(each(targets, newState)));
   announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
   if (record) {
     pushUndo({
@@ -381,9 +388,9 @@ export function setStarred(domIds: string[], newState: boolean, record = true): 
 /**
  * Restore one or more hidden quotes as a single gesture.
  *
- * One state write and one PUT however many are passed. "Restore all" used to
- * loop a per-quote toggle, sending one full-map replacement of `/hidden` per
- * hidden quote, fire-and-forget and racing the others.
+ * One state write and one PATCH however many are passed. "Restore all" used
+ * to loop a per-quote toggle, sending one full-map replacement of `/hidden`
+ * per hidden quote, fire-and-forget and racing the others.
  *
  * Unhide has no collapse window — the card comes back immediately and the
  * fly-down cascade is applied by the group to the elements once they render.
@@ -405,9 +412,9 @@ export function unhideQuotes(domIds: string[], record = true): void {
       // render it as an empty card forever.
       hiding.delete(id);
     }
-    putHidden(hidden);
     return { ...prev, hidden, hiding };
   });
+  send(patchHidden(each(targets, false)));
   announce(i18n.t("announce.restored"));
   if (record) {
     pushUndo({
@@ -429,15 +436,15 @@ export const HIDE_DURATION = 300;
  * Hide one or more quotes as a single gesture.
  *
  * This is the whole gesture: mark the quotes as animating, wait out the
- * collapse, then commit them to `hidden` in ONE state write and ONE PUT.
+ * collapse, then commit them to `hidden` in ONE state write and ONE PATCH.
  *
  * It replaces a per-quote path that cost O(n^2) writes for an n-quote
  * selection — the keyboard handler looped the selection calling each card's
  * registered hide handler, and each of those handlers looped the selection
  * again. Measured before the fix: 3 selected quotes produced 9 writes, 5
- * produced 25. Because `/hidden` is a full-map replacement sent fire-and-
- * forget, those writes also raced each other, and the server kept whichever
- * landed last.
+ * produced 25. Because `/hidden` was then a full-map replacement sent fire-
+ * and-forget, those writes also raced each other, and the server kept
+ * whichever landed last.
  *
  * Callers pass every quote the gesture applies to. Hiding is one-way, so
  * there is no direction argument; `unhideQuotes` restores.
@@ -460,7 +467,7 @@ export function hideQuotes(domIds: string[], record = true): void {
   });
 
   // ONE timer for the gesture, not one per quote. The commit is a single
-  // state write and a single PUT however many quotes are in it.
+  // state write and a single PATCH however many quotes are in it.
   setTimeout(() => {
     // A quote restored during the collapse (⌘Z straight after a hide) has
     // already left `hiding`; committing it would hide it again behind the
@@ -474,9 +481,9 @@ export function hideQuotes(domIds: string[], record = true): void {
         hidden[id] = true;
         hiding.delete(id);
       }
-      putHidden(hidden);
       return { ...prev, hidden, hiding };
     });
+    send(patchHidden(each(landing, true)));
     announce(i18n.t("announce.hidden"));
   }, HIDE_DURATION);
 
@@ -500,7 +507,7 @@ function editAction(key: string): string {
 
 /**
  * Set (or with `undefined`, clear) one entry of the shared edits map. One
- * state write, one full-map PUT. The undo entry holds the entry's previous
+ * state write, one PATCH of that key. The undo entry holds the entry's previous
  * value — absent meaning "never edited", which the undo restores by removing
  * the key, so the quote or heading falls back to the pipeline's text.
  */
@@ -514,9 +521,9 @@ function setEdit(key: string, text: string | undefined, record: boolean): void {
     const edits = { ...prev.edits };
     if (text === undefined) delete edits[key];
     else edits[key] = text;
-    putEdits(edits);
     return { ...prev, edits };
   });
+  send(patchEdits({ [key]: text ?? null }));
   if (record) {
     pushUndo({
       action: editAction(key),
@@ -532,10 +539,9 @@ export function commitEdit(domId: string, newText: string): void {
 }
 
 /**
- * Commit a section/theme heading rename.  Same path as `commitEdit` — updates
- * the shared edits map and sends the *whole* map (quote + heading edits) so the
- * full-replace `PUT /edits` never wipes the other kind.  `headingKey` is the
- * durable-id key (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
+ * Commit a section/theme heading rename.  Same path as `commitEdit`: the
+ * shared edits map, one PATCH of that key.  `headingKey` is the durable-id key
+ * (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
  */
 export function commitHeadingEdit(headingKey: string, newText: string): void {
   setEdit(headingKey, newText, true);
@@ -547,7 +553,7 @@ export function addTag(domId: string, tag: TagResponse): void {
 
 /**
  * Add one tag to one or more quotes as a single gesture: one state write, one
- * PUT, one undo entry. A selection used to loop `addTag`, one full-map
+ * PATCH, one undo entry. A selection used to loop `addTag`, one full-map
  * `/tags` replacement per quote, fire-and-forget and racing the others — and
  * an undo of that loop would have raced the same way.
  *
@@ -566,9 +572,9 @@ export function addTagToQuotes(domIds: string[], tag: TagResponse, record = true
   setState((prev) => {
     const tags = { ...prev.tags };
     for (const id of targets) tags[id] = [...(tags[id] || []), tag];
-    putTags(tagNamesMap(tags));
     return { ...prev, tags };
   });
+  send(patchTags(each(targets, { add: [tag.name] })));
   lastUsedTag = tag;
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
   if (record) {
@@ -592,9 +598,9 @@ function removeTagFromQuotes(domIds: string[], tagName: string): void {
       tags[id] = (tags[id] || []).filter((t) => t.name !== tagName);
       if (tags[id].length === 0) delete tags[id];
     }
-    putTags(tagNamesMap(tags));
     return { ...prev, tags };
   });
+  send(patchTags(each(targets, { remove: [tagName] })));
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
 }
 
@@ -610,9 +616,9 @@ export function removeTag(domId: string, tagName: string, record = true): void {
     const tags = { ...prev.tags };
     tags[domId] = (tags[domId] || []).filter((t) => t.name !== tagName);
     if (tags[domId].length === 0) delete tags[domId];
-    putTags(tagNamesMap(tags));
     return { ...prev, tags };
   });
+  send(patchTags({ [domId]: { remove: [tagName] } }));
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
   if (record) {
     pushUndo({
@@ -633,9 +639,9 @@ function restoreTag(domId: string, tag: TagResponse, index: number): void {
     const list = [...(tags[domId] || [])];
     list.splice(Math.min(index, list.length), 0, tag);
     tags[domId] = list;
-    putTags(tagNamesMap(tags));
     return { ...prev, tags };
   });
+  send(patchTags({ [domId]: { add: [tag.name] } }));
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
 }
 
@@ -646,21 +652,23 @@ export function deleteBadge(domId: string, sentiment: string): void {
   setState((prev) => {
     const deletedBadges = { ...prev.deletedBadges };
     deletedBadges[domId] = [...(deletedBadges[domId] || []), sentiment];
-    putDeletedBadges(deletedBadges);
     return { ...prev, deletedBadges };
   });
+  send(patchDeletedBadges({ [domId]: { add: [sentiment] } }));
 }
 
 export function restoreBadges(domId: string): void {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return;
+  const restored = state.deletedBadges[domId] ?? [];
+  if (restored.length === 0) return;
   setState((prev) => {
     const deletedBadges = { ...prev.deletedBadges };
     delete deletedBadges[domId];
-    putDeletedBadges(deletedBadges);
     return { ...prev, deletedBadges };
   });
+  send(patchDeletedBadges({ [domId]: { remove: restored } }));
 }
 
 export function acceptProposedTag(
@@ -678,7 +686,7 @@ export function acceptProposedTag(
 
     const tags = { ...prev.tags };
     tags[domId] = [...(tags[domId] || []), tag];
-    // No putTags — acceptProposal handles server-side tag creation.
+    // No tag write: acceptProposal makes the tag on the server.
     return { ...prev, proposedTags, tags };
   });
   acceptProposal(proposalId).catch((err) =>

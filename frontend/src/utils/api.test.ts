@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { putFrameworkStates, sendPut } from "./api";
+import { patchStarred, patchTags, putFrameworkStates, sendPut } from "./api";
 import { toast } from "./toast";
 
 vi.mock("./toast", () => ({ toast: vi.fn() }));
@@ -73,5 +73,71 @@ describe("putFrameworkStates — the same rule", () => {
     fetchMock.mockResolvedValue(answer(500, { detail: "boom" }));
     await expect(putFrameworkStates({})).resolves.toEqual({ status: "error", catchUp: [] });
     expect(said()).not.toMatch(/connection/i);
+  });
+});
+
+/**
+ * A curation write names one gesture's change, and writes to one path go out
+ * one at a time. Sent together, a star and its unstar (or an act and its ⌘Z)
+ * reached the server's threadpool together and could commit the wrong way
+ * round, leaving the server opposite to the screen (R4).
+ */
+describe("curation writes", () => {
+  /** A fetch that answers only when told to. */
+  function held(): Array<(r: Response) => void> {
+    const answers: Array<(r: Response) => void> = [];
+    fetchMock.mockImplementation(
+      () => new Promise<Response>((resolve) => answers.push(resolve)),
+    );
+    return answers;
+  }
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("sends a PATCH carrying only the change", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok" }));
+    await patchTags({ "q-p1-10": { add: ["x"] } });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/tags$/);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(String(init.body))).toEqual({ "q-p1-10": { add: ["x"] } });
+  });
+
+  it("holds a second write to the same path until the first has landed", async () => {
+    const answers = held();
+    const first = patchStarred({ "q-p1-10": true });
+    const second = patchStarred({ "q-p1-10": false });
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    answers[0](answer(200, { status: "ok" }));
+    await first;
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body))).toEqual({
+      "q-p1-10": false,
+    });
+    answers[1](answer(200, { status: "ok" }));
+    await second;
+  });
+
+  it("sends the next write after one that failed", async () => {
+    const answers = held();
+    const first = patchStarred({ "q-p1-10": true });
+    const second = patchStarred({ "q-p1-26": true });
+    await settle();
+    answers[0](answer(500, { detail: "boom" }));
+    await expect(first).rejects.toThrow();
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    answers[1](answer(200, { status: "ok" }));
+    await expect(second).resolves.toBeUndefined();
+  });
+
+  it("does not hold a write to another path", async () => {
+    const answers = held();
+    void patchStarred({ "q-p1-10": true });
+    void patchTags({ "q-p1-10": { add: ["x"] } });
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    for (const a of answers) a(answer(200, { status: "ok" }));
   });
 });

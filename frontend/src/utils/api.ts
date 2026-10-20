@@ -221,9 +221,13 @@ function firePut(path: string, body: unknown): void {
  * land after the act it reverses). Rejects after toasting.
  */
 export function sendPut(path: string, body: unknown): Promise<void> {
+  return sendWrite("PUT", path, body);
+}
+
+function sendWrite(method: "PUT" | "PATCH", path: string, body: unknown): Promise<void> {
   if (isExportMode()) return Promise.resolve(); // No server in export mode
   return fetch(`${apiBase()}${path}`, {
-    method: "PUT",
+    method,
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   })
@@ -232,10 +236,10 @@ export function sendPut(path: string, body: unknown): Promise<void> {
       // with ok=false. Without this check the catch never fires and a failed
       // background sync is fully silent (DB never written, UI diverges on reload —
       // the dropped-auth-token masquerade). Surface it so it's at least greppable.
-      if (!resp.ok) throw await httpError("PUT", path, resp);
+      if (!resp.ok) throw await httpError(method, path, resp);
     })
     .catch((err) => {
-      console.error(`PUT ${path} failed:`, err);
+      console.error(`${method} ${path} failed:`, err);
       // A failed background sync is otherwise invisible until reload silently
       // reverts the change. One toast covers every view-toggle consumer
       // (star/hide/tags/hidden-groups/framework-states/…); toast() is
@@ -265,27 +269,56 @@ export function toastSaveFailed(err: unknown): void {
 }
 
 // ---------------------------------------------------------------------------
-// Fire-and-forget PUT helpers (legacy localStorage sync)
+// Curation writes: one gesture's change, never the whole map
 // ---------------------------------------------------------------------------
+//
+// Each names only the quotes a gesture changed and only what changed. The
+// server's `PUT` on the same paths replaces the whole map, so it erased what
+// the client didn't hold: AutoCode tags re-applied after a run, the curation
+// of quotes a speaker recode keeps off `/quotes`, and a deleted tag still in a
+// stale map came back under Uncategorised.
+//
+// Writes to one path go out one at a time, in the order they were made. Sent
+// together they reach the server's threadpool together, and a star and its
+// unstar (or an act and its ⌘Z) could commit the wrong way round, leaving the
+// server opposite to the screen. Each still toasts on failure and rejects.
 
-export function putHidden(data: Record<string, boolean>): void {
-  firePut("/hidden", data);
+export interface CurationDelta {
+  add?: string[];
+  remove?: string[];
 }
 
-export function putStarred(data: Record<string, boolean>): void {
-  firePut("/starred", data);
+const writeQueues = new Map<string, Promise<void>>();
+
+function queuedPatch(path: string, body: unknown): Promise<void> {
+  const next = (writeQueues.get(path) ?? Promise.resolve()).then(() =>
+    sendWrite("PATCH", path, body),
+  );
+  // A failed write has already said why; the queue must outlive it, or every
+  // later write to the path would be skipped.
+  writeQueues.set(path, next.catch(() => undefined));
+  return next;
 }
 
-export function putEdits(data: Record<string, string>): void {
-  firePut("/edits", data);
+export function patchHidden(data: Record<string, boolean>): Promise<void> {
+  return queuedPatch("/hidden", data);
 }
 
-export function putTags(data: Record<string, string[]>): void {
-  firePut("/tags", data);
+export function patchStarred(data: Record<string, boolean>): Promise<void> {
+  return queuedPatch("/starred", data);
 }
 
-export function putDeletedBadges(data: Record<string, string[]>): void {
-  firePut("/deleted-badges", data);
+/** Text sets an edit; `null` clears it (the quote or heading reads as the pipeline's). */
+export function patchEdits(data: Record<string, string | null>): Promise<void> {
+  return queuedPatch("/edits", data);
+}
+
+export function patchTags(data: Record<string, CurationDelta>): Promise<void> {
+  return queuedPatch("/tags", data);
+}
+
+export function patchDeletedBadges(data: Record<string, CurationDelta>): Promise<void> {
+  return queuedPatch("/deleted-badges", data);
 }
 
 export function getHiddenTagGroups(): Promise<string[]> {

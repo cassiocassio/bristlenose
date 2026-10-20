@@ -7,7 +7,7 @@ import { redo, resetUndoStore, undo } from "../contexts/UndoStore";
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn(),
   getCodebook: vi.fn(),
-  putEdits: vi.fn(),
+  patchEdits: vi.fn(() => Promise.resolve()),
 }));
 
 import { apiGet, getCodebook } from "../utils/api";

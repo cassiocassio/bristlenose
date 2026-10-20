@@ -25,16 +25,16 @@ import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { isFocusMode, _resetFocusMode } from "../contexts/FocusModeStore";
 import { useKeyboardShortcuts } from "./useKeyboardShortcuts";
-import { putTags } from "../utils/api";
+import { patchTags } from "../utils/api";
 
-// Mock API calls (addTag calls putTags internally).
+// Mock API calls (addTag calls patchTags internally).
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn().mockResolvedValue({ video_map: {} }),
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
@@ -928,7 +928,7 @@ describe("useKeyboardShortcuts", () => {
         colour_index: 0,
         source: "human",
       });
-      vi.mocked(putTags).mockClear();
+      vi.mocked(patchTags).mockClear();
 
       // Move focus to q-2
       act(() => getCtx().setFocus("q-2"));
@@ -936,11 +936,11 @@ describe("useKeyboardShortcuts", () => {
       // Press r — should quick-apply
       act(() => pressKey("r"));
 
-      expect(putTags).toHaveBeenCalled();
-      const calls = vi.mocked(putTags).mock.calls;
+      expect(patchTags).toHaveBeenCalled();
+      const calls = vi.mocked(patchTags).mock.calls;
       const lastCall = calls[calls.length - 1];
       expect(lastCall?.[0]).toHaveProperty("q-2");
-      expect(lastCall?.[0]["q-2"]).toContain("usability");
+      expect(lastCall?.[0]["q-2"]).toEqual({ add: ["usability"] });
 
       unmount();
     });
@@ -952,9 +952,9 @@ describe("useKeyboardShortcuts", () => {
         getCtx().setFocus("q-1");
       });
 
-      vi.mocked(putTags).mockClear();
+      vi.mocked(patchTags).mockClear();
       act(() => pressKey("r"));
-      expect(putTags).not.toHaveBeenCalled();
+      expect(patchTags).not.toHaveBeenCalled();
 
       unmount();
     });
@@ -974,7 +974,7 @@ describe("useKeyboardShortcuts", () => {
         colour_index: 1,
         source: "human",
       });
-      vi.mocked(putTags).mockClear();
+      vi.mocked(patchTags).mockClear();
 
       // Select q-2 and q-3
       act(() => {
@@ -985,13 +985,13 @@ describe("useKeyboardShortcuts", () => {
 
       act(() => pressKey("r"));
 
-      expect(putTags).toHaveBeenCalled();
-      const calls = vi.mocked(putTags).mock.calls;
+      expect(patchTags).toHaveBeenCalled();
+      const calls = vi.mocked(patchTags).mock.calls;
       const lastCall = calls[calls.length - 1];
       expect(lastCall?.[0]).toHaveProperty("q-2");
-      expect(lastCall?.[0]["q-2"]).toContain("learnability");
+      expect(lastCall?.[0]["q-2"]).toEqual({ add: ["learnability"] });
       expect(lastCall?.[0]).toHaveProperty("q-3");
-      expect(lastCall?.[0]["q-3"]).toContain("learnability");
+      expect(lastCall?.[0]["q-3"]).toEqual({ add: ["learnability"] });
 
       unmount();
     });
@@ -1006,10 +1006,10 @@ describe("useKeyboardShortcuts", () => {
         colour_index: 0,
         source: "human",
       });
-      vi.mocked(putTags).mockClear();
+      vi.mocked(patchTags).mockClear();
 
       act(() => pressKey("r"));
-      expect(putTags).not.toHaveBeenCalled();
+      expect(patchTags).not.toHaveBeenCalled();
 
       unmount();
     });

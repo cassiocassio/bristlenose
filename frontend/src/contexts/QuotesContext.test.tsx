@@ -11,6 +11,7 @@ import {
   resetStore,
   toggleStar,
   hideQuotes,
+  setStarred,
   unhideQuotes,
   HIDE_DURATION,
   commitEdit,
@@ -43,30 +44,30 @@ import { _resetExportCache } from "../utils/exportData";
 // ── Mocks ────────────────────────────────────────────────────────────────
 
 vi.mock("../utils/api", () => ({
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
 import {
-  putHidden,
-  putStarred,
-  putEdits,
-  putTags,
-  putDeletedBadges,
+  patchHidden,
+  patchStarred,
+  patchEdits,
+  patchTags,
+  patchDeletedBadges,
   acceptProposal,
   denyProposal,
 } from "../utils/api";
 
-const mockPutHidden = vi.mocked(putHidden);
-const mockPutStarred = vi.mocked(putStarred);
-const mockPutEdits = vi.mocked(putEdits);
-const mockPutTags = vi.mocked(putTags);
-const mockPutDeletedBadges = vi.mocked(putDeletedBadges);
+const mockPatchHidden = vi.mocked(patchHidden);
+const mockPatchStarred = vi.mocked(patchStarred);
+const mockPatchEdits = vi.mocked(patchEdits);
+const mockPatchTags = vi.mocked(patchTags);
+const mockPatchDeletedBadges = vi.mocked(patchDeletedBadges);
 const mockAcceptProposal = vi.mocked(acceptProposal);
 const mockDenyProposal = vi.mocked(denyProposal);
 
@@ -267,12 +268,12 @@ describe("QuotesStore", () => {
   });
 
   describe("toggleStar", () => {
-    it("stars a quote and calls putStarred", () => {
+    it("stars a quote and calls patchStarred", () => {
       initFromQuotes([makeQuote()]);
       toggleStar("q-P1-120", true);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.starred["q-P1-120"]).toBe(true);
-      expect(mockPutStarred).toHaveBeenCalledWith({ "q-P1-120": true });
+      expect(mockPatchStarred).toHaveBeenCalledWith({ "q-P1-120": true });
     });
 
     it("unstars a quote", () => {
@@ -280,7 +281,7 @@ describe("QuotesStore", () => {
       toggleStar("q-P1-120", false);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.starred["q-P1-120"]).toBeUndefined();
-      expect(mockPutStarred).toHaveBeenCalledWith({});
+      expect(mockPatchStarred).toHaveBeenCalledWith({ "q-P1-120": false });
     });
   });
 
@@ -295,13 +296,13 @@ describe("QuotesStore", () => {
       try {
         initFromQuotes([makeQuote()]);
         hideQuotes(["q-P1-120"]);
-        expect(mockPutHidden).not.toHaveBeenCalled();
+        expect(mockPatchHidden).not.toHaveBeenCalled();
 
         vi.advanceTimersByTime(HIDE_DURATION + 50);
         const { result } = renderHook(() => useQuotesStore());
         expect(result.current.hidden["q-P1-120"]).toBe(true);
-        expect(mockPutHidden).toHaveBeenCalledTimes(1);
-        expect(mockPutHidden).toHaveBeenCalledWith({ "q-P1-120": true });
+        expect(mockPatchHidden).toHaveBeenCalledTimes(1);
+        expect(mockPatchHidden).toHaveBeenCalledWith({ "q-P1-120": true });
       } finally {
         vi.useRealTimers();
       }
@@ -312,8 +313,8 @@ describe("QuotesStore", () => {
       unhideQuotes(["q-P1-120"]);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.hidden["q-P1-120"]).toBeUndefined();
-      expect(mockPutHidden).toHaveBeenCalledTimes(1);
-      expect(mockPutHidden).toHaveBeenCalledWith({});
+      expect(mockPatchHidden).toHaveBeenCalledTimes(1);
+      expect(mockPatchHidden).toHaveBeenCalledWith({ "q-P1-120": false });
     });
 
     it("restores a whole group in one write, not one per quote", () => {
@@ -322,36 +323,36 @@ describe("QuotesStore", () => {
       unhideQuotes(ids);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.hidden).toEqual({});
-      expect(mockPutHidden).toHaveBeenCalledTimes(1);
+      expect(mockPatchHidden).toHaveBeenCalledTimes(1);
     });
   });
 
   describe("commitEdit", () => {
-    it("stores edited text and calls putEdits", () => {
+    it("stores edited text and calls patchEdits", () => {
       initFromQuotes([makeQuote()]);
       commitEdit("q-P1-120", "new text");
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.edits["q-P1-120"]).toBe("new text");
-      expect(mockPutEdits).toHaveBeenCalledWith({ "q-P1-120": "new text" });
+      expect(mockPatchEdits).toHaveBeenCalledWith({ "q-P1-120": "new text" });
     });
   });
 
   describe("addTag / removeTag", () => {
-    it("adds a tag and calls putTags with names only", () => {
+    it("adds a tag and sends only that addition, by name", () => {
       initFromQuotes([makeQuote()]);
       addTag("q-P1-120", TAG_FRUSTRATION);
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.tags["q-P1-120"]).toHaveLength(1);
       expect(result.current.tags["q-P1-120"][0].name).toBe("Frustration");
-      expect(mockPutTags).toHaveBeenCalledWith({ "q-P1-120": ["Frustration"] });
+      expect(mockPatchTags).toHaveBeenCalledWith({ "q-P1-120": { add: ["Frustration"] } });
     });
 
-    it("removes a tag and calls putTags", () => {
+    it("removes a tag and sends only that removal", () => {
       initFromQuotes([makeQuote({ tags: [TAG_FRUSTRATION] })]);
       removeTag("q-P1-120", "Frustration");
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.tags["q-P1-120"]).toBeUndefined();
-      expect(mockPutTags).toHaveBeenCalledWith({});
+      expect(mockPatchTags).toHaveBeenCalledWith({ "q-P1-120": { remove: ["Frustration"] } });
     });
 
     it("does not add a duplicate tag (exact name match)", () => {
@@ -359,8 +360,8 @@ describe("QuotesStore", () => {
       addTag("q-P1-120", { ...TAG_FRUSTRATION });
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.tags["q-P1-120"]).toHaveLength(1);
-      // putTags should not be called for the duplicate.
-      expect(mockPutTags).not.toHaveBeenCalled();
+      // patchTags should not be called for the duplicate.
+      expect(mockPatchTags).not.toHaveBeenCalled();
     });
 
     it("does not add a duplicate tag (case-insensitive)", () => {
@@ -373,27 +374,102 @@ describe("QuotesStore", () => {
       });
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.tags["q-P1-120"]).toHaveLength(1);
-      expect(mockPutTags).not.toHaveBeenCalled();
+      expect(mockPatchTags).not.toHaveBeenCalled();
     });
   });
 
   describe("deleteBadge / restoreBadges", () => {
-    it("deletes a badge and calls putDeletedBadges", () => {
+    it("deletes a badge and calls patchDeletedBadges", () => {
       initFromQuotes([makeQuote()]);
       deleteBadge("q-P1-120", "negative");
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.deletedBadges["q-P1-120"]).toEqual(["negative"]);
-      expect(mockPutDeletedBadges).toHaveBeenCalledWith({
-        "q-P1-120": ["negative"],
+      expect(mockPatchDeletedBadges).toHaveBeenCalledWith({
+        "q-P1-120": { add: ["negative"] },
       });
     });
 
-    it("restores all badges and calls putDeletedBadges", () => {
+    it("restores all badges and calls patchDeletedBadges", () => {
       initFromQuotes([makeQuote({ deleted_badges: ["negative"] })]);
       restoreBadges("q-P1-120");
       const { result } = renderHook(() => useQuotesStore());
       expect(result.current.deletedBadges["q-P1-120"]).toBeUndefined();
-      expect(mockPutDeletedBadges).toHaveBeenCalledWith({});
+      expect(mockPatchDeletedBadges).toHaveBeenCalledWith({
+        "q-P1-120": { remove: ["negative"] },
+      });
+    });
+  });
+
+  // The server never clears what a write does not name, so a gesture names
+  // only the quotes it changed. A whole-map write erased AutoCode tags
+  // re-applied after a run (R1) and the curation of quotes a speaker recode
+  // keeps off /quotes (R2), because the client never held them.
+  describe("a gesture sends only what it changed", () => {
+    const other = () => makeQuote({ dom_id: "q-a", is_starred: true, is_hidden: true,
+      edited_text: "a's words", tags: [TAG_FRUSTRATION], deleted_badges: ["negative"] });
+    const mine = () => makeQuote({ dom_id: "q-b" });
+
+    it("a star names one quote", () => {
+      initFromQuotes([other(), mine()]);
+      setStarred(["q-b"], true);
+      expect(mockPatchStarred).toHaveBeenCalledWith({ "q-b": true });
+    });
+
+    it("a hide names one quote", () => {
+      vi.useFakeTimers();
+      try {
+        initFromQuotes([other(), mine()]);
+        hideQuotes(["q-b"]);
+        vi.advanceTimersByTime(HIDE_DURATION);
+        expect(mockPatchHidden).toHaveBeenCalledWith({ "q-b": true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("an edit names one key", () => {
+      initFromQuotes([other(), mine()]);
+      commitEdit("q-b", "b's words");
+      expect(mockPatchEdits).toHaveBeenCalledWith({ "q-b": "b's words" });
+    });
+
+    it("a tag names one quote and one tag", () => {
+      initFromQuotes([other(), mine()]);
+      addTag("q-b", TAG_FRUSTRATION);
+      expect(mockPatchTags).toHaveBeenCalledWith({ "q-b": { add: ["Frustration"] } });
+    });
+
+    it("a badge names one quote and one sentiment", () => {
+      initFromQuotes([other(), mine()]);
+      deleteBadge("q-b", "positive");
+      expect(mockPatchDeletedBadges).toHaveBeenCalledWith({ "q-b": { add: ["positive"] } });
+    });
+  });
+
+  // A tag deleted in the codebook, a framework uninstalled, a proposal
+  // reviewed: all happen behind the screen. A load that merged (Discussion,
+  // Screens) kept the old tags and proposals drawn, and the next whole-map
+  // write saved the deleted tag back under Uncategorised (R3).
+  describe("a merge takes the server's tags and proposals for the quotes it loads", () => {
+    const proposal = { id: 7, tag_name: "Trust", group_name: "UX", colour_set: "ux",
+      colour_index: 2, confidence: 0.8, rationale: "r" };
+
+    it("drops a tag the server no longer has", () => {
+      initFromQuotes([makeQuote({ tags: [TAG_FRUSTRATION] })]);
+      initFromQuotes([makeQuote({ tags: [] })]);
+      expect(getQuotesSnapshot().tags["q-P1-120"]).toBeUndefined();
+    });
+
+    it("drops a proposal the server no longer has", () => {
+      initFromQuotes([makeQuote({ proposed_tags: [proposal] })]);
+      initFromQuotes([makeQuote({ proposed_tags: [] })]);
+      expect(getQuotesSnapshot().proposedTags["q-P1-120"]).toBeUndefined();
+    });
+
+    it("leaves a quote it did not load alone", () => {
+      initFromQuotes([makeQuote({ dom_id: "q-a", tags: [TAG_FRUSTRATION] })]);
+      initFromQuotes([makeQuote({ dom_id: "q-b" })]);
+      expect(getQuotesSnapshot().tags["q-a"]).toHaveLength(1);
     });
   });
 
@@ -580,8 +656,8 @@ describe("QuotesStore", () => {
 
     it("does not make an API call", () => {
       setSearchQuery("test");
-      expect(mockPutStarred).not.toHaveBeenCalled();
-      expect(mockPutHidden).not.toHaveBeenCalled();
+      expect(mockPatchStarred).not.toHaveBeenCalled();
+      expect(mockPatchHidden).not.toHaveBeenCalled();
     });
   });
 
@@ -699,31 +775,25 @@ describe("QuotesStore", () => {
       expect(result.current.edits["section-cluster-5:desc"]).toBeUndefined();
     });
 
-    it("commitHeadingEdit sends the FULL merged map so a quote edit is not wiped", () => {
-      // The regression guard: PUT /edits is a full-replace, so heading + quote
-      // edits must ride together or one wipes the other.
+    // Heading and quote edits share one map, and each commit sends only its
+    // own key: the server never clears an edit the write does not name.
+    it("commitHeadingEdit sends only the heading, and the quote edit stays", () => {
       initFromQuotes([makeQuote({ dom_id: "q-P1-100", edited_text: "kept quote edit" })]);
       act(() => {
         commitHeadingEdit("section-cluster-5:title", "Home screen");
       });
-      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
-      expect(lastPayload).toMatchObject({
-        "q-P1-100": "kept quote edit",
-        "section-cluster-5:title": "Home screen",
-      });
+      expect(mockPatchEdits).toHaveBeenLastCalledWith({ "section-cluster-5:title": "Home screen" });
+      expect(getQuotesSnapshot().edits["q-P1-100"]).toBe("kept quote edit");
     });
 
-    it("a subsequent quote edit preserves the heading edit in the same payload", () => {
+    it("a quote edit sends only the quote, and the heading edit stays", () => {
       initHeadingEdits([makeSection({ cluster_id: 5, edited_label: "Home screen" })], []);
       initFromQuotes([makeQuote({ dom_id: "q-P1-100" })]);
       act(() => {
         commitEdit("q-P1-100", "new quote text");
       });
-      const lastPayload = mockPutEdits.mock.calls[mockPutEdits.mock.calls.length - 1]?.[0];
-      expect(lastPayload).toMatchObject({
-        "q-P1-100": "new quote text",
-        "section-cluster-5:title": "Home screen",
-      });
+      expect(mockPatchEdits).toHaveBeenLastCalledWith({ "q-P1-100": "new quote text" });
+      expect(getQuotesSnapshot().edits["section-cluster-5:title"]).toBe("Home screen");
     });
   });
 });

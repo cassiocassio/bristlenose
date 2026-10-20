@@ -131,8 +131,8 @@ vi.mock("../utils/api", () => ({
   apiGet: vi.fn().mockResolvedValue({ enabled: false, unavailable: null, screens: [] }),
   getTranscript: vi.fn(),
   getSessionList: vi.fn().mockResolvedValue([]),
-  putDeletedBadges: vi.fn(),
-  putTags: vi.fn(),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
   postParagraphSplit: vi.fn().mockResolvedValue({ id: 1 }),
   postParagraphJoin: vi.fn().mockResolvedValue({ id: 2 }),
   deleteParagraphEdit: vi.fn().mockResolvedValue(undefined),
@@ -146,7 +146,10 @@ vi.mock("../utils/embedded", () => ({
   isEmbedded: () => mockEmbedded,
 }));
 
-import { apiGet, getTranscript, getSessionList, postParagraphJoin, postParagraphSplit } from "../utils/api";
+import {
+  apiGet, getTranscript, getSessionList, patchDeletedBadges, patchTags, postParagraphJoin,
+  postParagraphSplit,
+} from "../utils/api";
 import { screenRef } from "./screens/screenModel";
 import { navigateTo } from "../shims/navigation";
 
@@ -1076,6 +1079,22 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
       document.dispatchEvent(new FocusEvent("focusout"));
     });
     await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
+  });
+
+  // A margin delete names its quote and the one badge or tag. It sent a
+  // one-quote map to the routes that replace the whole map, so deleting one
+  // tag here wiped every other quote's tags in the project.
+  it("a margin delete sends only that quote's change", async () => {
+    mockedGetTranscript.mockResolvedValue(mockData);
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    fireEvent.click(
+      (await screen.findByTestId("annotation-q-p1-10-tag-usability")).querySelector(".badge-delete")!,
+    );
+    expect(vi.mocked(patchTags)).toHaveBeenLastCalledWith({ "q-p1-10": { remove: ["usability"] } });
+    fireEvent.click(await screen.findByTestId("annotation-q-p1-26-sentiment"));
+    expect(vi.mocked(patchDeletedBadges)).toHaveBeenLastCalledWith({
+      "q-p1-26": { add: ["frustration"] },
+    });
   });
 
   it("does not bring back a badge deleted while a re-read was in flight", async () => {

@@ -39,17 +39,17 @@ import { resetSidebarStore } from "../contexts/SidebarStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { QuoteGroup } from "./QuoteGroup";
-import { putHidden, putStarred } from "../utils/api";
+import { patchHidden, patchStarred } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn().mockResolvedValue({ video_map: {} }),
   getModeratorQuestion: vi.fn().mockResolvedValue(null),
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn().mockResolvedValue(undefined),
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
@@ -154,8 +154,8 @@ describe("bulk hide cost", () => {
     document.body.innerHTML = "";
     realScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function () {};
-    vi.mocked(putHidden).mockClear();
-    vi.mocked(putStarred).mockClear();
+    vi.mocked(patchHidden).mockClear();
+    vi.mocked(patchStarred).mockClear();
     vi.useFakeTimers();
   });
 
@@ -195,7 +195,7 @@ describe("bulk hide cost", () => {
     // restoring the old per-quote loop in the caller produces 3 writes, not
     // 9, and passes. Mutation-proved — the loose form survived a mutation
     // that put the defect's shape back. Pinning the contract instead.
-    expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchHidden).mock.calls.length).toBe(1);
 
     // …and it must still hide exactly the quotes that were selected.
     expect(Object.keys(getQuotesSnapshot().hidden).sort()).toEqual([...ids].sort());
@@ -240,7 +240,7 @@ describe("bulk hide cost", () => {
     act(() => {
       vi.advanceTimersByTime(HIDE_DURATION + 50);
     });
-    expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchHidden).mock.calls.length).toBe(1);
     expect(Object.keys(getQuotesSnapshot().hidden).sort()).toEqual(["q-a-1", "q-b-1"]);
 
     unmount();
@@ -263,7 +263,7 @@ describe("bulk hide cost", () => {
       vi.advanceTimersByTime(HIDE_DURATION + 50);
     });
 
-    expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchHidden).mock.calls.length).toBe(1);
     expect(Object.keys(getQuotesSnapshot().hidden)).toEqual(["q-p1-1"]);
 
     unmount();
@@ -280,7 +280,7 @@ describe("restore all", () => {
     document.body.innerHTML = "";
     realScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function () {};
-    vi.mocked(putHidden).mockClear();
+    vi.mocked(patchHidden).mockClear();
     vi.useFakeTimers();
   });
 
@@ -315,7 +315,7 @@ describe("restore all", () => {
     });
 
     expect(getQuotesSnapshot().hidden).toEqual({});
-    expect(vi.mocked(putHidden).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchHidden).mock.calls.length).toBe(1);
 
     unmount();
   });
@@ -338,7 +338,7 @@ describe("bulk star direction", () => {
     document.body.innerHTML = "";
     realScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function () {};
-    vi.mocked(putStarred).mockClear();
+    vi.mocked(patchStarred).mockClear();
     vi.useFakeTimers();
   });
 
@@ -387,7 +387,7 @@ describe("bulk star direction", () => {
 
     // The label said Star, so both must end starred.
     expect(getQuotesSnapshot().starred).toEqual({ "q-1": true, "q-2": true });
-    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchStarred).mock.calls.length).toBe(1);
 
     unmount();
   });
@@ -409,7 +409,7 @@ describe("bulk star direction", () => {
     });
 
     expect(getQuotesSnapshot().starred).toEqual({});
-    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchStarred).mock.calls.length).toBe(1);
 
     unmount();
   });
@@ -429,7 +429,7 @@ describe("bulk star direction", () => {
     });
 
     expect(Object.keys(getQuotesSnapshot().starred).sort()).toEqual([...ids].sort());
-    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchStarred).mock.calls.length).toBe(1);
 
     unmount();
   });
@@ -463,7 +463,7 @@ describe("bulk star direction", () => {
 
     // Direction comes from the set, not the card: both end starred.
     expect(getQuotesSnapshot().starred).toEqual({ "q-1": true, "q-2": true });
-    expect(vi.mocked(putStarred).mock.calls.length).toBe(1);
+    expect(vi.mocked(patchStarred).mock.calls.length).toBe(1);
 
     unmount();
   });

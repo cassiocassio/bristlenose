@@ -17,11 +17,11 @@ vi.mock("react-i18next", () => ({
 vi.mock("../hooks/useProjectId", () => ({ useProjectId: () => "1" }));
 vi.mock("../contexts/FocusContext", () => ({ useFocus: () => ({ selectedIds: new Set() }) }));
 vi.mock("../utils/api", () => ({
-  putHidden: vi.fn(),
-  putStarred: vi.fn(),
-  putEdits: vi.fn(),
-  putTags: vi.fn(),
-  putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchTags: vi.fn(() => Promise.resolve()),
+  patchDeletedBadges: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("../utils/exportActions", () => ({
   copyQuotesToClipboard: vi.fn(),

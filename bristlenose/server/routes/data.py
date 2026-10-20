@@ -1,8 +1,10 @@
 """Data API endpoints — researcher state (edits, tags, hidden, starred, etc.).
 
 These endpoints mirror the localStorage keys used by the vanilla JS modules.
-Each GET returns the full state map; each PUT replaces it.  The JS modules
-call PUT after every localStorage write (fire-and-forget background sync).
+Each GET returns the full state map; each PUT replaces it.  The curation maps
+(edits, tags, hidden, starred, deleted badges) also take a PATCH that changes
+only the keys it names, and that is what the SPA sends: a whole-map PUT erased
+whatever the client didn't hold.  The PUTs stay as the whole-map contract.
 """
 
 from __future__ import annotations
@@ -11,10 +13,10 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import (
@@ -120,6 +122,33 @@ def _check_project(db: Session, project_id: int) -> Project:
 
 # Past the 99-hour limit every timecode parser here declares.
 _MAX_DOM_TIMECODE = 100 * 3600
+
+# A curation PATCH (one gesture's change) is bounded: a select-all on the
+# largest project seen is under 2,000 quotes.
+_MAX_DELTA_QUOTES = 10_000
+_MAX_DELTA_OPS = 100
+
+_TagName = Annotated[str, Field(min_length=1, max_length=200)]  # TagDefinition.name
+_BadgeName = Annotated[str, Field(min_length=1, max_length=50)]  # DeletedBadge.sentiment
+
+
+class TagDelta(BaseModel):
+    """One quote's change of tags, by name: what the gesture added and removed."""
+
+    add: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+    remove: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+
+
+class BadgeDelta(BaseModel):
+    """One quote's change of deleted sentiment badges."""
+
+    add: list[_BadgeName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+    remove: list[_BadgeName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+
+
+def _check_delta_size(data: dict[str, Any]) -> None:
+    if len(data) > _MAX_DELTA_QUOTES:
+        raise HTTPException(status_code=422, detail="Too many quotes in one change")
 
 
 def _parse_dom_quote_id(dom_id: str) -> tuple[str, int]:
@@ -842,6 +871,52 @@ def put_edits(
         db.close()
 
 
+@router.patch("/projects/{project_id}/edits")
+def patch_edits(
+    project_id: int,
+    request: Request,
+    data: dict[str, str | None],
+) -> dict[str, str]:
+    """Change the edits named, and only those: text sets one, ``null`` clears it.
+
+    The SPA's write. ``PUT`` replaces the whole map, so it erased the edits of
+    any quote the client didn't hold (one a speaker recode keeps off
+    ``/quotes``, R2); a ``PATCH`` names one gesture's keys.
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        for key, text in data.items():
+            if key.startswith("q-"):
+                quote = _resolve_quote(db, project_id, key)
+                if not quote:
+                    continue
+                db.query(QuoteEdit).filter_by(quote_id=quote.id).delete(
+                    synchronize_session=False
+                )
+                if text is not None:
+                    db.add(QuoteEdit(quote_id=quote.id, edited_text=text, edited_at=_now()))
+                    _mint_pin(db, quote, frozen_text=text)
+            else:
+                db.query(HeadingEdit).filter_by(
+                    project_id=project_id, heading_key=key
+                ).delete(synchronize_session=False)
+                if text is not None:
+                    db.add(
+                        HeadingEdit(
+                            project_id=project_id,
+                            heading_key=key,
+                            edited_text=text,
+                            edited_at=_now(),
+                        )
+                    )
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Tags (tags.js — user-defined tags)
 # ---------------------------------------------------------------------------
@@ -941,6 +1016,67 @@ def put_tags(
         db.close()
 
 
+@router.patch("/projects/{project_id}/tags")
+def patch_tags(
+    project_id: int,
+    request: Request,
+    data: dict[str, TagDelta],
+) -> dict[str, str]:
+    """Add and remove tags by name on the quotes named, and touch nothing else.
+
+    The SPA's write. ``PUT`` deletes every tag of the project and re-inserts
+    the body, so it erased what the client didn't hold: AutoCode tags
+    re-applied after new sessions (R1), the tags of quotes a speaker recode
+    keeps off ``/quotes`` (R2), and a deleted tag still in the client's map
+    came back under Uncategorised (R3). A delta names only what the gesture
+    changed. An added name nobody has made yet is the new-tag path, as in
+    ``put_tags``; a name already on the quote keeps its provenance.
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+
+        tag_defs: dict[str, int] = {}
+        for td in db.query(TagDefinition).all():
+            tag_defs[td.name.lower()] = td.id
+        uncategorised: CodebookGroup | None = None
+
+        for dom_id, delta in data.items():
+            quote = _resolve_quote(db, project_id, dom_id)
+            if not quote:
+                continue
+            for tag_name in delta.remove:
+                td_id = tag_defs.get(tag_name.lower())
+                if td_id is not None:
+                    db.query(QuoteTag).filter_by(
+                        quote_id=quote.id, tag_definition_id=td_id
+                    ).delete(synchronize_session=False)
+            for tag_name in delta.add:
+                td_id = tag_defs.get(tag_name.lower())
+                if td_id is None:
+                    if uncategorised is None:
+                        uncategorised = _get_or_create_uncategorised(db)
+                    td = TagDefinition(name=tag_name, codebook_group_id=uncategorised.id)
+                    db.add(td)
+                    db.flush()
+                    td_id = td.id
+                    tag_defs[tag_name.lower()] = td_id
+                if db.query(QuoteTag).filter_by(
+                    quote_id=quote.id, tag_definition_id=td_id
+                ).first():
+                    continue
+                db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td_id, source="human"))
+                # The pin predicate, as in put_tags.
+                if not _is_sentiment_tag(db, td_id):
+                    _mint_pin(db, quote)
+
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Hidden (hidden.js)
 # ---------------------------------------------------------------------------
@@ -1003,6 +1139,37 @@ def put_hidden(
             elif should_hide:
                 db.add(QuoteState(quote_id=qid, is_hidden=True, hidden_at=_now()))
 
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.patch("/projects/{project_id}/hidden")
+def patch_hidden(
+    project_id: int,
+    request: Request,
+    data: dict[str, bool],
+) -> dict[str, str]:
+    """Hide (``true``) or restore (``false``) the quotes named, and no others.
+
+    The SPA's write; ``PUT`` resets every project quote, including the ones a
+    speaker recode keeps off ``/quotes`` (R2).
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        for dom_id, is_hidden in data.items():
+            quote = _resolve_quote(db, project_id, dom_id)
+            if not quote:
+                continue
+            qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
+            if qs:
+                qs.is_hidden = is_hidden
+                qs.hidden_at = _now() if is_hidden else None
+            elif is_hidden:
+                db.add(QuoteState(quote_id=quote.id, is_hidden=True, hidden_at=_now()))
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1073,6 +1240,39 @@ def put_starred(
                 if quote:
                     _mint_pin(db, quote)  # freeze on first human touch
 
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.patch("/projects/{project_id}/starred")
+def patch_starred(
+    project_id: int,
+    request: Request,
+    data: dict[str, bool],
+) -> dict[str, str]:
+    """Star (``true``) or unstar (``false``) the quotes named, and no others.
+
+    The SPA's write; ``PUT`` resets every project quote, including the ones a
+    speaker recode keeps off ``/quotes`` (R2).
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        for dom_id, is_starred in data.items():
+            quote = _resolve_quote(db, project_id, dom_id)
+            if not quote:
+                continue
+            qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
+            if qs:
+                qs.is_starred = is_starred
+                qs.starred_at = _now() if is_starred else None
+            elif is_starred:
+                db.add(QuoteState(quote_id=quote.id, is_starred=True, starred_at=_now()))
+            if is_starred:
+                _mint_pin(db, quote)  # freeze on first human touch
         db.commit()
         return {"status": "ok"}
     finally:
@@ -1232,6 +1432,45 @@ def put_deleted_badges(
                         )
                     )
 
+        db.commit()
+        return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.patch("/projects/{project_id}/deleted-badges")
+def patch_deleted_badges(
+    project_id: int,
+    request: Request,
+    data: dict[str, BadgeDelta],
+) -> dict[str, str]:
+    """Delete (``add``) or restore (``remove``) sentiment badges on the quotes named.
+
+    The SPA's write; ``PUT`` clears every project quote's deleted badges, so
+    the transcript margin's one-quote body wiped all the others.
+    """
+    _check_delta_size(data)
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        for dom_id, delta in data.items():
+            quote = _resolve_quote(db, project_id, dom_id)
+            if not quote:
+                continue
+            if delta.remove:
+                db.query(DeletedBadge).filter(
+                    DeletedBadge.quote_id == quote.id,
+                    DeletedBadge.sentiment.in_(delta.remove),
+                ).delete(synchronize_session=False)
+            for sentiment in delta.add:
+                if not db.query(DeletedBadge).filter_by(
+                    quote_id=quote.id, sentiment=sentiment
+                ).first():
+                    db.add(
+                        DeletedBadge(
+                            quote_id=quote.id, sentiment=sentiment, deleted_at=_now()
+                        )
+                    )
         db.commit()
         return {"status": "ok"}
     finally:

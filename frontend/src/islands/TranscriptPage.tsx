@@ -64,8 +64,8 @@ import {
   apiGet,
   getTranscript,
   getSessionList,
-  putDeletedBadges,
-  putTags,
+  patchDeletedBadges,
+  patchTags,
 } from "../utils/api";
 import type { SessionListItem } from "../utils/api";
 import { formatFinderDate, formatTimecode } from "../utils/format";
@@ -767,7 +767,10 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
           [quoteId]: { ...ann, deleted_badges: updated },
         },
       });
-      putDeletedBadges({ [quoteId]: updated });
+      // Only this quote's change. A one-quote map sent as the whole map wiped
+      // every other quote's deleted badges (and, below, tags) in the project.
+      // A write that fails has already said why.
+      patchDeletedBadges({ [quoteId]: { add: [sentiment] } }).catch(() => undefined);
     },
     [data],
   );
@@ -786,7 +789,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
           [quoteId]: { ...ann, tags: updated },
         },
       });
-      putTags({ [quoteId]: updated.map((t) => t.name) });
+      patchTags({ [quoteId]: { remove: [tagName] } }).catch(() => undefined);
     },
     [data],
   );

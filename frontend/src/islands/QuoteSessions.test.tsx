@@ -13,8 +13,8 @@ import { renderHook, act } from "@testing-library/react";
 vi.mock("../utils/api", () => ({
   apiGet: vi.fn(),
   getCodebook: vi.fn(),
-  putEdits: vi.fn(),
-  putStarred: vi.fn(),
+  patchEdits: vi.fn(() => Promise.resolve()),
+  patchStarred: vi.fn(() => Promise.resolve()),
 }));
 
 import { apiGet, getCodebook } from "../utils/api";

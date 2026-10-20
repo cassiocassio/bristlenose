@@ -22,7 +22,7 @@ import type { QuoteResponse, QuotesListResponse, SessionResponse } from "../util
 vi.mock("../utils/api", async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
   apiGet: vi.fn(),
-  putStarred: vi.fn(),
+  patchStarred: vi.fn(() => Promise.resolve()),
 }));
 
 import { apiGet } from "../utils/api";

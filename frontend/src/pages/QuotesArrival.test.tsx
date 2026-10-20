@@ -7,7 +7,7 @@ import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../utils/api")>()),
-  putHidden: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()),
 }));
 const scrolled: string[] = [];
 const scrollOpts: ({ block?: string; highlight?: boolean } | undefined)[] = [];

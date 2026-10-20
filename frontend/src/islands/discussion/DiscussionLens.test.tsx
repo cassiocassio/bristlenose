@@ -901,7 +901,7 @@ const sessionList = data.sessions.map((s) => ({
 const api = vi.hoisted(() => ({
   apiGet: vi.fn(), getSessionList: vi.fn(), getCodebook: vi.fn(),
   // the quotes store's writes (QuotesContext): fire-and-forget PUTs
-  putHidden: vi.fn(), putStarred: vi.fn(), putEdits: vi.fn(), putTags: vi.fn(), putDeletedBadges: vi.fn(),
+  patchHidden: vi.fn(() => Promise.resolve()), patchStarred: vi.fn(() => Promise.resolve()), patchEdits: vi.fn(() => Promise.resolve()), patchTags: vi.fn(() => Promise.resolve()), patchDeletedBadges: vi.fn(() => Promise.resolve()),
   acceptProposal: vi.fn(), denyProposal: vi.fn(),
 }));
 vi.mock("../../utils/api", () => api);

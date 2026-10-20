@@ -23,6 +23,11 @@ private final class FakeServe: @unchecked Sendable {
     var status: (URL) -> Int = { _ in 200 }
     /// How long the answer takes, as building a real export does.
     var delay: (URL) -> TimeInterval = { _ in 0 }
+    /// Answers held until `release()`: an export still building for as long
+    /// as the test needs, not for a fixed delay a held main actor can outlast.
+    var hold: (URL) -> Bool = { _ in false }
+    private var held: [() -> Void] = []
+    private var released = false
     private(set) var requested: [URL] = []
 
     init() throws {
@@ -46,9 +51,14 @@ private final class FakeServe: @unchecked Sendable {
                 head += "Content-Type: \(code == 200 ? "text/html" : "application/json")\r\n"
                 if code == 200 { head += "Content-Disposition: attachment; filename=\"report.html\"\r\n" }
                 head += "Content-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n"
-                DispatchQueue.main.asyncAfter(deadline: .now() + self.delay(url)) {
+                let answer = {
                     connection.send(content: Data((head + body).utf8),
                                     completion: .contentProcessed { _ in connection.cancel() })
+                }
+                if self.hold(url), !self.released {
+                    self.held.append(answer)
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + self.delay(url), execute: answer)
                 }
             }
         }
@@ -57,8 +67,17 @@ private final class FakeServe: @unchecked Sendable {
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
 
+    /// Send every held answer, and hold none from now on. Main queue only.
+    func release() {
+        released = true
+        let answers = held
+        held = []
+        answers.forEach { $0() }
+    }
+
     func ready() async {
-        for _ in 0..<200 where port == 0 { try? await Task.sleep(for: .milliseconds(10)) }
+        let deadline = Date().addingTimeInterval(ExportRig.patience)
+        while port == 0, Date() < deadline { try? await Task.sleep(for: .milliseconds(10)) }
     }
 
     func stop() { listener.cancel() }
@@ -106,7 +125,14 @@ private final class ExportRig {
         }
     }
 
-    func until(_ condition: () -> Bool, seconds: Double = 8) async {
+    /// How long a wait for something that must happen may take. The full
+    /// suite runs hundreds of main-actor tests beside these, and every step of
+    /// an export is a main-actor hop: an 8 s ceiling failed in the full suite
+    /// on 20 Oct 2026 and beside a 15 s main-thread hold. A green wait returns
+    /// as soon as its condition holds.
+    nonisolated static let patience: Double = 30
+
+    func until(_ condition: () -> Bool, seconds: Double = patience) async {
         let deadline = Date().addingTimeInterval(seconds)
         while !condition(), Date() < deadline {
             try? await Task.sleep(for: .milliseconds(20))
@@ -190,10 +216,14 @@ struct ExportSaveFlowTests {
 
     @Test func exportReportPressedTwiceAsksOnce() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
-        rig.serve.delay = { _ in 0.3 }   // the second press lands while it builds
+        // The export is still building when the second press lands: its
+        // answer is held until both presses are in.
+        rig.serve.hold = { _ in true }
         await rig.export()
         await rig.export()
+        rig.serve.release()
         await rig.until { rig.saved == "<html>NAMED</html>" }
+        await rig.until { !rig.coordinator.hasPendingReportExport }
         // Give a second panel time to come up, so a pass is not a race.
         try? await Task.sleep(for: .milliseconds(500))
 
@@ -231,11 +261,12 @@ struct ExportSaveFlowTests {
     @Test func aPressWhileTheAnonymisedCopyIsFetchedAsksNothing() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.atPanel = { $0?.anonymise = true }
-        // Hold the anonymised copy up long enough to press again.
-        rig.serve.delay = { $0.query?.contains("anonymise=true") == true ? 0.5 : 0 }
+        // Hold the anonymised copy up until the second press is in.
+        rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
         await rig.export()
         await rig.until { rig.serve.requested.count == 2 }
         await rig.export()
+        rig.serve.release()
         await rig.until { rig.saved == "<html>ANONYMISED</html>" }
         try? await Task.sleep(for: .milliseconds(500))
 

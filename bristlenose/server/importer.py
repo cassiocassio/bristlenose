@@ -410,8 +410,8 @@ def _find_or_create_project(
     # --- Read metadata ---------------------------------------------------
     metadata_path = intermediate / "metadata.json"
     project_name = "Untitled"
-    if metadata_path.exists():
-        meta = json.loads(metadata_path.read_text(encoding="utf-8"))
+    meta = _read_intermediate_json(metadata_path)
+    if isinstance(meta, dict):
         project_name = meta.get("project_name", "Untitled")
 
     # --- Find or create project ------------------------------------------
@@ -509,15 +509,16 @@ def import_project(db: Session, project_dir: Path) -> Project:
     now = datetime.now(timezone.utc)
 
     # --- Read intermediate JSON ------------------------------------------
-    screen_clusters_data: list[dict[str, Any]] = []
+    # An unreadable file reads as missing, never as empty: `_missing_output`
+    # then keeps the quotes already imported instead of sweeping them, and
+    # their stars and tags, as removed by the re-run (R112).
     sc_path = intermediate / "screen_clusters.json"
-    if sc_path.exists():
-        screen_clusters_data = json.loads(sc_path.read_text(encoding="utf-8"))
-
-    theme_groups_data: list[dict[str, Any]] = []
     tg_path = intermediate / "theme_groups.json"
-    if tg_path.exists():
-        theme_groups_data = json.loads(tg_path.read_text(encoding="utf-8"))
+    sc_raw = _read_intermediate_json(sc_path)
+    tg_raw = _read_intermediate_json(tg_path)
+    screen_clusters_data: list[dict[str, Any]] = sc_raw or []
+    theme_groups_data: list[dict[str, Any]] = tg_raw or []
+    quote_files_readable = sc_raw is not None and tg_raw is not None
 
     # --- Parse transcripts for session metadata --------------------------
     transcripts_dir = _find_transcripts_dir(project_dir, output_dir)
@@ -527,7 +528,7 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # Asked before anything below writes, while the DB still describes the
     # previous import.
     missing_output = _missing_output(
-        db, project, sc_path.exists() and tg_path.exists(), bool(session_meta),
+        db, project, quote_files_readable, bool(session_meta),
     )
 
     # --- Build sessions from all data sources ----------------------------
@@ -2195,7 +2196,7 @@ def _import_topic_boundaries(
     tb_path: Path,
 ) -> None:
     """Import topic boundaries from JSON."""
-    data = json.loads(tb_path.read_text(encoding="utf-8"))
+    data = _read_intermediate_json(tb_path) or []
     for item in data:
         sid = item.get("session_id", "")
         sess = session_map.get(sid)
@@ -2372,6 +2373,23 @@ def _auto_tag_from_sentiment_field(db: Session, project: Project) -> None:
             created,
             project.name,
         )
+
+
+def _read_intermediate_json(path: Path) -> Any:
+    """A pipeline JSON file's contents, or None when it is absent or will not read.
+
+    One truncated file (a power cut mid-write, a full disk) used to raise out of
+    the whole import, so a fresh database got no project and the report opened
+    empty (R112). Said once in the log; the caller decides what absence means.
+    """
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):  # JSONDecodeError and UnicodeDecodeError are ValueErrors
+        logger.warning("import | %s will not read; imported without it", path,
+                       exc_info=True)
+        return None
 
 
 def _missing_output(

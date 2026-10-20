@@ -2050,7 +2050,20 @@ def _auto_render(project_dir: Path) -> None:
     from bristlenose.pipeline import Pipeline
 
     pipeline = Pipeline(settings, verbose=False)
-    result = pipeline.run_render_only(output_dir, input_dir)
+    try:
+        result = pipeline.run_render_only(output_dir, input_dir)
+    except Exception:  # noqa: BLE001 — the sealed static render must never stop serve
+        # A typo in people.yaml or one truncated intermediate file raised out of
+        # serve before the server bound, so the report would not open at all
+        # (R112). The SPA reads the database, which the importer fills
+        # tolerantly; only the static copy goes stale.
+        import logging
+
+        logging.getLogger("bristlenose").warning(
+            "serve | static report not re-rendered; the report is served from "
+            "its database", exc_info=True,
+        )
+        return
     console.print(
         f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]"
         f"  {count_noun(result.total_quotes, 'quote')}"

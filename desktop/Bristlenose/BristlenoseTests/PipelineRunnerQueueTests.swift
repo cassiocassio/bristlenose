@@ -80,8 +80,12 @@ struct PipelineRunnerQueueTests {
         /// - Parameter lookup: where the sidecar is, when a test asks the
         ///   runner to look (R28).
         ///   - foreignPoll / patience: the watch on a run another process owns.
+        ///   - endStateRead / slowEndReread: the read that settles a finished
+        ///     run, and the wait before reading again when it timed out (R29).
         init(lookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
-             foreignPoll: Duration = .milliseconds(50), patience: Int = 15) {
+             foreignPoll: Duration = .milliseconds(50), patience: Int = 15,
+             endStateRead: (@Sendable (URL) async -> PipelineState)? = nil,
+             slowEndReread: Duration = .milliseconds(50)) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -120,7 +124,11 @@ struct PipelineRunnerQueueTests {
                 sidecarLookup: lookup,
                 outputDrainLimit: .seconds(1),
                 foreignRunPollInterval: foreignPoll,
-                foreignRunPatience: patience
+                foreignRunPatience: patience,
+                endStateRead: endStateRead ?? {
+                    await PipelineRunner.readManifestState(at: $0, timeout: .seconds(5))
+                },
+                slowEndRereadInterval: slowEndReread
             )
             runner.setProjectIndex(index)
         }
@@ -492,6 +500,67 @@ struct PipelineRunnerQueueTests {
             Issue.record("expected .ready, got \(String(describing: rig.runner.state[a.id]))"); return
         }
         #expect(rig.noted == [.claude])
+    }
+
+    /// Reads of the end state, counted across the threads they run on.
+    final class ReadLog: @unchecked Sendable {
+        private let lock = NSLock()
+        private var n = 0
+        /// The number of this read, from 1.
+        func next() -> Int { lock.lock(); defer { lock.unlock() }; n += 1; return n }
+        var count: Int { lock.lock(); defer { lock.unlock() }; return n }
+    }
+
+    /// R29: a run that succeeded on a disk too slow for the 5 s end-state read
+    /// read "Not responding" for good. The termination path accepted the
+    /// timed-out read, said the next passive scan would settle it, and there
+    /// is no passive scan. It is read again until it answers.
+    @Test func aSuccessfulRunWhoseEndReadTimedOutIsReadAgain() async {
+        let reads = ReadLog()
+        // The end read and the first re-read both time out; the next answers.
+        let rig = Rig(endStateRead: { url in
+            if reads.next() <= 2 { return .unreachable(reason: .timedOut) }
+            return await PipelineRunner.readManifestState(at: url, timeout: .seconds(5))
+        })
+        defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: nil)
+
+        rig.launches[0].exit()
+        await until {
+            if case .ready = rig.runner.state[a.id] { return true }
+            return false
+        }
+
+        guard case .ready = rig.runner.state[a.id] else {
+            Issue.record("expected .ready, got \(String(describing: rig.runner.state[a.id]))"); return
+        }
+        #expect(reads.count == 3)
+    }
+
+    /// The second read is the row's only while the row still says the read
+    /// timed out: a run started meanwhile is not overwritten by it.
+    @Test func aRereadDoesNotOverwriteARunStartedMeanwhile() async {
+        let reads = ReadLog()
+        let rig = Rig(endStateRead: { url in
+            if reads.next() == 1 { return .unreachable(reason: .timedOut) }
+            return await PipelineRunner.readManifestState(at: url, timeout: .seconds(5))
+        }, slowEndReread: .milliseconds(300))
+        defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.writeFinishedRun(in: a, tokens: nil)
+
+        rig.launches[0].exit()
+        await until { rig.runner.state[a.id] == .unreachable(reason: .timedOut) }
+        #expect(rig.runner.state[a.id] == .unreachable(reason: .timedOut))
+        rig.runner.start(project: a)
+        #expect(rig.runner.state[a.id] == .running)
+
+        try? await Task.sleep(for: .milliseconds(600))
+        #expect(rig.runner.state[a.id] == .running)
+        #expect(reads.count == 1, "nothing read the finished run again once a new one held the row")
     }
 
     @Test func aRunFinishedFromCacheClearsNothing() async {

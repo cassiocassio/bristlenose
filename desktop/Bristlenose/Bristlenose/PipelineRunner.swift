@@ -568,6 +568,12 @@ final class PipelineRunner: ObservableObject {
     private let outputDrainLimit: Duration
     private let foreignRunPollInterval: Duration
     private let foreignRunPatience: Int
+    /// The read that settles a finished run's state from disk. A test passes
+    /// a slow one; the app reads the manifest with its 5 s timeout.
+    private let endStateRead: @Sendable (URL) async -> PipelineState
+    /// How long to wait between reads of a finished run whose end-state read
+    /// timed out (R29).
+    private let slowEndRereadInterval: Duration
 
     /// A run this app neither spawned nor attached — a CLI run on a sidebar
     /// study — reads `.running` from its own `run.pid` (`EventLogReader.deriveState`),
@@ -575,6 +581,9 @@ final class PipelineRunner: ObservableObject {
     /// none we may signal. Re-read until disk says it is over (R22). It used to
     /// read "Analysing" until quit, holding the Mac awake.
     private var foreignRunWatches: [UUID: Task<Void, Never>] = [:]
+
+    /// Re-reads of a finished run whose end-state read timed out (R29).
+    private var slowEndRereads: [UUID: Task<Void, Never>] = [:]
 
     /// Whether the project's live run is this app's: the one in the slot, or
     /// an attached orphan.
@@ -655,9 +664,15 @@ final class PipelineRunner: ObservableObject {
         sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
         outputDrainLimit: Duration = .seconds(2),
         foreignRunPollInterval: Duration = .seconds(2),
-        foreignRunPatience: Int = 15
+        foreignRunPatience: Int = 15,
+        endStateRead: @escaping @Sendable (URL) async -> PipelineState = {
+            await PipelineRunner.readManifestState(at: $0, timeout: .seconds(5))
+        },
+        slowEndRereadInterval: Duration = .seconds(5)
     ) {
         self.foreignRunPatience = foreignRunPatience
+        self.endStateRead = endStateRead
+        self.slowEndRereadInterval = slowEndRereadInterval
         self.sidecarLookup = sidecarLookup
         self.outputDrainLimit = outputDrainLimit
         self.foreignRunPollInterval = foreignRunPollInterval
@@ -2333,6 +2348,9 @@ var args = ["run", project.path, "--no-serve"]
         switch decision {
         case .accept(let final):
             state[projectID] = final
+            if final == .unreachable(reason: .timedOut), let project {
+                rereadAfterSlowEnd(project)
+            }
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
                     provider: provider, project: project,
@@ -2355,6 +2373,45 @@ var args = ["run", project.path, "--no-serve"]
 
         startNextQueued()
     }
+
+    /// Read a finished run's end state again after its read timed out (R29).
+    ///
+    /// The run succeeded; the disk was slow (a sleeping drive, a network
+    /// share), so the 5 s read gave up and the row said "Not responding". The
+    /// termination path accepted that on the promise of a later passive scan,
+    /// and there is none: the row stayed until relaunch. Read again every
+    /// `slowEndRereadInterval`, at most `slowEndRereadLimit` times, and take
+    /// the first answer that is not another time-out. Only while the row still
+    /// shows the time-out: a run started meanwhile, or a scan that settled it,
+    /// owns the row. One read at a time; a read that hangs holds the loop, not
+    /// a pile of reads.
+    private func rereadAfterSlowEnd(_ project: Project) {
+        let projectID = project.id
+        let url = Self.manifestURL(for: project)
+        let read = endStateRead
+        let interval = slowEndRereadInterval
+        slowEndRereads[projectID]?.cancel()
+        slowEndRereads[projectID] = Task { @MainActor [weak self] in
+            for _ in 0..<Self.slowEndRereadLimit {
+                try? await Task.sleep(for: interval)
+                guard !Task.isCancelled,
+                      self?.state[projectID] == .unreachable(reason: .timedOut) else { break }
+                let resolved = await Task.detached { await read(url) }.value
+                guard !Task.isCancelled, let self,
+                      self.state[projectID] == .unreachable(reason: .timedOut) else { break }
+                if resolved == .unreachable(reason: .timedOut) { continue }
+                Self.logger.info(
+                    "a finished run's end state read on a second try project=\(projectID.uuidString, privacy: .public) state=\(String(describing: resolved), privacy: .public)"
+                )
+                self.applyScanResult(resolved, for: projectID)
+                break
+            }
+            self?.slowEndRereads[projectID] = nil
+        }
+    }
+
+    /// About a minute of re-reads at the default interval.
+    static let slowEndRereadLimit = 12
 
     /// Pure decision: given exit status + log-marker result + the
     /// derived-from-disk state, what should the runner write?
@@ -2380,8 +2437,8 @@ var args = ["run", project.path, "--no-serve"]
             // Sidecar said it worked. Trust the disk derivation:
             //   .ready  → accept (real success)
             //   .idle/.partial/.stopped → accept (botched run, honest signal)
-            //   .unreachable → accept (slow disk; sidebar will self-correct
-            //                  on next passive scan)
+            //   .unreachable → accept (slow disk; a timed-out read is read
+            //                  again by `rereadAfterSlowEnd`, R29)
             // When exit was non-zero AND log markers passed but disk says
             // not-ready, that's a real failure (log markers lied) — fall
             // through to categorisation rather than write a misleading state.
@@ -2407,10 +2464,7 @@ var args = ["run", project.path, "--no-serve"]
         projectID: UUID, project: Project?
     ) async -> PipelineState {
         guard let project else { return .idle }
-        let url = Self.manifestURL(for: project)
-        let derived = await Self.readManifestState(
-            at: url, timeout: .seconds(5)
-        )
+        let derived = await endStateRead(Self.manifestURL(for: project))
         if case .ready = derived {
             return derived
         }

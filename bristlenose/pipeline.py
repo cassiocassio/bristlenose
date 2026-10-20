@@ -1541,8 +1541,17 @@ class Pipeline:
             input_dir, declined, order_by_start=_may_order_by_start(output_dir)
         )
         if not sessions:
+            # A failed run, as `run_transcription_only` has it: returning an
+            # empty result ended "Done" with an empty report (R116).
             console.print("[red]No supported files found.[/red]")
-            return self._empty_result(output_dir)
+            raise PipelineAbandonedError(
+                cause=Cause(
+                    category=CauseCategoryEnum.MISSING_INPUT,
+                    message="No supported files found in input directory.",
+                    stage="s01_ingest",
+                ),
+                summary=self._summary,
+            )
         # Sticky ids: a session keeps its number across runs, so a recording
         # older than the ones already analysed cannot renumber them.
         session_registry = SessionRegistry.load(output_dir)

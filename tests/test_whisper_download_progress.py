@@ -148,3 +148,79 @@ def test_the_run_reports_the_download_before_transcription(tmp_path: Path) -> No
     # downloading until the first recording is transcribed.
     assert stages[: len(downloads) + 1] == ["download"] * len(downloads) + ["transcribe"]
     assert "download" not in stages[len(downloads):]
+
+
+# ── review fixes (20 Oct 2026) ──────────────────────────────────────────────
+
+
+def test_a_partial_cache_counts_what_is_already_on_disk() -> None:
+    seen: list[tuple[int, int]] = []
+    read = whisper._progress_line_reader(lambda d, t: seen.append((d, t)), already=600)
+    read("@download-start repo 1000")
+    read("@download 200 1000")
+    read("@download 900 1000")  # never past the whole
+    assert seen == [(600, 1000), (800, 1000), (1000, 1000)]
+
+
+def test_a_progress_fault_never_fails_the_download(caplog) -> None:
+    calls = []
+
+    def sink(done: int, total: int) -> None:
+        calls.append(done)
+        raise ValueError("sink broke")
+
+    read = whisper._progress_line_reader(sink)
+    read("@download-start repo 1000")      # raises inside, swallowed and logged
+    read("@download 500 1000")             # forwarding has stopped
+    assert calls == [0]
+    assert "stopped reporting" in caplog.text
+
+
+def test_the_real_line_writer_and_reader_agree(monkeypatch) -> None:
+    """Not hand-written lines: the format fetch_with_progress_lines prints."""
+    monkeypatch.setattr(whisper, "unknown_model_message", lambda _s: None)
+    monkeypatch.setattr(whisper, "_resolve_repo_id", lambda _s: "repo")
+    states = iter(["missing", "cached"])
+    monkeypatch.setattr(whisper, "cache_state", lambda _r: next(states))
+    monkeypatch.setattr(whisper, "_server_total_bytes", lambda _r: 1000)
+
+    def fake_hf(_repo, tqdm_class=None):
+        bar = tqdm_class(total=1000, unit="B", desc="Downloading bytes")
+        bar.update(400)
+        bar.update(600)
+
+    monkeypatch.setattr("bristlenose.utils.package_install.ensure_hf_model", fake_hf)
+    seen: list[tuple[int, int]] = []
+    whisper.fetch_with_progress_lines(
+        BristlenoseSettings(), write=whisper._progress_line_reader(lambda d, t: seen.append((d, t)))
+    )
+    assert seen[0] == (0, 1000)
+    assert seen[-1] == (1000, 1000)
+
+
+def test_a_predicted_total_leaves_out_the_download() -> None:
+    """The ring measures from the download's end, so every predicted total must too."""
+    import time
+    from types import SimpleNamespace
+
+    from bristlenose.timing import Estimate
+
+    pipeline = Pipeline(BristlenoseSettings(project_name="frame"))
+    emitted: list[dict] = []
+    pipeline.set_progress_sink(lambda **f: emitted.append(f))
+    pipeline._run_start_perf = time.perf_counter() - 1_000   # run started 1000 s ago
+    pipeline._download_started = time.perf_counter() - 900   # download took 900 s
+    pipeline._model_download_seen = True
+    pipeline._end_model_download()
+    assert 899 < pipeline._download_seconds < 901
+
+    remaining = Estimate.__new__(Estimate)
+    object.__setattr__(remaining, "total_seconds", 300.0)
+    pipeline._estimator = SimpleNamespace(stage_completed=lambda *_a: remaining)
+    pipeline._emit = lambda _e: None
+    pipeline._emit_remaining("transcribe", 50)
+    # 100 s of analysis + 300 s left, not 1000 + 300.
+    assert 399 < emitted[-1]["predicted_total_seconds"] < 402
+
+    pipeline._carry_eta(remaining)
+    assert 399 < pipeline._last_predicted_total < 402

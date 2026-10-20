@@ -135,9 +135,13 @@ enum RunProgressMath {
         }
         if leavingDownload {
             // A new phase, named by the row's new verb: the ring starts again
-            // and times the analysis alone.
+            // and times the analysis alone. With no estimate (a first run on a
+            // Mac has no timing history) and no measured fraction, that is the
+            // spinner: an empty determinate ring would sit frozen until the
+            // first recording finished transcribing.
             p.timeBaseline = now
-            p.ringFraction = 0
+            let hasEstimate = (predictedTotalSeconds ?? p.predictedTotalSeconds ?? 0) > 0
+            p.ringFraction = (hasEstimate || stageFraction != nil) ? 0 : nil
         }
 
         let elapsed = now.timeIntervalSince(p.timeBaseline ?? startedAt)

@@ -27,9 +27,10 @@ enum RunProgressSubtitle {
     /// `speakers` / `topics`, not `identify_speakers` / `topic_segmentation`.
     /// The verb for each is localised via `desktop.chrome.pipeline.stage.<id>`.
     /// An id outside this set yields no verb: the guard stops an unexpected id
-    /// from rendering as a raw key. Keep in sync with `timing.py ALL_STAGES`,
-    /// plus `download` (`RunProgressMath.downloadStage`), which the run emits
-    /// before them for a first run's speech model and the estimator never counts.
+    /// from rendering as a raw key. Keep in sync with `timing.py PROGRESS_STAGES`:
+    /// `ALL_STAGES` plus `download` (`RunProgressMath.downloadStage`), which the
+    /// run emits before them for a first run's speech model and the estimator
+    /// never counts. `tests/test_swift_python_contract.py` holds the two equal.
     static let knownStages: Set<String> = [
         "download", "transcribe", "speakers", "pii", "topics", "quotes", "cluster",
         "discussion", "render",

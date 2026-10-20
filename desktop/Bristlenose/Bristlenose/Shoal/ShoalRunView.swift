@@ -37,7 +37,13 @@ struct ShoalRunView: View {
     @State private var disturbanceRequest: ShoalDisturbance?
 
     private var ringFraction: Double {
-        liveData.progress[projectID]?.ringFraction ?? 0
+        // The flock follows the analysis, not a first run's speech-model
+        // download: that fill is bytes, and taken as analysis it latched the
+        // flock to "late" and logged a stale sidecar while the feed was
+        // rightly empty (R32 review).
+        guard let progress = liveData.progress[projectID],
+            progress.stage != RunProgressMath.downloadStage else { return 0 }
+        return progress.ringFraction ?? 0
     }
 
     var body: some View {

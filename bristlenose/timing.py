@@ -57,6 +57,14 @@ ALL_STAGES = (
     STAGE_RENDER,
 )
 
+# A first run's speech-model download, reported as a progress stage before the
+# others (R32). Not an estimator stage, so not in ALL_STAGES: the estimate never
+# contains it, and the Mac app fills the ring from its bytes instead.
+PROGRESS_STAGE_DOWNLOAD = "download"
+
+# Every id ``run_progress.stage`` can carry; the Mac app's ``knownStages``.
+PROGRESS_STAGES = (PROGRESS_STAGE_DOWNLOAD, *ALL_STAGES)
+
 
 # ---------------------------------------------------------------------------
 # Welford's online algorithm

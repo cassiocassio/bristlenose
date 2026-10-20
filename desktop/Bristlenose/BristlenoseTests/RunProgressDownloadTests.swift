@@ -49,11 +49,26 @@ import Testing
         p = at(p, 901, stage: "transcribe", predicted: 600)
         #expect(p.ringFraction == 0)                         // a new phase
         // Five minutes into a ten-minute analysis: half the estimate, not the
-        // 20 minutes since the run started (which would read as overrun).
+        // 20 minutes since the run started (which would read as overrun). The
+        // run sends predicted totals in this frame too: it leaves the download
+        // out of them (`Pipeline._analysis_elapsed`).
         p = at(p, 1_201, stage: "transcribe", predicted: 600)
         let expected = 300.0 / 600 * RunProgressMath.expectedCompletionMark
         #expect(abs((p.ringFraction ?? -1) - expected) < 1e-9)
         #expect(p.timeBaseline == start.addingTimeInterval(901))
+    }
+
+    /// A first run on a new Mac has no timing history, so no estimate: after
+    /// the download the ring is the spinner until a measured fraction arrives,
+    /// not an empty ring frozen through transcription (R32 review).
+    @Test func withNoEstimateTheAnalysisStartsAsASpinner() {
+        var p = PipelineProgress(startedAt: start)
+        p = at(p, 10, stage: "download", fraction: 0.4)
+        p = at(p, 900, stage: "download", fraction: 1)
+        p = at(p, 901, stage: "transcribe")
+        #expect(p.ringFraction == nil)
+        p = at(p, 1_200, stage: "transcribe", fraction: 0.5)   // first recording done
+        #expect(p.ringFraction == 0.5)
     }
 
     @Test func aDownloadOfUnknownSizeIsASpinner() {

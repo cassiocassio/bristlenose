@@ -1080,6 +1080,10 @@ class Pipeline:
         # run_lifecycle block by the CLI. None on no-lifecycle paths.
         self._progress_sink: object | None = None
         self._model_download_seen = False
+        self._download_started: float | None = None
+        # Seconds the first-run speech-model download took. Left out of every
+        # predicted total, which the Mac app measures from the download's end.
+        self._download_seconds = 0.0
         #: Sessions the readable chain has delivered this run (a count only).
         self._sessions_readable = 0
         self._transcription_held = 0.0
@@ -1152,7 +1156,7 @@ class Pipeline:
             kind="remaining", stage=stage, elapsed=elapsed,
             estimate=remaining,
         ))
-        total_elapsed = self._elapsed_seconds()
+        total_elapsed = self._analysis_elapsed()
         predicted = (
             total_elapsed + remaining.total_seconds
             if total_elapsed is not None else None
@@ -1206,8 +1210,14 @@ class Pipeline:
         and measures the analysis from where it ends (R32).
         """
         self._model_download_seen = True
+        if self._download_started is None:
+            import time
+
+            self._download_started = time.perf_counter()
+        from bristlenose.timing import PROGRESS_STAGE_DOWNLOAD
+
         self._emit_progress(
-            stage="download",
+            stage=PROGRESS_STAGE_DOWNLOAD,
             stage_fraction=(min(done, total) / total if total else None),
         )
 
@@ -1222,7 +1232,21 @@ class Pipeline:
             from bristlenose.timing import STAGE_TRANSCRIBE as _T_STAGE_TRANSCRIBE
 
             self._model_download_seen = False
+            if self._download_started is not None:
+                import time
+
+                self._download_seconds = time.perf_counter() - self._download_started
             self._emit_stage_entry(_T_STAGE_TRANSCRIBE)
+
+    def _analysis_elapsed(self) -> float | None:
+        """Run time less the speech-model download: the frame of a predicted total.
+
+        The estimate never contains the download, and the Mac app's ring measures
+        from where it ends; a total counted from the run's start would carry the
+        download and freeze the ring for the second half of the run (R32 review).
+        """
+        elapsed = self._elapsed_seconds()
+        return None if elapsed is None else elapsed - self._download_seconds
 
     def _on_session_progress(
         self, stage: str, status: Any, label: str, *, remaining: int, cached: int = 0,
@@ -1323,7 +1347,7 @@ class Pipeline:
             self._last_eta_remaining = None
             self._last_predicted_total = None
             return
-        elapsed = self._elapsed_seconds()
+        elapsed = self._analysis_elapsed()
         self._last_eta_remaining = remaining.total_seconds
         self._last_predicted_total = elapsed + remaining.total_seconds if elapsed is not None else None
 

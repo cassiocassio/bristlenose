@@ -482,7 +482,10 @@ def preflight_whisper(
     try:
         if on_download_progress is not None and not _stderr_is_tty():
             fetch_with_progress_lines(
-                settings, write=_progress_line_reader(on_download_progress)
+                settings,
+                write=_progress_line_reader(
+                    on_download_progress, already=_bytes_on_disk(repo_id)
+                ),
             )
         else:
             with _native_download_progress() as bar_class:
@@ -649,15 +652,34 @@ def fetch_with_progress_lines(
     out(f"@download-done {clock() - t0:.1f}")
 
 
-def _progress_line_reader(on_progress: Callable[[int, int], None]) -> Callable[[str], None]:
-    """Turn the ``@download`` lines back into ``on_progress(done, total)`` calls."""
+def _progress_line_reader(
+    on_progress: Callable[[int, int], None], already: int = 0
+) -> Callable[[str], None]:
+    """Turn the ``@download`` lines back into ``on_progress(done, total)`` calls.
+
+    ``already`` is what a partial cache held before the fetch: Hugging Face
+    skips finished files, so the lines count only this run's bytes against the
+    whole repo's size. A progress fault is logged once and the forwarding stops;
+    it must never fail the download (on hf_xet it would vanish into a Rust thread,
+    on plain HTTP surface as a failed model download).
+    """
+    broken = [False]
 
     def read(line: str) -> None:
+        if broken[0]:
+            return
         parts = line.split()
-        if parts and parts[0] == "@download-start" and len(parts) == 3:
-            on_progress(0, int(parts[2]))
-        elif parts and parts[0] == "@download" and len(parts) == 3:
-            on_progress(int(parts[1]), int(parts[2]))
+        try:
+            if parts and parts[0] == "@download-start" and len(parts) == 3:
+                total = int(parts[2])
+                on_progress(min(already, total) if total else 0, total)
+            elif parts and parts[0] == "@download" and len(parts) == 3:
+                total = int(parts[2])
+                done = int(parts[1]) + already
+                on_progress(min(done, total) if total else done, total)
+        except Exception:  # noqa: BLE001 — progress is advisory; the download is not
+            broken[0] = True
+            logger.warning("model download progress stopped reporting", exc_info=True)
 
     return read
 

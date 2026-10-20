@@ -503,6 +503,44 @@ struct PipelineRunnerQueueTests {
         #expect(rig.noted.isEmpty)
     }
 
+    @Test func aPreviousRunsCompletionIsNotThisRunsCall() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.writeFinishedRun(in: a, runId: "earlier", tokens: 120)
+        rig.runner.start(project: a)
+
+        // Exits without writing a terminus of its own; the disk still reads ready.
+        rig.launches[0].exit()
+        await until { rig.runner.state[a.id] != .running }
+
+        guard case .ready = rig.runner.state[a.id] else {
+            Issue.record("expected .ready, got \(String(describing: rig.runner.state[a.id]))"); return
+        }
+        #expect(rig.noted.isEmpty, "credited the earlier run's tokens to this one")
+    }
+
+    @Test func anAttachedRunIsNotCreditedWithThePreviousRunsTokens() async throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("orphan-prior-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        // The previous run finished with tokens; the attached one has not
+        // written its own start yet, so that terminus is still the tail.
+        Self.writeFinishedRun(at: root.path, runId: "earlier", tokens: 300)
+        var noted: [LLMProvider] = []
+        let (runner, _, _, url) = try await attachedOrphan(
+            path: root.path, providerLine: "openai",
+            noteRunSucceeded: { noted.append($0) }
+        )
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        // The poll reads ready (the earlier run's) and calls the run over.
+        await until({ !FileManager.default.fileExists(atPath: url.path) }, seconds: 6)
+        await until({ runner.state.values.contains { if case .ready = $0 { true } else { false } } }, seconds: 3)
+
+        #expect(noted.isEmpty, "credited the earlier run's tokens to the attached one")
+    }
+
     @Test func theRecordedProviderIsTheThirdLineOfThePIDFile() {
         #expect(PipelineRunner.recordedProvider(pidFileContents: "42\n1.2\nopenai") == .chatGPT)
         #expect(PipelineRunner.recordedProvider(pidFileContents: "42\n1.2\n") == nil)
@@ -534,7 +572,7 @@ struct PipelineRunnerQueueTests {
         )
         defer { try? FileManager.default.removeItem(at: url) }
 
-        // The run finishes: its poll reads the manifest as ready.
+        // The run finishes: its terminus lands, and the poll reads it as ready.
         Self.writeFinishedRun(at: root.path, runId: "orphan-run", tokens: 300)
         await until({ !noted.isEmpty }, seconds: 8)
 

@@ -11,10 +11,10 @@ import Testing
 ///   2. `readManifestState(...)` — disk derivation; exercises the path
 ///      `parseManifest` + `EventLogReader.deriveState` integration.
 ///
-/// The state-machine glue itself (`handleTermination`'s generation re-check,
-/// queue pump, cancel-vs-finish race) is exercised end-to-end by the cohort
-/// walkthrough rather than here; the pure-function tests below pin the bit
-/// that's most likely to regress silently.
+/// The state-machine glue itself (the slot held through the end-state read,
+/// the queue pump, Stop's ladder, the cancel-vs-finish race) is driven through
+/// the real runner in `PipelineRunnerQueueTests`; the pure-function tests below
+/// pin the bit that's most likely to regress silently.
 ///
 /// Stays non-`@MainActor` — only exercises `nonisolated static` helpers.
 struct PipelineRunnerTerminationTests {

@@ -569,6 +569,9 @@ final class PipelineRunner: ObservableObject {
     /// for an attached orphan. A finished run clears an out-of-credit verdict
     /// on this one, not on whichever is active when it ends (R40).
     private var runProviders: [UUID: LLMProvider] = [:]
+    /// For an attached run: the terminus already newest in its events log when
+    /// it was attached, i.e. a previous run's. Its tokens are not this run's.
+    private var orphanPriorTerminus: [UUID: String] = [:]
 
     /// A launched run, as the runner sees it once it is going.
     struct LaunchedRun {
@@ -810,7 +813,8 @@ final class PipelineRunner: ObservableObject {
         case indeterminate
     }
 
-    /// The PID file is `"<pid>\n<start_time>"` — the start token is the
+    /// The PID file is `"<pid>\n<start_time>\n<provider>"` (the third line,
+    /// since 20 Oct 2026, is read only by `recordedProvider`) — the start token is the
     /// libproc `"<tvsec>.<tvusec>"` string `EventLogReader.procStartTime`
     /// yields, recorded at spawn, so a pid the kernel has since reused fails
     /// the comparison instead of matching on argv. A file with no token (the
@@ -967,6 +971,10 @@ final class PipelineRunner: ObservableObject {
         attachedOrphanPIDs[project.id] = pid
         runProviders[project.id] = (try? String(contentsOf: Self.pidFileURL(for: project), encoding: .utf8))
             .flatMap(Self.recordedProvider(pidFileContents:))
+        if let tail = EventLogReader.tailEvent(at: Self.eventsURL(for: project)),
+           tail.event != "run_started" {
+            orphanPriorTerminus[project.id] = tail.runId
+        }
         state[project.id] = .running
         sessionsReadable[project.id] = nil
         priorRunIds[project.id] = nil
@@ -1048,6 +1056,8 @@ final class PipelineRunner: ObservableObject {
 
     private func handleOrphanExit(projectID: UUID, project: Project) {
         let provider = runProviders.removeValue(forKey: projectID)
+        let priorTerminus = orphanPriorTerminus.removeValue(forKey: projectID)
+        let eventsURL = Self.eventsURL(for: project)
         attachedOrphanPIDs[projectID] = nil
         orphanPollTasks[projectID]?.cancel()
         orphanPollTasks[projectID] = nil
@@ -1075,8 +1085,13 @@ final class PipelineRunner: ObservableObject {
             )
             await self?.applyScanResult(resolved, for: projectID)
             if case .ready = resolved {
+                // `.ready` here came from the run's own terminus: with an
+                // events log, a tail of `run_started` reads as running or
+                // stranded, never ready (`EventLogReader.deriveState`).
+                let terminus = EventLogReader.tailEvent(at: eventsURL)
                 await self?.noteCreditIfTheRunUsedAnLLM(
-                    provider: provider, project: project, priorRunId: nil
+                    provider: provider, project: project,
+                    terminus: terminus, priorRunId: priorTerminus
                 )
             }
         }
@@ -1088,10 +1103,16 @@ final class PipelineRunner: ObservableObject {
     /// carries no tokens. `priorRunId` is the run newest at spawn: a terminus
     /// with that id is not this run's.
     private func noteCreditIfTheRunUsedAnLLM(
-        provider: LLMProvider?, project: Project?, priorRunId: String?
+        provider: LLMProvider?, project: Project?,
+        terminus: EventLogReader.Event?, priorRunId: String?
     ) {
-        guard let provider, let project else { return }
-        let terminus = EventLogReader.tailEvent(at: Self.eventsURL(for: project))
+        guard let project else { return }
+        guard let provider else {
+            Self.logger.info(
+                "run finished with its provider not on record project=\(project.id.uuidString, privacy: .public) — credit verdict left as it is"
+            )
+            return
+        }
         guard Self.runUsedAnLLM(terminus: terminus, priorRunId: priorRunId) else {
             Self.logger.info(
                 "run finished with no LLM call on record project=\(project.id.uuidString, privacy: .public) — credit verdict left as it is"
@@ -1800,6 +1821,7 @@ final class PipelineRunner: ObservableObject {
             currentReadTask = nil
             progressPollTasks[projectID]?.cancel()
             progressPollTasks[projectID] = nil
+            runProviders[projectID] = nil
             state[projectID] = .failed(
                 // `localizedDescription` is Foundation's, already in the user's
                 // language — it passes through as a variable rather than being
@@ -2080,7 +2102,9 @@ var args = ["run", project.path, "--no-serve"]
             state[projectID] = final
             if case .ready = final {
                 noteCreditIfTheRunUsedAnLLM(
-                    provider: provider, project: project, priorRunId: priorRunIds[projectID]
+                    provider: provider, project: project,
+                    terminus: project.flatMap { EventLogReader.tailEvent(at: Self.eventsURL(for: $0)) },
+                    priorRunId: priorRunIds[projectID]
                 )
                 Self.logger.info(
                     """

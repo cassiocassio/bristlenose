@@ -69,6 +69,13 @@ LOCALISED: dict[str, str] = {
         "forever); `fetchFailure` carries the verdict as a CloudFetchFailure "
         "case and CloudImportOutlineView resolves it. 21 Sep 2026."
     ),
+    "InstallError": (
+        "DiscussionGuide's. errorDescription stays English for the log; "
+        "`localeKey` (desktop.discussion.guideNotDownloaded, in all 21 locales) "
+        "is what the choose-a-guide alert in ContentView shows, and any other "
+        "error keeps the sentence macOS already localised. Added in e6da6918, "
+        "classified 20 Oct 2026."
+    ),
 }
 
 # English on purpose, for a reason that is a property of the surface rather than

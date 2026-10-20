@@ -476,7 +476,7 @@ def no_run_signal_handlers_left_behind():
 
 
 @pytest.fixture(autouse=True)
-def no_run_log_handlers_left_behind():
+def no_run_log_handlers_left_behind(request):
     """`run` calls ``setup_logging``, which puts a StreamHandler on the root
     logger bound to the ``sys.stderr`` of that moment. Under ``CliRunner`` that
     is the runner's capture stream, closed when ``invoke`` returns, and a CLI
@@ -486,13 +486,41 @@ def no_run_log_handlers_left_behind():
     "--- Logging error ---" traceback landed in that command's output
     (test_cli_give_up_banner.py failed after any ``run`` test, 20 Oct 2026).
     Remove and close the handlers a test's ``setup_logging`` added; pytest's
-    own capture handlers are subclasses, so ``type(...) in`` leaves them be."""
+    own capture handlers are subclasses, so ``type(...) in`` leaves them be.
+
+    ``setup_logging`` also removes pytest's handlers, so in a test that asked
+    for ``caplog`` it is wrapped to take them off first and put them back
+    after: caplog then sees what is logged after ``create_app``. Tests without
+    caplog get ``setup_logging`` unwrapped (``test_logging.py`` counts the
+    root handlers). And the root level ``setup_logging`` sets to DEBUG is put
+    back."""
     import logging
     from logging.handlers import RotatingFileHandler
 
+    import bristlenose.logging as bn_logging
+
     root = logging.getLogger()
     before = set(root.handlers)
-    yield
+    level_before = root.level
+    with pytest.MonkeyPatch.context() as mp:
+        if "caplog" in request.fixturenames:
+            real = bn_logging.setup_logging
+
+            def setup_logging(*args, **kwargs):
+                pytest_handlers = [
+                    h for h in root.handlers if type(h).__module__.startswith("_pytest")
+                ]
+                for h in pytest_handlers:
+                    root.removeHandler(h)
+                try:
+                    real(*args, **kwargs)
+                finally:
+                    for h in pytest_handlers:
+                        root.addHandler(h)
+
+            mp.setattr(bn_logging, "setup_logging", setup_logging)
+        yield
+    root.setLevel(level_before)
     for handler in root.handlers[:]:
         if handler not in before and type(handler) in (logging.StreamHandler, RotatingFileHandler):
             root.removeHandler(handler)

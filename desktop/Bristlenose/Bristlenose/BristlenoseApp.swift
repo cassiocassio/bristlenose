@@ -267,6 +267,14 @@ struct BristlenoseApp: App {
                     // Parked behind BristlenoseFlags.appleSpeech; once per process.
                     WhisperDownloadModel.shared.appLaunched()
                     pipelineRunner.scanAllProjects(projectIndex.projects)
+                    // The queue the last Quit or crash left, in order, when it
+                    // is fresh and its studies are still there (R19). Once per
+                    // process; nil in a second copy of the app and under tests.
+                    if let store = DefaultsRunQueueStore.live {
+                        Task { @MainActor in
+                            await pipelineRunner.restoreQueue(from: store, index: projectIndex)
+                        }
+                    }
                     removalStore.setProjectIndex(projectIndex)
                     // Selection-restore is owned by ContentView (the @State
                     // selection holder); wired via NotificationCenter to keep

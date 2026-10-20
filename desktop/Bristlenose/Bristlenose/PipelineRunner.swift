@@ -478,12 +478,18 @@ final class PipelineRunner: ObservableObject {
     /// `currentlyRunning` holds the slot; any new `start()` while that's set
     /// enqueues. The slot is held from spawn until the run's end state has
     /// been written, not just while its process lives (R23).
-    private var queue = RunQueue()
+    private var queue = RunQueue() { didSet { journalQueue() } }
     private var currentlyRunning: UUID?
+    /// Whether the run in the slot was asked for with `--clean`.
+    private var currentClean = false
+
+    /// When each waiting study was asked for, and the queue as the next launch
+    /// will find it (`restoreQueue(from:)`).
+    let queueJournal = RunQueueJournal()
 
     /// The run in flight, if any: its process is live. Cleared when the
     /// termination handler starts, before the exit is resolved.
-    private var currentRun: LaunchedRun?
+    private var currentRun: LaunchedRun? { didSet { journalQueue() } }
     private var currentReadTask: Task<Void, Never>?
     private var currentProject: Project?
 
@@ -528,7 +534,7 @@ final class PipelineRunner: ObservableObject {
     /// Set by `cancel()` on the owned-process path so `handleTermination`
     /// routes the non-zero exit status to `.idle` (user asked) rather than
     /// `.failed` (pipeline errored). Cleared on each `spawn`.
-    private var cancellationRequested: Bool = false
+    private var cancellationRequested: Bool = false { didSet { journalQueue() } }
 
     /// Manifest timestamps include fractional seconds
     /// (`2026-04-17T00:37:27.480978+00:00`), which the default
@@ -946,7 +952,7 @@ final class PipelineRunner: ObservableObject {
 
     /// The task's value, or nil if it takes longer than `limit`. The task is
     /// left running, for the caller to wait on again.
-    private nonisolated static func value<T: Sendable>(
+    nonisolated static func value<T: Sendable>(
         of task: Task<T, Never>, within limit: Duration
     ) async -> T? {
         await withCheckedContinuation { (done: CheckedContinuation<T?, Never>) in
@@ -963,6 +969,12 @@ final class PipelineRunner: ObservableObject {
                 timer.cancel()
             }
         }
+    }
+
+    /// A run this launch did not start is live for the project: an attached
+    /// orphan or a CLI run. `start` turns a study away while one is.
+    func hasOutsideRun(_ projectID: UUID) -> Bool {
+        attachedOrphanPIDs[projectID] != nil || isForeignRunning(projectID)
     }
 
     private func isForeignRunning(_ projectID: UUID) -> Bool {
@@ -1707,7 +1719,9 @@ final class PipelineRunner: ObservableObject {
     ///   `bristlenose-output/` before running. Used by the `outputExists`
     ///   re-analyse CTA in the failed-popover. Destructive — caller must
     ///   confirm with the user first. Default false.
-    func start(project: Project, clean: Bool = false) {
+    func start(
+        project: Project, clean: Bool = false, requested: RunQueueJournal.Stamp? = nil
+    ) {
         guard hasConsent() else {
             Self.logger.warning(
                 "start blocked — no AI consent (project=\(project.id.uuidString, privacy: .public))"
@@ -1757,12 +1771,16 @@ final class PipelineRunner: ObservableObject {
         }
 
         if currentlyRunning == nil {
+            queueJournal.stamp(project.id, studyID: project.studyID, fresh: true, as: requested)
             spawn(project: project, clean: clean)
         } else if currentlyRunning != project.id || currentRun == nil {
             // The second case: this study's run has ended and its end state is
             // being read. A start now — a drop onto it in its last moment — is
             // a new request and waits its turn. Starting a study whose run is
             // live does nothing, as before.
+            queueJournal.stamp(
+                project.id, studyID: project.studyID, fresh: !queue.contains(project.id), as: requested
+            )
             queue.enqueue(project.id, clean: clean)
             renumberQueue()
         }
@@ -1974,8 +1992,8 @@ final class PipelineRunner: ObservableObject {
     /// included).
     ///
     /// No escalation: the app is gone before a timer could fire, and a run
-    /// wedged in a C call takes the signal when the call returns. The queue
-    /// lives in memory and is not kept; it is logged so the loss is on record.
+    /// wedged in a C call takes the signal when the call returns. The queue,
+    /// with the run just stopped at its head, is kept for the next launch.
     func stopAllForQuit() {
         let owned = currentRun.flatMap { $0.isRunning() ? $0.pid : nil }
         let targets = Self.quitSignalTargets(
@@ -1994,8 +2012,14 @@ final class PipelineRunner: ObservableObject {
                 Self.logger.error("quit: SIGINT to run pid=\(pid, privacy: .public) target=\(target, privacy: .public) failed errno=\(err, privacy: .public)")
             }
         }
-        if !queue.isEmpty {
-            Self.logger.warning("quit: \(self.queue.count, privacy: .public) queued run(s) not kept across launches")
+        // Quitting is not the researcher taking anything out of the queue: the
+        // run just signalled is still its head, and the next launch restarts
+        // it (`restoreQueue(from:)`). Nothing written after this point counts.
+        queueJournal.freeze()
+        let waiting = queue.count + (owned != nil && !cancellationRequested ? 1 : 0)
+        if waiting > 0 {
+            let fate = queueJournal.store == nil ? "not kept: this copy of the app does not keep the queue" : "kept for the next launch"
+            Self.logger.info("quit: \(waiting, privacy: .public) queued run(s) \(fate, privacy: .public)")
         }
     }
 
@@ -2059,6 +2083,7 @@ final class PipelineRunner: ObservableObject {
         generation += 1
         let gen = generation
         currentlyRunning = project.id
+        currentClean = clean
         currentProject = project
         currentParser = StdoutProgressParser()
         cancellationRequested = false
@@ -2804,6 +2829,16 @@ var args = ["run", project.path, "--no-serve"]
     }
 
     // MARK: - Queue management
+
+    /// Write the queue as the next launch should find it: the run in flight
+    /// first, unless Stop was asked for it, then the studies waiting.
+    func journalQueue() {
+        let live = currentRun != nil && !cancellationRequested
+        queueJournal.write(
+            inFlight: live ? currentlyRunning.map { (id: $0, clean: currentClean) } : nil,
+            queued: queue.entries
+        )
+    }
 
     private func renumberQueue() {
         for (offset, id) in queue.ids.enumerated() {

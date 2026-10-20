@@ -358,7 +358,10 @@ structured event stream and consumed by Swift:
 
 What the Mac app knows that Python never sees: project availability, the queue / stop / scan
 *brackets* around a run, sidecar lifecycle, file-import copy, source-file watching + counts.
-Swift-detected, in-memory. Catalogue in §4.
+Swift-detected, in-memory, with one exception: the run queue is kept across Quit and a crash, and
+the next launch restores it in order, the stopped run first, for 92 hours (R19, 20 Oct 2026;
+`QueueRestorePolicy`, `PipelineRunner+QueueRestore.swift`). A restored study shows the ordinary
+Analysing and Queued rows; a dropped one shows nothing. Catalogue in §4.
 
 ## 3. The Swift↔Python boundary — three categories
 

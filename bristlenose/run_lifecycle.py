@@ -105,9 +105,24 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
     raise KeyboardInterrupt()
 
 
+def _handled_signals() -> list[int]:
+    """SIGINT and SIGTERM, and SIGHUP unless it is already ignored.
+
+    Closing the terminal tab sends SIGHUP. Unhandled, it killed the run with no
+    terminus, which the next reader reconciled as "stopped unexpectedly"
+    (R122). Under ``nohup`` it is ignored and stays ignored: that run is meant
+    to outlive the terminal. Windows has no SIGHUP.
+    """
+    sigs = [signal.SIGINT, signal.SIGTERM]
+    hup = getattr(signal, "SIGHUP", None)
+    if hup is not None and signal.getsignal(hup) is not signal.SIG_IGN:
+        sigs.append(hup)
+    return sigs
+
+
 def _install_signal_handlers() -> None:
-    """Install our SIGINT / SIGTERM handlers. Idempotent."""
-    for sig in (signal.SIGINT, signal.SIGTERM):
+    """Install our SIGINT / SIGTERM / SIGHUP handlers. Idempotent."""
+    for sig in _handled_signals():
         if sig not in _prev_handlers:
             _prev_handlers[sig] = signal.signal(sig, _signal_handler)
 

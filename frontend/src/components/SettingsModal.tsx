@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
+import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isEmbedded } from "../utils/embedded";
 import { dt } from "../utils/platformTranslation";
 import { PALETTES, isPalette, readSavedPalette, type Palette } from "../utils/bootPalette";
@@ -1014,7 +1015,11 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
       testId="bn-settings-overlay"
       titleId="settings-modal-title"
     >
-      {content}
+      {/* Inside the content pane, so the nav, the × and Escape outlive a crash
+          in a section; keyed on it, so another section clears it (R85). */}
+      <PanelErrorBoundary part key={activeId}>
+        {content}
+      </PanelErrorBoundary>
     </ModalNav>
   );
 }

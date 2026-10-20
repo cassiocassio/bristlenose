@@ -37,7 +37,8 @@
     "noResults": "Ei tuloksia",
     "error": "Virhe",
     "lensError": "Tätä näkymää ei voitu näyttää. Yritä uudelleen tai valitse toinen näkymä.",
-    "panelError": "Tätä sivupalkkia ei voitu näyttää."
+    "panelError": "Tätä sivupalkkia ei voitu näyttää.",
+    "partError": "Tätä ei voitu näyttää."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

@@ -52,6 +52,19 @@
     line-height: var(--bn-text-label-lh);
 }
 
+/* In a bar's slot (the header or the nav, AppLayout), the bar is short:
+   the sentence and Retry sit in one row. */
+.center > .bn-empty-state.bn-panel-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--bn-space-md);
+    padding: var(--bn-space-sm) var(--bn-space-md);
+}
+.center > .bn-panel-error .bn-btn {
+    margin-top: 0;
+}
+
 /* Refetch overlay — dim existing data while a refetch is in flight.
    `inert` is set on the same element from the React hook to block AT
    and keyboard input; this rule covers visual dim + pointer cursor.

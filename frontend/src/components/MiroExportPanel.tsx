@@ -14,6 +14,7 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
 import { announce } from "../utils/announce";
@@ -448,227 +449,233 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         aria-modal="true"
         aria-labelledby="bn-miro-title"
       >
-        <h2 id="bn-miro-title" ref={headingRef} tabIndex={-1}>
-          {t("miro.title")}
-        </h2>
+        <PanelErrorBoundary part>
+          {() => (
+            <>
+              <h2 id="bn-miro-title" ref={headingRef} tabIndex={-1}>
+                {t("miro.title")}
+              </h2>
 
-        {view === "loading" && (
-          <p className="bn-modal-subtitle">{t("miro.checkingConnection")}</p>
-        )}
+              {view === "loading" && (
+                <p className="bn-modal-subtitle">{t("miro.checkingConnection")}</p>
+              )}
 
-        {view === "connect" && (
-          <>
-            <p className="bn-modal-subtitle">{t("miro.connectIntro")}</p>
-            <p className="bn-export-hint" style={{ marginTop: 14 }}>
-              {t("miro.orPasteToken")}{" "}
-              <a
-                href="https://bristlenose.app/docs/send-to-miro.html"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t("miro.howToGetToken")}
-              </a>
-            </p>
-            <input
-              type="password"
-              value={token}
-              placeholder={t("miro.tokenPlaceholder")}
-              aria-label={t("miro.tokenPlaceholder")}
-              onChange={(e) => setToken(e.target.value)}
-              style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-            />
-            {error && (
-              <p className="bn-export-error" role="alert">
-                {error}
-              </p>
-            )}
-            <div className="bn-modal-actions">
-              <button className="bn-btn bn-btn-secondary" onClick={onClose}>
-                {t("miro.cancel")}
-              </button>
-              <button
-                className="bn-btn bn-btn-primary"
-                onClick={handlePasteConnect}
-                disabled={busy || !token.trim()}
-              >
-                {t("miro.connect")}
-              </button>
-            </div>
-          </>
-        )}
-
-        {view === "configure" && (
-          <>
-            <p className="bn-modal-subtitle">
-              {t("miro.connected")} ·{" "}
-              <button className="bn-linkish" onClick={handleDisconnect} disabled={busy}>
-                {t("miro.disconnect")}
-              </button>
-            </p>
-            {account && <p className="bn-export-hint">{account}</p>}
-            <label className="bn-export-hint" htmlFor="bn-miro-board-name">
-              {t("miro.boardNameLabel")}
-            </label>
-            <input
-              id="bn-miro-board-name"
-              type="text"
-              value={boardName}
-              placeholder={t("miro.boardNamePlaceholder")}
-              onChange={(e) => {
-                named.current = true;
-                setBoardName(e.target.value);
-              }}
-              style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-            />
-            <label className="bn-export-hint" style={{ marginTop: 10 }} htmlFor="bn-miro-colour-by">
-              {t("miro.colourByLabel")}
-            </label>
-            <select
-              id="bn-miro-colour-by"
-              value={colourBy}
-              onChange={(e) => setColourBy(e.target.value)}
-            >
-              <option value="sentiment">{t("miro.colourBySentiment")}</option>
-              <option value="none">{t("miro.colourByNone")}</option>
-            </select>
-            <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
-              <input
-                type="checkbox"
-                checked={splitLong}
-                onChange={(e) => setSplitLong(e.target.checked)}
-                data-testid="bn-miro-split-long"
-              />
-              <span>{t("miro.splitLongQuotes")}</span>
-            </label>
-            <fieldset className="bn-export-radios" data-testid="bn-miro-shape">
-              <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
-              {(["rectangle", "square"] as const).map((s) => (
-                <label key={s} className="bn-export-checkbox">
+              {view === "connect" && (
+                <>
+                  <p className="bn-modal-subtitle">{t("miro.connectIntro")}</p>
+                  <p className="bn-export-hint" style={{ marginTop: 14 }}>
+                    {t("miro.orPasteToken")}{" "}
+                    <a
+                      href="https://bristlenose.app/docs/send-to-miro.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("miro.howToGetToken")}
+                    </a>
+                  </p>
                   <input
-                    type="radio"
-                    name="bn-miro-shape"
-                    value={s}
-                    checked={shape === s}
-                    onChange={() => setShape(s)}
+                    type="password"
+                    value={token}
+                    placeholder={t("miro.tokenPlaceholder")}
+                    aria-label={t("miro.tokenPlaceholder")}
+                    onChange={(e) => setToken(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
                   />
-                  <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
-                </label>
-              ))}
-            </fieldset>
-            {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
-                screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
-            {!screens && featureFlags.boardClipLinks && (
-              <>
-              <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={linkClips}
-                  onChange={(e) => setLinkClips(e.target.checked)}
-                />
-                <span>
-                  {t("miro.linkClipsLabel")}
-                  <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
-                </span>
-              </label>
-              {linkClips && (
-                <input
-                  type="text"
-                  value={clipsBase}
-                  placeholder={t("miro.clipsBasePlaceholder")}
-                  aria-label={t("miro.linkClipsLabel")}
-                  onChange={(e) => setClipsBase(e.target.value)}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
-                />
+                  {error && (
+                    <p className="bn-export-error" role="alert">
+                      {error}
+                    </p>
+                  )}
+                  <div className="bn-modal-actions">
+                    <button className="bn-btn bn-btn-secondary" onClick={onClose}>
+                      {t("miro.cancel")}
+                    </button>
+                    <button
+                      className="bn-btn bn-btn-primary"
+                      onClick={handlePasteConnect}
+                      disabled={busy || !token.trim()}
+                    >
+                      {t("miro.connect")}
+                    </button>
+                  </div>
+                </>
               )}
-              </>
-            )}
-            <p className="bn-export-hint" style={{ marginTop: 10 }}>
-              {renderNotice()}
-            </p>
-            {error && (
-              <p className="bn-export-error" role="alert">
-                {error}
-              </p>
-            )}
-            <div className="bn-modal-actions">
-              <button className="bn-btn bn-btn-primary" onClick={handleExport} disabled={busy}>
-                {t("miro.createBoard")}
-              </button>
-            </div>
-          </>
-        )}
 
-        {view === "exporting" && (
-          <>
-            <p className="bn-modal-subtitle" data-testid="bn-miro-build-line">
-              {buildLine(t, buildState)}
-            </p>
-            {/* No value while there is no honest fraction (screenshots being made, the board
-                opening): the browser's own indeterminate bar. */}
-            <progress
-              className="bn-export-progress"
-              max={1}
-              value={buildState?.fraction ?? undefined}
-              aria-label={t("miro.creatingBoard")}
-              data-testid="bn-miro-build-bar"
-            />
-            {/* The line is kept when empty, so the dialog does not grow when a time arrives. */}
-            <p className="bn-export-hint">
-              {etaLine(t, buildState?.eta_seconds) ? (
-                <span data-testid="bn-miro-build-eta">{etaLine(t, buildState?.eta_seconds)}</span>
-              ) : (
-                "\u00a0"
+              {view === "configure" && (
+                <>
+                  <p className="bn-modal-subtitle">
+                    {t("miro.connected")} ·{" "}
+                    <button className="bn-linkish" onClick={handleDisconnect} disabled={busy}>
+                      {t("miro.disconnect")}
+                    </button>
+                  </p>
+                  {account && <p className="bn-export-hint">{account}</p>}
+                  <label className="bn-export-hint" htmlFor="bn-miro-board-name">
+                    {t("miro.boardNameLabel")}
+                  </label>
+                  <input
+                    id="bn-miro-board-name"
+                    type="text"
+                    value={boardName}
+                    placeholder={t("miro.boardNamePlaceholder")}
+                    onChange={(e) => {
+                      named.current = true;
+                      setBoardName(e.target.value);
+                    }}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
+                  />
+                  <label className="bn-export-hint" style={{ marginTop: 10 }} htmlFor="bn-miro-colour-by">
+                    {t("miro.colourByLabel")}
+                  </label>
+                  <select
+                    id="bn-miro-colour-by"
+                    value={colourBy}
+                    onChange={(e) => setColourBy(e.target.value)}
+                  >
+                    <option value="sentiment">{t("miro.colourBySentiment")}</option>
+                    <option value="none">{t("miro.colourByNone")}</option>
+                  </select>
+                  <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={splitLong}
+                      onChange={(e) => setSplitLong(e.target.checked)}
+                      data-testid="bn-miro-split-long"
+                    />
+                    <span>{t("miro.splitLongQuotes")}</span>
+                  </label>
+                  <fieldset className="bn-export-radios" data-testid="bn-miro-shape">
+                    <legend className="bn-export-hint">{t("miro.stickyShape")}</legend>
+                    {(["rectangle", "square"] as const).map((s) => (
+                      <label key={s} className="bn-export-checkbox">
+                        <input
+                          type="radio"
+                          name="bn-miro-shape"
+                          value={s}
+                          checked={shape === s}
+                          onChange={() => setShape(s)}
+                        />
+                        <span>{t(s === "square" ? "miro.stickyShapeSquare" : "miro.stickyShapeRectangle")}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                  {/* Clip links are a quotes-board option: the screens board's quotes sit beside their
+                      screengrab, and its stickies carry no link (docs/design-screens-export.md §6). */}
+                  {!screens && featureFlags.boardClipLinks && (
+                    <>
+                    <label className="bn-export-checkbox" style={{ marginTop: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={linkClips}
+                        onChange={(e) => setLinkClips(e.target.checked)}
+                      />
+                      <span>
+                        {t("miro.linkClipsLabel")}
+                        <small className="bn-export-hint">{t("miro.linkClipsHint")}</small>
+                      </span>
+                    </label>
+                    {linkClips && (
+                      <input
+                        type="text"
+                        value={clipsBase}
+                        placeholder={t("miro.clipsBasePlaceholder")}
+                        aria-label={t("miro.linkClipsLabel")}
+                        onChange={(e) => setClipsBase(e.target.value)}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "8px 10px" }}
+                      />
+                    )}
+                    </>
+                  )}
+                  <p className="bn-export-hint" style={{ marginTop: 10 }}>
+                    {renderNotice()}
+                  </p>
+                  {error && (
+                    <p className="bn-export-error" role="alert">
+                      {error}
+                    </p>
+                  )}
+                  <div className="bn-modal-actions">
+                    <button className="bn-btn bn-btn-primary" onClick={handleExport} disabled={busy}>
+                      {t("miro.createBoard")}
+                    </button>
+                  </div>
+                </>
               )}
-            </p>
-            <div className="bn-modal-actions">
-              <button
-                className="bn-btn bn-btn-secondary"
-                onClick={() => {
-                  // Stopping is acknowledged at once; the server finishes the call in hand, and
-                  // the board keeps what it has. If the stop did not land (the build had just
-                  // finished, or the request failed), read the build again and say what it did.
-                  const stopped = ++build.current;
-                  setView("configure");
-                  (screens ? cancelScreensMiro : cancelMiroBoard)().catch(() => {
-                    if (stopped !== build.current) return; // closed, or a new build begun
-                    setView("exporting");
-                    void watch(++build.current);
-                  });
-                }}
-              >
-                {t("miro.cancel")}
-              </button>
-            </div>
-          </>
-        )}
 
-        {view === "done" && (
-          <>
-            <p className="bn-modal-subtitle">
-              {t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies })}
-            </p>
-            {screens && skipped > 0 && (
-              <p className="bn-export-hint">
-                {t("export.screens.partial", { written: stickies, total: stickies + skipped })}
-              </p>
-            )}
-            <div className="bn-modal-actions">
-              <button className="bn-btn bn-btn-secondary" onClick={onClose}>
-                {t("miro.done")}
-              </button>
-              {boardUrl && (
-                <a
-                  className="bn-btn bn-btn-primary"
-                  href={boardUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t("miro.openInMiro")}
-                </a>
+              {view === "exporting" && (
+                <>
+                  <p className="bn-modal-subtitle" data-testid="bn-miro-build-line">
+                    {buildLine(t, buildState)}
+                  </p>
+                  {/* No value while there is no honest fraction (screenshots being made, the board
+                      opening): the browser's own indeterminate bar. */}
+                  <progress
+                    className="bn-export-progress"
+                    max={1}
+                    value={buildState?.fraction ?? undefined}
+                    aria-label={t("miro.creatingBoard")}
+                    data-testid="bn-miro-build-bar"
+                  />
+                  {/* The line is kept when empty, so the dialog does not grow when a time arrives. */}
+                  <p className="bn-export-hint">
+                    {etaLine(t, buildState?.eta_seconds) ? (
+                      <span data-testid="bn-miro-build-eta">{etaLine(t, buildState?.eta_seconds)}</span>
+                    ) : (
+                      "\u00a0"
+                    )}
+                  </p>
+                  <div className="bn-modal-actions">
+                    <button
+                      className="bn-btn bn-btn-secondary"
+                      onClick={() => {
+                        // Stopping is acknowledged at once; the server finishes the call in hand, and
+                        // the board keeps what it has. If the stop did not land (the build had just
+                        // finished, or the request failed), read the build again and say what it did.
+                        const stopped = ++build.current;
+                        setView("configure");
+                        (screens ? cancelScreensMiro : cancelMiroBoard)().catch(() => {
+                          if (stopped !== build.current) return; // closed, or a new build begun
+                          setView("exporting");
+                          void watch(++build.current);
+                        });
+                      }}
+                    >
+                      {t("miro.cancel")}
+                    </button>
+                  </div>
+                </>
               )}
-            </div>
-          </>
-        )}
+
+              {view === "done" && (
+                <>
+                  <p className="bn-modal-subtitle">
+                    {t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies })}
+                  </p>
+                  {screens && skipped > 0 && (
+                    <p className="bn-export-hint">
+                      {t("export.screens.partial", { written: stickies, total: stickies + skipped })}
+                    </p>
+                  )}
+                  <div className="bn-modal-actions">
+                    <button className="bn-btn bn-btn-secondary" onClick={onClose}>
+                      {t("miro.done")}
+                    </button>
+                    {boardUrl && (
+                      <a
+                        className="bn-btn bn-btn-primary"
+                        href={boardUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t("miro.openInMiro")}
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </PanelErrorBoundary>
       </div>
     </div>,
     document.body,

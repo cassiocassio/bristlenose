@@ -37,7 +37,8 @@
     "noResults": "Brak wyników",
     "error": "Błąd",
     "lensError": "Nie udało się wyświetlić tego widoku. Spróbuj ponownie lub wybierz inny widok.",
-    "panelError": "Nie udało się wyświetlić tego paska bocznego."
+    "panelError": "Nie udało się wyświetlić tego paska bocznego.",
+    "partError": "Nie udało się tego wyświetlić."
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

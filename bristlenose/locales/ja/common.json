@@ -37,7 +37,8 @@
     "noResults": "該当なし",
     "error": "エラー",
     "lensError": "この表示を開けませんでした。もう一度試すか、別の表示を選んでください。",
-    "panelError": "このサイドバーを表示できませんでした。"
+    "panelError": "このサイドバーを表示できませんでした。",
+    "partError": "この部分を表示できませんでした。"
   },
   "header": {
     "logoAlt": "Bristlenose ロゴ",

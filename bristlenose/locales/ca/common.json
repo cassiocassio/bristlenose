@@ -37,7 +37,8 @@
     "noResults": "Cap resultat",
     "error": "Error",
     "lensError": "No s'ha pogut mostrar aquesta vista. Torna-ho a provar o tria una altra vista.",
-    "panelError": "No s'ha pogut mostrar aquesta barra lateral."
+    "panelError": "No s'ha pogut mostrar aquesta barra lateral.",
+    "partError": "No s'ha pogut mostrar això."
   },
   "header": {
     "logoAlt": "Logotip del Bristlenose",

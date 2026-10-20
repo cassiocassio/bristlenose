@@ -37,7 +37,8 @@
     "noResults": "Aucun résultat",
     "error": "Erreur",
     "lensError": "Impossible d’afficher cette vue. Réessayez ou choisissez une autre vue.",
-    "panelError": "Impossible d’afficher cette barre latérale."
+    "panelError": "Impossible d’afficher cette barre latérale.",
+    "partError": "Impossible d’afficher cet élément."
   },
   "titlebar": {
     "quotes_one": "{{count}}\u00a0Verbatim",

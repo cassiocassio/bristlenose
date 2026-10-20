@@ -37,7 +37,8 @@
     "noResults": "Nessun risultato",
     "error": "Errore",
     "lensError": "Impossibile mostrare questa vista. Riprova o scegli un’altra vista.",
-    "panelError": "Impossibile mostrare questa barra laterale."
+    "panelError": "Impossibile mostrare questa barra laterale.",
+    "partError": "Impossibile mostrare questo elemento."
   },
   "header": {
     "logoAlt": "Logo Bristlenose",

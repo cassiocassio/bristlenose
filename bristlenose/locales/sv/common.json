@@ -37,7 +37,8 @@
     "noResults": "Inga resultat",
     "error": "Fel",
     "lensError": "Den här vyn kunde inte visas. Försök igen eller välj en annan vy.",
-    "panelError": "Den här panelen kunde inte visas."
+    "panelError": "Den här panelen kunde inte visas.",
+    "partError": "Det här kunde inte visas."
   },
   "header": {
     "logoAlt": "Bristlenose-logotyp",

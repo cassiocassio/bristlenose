@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { useProjectId } from "../hooks/useProjectId";
 import { isExportMode } from "../utils/exportData";
 import { resolveBrowserLang } from "../i18n/LocaleStore";
@@ -105,57 +106,63 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
       data-testid="bn-export-overlay"
     >
       <div className="bn-modal" data-testid="bn-export-modal" style={{ maxWidth: 420 }}>
-        <h2>{t("export.heading")}</h2>
-        <p className="bn-modal-subtitle">
-          {t("export.subtitle")}
-        </p>
-        <label className="bn-export-locale">
-          <span>{t("settings:language.legend")}</span>
-          <select
-            className="bn-locale-select"
-            value={exportLocale}
-            onChange={(e) => setExportLocale(e.target.value as Locale)}
-            data-testid="bn-export-locale-select"
-          >
-            {SUPPORTED_LOCALES.map((loc) => (
-              <option key={loc} value={loc}>
-                {LOCALE_LABELS[loc]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="bn-export-checkbox">
-          <input
-            type="checkbox"
-            checked={anonymise}
-            onChange={(e) => setAnonymise(e.target.checked)}
-                      />
-          <span>
-            {t("export.anonymise")}
-            <small className="bn-export-hint">
-              {t("export.anonymiseHint")}
-            </small>
-          </span>
-        </label>
-        {error && (
-          <p className="bn-export-error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="bn-modal-actions">
-          <button
-            className="bn-btn bn-btn-secondary"
-            onClick={onClose}
-          >
-            {t("buttons.cancel")}
-          </button>
-          <button
-            className="bn-btn bn-btn-primary"
-            onClick={handleExport}
-          >
-            {t("buttons.export")}
-          </button>
-        </div>
+        <PanelErrorBoundary part>
+          {() => (
+            <>
+              <h2>{t("export.heading")}</h2>
+              <p className="bn-modal-subtitle">
+                {t("export.subtitle")}
+              </p>
+              <label className="bn-export-locale">
+                <span>{t("settings:language.legend")}</span>
+                <select
+                  className="bn-locale-select"
+                  value={exportLocale}
+                  onChange={(e) => setExportLocale(e.target.value as Locale)}
+                  data-testid="bn-export-locale-select"
+                >
+                  {SUPPORTED_LOCALES.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {LOCALE_LABELS[loc]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="bn-export-checkbox">
+                <input
+                  type="checkbox"
+                  checked={anonymise}
+                  onChange={(e) => setAnonymise(e.target.checked)}
+                            />
+                <span>
+                  {t("export.anonymise")}
+                  <small className="bn-export-hint">
+                    {t("export.anonymiseHint")}
+                  </small>
+                </span>
+              </label>
+              {error && (
+                <p className="bn-export-error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="bn-modal-actions">
+                <button
+                  className="bn-btn bn-btn-secondary"
+                  onClick={onClose}
+                >
+                  {t("buttons.cancel")}
+                </button>
+                <button
+                  className="bn-btn bn-btn-primary"
+                  onClick={handleExport}
+                >
+                  {t("buttons.export")}
+                </button>
+              </div>
+            </>
+          )}
+        </PanelErrorBoundary>
       </div>
     </div>,
     document.body,

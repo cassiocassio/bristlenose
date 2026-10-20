@@ -37,7 +37,8 @@
     "noResults": "No results",
     "error": "Error",
     "lensError": "This lens couldn’t be shown. Try again, or choose another lens.",
-    "panelError": "This sidebar couldn’t be shown."
+    "panelError": "This sidebar couldn’t be shown.",
+    "partError": "This couldn’t be shown."
   },
   "header": {
     "logoAlt": "Bristlenose logo",

@@ -37,7 +37,8 @@
     "noResults": "Geen resultaten",
     "error": "Fout",
     "lensError": "Deze weergave kon niet worden getoond. Probeer het opnieuw of kies een andere weergave.",
-    "panelError": "Deze zijbalk kon niet worden getoond."
+    "panelError": "Deze zijbalk kon niet worden getoond.",
+    "partError": "Dit kon niet worden getoond."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

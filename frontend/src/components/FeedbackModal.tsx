@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
 import type { HealthResponse } from "../utils/health";
 
@@ -183,54 +184,60 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
       data-testid="bn-feedback-overlay"
     >
       <div className="bn-modal feedback-modal" data-testid="bn-feedback-modal">
-        <h2>{t("feedback.heading")}</h2>
-        <div className="feedback-sentiments">
-          {FEEDBACK_SENTIMENT_KEYS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`feedback-sentiment${rating === item.value ? " selected" : ""}`}
-              data-value={item.value}
-              onClick={() => setRating(item.value)}
-            >
-              <span className="feedback-sentiment-face">{item.emoji}</span>
-              <span className="feedback-sentiment-label">{t(item.labelKey)}</span>
-            </button>
-          ))}
-        </div>
-        <label className="feedback-label" htmlFor="bn-feedback-message">
-          {t("feedback.helpUsImprove")}
-        </label>
-        <textarea
-          id="bn-feedback-message"
-          className="feedback-textarea"
-          placeholder={t("feedback.placeholder")}
-          rows={3}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-        />
-        <div className="feedback-actions">
-          <button
-            type="button"
-            className="feedback-btn feedback-btn-cancel"
-            onClick={onClose}
-          >
-            {t("buttons.cancel")}
-          </button>
-          <button
-            type="button"
-            className="feedback-btn feedback-btn-send"
-            onClick={() => {
-              void submit();
-            }}
-            disabled={!rating || sending}
-          >
-            {sending ? t("feedback.sending") : t("feedback.send")}
-          </button>
-        </div>
-        <p className="bn-modal-footer">
-          {t("feedback.anonymous")}
-        </p>
+        <PanelErrorBoundary part>
+          {() => (
+            <>
+              <h2>{t("feedback.heading")}</h2>
+              <div className="feedback-sentiments">
+                {FEEDBACK_SENTIMENT_KEYS.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`feedback-sentiment${rating === item.value ? " selected" : ""}`}
+                    data-value={item.value}
+                    onClick={() => setRating(item.value)}
+                  >
+                    <span className="feedback-sentiment-face">{item.emoji}</span>
+                    <span className="feedback-sentiment-label">{t(item.labelKey)}</span>
+                  </button>
+                ))}
+              </div>
+              <label className="feedback-label" htmlFor="bn-feedback-message">
+                {t("feedback.helpUsImprove")}
+              </label>
+              <textarea
+                id="bn-feedback-message"
+                className="feedback-textarea"
+                placeholder={t("feedback.placeholder")}
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+              <div className="feedback-actions">
+                <button
+                  type="button"
+                  className="feedback-btn feedback-btn-cancel"
+                  onClick={onClose}
+                >
+                  {t("buttons.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className="feedback-btn feedback-btn-send"
+                  onClick={() => {
+                    void submit();
+                  }}
+                  disabled={!rating || sending}
+                >
+                  {sending ? t("feedback.sending") : t("feedback.send")}
+                </button>
+              </div>
+              <p className="bn-modal-footer">
+                {t("feedback.anonymous")}
+              </p>
+            </>
+          )}
+        </PanelErrorBoundary>
       </div>
     </div>,
     document.body,

@@ -12,6 +12,7 @@ import { Outlet, useNavigate, useMatch, useLocation } from "react-router-dom";
 import { Header } from "../components/Header";
 import { NavBar } from "../components/NavBar";
 import { Footer } from "../components/Footer";
+import { PanelErrorBoundary } from "../components/PanelErrorBoundary";
 import { formatTimecode } from "../utils/format";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { SettingsModal } from "../components/SettingsModal";
@@ -947,19 +948,33 @@ function AppShell() {
         ) : undefined
       }
     >
-      {!embedded && <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
-      {!embedded && <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />}
+      {/* The chrome beside the lens, each in its own boundary (R85, decision #9):
+          a crash in one leaves the report standing. The bars' Retry reloads the
+          page, as the whole-report one does; the modals hold theirs inside
+          their own box, so they can still be closed. */}
+      {!embedded && (
+        <PanelErrorBoundary part reload>
+          <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />
+        </PanelErrorBoundary>
+      )}
+      {!embedded && (
+        <PanelErrorBoundary part reload>
+          <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />
+        </PanelErrorBoundary>
+      )}
       <main className="bn-main">
         <Suspense fallback={null}>
           <Outlet />
         </Suspense>
       </main>
       {!embedded && (
-        <Footer
-          health={health}
-          onOpenFeedback={openFeedback}
-          onToggleHelp={() => openDocs(DOCS_URL)}
-        />
+        <PanelErrorBoundary quiet>
+          <Footer
+            health={health}
+            onOpenFeedback={openFeedback}
+            onToggleHelp={() => openDocs(DOCS_URL)}
+          />
+        </PanelErrorBoundary>
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
       <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
@@ -974,10 +989,19 @@ function AppShell() {
         screens={location.pathname.startsWith("/report/screens")}
       />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
-      <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
-      <AnnounceRegion />
-      <LensSubtitleSync />
-      <UndoSync />
+      <PanelErrorBoundary quiet>
+        <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
+      </PanelErrorBoundary>
+      {/* Invisible, so a crash in one draws nothing and leaves the report standing. */}
+      <PanelErrorBoundary quiet>
+        <AnnounceRegion />
+      </PanelErrorBoundary>
+      <PanelErrorBoundary quiet>
+        <LensSubtitleSync />
+      </PanelErrorBoundary>
+      <PanelErrorBoundary quiet>
+        <UndoSync />
+      </PanelErrorBoundary>
       <NativeSearchSync />
       {IS_DEV && (
         <Suspense fallback={null}>

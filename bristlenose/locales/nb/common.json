@@ -37,7 +37,8 @@
     "noResults": "Ingen treff",
     "error": "Feil",
     "lensError": "Denne visningen kunne ikke vises. Prøv igjen, eller velg en annen visning.",
-    "panelError": "Dette sidepanelet kunne ikke vises."
+    "panelError": "Dette sidepanelet kunne ikke vises.",
+    "partError": "Dette kunne ikke vises."
   },
   "header": {
     "logoAlt": "Bristlenose-logo",

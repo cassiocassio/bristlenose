@@ -2029,7 +2029,8 @@ struct ContentView: View {
     // the pane resolution owns it now, and the lens-availability derivation
     // reads the same copy.
 
-    /// Handle files/folders dropped from Finder onto the sidebar free space.
+    /// Handle files/folders dropped from Finder onto the sidebar free space,
+    /// or onto the empty "Drop a folder" pane (one route for both doors, R46).
     /// - Folder: create project pointing to that directory (scan all files)
     /// - File(s): create project with inputFiles restricting to the dropped files
     /// De-duplicates by path — if a project already exists for that folder, selects it.
@@ -2060,7 +2061,7 @@ struct ContentView: View {
 
     /// Process collected URLs from a sidebar drop. `intoFolder` is non-nil
     /// for drops on a project-sidebar-folder row (see `handleDropOnFolder`);
-    /// nil for empty-sidebar drops, which create at root.
+    /// nil for empty-sidebar and empty-pane drops, which create at root.
     private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID? = nil) {
         guard !urls.isEmpty else { return }
 
@@ -3714,10 +3715,10 @@ struct ContentView: View {
                         .padding(12)
                 }
             }
+            // The sidebar's own route: a listed folder is selected, not added
+            // again, and a moved study's row follows it (R46).
             .dropDestination(for: URL.self) { urls, _ in
-                let directories = urls.filter { $0.hasDirectoryPath }
-                let files = urls.filter { !$0.hasDirectoryPath }
-                createProjectFromURLs(directories: directories, files: files)
+                handleDrop(urls: urls)
                 return true
             } isTargeted: { noSelectionDropTargeted = $0 }
         }

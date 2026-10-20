@@ -71,5 +71,31 @@ def test_utf8_wins_over_windows_1252_when_both_would_decode(tmp_path: Path) -> N
 
 def test_bytes_windows_1252_leaves_undefined_still_read(tmp_path: Path) -> None:
     path = tmp_path / "t.txt"
-    path.write_bytes(b"caf\xe9 \x81")
-    assert read_text_any_encoding(path).startswith("café")
+    path.write_bytes(b"un caf\xe9 au lait \x81")
+    assert read_text_any_encoding(path).startswith("un café")
+
+
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be"])
+def test_utf16_without_a_byte_order_mark_is_read(tmp_path: Path, encoding: str) -> None:
+    """Without a BOM it is also valid UTF-8 (ASCII with NULs between), and every
+    cue then failed its timing check."""
+    path = tmp_path / "s.srt"
+    path.write_bytes(_SRT.encode(encoding))
+    (seg,) = parse_subtitle_file(_input(path, FileType.SUBTITLE_SRT))
+    assert seg.text == _LINE
+
+
+@pytest.mark.parametrize("text, encoding", [
+    ("1\n00:00:01,000 --> 00:00:03,000\n我们今天讨论一下这个应用的使用体验。\n", "gbk"),
+    ("1\n00:00:01,000 --> 00:00:03,000\n今日はアプリについてお話しします。\n", "shift_jis"),
+    ("1\n00:00:01,000 --> 00:00:03,000\nСегодня мы поговорим о приложении.\n", "cp1251"),
+])
+def test_a_non_western_legacy_file_is_refused_not_misread(
+    tmp_path: Path, text: str, encoding: str,
+) -> None:
+    """Read as 1252 it would be fluent-looking nonsense, analysed and paid for.
+    Refused, as before, it is a stated "could not be read" row."""
+    path = tmp_path / "s.srt"
+    path.write_bytes(text.encode(encoding))
+    with pytest.raises(UnicodeDecodeError):
+        read_text_any_encoding(path)

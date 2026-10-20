@@ -30,8 +30,9 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   deferred per-session stamp below. Register: R12.
   Then two more (wave 5): switching a codebook off and on while its catch-up is
   still coding no longer starts a second catch-up on the same job
-  (`_start_catch_ups` skips a job already `running` or `pending`, so the
-  running one's chip stands); and a failed catch-up records `failure_kind`, as
+  (`_start_catch_ups` skips a framework whose catch-up task is still live, so
+  the running one's chip stands; it asks the task, not the row, because a row
+  can say `running` with no task behind it until a restart); and a failed catch-up records `failure_kind`, as
   `run_autocode_job` does, so its chip says which failure it was (out of
   credit, rate limited…) instead of the generic "Tagging failed.".
 - _2026-08-31_ — trued against the v1 deletion (`baa1aa0e`) and the A5 defect.

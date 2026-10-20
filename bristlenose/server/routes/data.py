@@ -1638,6 +1638,11 @@ def get_framework_states(
 
 # Strong references to in-flight catch-up tasks (see _schedule_catch_up).
 _CATCH_UP_TASKS: set[Any] = set()
+# The live catch-up task per (project, framework), which _start_catch_ups asks
+# before starting another. The task, not the job row: a row can say "running"
+# with no task behind it (a failed status write, a schedule that raised), and
+# trusting it would refuse every later catch-up until a restart.
+_CATCH_UP_IN_FLIGHT: dict[tuple[int, str], Any] = {}
 
 
 def _schedule_catch_up(
@@ -1682,6 +1687,14 @@ def _schedule_catch_up(
     task = asyncio.create_task(_run())
     _CATCH_UP_TASKS.add(task)
     task.add_done_callback(_CATCH_UP_TASKS.discard)
+    key = (project_id, framework_id)
+    _CATCH_UP_IN_FLIGHT[key] = task
+
+    def _forget(t: Any) -> None:
+        if _CATCH_UP_IN_FLIGHT.get(key) is t:
+            del _CATCH_UP_IN_FLIGHT[key]
+
+    task.add_done_callback(_forget)
 
 
 def _start_catch_ups(
@@ -1694,9 +1707,9 @@ def _start_catch_ups(
     was imported since that job finished (the frozen watermark; §4a). Setting the
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
-    where it would otherwise see the stale "completed" and resolve instantly. A job
-    already "running" is a catch-up still in flight (off and on again while it
-    codes), so it is not started twice. Cheap: two indexed queries per framework,
+    where it would otherwise see the stale "completed" and resolve instantly. A
+    catch-up whose task is still live (off and on again while it codes) is not
+    started twice; a row left "running" with no task behind it is started again. Cheap: two indexed queries per framework,
     no LLM.
     """
     from bristlenose.server.models import AutoCodeJob
@@ -1711,8 +1724,9 @@ def _start_catch_ups(
         )
         if job is None or job.completed_at is None:
             continue  # never applied → nothing to catch up
-        if job.status in ("running", "pending"):
-            # A catch-up already coding this delta (the switch went off and on
+        in_flight = _CATCH_UP_IN_FLIGHT.get((project_id, fid))
+        if in_flight is not None and not in_flight.done():
+            # A catch-up still coding this delta (the switch went off and on
             # while it ran): a second one would code the same sessions again on
             # the same job. Its chip is already up and resolves when it ends.
             continue

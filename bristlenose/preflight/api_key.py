@@ -27,8 +27,8 @@ distinguish "key valid + paid" from "key valid + no balance" — both return
 State (finding 8): :func:`state_path` returns ``~/Library/Application
 Support/Bristlenose/state.json`` on macOS and ``$XDG_DATA_HOME/Bristlenose/
 state.json`` on Linux. The 24-hour TTL means a successful validation skips
-the network on subsequent runs within the window — for the same request only:
-each record carries :func:`request_fingerprint` (the model and the
+the network on subsequent runs within the window — for the same model and
+parameters only (not the key or the endpoint): each record carries :func:`request_fingerprint` (the model and the
 ``request_params``), so a model or ``llm_max_tokens`` changed the same day is
 checked again. Until 20 Oct 2026 the record was keyed by provider alone.
 

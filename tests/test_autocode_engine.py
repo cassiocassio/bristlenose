@@ -1674,17 +1674,94 @@ class TestStartCatchUps:
         self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
         self._add_quotes(db_factory, project_id, 3)
 
+        live = MagicMock()
+        live.done.return_value = False
         db = db_factory()
         try:
             assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
-            # The first catch-up is still running when the switch goes off and on.
-            assert _start_catch_ups(db, project_id, [framework_id]) == []
+            # The first catch-up's task is still live when the switch goes off and on.
+            with patch.dict(
+                "bristlenose.server.routes.data._CATCH_UP_IN_FLIGHT",
+                {(project_id, framework_id): live},
+            ):
+                assert _start_catch_ups(db, project_id, [framework_id]) == []
             job = (
                 db.query(AutoCodeJob)
                 .filter_by(project_id=project_id, framework_id=framework_id)
                 .one()
             )
             assert job.status == "running"
+        finally:
+            db.close()
+
+    def test_a_scheduled_catch_up_is_in_flight_until_it_ends(
+        self, project_with_garrett
+    ) -> None:
+        """The skip asks the task the route scheduled; pin that scheduling
+        registers it, and that it is forgotten when it ends."""
+        from types import SimpleNamespace
+
+        from bristlenose.server.routes import data as data_routes
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        request = SimpleNamespace(
+            app=SimpleNamespace(
+                state=SimpleNamespace(db_factory=db_factory, settings=_mock_settings())
+            )
+        )
+
+        async def scenario() -> tuple[list[str], list[str]]:
+            release = asyncio.Event()
+
+            async def slow_reapply(*_a, **_k) -> int:
+                await release.wait()
+                return 0
+
+            with patch(
+                "bristlenose.server.autocode.reapply_to_new_quotes", slow_reapply
+            ):
+                db = db_factory()
+                try:
+                    first = data_routes._start_catch_ups(db, project_id, [framework_id])
+                    data_routes._schedule_catch_up(request, project_id, framework_id)
+                    await asyncio.sleep(0)
+                    during = data_routes._start_catch_ups(db, project_id, [framework_id])
+                finally:
+                    db.close()
+                release.set()
+                for _ in range(5):
+                    await asyncio.sleep(0)
+            return first, during
+
+        first, during = asyncio.run(scenario())
+        assert first == [framework_id]
+        assert during == []
+        assert (project_id, framework_id) not in data_routes._CATCH_UP_IN_FLIGHT
+
+    def test_a_job_left_running_with_no_task_is_started_again(
+        self, project_with_garrett
+    ) -> None:
+        """A row can say "running" with no task behind it (its failed write hit a
+        locked database, or scheduling raised after the commit). Trusting the row
+        would refuse every later catch-up until a restart; the task decides."""
+        from bristlenose.server.routes.data import _start_catch_ups
+
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
+        self._add_quotes(db_factory, project_id, 3)
+        finished = MagicMock()
+        finished.done.return_value = True
+        db = db_factory()
+        try:
+            assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
+            with patch.dict(
+                "bristlenose.server.routes.data._CATCH_UP_IN_FLIGHT",
+                {(project_id, framework_id): finished},
+            ):
+                assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
+            assert _start_catch_ups(db, project_id, [framework_id]) == [framework_id]
         finally:
             db.close()
 

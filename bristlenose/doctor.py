@@ -2039,6 +2039,7 @@ def _azure_refusal(exc: Any) -> str:
         body = json.loads(exc.read().decode("utf-8", "replace"))
         message = body["error"]["message"]
     except Exception:
+        logger.debug("Azure 400 with no readable error message", exc_info=True)
         return _AZURE_REFUSED
     return f"{_AZURE_REFUSED}: {message}" if isinstance(message, str) else _AZURE_REFUSED
 

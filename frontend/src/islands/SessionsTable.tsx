@@ -253,12 +253,15 @@ export function SessionsTable({
     if (refreshKey > 0) setIsRefetching(true);
     apiGet<SessionsListResponse>("/sessions")
       .then((json) => {
+        // A superseded read must not overwrite a newer one's answer, either way.
+        if (cancelled) return;
         setData(json);
         setError(null);
       })
       .catch((err: Error) => {
         // The wire string is for the console; the lens says it in its own words (R86).
         console.error("Sessions read failed:", err);
+        if (cancelled) return;
         setError(err.message || "read failed");
       })
       .finally(() => setIsRefetching(false));

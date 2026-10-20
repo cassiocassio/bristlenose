@@ -10,6 +10,7 @@ Includes a comprehensive test grid covering all combinations of:
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from contextlib import ExitStack
@@ -2131,6 +2132,60 @@ class TestValidateAnthropicKey:
         with patch("urllib.request.urlopen", side_effect=exc):
             ok, msg = _validate_anthropic_key("bad")
         assert ok is False and "401" in msg
+
+
+class TestValidateAzureKeySendsTheRunsRequest:
+    """Doctor's Azure check is a paid chat completion, as the run's preflight
+    is. It sent ``max_tokens: 1`` and no temperature, and counted a 400 as a
+    good key, so it went green over a deployment that refuses the run's own
+    request (R104's shape, one surface over). It now sends the run's
+    parameters from ``request_params``, in the one call it already made."""
+
+    _AZURE = {
+        "llm_provider": "azure",
+        "azure_api_key": "test-key",
+        "azure_endpoint": "https://example.openai.azure.com/",
+        "azure_deployment": "my-deployment",
+        "llm_max_tokens": 32000,
+        "llm_temperature": 0.3,
+    }
+
+    def test_the_call_carries_the_runs_parameters(self) -> None:
+        import json
+
+        from bristlenose.llm.client import request_params
+
+        captured: list[dict] = []
+
+        def fake_urlopen(req, timeout=10, context=None):  # noqa: ANN001, ARG001
+            captured.append(json.loads(req.data))
+            return MagicMock()
+
+        settings = _settings(**self._AZURE)
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = check_api_key(settings)
+
+        assert result.status == CheckStatus.OK
+        assert len(captured) == 1  # one paid call, as before
+        body = captured[0]
+        expected = request_params("azure", "my-deployment", 32000, 0.3)
+        assert {k: body[k] for k in expected} == expected
+
+    def test_a_refused_request_is_not_a_good_key(self) -> None:
+        import io
+        import urllib.error
+
+        message = "Unsupported parameter: 'max_tokens' is not supported with this model."
+        body = json.dumps({"error": {"code": "unsupported_parameter", "message": message}})
+        exc = urllib.error.HTTPError(
+            "u", 400, "Bad Request", {}, io.BytesIO(body.encode()),  # type: ignore[arg-type]
+        )
+        with patch("urllib.request.urlopen", side_effect=exc):
+            result = check_api_key(_settings(**self._AZURE))
+        assert result.status == CheckStatus.FAIL
+        assert message in result.detail
+        # No credentials fix: the key, endpoint and deployment are all fine.
+        assert result.fix_key == ""
 
 
 class TestBundleAdminPanelGuard:

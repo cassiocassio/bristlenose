@@ -14,7 +14,7 @@ import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bristlenose.i18n import FALLBACK_ONLY_LOCALES
 from bristlenose.utils.bundled_binary import bundled_binary_path
@@ -544,15 +544,22 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
         source = get_credential_source("azure")
         source_label = f" ({_store_label})" if source == "keychain" else ""
 
+        from bristlenose.llm.client import request_params
+
         valid, err = _validate_azure_key(
-            endpoint, key, deployment, settings.azure_api_version
+            endpoint, key, deployment, settings.azure_api_version,
+            params=request_params(
+                "azure", deployment, settings.llm_max_tokens, settings.llm_temperature
+            ),
         )
         if valid is False:
             return CheckResult(
                 status=CheckStatus.FAIL,
                 label="API key",
                 detail=f"Azure OpenAI rejected ({err})",
-                fix_key="api_key_invalid_azure",
+                # A refused request is no credential fault: the provider's words
+                # in the detail are the fix, and "check your key" would mislead.
+                fix_key="" if err.startswith(_AZURE_REFUSED) else "api_key_invalid_azure",
             )
         if valid is None:
             return CheckResult(
@@ -1952,18 +1959,34 @@ def _validate_openai_key(key: str) -> tuple[bool | None, str]:
 
 
 def _validate_azure_key(
-    endpoint: str, key: str, deployment: str, api_version: str,
+    endpoint: str,
+    key: str,
+    deployment: str,
+    api_version: str,
+    *,
+    params: dict[str, Any] | None = None,
 ) -> tuple[bool | None, str]:
-    """Validate Azure OpenAI credentials with a minimal API call.
+    """Validate Azure OpenAI credentials with the run's own request.
 
-    Returns (True, "") if valid, (False, error) if rejected,
-    (None, error) if we couldn't check (network issue).
+    The one paid call this check makes carries the parameters every pipeline
+    call carries (``request_params``, as the run's preflight sends them), with
+    the preflight's inert prompt. Until 20 Oct 2026 it sent ``max_tokens: 1``
+    and counted a 400 as a good key, so doctor went green over a deployment
+    that refuses the run's request. ``params`` defaults to the settings'
+    defaults for a direct call.
+
+    Returns (True, "") if valid, (False, error) if rejected — a refused request
+    as ``"HTTP 400: <the provider's words>"`` — (None, error) if we couldn't
+    check (network issue).
     """
     import urllib.error
     import urllib.request
 
+    from bristlenose.preflight.api_key import _VALIDATION_PROMPT, _params_for
+
     if not _key_is_sendable(key):
         return (False, _UNSENDABLE_KEY)
+    params = _params_for("azure", deployment, params)
 
     url = (
         f"{endpoint.rstrip('/')}/openai/deployments/{deployment}"
@@ -1978,8 +2001,8 @@ def _validate_azure_key(
                 "Content-Type": "application/json",
             },
             data=json.dumps({
-                "messages": [{"role": "user", "content": "hi"}],
-                "max_tokens": 1,
+                "messages": [{"role": "user", "content": _VALIDATION_PROMPT}],
+                **params,
             }).encode(),
         )
         with urllib.request.urlopen(req, timeout=10, context=https_context()):
@@ -1992,13 +2015,32 @@ def _validate_azure_key(
             return (False, "403 Forbidden")
         if exc.code == 404:
             return (False, f"Deployment '{deployment}' not found")
-        if exc.code in (400, 429, 500, 503):
+        if exc.code == 400:
+            # The run's own request, refused: an output cap above the model's
+            # ceiling, a parameter the deployment's model does not take. The run
+            # would fail on it, so it is not a good key. Said in the provider's
+            # words, as the preflight says it.
+            return (False, _without_key(_azure_refusal(exc), key))
+        if exc.code in (429, 500, 503):
             return (True, "")
         return (None, f"HTTP {exc.code}")
     except urllib.error.URLError as exc:
         return (None, _without_key(str(exc.reason), key))
     except Exception as exc:
         return (None, _without_key(str(exc), key))
+
+
+_AZURE_REFUSED = "HTTP 400"
+
+
+def _azure_refusal(exc: Any) -> str:
+    """``"HTTP 400: <message>"`` from an Azure error body, or ``"HTTP 400"``."""
+    try:
+        body = json.loads(exc.read().decode("utf-8", "replace"))
+        message = body["error"]["message"]
+    except Exception:
+        return _AZURE_REFUSED
+    return f"{_AZURE_REFUSED}: {message}" if isinstance(message, str) else _AZURE_REFUSED
 
 
 def _validate_google_key(key: str) -> tuple[bool | None, str]:

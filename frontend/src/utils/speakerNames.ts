@@ -19,7 +19,7 @@
  * still in flight lands after it rather than racing it.
  */
 
-import { getPeople, isSessionScopedCode, sendPut } from "./api";
+import { getPeople, isSessionScopedCode, sendPut, toastSaveFailed } from "./api";
 import { isExportMode } from "./exportData";
 import { pushUndo } from "../contexts/UndoStore";
 import {
@@ -108,7 +108,11 @@ async function writeSlot(
   }
   // Fresh, not the caller's copy: by the time an undo runs, other
   // participants may have been renamed, and only this one is going back.
-  const people = await getPeople();
+  // A read says nothing when it fails (sendPut toasts, apiGet does not).
+  const people = await getPeople().catch((err: unknown) => {
+    toastSaveFailed(err);
+    throw err;
+  });
   const entry = people[code] ?? { full_name: "", short_name: "", role: "" };
   const full_name = state.full_name ?? entry.full_name;
   if (entry.full_name !== full_name || entry.short_name !== state.short_name) {
@@ -118,6 +122,18 @@ async function writeSlot(
     });
   }
   await sendPut(slotPath(sessionId, code), { confirmed: state.confirmed });
+}
+
+/** Bumped by every act and every undo or redo on a slot, so a failed write
+ *  puts back only a screen nothing has moved since. */
+const slotMoves = new Map<string, number>();
+
+const slotKey = (sessionId: string, code: string) => `${sessionId}\u0000${code}`;
+
+function moved(sessionId: string, code: string): number {
+  const n = (slotMoves.get(slotKey(sessionId, code)) ?? 0) + 1;
+  slotMoves.set(slotKey(sessionId, code), n);
+  return n;
 }
 
 function announce(sessionId: string, code: string, state: SpeakerNameState): void {
@@ -141,17 +157,27 @@ export interface NameSpeakerArgs {
  */
 export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs): Promise<void> {
   if (isExportMode() || sameState(before, after)) return Promise.resolve();
+  moved(sessionId, code);
   const done = enqueue(() => writeSlot(sessionId, code, after, before));
+  // The screen moves at once; a write that fails puts it back, as a quote's
+  // does (R7), unless a later act or step has moved the slot since.
+  const step = (to: SpeakerNameState, from: SpeakerNameState) => {
+    announce(sessionId, code, to);
+    const at = moved(sessionId, code);
+    return enqueue(() => writeSlot(sessionId, code, to, from)).catch((err: unknown) => {
+      if (slotMoves.get(slotKey(sessionId, code)) === at) {
+        announce(sessionId, code, from);
+        // A participant's write is two requests, and the first may have landed:
+        // views read the slot again rather than trust the guess.
+        written();
+      }
+      throw err;
+    });
+  };
   pushUndo({
     action: actionFor(code, before, after),
-    undo: () => {
-      announce(sessionId, code, before);
-      return enqueue(() => writeSlot(sessionId, code, before, after));
-    },
-    redo: () => {
-      announce(sessionId, code, after);
-      return enqueue(() => writeSlot(sessionId, code, after, before));
-    },
+    undo: () => step(before, after),
+    redo: () => step(after, before),
   });
   return done;
 }
@@ -184,4 +210,5 @@ export function speakerWritesSettled(): Promise<void> {
 /** Test seam: drop any queued writes' ordering. */
 export function resetSpeakerNameQueue(): void {
   queue = Promise.resolve();
+  slotMoves.clear();
 }

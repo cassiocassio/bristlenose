@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
-import { getPeople, sendPut } from "./api";
+import { getPeople, sendPut, toastSaveFailed } from "./api";
 import { nameStateOf } from "./speakerPicking";
 import type { SpeakerResponse } from "./types";
 import {
@@ -16,11 +16,12 @@ import {
 
 vi.mock("./api", async (importOriginal) => {
   const real = await importOriginal<typeof import("./api")>();
-  return { ...real, getPeople: vi.fn(), sendPut: vi.fn() };
+  return { ...real, getPeople: vi.fn(), sendPut: vi.fn(), toastSaveFailed: vi.fn() };
 });
 
 const putMock = vi.mocked(sendPut);
 const peopleMock = vi.mocked(getPeople);
+const toastMock = vi.mocked(toastSaveFailed);
 
 // A moderator slot names the person it points at (design-people.md §J8).
 const proposed: SpeakerNameState = {
@@ -34,6 +35,7 @@ const puts = () => putMock.mock.calls.map(([path, body]) => [path, body]);
 beforeEach(() => {
   putMock.mockReset().mockResolvedValue(undefined);
   peopleMock.mockReset();
+  toastMock.mockReset();
 });
 
 afterEach(() => {
@@ -179,6 +181,83 @@ describe("nameSpeaker — a participant", () => {
     peopleMock.mockResolvedValue(structuredClone(people));
     await nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: { ...ann, confirmed: true } });
     expect(puts()).toEqual([["/sessions/s1/speakers/p1", { confirmed: true }]]);
+  });
+});
+
+// An undo draws the slot at once and writes after. A participant's write first
+// reads /people, and a failed read used to fail with no message, leaving the
+// screen showing a name the server never took back.
+describe("nameSpeaker — an undo or redo that fails", () => {
+  const people = { p1: { full_name: "Ann Archer", short_name: "Ann", role: "" } };
+  const ann: SpeakerNameState = { full_name: "Ann Archer", short_name: "Ann", confirmed: false };
+  const annie: SpeakerNameState = { full_name: "Ann Archer", short_name: "Annie", confirmed: true };
+
+  function listen() {
+    const seen: SpeakerNameState[] = [];
+    const on = (e: Event) => seen.push((e as CustomEvent<PeopleChangedDetail>).detail.state);
+    window.addEventListener(PEOPLE_CHANGED_EVENT, on);
+    return { seen, stop: () => window.removeEventListener(PEOPLE_CHANGED_EVENT, on) };
+  }
+
+  it("says so when the read fails, and puts the name back on screen", async () => {
+    peopleMock.mockResolvedValueOnce(structuredClone(people));
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: annie });
+    const err = new Error("GET /people 500");
+    peopleMock.mockRejectedValueOnce(err);
+    const { seen, stop } = listen();
+    const reread = vi.fn();
+    window.addEventListener("bn:speakers-written", reread);
+    expect(await undo()).toBe(false);
+    stop();
+    window.removeEventListener("bn:speakers-written", reread);
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(err);
+    expect(seen).toEqual([ann, annie]);
+    // Half of a participant's write may have landed: views read the slot again.
+    expect(reread).toHaveBeenCalledTimes(1);
+    expect(getUndoState().undoAction).toBe("renameParticipant");
+  });
+
+  it("a redo that fails puts the undone name back", async () => {
+    peopleMock.mockResolvedValueOnce(structuredClone(people));
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: annie });
+    peopleMock.mockResolvedValueOnce(structuredClone(people));
+    await undo();
+    peopleMock.mockRejectedValueOnce(new Error("offline"));
+    const { seen, stop } = listen();
+    expect(await redo()).toBe(false);
+    stop();
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([annie, ann]);
+  });
+
+  it("a refused write is said once, by the write, and the screen goes back", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    putMock.mockRejectedValueOnce(new Error("PUT 409"));
+    const { seen, stop } = listen();
+    expect(await undo()).toBe(false);
+    stop();
+    expect(toastMock).not.toHaveBeenCalled(); // sendPut has already toasted
+    expect(seen).toEqual([proposed, picked]);
+  });
+
+  it("leaves the screen alone when a later act moved the slot meanwhile", async () => {
+    peopleMock.mockResolvedValueOnce(structuredClone(people));
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: annie });
+    let fail!: (e: unknown) => void;
+    peopleMock.mockReturnValueOnce(new Promise((_, rej) => { fail = rej; }));
+    const { seen, stop } = listen();
+    const reread = vi.fn();
+    window.addEventListener("bn:speakers-written", reread);
+    const undone = undo();
+    peopleMock.mockResolvedValue(structuredClone(people));
+    void nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: { ...ann, short_name: "A" } });
+    fail(new Error("offline"));
+    expect(await undone).toBe(false);
+    stop();
+    window.removeEventListener("bn:speakers-written", reread);
+    expect(seen).toEqual([ann]);
+    expect(reread).not.toHaveBeenCalled();
   });
 });
 

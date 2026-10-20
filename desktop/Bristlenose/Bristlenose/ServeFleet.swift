@@ -276,11 +276,12 @@ final class ServeFleet: ObservableObject {
     /// looking at; restarting only the fronted one would leave the rest serving
     /// under a consent the researcher just changed. So: lazy, except the
     /// exposed instances, which an agent can read while unattended, and any
-    /// serve still reading shared screens after Read shared screens went off —
-    /// a starting one included, since it was spawned with the old env and would
-    /// otherwise boot and go on reading. Its restart spawns with an explicit
-    /// `BRISTLENOSE_SCREEN_TEXT=0`, which is what tells the server to delete
-    /// what it read.
+    /// serve still reading shared screens after Read shared screens went off.
+    /// A serve still booting restarts if its spawn env differs from the env it
+    /// would get now (R35): nothing re-checks when it reaches `.running`, so a
+    /// key, provider or Anonymise change made while a study opened was lost. A
+    /// screens restart spawns with an explicit `BRISTLENOSE_SCREEN_TEXT=0`,
+    /// which is what tells the server to delete what it read.
     func applyEnvChange(defaults: UserDefaults = .standard) {
         // Read once, from the same source `overlayPreferences` builds the env
         // from, so "the new env would not read screens" is the env's own rule.
@@ -289,13 +290,21 @@ final class ServeFleet: ObservableObject {
         let screensAllowed = ServeManager.readsScreens(nextEnv)
         for (id, manager) in managers {
             let starting = manager.state == .starting
+            // Only a booting serve needs the comparison, and building the env
+            // reads the keychain (quietly), so it is done for those alone.
+            let spawnedOnCurrentEnv = starting
+                && manager.spawnedEnvFingerprint != nil
+                && manager.spawnedEnvFingerprint == manager.mode.map {
+                    ServeEnvStaleness.fingerprint(BristlenoseShared.childEnvironment(for: $0))
+                }
             switch ServeEnvStaleness.action(project: id,
                                             isRunning: manager.runningPort != nil,
                                             isFronted: id == frontedProject,
                                             isExposed: isExposed(id),
                                             readsWithdrawnScreens: manager.spawnedReadsScreens
                                                 && !screensAllowed,
-                                            isStarting: starting) {
+                                            isStarting: starting,
+                                            spawnedOnCurrentEnv: spawnedOnCurrentEnv) {
             case .restartNow:          manager.restartIfRunning(orStarting: starting)
             case .restartOnNextFront:  staleProjects.insert(id)
             case .nothing:             break

@@ -69,16 +69,41 @@ struct ServeEnvStalenessTests {
             isExposed: false, readsWithdrawnScreens: true) == .nothing)
     }
 
-    /// A booting serve was spawned seconds ago with the old env. Spawned
-    /// reading screens, it restarts now rather than boot and read; otherwise a
-    /// booting serve keeps the old answer for every other preference.
-    @Test func aStartingInstanceReadingWithdrawnScreensRestartsNow() {
+    /// A booting serve was spawned seconds ago with the old env, and nothing
+    /// re-checks it when it reaches `.running`, so any change restarts it now
+    /// (R35: a key, provider or Anonymise change made while a study opened
+    /// never reached it). This test used to pin `.nothing` for the second case.
+    @Test func aStartingInstanceRestartsNowForAnyChange() {
         #expect(ServeEnvStaleness.action(
             project: Self.background, isRunning: false, isFronted: false,
             isExposed: false, readsWithdrawnScreens: true, isStarting: true) == .restartNow)
         #expect(ServeEnvStaleness.action(
             project: Self.background, isRunning: false, isFronted: true,
-            isExposed: true, readsWithdrawnScreens: false, isStarting: true) == .nothing)
+            isExposed: false, readsWithdrawnScreens: false, isStarting: true) == .restartNow)
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: false, isFronted: false,
+            isExposed: false, readsWithdrawnScreens: false, isStarting: true) == .restartNow)
+    }
+
+    /// …unless it was spawned with the env it would get now — first-run
+    /// consent posts and then starts the serve, and restarting that one would
+    /// throw its cold boot away.
+    @Test func aStartingInstanceAlreadyOnTheCurrentEnvIsLeftAlone() {
+        #expect(ServeEnvStaleness.action(
+            project: Self.background, isRunning: false, isFronted: true,
+            isExposed: false, isStarting: true, spawnedOnCurrentEnv: true) == .nothing)
+    }
+
+    @Test func theFingerprintIgnoresPerSpawnPlumbingButNotAKey() {
+        let base = ["BRISTLENOSE_LLM_PROVIDER": "anthropic",
+                    "BRISTLENOSE_ANTHROPIC_API_KEY": "sk-one",
+                    "_BRISTLENOSE_MCP_TOKEN": "t1"]
+        var newToken = base; newToken["_BRISTLENOSE_MCP_TOKEN"] = "t2"
+        var newKey = base; newKey["BRISTLENOSE_ANTHROPIC_API_KEY"] = "sk-two"
+
+        #expect(ServeEnvStaleness.fingerprint(base) == ServeEnvStaleness.fingerprint(newToken))
+        #expect(ServeEnvStaleness.fingerprint(base) != ServeEnvStaleness.fingerprint(newKey))
+        #expect(!ServeEnvStaleness.fingerprint(base).contains("sk-one"))
     }
 
     @Test func frontedAndExposedIsStillJustOneRestart() {

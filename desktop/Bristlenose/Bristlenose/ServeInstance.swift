@@ -109,6 +109,12 @@ final class ServeInstance: ObservableObject {
     /// `@Published` — nothing renders it.
     var spawnedReadsScreens = false
 
+    /// `ServeEnvStaleness.fingerprint` of the env this sidecar was spawned
+    /// with, nil before a spawn. Lets a preference change landing while the
+    /// serve boots restart it only when its env really is stale (R35), not when
+    /// it was spawned a moment after the change with the new env already in it.
+    var spawnedEnvFingerprint: String?
+
     /// The MCP-scoped token this sidecar was spawned with — what the Connect
     /// Agent sheet hands out and what the handshake carries. Durable (Keychain,
     /// per project) normally; an *ephemeral process-lifetime scoped* token when

@@ -170,23 +170,50 @@ struct ServeFleetLifecycleTests {
         #expect(b.spawnedReadsScreens == false)
     }
 
-    /// …and a starting serve that never read screens is left alone, as it
-    /// always was for every other preference.
-    @Test func aStartingServeThatReadsNothingIsLeftAlone() throws {
+    /// R35: a setting changed while a study is opening — a new key, a
+    /// provider switch, Anonymise — must reach it. The serve baked its env at
+    /// spawn, and nothing re-checks when it reaches `.running`, so it restarts
+    /// now. This test used to be `aStartingServeThatReadsNothingIsLeftAlone`,
+    /// which pinned the bug: the change was dropped, the serve booted on the
+    /// old env and kept it until some later preference change.
+    @Test func aStartingServeIsRestartedOntoTheNewEnv() async throws {
         let suite = "ServeFleetLifecycleTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(false, forKey: ScreenTextPreference.key)
 
         let fleet = Self.externalFleet()
         let a = fleet.manager(for: Self.a)
         a.instance.state = .starting
         a.instance.currentProjectPath = "/p/a"
-        fleet.frontedProject = nil
+        fleet.frontedProject = Self.a
 
         fleet.applyEnvChange(defaults: defaults)
+        await settle(a, to: .running(port: Self.restartPort))
 
-        #expect(a.state == .starting)
+        #expect(a.state == .running(port: Self.restartPort),
+                "a serve booting when a preference changed kept its old env")
+        #expect(fleet.staleProjects.contains(Self.a) == false)
+    }
+
+    /// …but not one spawned a moment after the change, with the new env
+    /// already in it: first-run consent posts and then starts the serve, and
+    /// a restart there would throw away the slowest boot the app ever does.
+    @Test func aStartingServeAlreadyOnTheCurrentEnvIsLeftAlone() async throws {
+        let fleet = Self.externalFleet()
+        let a = fleet.manager(for: Self.a)
+        a.instance.state = .starting
+        a.instance.currentProjectPath = "/p/a"
+        let mode = try #require(a.mode)
+        a.instance.spawnedEnvFingerprint =
+            ServeEnvStaleness.fingerprint(BristlenoseShared.childEnvironment(for: mode))
+        fleet.frontedProject = Self.a
+
+        fleet.applyEnvChange()
+        // A restart is a Task (shutdown, then start), so give it the time the
+        // restart tests wait for before calling it absent.
+        await settle(a, to: .running(port: Self.restartPort))
+
+        #expect(a.state == .starting, "a serve already on the current env was restarted")
         #expect(fleet.staleProjects.contains(Self.a) == false)
     }
 

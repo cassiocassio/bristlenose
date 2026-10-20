@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// What to do with each running sidecar when a preference or the consent
@@ -77,21 +78,40 @@ enum ServeEnvStaleness {
     ///   - readsWithdrawnScreens: was this serve spawned reading shared screens
     ///     that the new environment no longer allows? Eager for the same reason
     ///     as `isExposed`: the harm runs whether or not anyone is looking.
-    ///   - isStarting: spawned but not yet `.running`. Only the withdrawn-screens
-    ///     case acts on it: such a serve was spawned with the old env seconds
-    ///     ago and would otherwise reach `.running` and read. Every other
-    ///     preference keeps the old answer for a booting serve (nothing).
+    ///   - isStarting: spawned but not yet `.running`. Nothing re-checks its
+    ///     env when it reaches `.running`, so a stale one restarts now, before
+    ///     anything is on screen (R35). Marking it stale instead would not do:
+    ///     it is usually the fronted serve, so nothing fronts it again, and a
+    ///     key, provider or Anonymise change made while a study opened stayed
+    ///     off until some later preference change.
+    ///   - spawnedOnCurrentEnv: a booting serve whose spawn env already equals
+    ///     the env it would get now — spawned just after the change (first-run
+    ///     consent posts, then starts the serve). Restarting it would throw a
+    ///     cold boot away for nothing.
     static func action(project: UUID,
                        isRunning: Bool,
                        isFronted: Bool,
                        isExposed: Bool,
                        readsWithdrawnScreens: Bool = false,
-                       isStarting: Bool = false) -> Action {
-        if isStarting && readsWithdrawnScreens { return .restartNow }
+                       isStarting: Bool = false,
+                       spawnedOnCurrentEnv: Bool = false) -> Action {
+        if isStarting { return spawnedOnCurrentEnv ? .nothing : .restartNow }
         guard isRunning else { return .nothing }
         if isFronted { return .restartNow }
         if isExposed { return .restartNow }
         if readsWithdrawnScreens { return .restartNow }
         return .restartOnNextFront
+    }
+
+    /// A digest of a sidecar env, for "was it spawned with the env it would get
+    /// now?". Leaves out the `_`-prefixed variables, which are per-spawn
+    /// plumbing (the MCP token, the host handshake), and hashes the rest so no
+    /// API key is kept in the clear.
+    static func fingerprint(_ env: [String: String]) -> String {
+        let lines = env.filter { !$0.key.hasPrefix("_") }
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: "\n")
+        return SHA256.hash(data: Data(lines.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }

@@ -123,6 +123,7 @@ struct LLMSettingsView: View {
             // Save the row being left before anything else. Here, not on the
             // key field: picking Ollama removes the field, and with it any
             // handler it carried (R38).
+            swappingRevealedField = false
             commitAPIKeys([previous])
             commitAzure()
             applyPresenceAndCache(provider: selectedProvider)
@@ -342,6 +343,10 @@ struct LLMSettingsView: View {
 
     @State private var keyDrafts = APIKeyDrafts()
     @State private var apiKeyRevealed: [LLMProvider: Bool] = [:]
+    /// Set by the eye button while the key field is focused; consumed by the
+    /// blur the field swap causes. Cleared on a row change, so a swap that
+    /// produced no blur cannot swallow a later real one.
+    @State private var swappingRevealedField = false
     @FocusState private var apiKeyFocused: Bool
 
     private var apiKeySection: some View {
@@ -371,6 +376,11 @@ struct LLMSettingsView: View {
                 }
 
                 Button {
+                    // Revealing swaps SecureField for TextField, which removes
+                    // the focused field; that blur is not the person leaving,
+                    // so it must not commit a half-typed key. The flag is
+                    // consumed by that one blur, which puts focus back.
+                    if apiKeyFocused { swappingRevealedField = true }
                     apiKeyRevealed[selectedProvider, default: false].toggle()
                 } label: {
                     Image(systemName: apiKeyRevealed[selectedProvider, default: false]
@@ -399,7 +409,13 @@ struct LLMSettingsView: View {
             .onChange(of: selectedProvider) { _, _ in loadAPIKey() }
             .onSubmit { commitAPIKeys([selectedProvider]) }
             .onChange(of: apiKeyFocused) { _, focused in
-                if !focused { commitAPIKeys([selectedProvider]) }
+                guard !focused else { return }
+                if swappingRevealedField {
+                    swappingRevealedField = false
+                    apiKeyFocused = true
+                    return
+                }
+                commitAPIKeys([selectedProvider])
             }
 
             if keyDrafts.failed.contains(selectedProvider) {
@@ -471,6 +487,12 @@ struct LLMSettingsView: View {
                 Self.logger.error(
                     "API key for \(provider.rawValue, privacy: .public) did not reach the Keychain")
                 applyPresenceAndCache(provider: provider)
+                // The error appears under the field without moving focus, so
+                // say it: VoiceOver otherwise hears nothing.
+                NSAccessibility.post(
+                    element: NSApp as Any, notification: .announcementRequested,
+                    userInfo: [.announcement: i18n.t("desktop.llmSettings.keyNotSaved"),
+                               .priority: NSAccessibilityPriorityLevel.high.rawValue])
             }
             runKeyChanged = runKeyChanged || outcome.changesWhatRunsUse
         }

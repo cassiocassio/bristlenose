@@ -464,6 +464,9 @@ final class ServeManager: ObservableObject {
     /// `ServeInstance.spawnedReadsScreens`.
     var spawnedReadsScreens: Bool { instance.spawnedReadsScreens }
 
+    /// See `ServeInstance.spawnedEnvFingerprint`.
+    var spawnedEnvFingerprint: String? { instance.spawnedEnvFingerprint }
+
     /// Does a spawn environment read shared screens? The one place that
     /// answers it, so `start()` records exactly what `overlayPreferences` wrote.
     nonisolated static func readsScreens(_ env: [String: String]) -> Bool {
@@ -591,6 +594,7 @@ final class ServeManager: ObservableObject {
         // Nothing spawned yet; the spawn below records what it is given. An
         // external server was not spawned by us, so it stays false.
         instance.spawnedReadsScreens = false
+        instance.spawnedEnvFingerprint = nil
         // The old sidecar's handshake names an instance that is going away;
         // remove it now so the proxy reports honestly during the boot gap.
         // The new one is written when this serve reaches .running and its
@@ -654,6 +658,7 @@ final class ServeManager: ObservableObject {
         env["_BRISTLENOSE_MCP_TOKEN"] = mcpToken
         proc.environment = env
         instance.spawnedReadsScreens = Self.readsScreens(env)
+        instance.spawnedEnvFingerprint = ServeEnvStaleness.fingerprint(env)
 
         let pipe = Pipe()
         proc.standardOutput = pipe
@@ -798,9 +803,10 @@ final class ServeManager: ObservableObject {
     /// Called when user preferences change (provider, model, API key, etc.).
     /// Uses the same escalating teardown as `switchProject(to:)` so a Whisper-wedged
     /// sidecar doesn't survive a prefs save (William's parsimony pass, Finding 32).
-    /// - Parameter orStarting: also restart a serve that is still booting. Only
-    ///   the withdrawn-screens fan-out passes it (`ServeEnvStaleness`): a serve
-    ///   spawned with screen text seconds ago must not reach `.running` and read.
+    /// - Parameter orStarting: also restart a serve that is still booting.
+    ///   `ServeFleet.applyEnvChange` passes it for a booting serve whose spawn
+    ///   env differs from the current one (`ServeEnvStaleness`, R35): nothing
+    ///   re-checks the env when it reaches `.running`.
     func restartIfRunning(orStarting: Bool = false) {
         // A parked sidecar baked its provider/model/API-key/prefs env at spawn
         // time (BristlenoseShared.childEnvironment). A prefs OR consent change

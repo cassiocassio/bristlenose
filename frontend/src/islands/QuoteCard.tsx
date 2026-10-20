@@ -14,7 +14,7 @@
  * via callbacks.
  */
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
@@ -292,6 +292,30 @@ export function QuoteCard({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [crop]);
+
+  // ── Leaving mid-edit → commit ───────────────────────────────────────
+  // A lens switch (⌘1–5, the native sidebar) unmounts the card mid-edit.
+  // WebKit fires no blur for a removed editor, and a blur that did fire
+  // committed 150 ms later, after the editor was gone, writing the old text
+  // back. So as the card goes, drop any pending blur and commit what is on
+  // screen, the way blur does (R88). Layout effects: their cleanup runs while
+  // the editor is still in the DOM, and the ref is written outside render.
+
+  const commitOnLeave = useRef<(() => void) | null>(null);
+  useLayoutEffect(() => {
+    commitOnLeave.current =
+      crop.mode === "idle"
+        ? null
+        : () => {
+            if (crop.blurTimeoutRef.current) {
+              clearTimeout(crop.blurTimeoutRef.current);
+              crop.blurTimeoutRef.current = null;
+            }
+            const editableEl = textSpanRef.current?.querySelector(".crop-editable") as HTMLElement | null;
+            crop.commitEdit(editableEl);
+          };
+  });
+  useLayoutEffect(() => () => commitOnLeave.current?.(), []);
 
   // ── Card-level keydown for crop mode ────────────────────────────────
 

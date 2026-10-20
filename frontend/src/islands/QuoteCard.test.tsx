@@ -563,6 +563,51 @@ describe("QuoteCard — editing (trim handles)", () => {
   });
 });
 
+// R88: a lens switch from ⌘1–5 or the native sidebar unmounts the card mid-edit.
+// WebKit fires no blur for a removed editor, and a blur that did fire committed
+// 150 ms later from an editor that was gone, writing the old text back.
+describe("QuoteCard — an edit in progress survives the card going away", () => {
+  const TYPED = "The navigation was hidden";
+  function startEditing(onEditCommit: ReturnType<typeof vi.fn>) {
+    const view = renderEditableCard({}, { onEditCommit });
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-text"));
+    const editor = document.querySelector(".crop-editable") as HTMLElement;
+    expect(editor).toBeTruthy();
+    editor.textContent = TYPED;
+    return { ...view, editor };
+  }
+
+  it("commits what was typed when the card unmounts with no blur", () => {
+    const onEditCommit = vi.fn();
+    const { unmount } = startEditing(onEditCommit);
+    unmount();
+    expect(onEditCommit).toHaveBeenCalledTimes(1);
+    expect(onEditCommit).toHaveBeenCalledWith("q-p1-26", TYPED);
+  });
+
+  it("commits what was typed, once, when a blur is followed by the unmount", () => {
+    vi.useFakeTimers();
+    try {
+      const onEditCommit = vi.fn();
+      const { unmount, editor } = startEditing(onEditCommit);
+      fireEvent.blur(editor);
+      unmount();
+      vi.advanceTimersByTime(500);
+      expect(onEditCommit).toHaveBeenCalledTimes(1);
+      expect(onEditCommit).toHaveBeenCalledWith("q-p1-26", TYPED);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("writes nothing on unmount when no edit was open", () => {
+    const onEditCommit = vi.fn();
+    const { unmount } = renderEditableCard({}, { onEditCommit });
+    unmount();
+    expect(onEditCommit).not.toHaveBeenCalled();
+  });
+});
+
 describe("QuoteCard — sentiment badge dedup", () => {
   function renderWithTags(
     overrides: Partial<QuoteResponse>,

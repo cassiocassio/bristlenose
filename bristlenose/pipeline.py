@@ -1079,6 +1079,7 @@ class Pipeline:
         # Structured progress sink (RunHandle.progress) — set inside the
         # run_lifecycle block by the CLI. None on no-lifecycle paths.
         self._progress_sink: object | None = None
+        self._model_download_seen = False
         #: Sessions the readable chain has delivered this run (a count only).
         self._sessions_readable = 0
         self._transcription_held = 0.0
@@ -1196,6 +1197,32 @@ class Pipeline:
             # newest line, and the next heartbeat would otherwise hide it.
             fields.setdefault("sessions_readable", self._sessions_readable)
         self._progress_sink(**fields)  # type: ignore[operator]
+
+    def _on_model_download_progress(self, done: int, total: int) -> None:
+        """Emit the first-run speech-model download as its own progress stage.
+
+        ``download`` is not an estimator stage: the Welford estimate never
+        contains it, so the Mac app fills the ring from the bytes while it runs
+        and measures the analysis from where it ends (R32).
+        """
+        self._model_download_seen = True
+        self._emit_progress(
+            stage="download",
+            stage_fraction=(min(done, total) / total if total else None),
+        )
+
+    def _end_model_download(self) -> None:
+        """Move the progress record on from the download once it has finished.
+
+        Transcription reports nothing until its first session ends, and audio
+        extraction, which the estimator counts as transcription, sits between
+        the two. Without this the row went on saying it was downloading.
+        """
+        if self._model_download_seen:
+            from bristlenose.timing import STAGE_TRANSCRIBE as _T_STAGE_TRANSCRIBE
+
+            self._model_download_seen = False
+            self._emit_stage_entry(_T_STAGE_TRANSCRIBE)
 
     def _on_session_progress(
         self, stage: str, status: Any, label: str, *, remaining: int, cached: int = 0,
@@ -1608,7 +1635,9 @@ class Pipeline:
                     console=console,
                     status=status,
                     allow_fetch=not self.settings.no_fetch,
+                    on_download_progress=self._on_model_download_progress,
                 )
+                self._end_model_download()
 
             # Closing line — guarantees no further prompt this run.
             from bristlenose.i18n import t as _i18n_t
@@ -3336,7 +3365,9 @@ class Pipeline:
                     console=console,
                     status=status,
                     allow_fetch=not self.settings.no_fetch,
+                    on_download_progress=self._on_model_download_progress,
                 )
+                self._end_model_download()
 
             # ── Stage 2: Extract audio ──
             status.update("[dim]Extracting audio...[/dim]")

@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -407,6 +407,7 @@ def preflight_whisper(
     console: Console,
     status: Status | None,
     allow_fetch: bool,
+    on_download_progress: Callable[[int, int], None] | None = None,
 ) -> None:
     """Run the Whisper-model preflight.
 
@@ -420,6 +421,14 @@ def preflight_whisper(
       spinner, call ``snapshot_download`` with HF Hub's own progress bars on
       (on a terminal only — :func:`_native_download_progress`), restart the
       spinner, print the ✓ done line.
+
+    ``on_download_progress(done_bytes, total_bytes)`` is for a host that draws
+    its own progress (the Mac app reads it from ``run_progress``). Off a
+    terminal, where HF's bars draw nothing, the fetch then counts bytes the way
+    :func:`fetch_with_progress_lines` does; ``total_bytes`` is 0 when the Hub
+    gave no sizes. Without it, a first run in the app spent the whole ~1.6 GB
+    download under a ring timed for the analysis alone, which sat near full and
+    read as hung (R32, 20 Oct 2026).
 
     Callers gate on ``needs_transcription`` themselves (finding 39) — a folder
     of all-platform-transcripts should never trigger this code path.
@@ -471,8 +480,13 @@ def preflight_whisper(
         status.stop()
     t0 = time.perf_counter()
     try:
-        with _native_download_progress() as bar_class:
-            ensure_hf_model(repo_id, tqdm_class=bar_class)
+        if on_download_progress is not None and not _stderr_is_tty():
+            fetch_with_progress_lines(
+                settings, write=_progress_line_reader(on_download_progress)
+            )
+        else:
+            with _native_download_progress() as bar_class:
+                ensure_hf_model(repo_id, tqdm_class=bar_class)
     finally:
         if status is not None:
             status.start()
@@ -633,6 +647,19 @@ def fetch_with_progress_lines(
 
         raise PackageInstallError(f"{repo_id} is not complete in the cache after the download")
     out(f"@download-done {clock() - t0:.1f}")
+
+
+def _progress_line_reader(on_progress: Callable[[int, int], None]) -> Callable[[str], None]:
+    """Turn the ``@download`` lines back into ``on_progress(done, total)`` calls."""
+
+    def read(line: str) -> None:
+        parts = line.split()
+        if parts and parts[0] == "@download-start" and len(parts) == 3:
+            on_progress(0, int(parts[2]))
+        elif parts and parts[0] == "@download" and len(parts) == 3:
+            on_progress(int(parts[1]), int(parts[2]))
+
+    return read
 
 
 class _NullStream:

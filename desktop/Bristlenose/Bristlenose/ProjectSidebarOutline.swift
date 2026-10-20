@@ -2369,7 +2369,16 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     ) -> Bool {
         guard isFolderShaped, hasPath, isAvailable else { return false }
         guard pipelineIsFree(state) else { return false }
-        return hasWorkToDo(data)
+        // A run that did not finish has work to do whatever the folder says.
+        // Stopped or failed after transcription, every recording has its
+        // session and nothing is new, so `hasWorkToDo` reads it as analysed —
+        // and the only verb left was Re-analyse…, which starts from scratch and
+        // discards the researcher's work. Analyse resumes from the manifest
+        // (R19 follow-up, 20 Oct 2026).
+        switch state {
+        case .stopped, .failed, .failedWithDiagnostic: return true
+        default: return hasWorkToDo(data)
+        }
     }
 
     /// The "is there work to do" half of `canAnalyse`, pure so it can be tested

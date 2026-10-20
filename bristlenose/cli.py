@@ -2930,7 +2930,8 @@ def _help_commands() -> None:
     console.print("  -l, --llm               claude | chatgpt | azure | gemini | local")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
-    console.print("  --clean                 Delete output dir before running")
+    console.print("  --clean                 Start afresh. The previous output is kept aside")
+    console.print("                          and removed once the run succeeds.")
     console.print("  -v, --verbose           Verbose logging")
     console.print()
     console.print("[bold]bristlenose transcribe[/bold] <input-dir> [options]")
@@ -3046,7 +3047,7 @@ def _help_workflows() -> None:
     console.print("  Video: .mp4 .m4v .mov .avi .mkv .webm .wmv .asf .mts .m2ts")
     console.print("         .3gp .flv .mpg .mpeg")
     console.print("  Subtitles: .srt .vtt")
-    console.print("  Transcripts: .docx (Teams exports), .txt (plain text)")
+    console.print("  Transcripts: .docx (Teams exports)")
     console.print("  Files sharing a name stem are treated as one session.")
     console.print()
 

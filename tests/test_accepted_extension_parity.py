@@ -86,3 +86,33 @@ def test_cloud_import_scan_covers_the_media_it_may_encounter(canonical: set[str]
         f"cloud-import destination scan cannot see {sorted(missing)}; a local file "
         "in one of these formats will never be matched to its remote row"
     )
+
+
+_DOTTED = re.compile(r"(?<![\w.])\.([a-z0-9]+)\b")
+
+
+def test_help_lists_exactly_what_the_pipeline_reads(canonical: set[str]) -> None:
+    """`bristlenose help workflows` names the input formats in prose.
+
+    It said `.txt (plain text)` was an accepted transcript while ingest declines
+    every `.txt` ("Not a format Bristlenose reads"), so a researcher following
+    the help got a run that analysed nothing (20 Oct 2026).
+    """
+    from typer.testing import CliRunner
+
+    from bristlenose.cli import app
+
+    result = CliRunner().invoke(app, ["help", "workflows"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    block = out.split("Input files", 1)[1].split("Files sharing", 1)[0]
+    assert set(_DOTTED.findall(block)) == canonical
+
+
+def test_man_page_lists_exactly_what_the_pipeline_reads(canonical: set[str]) -> None:
+    """The man page carries the same list, in its own `.nf` block."""
+    man = (REPO / "bristlenose" / "data" / "bristlenose.1").read_text(encoding="utf-8")
+    man = re.sub(r"\\f[BIRP]", "", man.replace("\\-", "-"))
+    after = man.split("accepts any mix of audio, video, subtitle, and transcript files", 1)[1]
+    block = after.split("\n.nf\n", 1)[1].split("\n.fi\n", 1)[0]
+    assert set(_DOTTED.findall(block)) == canonical

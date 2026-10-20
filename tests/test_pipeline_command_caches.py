@@ -399,3 +399,44 @@ def test_run_transcribes_a_session_a_verified_cache_file_does_not_hold(
     again: dict = {}
     _drive(tmp_path, "run", 2, again)
     assert "transcribed" not in again, again
+
+
+def test_transcribe_does_not_give_run_s_speakers_to_changed_segments(
+    tmp_path: Path,
+) -> None:
+    # run's speakers belong to the segments run identified. s1's cached
+    # transcription differs from those now, so its record is not fresh and
+    # the heuristic decides, whatever run's speaker cache holds.
+    from bristlenose.hashing import hash_bytes
+
+    _drive(tmp_path, "run", 2, {}, llm_researcher="Speaker B")
+    path = _intermediate(tmp_path, "session_segments.json")
+    cached = json.loads(path.read_text(encoding="utf-8"))
+    cached["s1"][0]["text"] += " Edited."
+    path.write_text(json.dumps(cached), encoding="utf-8")
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["stages"]["transcribe"]["content_hash"] = hash_bytes(path.read_bytes())
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    _drive(tmp_path, "transcribe", 2, {})
+
+    raw = tmp_path / "output" / "transcripts-raw"
+    assert "[m1] (Speaker B)" not in (raw / "s1.txt").read_text(encoding="utf-8")
+    assert "[m1] (Speaker B)" in (raw / "s2.txt").read_text(encoding="utf-8")
+
+
+def test_transcribe_logs_a_speaker_cache_it_cannot_use(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A fresh record whose file is gone: the heuristic stands in, and the log
+    # says so rather than pass it off as a new recording's identification.
+    _drive(tmp_path, "run", 2, {}, llm_researcher="Speaker B")
+    _intermediate(tmp_path, "speaker-info/s1.json").unlink()
+
+    with caplog.at_level("WARNING", logger="bristlenose.pipeline"):
+        _drive(tmp_path, "transcribe", 2, {})
+
+    assert any("s1: speaker cache missing" in r.getMessage() for r in caplog.records), (
+        [r.getMessage() for r in caplog.records]
+    )

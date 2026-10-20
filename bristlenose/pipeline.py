@@ -3606,6 +3606,12 @@ class Pipeline:
                         for seg in _si_data["segments_with_roles"]
                     ]
                     _si_kept.add(sid)
+                else:
+                    # run() would ask the model again; transcribe has none.
+                    logger.warning(
+                        "transcribe | %s: speaker cache missing or unusable,"
+                        " heuristic roles instead of run's", sid,
+                    )
             for sid, segments in session_segments.items():
                 if sid not in _si_kept:
                     identify_speaker_roles_heuristic(segments)

@@ -289,4 +289,24 @@ describe("Clip export chip after a server restart", () => {
       expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed"),
     );
   });
+
+  it("a screens export the server no longer holds ends the same way", async () => {
+    // Restarted between the export's start and its first read: "idle" from the first answer.
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/export/screens/status")
+        ? { status: "idle", progress: 0, total: 0, completed_count: 0, skipped_count: 0, current: "", output_dir: null, files: [] }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    renderRoute("/report/sessions/");
+    act(() => {
+      addJob("screens:r13", { type: "screens", frameworkId: "", frameworkTitle: "", total: 3 });
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed"),
+    );
+  });
 });

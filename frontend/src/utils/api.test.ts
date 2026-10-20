@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   deleteCodebookTag,
+  getAutoCodeStatus,
+  getClipExtractionStatus,
+  getScreensExportStatus,
   patchStarred,
   patchTags,
   putFrameworkStates,
@@ -215,5 +218,36 @@ describe("a curation write that the server could not place", () => {
     fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
     await expect(patchStarred({ "q-p1-10": true })).resolves.toBeUndefined();
     expect(toastMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A background job's status read that never answers fails, so the chip polling it can count
+ * a failure instead of waiting on a hung server for ever (R13). Other reads have no deadline.
+ */
+describe("a job status read that never answers", () => {
+  const hang = (_url: string, init?: RequestInit) => new Promise((_, reject) => {
+    init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+  });
+
+  it.each([
+    ["AutoCode", () => getAutoCodeStatus("garrett")],
+    ["clips", () => getClipExtractionStatus()],
+    ["screens", () => getScreensExportStatus()],
+  ])("%s: fails after five seconds", async (_name, read) => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(hang);
+      const failed = expect(read()).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(5_000);
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("an answer in time is the answer", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "running" }));
+    await expect(getClipExtractionStatus()).resolves.toEqual({ status: "running" });
   });
 });

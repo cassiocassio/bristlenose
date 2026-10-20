@@ -151,6 +151,8 @@ export function saveQuotesSpreadsheet(
  * no-scope union. Registers an activity chip and surfaces ffmpeg-missing /
  * in-progress / failed states via toast.
  */
+let clipsJobSeq = 0;
+
 export async function extractVideoClips(
   ids: string[] | null,
   t: TFunction,
@@ -162,7 +164,10 @@ export async function extractVideoClips(
       toast(t("export.clips.noClips"));
       return;
     }
-    addJob("clips", { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
+    // Each export is its own job, as for screens below: under one fixed id the last export's
+    // finished chip stood for the next one until its first read (R13).
+    for (const [id, job] of getJobs()) if (job.type === "clips") removeJob(id);
+    addJob(`clips:${++clipsJobSeq}`, { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
     // One toast at a time replaces the last, so both notices share one, held
     // long enough to read; the burn notice is also announced, since it is the
     // only sign the subtitled copies won't be made.

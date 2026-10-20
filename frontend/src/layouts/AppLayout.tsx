@@ -206,9 +206,6 @@ function openDocs(url: string): void {
 /**
  * Inner component that uses hooks requiring PlayerProvider + FocusProvider.
  */
-/** Screens export jobs whose status has been read at least once (see the chip's pollFn). */
-const seenScreensJobs = new Set<string>();
-
 function AppShell() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -802,11 +799,9 @@ function AppShell() {
             },
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getScreensExportStatus();
-              // "idle" before the first read is a job not yet seen; after it, the server has
-              // forgotten the job (it restarted), which would otherwise spin for ever.
-              if (s.status !== "idle") seenScreensJobs.add(id);
-              const status =
-                s.status === "idle" ? (seenScreensJobs.has(id) ? "failed" : "running") : s.status;
+              // As for clips: the server holds the job before the export's start returns, so "idle",
+              // even on the first read, means it has forgotten it (it restarted) (R13).
+              const status = s.status === "idle" ? "failed" : s.status;
               return {
                 status,
                 progressLabel: status === "running" ? `${s.progress}/${s.total}` : null,

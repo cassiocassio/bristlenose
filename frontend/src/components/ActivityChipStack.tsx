@@ -175,7 +175,8 @@ function toChipJob(job: ActivityJob, norm: NormalisedJobStatus | null): Activity
 const POLL_INTERVAL = 2000;
 
 /**
- * Failed polls in a row after which a job is ended as failed (about eight seconds).
+ * Failed polls in a row after which a job is ended as failed: about eight seconds for a server
+ * that refuses, about half a minute for one that hangs (each read waits up to five seconds).
  * A server that restarted has forgotten its clip and screens jobs and failed its AutoCode
  * ones, and one that went away answers nothing, so a chip that waited for an answer
  * spun for ever (R13). One answer in between starts the count again.
@@ -191,12 +192,26 @@ const LOST: NormalisedJobStatus = {
   partialMessage: null,
 };
 
+/**
+ * What a poll's answer makes of a job's status. A finished outcome stands against a later poll's
+ * different one: every change to the job list polls each job again, and a server that restarted
+ * would turn a finished clip export into a failed one. "Running" again is a new run under the same
+ * id and is followed; the lost state gives way to any answer.
+ */
+function answered(prev: NormalisedJobStatus | null | undefined, norm: NormalisedJobStatus): NormalisedJobStatus {
+  if (prev && prev !== LOST && isTerminal(prev.status) && isTerminal(norm.status)) return prev;
+  return norm;
+}
+
 export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, NormalisedJobStatus | null>>({});
   const [expanded, setExpanded] = useState(false);
-  const completeFired = useRef<Set<string>>(new Set());
+  const completeFired = useRef<Map<string, NormalisedJobStatus>>(new Map());
   const pollFailures = useRef<Record<string, number>>({});
+  // The read each job has out, if any: one at a time, so a hung server cannot pile them up, and
+  // an answer to a read whose job has since been dismissed is dropped.
+  const inFlight = useRef<Map<string, object>>(new Map());
   // Ref mirror of statuses so the interval callback can read current values
   // without restarting the timer on every status change.
   const statusesRef = useRef(statuses);
@@ -204,16 +219,23 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
 
   // Poll each job — dispatch by pollFn (custom) or getAutoCodeStatus (default).
   const pollJob = useCallback((job: ActivityJob) => {
-    const promise = job.pollFn
-      ? job.pollFn()
-      : getAutoCodeStatus(job.frameworkId).then(normaliseAutoCode);
+    if (inFlight.current.has(job.id)) return;
+    const read = {};
+    inFlight.current.set(job.id, read);
+    const current = () => inFlight.current.get(job.id) === read;
+    // Started inside a promise, so a pollFn that throws rather than rejects still settles the read.
+    const promise = Promise.resolve().then(() =>
+      job.pollFn ? job.pollFn() : getAutoCodeStatus(job.frameworkId).then(normaliseAutoCode),
+    );
 
     promise
       .then((norm) => {
+        if (!current()) return;
         pollFailures.current[job.id] = 0;
-        setStatuses((prev) => ({ ...prev, [job.id]: norm }));
+        setStatuses((prev) => ({ ...prev, [job.id]: answered(prev[job.id], norm) }));
       })
       .catch(() => {
+        if (!current()) return;
         // One failure may be a blip; a run of them is a job nothing can report on.
         const n = (pollFailures.current[job.id] ?? 0) + 1;
         pollFailures.current[job.id] = n;
@@ -224,10 +246,28 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
             isTerminal(prev[job.id]?.status) ? prev : { ...prev, [job.id]: LOST },
           );
         }
+      })
+      .finally(() => {
+        if (current()) inFlight.current.delete(job.id);
       });
   }, []);
 
+  // A job that leaves the list (dismissed) takes its state with it, so one that comes back under
+  // the same id ("clips", "autocode:<framework>") starts clean rather than as the last one ended.
+  const ids = jobs.map((j) => j.id).join("\n");
+  const [listedIds, setListedIds] = useState(ids);
+  if (ids !== listedIds) {
+    setListedIds(ids);
+    const live = new Set(jobs.map((j) => j.id));
+    if (Object.keys(statuses).some((id) => !live.has(id))) {
+      setStatuses((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => live.has(id))));
+    }
+  }
+
   useEffect(() => {
+    const live = new Set(jobs.map((j) => j.id));
+    for (const id of Object.keys(pollFailures.current)) if (!live.has(id)) delete pollFailures.current[id];
+    for (const id of [...inFlight.current.keys()]) if (!live.has(id)) inFlight.current.delete(id);
     if (jobs.length === 0) return;
 
     // Immediate poll for all jobs.
@@ -250,8 +290,15 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   useEffect(() => {
     for (const job of jobs) {
       const norm = statuses[job.id];
-      if (isTerminal(norm?.status) && !completeFired.current.has(job.id)) {
-        completeFired.current.add(job.id);
+      // Not finished (a new run, or a job back under a dismissed one's id): its end is news again.
+      if (!norm || !isTerminal(norm.status)) {
+        completeFired.current.delete(job.id);
+        continue;
+      }
+      // Once per ending; a real answer after the lost state is the ending that counts.
+      const fired = completeFired.current.get(job.id);
+      if (!fired || (fired === LOST && norm !== LOST)) {
+        completeFired.current.set(job.id, norm);
         // Tell the shell before the callback, and inside the same
         // fired-once guard: polling is every 2s and a terminal job stays
         // terminal, so anywhere else would repost the same verdict forever.

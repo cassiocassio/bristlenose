@@ -1,6 +1,6 @@
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { ActivityChipStack } from "./ActivityChipStack";
-import type { ActivityJob } from "./ActivityChipStack";
+import type { ActivityJob, NormalisedJobStatus } from "./ActivityChipStack";
 import type { AutoCodeJobStatus } from "../utils/types";
 
 // Mock the API module.
@@ -650,6 +650,165 @@ describe("ActivityChipStack", () => {
         });
       }
       expect(mockGetStatus.mock.calls.length).toBeGreaterThanOrEqual(10);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+    });
+  });
+
+  // R13 follow-ups: a later poll must not rewrite a finished job, a job that leaves and comes
+  // back under the same id starts clean, and a hung read is not asked again on top of itself.
+  describe("a job's life under its id", () => {
+    const done = () =>
+      makeStatus({ status: "completed", processed_quotes: 10, completed_at: "2026-02-20T10:01:30Z" });
+    const lost = () => Promise.reject(new Error("Failed to fetch"));
+    const never = () => new Promise<never>(() => {});
+    const endLost = async () => {
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+    };
+
+    it("asks again only once the last read has answered", async () => {
+      const pollFn = vi.fn(never);
+      render(<ActivityChipStack jobs={[makeJob({ pollFn })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(pollFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a finished job's outcome against a later poll's different one", async () => {
+      // Every change to the job list polls each job once more; after a restart the server
+      // answers "failed" for a clip export that finished.
+      mockGetStatus.mockResolvedValueOnce(done());
+      mockGetStatus.mockResolvedValue(makeStatus({ status: "failed" }));
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      rerender(<ActivityChipStack jobs={[makeJob()]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(mockGetStatus).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+    });
+
+    it("follows a new run under the same id, and says when it finishes", async () => {
+      const onComplete = vi.fn();
+      mockGetStatus.mockResolvedValueOnce(done());
+      mockGetStatus.mockResolvedValueOnce(makeStatus());
+      mockGetStatus.mockResolvedValue(done());
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      rerender(<ActivityChipStack jobs={[makeJob({ onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(onComplete).toHaveBeenCalledTimes(2);
+    });
+
+    it("starts clean when a job is dismissed and its id comes back", async () => {
+      const first = vi.fn(lost);
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ pollFn: first })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await endLost();
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+      rerender(<ActivityChipStack jobs={[]} onDismiss={vi.fn()} />);
+      // Back under the same id, its first read failing: one failure is not five.
+      const second = vi.fn(lost);
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn: second })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(second).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+    });
+
+    it("does not count a dismissed job's late failure against the one back under its id", async () => {
+      let fail!: (e: Error) => void;
+      const first = vi.fn(() => new Promise<NormalisedJobStatus>((_, r) => (fail = r)));
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ pollFn: first })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      rerender(<ActivityChipStack jobs={[]} onDismiss={vi.fn()} />);
+      const second = vi.fn(lost);
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn: second })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      for (let i = 0; i < 3; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+      expect(second).toHaveBeenCalledTimes(4);
+      await act(async () => {
+        fail(new Error("Failed to fetch"));
+      });
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
+    });
+
+    it("keeps the returning job to one read out when a dismissed job's read settles", async () => {
+      let answer!: (s: NormalisedJobStatus) => void;
+      const first = vi.fn(() => new Promise<NormalisedJobStatus>((r) => (answer = r)));
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ pollFn: first })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      rerender(<ActivityChipStack jobs={[]} onDismiss={vi.fn()} />);
+      const second = vi.fn(never);
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn: second })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await act(async () => {
+        answer({ status: "running", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null });
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(second).toHaveBeenCalledTimes(1);
+    });
+
+    it("says when a job thought lost really finishes, once", async () => {
+      const onComplete = vi.fn();
+      let up = false;
+      const pollFn = vi.fn(() =>
+        up
+          ? Promise.resolve<NormalisedJobStatus>({ status: "completed", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null })
+          : Promise.reject(new Error("Failed to fetch")),
+      );
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ pollFn, onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await endLost();
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      up = true;
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn, onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+      expect(onComplete).toHaveBeenCalledTimes(2);
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn, onComplete })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(onComplete).toHaveBeenCalledTimes(2);
+    });
+
+    it("counts a poll that throws rather than rejects as a failed poll", async () => {
+      const pollFn = vi.fn((): Promise<NormalisedJobStatus> => {
+        throw new Error("boom");
+      });
+      render(<ActivityChipStack jobs={[makeJob({ pollFn })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      await endLost();
+      expect(pollFn).toHaveBeenCalledTimes(5);
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+    });
+
+    it("drops a read that was still out when its job was dismissed", async () => {
+      let answer!: (s: NormalisedJobStatus) => void;
+      const first = vi.fn(() => new Promise<NormalisedJobStatus>((r) => (answer = r)));
+      const { rerender } = render(<ActivityChipStack jobs={[makeJob({ pollFn: first })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      rerender(<ActivityChipStack jobs={[]} onDismiss={vi.fn()} />);
+      const second = vi.fn(never);
+      rerender(<ActivityChipStack jobs={[makeJob({ pollFn: second })]} onDismiss={vi.fn()} />);
+      await act(async () => {});
+      expect(second).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        answer({ status: "failed", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null });
+      });
       expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
     });
   });

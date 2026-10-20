@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 vi.mock("./api", () => ({ startClipExtraction: vi.fn() }));
 vi.mock("./toast", () => ({ toast: vi.fn() }));
 vi.mock("./announce", () => ({ announce: vi.fn() }));
-vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn() }));
+vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn(), getJobs: vi.fn(() => new Map()), removeJob: vi.fn() }));
 
 import { startClipExtraction } from "./api";
 import { toast } from "./toast";

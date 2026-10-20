@@ -119,7 +119,9 @@ export async function apiGetText(
   return { text: await resp.text(), language: resp.headers.get("Content-Language") };
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
+/** `timeoutMs`: a read that has not answered by then fails (an AbortController and a timer,
+ *  not `AbortSignal.timeout`, which fake timers cannot drive). Without it, a read waits. */
+export async function apiGet<T>(path: string, timeoutMs?: number): Promise<T> {
   const embedded = resolveFromExport<T>(path);
   if (embedded !== undefined) return embedded;
   if (isExportMode()) {
@@ -128,9 +130,16 @@ export async function apiGet<T>(path: string): Promise<T> {
     // instead of a doomed fetch that degrades silently.
     throw new Error(`Export mode: no embedded data for ${path}`);
   }
-  const resp = await fetch(`${apiBase()}${path}`, { headers: authHeaders() });
-  if (!resp.ok) throw await httpError("GET", path, resp);
-  return resp.json() as Promise<T>;
+  const abort = timeoutMs ? new AbortController() : null;
+  const timer = abort ? setTimeout(() => abort.abort(), timeoutMs) : undefined;
+  try {
+    const init = abort ? { headers: authHeaders(), signal: abort.signal } : { headers: authHeaders() };
+    const resp = await fetch(`${apiBase()}${path}`, init);
+    if (!resp.ok) throw await httpError("GET", path, resp);
+    return (await resp.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
@@ -586,8 +595,12 @@ export function startAutoCode(frameworkId: string): Promise<AutoCodeJobStatus> {
   return apiPost<AutoCodeJobStatus>(`/autocode/${frameworkId}`, {});
 }
 
+/** A background job's status read, polled every 2 s by its activity chip: one that has not
+ *  answered in this long counts as a failed poll, so a hung server ends the chip (R13). */
+const STATUS_READ_TIMEOUT_MS = 5_000;
+
 export function getAutoCodeStatus(frameworkId: string): Promise<AutoCodeJobStatus> {
-  return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`);
+  return apiGet<AutoCodeJobStatus>(`/autocode/${frameworkId}/status`, STATUS_READ_TIMEOUT_MS);
 }
 
 export function cancelAutoCode(frameworkId: string): Promise<AutoCodeJobStatus> {
@@ -736,7 +749,7 @@ export function startClipExtraction(
 }
 
 export function getClipExtractionStatus(): Promise<ClipJobStatus> {
-  return apiGet<ClipJobStatus>("/export/clips/status");
+  return apiGet<ClipJobStatus>("/export/clips/status", STATUS_READ_TIMEOUT_MS);
 }
 
 export function cancelClipExtraction(): Promise<{ cancelled: boolean }> {
@@ -756,7 +769,7 @@ export function startScreensExport(): Promise<ScreensExportStart> {
 }
 
 export function getScreensExportStatus(): Promise<ScreensExportStatus> {
-  return apiGet<ScreensExportStatus>("/export/screens/status");
+  return apiGet<ScreensExportStatus>("/export/screens/status", STATUS_READ_TIMEOUT_MS);
 }
 
 export function cancelScreensExport(): Promise<{ cancelled: boolean }> {

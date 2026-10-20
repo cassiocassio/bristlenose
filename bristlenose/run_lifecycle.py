@@ -84,7 +84,10 @@ log = logging.getLogger("bristlenose")
 _caught_signal: int | None = None
 _prev_handlers: dict[int, object] = {}
 
-#: How long a hosted run may take to stop before the backstop ends it.
+#: How long a hosted run may take to stop before the backstop ends it. The Mac
+#: app's Stop holds its SIGKILL until after this plus the lock wait below, so
+#: that the backstop, not the kill, records the stop: mirrored as
+#: `PipelineRunner.pythonHostedStopGrace`, pinned by test_swift_python_contract.
 _HOSTED_STOP_GRACE_S = 20.0
 #: How long the backstop waits for a terminus write already under way: one
 #: stuck on a stalled disk must not hold the exit too.
@@ -157,9 +160,11 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
         # by pydantic as an ordinary error: a cancel recorded as a failure
         # (R19). The CLI keeps a second Ctrl-C as the user's force. Quit sends
         # SIGINT only. The app's Stop, on its own run or an attached one,
-        # escalates: SIGINT, SIGTERM at +5 s (ignored here), SIGKILL at +8 s,
-        # which no handler sees and which is what ends a stopping hosted run.
-        # Nothing escalates after Quit: `_arm_hosted_backstop` ends a stuck unwind.
+        # escalates: SIGINT, SIGTERM at +5 s (ignored here), SIGKILL at +30 s.
+        # `_arm_hosted_backstop` ends a stuck unwind first, after Stop and
+        # Quit alike, and records it; SIGKILL, which writes nothing, is the
+        # last resort (`PipelineRunner.cancelLadder`, pinned against
+        # `_HOSTED_STOP_GRACE_S` in tests/test_swift_python_contract.py).
         return
     _caught_signal = signum
     if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":

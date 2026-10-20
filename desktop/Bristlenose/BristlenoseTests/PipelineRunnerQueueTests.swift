@@ -91,7 +91,8 @@ struct PipelineRunnerQueueTests {
              manifestRead: (@Sendable (URL) async -> PipelineState)? = nil,
              endStateTimeout: Duration = .seconds(5),
              slowEndReread: Duration = .milliseconds(50),
-             drainLimit: Duration = .seconds(1)) {
+             drainLimit: Duration = .seconds(1),
+             escalationSleep: @escaping @Sendable (Duration) async -> Void = { _ in }) {
             root = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("runner-queue-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -122,7 +123,7 @@ struct PipelineRunnerQueueTests {
                         pid: launch.pid, isRunning: { launch.running }, output: launch.output
                     )
                 },
-                escalationSleep: { _ in },
+                escalationSleep: escalationSleep,
                 // Each run leads its own group, as Foundation makes every child.
                 signalTarget: { -$0 },
                 activeProvider: { [weak self] in self?.providerNow },
@@ -349,6 +350,30 @@ struct PipelineRunnerQueueTests {
         await until { rig.signals.count >= 3 }
 
         #expect(rig.signals.map(\.sig) == [SIGINT, SIGTERM, SIGKILL])
+    }
+
+    /// The backstop ends a stopping run 20 s in (`os._exit`, which takes none
+    /// of its children); the next run starts at once and moves `generation`.
+    /// SIGKILL at +30 s must still reach what the stopped run left behind.
+    @Test func aWorkerLeftBehindIsStillKilledOnceTheNextRunHasStarted() async {
+        let gate = LadderGate()
+        let rig = Rig(escalationSleep: { _ in await gate.wait() }); defer { rig.cleanUp() }
+        let a = rig.project("A"), b = rig.project("B")
+        rig.onSignal = { launch, sig in
+            if sig == SIGINT { launch.exit(.exited(code: 130), groupLingers: true) }
+            if sig == SIGKILL { launch.groupAlive = false }
+        }
+        rig.runner.start(project: a)
+        rig.runner.start(project: b)
+        let pidA = rig.launches[0].pid
+
+        rig.runner.cancel(project: a)
+        await until { rig.launches.count == 2 }
+        #expect(rig.launches.count == 2, "B never started, so the generation never moved")
+        await gate.open()
+        await until { rig.signals.contains { $0.pid == -pidA && $0.sig == SIGKILL } }
+
+        #expect(rig.signals.filter { $0.pid == -pidA }.map(\.sig) == [SIGINT, SIGTERM, SIGKILL])
     }
 
     @Test func aStopWhoseSignalFailedCanBeTriedAgain() async {
@@ -1272,5 +1297,14 @@ struct PipelineRunnerQueueTests {
         #expect(PipelineRunner.ownedSignalTarget(pid: 500, processGroup: 42, ownGroup: 42) == 500)
         #expect(PipelineRunner.ownedSignalTarget(pid: 500, processGroup: -1, ownGroup: 42) == 500)
         #expect(PipelineRunner.ownedSignalTarget(pid: 42, processGroup: 42, ownGroup: 42) == 42)
+    }
+}
+
+/// Holds Stop's ladder until a test lets it go.
+private actor LadderGate {
+    private var isOpen = false
+    func open() { isOpen = true }
+    func wait() async {
+        while !isOpen { try? await Task.sleep(for: .milliseconds(5)) }
     }
 }

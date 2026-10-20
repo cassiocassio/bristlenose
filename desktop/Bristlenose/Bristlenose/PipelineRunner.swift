@@ -178,7 +178,7 @@ struct PipelineProgress: Equatable {
     /// actually exiting. Lets the pill / popover acknowledge the
     /// click immediately ("Stopping…", disabled button) so the user
     /// doesn't keep clicking Stop while SIGINT/SIGTERM/SIGKILL play
-    /// out (can take 1–8s on a wedged subprocess).
+    /// out (up to 30 s on a wedged subprocess, `cancelLadder`).
     var isStopping: Bool = false
     /// Sessions a first analysis has made readable so far (progressive lenses):
     /// the newest `sessions_readable` the run reported, never moving back. Nil
@@ -1839,11 +1839,15 @@ final class PipelineRunner: ObservableObject {
                 escalateCancel(
                     pid: target, projectID: project.id,
                     stillRunning: { [weak self] in
-                        guard let self, self.generation == gen else { return false }
                         // A group outlives its leader while any member lives,
                         // and its id is not reused until then, so a worker the
-                        // leader left behind still gets the rest of the ladder.
+                        // leader left behind still gets the rest of the ladder,
+                        // even once the next run has started: the backstop's
+                        // exit at the grace takes none of the run's children.
                         if target < 0 { return signal(target, 0) == 0 }
+                        // A bare pid: `currentRun` is the next run once the
+                        // generation moves.
+                        guard let self, self.generation == gen else { return false }
                         return self.currentRun?.isRunning() == true
                     },
                     send: { signal(target, $0) }
@@ -1877,8 +1881,8 @@ final class PipelineRunner: ObservableObject {
                 // Schedule signal escalation: SIGINT alone won't cut
                 // through whisper/torch model loads (Python signal
                 // handler can only run between bytecodes, blocked
-                // during long C calls). At 5s escalate to SIGTERM, at
-                // 8s SIGKILL — the user's "Stop" must always succeed.
+                // during long C calls). `cancelLadder`: SIGTERM at 5 s,
+                // SIGKILL at 30 s — the user's "Stop" must always succeed.
                 scheduleOrphanCancelEscalation(pid: pid, target: target, projectID: project.id)
             } else if err == ESRCH {
                 // Process already gone (raced our cancel). Treat as
@@ -1923,12 +1927,29 @@ final class PipelineRunner: ObservableObject {
         )
     }
 
-    /// Stop's ladder after SIGINT: SIGTERM at +5 s, SIGKILL 3 s later.
+    /// Python's hosted-stop backstop, `run_lifecycle._HOSTED_STOP_GRACE_S`: a
+    /// desktop-hosted run still stopping this long after the signal writes its
+    /// own `run_cancelled` and exits. `tests/test_swift_python_contract.py`
+    /// pins this to the Python value.
+    nonisolated static let pythonHostedStopGrace: Duration = .seconds(20)
+    /// `run_lifecycle._BACKSTOP_LOCK_TIMEOUT_S`: how long the backstop waits
+    /// for a terminus write already under way before giving up on its own.
+    nonisolated static let pythonBackstopLockWait: Duration = .seconds(5)
+
+    /// Stop's ladder after SIGINT: SIGTERM at +5 s, SIGKILL at +30 s.
     /// Whisper / torch / ctranslate2 hold the GIL during long C calls, so a
     /// Python signal handler can be deferred 30–60s during model load. The
-    /// user clicked Stop; their contract is "this stops".
+    /// user clicked Stop; their contract is "this stops", and SIGKILL keeps it.
+    /// SIGKILL writes no terminus, so it waits out the backstop
+    /// (`pythonHostedStopGrace` + `pythonBackstopLockWait`, plus 5 s): before,
+    /// at +8 s, a run still unwinding read "stopped unexpectedly" and the next
+    /// run recorded the researcher's Stop as a failure. The row reads
+    /// "Stopping…" meanwhile. The grace starts when Python's handler runs, not
+    /// at SIGINT: a handler more than 10 s late (5 s if a terminus write holds
+    /// the lock), followed by an unwind that blocks, still loses to SIGKILL.
+    /// Measured 20 Oct 2026: real decode calls take SIGINT in under 0.4 s.
     nonisolated static let cancelLadder: [(signal: Int32, after: Duration)] = [
-        (SIGTERM, .seconds(5)), (SIGKILL, .seconds(3)),
+        (SIGTERM, .seconds(5)), (SIGKILL, .seconds(25)),
     ]
 
     /// Run `cancelLadder`, checking before each step that the run is still

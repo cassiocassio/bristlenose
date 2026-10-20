@@ -11,6 +11,7 @@ write one.
 
 from __future__ import annotations
 
+import os
 import signal
 import sys
 import time
@@ -304,3 +305,92 @@ def test_the_cli_holds_the_exit_until_it_has_said_how_the_restore_went(
     monkeypatch.setattr(cli, "_say", _spy)
     CliRunner().invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
     assert said_while_held == [True]
+
+
+# --- The Mac app's Stop ladder against the backstop (R20 follow-up) -----------
+#
+# Stop sends SIGINT, then the steps of `PipelineRunner.cancelLadder`, to the run's
+# process group. SIGKILL writes no terminus, so a ladder that kills before the
+# backstop fires left a stop recorded as "stopped unexpectedly". These drive the
+# ladder as written in the Swift source against the real lifecycle, every time
+# scaled by _LADDER_SCALE so a 30 s ladder takes a few seconds.
+
+_LADDER_SCALE = 0.15
+
+
+def _scaled_backstop_preamble() -> str:
+    import bristlenose.run_lifecycle as rl
+
+    return (
+        "import bristlenose.run_lifecycle as _r\n"
+        f"_r._HOSTED_STOP_GRACE_S = {rl._HOSTED_STOP_GRACE_S * _LADDER_SCALE}\n"
+        f"_r._BACKSTOP_LOCK_TIMEOUT_S = {rl._BACKSTOP_LOCK_TIMEOUT_S * _LADDER_SCALE}"
+    )
+
+
+def _press_stop(proc) -> None:
+    """SIGINT, then each ladder step while the run is alive, to its group."""
+    from tests.test_swift_python_contract import swift_cancel_ladder
+
+    os.killpg(proc.pid, signal.SIGINT)
+    for name, after in swift_cancel_ladder():
+        time.sleep(after * _LADDER_SCALE)
+        if proc.poll() is not None:
+            return
+        os.killpg(proc.pid, getattr(signal, name))
+
+
+def _stop_with_the_ladder(tmp_path: Path, body: str) -> tuple[int, list[object]]:
+    sentinel = tmp_path / "ready"
+    proc = _spawn_lifecycle_subprocess(
+        tmp_path, body.format(sentinel=str(sentinel)),
+        preamble=_scaled_backstop_preamble(), env=HOSTED,
+    )
+    f = events_path(tmp_path)
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        _press_stop(proc)
+        code = _wait_exit(proc, 10.0)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert code is not None
+    return code, _termini(f)
+
+
+def test_a_stop_whose_unwind_outlasts_the_old_ladder_is_recorded_stopped(
+    tmp_path: Path,
+) -> None:
+    """An unwind that ends inside the grace (a join on a slow C call) writes its
+    own run_cancelled; the ladder must not kill it first."""
+    import bristlenose.run_lifecycle as rl
+
+    unwind = 0.75 * rl._HOSTED_STOP_GRACE_S * _LADDER_SCALE
+    body = f"""
+        import signal, threading
+        Path({{sentinel!r}}).write_text("ready")
+        try:
+            signal.pause()
+        finally:
+            threading.Event().wait({unwind})
+    """
+    code, termini = _stop_with_the_ladder(tmp_path, body)
+    assert code != -signal.SIGKILL, "the ladder killed a run that was unwinding"
+    assert len(termini) == 1 and isinstance(termini[0], RunCancelledEvent), termini
+
+
+def test_a_stop_that_never_unwinds_is_recorded_by_the_backstop_not_killed(
+    tmp_path: Path,
+) -> None:
+    code, termini = _stop_with_the_ladder(tmp_path, """
+        import signal, threading
+        Path({sentinel!r}).write_text("ready")
+        try:
+            signal.pause()
+        finally:
+            threading.Event().wait()
+    """)
+    assert code == 128 + signal.SIGINT, f"ended by {code}, not the backstop"
+    assert len(termini) == 1 and isinstance(termini[0], RunCancelledEvent), termini

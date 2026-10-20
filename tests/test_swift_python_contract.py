@@ -275,3 +275,63 @@ class TestProgressStageVocabularyContract:
             f"Swift knows {sorted(swift_set)}, Python emits {sorted(PROGRESS_STAGES)} — "
             f"a stage in the difference renders no verb"
         )
+
+
+_PIPELINE_RUNNER_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "PipelineRunner.swift"
+)
+# Mirrors `static let cancelLadder: [(signal: Int32, after: Duration)] = [ ... ]`.
+_CANCEL_LADDER_RE = re.compile(r"static\s+let\s+cancelLadder\b[^=]*=\s*\[(.*?)\n\s*\]", re.S)
+_LADDER_STEP_RE = re.compile(r"\((SIG[A-Z]+),\s*\.seconds\((\d+(?:\.\d+)?)\)\)")
+
+
+def swift_cancel_ladder() -> list[tuple[str, float]]:
+    """Stop's escalation after SIGINT, as `(signal name, seconds after the last step)`."""
+    text = _PIPELINE_RUNNER_SWIFT.read_text(encoding="utf-8")
+    match = _CANCEL_LADDER_RE.search(text)
+    assert match is not None, "PipelineRunner.swift no longer declares `cancelLadder`"
+    steps = [(name, float(s)) for name, s in _LADDER_STEP_RE.findall(match.group(1))]
+    assert steps, "cancelLadder holds no `(SIGNAL, .seconds(n))` steps this test can read"
+    return steps
+
+
+def _swift_seconds(name: str) -> float:
+    text = _PIPELINE_RUNNER_SWIFT.read_text(encoding="utf-8")
+    match = re.search(
+        rf"static\s+let\s+{name}\s*:\s*Duration\s*=\s*\.seconds\((\d+(?:\.\d+)?)\)", text,
+    )
+    assert match is not None, f"PipelineRunner.swift no longer declares `{name}: Duration`"
+    return float(match.group(1))
+
+
+class TestStopLadderContract:
+    """Stop's SIGKILL lands after Python's hosted backstop could record the stop.
+
+    A desktop-hosted run that is still stopping `_HOSTED_STOP_GRACE_S` after the
+    signal writes its own `run_cancelled` and exits. SIGKILL writes nothing, so a
+    ladder that kills first leaves the log ending on `run_started` with a dead pid,
+    which the app reads as "stopped unexpectedly" and the next run records as a
+    failure (R20 follow-up, 20 Oct 2026). The Swift suite pins the order from its
+    side; this is the copy that runs on every push.
+    """
+
+    def test_swift_mirrors_the_backstop_constants(self) -> None:
+        import bristlenose.run_lifecycle as rl
+
+        assert _swift_seconds("pythonHostedStopGrace") == rl._HOSTED_STOP_GRACE_S
+        assert _swift_seconds("pythonBackstopLockWait") == rl._BACKSTOP_LOCK_TIMEOUT_S
+
+    def test_sigkill_lands_after_the_backstop_could_write(self) -> None:
+        import bristlenose.run_lifecycle as rl
+
+        ladder = swift_cancel_ladder()
+        assert ladder[-1][0] == "SIGKILL", f"Stop's last resort is not SIGKILL: {ladder}"
+        steps = [name for name, _ in ladder]
+        first_kill = steps.index("SIGKILL")
+        kill_at = sum(after for _, after in ladder[: first_kill + 1])
+        latest_write = rl._HOSTED_STOP_GRACE_S + rl._BACKSTOP_LOCK_TIMEOUT_S
+        assert kill_at > latest_write, (
+            f"Stop sends SIGKILL {kill_at:g} s after SIGINT; the backstop may still be "
+            f"writing its run_cancelled until {latest_write:g} s. Lengthen the SIGKILL "
+            "step in PipelineRunner.cancelLadder."
+        )

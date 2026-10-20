@@ -914,7 +914,9 @@ def _print_pipeline_summary(
         _print_mcp_connect(urlparse(serve_url).port or 8150)
 
 
-def _print_pipeline_failure(cause: object, input_dir: Path, settings: object) -> None:
+def _print_pipeline_failure(
+    cause: object, input_dir: Path, settings: object, command: str = "run",
+) -> None:
     """Print a researcher-facing failure banner from a structured Cause.
 
     Maps cause.category to actionable copy; falls back to cause.message for
@@ -936,7 +938,7 @@ def _print_pipeline_failure(cause: object, input_dir: Path, settings: object) ->
     from bristlenose.providers import PROVIDERS
 
     folder = input_dir.name or str(input_dir)
-    retry_cmd = f"bristlenose run {folder}/"
+    retry_cmd = f"bristlenose {command} {folder}/"
     category = getattr(cause, "category", None)
     message = getattr(cause, "message", "") or ""
     provider_key = getattr(cause, "provider", None) or getattr(settings, "llm_provider", None)
@@ -1652,6 +1654,10 @@ def transcribe(
     except PreflightAbortedError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(2) from exc
+    except PipelineAbandonedError as exc:
+        # As `run` does: the banner, not typer's traceback (R121).
+        _print_pipeline_failure(exc.cause, input_dir, settings, command="transcribe")
+        raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
     # Transcript-specific: point to the transcripts dir, not the report
@@ -1787,6 +1793,10 @@ def analyze(
     except PreflightAbortedError as exc:
         _say(MessageKind.ERROR, str(exc))
         raise typer.Exit(2) from exc
+    except PipelineAbandonedError as exc:
+        # As `run` does: the banner, not typer's traceback (R121).
+        _print_pipeline_failure(exc.cause, transcripts_dir, settings, command="analyze")
+        raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
 

@@ -62,6 +62,11 @@ enum EventLogReader {
         /// Carried on every progress line once non-zero, so the newest line
         /// always has it.
         let sessionsReadable: Int?
+        /// Token totals on a terminus, present only when the run made an LLM
+        /// call that reported usage (`cost.compute_run_cost`): a run that
+        /// finished from cache carries neither.
+        let inputTokens: Int?
+        let outputTokens: Int?
 
         enum CodingKeys: String, CodingKey {
             case event, kind
@@ -78,6 +83,8 @@ enum EventLogReader {
             case etaRemainingSeconds = "eta_remaining_seconds"
             case predictedTotalSeconds = "predicted_total_seconds"
             case sessionsReadable = "sessions_readable"
+            case inputTokens = "input_tokens"
+            case outputTokens = "output_tokens"
         }
     }
 

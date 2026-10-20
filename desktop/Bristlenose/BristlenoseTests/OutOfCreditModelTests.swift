@@ -41,19 +41,4 @@ struct OutOfCreditModelTests {
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .invalid)
         }
     }
-
-    @Test func onlyAFinishedAnalysisCounts() {
-        let id = UUID()
-        func succeeded(_ from: PipelineState?, _ to: PipelineState) -> Bool {
-            OutOfCreditModel.aRunSucceeded(old: from.map { [id: $0] } ?? [:], new: [id: to])
-        }
-        #expect(succeeded(.running, .ready(Date())))
-        // Stopped, failed and partial runs prove nothing about credit.
-        #expect(!succeeded(.running, .stopped(stagesComplete: [])))
-        #expect(!succeeded(.running, .failed(.passthrough("402"), category: .outOfCredit)))
-        #expect(!succeeded(.running, .partial(kind: "transcribe-only", stagesComplete: [])))
-        // A passive manifest read of an analysed study is not a run.
-        #expect(!succeeded(.scanning, .ready(Date())))
-        #expect(!succeeded(nil, .ready(Date())))
-    }
 }

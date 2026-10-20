@@ -972,10 +972,9 @@ struct ContentView: View {
             for id in CompletionRescan.projectsFinishingRun(old: old, new: new) {
                 projectIndex.recordPipelineRun(id: id)
             }
-            // A finished analysis is proof the provider has credit (R40).
-            if OutOfCreditModel.aRunSucceeded(old: old, new: new) {
-                OutOfCreditModel.noteRunSucceeded()
-            }
+            // A finished run's credit verdict is cleared by PipelineRunner,
+            // which knows the run's own provider and whether it called an LLM
+            // (R40).
         }
         // Re-analyse reads the session count, which lands ~1.5 s after the run
         // ends (`scheduleCountRescan`), so the state change above still sees

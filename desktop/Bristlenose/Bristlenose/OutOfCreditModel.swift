@@ -19,8 +19,9 @@ import Foundation
 /// from `PipelineRunner.deriveFailureState` — the authoritative run-failure path,
 /// keyed on the distinct billing category (never a transient `.quota`/429).
 /// Two things clear it: a fresh validation recording `.online`, and a run
-/// that finishes (`noteRunSucceeded`, R40). Refocus only re-reads the cache, so
-/// after a browser top-up the pill stays lit until one of those happens. And
+/// that finishes having made an LLM call (`noteRunSucceeded`, R40). Refocus
+/// only re-reads the cache, so after a browser top-up the pill stays lit until
+/// one of those happens. And
 /// the OpenAI Settings probe is unbilled (GET /v1/models), so Settings can't
 /// detect OpenAI credit-out — the run-failure trigger covers it instead.
 @MainActor
@@ -80,30 +81,18 @@ final class OutOfCreditModel: ObservableObject {
         NotificationCenter.default.post(name: .bristlenoseOutOfCreditChanged, object: nil)
     }
 
-    /// Whether a run just finished with a whole analysis: `.running` → `.ready`.
-    /// A stopped, failed or partial run proves nothing about credit.
-    static func aRunSucceeded(old: [UUID: PipelineState], new: [UUID: PipelineState]) -> Bool {
-        new.contains { id, state in
-            guard case .running = old[id], case .ready = state else { return false }
-            return true
-        }
-    }
-
-    /// Clear a sticky out-of-credit verdict on the active provider once a run
-    /// has finished on it, then post a refresh so the pill goes out (R40).
-    /// The verdict was sticky with nothing to re-validate it: a top-up happens
-    /// in the browser, and the pill stayed lit through a successful run.
-    ///
-    /// The active provider, as `recordActiveProviderOutOfCredit` attributes a
-    /// failure: the run was spawned with it.
-    static func noteRunSucceeded() {
+    /// Clear a sticky out-of-credit verdict on the provider a run was spawned
+    /// with, once that run has finished with an LLM call, then post a refresh
+    /// so the pill goes out (R40). The verdict was sticky with nothing to
+    /// re-validate it: a top-up happens in the browser, and the pill stayed lit
+    /// through a successful run. `PipelineRunner` decides when (its own finish,
+    /// owned or attached, with tokens on its terminus); this does the clearing.
+    static func noteRunSucceeded(provider: LLMProvider) {
         guard
-            let active = UserDefaults.standard.string(forKey: "activeProvider")
-                .flatMap(LLMProvider.init(rawValue:)),
-            active.needsAPIKey,
-            let keychainProvider = active.keychainProvider,
+            provider.needsAPIKey,
+            let keychainProvider = provider.keychainProvider,
             let key = KeychainHelper.get(provider: keychainProvider), !key.isEmpty,
-            clearAfterSuccessfulRun(provider: active, key: key)
+            clearAfterSuccessfulRun(provider: provider, key: key)
         else { return }
         NotificationCenter.default.post(name: .bristlenoseOutOfCreditChanged, object: nil)
     }

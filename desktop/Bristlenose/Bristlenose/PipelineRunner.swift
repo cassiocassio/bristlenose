@@ -558,15 +558,23 @@ final class PipelineRunner: ObservableObject {
     private let keyReadiness: @MainActor () -> BristlenoseShared.APIKeyReadiness
     private let launcher: RunLauncher?
     private let escalationSleep: @Sendable (Duration) async -> Void
+    /// Where Stop's and Quit's signals for a run's pid go — its process group,
+    /// by `ownedSignalTarget`. A test passes its own so the group case can be
+    /// seen without a second process.
+    private let signalTarget: (pid_t) -> pid_t
+    private let activeProvider: @MainActor () -> LLMProvider?
+    private let noteRunSucceeded: @MainActor (LLMProvider) -> Void
+
+    /// The provider each run was spawned with — read back from the PID file
+    /// for an attached orphan. A finished run clears an out-of-credit verdict
+    /// on this one, not on whichever is active when it ends (R40).
+    private var runProviders: [UUID: LLMProvider] = [:]
 
     /// A launched run, as the runner sees it once it is going.
     struct LaunchedRun {
         let pid: pid_t
         /// False once the process has exited and been reaped.
         let isRunning: () -> Bool
-        /// `getpgid` of the run, read at launch: Foundation makes each child
-        /// the leader of its own group.
-        let processGroup: pid_t
     }
 
     /// Starts a `bristlenose run` for a project, `--clean` or not, and calls
@@ -588,6 +596,10 @@ final class PipelineRunner: ObservableObject {
     ///     defaults or Keychain.
     ///   - launcher: how a run is started. Nil, the app's, launches the sidecar.
     ///   - escalationSleep: the wait between Stop's signals; a test passes none.
+    ///   - signalTarget: where a run's signals go, given its pid.
+    ///   - activeProvider: the provider a run is spawned with.
+    ///   - noteRunSucceeded: what a finished run that made an LLM call does to
+    ///     its provider's out-of-credit verdict.
     init(
         notificationCenter: NotificationCenter = .default,
         sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno },
@@ -598,6 +610,15 @@ final class PipelineRunner: ObservableObject {
         launcher: RunLauncher? = nil,
         escalationSleep: @escaping @Sendable (Duration) async -> Void = {
             try? await Task.sleep(for: $0)
+        },
+        signalTarget: @escaping (pid_t) -> pid_t = {
+            PipelineRunner.ownedSignalTarget(pid: $0, processGroup: getpgid($0), ownGroup: getpgrp())
+        },
+        activeProvider: @escaping @MainActor () -> LLMProvider? = {
+            UserDefaults.standard.string(forKey: "activeProvider").flatMap(LLMProvider.init(rawValue:))
+        },
+        noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = {
+            OutOfCreditModel.noteRunSucceeded(provider: $0)
         }
     ) {
         self.sendSignal = sendSignal
@@ -605,6 +626,9 @@ final class PipelineRunner: ObservableObject {
         self.keyReadiness = keyReadiness
         self.launcher = launcher
         self.escalationSleep = escalationSleep
+        self.signalTarget = signalTarget
+        self.activeProvider = activeProvider
+        self.noteRunSucceeded = noteRunSucceeded
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language) runs again, and the per-session
@@ -941,6 +965,8 @@ final class PipelineRunner: ObservableObject {
             "attaching to orphan project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
         )
         attachedOrphanPIDs[project.id] = pid
+        runProviders[project.id] = (try? String(contentsOf: Self.pidFileURL(for: project), encoding: .utf8))
+            .flatMap(Self.recordedProvider(pidFileContents:))
         state[project.id] = .running
         sessionsReadable[project.id] = nil
         priorRunIds[project.id] = nil
@@ -1021,6 +1047,7 @@ final class PipelineRunner: ObservableObject {
     }
 
     private func handleOrphanExit(projectID: UUID, project: Project) {
+        let provider = runProviders.removeValue(forKey: projectID)
         attachedOrphanPIDs[projectID] = nil
         orphanPollTasks[projectID]?.cancel()
         orphanPollTasks[projectID] = nil
@@ -1047,7 +1074,39 @@ final class PipelineRunner: ObservableObject {
                 at: Self.manifestURL(for: project), timeout: Self.scanTimeout
             )
             await self?.applyScanResult(resolved, for: projectID)
+            if case .ready = resolved {
+                await self?.noteCreditIfTheRunUsedAnLLM(
+                    provider: provider, project: project, priorRunId: nil
+                )
+            }
         }
+    }
+
+    /// A run that finished whole and made an LLM call on `provider` proves it
+    /// has credit, so a sticky out-of-credit verdict on it can go (R40). A run
+    /// that finished from cache made no call and proves nothing; its terminus
+    /// carries no tokens. `priorRunId` is the run newest at spawn: a terminus
+    /// with that id is not this run's.
+    private func noteCreditIfTheRunUsedAnLLM(
+        provider: LLMProvider?, project: Project?, priorRunId: String?
+    ) {
+        guard let provider, let project else { return }
+        let terminus = EventLogReader.tailEvent(at: Self.eventsURL(for: project))
+        guard Self.runUsedAnLLM(terminus: terminus, priorRunId: priorRunId) else {
+            Self.logger.info(
+                "run finished with no LLM call on record project=\(project.id.uuidString, privacy: .public) — credit verdict left as it is"
+            )
+            return
+        }
+        noteRunSucceeded(provider)
+    }
+
+    nonisolated static func runUsedAnLLM(
+        terminus: EventLogReader.Event?, priorRunId: String?
+    ) -> Bool {
+        guard let terminus, terminus.event == "run_completed",
+              terminus.runId != priorRunId else { return false }
+        return (terminus.inputTokens ?? 0) + (terminus.outputTokens ?? 0) > 0
     }
 
     // MARK: - PID file
@@ -1074,7 +1133,9 @@ final class PipelineRunner: ObservableObject {
             .appendingPathComponent("pids")
     }
 
-    private nonisolated static func writePIDFile(for project: Project, pid: pid_t) {
+    private nonisolated static func writePIDFile(
+        for project: Project, pid: pid_t, provider: LLMProvider?
+    ) {
         let url = pidFileURL(for: project)
         try? FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
@@ -1087,7 +1148,18 @@ final class PipelineRunner: ObservableObject {
             logger.error("no start token for pid=\(pid, privacy: .public) at spawn — orphan attach for this run will be indeterminate")
             start = noStartToken
         }
-        try? Data("\(pid)\n\(start)".utf8).write(to: url, options: .atomic)
+        // Third line: the provider the run was spawned with, so a relaunch
+        // that attaches the run still knows it (R40). `ownedRunVerdict` reads
+        // only the first two; a file without it reads as "not known".
+        try? Data("\(pid)\n\(start)\n\(provider?.rawValue ?? "")".utf8)
+            .write(to: url, options: .atomic)
+    }
+
+    /// The provider a run's PID file records, if it records one.
+    nonisolated static func recordedProvider(pidFileContents: String) -> LLMProvider? {
+        let lines = pidFileContents.split(separator: "\n", omittingEmptySubsequences: false)
+        guard lines.count > 2 else { return nil }
+        return LLMProvider(rawValue: lines[2].trimmingCharacters(in: .whitespaces))
     }
 
     private nonisolated static func removePIDFile(for project: Project) {
@@ -1440,9 +1512,7 @@ final class PipelineRunner: ObservableObject {
                 // The run's whole process group, as `Process.interrupt()` did
                 // (measured 20 Oct 2026: it reaches a forked child too), so
                 // SIGKILL also takes the run's own children.
-                let target = Self.ownedSignalTarget(
-                    pid: run.pid, processGroup: run.processGroup, ownGroup: getpgrp()
-                )
+                let target = signalTarget(run.pid)
                 let err = sendSignal(target, SIGINT)
                 if err == 0 {
                     Self.logger.info(
@@ -1483,11 +1553,14 @@ final class PipelineRunner: ObservableObject {
             // were ours. Send SIGINT directly and interpret errno —
             // re-verifying via /bin/ps was racy (PID-file write delays,
             // ps exec hiccups) and the silent skip path was the
-            // Stop-is-a-lie alpha blocker (24 Apr 2026).
-            let result = kill(pid, SIGINT)
-            if result == 0 {
+            // Stop-is-a-lie alpha blocker (24 Apr 2026). The orphan was
+            // spawned by an earlier launch, so it leads its own process group
+            // as an owned run does, and the signals go to the group too.
+            let target = signalTarget(pid)
+            let err = sendSignal(target, SIGINT)
+            if err == 0 {
                 Self.logger.info(
-                    "SIGINT to attached orphan project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
+                    "SIGINT to attached orphan project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public) target=\(target, privacy: .public)"
                 )
                 liveData.mutateProgress(for: project.id) { p in
                     p.lastLine = "Stopping…"
@@ -1503,15 +1576,15 @@ final class PipelineRunner: ObservableObject {
                 // handler can only run between bytecodes, blocked
                 // during long C calls). At 5s escalate to SIGTERM, at
                 // 8s SIGKILL — the user's "Stop" must always succeed.
-                scheduleOrphanCancelEscalation(pid: pid, projectID: project.id)
-            } else if errno == ESRCH {
+                scheduleOrphanCancelEscalation(pid: pid, target: target, projectID: project.id)
+            } else if err == ESRCH {
                 // Process already gone (raced our cancel). Treat as
                 // success and run the same teardown the poll task would.
                 Self.logger.info(
                     "orphan already exited project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
                 )
                 handleOrphanExit(projectID: project.id, project: project)
-            } else if errno == EPERM {
+            } else if err == EPERM {
                 // Not ours after all — leave state intact, surface in log.
                 // Should not happen given attach-time ownership check.
                 Self.logger.error(
@@ -1519,7 +1592,7 @@ final class PipelineRunner: ObservableObject {
                 )
             } else {
                 Self.logger.error(
-                    "SIGINT failed errno=\(errno, privacy: .public) project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
+                    "SIGINT failed errno=\(err, privacy: .public) project=\(project.id.uuidString, privacy: .public) pid=\(pid, privacy: .public)"
                 )
             }
         } else if queue.remove(project.id) {
@@ -1529,16 +1602,21 @@ final class PipelineRunner: ObservableObject {
     }
 
     /// Escalate from SIGINT to SIGTERM to SIGKILL if the orphan won't
-    /// die. Bail out at any step if the PID is already dead or the
-    /// attach has changed (project was re-cancelled with a new run, or
-    /// orphan poll task already ran handleOrphanExit).
-    private func scheduleOrphanCancelEscalation(pid: pid_t, projectID: UUID) {
+    /// die. Bail out at any step once nothing is left: for a group, when no
+    /// member is alive (its id is not reused until then, so a worker the run
+    /// left behind still gets the ladder after `handleOrphanExit`); for a bare
+    /// pid, when it is dead or the attach has changed (project was
+    /// re-cancelled with a new run, or orphan poll task already ran
+    /// handleOrphanExit).
+    private func scheduleOrphanCancelEscalation(pid: pid_t, target: pid_t, projectID: UUID) {
+        let signal = sendSignal
         escalateCancel(
-            pid: pid, projectID: projectID,
+            pid: target, projectID: projectID,
             stillRunning: { [weak self] in
-                kill(pid, 0) == 0 && self?.attachedOrphanPIDs[projectID] == pid
+                if target < 0 { return signal(target, 0) == 0 }
+                return signal(pid, 0) == 0 && self?.attachedOrphanPIDs[projectID] == pid
             },
-            send: { kill(pid, $0) == 0 ? 0 : errno }
+            send: { signal(target, $0) }
         )
     }
 
@@ -1618,15 +1696,17 @@ final class PipelineRunner: ObservableObject {
         let targets = Self.quitSignalTargets(
             owned: owned, orphans: Array(attachedOrphanPIDs.values)
         )
+        // Each run's group, as Stop does, so a run's own children hear it too.
         for pid in targets {
-            let err = sendSignal(pid, SIGINT)
+            let target = signalTarget(pid)
+            let err = sendSignal(target, SIGINT)
             if err == 0 {
-                Self.logger.info("quit: SIGINT to run pid=\(pid, privacy: .public)")
+                Self.logger.info("quit: SIGINT to run pid=\(pid, privacy: .public) target=\(target, privacy: .public)")
             } else if err == ESRCH {
                 // Already gone between polls — the outcome Quit wanted.
                 Self.logger.info("quit: run pid=\(pid, privacy: .public) already exited")
             } else {
-                Self.logger.error("quit: SIGINT to run pid=\(pid, privacy: .public) failed errno=\(err, privacy: .public)")
+                Self.logger.error("quit: SIGINT to run pid=\(pid, privacy: .public) target=\(target, privacy: .public) failed errno=\(err, privacy: .public)")
             }
         }
         if !queue.isEmpty {
@@ -1673,6 +1753,8 @@ final class PipelineRunner: ObservableObject {
         currentProject = project
         currentParser = StdoutProgressParser()
         cancellationRequested = false
+        let provider = activeProvider()
+        runProviders[project.id] = provider
         beginSpawnedRun(project)
         startProgressPoll(for: project, generation: gen)
 
@@ -1703,7 +1785,7 @@ final class PipelineRunner: ObservableObject {
             // unattachable on next launch. Window is single-process-spawn
             // wide (~ms); accepted rather than working around it with a
             // separate `lsof`-style argv sweep on launch.
-            Self.writePIDFile(for: project, pid: run.pid)
+            Self.writePIDFile(for: project, pid: run.pid, provider: provider)
             Self.logger.info(
                 "spawned bristlenose run project=\(projectID.uuidString, privacy: .public) pid=\(run.pid, privacy: .public)"
             )
@@ -1880,8 +1962,7 @@ var args = ["run", project.path, "--no-serve"]
         try proc.run()
         return LaunchedRun(
             pid: proc.processIdentifier,
-            isRunning: { proc.isRunning },
-            processGroup: getpgid(proc.processIdentifier)
+            isRunning: { proc.isRunning }
         )
     }
 
@@ -1930,6 +2011,7 @@ var args = ["run", project.path, "--no-serve"]
         if let project {
             Self.removePIDFile(for: project)
         }
+        let provider = runProviders.removeValue(forKey: projectID)
         currentRun = nil
         currentReadTask?.cancel()
         currentReadTask = nil
@@ -1997,6 +2079,9 @@ var args = ["run", project.path, "--no-serve"]
         case .accept(let final):
             state[projectID] = final
             if case .ready = final {
+                noteCreditIfTheRunUsedAnLLM(
+                    provider: provider, project: project, priorRunId: priorRunIds[projectID]
+                )
                 Self.logger.info(
                     """
                     run succeeded project=\(projectID.uuidString, privacy: .public) \

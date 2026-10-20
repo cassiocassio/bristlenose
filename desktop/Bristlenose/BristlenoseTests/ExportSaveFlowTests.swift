@@ -12,6 +12,8 @@ import WebKit
 ///   panel and written to disk as though it were the report.
 /// - R74: ticking Anonymise in the save panel cancelled the save and put up a
 ///   second save panel for the anonymised copy.
+/// - R76: Export Report pressed again before the panel came up put up a
+///   second save panel.
 /// A loopback HTTP server standing in for serve. A download cannot go through
 /// a `WKURLSchemeHandler` (WebKit fails it with -1002), so this is real HTTP.
 private final class FakeServe: @unchecked Sendable {
@@ -19,6 +21,8 @@ private final class FakeServe: @unchecked Sendable {
     /// Status for each request; the body names whether it was anonymised.
     /// Read and written on the main queue only, where the listener runs.
     var status: (URL) -> Int = { _ in 200 }
+    /// How long the answer takes, as building a real export does.
+    var delay: (URL) -> TimeInterval = { _ in 0 }
     private(set) var requested: [URL] = []
 
     init() throws {
@@ -42,8 +46,10 @@ private final class FakeServe: @unchecked Sendable {
                 head += "Content-Type: \(code == 200 ? "text/html" : "application/json")\r\n"
                 if code == 200 { head += "Content-Disposition: attachment; filename=\"report.html\"\r\n" }
                 head += "Content-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n"
-                connection.send(content: Data((head + body).utf8),
-                                completion: .contentProcessed { _ in connection.cancel() })
+                DispatchQueue.main.asyncAfter(deadline: .now() + self.delay(url)) {
+                    connection.send(content: Data((head + body).utf8),
+                                    completion: .contentProcessed { _ in connection.cancel() })
+                }
             }
         }
         listener.start(queue: .main)
@@ -95,7 +101,8 @@ private final class ExportRig {
         coordinator.lastLoadedURL = URL(string: "http://127.0.0.1:\(serve.port)/report/")
         let url = URL(string: "http://127.0.0.1:\(serve.port)/api/projects/1/export?\(query)")!
         webView.startDownload(using: URLRequest(url: url)) { [coordinator] download in
-            download.delegate = coordinator
+            // As `navigationAction(_:didBecome:)` hands the SPA's link over.
+            coordinator.adoptDownload(download, requestURL: url)
         }
     }
 
@@ -177,5 +184,69 @@ struct ExportSaveFlowTests {
         #expect(rig.saved == nil)
         #expect(rig.alerts.count == 1)
         #expect(rig.alerts.first?.informativeText == HTTPURLResponse.localizedString(forStatusCode: 500))
+    }
+
+    // MARK: - R76
+
+    @Test func exportReportPressedTwiceAsksOnce() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        rig.serve.delay = { _ in 0.3 }   // the second press lands while it builds
+        await rig.export()
+        await rig.export()
+        await rig.until { rig.saved == "<html>NAMED</html>" }
+        // Give a second panel time to come up, so a pass is not a race.
+        try? await Task.sleep(for: .milliseconds(500))
+
+        #expect(rig.panels == 1, "the second press put up a second save panel")
+        #expect(rig.saved == "<html>NAMED</html>")
+        #expect(rig.alerts.isEmpty, "a dropped second press is not a failure")
+    }
+
+    /// The export after a finished one, a cancelled one, or an error is not
+    /// taken for a second press.
+    @Test func eachExportAfterTheLastHasEndedAsksAgain() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        await rig.export()
+        await rig.until { rig.saved != nil && !rig.coordinator.hasPendingReportExport }
+
+        var cancelled = false
+        rig.coordinator.chooseSaveDestination = { _, _ in rig.panels += 1; cancelled = true; return nil }
+        await rig.export()
+        await rig.until { cancelled }
+
+        rig.serve.status = { _ in 500 }
+        await rig.export()
+        await rig.until { !rig.alerts.isEmpty }
+
+        rig.serve.status = { _ in 200 }
+        await rig.export()
+        await rig.until { rig.panels == 3 }
+
+        #expect(rig.panels == 3, "an export after one had ended was dropped")
+        #expect(rig.alerts.count == 1)
+    }
+
+    /// Ticking Anonymise hands the pending export to the refetch: a press
+    /// while it is fetched is still a second press.
+    @Test func aPressWhileTheAnonymisedCopyIsFetchedAsksNothing() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        rig.atPanel = { $0?.anonymise = true }
+        // Hold the anonymised copy up long enough to press again.
+        rig.serve.delay = { $0.query?.contains("anonymise=true") == true ? 0.5 : 0 }
+        await rig.export()
+        await rig.until { rig.serve.requested.count == 2 }
+        await rig.export()
+        await rig.until { rig.saved == "<html>ANONYMISED</html>" }
+        try? await Task.sleep(for: .milliseconds(500))
+
+        #expect(rig.panels == 1)
+        #expect(rig.saved == "<html>ANONYMISED</html>")
+
+        // Saved: the export is over, and the next press asks again.
+        await rig.until { !rig.coordinator.hasPendingReportExport }
+        rig.atPanel = { _ in }
+        await rig.export()
+        await rig.until { rig.panels == 2 }
+        #expect(rig.panels == 2, "the anonymised export never let go")
     }
 }

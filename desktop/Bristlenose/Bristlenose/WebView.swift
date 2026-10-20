@@ -308,6 +308,12 @@ struct WebView: NSViewRepresentable {
         /// destination is decided; the panel is not shown again.
         @MainActor private var chosenDestination: [ObjectIdentifier: URL] = [:]
 
+        /// The Export Report download in flight, from the click until it is
+        /// saved, cancelled or fails. Another Export Report while it is pending
+        /// is dropped: the server takes seconds to build one, and a second
+        /// press in that time put up a second save panel (R76).
+        @MainActor private var pendingReportExport: WKDownload?
+
         /// Run the save panel and return where to save, or nil for Cancel. A
         /// seam so a test can stand in for the researcher; the accessory's
         /// controller is passed so it can tick Anonymise.
@@ -565,9 +571,36 @@ struct WebView: NSViewRepresentable {
             didBecome download: WKDownload
         ) {
             download.delegate = self
+            let url = navigationAction.request.url
             Task { @MainActor in
-                self.pendingRequestURL[ObjectIdentifier(download)] = navigationAction.request.url
+                self.adoptDownload(download, requestURL: url)
             }
+        }
+
+        /// Take on a download the page started. A second Export Report while
+        /// one is pending is cancelled here, before it can reach a panel (R76).
+        @MainActor
+        func adoptDownload(_ download: WKDownload, requestURL: URL?) {
+            download.delegate = self
+            if Self.isHTMLReportURL(requestURL) {
+                if pendingReportExport != nil {
+                    log.notice("export: Export Report pressed again while one is pending — dropped")
+                    download.cancel { _ in }
+                    return
+                }
+                pendingReportExport = download
+            }
+            pendingRequestURL[ObjectIdentifier(download)] = requestURL
+        }
+
+        /// Whether an Export Report is in flight. For tests: the file lands
+        /// before WebKit says the download has finished.
+        @MainActor var hasPendingReportExport: Bool { pendingReportExport != nil }
+
+        /// The download is over, one way or another: an export behind it may go.
+        @MainActor
+        private func reportExportEnded(_ download: WKDownload) {
+            if pendingReportExport === download { pendingReportExport = nil }
         }
 
         func webView(
@@ -618,6 +651,7 @@ struct WebView: NSViewRepresentable {
             // server's error and saved it as the report (R75).
             if let status = Self.failedStatus(of: response) {
                 log.error("export download refused: HTTP \(status, privacy: .public) path=\(requestURL?.path ?? "?", privacy: .public) refetch=\(alreadyChosen != nil, privacy: .public)")
+                reportExportEnded(download)
                 completionHandler(nil)
                 showSaveFailed(detail: HTTPURLResponse.localizedString(forStatusCode: status))
                 return
@@ -665,6 +699,7 @@ struct WebView: NSViewRepresentable {
             }
 
             guard let chosen = chooseSaveDestination(panel, controller) else {
+                reportExportEnded(download)
                 completionHandler(nil)
                 return
             }
@@ -687,11 +722,17 @@ struct WebView: NSViewRepresentable {
                     // This download is the copy they turned down; never save
                     // it in place of the one they asked for.
                     log.error("export: the \(c.anonymise ? "anonymised" : "named", privacy: .public) copy could not be fetched")
+                    reportExportEnded(download)
                     showSaveFailed(detail: nil)
                     return
                 }
                 webView.startDownload(using: URLRequest(url: alternate)) { [weak self] refetch in
                     guard let self else { return }
+                    // The export is still pending: it is this copy now.
+                    // (The first copy's end may have cleared it already.)
+                    if self.pendingReportExport == nil || self.pendingReportExport === download {
+                        self.pendingReportExport = refetch
+                    }
                     let refetchID = ObjectIdentifier(refetch)
                     self.chosenDestination[refetchID] = chosen
                     self.pendingRequestURL[refetchID] = alternate
@@ -709,6 +750,7 @@ struct WebView: NSViewRepresentable {
             // background queue — the file is the user's own data, never
             // from an untrusted external source.
             Task { @MainActor in
+                self.reportExportEnded(download)
                 self.stripQuarantineIfPossible(download: download)
             }
         }
@@ -734,6 +776,7 @@ struct WebView: NSViewRepresentable {
             // its entries behind, and an ObjectIdentifier is only an address:
             // a later download could inherit a chosen place.
             Task { @MainActor in
+                self.reportExportEnded(download)
                 self.chosenDestination.removeValue(forKey: ObjectIdentifier(download))
                 self.pendingRequestURL.removeValue(forKey: ObjectIdentifier(download))
             }

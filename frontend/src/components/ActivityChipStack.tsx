@@ -67,7 +67,7 @@ function isTerminal(s: NormalisedJobStatus["status"] | undefined): boolean {
 }
 
 export interface ActivityJob {
-  /** Unique key, e.g. "autocode:garrett" or "clips". */
+  /** Unique key, one per run: e.g. "autocode:garrett:2" or "clips:1". */
   id: string;
   /** Human-readable label, e.g. "AutoCoding Garrett". */
   label: string;
@@ -253,7 +253,8 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
   }, []);
 
   // A job that leaves the list (dismissed) takes its state with it, so one that comes back under
-  // the same id ("clips", "autocode:<framework>") starts clean rather than as the last one ended.
+  // the same id starts clean rather than as the last one ended. (Clip exports and AutoCode runs
+  // now take a new id per run and replace their last chip, which does not rely on this.)
   const ids = jobs.map((j) => j.id).join("\n");
   const [listedIds, setListedIds] = useState(ids);
   if (ids !== listedIds) {

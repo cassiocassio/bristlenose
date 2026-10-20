@@ -33,7 +33,7 @@ import type { ApiError } from "../utils/api";
 // tells a Mac-app user to edit a `.env` file.
 import { autocodeRefusal } from "../utils/autocodeRefusal";
 import { toast } from "../utils/toast";
-import { addJob } from "../contexts/ActivityStore";
+import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
 import type {
   CodebookResponse,
   RemoveFrameworkInfo,
@@ -133,6 +133,9 @@ function provenanceFor(
     ? { text: i18n.t("codebook.onByDefault"), isPerson: false }
     : { text: i18n.t("codebook.availableByDefault"), isPerson: false };
 }
+
+/** Numbers each AutoCode run's activity job (see onInstall). */
+let autocodeJobSeq = 0;
 
 export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const { t } = useTranslation();
@@ -406,7 +409,15 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
           // Register with the activity store so the chip stack shows progress.
           // Autotagging is not instant; without this the researcher clicks
           // Install and nothing appears to happen for minutes.
-          addJob(`autocode:${id}`, {
+          //
+          // Each run is its own job, and this codebook's last chip goes, as
+          // for clip exports: under one id per codebook, a reinstall joined
+          // the last run's finished chip, and a run that failed before its
+          // first read stayed "Done".
+          for (const [jobId, job] of getJobs()) {
+            if (job.type === "autocode" && job.frameworkId === id) removeJob(jobId);
+          }
+          addJob(`autocode:${id}:${++autocodeJobSeq}`, {
             type: "autocode",
             frameworkId: id,
             frameworkTitle: title,

@@ -115,7 +115,11 @@ vi.mock("../utils/api", () => ({
   denyAllProposals: vi.fn(() => Promise.resolve({ denied: 0 })),
   denyProposal: vi.fn(() => Promise.resolve({ status: "ok" })),
 }));
-vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn() }));
+vi.mock("../contexts/ActivityStore", () => ({
+  addJob: vi.fn(),
+  removeJob: vi.fn(),
+  getJobs: vi.fn(() => new Map()),
+}));
 vi.mock("../utils/toast", () => ({ toast: vi.fn() }));
 
 describe("CodebookV2 — built-in is derived, not hardcoded", () => {
@@ -458,6 +462,32 @@ describe("phase 5 — the destructive edge", () => {
     // And it registers with the chip stack: autotagging is not instant, so
     // without this the researcher clicks Install and nothing appears to happen.
     await waitFor(() => expect(store.addJob).toHaveBeenCalled());
+  });
+
+  // Uninstall and install again while the last run's chip still says Done: the
+  // new run joined that chip under the same id, and one that failed before its
+  // first read stayed "Done". Each run is its own job, and the framework's last
+  // chip goes, as clip exports do.
+  it("a run is its own job, replacing that codebook's last chip", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const store = await import("../contexts/ActivityStore");
+    const old = { type: "autocode", frameworkId: "cliux", frameworkTitle: "CLI UX" };
+    const other = { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" };
+    vi.mocked(store.getJobs).mockReturnValue(
+      new Map([["autocode:cliux", old], ["autocode:garrett", other]]) as never,
+    );
+    vi.mocked(store.addJob).mockClear();
+    vi.mocked(store.removeJob).mockClear();
+    render(<Lens projectId="1" projectName="Ikea" />);
+    await waitFor(() => screen.getByTestId("bn-v2-nav"));
+    fireEvent.click(screen.getByTestId("bn-v2-browse"));
+    fireEvent.click(screen.getByTestId("bn-v2-card-action-cliux"));
+    await waitFor(() => expect(store.addJob).toHaveBeenCalledTimes(1));
+    expect(store.removeJob).toHaveBeenCalledWith("autocode:cliux");
+    expect(store.removeJob).not.toHaveBeenCalledWith("autocode:garrett");
+    const [id] = vi.mocked(store.addJob).mock.calls[0];
+    expect(id).not.toBe("autocode:cliux");
+    vi.mocked(store.getJobs).mockReturnValue(new Map());
   });
 
   it("installs without a confirmation", async () => {

@@ -2,6 +2,34 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.42.0** — _20 Oct 2026_
+
+Quotes in the Discussion lens work like quotes everywhere else, and Re-analyse no longer loses curation made in the same sitting.
+
+**New**
+
+- **Quotes in the Discussion lens are full quote cards.** The timecode plays, the badge opens the transcript, and you can star, hide, tag and edit a quote and take AutoCode's proposals, as on Quotes and Screens. A hidden quote leaves the lens and is counted beside its question. A question with nothing to show is a quiet grey row.
+
+**Improved**
+
+- **The tag sidebar no longer fills with zeros after AutoCode.** Each tag shows one number: what you have accepted, or, before you accept anything, its proposals in grey.
+- **Miro boards start in flat colour**, as FigJam boards do; sentiment colour is still offered. Theme columns follow the order of the themes in the Quotes lens, and a long quote is never split where words were cut.
+
+**Fixed**
+
+- **Re-analyse could discard stars, tags and edits made in the same sitting** in the Mac app, without its "you'll lose edits" warning.
+- **After a stopped run, the next run redid every session**, unchanged ones included, and paid for the analysis again. It now reuses what the stopped run finished.
+- **Teams and Google Meet sign-in didn't start in the Mac app downloaded from bristlenose.app.**
+- **A meeting downloaded from Zoom's web portal came in as separate sessions**, the video transcribed from scratch and Zoom's transcript on its own. They are now one session, with Zoom's transcript and speaker names.
+- **Quote exports from sessions over an hour long were out of order.** CSV and Excel rows, and board theme columns, put 1:00:05 before 59:00.
+- **The Project page flickered between one and two rows of tabs** at some window widths.
+- **On Windows, a run could stop with an access-denied error** while the report was open.
+- **Code scanning findings closed:** the video player reads only the parameters it uses, and translations and codebook templates load only from Bristlenose's own files.
+
+**Removed**
+
+- **"Link quotes to clips" is hidden on Miro and FigJam boards.** Every link it made pointed at a clip file that didn't exist.
+
 **0.41.0** — _19 Oct 2026_
 
 Miro and FigJam boards show their progress and can be stopped, and a long quote split over several stickies breaks where it reads, in every language Bristlenose speaks.

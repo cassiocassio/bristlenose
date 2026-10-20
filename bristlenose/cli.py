@@ -1230,9 +1230,12 @@ def run(
     # when a pipeline manifest exists (Phase 1c/1d crash recovery).
     output_exists = output_dir.exists() and any(output_dir.iterdir())
     if output_exists and not clean:
-        from bristlenose.manifest import load_manifest
+        from bristlenose.manifest import has_manifest
 
-        if load_manifest(output_dir) is not None:
+        # The file, not its contents: a manifest that will not read still says
+        # a run was here, and reads as no record, so the run recomputes rather
+        # than refusing the folder (R111).
+        if has_manifest(output_dir):
             # Print a one-line resume summary from the manifest (Phase 1e)
             from bristlenose.status import format_resume_summary, get_project_status
 

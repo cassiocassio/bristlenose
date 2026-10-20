@@ -209,7 +209,7 @@ class ProgressiveImport:
         )
 
         try:
-            manifest = load_manifest(project_output_dir(self._project_dir))
+            manifest = load_manifest(project_output_dir(self._project_dir), strict=True)
         except Exception as exc:  # noqa: BLE001 — a half-written or moved file
             said = f"{type(exc).__name__}: {exc}"
             if said != self._manifest_error:

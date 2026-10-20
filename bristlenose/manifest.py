@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -158,12 +159,33 @@ def create_manifest(project_name: str, pipeline_version: str) -> PipelineManifes
     )
 
 
-def load_manifest(output_dir: Path) -> PipelineManifest | None:
-    """Load the manifest from disk, or return None if it doesn't exist."""
+def load_manifest(output_dir: Path, *, strict: bool = False) -> PipelineManifest | None:
+    """Load the manifest from disk, or return None if it doesn't exist.
+
+    A manifest that will not read (truncated by a power cut or a full disk,
+    edited by hand) is treated as absent, with a warning, as an unreadable held
+    copy is in ``resume_manifest``: a stage with no record is recomputed, never
+    trusted, and the run's next write replaces the file. Until 20 Oct 2026 it
+    raised, and ``run`` and ``status`` printed a traceback until the file was
+    deleted by hand (R111). ``strict`` raises instead, for a reader that tells
+    "not readable yet" from "absent" (the progressive importer).
+    """
     path = _manifest_path(output_dir)
     if not path.exists():
         return None
-    return PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
+    if strict:
+        return PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
+    try:
+        return PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):  # ValidationError and UnicodeDecodeError are ValueErrors
+        logger.warning("manifest | unreadable at %s, treated as absent", path,
+                       exc_info=True)
+        return None
+
+
+def has_manifest(output_dir: Path) -> bool:
+    """A run has been here: the manifest file exists, readable or not."""
+    return _manifest_path(output_dir).exists()
 
 
 def write_manifest(manifest: PipelineManifest, output_dir: Path) -> None:
@@ -184,7 +206,12 @@ def _write_manifest_to(manifest: PipelineManifest, path: Path) -> None:
 
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+    with tmp.open("w", encoding="utf-8") as fh:
+        fh.write(manifest.model_dump_json(indent=2))
+        # On disk before the replace: otherwise a power cut can leave the
+        # renamed file empty, which reads as no record and re-pays every stage.
+        fh.flush()
+        os.fsync(fh.fileno())
     replace_retrying(tmp, path)
 
 

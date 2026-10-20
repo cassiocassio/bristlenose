@@ -218,13 +218,26 @@ final class ServeManager: ObservableObject {
     /// that crosses the language boundary.
     @Published private(set) var projectKey: String?
 
+    /// Where `setAgentScope` sends its PUT: a running serve that is not being
+    /// torn down, else nil.
+    ///
+    /// `shutdown` detaches `process` before it interrupts the sidecar, so a
+    /// spawned serve still reading `.running` with no process is going away. A
+    /// PUT there fails with "Could not connect to the server" and logged a false
+    /// ERROR on every restart (100days §2). An external server was never ours
+    /// to spawn: it has no process and is never going away.
+    var agentScopeURL: URL? {
+        guard case .running(let port) = state else { return nil }
+        if case .external? = mode {} else if process == nil { return nil }
+        return URL(string: "http://127.0.0.1:\(port)/api/agent-scope")
+    }
+
     /// Put this serve in or out of agent scope. Scope is a permission and
     /// serve lifetime is a cache: a project whose window just closed must stop
     /// answering NOW, not when its sidecar is reaped 90 s later, and not merely
     /// because a polite proxy stopped routing to it.
     func setAgentScope(readable: Bool) {
-        guard case .running(let port) = state,
-              let url = URL(string: "http://127.0.0.1:\(port)/api/agent-scope") else { return }
+        guard let url = agentScopeURL else { return }
         guard let token = authToken else {
             // Loud, not silent: a `.running` serve with no token means the
             // revocation cannot be sent at all, and the fleet has already
@@ -764,6 +777,12 @@ final class ServeManager: ObservableObject {
 
     /// Stop the serve process and reset state.
     func stop() {
+        // A stop supersedes any lifecycle driver in flight, exactly as a
+        // start() does: a restart awaiting teardown must not bring back a
+        // serve that was stopped meanwhile (a window leaving the study, or
+        // `ServeFleet.discard`, which then drops this manager and would leave
+        // the respawned sidecar tracked by nothing).
+        generation += 1
         timeoutTask?.cancel()
         timeoutTask = nil
         drainParked()  // tear down any warm sidecar (Cmd+Q, folder/empty selection)
@@ -822,8 +841,19 @@ final class ServeManager: ObservableObject {
         }
         guard live, let path = currentProjectPath else { return }
         log.info("preferences changed — restarting serve")
+        // Ownership token, captured now rather than inside the Task: a start()
+        // that lands before the Task runs, or while it awaits teardown, owns
+        // the serve from then on. Without the re-checks this restart tore that
+        // serve down and started the path captured above in its place. The one
+        // `generation` token, per desktop/CLAUDE.md — not a second epoch.
+        let myGeneration = generation
         Task { @MainActor in
+            guard generation == myGeneration else { return }
             await shutdown(timeout: .seconds(2))
+            guard generation == myGeneration else {
+                log.info("restart superseded mid-teardown — leaving the serve to the new owner")
+                return
+            }
             start(projectPath: path)
         }
     }
@@ -877,6 +907,14 @@ final class ServeManager: ObservableObject {
             currentProjectPath = nil
             return
         }
+
+        // Detach before signalling. This exit is one we asked for, and while
+        // `process` still names it `handleTermination` reads it as the fronted
+        // serve dying and writes `.failed` — "stopped before it finished
+        // starting" on a booting serve — until the restart's `start()` lands
+        // (R35). Detached, the termination and any late stdout line route to
+        // nobody; `proc` stays in hand for the escalation below.
+        process = nil
 
         // Polite signal — Uvicorn handles SIGINT as graceful shutdown.
         proc.interrupt()
@@ -1189,7 +1227,8 @@ final class ServeManager: ObservableObject {
     /// (transition `state` to `.failed`) or the parked-death path (drop the warm
     /// slot silently, review F9). A process that is neither (already superseded
     /// and torn down) is a no-op — identity subsumes the old generation guard.
-    private func handleTermination(processID procID: ObjectIdentifier, status: Int32) {
+    /// Internal so a test can stand in for the handler `start()` installs.
+    func handleTermination(processID procID: ObjectIdentifier, status: Int32) {
         if let fronted = process, ObjectIdentifier(fronted) == procID {
             timeoutTask?.cancel()
             // The serve died — its handshake must not keep naming the freed

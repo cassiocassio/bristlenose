@@ -383,8 +383,8 @@ final class BridgeHandler: ObservableObject {
     /// let the researcher pick files, and then told them off. Dimming is the
     /// menu-bar answer to "not right now".
     @Published var hasSelectedProject: Bool = false
-    /// Whether the selected study can take files now: not running, queued,
-    /// failed or unreachable. Read by File ▸ Add Files… beside
+    /// Whether the selected study can take files now: its folder is there,
+    /// and it is not running, queued, failed or unreachable. Read by File ▸ Add Files… beside
     /// `hasSelectedProject`; the same rule the sidebars ask of a Finder drop
     /// (`StudyFinderDrop.accepts`), which springs back on a busy study. The
     /// panel used to open, take the pick, and do nothing (R47 follow-up).
@@ -401,7 +401,9 @@ final class BridgeHandler: ObservableObject {
     func mirrorSelectedProjectRun(project: Project, state: PipelineState?,
                                   data: UnanalysedState?) {
         selectedProjectIsRunning = SidebarOutlineController.isRunningOrQueued(state)
-        selectedProjectTakesFiles = StudyFinderDrop.accepts(state: state)
+        // An unreachable folder can keep `.ready` (an ejected drive), so the
+        // folder's own availability is asked too: files would copy into nothing.
+        selectedProjectTakesFiles = project.isAvailable && StudyFinderDrop.accepts(state: state)
         selectedProjectNeedsFolderAccess = state?.needsFolderAccess == true
         selectedProjectIsAnalysed = SidebarOutlineController.reAnalyseIsOffered(
             isFolderShaped: project.inputFiles == nil,

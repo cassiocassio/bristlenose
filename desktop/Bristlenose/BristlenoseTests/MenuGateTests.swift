@@ -76,6 +76,18 @@ struct MenuGateTests {
         #expect(!bridge.selectedProjectTakesFiles)
     }
 
+    /// A study on an ejected drive keeps `.ready`, so its state alone would
+    /// light Add Files… over a folder that isn't there.
+    @Test func addFilesDimsForAStudyOnAnEjectedDrive() {
+        let bridge = BridgeHandler()
+        let ejected = Project(id: UUID(), name: "Study",
+                              path: "/Volumes/BN-ejected-\(UUID().uuidString)/study")
+        #expect(!ejected.isAvailable)
+
+        bridge.mirrorSelectedProjectRun(project: ejected, state: .ready(Date()), data: data(sessions: 6))
+        #expect(!bridge.selectedProjectTakesFiles)
+    }
+
     // MARK: R70 — report commands need the channel
 
     /// The report's mirrors outlive a dead sidecar; `commandTab` does not.

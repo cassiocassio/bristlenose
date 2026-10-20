@@ -423,7 +423,7 @@ Keyboard shortcuts: Cmd+1-5 (tabs) and Cmd+Opt+S (sidebar) live in the View menu
 - Codes menu: group/code operations dim when not on the codebook lens with a live channel. Browse/Import always enabled
 - Edit > Undo/Redo: hidden when `isEditing` (lets WKWebView handle character-level undo). The report's undo dims without a live channel; a pending sidebar removal is native and does not
 - File > Export Report: `canExportReport` — dims while any lens is withheld (a first analysis, or a stopped one), because the SPA refuses a partial report (R61)
-- File > Add Files…: dims without a selected study, and while the study can't take files (running, queued, failed, unreachable: `selectedProjectTakesFiles`, the rule a sidebar drop asks via `StudyFinderDrop`, R47)
+- File > Add Files…: dims without a selected study, and while the study can't take files (its folder missing, or running, queued, failed, unreachable: `selectedProjectTakesFiles`, the rule a sidebar drop asks via `StudyFinderDrop`, R47; an ejected drive keeps `.ready`, so the folder is asked too)
 - View > panels: dim based on `commandTab`
 
 **Responder chain rules:**

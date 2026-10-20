@@ -49,6 +49,10 @@ describe("fileUri", () => {
       "file:///Users/r/%C3%89tude%20%232%20%3F%2050%25/clips",
     );
   });
+
+  it("refuses a relative path, whose first component would read as a host", () => {
+    expect(() => fileUri("bristlenose-output/clips")).toThrow();
+  });
 });
 
 describe("revealExport", () => {
@@ -57,6 +61,20 @@ describe("revealExport", () => {
     await revealExport("screens");
     expect(revealClips).toHaveBeenCalledOnce();
     expect(revealScreens).toHaveBeenCalledOnce();
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it("in a browser fails when the server could not show the folder", async () => {
+    vi.mocked(revealClips).mockResolvedValueOnce({ revealed: false, path: "/s/clips" });
+    await expect(revealExport("clips")).rejects.toThrow("could not show");
+  });
+
+  it("in the app shows nothing for an export that did not finish", async () => {
+    embed();
+    vi.mocked(getScreensExportStatus).mockResolvedValue({
+      ...screensStatus("/s/screens", ["p1-01.jpg"]), status: "cancelled",
+    });
+    await expect(revealExport("screens")).rejects.toThrow("no finished screens export");
     expect(postMessage).not.toHaveBeenCalled();
   });
 
@@ -70,11 +88,12 @@ describe("revealExport", () => {
     expect(revealScreens).not.toHaveBeenCalled();
   });
 
-  it("in the app posts nothing, and fails, when there is no export folder to show", async () => {
+  it("in the app posts nothing, and fails, when the latest clips export did not finish", async () => {
+    // A newer export replaced the chip's: cancelled, with the partial folder it left.
     embed();
     vi.mocked(getClipExtractionStatus).mockResolvedValue({
-      status: "idle", progress: 0, total: 0, completed_count: 0, skipped_count: 0,
-      current_clip: "", output_dir: null,
+      status: "cancelled", progress: 1, total: 3, completed_count: 1, skipped_count: 0,
+      current_clip: "", output_dir: "/s/clips",
     });
     await expect(revealExport("clips")).rejects.toThrow("no finished clips export");
     expect(postMessage).not.toHaveBeenCalled();

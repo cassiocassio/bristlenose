@@ -928,8 +928,13 @@ async def reveal_clips(
     # sandboxed sidecar (the Mac app) may not be allowed to run it at all, which
     # raised here as a 500; the app reveals through its own bridge instead.
     try:
-        done = subprocess.run(command, check=False).returncode == 0
+        # Not capture_output: a file manager xdg-open starts can inherit the pipe and
+        # hold it open, and the read would wait for it to quit.
+        code = subprocess.run(command, check=False).returncode
     except OSError:
         logger.warning("Reveal clips: %s could not be run", command[0], exc_info=True)
-        done = False
+        return {"revealed": False, "path": str(reveal_path)}
+    if code != 0:
+        logger.warning("Reveal clips: %s exited %d", command[0], code)
+    done = code == 0
     return {"revealed": done, "path": str(reveal_path)}

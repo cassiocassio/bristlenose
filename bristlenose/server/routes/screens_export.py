@@ -227,10 +227,15 @@ async def reveal_screens(request: Request, project_id: int) -> dict[str, Any]:
     # A sandboxed sidecar (the Mac app) may not be allowed to run it: not revealed, not a
     # 500. The app reveals through its own bridge (R72).
     try:
-        done = subprocess.run(command, check=False).returncode == 0
+        # Not capture_output: a file manager xdg-open starts can inherit the pipe and
+        # hold it open, and the read would wait for it to quit.
+        code = subprocess.run(command, check=False).returncode
     except OSError:
         logger.warning("Reveal screens: %s could not be run", command[0], exc_info=True)
-        done = False
+        return {"revealed": False, "path": str(target)}
+    if code != 0:
+        logger.warning("Reveal screens: %s exited %d", command[0], code)
+    done = code == 0
     return {"revealed": done, "path": str(target)}
 
 

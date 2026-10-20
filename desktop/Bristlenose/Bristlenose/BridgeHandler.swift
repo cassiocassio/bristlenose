@@ -1426,6 +1426,8 @@ final class BridgeHandler: ObservableObject {
             guard let uri = data?["uri"] as? String,
                   let url = URL(string: uri),
                   url.isFileURL else {
+                // Said, not silent: the page has already dismissed its chip (R72).
+                Self.log.error("reveal-in-finder refused: not a file URL")
                 break
             }
             NSWorkspace.shared.activateFileViewerSelecting([url])

@@ -17,25 +17,31 @@ import {
   revealScreens,
 } from "./api";
 
-/** A POSIX path as a `file:` URI, each component percent-encoded. */
+/** An absolute POSIX path as a `file:` URI, each component percent-encoded. */
 export function fileUri(path: string): string {
+  // A relative path would read its first component as the URI's host.
+  if (!path.startsWith("/")) throw new Error(`not an absolute path: ${path}`);
   return "file://" + path.split("/").map(encodeURIComponent).join("/");
 }
 
 /** Where the export is: the clips folder, or the first still (the folder if none). */
 async function exportTarget(kind: "clips" | "screens"): Promise<string | null> {
+  // Only a finished export: the slot holds the latest job, which a newer export may
+  // have replaced since the chip finished.
   if (kind === "clips") {
-    return (await getClipExtractionStatus()).output_dir;
+    const c = await getClipExtractionStatus();
+    return c.status === "completed" ? c.output_dir : null;
   }
   const s = await getScreensExportStatus();
-  if (!s.output_dir) return null;
+  if (s.status !== "completed" || !s.output_dir) return null;
   const first = s.files[0];
   return first ? `${s.output_dir.replace(/\/+$/, "")}/${first}` : s.output_dir;
 }
 
 export async function revealExport(kind: "clips" | "screens"): Promise<void> {
   if (!isEmbedded()) {
-    await (kind === "clips" ? revealClips() : revealScreens());
+    const r = await (kind === "clips" ? revealClips() : revealScreens());
+    if (!r.revealed) throw new Error(`the server could not show ${r.path}`);
     return;
   }
   const target = await exportTarget(kind);

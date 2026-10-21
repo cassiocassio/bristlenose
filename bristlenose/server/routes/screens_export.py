@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from bristlenose.output_paths import project_output_dir
@@ -446,9 +447,10 @@ class ScreensMiroStatus(BaseModel):
     build: BoardBuild | None = None
 
 
-@router.post("/projects/{project_id}/export/screens/miro")
+# `response_model` explicitly: the annotation admits the not-connected refusal's JSONResponse.
+@router.post("/projects/{project_id}/export/screens/miro", response_model=ScreensExportStart)
 async def start_screens_miro(request: Request, project_id: int,
-                             body: ScreensMiroStart | None = None) -> ScreensExportStart:
+                             body: ScreensMiroStart | None = None) -> ScreensExportStart | JSONResponse:
     """Build the screens as a new Miro board: a frame per screen, in journey order, everyone's
     quotes stacked beneath its still by participant."""
     from bristlenose.i18n import t_in
@@ -468,7 +470,9 @@ async def start_screens_miro(request: Request, project_id: int,
         raise HTTPException(status_code=409, detail="The last screens board is still stopping")
     token = _miro_token(request)
     if not token:
-        raise HTTPException(status_code=401, detail="Miro is not connected")
+        # The quotes board's reason, so both clients say it in the reader's language (R94).
+        return JSONResponse(status_code=401, content={
+            "detail": "Miro is not connected", "reason": "not_connected", "vars": {}})
     project_dir = getattr(request.app.state, "project_dir", None)
     if project_dir is None:
         raise HTTPException(status_code=400, detail="No project directory configured")

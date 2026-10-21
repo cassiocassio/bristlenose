@@ -73,6 +73,7 @@ function errDetail(e: unknown): string {
  */
 const EXPORT_ERROR_KEYS: Record<string, string> = {
   token_rejected: "miro.tokenRejected",
+  not_connected: "miro.errNotConnected",
   no_quotes_selected: "miro.errNoQuotesSelected",
   no_board_id: "miro.errNoBoardId",
   board_incomplete: "miro.errBoardIncomplete",
@@ -415,12 +416,15 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
       }
     } catch (e) {
       if (!live()) return;
-      // A refusal is a status, never the server's English: a build already running, or none.
+      // A refusal is a status, never the server's English: a reason the server named (not
+      // connected, R94), else a build already running, or none.
+      const reason = (e as { reason?: unknown } | null)?.reason;
+      const named = typeof reason === "string" ? EXPORT_ERROR_KEYS[reason] : undefined;
       const msg = e instanceof Error ? e.message : "";
       // A 409 on the quotes board is the last one still stopping (Stop answers at once; the server
       // finishes the call in hand, which can be Miro's half-minute of refusing a new board).
-      setError(t(/ 409\b/.test(msg) ? (screens ? "export.screens.inProgress" : "miro.stillStopping")
-        : screens && / 404\b/.test(msg) ? "export.screens.none" : "miro.exportError"));
+      setError(t(named ?? (/ 409\b/.test(msg) ? (screens ? "export.screens.inProgress" : "miro.stillStopping")
+        : screens && / 404\b/.test(msg) ? "export.screens.none" : "miro.exportError")));
       setView("configure");
       return;
     }

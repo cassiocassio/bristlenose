@@ -322,6 +322,22 @@ def test_not_connected_is_refused_before_any_job_starts(client: AuthTestClient) 
         assert client.get("/api/projects/1/miro/board/status").json()["status"] == "idle"
 
 
+def test_not_connected_names_a_reason_the_clients_localise(client: AuthTestClient) -> None:
+    """R94: the refusal carries `not_connected`, so neither client shows its English `detail`."""
+    with client, patch("bristlenose.server.routes.miro._miro_token", return_value=None):
+        r = client.post("/api/projects/1/miro/board", json={})
+        assert r.status_code == 400
+        assert r.json()["reason"] == "not_connected" and r.json()["detail"]
+
+
+def test_the_screens_board_not_connected_names_the_same_reason(client: AuthTestClient) -> None:
+    """The screens board refuses before it reads anything, with the quotes board's reason."""
+    with client, patch("bristlenose.server.routes.miro._miro_token", return_value=None):
+        r = client.post("/api/projects/1/export/screens/miro", json={})
+        assert r.status_code == 401
+        assert r.json()["reason"] == "not_connected" and r.json()["detail"]
+
+
 # ── The screens board's worker ──────────────────────────────────────────────────────────────
 
 

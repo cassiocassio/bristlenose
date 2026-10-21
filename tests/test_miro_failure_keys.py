@@ -30,23 +30,29 @@ import pytest
 REPO = Path(__file__).resolve().parent.parent
 EXPORT = REPO / "bristlenose" / "server" / "miro_export.py"
 ROUTE = REPO / "bristlenose" / "server" / "routes" / "miro.py"
+SCREENS_ROUTE = REPO / "bristlenose" / "server" / "routes" / "screens_export.py"
 SWIFT = REPO / "desktop" / "Bristlenose" / "Bristlenose" / "MiroAPI.swift"
 PANEL = REPO / "frontend" / "src" / "components" / "MiroExportPanel.tsx"
 LOCALES = REPO / "bristlenose" / "locales"
 
 
 def _reasons() -> set[str]:
-    """Every reason the server can actually emit, read from the raise sites."""
-    return set(re.findall(r'reason="(\w+)"', EXPORT.read_text(encoding="utf-8")))
+    """Every reason the server can actually emit, read from the raise sites — and from the
+    routes' own JSON refusals (`"reason": "not_connected"`), which never pass through a raise."""
+    found = set(re.findall(r'reason="(\w+)"', EXPORT.read_text(encoding="utf-8")))
+    for route in (ROUTE, SCREENS_ROUTE):
+        found |= set(re.findall(r'"reason":\s*"(\w+)"', route.read_text(encoding="utf-8")))
+    return found
 
 
 def _en_miro() -> dict:
     return json.loads((LOCALES / "en" / "common.json").read_text(encoding="utf-8"))["miro"]
 
 
-def test_the_server_emits_at_least_the_three_researcher_facing_reasons() -> None:
+def test_the_server_emits_at_least_the_researcher_facing_reasons() -> None:
     """Derived from the source, not a hand-written list — a new one enrols itself."""
-    assert _reasons() >= {"no_quotes_selected", "no_board_id", "board_incomplete"}
+    assert _reasons() >= {
+        "no_quotes_selected", "no_board_id", "board_incomplete", "not_connected"}
 
 
 @pytest.mark.parametrize("client", ["swift", "spa"])

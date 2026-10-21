@@ -357,6 +357,7 @@
     "errNoQuotesSelected": "Nessuna citazione corrisponde alla selezione: non c\u2019\u00e8 nulla da inviare.",
     "errNoBoardId": "Miro non ha restituito alcuna board. Non \u00e8 stato creato nulla.",
     "errBoardIncomplete": "La board \u00e8 stata creata ma \u00e8 incompleta. Aprila per vedere cosa \u00e8 arrivato.",
+    "errNotConnected": "Non connesso a Miro. Connetti e riprova.",
     "stillStopping": "La board precedente si sta ancora fermando. Riprova tra un momento.",
     "menuLabel": "Invia a Miro…",
     "serverUnreachable": "Impossibile raggiungere il server locale.",

@@ -426,9 +426,11 @@ async def _run_board(job: dict[str, Any], *args: Any) -> None:
     await asyncio.to_thread(job["tracker"].remember)
 
 
-@router.post("/projects/{project_id}/miro/board")
+# `response_model` explicitly, for the same reason as `miro_export_board`: the annotation admits
+# the JSONResponse the not-connected refusal returns.
+@router.post("/projects/{project_id}/miro/board", response_model=MiroBoardStart)
 async def start_miro_board(project_id: int, body: MiroExportRequest,
-                           request: Request) -> MiroBoardStart:
+                           request: Request) -> MiroBoardStart | JSONResponse:
     """Build a new Miro board from the project's (optionally scoped) quotes, as a job.
 
     Read its progress at ``…/miro/board/status``; ``…/miro/board/cancel`` stops it after the call
@@ -449,7 +451,10 @@ async def start_miro_board(project_id: int, body: MiroExportRequest,
         db.close()
     token = _miro_token(request)
     if not token:
-        raise HTTPException(status_code=400, detail="Not connected to Miro")
+        # A reason beside the English `detail`, as the 502 above sends: both clients localise it
+        # (R94), and an older one still reads `detail`.
+        return JSONResponse(status_code=400, content={
+            "detail": "Not connected to Miro", "reason": "not_connected", "vars": {}})
     job: dict[str, Any] = {"status": "running", "board_url": None, "stickies": 0, "reason": None,
                            "vars": {}, "tracker": BoardProgress("quotes", history_dir=default_history_dir())}
     _board_jobs[project_id] = job

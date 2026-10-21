@@ -85,9 +85,12 @@ struct MiroAPI {
     private static let screensErrorKeys = errorKeys.merging(
         ["no_stills": "common.export.screens.none"]) { a, _ in a }
 
-    private static let errorKeys: [String: String] = [
+    /// Not private so a test can pin an entry, as `FigJamAPI.reasonKeys` is.
+    static let errorKeys: [String: String] = [
         // Named by the job route when Miro refuses the token (a 401/403 with no reason of its own).
         "token_rejected": "common.miro.tokenRejected",
+        // Both boards' start, before any job: no Miro token at all (R94).
+        "not_connected": "common.miro.errNotConnected",
         "no_quotes_selected": "common.miro.errNoQuotesSelected",
         "no_board_id": "common.miro.errNoBoardId",
         "board_incomplete": "common.miro.errBoardIncomplete",

@@ -129,6 +129,14 @@ describe("MiroExportPanel — a board's progress", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.stillStopping")));
   });
 
+  it("starting a board while not connected says so, not the server's English (R94)", async () => {
+    startMiroBoard.mockRejectedValueOnce(Object.assign(new Error("POST /miro/board 400: Not connected to Miro"),
+      { reason: "not_connected", detail: "Not connected to Miro" }));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.errNotConnected")));
+  });
+
   it("a build the server no longer knows is an error, not a quiet stop", async () => {
     render(<MiroExportPanel open onClose={() => {}} />);
     fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));

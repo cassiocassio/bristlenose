@@ -357,6 +357,7 @@
     "errNoQuotesSelected": "No quotes match the current selection \u2014 there is nothing to send.",
     "errNoBoardId": "Miro did not return a board. Nothing was created.",
     "errBoardIncomplete": "The board was created but is incomplete. Open it to see what arrived.",
+    "errNotConnected": "Not connected to Miro. Connect, then try again.",
     "stillStopping": "The last board is still stopping. Try again in a moment.",
     "menuLabel": "Send to Miro…",
     "serverUnreachable": "Could not reach the local server.",

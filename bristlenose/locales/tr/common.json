@@ -357,6 +357,7 @@
     "errNoQuotesSelected": "Hi\u00e7bir al\u0131nt\u0131 ge\u00e7erli se\u00e7imle e\u015fle\u015fmiyor \u2014 g\u00f6nderilecek bir \u015fey yok.",
     "errNoBoardId": "Miro bir pano d\u00f6nd\u00fcrmedi. Hi\u00e7bir \u015fey olu\u015fturulmad\u0131.",
     "errBoardIncomplete": "Pano olu\u015fturuldu ancak eksik. Nelerin aktar\u0131ld\u0131\u011f\u0131n\u0131 g\u00f6rmek i\u00e7in a\u00e7\u0131n.",
+    "errNotConnected": "Miro'ya ba\u011fl\u0131 de\u011fil. Ba\u011flan\u0131p yeniden deneyin.",
     "stillStopping": "\u00d6nceki pano h\u00e2l\u00e2 durduruluyor. Birazdan yeniden deneyin.",
     "menuLabel": "Miro'ya Gönder…",
     "serverUnreachable": "Yerel sunucuya ula\u015f\u0131lamad\u0131.",

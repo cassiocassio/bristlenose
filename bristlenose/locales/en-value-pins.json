@@ -379,6 +379,7 @@
  "common.miro.errBoardIncomplete": "abd6e3",
  "common.miro.errNoBoardId": "58fcf9",
  "common.miro.errNoQuotesSelected": "8b097b",
+ "common.miro.errNotConnected": "dfa757",
  "common.miro.exportError": "3e1c26",
  "common.miro.howToGetToken": "e5d19b",
  "common.miro.linkClipsHint": "fedaee",

@@ -169,15 +169,16 @@ export async function extractVideoClips(
     for (const [id, job] of getJobs()) if (job.type === "clips") removeJob(id);
     addJob(`clips:${++clipsJobSeq}`, { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
     // One toast at a time replaces the last, so both notices share one, held
-    // long enough to read; the burn notice is also announced, since it is the
-    // only sign the subtitled copies won't be made.
+    // long enough to read. A toast speaks itself, but the progress line below
+    // lands in the same frame and would replace it, so the spoken line carries
+    // the notices too, then the progress.
     const notices = [
       result.pii_warning ? t("export.clips.piiWarning") : null,
       result.burn_unavailable ? t("export.clips.burnUnavailable") : null,
     ].filter((n): n is string => n !== null);
     if (notices.length > 0) toast(notices.join(" · "), 6000);
     const progress = t("export.clips.progress", { progress: 0, total: result.total });
-    announce(result.burn_unavailable ? `${t("export.clips.burnUnavailable")}. ${progress}` : progress);
+    announce([...notices, progress].join(". "));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("422")) toast(t("export.clips.ffmpegMissing"));

@@ -7,6 +7,7 @@ vi.mock("../contexts/ActivityStore", () => ({ addJob: vi.fn(), getJobs: vi.fn(()
 
 import { startClipExtraction } from "./api";
 import { toast } from "./toast";
+import { announce } from "./announce";
 import { extractVideoClips } from "./exportActions";
 import { _resetSubtitlePrefsForTests, setSubtitlePref } from "./subtitlePrefs";
 
@@ -18,6 +19,7 @@ beforeEach(() => {
   _resetSubtitlePrefsForTests();
   start.mockReset();
   vi.mocked(toast).mockReset();
+  vi.mocked(announce).mockReset();
 });
 
 describe("extractVideoClips — burn-in", () => {
@@ -49,5 +51,14 @@ describe("extractVideoClips — burn-in", () => {
     expect(toast).toHaveBeenCalledOnce();
     expect(vi.mocked(toast).mock.calls[0][0]).toContain("export.clips.piiWarning");
     expect(vi.mocked(toast).mock.calls[0][0]).toContain("export.clips.burnUnavailable");
+  });
+
+  it("speaks the notices as well as the progress, since the progress line replaces the toast's", async () => {
+    start.mockResolvedValue({ total: 2, pii_warning: true } as never);
+    await extractVideoClips(["q1"], t, true);
+    expect(announce).toHaveBeenCalledOnce();
+    const spoken = vi.mocked(announce).mock.calls[0][0];
+    expect(spoken).toContain("export.clips.piiWarning");
+    expect(spoken).toContain("export.clips.progress");
   });
 });

@@ -1,9 +1,14 @@
 /**
  * AnnounceRegion — visually-hidden aria-live region for screen-reader
  * announcements.  Mount once in AppLayout.
+ *
+ * Portalled to `document.body`, outside `#bn-app-root`: `useInert` makes that
+ * root inert while a modal is open, and an inert live region is silent, so a
+ * toast or announcement made with a dialog up was never heard.
  */
 
 import { useCallback } from "react";
+import { createPortal } from "react-dom";
 import { setAnnounceElement } from "../utils/announce";
 
 const STYLE: React.CSSProperties = {
@@ -23,5 +28,8 @@ export function AnnounceRegion() {
     setAnnounceElement(node);
   }, []);
 
-  return <div ref={ref} role="status" aria-live="polite" aria-atomic="true" style={STYLE} />;
+  return createPortal(
+    <div ref={ref} role="status" aria-live="polite" aria-atomic="true" style={STYLE} />,
+    document.body,
+  );
 }

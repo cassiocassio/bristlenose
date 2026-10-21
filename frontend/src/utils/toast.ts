@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { createElement } from "react";
 import { Toast } from "../components/Toast";
+import { announce } from "./announce";
 import type { MessageKind } from "./messageKind";
 
 let root: Root | null = null;
@@ -50,6 +51,10 @@ export function toast(
   duration = 2000,
   kind?: MessageKind,
 ): void {
+  // A toast is often the only sign an action happened, so it is spoken too. The
+  // shared live region already exists when the toast appears; one born with its
+  // text, as this container is on first use, can go unannounced.
+  announce(message);
   getRoot().render(
     createElement(Toast, { message, duration, kind, onDismiss: dismiss }),
   );

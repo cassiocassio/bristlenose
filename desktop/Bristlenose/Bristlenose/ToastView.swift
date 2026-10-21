@@ -25,11 +25,27 @@ import SwiftUI
 final class ToastStore: ObservableObject {
     @Published var message: String?
     private var dismissTask: Task<Void, Never>?
+    private let announce: @MainActor (String) -> Void
+
+    /// `announce` is a seam for tests; the app speaks through VoiceOver.
+    init(announce: @escaping @MainActor (String) -> Void = ToastStore.voiceOver) {
+        self.announce = announce
+    }
+
+    /// A toast appears without taking focus, so VoiceOver hears nothing unless it is
+    /// told, and the toast is often the only sign the gesture did anything.
+    static func voiceOver(_ text: String) {
+        NSAccessibility.post(
+            element: NSApp as Any, notification: .announcementRequested,
+            userInfo: [.announcement: text,
+                       .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+    }
 
     /// Show a toast message. Replaces any currently visible toast.
     func show(_ message: String, duration: TimeInterval = 3) {
         dismissTask?.cancel()
         self.message = message
+        announce(message)
         dismissTask = Task {
             try? await Task.sleep(for: .seconds(duration))
             guard !Task.isCancelled else { return }

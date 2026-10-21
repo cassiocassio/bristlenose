@@ -145,7 +145,12 @@ def build_authorize_url(client_id: str, redirect_uri: str, state: str,
 
 def exchange_code_for_tokens(client_id: str, code: str, redirect_uri: str,
                              code_verifier: str) -> dict[str, Any]:
-    """Exchange an authorization code for access + refresh tokens (PKCE — no secret)."""
+    """Exchange an authorization code for an access token, by PKCE with no secret.
+
+    A refresh token comes back only for an app created with expiring tokens;
+    ours wasn't, so expect none. Miro documents a client secret for this call,
+    not PKCE: whether this works is what experiments/miro-pkce-probe tests.
+    """
     resp = httpx.post(OAUTH_TOKEN, data={
         "grant_type": "authorization_code",
         "client_id": client_id,

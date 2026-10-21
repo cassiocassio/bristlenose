@@ -143,11 +143,12 @@ export async function apiGet<T>(path: string, timeoutMs?: number): Promise<T> {
   }
 }
 
-async function apiPost<T>(path: string, body: unknown): Promise<T> {
+async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   const resp = await fetch(`${apiBase()}${path}`, {
     method: "POST",
     headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+    signal,
   });
   if (!resp.ok) throw await httpError("POST", path, resp);
   return resp.json() as Promise<T>;
@@ -631,12 +632,21 @@ export function getAutoCodeProposals(
   return apiGet<ProposalsListResponse>(`/autocode/${frameworkId}/proposals${qs}`);
 }
 
+/** A proposal review, bounded like a curation write: the quotes store holds a
+ *  quote as under review until its review answers, so one that never answered
+ *  would freeze that quote's tags and proposals until a reload. */
+function timedReview(path: string): Promise<void> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), WRITE_TIMEOUT_MS);
+  return apiPost<void>(path, {}, abort.signal).finally(() => clearTimeout(timer));
+}
+
 export function acceptProposal(proposalId: number): Promise<void> {
-  return apiPost(`/autocode/proposals/${proposalId}/accept`, {});
+  return timedReview(`/autocode/proposals/${proposalId}/accept`);
 }
 
 export function denyProposal(proposalId: number): Promise<void> {
-  return apiPost(`/autocode/proposals/${proposalId}/deny`, {});
+  return timedReview(`/autocode/proposals/${proposalId}/deny`);
 }
 
 export function acceptAllProposals(

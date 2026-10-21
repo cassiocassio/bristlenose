@@ -250,6 +250,43 @@ describe("QuotesStore", () => {
         expect(getQuotesSnapshot().deletedBadges["q-1"]).toContain("negative");
       });
 
+      describe("a proposal review in flight", () => {
+        const proposal = {
+          id: 42, tag_name: "Frustration", group_name: "Emotions", colour_set: "emo",
+          colour_index: 0, confidence: 0.9, rationale: "",
+        };
+        const stale = () =>
+          initFromQuotes([makeQuote({ dom_id: "q-1", tags: [], proposed_tags: [proposal] })], true);
+
+        it("keeps an accepted tag, and the proposal gone", () => {
+          initFromQuotes([makeQuote({ dom_id: "q-1", proposed_tags: [proposal] })]);
+          mockAcceptProposal.mockImplementationOnce(pending);
+          act(() => acceptProposedTag("q-1", 42, TAG_FRUSTRATION));
+          stale();
+          const s = getQuotesSnapshot();
+          expect(s.tags["q-1"]?.map((t) => t.name)).toEqual(["Frustration"]);
+          expect(s.proposedTags["q-1"]).toBeUndefined();
+        });
+
+        it("keeps a denied proposal gone", () => {
+          initFromQuotes([makeQuote({ dom_id: "q-1", proposed_tags: [proposal] })]);
+          mockDenyProposal.mockImplementationOnce(pending);
+          act(() => denyProposedTag("q-1", 42));
+          stale();
+          expect(getQuotesSnapshot().proposedTags["q-1"]).toBeUndefined();
+        });
+
+        it("follows the server again once the review is answered", async () => {
+          initFromQuotes([makeQuote({ dom_id: "q-1", proposed_tags: [proposal] })]);
+          await act(async () => {
+            denyProposedTag("q-1", 42);
+            await Promise.resolve();
+          });
+          stale();
+          expect(getQuotesSnapshot().proposedTags["q-1"]).toEqual([proposal]);
+        });
+      });
+
       it("does not abandon a hide mid-collapse", () => {
         vi.useFakeTimers();
         try {

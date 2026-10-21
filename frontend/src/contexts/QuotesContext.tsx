@@ -258,8 +258,8 @@ export function initFromQuotes(
     //
     // A refetch can land while a gesture's write is unanswered (an AutoCode run
     // finishing mid-curation), and its response may predate the write: for a
-    // star, hide, edit, tag or deleted badge still in flight, keep what the
-    // screen shows.
+    // star, hide, edit, tag, deleted badge or proposal review still in flight,
+    // keep what the screen shows.
     const keep = <T,>(map: Record<string, T>, from: Record<string, T>, id: string) => {
       if (id in from) map[id] = from[id];
       else delete map[id];
@@ -271,7 +271,8 @@ export function initFromQuotes(
       else if (q.is_starred) starred[q.dom_id] = true;
       if (unsettled.has(`edits:${q.dom_id}`)) keep(edits, prev.edits, q.dom_id);
       else if (q.edited_text) edits[q.dom_id] = q.edited_text;
-      if (tagWriteUnanswered(q.dom_id)) {
+      const reviewing = reviewsInFlight.has(q.dom_id);
+      if (tagWriteUnanswered(q.dom_id) || reviewing) {
         // The response may predate it: keep what the screen shows.
         if (prev.tags[q.dom_id]) tags[q.dom_id] = prev.tags[q.dom_id];
         else delete tags[q.dom_id];
@@ -279,7 +280,8 @@ export function initFromQuotes(
       else delete tags[q.dom_id];
       if (writeUnansweredOn("badges", q.dom_id)) keep(deletedBadges, prev.deletedBadges, q.dom_id);
       else if (q.deleted_badges.length > 0) deletedBadges[q.dom_id] = [...q.deleted_badges];
-      if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
+      if (reviewing) keep(proposedTags, prev.proposedTags, q.dom_id);
+      else if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
       else delete proposedTags[q.dom_id];
     }
 
@@ -340,6 +342,7 @@ export function initHeadingEdits(
 export function resetStore(): void {
   state = emptyState();
   unsettled.clear();
+  reviewsInFlight.clear();
   searchPeople = undefined;
   lastUsedTag = null;
   listeners.forEach((l) => l());
@@ -425,6 +428,20 @@ function writeUnansweredOn(kind: "tags" | "badges", domId: string): boolean {
 /** Whether a tag write on this quote is still unanswered. */
 function tagWriteUnanswered(domId: string): boolean {
   return writeUnansweredOn("tags", domId);
+}
+
+/** Proposal accepts and denies not yet answered, per quote. They go straight
+ *  to the server rather than through `send`, so they are counted here. */
+const reviewsInFlight = new Map<string, number>();
+
+function trackReview(domId: string, review: Promise<unknown>): void {
+  reviewsInFlight.set(domId, (reviewsInFlight.get(domId) ?? 0) + 1);
+  const done = () => {
+    const n = (reviewsInFlight.get(domId) ?? 1) - 1;
+    if (n > 0) reviewsInFlight.set(domId, n);
+    else reviewsInFlight.delete(domId);
+  };
+  review.then(done, done);
 }
 
 function withFlag(key: "starred" | "hidden", id: string, on: boolean): Updater {
@@ -926,7 +943,9 @@ export function acceptProposedTag(
   // screen follows the server: accepted elsewhere keeps the tag (no message:
   // that is what was asked), denied elsewhere or gone (404) drops it, anything
   // else puts the suggestion back as well.
-  acceptProposal(proposalId).catch((err: ApiError) => {
+  const accept = acceptProposal(proposalId);
+  trackReview(domId, accept);
+  accept.catch((err: ApiError) => {
     console.error("Accept proposal failed:", err);
     if (err?.reason === "proposal_accepted") return;
     toastSaveFailed(err);
@@ -951,7 +970,9 @@ export function denyProposedTag(domId: string, proposalId: number): void {
     return { ...prev, proposedTags };
   });
   // As accept: say so, and follow the server. Accepted elsewhere shows the tag.
-  denyProposal(proposalId).catch((err: ApiError) => {
+  const deny = denyProposal(proposalId);
+  trackReview(domId, deny);
+  deny.catch((err: ApiError) => {
     console.error("Deny proposal failed:", err);
     if (err?.reason === "proposal_denied") return;
     toastSaveFailed(err);

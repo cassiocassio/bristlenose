@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  acceptProposal,
   deleteCodebookTag,
   getAutoCodeStatus,
   getClipExtractionStatus,
@@ -177,6 +178,23 @@ describe("curation writes", () => {
     await settle();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const a of answers) a(answer(200, { status: "ok" }));
+  });
+});
+
+describe("a proposal review that never answers", () => {
+  it("fails, so the quote it holds as under review is let go", async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation((_url: string, init: RequestInit) => new Promise((_, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new DOMException("timed out", "TimeoutError")));
+      }));
+      const accept = acceptProposal(42);
+      const failed = expect(accept).rejects.toThrow();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

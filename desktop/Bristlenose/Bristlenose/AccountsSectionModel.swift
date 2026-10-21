@@ -212,18 +212,6 @@ enum AccountsSectionModel {
         }
     }
 
-    /// Which sentence an unavailable row's detail line reads.
-    ///
-    /// A stored sign-in gets the fuller sentence: otherwise the row reads as
-    /// "nothing is stored here", which is the reading that would leave a
-    /// client's credential on disk untouched. **Keyed on the stored key, not
-    /// the address:** a sign-in this build cannot read is listed with a key and
-    /// no address (R41), and the row offers Disconnect for it.
-    static func unavailableDetailKey(_ section: AccountSection) -> String {
-        section.accountKey == nil ? "desktop.accounts.cantSignIn"
-                                  : "desktop.accounts.cantSignInStranded"
-    }
-
     private static func cloudSection(_ platform: CloudPlatform,
                                      available: Bool,
                                      connections: [CloudGrantStore.Connection]) -> AccountSection {

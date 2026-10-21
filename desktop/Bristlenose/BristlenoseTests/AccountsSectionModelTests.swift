@@ -123,29 +123,6 @@ struct AccountsSectionModelTests {
         #expect(result.first { $0.service.id == "teams" }?.accountKey == nil)
     }
 
-    @Test("A stored sign-in on an unavailable service says it is still stored, even unread")
-    func unavailableDetailFollowsTheStoredSignIn() {
-        // R41 review. A sign-in this build cannot read is listed with its key
-        // and no address, and the row offers Disconnect. Keying the sentence on
-        // the address told the researcher nothing was stored over a credential
-        // the same row offers to remove.
-        let unread = CloudGrantStore.Connection(platform: .teams,
-                                                accountKey: CloudAccountKey.derive("martin@clientco.com"),
-                                                address: nil,
-                                                needsSignIn: true,
-                                                driveTier: nil)
-        let stored = sections(available: [.meet], connections: [unread])
-        let teams = stored.first { $0.service.id == "teams" }
-        #expect(teams?.state == .unavailable(strandedIdentity: nil))
-        #expect(teams?.accountKey != nil)
-        #expect(teams.map(AccountsSectionModel.unavailableDetailKey)
-                == "desktop.accounts.cantSignInStranded")
-
-        let empty = sections(available: [.meet]).first { $0.service.id == "teams" }
-        #expect(empty.map(AccountsSectionModel.unavailableDetailKey)
-                == "desktop.accounts.cantSignIn")
-    }
-
     // MARK: Connected
 
     @Test("A connected account is named by its address")

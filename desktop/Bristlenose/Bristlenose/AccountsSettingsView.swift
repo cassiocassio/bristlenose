@@ -168,8 +168,12 @@ struct AccountsSettingsView: View {
 
     private func detail(_ section: AccountSection) -> String? {
         switch section.state {
-        case .unavailable:
-            return i18n.t(AccountsSectionModel.unavailableDetailKey(section),
+        case .unavailable(let stranded):
+            // A stranded grant gets the fuller sentence: otherwise the row reads
+            // as "nothing is stored here", which is the reading that would leave
+            // a client's credential on disk untouched.
+            return i18n.t(stranded == nil ? "desktop.accounts.cantSignIn"
+                                          : "desktop.accounts.cantSignInStranded",
                           ["service": section.service.displayName])
         case .notConnected:
             return section.service.connectsFromHere

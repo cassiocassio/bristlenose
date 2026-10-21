@@ -1994,6 +1994,19 @@ class TestRedactedSourceHeader:
 # ---------------------------------------------------------------------------
 
 
+#: Past difflib's 200-character autojunk line. With autojunk on, the re-worded form below
+#: scores 0.19 against this (most letters are "popular" and cannot start a match); with it
+#: off, 0.81. Measured 21 Oct 2026.
+LONG = ("So I went to the orders page and I looked for the button that would let me go back, and it "
+        "was not where I expected it to be, and I scrolled the whole page twice before I found the "
+        "small link at the bottom that took me there, which honestly I would never have found on "
+        "my own.")
+LONG_REWORDED = ("So I navigated to the orders page and I searched for the control that would let me "
+                 "go backwards and it was not where I assumed it to be, and I dragged the whole page "
+                 "repeatedly before I found the tiny link at the foot that took me there, which "
+                 "frankly I would not have found on my initiative.")
+
+
 def _same_start_pair() -> list[dict]:
     """Stage 9 cuts two quotes from one paragraph: one start, two ends, two texts."""
     first = _make_quote("s1", "p1", 53.0, "The first half of the paragraph")
@@ -2077,6 +2090,221 @@ class TestSameStartQuotes:
             for r in db.query(Quote).filter_by(project_id=project.id).all()
         }
         assert final == progressive
+
+    @staticmethod
+    def _rewrite(tmp_path: Path, quotes: list[dict]) -> None:
+        intermediate = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
+        (intermediate / "screen_clusters.json").write_text(
+            json.dumps([{"screen_label": "Checkout", "description": "", "display_order": 1,
+                         "quotes": quotes}]), encoding="utf-8")
+
+    @staticmethod
+    def _by_text(db: Session, project_id: int) -> dict[str, tuple[int, int, bool, bool]]:
+        """text → (row id, ordinal, starred, hidden)."""
+        states = {s.quote_id: (s.is_starred, s.is_hidden) for s in db.query(QuoteState).all()}
+        return {
+            r.text: (r.id, r.ordinal, *states.get(r.id, (False, False)))
+            for r in db.query(Quote).filter_by(project_id=project_id).all()
+        }
+
+    def test_a_rerun_that_reorders_a_pair_keeps_each_star_on_its_words(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The ordinal is the row's, not the batch's: a re-run whose ends sort the pair the
+        other way round leaves every star and hide on the words it was put on (review S1)."""
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[second["text"]][0], is_starred=True))
+        db.add(QuoteState(quote_id=before[first["text"]][0], is_hidden=True))
+        db.commit()
+
+        first["end_timecode"] = 80.0  # the model now ends the first later than the second
+        self._rewrite(tmp_path, [first, second])
+        import_project(db, proj)
+
+        after = self._by_text(db, project.id)
+        assert after[second["text"]] == (before[second["text"]][0], 1, True, False)
+        assert after[first["text"]] == (before[first["text"]][0], 0, False, True)
+
+    def test_a_rerun_that_drops_the_first_of_a_pair_keeps_the_second_on_its_row(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The second quote stays on its own row and ordinal, with its star and without the
+        first's hide; the first goes as any stale quote does (review S2)."""
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[second["text"]][0], is_starred=True))
+        db.add(QuoteState(quote_id=before[first["text"]][0], is_hidden=True))
+        db.commit()
+
+        self._rewrite(tmp_path, [second])
+        import_project(db, proj)
+
+        assert db.query(Quote).filter_by(project_id=project.id).count() == 1
+        after = self._by_text(db, project.id)
+        assert after == {second["text"]: (before[second["text"]][0], 1, True, False)}
+
+    def test_a_lone_quote_reworded_keeps_its_row(self, db: Session, tmp_path: Path) -> None:
+        """One quote at a start, re-emitted in other words: the same row, star and all
+        (Freeze's promise; the content rule applies only where a second holds a pair)."""
+        lone = _make_quote("s1", "p1", 10.0, "Something said once")
+        proj = _write_pipeline_output(tmp_path, self._clusters([lone]), [])
+        project = import_project(db, proj)
+        [(row_id, _, _, _)] = self._by_text(db, project.id).values()
+        db.add(QuoteState(quote_id=row_id, is_starred=True))
+        db.commit()
+        reworded = _make_quote("s1", "p1", 10.0, "Entirely different wording from the model")
+        self._rewrite(tmp_path, [reworded])
+        import_project(db, proj)
+        assert self._by_text(db, project.id) == {reworded["text"]: (row_id, 0, True, False)}
+
+    def test_a_new_quote_in_the_second_never_takes_a_stale_rows_ordinal(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """The first is dropped and a third quote arrives in the same second: it takes
+        ordinal 2, not the dropped row's 0, which still exists until the stale sweep."""
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[second["text"]][0], is_starred=True))
+        db.commit()
+
+        third = _make_quote("s1", "p1", 53.0, "A third thing, said in the same breath")
+        third["end_timecode"] = 90.0
+        self._rewrite(tmp_path, [second, third])
+        import_project(db, proj)
+
+        after = self._by_text(db, project.id)
+        assert after == {
+            second["text"]: (before[second["text"]][0], 1, True, False),
+            third["text"]: (after[third["text"]][0], 2, False, False),
+        }
+
+    def test_an_upgraded_projects_starred_row_keeps_its_words(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Before R86 the pair was one row holding the second's words, and the researcher
+        starred those words. The first re-analysis after upgrading gives the first half a
+        new row; the starred row keeps the words it showed (review finding 2)."""
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([second]), [])
+        project = import_project(db, proj)
+        [(row_id, ordinal, _, _)] = self._by_text(db, project.id).values()
+        assert ordinal == 0
+        db.add(QuoteState(quote_id=row_id, is_starred=True))
+        db.commit()
+
+        self._rewrite(tmp_path, [first, second])
+        import_project(db, proj)
+
+        after = self._by_text(db, project.id)
+        assert after[second["text"]] == (row_id, 0, True, False)
+        assert after[first["text"]][1:] == (1, False, False)
+
+    def test_a_reworded_quote_under_researcher_state_is_said(
+        self, db: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A re-run that changes the words of a starred quote is said per quote at INFO and
+        totalled once at WARNING; the same change on an untouched quote is not."""
+        import logging
+
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[second["text"]][0], is_starred=True))
+        db.commit()
+
+        first["verbatim_excerpt"] = "the first half, reworded"
+        second["verbatim_excerpt"] = "and the second half, reworded"
+        self._rewrite(tmp_path, [first, second])
+        with caplog.at_level(logging.INFO, logger="bristlenose.server.importer"):
+            import_project(db, proj)
+        said = [r for r in caplog.records if "reworded by this run" in r.getMessage()]
+        assert [r.levelno for r in said] == [logging.INFO, logging.WARNING]
+        assert f"row {before[second['text']][0]}" in said[0].getMessage()
+        assert said[1].getMessage().startswith("1 curated quote reworded")
+        assert all("second half" not in r.getMessage() for r in said)  # words stay out
+
+    def test_a_pair_with_one_long_reworded_quote_keeps_each_star(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """A long quote (past difflib's 200-character autojunk line) re-worded on a re-run is
+        still its row: each star stays on its own words (review, blocker 1)."""
+        first, second = _same_start_pair()
+        second["text"] = second["verbatim_excerpt"] = LONG
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[second["text"]][0], is_starred=True))
+        db.add(QuoteState(quote_id=before[first["text"]][0], is_hidden=True))
+        db.commit()
+
+        reworded = LONG_REWORDED
+        second["text"] = second["verbatim_excerpt"] = reworded
+        self._rewrite(tmp_path, [first, second])
+        import_project(db, proj)
+
+        after = self._by_text(db, project.id)
+        assert len(after) == 2
+        assert after[reworded] == (before[LONG][0], 1, True, False)
+        assert after[first["text"]] == (before[first["text"]][0], 0, False, True)
+
+    def test_a_quote_unlike_its_neighbour_is_new_not_a_rewording(
+        self, db: Session, tmp_path: Path,
+    ) -> None:
+        """Below the closeness line the quote is new: its own row and ordinal, and the row
+        it did not match goes as stale (it carried no researcher state)."""
+        first, second = _same_start_pair()
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        project = import_project(db, proj)
+        before = self._by_text(db, project.id)
+        db.add(QuoteState(quote_id=before[first["text"]][0], is_starred=True))
+        db.commit()
+
+        other = _make_quote("s1", "p1", 53.0, "Completely unrelated words about the checkout")
+        other["end_timecode"] = 71.0
+        self._rewrite(tmp_path, [first, other])
+        import_project(db, proj)
+
+        after = self._by_text(db, project.id)
+        assert after[first["text"]] == (before[first["text"]][0], 0, True, False)
+        assert after[other["text"]][1:] == (2, False, False)
+        assert len(after) == 2 and second["text"] not in after
+
+    def test_two_quotes_sharing_an_excerpt_but_not_text_are_said(
+        self, db: Session, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """One key is one quote: two incoming quotes with the same excerpt, start and end but
+        different text import as one row, and the import says so."""
+        import logging
+
+        first, second = _same_start_pair()
+        second["end_timecode"] = first["end_timecode"]
+        second["verbatim_excerpt"] = first["verbatim_excerpt"]
+        proj = _write_pipeline_output(tmp_path, self._clusters([first, second]), [])
+        with caplog.at_level(logging.WARNING, logger="bristlenose.server.importer"):
+            project = import_project(db, proj)
+        assert db.query(Quote).filter_by(project_id=project.id).count() == 1
+        assert any("share one excerpt" in r.getMessage() for r in caplog.records)
+
+
+    def test_a_quote_without_an_ordinal_is_refused(self, db: Session, tmp_path: Path) -> None:
+        """A caller that skips the pre-pass fails loudly rather than re-creating R86."""
+        from datetime import datetime, timezone
+
+        from bristlenose.server.importer import _get_or_create_quote
+
+        proj = _write_pipeline_output(tmp_path, self._clusters([]), [])
+        project = import_project(db, proj)
+        with pytest.raises(KeyError, match="ordinal"):
+            _get_or_create_quote(db, project, _make_quote("s1", "p1", 1.0, "no pre-pass"),
+                                 datetime.now(timezone.utc))
 
     def test_a_third_way_in_is_refused(self, db: Session, tmp_path: Path) -> None:
         """The stable key is unique: a duplicate row cannot be written past the importer."""

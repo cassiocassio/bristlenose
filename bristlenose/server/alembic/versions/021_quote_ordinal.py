@@ -34,7 +34,7 @@ depends_on = None
 _OLD_INDEX = "ix_quote_stable_key"
 _NEW_INDEX = "uq_quote_stable_key"
 
-QuoteRankKey = tuple[str, str, float, float, str]
+QuoteRankKey = tuple[str, str, float, float, str, int]
 
 
 def _rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]:
@@ -44,7 +44,7 @@ def _rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int
         groups.setdefault((key[0], key[1], int(key[2])), set()).add(key)
     ranks: dict[QuoteRankKey, int] = {}
     for members in groups.values():
-        for i, key in enumerate(sorted(members, key=lambda k: (k[2], k[3], k[4]))):
+        for i, key in enumerate(sorted(members, key=lambda k: (k[2], k[3], k[4], k[5]))):
             ranks[key] = i
     return ranks
 
@@ -57,16 +57,24 @@ def _index_names(table: str) -> set[str]:
     return {str(i["name"]) for i in sa.inspect(op.get_bind()).get_indexes(table) if i["name"]}
 
 
+def _rank_key_from_row(sid: object, code: object, start: object, end: object,
+                       verbatim: object, text: object, qid: object) -> QuoteRankKey:
+    """Copy of the importer's ``_rank_key``, from a row's columns — the nulls and the text
+    fallback read alike. The row id is the tiebreak: two identical rows (a race before the
+    unique index) must take two ordinals, or the index refuses to build."""
+    return (str(sid or ""), str(code or ""), float(start or 0.0), float(end or 0.0),  # type: ignore[arg-type]
+            str(verbatim or text or ""), int(qid))  # type: ignore[call-overload]
+
+
 def _backfill() -> None:
     bind = op.get_bind()
     rows = bind.execute(sa.text(
         "SELECT id, project_id, session_id, participant_id, start_timecode, end_timecode,"
-        " verbatim_excerpt FROM quotes"
+        " verbatim_excerpt, text FROM quotes"
     )).all()
     by_project: dict[int, list[tuple[int, QuoteRankKey]]] = {}
-    for qid, pid, sid, code, start, end, verbatim in rows:
-        key: QuoteRankKey = (str(sid), str(code), float(start), float(end or 0.0),
-                             str(verbatim or ""))
+    for qid, pid, sid, code, start, end, verbatim, text in rows:
+        key = _rank_key_from_row(sid, code, start, end, verbatim, text, qid)
         by_project.setdefault(int(pid), []).append((int(qid), key))
     for members in by_project.values():
         ranks = _rank_quote_ordinals(key for _, key in members)

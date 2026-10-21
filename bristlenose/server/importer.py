@@ -19,7 +19,9 @@ import logging
 import os
 import re
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,6 +61,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.utils.fs import is_os_metadata
 from bristlenose.utils.markdown import REDACTED_SOURCE
+from bristlenose.utils.text import count_noun
 from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
 logger = logging.getLogger(__name__)
@@ -601,17 +604,14 @@ def import_project(db: Session, project_dir: Path) -> Project:
     # --- Import quotes, clusters, themes ---------------------------------
     # Rank every incoming quote first, sections and themes together, so a
     # same-start pair gets its two ordinals whichever lens each half landed in.
-    _assign_ordinals(
-        q
-        for group in (*screen_clusters_data, *theme_groups_data)
-        for q in group.get("quotes", [])
-    )
-    quote_map = _import_quotes_from_clusters(
-        db, project, session_map, screen_clusters_data, now,
-    )
-    _import_quotes_from_themes(
-        db, project, session_map, theme_groups_data, quote_map, now,
-    )
+    with _reword_tally():
+        _assign_ordinals(
+            db, project,
+            (q for group in (*screen_clusters_data, *theme_groups_data)
+             for q in group.get("quotes", [])),
+        )
+        _import_quotes_from_clusters(db, project, session_map, screen_clusters_data, now)
+        _import_quotes_from_themes(db, project, session_map, theme_groups_data, now)
 
     # --- Auto-import sentiment framework + auto-tag from pipeline ---------
     _auto_import_sentiment_framework(db, project)
@@ -817,13 +817,13 @@ def import_session_quotes(
     wanted = session_ids & present
     now = datetime.now(timezone.utc)
     counts: dict[str, int] = dict.fromkeys(wanted, 0)
-    quotes = [q for q in (data if isinstance(data, list) else []) if isinstance(q, dict)]
-    _assign_ordinals(quotes)
-    for quote in quotes:
-        sid = quote.get("session_id", "")
-        if sid in wanted:
+    quotes = [q for q in (data if isinstance(data, list) else [])
+              if isinstance(q, dict) and q.get("session_id", "") in wanted]
+    with _reword_tally():
+        _assign_ordinals(db, project, quotes)
+        for quote in quotes:
             _get_or_create_quote(db, project, quote, now)
-            counts[sid] += 1
+            counts[quote["session_id"]] += 1
     if any(counts.values()):
         _auto_import_sentiment_framework(db, project)
         _auto_tag_from_sentiment_field(db, project)
@@ -1747,8 +1747,11 @@ def _import_participant(
             setattr(person, attr, source[key])
 
 
-QuoteRankKey = tuple[str, str, float, float, str]
-"""``(session_id, participant_id, start, end, verbatim_excerpt)`` — what ranks a quote."""
+QuoteRankKey = tuple[str, str, float, float, str, int]
+"""``(session, participant, start, end, content, tiebreak)`` — what ranks a quote. Content
+is the verbatim excerpt, or the text when there is none. The tiebreak is 0 for a quote read
+from JSON, where an identical key is the same quote, and the row id for a row (migration
+021's backfill), where two identical rows must stay two."""
 
 
 def rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]:
@@ -1758,7 +1761,9 @@ def rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]
     then named only one of them (R86). Within ``(session, participant, int(start))`` the
     distinct keys are ordered by ``(start, end, verbatim_excerpt)`` and numbered from 0,
     so the first of every group keeps the id it always had. An identical key is one
-    quote (it may sit in a section and a theme) and gets one ordinal.
+    quote (it may sit in a section and a theme) and gets one ordinal. This is the order
+    for quotes that match no existing row (``_assign_ordinals``); a row's ordinal, once
+    minted, is never re-ranked — ``end`` and ``verbatim_excerpt`` are model output.
 
     Migration 021 carries a copy of this function for its backfill — a migration must
     not import code that can change under it — and ``tests/test_migration_021_quote_ordinal.py``
@@ -1769,32 +1774,180 @@ def rank_quote_ordinals(keys: Iterable[QuoteRankKey]) -> dict[QuoteRankKey, int]
         groups.setdefault((key[0], key[1], int(key[2])), set()).add(key)
     ranks: dict[QuoteRankKey, int] = {}
     for members in groups.values():
-        for i, key in enumerate(sorted(members, key=lambda k: (k[2], k[3], k[4]))):
+        for i, key in enumerate(sorted(members, key=lambda k: (k[2], k[3], k[4], k[5]))):
             ranks[key] = i
     return ranks
 
 
 def _rank_key(quote_data: dict[str, Any]) -> QuoteRankKey:
+    """Mirrored by ``021_quote_ordinal._rank_key_from_row``: nulls and the text fallback
+    read alike on both."""
     return (
         str(quote_data.get("session_id", "")),
         str(quote_data.get("participant_id", "")),
-        float(quote_data.get("start_timecode", 0.0)),
-        float(quote_data.get("end_timecode", 0.0)),
-        str(quote_data.get("verbatim_excerpt", "") or ""),
+        float(quote_data.get("start_timecode") or 0.0),
+        float(quote_data.get("end_timecode") or 0.0),
+        _content(quote_data),
+        0,
     )
 
 
-def _assign_ordinals(quotes: Iterable[dict[str, Any]]) -> None:
-    """Stamp ``ordinal`` on every incoming quote dict, ranked over all of them at once.
+def _content(quote_data: dict[str, Any]) -> str:
+    return str(quote_data.get("verbatim_excerpt") or quote_data.get("text") or "")
+
+
+def _row_content(row: Quote) -> str:
+    return row.verbatim_excerpt or row.text or ""
+
+
+#: How alike (``difflib`` ratio) the words must be for a quote to claim a row that is not
+#: its exact words, when the second holds more than one quote on either side. Below it the
+#: quote is new and the row is stale; a lone quote against a lone row always matches.
+_CLOSE_ENOUGH = 0.6
+
+
+def _match_quotes_to_rows(
+    incoming: dict[QuoteRankKey, str], rows: list[Quote], where: str,
+) -> dict[QuoteRankKey, Quote]:
+    """Which existing row each incoming quote *is*, among the quotes at one exact start.
+
+    One each side: they match, whatever the words — the Freeze promise that curation
+    survives a re-worded quote (``test_curation_survives_reimport_via_different_spelling``).
+    Otherwise by content: the same words first, then the closest words at or above
+    ``_CLOSE_ENOUGH``, greedily and in a fixed order, so a row keeps its ordinal (and
+    everything hanging off it) across a re-run that re-cuts, re-orders or drops its
+    neighbour, while a quote unlike any row is new. A claim that is not exact is said.
+    """
+    if len(incoming) == 1 and len(rows) == 1:
+        return {next(iter(incoming)): rows[0]}
+    matched: dict[QuoteRankKey, Quote] = {}
+    free_rows = sorted(rows, key=lambda r: (r.ordinal, r.id))
+    for key, content in sorted(incoming.items()):
+        exact = [r for r in free_rows if _row_content(r) == content]
+        if exact:
+            matched[key] = exact[0]
+            free_rows.remove(exact[0])
+            if len(exact) > 1:
+                logger.warning(
+                    "quote %s: %d rows carry the same words; row %d keeps the earlier ordinal",
+                    where, len(exact), exact[0].id)
+    if free_rows and len(matched) < len(incoming):
+        from difflib import SequenceMatcher
+
+        left = sorted(k for k in incoming if k not in matched)
+        scored = sorted(
+            ((SequenceMatcher(None, incoming[k], _row_content(r), autojunk=False).ratio(), k, r)
+             for k in left for r in free_rows),
+            key=lambda t: (-t[0], t[1], t[2].id),
+        )
+        for ratio, key, row in scored:
+            if key in matched or row not in free_rows:
+                continue
+            if ratio < _CLOSE_ENOUGH:
+                break  # sorted by ratio: nothing left is close enough
+            matched[key] = row
+            free_rows.remove(row)
+            logger.info("quote %s: no row with these words; row %d (%.0f%% alike) keeps"
+                        " its ordinal", where, row.id, ratio * 100)
+        for key in left:
+            if key not in matched:
+                logger.warning("quote %s: unlike every row in its second; it is new, and %d"
+                               " row(s) there are not re-emitted", where, len(free_rows))
+    return matched
+
+
+def _assign_ordinals(db: Session, project: Project, quotes: Iterable[dict[str, Any]]) -> None:
+    """Stamp ``ordinal`` on every incoming quote dict.
 
     The pre-pass runs over everything an import will hand ``_get_or_create_quote`` —
-    every section's and theme's quotes together, or a whole ``extracted_quotes.json`` —
-    so the progressive and the final path mint the same ordinal for the same quote.
+    every section's and theme's quotes together, or a whole ``extracted_quotes.json``.
+    The ordinal is a property of a *row*: within each (session, participant, exact start)
+    an incoming quote is matched to the row it is (``_match_quotes_to_rows``) and takes
+    that row's ordinal; one that matches nothing takes the lowest ordinal no row in that
+    whole second holds, so no existing id ever moves. Only where nothing exists yet — a
+    first import, or the migration's backfill — are the quotes ranked by
+    ``rank_quote_ordinals`` (start, end, verbatim), which is also the order in which new
+    quotes take free ordinals, so the progressive and the final path agree.
     """
     quotes = list(quotes)
-    ranks = rank_quote_ordinals(_rank_key(q) for q in quotes)
+    key_of = {id(q): _rank_key(q) for q in quotes}
+    content_of = {key_of[id(q)]: _content(q) for q in quotes}
+    texts_of: dict[QuoteRankKey, set[str]] = {}
     for q in quotes:
-        q["ordinal"] = ranks[_rank_key(q)]
+        texts_of.setdefault(key_of[id(q)], set()).add(str(q.get("text") or ""))
+    for key, texts in texts_of.items():
+        if len(texts) > 1:
+            # One key is one quote: these two would become one row, the later words winning.
+            logger.warning("quote %s/%s@%g: %d quotes share one excerpt but differ in text;"
+                           " they import as one", key[0], key[1], key[2], len(texts))
+    ranks = rank_quote_ordinals(content_of)
+    groups: dict[tuple[str, str, int], list[QuoteRankKey]] = {}
+    for key in content_of:
+        groups.setdefault((key[0], key[1], int(key[2])), []).append(key)
+    sessions = {g[0] for g in groups}
+    existing: dict[tuple[str, str, int], list[Quote]] = {}
+    if sessions:
+        for row in (db.query(Quote).filter(Quote.project_id == project.id,
+                                            Quote.session_id.in_(sessions)).all()):
+            g = (row.session_id, row.participant_id, int(row.start_timecode))
+            if g in groups:
+                existing.setdefault(g, []).append(row)
+    assigned: dict[QuoteRankKey, int] = {}
+    for g, keys in groups.items():
+        rows = existing.get(g, [])
+        taken = {r.ordinal for r in rows}
+        for start in sorted({k[2] for k in keys}):
+            at_start = {k: content_of[k] for k in keys if k[2] == start}
+            here = [r for r in rows if r.start_timecode == start]
+            if here:
+                for key, row in _match_quotes_to_rows(
+                        at_start, here, f"{g[0]}/{g[1]}@{start:g}").items():
+                    assigned[key] = row.ordinal
+        free = (n for n in range(len(keys) + len(taken) + 1) if n not in taken)
+        for key in sorted((k for k in keys if k not in assigned), key=ranks.__getitem__):
+            assigned[key] = next(free)
+    for q in quotes:
+        q["ordinal"] = assigned[key_of[id(q)]]
+
+
+_REWORDED: ContextVar[list[int] | None] = ContextVar("reworded_curated_quotes", default=None)
+
+
+@contextmanager
+def _reword_tally() -> Iterator[list[int]]:
+    """Count the curated quotes an import rewords, and say the total once at WARNING; each
+    quote's own line is at INFO (a full re-analysis rewords most quotes)."""
+    rows: list[int] = []
+    token = _REWORDED.set(rows)
+    try:
+        yield rows
+    finally:
+        _REWORDED.reset(token)
+        if rows:
+            logger.warning("%s reworded by this run under researcher state (rows %s)",
+                           count_noun(len(rows), "curated quote"),
+                           ", ".join(str(r) for r in rows[:20]) + (", …" if len(rows) > 20 else ""))
+
+
+def _say_if_reworded_under_state(db: Session, row: Quote, quote_data: dict[str, Any]) -> None:
+    """A re-run that changes a curated quote's words is the one silent step in every way
+    curation can land on the wrong words: said per quote at INFO, totalled at WARNING by
+    ``_reword_tally``. The words stay out of the log."""
+    if (quote_data.get("text", row.text) == row.text
+            and quote_data.get("verbatim_excerpt", row.verbatim_excerpt) == row.verbatim_excerpt):
+        return
+    held = [
+        name for name, model in (("state", QuoteState), ("tag", QuoteTag), ("edit", QuoteEdit))
+        if db.query(model.id).filter_by(quote_id=row.id).first() is not None
+    ]
+    if held:
+        logger.info(
+            "quote %s/%s@%g#%d (row %d) reworded by this run under researcher %s",
+            row.session_id, row.participant_id, row.start_timecode, row.ordinal, row.id,
+            ", ".join(held))
+        tally = _REWORDED.get()
+        if tally is not None:
+            tally.append(row.id)
 
 
 def _get_or_create_quote(
@@ -1806,12 +1959,13 @@ def _get_or_create_quote(
     """Get or create a quote by stable key.
 
     Stable key: (project_id, session_id, participant_id, start_timecode, ordinal),
-    the ordinal stamped by ``_assign_ordinals`` before the quote reaches here.
+    the ordinal stamped by ``_assign_ordinals`` before the quote reaches here — a
+    quote without one is refused, since a default of 0 would quietly re-create R86.
     """
     session_id = quote_data.get("session_id", "")
     participant_id = quote_data.get("participant_id", "")
     start_timecode = float(quote_data.get("start_timecode", 0.0))
-    ordinal = int(quote_data.get("ordinal", 0))
+    ordinal = int(quote_data["ordinal"])
 
     # Try to find existing quote by stable key
     existing = (
@@ -1826,6 +1980,7 @@ def _get_or_create_quote(
         .first()
     )
     if existing:
+        _say_if_reworded_under_state(db, existing, quote_data)
         # Update pipeline fields (upsert)
         existing.text = quote_data.get("text", existing.text)
         existing.end_timecode = float(quote_data.get("end_timecode", existing.end_timecode))
@@ -1986,18 +2141,14 @@ def _import_quotes_from_clusters(
     session_map: dict[str, SessionModel],
     screen_clusters_data: list[dict[str, Any]],
     now: datetime,
-) -> dict[tuple[str, str, float, int], Quote]:
+) -> None:
     """Import screen clusters and their quotes.
 
     Upserts each cluster by *membership* (quote overlap), not label, so a
     renamed section keeps its ``cluster_id`` — and therefore any researcher
-    HeadingEdit keyed on that id — across pipeline label drift.
-
-    Returns a quote_map keyed by (session_id, participant_id, start_timecode, ordinal)
-    for deduplication when the same quote appears in themes.
+    HeadingEdit keyed on that id — across pipeline label drift. A quote that
+    also sits in a theme is found again by ``_get_or_create_quote``'s lookup.
     """
-    quote_map: dict[tuple[str, str, float, int], Quote] = {}
-
     # Resolve incoming quotes first so we can match clusters by membership.
     incoming_quotes: list[list[Quote]] = []
     incoming_members: list[tuple[int, set[int]]] = []
@@ -2006,7 +2157,6 @@ def _import_quotes_from_clusters(
         member_ids: set[int] = set()
         for q_data in cluster_data.get("quotes", []):
             q = _get_or_create_quote(db, project, q_data, now)
-            quote_map[(q.session_id, q.participant_id, q.start_timecode, q.ordinal)] = q
             qs.append(q)
             member_ids.add(q.id)
         incoming_quotes.append(qs)
@@ -2112,7 +2262,6 @@ def _import_quotes_from_clusters(
                     )
                 )
 
-    return quote_map
 
 
 def _import_quotes_from_themes(
@@ -2120,7 +2269,6 @@ def _import_quotes_from_themes(
     project: Project,
     session_map: dict[str, SessionModel],
     theme_groups_data: list[dict[str, Any]],
-    quote_map: dict[tuple[str, str, float, int], Quote],
     now: datetime,
 ) -> None:
     """Import theme groups and their quotes.
@@ -2132,8 +2280,6 @@ def _import_quotes_from_themes(
     - Every other theme matches by **membership** overlap (Phase 2), which lets
       an *unchanged* theme keep its id; a diverged one gets a fresh id (fine, its
       label is the machine's and disposable).
-
-    Reuses quotes from quote_map if they already exist (from clusters).
     """
     # Resolve incoming quotes first so we can match themes by membership.
     incoming_quotes: list[list[Quote]] = []
@@ -2143,7 +2289,6 @@ def _import_quotes_from_themes(
         member_ids: set[int] = set()
         for q_data in theme_data.get("quotes", []):
             q = _get_or_create_quote(db, project, q_data, now)
-            quote_map[(q.session_id, q.participant_id, q.start_timecode, q.ordinal)] = q
             qs.append(q)
             member_ids.add(q.id)
         incoming_quotes.append(qs)

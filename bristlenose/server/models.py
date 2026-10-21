@@ -449,11 +449,13 @@ class Quote(Base):
     sentiment: Mapped[str | None] = mapped_column(String(50), default=None)
     intensity: Mapped[int] = mapped_column(Integer, default=1)
     segment_index: Mapped[int] = mapped_column(Integer, default=-1)
-    # The quote's rank among this speaker's quotes that start in the same whole second,
-    # by (start, end, verbatim_excerpt): stage 9 cuts two quotes from one paragraph with
-    # one start, and the start alone named only one of them (R86). Minted by the
-    # importer's pre-pass (``rank_quote_ordinals``); 0 for the first, so every id and key
-    # made before the column reads unchanged. Internal: the UI never shows it.
+    # The row's slot among this speaker's quotes that start in the same whole second:
+    # stage 9 cuts two quotes from one paragraph with one start, and the start alone
+    # named only one of them (R86). Minted once by the importer's pre-pass
+    # (``_assign_ordinals``: a quote keeps the ordinal of the row it matches, a new one
+    # takes the lowest free; ranked by (start, end, words) only where no row exists yet)
+    # and never re-ranked. 0 for the first, so every id and key made before the column
+    # reads unchanged. Internal: the UI never shows it.
     ordinal: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_imported_at: Mapped[datetime | None] = mapped_column(default=None)
 

@@ -485,7 +485,7 @@ struct LLMSettingsView: View {
             case .saved(let readBack):
                 // Validate what reached the Keychain, never the typed value.
                 applyPresenceAndCache(provider: provider)
-                kickOffValidation(provider: provider, key: readBack)
+                kickOffValidation(provider: provider, key: readBack, announce: true)
             case .failed:
                 // The status keeps describing the key the Keychain still holds;
                 // the error under the field says the pasted one isn't it.
@@ -769,7 +769,7 @@ struct LLMSettingsView: View {
         }
         statuses[.azure] = .checking
         statusErrors[.azure] = nil
-        kickOffValidation(provider: .azure, key: stored)
+        kickOffValidation(provider: .azure, key: stored, announce: true)
     }
 
     // MARK: - Status helpers
@@ -1028,7 +1028,7 @@ struct LLMSettingsView: View {
     /// keeps showing `.invalid`. Definitive verdicts (`.online`, `.invalid`)
     /// from the network always overwrite the cache.
     private func kickOffValidation(
-        provider: LLMProvider, key: String, silent: Bool = false
+        provider: LLMProvider, key: String, silent: Bool = false, announce: Bool = false
     ) {
         validationTasks[provider]?.cancel()
         // Non-silent (explicit user action — a paste, or no cache to show):
@@ -1086,6 +1086,11 @@ struct LLMSettingsView: View {
                     "validate \(provider.rawValue, privacy: .public) → \(String(describing: status), privacy: .public)"
                 )
             }
+            ValidationAnnouncement.make(
+                provider: provider, status: resolved,
+                error: statusErrors[provider]?.resolved(i18n),
+                requested: announce, i18n: i18n
+            )?.post()
         }
     }
 }

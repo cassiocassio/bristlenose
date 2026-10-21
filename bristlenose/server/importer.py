@@ -1333,6 +1333,41 @@ def _words_read_as(words: list[dict[str, object]], text: str) -> bool:
     return difflib.SequenceMatcher(None, said, shown, autojunk=False).ratio() >= 0.9
 
 
+def _read_session_segments(path: Path) -> dict[str, list[dict[str, Any]]] | None:
+    """``session_segments.json`` as ``{session_id: [{start_time, words}, …]}`` with every
+    word carrying ``text``, ``start_time`` and ``end_time`` — or None, said once at WARNING,
+    when the file is unreadable or not that shape (decision #107).
+
+    The same guard as the pipeline's ``_load_cached_json(..., expect=dict)``: valid JSON of
+    another type, or the right type holding the wrong values, is a damaged cache. The
+    import goes on without word timings; the transcript itself comes from the ``.txt``.
+    """
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError(f"expected an object, found {type(data).__name__}")
+        clean: dict[str, list[dict[str, Any]]] = {}
+        for sid, segs in data.items():
+            if not isinstance(segs, list):
+                raise ValueError(f"session {sid!r}: expected a list of segments")
+            kept: list[dict[str, Any]] = []
+            for seg in segs:
+                if not isinstance(seg, dict):
+                    raise ValueError(f"session {sid!r}: a segment is not an object")
+                words = seg.get("words") or []
+                if not isinstance(words, list):
+                    raise ValueError(f"session {sid!r}: words are not a list")
+                for w in words:
+                    if not isinstance(w, dict) or not all(k in w for k in ("text", "start_time", "end_time")):
+                        raise ValueError(f"session {sid!r}: a word lacks text or its times")
+                kept.append({"start_time": float(seg.get("start_time", 0.0)), "words": words})
+            clean[sid] = kept
+        return clean
+    except (OSError, ValueError, TypeError) as exc:
+        logger.warning("session_segments.json is damaged (%s): importing without word timings", exc)
+        return None
+
+
 def _enrich_words_from_intermediate(
     db: Session,
     session_map: dict[str, SessionModel],
@@ -1409,9 +1444,8 @@ def _enrich_words_from_intermediate(
     if not ss_path.exists():
         return
 
-    try:
-        raw = json.loads(ss_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    raw = _read_session_segments(ss_path)
+    if raw is None:
         return
 
     for sid, pipeline_segs in raw.items():
@@ -1419,10 +1453,7 @@ def _enrich_words_from_intermediate(
         if not sess:
             continue
 
-        raw_segs = sorted(
-            (p for p in pipeline_segs if p.get("words")),
-            key=lambda p: float(p.get("start_time", 0.0)),
-        )
+        raw_segs = sorted((p for p in pipeline_segs if p["words"]), key=lambda p: p["start_time"])
         if not raw_segs:
             continue
 

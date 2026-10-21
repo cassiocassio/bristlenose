@@ -1990,6 +1990,41 @@ class TestRedactedSourceHeader:
 
 
 # ---------------------------------------------------------------------------
+# A damaged session_segments.json (decision #107)
+# ---------------------------------------------------------------------------
+
+
+class TestDamagedSessionSegments:
+    """A damaged ``session_segments.json`` costs the word timings, never the import:
+    the transcript lands, every segment without words, and the file is said once."""
+
+    @pytest.mark.parametrize("damaged", [
+        "[]",                                        # valid JSON of another type
+        "42",
+        '{"s1": "not a list"}',                      # a session whose value is not a list
+        '{"s1": [1, 2]}',                            # segments that are not objects
+        '{"s1": [{"start_time": 2.0, "words": "x"}]}',       # words that are not a list
+        '{"s1": [{"start_time": 2.0, "words": [{"text": "Hello,"}]}]}',  # a word without times
+        '{"s1": [{"start_time": "soon", "words": [{"text": "Hello,", "start_time": 2.0, "end_time": 2.5}]}]}',
+    ], ids=["list", "number", "value-not-list", "segment-not-object", "words-not-list",
+            "word-without-times", "start-not-a-number"])
+    def test_a_damaged_file_imports_without_word_timings(
+        self, db: Session, tmp_path: Path, damaged: str, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        import logging
+
+        project_dir = _write_transcript_and_words(tmp_path, words=_HELLO_WORDS)
+        (tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
+         / "session_segments.json").write_text(damaged, encoding="utf-8")
+        with caplog.at_level(logging.WARNING, logger="bristlenose.server.importer"):
+            import_project(db, project_dir)
+        segs = db.query(TranscriptSegment).order_by(TranscriptSegment.start_time).all()
+        assert [s.words_json for s in segs] == [None, None]
+        said = [r for r in caplog.records if "session_segments.json" in r.getMessage()]
+        assert len(said) == 1 and said[0].levelno == logging.WARNING
+
+
+# ---------------------------------------------------------------------------
 # Two quotes from one speaker with one start (R86)
 # ---------------------------------------------------------------------------
 

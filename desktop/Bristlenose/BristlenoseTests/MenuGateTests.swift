@@ -152,4 +152,40 @@ struct MenuGateTests {
         #expect(FigJamSheet.offered(hasKeyWindow: true, runningPort: 8176))
         #expect(!FigJamSheet.offered(hasKeyWindow: false, runningPort: 8176))
     }
+
+    /// The gate is the key window's own serve, not the fronted one. The menu
+    /// read `serveFleet.frontedOrIdle`, and `front` runs only for a window with
+    /// a study: window A on a running study, window B in front with none, and
+    /// the items lit off A's port while B's `perform` dropped the press.
+    @Test func sendToABoardFollowsTheKeyWindowsOwnServer() {
+        let fleet = ServeFleet()
+        let running = UUID(), notRunning = UUID()
+        fleet.manager(for: running).instance.state = .running(port: 8176)
+        fleet.frontedProject = running
+        #expect(fleet.frontedOrIdle.runningPort != nil, "precondition: another window's serve is up")
+
+        let bridge = BridgeHandler()
+        let offered = {
+            (MiroSheet.offered(hasKeyWindow: true, runningPort: bridge.reportServerPort),
+             FigJamSheet.offered(hasKeyWindow: true, runningPort: bridge.reportServerPort))
+        }
+
+        bridge.mirrorReportServer(nil)  // a window with no study
+        #expect(offered() == (false, false), "lit in a window with no study")
+
+        bridge.mirrorReportServer(fleet.manager(for: notRunning))
+        #expect(offered() == (false, false), "lit over a study whose server is not up")
+
+        bridge.mirrorReportServer(fleet.manager(for: running))
+        #expect(offered() == (true, true))
+
+        fleet.manager(for: running).instance.state = .idle
+        bridge.mirrorReportServer(fleet.manager(for: running))
+        #expect(offered() == (false, false), "stayed lit after the server stopped")
+    }
+
+    /// No window in front: the stand-in the menu bar reads has no server.
+    @Test func theUnattachedBridgeHasNoReportServer() {
+        #expect(BridgeHandler.unattached.reportServerPort == nil)
+    }
 }

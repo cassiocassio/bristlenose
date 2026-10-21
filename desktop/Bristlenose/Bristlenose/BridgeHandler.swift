@@ -486,6 +486,26 @@ final class BridgeHandler: ObservableObject {
     /// (R61). `lensReadiness` is the native mirror of that same lens map.
     var canExportReport: Bool { canDispatch && lensReadiness == .all }
 
+    /// The port of **this window's own** report server, or nil when it has
+    /// none (no study, or its serve isn't up). Send to Miro and Send to FigJam
+    /// gate on it, in the Quotes menu and the toolbar popover, through
+    /// `MiroSheet.offered` / `FigJamSheet.offered` (R62).
+    ///
+    /// Mirrored by `ContentView`, because the window's serve lives in the fleet
+    /// the menu bar can't see. The menu bar's own `serveFleet.frontedOrIdle` is
+    /// the wrong source: `front` runs only for a window with a study, so a key
+    /// window with none read another window's port and lit an item its
+    /// `perform` then dropped. `.unattached` leaves it nil. Not cleared by
+    /// `reset()`: like `lensesAvailable`, its one writer is the window's mirror.
+    @Published private(set) var reportServerPort: Int?
+
+    /// Mirror the window's serve: the same `serveManager?.runningPort` that
+    /// `perform(.showMiro)` / `perform(.showFigJam)` guard on.
+    func mirrorReportServer(_ manager: ServeManager?) {
+        let port = manager?.runningPort
+        if reportServerPort != port { reportServerPort = port }
+    }
+
     /// What the menu bar reads when **no project window is frontmost** — the
     /// Settings window, the Import window, or no window at all.
     ///

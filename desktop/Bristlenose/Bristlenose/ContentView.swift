@@ -1120,6 +1120,13 @@ struct ContentView: View {
         .onChange(of: lensAvailability, initial: true) { _, availability in
             bridgeHandler.lensesAvailable = availability.isAvailable
         }
+        // This window's own report server, for Send to Miro / FigJam in the
+        // Quotes menu and the export popover (R62). The window's, not the
+        // fronted one the menu bar holds: `serveFleet.front` runs only for a
+        // window with a study. Same mirror pattern as `lensesAvailable`.
+        .onChange(of: serveManager?.runningPort, initial: true) { _, _ in
+            bridgeHandler.mirrorReportServer(serveManager)
+        }
         // Take a place in the roster whenever what this window shows changes —
         // a different study, or a different lens of the same one. `initial`
         // covers the window opening already showing something.
@@ -4163,10 +4170,11 @@ private struct ExportPopoverContent: View {
                 ) { revealTranscripts() }
             }
 
-            // Send to Miro — always available (uploads the project's quotes as a
-            // new board of sticky notes). Presents the native MiroSheet, which
+            // Send to Miro — any lens (uploads the project's quotes as a new
+            // board of sticky notes). Presents the native MiroSheet, which
             // drives the same Python REST endpoints the web panel uses; this
-            // window's ContentView owns the .sheet (via `onMiro`).
+            // window's ContentView owns the .sheet (via `onMiro`). The Quotes
+            // menu's twin gate (R62): dimmed without this window's report server.
             Divider().padding(.horizontal, 10)
             ExportPopoverRow(
                 icon: "square.grid.2x2",
@@ -4177,6 +4185,8 @@ private struct ExportPopoverContent: View {
                 dismiss()
                 onMiro()
             }
+            .disabled(!MiroSheet.offered(hasKeyWindow: true,
+                                         runningPort: bridgeHandler.reportServerPort))
             // Send to FigJam — a board file for the Bristlenose FigJam plugin
             // (FigJam has no way to be written to from outside). The quotes
             // board only, so not on the Screens lens. Parked until the plugin
@@ -4190,6 +4200,8 @@ private struct ExportPopoverContent: View {
                     dismiss()
                     onFigJam()
                 }
+                .disabled(!FigJamSheet.offered(hasKeyWindow: true,
+                                               runningPort: bridgeHandler.reportServerPort))
             }
         }
         .frame(width: 308)

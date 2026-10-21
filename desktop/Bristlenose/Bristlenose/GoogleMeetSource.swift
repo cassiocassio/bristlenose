@@ -57,22 +57,6 @@ private struct CalendarEventsPage: Decodable {
             let conferenceId: String?
             let conferenceSolution: Solution?
         }
-        /// A Drive file hung off the event. **Probe, not yet a feature.**
-        ///
-        /// Observed 16 Aug 2026: a recorded Meet event carries its Recording,
-        /// its Transcript and its Gemini notes here as attachments, each with a
-        /// `fileId`. If that is reliable it is a far shorter road to the video
-        /// than `conferenceRecords` — no meeting-code match, no start-time
-        /// window, no organiser wall — and it would retire the three findings
-        /// that exist only to make that join work.
-        ///
-        /// Decoded narrowly for the same reason as everything else here: a
-        /// struct with nowhere to put an agenda cannot keep one.
-        struct Attachment: Decodable {
-            let fileId: String?
-            let title: String?
-            let mimeType: String?
-        }
         let id: String?
         let summary: String?
         let start: When?
@@ -80,7 +64,6 @@ private struct CalendarEventsPage: Decodable {
         let attendees: [Person]?
         let organizer: Person?
         let conferenceData: Conference?
-        let attachments: [Attachment]?
         /// TRAP: the honesty flag. True means the attendee array is a lie of
         /// omission, and any roster built from it is incomplete.
         let attendeesOmitted: Bool?
@@ -757,11 +740,7 @@ final class GoogleMeetSource: CloudImportSource {
             URLQueryItem(
                 name: "fields",
                 value: "items(id,summary,start,end,attendees,organizer,"
-                    + "conferenceData,attendeesOmitted,recurringEventId,"
-                    // Probe. Adds file titles and ids, which are meeting-derived
-                    // rather than agenda text, so the header's claim about
-                    // never fetching event bodies still holds.
-                    + "attachments),nextPageToken"
+                    + "conferenceData,attendeesOmitted,recurringEventId),nextPageToken"
             ),
         ]
         if let pageToken { items.append(URLQueryItem(name: "pageToken", value: pageToken)) }
@@ -812,19 +791,6 @@ final class GoogleMeetSource: CloudImportSource {
                 continue
             }
             candidates.append((event, start, event.organizer?.isSelf == true))
-
-            // Probe, logged rather than used. If every recorded meeting carries
-            // a `video/*` attachment with a fileId, that is a shorter road to
-            // the file than the space resolution below.
-            let attachments = event.attachments ?? []
-            Self.log.notice("""
-                meet_event attachments=\(attachments.count, privacy: .public) \
-                kinds=[\(attachments.compactMap(\.mimeType).joined(separator: ","), privacy: .public)] \
-                hasFileIDs=\(attachments.allSatisfy { $0.fileId != nil }, privacy: .public)
-                """)
-            for attachment in attachments {
-                Self.log.debug("meet_event attachment title=\(attachment.title ?? "—", privacy: .public)")
-            }
         }
 
         // Pass 2 — the join, on the key rather than on the clock.

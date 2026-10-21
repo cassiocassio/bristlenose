@@ -321,6 +321,31 @@ struct CloudAccountKeyTests {
                 "drawing a Settings row destroyed a credential")
     }
 
+    @Test("A sign-in this build cannot read is listed, needing sign-in, and can be removed",
+          arguments: zip(["cloud-microsoft-teams", "cloud-google-meet", "cloud-zoom"],
+                         [CloudPlatform.teams, .meet, .zoom]))
+    func unreadableSignInIsListedAndRemovable(provider: String, platform: CloudPlatform) {
+        // R41. Keeping the blob (above) was half the job: a row that is dropped
+        // because it does not decode reads "Not connected" over a sign-in that
+        // is on disk, and offers no Disconnect to remove it. It is listed as
+        // the tombstone `needsSignIn` already describes.
+        let keychain = InMemoryKeychain()
+        let key = CloudAccountKey.derive("martin@clientco.com")
+        keychain.set(provider: provider, account: key, value: "{ not a grant }")
+
+        let rows = CloudGrantStore.connections(store: keychain)
+
+        #expect(rows.map(\.accountKey) == [key], "an unreadable sign-in has no row")
+        guard let row = rows.first else { return }
+        #expect(row.platform == platform)
+        #expect(row.needsSignIn == true)
+        #expect(row.address == nil)
+
+        CloudGrantStore.disconnect(platform, accountKey: key, store: keychain)
+        #expect(keychain.get(provider: provider, account: key) == nil,
+                "Disconnect left the unreadable sign-in behind")
+    }
+
     @Test("The restore path still discards what it cannot read")
     func restorePathStillDiscards() {
         // The other half of the fence, kept where its reasoning still holds: a

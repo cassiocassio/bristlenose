@@ -502,45 +502,48 @@ enum CloudGrantStore {
     static func connections(store: any KeychainStore = KeychainHelper.liveStore) -> [Connection] {
         migrateLegacyItems(store: store)
         return CloudPlatform.built.flatMap { platform -> [Connection] in
-            accountKeys(for: platform, store: store).compactMap { key in
+            accountKeys(for: platform, store: store).map { key -> Connection in
                 switch platform {
                 case .teams:
                     // Non-destructive: this is a read to *draw a row*, and a
                     // Settings pane must not delete a credential it merely
                     // failed to parse. The restore path keeps the discard.
-                    return loadTeams(account: key, store: store,
-                                     discardingUnreadable: false).map {
-                        Connection(platform: platform, accountKey: key,
-                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
-                                   // `map`, not a default: a grant stored before
-                                   // the field existed, or by a session that
-                                   // never listed, has no verdict — and "not
-                                   // asked" must not read as "asked and found
-                                   // nothing".
-                                   driveTier: $0.driveType.map(DriveTier.init(driveType:)))
-                    }
+                    guard let grant = loadTeams(account: key, store: store,
+                                                discardingUnreadable: false)
+                    else { return unreadable(platform, key) }
+                    return Connection(platform: platform, accountKey: key,
+                                      address: grant.identity,
+                                      needsSignIn: grant.needsSignIn == true,
+                                      // `map`, not a default: a grant stored before
+                                      // the field existed, or by a session that
+                                      // never listed, has no verdict — and "not
+                                      // asked" must not read as "asked and found
+                                      // nothing".
+                                      driveTier: grant.driveType.map(DriveTier.init(driveType:)))
                 case .meet:
-                    return loadGoogle(account: key, store: store,
-                                      discardingUnreadable: false).map {
-                        Connection(platform: platform, accountKey: key,
-                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
-                                   // Google's tier comes from the address, free,
-                                   // in `AccountsSectionModel`. Nothing to store
-                                   // and nothing to carry.
-                                   driveTier: nil)
-                    }
+                    guard let grant = loadGoogle(account: key, store: store,
+                                                 discardingUnreadable: false)
+                    else { return unreadable(platform, key) }
+                    return Connection(platform: platform, accountKey: key,
+                                      address: grant.identity,
+                                      needsSignIn: grant.needsSignIn == true,
+                                      // Google's tier comes from the address, free,
+                                      // in `AccountsSectionModel`. Nothing to store
+                                      // and nothing to carry.
+                                      driveTier: nil)
                 case .zoom:
-                    return loadZoom(account: key, store: store,
-                                    discardingUnreadable: false).map {
-                        Connection(platform: platform, accountKey: key,
-                                   address: $0.identity, needsSignIn: $0.needsSignIn == true,
-                                   // Nothing to carry: Zoom's "can this account
-                                   // record" question is a live account setting
-                                   // that `ZoomPreflight` answers at listing
-                                   // time, not a durable property worth writing
-                                   // down. See `ZoomGrant.revoked`.
-                                   driveTier: nil)
-                    }
+                    guard let grant = loadZoom(account: key, store: store,
+                                               discardingUnreadable: false)
+                    else { return unreadable(platform, key) }
+                    return Connection(platform: platform, accountKey: key,
+                                      address: grant.identity,
+                                      needsSignIn: grant.needsSignIn == true,
+                                      // Nothing to carry: Zoom's "can this account
+                                      // record" question is a live account setting
+                                      // that `ZoomPreflight` answers at listing
+                                      // time, not a durable property worth writing
+                                      // down. See `ZoomGrant.revoked`.
+                                      driveTier: nil)
                 }
             }
         }
@@ -558,6 +561,15 @@ enum CloudGrantStore {
                                 store: any KeychainStore = KeychainHelper.liveStore) -> String? {
         migrateLegacyItems(store: store)
         return accountKeys(for: platform, store: store).first
+    }
+
+    /// An item enumeration found and this build cannot read. The sign-in is
+    /// real — it is on disk — and holds nothing that works, which is exactly
+    /// the tombstone `needsSignIn` already describes. Listing it is what makes
+    /// it removable; the restore path still discards it on the next sign-in.
+    private static func unreadable(_ platform: CloudPlatform, _ key: String) -> Connection {
+        Connection(platform: platform, accountKey: key, address: nil,
+                   needsSignIn: true, driveTier: nil)
     }
 
     private static func accountKeys(for platform: CloudPlatform,

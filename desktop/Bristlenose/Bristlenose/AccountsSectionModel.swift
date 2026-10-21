@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // What Settings ▸ Accounts shows, worked out without touching the network.
 //
@@ -185,6 +186,8 @@ struct AccountSection: Identifiable, Equatable, Sendable {
 /// decision, the decision belongs in a testable helper.
 enum AccountsSectionModel {
 
+    private static let log = Logger(subsystem: "app.bristlenose", category: "cloud-import")
+
     /// - Parameters:
     ///   - available: the platforms this build can actually sign in to — an
     ///     OAuth client is registered *and* the service is not parked. Passed
@@ -224,9 +227,25 @@ enum AccountsSectionModel {
                                   : "desktop.accounts.cantSignInStranded"
     }
 
+    /// How many sign-ins are stored for `platform`, when that is more than the
+    /// one the pane shows; nil otherwise.
+    ///
+    /// R43, owner's decision 21 Oct 2026: one account per service stays the
+    /// rule, so a second stored sign-in is neither shown nor removable here.
+    /// It is logged instead, platform and count only: an address or account
+    /// key identifies a client.
+    static func surplusSignInCount(for platform: CloudPlatform,
+                                   in connections: [CloudGrantStore.Connection]) -> Int? {
+        let count = connections.filter { $0.platform == platform }.count
+        return count > 1 ? count : nil
+    }
+
     private static func cloudSection(_ platform: CloudPlatform,
                                      available: Bool,
                                      connections: [CloudGrantStore.Connection]) -> AccountSection {
+        if let count = surplusSignInCount(for: platform, in: connections) {
+            log.notice("accounts: \(count) stored sign-ins for \(platform.rawValue, privacy: .public); showing the first, one account per service (R43)")
+        }
         // Unavailable is checked first and unconditionally. A grant left behind
         // by an earlier build whose client id has since gone would otherwise
         // render as a working connection nothing can use.

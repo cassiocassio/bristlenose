@@ -146,6 +146,18 @@ struct AccountsSectionModelTests {
                 == "desktop.accounts.cantSignIn")
     }
 
+    @Test("More than one stored sign-in for a service is noticed, and one is not")
+    func surplusSignInsAreCounted() {
+        // R43: one account per service stays the rule, and the extra sign-in
+        // is logged. This is the decision the log line rests on.
+        let connections = [connection(.teams, "martin@clientco.com"),
+                           connection(.teams, "martin@otherclient.com"),
+                           connection(.meet, "martin@clientco.com")]
+        #expect(AccountsSectionModel.surplusSignInCount(for: .teams, in: connections) == 2)
+        #expect(AccountsSectionModel.surplusSignInCount(for: .meet, in: connections) == nil)
+        #expect(AccountsSectionModel.surplusSignInCount(for: .zoom, in: connections) == nil)
+    }
+
     // MARK: Connected
 
     @Test("A connected account is named by its address")

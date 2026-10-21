@@ -26,6 +26,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Literal
 
 from bristlenose.providers import CREDENTIALS
 
@@ -333,6 +334,34 @@ def get_credential_store_label() -> str:
             return "Secret Service"
         return "config file"
     return "config file"
+
+
+CredentialStoreKind = Literal["keychain", "secret_service", "file"]
+
+
+def credential_store_kind(store: CredentialStore) -> CredentialStoreKind:
+    """Which kind of store this INSTANCE is — for wording what it couldn't save.
+
+    Maps the store that was actually written to, never re-probes the platform,
+    so the kind is the store whose write failed (a second
+    ``_is_secret_service_available()`` probe could answer differently).
+
+    Raises ``TypeError`` for a store that persists nothing (a bare
+    :class:`EnvCredentialStore`) or one this module doesn't know: there is no
+    store to name.
+    """
+    # Both modules import on any platform (subprocess/shutil only); imported
+    # here because each imports this module.
+    from bristlenose.credentials_linux import LinuxCredentialStore
+    from bristlenose.credentials_macos import MacOSCredentialStore
+
+    if isinstance(store, FileCredentialStore):
+        return "file"
+    if isinstance(store, MacOSCredentialStore):
+        return "keychain"
+    if isinstance(store, LinuxCredentialStore):
+        return "secret_service"
+    raise TypeError(f"{type(store).__name__} is not a persisting credential store")
 
 
 def get_credential_source(provider: str) -> str | None:

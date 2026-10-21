@@ -17,6 +17,7 @@ import { useInert } from "../hooks/useInert";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
+import { isDesktop } from "../utils/platform";
 import { announce } from "../utils/announce";
 import { postStoreMiroToken } from "../shims/bridge";
 import {
@@ -37,6 +38,7 @@ import type {
   MiroBoardStatus,
   MiroExportRequest,
   MiroStatusResponse,
+  MiroStoreKind,
   ScreensMiroStatus,
 } from "../utils/types";
 
@@ -52,6 +54,18 @@ interface MiroExportPanelProps {
 const BOARD_POLL_MS = 1500;
 
 type View = "loading" | "connect" | "configure" | "exporting" | "done";
+
+/**
+ * "Connected, but couldn't save the token to <store>" in each store's own word: the Mac's
+ * Keychain, the Linux desktop's keyring, or the settings file Bristlenose falls back to.
+ * One key per store, not a `{{store}}` placeholder, because the noun declines and agrees
+ * with its article in half the locales. Literal keys, so the locale-reader gate sees each.
+ */
+const PERSIST_WARNING_KEY: Record<MiroStoreKind, string> = {
+  keychain: "miro.persistWarningKeychain",
+  secret_service: "miro.persistWarningKeyring",
+  file: "miro.persistWarningFile",
+};
 
 /** Pull the server `detail` (attached by api.ts httpError) off a caught error. */
 function errDetail(e: unknown): string {
@@ -156,6 +170,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const [clipsBase, setClipsBase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Connected, but the token wasn't saved: state beside "Connected ✓", not an error.
+  const [persistWarning, setPersistWarning] = useState<string | null>(null);
   const [boardUrl, setBoardUrl] = useState<string | null>(null);
   const [stickies, setStickies] = useState(0);
   // Both boards are jobs: how far the build has got, how many screens it could not show, and
@@ -247,6 +263,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     if (!open) return;
     triggerRef.current = document.activeElement;
     setError(null);
+    setPersistWarning(null);
     setBoardUrl(null);
     setSkipped(0);
     setBuildState(null);
@@ -364,6 +381,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         // the sandboxed sidecar can't write the Keychain, so hand it to the
         // macOS host. No-op in browser/serve mode (Python persists it there).
         postStoreMiroToken(token.trim());
+        // In the browser the server's store is the only one, so say where the token couldn't be
+        // saved. Not in the Mac app: there Python's Keychain write is a sandboxed no-op by design,
+        // the durable copy goes through the bridge above, and the native sheet owns the warning.
+        setPersistWarning(
+          !isDesktop() && s.persisted === false && s.store ? t(PERSIST_WARNING_KEY[s.store]) : null,
+        );
         setAccount(accountLine(s));
         setTeamName(s.team_name?.trim() || null);
         setView("configure");
@@ -382,6 +405,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     setError(null);
     try {
       await postMiroDisconnect();
+      setPersistWarning(null);
       setAccount(null);
       setTeamName(null);
       setView("connect");
@@ -534,6 +558,11 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                       {t("miro.disconnect")}
                     </button>
                   </p>
+                  {persistWarning && (
+                    <p className="bn-export-hint" role="status">
+                      {persistWarning}
+                    </p>
+                  )}
                   {account && <p className="bn-export-hint">{account}</p>}
                   <label className="bn-export-hint" htmlFor="bn-miro-board-name">
                     {t("miro.boardNameLabel")}

@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import secrets
+import subprocess
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -19,6 +20,8 @@ from bristlenose.board_progress import BoardCancelledError, BoardProgress, defau
 from bristlenose.config import load_settings
 from bristlenose.credentials import (
     CredentialStore,
+    CredentialStoreKind,
+    credential_store_kind,
     get_credential,
     get_credential_source,
     get_credential_store,
@@ -49,6 +52,11 @@ class MiroStatusResponse(BaseModel):
     user_name: str | None = None
     team_name: str | None = None  # the workspace new boards are created in
     org_name: str | None = None  # company/organization (Enterprise only)
+    # /connect only (None elsewhere, so Swift's StatusResponse is unchanged):
+    # whether the token round-tripped the store, and which kind of store was
+    # asked, so the browser panel can say where it couldn't be saved.
+    persisted: bool | None = None
+    store: CredentialStoreKind | None = None
 
 
 class MiroConnectRequest(BaseModel):
@@ -146,6 +154,16 @@ def _store_token_verified(store: CredentialStore, key: str, value: str) -> bool:
         return set_verified(store, key, value)
     except NotImplementedError:
         logger.warning("No writable credential store — %s not persisted", key)
+        return False
+    except subprocess.CalledProcessError as exc:
+        # `secret-tool store` runs with check=True: installed, but no provider
+        # owns org.freedesktop.secrets (Debian with libsecret-tools, WSL, a TTY).
+        # The token validated; it just wasn't saved. Exit code only — stderr
+        # isn't captured, and the command line carries no secret either way.
+        logger.warning(
+            "%s could not write %s (exit %s) — not persisted",
+            type(store).__name__, key, exc.returncode,
+        )
         return False
 
 
@@ -259,7 +277,22 @@ def miro_connect(
         user_name=account.get("user_name"),
         team_name=account.get("team_name"),
         org_name=account.get("org_name"),
+        persisted=persisted,
+        store=_store_kind(store),
     )
+
+
+def _store_kind(store: CredentialStore) -> CredentialStoreKind | None:
+    """The kind of the store just written, or None for one with no name.
+
+    Production only ever hands this one of the three persisting stores; a
+    read-only or unknown store reports no kind rather than turning a connect
+    that worked into a 500.
+    """
+    try:
+        return credential_store_kind(store)
+    except TypeError:
+        return None
 
 
 # ---------------------------------------------------------------------------

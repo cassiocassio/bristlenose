@@ -793,3 +793,35 @@ class TestCredentialRegistry:
             if not key_fields:
                 continue
             assert key_fields[0].env_var == f"BRISTLENOSE_{CREDENTIALS[name].env_var}", name
+
+
+class TestCredentialStoreKind:
+    """`credential_store_kind` names the store that was asked to hold a token.
+
+    It maps the INSTANCE, never re-probes the platform, so the kind the Miro
+    panel words its warning with is the store whose write failed.
+    """
+
+    def test_keychain(self) -> None:
+        from bristlenose.credentials import credential_store_kind
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        assert credential_store_kind(MacOSCredentialStore()) == "keychain"
+
+    def test_secret_service(self) -> None:
+        from bristlenose.credentials import credential_store_kind
+        from bristlenose.credentials_linux import LinuxCredentialStore
+
+        assert credential_store_kind(LinuxCredentialStore()) == "secret_service"
+
+    def test_file(self, tmp_path: Path) -> None:
+        from bristlenose.credentials import FileCredentialStore, credential_store_kind
+
+        assert credential_store_kind(FileCredentialStore(tmp_path / ".env")) == "file"
+
+    def test_a_read_only_store_has_no_kind(self) -> None:
+        """Nothing was asked to persist, so there is no store to name."""
+        from bristlenose.credentials import credential_store_kind
+
+        with pytest.raises(TypeError):
+            credential_store_kind(EnvCredentialStore())

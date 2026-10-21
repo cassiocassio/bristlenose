@@ -341,3 +341,89 @@ def test_a_miro_board_is_flat_unless_sentiment_is_asked_for(client: TestClient) 
     tinted = client.post(url, json={"colour_by": "sentiment"}).json()["html"]
     assert not any(h in flat for h in sentiment)
     assert all(h in tinted for h in sentiment)
+
+
+# ---------------------------------------------------------------------------
+# POST /connect says whether the token was saved, and to which store — so the
+# browser panel can say "connected, but not saved to your <store>" in the OS's
+# own word. The Mac app ignores both fields (its native sheet owns the warning).
+# ---------------------------------------------------------------------------
+
+
+def _store_doubles() -> list[tuple[type, str]]:
+    """A `_NoOpStore` dressed as each concrete store, with the kind it must map to."""
+    from bristlenose.credentials import FileCredentialStore
+    from bristlenose.credentials_linux import LinuxCredentialStore
+    from bristlenose.credentials_macos import MacOSCredentialStore
+
+    return [
+        (type("_NoOpKeychain", (_NoOpStore, MacOSCredentialStore), {}), "keychain"),
+        (type("_NoOpSecretService", (_NoOpStore, LinuxCredentialStore), {}), "secret_service"),
+        (type("_NoOpFile", (_NoOpStore, FileCredentialStore), {}), "file"),
+    ]
+
+
+_NO_ACCOUNT = {"user_name": None, "team_name": None, "org_name": None}
+
+
+def _connect(client: TestClient, store: object):  # noqa: ANN202 — a Response
+    with patch(_PATCH_GET_STORE, return_value=store), \
+         patch(_PATCH_VALIDATE_TOKEN, return_value=(True, None)), \
+         patch(_PATCH_TOKEN_INFO, return_value=_NO_ACCOUNT):
+        return client.post("/api/projects/1/miro/connect", json={"token": "tok-abc"})
+
+
+class TestConnectReportsPersistence:
+    @pytest.mark.parametrize("kind_index", [0, 1, 2], ids=["keychain", "secret_service", "file"])
+    def test_a_write_that_did_not_land_is_reported_with_its_store(
+        self, client: TestClient, kind_index: int
+    ) -> None:
+        cls, kind = _store_doubles()[kind_index]
+        resp = _connect(client, cls())
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["connected"] is True
+        assert data["persisted"] is False
+        assert data["store"] == kind
+
+    def test_a_write_that_landed_is_reported_persisted(self, client: TestClient) -> None:
+        from bristlenose.credentials_macos import MacOSCredentialStore
+
+        cls = type("_WorkingKeychain", (_WorkingStore, MacOSCredentialStore), {})
+        data = _connect(client, cls()).json()
+        assert data["persisted"] is True
+        assert data["store"] == "keychain"
+
+    def test_a_secret_tool_failure_is_not_saved_rather_than_a_500(
+        self, client: TestClient
+    ) -> None:
+        """`secret-tool` installed, no provider owns org.freedesktop.secrets.
+
+        `LinuxCredentialStore.set` runs with `check=True`, so the write raises.
+        The token validated; the connect works for this session; it just wasn't
+        saved — which is what the panel must be told, not a server error.
+        """
+        import subprocess
+
+        from bristlenose.credentials_linux import LinuxCredentialStore
+
+        class _NoProvider(_NoOpStore, LinuxCredentialStore):
+            def set(self, key: str, value: str) -> None:
+                raise subprocess.CalledProcessError(1, ["secret-tool", "store"])
+
+        resp = _connect(client, _NoProvider())
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["connected"] is True
+        assert data["persisted"] is False
+        assert data["store"] == "secret_service"
+        assert client.app.state.miro_session_token == "tok-abc"
+
+    def test_status_and_disconnect_carry_neither_field(self, client: TestClient) -> None:
+        """Only /connect wrote anything; the Swift `StatusResponse` contract is unchanged."""
+        with patch(_PATCH_GET_CREDENTIAL, return_value=None):
+            status = client.get("/api/projects/1/miro/status").json()
+        assert status["persisted"] is None and status["store"] is None
+        with patch(_PATCH_GET_STORE, return_value=_WorkingStore()):
+            gone = client.post("/api/projects/1/miro/disconnect").json()
+        assert gone["persisted"] is None and gone["store"] is None

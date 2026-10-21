@@ -837,7 +837,14 @@ export interface MiroStatusResponse {
   user_name?: string | null;
   team_name?: string | null; // workspace new boards are created in
   org_name?: string | null; // company/organization (Enterprise only)
+  /** POST /connect only: did the token round-trip the store? Absent elsewhere. */
+  persisted?: boolean | null;
+  /** POST /connect only: which kind of store was asked to hold the token. */
+  store?: MiroStoreKind | null;
 }
+
+/** The store the server wrote a Miro token to (`credentials.credential_store_kind`). */
+export type MiroStoreKind = "keychain" | "secret_service" | "file";
 
 export interface MiroExportRequest {
   board_name?: string | null;

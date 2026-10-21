@@ -3118,12 +3118,6 @@ struct ContentView: View {
                 // and the gap is reachable on every start and switch.
                 handshakeProjectPaths: serveFleet.handshakeProjectPaths,
                 lastAgentCallAt: serveFleet.lastAgentCallAt,
-                // The crash belongs to this window's document, so it is the
-                // sole-selected study's and no other's; the bridge clears it
-                // on the next successful render or a project switch.
-                reportCrash: selectedProject.flatMap { p in
-                    bridgeHandler.reportCrash.map { (projectID: p.id, crash: $0) }
-                },
                 renameRequest: renameRequest,
                 flashProjectID: dropTargetProjectID
             )

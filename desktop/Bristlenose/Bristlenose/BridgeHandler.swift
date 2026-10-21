@@ -390,15 +390,6 @@ final class BridgeHandler: ObservableObject {
     /// panel used to open, take the pick, and do nothing (R47 follow-up).
     @Published var selectedProjectTakesFiles: Bool = false
 
-    /// This window's report crashed: the `/report` error boundary's
-    /// `report-error` post (decision #2, 21 Oct 2026). Read by `ContentView`
-    /// into the sidebar row of the study this window shows, and by the row's
-    /// popover. Nil whenever the document is rendering: cleared by `ready`
-    /// (a reload, Retry's included), by `route-change` (a navigation that
-    /// rendered), by a status page replacing the SPA, and by `reset()` (a
-    /// project switch), so it never outlives the window that crashed.
-    @Published var reportCrash: ReportCrash?
-
     /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
     /// folder-access half — from the facts that decide them.
     ///
@@ -986,9 +977,6 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             documentState = .spa
-            // A document that mounted is a document that rendered: Retry's
-            // reload, or a run's end, has replaced the crashed one.
-            reportCrash = nil
             // Replay the lens the user clicked during boot, if any — the
             // queue is what makes a lit-on-the-prior rail a promise rather
             // than a lie (P3). Routed back through `activateLens` so the
@@ -1016,8 +1004,6 @@ final class BridgeHandler: ObservableObject {
                 StatusPageOutcome(bridgeValue: body["outcome"] as? String)
             )
             pendingLensIntent = nil
-            // The crashed SPA is gone; this page is not it.
-            reportCrash = nil
             // A status page withholds nothing of its own; the SPA's last
             // `lens-availability` post no longer describes this document.
             lensReadiness = .all
@@ -1027,9 +1013,6 @@ final class BridgeHandler: ObservableObject {
                 currentPath = url
                 sessionsRouteMemory.observe(path: url)
                 leaveWithheldLens()
-                // AppLayout posts this from an effect, which runs only after
-                // the layout committed: the report rendered again.
-                reportCrash = nil
             }
 
         case "anchor-change":
@@ -1289,27 +1272,6 @@ final class BridgeHandler: ObservableObject {
                 OutOfCreditModel.recordActiveProviderOutOfCredit(provider: provider)
             }
 
-        case "report-error":
-            // The whole report failed to render (decision #2, 21 Oct 2026,
-            // `docs/mockups/report-crash-fallback.html`): the `/report`
-            // boundary posts the route, the error and the first stack frames
-            // once per crash. `llm-failure`'s shape — logged here so it lands
-            // in the unified log (the WKWebView console is invisible in a
-            // release build), and kept on this window for the sidebar row's
-            // warning glyph and the popover's Copy details. Deliberately not
-            // written to the project's bristlenose.log: nothing in the SPA
-            // writes to the serve's log today, and a route for it would be
-            // new machinery. A payload with no route or message is dropped
-            // and said so, never lit.
-            guard let crash = ReportCrash.fromBridge(body) else {
-                Self.log.error("report-error dropped: no route or message in the payload")
-                return
-            }
-            Self.log.error(
-                "report-error route=\(crash.route, privacy: .public) error=\(crash.message, privacy: .public)"
-            )
-            reportCrash = crash
-
         default:
             break
         }
@@ -1346,8 +1308,6 @@ final class BridgeHandler: ObservableObject {
         personPicker.close()
         isReady = false
         documentState = .loading
-        // The crashed document goes with the selection it belonged to.
-        reportCrash = nil
         // The next document says what it withholds; until then nothing is.
         lensReadiness = .all
         pendingLensIntent = nil

@@ -195,23 +195,21 @@ def _build_details(cause: Cause | None) -> str | None:
 
 
 def _holds_interviews(project_dir: Path) -> bool:
-    """Whether a file Bristlenose analyses sits at the folder's top level.
+    """Whether `run` would find a file to analyse in the folder.
 
-    Top level only, as the Mac's own work-to-do check counts: one listing per
-    page view, with no walk into subfolders.
+    `run`'s own file selection (`iter_scanned_files`), not a copy of it, so
+    interviews kept in per-participant subfolders count as `run` counts them
+    (decision #82). It stops at the first, and lists and stats without opening
+    a file, so a dataless placeholder is never downloaded to answer.
     """
     from bristlenose.models import classify_file
-    from bristlenose.utils.fs import is_os_metadata
+    from bristlenose.stages.s01_ingest import UnsuitableInputDirError, iter_scanned_files
 
     try:
         return any(
-            entry.is_file()
-            and not entry.name.startswith(".")
-            and not is_os_metadata(entry)
-            and classify_file(entry) is not None
-            for entry in project_dir.iterdir()
+            classify_file(path) is not None for path in iter_scanned_files(project_dir)
         )
-    except OSError:
+    except (OSError, UnsuitableInputDirError):  # `run` refuses it, or cannot list it
         return False
 
 

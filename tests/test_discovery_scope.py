@@ -186,6 +186,24 @@ class TestResilience:
             "the unreadable folder was stepped over without being reported"
         )
 
+    def test_a_file_unstatable_after_listing_does_not_end_the_walk(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Listed, then gone (or unreadable) before its times are read: the
+        file is stepped over, the rest of the folder still ingests."""
+        _touch(tmp_path / "good.mp4")
+        gone = _touch(tmp_path / "gone.mp4")
+        real = s01_ingest._get_creation_time
+
+        def creation_time(path: Path):  # type: ignore[no-untyped-def]
+            if path == gone:
+                raise FileNotFoundError(2, "No such file or directory", str(path))
+            return real(path)
+
+        monkeypatch.setattr(s01_ingest, "_get_creation_time", creation_time)
+
+        assert [f.path.name for f in discover_files(tmp_path)] == ["good.mp4"]
+
     def test_a_cloud_placeholder_is_not_faulted_in(self, tmp_path: Path,
                                                    monkeypatch: pytest.MonkeyPatch) -> None:
         """Duration at scan time is a nicety; it must not cost a download.

@@ -6,6 +6,7 @@ import logging
 import re
 import sys
 import unicodedata
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -143,6 +144,34 @@ def discover_files(
     Raises:
         UnsuitableInputDirError: *input_dir* is a filesystem or system root.
     """
+    files: list[InputFile] = []
+    for path in iter_scanned_files(input_dir, skipped):
+        try:
+            _try_add_file(path, files, skipped)
+        except OSError as exc:  # gone or unreadable since the listing
+            logger.warning("Skipping unreadable entry %s: %s", path, exc)
+
+    # Sort by creation date, then filename as tiebreaker
+    files.sort(key=lambda f: (f.created_at, f.path.name))
+    return files
+
+
+def iter_scanned_files(
+    input_dir: Path, skipped: list[SkippedFile] | None = None
+) -> Iterator[Path]:
+    """Every file `run`'s scan considers, in scan order — its file selection.
+
+    The walk alone: depth, hidden entries, OS metadata, our own artefacts and
+    output, the discussion guide, links, unreadable folders. It lists and stats
+    and never opens a file, so a dataless placeholder is yielded without being
+    downloaded. :func:`discover_files` classifies and probes what it yields;
+    the serve's never-run page asks only whether any of it is a format we read
+    (decision #82), so the two cannot disagree about what a folder holds.
+
+    Raises:
+        UnsuitableInputDirError: *input_dir* is a filesystem or system root
+            (on the first ``next``).
+    """
     reason = _refuse_reason(input_dir)
     if reason is not None:
         raise UnsuitableInputDirError(
@@ -150,19 +179,14 @@ def discover_files(
             "Point Bristlenose at the folder holding your recordings."
         )
 
-    files: list[InputFile] = []
     seen: set[Path] = set()
     links: list[tuple[Path, int]] = []
-    _scan_dir(input_dir, 0, files, skipped, seen, links)
+    yield from _scan_dir(input_dir, 0, skipped, seen, links)
     # Links after the real tree, so whatever a link and its target both reach
     # keeps the target's own path, wherever the link sorts (R123).
     while links:
         link, depth = links.pop(0)
-        _scan_entries([link], depth, files, skipped, seen, links, defer_links=False)
-
-    # Sort by creation date, then filename as tiebreaker
-    files.sort(key=lambda f: (f.created_at, f.path.name))
-    return files
+        yield from _scan_entries([link], depth, skipped, seen, links, defer_links=False)
 
 
 def _resolved(path: Path) -> Path:
@@ -175,11 +199,10 @@ def _resolved(path: Path) -> Path:
 def _scan_dir(
     directory: Path,
     depth: int,
-    files: list[InputFile],
     skipped: list[SkippedFile] | None,
     seen: set[Path],
     links: list[tuple[Path, int]],
-) -> None:
+) -> Iterator[Path]:
     """Walk *directory*, descending while files stay within _MAX_SCAN_DEPTH.
 
     An unreadable directory is recorded and stepped over, never fatal. Dropping
@@ -206,19 +229,18 @@ def _scan_dir(
             )
         logger.warning("Skipping unreadable directory %s: %s", directory, exc)
         return
-    _scan_entries(entries, depth, files, skipped, seen, links, defer_links=True)
+    yield from _scan_entries(entries, depth, skipped, seen, links, defer_links=True)
 
 
 def _scan_entries(
     entries: list[Path],
     depth: int,
-    files: list[InputFile],
     skipped: list[SkippedFile] | None,
     seen: set[Path],
     links: list[tuple[Path, int]],
     *,
     defer_links: bool,
-) -> None:
+) -> Iterator[Path]:
     """Classify *entries* (one folder's, or one deferred link) at *depth*."""
     for entry in entries:
         # Hidden entries — dot-files and dot-directories alike — are tool
@@ -274,10 +296,10 @@ def _scan_entries(
                     # Marked only once walked: a folder too deep to walk here
                     # can still be reached by a shallower link.
                     seen.add(real)
-                    _scan_dir(entry, depth + 1, files, skipped, seen, links)
+                    yield from _scan_dir(entry, depth + 1, skipped, seen, links)
             elif entry.is_file():
                 seen.add(real)
-                _try_add_file(entry, files, skipped)
+                yield entry
         except OSError as exc:  # a single unstatable entry must not end the walk
             logger.warning("Skipping unreadable entry %s: %s", entry, exc)
 

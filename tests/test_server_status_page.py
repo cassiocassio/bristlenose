@@ -167,6 +167,95 @@ class TestDetectStatus:
         assert info is not None
         assert "No interviews" in info.short
 
+    @pytest.mark.parametrize(
+        ("layout", "run_finds"),
+        [
+            pytest.param(["p1/a.mp4"], True, id="only_in_subfolders"),
+            pytest.param(["top.mp4", "p2/b.m4a"], True, id="mixed"),
+            pytest.param(["a/b/x.mp4"], True, id="level_three"),
+            pytest.param(["a/b/c/x.mp4"], False, id="too_deep"),
+            pytest.param(["clip.ts", "p1/clip.ts"], False, id="ts_only"),
+            pytest.param(["p1/._a.mp4", "p1/.DS_Store", "p1/~$notes.docx"], False,
+                         id="metadata_only"),
+            pytest.param(["bristlenose-output/clips/q1.mp4"], False, id="output_only"),
+            pytest.param(["Discussion guide/guide.docx"], False, id="guide_only"),
+            pytest.param([".git/x.mp4"], False, id="hidden_folder"),
+        ],
+    )
+    def test_never_run_page_sees_the_interviews_run_would_analyse(
+        self, tmp_path: Path, layout: list[str], run_finds: bool
+    ) -> None:
+        """Decision #82 (R100): the page asks the folder what `run` would ask it.
+
+        It read the top level only, so a study kept in per-participant folders
+        was told "No interviews to analyse yet" while `run` found every one.
+        """
+        from bristlenose.stages.s01_ingest import discover_files
+
+        project = tmp_path / "project"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        for rel in layout:
+            path = project / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"\x00")
+        with patch("bristlenose.stages.s01_ingest.probe_media", return_value=(None, None)):
+            assert bool(discover_files(project)) is run_finds  # the scenario is what it says
+        info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        assert info is not None
+        assert info.outcome == "no-run"
+        if run_finds:
+            assert info.short == "Not analysed yet."
+        else:
+            assert "No interviews" in info.short
+
+    def test_never_run_page_never_reads_a_file_to_see_it(self, tmp_path: Path) -> None:
+        """A dataless placeholder in a subfolder counts, as `run` counts it,
+        without its bytes being asked for: no probe, no stat of its times, no
+        open (on POSIX the file is unreadable, so a read would fail and hide it)."""
+        project = tmp_path / "project"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        media = project / "p1" / "a.mp4"
+        media.parent.mkdir()
+        media.write_bytes(b"\x00")
+        media.chmod(0)
+        try:
+            with patch("bristlenose.stages.s01_ingest.probe_media",
+                       side_effect=AssertionError("probed")), \
+                 patch("bristlenose.stages.s01_ingest._get_creation_time",
+                       side_effect=AssertionError("stat'd for times")):
+                info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        finally:
+            media.chmod(0o600)
+        assert info is not None
+        assert info.short == "Not analysed yet."
+
+    def test_never_run_page_asks_runs_own_scan(self, tmp_path: Path) -> None:
+        """One scan, not a copy: what `run`'s selection yields is what counts."""
+        project = tmp_path / "project"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        with patch("bristlenose.stages.s01_ingest.iter_scanned_files",
+                   return_value=iter([project / "p1" / "a.mp4"])):
+            info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        assert info is not None
+        assert info.short == "Not analysed yet."
+
+    def test_never_run_page_on_a_folder_run_refuses_neither_walks_nor_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`run` refuses the home folder before walking it; so does the page."""
+        project = tmp_path / "home"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        (project / "p1").mkdir()
+        (project / "p1" / "a.mp4").write_bytes(b"\x00")
+        monkeypatch.setenv("HOME", str(project))
+        info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
+        assert info is not None
+        assert "No interviews" in info.short
+
     def test_completed_lets_spa_render(self, tmp_path: Path) -> None:
         _seed_completed(tmp_path)
         assert detect_status(tmp_path, _cond(tmp_path)) is None

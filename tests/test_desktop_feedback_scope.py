@@ -29,10 +29,12 @@ tested in Swift (`WindowCommandTests`).
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
-_TARGET = Path(__file__).resolve().parent.parent / "desktop" / "Bristlenose" / "Bristlenose"
+_DESKTOP = Path(__file__).resolve().parent.parent / "desktop"
+_TARGET = _DESKTOP / "Bristlenose" / "Bristlenose"
 
 
 def _sources() -> dict[str, str]:
@@ -69,8 +71,6 @@ def test_the_status_page_asks_its_own_window_not_every_window() -> None:
     arm = _case_body(_sources()["BridgeHandler.swift"], "open-feedback")
     assert "NotificationCenter" not in arm, "the status page's request must not broadcast"
     assert "requestFeedback()" in arm
-    # The diagnostic stays on the door it watches.
-    assert 'FeedbackTrace.opened(by: "status-page-bridge' in arm
 
 
 def _doors() -> str:
@@ -176,3 +176,62 @@ def test_the_sheet_is_one_view_whatever_the_serve_does() -> None:
     assert sheet.count("FeedbackSheet(") == 1, sheet
     assert "FeedbackSheet(port: serveManager?.runningPort" in sheet
     assert not re.search(r"\bif\b|\?\s*FeedbackSheet|\bswitch\b", sheet), sheet
+
+
+# Build output, caches and bundles: generated, never edited, and gigabytes of it.
+# The bundled sidecar is gitignored and absent on CI, so scanning it would make the
+# walk's reach depend on the machine.
+_SKIP_DIRS = {
+    "build",
+    "DerivedData",
+    ".build",
+    "node_modules",
+    "__pycache__",
+    ".git",
+    "bristlenose-sidecar",
+}
+_SOURCE_SUFFIXES = {
+    ".swift",
+    ".m",
+    ".h",
+    ".md",
+    ".sh",
+    ".js",
+    ".mjs",
+    ".json",
+    ".py",
+    ".plist",
+    ".entitlements",
+    ".xcconfig",
+    ".strings",
+    ".xcstrings",
+    ".pbxproj",
+    ".spec",
+    ".txt",
+}
+
+
+def test_the_feedback_trace_diagnostic_is_gone() -> None:
+    # `FeedbackTrace` (15a80c71) logged every door into the sheet and drew the
+    # trigger chain in an English-only caption on the sheet itself, to chase the
+    # sheet that opened in every window. R82 fixed that (178b7dce) and the trace
+    # was removed (21 Oct 2026). It was marked "remove before release" and had to be
+    # parked off the tree for the 0.42.0 run, so this keeps it out for good.
+    scanned = 0
+    found = []
+    for directory, dirs, files in os.walk(_DESKTOP):
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in _SKIP_DIRS and not d.endswith((".xcresult", ".app", ".xcarchive"))
+        ]
+        for name in files:
+            path = Path(directory, name)
+            if path.suffix not in _SOURCE_SUFFIXES:
+                continue
+            scanned += 1
+            if "FeedbackTrace" in path.read_text(encoding="utf-8", errors="replace"):
+                found.append(str(path.relative_to(_DESKTOP)))
+    # A walk that reached nothing would pass vacuously.
+    assert scanned > 100 and "FeedbackSheet.swift" in {p.name for p in _TARGET.iterdir()}
+    assert found == [], found

@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 /// Menu-bar commands that act on **one window**, routed to the front one.
@@ -218,8 +219,8 @@ enum NewItemFallback {
 /// appears, which is the `NewItemFallback` shape.
 ///
 /// It expires. A request nothing claimed (the window that was meant to open
-/// never did) must not surface as a sheet in whatever window opens later; an
-/// unexplained feedback sheet is the very report `FeedbackTrace` is chasing.
+/// never did) must not surface as a sheet in whatever window opens later, as an
+/// unexplained sheet nobody asked for.
 @MainActor
 enum FeedbackFallback {
     /// Long enough for `openWindow` to build a window and run its `onAppear`,
@@ -240,6 +241,15 @@ enum FeedbackFallback {
     static func claim(now: Date = Date()) -> Bool {
         guard let at = requestedAt else { return false }
         requestedAt = nil
-        return now.timeIntervalSince(at) <= lifetime
+        let age = now.timeIntervalSince(at)
+        guard age <= lifetime else {
+            // Someone chose Send Feedback and no sheet opened: the window the
+            // menu opened took longer than `lifetime` to appear.
+            log.notice("feedback request expired unclaimed after \(age, format: .fixed(precision: 1), privacy: .public) s")
+            return false
+        }
+        return true
     }
+
+    private static let log = Logger(subsystem: "app.bristlenose", category: "feedback")
 }

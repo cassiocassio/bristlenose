@@ -114,40 +114,25 @@ struct CopyDiskSpaceAlertState: Identifiable {
 private struct FeedbackDoors: ViewModifier {
     @Binding var isShowing: Bool
     let feedbackRequests: Int
-    let projectName: String
 
     func body(content: Content) -> some View {
         content
             // The menu's fallback with no project window in front. Every window
             // hears it; the one that claims `FeedbackFallback` opens the sheet.
-            .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { note in
-                let source = note.userInfo?[FeedbackTrace.sourceKey] as? String ?? "unknown-poster"
-                guard FeedbackFallback.claim() else {
-                    FeedbackTrace.log.notice("feedback broadcast not taken by this window from=\(source, privacy: .public) (claimed elsewhere, or expired)")
-                    return
-                }
-                FeedbackTrace.opened(by: "broadcast-received from=\(source) project=\(projectName)")
+            .onReceive(NotificationCenter.default.publisher(for: .showFeedbackSheet)) { _ in
+                guard FeedbackFallback.claim() else { return }
                 isShowing = true
             }
             // This window's page asked: the status page, or Help ▸ Send
             // Feedback with this report's popout player in front.
             .onChange(of: feedbackRequests) { _, _ in
-                FeedbackTrace.opened(by: "window-page-request project=\(projectName)")
                 isShowing = true
             }
             // The menu opened this window because no project window was open to
             // take its request: take it now.
             .onAppear {
                 if FeedbackFallback.claim() {
-                    FeedbackTrace.opened(by: "opened-for-feedback")
                     isShowing = true
-                }
-            }
-            // Catch-all: logs every false→true flip, so a path nobody thought of
-            // still shows up (it will be the one with no matching "opened by" line).
-            .onChange(of: isShowing) { _, showing in
-                if showing {
-                    FeedbackTrace.log.notice("feedback sheet presenting project=\(projectName, privacy: .public) event=\(FeedbackTrace.describeCurrentEvent(), privacy: .public)")
                 }
             }
     }
@@ -1262,8 +1247,7 @@ struct ContentView: View {
         // `FeedbackFallback`. The last two are `FeedbackDoors`.
         .modifier(FeedbackDoors(
             isShowing: $showingFeedbackSheet,
-            feedbackRequests: bridgeHandler.feedbackRequests,
-            projectName: selectedProject?.name ?? "none"
+            feedbackRequests: bridgeHandler.feedbackRequests
         ))
         .sheet(isPresented: $showingFeedbackSheet) {
             // One view whatever the serve does while it is up: see
@@ -1696,7 +1680,6 @@ struct ContentView: View {
         case .showSessionsSwitcher:
             sessionsSwitcherRequest += 1
         case .showFeedback:
-            FeedbackTrace.opened(by: "window-command")
             showingFeedbackSheet = true
         case .applyDebugFixture(let scenario):
             applyDebugFixture(named: scenario)
@@ -3035,7 +3018,6 @@ struct ContentView: View {
         // Sets THIS window's sheet flag. The menu item's old app-wide
         // broadcast opened a sheet in every window.
         let footer = SidebarFooter(i18n: i18n) {
-            FeedbackTrace.opened(by: "sidebar-footer-ladybug")
             showingFeedbackSheet = true
         }
         if #available(macOS 26, *) {
@@ -3136,6 +3118,12 @@ struct ContentView: View {
                 // and the gap is reachable on every start and switch.
                 handshakeProjectPaths: serveFleet.handshakeProjectPaths,
                 lastAgentCallAt: serveFleet.lastAgentCallAt,
+                // The crash belongs to this window's document, so it is the
+                // sole-selected study's and no other's; the bridge clears it
+                // on the next successful render or a project switch.
+                reportCrash: selectedProject.flatMap { p in
+                    bridgeHandler.reportCrash.map { (projectID: p.id, crash: $0) }
+                },
                 renameRequest: renameRequest,
                 flashProjectID: dropTargetProjectID
             )

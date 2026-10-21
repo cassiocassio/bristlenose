@@ -42,10 +42,7 @@ struct AlphaExpiryFlow: ViewModifier {
                 // flight (`FeedbackSheetModel.cancelSend`), so a send that ends
                 // after it never calls onSent; this keeps a fresh attempt clean
                 // whatever the order.
-                Button("Send Feedback…") {
-                    FeedbackTrace.opened(by: "alpha-expiry-alert")
-                    didSend = false; route = .feedback
-                }
+                Button("Send Feedback…") { didSend = false; route = .feedback }
                 Button("Quit", role: .cancel) { NSApp.terminate(nil) }
             } message: {
                 Text("This was a time-limited preview. Get the latest at bristlenose.app. If you have a minute, I'd love to hear how it went.")

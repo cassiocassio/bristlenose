@@ -1990,7 +1990,6 @@ private struct HelpMenuContent: View {
         //     open to claim it, a project window opens and takes it.
         // So the item never dims, never goes dead, and never opens two.
         Button(i18n.t("desktop.menu.help.sendFeedback")) {
-            FeedbackTrace.opened(by: "help-menu windowCommands=\(windowCommands != nil)")
             if let windowCommands {
                 windowCommands.perform(.showFeedback)
             } else if bridgeHandler !== BridgeHandler.unattached {

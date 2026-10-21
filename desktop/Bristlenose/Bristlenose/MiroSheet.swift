@@ -151,7 +151,12 @@ final class MiroSheetModel: ObservableObject {
         let conn: MiroAPI.Connection
         do {
             conn = try await api.status()
+        } catch is CancellationError {
+            return
         } catch {
+            // The sheet closed mid-load: URLSession throws on our own cancel, and an
+            // "unreachable" line written now would be for nobody (as in `follow`).
+            if Task.isCancelled { return }
             // Could not tell is not signed out (R78): Connect stays, and its error line says why.
             step = .connect
             self.error = Self.text(for: error, i18n) ?? t("connectError")

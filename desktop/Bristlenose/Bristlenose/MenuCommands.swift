@@ -90,7 +90,8 @@ struct MenuCommands: Commands {
         CustomMenus(
             bridgeHandler: bridgeHandler,
             projectIndex: projectIndex,
-            i18n: i18n
+            i18n: i18n,
+            serveManager: serveManager
         )
 
         // (`Window ▸ Bristlenose` lived here until 16 Aug 2026. It is
@@ -359,6 +360,7 @@ private struct CustomMenus: Commands {
     let bridgeHandler: BridgeHandler
     let projectIndex: ProjectIndex
     let i18n: I18n
+    let serveManager: ServeManager
 
     var body: some Commands {
         // **Menu-bar titles, via `LocalizedStringKey(runtime String)`.**
@@ -392,7 +394,7 @@ private struct CustomMenus: Commands {
             CodesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
         }
         CommandMenu(LocalizedStringKey(i18n.t("common.nav.quotes"))) {
-            QuotesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n)
+            QuotesMenuContent(bridgeHandler: bridgeHandler, i18n: i18n, serveManager: serveManager)
         }
         CommandMenu(LocalizedStringKey(i18n.t("desktop.menu.video.title"))) {
             VideoMenuContent(bridgeHandler: bridgeHandler, i18n: i18n,
@@ -1578,6 +1580,8 @@ enum LensStep {
 private struct QuotesMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var i18n: I18n
+    /// Send to Miro / FigJam dim on it: the sheets need the report server.
+    @ObservedObject var serveManager: ServeManager
     @FocusedValue(\.windowCommands) private var windowCommands
 
     /// `commandTab`, not `activeTab`: every item here dispatches through
@@ -1764,16 +1768,17 @@ private struct QuotesMenuContent: View {
         ))
         .disabled(!onQuotesTab)
 
-        // Send to Miro — mirrors the toolbar popover's Miro row. Always enabled
-        // (uploads the project's quotes regardless of the active tab), matching
-        // the popover. Presents the native MiroSheet (ContentView owns the .sheet).
+        // Send to Miro — mirrors the toolbar popover's Miro row. Any tab (it
+        // uploads the project's quotes), but dimmed without the report server,
+        // which the sheet needs (R62). Presents the native MiroSheet (ContentView owns the .sheet).
         // Lives HERE, not in File: Miro exports quotes, and File carries the
         // whole-report export. (Briefly moved to File on 28 Jul 2026 and moved
         // straight back — recorded so it isn't "tidied" there again.)
         Button(i18n.t("common.miro.menuLabel")) {
             windowCommands?.perform(.showMiro)
         }
-        .disabled(!WindowCommand.showMiro.isEnabled(hasKeyWindow: windowCommands != nil))
+        .disabled(!MiroSheet.offered(hasKeyWindow: windowCommands != nil,
+                                     runningPort: serveManager.runningPort))
 
         // Send to FigJam — the board file for the FigJam plugin; the native
         // FigJamSheet, which ContentView owns. Parked until the plugin is
@@ -1784,7 +1789,8 @@ private struct QuotesMenuContent: View {
             Button(i18n.t("common.figjam.menuLabel")) {
                 windowCommands?.perform(.showFigJam)
             }
-            .disabled(!WindowCommand.showFigJam.isEnabled(hasKeyWindow: windowCommands != nil))
+            .disabled(!FigJamSheet.offered(hasKeyWindow: windowCommands != nil,
+                                           runningPort: serveManager.runningPort))
         }
 
         Divider()

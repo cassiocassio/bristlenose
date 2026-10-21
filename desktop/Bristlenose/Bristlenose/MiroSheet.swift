@@ -313,6 +313,13 @@ struct MiroSheet: View {
         loadsOnAppear = false
     }
 
+    /// Whether Send to Miro is offered: a project window in front, and its report
+    /// server up, since the sheet drives serve's endpoints and the window drops
+    /// the press without a port (R62).
+    static func offered(hasKeyWindow: Bool, runningPort: Int?) -> Bool {
+        WindowCommand.showMiro.isEnabled(hasKeyWindow: hasKeyWindow) && runningPort != nil
+    }
+
     // Constant size across every step (HIG: sheets keep one size through a flow —
     // cf. Pages' Export dialog, which stays fixed across all 7 tabs and lets the
     // sparse tabs show whitespace). Sized to the tallest step (configure with the

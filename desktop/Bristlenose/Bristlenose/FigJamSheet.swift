@@ -221,6 +221,12 @@ struct FigJamSheet: View {
         ))
     }
 
+    /// Whether Send to FigJam is offered: the same gate as `MiroSheet.offered`,
+    /// since this sheet also needs the report server (R62).
+    static func offered(hasKeyWindow: Bool, runningPort: Int?) -> Bool {
+        WindowCommand.showFigJam.isEnabled(hasKeyWindow: hasKeyWindow) && runningPort != nil
+    }
+
     // One size through the flow, like the Miro sheet (HIG: sheets keep one size).
     private let sheetWidth: CGFloat = 460
     private let sheetMinHeight: CGFloat = 400

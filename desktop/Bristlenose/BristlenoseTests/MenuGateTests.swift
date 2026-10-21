@@ -136,4 +136,20 @@ struct MenuGateTests {
         #expect(!bridge.canExportReport)
         withExtendedLifetime(webView) {}
     }
+
+    // MARK: R62 — Send to Miro / FigJam need the report server
+
+    /// The sheet drives serve's REST endpoints, and `perform` drops the press
+    /// without a port; the menu item stayed live and did nothing.
+    @Test func sendToMiroDimsWithoutTheReportServer() {
+        #expect(!MiroSheet.offered(hasKeyWindow: true, runningPort: nil))
+        #expect(MiroSheet.offered(hasKeyWindow: true, runningPort: 8176))
+        #expect(!MiroSheet.offered(hasKeyWindow: false, runningPort: 8176))
+    }
+
+    @Test func sendToFigJamDimsWithoutTheReportServer() {
+        #expect(!FigJamSheet.offered(hasKeyWindow: true, runningPort: nil))
+        #expect(FigJamSheet.offered(hasKeyWindow: true, runningPort: 8176))
+        #expect(!FigJamSheet.offered(hasKeyWindow: false, runningPort: 8176))
+    }
 }

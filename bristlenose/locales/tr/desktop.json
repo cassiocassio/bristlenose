@@ -78,7 +78,8 @@
       "focusMode": "Odak modu",
       "zoomIn": "Yakınlaştır",
       "zoomOut": "Uzaklaştır",
-      "actualSize": "Gerçek Boyut"
+      "actualSize": "Gerçek Boyut",
+      "reloadReport": "Raporu Yeniden Yükle"
     },
     "project": {
       "analyse": "Analiz Et",

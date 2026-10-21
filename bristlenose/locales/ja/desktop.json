@@ -78,7 +78,8 @@
       "focusMode": "\u30d5\u30a9\u30fc\u30ab\u30b9\u30e2\u30fc\u30c9",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-      "actualSize": "実際のサイズ"
+      "actualSize": "実際のサイズ",
+      "reloadReport": "レポートを再読み込み"
     },
     "project": {
       "analyse": "\u5206\u6790",

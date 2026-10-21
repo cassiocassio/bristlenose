@@ -78,7 +78,8 @@
       "focusMode": "\uc9d1\uc911 \ubaa8\ub4dc",
       "zoomIn": "확대",
       "zoomOut": "축소",
-      "actualSize": "실제 크기"
+      "actualSize": "실제 크기",
+      "reloadReport": "보고서 다시 불러오기"
     },
     "project": {
       "analyse": "\ubd84\uc11d",

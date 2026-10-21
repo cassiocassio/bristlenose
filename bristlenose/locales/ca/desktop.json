@@ -78,7 +78,8 @@
       "focusMode": "Mode immersió",
       "zoomIn": "Amplia",
       "zoomOut": "Redueix",
-      "actualSize": "Mida real"
+      "actualSize": "Mida real",
+      "reloadReport": "Torna a carregar l'informe"
     },
     "project": {
       "analyse": "Analitza",

@@ -78,7 +78,8 @@
       "focusMode": "Re\u017eim soust\u0159ed\u011bn\u00ed",
       "zoomIn": "Přiblížit",
       "zoomOut": "Oddálit",
-      "actualSize": "Skutečná velikost"
+      "actualSize": "Skutečná velikost",
+      "reloadReport": "Znovu načíst zprávu"
     },
     "project": {
       "analyse": "Analyzovat",

@@ -78,7 +78,8 @@
       "focusMode": "Fokusl\u00e4ge",
       "zoomIn": "Zooma in",
       "zoomOut": "Zooma ut",
-      "actualSize": "Verklig storlek"
+      "actualSize": "Verklig storlek",
+      "reloadReport": "Läs in rapport igen"
     },
     "project": {
       "analyse": "Analysera",

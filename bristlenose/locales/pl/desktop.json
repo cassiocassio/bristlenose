@@ -78,7 +78,8 @@
       "focusMode": "Tryb skupienia",
       "zoomIn": "Powiększ",
       "zoomOut": "Pomniejsz",
-      "actualSize": "Rzeczywisty rozmiar"
+      "actualSize": "Rzeczywisty rozmiar",
+      "reloadReport": "Załaduj ponownie raport"
     },
     "project": {
       "analyse": "Analizuj",

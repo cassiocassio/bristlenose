@@ -19,6 +19,27 @@ final class BristlenoseWebView: WKWebView {
     /// active tab / editing state and dispatch a menu action. Weak — the
     /// handler is owned at the App level and outlives the web view.
     weak var bridgeHandler: BridgeHandler?
+    /// Set in `WebView.makeNSView`, for the right-click menu's Reload Report.
+    weak var i18n: I18n?
+
+    /// Right-click ▸ Reload Report, where a browser user looks for Reload. It is
+    /// the remedy the broken mark asks for (a part of the report that couldn't be
+    /// shown, `PanelErrorBoundary` `part`); View ▸ Reload Report (⌘R) is its twin.
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        super.willOpenMenu(menu, with: event)
+        guard let i18n, let handler = bridgeHandler else { return }
+        ReportContextMenu.apply(
+            to: menu,
+            isEditing: handler.isEditing,
+            title: i18n.t("desktop.menu.view.reloadReport"),
+            target: self,
+            action: #selector(reloadReportFromMenu(_:))
+        )
+    }
+
+    @objc private func reloadReportFromMenu(_ sender: Any?) {
+        bridgeHandler?.reloadWebView()
+    }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -77,6 +98,47 @@ final class BristlenoseWebView: WKWebView {
 /// while editing text inline, ⌘A stays native text select-all. ⌘C stays
 /// Quotes-only: copying "the selection" elsewhere could include quotes the lens
 /// does not show.
+/// The report's right-click menu gains Reload Report (owner, 20 Oct 2026).
+/// Pure, so the menu edit is tested without WebKit building a menu.
+enum ReportContextMenu {
+    /// WebKit's own Reload item, which the page menu may carry. The identifier is
+    /// WebKit's (not public API): when it is there, ours takes its place so the
+    /// menu offers one reload, the one that refetches from the serve; when it is
+    /// not, nothing is matched and ours is appended.
+    static let webKitReload = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierReload")
+    static let reloadReport = NSUserInterfaceItemIdentifier("app.bristlenose.reloadReport")
+
+    /// Not while a field has the keyboard (`isEditing`: any focused input,
+    /// textarea or editable text, the search box included): what is typed there
+    /// is saved only when the edit is committed, and a reload would drop it. A
+    /// deliberate over-approximation; clicking out of the field brings it back.
+    static func offersReload(isEditing: Bool) -> Bool { !isEditing }
+
+    /// The whole edit WebView makes: ours in, or, while editing, WebKit's own
+    /// Reload out too, since it would drop the typed words just the same.
+    static func apply(to menu: NSMenu, isEditing: Bool, title: String, target: AnyObject, action: Selector) {
+        guard offersReload(isEditing: isEditing) else {
+            menu.items.filter { $0.identifier == webKitReload }.forEach(menu.removeItem)
+            return
+        }
+        addReload(to: menu, title: title, target: target, action: action)
+    }
+
+    static func addReload(to menu: NSMenu, title: String, target: AnyObject, action: Selector) {
+        guard !menu.items.contains(where: { $0.identifier == reloadReport }) else { return }
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = target
+        item.identifier = reloadReport
+        if let at = menu.items.firstIndex(where: { $0.identifier == webKitReload }) {
+            menu.removeItem(at: at)
+            menu.insertItem(item, at: at)
+            return
+        }
+        if let last = menu.items.last, !last.isSeparatorItem { menu.addItem(.separator()) }
+        menu.addItem(item)
+    }
+}
+
 enum CardLensKeys {
     static func claimsSelectAll(tab: Tab?, isEditing: Bool) -> Bool {
         !isEditing && (tab == .quotes || tab == .screens || tab == .discussion)
@@ -188,6 +250,7 @@ struct WebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.bridgeHandler = bridgeHandler  // ⌘A → select-all-quotes interception
+        webView.i18n = i18n  // the right-click menu's Reload Report
         context.coordinator.webView = webView
         // Diagnostic (dead-lens hunt): name every webview at birth, so the
         // dispatch/message identity tags above resolve to creation events.

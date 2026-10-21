@@ -78,7 +78,8 @@
       "focusMode": "Focusmodus",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom uit",
-      "actualSize": "Werkelijke grootte"
+      "actualSize": "Werkelijke grootte",
+      "reloadReport": "Rapport opnieuw laden"
     },
     "project": {
       "analyse": "Analyseer",

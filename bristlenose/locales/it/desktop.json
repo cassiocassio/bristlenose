@@ -78,7 +78,8 @@
       "focusMode": "Modalit\u00e0 focus",
       "zoomIn": "Aumenta lo zoom",
       "zoomOut": "Riduci lo zoom",
-      "actualSize": "Dimensioni reali"
+      "actualSize": "Dimensioni reali",
+      "reloadReport": "Ricarica report"
     },
     "project": {
       "analyse": "Analizza",

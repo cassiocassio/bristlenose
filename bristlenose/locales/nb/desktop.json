@@ -78,7 +78,8 @@
       "focusMode": "Fokusmodus",
       "zoomIn": "Zoom inn",
       "zoomOut": "Zoom ut",
-      "actualSize": "Faktisk størrelse"
+      "actualSize": "Faktisk størrelse",
+      "reloadReport": "Last inn rapport på nytt"
     },
     "project": {
       "analyse": "Analyser",

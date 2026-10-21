@@ -78,7 +78,8 @@
       "focusMode": "Keskittymistila",
       "zoomIn": "Suurenna",
       "zoomOut": "Pienennä",
-      "actualSize": "Todellinen koko"
+      "actualSize": "Todellinen koko",
+      "reloadReport": "Lataa raportti uudelleen"
     },
     "project": {
       "analyse": "Analysoi",

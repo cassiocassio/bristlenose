@@ -1193,6 +1193,20 @@ private struct ViewMenuContent: View {
 
         Divider()
 
+        // ⌘R, as in Safari: the remedy for a part of the report that couldn't be
+        // shown (the broken mark, PanelErrorBoundary), and for anything else that
+        // looks wrong. `hasChannel`, not `canDispatch`: it hands the view to
+        // WebKit and dispatches no JS, so it works on a status page too. Dimmed
+        // while text is being edited, as the right-click item is withheld then
+        // (ReportContextMenu.offersReload): a reload would drop the typed words.
+        Button(i18n.t("desktop.menu.view.reloadReport"), systemImage: "arrow.clockwise") {
+            bridgeHandler.reloadWebView()
+        }
+        .keyboardShortcut("r", modifiers: .command)
+        .disabled(!bridgeHandler.hasChannel || !ReportContextMenu.offersReload(isEditing: bridgeHandler.isEditing))
+
+        Divider()
+
         // `canDispatch`, not `isReady`: zoom is a capability, and `isReady` goes
         // true on the status page where `applyZoom` does not exist. See its note
         // on BridgeHandler. The clamp is deliberately NOT modelled here — the

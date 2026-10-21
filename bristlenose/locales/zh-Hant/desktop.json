@@ -78,7 +78,8 @@
       "focusMode": "\u5c08\u6ce8\u6a21\u5f0f",
       "zoomIn": "放大",
       "zoomOut": "縮小",
-      "actualSize": "實際大小"
+      "actualSize": "實際大小",
+      "reloadReport": "重新載入報告"
     },
     "project": {
       "analyse": "\u5206\u6790",

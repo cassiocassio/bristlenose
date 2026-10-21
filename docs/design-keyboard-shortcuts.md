@@ -156,6 +156,8 @@ The macOS desktop app (SwiftUI shell wrapping the React SPA in WKWebView) has ad
 | Use Selection for Find | `⌘E` | Edit | `bridgeHandler.menuAction("useSelectionForFind")` |
 | Export Report | `⇧⌘E` | File | `bridgeHandler.menuAction("exportReport")` |
 | Settings | `⌘,` | app | native Settings scene |
+| Reload Report | `⌘R` | View, and the report's right-click menu | `bridgeHandler.reloadWebView()` (reload from the serve). Safari's binding. The remedy for a part that couldn't be shown (the broken mark, `PanelErrorBoundary`); dimmed while a field has focus. The report's bare `r`/`t` decline the chord, or ⌘R would quick-apply a tag (20 Oct 2026) |
+| Show in Finder | `⇧⌘R` | Project | `NSWorkspace.selectFile` on the selected project |
 
 ### Reserved (future)
 

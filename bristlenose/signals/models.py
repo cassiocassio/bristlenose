@@ -45,6 +45,7 @@ class SignalQuote:
     intensity: int
     tag_names: list[str] = field(default_factory=list)  # specific tags from the group
     segment_index: int = -1  # 0-based ordinal in the session transcript (-1 = unknown)
+    ordinal: int = 0  # the row's slot within its second (`grounding.quote_dom_id`)
 
 
 @dataclass

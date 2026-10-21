@@ -159,6 +159,28 @@ class TestTranscriptQuotes:
             if seg["is_moderator"]:
                 assert not seg["is_quoted"]
 
+    def test_a_second_quote_in_the_second_has_its_own_anchor(self, client: TestClient) -> None:
+        """Two quotes with one start: the paragraph names both ids, each with its own
+        annotation (R86)."""
+        from bristlenose.server.models import Quote
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            first = db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first()
+            second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                               start_timecode=first.start_timecode, ordinal=1, end_timecode=first.end_timecode,
+                               text="the second half", verbatim_excerpt=first.verbatim_excerpt,
+                               quote_type=first.quote_type, topic_label=first.topic_label)
+            db.add(second)
+            db.commit()
+        finally:
+            db.close()
+        data = client.get("/api/projects/1/transcripts/s1").json()
+        quoted = [set(s["quote_ids"]) for s in data["segments"] if "q-p1-10" in s["quote_ids"]]
+        assert quoted and all({"q-p1-10", "q-p1-10-1"} <= ids for ids in quoted)
+        assert data["annotations"]["q-p1-10-1"]["verbatim_excerpt"] == \
+            data["annotations"]["q-p1-10"]["verbatim_excerpt"]
+
     def test_annotations_keyed_by_dom_id(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/transcripts/s1").json()
         for key in data["annotations"]:

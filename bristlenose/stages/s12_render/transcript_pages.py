@@ -15,6 +15,7 @@ from bristlenose.models import (
     ThemeGroup,
     format_timecode,
 )
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.stages.s12_render.html_helpers import (
     _document_shell_open,
     _esc,
@@ -88,16 +89,16 @@ def _build_transcript_quote_map(
     assignment: dict[str, tuple[str, str]] = {}
     for cluster in screen_clusters or []:
         for q in cluster.quotes:
-            qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+            qid = quote_dom_id(q.participant_id, q.start_timecode, 0)  # the pipeline's quotes carry no ordinal
             assignment[qid] = (cluster.screen_label, "section")
     for theme in theme_groups or []:
         for q in theme.quotes:
-            qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+            qid = quote_dom_id(q.participant_id, q.start_timecode, 0)  # the pipeline's quotes carry no ordinal
             assignment[qid] = (theme.theme_label, "theme")
 
     result: _QuoteMap = {}
     for q in all_quotes:
-        qid = f"q-{q.participant_id}-{int(q.start_timecode)}"
+        qid = quote_dom_id(q.participant_id, q.start_timecode, 0)  # the pipeline's quotes carry no ordinal
         label, label_type = assignment.get(qid, ("", ""))
         ann = _QuoteAnnotation(
             quote_id=qid,

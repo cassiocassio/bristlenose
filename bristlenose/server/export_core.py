@@ -18,6 +18,7 @@ from urllib.parse import quote
 from sqlalchemy.orm import Session as DbSession
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.grounding import parse_quote_dom_id
 from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
     ClusterQuote,
@@ -35,7 +36,6 @@ from bristlenose.server.models import (
 from bristlenose.server.models import (
     Session as SessionModel,
 )
-from bristlenose.server.routes.data import _parse_dom_quote_id
 from bristlenose.utils.timecodes import format_timecode
 
 # ---------------------------------------------------------------------------
@@ -140,6 +140,8 @@ class ExportableQuote:
     #: The quote's row, for a board that times its words (`miro_export.load_pauses`); not one of
     #: the export columns, which `quotes_export` lists by name.
     quote_id: int = 0
+    #: Its rank within its second, for the board's DOM id (`grounding.quote_dom_id`); not a column.
+    ordinal: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +238,7 @@ def extract_quotes_for_export(
                 session=q.session_id,
                 source_file=source_file,
                 quote_id=q.id,
+                ordinal=q.ordinal,
             )
         )
 
@@ -260,14 +263,14 @@ def _resolve_quote_ids(
 
     Each quote appears once, however many times its id was sent: a repeated id
     used to put the same quote in an export twice. Two quotes from one speaker
-    within the same second share a DOM id, which names only the earlier of them
-    — the tie-break is fixed so it is always that one."""
+    within the same second are two ids (``q-p1-10``, ``q-p1-10-1``), each
+    naming its own row."""
     out = speaker_slots.evidence_out(db, project_id)
     quotes: list[Quote] = []
     seen: set[int] = set()
     for dom_id in dict.fromkeys(dom_ids):
         try:
-            participant_id, timecode = _parse_dom_quote_id(dom_id)
+            participant_id, timecode, ordinal = parse_quote_dom_id(dom_id)
         except ValueError:
             continue
         q = (
@@ -277,6 +280,7 @@ def _resolve_quote_ids(
                 Quote.participant_id == participant_id,
                 Quote.start_timecode >= timecode,
                 Quote.start_timecode < timecode + 1,
+                Quote.ordinal == ordinal,
             )
             .order_by(Quote.start_timecode, Quote.id)
             .first()

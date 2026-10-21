@@ -160,7 +160,10 @@ cache and are processed, the rest load from disk.
 
 **Why curation survives, and when it would stop.** `importer.py` promises that
 "researcher state (starred, hidden, tags, edits, deleted badges) is preserved
-for quotes that survive the re-import", matched on a stable key — and its own
+for quotes that survive the re-import", matched on a stable key —
+`(project, session, participant, start_timecode, ordinal)`, the ordinal being the
+quote's rank among the speaker's quotes starting in that second (R86, 21 Oct 2026;
+`bristlenose/server/CLAUDE.md` § Quote DOM ID) — and its own
 line 216 records the caveat: the promise "only holds when the existing row is
 matched". So the safety comes from **not redoing the work**, not from
 reconciling it. Cached stages don't regenerate quotes, so keys don't move and

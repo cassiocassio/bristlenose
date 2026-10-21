@@ -342,27 +342,28 @@ class TestMalformedDomIds:
         assert resp.status_code == 200
 
     def test_dom_id_with_extra_dashes(self, client: TestClient) -> None:
-        """DOM ID with dashes in participant_id — uses rfind('-')."""
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        """DOM ID with dashes in participant_id — the tail is the number(s)."""
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         # Multi-dash participant like "q-long-name-123"
-        pid, tc = _parse_dom_quote_id("q-long-name-123")
+        pid, tc, ordinal = _parse_dom_quote_id("q-long-name-123")
         assert pid == "long-name"
         assert tc == 123
+        assert ordinal == 0
 
     def test_dom_id_timecode_zero(self, client: TestClient) -> None:
         """Timecode 0 — valid but unusual (quote at the very start)."""
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
-        pid, tc = _parse_dom_quote_id("q-p1-0")
+        pid, tc, _ = _parse_dom_quote_id("q-p1-0")
         assert pid == "p1"
         assert tc == 0
 
     def test_dom_id_large_timecode(self, client: TestClient) -> None:
         """Very large timecode — 3-hour interview at 10800 seconds."""
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
-        pid, tc = _parse_dom_quote_id("q-p1-10800")
+        pid, tc, _ = _parse_dom_quote_id("q-p1-10800")
         assert pid == "p1"
         assert tc == 10800
 
@@ -373,20 +374,20 @@ class TestMalformedDomIds:
         uses rfind('-') so 'p1--5' splits into participant='p1-' and
         timecode='5'.  This won't match any real quote, which is fine.
         """
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
-        pid, tc = _parse_dom_quote_id("q-p1--5")
+        pid, tc, _ = _parse_dom_quote_id("q-p1--5")
         assert pid == "p1-"
         assert tc == 5
 
     def test_dom_id_empty_string(self, client: TestClient) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError):
             _parse_dom_quote_id("")
 
     def test_dom_id_just_prefix(self, client: TestClient) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError):
             _parse_dom_quote_id("q-")
@@ -431,11 +432,11 @@ class TestMalformedDomIds:
         resp = client.put(f"/api/projects/1/{path}", json={"q-p1-99999999999999999999": True})
         assert resp.status_code == 200
 
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError):
             _parse_dom_quote_id("q-p1-360001")
-        assert _parse_dom_quote_id("q-p1-359999") == ("p1", 359999)
+        assert _parse_dom_quote_id("q-p1-359999") == ("p1", 359999, 0)
 
 
 # ---------------------------------------------------------------------------

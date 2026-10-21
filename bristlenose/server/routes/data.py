@@ -21,6 +21,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
+from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
     UNCATEGORISED_GROUP_NAME,
@@ -122,9 +123,6 @@ def _check_project(db: Session, project_id: int) -> Project:
     return project
 
 
-# Past the 99-hour limit every timecode parser here declares.
-_MAX_DOM_TIMECODE = 100 * 3600
-
 # A curation PATCH (one gesture's change) is bounded: a select-all on the
 # largest project seen is under 2,000 quotes.
 _MAX_DELTA_QUOTES = 10_000
@@ -168,38 +166,15 @@ def _check_delta_size(data: dict[str, Any]) -> None:
         raise HTTPException(status_code=422, detail="Too many quotes in one change")
 
 
-def _parse_dom_quote_id(dom_id: str) -> tuple[str, int]:
-    """Parse a DOM quote ID like 'q-p1-123' into (participant_id, timecode_int).
-
-    Format: ``q-{participant_id}-{int(start_timecode)}``.
-    participant_id is always a simple code like p1, m1, o1 (no dashes).
-    """
-    if not dom_id.startswith("q-"):
-        raise ValueError(f"Invalid quote DOM ID: {dom_id}")
-    rest = dom_id[2:]  # strip "q-"
-    last_dash = rest.rfind("-")
-    if last_dash < 0:
-        raise ValueError(f"Invalid quote DOM ID: {dom_id}")
-    participant_id = rest[:last_dash]
-    try:
-        timecode = int(rest[last_dash + 1 :])
-    except ValueError:
-        raise ValueError(f"Invalid timecode in DOM ID: {dom_id}") from None
-    if timecode > _MAX_DOM_TIMECODE:
-        # Unbounded, it reached SQLite as an integer it cannot hold and every
-        # route that resolves ids answered 500 (review, 17 Oct 2026).
-        raise ValueError(f"Timecode out of range in DOM ID: {dom_id}")
-    return participant_id, timecode
-
-
 def _resolve_quote(db: Session, project_id: int, dom_id: str) -> Quote | None:
     """Resolve a DOM quote ID to a Quote row.
 
-    The timecode in the DOM ID is ``int(start_timecode)``.  We match any
-    quote whose ``start_timecode`` rounds down to that integer.
+    The timecode in the DOM ID is ``int(start_timecode)``, so any quote whose
+    start rounds down to it matches; the ordinal picks among the speaker's
+    quotes that start in that second (0, the first, when the id carries none).
     """
     try:
-        participant_id, timecode = _parse_dom_quote_id(dom_id)
+        participant_id, timecode, ordinal = parse_quote_dom_id(dom_id)
     except ValueError:
         return None
     return (
@@ -209,6 +184,7 @@ def _resolve_quote(db: Session, project_id: int, dom_id: str) -> Quote | None:
             Quote.participant_id == participant_id,
             Quote.start_timecode >= timecode,
             Quote.start_timecode < timecode + 1,
+            Quote.ordinal == ordinal,
         )
         .order_by(Quote.start_timecode, Quote.id)
         .first()
@@ -216,8 +192,8 @@ def _resolve_quote(db: Session, project_id: int, dom_id: str) -> Quote | None:
 
 
 def _quote_dom_id(quote: Quote) -> str:
-    """Build the DOM ID for a quote (matches render/quote_format.py format)."""
-    return f"q-{quote.participant_id}-{int(quote.start_timecode)}"
+    """The quote's DOM id (``grounding.quote_dom_id``)."""
+    return quote_dom_id(quote.participant_id, quote.start_timecode, quote.ordinal)
 
 
 def _now() -> datetime:

@@ -677,7 +677,7 @@ def _tool_search_quotes(
     page = matched[offset : offset + limit]
     rows = [
         {
-            "quote_id": quote_dom_id(q.participant_id, q.start_timecode),
+            "quote_id": quote_dom_id(q.participant_id, q.start_timecode, q.ordinal),
             "text": edited.get(q.id, q.text),  # researcher's edit wins; never truncated
             "participant": q.participant_id,
             "session_id": q.session_id,
@@ -742,7 +742,7 @@ def _tool_get_signals(db: Any, project_id: int, lens: str, limit: int) -> dict[s
             "flag": s.flag,
             "supporting_quotes": [
                 {
-                    "quote_id": quote_dom_id(q.participant_id, q.start_seconds),
+                    "quote_id": quote_dom_id(q.participant_id, q.start_seconds, q.ordinal),
                     "text": q.text,
                     "participant": q.participant_id,
                     "session_id": q.session_id,

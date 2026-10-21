@@ -40,6 +40,7 @@ from bristlenose.server.grounding import (
     resolve_quote_indices,
 )
 from bristlenose.server.models import (
+    ClusterQuote,
     Project,
     Quote,
     QuoteEdit,
@@ -99,7 +100,7 @@ def _make_app():
 
 def _quote_pks_by_dom_id(db) -> dict[str, int]:
     return {
-        quote_dom_id(q.participant_id, q.start_timecode): q.id
+        quote_dom_id(q.participant_id, q.start_timecode, q.ordinal): q.id
         for q in db.query(Quote).filter_by(project_id=1).all()
     }
 
@@ -110,6 +111,28 @@ def _quote_pks_by_dom_id(db) -> dict[str, int]:
 
 
 class TestCorpusAssembly:
+    def test_corpus_gives_the_second_quote_its_own_id(self) -> None:
+        """A same-second pair is two citable entries, not one key overwritten (R86)."""
+        app = _make_app()
+        db = app.state.db_factory()
+        try:
+            first = (db.query(Quote).filter_by(project_id=1)
+                     .order_by(Quote.start_timecode).first())
+            second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                           start_timecode=first.start_timecode, ordinal=1, end_timecode=60.0,
+                           text="the second half", quote_type=first.quote_type, topic_label="")
+            db.add(second)
+            db.flush()
+            section = db.query(ClusterQuote).filter_by(quote_id=first.id).one()
+            db.add(ClusterQuote(cluster_id=section.cluster_id, quote_id=second.id))
+            db.commit()
+            corpus = assemble_corpus_context(db, 1)
+        finally:
+            db.close()
+        assert corpus.quote_count == 5
+        assert {"q-p1-10", "q-p1-10-1"} <= set(corpus.quotes_by_id)
+        assert corpus.quotes_by_id["q-p1-10-1"].text == "the second half"
+
     def test_contains_every_fixture_quote_with_report_structure(self) -> None:
         app = _make_app()
         db = app.state.db_factory()

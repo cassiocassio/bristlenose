@@ -32,6 +32,7 @@ from sqlalchemy import text as sa_text  # `text` clashes with a loop var below
 from sqlalchemy.orm import Session
 
 from bristlenose.models import INAUDIBLE_TOKEN
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
     ClusterQuote,
     CodebookGroup,
@@ -2732,17 +2733,18 @@ def _delete_heading_edits(
 def _prune_arrangements(db: Session, project: Project) -> None:
     """Drop the Screens lens's card placements for quotes that no longer exist.
 
-    A card is keyed by its quote's DOM id (``q-p1-123``, the start in whole seconds), so a
+    A card is keyed by its quote's DOM id (``q-p1-123``, the start in whole seconds, and
+    ``q-p1-123-1`` for a second quote starting in that second), so a
     re-analysis that moves a quote's start makes it a new id: its card waits in the board's list,
     and the old id would stay in the arrangement for ever. The board itself is left as the
     researcher made it; only the placements that name no quote go, and a version left with none
     returns to automatic. A row that does not parse is left for the route to skip.
     """
     live = {
-        f"q-{pid}-{int(start)}"
-        for pid, start in db.query(Quote.participant_id, Quote.start_timecode)
-        .filter(Quote.project_id == project.id)
-        .all()
+        quote_dom_id(pid, start, ordinal)
+        for pid, start, ordinal in db.query(
+            Quote.participant_id, Quote.start_timecode, Quote.ordinal,
+        ).filter(Quote.project_id == project.id).all()
     }
     for row in db.query(ScreenArrangement).filter_by(project_id=project.id).all():
         try:

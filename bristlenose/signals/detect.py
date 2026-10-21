@@ -104,6 +104,7 @@ def _compute_signals(
                     start_seconds=q.start_timecode,
                     intensity=q.intensity,
                     segment_index=q.segment_index,
+                    ordinal=getattr(q, "ordinal", 0),  # the pipeline's quotes carry none
                 )
                 for q in raw_quotes_sorted
             ]

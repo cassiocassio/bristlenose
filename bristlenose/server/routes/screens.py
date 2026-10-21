@@ -47,6 +47,7 @@ from bristlenose.screen_text import ReadFailure, Unavailable
 from bristlenose.screen_text.index import cache_key, index_dir, read_index, stored_key
 from bristlenose.screen_text.screens import SessionInput, derive_screens
 from bristlenose.server import speaker_slots
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import Project, ScreenArrangement
 from bristlenose.server.scene_strips import video_sessions
 from bristlenose.server.screen_text_job import session_durations
@@ -248,9 +249,10 @@ def derive_project_screens(
     by_session: dict[str, list[dict[str, Any]]] = {}
     codes: dict[str, Counter] = {}
     for q in quotes:
-        owner[f"q-{q.participant_id}-{int(q.start_timecode)}"] = q.session_id
+        dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+        owner[dom_id] = q.session_id
         by_session.setdefault(q.session_id, []).append({
-            "dom_id": f"q-{q.participant_id}-{int(q.start_timecode)}",
+            "dom_id": dom_id,
             "start": float(q.start_timecode), "end": float(q.end_timecode),
             "text": q.verbatim_excerpt or q.text,
         })

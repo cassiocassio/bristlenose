@@ -47,6 +47,7 @@ from bristlenose.server.clip_subtitles import (
     tokens_for_segment,
 )
 from bristlenose.server.export_core import pick_featured_quotes
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
     Person,
     Project,
@@ -201,7 +202,7 @@ def _quotes_to_quotelike(
     """Convert ORM Quote rows to the _QuoteLike interface for manifest building."""
     result: list[_QuoteLike] = []
     for q in quotes:
-        dom_id = f"q-{q.participant_id}-{int(q.start_timecode)}"
+        dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
         result.append(_QuoteLike(
             quote_id=dom_id,
             row_id=q.id,
@@ -305,7 +306,7 @@ def _load_corrections(
             end=quote.end_timecode,
             original=quote.text,
             corrected=edited,
-            quote_ref=f"q-{quote.participant_id}-{int(quote.start_timecode)}",
+            quote_ref=quote_dom_id(quote.participant_id, quote.start_timecode, quote.ordinal),
         ))
     return sorted(latest, key=lambda c: c.start)
 
@@ -752,7 +753,7 @@ async def start_clip_extraction(
             requested = set(body.ids)
             combined_quotes = [
                 q for q in all_quotes
-                if f"q-{q.participant_id}-{int(q.start_timecode)}" in requested
+                if quote_dom_id(q.participant_id, q.start_timecode, q.ordinal) in requested
             ]
             hero_ids: set[int] = set()
         else:

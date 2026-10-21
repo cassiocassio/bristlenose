@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots, transcript_layout
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.journey import derive_journeys
 from bristlenose.server.models import (
@@ -186,7 +187,8 @@ def _highlight_quoted_text(
 
 
 def _quote_dom_id(q: Quote) -> str:
-    return f"q-{q.participant_id}-{int(q.start_timecode)}"
+    """The quote's DOM id (``grounding.quote_dom_id``)."""
+    return quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
 
 
 # ---------------------------------------------------------------------------

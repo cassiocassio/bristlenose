@@ -73,6 +73,28 @@ def test_the_board_pools_each_screen_in_journey_order_grouped_by_participant() -
         ("s2", "screen-02-p2.jpg"), ("s1", "screen-02-p1.jpg")]
 
 
+def test_start_reads_the_second_token() -> None:
+    """``q-p1-10-1`` starts at second 10, not 1: the ordinal is a suffix, never the start (R86)."""
+    from bristlenose.screen_text.shots import _start
+
+    assert _start("q-p1-10") == 10
+    assert _start("q-p1-10-1") == 10
+    assert _start("q-p1-10-x") == 0
+    assert _start("junk") == 0
+
+
+def test_a_same_second_pair_keeps_its_time_order_on_the_board() -> None:
+    from bristlenose.screen_text.shots import journey
+
+    home = _screen("/home", _tab("s1", "p1", 5, [[0, 20]],
+                                 loose=["q-p1-10-1", "q-p1-10", "q-p1-3", "junk"]))
+    owner = {"q-p1-3": "s1", "q-p1-10": "s1", "q-p1-10-1": "s1", "junk": "s1"}
+    [out] = journey([home], owner)
+    # An id that does not parse neither crashes the board nor joins a participant.
+    assert ("p1", ["q-p1-3", "q-p1-10", "q-p1-10-1"]) in out["groups"]
+    assert ("", ["junk"]) in out["groups"]
+
+
 def test_a_crafted_code_cannot_name_a_file_outside_the_folder() -> None:
     for code in ("../../../escape", "/tmp/pwn", "p1/../x"):
         [shot] = shot_list([_screen("/a", _tab("s1", code, 1, [[0, 2]]))], {})

@@ -261,14 +261,38 @@ def test_rows_sort_by_time_not_by_the_timecode_as_text(db_session):
     assert [q.timecode for q in rows] == ["59:00", "1:00:05"]
 
 
-def test_an_id_two_quotes_share_names_the_earlier(db_session):
-    """Two quotes from one speaker in the same second share a DOM id; it names the earlier, on
-    every export that takes a selection (CSV, XLSX, both boards)."""
+def test_resolve_quote_ids_returns_both_of_a_pair(db_session):
+    """Two quotes with one start are ``q-p1-10`` and ``q-p1-10-1``; a selection naming
+    both gets both rows, in the order asked (R86)."""
+    from bristlenose.server.export_core import _resolve_quote_ids
+    from bristlenose.server.models import Quote
+
+    first = (db_session.query(Quote).filter_by(project_id=1)
+             .order_by(Quote.start_timecode).first())
+    assert int(first.start_timecode) == 10
+    second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                   start_timecode=first.start_timecode, ordinal=1, end_timecode=60.0,
+                   text="the second half", quote_type=first.quote_type, topic_label="")
+    db_session.add(second)
+    db_session.commit()
+    rows = _resolve_quote_ids(db_session, 1, ["q-p1-10-1", "q-p1-10"])
+    assert [q.id for q in rows] == [second.id, first.id]
+    [row] = extract_quotes_for_export(db_session, project_id=1, quote_ids=["q-p1-10-1"])
+    assert (row.quote_id, row.ordinal) == (second.id, 1)
+
+
+def test_an_id_names_its_own_quote_not_its_neighbour_in_the_second(db_session):
+    """Two quotes from one speaker in the same second are ``q-p1-10`` and ``q-p1-10-1``, as
+    the importer ranks them (the earlier start first); each selection names its own row on
+    every export that takes one (CSV, XLSX, both boards)."""
     from bristlenose.server.models import Quote
 
     first, second = (db_session.query(Quote).filter_by(project_id=1)
                      .order_by(Quote.start_timecode).all()[:2])
-    second.start_timecode, first.start_timecode = 10.2, 10.7
+    second.start_timecode, second.ordinal = 10.2, 0
+    first.start_timecode, first.ordinal = 10.7, 1
     db_session.commit()
     [row] = extract_quotes_for_export(db_session, project_id=1, quote_ids=["q-p1-10"])
     assert row.quote_id == second.id
+    [row] = extract_quotes_for_export(db_session, project_id=1, quote_ids=["q-p1-10-1"])
+    assert row.quote_id == first.id

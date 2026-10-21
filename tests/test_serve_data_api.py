@@ -571,36 +571,139 @@ class TestDomIdParsing:
     """Verify that the _parse_dom_quote_id helper works correctly."""
 
     def test_valid_id(self) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
-        pid, tc = _parse_dom_quote_id("q-p1-123")
+        pid, tc, ordinal = _parse_dom_quote_id("q-p1-123")
         assert pid == "p1"
         assert tc == 123
+        assert ordinal == 0
 
     def test_moderator_id(self) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
-        pid, tc = _parse_dom_quote_id("q-m1-45")
+        pid, tc, ordinal = _parse_dom_quote_id("q-m1-45")
         assert pid == "m1"
         assert tc == 45
+        assert ordinal == 0
+
+    def test_second_quote_in_the_second(self) -> None:
+        """``q-p1-10-1`` is the second quote starting in second 10 (R86)."""
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
+
+        assert _parse_dom_quote_id("q-p1-10-1") == ("p1", 10, 1)
+        assert _parse_dom_quote_id("q-p1-10-12") == ("p1", 10, 12)
+
+    def test_a_dashed_participant_still_parses(self) -> None:
+        """Real codes are ``[pmo]\\d+``; a dashed one parses while its tail is not two numbers."""
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
+
+        assert _parse_dom_quote_id("q-long-name-123") == ("long-name", 123, 0)
+
+    def test_a_non_numeric_ordinal_is_rejected(self) -> None:
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
+
+        with pytest.raises(ValueError, match="Invalid timecode"):
+            _parse_dom_quote_id("q-p1-10-x")
+        with pytest.raises(ValueError, match="Invalid timecode"):
+            _parse_dom_quote_id("q-p1-10-")
+        with pytest.raises(ValueError, match="out of range"):
+            _parse_dom_quote_id("q-p1-10-99999999999")
 
     def test_invalid_prefix(self) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError, match="Invalid quote DOM ID"):
             _parse_dom_quote_id("x-p1-123")
 
     def test_no_timecode(self) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError, match="Invalid quote DOM ID"):
             _parse_dom_quote_id("q-p1")
 
     def test_non_numeric_timecode(self) -> None:
-        from bristlenose.server.routes.data import _parse_dom_quote_id
+        from bristlenose.server.grounding import parse_quote_dom_id as _parse_dom_quote_id
 
         with pytest.raises(ValueError, match="Invalid timecode"):
             _parse_dom_quote_id("q-p1-abc")
+
+
+def _add_second_quote_in_the_same_second(client: TestClient) -> tuple[int, int]:
+    """A second quote cut from the same paragraph as ``q-p1-10``: one start, ordinal 1.
+    Returns ``(first_id, second_id)``."""
+    from bristlenose.server.models import Quote
+
+    db = client.app.state.db_factory()  # type: ignore[union-attr]
+    try:
+        first = (db.query(Quote).filter(Quote.participant_id == "p1")
+                 .order_by(Quote.start_timecode).first())
+        assert first is not None and int(first.start_timecode) == 10
+        second = Quote(
+            project_id=first.project_id, session_id=first.session_id, participant_id="p1",
+            start_timecode=first.start_timecode, ordinal=1,
+            end_timecode=first.end_timecode + 40.0, text="A second quote in the same second",
+            quote_type=first.quote_type, topic_label=first.topic_label,
+        )
+        db.add(second)
+        db.commit()
+        return first.id, second.id
+    finally:
+        db.close()
+
+
+def _dom_ids_in(payload: object) -> set[str]:
+    found: set[str] = set()
+    if isinstance(payload, dict):
+        if isinstance(payload.get("dom_id"), str):
+            found.add(payload["dom_id"])
+        for v in payload.values():
+            found |= _dom_ids_in(v)
+    elif isinstance(payload, list):
+        for v in payload:
+            found |= _dom_ids_in(v)
+    return found
+
+
+class TestSecondQuoteInASecond:
+    """Two quotes from one speaker starting in the same second are two ids (R86)."""
+
+    def test_second_quote_in_a_second_has_its_own_dom_id(self, client: TestClient) -> None:
+        from bristlenose.server.models import QuoteState, QuoteTag, TagDefinition
+
+        first_id, second_id = _add_second_quote_in_the_same_second(client)
+
+        ids = _dom_ids_in(client.get("/api/projects/1/quotes").json())
+        assert {"q-p1-10", "q-p1-10-1"} <= ids
+
+        r = client.patch("/api/projects/1/starred", json={"q-p1-10-1": True})
+        assert r.status_code == 200 and r.json()["unresolved"] == []
+        r = client.patch("/api/projects/1/hidden", json={"q-p1-10-1": True})
+        assert r.status_code == 200 and r.json()["unresolved"] == []
+        r = client.patch("/api/projects/1/tags",
+                         json={"q-p1-10-1": {"add": ["cut apart"], "remove": []}})
+        assert r.status_code == 200 and r.json()["unresolved"] == []
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            states = {s.quote_id: (s.is_starred, s.is_hidden)
+                      for s in db.query(QuoteState).all()}
+            assert states.get(second_id) == (True, True)
+            assert states.get(first_id, (False, False)) == (False, False)
+            tagged = {
+                t.quote_id for t in db.query(QuoteTag)
+                .join(TagDefinition, QuoteTag.tag_definition_id == TagDefinition.id)
+                .filter(TagDefinition.name == "cut apart").all()
+            }
+            assert tagged == {second_id}
+        finally:
+            db.close()
+
+        assert client.get("/api/projects/1/starred").json() == {"q-p1-10-1": True}
+        assert client.get("/api/projects/1/hidden").json() == {"q-p1-10-1": True}
+        # The first keeps today's id, and a PATCH on it lands on the first only.
+        r = client.patch("/api/projects/1/starred", json={"q-p1-10": True})
+        assert r.status_code == 200
+        assert client.get("/api/projects/1/starred").json() == {"q-p1-10": True, "q-p1-10-1": True}
 
 
 # ---------------------------------------------------------------------------

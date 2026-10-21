@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from bristlenose.models import EmotionalTone, ExtractedQuote, QuoteIntent, format_timecode
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.stages.s12_render.html_helpers import (
     _display_name,
     _esc,
@@ -19,7 +20,7 @@ def _format_quote_html(
     display_names: dict[str, str] | None = None,
 ) -> str:
     """Render a single quote as an HTML blockquote."""
-    quote_id = f"q-{quote.participant_id}-{int(quote.start_timecode)}"
+    quote_id = quote_dom_id(quote.participant_id, quote.start_timecode, 0)  # the pipeline's quotes carry no ordinal
     tc_html = _timecode_html(quote, video_map)
     tc = format_timecode(quote.start_timecode)
 

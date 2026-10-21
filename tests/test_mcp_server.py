@@ -97,6 +97,38 @@ def _seed_second_frustration(db) -> None:
     db.commit()
 
 
+def _seed_second_in_the_same_second(db) -> Quote:
+    """A second frustration quote cut from the same paragraph as ``q-p1-26``: one start,
+    ordinal 1, in Dashboard, so the Dashboard|frustration cell holds the pair."""
+    dashboard = db.query(ScreenCluster).filter_by(screen_label="Dashboard").one()
+    first = (db.query(Quote).filter_by(project_id=1, sentiment="frustration")
+             .order_by(Quote.start_timecode).first())
+    second = Quote(
+        project_id=1, session_id=first.session_id, participant_id="p1",
+        start_timecode=first.start_timecode, ordinal=1, end_timecode=first.end_timecode + 9,
+        text="And then the second half of what I said about the dashboard buttons.",
+        quote_type="screen_specific", sentiment="frustration", intensity=2,
+    )
+    db.add(second)
+    db.flush()
+    db.add(ClusterQuote(cluster_id=dashboard.id, quote_id=second.id))
+    db.commit()
+    return second
+
+
+class TestSameSecondPair:
+    def test_a_same_second_pair_has_two_quote_ids(self, db) -> None:
+        """An agent gets one id per quote: the second quote in the second is ``-1``, on
+        ``search_quotes`` and on a signal card's supporting quotes (review, item 2)."""
+        second = _seed_second_in_the_same_second(db)
+        ids = {r["quote_id"]: r["text"] for r in _search(db)["quotes"]}
+        assert {"q-p1-26", "q-p1-26-1"} <= set(ids)
+        assert ids["q-p1-26-1"] == second.text
+        cards = _tool_get_signals(db, 1, "sentiment", 10)["signals"]
+        [card] = [c for c in cards if c["location"] == "Dashboard" and c["sentiment"] == "frustration"]
+        assert {q["quote_id"] for q in card["supporting_quotes"]} >= {"q-p1-26", "q-p1-26-1"}
+
+
 def _seed_tagged_group(db) -> None:
     """A hand-rolled group with one tag applied to BOTH Dashboard quotes,
     so the tags lens has a Dashboard|group cell of two."""

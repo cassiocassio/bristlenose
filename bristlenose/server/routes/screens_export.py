@@ -26,6 +26,8 @@ from pydantic import BaseModel
 from bristlenose.output_paths import project_output_dir
 from bristlenose.screen_text import export_folder
 from bristlenose.screen_text.shots import shot_list
+from bristlenose.server.export_core import ExportableQuote, extract_quotes_for_export
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import Project, Quote, QuoteState
 from bristlenose.server.routes.miro import BoardBuild, build_snapshot
 from bristlenose.server.routes.screens import (
@@ -35,6 +37,7 @@ from bristlenose.server.routes.screens import (
     screens_enabled,
 )
 from bristlenose.server.scene_strips import video_sessions
+from bristlenose.utils.timecodes import parse_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +55,19 @@ _plain_name = export_folder.plain_name
 def _hidden_dom_ids(db: Any, project_id: int) -> set[str]:
     quotes = {q.id: q for q in db.query(Quote).filter_by(project_id=project_id).all()}
     return {
-        f"q-{quotes[s.quote_id].participant_id}-{int(quotes[s.quote_id].start_timecode)}"
+        quote_dom_id(quotes[s.quote_id].participant_id, quotes[s.quote_id].start_timecode,
+                     quotes[s.quote_id].ordinal)
         for s in db.query(QuoteState).filter(
             QuoteState.quote_id.in_(quotes), QuoteState.is_hidden.is_(True),
         ).all()
         if s.quote_id in quotes
     }
+
+
+def _quotes_by_dom_id(db: Any, project_id: int) -> dict[str, ExportableQuote]:
+    """Every export row by its quote's DOM id, the key the board's journey names quotes by."""
+    return {quote_dom_id(q.participant_code, parse_timecode(q.timecode), q.ordinal): q
+            for q in extract_quotes_for_export(db, project_id)}
 
 
 def _write_inside(folder: Path, name: str, data: bytes) -> None:
@@ -255,7 +265,6 @@ _miro_jobs: dict[int, dict[str, Any]] = {}
 
 def _attribution(q: Any) -> str:
     from bristlenose.board_layout import attribution
-    from bristlenose.utils.timecodes import parse_timecode
 
     return attribution(q.participant_code, parse_timecode(q.timecode))
 
@@ -444,10 +453,9 @@ async def start_screens_miro(request: Request, project_id: int,
     quotes stacked beneath its still by participant."""
     from bristlenose.i18n import t_in
     from bristlenose.screen_text.shots import journey
-    from bristlenose.server.export_core import extract_quotes_for_export, project_display_name
+    from bristlenose.server.export_core import project_display_name
     from bristlenose.server.miro_export import load_pauses, session_languages
     from bristlenose.server.routes.miro import _miro_token
-    from bristlenose.utils.timecodes import parse_timecode
 
     body = body or ScreensMiroStart()
     existing = _miro_jobs.get(project_id)
@@ -477,8 +485,7 @@ async def start_screens_miro(request: Request, project_id: int,
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
             state, owner = derive_project_screens(request, db, project_id)
-            quotes = {f"q-{q.participant_code}-{int(parse_timecode(q.timecode))}": q
-                      for q in extract_quotes_for_export(db, project_id)}
+            quotes = _quotes_by_dom_id(db, project_id)
             timed = load_pauses(db, project_id, list(quotes.values()))
             pauses = {d: timed[q.quote_id] for d, q in quotes.items() if q.quote_id in timed}
             title = ((board_name or "").strip()

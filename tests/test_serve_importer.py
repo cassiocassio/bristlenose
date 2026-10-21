@@ -2091,6 +2091,25 @@ class TestSameStartQuotes:
         }
         assert final == progressive
 
+    def test_prune_keeps_a_second_quote_card(self, db: Session, tmp_path: Path) -> None:
+        """A Screens card keyed ``q-p1-53-1`` names a live quote and stays; one that names
+        no quote goes."""
+        from bristlenose.server.importer import _prune_arrangements
+        from bristlenose.server.models import ScreenArrangement
+
+        proj = _write_pipeline_output(tmp_path, self._clusters(_same_start_pair()), [])
+        project = import_project(db, proj)
+        cards = {"q-p1-53": {"kind": "edge", "edge": "left", "i": 0},
+                 "q-p1-53-1": {"kind": "edge", "edge": "left", "i": 1},
+                 "q-p1-99": {"kind": "edge", "edge": "left", "i": 2}}
+        db.add(ScreenArrangement(project_id=project.id, screen_key="url:/checkout",
+                                 session_id="s1", cards=json.dumps(cards)))
+        db.commit()
+        _prune_arrangements(db, project)
+        db.commit()
+        row = db.query(ScreenArrangement).filter_by(project_id=project.id).one()
+        assert set(json.loads(row.cards)) == {"q-p1-53", "q-p1-53-1"}
+
     @staticmethod
     def _rewrite(tmp_path: Path, quotes: list[dict]) -> None:
         intermediate = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"

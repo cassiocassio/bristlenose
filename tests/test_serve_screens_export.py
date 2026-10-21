@@ -38,6 +38,33 @@ def _width(jpg: Path) -> int:
     return int(out.stdout.strip())
 
 
+def test_a_same_second_pair_is_two_keys_on_the_board(tmp_path: Path) -> None:
+    """The board names quotes by DOM id: a second quote in the second is its own key, and a
+    hidden one is hidden under that key (R86)."""
+    from bristlenose.server.models import Quote, QuoteState
+    from bristlenose.server.routes import screens_export as se
+
+    fixture = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
+    app = create_app(project_dir=fixture, dev=True, db_url="sqlite://")
+    db = app.state.db_factory()
+    try:
+        first = (db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first())
+        second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                       start_timecode=first.start_timecode, ordinal=1, end_timecode=60.0,
+                       text="the second half", quote_type=first.quote_type, topic_label="")
+        db.add(second)
+        db.commit()
+        quotes = se._quotes_by_dom_id(db, 1)
+        assert quotes["q-p1-10"].quote_id == first.id
+        assert quotes["q-p1-10-1"].quote_id == second.id
+        db.add(QuoteState(quote_id=second.id, is_hidden=True))
+        db.commit()
+        assert se._hidden_dom_ids(db, 1) == {"q-p1-10-1"}
+        assert "q-p1-10-1" not in se._quotes_by_dom_id(db, 1)  # hidden rows leave the export
+    finally:
+        db.close()
+
+
 @_needs_ffmpeg
 def test_each_still_is_written_full_size_and_replaces_the_last_export(
         project: Path, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811

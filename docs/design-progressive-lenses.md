@@ -535,8 +535,9 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
    reader of the per-session quote output, and `_cleanup_stale_data` must not retire
    join-less quotes during a run. The quotes route serves join-less quotes only when
    pinned (`routes/quotes.py`); before `joined` it must serve them grouped by session. The quote's
-   stable key `(project, session, participant, start_timecode)`
-   (`importer.py`, `_get_or_create_quote`) is unchanged at the barrier, so stars,
+   stable key `(project, session, participant, start_timecode, ordinal)`
+   (`importer.py`, `_get_or_create_quote`; the ordinal since R86, 21 Oct 2026, ranked
+   by one pre-pass on both paths) is unchanged at the barrier, so stars,
    hides and tags made before it survive it. Gate test for exactly that.
 3. Quote exclusivity (`bristlenose/stages/CLAUDE.md`) is a sections-and-themes
    invariant; before the barrier every quote sits in its session's group.

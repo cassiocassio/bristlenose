@@ -34,6 +34,7 @@ class QuoteRecord:
     intensity: int
     tag_names: list[str] | None = None  # specific tags from the group (passthrough)
     segment_index: int = -1  # 0-based ordinal in the session transcript (-1 = unknown)
+    ordinal: int = 0  # the row's slot within its second (`grounding.quote_dom_id`)
 
 
 def detect_signals_generic(
@@ -114,6 +115,7 @@ def _compute_signals(
                     intensity=q.intensity,
                     tag_names=list(q.tag_names) if q.tag_names else [],
                     segment_index=q.segment_index,
+                    ordinal=q.ordinal,
                 )
                 for q in raw_quotes_sorted
             ]

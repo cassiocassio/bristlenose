@@ -144,6 +144,37 @@ class TestStartClipExtraction:
         assert resp.status_code == 200
         assert len(built) == 1 and len(built[0]) == 2
 
+    def test_the_second_quote_in_a_second_is_clipped_by_its_own_id(
+        self, client: TestClient, tmp_path: Path,
+    ) -> None:
+        """``q-p1-10-1`` names the second quote only, and the clip carries that id (R86)."""
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            first = db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first()
+            second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                               start_timecode=first.start_timecode, ordinal=1, end_timecode=first.end_timecode,
+                               text="the second half", verbatim_excerpt=first.verbatim_excerpt,
+                               quote_type=first.quote_type, topic_label=first.topic_label)
+            db.add(second)
+            db.commit()
+        finally:
+            db.close()
+
+        built: list[list[ClipSpec]] = []
+        real_build = clips_export.build_clip_manifest
+
+        def spy(*args, **kwargs):  # type: ignore[no-untyped-def]
+            built.append(real_build(*args, **kwargs))
+            return built[-1]
+
+        media = ({"s1": (tmp_path / "s1.mp4", False)}, {"s1": 300.0})
+        with patch.object(clips_export.FFmpegBackend, "check_available", return_value=(True, "")), \
+                patch.object(clips_export, "_load_session_media", return_value=media), \
+                patch.object(clips_export, "build_clip_manifest", spy):
+            resp = client.post("/api/projects/1/export/clips", json={"ids": ["q-p1-10-1"]})
+        assert resp.status_code == 200
+        assert [c.quote_id for c in built[0]] == ["q-p1-10-1"]
+
     def test_no_ids_uses_featured_union(self, client: TestClient) -> None:
         """With no ids (legacy no-scope caller), the featured union still runs."""
         with patch(

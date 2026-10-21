@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -275,6 +276,33 @@ class TestDashboardFeaturedQuotes:
         data = client.get("/api/projects/1/dashboard").json()
         for fq in data["featured_quotes"]:
             assert fq["dom_id"].startswith("q-")
+
+    def test_a_starred_second_quote_in_the_second_is_featured_under_its_own_id(
+        self, client: TestClient,
+    ) -> None:
+        """Two quotes with one start are two featured cards, not one id twice (R86)."""
+        from bristlenose.server.models import Quote
+
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            first = db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first()
+            second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                               start_timecode=first.start_timecode, ordinal=1, end_timecode=first.end_timecode,
+                               text="the second half", verbatim_excerpt=first.verbatim_excerpt,
+                               quote_type=first.quote_type, topic_label=first.topic_label)
+            db.add(second)
+            db.commit()
+        finally:
+            db.close()
+        assert client.put("/api/projects/1/starred", json={"q-p1-10-1": True}).status_code == 200
+        # The picker prefers 12–33-word quotes and never forces a star in; the id is the point.
+        with patch("bristlenose.server.routes.dashboard.pick_featured_quotes",
+                   side_effect=lambda quotes, n=9: list(quotes)):
+            data = client.get("/api/projects/1/dashboard").json()
+        featured = {fq["dom_id"]: fq for fq in data["featured_quotes"]}
+        assert featured["q-p1-10-1"]["is_starred"] is True
+        assert featured["q-p1-10-1"]["text"] == "the second half"
+        assert "q-p1-10" in featured and featured["q-p1-10"]["is_starred"] is False
 
     def test_featured_quotes_not_starred_initially(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/dashboard").json()

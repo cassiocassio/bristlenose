@@ -14,6 +14,8 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from bristlenose.server.grounding import parse_quote_dom_id
+
 _CODE = re.compile(r"^([^\d]*)(\d*)(.*)$")
 _UNSAFE = re.compile(r"[^A-Za-z0-9_-]")
 
@@ -96,12 +98,18 @@ def shot_list(
     return shots
 
 
-def _start(dom: str) -> int:
-    """A quote's start second, from its DOM id (`q-{participant}-{int(start)}`)."""
+def _parts(dom: str) -> tuple[str, int, int]:
+    """`(participant, start second, ordinal)` from a quote's DOM id; `("", 0, 0)` for one that
+    does not parse, which then sorts first and groups under no participant."""
     try:
-        return int(dom.rsplit("-", 1)[1])
-    except (IndexError, ValueError):
-        return 0
+        return parse_quote_dom_id(dom)
+    except ValueError:
+        return "", 0, 0
+
+
+def _start(dom: str) -> int:
+    """A quote's start second, from its DOM id (`q-{participant}-{int(start)}[-{ordinal}]`)."""
+    return _parts(dom)[1]
 
 
 def journey(
@@ -143,9 +151,10 @@ def journey(
         for tab in sc["tabs"]:
             for dom in [p["dom_id"] for p in tab["pins"]] + list(tab["loose"]):
                 if dom in owner and dom not in hidden:
-                    # The participant is in the id itself: q-{participant}-{start}.
-                    said.setdefault(dom.split("-")[1], set()).add(dom)
-        groups = sorted(((code, sorted(doms, key=_start)) for code, doms in said.items()),
+                    # The participant is in the id itself: q-{participant}-{start}[-{ordinal}].
+                    said.setdefault(_parts(dom)[0], set()).add(dom)
+        # By start, then ordinal: a same-second pair keeps its order whatever the set's.
+        groups = sorted(((code, sorted(doms, key=lambda d: _parts(d)[1:])) for code, doms in said.items()),
                         key=lambda g: code_order(g[0]))
         ranks = rank.get(sc["key"], [0.0])
         others = sorted((tb for tb in sc["tabs"] if tb is not shown),

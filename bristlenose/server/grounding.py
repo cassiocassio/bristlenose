@@ -31,6 +31,7 @@ is not citable even though it exists in the DB.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -154,9 +155,54 @@ class CorpusContext:
 # ---------------------------------------------------------------------------
 
 
-def quote_dom_id(participant_id: str, start_timecode: float) -> str:
-    """Build the report's quote id (matches ``render/quote_format.py``)."""
-    return f"q-{participant_id}-{int(start_timecode)}"
+#: A hundred hours. Unbounded, a crafted id reached SQLite as an integer it cannot
+#: hold and every route that resolves ids answered 500 (review, 17 Oct 2026).
+_MAX_DOM_TIMECODE = 100 * 3600
+#: Quotes one speaker starts in one second. Bounded for the same reason.
+_MAX_DOM_ORDINAL = 10_000
+_DIGITS = re.compile(r"[0-9]+")
+
+
+def quote_dom_id(participant_id: str, start_timecode: float, ordinal: int) -> str:
+    """The report's quote id: ``q-{participant}-{int(start)}``, with ``-{ordinal}``
+    appended for every quote after the first that the speaker starts in that second.
+
+    The one builder (``tests/test_quote_dom_id.py`` refuses any other spelling of a built
+    id). The ordinal is required — a default of 0 is how a caller forgets it — and the
+    sealed static render, whose quotes carry none, passes 0. Ordinal 0 keeps the form
+    every stored key, URL anchor and Screens card already uses, so a project with no
+    same-second pair reads exactly as before (R86).
+    """
+    base = f"q-{participant_id}-{int(start_timecode)}"
+    return f"{base}-{ordinal}" if ordinal >= 1 else base
+
+
+def parse_quote_dom_id(dom_id: str) -> tuple[str, int, int]:
+    """``q-p1-123`` → ``("p1", 123, 0)``; ``q-p1-123-1`` → ``("p1", 123, 1)``.
+
+    A speaker code is ``[pmo]\\d+`` (``assign_speaker_codes``), so the id's tail is
+    the numbers: the start second, then the ordinal when a second number follows
+    it. A participant carrying a dash is still read as long as its own tail is
+    not two numbers (``q-long-name-123`` → ``long-name``). Raises ``ValueError``
+    for anything else, including a number past the bounds above.
+    """
+    if not dom_id.startswith("q-"):
+        raise ValueError(f"Invalid quote DOM ID: {dom_id}")
+    tokens = dom_id[2:].split("-")
+    if len(tokens) < 2:
+        raise ValueError(f"Invalid quote DOM ID: {dom_id}")
+    ordinal = 0
+    if len(tokens) >= 3 and _DIGITS.fullmatch(tokens[-1]) and _DIGITS.fullmatch(tokens[-2]):
+        ordinal = int(tokens.pop())
+    if not _DIGITS.fullmatch(tokens[-1]):
+        raise ValueError(f"Invalid timecode in DOM ID: {dom_id}")
+    timecode = int(tokens.pop())
+    participant_id = "-".join(tokens)
+    if not participant_id:
+        raise ValueError(f"Invalid quote DOM ID: {dom_id}")
+    if timecode > _MAX_DOM_TIMECODE or ordinal > _MAX_DOM_ORDINAL:
+        raise ValueError(f"Timecode out of range in DOM ID: {dom_id}")
+    return participant_id, timecode, ordinal
 
 
 def _quote_line(index: int, cq: CorpusQuote) -> str:
@@ -251,7 +297,7 @@ def assemble_corpus_context(
 
     def _corpus_quote(q: Quote, where: str) -> CorpusQuote:
         return CorpusQuote(
-            dom_id=quote_dom_id(q.participant_id, q.start_timecode),
+            dom_id=quote_dom_id(q.participant_id, q.start_timecode, q.ordinal),
             participant_id=q.participant_id,
             session_id=q.session_id,
             text=edited_text.get(q.id, q.text),
@@ -652,6 +698,7 @@ def load_signals(
             sentiment: Sentiment | None
             intensity: int
             segment_index: int
+            ordinal: int
 
         @_dc
         class _ClusterAdapter:
@@ -680,6 +727,7 @@ def load_signals(
                 sentiment=sent,
                 intensity=q.intensity,
                 segment_index=q.segment_index,
+                ordinal=q.ordinal,
             )
 
         cluster_adapters = []
@@ -795,6 +843,7 @@ def load_signals(
                 intensity=quote.intensity,
                 tag_names=tag_names,
                 segment_index=quote.segment_index,
+                ordinal=quote.ordinal,
             )
             if section_label:
                 section_contributions.append(QuoteContribution(

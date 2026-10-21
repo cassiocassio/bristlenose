@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from bristlenose.config import load_settings
 from bristlenose.server.autocode import run_autocode_job
 from bristlenose.server.codebook import get_template
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
     AutoCodeJob,
     CodebookGroup,
@@ -455,6 +456,7 @@ def get_proposals(
                 Quote.participant_id,
                 Quote.session_id,
                 Quote.start_timecode,
+                Quote.ordinal,
                 TagDefinition.name,
                 TagDefinition.id,
                 TagDefinition.codebook_group_id,
@@ -491,7 +493,7 @@ def get_proposals(
             ProposedTagOut(
                 id=p.id,
                 quote_id=p.quote_id,
-                dom_id=f"q-{participant_id}-{int(start_tc)}",
+                dom_id=quote_dom_id(participant_id, start_tc, ordinal),
                 session_id=session_id,
                 speaker_code=participant_id,
                 start_timecode=start_tc,
@@ -509,7 +511,7 @@ def get_proposals(
                 rationale=p.rationale,
                 status=p.status,
             )
-            for p, quote_text, participant_id, session_id, start_tc,
+            for p, quote_text, participant_id, session_id, start_tc, ordinal,
                 tag_name, td_id, cg_id, group_name, colour_set in proposals
         ]
 

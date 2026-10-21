@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import (
     AutoCodeJob,
@@ -199,8 +200,8 @@ def _check_project(db: Session, project_id: int) -> Project:
 
 
 def _quote_dom_id(quote: Quote) -> str:
-    """Build the DOM ID for a quote (matches render/quote_format.py format)."""
-    return f"q-{quote.participant_id}-{int(quote.start_timecode)}"
+    """The quote's DOM id (``grounding.quote_dom_id``)."""
+    return quote_dom_id(quote.participant_id, quote.start_timecode, quote.ordinal)
 
 
 def _resolve_speaker_names(

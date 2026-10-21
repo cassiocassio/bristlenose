@@ -664,6 +664,35 @@ class TestGetProposals:
         # Only 0.8 is ≥ 0.75
         assert data["total"] == 1
 
+    def test_a_proposal_on_a_second_quote_in_the_second_carries_its_own_id(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """Two quotes with one start are two ids in the review list (R86)."""
+        from bristlenose.server.models import TagDefinition
+
+        db = client_with_completed_job.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            first = db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first()
+            second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                           start_timecode=first.start_timecode, ordinal=1, end_timecode=60.0,
+                           text="the second half", quote_type=first.quote_type, topic_label="")
+            db.add(second)
+            db.flush()
+            job = db.query(AutoCodeJob).filter_by(project_id=1, framework_id="garrett").one()
+            td = db.query(TagDefinition).first()
+            db.add(ProposedTag(job_id=job.id, quote_id=second.id, tag_definition_id=td.id,
+                               confidence=0.9, rationale="pair"))
+            db.commit()
+            second_id = second.id
+        finally:
+            db.close()
+        resp = client_with_completed_job.get(
+            "/api/projects/1/autocode/garrett/proposals?min_confidence=0.5"
+        )
+        by_dom = {p["dom_id"]: p["quote_id"] for p in resp.json()["proposals"]}
+        assert by_dom["q-p1-10-1"] == second_id
+        assert by_dom["q-p1-10"] != second_id
+
     def test_proposals_have_expected_fields(
         self, client_with_completed_job: TestClient
     ) -> None:

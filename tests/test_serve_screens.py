@@ -104,6 +104,33 @@ def test_a_quote_said_on_a_screen_is_pinned_to_the_line_it_shares(project: Path,
     assert [p["dom_id"] for p in tab["pins"]] == [f"q-{q.participant_id}-{int(q.start_timecode)}"]
 
 
+def test_a_second_quote_in_the_second_is_its_own_pin(project: Path,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two quotes with one start, both said on the screen, are two pins (R86)."""
+    monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
+    app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+    _give_s1_a_video(app, project)
+    db = app.state.db_factory()
+    try:
+        first = db.query(Quote).filter_by(project_id=1).order_by(Quote.start_timecode).first()
+        second = Quote(project_id=1, session_id=first.session_id, participant_id="p1",
+                       start_timecode=first.start_timecode, ordinal=1, end_timecode=first.end_timecode,
+                       text=first.text, verbatim_excerpt=first.verbatim_excerpt,
+                       quote_type=first.quote_type, topic_label=first.topic_label)
+        db.add(second)
+        db.commit()
+    finally:
+        db.close()
+    q = _first_quote(app)
+    words = [w for w in (q.verbatim_excerpt or q.text).split() if len(w) >= 5][:3]
+    _write_index(app, project, [{"text": " ".join(words), "box": [0.4, 0.5, 0.3, 0.04]}],
+                 q.start_timecode - 4, q.end_timecode + 4)
+    body = AuthTestClient(app).get("/api/projects/1/screens").json()
+    [screen] = body["screens"]
+    [tab] = screen["tabs"]
+    assert sorted(p["dom_id"] for p in tab["pins"]) == ["q-p1-10", "q-p1-10-1"]
+
+
 def test_the_still_route_refuses_a_bad_crop(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
     app = create_app(project_dir=project, dev=False, db_url="sqlite://")

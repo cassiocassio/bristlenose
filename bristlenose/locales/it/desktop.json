@@ -421,7 +421,8 @@
         "no_speech": "Nessun parlato rilevato — in questa registrazione non è stato detto nulla.",
         "unreadable_folder": "Non è stato possibile aprire questa cartella.",
         "unreadable": "Non è stato possibile leggere il file.",
-        "duplicate_recording": "Una seconda registrazione per questa sessione — è stata usata l'altra."
+        "duplicate_recording": "Una seconda registrazione per questa sessione — è stata usata l'altra.",
+        "duplicate_transcript": "Una seconda copia della trascrizione di questa sessione — è stata usata l'altra."
       }
     }
   },

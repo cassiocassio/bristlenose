@@ -459,7 +459,8 @@
         "no_speech": "Nie znaleziono mowy — w tym nagraniu nikt nic nie powiedział.",
         "unreadable_folder": "Nie udało się otworzyć tego folderu.",
         "unreadable": "Nie udało się odczytać pliku.",
-        "duplicate_recording": "Drugie nagranie dla tej sesji — użyto innego."
+        "duplicate_recording": "Drugie nagranie dla tej sesji — użyto innego.",
+        "duplicate_transcript": "Druga kopia transkrypcji tej sesji — użyto innej."
       }
     }
   },

@@ -1405,6 +1405,7 @@
  "desktop.pipeline.diagnostic.pill.quota": "a06130",
  "desktop.pipeline.diagnostic.pill.unknown": "1480ec",
  "desktop.pipeline.diagnostic.reason.duplicate_recording": "b70d26",
+ "desktop.pipeline.diagnostic.reason.duplicate_transcript": "17c91d",
  "desktop.pipeline.diagnostic.reason.empty": "f0eef4",
  "desktop.pipeline.diagnostic.reason.incomplete": "832681",
  "desktop.pipeline.diagnostic.reason.no_audio": "b8fed1",

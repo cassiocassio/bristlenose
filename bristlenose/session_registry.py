@@ -301,7 +301,11 @@ class SessionRegistry:
         a weaker key. ``input_dir`` lets the registry remember places relative
         to the interview folder; without it nothing is remembered.
         """
-        from bristlenose.stages.s01_ingest import fold_duplicate_recording, session_key
+        from bristlenose.stages.s01_ingest import (
+            fold_duplicate_recording,
+            fold_duplicate_transcript,
+            session_key,
+        )
 
         used = {_number(sid) for sid in self.sessions.values()}
         next_n = max(used, default=0) + 1
@@ -365,16 +369,40 @@ class SessionRegistry:
         # on the run's summary, never dropped silently (register row 15).
         folded: set[int] = set()
 
+        # A session with no recording, by the fingerprints of all its files:
+        # taken before any fold moves files between sessions.
+        transcript_fps: dict[int, frozenset[str]] = {}
+        for i, s in enumerate(sessions):
+            if s.files and not _is_media(primaries[i]):
+                file_fps = [_fingerprint(f.path) for f in s.files]
+                if all(fp is not None for fp in file_fps):
+                    transcript_fps[i] = frozenset(fp for fp in file_fps if fp is not None)
+
         def fold(i: int, owner: int) -> None:
-            if not (_is_media(primaries[i]) and _is_media(primaries[owner])):
-                # Identical transcript files, say: kept as two sessions, and
-                # said so (whether to fold those is an open product call).
+            copy, kept = primaries[i], primaries[owner]
+            if _is_media(copy) and _is_media(kept):
+                fold_duplicate_recording(sessions[owner], sessions[i])
+            elif not _is_media(copy) and not _is_media(kept) and copy is not None:
+                # The same transcript file twice with no recording — a Teams
+                # .vtt or .docx downloaded twice — is one session too
+                # (decision #97, 21 Oct 2026): owner, retire and statement
+                # as for a recording, under its own reason. Every file of the
+                # copy whose bytes the owner holds is set aside, not only the
+                # one that matched (the .docx of a pair is not read twice).
+                # (A file whose bytes are not here proves nothing either way.)
+                held = {_fingerprint(f.path) for f in sessions[owner].files} - {None}
+                fold_duplicate_transcript(sessions[owner], sessions[i], {
+                    f.path for f in sessions[i].files
+                    if f.path == copy or _fingerprint(f.path) in held
+                })
+            else:
+                # A recording and a transcript file with one fingerprint are
+                # not two copies of one thing: kept apart, and said.
                 logger.warning(
-                    "%r and %r hold the same bytes but are not recordings; kept apart",
+                    "%r and %r hold the same bytes but one is a recording; kept apart",
                     named[i], named[owner],
                 )
                 return
-            fold_duplicate_recording(sessions[owner], sessions[i])
             folded.add(i)
             # A study analysed before 20 Oct 2026 keyed the copy by name as
             # its own session. That session is retired — its key goes, so
@@ -393,6 +421,19 @@ class SessionRegistry:
         for i, fp in enumerate(fps):
             if fp is not None and first_with_fp[fp] != i:
                 fold(i, first_with_fp[fp])
+        # A Teams pair downloaded twice: a session's first file is its key,
+        # and the two downloads can land their .vtt and .docx in a different
+        # order, so the keys differ while every file is the same. Sessions
+        # with no recording holding the same set of files are one session.
+        same_files: dict[frozenset[str], list[int]] = {}
+        for i, tfps in transcript_fps.items():
+            if i not in folded and len(tfps) > 1:
+                same_files.setdefault(tfps, []).append(i)
+        for group in same_files.values():
+            kept_i = min(group, key=owner_rank)
+            for i in group:
+                if i != kept_i:
+                    fold(i, kept_i)
 
         claimed: set[str] = set()
         resolved: list[str | None] = [None] * len(sessions)
@@ -408,7 +449,8 @@ class SessionRegistry:
         for i, fp in enumerate(fps):
             # A copy whose name belongs to another session is that session,
             # even when the keyed copy is gone (Fable review, 15 Oct 2026).
-            if fp is not None and first_with_fp[fp] == i and owner_rank(i)[0] != 2:
+            if (fp is not None and first_with_fp[fp] == i and owner_rank(i)[0] != 2
+                    and i not in folded):
                 claim(i, self.sessions.get(FP_PREFIX + fp))
         for i, fp in enumerate(fps):
             if resolved[i] is None and fp is None and places[i] is not None:

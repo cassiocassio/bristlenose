@@ -169,6 +169,12 @@ class UnusableReason(str, Enum):
     #: stated rather than dropped (12 Oct 2026). A video beside an audio
     #: file is the everyday pair, not this.
     DUPLICATE_RECORDING = "duplicate_recording"
+    #: A byte-identical copy of a session's transcript file, with no recording
+    #: — the same Teams ``.vtt`` or ``.docx`` downloaded twice. Folded into the
+    #: session that owns the bytes, set aside, and stated (decision #97,
+    #: 21 Oct 2026). Its own word because "a second recording" is not what a
+    #: transcript is.
+    DUPLICATE_TRANSCRIPT = "duplicate_transcript"
 
 
 class EventTypeEnum(str, Enum):

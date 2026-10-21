@@ -67,6 +67,9 @@ MESSAGES: dict[UnusableReason, str] = {
     UnusableReason.DUPLICATE_RECORDING: (
         "A second recording for this session — the other one was used."
     ),
+    UnusableReason.DUPLICATE_TRANSCRIPT: (
+        "A second copy of this session's transcript — the other one was used."
+    ),
 }
 
 #: Leading bytes that identify a media container. Enough to answer the only

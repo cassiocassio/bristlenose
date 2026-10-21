@@ -15,7 +15,14 @@ import shutil
 from pathlib import Path
 
 from bristlenose.events import UnusableReason
-from tests.test_pipeline_platform_transcripts import audio_session, run_pipeline
+from bristlenose.models import FileType, InputFile, InputSession
+from tests.test_pipeline_platform_transcripts import (
+    _T0,
+    TEAMS_PAIR,
+    audio_session,
+    run_pipeline,
+    write_vtt,
+)
 
 
 def _copy_of(input_dir: Path, session, n: int, name: str):
@@ -85,4 +92,71 @@ class TestDuplicateRecording:
         assert h.transcribed in ([["s1"]], [["s1"], []]), "the survivor re-paid Whisper"
         segments = h.session_segments()
         assert list(segments) == ["s1"]
+        assert _refusals(h, 1) == []
+
+
+def _transcript_session(input_dir: Path, n: int, name: str) -> InputSession:
+    """A Teams transcript with no recording beside it. ``name`` other than
+    ``transcript.vtt`` is a byte-identical copy of that file (a second
+    download)."""
+    original = write_vtt(input_dir, "transcript", TEAMS_PAIR)
+    path = input_dir / name
+    if not path.exists():
+        shutil.copy2(original, path)
+    vtt = InputFile(
+        path=path, file_type=FileType.SUBTITLE_VTT, created_at=_T0,
+        size_bytes=path.stat().st_size,
+    )
+    return InputSession(
+        session_id=f"s{n}", session_number=n, participant_id=f"p{n}", participant_number=n,
+        files=[vtt], audio_path=None, has_existing_transcript=True, session_date=_T0,
+    )
+
+
+class TestDuplicateTranscript:
+    """The same transcript downloaded twice, no recording — decision #97,
+    21 Oct 2026. One session, the copy stated, never a second participant.
+    The wire value is spelled out: it is what the Files bucket and the
+    locale key are built from."""
+
+    def test_two_identical_vtts_are_one_session_and_the_copy_is_stated(
+        self, tmp_path: Path,
+    ) -> None:
+        def build(d: Path, _i: int):
+            return [_transcript_session(d, 1, "transcript.vtt"),
+                    _transcript_session(d, 2, "transcript (1).vtt")]
+
+        h = run_pipeline(tmp_path, build)
+        assert h.quoted == [["s1"]], "the copy's quotes count as a second participant"
+        assert _refusals(h, 0) == [("transcript (1).vtt", "duplicate_transcript", "s1")]
+        # Set aside means not read: it is stated once, as a duplicate, and is
+        # not parsed and then "superseded" as well.
+        assert "superseded" not in h.log()
+
+    def test_a_transcript_copy_added_later_is_folded_in_and_nothing_runs_again(
+        self, tmp_path: Path,
+    ) -> None:
+        def build(d: Path, i: int):
+            original = _transcript_session(d, 1, "transcript.vtt")
+            if i == 0:
+                return [original]
+            return [original, _transcript_session(d, 2, "transcript (1).vtt")]
+
+        h = run_pipeline(tmp_path, build, runs=2)
+        assert 1 not in h.quoted_by_run, "the second run paid for quotes again"
+        assert _refusals(h, 1) == [("transcript (1).vtt", "duplicate_transcript", "s1")]
+
+    def test_deleting_the_kept_transcript_leaves_the_session_to_the_other(
+        self, tmp_path: Path,
+    ) -> None:
+        def build(d: Path, i: int):
+            original = _transcript_session(d, 1, "transcript.vtt")
+            copy = _transcript_session(d, 2, "transcript (1).vtt")
+            if i == 0:
+                return [original, copy]
+            original.files[0].path.unlink(missing_ok=True)
+            return [copy]
+
+        h = run_pipeline(tmp_path, build, runs=2)
+        assert list(h.session_segments()) == ["s1"]
         assert _refusals(h, 1) == []

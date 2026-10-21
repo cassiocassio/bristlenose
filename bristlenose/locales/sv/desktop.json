@@ -421,7 +421,8 @@
         "no_speech": "Inget tal hittades – inget sades i den här inspelningen.",
         "unreadable_folder": "Det gick inte att öppna mappen.",
         "unreadable": "Det gick inte att läsa filen.",
-        "duplicate_recording": "En andra inspelning för den här sessionen – den andra användes."
+        "duplicate_recording": "En andra inspelning för den här sessionen – den andra användes.",
+        "duplicate_transcript": "En andra kopia av den här sessionens transkription – den andra användes."
       }
     }
   },

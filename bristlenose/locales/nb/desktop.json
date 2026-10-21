@@ -421,7 +421,8 @@
         "no_speech": "Ingen tale funnet – ingenting ble sagt i dette opptaket.",
         "unreadable_folder": "Denne mappen kunne ikke åpnes.",
         "unreadable": "Filen kunne ikke leses.",
-        "duplicate_recording": "Et annet opptak for denne økten – det andre ble brukt."
+        "duplicate_recording": "Et annet opptak for denne økten – det andre ble brukt.",
+        "duplicate_transcript": "En annen kopi av transkripsjonen for denne økten – den andre ble brukt."
       }
     }
   },

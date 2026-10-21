@@ -6,6 +6,8 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-10-21_ — §11a: identical *transcript* files with no recording fold too (decision #97), the copy set aside as `duplicate_transcript`. Anchors: register row 55; `TestDuplicateTranscript` in `tests/test_pipeline_duplicate_recording.py`.
+
 - _2026-10-20_ — §11a's first departure closed (R49): identical bytes under two names are one session again, as §5 said; the copy is set aside and stated, its transcription never paid for. Anchors: register row 55; `tests/test_pipeline_duplicate_recording.py`.
 
 - _2026-10-15_ — phases 2, 4 and 5 built: the marker, one study per database with fork collapse, content fingerprints and registry version 3, transcription keyed by content, the Re-analyse carry (2); the sidebar reads the marker, follows a moved folder and re-mints a copy (4); agent access keyed by study (5). Phase 3 is obviated. Phase 6 built the same day: Locate… searches for a study by id through a visible beacon file, and a copy's row says where it came from (§13a). §11a records where the build departed from this note.
@@ -371,8 +373,22 @@ not the folder, and are unchanged.
   copy's old number; the number stays reserved and its speakers, pins and
   starts are left in place). The run's totals — files by type, hours of
   audio, the time estimate — count the interview once. Identical
-  *transcript* files are not folded (an open product call); the run says
-  so. **Known limit:** a copy folded while resident has no place of its own
+  *transcript* files with no recording (the same Teams `.vtt` or `.docx`
+  downloaded twice) fold the same way since 21 Oct 2026 (decision #97,
+  `s01_ingest.fold_duplicate_transcript`): same owner rank, same retire, the
+  copy set aside as `duplicate_transcript` ("a second copy of this session's
+  transcript") and never parsed — every file of the copy whose bytes the
+  owner holds, so the `.docx` of a Teams pair is not read twice; a file that
+  differs joins as a candidate. A pair downloaded twice can land its `.vtt`
+  and `.docx` in a different order, so the sessions' first files (their
+  keys) differ: sessions with no recording holding the same set of files are
+  folded too. A recording and a transcript with one fingerprint are kept
+  apart and said. An evicted transcript copy is not fetched to be
+  compared (only a recording is): it is its own session until resident, then
+  folds and that session is retired. A pair-folded copy from a study
+  analysed before 21 Oct 2026 held its own content key, so its old session
+  is not retired: if the kept pair is later deleted, the survivor is that
+  old session, not the kept one. **Known limit:** a copy folded while resident has no place of its own
   in `hints`, so if both copies are later evicted it is a placeholder with
   no bytes, no place and no name — a new session for that run, downloaded
   and transcribed at transcription. Register row 55;

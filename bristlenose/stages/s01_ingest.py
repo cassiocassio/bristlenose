@@ -636,6 +636,38 @@ def fold_duplicate_recording(owner: InputSession, duplicate: InputSession) -> No
     )
 
 
+def fold_duplicate_transcript(
+    owner: InputSession, duplicate: InputSession, copies: set[Path],
+) -> None:
+    """Fold *duplicate* — a session with no recording, whose transcript files
+    *copies* are byte for byte files *owner* holds — into *owner*: one
+    session, read once and counted once.
+
+    ``transcript.vtt`` and ``transcript (1).vtt``, the same Teams download
+    taken twice: one transcript, as identical recordings are one recording
+    (decision #97, 21 Oct 2026; ``fold_duplicate_recording`` is the sibling).
+    Until then the two were sessions and the copy's quotes read as a second
+    participant agreeing. Each of *copies* is set aside with
+    ``DUPLICATE_TRANSCRIPT``, so it is stated on the run's summary and never
+    parsed; a file of the duplicate that differs joins the owner as a
+    candidate transcript, as a recording copy's companions do, and one
+    transcript per session is still chosen. The owner's files stay first, so
+    a tie keeps what is used. The session registry decides the owner and
+    which files are copies (``SessionRegistry.apply``).
+    """
+    for f in duplicate.files:
+        if f.path in copies:
+            f.error = UnusableReason.DUPLICATE_TRANSCRIPT.value
+            logger.warning(
+                "%s is the same transcript as one beside %s — set aside; %s is used",
+                f.path.name, owner.files[0].path.name, owner.files[0].path.name,
+            )
+        owner.files.append(f)
+    owner.has_existing_transcript = (
+        owner.has_existing_transcript or duplicate.has_existing_transcript
+    )
+
+
 def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
     """The stable identity of a session's file group — what the grouping keys on.
 

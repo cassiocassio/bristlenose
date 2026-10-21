@@ -870,6 +870,17 @@ def _copies(tmp_path: Path, *names: str, data: bytes = b"one recording") -> list
     return files
 
 
+def _transcripts(
+    tmp_path: Path, *names: str, kind: FileType = FileType.SUBTITLE_VTT,
+    data: bytes = b"WEBVTT the same meeting",
+) -> list[InputFile]:
+    """Byte-identical transcript files under *names*, a day apart."""
+    files = _copies(tmp_path, *names, data=data)
+    for f in files:
+        f.file_type = kind
+    return files
+
+
 class TestDuplicateRecordings:
     """Identical bytes under two names are one recording (design-project-identity
     §5): one session, the copy set aside and stated, never a second participant
@@ -995,20 +1006,172 @@ class TestDuplicateRecordings:
         later = SessionRegistry.load(out).apply(_ingest([b, c]), tmp_path)
         assert [s.session_id for s in later] == ["s1", "s3"], "the retired number was reused"
 
-    def test_identical_transcript_files_are_kept_apart_and_said(self, tmp_path: Path) -> None:
-        """Only recordings fold. Two identical transcript files stay two
-        sessions (an open product call), and the run says so."""
-        files = [
-            _copies(tmp_path, name, data=b"WEBVTT the same")[0]
-            for name in ("ann.vtt", "ann (1).vtt")
-        ]
-        for f in files:
-            f.file_type = FileType.SUBTITLE_VTT
-        files[1].created_at = files[0].created_at + timedelta(days=1)
-        with _Capture("bristlenose.session_registry") as said:
+    # ── Identical transcript files, no recording (decision #97, 21 Oct 2026) ──
+    # The same Teams ``.vtt`` or ``.docx`` downloaded twice is one session, as
+    # identical recordings are. Until then the two were kept apart (R49 review
+    # finding 2) and the copy's quotes read as a second participant agreeing.
+    # The wire value is spelled out, not taken from the enum: it is what the
+    # Files bucket and the locale key are built from.
+
+    def test_two_identical_transcripts_are_one_session(self, tmp_path: Path) -> None:
+        files = _transcripts(tmp_path, "transcript.vtt", "transcript (1).vtt")
+        with _Capture("bristlenose.stages.s01_ingest") as said:
             sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        kept, aside = sessions[0].files
+        assert (kept.path.name, kept.error) == ("transcript.vtt", None)
+        assert (aside.path.name, aside.error) == ("transcript (1).vtt", "duplicate_transcript")
+        assert sessions[0].has_existing_transcript
+        assert any("transcript (1).vtt" in m and "transcript.vtt" in m for m in said), said
+
+    def test_two_identical_docx_are_one_session(self, tmp_path: Path) -> None:
+        files = _transcripts(
+            tmp_path, "notes.docx", "notes (1).docx", kind=FileType.DOCX, data=b"PK docx bytes",
+        )
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert [(f.path.name, f.error) for f in sessions[0].files] == [
+            ("notes.docx", None), ("notes (1).docx", "duplicate_transcript"),
+        ]
+
+    def test_identical_transcripts_in_two_folders_are_one_session(self, tmp_path: Path) -> None:
+        files = _transcripts(tmp_path, "alice/interview.vtt", "bob/interview.vtt")
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest(files), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert [f.error for f in sessions[0].files] == [None, "duplicate_transcript"]
+
+    def test_deleting_the_kept_transcript_leaves_the_session_to_the_other(
+        self, tmp_path: Path,
+    ) -> None:
+        out = tmp_path / "out"
+        files = _transcripts(tmp_path, "a.vtt", "b.vtt")
+        reg = SessionRegistry.load(out)
+        assert [s.session_id for s in reg.apply(_ingest(files), tmp_path)] == ["s1"]
+        reg.save()
+        files[0].path.unlink()
+        reg = SessionRegistry.load(out)
+        # A new run's ingest builds its files afresh (the first apply marked
+        # this one set aside).
+        alone = reg.apply(_ingest(_transcripts(tmp_path, "b.vtt")), tmp_path)
+        reg.save()
+        assert [(s.session_id, s.files[0].path.name, s.files[0].error) for s in alone] == [
+            ("s1", "b.vtt", None),
+        ]
+
+    def test_a_study_from_before_the_fold_retires_the_transcript_copys_session(
+        self, tmp_path: Path,
+    ) -> None:
+        """Until 21 Oct 2026 the copy was its own session, keyed by name only
+        (the copy never owned the content key). The first run after folds it
+        and retires that session, number kept, exactly as for a recording."""
+        out = tmp_path / "out"
+        a = _transcripts(tmp_path, "ann.vtt", data=b"WEBVTT the interview")[0]
+        b = _transcripts(tmp_path, "ann (1).vtt", data=b"WEBVTT for now, other")[0]
+        b.created_at = a.created_at + timedelta(days=1)
+        reg = SessionRegistry.load(out)
+        assert [s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)] == ["s1", "s2"]
+        reg.save()
+        data = json.loads(registry_path(out).read_text())
+        data["sessions"] = {k: v for k, v in data["sessions"].items()
+                            if not (k.startswith("fp:") and v == "s2")}
+        registry_path(out).write_text(json.dumps(data))
+        b.path.write_bytes(a.path.read_bytes())
+        b.size_bytes = a.size_bytes
+
+        reg = SessionRegistry.load(out)
+        folded = reg.apply(_ingest([a, b]), tmp_path)
+        reg.save()
+        assert [s.session_id for s in folded] == ["s1"]
+        keys = json.loads(registry_path(out).read_text())["sessions"]
+        assert "stem:ann (1)" not in keys and keys.get("retired:s2") == "s2"
+
+        a.path.unlink()
+        survivor = SessionRegistry.load(out).apply(_ingest([b]), tmp_path)
+        assert [s.session_id for s in survivor] == ["s1"], "the survivor took the copy's old number"
+
+    def test_a_teams_pair_downloaded_twice_is_one_session_whatever_the_order(
+        self, tmp_path: Path,
+    ) -> None:
+        """The .vtt and the .docx of one meeting, downloaded twice. Each copy
+        of each file is set aside — none is read again — and the fold does
+        not depend on which file of a download landed first (a session's
+        first file is its key; the two downloads can disagree)."""
+        def pair(names: tuple[str, str], days: tuple[int, int]) -> list[InputFile]:
+            out = []
+            for name, day in zip(names, days, strict=True):
+                kind = FileType.DOCX if name.endswith(".docx") else FileType.SUBTITLE_VTT
+                f = _transcripts(tmp_path, name, kind=kind, data=f"bytes of {kind.value}".encode())[0]
+                f.created_at = _T0 + timedelta(days=day)
+                out.append(f)
+            return out
+
+        for second in ((2, 3), (3, 2)):  # the copy's .vtt first, then its .docx first
+            files = pair(("mtg.vtt", "mtg.docx"), (0, 1)) + pair(
+                ("mtg (1).vtt", "mtg (1).docx"), second,
+            )
+            files.sort(key=lambda f: (f.created_at, f.path.name))  # as discover_files does
+            sessions = SessionRegistry.load(tmp_path / f"out{second}").apply(
+                _ingest(files), tmp_path,
+            )
+            assert [s.session_id for s in sessions] == ["s1"], second
+            assert sorted((f.path.name, f.error) for f in sessions[0].files) == [
+                ("mtg (1).docx", "duplicate_transcript"),
+                ("mtg (1).vtt", "duplicate_transcript"),
+                ("mtg.docx", None),
+                ("mtg.vtt", None),
+            ], second
+
+    def test_a_copy_with_a_different_companion_joins_it_as_a_candidate(
+        self, tmp_path: Path,
+    ) -> None:
+        """Only identical files are set aside: a companion the copy carries
+        that differs is another transcript of the meeting, and competes."""
+        a = _transcripts(tmp_path, "mtg.vtt")[0]
+        b = _transcripts(tmp_path, "mtg (1).vtt")[0]
+        extra = _transcripts(tmp_path, "mtg (1).srt", kind=FileType.SUBTITLE_SRT, data=b"other")[0]
+        for f, day in ((b, 1), (extra, 2)):
+            f.created_at = _T0 + timedelta(days=day)
+        sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest([a, b, extra]), tmp_path)
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert [(f.path.name, f.error) for f in sessions[0].files] == [
+            ("mtg.vtt", None), ("mtg (1).vtt", "duplicate_transcript"), ("mtg (1).srt", None),
+        ]
+
+    def test_a_copy_file_whose_bytes_are_not_here_is_not_set_aside(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A file with no fingerprint (an evicted placeholder) proves nothing
+        about being a copy, even when the owner has one too: it joins as a
+        candidate rather than being stated as a duplicate it may not be."""
+        import bristlenose.session_registry as sr
+
+        real = sr._fingerprint
+        monkeypatch.setattr(
+            sr, "_fingerprint", lambda p: None if p is not None and p.suffix == ".srt" else real(p),
+        )
+        a, b = _transcripts(tmp_path, "mtg.vtt", "mtg (1).vtt")
+        a_srt = _transcripts(tmp_path, "mtg.srt", kind=FileType.SUBTITLE_SRT, data=b"x")[0]
+        b_srt = _transcripts(tmp_path, "mtg (1).srt", kind=FileType.SUBTITLE_SRT, data=b"y")[0]
+        for f, day in ((a_srt, 1), (b, 2), (b_srt, 3)):
+            f.created_at = _T0 + timedelta(days=day)
+        sessions = SessionRegistry.load(tmp_path / "out").apply(
+            _ingest([a, a_srt, b, b_srt]), tmp_path,
+        )
+        assert [s.session_id for s in sessions] == ["s1"]
+        assert {f.path.name: f.error for f in sessions[0].files}["mtg (1).srt"] is None
+
+    def test_a_recording_and_a_transcript_with_one_fingerprint_stay_apart(
+        self, tmp_path: Path,
+    ) -> None:
+        """Only like folds with like: a recording's and a transcript's bytes
+        being equal is not two copies of one thing, and is said."""
+        rec = _copies(tmp_path, "ann.wav", data=b"same bytes")[0]
+        vtt = _transcripts(tmp_path, "bob.vtt", data=b"same bytes")[0]
+        vtt.created_at = rec.created_at + timedelta(days=1)
+        with _Capture("bristlenose.session_registry") as said:
+            sessions = SessionRegistry.load(tmp_path / "out").apply(_ingest([rec, vtt]), tmp_path)
         assert [s.session_id for s in sessions] == ["s1", "s2"]
-        assert any("not recordings" in m for m in said), said
+        assert any("kept apart" in m for m in said), said
 
     def test_different_bytes_under_two_names_stay_two_sessions(self, tmp_path: Path) -> None:
         """A re-export or a trim is a different recording (§5): out of scope."""

@@ -402,7 +402,8 @@
         "no_speech": "找不到語音 — 這段錄音中沒有人說話。",
         "unreadable_folder": "無法打開這個檔案夾。",
         "unreadable": "無法讀取這個檔案。",
-        "duplicate_recording": "此工作階段的第二段錄音 — 已使用另一段。"
+        "duplicate_recording": "此工作階段的第二段錄音 — 已使用另一段。",
+        "duplicate_transcript": "此工作階段逐字稿的第二份副本 — 已使用另一份。"
       }
     }
   },

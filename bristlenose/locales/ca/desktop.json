@@ -421,7 +421,8 @@
         "no_speech": "No s'hi ha trobat parla — ningú no hi ha dit res en aquest enregistrament.",
         "unreadable_folder": "No s'ha pogut obrir aquesta carpeta.",
         "unreadable": "No s'ha pogut llegir el fitxer.",
-        "duplicate_recording": "Una segona gravació per a aquesta sessió — s'ha fet servir l'altra."
+        "duplicate_recording": "Una segona gravació per a aquesta sessió — s'ha fet servir l'altra.",
+        "duplicate_transcript": "Una segona còpia de la transcripció d'aquesta sessió — s'ha fet servir l'altra."
       }
     }
   },

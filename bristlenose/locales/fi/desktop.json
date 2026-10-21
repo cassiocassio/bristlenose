@@ -421,7 +421,8 @@
         "no_speech": "Puhetta ei löytynyt — tässä tallenteessa ei sanota mitään.",
         "unreadable_folder": "Tätä kansiota ei voitu avata.",
         "unreadable": "Tiedostoa ei voitu lukea.",
-        "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin."
+        "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin.",
+        "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin."
       }
     }
   },

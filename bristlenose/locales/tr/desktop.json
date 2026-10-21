@@ -421,7 +421,8 @@
         "no_speech": "Konuşma bulunamadı — bu kayıtta hiçbir şey söylenmemiş.",
         "unreadable_folder": "Bu klasör açılamadı.",
         "unreadable": "Dosya okunamadı.",
-        "duplicate_recording": "Bu oturum için ikinci bir kayıt — diğeri kullanıldı."
+        "duplicate_recording": "Bu oturum için ikinci bir kayıt — diğeri kullanıldı.",
+        "duplicate_transcript": "Bu oturumun dökümünün ikinci bir kopyası — diğeri kullanıldı."
       }
     }
   },

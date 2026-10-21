@@ -421,7 +421,8 @@
         "no_speech": "Keine Sprache gefunden — in dieser Aufnahme wurde nichts gesagt.",
         "unreadable_folder": "Dieser Ordner konnte nicht geöffnet werden.",
         "unreadable": "Die Datei konnte nicht gelesen werden.",
-        "duplicate_recording": "Eine zweite Aufnahme für dieses Interview — die andere wurde verwendet."
+        "duplicate_recording": "Eine zweite Aufnahme für dieses Interview — die andere wurde verwendet.",
+        "duplicate_transcript": "Eine zweite Kopie des Transkripts dieses Interviews — die andere wurde verwendet."
       }
     }
   },

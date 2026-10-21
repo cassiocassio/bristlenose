@@ -4428,6 +4428,10 @@ class Pipeline:
             # .docx sat side by side.
             candidates: list[ParsedTranscriptFile] = []
             for f in session.files:
+                if f.error is not None:
+                    # Set aside at ingest — a copy of the transcript folded
+                    # in (decision #97) — and stated there; never read.
+                    continue
                 if f.file_type in (FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT):
                     stage, parse = "s03_parse_subtitles", parse_subtitle_file
                 elif f.file_type == FileType.DOCX:

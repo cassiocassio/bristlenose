@@ -1447,13 +1447,17 @@ describe("useKeyboardShortcuts", () => {
       }
     }
 
+    // t and r joined on 20 Oct 2026: they had no guard at all, so ⌘R on a
+    // focused quote quick-applied the last tag and, its keydown prevented, never
+    // reached View ▸ Reload Report in the Mac app; ⌘T opened the tag input.
+    //
     // x, h and s are NOT in the loop above, and the reason is the whole point
     // of writing this suite against the unfixed source first: all three bail
     // early when no quote is focused, so on a bare harness they read as
     // "declined" whether the guard exists or not. Nine vacuous passes, and
     // ⌘S — the case that started this — among them. They need a focused quote
     // before the assertion means anything.
-    for (const key of ["x", "h", "s"]) {
+    for (const key of ["x", "h", "s", "t", "r"]) {
       for (const modifier of ["metaKey", "ctrlKey", "altKey"] as const) {
         it(`${key} is inert with ${modifier} even with a focused quote`, () => {
           const { getCtx, unmount } = renderWithProviders(undefined, "/report/quotes/");

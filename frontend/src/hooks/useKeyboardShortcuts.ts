@@ -716,14 +716,14 @@ export function useKeyboardShortcuts({
       }
 
       // t — add tag
-      if (key === "t" && scopedFocus()) {
+      if (key === "t" && bare && scopedFocus()) {
         e.preventDefault();
         handleTagOpen();
         return;
       }
 
       // r — repeat last tag (quick-apply to focused/selected quotes)
-      if (key === "r" && (scopedFocus() || scopedSelection().size > 0)) {
+      if (key === "r" && bare && (scopedFocus() || scopedSelection().size > 0)) {
         e.preventDefault();
         handleQuickApply();
         return;

@@ -728,6 +728,9 @@ class RunHandle:
         eta_remaining_seconds: float | None = None,
         predicted_total_seconds: float | None = None,
         elapsed_seconds: float | None = None,
+        stage_base: float | None = None,
+        stage_span: float | None = None,
+        stage_expected_seconds: float | None = None,
     ) -> None:
         """Emit one in-flight ``run_progress`` event — the pipeline's sink.
 
@@ -759,6 +762,9 @@ class RunHandle:
             eta_remaining_seconds=eta_remaining_seconds,
             predicted_total_seconds=predicted_total_seconds,
             elapsed_seconds=elapsed_seconds,
+            stage_base=stage_base,
+            stage_span=stage_span,
+            stage_expected_seconds=stage_expected_seconds,
         )
         try:
             append_event(self._events_file, event)

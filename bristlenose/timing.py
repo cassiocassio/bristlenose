@@ -140,6 +140,25 @@ def _fmt(seconds: float) -> str:
     return f"{max(1, round(seconds))} sec"
 
 
+@dataclass(frozen=True)
+class StageBudget:
+    """The slice of the progress ring one stage owns (R27).
+
+    ``base`` is the share of this run's expected time spent by the stages
+    before it, ``span`` the stage's own share — both in 0..1, and the spans of
+    the stages that run sum to 1 — and ``expected_seconds`` is what the stage
+    is expected to take this run. Read from the same Welford means as the
+    ETA, as shares rather than a scalar sum, so the Mac app can fill the
+    current stage's slice by that stage's own progress instead of racing the
+    whole ring off elapsed over the predicted total
+    (docs/design-progress-ring-estimate.md, option A).
+    """
+
+    base: float
+    span: float
+    expected_seconds: float
+
+
 # ---------------------------------------------------------------------------
 # Pipeline event (for future UI)
 # ---------------------------------------------------------------------------
@@ -263,6 +282,7 @@ class TimingEstimator:
         # stage is neither predicted nor counted as "remaining" for ever.
         self._pii_enabled = False
         self._discussion_enabled = False
+        self._skip_transcription = False
         # Input sizes set by caller after ingest.
         self.audio_minutes: float = 0.0
         self.session_count: int = 0
@@ -272,6 +292,12 @@ class TimingEstimator:
         # figure until one actually starts (skip_to), so no estimate is offered
         # that counts work the cache will do. Set by initial_estimate().
         self._likely_cached: set[str] = set()
+        # Stages the cache served, seen on entry to a later one (skip_to): not
+        # part of this run's work, so not part of its ring either.
+        self._retired: set[str] = set()
+        # Whether this run's ring can be stage-weighted, decided once at the
+        # opening estimate (stage_budget): the model must not change mid-run.
+        self._budget_ok = False
         # Pipeline start time (set externally).
         self._pipeline_start: float = 0.0
 
@@ -336,7 +362,12 @@ class TimingEstimator:
         self.session_count = session_count
         self._pii_enabled = pii_enabled
         self._discussion_enabled = discussion_enabled
+        self._skip_transcription = skip_transcription
         self._likely_cached = set(likely_cached)
+        self._budget_ok = self.has_history() and all(
+            (stat := self._profile.get(s)) is not None and stat.n > 0
+            for s in self._run_stages()
+        )
 
         if not self.has_history():
             return None
@@ -425,9 +456,63 @@ class TimingEstimator:
         skipped = [s for s in ALL_STAGES[:ALL_STAGES.index(stage)] if s not in self._completed]
         if not skipped:
             return False, None
+        self._retired.update(skipped)
         for s in skipped[:-1]:
             self._completed[s] = 0.0
         return True, self.stage_completed(skipped[-1], 0.0)
+
+    def _run_stages(self) -> list[str]:
+        """The frame the ring is shared over, in order: the conditional stages
+        only when on, transcription unless skipped, and every stage not yet
+        retired by ``skip_to``. A stage the opening guess has as cached stays
+        in the frame (with no span of its own, see ``stage_budget``) until a
+        later stage's entry confirms it: dropping it early and restoring it
+        when it ran after all would shrink every base behind it, and the ring,
+        which never runs backwards, would sit until the fill caught up."""
+        out: list[str] = []
+        for s in ALL_STAGES:
+            if s == STAGE_TRANSCRIBE and self._skip_transcription:
+                continue
+            if s == STAGE_PII and not self._pii_enabled:
+                continue
+            if s == STAGE_DISCUSSION and not self._discussion_enabled:
+                continue
+            if s in self._retired:
+                continue
+            out.append(s)
+        return out
+
+    def stage_budget(self, stage: str, *, completed: bool = False) -> StageBudget | None:
+        """The ring slice ``stage`` owns this run (R27), or None when the run
+        cannot be stage-weighted. That is decided once, at the opening
+        estimate, so the ring's model never changes mid-run: the history must
+        be warm — the same bar as the ETA (``has_history``) — and every stage
+        the run is configured to do must have an observation, since the share
+        of one that has none (a first run with redaction or the discussion lens
+        on) would be an invented zero. Without a budget the Mac app keeps its
+        whole-run time ring.
+
+        The shares are over the frame (``_run_stages``), so a skipped stage or
+        one retired on a later entry gives its share to the others. A stage the
+        opening guess has as cached keeps its weight in the frame but reports a
+        zero span until it really runs (``stage_runs``), so a wrong guess only
+        ever moves the ring forward; a stage retired after the guess is no
+        longer in the frame, so its entry reports zero at its base. A stage
+        that ran keeps its full expected share whatever it took, and
+        ``completed`` reports it held at its end: ``base + span``, span zero.
+        """
+        if stage not in ALL_STAGES or not self._budget_ok:
+            return None
+        weights = {s: self._estimate_stage(s)[0] for s in self._run_stages()}
+        total = sum(weights.values())
+        if total <= 0:
+            return None
+        before = ALL_STAGES[:ALL_STAGES.index(stage)]
+        base = sum(w for s, w in weights.items() if s in before) / total
+        own = 0.0 if stage in self._likely_cached else weights.get(stage, 0.0)
+        if completed:
+            return StageBudget(base=base + own / total, span=0.0, expected_seconds=0.0)
+        return StageBudget(base=base, span=own / total, expected_seconds=own)
 
     def stage_runs(self, stage: str) -> tuple[bool, Estimate | None]:
         """A stage is doing real work, not loading its cache. If the opening

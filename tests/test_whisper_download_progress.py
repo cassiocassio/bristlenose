@@ -216,7 +216,10 @@ def test_a_predicted_total_leaves_out_the_download() -> None:
 
     remaining = Estimate.__new__(Estimate)
     object.__setattr__(remaining, "total_seconds", 300.0)
-    pipeline._estimator = SimpleNamespace(stage_completed=lambda *_a: remaining)
+    pipeline._estimator = SimpleNamespace(
+        stage_completed=lambda *_a: remaining,
+        stage_budget=lambda *_a, **_k: None,  # cold: no ring slice
+    )
     pipeline._emit = lambda _e: None
     pipeline._emit_remaining("transcribe", 50)
     # 100 s of analysis + 300 s left, not 1000 + 300.

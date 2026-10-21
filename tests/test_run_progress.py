@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import math
+from unittest.mock import patch
 
 import pytest
 
@@ -101,10 +102,14 @@ def test_non_finite_eta_coerced_to_none_and_valid_json(tmp_path):
         eta_remaining_seconds=float("inf"),
         stage_fraction=float("nan"),
         predicted_total_seconds=float("-inf"),
+        stage_base=float("nan"),
+        stage_span=float("inf"),
+        stage_expected_seconds=float("-inf"),
     )
     assert ev.eta_remaining_seconds is None
     assert ev.stage_fraction is None
     assert ev.predicted_total_seconds is None
+    assert (ev.stage_base, ev.stage_span, ev.stage_expected_seconds) == (None, None, None)
 
     f = events_path(tmp_path)
     append_event(f, ev)
@@ -236,6 +241,9 @@ class _ColdEstimator:
     def skip_to(self, stage: str) -> tuple[bool, None]:
         return False, None
 
+    def stage_budget(self, stage: str, *, completed: bool = False) -> None:
+        return None  # cold: no slice either
+
 
 def test_emit_remaining_clears_carried_eta_when_estimate_goes_cold():
     # HIGH-3 regression guard. When the estimator returns None (cold start, or
@@ -362,3 +370,154 @@ def test_a_resume_offers_only_the_work_left_and_rises_only_when_a_stage_really_r
     assert all(e is None or e <= opening.total_seconds for e in etas)  # never climbs on a cache hit
     pipeline._stage_runs(STAGE_TOPICS)  # the guess was wrong: topics really runs
     assert collected[-1]["eta_remaining_seconds"] > opening.total_seconds
+
+
+# ---------------------------------------------------------------------------
+# R27 — the ring slice a stage owns rides on its progress events
+# ---------------------------------------------------------------------------
+
+
+def _warm_estimator(tmp_path, **overrides):
+    """A seeded profile: transcribe 4 s/min, LLM stages 15 s/session, cluster
+    5, render 0.5 — the fixture `tests/test_timing.py` uses. With 10 audio
+    minutes and 5 sessions that is 40 + 225 + 25 + 2.5 = 292.5 s."""
+    from bristlenose.timing import TimingEstimator, save_timing_data
+
+    def stat(mean: float) -> dict:
+        return {"mean": mean, "m2": 1.0, "n": 5}
+
+    profile = {
+        "transcribe": stat(4.0), "speakers": stat(15.0), "topics": stat(15.0),
+        "quotes": stat(15.0), "cluster": stat(5.0), "render": stat(0.5),
+    }
+    profile.update(overrides)
+    save_timing_data({"version": 1, "profiles": {"hw": profile}}, tmp_path)
+    return TimingEstimator("hw", tmp_path)
+
+
+def test_a_stage_entry_carries_the_ring_slice_the_stage_owns(tmp_path):
+    """R27. A ring driven by elapsed over the whole predicted total races to its
+    cap as soon as the last big stage starts, because that stage's estimate is
+    small and high-variance (docs/design-progress-ring-estimate.md). So every
+    estimator-stage event carries the slice the stage owns — where it starts,
+    how much of the ring is its, and its expected seconds — from the same
+    Welford means the ETA uses. Grouping then fills grouping's slice and
+    structurally cannot reach the cap."""
+    from bristlenose.timing import STAGE_TRANSCRIBE
+
+    est = _warm_estimator(tmp_path)
+    assert est.initial_estimate(10.0, 5).total_seconds == pytest.approx(292.5)
+    collected: list[dict[str, object]] = []
+    pipeline = Pipeline(BristlenoseSettings(), estimator=est)
+    pipeline.set_progress_sink(lambda **fields: collected.append(fields))
+
+    # The run as it happens: each stage enters, then reports its time. Quotes
+    # ran long (120 s against 75 expected) — a completed stage still keeps its
+    # expected share, so an overrun cannot push the ring past its slice.
+    for stage, took in ((STAGE_TRANSCRIBE, 50.0), (STAGE_SPEAKERS, 70.0),
+                        (STAGE_TOPICS, 80.0), (STAGE_QUOTES, 120.0)):
+        pipeline._emit_stage_entry(stage)
+        pipeline._emit_remaining(stage, took)
+    # The completion line reads the stage held at its end: base + span, no span.
+    quotes_done = collected[-1]
+    assert quotes_done["stage"] == "quotes"
+    assert quotes_done["stage_base"] == pytest.approx((40 + 225) / 292.5)
+    assert quotes_done["stage_span"] == 0.0
+    assert quotes_done["stage_expected_seconds"] == 0.0
+
+    pipeline._emit_stage_entry(STAGE_CLUSTER)
+
+    e = collected[-1]
+    assert e["stage"] == "cluster"
+    assert e["stage_base"] == pytest.approx((40 + 225) / 292.5)   # everything before it
+    assert e["stage_span"] == pytest.approx(25 / 292.5)           # its own share
+    assert e["stage_expected_seconds"] == pytest.approx(25.0)
+    # The ETA figures on the same event are what they were: the prose is untouched.
+    assert e["eta_remaining_seconds"] == pytest.approx(27.5)       # cluster + render
+    assert all("stage_base" in c for c in collected), "every estimator-stage line carries its slice"
+
+
+def test_the_budget_rides_the_sink_to_the_events_file(tmp_path):
+    """The sink is the one writer of the wire; a field the pipeline sets that
+    the sink drops never reaches the Mac, with nothing red."""
+    handle = RunHandle(
+        "RUN0001", events_file=events_path(tmp_path), kind=KindEnum.RUN,
+        started_at=_now_iso(),
+    )
+    handle.progress(stage="cluster", stage_base=0.8, stage_span=0.15,
+                    stage_expected_seconds=20.0)
+    line = json.loads(events_path(tmp_path).read_text(encoding="utf-8").strip().splitlines()[-1])
+    assert (line["stage_base"], line["stage_span"], line["stage_expected_seconds"]) == (0.8, 0.15, 20.0)
+    ev = [e for e in read_events(events_path(tmp_path)) if isinstance(e, RunProgressEvent)][-1]
+    assert (ev.stage_base, ev.stage_span, ev.stage_expected_seconds) == (0.8, 0.15, 20.0)
+
+
+def test_the_people_file_is_timed_as_render(tmp_path):
+    """The people-file merge and the scene colours used to run between grouping
+    and render in no stage at all: the estimate never counted that tail and
+    the ring sat through it (R27). They are inside render's window now, so the
+    row says "Rendering" when they start and render's rate learns their time."""
+    import time
+
+    import bristlenose.people as people_mod
+    import bristlenose.pipeline as pipeline_mod
+    from tests.test_pipeline_command_caches import _drive
+
+    entered: list[str] = []
+    stage_when_people_written: list[str | None] = []
+    steps: list[tuple[str, float]] = []
+    real_entry = Pipeline._emit_stage_entry
+    real_write = people_mod.write_people_file
+    real_step = pipeline_mod._print_step
+
+    def _entry(self, stage):
+        entered.append(stage)
+        return real_entry(self, stage)
+
+    def _write(*a, **kw):
+        stage_when_people_written.append(entered[-1] if entered else None)
+        time.sleep(1.0)  # a slow people file: render's time must include it
+        return real_write(*a, **kw)
+
+    def _step(message, elapsed):
+        steps.append((message, elapsed))
+        return real_step(message, elapsed)
+
+    with (
+        patch.object(Pipeline, "_emit_stage_entry", new=_entry),
+        patch.object(people_mod, "write_people_file", new=_write),
+        patch.object(pipeline_mod, "_print_step", new=_step),
+    ):
+        _drive(tmp_path, "run", 2, {})
+
+    assert stage_when_people_written == [STAGE_RENDER], (
+        f"people file written under stage {stage_when_people_written}, entered {entered}"
+    )
+    rendered = [e for m, e in steps if m == "Rendered report"]
+    assert rendered and rendered[0] >= 1.0, f"render's time leaves the people file out: {steps}"
+
+
+def test_a_failed_discussion_stage_still_reports_its_completion(tmp_path):
+    """The discussion lens never abandons the run, so its failure branch used
+    to return without telling the estimator the stage was over. The next
+    entry then retired it as cache-served: its share left the ring and render
+    started below where the ring already was, a stall through the tail; and
+    the ETA went on counting a stage that had already run."""
+    import asyncio
+    from unittest.mock import ANY, MagicMock
+
+    settings = BristlenoseSettings(discussion_lens=True)
+    estimator = MagicMock()
+    estimator.stage_completed.return_value = None
+    estimator.stage_runs.return_value = (False, None)
+    estimator.skip_to.return_value = (False, None)
+    estimator.stage_budget.return_value = None
+    pipeline = Pipeline(settings, estimator=estimator)
+
+    with patch("bristlenose.discussion.stage.run_discussion",
+               side_effect=RuntimeError("the model refused")):
+        asyncio.run(pipeline._run_discussion(
+            [], [], tmp_path, tmp_path, MagicMock(), None, None,
+        ))
+
+    estimator.stage_completed.assert_any_call("discussion", ANY)

@@ -424,12 +424,24 @@ class RunProgressEvent(_EventBase):
     # Python-measured elapsed; reserved for the orphan-attach elapsed baseline
     # (Swift can't measure it from a mid-run attach). Not yet read Swift-side.
     elapsed_seconds: float | None = None
+    # The slice of the ring ``stage`` owns (R27, `timing.StageBudget`): the
+    # share of the run's expected time before it, its own share, and its
+    # expected seconds. On every estimator-stage line of a run with timing
+    # history; absent on a cold run and on the download stage, where the Mac
+    # app keeps its elapsed-over-predicted ring. Shares, never anything that
+    # names a session.
+    stage_base: float | None = None
+    stage_span: float | None = None
+    stage_expected_seconds: float | None = None
 
     @field_validator(
         "stage_fraction",
         "eta_remaining_seconds",
         "predicted_total_seconds",
         "elapsed_seconds",
+        "stage_base",
+        "stage_span",
+        "stage_expected_seconds",
         mode="before",
     )
     @classmethod

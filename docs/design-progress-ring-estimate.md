@@ -10,6 +10,54 @@ options for the proper stage-weighted fix (a near-term follow-up enhancement).
 longer applies. The interim creep stopgap is committed and lands in the next ordinary release; the
 stage-weighted fix below is the follow-up enhancement, no longer release-gated.
 
+**Built (21 Oct 2026, R27) — option A, as recommended.** What shipped, and where it departs from the
+text below:
+
+- **Python emits the budget on every estimator-stage `run_progress` line:** `stage_base`,
+  `stage_span`, `stage_expected_seconds` (`timing.StageBudget`, attached in
+  `Pipeline._emit_progress` → `_attach_stage_budget`; `TimingEstimator.stage_budget`). Shares of the
+  run's expected time from the same Welford means as the ETA; `timing.json` and the ETA/CLI prose
+  are untouched (`tests/test_run_progress.py`, `tests/test_timing.py::TestStageBudget`,
+  `tests/test_swift_python_contract.py::TestStageBudgetContract`).
+- **The frame, and renormalisation:** the shares are over the frame of stages the run may do — the
+  conditional stages only when on, transcription left out under `skip_transcription`, and a stage
+  retired on entry to a later one (`skip_to` records a `_retired` set) gives its share to the rest.
+  A stage the opening guess has as cached **stays in the frame with a zero span** until a later
+  entry retires it or it really runs (`stage_runs`), so a wrong guess only ever moves the ring
+  forward (review, 21 Oct: dropping it and restoring it would shrink every base behind it and stall
+  the ring, which never runs backwards). A completed stage keeps its full expected share whatever it
+  took, and its completion line reports it held at its end (`base + span`, span 0). A stage that
+  fails without a terminus (the discussion lens's failure branch) now also reports completion, so it
+  is never retired as cache-served after running.
+- **Swift fills the current slice by `RunProgressMath.sliceFill`** — *departure from the text
+  below:* the fill is the stage's measured fraction (audio done, sessions done) **moved on by its
+  elapsed-vs-expected time toward the next measured step, never past it** — not "measured where
+  available, else time". The clock keeps the ring moving between sessions; a measure is never
+  claimed before it arrives. A stage with no measure (grouping) fills by time alone, shaped by
+  `displayFraction` so an overrun creeps toward 0.92 of its own slice. **The headroom band is
+  kept:** the slices are scaled to the 13 Jul stopgap's 0.85 mark and the whole run's overrun creep
+  through 0.85→0.92 stays on top (`stageWeightedFraction`), because a slice of a few per cent cannot
+  show its own creep on a 16 pt ring and the failure the stopgap was built against is a ring that
+  looks frozen (review, 21 Oct; the test pins a visible minimum delta over a minute's overrun).
+  `stageStartedAt` is the local time the stage was first seen; the first stage seen counts from the
+  run's start (a run without the download sends no transcribe entry). A line with no stage (a
+  session becoming readable) keeps the running stage's slice. Without a budget on the line the
+  whole-run time path runs unchanged (`RunProgressSliceTests`).
+- **Fallback ladder (the open question below, settled), decided once at the opening estimate so the
+  ring's model never changes mid-run (`_budget_ok`):** (1) history warm and every configured stage
+  has an observation → stage-weighted; (2) otherwise — fewer than 4 runs (`has_history`), or a
+  stage configured for the first time (redaction or the discussion lens newly on) whose share would
+  be an invented zero — **no budget is emitted and the ring is the whole-run `elapsed/predicted`**,
+  which is the "no change" rung. No "equal slices" rung was built: it would draw a shape from no
+  data.
+- **The untimed tail is gone:** the people-file merge and the scene colours now run inside render's
+  timed window (`_emit_stage_entry(STAGE_RENDER)` moves before them), so render's rate learns them and
+  the row reads "Rendering" from their start (`test_the_people_file_is_timed_as_render`). Two
+  consequences, accepted: the CLI's "Rendered report" checkmark time now includes them; and render's
+  Welford mean covers its whole history, so its share grows toward the new scope over many runs
+  rather than at once. Resetting render's history was considered and not done (open item).
+- **Still separate:** the stale "N of M" next to a non-session stage (last bullet of Related).
+
 Sibling doc: [`design-sidebar-activity-indicators.md`](design-sidebar-activity-indicators.md) (the
 Phase 0b determinate-ring design this refines).
 
@@ -140,18 +188,20 @@ time fraction as the slice-fill signal for `cluster`. B only if the beta window 
 
 ---
 
-## Open questions / risks
+## Open questions / risks — all settled 21 Oct 2026 (see the Built block at the top)
 
 - **Cold start / thin history.** With `< 4` runs of history the Welford means are absent or noisy; the
   slice weights degrade to something coarse (equal slices, or fall back to the current
   `elapsed/predicted`). Needs an explicit fallback ladder, mirroring the existing best-available ladder
-  in [`design-sidebar-activity-indicators.md`](design-sidebar-activity-indicators.md).
+  in [`design-sidebar-activity-indicators.md`](design-sidebar-activity-indicators.md). _Settled: no
+  budget is emitted, and the ring is the whole-run `elapsed/predicted` — no equal-slices rung._
 - **CLI parity.** The same estimator drives the CLI's ETA prose. Stage-weighting is a display concern
   for the ring; confirm the CLI ETA text is unaffected (it consumes `eta_remaining_seconds`, not the
-  ring fraction).
+  ring fraction). _Confirmed: `cli.py` prints the `estimate` `PipelineEvent`'s `range_str`, which the
+  build does not touch; the `remaining` events and `eta_remaining_seconds` are emitted as before._
 - **Analyze / skip-transcription paths.** Slice weights must renormalise when a stage is skipped
   (`--no-transcribe`, cached stages) — the existing `initial_estimate(skip_transcription=…)` already
-  excludes skipped stages from the sum; the slice math must do the same.
+  excludes skipped stages from the sum; the slice math must do the same. _Done: `_run_stages`._
 
 ---
 

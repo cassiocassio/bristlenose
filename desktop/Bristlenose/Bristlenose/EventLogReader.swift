@@ -62,6 +62,13 @@ enum EventLogReader {
         /// Carried on every progress line once non-zero, so the newest line
         /// always has it.
         let sessionsReadable: Int?
+        /// The slice of the ring the line's stage owns (R27): its base and
+        /// span as shares of the run's expected time, and its expected
+        /// seconds. Absent from an older sidecar and from a run with thin
+        /// timing history, where the ring keeps its whole-run time fill.
+        let stageBase: Double?
+        let stageSpan: Double?
+        let stageExpectedSeconds: Double?
         /// Token totals on a terminus, present only when the run made an LLM
         /// call that reported usage (`cost.compute_run_cost`): a run that
         /// finished from cache carries neither.
@@ -83,6 +90,9 @@ enum EventLogReader {
             case etaRemainingSeconds = "eta_remaining_seconds"
             case predictedTotalSeconds = "predicted_total_seconds"
             case sessionsReadable = "sessions_readable"
+            case stageBase = "stage_base"
+            case stageSpan = "stage_span"
+            case stageExpectedSeconds = "stage_expected_seconds"
             case inputTokens = "input_tokens"
             case outputTokens = "output_tokens"
         }

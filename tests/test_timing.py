@@ -19,6 +19,7 @@ from bristlenose.timing import (
     STAGE_TRANSCRIBE,
     Estimate,
     StageActual,
+    StageBudget,
     TimingEstimator,
     WelfordStat,
     _fmt,
@@ -391,6 +392,144 @@ class TestTimingEstimator:
                 assert stage not in result.breakdown
             else:
                 assert stage in result.breakdown
+
+
+class TestStageBudget:
+    """The ring slice a stage owns (R27): shares of the run's expected time,
+    renormalised over the stages that run, from the same means as the ETA."""
+
+    @staticmethod
+    def _warm(tmp_path: Path) -> TimingEstimator:
+        _seed_profile(tmp_path, "hw", transcribe_rate=4.0, llm_rate=15.0)
+        return TimingEstimator("hw", tmp_path)
+
+    def test_shares_follow_pipeline_order_and_sum_to_one(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5)   # 40 + 75×3 + 25 + 2.5 = 292.5
+        budgets = {s: est.stage_budget(s) for s in (
+            STAGE_TRANSCRIBE, STAGE_SPEAKERS, STAGE_TOPICS, STAGE_QUOTES, STAGE_CLUSTER, STAGE_RENDER,
+        )}
+        assert all(b is not None for b in budgets.values())
+        assert budgets[STAGE_TRANSCRIBE].base == 0.0
+        assert budgets[STAGE_CLUSTER].base == pytest.approx(265 / 292.5)
+        assert budgets[STAGE_CLUSTER].span == pytest.approx(25 / 292.5)
+        assert budgets[STAGE_CLUSTER].expected_seconds == pytest.approx(25.0)
+        assert budgets[STAGE_RENDER].base + budgets[STAGE_RENDER].span == pytest.approx(1.0)
+        assert sum(b.span for b in budgets.values()) == pytest.approx(1.0)
+
+    def test_a_completed_stage_keeps_its_expected_share(self, tmp_path: Path) -> None:
+        """Quotes took twice its estimate; grouping still starts where the
+        estimate said, so no stage can push the ring past its slice."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5)
+        for s, took in ((STAGE_TRANSCRIBE, 50.0), (STAGE_SPEAKERS, 70.0),
+                        (STAGE_TOPICS, 80.0), (STAGE_QUOTES, 150.0)):
+            est.stage_completed(s, took)
+        assert est.stage_budget(STAGE_CLUSTER).base == pytest.approx(265 / 292.5)
+
+    def test_skipped_transcription_gives_its_share_to_the_rest(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, skip_transcription=True)   # 252.5 s without transcribe
+        assert est.stage_budget(STAGE_SPEAKERS).base == 0.0
+        assert est.stage_budget(STAGE_CLUSTER).span == pytest.approx(25 / 252.5)
+        assert est.stage_budget(STAGE_TRANSCRIBE).span == 0.0
+
+    def test_cached_stages_leave_the_ring_to_the_stages_that_run(self, tmp_path: Path) -> None:
+        """A resume: the opening guess says the four early stages are cached,
+        and entering cluster confirms it. Cluster and render share the ring."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, likely_cached={STAGE_TRANSCRIBE, STAGE_SPEAKERS,
+                                                     STAGE_TOPICS, STAGE_QUOTES})
+        est.skip_to(STAGE_CLUSTER)
+        b = est.stage_budget(STAGE_CLUSTER)
+        assert b.base == 0.0 and b.span == pytest.approx(25 / 27.5)
+        assert est.stage_budget(STAGE_RENDER).base == pytest.approx(25 / 27.5)
+
+    def test_stages_the_cache_served_on_entry_drop_out(self, tmp_path: Path) -> None:
+        """The opening guess had everything running; entering cluster with
+        nothing completed says the four before it came from cache after all.
+        They leave the ring: cluster starts at 0 and shares it with render."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5)
+        assert est.stage_budget(STAGE_CLUSTER).base == pytest.approx(265 / 292.5)
+        est.skip_to(STAGE_CLUSTER)
+        b = est.stage_budget(STAGE_CLUSTER)
+        assert b.base == 0.0 and b.span == pytest.approx(25 / 27.5)
+
+    def test_a_stage_the_cache_serves_holds_at_its_base(self, tmp_path: Path) -> None:
+        """Entry to a stage the opening guess had cached: zero span at its
+        base, so the ring holds rather than moving on work that takes no time."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, likely_cached={STAGE_TRANSCRIBE})
+        est.skip_to(STAGE_SPEAKERS)
+        b = est.stage_budget(STAGE_TRANSCRIBE)
+        assert b == StageBudget(base=0.0, span=0.0, expected_seconds=0.0)
+        assert est.stage_budget(STAGE_SPEAKERS).base == 0.0
+
+    def test_a_stage_guessed_cached_that_runs_takes_its_share_back(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, likely_cached={STAGE_TRANSCRIBE, STAGE_SPEAKERS})
+        est.skip_to(STAGE_SPEAKERS)
+        assert est.stage_budget(STAGE_SPEAKERS).span == 0.0
+        est.stage_runs(STAGE_SPEAKERS)
+        assert est.stage_budget(STAGE_SPEAKERS).span == pytest.approx(75 / 252.5)
+
+    def test_a_wrong_cache_guess_only_ever_moves_the_ring_forward(self, tmp_path: Path) -> None:
+        """Speakers ran; topics was guessed cached and runs after all. The
+        guessed stage keeps its weight in the frame throughout, so no base
+        behind it shrinks when the guess is corrected: the ring, which never
+        runs backwards, is not left waiting for the fill to catch up."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, likely_cached={STAGE_TOPICS})
+        est.stage_completed(STAGE_TRANSCRIBE, 50.0)
+        est.stage_completed(STAGE_SPEAKERS, 70.0)
+        est.skip_to(STAGE_TOPICS)
+        at_entry = est.stage_budget(STAGE_TOPICS)
+        assert at_entry == StageBudget(base=(40 + 75) / 292.5, span=0.0, expected_seconds=0.0)
+        est.stage_runs(STAGE_TOPICS)
+        running = est.stage_budget(STAGE_TOPICS)
+        assert running.base == at_entry.base
+        assert running.span == pytest.approx(75 / 292.5)
+        assert est.stage_budget(STAGE_QUOTES).base == pytest.approx((40 + 150) / 292.5)
+
+    def test_a_completed_stage_reads_held_at_its_end(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5)
+        est.stage_completed(STAGE_TRANSCRIBE, 50.0)
+        assert est.stage_budget(STAGE_TRANSCRIBE, completed=True) == StageBudget(
+            base=40 / 292.5, span=0.0, expected_seconds=0.0)
+
+    def test_thin_history_offers_no_budget(self, tmp_path: Path) -> None:
+        """The same bar as the ETA: under four runs, the whole-run ring."""
+        _seed_profile(tmp_path, "hw", n=3)
+        est = TimingEstimator("hw", tmp_path)
+        assert est.initial_estimate(10.0, 5) is None
+        assert est.stage_budget(STAGE_CLUSTER) is None
+
+    def test_a_configured_stage_with_no_data_withholds_the_budget_for_the_run(
+        self, tmp_path: Path,
+    ) -> None:
+        """Redaction on for the first time: its share would be an invented
+        zero, so no budget this run — decided at the opening estimate, so a
+        later cache correction cannot switch the ring's model mid-run. The next
+        run, with one observation, is weighted."""
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5, pii_enabled=True, likely_cached={STAGE_PII})
+        assert est.stage_budget(STAGE_CLUSTER) is None
+        est.skip_to(STAGE_PII)
+        est.stage_runs(STAGE_PII)
+        assert est.stage_budget(STAGE_PII) is None
+        est.record_run({STAGE_PII: StageActual(elapsed=8.0, input_size=5.0)})
+        est.initial_estimate(10.0, 5, pii_enabled=True)
+        assert est.stage_budget(STAGE_PII).span > 0
+
+    def test_a_stage_that_is_off_is_not_in_the_ring(self, tmp_path: Path) -> None:
+        est = self._warm(tmp_path)
+        est.initial_estimate(10.0, 5)   # pii and discussion off
+        assert est.stage_budget(STAGE_PII) == StageBudget(base=(40 + 75) / 292.5, span=0.0,
+                                                          expected_seconds=0.0)
+        assert est.stage_budget(STAGE_DISCUSSION).span == 0.0
+        assert est.stage_budget("download") is None   # not an estimator stage
 
 
 class TestConditionalPIIStage:

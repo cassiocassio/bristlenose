@@ -335,3 +335,65 @@ class TestStopLadderContract:
             f"writing its run_cancelled until {latest_write:g} s. Lengthen the SIGKILL "
             "step in PipelineRunner.cancelLadder."
         )
+
+
+# ---------------------------------------------------------------------------
+# The stage budget on run_progress — the ring slice (R27)
+# ---------------------------------------------------------------------------
+
+_EVENT_LOG_READER_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "EventLogReader.swift"
+)
+_RUN_PROGRESS_MATH_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "RunProgressMath.swift"
+)
+# The three wire fields that carry the slice of the ring a stage owns.
+_STAGE_BUDGET_FIELDS = ("stage_base", "stage_span", "stage_expected_seconds")
+
+
+class TestStageBudgetContract:
+    """`stage_base` / `stage_span` / `stage_expected_seconds` are written by
+    Python (`RunHandle.progress`, `RunProgressEvent`) and read by two Swift
+    sites: the `CodingKeys` of `EventLogReader.Event` and the parameters of
+    `RunProgressMath.apply`. A name wrong on one side decodes as nil, and the
+    ring quietly keeps the whole-run time fill — the bug returns with nothing
+    red. The reader must take the fields as optional, because a sidecar that
+    predates them sends none; the Swift suite pins the end-to-end fold
+    (`RunProgressSliceTests`), and this is the copy that runs on every push.
+    """
+
+    def test_python_writes_the_fields(self) -> None:
+        import inspect
+
+        from bristlenose.events import RunProgressEvent
+        from bristlenose.run_lifecycle import RunHandle
+
+        for name in _STAGE_BUDGET_FIELDS:
+            assert name in RunProgressEvent.model_fields
+            assert RunProgressEvent.model_fields[name].default is None
+            assert name in inspect.signature(RunHandle.progress).parameters
+
+    def test_swift_decodes_the_fields_by_the_same_names(self) -> None:
+        text = _EVENT_LOG_READER_SWIFT.read_text(encoding="utf-8")
+        # The file holds more than one CodingKeys enum; only Event's counts.
+        m = re.search(r"struct Event\s*:\s*Codable.*?\n    \}\n", text, re.S)
+        assert m, "EventLogReader.swift no longer declares `struct Event: Codable`"
+        event = m.group(0)
+        keys = dict(re.findall(r'case\s+(\w+)\s*=\s*"([^"]+)"', event))
+        wire = {v: k for k, v in keys.items()}
+        for name in _STAGE_BUDGET_FIELDS:
+            assert name in wire, f"EventLogReader.Event has no CodingKey for {name!r}"
+            prop = wire[name]
+            assert re.search(rf"let\s+{prop}\s*:\s*Double\?", event), (
+                f"EventLogReader.Event.{prop} must be `Double?` — an older "
+                "sidecar sends no budget, and a non-optional would fail the decode"
+            )
+
+    def test_swift_apply_takes_the_fields(self) -> None:
+        text = _RUN_PROGRESS_MATH_SWIFT.read_text(encoding="utf-8")
+        m = re.search(r"static\s+func\s+apply\s*\((.*?)\)\s*->\s*PipelineProgress", text, re.S)
+        assert m, "RunProgressMath.apply is gone"
+        for prop in ("stageBase", "stageSpan", "stageExpectedSeconds"):
+            assert re.search(rf"{prop}\s*:\s*Double\?", m.group(1)), (
+                f"RunProgressMath.apply has no `{prop}: Double?` parameter"
+            )

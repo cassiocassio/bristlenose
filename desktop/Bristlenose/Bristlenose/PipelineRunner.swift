@@ -185,6 +185,17 @@ struct PipelineProgress: Equatable {
     /// on a run that delivers nothing early. The subtitle says it while
     /// sessions are still arriving.
     var sessionsReadable: Int?
+    /// The slice of the ring the current stage owns (R27): where it starts,
+    /// how much of the ring is its, and how long it is expected to take, from
+    /// the run's own per-stage budget (`stage_base` / `stage_span` /
+    /// `stage_expected_seconds`). Nil from a run that sends none — an older
+    /// sidecar, or thin timing history — which keeps the whole-run time ring.
+    var stageBase: Double?
+    var stageSpan: Double?
+    var stageExpectedSeconds: Double?
+    /// When the current stage was first seen, so its slice can fill by time
+    /// between the run's events. Local, like `startedAt`.
+    var stageStartedAt: Date?
 }
 
 // MARK: - Lifecycle state
@@ -1156,6 +1167,9 @@ final class PipelineRunner: ObservableObject {
             stageFraction: event.stageFraction,
             etaRemainingSeconds: event.etaRemainingSeconds,
             predictedTotalSeconds: event.predictedTotalSeconds,
+            stageBase: event.stageBase,
+            stageSpan: event.stageSpan,
+            stageExpectedSeconds: event.stageExpectedSeconds,
             to: current,
             startedAt: current.startedAt,
             now: Date()

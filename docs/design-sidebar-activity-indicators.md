@@ -198,12 +198,28 @@ the ring **creeps asymptotically** `0.85 → 0.92` (`1 − exp(−overrun/tau)`,
 over-runs. Always inching, never flat, never 1.0 — a moving 85% over a stalled 99%. Pure + unit-tested
 in `RunProgressMathTests` (`applyRingKeepsMovingWhenRunOverrunsEstimate` is the regression).
 
+**Stage-weighted (21 Oct 2026, R27).** The creep stopped the ring *freezing*; it still reached the
+high-80s as soon as "Grouping themes" began, because the whole-run `elapsed/predicted` under-counts the
+tail. Now each estimator-stage `run_progress` line carries the slice of the ring its stage owns
+(`stage_base` / `stage_span` / `stage_expected_seconds`, shares of the run's expected time from the
+same Welford means), and `RunProgressMath` fills the *current* slice by the stage's own progress —
+`sliceFill`: its measured fraction, moved on by its elapsed-vs-expected time toward the next measured
+step and never past it, the time shaped by `displayFraction` so an over-running stage creeps toward
+0.92 of its own slice and never invades the next. The slices are scaled to the 0.85 headroom mark and
+the whole run's creep above stays on top (`stageWeightedFraction`), so a long tail still visibly
+moves. Completed stages contribute their expected share; skipped and retired stages drop out of the
+shares. Without a budget on the line (a sidecar that predates it, thin history, a stage configured
+for the first time) the whole-run ring above is what runs. Spec and departures:
+[`design-progress-ring-estimate.md`](design-progress-ring-estimate.md); tests
+`RunProgressSliceTests`, `tests/test_timing.py::TestStageBudget`.
+
 **Text vs pie:** the pie encodes *time*; the **text** carries the discrete markers — stage ("Stage 4"
 / stage name), per-session fraction ("Transcribing — 3 of 8"), and the estimate ("~4 min left"). The
 text ticking over is itself a liveness signal. Same `PipelineProgress` + ETA feed both.
 
 **Best-available ladder (mirrors the shipped `OllamaDownloadPill` known/unknown switch):**
-1. Welford ETA-weighted ring + "~N min left" (when calibrated).
+1. Welford ETA-weighted ring + "~N min left" (when calibrated) — since 21 Oct 2026 stage-weighted
+   when the line carries a stage budget, whole-run `elapsed/predicted` when it does not.
 2. else within-stage session fraction → ring + "N of M sessions".
 3. else `stageIndex / 10` → coarse ring + "Stage N of 10".
 4. else (uncalibrated first run / variable-shape cluster+theme stages) → spinner.

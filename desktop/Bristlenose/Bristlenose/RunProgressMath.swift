@@ -100,11 +100,57 @@ enum RunProgressMath {
         return nil
     }
 
+    /// The fill of one stage's slice of the ring, in `[0, 1]` (R27).
+    ///
+    /// The stage's own measured fraction is the floor — audio done for
+    /// transcription, sessions finished for the per-session stages — and its
+    /// elapsed time against its expected seconds moves the ring on from there
+    /// toward the next measured step (`nextMeasuredStep`), never past it, so
+    /// the ring keeps moving between sessions without claiming a session that
+    /// has not finished. A stage with no measure at all (grouping is one
+    /// concurrent LLM call) fills by time alone. The time fill is shaped by
+    /// `displayFraction`, so a stage that runs over its estimate creeps toward
+    /// `asymptoteCap` *of its own slice* and never reaches the next stage's.
+    static func sliceFill(
+        measuredFraction: Double?,
+        nextMeasuredStep: Double? = nil,
+        stageElapsedSeconds: Double,
+        stageExpectedSeconds: Double?
+    ) -> Double {
+        let measured = Swift.min(Swift.max(measuredFraction ?? 0, 0), 1)
+        guard let expected = stageExpectedSeconds, expected > 0 else { return measured }
+        let timed = displayFraction(timeRatio: stageElapsedSeconds / expected)
+        let ceiling = Swift.min(Swift.max(nextMeasuredStep ?? 1, measured), 1)
+        return Swift.min(Swift.max(measured, timed), ceiling)
+    }
+
+    /// The whole ring from a stage budget (R27): the slices, scaled to the
+    /// `expectedCompletionMark` headroom so the last one ends where the
+    /// whole-run estimate's end always sat, plus the overrun creep of the
+    /// whole run through the `0.85 → 0.92` reserve — the mechanism of 13 Jul,
+    /// kept so a long tail stays visibly moving: a slice of a few per cent
+    /// cannot show its own creep on a 16 pt ring.
+    static func stageWeightedFraction(
+        base: Double, span: Double, fill: Double, wholeRunTimeRatio: Double
+    ) -> Double {
+        let slices = expectedCompletionMark * (Swift.max(base, 0) + Swift.max(span, 0) * fill)
+        let creep = wholeRunTimeRatio > 1
+            ? displayFraction(timeRatio: wholeRunTimeRatio) - expectedCompletionMark : 0
+        return slices + creep
+    }
+
     /// Apply a decoded `run_progress` event to a progress value, returning the
     /// updated value (pure). `now` / `startedAt` give the local elapsed used for
     /// the time-based fill (smoother than the event's own `elapsed`, which only
     /// updates per emit). The ring is monotonic across calls via
     /// `previous.ringFraction`.
+    ///
+    /// With a stage budget on the event (`stageBase` / `stageSpan` /
+    /// `stageExpectedSeconds`, R27) the ring is stage-weighted: the stages
+    /// before the current one contribute their full expected share, and the
+    /// current one fills its own slice by `sliceFill`. Without one — an older
+    /// sidecar, or a run with thin timing history — the whole-run time ring
+    /// below is unchanged.
     static func apply(
         stage: String?,
         sessionsComplete: Int?,
@@ -112,6 +158,9 @@ enum RunProgressMath {
         stageFraction: Double?,
         etaRemainingSeconds: Double?,
         predictedTotalSeconds: Double?,
+        stageBase: Double? = nil,
+        stageSpan: Double? = nil,
+        stageExpectedSeconds: Double? = nil,
         to previous: PipelineProgress,
         startedAt: Date,
         now: Date
@@ -119,11 +168,25 @@ enum RunProgressMath {
         var p = previous
         let leavingDownload = previous.stage == downloadStage
             && stage != nil && stage != downloadStage
-        if let stage { p.stage = stage }
+        if let stage, stage != previous.stage {
+            p.stage = stage
+            // The first stage seen was running from the start (a run without
+            // the download sends no transcribe entry: its first line is the
+            // first file done); any later stage starts at its first line.
+            p.stageStartedAt = previous.stage == nil ? (p.timeBaseline ?? startedAt) : now
+        }
         if let sessionsComplete { p.sessionsComplete = sessionsComplete }
         if let sessionsTotal { p.sessionsTotal = sessionsTotal }
         if let etaRemainingSeconds { p.etaRemainingSeconds = etaRemainingSeconds }
         if let predictedTotalSeconds { p.predictedTotalSeconds = predictedTotalSeconds }
+        // A line that names a stage carries that stage's budget, or none; a
+        // line with no stage (a session becoming readable) is the same stage
+        // still running, so its slice stays.
+        if stage != nil {
+            p.stageBase = stageBase
+            p.stageSpan = stageSpan
+            p.stageExpectedSeconds = stageExpectedSeconds
+        }
 
         if p.stage == downloadStage {
             if let stageFraction {
@@ -141,10 +204,43 @@ enum RunProgressMath {
             // first recording finished transcribing.
             p.timeBaseline = now
             let hasEstimate = (predictedTotalSeconds ?? p.predictedTotalSeconds ?? 0) > 0
-            p.ringFraction = (hasEstimate || stageFraction != nil) ? 0 : nil
+            p.ringFraction = (hasEstimate || stageFraction != nil || p.stageBase != nil) ? 0 : nil
         }
 
         let elapsed = now.timeIntervalSince(p.timeBaseline ?? startedAt)
+        if let base = p.stageBase, let span = p.stageSpan {
+            // Stage-weighted (R27). The measured fraction is the stage's own:
+            // `stageFraction` where the stage sends one (transcription's audio
+            // done, the per-session stages' sessions done), else its session
+            // count — the line's on a stage line, the carried pair on a line
+            // with no stage, since that is the same stage still running.
+            let (complete, total) = stage == nil
+                ? (p.sessionsComplete, p.sessionsTotal) : (sessionsComplete, sessionsTotal)
+            let sessionFraction: Double? = {
+                guard let c = complete, let t = total, t > 0 else { return nil }
+                return Double(c) / Double(t)
+            }()
+            let measured = stageFraction ?? sessionFraction
+            let nextStep: Double? = {
+                guard let m = measured, let t = total, t > 0 else { return nil }
+                return (floor(m * Double(t) + 1e-9) + 1) / Double(t)
+            }()
+            let stageElapsed = now.timeIntervalSince(p.stageStartedAt ?? p.timeBaseline ?? startedAt)
+            let fill = sliceFill(
+                measuredFraction: measured,
+                nextMeasuredStep: nextStep,
+                stageElapsedSeconds: stageElapsed,
+                stageExpectedSeconds: p.stageExpectedSeconds
+            )
+            let predicted = p.predictedTotalSeconds ?? 0
+            let raw = stageWeightedFraction(
+                base: base, span: span, fill: fill,
+                wholeRunTimeRatio: predicted > 0 ? elapsed / predicted : 0
+            )
+            p.ringFraction = clampedFraction(raw: raw, previous: p.ringFraction ?? 0)
+            return p
+        }
+
         // Fall back to the last-known predicted total so the ring keeps advancing
         // through the render tail, where the pipeline stops re-emitting it (the
         // Welford remaining-estimate drops below its 10s floor and goes nil).

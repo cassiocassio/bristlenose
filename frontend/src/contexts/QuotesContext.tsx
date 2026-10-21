@@ -234,6 +234,9 @@ export function initFromQuotes(
           searchQuery: prev.searchQuery,
           searchTokens: prev.searchTokens,
           tagFilter: prev.tagFilter,
+          // A hide mid-collapse commits only what is still in `hiding`, so
+          // dropping it here would abandon the hide unsent.
+          hiding: prev.hiding,
         }
       : prev;
     const hidden = { ...base.hidden };
@@ -252,17 +255,30 @@ export function initFromQuotes(
     // or uninstall a framework, and AutoCode can review a proposal, behind the
     // screen's back, and a merge that only ever added kept them drawn (R3).
     // Quotes not in the response are left as they are.
+    //
+    // A refetch can land while a gesture's write is unanswered (an AutoCode run
+    // finishing mid-curation), and its response may predate the write: for a
+    // star, hide, edit, tag or deleted badge still in flight, keep what the
+    // screen shows.
+    const keep = <T,>(map: Record<string, T>, from: Record<string, T>, id: string) => {
+      if (id in from) map[id] = from[id];
+      else delete map[id];
+    };
     for (const q of [...quotes, ...(uncategorised ?? [])]) {
-      if (q.is_hidden) hidden[q.dom_id] = true;
-      if (q.is_starred) starred[q.dom_id] = true;
-      if (q.edited_text) edits[q.dom_id] = q.edited_text;
+      if (unsettled.has(`hidden:${q.dom_id}`)) keep(hidden, prev.hidden, q.dom_id);
+      else if (q.is_hidden) hidden[q.dom_id] = true;
+      if (unsettled.has(`starred:${q.dom_id}`)) keep(starred, prev.starred, q.dom_id);
+      else if (q.is_starred) starred[q.dom_id] = true;
+      if (unsettled.has(`edits:${q.dom_id}`)) keep(edits, prev.edits, q.dom_id);
+      else if (q.edited_text) edits[q.dom_id] = q.edited_text;
       if (tagWriteUnanswered(q.dom_id)) {
         // The response may predate it: keep what the screen shows.
         if (prev.tags[q.dom_id]) tags[q.dom_id] = prev.tags[q.dom_id];
         else delete tags[q.dom_id];
       } else if (q.tags.length > 0) tags[q.dom_id] = [...q.tags];
       else delete tags[q.dom_id];
-      if (q.deleted_badges.length > 0) deletedBadges[q.dom_id] = [...q.deleted_badges];
+      if (writeUnansweredOn("badges", q.dom_id)) keep(deletedBadges, prev.deletedBadges, q.dom_id);
+      else if (q.deleted_badges.length > 0) deletedBadges[q.dom_id] = [...q.deleted_badges];
       if (q.proposed_tags.length > 0) proposedTags[q.dom_id] = [...q.proposed_tags];
       else delete proposedTags[q.dom_id];
     }
@@ -398,11 +414,17 @@ function send(write: Promise<void>, changes: Change[]): void {
   );
 }
 
-/** Whether a tag write on this quote is still unanswered. */
-function tagWriteUnanswered(domId: string): boolean {
-  const prefix = `tags:${domId}:`;
+/** Whether a write of this kind (`tags`, `badges`) on this quote is still
+ *  unanswered. The prefix ends at a colon, so `q-1` never matches `q-10`. */
+function writeUnansweredOn(kind: "tags" | "badges", domId: string): boolean {
+  const prefix = `${kind}:${domId}:`;
   for (const k of unsettled.keys()) if (k.startsWith(prefix)) return true;
   return false;
+}
+
+/** Whether a tag write on this quote is still unanswered. */
+function tagWriteUnanswered(domId: string): boolean {
+  return writeUnansweredOn("tags", domId);
 }
 
 function withFlag(key: "starred" | "hidden", id: string, on: boolean): Updater {

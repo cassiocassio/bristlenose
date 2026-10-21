@@ -100,7 +100,7 @@ export function TagRow({
   // proposals in muted ink, else nothing. Proposals beside an accepted count
   // ride in the bar's pale segment, not a second digit.
   const shownCount = count > 0 ? count : tentativeCount;
-  const countKind = count > 0 ? " is-accepted" : " is-tentative";
+  const countKind = count > 0 ? " is-accepted" : tentativeCount > 0 ? " is-tentative" : "";
   const acceptedFrac = maxCount > 0 ? count / maxCount : 0;
   const tentativeFrac = maxCount > 0 ? tentativeCount / maxCount : 0;
 

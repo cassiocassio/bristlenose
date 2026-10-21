@@ -202,6 +202,69 @@ describe("QuotesStore", () => {
       expect(result.current.hidden).toEqual({ "q-P2-200": true });
     });
 
+    describe("a refetch landing while a gesture's write is unanswered", () => {
+      // An AutoCode run finishing mid-curation refetches with replace; its
+      // response may predate the gesture's write.
+      const pending = () => new Promise<void>(() => {});
+
+      it("keeps a star in flight", () => {
+        initFromQuotes([makeQuote({ dom_id: "q-1" })]);
+        mockPatchStarred.mockImplementationOnce(pending);
+        act(() => toggleStar("q-1", true));
+        initFromQuotes([makeQuote({ dom_id: "q-1", is_starred: false })], true);
+        expect(getQuotesSnapshot().starred["q-1"]).toBe(true);
+      });
+
+      it("keeps an unstar in flight", () => {
+        initFromQuotes([makeQuote({ dom_id: "q-1", is_starred: true })]);
+        mockPatchStarred.mockImplementationOnce(pending);
+        act(() => toggleStar("q-1", false));
+        initFromQuotes([makeQuote({ dom_id: "q-1", is_starred: true })], true);
+        expect(getQuotesSnapshot().starred["q-1"]).toBeUndefined();
+      });
+
+      it("does not borrow another quote's write whose id it prefixes", () => {
+        initFromQuotes([makeQuote({ dom_id: "q-1" }), makeQuote({ dom_id: "q-10" })]);
+        mockPatchStarred.mockImplementationOnce(pending);
+        act(() => toggleStar("q-10", true));
+        initFromQuotes(
+          [makeQuote({ dom_id: "q-1", is_starred: true }), makeQuote({ dom_id: "q-10" })],
+          true,
+        );
+        expect(getQuotesSnapshot().starred["q-1"]).toBe(true);
+      });
+
+      it("keeps an edit in flight", () => {
+        initFromQuotes([makeQuote({ dom_id: "q-1" })]);
+        mockPatchEdits.mockImplementationOnce(pending);
+        act(() => commitEdit("q-1", "trimmed"));
+        initFromQuotes([makeQuote({ dom_id: "q-1", edited_text: null })], true);
+        expect(getQuotesSnapshot().edits["q-1"]).toBe("trimmed");
+      });
+
+      it("keeps a deleted badge in flight", () => {
+        initFromQuotes([makeQuote({ dom_id: "q-1" })]);
+        mockPatchDeletedBadges.mockImplementationOnce(pending);
+        act(() => deleteBadge("q-1", "negative"));
+        initFromQuotes([makeQuote({ dom_id: "q-1", deleted_badges: [] })], true);
+        expect(getQuotesSnapshot().deletedBadges["q-1"]).toContain("negative");
+      });
+
+      it("does not abandon a hide mid-collapse", () => {
+        vi.useFakeTimers();
+        try {
+          initFromQuotes([makeQuote({ dom_id: "q-1" })]);
+          act(() => hideQuotes(["q-1"]));
+          initFromQuotes([makeQuote({ dom_id: "q-1", is_hidden: false })], true);
+          act(() => vi.advanceTimersByTime(HIDE_DURATION + 10));
+          expect(getQuotesSnapshot().hidden["q-1"]).toBe(true);
+          expect(mockPatchHidden).toHaveBeenCalledWith({ "q-1": true });
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+    });
+
     it("replace keeps what the researcher is looking at: search, tokens, starred-only, tag filter", () => {
       // A refetch is never the researcher's doing (a run or an AutoCode
       // catch-up finishing), so it must not clear their search.

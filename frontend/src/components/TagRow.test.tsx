@@ -182,6 +182,7 @@ describe("TagRow", () => {
     it("neither: shows no digit and no bar", () => {
       const { container } = render(<TagRow {...BASE_PROPS} count={0} tentativeCount={0} />);
       expect(countEl(container)).toBeEmptyDOMElement();
+      expect(countEl(container)).not.toHaveClass("is-tentative");
       expect(container.querySelector(".tag-micro-bar")).not.toBeInTheDocument();
     });
   });

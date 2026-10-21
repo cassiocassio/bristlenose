@@ -262,6 +262,7 @@
     "reAnalyseRebuild_many": "Bristlenose ponownie przepisze i przeanalizuje {{count}} wywiad\u00f3w od zera.",
     "reAnalyseRebuild_other": "Bristlenose ponownie przepisze i przeanalizuje {{count}} wywiad\u00f3w od zera.",
     "reAnalyseLossHeader": "Twoja praca nad tym badaniem zostanie odrzucona:",
+    "reAnalyseLossUnknown": "Bristlenose nie m\u00f3g\u0142 policzy\u0107 Twoich gwiazdek, tag\u00f3w i edycji \u2014 ponowna analiza mo\u017ce je odrzuci\u0107.",
     "notAnalysedCount_one": "1 plik nieprzeanalizowany",
     "notAnalysedCount_few": "{{count}} pliki nieprzeanalizowane",
     "notAnalysedCount_many": "{{count}} plik\u00f3w nieprzeanalizowanych",

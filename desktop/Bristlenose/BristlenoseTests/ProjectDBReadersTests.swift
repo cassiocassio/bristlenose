@@ -138,10 +138,137 @@ struct ProjectDBReadersTests {
     @Test func curationCountsAreProjectOnesOnly() throws {
         let root = try Self.forkedProject()
         defer { try? FileManager.default.removeItem(at: root) }
-        let counts = CurationCountsReader.read(projectRoot: root)
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
         #expect(counts.editedQuotes == 1)
         #expect(counts.tags == 1)
         #expect(counts.starredQuotes == 1)
         #expect(counts.namedThemes == 1)
+    }
+
+    // MARK: - Unreadable is not zero (decision #1, 21 Oct 2026)
+    //
+    // A zero lets Re-analyse run `--clean` without asking, so a read that
+    // FAILED must not come back as one. Until 21 Oct it did: an unopenable file
+    // returned `.none`, and a file that opened but could not be read (not a
+    // database, a torn page, an I/O error materialising an evicted file) had
+    // every count's failure swallowed into 0. Both ran the destructive rebuild
+    // with no confirmation.
+
+    private static func dbURL(_ root: URL) -> URL {
+        root.appendingPathComponent("bristlenose-output/.bristlenose/bristlenose.db")
+    }
+
+    @Test func curationCountsAreNilWhenTheFileIsNotADatabase() throws {
+        let root = try Self.makeProject { _ in }
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data(repeating: 0x42, count: 8192).write(to: Self.dbURL(root))
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    @Test func curationCountsAreNilWhenTheFileCannotBeOpened() throws {
+        let root = try Self.forkedProject()
+        let db = Self.dbURL(root)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: db.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: db.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    /// The schema page reads, the table pages do not: `prepare` succeeds and
+    /// `step` returns `SQLITE_CORRUPT`. Every page after the first is
+    /// overwritten, so every curation table's root page is garbage.
+    @Test func curationCountsAreNilWhenATablePageIsCorrupt() throws {
+        let root = try Self.forkedProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        // The premise: the schema sits wholly on page 1, so what fails is the
+        // count's step, not its prepare.
+        var probe: OpaquePointer?
+        try #require(sqlite3_open(Self.dbURL(root).path, &probe) == SQLITE_OK)
+        var stmt: OpaquePointer?
+        sqlite3_prepare_v2(probe, "PRAGMA page_size", -1, &stmt, nil)
+        sqlite3_step(stmt)
+        let pageSize = sqlite3_column_int(stmt, 0)
+        sqlite3_finalize(stmt)
+        sqlite3_close(probe)
+        try #require(pageSize == 4096)
+        let handle = try FileHandle(forUpdating: Self.dbURL(root))
+        let size = try handle.seekToEnd()
+        try #require(size > 4096)
+        try handle.seek(toOffset: 4096)
+        try handle.write(contentsOf: Data(repeating: 0xFF, count: Int(size) - 4096))
+        try handle.close()
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    /// A folder the app may not look into is not "no database": `fileExists`
+    /// would say false and read as a zero. `stat` says `EACCES`.
+    @Test func curationCountsAreNilWhenTheFolderCannotBeSearched() throws {
+        let root = try Self.forkedProject()
+        let dot = root.appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: dot.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dot.path)
+            try? FileManager.default.removeItem(at: root)
+        }
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    /// Stars with no `quotes` table to scope them by cannot be counted, and must
+    /// not count as none.
+    @Test func curationCountsAreNilWhenAJoinTableIsMissing() throws {
+        let root = try Self.forkedProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var db: OpaquePointer?
+        try #require(sqlite3_open(Self.dbURL(root).path, &db) == SQLITE_OK)
+        Self.exec(db, "DROP TABLE quotes;")
+        sqlite3_close(db)
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    /// A column renamed by a later migration is a count that failed, not a zero.
+    @Test func curationCountsAreNilWhenAColumnHasBeenRenamed() throws {
+        let root = try Self.forkedProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        var db: OpaquePointer?
+        try #require(sqlite3_open(Self.dbURL(root).path, &db) == SQLITE_OK)
+        Self.exec(db, "ALTER TABLE quote_states RENAME COLUMN is_starred TO starred;")
+        sqlite3_close(db)
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+    }
+
+    /// No database is a real zero: nothing has been served, so nothing has been
+    /// curated, and Re-analyse need not ask.
+    @Test func curationCountsAreZeroNotNilWithNoDatabase() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-db-readers-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == CurationCounts.none)
+    }
+
+    /// An older schema without the curation tables is a real zero too: there is
+    /// nothing of that kind to lose. Which tables exist is asked of
+    /// `sqlite_master`, so this stays distinct from a file that can't be read.
+    @Test func curationCountsAreZeroNotNilWithAnOlderSchema() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-db-readers-\(UUID().uuidString)")
+        let dot = root.appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(at: dot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var db: OpaquePointer?
+        try #require(sqlite3_open(dot.appendingPathComponent("bristlenose.db").path, &db) == SQLITE_OK)
+        Self.exec(db, "CREATE TABLE projects (id INTEGER PRIMARY KEY, name TEXT);")
+        sqlite3_close(db)
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == CurationCounts.none)
     }
 }

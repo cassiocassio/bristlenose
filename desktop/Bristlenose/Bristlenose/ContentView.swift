@@ -1717,14 +1717,12 @@ struct ContentView: View {
         case .stopProject:
             if let project = selectedProject { pipelineRunner.cancel(project: project) }
         case .reAnalyseProject:
-            // Ask, always. `--clean` moves `bristlenose-output/` aside — the whole
-            // directory, database included — and discards it once the new run
-            // succeeds (since 30 Aug 2026; an `rmtree` before that), so this
-            // discards the analysis and every edit made on top of it. The
-            // ellipsis on the menu item
-            // promises a question; skipping it on a project that happens to
-            // carry no curation would make the ellipsis a lie and would still
-            // be throwing away finished work and re-spending on the provider.
+            // `--clean` moves `bristlenose-output/` aside — the whole directory,
+            // database included — and discards it once the new run succeeds
+            // (since 30 Aug 2026; an `rmtree` before that), so this discards the
+            // analysis and every edit made on top of it. `askToReAnalyse`
+            // confirms when there is curation to lose or when it could not be
+            // counted, and runs unasked only on a real zero (`ReAnalyseDecision`).
             if let project = selectedProject { askToReAnalyse(project) }
         case .removeFromSidebar:
             removeSelectedProjectsFromSidebar()
@@ -1834,17 +1832,25 @@ struct ContentView: View {
         let root = URL(fileURLWithPath: project.path)
         Task { @MainActor in
             let counts = await Task.detached { CurationCountsReader.read(projectRoot: root) }.value
-            guard !counts.isEmpty else {
+            let shown: CurationCounts?
+            switch ReAnalyseDecision.decide(counts) {
+            case .proceed:
                 // Nothing curated: the analysis is derived output the researcher
                 // just asked to have rebuilt, so there is nothing to weigh and a
                 // modal would be a speed bump.
                 pipelineRunner.start(project: project, clean: true)
                 return
+            case .confirm(let measured):
+                shown = measured
+            case .confirmUnreadable:
+                // Could not count: ask, and say so. Never proceed on a read
+                // that failed — that ran --clean unasked until 21 Oct 2026.
+                shown = nil
             }
             reAnalyseConfirm = PendingReAnalyse(
                 project: project,
                 sessionCount: projectIndex.unanalysed[project.id]?.sessionCount ?? 0,
-                counts: counts
+                counts: shown
             )
         }
     }

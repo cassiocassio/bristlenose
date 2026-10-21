@@ -244,6 +244,7 @@
     "reAnalyseRebuild_one": "Bristlenose transcribeert en analyseert 1 interview opnieuw, vanaf nul.",
     "reAnalyseRebuild_other": "Bristlenose transcribeert en analyseert alle {{count}} interviews opnieuw, vanaf nul.",
     "reAnalyseLossHeader": "Je werk aan dit onderzoek gaat verloren:",
+    "reAnalyseLossUnknown": "Bristlenose kon je sterren, tags en bewerkingen niet tellen \u2014 bij opnieuw analyseren kunnen ze verloren gaan.",
     "notAnalysedCount_one": "1 bestand niet geanalyseerd",
     "notAnalysedCount_other": "{{count}} bestanden niet geanalyseerd",
     "failureCount_one": "1 fout",

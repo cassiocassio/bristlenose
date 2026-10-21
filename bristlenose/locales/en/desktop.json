@@ -245,6 +245,7 @@
     "reAnalyseRebuild_one": "Bristlenose will transcribe and analyse 1 interview again from scratch.",
     "reAnalyseRebuild_other": "Bristlenose will transcribe and analyse all {{count}} interviews again from scratch.",
     "reAnalyseLossHeader": "Your work on this study will be discarded:",
+    "reAnalyseLossUnknown": "Bristlenose couldn't count your stars, tags and edits \u2014 re-analysing may discard them.",
     "notAnalysedCount_one": "1 file not analysed",
     "notAnalysedCount_other": "{{count}} files not analysed",
     "failureCount_one": "1 failure",

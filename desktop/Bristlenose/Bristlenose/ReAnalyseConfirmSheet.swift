@@ -12,7 +12,9 @@ import SwiftUI
 /// nothing they can weigh; five counted lines let them decide in one read. When
 /// every count is zero there is nothing to weigh and no sheet appears at all —
 /// the caller checks `CurationCounts.isEmpty` and simply starts the run. That is
-/// the difference between a confirmation and a speed bump.
+/// the difference between a confirmation and a speed bump. **A count that could
+/// not be taken is not a zero**: the sheet appears, with one sentence in place
+/// of the list (`ReAnalyseDecision`, decision #1, 21 Oct 2026).
 ///
 /// **Stars are counted, and the drawing didn't have them.** `--clean` destroys
 /// them along with everything else, so a list that omitted them would be silent
@@ -34,17 +36,41 @@ import SwiftUI
 /// leaked.
 /// What the sheet is about: the project, plus the measurements taken at the
 /// moment of asking. `Identifiable` so `.sheet(item:)` can key on it.
+///
+/// `counts` is nil when the database could not be read — the sheet then says
+/// it could not count, in place of the list.
 struct PendingReAnalyse: Identifiable {
     let id = UUID()
     let project: Project
     let sessionCount: Int
-    let counts: CurationCounts
+    let counts: CurationCounts?
+}
+
+/// Whether **Re-analyse…** asks first, given what `CurationCountsReader.read`
+/// returned. Pure, so the one branch that decides whether `--clean` runs
+/// unasked is tested without a view.
+///
+/// **Unreadable confirms** (decision #1, 21 Oct 2026). A count that could not
+/// be taken is not a zero: until then a database the app could not read ran
+/// the destructive rebuild with no confirmation at all. A real zero still
+/// proceeds — nothing of the researcher's to lose, so a modal would be a speed
+/// bump.
+enum ReAnalyseDecision: Equatable {
+    case confirm(CurationCounts)
+    case confirmUnreadable
+    case proceed
+
+    static func decide(_ counts: CurationCounts?) -> ReAnalyseDecision {
+        guard let counts else { return .confirmUnreadable }
+        return counts.isEmpty ? .proceed : .confirm(counts)
+    }
 }
 
 struct ReAnalyseConfirmSheet: View {
     let projectName: String
     let sessionCount: Int
-    let counts: CurationCounts
+    /// Nil: the counts could not be read, and the sheet says so instead.
+    let counts: CurationCounts?
     let onCancel: () -> Void
     let onConfirm: () -> Void
 
@@ -53,6 +79,7 @@ struct ReAnalyseConfirmSheet: View {
     /// One line per kind, zero-count kinds omitted — a "0 tags" line is noise
     /// in a list whose whole job is to be read at a glance.
     private var lossLines: [String] {
+        guard let counts else { return [] }
         var lines: [String] = []
         func add(_ key: String, _ n: Int) {
             guard n > 0 else { return }
@@ -80,17 +107,27 @@ struct ReAnalyseConfirmSheet: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(i18n.t("desktop.chrome.reAnalyseLossHeader"))
+            if counts == nil {
+                // The header promises a list, and an empty one under it would
+                // read as "nothing to lose". One sentence in its place says the
+                // count failed and what that risks.
+                Text(i18n.t("desktop.chrome.reAnalyseLossUnknown"))
                     .font(.callout.weight(.medium))
-                ForEach(lossLines, id: \.self) { line in
-                    Text(line)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .padding(.leading, 12)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            } else {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(i18n.t("desktop.chrome.reAnalyseLossHeader"))
+                        .font(.callout.weight(.medium))
+                    ForEach(lossLines, id: \.self) { line in
+                        Text(line)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 12)
+                    }
                 }
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 2)
 
             HStack {
                 Spacer()

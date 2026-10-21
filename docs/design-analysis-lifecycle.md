@@ -14,6 +14,7 @@ trued-against: HEAD@main (6562c7be) on 2026-10-14
 
 ## Changelog
 
+- _2026-10-21_ — decision #1: **Re-analyse…** asks when the curation count can't be read. `CurationCountsReader.read` returns nil for a database it could not read — unopenable, not a database, a torn page, an I/O error — where it used to return zero, so `--clean` ran unasked; the sheet then shows one sentence in place of the counted list. No database file, or an older schema missing a table, is still a real zero and runs unasked. §3.3 and §4 updated. Anchors: `ReAnalyseDecision` (`ReAnalyseConfirmSheet.swift`), `desktop.chrome.reAnalyseLossUnknown`, `ReAnalyseDecisionTests`, `ProjectDBReadersTests` (`curationCountsAreNil…`).
 - _2026-10-21_ — decision #111 ("match run"): the Mac's count of what a study holds (`UnanalysedState.ingestableFileCount`, and `newFiles` behind the `+N unanalysed` delta) walks the folder with `run`'s file selection, ported to Swift as `ScanSelection` — three levels deep, the same skips, refusals and extensions, list and stat only. A study in per-participant folders now reads "N files to analyse" with **Analyse**, not "Drag Interviews Here"; a recording added to a participant folder rescans; `.txt` notes, which `run` never reads, are no longer listed as unanalysed. Below the top level a folder holding an ingested file counts as analysed whole, because `source_files` records one file per session and the rest of a session (a Zoom folder's audio, a Teams `.vtt`) would otherwise read as unanalysed forever; a file added to an analysed participant folder is therefore not reported (known gap). Anti-drift: `tests/fixtures/scan-selection-contract.json`, asserted by `tests/test_scan_selection_contract.py` (Python, `iter_scanned_files`) and `ScanSelectionContractTests` (Swift). Closes R100-7's count half.
 - _2026-10-21_ — decision #82 (R100): the never-run status page's interview check walks the folder with `run`'s own file selection (`s01_ingest.iter_scanned_files`, which `discover_files` consumes), so a study in per-participant subfolders reads "Not analysed yet.", not "No interviews to analyse yet". It stops at the first file and never opens one. The Mac's `.idle` pane still counts the top level only (R100-7, recorded). Anchors: `status_page._holds_interviews`, `tests/test_server_status_page.py`.
 - _2026-10-20_ — new §4.3: with no AI provider set up, the Mac no longer spawns a run that can only fail. Found by the guest walk on 0.42.0 (`experiments/guest-walk/`): adding an interview with no key started a run, Python's setup check stopped it, the Mac classified it `unknown`, and the detail pane said "No interviews to analyse yet" over the interview just added. The owner chose *refuse, don't spawn* over keeping the doomed run or asking first. Anchors: `PipelineRunner.providerRefusal`, `BristlenoseShared.apiKeyReadiness`, `PipelineFailureCategory.providerNotSetUp`, `status_page._holds_interviews`.
@@ -330,6 +331,9 @@ sequenceDiagram
     alt curation exists
         C->>R: "Discards 47 quotes, 12 tags, 3 renamed speakers"
         R->>C: Re-analyse / Cancel
+    else the count could not be read
+        C->>R: "Bristlenose couldn't count your stars, tags and edits — re-analysing may discard them."
+        R->>C: Re-analyse / Cancel
     else nothing to lose
         Note over C: no modal — nothing to measure
     end
@@ -364,8 +368,8 @@ Where each verb can be reached, and what gates it.
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
 | Primary action on the files popover | popover header | `newFiles` non-empty | Shipped (§6.2 amendment) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
-| **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`) |
-| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`) |
+| **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`); confirms when curation can't be counted (21 Oct, decision #1) |
+| **Re-analyse…** | sidebar context menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — hides (§6.1); state gate fixed 21 Aug (`06b57843`); confirms when curation can't be counted (21 Oct, decision #1) |
 | **Locate…** | context menu, Project menu | `cantFind` | Shipped |
 | **Show Diagnostics…** | failure glyph, context menu | `failed` / `completedPartial` | Shipped |
 
@@ -711,7 +715,7 @@ output is not a loss for the researcher to weigh — it is the thing they just
 asked to have rebuilt, and the sheet's opening line already states it ("…will
 transcribe and analyse all 14 interviews again from scratch"). The counted block
 is about *their* work. So "silence when there is nothing to lose" is coherent:
-confirm when their work is at risk, and otherwise do what was asked.
+confirm when their work is at risk, and otherwise do what was asked. A count that could not be taken counts as at risk: since 21 Oct 2026 it confirms, with its own sentence in place of the list (decision #1); before that, an unreadable database ran `--clean` unasked.
 
 **This also settles §7's codebook question, for now.** "Does Re-analyse keep
 the codebook?" has one answer today — nothing is kept, because the mechanism is

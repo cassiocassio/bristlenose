@@ -244,6 +244,7 @@
     "reAnalyseRebuild_one": "Bristlenose transskriberer og analyserer 1 interview forfra.",
     "reAnalyseRebuild_other": "Bristlenose transskriberer og analyserer alle {{count}} interviews forfra.",
     "reAnalyseLossHeader": "Dit arbejde med dette studie kasseres:",
+    "reAnalyseLossUnknown": "Bristlenose kunne ikke t\u00e6lle dine stjernemarkeringer, tags og redigeringer \u2014 en ny analyse kan kassere dem.",
     "notAnalysedCount_one": "1 fil ikke analyseret",
     "notAnalysedCount_other": "{{count}} filer ikke analyseret",
     "failureCount_one": "1 fejl",

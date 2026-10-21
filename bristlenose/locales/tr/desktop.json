@@ -244,6 +244,7 @@
     "reAnalyseRebuild_one": "Bristlenose 1 g\u00f6r\u00fc\u015fmeyi ba\u015ftan yeniden yaz\u0131ya d\u00f6kecek ve analiz edecek.",
     "reAnalyseRebuild_other": "Bristlenose {{count}} g\u00f6r\u00fc\u015fmenin tamam\u0131n\u0131 ba\u015ftan yeniden yaz\u0131ya d\u00f6kecek ve analiz edecek.",
     "reAnalyseLossHeader": "Bu \u00e7al\u0131\u015fmadaki eme\u011finiz silinecek:",
+    "reAnalyseLossUnknown": "Bristlenose y\u0131ld\u0131zlar\u0131n\u0131z\u0131, etiketlerinizi ve d\u00fczenlemelerinizi sayamad\u0131 \u2014 yeniden analiz bunlar\u0131 silebilir.",
     "notAnalysedCount_one": "1 dosya analiz edilmedi",
     "notAnalysedCount_other": "{{count}} dosya analiz edilmedi",
     "failureCount_one": "1 hata",

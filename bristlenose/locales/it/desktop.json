@@ -244,6 +244,7 @@
     "reAnalyseRebuild_one": "Bristlenose trascriver\u00e0 e analizzer\u00e0 1 intervista da capo.",
     "reAnalyseRebuild_other": "Bristlenose trascriver\u00e0 e analizzer\u00e0 tutte le {{count}} interviste da capo.",
     "reAnalyseLossHeader": "Il tuo lavoro su questo studio verr\u00e0 eliminato:",
+    "reAnalyseLossUnknown": "Bristlenose non \u00e8 riuscito a contare le tue stelle, i tag e le modifiche \u2014 una nuova analisi potrebbe eliminarli.",
     "notAnalysedCount_one": "1 file non analizzato",
     "notAnalysedCount_other": "{{count}} file non analizzati",
     "failureCount_one": "1 errore",

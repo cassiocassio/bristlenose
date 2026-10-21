@@ -244,6 +244,7 @@
     "reAnalyseRebuild_one": "Bristlenose transcriur\u00e0 i analitzar\u00e0 1 entrevista de nou des de zero.",
     "reAnalyseRebuild_other": "Bristlenose transcriur\u00e0 i analitzar\u00e0 les {{count}} entrevistes de nou des de zero.",
     "reAnalyseLossHeader": "La teva feina en aquest estudi es descartar\u00e0:",
+    "reAnalyseLossUnknown": "Bristlenose no ha pogut comptar les teves cites destacades, etiquetes i edicions \u2014 si tornes a analitzar, es podrien descartar.",
     "notAnalysedCount_one": "1 fitxer sense analitzar",
     "notAnalysedCount_other": "{{count}} fitxers sense analitzar",
     "failureCount_one": "1 error",

@@ -291,7 +291,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   // so without this the keyboard/SR user is stranded on document.body behind
   // the inert wall.
   useEffect(() => {
-    if (open) requestAnimationFrame(() => headingRef.current?.focus());
+    if (open) requestAnimationFrame(() => (headingRef.current ?? document.getElementById("bn-miro-title"))?.focus());
   }, [open]);
 
   // Announce async status transitions — the view swaps the subtitle text with
@@ -449,7 +449,8 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         aria-modal="true"
         aria-labelledby="bn-miro-title"
       >
-        <PanelErrorBoundary part>
+        {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
+        <PanelErrorBoundary part labelId="bn-miro-title">
           {() => (
             <>
               <h2 id="bn-miro-title" ref={headingRef} tabIndex={-1}>

@@ -68,6 +68,11 @@
     padding: var(--bn-space-xl) var(--bn-space-md);
     font-size: var(--bn-text-display);
 }
+/* In a dialog the mark takes the focus its heading would have had: a focus
+   sink, not a control, so no ring (theme CLAUDE.md, focus sinks). */
+.bn-part-error:focus-visible {
+    outline: none;
+}
 
 /* Refetch overlay — dim existing data while a refetch is in flight.
    `inert` is set on the same element from the React hook to block AT

@@ -23,7 +23,10 @@ import { Icon } from "./Icon";
  * remedy everyone already knows, reload: the browser's own, or View ▸ Reload
  * Report (⌘R) and right-click ▸ Reload Report in the Mac app. It is not an
  * alert; assistive technology meets it as an image named "This couldn’t be
- * shown." (`labels.partError`).
+ * shown." (`labels.partError`). A dialog named by a heading inside its
+ * content passes that heading's id as `labelId`: the mark takes it over when
+ * the heading goes, so the dialog's `aria-labelledby` still names something,
+ * and it can take the focus the heading would have had.
  *
  * A boundary catches only what renders below it, and a modal's content is
  * inline JSX evaluated in the modal's own render, above anything it wraps. So
@@ -45,24 +48,26 @@ export function PanelErrorBoundary({
   children,
   quiet = false,
   part = false,
+  labelId,
 }: {
   children: ReactNode | (() => ReactNode);
   quiet?: boolean;
   part?: boolean;
+  labelId?: string;
 }) {
   // SidebarLayout is also mounted without a router (its own unit tests), so the
   // route-change reset is read only when there is one.
   return useInRouterContext() ? (
-    <ResetOnRouteChange quiet={quiet} part={part}>{children}</ResetOnRouteChange>
+    <ResetOnRouteChange quiet={quiet} part={part} labelId={labelId}>{children}</ResetOnRouteChange>
   ) : (
-    <Boundary quiet={quiet} part={part}>{children}</Boundary>
+    <Boundary quiet={quiet} part={part} labelId={labelId}>{children}</Boundary>
   );
 }
 
-function ResetOnRouteChange({ children, quiet, part }: Omit<BoundaryProps, "resetKey">) {
+function ResetOnRouteChange({ children, quiet, part, labelId }: Omit<BoundaryProps, "resetKey">) {
   const { pathname } = useLocation();
   return (
-    <Boundary quiet={quiet} part={part} resetKey={pathname}>
+    <Boundary quiet={quiet} part={part} labelId={labelId} resetKey={pathname}>
       {children}
     </Boundary>
   );
@@ -77,6 +82,7 @@ interface BoundaryProps {
   children: ReactNode | (() => ReactNode);
   quiet: boolean;
   part: boolean;
+  labelId?: string;
   resetKey?: string;
 }
 
@@ -104,16 +110,16 @@ class Boundary extends Component<BoundaryProps, BoundaryState> {
     const { children } = this.props;
     if (!this.state.failed) return typeof children === "function" ? <Deferred render={children} /> : children;
     if (this.props.quiet) return null;
-    if (this.props.part) return <PartFallback />;
+    if (this.props.part) return <PartFallback labelId={this.props.labelId} />;
     return <PanelFallback onRetry={() => this.setState({ failed: false })} />;
   }
 }
 
 /** The broken mark where the part was: no words, no button, not an alert. */
-function PartFallback() {
+function PartFallback({ labelId }: { labelId?: string }) {
   const { t } = useTranslation();
   return (
-    <div className="bn-route-error bn-part-error">
+    <div className="bn-route-error bn-part-error" id={labelId} tabIndex={labelId ? -1 : undefined}>
       <Icon name="broken" label={t("labels.partError")} />
     </div>
   );

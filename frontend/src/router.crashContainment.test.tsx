@@ -554,6 +554,22 @@ describe("a crash inside an open modal", () => {
     await waitFor(() => expect(overlay).not.toHaveClass("visible"));
   });
 
+  // F1: these two dialogs are named by their heading (aria-labelledby), and the
+  // heading is content, so it goes with a crash. The mark then names the dialog
+  // and takes the focus the heading would have had.
+  for (const c of [
+    { name: "Send to Miro", key: "miro.title", testId: "bn-miro-overlay", menu: /Send to Miro/, flag: false },
+    { name: "Send to FigJam", key: "figjam.title", testId: "bn-figjam-overlay", menu: /Send to FigJam/, flag: true },
+  ]) {
+    it(`${c.name}: a crashed dialog is named by the mark, which takes the focus`, async () => {
+      if (c.flag) featureFlags.figjamExport = true;
+      const { overlay } = await openBroken(c.key, () => exportMenu(c.menu), c.testId);
+      const dialog = within(overlay).getByRole("dialog", { name: "This couldn’t be shown." });
+      const mark = dialog.querySelector(".bn-part-error");
+      await waitFor(() => expect(document.activeElement).toBe(mark));
+    });
+  }
+
   it("Settings: the × still closes it, and another section still opens", async () => {
     const { overlay } = await openBroken(
       "appearance.legend",

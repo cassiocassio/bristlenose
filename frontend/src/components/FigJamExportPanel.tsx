@@ -71,7 +71,7 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
         })
         .catch(() => undefined);
     }
-    requestAnimationFrame(() => headingRef.current?.focus());
+    requestAnimationFrame(() => (headingRef.current ?? document.getElementById("bn-figjam-title"))?.focus());
   }, [open]);
 
   // Restore focus on close.
@@ -152,7 +152,8 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
         aria-modal="true"
         aria-labelledby="bn-figjam-title"
       >
-        <PanelErrorBoundary part>
+        {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
+        <PanelErrorBoundary part labelId="bn-figjam-title">
           {() => (
             <>
               <h2 id="bn-figjam-title" ref={headingRef} tabIndex={-1}>

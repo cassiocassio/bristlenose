@@ -271,4 +271,230 @@ struct ProjectDBReadersTests {
         let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
         #expect(counts == CurationCounts.none)
     }
+
+    // MARK: - A commit still in the WAL (decision #115, 21 Oct 2026)
+    //
+    // The serve checkpoints after every commit, but a checkpoint cannot copy
+    // frames past an open reader's snapshot, and nothing comes back for them
+    // until the next commit. A star made while any statement was in flight
+    // stays in `-wal`, the `immutable=1` read sees only the main file, and the
+    // count read zero: Re-analyse ran `--clean` unasked over it. Measured
+    // against the serve in `tests/test_serve_wal_visibility.py`.
+
+    struct HolderError: Error, CustomStringConvertible { let description: String }
+
+    /// The serve's stand-in: a `sqlite3` shell in its own process, holding the
+    /// database open in WAL mode with automatic checkpoints off, so a commit
+    /// stays in `-wal` until the test checkpoints it. Its own process because
+    /// `dmsLockIsHeld` asks whether *another* process holds `-shm` (a process
+    /// never sees its own POSIX locks), and running these tests under the
+    /// sandboxed test host is what shows `F_GETLK` works there.
+    private final class Holder {
+        private let process = Process()
+        private let input = Pipe()
+        private let errors = Pipe()
+        private let dir: URL
+
+        init(_ db: URL) throws {
+            dir = db.deletingLastPathComponent()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+            process.arguments = ["-bail", db.path]
+            process.standardInput = input
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = errors
+            try process.run()
+            try run("PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;")
+        }
+
+        /// Runs `sql`, returning once the shell has finished it: the shell's
+        /// stdout is buffered, so it signals by writing a file.
+        func run(_ sql: String) throws {
+            let mark = dir.appendingPathComponent("done-\(UUID().uuidString)")
+            input.fileHandleForWriting.write(Data("\(sql)\n.once '\(mark.path)'\nSELECT 'ok';\n".utf8))
+            let deadline = Date().addingTimeInterval(10)
+            while (try? String(contentsOf: mark, encoding: .utf8))?.contains("ok") != true {
+                guard process.isRunning, Date() < deadline else {
+                    if process.isRunning { process.terminate() }
+                    process.waitUntilExit()
+                    let err = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+                    throw HolderError(description: "sqlite3 did not finish `\(sql)`: \(err)")
+                }
+                usleep(10_000)
+            }
+            try? FileManager.default.removeItem(at: mark)
+        }
+
+        func close() {
+            try? input.fileHandleForWriting.close()
+            process.waitUntilExit()
+        }
+    }
+
+    private static func walSize(_ root: URL) throws -> Int {
+        let attrs = try FileManager.default.attributesOfItem(atPath: dbURL(root).path + "-wal")
+        return (attrs[.size] as? Int) ?? 0
+    }
+
+    /// A project with one quote, its database held in WAL mode by another process.
+    private static func heldProject() throws -> (URL, Holder) {
+        let root = try makeProject { db in exec(db, "INSERT INTO quotes VALUES (1, 1);") }
+        return (root, try Holder(dbURL(root)))
+    }
+
+    /// A second project folder holding copies of `files` (suffixes of the
+    /// database name: "", "-wal", "-shm") from `root`. Nobody holds it open.
+    private static func copyDatabase(of root: URL, _ files: [String]) throws -> URL {
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-db-readers-\(UUID().uuidString)")
+        let copyDB = dbURL(copy)
+        try FileManager.default.createDirectory(
+            at: copyDB.deletingLastPathComponent(), withIntermediateDirectories: true)
+        for suffix in files {
+            try FileManager.default.copyItem(
+                atPath: dbURL(root).path + suffix, toPath: copyDB.path + suffix)
+        }
+        return copy
+    }
+
+    private static func read(_ root: URL, maintained: Bool) -> CurationCounts? {
+        CurationCountsReader.read(projectRoot: root, shmIsMaintained: { _ in maintained }, betweenReads: {})
+    }
+
+    @Test func curationCountsAreNilWhileACommitIsOnlyInTheWAL() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO quote_states VALUES (1, 1, 0, 1);")
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == nil)
+
+        // Checkpointed, the main file holds the star and is counted, though
+        // `-wal` keeps its size: SQLite reuses the file rather than truncating.
+        // Counted at all only because the DMS probe saw the holder's lock.
+        try holder.run("PRAGMA wal_checkpoint(PASSIVE);")
+        try #require(try Self.walSize(root) > 0)
+        let after = try #require(CurationCountsReader.read(projectRoot: root))
+        #expect(after.starredQuotes == 1)
+    }
+
+    /// A served study with nothing curated still runs straight away: its WAL
+    /// is fully checkpointed but not empty, which is every served database
+    /// after its first write.
+    @Test func curationCountsAreZeroWithAnIdleCheckpointedWAL() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO projects VALUES (1, 'P', '/p', '/p'); PRAGMA wal_checkpoint(PASSIVE);")
+        try #require(try Self.walSize(root) > 0)
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: root)
+        #expect(counts == CurationCounts.none)
+    }
+
+    /// A WAL with no index beside it (a copied folder, a leftover) may hold
+    /// commits the main file lacks, and nothing says whether it does.
+    @Test func curationCountsAreNilWhenTheWALHasNoIndex() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO quote_states VALUES (1, 1, 0, 1);")
+        let copy = try Self.copyDatabase(of: root, ["", "-wal"])
+        defer { try? FileManager.default.removeItem(at: copy) }
+        #expect(Self.read(copy, maintained: true) == nil)
+    }
+
+    /// An index nobody holds open is one SQLite itself would rebuild before
+    /// trusting. The copy is consistent and idle; only the lock is missing.
+    @Test func curationCountsAreNilWhenNobodyHoldsTheIndex() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO projects VALUES (1, 'P', '/p', '/p'); PRAGMA wal_checkpoint(PASSIVE);")
+        let copy = try Self.copyDatabase(of: root, ["", "-wal", "-shm"])
+        defer { try? FileManager.default.removeItem(at: copy) }
+        let counts: CurationCounts? = CurationCountsReader.read(projectRoot: copy)
+        #expect(counts == nil)
+        #expect(Self.read(copy, maintained: true) == CurationCounts.none)  // the lock is why
+    }
+
+    /// A stale index from the same WAL era: it says every frame is in the main
+    /// file, and the WAL holds a later commit. A reader holding a snapshot
+    /// stops the writer restarting the WAL, so the star lands in the same era.
+    @Test func curationCountsAreNilWhenTheIndexIsBehindTheWAL() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO projects VALUES (1, 'P', '/p', '/p');")
+        var reader: OpaquePointer?
+        try #require(sqlite3_open(Self.dbURL(root).path, &reader) == SQLITE_OK)
+        defer { sqlite3_close(reader) }
+        Self.exec(reader, "BEGIN; SELECT COUNT(*) FROM projects;")
+        try holder.run("PRAGMA wal_checkpoint(PASSIVE);")
+        let staleIndex = try Data(contentsOf: URL(fileURLWithPath: Self.dbURL(root).path + "-shm"))
+        try holder.run("INSERT INTO quote_states VALUES (1, 1, 0, 1);")
+        Self.exec(reader, "COMMIT;")
+
+        let copy = try Self.copyDatabase(of: root, ["", "-wal"])
+        defer { try? FileManager.default.removeItem(at: copy) }
+        try staleIndex.write(to: URL(fileURLWithPath: Self.dbURL(copy).path + "-shm"))
+        // The premise: the stale index vouches for itself and is of this era.
+        let wal = try Data(contentsOf: URL(fileURLWithPath: Self.dbURL(copy).path + "-wal"))
+        try #require(staleIndex.subdata(in: 16..<20) == staleIndex.subdata(in: 96..<100))
+        try #require(staleIndex.subdata(in: 32..<40) == wal.subdata(in: 16..<24))
+        #expect(Self.read(copy, maintained: true) == nil)
+    }
+
+    /// A stale index from an earlier WAL era: the writer restarted the WAL
+    /// for the star, so the index's salt is not the WAL's.
+    @Test func curationCountsAreNilWhenTheIndexIsFromAnotherWALEra() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        for id in 1...6 { try holder.run("INSERT INTO projects VALUES (\(id), 'P', '/p', '/p');") }
+        try holder.run("PRAGMA wal_checkpoint(PASSIVE);")
+        let staleIndex = try Data(contentsOf: URL(fileURLWithPath: Self.dbURL(root).path + "-shm"))
+        try holder.run("INSERT INTO quote_states VALUES (1, 1, 0, 1);")
+
+        let copy = try Self.copyDatabase(of: root, ["", "-wal"])
+        defer { try? FileManager.default.removeItem(at: copy) }
+        try staleIndex.write(to: URL(fileURLWithPath: Self.dbURL(copy).path + "-shm"))
+        let wal = try Data(contentsOf: URL(fileURLWithPath: Self.dbURL(copy).path + "-wal"))
+        try #require(staleIndex.subdata(in: 32..<40) != wal.subdata(in: 16..<24))
+        #expect(Self.read(copy, maintained: true) == nil)
+    }
+
+    /// The index's two header copies disagree: a writer was mid-update.
+    @Test func curationCountsAreNilWhenTheIndexHeaderCopiesDisagree() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO projects VALUES (1, 'P', '/p', '/p'); PRAGMA wal_checkpoint(PASSIVE);")
+        let copy = try Self.copyDatabase(of: root, ["", "-wal", "-shm"])
+        defer { try? FileManager.default.removeItem(at: copy) }
+        try #require(Self.read(copy, maintained: true) == CurationCounts.none)
+        let shm = URL(fileURLWithPath: Self.dbURL(copy).path + "-shm")
+        var index = try Data(contentsOf: shm)
+        index[8] ^= 0xFF  // iChange, first copy only
+        try index.write(to: shm)
+        #expect(Self.read(copy, maintained: true) == nil)
+    }
+
+    /// A commit landing between the check and the count (a star request still
+    /// in flight when Re-analyse is picked) moves the index, and the count it
+    /// may have missed is not trusted.
+    @Test func curationCountsAreNilWhenACommitLandsWhileCounting() throws {
+        let (root, holder) = try Self.heldProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        defer { holder.close() }
+        try holder.run("INSERT INTO projects VALUES (1, 'P', '/p', '/p'); PRAGMA wal_checkpoint(PASSIVE);")
+        let counts = CurationCountsReader.read(
+            projectRoot: root, shmIsMaintained: CurationCountsReader.dmsLockIsHeld,
+            betweenReads: {
+                do {
+                    try holder.run("INSERT INTO quote_states VALUES (1, 1, 0, 1); PRAGMA wal_checkpoint(PASSIVE);")
+                } catch {
+                    Issue.record("\(error)")
+                }
+            })
+        #expect(counts == nil)
+    }
 }

@@ -48,7 +48,9 @@ struct CurationCounts: Equatable {
 /// file that would not open returned `.none`, and a file that opened but could
 /// not be read (not a database, a torn page, an I/O error materialising an
 /// evicted file) had each count's failure swallowed into 0. `ContentView`
-/// confirms on nil with its own sentence (`ReAnalyseDecision`).
+/// confirms on nil with its own sentence (`ReAnalyseDecision`). A commit the
+/// serve has not yet checkpointed out of `-wal` is nil too, since the
+/// immutable read cannot see it (`walVouch`, decision #115).
 ///
 /// What still reads as a real zero: no database file (`ENOENT` — nothing has
 /// been served, so nothing curated), and a curation table the schema does not
@@ -72,6 +74,18 @@ struct CurationCounts: Equatable {
 enum CurationCountsReader {
 
     nonisolated static func read(projectRoot: URL) -> CurationCounts? {
+        read(projectRoot: projectRoot, shmIsMaintained: dmsLockIsHeld, betweenReads: {})
+    }
+
+    /// `read(projectRoot:)` with its two seams exposed for tests:
+    /// `shmIsMaintained` (the DMS-lock probe, which cannot see a lock this
+    /// process holds) and `betweenReads`, run after the count and before the
+    /// WAL index is read the second time.
+    nonisolated static func read(
+        projectRoot: URL,
+        shmIsMaintained: (Int32) -> Bool,
+        betweenReads: () -> Void
+    ) -> CurationCounts? {
         let dbURL = projectRoot
             .appendingPathComponent("bristlenose-output", isDirectory: true)
             .appendingPathComponent(".bristlenose", isDirectory: true)
@@ -88,6 +102,24 @@ enum CurationCountsReader {
             return nil
         }
 
+        // `immutable=1` reads the main file and nothing else, so a commit the
+        // serve could not yet checkpoint is invisible to it (decision #115).
+        // Asked before the count and again after, like a seqlock: a commit
+        // landing in between moves `mxFrame` (or the salt, if it restarted the
+        // WAL), and the count it may have missed is not trusted.
+        guard let before = walVouch(dbURL, shmIsMaintained: shmIsMaintained) else { return nil }
+        guard let measured = counts(at: dbURL) else { return nil }
+        betweenReads()
+        guard walVouch(dbURL, shmIsMaintained: shmIsMaintained) == before else {
+            log.notice("read: the database changed while it was being counted")
+            return nil
+        }
+        log.info("read: \(measured.total) curated items")
+        return measured
+    }
+
+    /// The five counts from the main file, or nil when it could not be read.
+    private nonisolated static func counts(at dbURL: URL) -> CurationCounts? {
         var db: OpaquePointer?
         let uri = "file:\(dbURL.path)?immutable=1"
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_URI
@@ -133,11 +165,157 @@ enum CurationCountsReader {
         else {
             return nil
         }
-        let counts = CurationCounts(
+        return CurationCounts(
             editedQuotes: editedQuotes, tags: tags, starredQuotes: starredQuotes,
             renamedSpeakers: renamedSpeakers, namedThemes: namedThemes)
-        log.info("read: \(counts.total) curated items")
-        return counts
+    }
+
+    /// What the WAL index vouched for at one moment.
+    enum WALVouch: Equatable {
+        /// No `-wal`, or an empty one: the main file is the whole database.
+        case noWAL
+        /// Every commit up to `mxFrame` of the WAL era named by `salt` is in
+        /// the main file.
+        case current(salt: [UInt8], mxFrame: UInt32)
+    }
+
+    /// Whether the main database file holds every committed transaction, so an
+    /// `immutable=1` read of it is the whole truth. Nil means "can't tell", and
+    /// the caller reads that as couldn't count (decision #115, 21 Oct 2026).
+    ///
+    /// **Why it can be nil while the serve checkpoints after every commit.** A
+    /// checkpoint copies WAL frames into the main file only up to the oldest
+    /// open reader's snapshot, and `wal_autocheckpoint` comes back for the rest
+    /// only at the next commit. A star committed while any statement was in
+    /// flight on another connection (a concurrent request, the elaboration
+    /// stream, the importer, a second serve) stays in `-wal` until then, and
+    /// the researcher's last edit before Re-analyse has no "then". Measured
+    /// against the serve in `tests/test_serve_wal_visibility.py`.
+    ///
+    /// **The signal is the WAL index, not the WAL file.** A served database's
+    /// `-wal` is never empty after its first write (SQLite reuses the file
+    /// rather than truncating it), so "non-empty" would ask on every study;
+    /// and a partial checkpoint writes the main file *after* the star went into
+    /// the WAL, so "newer than the main file" misses it. The `-shm` header
+    /// (sqlite.org/walformat.html, native byte order) says it exactly:
+    /// `mxFrame`, the last committed frame, at offset 16, and `nBackfill`, how
+    /// many have been copied to the main file, at 96. Equal means current.
+    ///
+    /// **But only an index somebody maintains.** SQLite trusts `-shm` only while
+    /// a connection holds its DMS lock (byte 128), and rebuilds it from `-wal`
+    /// otherwise; a `-shm` and `-wal` from different moments (a sync between
+    /// Macs, a restore, a copy taken while the serve ran) can say "current"
+    /// over a later commit. So: nobody holding the lock with a non-empty
+    /// `-wal` is nil; the index's salt must be the `-wal` header's (same era);
+    /// and a frame of that era past `mxFrame` is nil.
+    ///
+    /// Overcautious by design, never the other way: a write in flight, a
+    /// rolled-back transaction's leftover frames, or a `-wal` that survived an
+    /// unclean exit (recovery sets `nBackfill` to 0) all read as nil, so an
+    /// idle study can show the sheet once, until its next commit.
+    nonisolated static func walVouch(
+        _ dbURL: URL, shmIsMaintained: (Int32) -> Bool
+    ) -> WALVouch? {
+        let walPath = dbURL.path + "-wal"
+        var info = stat()
+        if stat(walPath, &info) != 0 {
+            let err = errno
+            if err == ENOENT || err == ENOTDIR { return .noWAL }
+            log.notice("wal: stat failed, errno \(err, privacy: .public)")
+            return nil
+        }
+        if info.st_size == 0 { return .noWAL }
+
+        let shm = open(dbURL.path + "-shm", O_RDONLY)
+        guard shm >= 0 else {
+            log.notice("wal: a -wal with no readable -shm, errno \(errno, privacy: .public)")
+            return nil
+        }
+        defer { close(shm) }
+        guard shmIsMaintained(shm) else {
+            log.notice("wal: no connection holds the -shm, so its index is not current")
+            return nil
+        }
+        guard let index = readExactly(shm, count: 100, at: 0) else {
+            log.notice("wal: the -shm header is short")
+            return nil
+        }
+        // Two copies of the header, written in turn: unequal means a writer is
+        // mid-update. `isInit` is the byte at 12; the version is SQLite's 3007000.
+        guard index[0..<48] == index[48..<96], u32(index, 0) == 3_007_000, index[12] != 0 else {
+            log.notice("wal: the -shm header is not readable as a WAL index")
+            return nil
+        }
+        let mxFrame = u32(index, 16)
+        guard mxFrame == u32(index, 96) else {
+            log.notice("wal: frames up to \(mxFrame, privacy: .public) are not all checkpointed")
+            return nil
+        }
+
+        let wal = open(walPath, O_RDONLY)
+        guard wal >= 0, let header = readExactly(wal, count: 32, at: 0) else {
+            if wal >= 0 { close(wal) }
+            log.notice("wal: the -wal header could not be read")
+            return nil
+        }
+        defer { close(wal) }
+        // Big-endian, unlike the index: magic 0x377f0682/3, page size at 8.
+        let magic = beU32(header, 0)
+        let pageSize = Int(beU32(header, 8))
+        guard magic & 0xFFFF_FFFE == 0x377F_0682, pageSize >= 512, pageSize <= 65536,
+              pageSize & (pageSize - 1) == 0 else {
+            log.notice("wal: the -wal header is not a WAL header")
+            return nil
+        }
+        let salt = Array(header[16..<24])
+        guard Array(index[32..<40]) == salt else {
+            log.notice("wal: the -shm index is from another WAL era")
+            return nil
+        }
+        // A frame of this era past the last commit the index knows of is a
+        // commit it has not caught up with (or one being written).
+        let next = off_t(32) + off_t(mxFrame) * off_t(pageSize + 24)
+        if off_t(info.st_size) >= next + 24 {
+            guard let frame = readExactly(wal, count: 24, at: next) else {
+                log.notice("wal: a frame past the index could not be read")
+                return nil
+            }
+            if Array(frame[8..<16]) == salt {
+                log.notice("wal: the -wal holds frames past the index's last commit")
+                return nil
+            }
+        }
+        return .current(salt: salt, mxFrame: mxFrame)
+    }
+
+    /// Whether another process holds `-shm`'s DMS lock (byte 128), i.e. a
+    /// live connection is keeping the index current. A process never sees its
+    /// own POSIX locks, which is why tests inject this.
+    nonisolated static func dmsLockIsHeld(_ shm: Int32) -> Bool {
+        var lock = flock()
+        lock.l_type = Int16(F_WRLCK)
+        lock.l_whence = Int16(SEEK_SET)
+        lock.l_start = 128
+        lock.l_len = 1
+        guard fcntl(shm, F_GETLK, &lock) == 0 else {
+            log.notice("wal: F_GETLK failed, errno \(errno, privacy: .public)")
+            return false
+        }
+        return lock.l_type != Int16(F_UNLCK)
+    }
+
+    private nonisolated static func readExactly(_ fd: Int32, count: Int, at offset: off_t) -> [UInt8]? {
+        var buffer = [UInt8](repeating: 0, count: count)
+        let got = buffer.withUnsafeMutableBytes { pread(fd, $0.baseAddress, count, offset) }
+        return got == count ? buffer : nil
+    }
+
+    private nonisolated static func u32(_ bytes: [UInt8], _ offset: Int) -> UInt32 {
+        bytes.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self) }
+    }
+
+    private nonisolated static func beU32(_ bytes: [UInt8], _ offset: Int) -> UInt32 {
+        UInt32(bigEndian: u32(bytes, offset))
     }
 
     /// One kind of curation, or nil when the database could not answer.

@@ -351,6 +351,104 @@ struct SharedKeychainItemTests {
         }
     }
 
+    /// R37: a key first set up with `bristlenose configure`, then removed in
+    /// Settings. The app cannot delete the CLI's item (`-25244`), so the copy
+    /// stays for the CLI — and must stay *removed* for the app, quiet or asking,
+    /// without spending a dialog, instead of being adopted straight back.
+    @Test func remove_ofACLICreatedKey_staysRemovedForTheApp() {
+        withWorld { w in
+            plantLogin(w, "sk-cli")
+            #expect(askingRead(w) == "sk-cli")
+            let promptsBefore = w.login.prompts
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            #expect(syncedValue(w) == nil)
+            #expect(loginValue(w) == "sk-cli", "the CLI keeps its own item")
+            #expect(quietRead(w) == nil)
+            #expect(askingRead(w) == nil)
+            #expect(quietRead(w) == nil, "and it stays gone on the read after that")
+            #expect(w.login.prompts == promptsBefore)
+        }
+    }
+
+    /// The withheld copy is the CLI's to move: `configure` again, and the next
+    /// asking read adopts it as any CLI write — the removal was not a ban.
+    @Test func removedCLIKey_rewrittenByTheCLI_isAdoptedAgain() {
+        withWorld { w in
+            plantLogin(w, "sk-cli")
+            #expect(askingRead(w) == "sk-cli")
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            #expect(quietRead(w) == nil)
+            w.clock.tick()
+            plantLogin(w, "sk-cli-2")
+            #expect(quietRead(w) == nil, "a spawn path still may not ask")
+            #expect(askingRead(w) == "sk-cli-2")
+            #expect(syncedValue(w) == "sk-cli-2")
+        }
+    }
+
+    /// Saving in the app after such a removal is an ordinary save: both copies
+    /// written, the withheld stamp gone.
+    @Test func removedCLIKey_savedAgainInTheApp_isReadAgain() {
+        withWorld { w in
+            plantLogin(w, "sk-cli")
+            #expect(askingRead(w) == "sk-cli")
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            #expect(quietRead(w) == nil)
+            w.clock.tick()
+            #expect(write(w, "sk-new"))
+            #expect(quietRead(w) == "sk-new")
+            #expect(loginValue(w) == "sk-new")
+        }
+    }
+
+    /// The app's own login copy, refused by the keychain: left for the CLI and
+    /// withheld from the app, the same as a CLI-created one.
+    @Test func remove_refusedLoginDelete_isWithheldNotReadopted() {
+        withWorld { w in
+            write(w, "sk")
+            w.login.refuseDeletes = true
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            #expect(loginValue(w) == "sk")
+            #expect(quietRead(w) == nil)
+            #expect(askingRead(w) == nil)
+        }
+    }
+
+    /// A refusal with no stamp to read (a keychain that answers nothing) is
+    /// still a copy left behind: the ledger's last stamp stands in, so once the
+    /// keychain answers again the copy is withheld, not adopted as new.
+    @Test func remove_refusedWithNoStamp_isStillCountedAsLeft() {
+        withWorld { w in
+            write(w, "sk")
+            w.login.refuseDeletes = true
+            w.login.refuseReads = true
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            w.login.refuseReads = false
+            #expect(loginValue(w) == "sk")
+            #expect(askingRead(w) == nil)
+            #expect(quietRead(w) == nil)
+        }
+    }
+
+    /// The app's own synced copy refused: the key is honestly still there, and
+    /// a read says so rather than hiding it.
+    @Test func remove_refusedSyncedDelete_stillReadsTheKey() {
+        withWorld { w in
+            write(w, "sk")
+            w.synced.refuseDeletes = true
+            SharedKeychainItem.remove(service: service, account: account,
+                                      synced: w.synced, login: w.login, defaults: w.defaults)
+            #expect(syncedValue(w) == "sk")
+            #expect(quietRead(w) == "sk")
+            #expect(quietRead(w) == "sk")
+        }
+    }
+
     /// Deleting is the one case absence must not be read as: a copy missing on
     /// one side while the other still holds it comes back, by design.
     @Test func aCopyDeletedOnOneSideOnly_comesBack() {

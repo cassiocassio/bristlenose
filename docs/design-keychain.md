@@ -9,6 +9,23 @@ trued-against: HEAD@main on 2026-10-04 (128264a8)
 
 ## Changelog
 
+- _2026-10-21_ — **a key first set up with `bristlenose configure` could not be
+  removed in the app** (R37). `SharedKeychainItem.remove` deleted the login
+  copy, which the ACL refuses for another tool's item (`-25244`, the 5 Sep
+  measurement), then wiped the ledger, so the next read adopted the lone copy
+  back. The fake had removed foreign items unconditionally, so the delete test
+  passed on the bug. `remove` now keeps a refused copy's stamp withheld in the
+  ledger, and `RawKeychain.delete` reports `removed` / `absent` / `refused` so
+  a refusal with no readable stamp still counts as a copy left (review
+  finding: "both stamps nil" read as deleted). Settings' Clear reads back
+  through `APIKeyDrafts.clear` and shows a key the Keychain kept. The "What it
+  cannot do" bullet says what the app's Remove does and does not reach, names
+  the lost-ledger limit, and lists the unmeasured route and a keychain-carried
+  tombstone as open calls. Anchors: `KeychainHelper.swift`
+  `SharedKeychainItem.remove`, `RawDelete`, `InMemoryRawKeychain.delete`,
+  `APIKeyDrafts.clear`, `SharedKeychainItemTests`
+  `remove_ofACLICreatedKey_staysRemovedForTheApp`, `APIKeyDraftsTests`
+  `clear_whenTheKeychainKeepsTheKey_showsItAgain`.
 - _2026-10-04_ — **the Python suite reached the real keychain until today.** The
   5 Sep entry below means the *Swift* test host. Measured with a probe on every
   credential-store read: most of 1376 Python tests in 69 files queried the
@@ -447,7 +464,23 @@ path, which reads `.quiet` (`LLMSettingsView.swift`, the `measuring` flag); the 
 - **What it cannot do.** A key deleted from one keychain while the other still
   holds it comes back — absence is indistinguishable from a copy not yet made,
   and reading absence as deletion would let a locked login keychain delete a
-  synced key. Delete through the app, which removes both. Over SSH with no GUI
+  synced key. Delete through the app, which removes both where it may — and
+  it may not delete a login item `bristlenose configure` created (the `-25244`
+  above, no dialog). _Until 21 Oct 2026 `remove` then wiped the ledger, so the
+  next read found a lone login copy and adopted it: a key removed in Settings
+  came straight back (R37)._ Now `remove` keeps that copy's stamp in the
+  ledger as withheld (the same `loginRefused` flag a declined dialog sets), so
+  every read, quiet or asking, finds nothing moved and reads nothing, no
+  dialog spent; the CLI keeps its item and `bristlenose run` still finds it;
+  the next `configure` moves the stamp and an asking read adopts it as any CLI
+  write. The withheld stamp lives in the app's UserDefaults, so a lost ledger
+  (a wiped container, `reset-sandbox-state.sh`) reads that copy as first
+  sight and an asking read adopts it again, one dialog; a tombstone the
+  keychain itself carries would close that, and is a product call. Whether
+  the app should also take the CLI's copy by a route not yet
+  measured — rewriting the item's ACL, which may raise macOS's *"wants to
+  change the access"* dialog, then deleting — is an open product call, not a
+  rule. Over SSH with no GUI
   session, a first `security -w` on an app-created item fails instead of
   prompting; the CLI then reports no key, as it always did with a locked
   keychain.

@@ -507,12 +507,13 @@ struct LLMSettingsView: View {
     }
 
     private func clearAPIKey() {
-        guard let keychainKey = selectedProvider.keychainProvider else { return }
-        KeychainHelper.delete(provider: keychainKey)
+        guard selectedProvider.keychainProvider != nil else { return }
         LLMValidator.clearCache(provider: selectedProvider)
         validationTasks[selectedProvider]?.cancel()
         validationTasks[selectedProvider] = nil
-        keyDrafts.cleared(selectedProvider)
+        // Delete, then read back: a key the Keychain kept is shown again, and
+        // the row repaints from what a run would get (R37 review).
+        keyDrafts.clear(selectedProvider, store: KeychainHelper.liveStore)
         applyPresenceAndCache(provider: selectedProvider)
         NotificationCenter.default.post(name: .bristlenosePrefsChanged, object: nil)
     }

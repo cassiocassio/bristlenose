@@ -117,6 +117,39 @@ struct APIKeyDraftsTests {
         #expect(store.inner.get(provider: "anthropic") == nil)
     }
 
+    // MARK: - R37: Clear reads back, never assumes
+
+    @Test func clear_deletesTheKey_andLeavesTheFieldEmpty() {
+        let store = SpyKeychain()
+        store.inner.set(provider: "anthropic", value: "sk-stored")
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: "sk-stored")
+
+        let gone = drafts.clear(.claude, store: store)
+
+        #expect(gone)
+        #expect(store.deletes == 1)
+        #expect(drafts.text(.claude) == "")
+        #expect(!drafts.isDirty(.claude))
+    }
+
+    /// The Keychain kept the key (a refused delete): the field shows it again
+    /// and reports it, instead of an empty field beside a status that still
+    /// says the key works.
+    @Test func clear_whenTheKeychainKeepsTheKey_showsItAgain() {
+        let store = SpyKeychain()
+        store.inner.set(provider: "anthropic", value: "sk-stored")
+        store.inner.refuseDeletes = true
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: "sk-stored")
+
+        let gone = drafts.clear(.claude, store: store)
+
+        #expect(gone == false)
+        #expect(drafts.text(.claude) == "sk-stored")
+        #expect(!drafts.isDirty(.claude), "what is shown is what is stored")
+    }
+
     // MARK: - R36: a key that failed to save says so
 
     @Test func aRefusedWrite_isFailed_andKeepsThePastedKey() {

@@ -309,7 +309,24 @@ protocol RawKeychain {
     @discardableResult
     func write(service: String, account: String, value: String,
                interaction: KeychainInteraction) -> Bool
-    func delete(service: String, account: String, interaction: KeychainInteraction)
+    /// Delete the item. Never a throw: a caller that must know reads `refused`,
+    /// since the login keychain refuses to delete another tool's item.
+    @discardableResult
+    func delete(service: String, account: String, interaction: KeychainInteraction) -> RawDelete
+}
+
+/// What a `RawKeychain.delete` did.
+enum RawDelete: Equatable {
+    case removed
+    case absent
+    /// The keychain kept the item — `-25244` for a login item another tool
+    /// created, measured 4 Sep 2026 — or could not say.
+    case refused(OSStatus)
+
+    var refused: Bool {
+        if case .refused = self { return true }
+        return false
+    }
 }
 
 /// The data-protection keychain: iCloud-synced, entitlement-scoped, prompt-free.
@@ -413,10 +430,15 @@ struct DataProtectionKeychain: RawKeychain {
         return false
     }
 
-    func delete(service: String, account: String, interaction: KeychainInteraction) {
+    @discardableResult
+    func delete(service: String, account: String, interaction: KeychainInteraction) -> RawDelete {
         let status = SecItemDelete(query(service: service, account: account) as CFDictionary)
-        if status != errSecSuccess && status != errSecItemNotFound {
+        switch status {
+        case errSecSuccess: return .removed
+        case errSecItemNotFound: return .absent
+        default:
             KeychainHelper.logKeychainError("SecItemDelete", status: status)
+            return .refused(status)
         }
     }
 
@@ -573,12 +595,19 @@ struct LoginKeychain: RawKeychain {
         }
     }
 
-    func delete(service: String, account: String, interaction: KeychainInteraction) {
+    /// `-25244` is another tool's item (see `write`): expected, not logged.
+    @discardableResult
+    func delete(service: String, account: String, interaction: KeychainInteraction) -> RawDelete {
         let q = query(service: service, account: account)
-        Self.perform(interaction) {
+        return Self.perform(interaction) {
             let status = SecItemDelete(q as CFDictionary)
-            if status != errSecSuccess && status != errSecItemNotFound {
+            switch status {
+            case errSecSuccess: return .removed
+            case errSecItemNotFound: return .absent
+            case errSecInvalidOwnerEdit: return .refused(status)
+            default:
                 KeychainHelper.logKeychainError("SecItemDelete (login)", status: status)
+                return .refused(status)
             }
         }
     }
@@ -676,7 +705,10 @@ private let loginKeychainAccess: any LoginKeychainAccessMaking = LoginKeychainAc
 /// **What it cannot do.** A key deleted from one keychain while the other still
 /// holds it comes back: absence is indistinguishable from a copy not yet made, and
 /// reading absence as deletion would let a locked keychain delete a synced key.
-/// Delete through the app, which removes both.
+/// Delete through the app, which removes both where it may. A login copy
+/// `bristlenose configure` created it may not delete (`-25244`, measured), so
+/// that copy stays for the CLI, and `remove` records it as withheld so it is not
+/// adopted again until the CLI rewrites it.
 enum SharedKeychainItem {
 
     private static let log = Logger(subsystem: "app.bristlenose", category: "keychain")
@@ -693,8 +725,10 @@ enum SharedKeychainItem {
     struct Ledger: Equatable {
         var synced: Int64?
         var login: Int64?
-        /// The last decrypt of the login copy was refused (a declined dialog, a
-        /// locked keychain). Carried so the refusal is not re-asked on every read.
+        /// The login copy at this stamp is not to be read: its last decrypt was
+        /// refused (a declined dialog, a locked keychain), or the app removed the
+        /// key and could not remove this copy (another tool's item, `remove`).
+        /// Carried so neither is re-asked on every read; void once the copy moves.
         var loginRefused = false
 
         static func key(service: String, account: String) -> String {
@@ -905,14 +939,42 @@ enum SharedKeychainItem {
         return syncedWrote && syncedBack
     }
 
+    /// Delete both copies. A login copy `bristlenose configure` created cannot
+    /// be deleted by this app (`-25244`, measured), so when one is left behind
+    /// the ledger keeps its stamp as withheld: the next read sees nothing moved
+    /// and reads nothing, instead of finding a lone login copy and adopting it
+    /// — which is how a key removed in Settings came straight back (R37). The
+    /// CLI keeps that copy; the next `configure` moves it, and an asking read
+    /// adopts it again as it would any CLI write.
     static func remove(service: String, account: String,
                        synced: any RawKeychain, login: any RawKeychain,
                        interaction: KeychainInteraction = .allowed,
                        defaults: UserDefaults = .standard) {
         lock.withLock {
-            synced.delete(service: service, account: account, interaction: interaction)
-            login.delete(service: service, account: account, interaction: interaction)
-            defaults.removeObject(forKey: Ledger.key(service: service, account: account))
+            let seen = Ledger.load(defaults, service: service, account: account)
+            let syncedDelete = synced.delete(service: service, account: account, interaction: interaction)
+            let loginDelete = login.delete(service: service, account: account, interaction: interaction)
+            // A refusal counts as a copy left behind even when no stamp can be
+            // read for it (a keychain that answers nothing): the ledger's last
+            // stamp then stands in, so "both stamps nil" never reads as deleted.
+            let syncedStamp = stamp(synced, service: service, account: account)
+                ?? (syncedDelete.refused ? seen?.synced : nil)
+            let loginStamp = stamp(login, service: service, account: account)
+                ?? (loginDelete.refused ? seen?.login : nil)
+            let syncedLeft = syncedDelete.refused || syncedStamp != nil
+            let loginLeft = loginDelete.refused || loginStamp != nil
+            guard syncedLeft || loginLeft else {
+                defaults.removeObject(forKey: Ledger.key(service: service, account: account))
+                return
+            }
+            if syncedLeft {
+                log.error("synced copy of \(service, privacy: .public) could not be removed")
+            }
+            if loginLeft {
+                log.error("login copy of \(service, privacy: .public) could not be removed — another tool's item; bristlenose run will still see it")
+            }
+            Ledger(synced: syncedStamp, login: loginStamp, loginRefused: loginLeft)
+                .save(defaults, service: service, account: account)
         }
     }
 }
@@ -978,7 +1040,12 @@ final class InMemoryKeychain: KeychainStore {
         return true
     }
 
+    /// Make deletes fail and keep the key, as the login keychain does for an
+    /// item `bristlenose configure` created (`-25244`).
+    var refuseDeletes = false
+
     func delete(provider: String, account: String) {
+        guard !refuseDeletes else { return }
         storage.removeValue(forKey: Key(provider: provider, account: account))
     }
 
@@ -1006,13 +1073,19 @@ final class InMemoryRawKeychain: RawKeychain {
     /// Every dialog declined.
     var declinePrompts = false
     var refuseWrites = false
+    /// Every delete refused, the item kept — what `-25244` does to the app's
+    /// own copy when the ACL disagrees, or a locked keychain.
+    var refuseDeletes = false
     private(set) var reads = 0
     /// Dialogs a real keychain would have shown.
     private(set) var prompts = 0
     private(set) var writes = 0
 
+    /// A keychain that cannot answer (`refuseReads`) answers no attribute
+    /// read either, so a surviving item then has no stamp.
     func modificationDate(service: String, account: String) -> Date? {
-        items[Key(service: service, account: account)]?.modified
+        guard !refuseReads else { return nil }
+        return items[Key(service: service, account: account)]?.modified
     }
 
     func read(service: String, account: String, interaction: KeychainInteraction) -> RawRead {
@@ -1040,8 +1113,18 @@ final class InMemoryRawKeychain: RawKeychain {
         return true
     }
 
-    func delete(service: String, account: String, interaction: KeychainInteraction) {
-        items.removeValue(forKey: Key(service: service, account: account))
+    /// Deleting another tool's item is refused, as the real keychain refuses
+    /// it (`-25244`, measured 4 Sep 2026) — whether or not a dialog has since
+    /// trusted this app to read it. Until 21 Oct 2026 this fake removed every
+    /// item, so `remove` passed its test while a CLI-created key came straight
+    /// back in the app (R37). `refuseDeletes` refuses the app's own too.
+    @discardableResult
+    func delete(service: String, account: String, interaction: KeychainInteraction) -> RawDelete {
+        let key = Key(service: service, account: account)
+        guard let item = items[key] else { return .absent }
+        guard !refuseDeletes, !item.foreign else { return .refused(errSecInvalidOwnerEdit) }
+        items.removeValue(forKey: key)
+        return .removed
     }
 
     /// Plant an item as another writer would, at a given moment. `foreign` is

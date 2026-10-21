@@ -67,6 +67,22 @@ struct APIKeyDrafts {
         failed.remove(provider)
     }
 
+    /// The Clear button: delete the key, then read back what a run would now
+    /// get and show that. `true` when nothing is left. A key the Keychain kept
+    /// — the app's own copy refused, or a CLI-created login copy on a build
+    /// that could not withhold it — comes back into the field rather than an
+    /// empty field standing beside a status that still says the key works (R37
+    /// review). The ledger side of that case is `SharedKeychainItem.remove`.
+    @discardableResult
+    mutating func clear(_ provider: LLMProvider, store: any KeychainStore) -> Bool {
+        guard let keychainKey = provider.keychainProvider else { return true }
+        store.delete(provider: keychainKey)
+        cleared(provider)
+        let left = store.get(provider: keychainKey)
+        load(provider, stored: left)
+        return left == nil
+    }
+
     mutating func commit(_ provider: LLMProvider, store: any KeychainStore) -> Outcome {
         guard let keychainKey = provider.keychainProvider, isDirty(provider) else {
             return .unchanged

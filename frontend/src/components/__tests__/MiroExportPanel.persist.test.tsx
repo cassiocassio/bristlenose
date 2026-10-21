@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MiroExportPanel } from "../MiroExportPanel";
 import i18n from "../../i18n";
+import { announce } from "../../utils/announce";
 import type { MiroStatusResponse } from "../../utils/types";
 
 const { postMiroConnect, desktop } = vi.hoisted(() => ({
@@ -59,6 +60,7 @@ describe("MiroExportPanel — a token that connected but wasn't saved", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
     postMiroConnect.mockReset();
+    vi.mocked(announce).mockClear();
     desktop.value = false;
   });
 
@@ -77,9 +79,23 @@ describe("MiroExportPanel — a token that connected but wasn't saved", () => {
     expect(screen.getByText(i18n.t("miro.createBoard"))).toBeInTheDocument();
   });
 
+  it.each([
+    ["keychain", "miro.persistWarningKeychain"],
+    ["secret_service", "miro.persistWarningKeyring"],
+    ["file", "miro.persistWarningFile"],
+  ] as const)("speaks the %s notice through the shared live region", async (store, key) => {
+    // The panel is a modal: useInert makes the app root inert, so a live region
+    // inside it is silent. The notice goes through announce(), and the visible
+    // paragraph carries no role of its own, so it is not spoken twice.
+    await connectWith({ connected: true, persisted: false, store });
+    expect(announce).toHaveBeenCalledWith(i18n.t(key));
+    expect(screen.getByText(i18n.t(key))).not.toHaveAttribute("role");
+  });
+
   it("says nothing when the token was saved", async () => {
     await connectWith({ connected: true, persisted: true, store: "keychain" });
     expect(shownWarnings()).toEqual([]);
+    for (const k of WARNINGS) expect(announce).not.toHaveBeenCalledWith(i18n.t(k));
   });
 
   it("says nothing to an older server that doesn't report it", async () => {

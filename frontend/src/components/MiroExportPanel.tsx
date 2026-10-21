@@ -384,9 +384,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         // In the browser the server's store is the only one, so say where the token couldn't be
         // saved. Not in the Mac app: there Python's Keychain write is a sandboxed no-op by design,
         // the durable copy goes through the bridge above, and the native sheet owns the warning.
-        setPersistWarning(
-          !isDesktop() && s.persisted === false && s.store ? t(PERSIST_WARNING_KEY[s.store]) : null,
-        );
+        // Spoken through announce(): this is a modal, so useInert makes the app root inert and a
+        // live region inside it would be silent.
+        const warning =
+          !isDesktop() && s.persisted === false && s.store ? t(PERSIST_WARNING_KEY[s.store]) : null;
+        setPersistWarning(warning);
+        if (warning) announce(warning);
         setAccount(accountLine(s));
         setTeamName(s.team_name?.trim() || null);
         setView("configure");
@@ -559,7 +562,7 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
                     </button>
                   </p>
                   {persistWarning && (
-                    <p className="bn-export-hint" role="status">
+                    <p className="bn-export-hint">
                       {persistWarning}
                     </p>
                   )}

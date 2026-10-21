@@ -419,6 +419,27 @@ class TestConnectReportsPersistence:
         assert data["store"] == "secret_service"
         assert client.app.state.miro_session_token == "tok-abc"
 
+    def test_an_unrecognised_store_is_logged_by_class_name_only(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """No kind to name is still a 200 with store=None, but not a silent one.
+
+        The warning carries the store's class name and never the token.
+        """
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="bristlenose.server.routes.miro"):
+            resp = _connect(client, _NoOpStore())
+        assert resp.status_code == 200
+        assert resp.json()["store"] is None
+        warnings = [
+            r.getMessage() for r in caplog.records
+            if r.name == "bristlenose.server.routes.miro" and r.levelno == logging.WARNING
+            and "_NoOpStore" in r.getMessage()
+        ]
+        assert len(warnings) == 1, caplog.records
+        assert "tok-abc" not in caplog.text
+
     def test_status_and_disconnect_carry_neither_field(self, client: TestClient) -> None:
         """Only /connect wrote anything; the Swift `StatusResponse` contract is unchanged."""
         with patch(_PATCH_GET_CREDENTIAL, return_value=None):

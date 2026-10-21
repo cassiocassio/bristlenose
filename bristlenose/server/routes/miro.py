@@ -292,6 +292,10 @@ def _store_kind(store: CredentialStore) -> CredentialStoreKind | None:
     try:
         return credential_store_kind(store)
     except TypeError:
+        logger.warning(
+            "Miro connect: %s is not a known credential store — no store kind reported",
+            type(store).__name__,
+        )
         return None
 
 

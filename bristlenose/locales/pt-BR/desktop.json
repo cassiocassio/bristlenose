@@ -399,7 +399,7 @@
       "header": {
         "completed_partial": "Conclusão parcial",
         "failed": "Falha na execução",
-        "reportError": "Relatório não pôde ser mostrado"
+        "reportError": "Erro ao exibir relatório"
       },
       "action": {
         "copy": "Copiar detalhes",

@@ -399,7 +399,7 @@
       "header": {
         "completed_partial": "Compleció parcial",
         "failed": "L'execució ha fallat",
-        "reportError": "No s'ha pogut mostrar l'informe"
+        "reportError": "No es mostra l'informe"
       },
       "action": {
         "copy": "Copia els detalls",

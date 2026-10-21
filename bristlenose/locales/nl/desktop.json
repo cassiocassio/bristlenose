@@ -399,7 +399,7 @@
       "header": {
         "completed_partial": "Gedeeltelijk voltooid",
         "failed": "Run mislukt",
-        "reportError": "Rapport kon niet worden getoond"
+        "reportError": "Kan rapport niet tonen"
       },
       "action": {
         "copy": "Kopieer details",

@@ -840,3 +840,28 @@ def test_transcribe_recomputes_over_a_segments_file_with_a_malformed_session(
     assert any(
         "Discarding corrupt intermediate cache" in r.getMessage() for r in caplog.records
     ), [r.getMessage() for r in caplog.records]
+
+
+@pytest.mark.parametrize("mode", ["run", "transcribe"])
+def test_a_malformed_session_the_cache_would_not_serve_still_discards_the_file(
+    tmp_path: Path, mode: str,
+) -> None:
+    # s3's inputs changed, so it is not served from the cache either way; its
+    # entry is malformed all the same. The file is corrupt, and is discarded
+    # whole: s1 and s2 are transcribed again too, not served from it.
+    _drive(tmp_path, "run", 3, {})
+    path = _intermediate(tmp_path, "session_segments.json")
+    cached = json.loads(path.read_text(encoding="utf-8"))
+    cached["s3"] = "x"
+    path.write_text(json.dumps(cached), encoding="utf-8")
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["stages"]["transcribe"]["sessions"]["s3"]["input_hash"] = "stale"
+    # run: left RUNNING, as an interrupted run does, so the per-session path reads it.
+    manifest["stages"]["transcribe"]["status"] = "running"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    log: dict = {}
+    _drive(tmp_path, mode, 3, log)
+
+    assert log.get("transcribed") == [["s1", "s2", "s3"]], log

@@ -967,6 +967,10 @@ def _load_cached_json(
                 f"{path.name}: cache unreadable ({type(exc).__name__}) — recomputing",
             )
         logger.warning("Discarding corrupt intermediate cache %s: %s", path, exc)
+        # The traceback, to the log file only (INFO; the terminal shows
+        # WARNING): a bug in ``convert`` must not pass for a damaged file,
+        # which re-pays the stage on every run with one line to show.
+        logger.info("Discarding corrupt intermediate cache %s (traceback)", path, exc_info=True)
         return None
 
 

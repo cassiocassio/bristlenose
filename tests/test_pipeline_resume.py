@@ -90,6 +90,26 @@ def test_load_cached_json_says_recomputing_unless_the_caller_does_not(tmp_path, 
     assert "topic_boundaries.json: cache unreadable" in capsys.readouterr().out
 
 
+def test_load_cached_json_logs_the_traceback_of_what_it_discards(tmp_path, caplog):
+    # A bug in a caller's convert= reads as a damaged file and would re-pay
+    # the stage on every run; the traceback in the log tells the two apart.
+    p = tmp_path / "session_segments.json"
+    p.write_text('{"s1": []}', encoding="utf-8")
+
+    def _buggy(_raw):
+        raise TypeError("a bug, not a damaged file")
+
+    with caplog.at_level("INFO", logger="bristlenose.pipeline"):
+        assert _load_cached_json(p, recomputes=False, convert=_buggy) is None
+    records = [r for r in caplog.records if "Discarding corrupt" in r.getMessage()]
+    # The traceback goes to the file (INFO), not the terminal (WARNING and up),
+    # where a power-cut cache would otherwise print one on a plain run.
+    [warning] = [r for r in records if r.levelname == "WARNING"]
+    assert warning.exc_info is None
+    [traced] = [r for r in records if r.exc_info is not None]
+    assert traced.levelname == "INFO" and traced.exc_info[0] is TypeError
+
+
 def test_is_stage_cached_none_manifest():
     assert _is_stage_cached(None, STAGE_TOPIC_SEGMENTATION) is False
 

@@ -1248,15 +1248,11 @@ class Pipeline:
         )
         self._last_eta_remaining = remaining.total_seconds
         self._last_predicted_total = predicted
-        # The stage is over: its slice reads held at its end (R27), so a stage
-        # that finished early does not sit mid-slice until the next entry.
-        fields: dict[str, object] = {
-            "stage": stage,
-            "eta_remaining_seconds": remaining.total_seconds,
-            "predicted_total_seconds": predicted,
-        }
-        self._put_budget(fields, self._estimator.stage_budget(stage, completed=True))
-        self._emit_progress(**fields)
+        self._emit_progress(
+            stage=stage,
+            eta_remaining_seconds=remaining.total_seconds,
+            predicted_total_seconds=predicted,
+        )
 
     def set_progress_sink(self, sink: object | None) -> None:
         """Register the structured progress sink (``RunHandle.progress``).
@@ -1285,39 +1281,11 @@ class Pipeline:
         if self._progress_sink is None:
             return
         fields.setdefault("elapsed_seconds", self._elapsed_seconds())
-        self._attach_stage_budget(fields)
         if self._sessions_readable:
             # Every line, not only the one that moved it: readers take the
             # newest line, and the next heartbeat would otherwise hide it.
             fields.setdefault("sessions_readable", self._sessions_readable)
         self._progress_sink(**fields)  # type: ignore[operator]
-
-    def _attach_stage_budget(self, fields: dict[str, object]) -> None:
-        """Put the ring slice the event's stage owns on the line (R27).
-
-        Every estimator-stage event carries it, so the Mac app always has the
-        current stage's slice on the newest line it reads; the download stage
-        and the opening estimate carry none (no stage, or not an estimator
-        stage), and a cold estimator offers none, which leaves the app on its
-        whole-run time ring. A line that already names its slice (a stage's
-        completion, ``_emit_remaining``) keeps it.
-        """
-        from bristlenose.timing import ALL_STAGES
-
-        stage = fields.get("stage")
-        if "stage_base" in fields or self._estimator is None:
-            return
-        if not isinstance(stage, str) or stage not in ALL_STAGES:
-            return
-        self._put_budget(fields, self._estimator.stage_budget(stage))
-
-    @staticmethod
-    def _put_budget(fields: dict[str, object], budget: Any) -> None:
-        if budget is None:
-            return
-        fields["stage_base"] = budget.base
-        fields["stage_span"] = budget.span
-        fields["stage_expected_seconds"] = budget.expected_seconds
 
     def _on_model_download_progress(self, done: int, total: int) -> None:
         """Emit the first-run speech-model download as its own progress stage.
@@ -1554,11 +1522,6 @@ class Pipeline:
                 status="failed", quotes_sha=input_hashes["quotes"], guide_sha=input_hashes["guide"],
             ).model_dump_json(indent=2), encoding="utf-8")
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
-            # The stage ran, whatever it produced: told it is over, the estimate
-            # drops it from the time left and the ring keeps its share, rather
-            # than render's entry retiring it as cache-served and the ring
-            # sitting below where it already was.
-            self._emit_remaining(_T_STAGE_DISCUSSION, time.perf_counter() - t0)
             return None
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
@@ -3299,15 +3262,6 @@ class Pipeline:
                 )
 
             # ── People file ───────────────────────────────────────────
-            # Timed as render, with the scene colours below: the tail between
-            # grouping and the report used to belong to no stage, so the
-            # estimate never counted it and the ring sat through it (R27).
-            # Render is unconditional (no cached branch, no _emit_remaining),
-            # so this entry-emit is the only event that advances the verb to
-            # "Rendering". ETA is the one carried from the last stage that
-            # reported its completion (grouping, or discussion when on).
-            self._emit_stage_entry(STAGE_RENDER)
-            t0 = time.perf_counter()
             status.update("[dim]Updating people file...[/dim]")
             from bristlenose.people import (
                 auto_populate_names,
@@ -3374,7 +3328,12 @@ class Pipeline:
 
             # ── Stage 12: Render output ──────────────────────────────
             mark_stage_running(manifest, _M_STAGE_RENDER)
+            # Render is unconditional (no cached branch, no _emit_remaining),
+            # so this entry-emit is the only event that advances the verb to
+            # "Rendering". ETA is the carried cluster-completion estimate.
+            self._emit_stage_entry(STAGE_RENDER)
             status.update("[dim]Rendering output...[/dim]")
+            t0 = time.perf_counter()
             analysis = _compute_analysis(
                 screen_clusters, theme_groups, all_quotes, sessions,
             )

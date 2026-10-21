@@ -74,6 +74,8 @@ enum AgentActivity {
     /// symlink resolution) while `currentProjectPath` holds the spawn-time
     /// string — raw equality then reads a running project as "not running"
     /// with no signal. Same standardisation `MCPTokenStore.accountKey` uses.
+    /// It settles `.` / `..` and a trailing slash only: it resolves no link and
+    /// keeps a `/private` prefix, so those two respellings still compare unequal.
     static func samePath(_ a: String?, _ b: String) -> Bool {
         guard let a else { return false }
         return URL(fileURLWithPath: a).standardizedFileURL.path

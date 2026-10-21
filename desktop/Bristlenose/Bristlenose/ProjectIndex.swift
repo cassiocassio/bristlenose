@@ -381,6 +381,10 @@ final class ProjectIndex: ObservableObject {
     /// making fifty folders.
     var watcherCap: Int = ProjectIndex.maxConcurrentWatchers
 
+    /// What mints a security-scoped bookmark. A test swaps it for one that
+    /// refuses, which no folder in the test host's container ever does (R50).
+    var makeBookmark: (URL) throws -> Data = { try $0.bookmarkData(options: .withSecurityScope) }
+
     /// Projects whose folder was not at its path when `syncWatchers` last
     /// looked.
     private var unreachable: Set<UUID> = []
@@ -501,8 +505,12 @@ final class ProjectIndex: ObservableObject {
     func addProject(name: String, path: String, inputFiles: [String]? = nil,
                     intoFolder folderID: UUID? = nil) -> Project {
         let finalName = uniqueName(name, excluding: nil)
+        // The path and the bookmark name one spelling from the start (R50), so
+        // a later `refreshAvailability` has nothing to respell under a live serve.
+        let minted = mint(path)
+        let path = minted?.path ?? path
         let location = path.isEmpty ? nil : Self.detectLocation(for: path)
-        let bookmark = Self.createBookmark(for: path)
+        let bookmark = minted?.data
         let resourceID = Self.captureResourceIdentifier(for: path)
         // New items land at position 0 within their scope (root or folder);
         // push existing same-scope items down by 1. Folder positions are a
@@ -1226,21 +1234,56 @@ final class ProjectIndex: ObservableObject {
 
     // MARK: - Bookmark data
 
+    /// A bookmark and the spelling of the path it was minted at.
+    struct MintedBookmark: Equatable {
+        let data: Data
+        let path: String
+    }
+
     /// Create a security-scoped bookmark for a path.
     /// Returns nil for empty paths or if bookmark creation fails.
-    private static func createBookmark(for path: String) -> Data? {
+    private func createBookmark(for path: String) -> Data? { mint(path)?.data }
+
+    private func mint(_ path: String) -> MintedBookmark? {
+        Self.mintBookmark(for: path, make: makeBookmark)
+    }
+
+    /// The decision under `createBookmark`, with the maker injected (R50).
+    ///
+    /// Every caller stores the nil, and a nil bookmark on a folder that exists
+    /// reads as `.ready` and then fails every read — "Can't be read" with no
+    /// lease to reopen it. The add holds the grant (a drop or a panel), so the
+    /// row works for the rest of that session and fails from the next launch.
+    ///
+    /// A path whose last component is a symlink is the reachable case: it mints
+    /// nothing, and the folder it names mints under the same grant (measured in
+    /// the sandboxed test host, `BookmarkMintTests`). So a failed mint is tried
+    /// once more at the resolved spelling of the path, and the caller stores
+    /// the spelling that minted, so the row's path and its bookmark agree.
+    nonisolated static func mintBookmark(
+        for path: String, make: (URL) throws -> Data
+    ) -> MintedBookmark? {
         guard !path.isEmpty else { return nil }
         let url = URL(fileURLWithPath: path)
-        do {
-            return try url.bookmarkData(options: .withSecurityScope)
-        } catch {
-            // Every caller stores the nil, and a nil bookmark on a folder that
-            // exists reads as `.ready` and then fails every read — "Can't be
-            // read" with nothing in the log to say why (28 Sep 2026). The
-            // usual cause is a URL the process holds no sandbox grant for.
-            log.error("security-scoped bookmark not created for \(path, privacy: .private): \(error.localizedDescription, privacy: .public)")
-            return nil
+        let failure: Error
+        do { return MintedBookmark(data: try make(url), path: path) } catch { failure = error }
+        // Resolves every link in the path, not only the last component, and
+        // drops a `/private` prefix the system adds back.
+        let resolved = url.resolvingSymlinksInPath().path
+        if resolved != path {
+            do {
+                let data = try make(URL(fileURLWithPath: resolved))
+                log.notice("security-scoped bookmark minted at the resolved spelling of the path, after: \(failure.localizedDescription, privacy: .public)")
+                return MintedBookmark(data: data, path: resolved)
+            } catch {
+                log.error("security-scoped bookmark not created for \(path, privacy: .private) or the resolved spelling of the path: \(failure.localizedDescription, privacy: .public); \(error.localizedDescription, privacy: .public)")
+                return nil
+            }
         }
+        // The usual cause is a URL the process holds no sandbox grant for
+        // (28 Sep 2026: every site stored this nil in silence until then).
+        log.error("security-scoped bookmark not created for \(path, privacy: .private): \(failure.localizedDescription, privacy: .public)")
+        return nil
     }
 
     /// Capture the stable filesystem identity for a path, base64-encoded.
@@ -1307,7 +1350,9 @@ final class ProjectIndex: ObservableObject {
                     projects[i].path = resolvedPath
                     projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
-                    projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    // The bookmark that just resolved still names this folder:
+                    // a failed re-mint must not swap it for nil (R50).
+                    projects[i].bookmarkData = createBookmark(for: resolvedPath) ?? bookmark
                     changed = true
                     moved.append((project.id, resolvedPath))
                 }
@@ -1339,7 +1384,7 @@ final class ProjectIndex: ObservableObject {
                     projects[i].path = resolvedPath
                     projects[i].lastSeenPath = resolvedPath
                     projects[i].location = Self.detectLocation(for: resolvedPath)
-                    projects[i].bookmarkData = Self.createBookmark(for: resolvedPath)
+                    projects[i].bookmarkData = createBookmark(for: resolvedPath)
                     if projects[i].resourceIdentifier == nil,
                        let id = Self.captureResourceIdentifier(for: resolvedPath) {
                         projects[i].resourceIdentifier = id
@@ -1572,7 +1617,7 @@ final class ProjectIndex: ObservableObject {
             return
         }
         log.notice("project folder moved; following it")
-        relocateProject(id: id, newPath: url.path)
+        relocateProject(id: id, newPath: url.path, keepingBookmarkOnFailure: true)
     }
 
     /// Whether `url` sits in the user's Trash or a volume's `.Trashes`.
@@ -1594,13 +1639,21 @@ final class ProjectIndex: ObservableObject {
 
     /// Relocate a project to a new path (after user selects via NSOpenPanel,
     /// or the folder watcher reports a move).
-    func relocateProject(id: UUID, newPath: String) {
+    ///
+    /// `keepingBookmarkOnFailure` is for a move the folder made itself: the old
+    /// bookmark follows it, so a failed re-mint keeps it. A Locate onto another
+    /// folder must not, since the old one names a different folder, and nil is
+    /// the honest answer there.
+    func relocateProject(id: UUID, newPath: String, keepingBookmarkOnFailure: Bool = false) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
+        let minted = mint(newPath)
+        let newPath = minted?.path ?? newPath
         let pathChanged = projects[index].path != newPath
         projects[index].path = newPath
         projects[index].lastSeenPath = newPath
         projects[index].location = Self.detectLocation(for: newPath)
-        projects[index].bookmarkData = Self.createBookmark(for: newPath)
+        projects[index].bookmarkData = minted?.data
+            ?? (keepingBookmarkOnFailure ? projects[index].bookmarkData : nil)
         projects[index].resourceIdentifier = Self.captureResourceIdentifier(for: newPath)
         save()
         // Drop any old lease/watcher and re-establish against the new path.
@@ -1631,7 +1684,7 @@ final class ProjectIndex: ObservableObject {
             for i in projects.indices {
                 if !projects[i].path.isEmpty && projects[i].location == nil {
                     projects[i].location = Self.detectLocation(for: projects[i].path)
-                    projects[i].bookmarkData = Self.createBookmark(for: projects[i].path)
+                    projects[i].bookmarkData = createBookmark(for: projects[i].path)
                     needsSave = true
                 }
 

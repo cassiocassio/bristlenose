@@ -143,6 +143,16 @@ def _drive(
     async def _one(_quotes, *_a, **_kw):
         return [], StageOutcome(attempted=1, succeeded=1)
 
+    async def _discuss(transcripts, *_a, **_kw):
+        # Stubbed like every other LLM stage here: the pipeline's own record
+        # and manifest handling still run, on a stage that succeeds.
+        from bristlenose.discussion.models import DiscussionRecord
+
+        log.setdefault("discussed", []).append(sorted(t.session_id for t in transcripts))
+        return DiscussionRecord(), StageOutcome(
+            attempted=len(transcripts), succeeded=len(transcripts),
+        )
+
     with (
         patch("bristlenose.stages.s01_ingest.ingest", new=_ingest),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions", new=_stage2),
@@ -155,6 +165,7 @@ def _drive(
         patch("bristlenose.stages.s09_quote_extraction.extract_quotes", new=_quotes),
         patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=_one),
         patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=_one),
+        patch("bristlenose.discussion.stage.run_discussion", new=_discuss),
         patch("bristlenose.llm.client.LLMClient", MagicMock()),
     ):
         pipeline = Pipeline(settings)
@@ -338,6 +349,24 @@ def test_a_run_after_analyze_does_not_re_pay_the_analysis(tmp_path: Path) -> Non
     # At HEAD: {'quoted': [['s1', 's2']]} — every session's quotes re-paid.
     assert "quoted" not in after, after
     assert "topics" not in after, after
+
+
+def test_the_harness_runs_the_discussion_stage_without_an_error(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The discussion stage is on by default, and the harness once handed it a
+    MagicMock client: every ``_drive`` logged its failure path, unasserted, so a
+    real failure there was invisible. Fresh, then served from its cache."""
+    log: dict = {}
+    with caplog.at_level("ERROR"):
+        _drive(tmp_path, "run", 2, log)
+        _drive(tmp_path, "run", 2, log)
+
+    errors = [f"{r.name}: {r.getMessage()}" for r in caplog.records
+              if r.levelname == "ERROR"
+              and (r.name.startswith("bristlenose.discussion") or "discussion" in r.getMessage())]
+    assert errors == [], errors
+    assert log["discussed"] == [["s1", "s2"]], log  # ran once, then cached
 
 
 # ── transcribe keeps the speakers run identified ─────────────────────────────

@@ -340,6 +340,8 @@ struct CloudAccountKeyTests {
         #expect(row.platform == platform)
         #expect(row.needsSignIn == true)
         #expect(row.address == nil)
+        #expect(keychain.get(provider: provider, account: key) != nil,
+                "listing must never delete what it can't read")
 
         CloudGrantStore.disconnect(platform, accountKey: key, store: keychain)
         #expect(keychain.get(provider: provider, account: key) == nil,

@@ -247,6 +247,7 @@
     "showGroup": "Mostra {{group}}",
     "hideGroup": "Nascondi {{group}}",
     "assignToSelected": "Assegna {{name}} alle citazioni selezionate",
+    "focusOnTag": "Concentrati sulle citazioni di {{name}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

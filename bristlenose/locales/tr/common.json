@@ -247,6 +247,7 @@
     "showGroup": "{{group}} göster",
     "hideGroup": "{{group}} gizle",
     "assignToSelected": "{{name}} etiketini se\u00e7ili al\u0131nt\u0131lara ata",
+    "focusOnTag": "{{name}} al\u0131nt\u0131lar\u0131na odaklan",
     "frameworkSentiment": "Duygu durumu"
   },
   "footer": {

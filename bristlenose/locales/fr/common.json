@@ -237,6 +237,7 @@
     "showGroup": "Afficher {{group}}",
     "hideGroup": "Masquer {{group}}",
     "assignToSelected": "Attribuer {{name}} aux verbatim s\u00e9lectionn\u00e9s",
+    "focusOnTag": "Se concentrer sur les verbatim {{name}}",
     "frameworkSentiment": "Sentiment"
   },
   "header": {

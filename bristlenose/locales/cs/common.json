@@ -273,6 +273,7 @@
     "showGroup": "Zobrazit {{group}}",
     "hideGroup": "Skrýt {{group}}",
     "assignToSelected": "P\u0159i\u0159adit {{name}} k vybran\u00fdm cit\u00e1t\u016fm",
+    "focusOnTag": "Zam\u011b\u0159it se na cit\u00e1ty {{name}}",
     "frameworkSentiment": "Nálada"
   },
   "footer": {

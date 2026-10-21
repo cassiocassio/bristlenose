@@ -277,6 +277,7 @@
     "showGroup": "Pokaż {{group}}",
     "hideGroup": "Ukryj {{group}}",
     "assignToSelected": "Przypisz {{name}} do wybranych cytat\u00f3w",
+    "focusOnTag": "Skup si\u0119 na cytatach z {{name}}",
     "frameworkSentiment": "Sentyment"
   },
   "footer": {

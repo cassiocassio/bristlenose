@@ -242,6 +242,7 @@
     "showGroup": "{{group}} を表示",
     "hideGroup": "{{group}} を非表示",
     "assignToSelected": "\u9078\u629e\u3057\u305f\u767a\u8a00\u306b {{name}} \u3092\u5272\u308a\u5f53\u3066\u308b",
+    "focusOnTag": "{{name}} \u306e\u767a\u8a00\u306b\u7d5e\u308a\u8fbc\u3080",
     "frameworkSentiment": "感情"
   },
   "footer": {

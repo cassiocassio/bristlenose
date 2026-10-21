@@ -247,6 +247,7 @@
     "showGroup": "Visa {{group}}",
     "hideGroup": "Dölj {{group}}",
     "assignToSelected": "Tilldela {{name}} till valda citat",
+    "focusOnTag": "Fokusera p\u00e5 citat med {{name}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

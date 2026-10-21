@@ -247,6 +247,7 @@
     "showGroup": "Mostrar {{group}}",
     "hideGroup": "Ocultar {{group}}",
     "assignToSelected": "Atribuir {{name}} \u00e0s cita\u00e7\u00f5es selecionadas",
+    "focusOnTag": "Focar nas cita\u00e7\u00f5es de {{name}}",
     "frameworkSentiment": "Sentimento"
   },
   "footer": {

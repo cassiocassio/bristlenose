@@ -237,6 +237,7 @@
     "showGroup": "{{group}} anzeigen",
     "hideGroup": "{{group}} ausblenden",
     "assignToSelected": "{{name}} den ausgew\u00e4hlten Zitaten zuweisen",
+    "focusOnTag": "Auf Zitate mit {{name}} fokussieren",
     "frameworkSentiment": "Stimmung"
   },
   "header": {

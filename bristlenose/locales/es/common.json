@@ -237,6 +237,7 @@
     "showGroup": "Mostrar {{group}}",
     "hideGroup": "Ocultar {{group}}",
     "assignToSelected": "Asignar {{name}} a las citas seleccionadas",
+    "focusOnTag": "Centrarse en las citas de {{name}}",
     "frameworkSentiment": "Sentimiento"
   },
   "header": {

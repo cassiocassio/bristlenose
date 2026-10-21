@@ -247,6 +247,7 @@
     "showGroup": "Näytä {{group}}",
     "hideGroup": "Piilota {{group}}",
     "assignToSelected": "M\u00e4\u00e4rit\u00e4 {{name}} valituille sitaateille",
+    "focusOnTag": "Keskity {{name}}-sitaatteihin",
     "frameworkSentiment": "Tunnesävy"
   },
   "footer": {

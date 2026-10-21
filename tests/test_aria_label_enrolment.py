@@ -79,8 +79,9 @@ _KNOWN_UNENROLLED = frozenset({
     "components/EditableText.tsx",
     "components/EyeToggle.tsx",
     "components/ModalNav.tsx",
-    "components/TagRow.tsx",
 })
+# TagRow struck 21 Oct 2026: its bar area's "Focus on ${name} quotes" was the
+# last English label in it; now t("tags.focusOnTag").
 # TagGroupCard struck 23 Sep 2026 (0.31.1): its eye toggle built
 # `Show ${name}` / `Hide ${name}` in English while the identical control in
 # TagSidebar had used t("tags.showFramework"/"hideFramework") since it shipped.

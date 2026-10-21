@@ -247,6 +247,7 @@
     "showGroup": "Mostra {{group}}",
     "hideGroup": "Oculta {{group}}",
     "assignToSelected": "Assigna {{name}} a les cites seleccionades",
+    "focusOnTag": "Centra't en les cites de {{name}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

@@ -247,6 +247,7 @@
     "showGroup": "Vis {{group}}",
     "hideGroup": "Skjul {{group}}",
     "assignToSelected": "Tildel {{name}} til valgte citater",
+    "focusOnTag": "Fokus\u00e9r p\u00e5 citater med {{name}}",
     "frameworkSentiment": "Stemning"
   },
   "footer": {

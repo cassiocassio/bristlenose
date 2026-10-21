@@ -142,7 +142,7 @@ export function TagRow({
         // role="button" makes this interactive.
         // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
         tabIndex={onSoloClick ? 0 : undefined}
-        aria-label={onSoloClick ? `Focus on ${name} quotes` : undefined}
+        aria-label={onSoloClick ? t("tags.focusOnTag", { name }) : undefined}
       >
         {hasTentative ? (
           <MicroBar

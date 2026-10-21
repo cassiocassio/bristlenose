@@ -247,6 +247,7 @@
     "showGroup": "{{group}} tonen",
     "hideGroup": "{{group}} verbergen",
     "assignToSelected": "{{name}} toewijzen aan geselecteerde citaten",
+    "focusOnTag": "Focussen op citaten met {{name}}",
     "frameworkSentiment": "Sentiment"
   },
   "footer": {

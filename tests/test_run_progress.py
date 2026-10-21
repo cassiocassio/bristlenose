@@ -521,3 +521,35 @@ def test_a_failed_discussion_stage_still_reports_its_completion(tmp_path):
         ))
 
     estimator.stage_completed.assert_any_call("discussion", ANY)
+
+
+def test_the_manifest_says_render_is_running_before_the_people_file(tmp_path):
+    """The events log says "render" from the people file on (the entry emit
+    moved above it, R27), so the manifest must say the same: a crash in the
+    people file otherwise leaves the two records disagreeing about where the
+    run was. The manifest is marked in memory and written at completion, as
+    every stage does; this pins the order, which is the agreement."""
+    import bristlenose.people as people_mod
+    import bristlenose.pipeline as pipeline_mod
+    from tests.test_pipeline_command_caches import _drive
+
+    order: list[str] = []
+    real_mark = pipeline_mod.mark_stage_running
+    real_write = people_mod.write_people_file
+
+    def _mark(manifest, stage):
+        order.append(f"running:{stage}")
+        return real_mark(manifest, stage)
+
+    def _write(*a, **kw):
+        order.append("people-file")
+        return real_write(*a, **kw)
+
+    with (
+        patch.object(pipeline_mod, "mark_stage_running", new=_mark),
+        patch.object(people_mod, "write_people_file", new=_write),
+    ):
+        _drive(tmp_path, "run", 2, {})
+
+    assert "running:render" in order and "people-file" in order, order
+    assert order.index("running:render") < order.index("people-file"), order

@@ -161,3 +161,42 @@ import Testing
         #expect(p.ringFraction == 0.5)
     }
 }
+
+/// A session count belongs to the stage that sent it. The next stage's entry
+/// line carries none, and until its own first session finishes the row said
+/// the previous stage's count beside the new verb — "Extracting quotes ·
+/// 8 of 8" (the spec's "stale N of M", docs/design-progress-ring-estimate.md).
+@Suite struct RunProgressStageCountTests {
+
+    private let start = Date(timeIntervalSince1970: 1_000)
+
+    private func at(_ p: PipelineProgress, _ t: Double, stage: String?,
+                    complete: Int? = nil, total: Int? = nil) -> PipelineProgress {
+        RunProgressMath.apply(
+            stage: stage, sessionsComplete: complete, sessionsTotal: total,
+            stageFraction: nil, etaRemainingSeconds: 60, predictedTotalSeconds: 300,
+            to: p, startedAt: start, now: start.addingTimeInterval(t)
+        )
+    }
+
+    @Test func aNewStageDropsThePreviousStagesCount() {
+        var p = PipelineProgress(startedAt: start)
+        p = at(p, 10, stage: "topics", complete: 8, total: 8)
+        p = at(p, 20, stage: "quotes")                        // its entry: no count yet
+        #expect(p.sessionsComplete == nil && p.sessionsTotal == nil)
+        let row = RunProgressSubtitle.compose(
+            stage: p.stage, sessionsComplete: p.sessionsComplete,
+            sessionsTotal: p.sessionsTotal, etaRemainingSeconds: p.etaRemainingSeconds,
+            separator: " · ", localize: { key, _ in key })
+        #expect(!row.contains("sessionsCount"), "the row still carries a count: \(row)")
+        p = at(p, 30, stage: "quotes", complete: 1, total: 8)  // its own first session
+        #expect(p.sessionsComplete == 1 && p.sessionsTotal == 8)
+    }
+
+    @Test func aLineWithNoStageKeepsTheRunningStagesCount() {
+        var p = PipelineProgress(startedAt: start)
+        p = at(p, 10, stage: "quotes", complete: 3, total: 8)
+        p = at(p, 20, stage: nil)                             // a session became readable
+        #expect(p.sessionsComplete == 3 && p.sessionsTotal == 8)
+    }
+}

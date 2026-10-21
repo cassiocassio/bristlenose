@@ -174,9 +174,15 @@ enum RunProgressMath {
             // the download sends no transcribe entry: its first line is the
             // first file done); any later stage starts at its first line.
             p.stageStartedAt = previous.stage == nil ? (p.timeBaseline ?? startedAt) : now
+            // A session count belongs to the stage that sent it: a new stage
+            // starts with its own line's count, or none until its first
+            // session finishes — not the previous stage's "8 of 8".
+            p.sessionsComplete = sessionsComplete
+            p.sessionsTotal = sessionsTotal
+        } else {
+            if let sessionsComplete { p.sessionsComplete = sessionsComplete }
+            if let sessionsTotal { p.sessionsTotal = sessionsTotal }
         }
-        if let sessionsComplete { p.sessionsComplete = sessionsComplete }
-        if let sessionsTotal { p.sessionsTotal = sessionsTotal }
         if let etaRemainingSeconds { p.etaRemainingSeconds = etaRemainingSeconds }
         if let predictedTotalSeconds { p.predictedTotalSeconds = predictedTotalSeconds }
         // A line that names a stage carries that stage's budget, or none; a

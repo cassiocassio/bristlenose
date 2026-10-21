@@ -3332,7 +3332,9 @@ class Pipeline:
             # Render is unconditional (no cached branch, no _emit_remaining),
             # so this entry-emit is the only event that advances the verb to
             # "Rendering". ETA is the one carried from the last stage that
-            # reported its completion (grouping, or discussion when on).
+            # reported its completion (grouping, or discussion when on). The
+            # manifest says the same from here, so the two records agree.
+            mark_stage_running(manifest, _M_STAGE_RENDER)
             self._emit_stage_entry(STAGE_RENDER)
             t0 = time.perf_counter()
             status.update("[dim]Updating people file...[/dim]")
@@ -3400,7 +3402,6 @@ class Pipeline:
                 logger.warning("Scene colours skipped", exc_info=True)
 
             # ── Stage 12: Render output ──────────────────────────────
-            mark_stage_running(manifest, _M_STAGE_RENDER)
             status.update("[dim]Rendering output...[/dim]")
             analysis = _compute_analysis(
                 screen_clusters, theme_groups, all_quotes, sessions,

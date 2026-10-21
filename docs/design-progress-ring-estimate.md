@@ -55,8 +55,13 @@ text below:
   the row reads "Rendering" from their start (`test_the_people_file_is_timed_as_render`). Two
   consequences, accepted: the CLI's "Rendered report" checkmark time now includes them; and render's
   Welford mean covers its whole history, so its share grows toward the new scope over many runs
-  rather than at once. Resetting render's history was considered and not done (open item).
-- **Still separate:** the stale "N of M" next to a non-session stage (last bullet of Related).
+  rather than at once. Resetting render's history was considered and not done (open item). The
+  manifest's `mark_stage_running(render)` moved up with the entry emit, so the two records name the
+  same stage if the run dies in the people file (in memory, written at completion as every stage is).
+- **The stale "N of M" is closed too (21 Oct 2026):** a new stage's entry line takes its own session
+  count — none until its first session finishes — rather than carrying the previous stage's "8 of 8"
+  (`RunProgressMath.apply`, `RunProgressStageCountTests`); the existing wording, with the count simply
+  absent where it no longer applies.
 
 Sibling doc: [`design-sidebar-activity-indicators.md`](design-sidebar-activity-indicators.md) (the
 Phase 0b determinate-ring design this refines).
@@ -211,4 +216,4 @@ time fraction as the slice-fill signal for `cluster`. B only if the beta window 
 - Sibling parked item: the "glowing/shimmer alive-progress treatment" (ambient motion for a held
   determinate ring) — same progress-indicator honesty theme, same post-TF window.
 - The stale "N of M" session count shown next to non-session stages (e.g. "Grouping themes · 4 of 5")
-  is a separate, smaller wart tracked independently.
+  was a separate, smaller wart — closed 21 Oct 2026 (see the Built block).

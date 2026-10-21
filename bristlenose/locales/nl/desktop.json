@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Gedeeltelijk voltooid",
-        "failed": "Run mislukt"
+        "failed": "Run mislukt",
+        "reportError": "Rapport kon niet worden getoond"
       },
       "action": {
         "copy": "Kopieer details",
@@ -410,6 +411,7 @@
         "completed_partial": "Analyse voltooid met fouten voor {{project}}"
       },
       "noStructuredCause": "Gedetailleerde oorzaak niet vastgelegd.",
+      "reportError": "Je analyse is veilig — alleen de weergave is mislukt. Probeer opnieuw laadt het rapport opnieuw. Gebeurt het nog eens, kopieer dan de details en stuur ze via Help ▸ Stuur feedback.",
       "overflow_one": "… en {{count}} andere fout afgekapt",
       "overflow_other": "… en {{count}} andere fouten afgekapt",
       "reason": {

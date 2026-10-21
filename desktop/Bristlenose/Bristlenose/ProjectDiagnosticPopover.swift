@@ -30,6 +30,14 @@ struct ProjectDiagnosticPopover: View {
     /// presenter for the same reason as `onLocate`: an AppKit-hosted popover
     /// ignores `dismiss`.
     var closePopover: (() -> Void)? = nil
+    /// The window's report crash, when the glyph was drawn for one (decision
+    /// #2, 21 Oct 2026). Outranks `state` for the headline, the body and Copy
+    /// details: the row lit for the crash, so the popover speaks of it. The
+    /// header buttons are unchanged — Show Log keeps its shipped meaning,
+    /// the project's log, shown only when the file exists. `state` may be the
+    /// `.idle` stand-in from `ReportCrash.popoverState`, so no header button
+    /// may key on `.idle`.
+    var reportCrash: ReportCrash? = nil
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
@@ -139,6 +147,10 @@ struct ProjectDiagnosticPopover: View {
     /// ("the affordance promises something it doesn't deliver"). `.unreachable`
     /// became clickable on 26 Aug 2026 and this switch is why it isn't empty.
     private var headlineStatus: String {
+        if reportCrash != nil {
+            // The row's key, so the two cannot disagree (as "Run failed").
+            return i18n.t("desktop.pipeline.diagnostic.header.reportError")
+        }
         switch state {
         case .failed:
             return i18n.t("desktop.pipeline.status.headline.failed")
@@ -156,6 +168,37 @@ struct ProjectDiagnosticPopover: View {
 
     @ViewBuilder
     private func popoverBodyForCurrentState() -> some View {
+        if let reportCrash {
+            reportCrashBody(reportCrash)
+        } else {
+            popoverBodyForPipelineState()
+        }
+    }
+
+    /// The report crash — `unreachableBody`'s shape: one callout sentence
+    /// (your analysis is safe, Retry reloads, send us the details if it
+    /// recurs), then a caption of selectable detail, the error and the route.
+    /// The stack frames are not drawn; they ride Copy details.
+    @ViewBuilder
+    private func reportCrashBody(_ crash: ReportCrash) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(i18n.t("desktop.pipeline.diagnostic.reportError"))
+                .font(.callout)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(crash.message) · \(crash.route)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineLimit(3)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func popoverBodyForPipelineState() -> some View {
         switch state {
         case .completedPartial(let summary), .failedWithDiagnostic(let summary):
             bucketsBody(summary: summary)
@@ -181,7 +224,6 @@ struct ProjectDiagnosticPopover: View {
             Text(i18n.t(reason.explanationKey))
                 .font(.callout)
                 .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if !project.path.isEmpty {
                 Text(project.path)
@@ -312,6 +354,15 @@ struct ProjectDiagnosticPopover: View {
     /// native Mac pattern (Finder, Safari Copy URL). Dispatches on `state`.
     private func copyDiagnosticForCurrentState() {
         let text: String
+        if let reportCrash {
+            text = Self.formatReportCrashPlaintext(
+                crash: reportCrash, projectName: project.name, projectPath: project.path
+            )
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
+            return
+        }
         switch state {
         case .completedPartial(let summary):
             text = Self.formatDiagnosticPlaintext(
@@ -348,6 +399,34 @@ struct ProjectDiagnosticPopover: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
+    }
+
+    /// Plaintext for a report crash — `formatDiagnosticPlaintext`'s shape
+    /// (version line, project, outcome), then where it happened, what the
+    /// engine said, and the frames the SPA sent, indented as a stack reads.
+    /// English-only by design, like its siblings: the paste goes into a bug
+    /// report. The project path is redacted the same way; a frame's URL names
+    /// the bundle, never the study.
+    static func formatReportCrashPlaintext(
+        crash: ReportCrash, projectName: String, projectPath: String
+    ) -> String {
+        var lines: [String] = []
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        lines.append("Bristlenose \(appVersion) (\(build)) on \(os)")
+        lines.append("Project: \(projectName)")
+        lines.append("Outcome: \(MessageKind.warning.glyph) Report couldn't be shown")
+        lines.append("Where: \(crash.route)")
+        lines.append("Error: \(crash.message)")
+        for frame in crash.frames {
+            lines.append("    \(frame)")
+        }
+        var text = lines.joined(separator: "\n")
+        if !projectPath.isEmpty {
+            text = text.replacingOccurrences(of: projectPath, with: "<project>")
+        }
+        return text
     }
 
     /// Plaintext for an `.unreachable` diagnostic — the Unicode `MessageKind`

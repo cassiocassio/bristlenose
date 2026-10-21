@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Delvis gennemførelse",
-        "failed": "Kørslen mislykkedes"
+        "failed": "Kørslen mislykkedes",
+        "reportError": "Rapporten kunne ikke vises"
       },
       "action": {
         "copy": "Kopiér detaljer",
@@ -410,6 +411,7 @@
         "completed_partial": "Analysen blev færdig med fejl for {{project}}"
       },
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
+      "reportError": "Din analyse er i sikkerhed – kun visningen fejlede. Prøv igen genindlæser rapporten. Sker det igen, så kopiér detaljerne og send dem via Hjælp ▸ Send feedback.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",
       "overflow_other": "… og {{count}} yderligere fejl blev afkortet",
       "reason": {

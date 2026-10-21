@@ -11,6 +11,10 @@ import {
   postPlayerState,
   postStoreMiroToken,
   postFocusChange,
+  postReportError,
+  REPORT_ERROR_MESSAGE_LIMIT,
+  REPORT_ERROR_FRAME_LIMIT,
+  REPORT_ERROR_FRAME_LENGTH,
 } from "./bridge";
 
 // ---------------------------------------------------------------------------
@@ -74,6 +78,38 @@ describe("postRouteChange", () => {
 
   it("no-ops gracefully when webkit is absent", () => {
     expect(() => postRouteChange("/report/")).not.toThrow();
+  });
+});
+
+describe("postReportError", () => {
+  it("posts report-error with the route, the message and the frames", () => {
+    const post = installMockWebkit();
+    postReportError("/report/quotes/", "TypeError: x", ["at a (b.js:1:2)"]);
+    expect(post).toHaveBeenCalledWith({
+      type: "report-error",
+      route: "/report/quotes/",
+      message: "TypeError: x",
+      frames: ["at a (b.js:1:2)"],
+    });
+  });
+
+  it("bounds the payload to the limits the shell keeps", () => {
+    // The same three numbers as ReportCrash.swift — see the constants' doc.
+    expect(REPORT_ERROR_MESSAGE_LIMIT).toBe(500);
+    expect(REPORT_ERROR_FRAME_LIMIT).toBe(8);
+    expect(REPORT_ERROR_FRAME_LENGTH).toBe(300);
+    const post = installMockWebkit();
+    const long = "x".repeat(5_000);
+    postReportError(long, long, Array.from({ length: 50 }, () => long));
+    const [msg] = post.mock.calls[0] as [{ route: string; message: string; frames: string[] }];
+    expect(msg.route).toHaveLength(REPORT_ERROR_MESSAGE_LIMIT);
+    expect(msg.message).toHaveLength(REPORT_ERROR_MESSAGE_LIMIT);
+    expect(msg.frames).toHaveLength(REPORT_ERROR_FRAME_LIMIT);
+    for (const f of msg.frames) expect(f).toHaveLength(REPORT_ERROR_FRAME_LENGTH);
+  });
+
+  it("no-ops gracefully when webkit is absent", () => {
+    expect(() => postReportError("/report/", "Error: x", [])).not.toThrow();
   });
 });
 

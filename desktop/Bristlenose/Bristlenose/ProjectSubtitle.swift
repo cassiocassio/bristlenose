@@ -54,6 +54,14 @@ enum SubtitleVariant: Equatable {
     /// `MessageKind` and a locale key, so the view localises it like everything
     /// else and the glyph follows from the kind.
     case unreachable(reason: UnreachableReason)
+    /// The whole report failed to render in the window showing THIS project
+    /// (the `/report` error boundary's `report-error` bridge message,
+    /// decision #2, 21 Oct 2026). The analysis is intact and Retry usually
+    /// works, so by the 18 Jun rule this is `warning`, the class of an
+    /// ejected drive, not a failed run. Carries the crash so the popover and
+    /// Copy details read the same record the row lit for; cleared by the
+    /// window on its next successful render.
+    case reportError(ReportCrash)
     /// A drop / Add-Files gesture is landing N interviews in THIS project — the
     /// pre-copy "Adding N interviews…" acknowledgement, held for a ~2 s floor so
     /// it can't flash-and-vanish on a near-instant clonefile copy, then it yields
@@ -161,6 +169,10 @@ extension SubtitleVariant {
         switch self {
         case .failed, .failedDiagnostic, .completedPartial, .unreachable:
             return .diagnostics
+        case .reportError:
+            // The route, the error and the stack have no other home: the row
+            // can't fit them and the context menu can't show them.
+            return .diagnostics
         case .cantFind:
             // Glyph, no door. The one fact — the volume or host name — is
             // already in the subtitle, so there is nothing to disclose, and
@@ -220,6 +232,12 @@ extension SubtitleVariant {
         case .cantFind:
             // "This project isn't usable" — warning by the 18 Jun rule, whose
             // discriminator is usability, not cause.
+            return .warning
+        case .reportError:
+            // The report isn't usable right now, and nothing failed on disk:
+            // the analysis is intact and a reload usually brings it back.
+            // Warning, as `.cantFind` is — not error, which is a run that
+            // can't proceed.
             return .warning
         case .deltaOnly(.databaseForked), .ready(_, .some(.databaseForked)):
             // The report is reading a different project row from the one the
@@ -296,8 +314,13 @@ enum ProjectSubtitle {
     ///
     /// **Order (settled 18 Jun 2026 — `docs/design-desktop-project-status.md`
     /// §Precedence, §5):**
-    /// `cantFind (availability) › failed › running › stopped / partial ›
-    /// (idle: copying › missing › unanalysed › silence)`. Screen reading
+    /// `cantFind (availability) › failed › running › unreachable ›
+    /// completedPartial › reportError › queued / stopped / partial ›
+    /// (idle: adding › batch › copying › forked › reportError › screens ›
+    /// missing › unanalysed › silence)`. The report crash (21 Oct 2026)
+    /// yields to the verb-led and cause-shaped states and to the idle
+    /// activities and the error-kind delta, and takes the line from the rest
+    /// — `ReportCrash.outranks` plus the placement in `resolveIdle`. Screen reading
     /// (14 Oct 2026) joins the idle tier after copying and the distress
     /// deltas (forked, missing), above the quiet `unanalysed` one.
     ///
@@ -320,6 +343,7 @@ enum ProjectSubtitle {
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
+        reportCrash: ReportCrash? = nil,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -351,10 +375,17 @@ enum ProjectSubtitle {
             // Stopping outranks progress — acknowledge the Stop click.
             return isStopping ? .stopping : .running
         case .queued(let position):
+            // The window's report crashed (decision #2): a queued run may not
+            // start for hours, and the stack has no other door meanwhile.
+            // `ReportCrash.outranks` is the arbitration, exhaustive over
+            // `PipelineState`; the arms above it never reach here.
+            if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
             return .queued(position: position)
         case .stopped:
+            if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
             return .stopped
         case .partial(let kind, _):
+            if let reportCrash, ReportCrash.outranks(pipelineState) { return .reportError(reportCrash) }
             return .partial(transcribeOnly: kind == "transcribe-only")
         case .unreachable(let reason):
             return .unreachable(reason: reason)
@@ -367,6 +398,7 @@ enum ProjectSubtitle {
                 copy: copy,
                 importBatch: importBatch,
                 screens: screens,
+                reportCrash: ReportCrash.outranks(pipelineState) ? reportCrash : nil,
                 lastRunAt: lastRunAt,
                 missingCount: missingCount,
                 unanalysedCount: unanalysedCount,
@@ -376,8 +408,9 @@ enum ProjectSubtitle {
     }
 
     /// The idle / ready tier: the activities (adding › cloud batch › copy),
-    /// then a distress delta (forked, missing), then screen reading, then the
-    /// quiet `unanalysed` delta, then **nothing at all**.
+    /// then the error-kind delta (forked), then the window's report crash,
+    /// then screen reading over the warning delta (missing), then the quiet
+    /// `unanalysed` delta, then **nothing at all**.
     ///
     /// `lastRunAt` is accepted but **not read** (Schema E — the bare date it
     /// used to produce is retired). It stays in the signature because the
@@ -391,6 +424,7 @@ enum ProjectSubtitle {
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
+        reportCrash: ReportCrash?,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -421,6 +455,20 @@ enum ProjectSubtitle {
         }
         let delta = pickDelta(missingCount: missingCount, unanalysedCount: unanalysedCount,
                               databaseForked: databaseForked)
+        // The window's report crashed (decision #2, 21 Oct 2026). Every act
+        // the researcher started (an add, a batch, a copy) has kept the line
+        // above, and so does an error-kind delta: a forked database is a
+        // plausible cause of the crash and the graver fact, and a warning
+        // must not hide an error. The crash then outranks screen reading and
+        // the warning/info deltas — the report can't be read at all right
+        // now, and the stack has no other door. Read off the delta's own
+        // kind, as the screens arm below does, so the two can't disagree.
+        if let delta, SubtitleVariant.deltaOnly(delta).glyphKind == .error {
+            return .deltaOnly(delta)
+        }
+        if let reportCrash {
+            return .reportError(reportCrash)
+        }
         // Screen reading is the quietest activity: a background job the
         // researcher did not start by a gesture and cannot stop, so every act
         // they did start (an add, a batch, a copy) keeps the line over it, and

@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Kısmi tamamlanma",
-        "failed": "Çalıştırma başarısız oldu"
+        "failed": "Çalıştırma başarısız oldu",
+        "reportError": "Rapor gösterilemedi"
       },
       "action": {
         "copy": "Ayrıntıları kopyala",
@@ -410,6 +411,7 @@
         "completed_partial": "{{project}} için analiz hatalarla tamamlandı"
       },
       "noStructuredCause": "Ayrıntılı neden yakalanmadı.",
+      "reportError": "Çözümlemeniz güvende; yalnızca görüntüleme başarısız oldu. Yeniden Dene raporu yeniden yükler. Yine olursa ayrıntıları kopyalayıp Yardım ▸ Geri Bildirim Gönder ile gönderin.",
       "overflow_one": "… ve {{count}} hata daha kesildi",
       "overflow_other": "… ve {{count}} hata daha kesildi",
       "reason": {

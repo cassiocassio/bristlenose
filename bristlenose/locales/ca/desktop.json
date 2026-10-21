@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Compleció parcial",
-        "failed": "L'execució ha fallat"
+        "failed": "L'execució ha fallat",
+        "reportError": "No s'ha pogut mostrar l'informe"
       },
       "action": {
         "copy": "Copia els detalls",
@@ -410,6 +411,7 @@
         "completed_partial": "L'anàlisi ha acabat amb errors per a {{project}}"
       },
       "noStructuredCause": "No s'ha capturat la causa detallada.",
+      "reportError": "La teva anàlisi està segura: només ha fallat la visualització. Torna-ho a provar recarrega l'informe. Si torna a passar, copia els detalls i envia'ls amb Ajuda ▸ Envia comentaris.",
       "overflow_one": "… i {{count}} error més truncat",
       "overflow_other": "… i {{count}} errors més truncats",
       "reason": {

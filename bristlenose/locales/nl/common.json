@@ -35,8 +35,8 @@
     "search": "Zoek",
     "loading": "Laden…",
     "noResults": "Geen resultaten",
-    "error": "Fout",
     "lensError": "Deze weergave kon niet worden getoond. Probeer het opnieuw of kies een andere weergave.",
+    "reportError": "Dit rapport kon niet worden getoond.",
     "panelError": "Deze zijbalk kon niet worden getoond.",
     "partError": "Dit kon niet worden getoond."
   },

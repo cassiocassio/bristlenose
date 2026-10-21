@@ -390,6 +390,18 @@ final class BridgeHandler: ObservableObject {
     /// panel used to open, take the pick, and do nothing (R47 follow-up).
     @Published var selectedProjectTakesFiles: Bool = false
 
+    /// This window's report crashed: the `/report` error boundary's
+    /// `report-error` post (decision #2, 21 Oct 2026). Read by `ContentView`
+    /// into the sidebar row of the study this window shows, and by the row's
+    /// popover. Nil whenever the document is rendering: cleared by
+    /// `route-change` (the layout rendered — the fresh layout posts it on
+    /// mount after Retry's reload), by a status page replacing the SPA, and
+    /// by `reset()` (a project switch), so it never outlives the window that
+    /// crashed. **Not by `ready`**: a crash and a `ready` can belong to one
+    /// document, and `ready` is also fabricated by `WebView.didFinish`, so it
+    /// proves nothing about the layout.
+    @Published var reportCrash: ReportCrash?
+
     /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
     /// folder-access half — from the facts that decide them.
     ///
@@ -1004,6 +1016,8 @@ final class BridgeHandler: ObservableObject {
                 StatusPageOutcome(bridgeValue: body["outcome"] as? String)
             )
             pendingLensIntent = nil
+            // The crashed SPA is gone; this page is not it.
+            reportCrash = nil
             // A status page withholds nothing of its own; the SPA's last
             // `lens-availability` post no longer describes this document.
             lensReadiness = .all
@@ -1013,6 +1027,9 @@ final class BridgeHandler: ObservableObject {
                 currentPath = url
                 sessionsRouteMemory.observe(path: url)
                 leaveWithheldLens()
+                // AppLayout posts this from an effect, which runs only after
+                // the layout committed: the report rendered again.
+                reportCrash = nil
             }
 
         case "anchor-change":
@@ -1272,6 +1289,46 @@ final class BridgeHandler: ObservableObject {
                 OutOfCreditModel.recordActiveProviderOutOfCredit(provider: provider)
             }
 
+        case "report-error":
+            // The whole report failed to render (decision #2, 21 Oct 2026,
+            // `docs/mockups/report-crash-fallback.html`): the `/report`
+            // boundary posts the route, the error and the first stack frames
+            // once per crash. `llm-failure`'s shape — logged here so it lands
+            // in the unified log (the WKWebView console is invisible in a
+            // release build), and kept on this window for the sidebar row's
+            // warning glyph and the popover's Copy details. Deliberately not
+            // written to the project's bristlenose.log: nothing in the SPA
+            // writes to the serve's log today, and a route for it would be
+            // new machinery. A payload with no route or message is dropped
+            // and said so, never lit.
+            guard let crash = ReportCrash.fromBridge(body) else {
+                Self.log.error("report-error dropped: no route or message in the payload")
+                return
+            }
+            // The message can quote a value from the page, so it is private in
+            // the log; Copy details carries it, redacted of the project path.
+            Self.log.error(
+                "report-error route=\(crash.route, privacy: .public) error=\(crash.message, privacy: .private)"
+            )
+            reportCrash = crash
+            // The fallback is on screen, so the boot veil comes down: the pane
+            // and the sidebar then say the same thing. `documentState` stays
+            // as it was: `.loading` for a crash on the first mount (the shims
+            // were never installed), `.spa` for one after it (a modal's body,
+            // a layout that throws on navigation), where `switchToTab` and
+            // `__bristlenose` are still installed and navigating through them
+            // resets the boundary — the recovery path, which is why the
+            // command gates do not key on `reportCrash`. A `bn:menu-action`
+            // dispatched then reaches no listener; the gates can't see that.
+            isReady = true
+            // A lens clicked during boot keeps its place: the `ready` it waits
+            // for comes from the document a successful Retry mounts, and a
+            // click after the crash queues the same way, so the two behave
+            // alike. Said once, so the wait is on the record.
+            if let pending = pendingLensIntent {
+                Self.log.notice("queued lens \(pending.rawValue, privacy: .public) waits for the report to be retried")
+            }
+
         default:
             break
         }
@@ -1308,6 +1365,8 @@ final class BridgeHandler: ObservableObject {
         personPicker.close()
         isReady = false
         documentState = .loading
+        // The crashed document goes with the selection it belonged to.
+        reportCrash = nil
         // The next document says what it withholds; until then nothing is.
         lensReadiness = .all
         pendingLensIntent = nil

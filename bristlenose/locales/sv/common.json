@@ -35,8 +35,8 @@
     "search": "Sök",
     "loading": "Läser in…",
     "noResults": "Inga resultat",
-    "error": "Fel",
     "lensError": "Den här vyn kunde inte visas. Försök igen eller välj en annan vy.",
+    "reportError": "Den här rapporten kunde inte visas.",
     "panelError": "Den här panelen kunde inte visas.",
     "partError": "Det här kunde inte visas."
   },

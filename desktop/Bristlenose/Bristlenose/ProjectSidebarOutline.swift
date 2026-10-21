@@ -150,6 +150,12 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// frame clock from there, so SwiftUI sees one change per burst rather
     /// than one per animation frame.
     let lastAgentCallAt: [UUID: Date]
+    /// This window's report crashed, paired with the study it was showing
+    /// (decision #2, 21 Oct 2026). The window's `BridgeHandler` keeps the
+    /// crash; `ContentView` names the study, so the row lights for the one
+    /// whose document failed and no other. Nil the rest of the time. Value-
+    /// typed so a crash, and its clearing, re-run `updateNSViewController`.
+    let reportCrash: (projectID: UUID, crash: ReportCrash)?
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -197,6 +203,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.canShareWithAgents = canShareWithAgents
         controller.mcpMounted = mcpMounted
         controller.handshakeProjectPaths = handshakeProjectPaths
+        controller.reportCrash = reportCrash
         controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
@@ -277,6 +284,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var onShowInFinder: (UUID) -> Void = { _ in }
     /// See the representable's `handshakeProjectPaths`.
     var handshakeProjectPaths: Set<String> = []
+    /// The window's report crash and the study it belongs to — see the
+    /// representable's `reportCrash`.
+    var reportCrash: (projectID: UUID, crash: ReportCrash)?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     /// See the representable's `canShareWithAgents` / `mcpMounted`.
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
@@ -1996,6 +2006,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             copy: copyDisplay(for: project),
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
+            reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,
@@ -2085,8 +2096,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// for the context-menu item).
     private func presentDiagnosticPopover(projectID id: UUID, anchorRect rect: NSRect) {
         guard let project = projectIndex?.projects.first(where: { $0.id == id }),
-              let state = pipelineRunner?.state[id],
               let liveData, let i18n else { return }
+        // The popover shows what the glyph was drawn for. A report crash
+        // (decision #2) is not a pipeline state, and a project the pipeline
+        // has never touched has none, so the crash is read off the resolved
+        // variant and the state falls back to `.idle` beside it.
+        let crash: ReportCrash?
+        if case .reportError(let c) = subtitleVariant(for: project) { crash = c } else { crash = nil }
+        guard let state = ReportCrash.popoverState(pipelineState: pipelineRunner?.state[id], crash: crash)
+        else { return }
         // No frame, no padding: the popover owns its own size. The hosting
         // controller reports it through `fittingSize`, which is what NSPopover
         // sizes from — `.preferredContentSize` set explicitly so the controller
@@ -2098,7 +2116,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 self?.activePopover?.close()
                 self?.onLocate(id)
             },
-            closePopover: { [weak self] in self?.activePopover?.close() })
+            closePopover: { [weak self] in self?.activePopover?.close() },
+            reportCrash: crash)
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize

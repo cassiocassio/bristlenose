@@ -97,7 +97,7 @@ class UnsuitableInputDirError(ValueError):
 # this depth visits ~4,000 entries and finds 5 media files, so the cap is not
 # what protects against a silly drop — `_refuse_reason` is.
 #: Our own output directory, which by default lives *inside* the input
-#: folder. Matches `ProjectFolderWatcher.filterEligible`'s exclusion. The
+#: folder. The Mac's port of this walk (`ScanSelection.swift`) skips it too. The
 #: literal is repeated in `cli.py` (six sites) — worth one shared constant,
 #: but that is a separate sweep, not this one.
 OUTPUT_DIR_NAME = "bristlenose-output"
@@ -250,8 +250,8 @@ def _scan_entries(
         # refuse — a refusal names a file the researcher can't see, and one
         # `.claude/settings.local.json` demoted every otherwise-clean run to
         # "Partial completion" that way (29 Aug 2026). Matches
-        # `ProjectFolderWatcher`'s `.skipsHiddenFiles`, so the two scanners
-        # agree on what a folder holds. `is_os_metadata` adds Office's `~$`
+        # the Mac's `ScanSelection`, so the two scanners agree on what a folder
+        # holds (`tests/fixtures/scan-selection-contract.json`). `is_os_metadata` adds Office's `~$`
         # owner files, which are not dot-prefixed (R120).
         if entry.name.startswith(".") or is_os_metadata(entry):
             continue
@@ -281,10 +281,10 @@ def _scan_entries(
                 # a researcher saw was "bristlenose.db — not a format
                 # Bristlenose reads", which is noise they did not create and
                 # cannot act on. Same argument the OS-metadata filter above
-                # already makes. `ProjectFolderWatcher.filterEligible` has
-                # excluded this name since it was written; discovery had not,
-                # which is the same scanner-parity gap
-                # `tests/test_accepted_extension_parity.py` exists to catch.
+                # already makes. The Mac's folder watcher had excluded this
+                # name since it was written; discovery had not, which is the
+                # scanner-parity gap `tests/fixtures/scan-selection-contract.json`
+                # now pins from both sides.
                 if entry.name == OUTPUT_DIR_NAME:
                     continue
                 # The researcher's discussion guide, beside the recordings — a

@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Completamento parziale",
-        "failed": "Esecuzione non riuscita"
+        "failed": "Esecuzione non riuscita",
+        "reportError": "Impossibile mostrare il report"
       },
       "action": {
         "copy": "Copia i dettagli",
@@ -410,6 +411,7 @@
         "completed_partial": "L'analisi è terminata con errori per {{project}}"
       },
       "noStructuredCause": "Causa dettagliata non rilevata.",
+      "reportError": "La tua analisi è al sicuro: è fallita solo la visualizzazione. Riprova ricarica il report. Se succede di nuovo, copia i dettagli e inviali con Aiuto ▸ Invia un feedback.",
       "overflow_one": "… e {{count}} altro errore troncato",
       "overflow_other": "… e altri {{count}} errori troncati",
       "reason": {

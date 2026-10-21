@@ -433,7 +433,8 @@
       },
       "header": {
         "completed_partial": "Částečné dokončení",
-        "failed": "Běh selhal"
+        "failed": "Běh selhal",
+        "reportError": "Zprávu nelze zobrazit"
       },
       "action": {
         "copy": "Kopírovat podrobnosti",
@@ -445,6 +446,7 @@
         "completed_partial": "Analýza projektu {{project}} skončila s chybami"
       },
       "noStructuredCause": "Podrobná příčina nebyla zaznamenána.",
+      "reportError": "Vaše analýza je v bezpečí – selhalo jen zobrazení. Zkusit znovu zprávu znovu načte. Pokud se to bude opakovat, zkopírujte podrobnosti a odešlete je přes Nápověda ▸ Odeslat zpětnou vazbu.",
       "overflow_one": "… a {{count}} další chyba skryta",
       "overflow_few": "… a {{count}} další chyby skryty",
       "overflow_many": "… a {{count}} další chyby skryto",

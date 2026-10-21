@@ -45,6 +45,12 @@ enum SidebarSubtitleText {
             return i18n.t("desktop.pipeline.diagnostic.header.failed")       // :250-251
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
+        case .reportError:
+            // One key for the row and the popover headline, as "Run failed"
+            // is. 24 characters in English against the ~22 budget: it fits the
+            // 240pt sidebar; German is the long one (the row truncates, the
+            // popover says it whole).
+            return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
              .addingInterviews, .copying, .importingBatch, .readingScreens, .copyCancelling,
              .waitingForWhisper:
@@ -115,7 +121,7 @@ enum SidebarSubtitleText {
             return i18n.t("desktop.chrome.copyCancelling")
         case .waitingForWhisper:
             return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
-        case .cantFind, .failed, .failedDiagnostic, .completedPartial,
+        case .cantFind, .failed, .failedDiagnostic, .completedPartial, .reportError,
              .ready, .deltaOnly, .placeholder:
             return nil
         }

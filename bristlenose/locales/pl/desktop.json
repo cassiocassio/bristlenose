@@ -434,7 +434,8 @@
       },
       "header": {
         "completed_partial": "Ukończono częściowo",
-        "failed": "Analiza nie powiodła się"
+        "failed": "Analiza nie powiodła się",
+        "reportError": "Nie można wyświetlić raportu"
       },
       "action": {
         "copy": "Kopiuj szczegóły",
@@ -446,6 +447,7 @@
         "completed_partial": "Analiza zakończona z niepowodzeniami dla {{project}}"
       },
       "noStructuredCause": "Nie zarejestrowano szczegółowej przyczyny.",
+      "reportError": "Twoja analiza jest bezpieczna — nie powiodło się tylko wyświetlanie. Spróbuj ponownie wczytuje raport od nowa. Jeśli to się powtórzy, skopiuj szczegóły i wyślij je przez Pomoc ▸ Wyślij opinię.",
       "overflow_one": "… oraz {{count}} kolejne niepowodzenie pominięto",
       "overflow_few": "… oraz {{count}} kolejne niepowodzenia pominięto",
       "overflow_many": "… oraz {{count}} kolejnych niepowodzeń pominięto",

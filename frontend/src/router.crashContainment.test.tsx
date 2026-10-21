@@ -5,6 +5,9 @@ import { createHashRouter, createMemoryRouter, RouterProvider } from "react-rout
 import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
 import { featureFlags } from "./utils/featureFlags";
+import { postReportError } from "./shims/bridge";
+
+const mockPostReportError = vi.mocked(postReportError);
 
 // R85: a crash in one lens must stay in that lens, a crash in a sidebar must
 // stay in that sidebar, and a crash in the chrome (header, nav, footer, the
@@ -19,6 +22,9 @@ const boom = vi.hoisted(() => ({
   tagSidebar: false,
   signalsSidebar: false,
   minimap: false,
+  // The layout itself: a throw here climbs to the /report boundary, the
+  // whole-report crash (decision #2).
+  layout: false,
   // The chrome AppLayout mounts beside the lens (decision #9).
   header: false,
   navBar: false,
@@ -55,6 +61,19 @@ vi.mock("react-i18next", async (importOriginal) => {
       return { ...r, t };
     }) as typeof real.useTranslation,
   };
+});
+
+// The shell's end of the whole-report crash: `report-error` is posted for
+// the /report boundary and never for a lens (`postReportError`); the real
+// poster no-ops outside WKWebView, so a stub is the only way to see it.
+vi.mock("./shims/bridge", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./shims/bridge")>()),
+  postReportError: vi.fn(),
+}));
+
+vi.mock("./layouts/AppLayout", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./layouts/AppLayout")>();
+  return { ...real, AppLayout: throwsWhen(() => boom.layout, real.AppLayout) };
 });
 
 vi.mock("./components/Header", async (importOriginal) => {
@@ -146,6 +165,8 @@ beforeEach(() => {
   boom.tagSidebar = false;
   boom.signalsSidebar = false;
   boom.minimap = false;
+  boom.layout = false;
+  mockPostReportError.mockClear();
   boom.header = false;
   boom.navBar = false;
   boom.footer = false;
@@ -291,6 +312,68 @@ function expectContainedPanelFallback(panel: Element) {
   expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
   expect(console.error).toHaveBeenCalledWith("[PanelError]", expect.any(Error));
 }
+
+describe("a crash in the whole report", () => {
+  // Decision #2 (21 Oct 2026, spec docs/mockups/report-crash-fallback.html):
+  // the /report boundary says what couldn't be shown, keeps Retry, and tells
+  // the shell once — route, error, first frames — so the Mac sidebar row and
+  // its popover have something to show. A lens crash tells the shell nothing.
+
+  it("says the report couldn't be shown, with Retry, and nothing of the error", () => {
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("This report couldn’t be shown.");
+    expect(alert).not.toHaveTextContent(/^Error$/);
+    expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(console.error).toHaveBeenCalledWith("[RouteError]", expect.any(Error));
+  });
+
+  it("posts report-error to the shell once, with the route, the error and bounded frames", () => {
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    expect(mockPostReportError).toHaveBeenCalledOnce();
+    const [route, message, frames] = mockPostReportError.mock.calls[0];
+    expect(route).toBe("/report/quotes/");
+    expect(message).toBe("Error: kaboom-secret-stack-detail");
+    expect(frames.length).toBeGreaterThan(0);
+    expect(frames.length).toBeLessThanOrEqual(8);
+    // Frames, not the message line repeated: V8's `at …` or JSC's `fn@url`.
+    for (const f of frames) expect(f).toMatch(/^at |@/);
+    expect(frames.join("\n")).not.toContain("kaboom-secret-stack-detail");
+  });
+
+  it("posts once per crash: a navigation that crashes again posts again", async () => {
+    boom.layout = true;
+    const { router } = renderAt("/report/quotes/");
+    expect(mockPostReportError).toHaveBeenCalledOnce();
+    // The boundary resets on navigation, the layout throws again: a second
+    // crash, a second post. The fallback re-rendering in between posts nothing
+    // (the effect is keyed on the error object).
+    await act(async () => {
+      await router.navigate("/report/sessions/");
+    });
+    expect(mockPostReportError).toHaveBeenCalledTimes(2);
+    expect(mockPostReportError.mock.calls[1][0]).toBe("/report/sessions/");
+  });
+
+  it("for a lens crash tells the shell nothing", () => {
+    boom.mode = "first-render";
+    const { container } = renderAt("/report/signals/");
+    expectContainedFallback(container);
+    expect(mockPostReportError).not.toHaveBeenCalled();
+  });
+
+  it("for a sidebar or chrome crash tells the shell nothing", () => {
+    boom.navBar = true;
+    boom.tagSidebar = true;
+    renderAt("/report/quotes/");
+    expect(screen.getByTestId("quotes-lens")).toBeInTheDocument();
+    expect(mockPostReportError).not.toHaveBeenCalled();
+  });
+});
 
 describe("a crash in one sidebar", () => {
   beforeEach(() => {

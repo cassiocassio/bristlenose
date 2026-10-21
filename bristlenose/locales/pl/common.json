@@ -35,8 +35,8 @@
     "search": "Szukaj",
     "loading": "Wczytywanie…",
     "noResults": "Brak wyników",
-    "error": "Błąd",
     "lensError": "Nie udało się wyświetlić tego widoku. Spróbuj ponownie lub wybierz inny widok.",
+    "reportError": "Nie udało się wyświetlić tego raportu.",
     "panelError": "Nie udało się wyświetlić tego paska bocznego.",
     "partError": "Nie udało się tego wyświetlić."
   },

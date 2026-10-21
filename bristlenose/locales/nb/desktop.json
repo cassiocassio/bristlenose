@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Delvis fullført",
-        "failed": "Kjøring mislyktes"
+        "failed": "Kjøring mislyktes",
+        "reportError": "Rapporten kunne ikke vises"
       },
       "action": {
         "copy": "Kopier detaljer",
@@ -410,6 +411,7 @@
         "completed_partial": "Analysen ble fullført med feil for {{project}}"
       },
       "noStructuredCause": "Detaljert årsak ble ikke registrert.",
+      "reportError": "Analysen din er trygg – bare visningen feilet. Prøv igjen laster rapporten på nytt. Skjer det igjen, kopier detaljene og send dem via Hjelp ▸ Send tilbakemelding.",
       "overflow_one": "… og {{count}} feil til ble avkortet",
       "overflow_other": "… og {{count}} feil til ble avkortet",
       "reason": {

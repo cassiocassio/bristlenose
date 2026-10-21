@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Conclusão parcial",
-        "failed": "Falha na execução"
+        "failed": "Falha na execução",
+        "reportError": "Relatório não pôde ser mostrado"
       },
       "action": {
         "copy": "Copiar detalhes",
@@ -410,6 +411,7 @@
         "completed_partial": "A análise terminou com falhas para {{project}}"
       },
       "noStructuredCause": "Causa detalhada não registada.",
+      "reportError": "A sua análise está segura — só a apresentação falhou. Tentar novamente recarrega o relatório. Se voltar a acontecer, copie os detalhes e envie-os com Ajuda ▸ Enviar comentários.",
       "overflow_one": "… e mais {{count}} falha truncada",
       "overflow_other": "… e mais {{count}} falhas truncadas",
       "reason": {

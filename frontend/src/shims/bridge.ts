@@ -92,7 +92,8 @@ export type BridgeMessage =
   | { type: "lens-availability"; lenses: Record<string, boolean> }
   | { type: "timeline-state"; available: boolean; on: boolean; lanes: number }
   | ({ type: "timeline-menu" } & WireTimelineMenu)
-  | { type: "llm-failure"; kind: string; provider: string };
+  | { type: "llm-failure"; kind: string; provider: string }
+  | { type: "report-error"; route: string; message: string; frames: string[] };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -178,6 +179,45 @@ export function postFindPasteboardWrite(text: string): void {
  */
 export function postLLMFailure(kind: string, provider: string): void {
   postNativeMessage({ type: "llm-failure", kind, provider });
+}
+
+/**
+ * The most of a crash the shell is sent: enough for Copy details, no more.
+ * One bound on both sides — `ReportCrash.messageLimit` / `frameLimit` /
+ * `frameLength` in `desktop/Bristlenose/Bristlenose/ReportCrash.swift` hold
+ * the same three numbers, so what the SPA sends is what the shell keeps.
+ */
+export const REPORT_ERROR_MESSAGE_LIMIT = 500;
+export const REPORT_ERROR_FRAME_LIMIT = 8;
+export const REPORT_ERROR_FRAME_LENGTH = 300;
+
+/**
+ * Tell the shell the whole report crashed (decision #2, 21 Oct 2026; spec
+ * `docs/mockups/report-crash-fallback.html`). `llm-failure`'s shape: one
+ * post, the shell decides what to do with it — it lights the project's
+ * sidebar row ("Report couldn't be shown", a warning glyph) and gives the
+ * popover's Copy details the route, the error and the first stack frames.
+ *
+ * Posted by `RouteError` for the **whole-report** scope only. A lens crash
+ * stays web-only: the fallback is scoped, the other lenses still work, and
+ * raising the row for it would be news about a state the researcher can
+ * already see and leave.
+ *
+ * The payload is bounded here as well as in Swift: a message can carry an
+ * embedded object dump, and a stack of a hundred frames says nothing the
+ * first eight don't. The WKWebView console is invisible in a release build,
+ * so this is the only road the stack has to the researcher. No-ops outside
+ * WKWebView.
+ */
+export function postReportError(route: string, message: string, frames: string[]): void {
+  postNativeMessage({
+    type: "report-error",
+    route: route.slice(0, REPORT_ERROR_MESSAGE_LIMIT),
+    message: message.slice(0, REPORT_ERROR_MESSAGE_LIMIT),
+    frames: frames
+      .slice(0, REPORT_ERROR_FRAME_LIMIT)
+      .map((f) => f.slice(0, REPORT_ERROR_FRAME_LENGTH)),
+  });
 }
 
 /** Notify native shell of player open/close and play/pause state changes. */

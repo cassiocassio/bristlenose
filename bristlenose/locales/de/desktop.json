@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Teilweise abgeschlossen",
-        "failed": "Lauf fehlgeschlagen"
+        "failed": "Lauf fehlgeschlagen",
+        "reportError": "Bericht nicht anzeigbar"
       },
       "action": {
         "copy": "Details kopieren",
@@ -410,6 +411,7 @@
         "completed_partial": "Analyse für {{project}} mit Fehlern beendet"
       },
       "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
+      "reportError": "Ihre Analyse ist sicher – nur die Anzeige ist fehlgeschlagen. „Erneut versuchen“ lädt den Bericht neu. Falls es erneut passiert, kopieren Sie die Details und senden Sie sie über Hilfe ▸ Feedback senden.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
       "overflow_other": "… und {{count}} weitere Fehler gekürzt",
       "reason": {

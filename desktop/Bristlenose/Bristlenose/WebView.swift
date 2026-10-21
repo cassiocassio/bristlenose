@@ -572,6 +572,9 @@ struct WebView: NSViewRepresentable {
         /// loaded from a feature branch's app).
         ///
         /// `isReady` is fabricated here on purpose (legacy-bundle compat);
+        /// `BridgeHandler.reportCrash` is deliberately untouched — a fabricated
+        /// readiness says nothing about whether the layout rendered, and only
+        /// a `route-change` from it may clear a crash (decision #2);
         /// `documentState` deliberately is NOT (design decision D2) — an
         /// unidentified document stays `.loading` and the lens affordances
         /// stay pessimistic, which is the loud dev-time tell for a page that

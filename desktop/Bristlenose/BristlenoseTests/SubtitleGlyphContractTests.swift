@@ -37,7 +37,7 @@ import Testing
         case cantFind, failed, failedDiagnostic, completedPartial, stopping
         case running, queued, stopped, partial, unreachable, addingInterviews
         case copying, importingBatch, readingScreens, copyCancelling, waitingForWhisper
-        case ready, deltaOnly, placeholder
+        case ready, deltaOnly, placeholder, reportError
     }
 
     /// Every case, once, with a representative payload.
@@ -61,6 +61,7 @@ import Testing
         .ready(date: Date(timeIntervalSince1970: 1_000_000), delta: nil),
         .deltaOnly(.unanalysed(count: 2)),
         .placeholder,
+        .reportError(ReportCrash(route: "/report/quotes", message: "TypeError: x", frames: [])),
     ]
 
     @Test("Every SubtitleVariant case is exercised by an exemplar")
@@ -86,8 +87,10 @@ import Testing
         // taken from the design — which is how a gate comes to enforce something
         // nobody agreed to.
         let actionable = Set(Self.exemplars.filter { $0.glyphAction != .none }.map(\.tag))
+        // `.reportError` joined on 21 Oct 2026 (decision #2): the route, the
+        // error and the stack have no other home than the popover.
         #expect(actionable == [.failed, .failedDiagnostic,
-                               .completedPartial, .unreachable, .deltaOnly],
+                               .completedPartial, .unreachable, .deltaOnly, .reportError],
                 "actionable set drifted: \(actionable.sorted { "\($0)" < "\($1)" })")
     }
 
@@ -274,6 +277,7 @@ private extension SubtitleVariant {
         case .ready:            return .ready
         case .deltaOnly:        return .deltaOnly
         case .placeholder:      return .placeholder
+        case .reportError:      return .reportError
         }
     }
 }

@@ -35,8 +35,8 @@
     "search": "Suchen",
     "loading": "Laden…",
     "noResults": "Keine Ergebnisse",
-    "error": "Fehler",
     "lensError": "Diese Ansicht konnte nicht angezeigt werden. Versuchen Sie es erneut oder wählen Sie eine andere Ansicht.",
+    "reportError": "Dieser Bericht konnte nicht angezeigt werden.",
     "panelError": "Diese Seitenleiste konnte nicht angezeigt werden.",
     "partError": "Dies konnte nicht angezeigt werden."
   },

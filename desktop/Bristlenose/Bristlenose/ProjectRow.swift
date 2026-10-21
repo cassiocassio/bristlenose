@@ -270,6 +270,13 @@ struct ProjectRow: View {
         case .completedPartial:
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
+        case .reportError:
+            // Unreachable on this row: it passes no `reportCrash` (the
+            // window's crash is published to the AppKit sidebar, the shipped
+            // one). Drawn as the AppKit cell would, so the retired row can't
+            // disagree with it.
+            diagnosticSubtitle(kind: .warning,
+                               text: i18n.t("desktop.pipeline.diagnostic.header.reportError"))
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
              .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
             subtitleText(prefix: nil,
@@ -337,7 +344,7 @@ struct ProjectRow: View {
             return i18n.t("desktop.chrome.copyCancelling")
         case .waitingForWhisper:
             return i18n.t("desktop.chrome.pipeline.waitingForWhisper")
-        case .cantFind, .failed, .failedDiagnostic, .completedPartial,
+        case .cantFind, .failed, .failedDiagnostic, .completedPartial, .reportError,
              .ready, .deltaOnly, .placeholder:
             return nil
         }
@@ -704,6 +711,8 @@ struct ProjectRow: View {
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
+        case .reportError:
+            return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
              .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
             // Comma separator: VoiceOver reads commas as pauses

@@ -58,7 +58,7 @@ _REQUIRED_PILL_CATEGORIES = (
     "network",
     "unknown",
 )
-_REQUIRED_HEADERS = ("completed_partial", "failed")
+_REQUIRED_HEADERS = ("completed_partial", "failed", "reportError")
 _REQUIRED_ACTIONS = ("copy",)
 # `email` and `copied` keys were removed (Finding 31) — Email button was
 # dropped during the Swift design pass and Copy is silent (no flip), so the

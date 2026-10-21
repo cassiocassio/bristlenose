@@ -35,8 +35,8 @@
     "search": "Ara",
     "loading": "Yükleniyor…",
     "noResults": "Sonuç yok",
-    "error": "Hata",
     "lensError": "Bu görünüm gösterilemedi. Yeniden deneyin veya başka bir görünüm seçin.",
+    "reportError": "Bu rapor gösterilemedi.",
     "panelError": "Bu kenar çubuğu gösterilemedi.",
     "partError": "Bu bölüm gösterilemedi."
   },

@@ -399,7 +399,8 @@
       },
       "header": {
         "completed_partial": "Partial completion",
-        "failed": "Run failed"
+        "failed": "Run failed",
+        "reportError": "Report couldn’t be shown"
       },
       "action": {
         "copy": "Copy details",
@@ -411,6 +412,7 @@
         "completed_partial": "Analysis finished with failures for {{project}}"
       },
       "noStructuredCause": "Detailed cause not captured.",
+      "reportError": "Your analysis is safe — only the display failed. Retry reloads the report. If it happens again, copy the details and send them with Help ▸ Send Feedback.",
       "overflow_one": "… and {{count}} more failure truncated",
       "overflow_other": "… and {{count}} more failures truncated",
       "reason": {

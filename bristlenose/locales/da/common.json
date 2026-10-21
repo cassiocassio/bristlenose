@@ -35,8 +35,8 @@
     "search": "Søg",
     "loading": "Indlæser…",
     "noResults": "Ingen resultater",
-    "error": "Fejl",
     "lensError": "Denne visning kunne ikke vises. Prøv igen, eller vælg en anden visning.",
+    "reportError": "Denne rapport kunne ikke vises.",
     "panelError": "Dette sidepanel kunne ikke vises.",
     "partError": "Dette kunne ikke vises."
   },

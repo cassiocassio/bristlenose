@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Delvis slutförd",
-        "failed": "Körningen misslyckades"
+        "failed": "Körningen misslyckades",
+        "reportError": "Rapporten kunde inte visas"
       },
       "action": {
         "copy": "Kopiera information",
@@ -410,6 +411,7 @@
         "completed_partial": "Analysen slutfördes med fel för {{project}}"
       },
       "noStructuredCause": "Detaljerad orsak fångades inte.",
+      "reportError": "Din analys är säker – bara visningen misslyckades. Försök igen läser in rapporten på nytt. Händer det igen, kopiera detaljerna och skicka dem via Hjälp ▸ Skicka feedback.",
       "overflow_one": "… och {{count}} till fel avkortat",
       "overflow_other": "… och {{count}} till fel avkortade",
       "reason": {

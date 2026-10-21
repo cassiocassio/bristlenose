@@ -35,8 +35,8 @@
     "search": "Procurar",
     "loading": "A carregar…",
     "noResults": "Sem resultados",
-    "error": "Erro",
     "lensError": "Não foi possível mostrar esta vista. Tente novamente ou escolha outra vista.",
+    "reportError": "Não foi possível mostrar este relatório.",
     "panelError": "Não foi possível mostrar esta barra lateral.",
     "partError": "Não foi possível mostrar este conteúdo."
   },

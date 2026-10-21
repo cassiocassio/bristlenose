@@ -380,7 +380,8 @@
       },
       "header": {
         "completed_partial": "部分完成",
-        "failed": "執行失敗"
+        "failed": "執行失敗",
+        "reportError": "無法顯示報告"
       },
       "action": {
         "copy": "拷貝詳細資訊",
@@ -392,6 +393,7 @@
         "completed_partial": "{{project}} 的分析已完成，但有失敗"
       },
       "noStructuredCause": "未擷取到詳細原因。",
+      "reportError": "您的分析安全無虞，只是顯示失敗。按「重試」會重新載入報告。如果再次發生，請複製詳細資料，並透過「輔助說明 ▸ 傳送意見回饋」傳送給我們。",
       "overflow_other": "⋯另有 {{count}} 則失敗被截斷",
       "reason": {
         "unsupported_format": "Bristlenose 無法讀取的格式。",

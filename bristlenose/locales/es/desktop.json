@@ -398,7 +398,8 @@
       },
       "header": {
         "completed_partial": "Completado parcialmente",
-        "failed": "Ejecuci\u00f3n fallida"
+        "failed": "Ejecuci\u00f3n fallida",
+        "reportError": "No se pudo mostrar el informe"
       },
       "action": {
         "copy": "Copiar detalles",
@@ -410,6 +411,7 @@
         "completed_partial": "El an\u00e1lisis termin\u00f3 con fallos en {{project}}"
       },
       "noStructuredCause": "Causa detallada no registrada.",
+      "reportError": "Tu análisis está a salvo: solo ha fallado la visualización. Reintentar vuelve a cargar el informe. Si vuelve a ocurrir, copia los detalles y envíalos con Ayuda ▸ Enviar comentarios.",
       "overflow_one": "\u2026 y {{count}} fallo m\u00e1s truncado",
       "overflow_other": "\u2026 y {{count}} fallos m\u00e1s truncados",
       "reason": {

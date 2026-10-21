@@ -1,12 +1,23 @@
 ---
 status: current
-last-trued: 2026-09-04
-trued-against: HEAD@main on 2026-09-04 (bcdc03b9)
+last-trued: 2026-10-21
+trued-against: HEAD@main on 2026-10-21 (bf7ee8c6)
 ---
 
 # Miro Bridge — Design Document
 
 > **Trued 4 Sep 2026 (--topic keychain).** Shipped: web panel, native sheet, Settings ▸ Accounts row, Keychain persistence. The Keychain half now means **two** items — the app's data-protection one and a login-keychain copy `bristlenose configure miro` and a terminal `run` read — written and read back by `KeychainHelper.set`; the Python store call is read back too (`credentials.set_verified`). The June status line below is kept as history. This doc had no front-matter until today.
+
+> **Trued 21 Oct 2026 (OAuth facts).** The sign-in plan below was written before anyone read Miro's OAuth reference closely. Read on 19 and 20 Oct, it says:
+>
+> - **No PKCE, a confidential secret.** The [authorization request](https://developers.miro.com/reference/create-authorization-request-link) takes no `code_challenge`, and the [token exchange](https://developers.miro.com/reference/exchange-authorization-code-with-access-token) requires a `client_secret`, which "must be kept confidential", with no `code_verifier`.
+> - **Redirect URIs match exactly**, trailing slash included, and [Miro's OAuth troubleshooting page](https://developers.miro.com/docs/troubleshooting-oauth20) documents no wildcard for a localhost port.
+> - **Token expiry is fixed when the app is created** and can't be changed afterwards ([expiring access tokens](https://developers.miro.com/reference/authorization-flow-for-expiring-access-tokens)). Our app has it off (owner, 20 Oct), so a token lasts until the user uninstalls the app, and there is no refresh token.
+> - **"Share app" gives an install URL** to users outside the developer team without a Marketplace listing, and Miro documents no review for it ([sharing an app outside a developer team](https://developers.miro.com/docs/share-an-app-outside-of-a-developer-team)).
+> - **Untested:** whether Miro quietly accepts PKCE without a secret. `experiments/miro-pkce-probe/probe.py` answers that with one sign-in.
+> - **Pending, the owner's decision:** PKCE, if the probe passes, or a small broker on bristlenose.app that holds the secret. Neither is chosen.
+>
+> The sections below that assume PKCE and refresh tokens are marked where they say so, not rewritten.
 
 One-way export from Bristlenose to a Miro board: a first-draft research wall of
 sticky notes, grouped by section and theme, that a team rearranges to do
@@ -125,7 +136,7 @@ The ordering is deliberate: **OAuth first**, because first-run auth friction (th
 
 | Milestone | What | Why this order |
 |---|---|---|
-| **M2 — OAuth Connect** | Browser-based OAuth 2.0 + PKCE, keychain refresh, state-dependent Export menu (`Connect to Miro…` → `Send to Miro board…`). Paste-token demoted to fallback. | Collapses the key dance from a 6-step developer detour to one click. Highest leverage. |
+| **M2 — OAuth Connect** | Browser-based OAuth 2.0 + PKCE, keychain refresh, state-dependent Export menu (`Connect to Miro…` → `Send to Miro board…`). Paste-token demoted to fallback. _(Written as PKCE + refresh; see the 21 Oct note: Miro documents neither, and the sign-in shape is pending the owner's decision.)_ | Collapses the key dance from a 6-step developer detour to one click. Highest leverage. |
 | **M3 — API client** | Via `miro_api`: `create_board`, `create_frame` (named Sections/Themes), bulk `create_stickies` (parented into frames), `create_text` (title/legend), `create_tag`/attach. Rate-limit backoff. | The thin IR→REST translator. |
 | **M4 — Export service** | Port the POC IR + layout engine into `bristlenose/`. Scope = **all / starred / section** (reuses `export_core` `quote_ids` + `is_starred`). Background job (AutoCode async pattern), consent step. | The layout value, wired to real data + selection. |
 | **M5 — React panel** | The flow states: not-connected → connecting → configure/consent → exporting → done (`Open in Miro`). | Surfaces M2–M4 in the report UI. |
@@ -170,17 +181,23 @@ The ordering is deliberate: **OAuth first**, because first-run auth friction (th
 The hard-won constraints. Build against these.
 
 ### Auth & client
+
+**Superseded 21 Oct 2026**: the bullets below predate reading Miro's OAuth reference; kept as the earlier baseline, corrections in the note at the top.
+
 - **OAuth 2.0 + PKCE, no Marketplace publishing.** Create an app, install it to a
   Developer team directly. One-time browser consent on first run is the only
-  irreducible friction; refresh tokens keep it headless after.
+  irreducible friction; refresh tokens keep it headless after. _(Not for our app:
+  expiring tokens are off, so there is no refresh; "Share app" also gives outside
+  users an install URL without a listing.)_
 - **Not enterprise-gated.** OAuth + PKCE + expiring/refresh tokens are the
-  standard auth for _all_ Miro apps on _every_ plan (incl. free). Only specific
+  standard auth for _all_ Miro apps on _every_ plan (incl. free). _(PKCE: not
+  documented by Miro; see the note.)_ Only specific
   scopes need Enterprise (`auditlogs:read`, `organizations:*`). Bristlenose uses
   only `boards:read` + `boards:write` — both **standard scopes**, available on
   free accounts; you can even build/test on a free Developer team.
 - **Official Python client `miro_api`** (PyPI, Python 3.9+ — fits Bristlenose).
   Stateless `MiroApi` (token in) is the right fit for a batch exporter; it
-  auto-refreshes. Add as optional extra `bristlenose[miro]`.
+  auto-refreshes _(moot with non-expiring tokens)_. Add as optional extra `bristlenose[miro]`.
 - **Use REST, not the MCP server.** Miro's MCP server (public beta, Dec 2025) is
   a remote OAuth-2.1, AI-assistant-oriented surface exposing a REST _subset_. The
   REST API is the deterministic, scriptable batch surface we want. Revisit MCP
@@ -294,7 +311,7 @@ possible; never make someone do setup twice.**
   (jumps to configure).
 - **First run** crosses the boundary twice (consent out + auto-return). **Every
   run after** crosses once (the final `Open in Miro`). Consent never reappears —
-  token + refresh live in the keychain.
+  token + refresh live in the keychain _(refresh: see the 21 Oct note)_.
 - **No dead-ends:** the browser handoff sets the expectation ("come back here"),
   the return is automatic via localhost callback, the finish gives one obvious
   `Open in Miro` button.
@@ -308,12 +325,18 @@ See `docs/mockups/miro-flow.html` and `miro-setup-help.html`.
 
 ## OAuth flow (M2 detail)
 
+> **Marked 21 Oct 2026.** These steps assume PKCE and refresh tokens. Miro documents a
+> confidential client secret instead, and our app's tokens don't expire. Step 4's `{port}`
+> also collides with Miro's exact-match redirect URIs, so either way the sign-in needs a fixed
+> localhost port or a redirect that lands on a broker. The decision is pending; see the note at
+> the top. The steps are kept as written.
+
 1. Frontend gets the authorize URL (`GET /api/miro/auth-url`).
 2. System browser opens Miro's consent page.
 3. User clicks **Allow**.
 4. Miro redirects to `http://localhost:{port}/api/miro/callback`.
 5. Callback exchanges the code for tokens (PKCE — no client secret).
-6. Access + refresh tokens stored in keychain.
+6. Access + refresh tokens stored in keychain. _(refresh: see the 21 Oct note)_
 7. Report shows Connected; menu flips to `Send to Miro board…`.
 
 Security: random-UUID `state` validated on callback (CSRF); auto-refresh before
@@ -359,9 +382,9 @@ block third-party app authorisation.
 |------|-----------|
 | First-run auth friction (the key dance) | OAuth one-click (M2); paste-token fallback |
 | Rate limiting | bulk 20/call, exponential backoff |
-| Token expiry mid-export | refresh before start + during long exports |
+| Token expiry mid-export | refresh before start + during long exports — n/a as configured (21 Oct): tokens don't expire |
 | Board sluggish > 5k items | warn; suggest scoped (starred/section) export |
-| OAuth redirect URI mismatch | exact-match localhost port |
+| OAuth redirect URI mismatch | exact-match localhost port. _21 Oct: Miro matches redirect URIs exactly, counting a trailing slash, and documents no port wildcard, so the localhost port must be fixed, not `{port}`._ |
 | Sticky content > 6000 chars | cut to fit Miro's limit, with "…" (`fit_miro_sticky`); never shorter |
 | `<span>`/style silently escaped | stay in the tag allowlist; never inject CSS |
 | Miro deprecates more APIs | one-way push = minimal surface |
@@ -595,7 +618,9 @@ merge-ready pending push + CI. The "syntax only" markers below were the original
 - **A5** — clip-link filename convention is a guess
   (`{session}-{participant}-{secs}.mp4`); verify against `design-export-clips`.
 - **A10** — no token auto-refresh in the export path; if an OAuth token expired,
-  reconnect. Paste-token (non-expiring) sidesteps this.
+  reconnect. Paste-token (non-expiring) sidesteps this. _21 Oct: moot — our app's
+  tokens are non-expiring; refresh would need expiring tokens chosen at app creation,
+  which can't be changed._
 - Miro request shapes (frame `type:freeform`/`format:custom`, sticky
   `shape:square` + named `fillColor`, text `style.fontSize` string, bulk array
   body) are from the verified REST facts but **unrun** — first real push may
@@ -720,7 +745,7 @@ future OAuth button lives, and the Keychain+env layer below is reused by OAuth):
   non-sandboxed `keychain` path; the panel paste no-ops the bridge there.
 
 OAuth (the real solution) reuses this same Keychain+env layer for its access/refresh
-tokens — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
+tokens _(refresh: see the 21 Oct note)_ — only the *acquisition* (ASWebAuthenticationSession) and the token-handoff
 trigger change. The native sheet's **Disconnect** (`MiroSheetModel.disconnect()`) clears
 nothing of its own any more: since 18 Aug 2026 it calls `MiroConnectionStore.disconnect`, the
 single sequence Settings ▸ Accounts also calls, which takes all five copies — the in-session

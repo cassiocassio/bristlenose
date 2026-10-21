@@ -136,6 +136,16 @@ describe("MiroExportPanel — a board's progress", () => {
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.exportError")));
   });
 
+  it("a board that completes without a link is an error, not ready (R79)", async () => {
+    render(<MiroExportPanel open onClose={() => {}} />);
+    fireEvent.click(await screen.findByText(i18n.t("miro.createBoard")));
+    getMiroBoardStatus.mockResolvedValue({ ...status("completed"), board_url: null });
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.exportError")));
+    expect(screen.getByText(i18n.t("miro.createBoard"))).toBeInTheDocument();
+    expect(screen.queryByText(i18n.t("miro.boardReady", { count: 40 }))).toBeNull();
+    expect(screen.queryByText(i18n.t("miro.openInMiro"))).toBeNull();
+  });
+
   it("a Stop that misses (the board had just finished) shows the finished board", async () => {
     cancelMiroBoard.mockRejectedValueOnce(new Error("POST /miro/board/cancel 404"));
     await building(build({ phase: "groups", count_done: 8, count_total: 9, fraction: 0.95 }));

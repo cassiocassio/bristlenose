@@ -268,7 +268,12 @@ struct MiroAPI {
                 await onProgress(s.build)
                 try await Task.sleep(nanoseconds: 1_500_000_000)
             case "completed":
-                return ExportResult(boardURL: s.board_url ?? "",
+                // A board with no link is not ready: Open in Miro would do nothing (R79).
+                guard let url = s.board_url, !url.isEmpty else {
+                    throw APIError(message: "Miro board completed without a link",
+                                   localeKey: "common.miro.exportError")
+                }
+                return ExportResult(boardURL: url,
                                     stickies: s.completed_count ?? s.stickies ?? 0,
                                     skipped: s.skipped_count ?? 0)
             case "cancelled":

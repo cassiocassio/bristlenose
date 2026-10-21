@@ -205,6 +205,12 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
           setView("configure");
           return;
         }
+        if (!s.board_url) {
+          // A board with no link is not ready: Open in Miro would do nothing (R79).
+          setError(t("miro.exportError"));
+          setView("configure");
+          return;
+        }
         setBoardUrl(s.board_url);
         if ("completed_count" in s) {
           setStickies(s.completed_count);

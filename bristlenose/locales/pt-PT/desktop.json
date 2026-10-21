@@ -8,7 +8,7 @@
     "boardDestination": "Cria um novo quadro em {{team}}.",
     "connected": "Ligado",
     "openInMiro": "Abrir no Miro…",
-    "connectPersistWarning": "Ligado, mas não foi possível guardar o token no seu Keychain — poderá ser necessário voltar a ligar após reiniciar."
+    "connectPersistWarning": "Ligado, mas não foi possível guardar o token no seu porta-chaves — poderá ser necessário voltar a ligar após reiniciar."
   },
   "menu": {
     "app": {
@@ -875,7 +875,7 @@
     "pricingLink": "Preços",
     "lastVerified": "Última verificação %@",
     "revalidating": "A última validação foi rejeitada — a verificar novamente…",
-    "keyNotSaved": "Não foi possível guardar esta chave no seu Keychain, pelo que não está a ser utilizada. Prima Return para tentar novamente.",
+    "keyNotSaved": "Não foi possível guardar esta chave no seu porta-chaves, pelo que não está a ser utilizada. Prima Return para tentar novamente.",
     "activate": {
       "generic": "Usar este fornecedor",
       "ollama": "Usar o modelo Ollama local"

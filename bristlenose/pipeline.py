@@ -923,7 +923,7 @@ def _discard_stale_redaction(output_dir: Path) -> None:
             logger.info("Removed stale redaction output: %s", target.name)
 
 
-def _load_cached_json(path: Path) -> Any | None:
+def _load_cached_json(path: Path, *, recomputes: bool = True) -> Any | None:
     """Parse an intermediate-cache JSON file, tolerating a corrupt/truncated one.
 
     Returns the parsed object, or ``None`` if the file is missing, truncated,
@@ -938,21 +938,26 @@ def _load_cached_json(path: Path) -> Any | None:
     before the hash check; and backward-compat manifests with
     ``content_hash=None`` pass verification unconditionally. Both reach a raw
     parse of a file that a power loss may have truncated.
+
+    ``recomputes=False`` for a caller that falls back rather than recompute
+    (``transcribe``'s speaker cache): the log line stays, the terminal line,
+    which says "recomputing", does not.
     """
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         # ValueError covers json.JSONDecodeError and UnicodeDecodeError — the
         # two ways a half-written/encoding-mangled file fails to parse.
-        _print_warn(
-            f"{path.name}: cache unreadable ({type(exc).__name__}) — recomputing",
-        )
+        if recomputes:
+            _print_warn(
+                f"{path.name}: cache unreadable ({type(exc).__name__}) — recomputing",
+            )
         logger.warning("Discarding corrupt intermediate cache %s: %s", path, exc)
         return None
 
 
 def _read_speaker_cache(
-    path: Path,
+    path: Path, *, recomputes: bool = True,
 ) -> tuple[list[SpeakerInfo], list[TranscriptSegment]] | None:
     """One session's speaker cache (``speaker-info/<sid>.json``): its speaker
     infos and its segments with roles, or ``None`` if the file is missing,
@@ -961,10 +966,11 @@ def _read_speaker_cache(
     A wrong shape used to escape as a traceback from ``run`` and
     ``transcribe`` alike; ``None`` sends the session back to be identified
     (``run``) or to the heuristic (``transcribe``), as a missing file does.
+    ``recomputes``: as ``_load_cached_json``'s; ``transcribe`` passes False.
     """
     from bristlenose.stages.s05b_identify_speakers import speaker_info_from_dict
 
-    data = _load_cached_json(path) if path.exists() else None
+    data = _load_cached_json(path, recomputes=recomputes) if path.exists() else None
     if data is None:
         return None
     try:
@@ -975,6 +981,23 @@ def _read_speaker_cache(
     except (KeyError, TypeError, ValueError) as exc:  # pydantic's error is a ValueError
         logger.warning("speaker cache | %s unusable: %s", path.name, type(exc).__name__)
         return None
+
+
+def _retried_transcription_sids(
+    prev: PipelineManifest | None, lost: set[str],
+) -> set[str]:
+    """Sessions transcribed this time that are retries, not new interviews.
+
+    One the last run tried and failed (or deferred to Whisper), and one the
+    cache file lost (``lost``: recorded complete, not held by the file).
+    Counting either as new would say "+1 new session" on every run of a
+    recording that keeps failing. ``run`` and ``transcribe`` both count by it.
+    """
+    prev_tx = prev.stages.get(_M_STAGE_TRANSCRIBE) if prev else None
+    return {
+        sid for sid, rec in ((prev_tx.sessions or {}) if prev_tx else {}).items()
+        if rec.status == StageStatus.FAILED
+    } | lost
 
 
 _printed_warnings: set[str] = set()
@@ -1225,11 +1248,15 @@ class Pipeline:
         )
         self._last_eta_remaining = remaining.total_seconds
         self._last_predicted_total = predicted
-        self._emit_progress(
-            stage=stage,
-            eta_remaining_seconds=remaining.total_seconds,
-            predicted_total_seconds=predicted,
-        )
+        # The stage is over: its slice reads held at its end (R27), so a stage
+        # that finished early does not sit mid-slice until the next entry.
+        fields: dict[str, object] = {
+            "stage": stage,
+            "eta_remaining_seconds": remaining.total_seconds,
+            "predicted_total_seconds": predicted,
+        }
+        self._put_budget(fields, self._estimator.stage_budget(stage, completed=True))
+        self._emit_progress(**fields)
 
     def set_progress_sink(self, sink: object | None) -> None:
         """Register the structured progress sink (``RunHandle.progress``).
@@ -1258,11 +1285,39 @@ class Pipeline:
         if self._progress_sink is None:
             return
         fields.setdefault("elapsed_seconds", self._elapsed_seconds())
+        self._attach_stage_budget(fields)
         if self._sessions_readable:
             # Every line, not only the one that moved it: readers take the
             # newest line, and the next heartbeat would otherwise hide it.
             fields.setdefault("sessions_readable", self._sessions_readable)
         self._progress_sink(**fields)  # type: ignore[operator]
+
+    def _attach_stage_budget(self, fields: dict[str, object]) -> None:
+        """Put the ring slice the event's stage owns on the line (R27).
+
+        Every estimator-stage event carries it, so the Mac app always has the
+        current stage's slice on the newest line it reads; the download stage
+        and the opening estimate carry none (no stage, or not an estimator
+        stage), and a cold estimator offers none, which leaves the app on its
+        whole-run time ring. A line that already names its slice (a stage's
+        completion, ``_emit_remaining``) keeps it.
+        """
+        from bristlenose.timing import ALL_STAGES
+
+        stage = fields.get("stage")
+        if "stage_base" in fields or self._estimator is None:
+            return
+        if not isinstance(stage, str) or stage not in ALL_STAGES:
+            return
+        self._put_budget(fields, self._estimator.stage_budget(stage))
+
+    @staticmethod
+    def _put_budget(fields: dict[str, object], budget: Any) -> None:
+        if budget is None:
+            return
+        fields["stage_base"] = budget.base
+        fields["stage_span"] = budget.span
+        fields["stage_expected_seconds"] = budget.expected_seconds
 
     def _on_model_download_progress(self, done: int, total: int) -> None:
         """Emit the first-run speech-model download as its own progress stage.
@@ -1499,6 +1554,11 @@ class Pipeline:
                 status="failed", quotes_sha=input_hashes["quotes"], guide_sha=input_hashes["guide"],
             ).model_dump_json(indent=2), encoding="utf-8")
             _print_warn_step("Discussion lens not built", time.perf_counter() - t0)
+            # The stage ran, whatever it produced: told it is over, the estimate
+            # drops it from the time left and the ring keeps its share, rather
+            # than render's entry retiring it as cache-served and the ring
+            # sitting below where it already was.
+            self._emit_remaining(_T_STAGE_DISCUSSION, time.perf_counter() - t0)
             return None
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(record.model_dump_json(indent=2), encoding="utf-8")
@@ -1892,15 +1952,8 @@ class Pipeline:
                     if s.session_id not in _cached_tx_sids
                 ]
 
-                # A session the last run tried and failed (or deferred to
-                # Whisper) is a retry, not a new interview: counting it would
-                # say "+1 new session" on every run of a recording that keeps
-                # failing. Nor is one the cache file lost.
-                _prev_tx = _prev_manifest.stages.get(_M_STAGE_TRANSCRIBE) if _prev_manifest else None
-                _retried_tx_sids = {
-                    sid for sid, rec in ((_prev_tx.sessions or {}) if _prev_tx else {}).items()
-                    if rec.status == StageStatus.FAILED
-                } | _lost_tx_sids
+                # A retry is not a new interview (_retried_transcription_sids).
+                _retried_tx_sids = _retried_transcription_sids(_prev_manifest, _lost_tx_sids)
                 _new_tx_sessions = [
                     s for s in _remaining_sessions if s.session_id not in _retried_tx_sids
                 ]
@@ -3246,6 +3299,15 @@ class Pipeline:
                 )
 
             # ── People file ───────────────────────────────────────────
+            # Timed as render, with the scene colours below: the tail between
+            # grouping and the report used to belong to no stage, so the
+            # estimate never counted it and the ring sat through it (R27).
+            # Render is unconditional (no cached branch, no _emit_remaining),
+            # so this entry-emit is the only event that advances the verb to
+            # "Rendering". ETA is the one carried from the last stage that
+            # reported its completion (grouping, or discussion when on).
+            self._emit_stage_entry(STAGE_RENDER)
+            t0 = time.perf_counter()
             status.update("[dim]Updating people file...[/dim]")
             from bristlenose.people import (
                 auto_populate_names,
@@ -3312,12 +3374,7 @@ class Pipeline:
 
             # ── Stage 12: Render output ──────────────────────────────
             mark_stage_running(manifest, _M_STAGE_RENDER)
-            # Render is unconditional (no cached branch, no _emit_remaining),
-            # so this entry-emit is the only event that advances the verb to
-            # "Rendering". ETA is the carried cluster-completion estimate.
-            self._emit_stage_entry(STAGE_RENDER)
             status.update("[dim]Rendering output...[/dim]")
-            t0 = time.perf_counter()
             analysis = _compute_analysis(
                 screen_clusters, theme_groups, all_quotes, sessions,
             )
@@ -3481,6 +3538,7 @@ class Pipeline:
             sessions, input_dir, session_registry,
         )
         _cached_segments: dict[str, list[TranscriptSegment]] = {}
+        _cached_sids: set[str] = set()
         if reuse_transcription and _ss_path.exists():
             _cached_sids = fresh_session_ids(
                 _prev, _M_STAGE_TRANSCRIBE, _tx_fps, accept=_tx_fps_legacy,
@@ -3494,6 +3552,9 @@ class Pipeline:
                     if sid in _cached_sids
                 }
         _remaining = [s for s in sessions if s.session_id not in _cached_segments]
+        # New as run() counts it: a retry, or a session the file lost, is not.
+        _retried = _retried_transcription_sids(_prev, _cached_sids - set(_cached_segments))
+        _n_new = sum(1 for s in _remaining if s.session_id not in _retried)
 
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
@@ -3626,8 +3687,8 @@ class Pipeline:
                     f"Transcribed {count_noun(len(sessions), 'session')}"
                     f" ({count_noun(total_segments, 'segment')}"
                 )
-                if _cached_segments:
-                    msg += f", {count_noun(len(_remaining), 'new session')}"
+                if _cached_segments and _n_new:
+                    msg += f", {count_noun(_n_new, 'new session')}"
                 elif audio_str:
                     msg += f", {audio_str} audio"
                 msg += ")"
@@ -3646,7 +3707,7 @@ class Pipeline:
                 _prev, STAGE_IDENTIFY_SPEAKERS,
                 {sid: _segments_fingerprint(segs) for sid, segs in _cached_segments.items()},
             ):
-                _si_read = _read_speaker_cache(_si_dir / f"{sid}.json")
+                _si_read = _read_speaker_cache(_si_dir / f"{sid}.json", recomputes=False)
                 if _si_read is not None:
                     session_segments[sid] = _si_read[1]
                     _si_kept.add(sid)

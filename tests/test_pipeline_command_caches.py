@@ -632,3 +632,79 @@ def test_run_identifies_again_over_a_malformed_speaker_cache(
     # Before the fix: a ValidationError out of run(). Now s1 is asked again.
     assert any("s1 session" in text for text in log.get("roles", [])), log
     assert "Welcome" in (tmp_path / "output" / "transcripts-raw" / "s1.txt").read_text()
+
+
+# ── transcribe: the line says what it did ────────────────────────────────────
+
+
+def test_transcribe_counts_new_sessions_as_run_does(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    # s2 failed last run and s3 is a session the cache file lost: both are
+    # retries, as run() counts them. Only s4 is a new recording.
+    _drive(tmp_path, "run", 3, {})
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["stages"]["transcribe"]["sessions"]["s2"]["status"] = "failed"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    path = _intermediate(tmp_path, "session_segments.json")
+    cached = json.loads(path.read_text(encoding="utf-8"))
+    del cached["s3"]
+    path.write_text(json.dumps(cached), encoding="utf-8")
+    capsys.readouterr()
+
+    after: dict = {}
+    _drive(tmp_path, "transcribe", 4, after)
+
+    assert after["transcribed"] == [["s2", "s3", "s4"]], after
+    out = " ".join(capsys.readouterr().out.split())
+    # Before the fix: "3 new sessions".
+    assert "1 new session)" in out, out
+
+    # Retries alone are no new session at all.
+    capsys.readouterr()
+    _drive(tmp_path, "transcribe", 3, {})
+    out = " ".join(capsys.readouterr().out.split())
+    assert "Transcribed 3 sessions" in out, out
+    assert "new session" not in out, out
+
+
+def test_transcribe_over_a_corrupt_speaker_cache_does_not_say_recomputing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture,
+) -> None:
+    # transcribe has no model to identify speakers again: it falls back to the
+    # heuristic, and the log says so. The terminal must not say "recomputing".
+    _drive(tmp_path, "run", 2, {}, llm_researcher="Speaker B")
+    _intermediate(tmp_path, "speaker-info/s1.json").write_text('{"speaker_inf', encoding="utf-8")
+    capsys.readouterr()
+    # The terminal warning is deduplicated per process; transcribe never clears it.
+    from bristlenose import pipeline
+
+    pipeline._printed_warnings.clear()
+
+    with caplog.at_level("WARNING", logger="bristlenose.pipeline"):
+        _drive(tmp_path, "transcribe", 2, {})
+
+    out = capsys.readouterr().out
+    assert "recomputing" not in out, out
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("s1: speaker cache missing" in m for m in messages), messages
+    raw = tmp_path / "output" / "transcripts-raw"
+    assert "[m1] (Speaker B)" not in (raw / "s1.txt").read_text(encoding="utf-8")
+    assert "[m1] (Speaker B)" in (raw / "s2.txt").read_text(encoding="utf-8")
+
+
+def test_run_over_a_corrupt_speaker_cache_still_says_recomputing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
+) -> None:
+    # run() does ask the model again, so its warning stays true and stays.
+    _drive(tmp_path, "run", 2, {})
+    _intermediate(tmp_path, "speaker-info/s1.json").write_text('{"speaker_inf', encoding="utf-8")
+    capsys.readouterr()
+
+    log: dict = {}
+    _drive(tmp_path, "run", 3, log)
+
+    out = " ".join(capsys.readouterr().out.split())
+    assert "s1.json: cache unreadable (JSONDecodeError) — recomputing" in out, out
+    assert any("s1 session" in text for text in log.get("roles", [])), log

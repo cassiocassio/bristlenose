@@ -76,6 +76,20 @@ def test_load_cached_json_invalid_utf8_returns_none(tmp_path):
     assert _load_cached_json(p) is None
 
 
+def test_load_cached_json_says_recomputing_unless_the_caller_does_not(tmp_path, capsys):
+    # Every resume read recomputes what it cannot read, and says so; only a
+    # caller that falls back instead (transcribe's speaker cache) opts out.
+    from bristlenose import pipeline
+
+    pipeline._printed_warnings.clear()
+    p = tmp_path / "topic_boundaries.json"
+    p.write_text('[{"session_id": "s1"', encoding="utf-8")
+    assert _load_cached_json(p, recomputes=False) is None
+    assert "recomputing" not in capsys.readouterr().out
+    assert _load_cached_json(p) is None
+    assert "topic_boundaries.json: cache unreadable" in capsys.readouterr().out
+
+
 def test_is_stage_cached_none_manifest():
     assert _is_stage_cached(None, STAGE_TOPIC_SEGMENTATION) is False
 

@@ -14,6 +14,7 @@ trued-against: HEAD@main (6562c7be) on 2026-10-14
 
 ## Changelog
 
+- _2026-10-21_ — decision #111 ("match run"): the Mac's count of what a study holds (`UnanalysedState.ingestableFileCount`, and `newFiles` behind the `+N unanalysed` delta) walks the folder with `run`'s file selection, ported to Swift as `ScanSelection` — three levels deep, the same skips, refusals and extensions, list and stat only. A study in per-participant folders now reads "N files to analyse" with **Analyse**, not "Drag Interviews Here"; a recording added to a participant folder rescans; `.txt` notes, which `run` never reads, are no longer listed as unanalysed. Below the top level a folder holding an ingested file counts as analysed whole, because `source_files` records one file per session and the rest of a session (a Zoom folder's audio, a Teams `.vtt`) would otherwise read as unanalysed forever; a file added to an analysed participant folder is therefore not reported (known gap). Anti-drift: `tests/fixtures/scan-selection-contract.json`, asserted by `tests/test_scan_selection_contract.py` (Python, `iter_scanned_files`) and `ScanSelectionContractTests` (Swift). Closes R100-7's count half.
 - _2026-10-21_ — decision #82 (R100): the never-run status page's interview check walks the folder with `run`'s own file selection (`s01_ingest.iter_scanned_files`, which `discover_files` consumes), so a study in per-participant subfolders reads "Not analysed yet.", not "No interviews to analyse yet". It stops at the first file and never opens one. The Mac's `.idle` pane still counts the top level only (R100-7, recorded). Anchors: `status_page._holds_interviews`, `tests/test_server_status_page.py`.
 - _2026-10-20_ — new §4.3: with no AI provider set up, the Mac no longer spawns a run that can only fail. Found by the guest walk on 0.42.0 (`experiments/guest-walk/`): adding an interview with no key started a run, Python's setup check stopped it, the Mac classified it `unknown`, and the detail pane said "No interviews to analyse yet" over the interview just added. The owner chose *refuse, don't spawn* over keeping the doomed run or asking first. Anchors: `PipelineRunner.providerRefusal`, `BristlenoseShared.apiKeyReadiness`, `PipelineFailureCategory.providerNotSetUp`, `status_page._holds_interviews`.
 - _2026-10-14_ — trued up against progressive lenses (12–13 Oct): a first analysis — and so every Mac Re-analyse — now delivers each session as it is readable, which no section said. Pointers added in the owners table, §1.1, §2, §3.1–§3.3 and §5.4; the progressive doc owns the detail. Anchors: `bristlenose/readable_chain.py`, `server/progressive.py`, `server/status_page.py` (`sessions_imported`), commits "progressive lenses phase 1: a first analysis delivers each session's transcript as whisper finishes it" and "progressive lenses: the Mac's lens rail leaves a withheld lens for Sessions; a clean re-analyse is a first analysis".
@@ -381,7 +382,7 @@ transcripts to get started". **Fixed 19 Aug 2026** — `hasWorkToDo`
 pane reads the same measurement (§6.3).
 
 Both verbs need the same input: *does this project have work to do?*
-`UnanalysedState` carries it — `newFiles` (eligible, not yet ingested),
+`UnanalysedState` carries it — `newFiles` (files `run` would analyse, not yet ingested — `ProjectFolderWatcher.newFiles`),
 `sessionCount` (rows in `sessions`), and `ingestableFileCount`, which answers
 "is there anything here at all" and survives the F14 zeroing that hides
 `newFiles` from a never-analysed project.
@@ -885,8 +886,11 @@ a sentence explaining how to get started restates the control beside it.
 menu had been using, and `hasIngestableFiles` became `count > 0` — one
 measurement, so the number the pane promises and the flag the menu gates on
 cannot drift. The count is taken from the raw enumeration before any drift
-logic, minus companion types, by `ProjectFolderWatcher.ingestableCount`; the
-pane reads it through `ContentView.filesToAnalyse`, whose one deliberate
+logic, minus companion types; since decision #111 (21 Oct 2026) the selection
+is `run`'s own (`ScanSelection`, subfolders three deep, pinned to
+`iter_scanned_files` by `tests/fixtures/scan-selection-contract.json`), where it
+was the top level only and a study in participant folders read "Drag Interviews
+Here". The pane reads it through `ContentView.filesToAnalyse`, whose one deliberate
 divergence from `hasWorkToDo` is that **unknown resolves to the drop target
 rather than to a count** — hiding a menu item leaves no way forward, but the
 pane's alternative is not a dead end, and a pane that guessed a number would be

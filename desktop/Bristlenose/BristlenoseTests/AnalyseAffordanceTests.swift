@@ -149,27 +149,20 @@ import Foundation
     }
 
     @Test func companionFilesAreNotCounted() {
-        // The acceptance criterion, end to end through the two pure helpers the
-        // watcher itself uses: five recordings beside a researcher's notes are
-        // "5 files to analyse", because five is what a run then ingests.
-        // `isDirectory: true` is load-bearing: `filterEligible` compares each
-        // candidate's parent against the root, and a parent URL always carries
-        // the trailing slash a file-style `URL(fileURLWithPath:)` omits — so a
-        // file-style root matches nothing and the filter silently returns [].
-        // Production passes the watcher's real directory URL, which has it.
+        // The acceptance criterion, through the predicate the watcher's count
+        // uses (`ScanSelection.isReadable`, `classify_file`'s test): five
+        // recordings beside a researcher's notes are "5 files to analyse",
+        // because five is what a run then ingests.
         let root = URL(fileURLWithPath: "/tmp/study", isDirectory: true)
         let dropped = ["a.mp4", "b.mov", "c.m4a", "d.srt", "e.docx", "notes.txt"]
             .map { root.appendingPathComponent($0) }
-        let eligible = ProjectFolderWatcher.filterEligible(at: root, candidates: dropped)
-        #expect(eligible.count == 6, "the notes travel with the recordings")
-        #expect(ProjectFolderWatcher.ingestableCount(eligible) == 5)
+        #expect(dropped.filter(ScanSelection.isReadable).count == 5)
     }
 
     @Test func aFolderOfOnlyNotesOffersNothing() {
         let root = URL(fileURLWithPath: "/tmp/study", isDirectory: true)
-        let eligible = ProjectFolderWatcher.filterEligible(
-            at: root, candidates: ["one.txt", "two.txt"].map(root.appendingPathComponent))
-        #expect(ProjectFolderWatcher.ingestableCount(eligible) == 0)
+        let notes = ["one.txt", "two.txt"].map(root.appendingPathComponent)
+        #expect(notes.filter(ScanSelection.isReadable).isEmpty)
     }
 }
 

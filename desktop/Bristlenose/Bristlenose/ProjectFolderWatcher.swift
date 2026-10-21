@@ -11,8 +11,9 @@ private let log = Logger(subsystem: "app.bristlenose", category: "folder-watcher
 /// previously-ingested files, and the canonical session count. Published to
 /// `ProjectIndex` by `ProjectFolderWatcher` on every scan.
 struct UnanalysedState: Equatable {
-    /// Files present at the project root, with eligible extensions, that are
-    /// not in the ingested-set. Empty when there's nothing new.
+    /// Files `run` would analyse (its own file selection, `ScanSelection`, so
+    /// subfolders up to three deep count) that are not in the ingested-set.
+    /// Matched by basename. Empty when there's nothing new.
     let newFiles: [URL]
     /// Files previously ingested that are no longer present and are not
     /// iCloud-evicted. Surfaces in the row subtitle delta and the sheet.
@@ -36,10 +37,13 @@ struct UnanalysedState: Equatable {
     /// answers the different question, "is there anything here", and survives
     /// the F14 gate untouched.
     ///
-    /// Excludes companion types (`.txt`): the watcher accepts them so a note
-    /// dropped beside the recordings is carried into the project, but
-    /// `classify_file` returns `None` for them, so a folder holding only notes
-    /// has nothing to analyse.
+    /// Counted with `run`'s own file selection (`ScanSelection`, decision #111):
+    /// up to three folders deep, the same skips, the same extensions. A study
+    /// kept in per-participant folders counted zero here until 21 Oct 2026,
+    /// and read "Drag Interviews Here" over interviews `run` would analyse.
+    /// Excludes companion types (`.txt`): drag-and-drop carries a note into the
+    /// project, but `classify_file` returns `None` for it, so a folder holding
+    /// only notes has nothing to analyse.
     ///
     /// **A count, not a flag, because the detail pane promises the number.**
     /// "6 files to analyse" and the decision to offer Analyse at all have to
@@ -96,8 +100,11 @@ struct UnanalysedState: Equatable {
 /// owns watcher lifecycle: register on `→ .ready`, dispose on
 /// `→ .cantFind` / `→ .inCloud`.
 ///
-/// **Top-level only.** Subfolder content changes are filtered out by
-/// `subitemIsTopLevel(_:)` before any scan is scheduled.
+/// **As deep as `run` looks.** The scan is `ScanSelection` — `run`'s file
+/// selection — and `subitemMayChangeTheCount(_:)` lets through a change anywhere
+/// that selection could see it, so a recording added to a participant folder
+/// rescans. `bristlenose-output/` and hidden folders stay out, so a run's own
+/// writes schedule nothing.
 ///
 /// **Thread model.** `knownBasenames` is confined to `scanQueue`; both
 /// `seedKnown(basenames:)` and `performScan()` mutate it on that queue.
@@ -149,7 +156,7 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     /// after the burst quiets is enough.
     private static let scanDebounce: DispatchTimeInterval = .milliseconds(300)
 
-    /// Eligible top-level extensions. Lowercased; comparison is case-insensitive.
+    /// Eligible extensions. Lowercased; comparison is case-insensitive.
     ///
     /// **Must stay in step with `ContentView.acceptedExtensions` and, through it,
     /// `bristlenose/models.py`'s `ALL_EXTENSIONS`.** This set gates both halves of
@@ -274,12 +281,18 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
     }
 
     func presentedSubitemDidAppear(at url: URL) {
-        guard subitemIsTopLevel(url), isEligibleExtension(url) else { return }
+        guard subitemMayChangeTheCount(url) else { return }
         scheduleScan()
     }
 
     func presentedSubitemDidChange(at url: URL) {
-        guard subitemIsTopLevel(url), isEligibleExtension(url) else { return }
+        guard subitemMayChangeTheCount(url) else { return }
+        scheduleScan()
+    }
+
+    /// A participant folder renamed, or moved to the Trash, in Finder.
+    func presentedSubitem(at oldURL: URL, didMoveTo newURL: URL) {
+        guard subitemMayChangeTheCount(oldURL) || subitemMayChangeTheCount(newURL) else { return }
         scheduleScan()
     }
 
@@ -287,7 +300,7 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         at url: URL,
         completionHandler: @escaping ((any Error)?) -> Void
     ) {
-        if subitemIsTopLevel(url), isEligibleExtension(url) {
+        if subitemMayChangeTheCount(url) {
             scheduleScan()
         }
         completionHandler(nil)
@@ -310,25 +323,21 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         }
     }
 
-    /// Diff the on-disk top-level eligible files against the ingested-set
-    /// and the known-set; publish a new state if it changed. Caller must
-    /// already be on `scanQueue`.
+    /// Diff the files `run` would analyse against the ingested-set and the
+    /// known-set; publish a new state if it changed. Caller must already be on
+    /// `scanQueue` — the walk lists and stats a folder tree.
     private func performScanLocked() {
         guard let projectURL = presentedItemURL else { return }
 
-        let topLevelEligible = Self.enumerateTopLevelEligible(projectURL)
+        // `run`'s own selection (decision #111): subfolders up to three deep,
+        // the same skips and refusals, never a file opened.
+        let readable = ScanSelection.readableFiles(under: projectURL)
         let snapshot = SourceFilesReader.readSnapshot(projectRoot: projectURL)
         let ingested = snapshot.ingestedBasenames
 
-        var newFiles: [URL] = []
-        for url in topLevelEligible {
-            let base = url.lastPathComponent
-            if !ingested.contains(base) && !knownBasenames.contains(base) {
-                newFiles.append(url)
-            }
-        }
-        // Sort for stable Equatable comparison and stable display order.
-        newFiles.sort { $0.lastPathComponent < $1.lastPathComponent }
+        let newFiles = Self.newFiles(
+            readable: readable, root: projectURL, ingested: ingested, known: knownBasenames
+        )
 
         // An unreadable snapshot must not retract a correct warning. `nil` here
         // is SQLITE_BUSY or corruption — publishing `[]` for it would clear a
@@ -343,9 +352,9 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             missingFiles = lastPublished?.missingFiles ?? []
         }
 
-        // Computed from the raw enumeration, before any drift logic — see the
+        // Computed from the raw selection, before any drift logic — see the
         // field's doc comment for why it must not come from `newFiles`.
-        let ingestableCount = Self.ingestableCount(topLevelEligible)
+        let ingestableCount = readable.count
 
         let state = UnanalysedState(
             newFiles: newFiles,
@@ -404,63 +413,85 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
         state != lastPublished
     }
 
-    // MARK: - Filters (also used by unit tests via DropDecision-style pure helpers)
+    // MARK: - Filters
 
-    func subitemIsTopLevel(_ url: URL) -> Bool {
+    /// Whether a change at `url` can move the count, so is worth a rescan.
+    /// Was "top level, eligible extension" until decision #111, so a recording
+    /// added to a participant folder never rescanned.
+    func subitemMayChangeTheCount(_ url: URL) -> Bool {
         guard let root = presentedItemURL else { return false }
-        return url.deletingLastPathComponent().standardizedFileURL ==
-            root.standardizedFileURL
+        return Self.mayChangeTheCount(url, root: root)
     }
 
-    func isEligibleExtension(_ url: URL) -> Bool {
-        Self.eligibleExtensions.contains(url.pathExtension.lowercased())
+    /// In the selection's reach (`scanScopeDepth`), and either a file of a kind
+    /// the watcher counts or something that may be a folder. Above the deepest
+    /// level anything but an existing file of another kind counts as a possible
+    /// folder: `P1.Smith/` has an "extension", and a folder that has just been
+    /// deleted or moved cannot be asked what it was.
+    static func mayChangeTheCount(
+        _ url: URL, root: URL,
+        isRegularFile: (URL) -> Bool = {
+            (try? $0.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
+        }
+    ) -> Bool {
+        guard let depth = scanScopeDepth(url, root: root) else { return false }
+        if eligibleExtensions.contains(url.pathExtension.lowercased()) { return true }
+        return depth < ScanSelection.maxDepth && !isRegularFile(url)
     }
 
-    /// The ingestable subset of an eligible list, by count.
+    /// How many levels below `root` the change is, when it is somewhere `run`'s
+    /// selection could see: at most `ScanSelection.maxDepth` deep, and not under
+    /// a hidden folder, OS metadata, our own artefacts, `bristlenose-output/`
+    /// or the top-level discussion guide. Nil otherwise — so a run's writes into
+    /// its own output schedule nothing.
+    static func scanScopeDepth(_ url: URL, root: URL) -> Int? {
+        let rootPath = root.standardizedFileURL.path
+        let path = url.standardizedFileURL.path
+        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard path.hasPrefix(prefix) else { return nil }
+        let parts = path.dropFirst(prefix.count).split(separator: "/").map(String.init)
+        guard !parts.isEmpty, parts.count <= ScanSelection.maxDepth else { return nil }
+        for part in parts {
+            if part.hasPrefix(".") || ScanSelection.isOSMetadata(part)
+                || ScanSelection.isArtefact(part) || part == ScanSelection.outputDirName {
+                return nil
+            }
+        }
+        if parts.count > 1,
+           parts[0].lowercased() == DiscussionGuide.folderName.lowercased() {
+            return nil
+        }
+        return parts.count
+    }
+
+    /// Readable files not yet analysed, by name.
     ///
-    /// The pane promises this number ("6 files to analyse") and the Analyse
-    /// predicate gates on whether it is above zero, so it is derived once here
-    /// rather than at each reader. Drops companions: five recordings beside a
-    /// `notes.txt` are five files to analyse, and promising six would be a
-    /// number the run then contradicts.
-    static func ingestableCount(_ eligible: [URL]) -> Int {
-        eligible.filter { !companionExtensions.contains($0.pathExtension.lowercased()) }.count
-    }
-
-    /// Pure helper exposed for unit testing — filters a candidate URL list to
-    /// the same "top-level eligible" set used by the watcher.
-    static func filterEligible(at root: URL, candidates: [URL]) -> [URL] {
-        candidates.filter { url in
-            let name = url.lastPathComponent
-            if name == "bristlenose-output" { return false }
-            if name.hasPrefix(".") { return false }
-            if !eligibleExtensions.contains(url.pathExtension.lowercased()) {
-                return false
-            }
-            return url.deletingLastPathComponent().standardizedFileURL ==
-                root.standardizedFileURL
+    /// `source_files` holds ONE path per session (`session.files[0]`), so a
+    /// session's other files — the `.m4a` beside a Zoom folder's `.mp4`, the
+    /// `.vtt` beside a Teams recording — never appear in `ingested`. Matching by
+    /// basename alone would list them as unanalysed after every run, and offer
+    /// an Analyse that changes nothing. So below the top level a folder holding
+    /// any ingested file counts as analysed whole: a new participant folder is
+    /// new, a file added to an analysed one is not reported (a known gap — the
+    /// sessions `run` would form are `group_into_sessions`' call, not ours). At
+    /// the top level each file stands alone, as it always has. Names, not
+    /// paths: a recorded path goes stale on every folder rename
+    /// (`missingIngestedFiles`).
+    static func newFiles(
+        readable: [URL], root: URL, ingested: Set<String>, known: Set<String>
+    ) -> [URL] {
+        let rootPath = root.standardizedFileURL.path
+        func folder(_ url: URL) -> String { url.deletingLastPathComponent().standardizedFileURL.path }
+        let analysedFolders = Set(readable
+            .filter { ingested.contains($0.lastPathComponent) && folder($0) != rootPath }
+            .map(folder))
+        return readable.filter { url in
+            let base = url.lastPathComponent
+            if ingested.contains(base) || known.contains(base) { return false }
+            return !analysedFolders.contains(folder(url))
         }
-    }
-
-    private static func enumerateTopLevelEligible(_ root: URL) -> [URL] {
-        let fm = FileManager.default
-        let keys: [URLResourceKey] = [.isRegularFileKey]
-        guard let contents = try? fm.contentsOfDirectory(
-            at: root,
-            includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
-        ) else { return [] }
-
-        return contents.filter { url in
-            let name = url.lastPathComponent
-            if name == "bristlenose-output" { return false }
-            if name.hasPrefix(".") { return false }
-            if !eligibleExtensions.contains(url.pathExtension.lowercased()) {
-                return false
-            }
-            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-            return values?.isRegularFile == true
-        }
+        // Sorted for stable Equatable comparison and stable display order.
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     /// Which ingested files are genuinely gone.
@@ -550,8 +581,8 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
 
     /// Mirrors `_MAX_SCAN_DEPTH` in `bristlenose/stages/s01_ingest.py`. The two
     /// scanners disagreeing about depth is what produced the false "3 missing"
-    /// this function was rewritten to fix.
-    static let maxScanDepth = 3
+    /// this function was rewritten to fix. One constant with `ScanSelection`.
+    static let maxScanDepth = ScanSelection.maxDepth
 
     /// True when a missing file is actually iCloud-evicted (still "logically
     /// present"). Such files are not treated as truly missing.

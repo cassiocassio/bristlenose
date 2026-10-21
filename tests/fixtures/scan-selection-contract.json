@@ -1,0 +1,160 @@
+{
+  "_doc": [
+    "run's file selection, as a case table both languages assert (decision #111, 21 Oct 2026).",
+    "Python: tests/test_scan_selection_contract.py against s01_ingest.iter_scanned_files + classify_file.",
+    "Swift: BristlenoseTests/ScanSelectionTests.swift (ScanSelectionContractTests) against ScanSelection.scannedFiles.",
+    "A failure on one side means the two walks disagree. Fix the walk that is wrong; edit a case only when run's rules change on purpose, and then both walks change with it.",
+    "Each layout is built in an empty base folder: the study is base/<root_name, default 'study'>, 'files' and 'dirs' and 'links[].at' are relative to the study, 'outside' files are relative to base/outside, and 'links[].to' is written verbatim as the link's target (relative to the link's own folder).",
+    "'home' says where the home folder is for the refusal: '.' the study itself, '..' its parent. Absent: the real home.",
+    "'selected' is every file the walk yields, relative to the study; 'readable' the subset classify_file accepts. Both compared as sorted lists.",
+    "'posix_links' layouts need symlinks and are skipped on Windows. 'refusals' are absolute paths, asserted on macOS only (/Library and friends resolve differently elsewhere)."
+  ],
+  "max_depth": 3,
+  "layouts": [
+    {
+      "name": "subfolder-only",
+      "files": ["p1/interview.mp4", "p2/interview.m4a", "p2/chat.txt"],
+      "selected": ["p1/interview.mp4", "p2/chat.txt", "p2/interview.m4a"],
+      "readable": ["p1/interview.mp4", "p2/interview.m4a"]
+    },
+    {
+      "name": "mixed",
+      "files": ["intro.mov", "p1/session.mp4", "p1/notes.txt", "p2/zoom1/video123.mp4", "p2/zoom1/audio123.m4a"],
+      "selected": ["intro.mov", "p1/notes.txt", "p1/session.mp4", "p2/zoom1/audio123.m4a", "p2/zoom1/video123.mp4"],
+      "readable": ["intro.mov", "p1/session.mp4", "p2/zoom1/audio123.m4a", "p2/zoom1/video123.mp4"]
+    },
+    {
+      "name": "ts-only",
+      "files": ["b.ts", "p1/a.ts"],
+      "selected": ["b.ts", "p1/a.ts"],
+      "readable": []
+    },
+    {
+      "name": "metadata-only",
+      "files": ["._a.mp4", ".DS_Store", "~$guide.docx", "p1/._b.mp4", "p1/~$notes.docx"],
+      "selected": [],
+      "readable": []
+    },
+    {
+      "name": "depth-limit",
+      "files": ["top.wav", "a/b.m4a", "a/b/c.mp4", "a/b/c/d.mp4"],
+      "selected": ["a/b.m4a", "a/b/c.mp4", "top.wav"],
+      "readable": ["a/b.m4a", "a/b/c.mp4", "top.wav"]
+    },
+    {
+      "name": "inside-output",
+      "files": ["z.mp4", "bristlenose-output/x.mp4", "bristlenose-output/sessions/y.vtt", "p1/bristlenose-output/w.mp4"],
+      "selected": ["z.mp4"],
+      "readable": ["z.mp4"]
+    },
+    {
+      "name": "inside-guide",
+      "files": ["a.mp4", "Discussion guide/guide.docx", "Discussion guide/clip.mp4"],
+      "selected": ["a.mp4"],
+      "readable": ["a.mp4"]
+    },
+    {
+      "name": "guide-folder-case-blind",
+      "files": ["a.mp4", "DISCUSSION GUIDE/guide.docx"],
+      "selected": ["a.mp4"],
+      "readable": ["a.mp4"]
+    },
+    {
+      "name": "nested-guide-folder-is-walked",
+      "files": ["p1/Discussion guide/x.docx"],
+      "selected": ["p1/Discussion guide/x.docx"],
+      "readable": ["p1/Discussion guide/x.docx"]
+    },
+    {
+      "name": "hidden-folder",
+      "files": [".claude/a.mp4", ".hidden.mp4", "p1/.git/b.mp4", "p1/c.mp4"],
+      "selected": ["p1/c.mp4"],
+      "readable": ["p1/c.mp4"]
+    },
+    {
+      "name": "our-artefacts",
+      "files": ["a.mp4", "bristlenose.db", "bristlenose.db-wal", "manifest.json", "bristlenose-study.txt", "run.pid", ".bristlenose/x.mp4", "p1/pipeline-events.jsonl", "p1/b.mp4"],
+      "selected": ["a.mp4", "p1/b.mp4"],
+      "readable": ["a.mp4", "p1/b.mp4"]
+    },
+    {
+      "name": "extensions",
+      "files": ["A.MP4", "b.Mov", "c.vtt", "d.srt", "e.docx", "f.txt", "g.pdf", "h", "i.mp4.part"],
+      "selected": ["A.MP4", "b.Mov", "c.vtt", "d.srt", "e.docx", "f.txt", "g.pdf", "h", "i.mp4.part"],
+      "readable": ["A.MP4", "b.Mov", "c.vtt", "d.srt", "e.docx"]
+    },
+    {
+      "name": "empty-folders",
+      "dirs": ["p1", "p2/zoom1"],
+      "selected": [],
+      "readable": []
+    },
+    {
+      "name": "link-to-a-walked-folder-counts-once",
+      "posix_links": true,
+      "files": ["p1/a.mp4"],
+      "links": [{"at": "alias", "to": "p1"}],
+      "selected": ["p1/a.mp4"],
+      "readable": ["p1/a.mp4"]
+    },
+    {
+      "name": "link-to-a-folder-outside",
+      "posix_links": true,
+      "outside": ["shared/s.mp4"],
+      "links": [{"at": "ext", "to": "../outside/shared"}],
+      "selected": ["ext/s.mp4"],
+      "readable": ["ext/s.mp4"]
+    },
+    {
+      "name": "link-to-a-file",
+      "posix_links": true,
+      "files": ["p1/x.mp4"],
+      "outside": ["o.m4a"],
+      "links": [{"at": "o-link.m4a", "to": "../outside/o.m4a"}],
+      "selected": ["o-link.m4a", "p1/x.mp4"],
+      "readable": ["o-link.m4a", "p1/x.mp4"]
+    },
+    {
+      "name": "link-keeps-its-own-depth",
+      "posix_links": true,
+      "files": ["a/b/k.mp4"],
+      "outside": ["deep/f.mp4"],
+      "links": [{"at": "a/b/deep", "to": "../../../outside/deep"}],
+      "selected": ["a/b/k.mp4"],
+      "readable": ["a/b/k.mp4"]
+    },
+    {
+      "name": "home-folder-is-refused",
+      "home": ".",
+      "files": ["a.mp4", "p1/b.mp4"],
+      "selected": [],
+      "readable": []
+    },
+    {
+      "name": "home-library-is-refused",
+      "root_name": "Library",
+      "home": "..",
+      "files": ["a.mp4"],
+      "selected": [],
+      "readable": []
+    },
+    {
+      "name": "a-folder-in-home-is-not-refused",
+      "root_name": "Documents",
+      "home": "..",
+      "files": ["a.mp4"],
+      "selected": ["a.mp4"],
+      "readable": ["a.mp4"]
+    }
+  ],
+  "refusals": [
+    {"path": "/", "refused": true},
+    {"path": "/Library", "refused": true},
+    {"path": "/Applications", "refused": true},
+    {"path": "/System", "refused": true},
+    {"path": "/usr", "refused": true},
+    {"path": "/Volumes", "refused": true},
+    {"path": "/private", "refused": true},
+    {"path": "/Users", "refused": false}
+  ]
+}

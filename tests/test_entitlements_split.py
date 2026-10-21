@@ -312,3 +312,44 @@ class TestTheArtefactGatesCheckTheSplitToo:
                     f"{gate.name} greps the bare entitlement name, which also "
                     f"matches the explanatory comments: {line.strip()!r}"
                 )
+
+
+_PBXPROJ = _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "project.pbxproj"
+
+
+class TestTheSandboxAllowsPrinting:
+    """File ▸ Print needs `com.apple.security.print` in every sandboxed build.
+
+    Without it the sandbox refuses the print panel and AppKit says "This
+    application does not support printing. Please contact the application's
+    developer." — on the one path that should print, a report in front. The
+    host's sandbox entitlements are generated from `ENABLE_*` build settings,
+    not from the `.entitlements` files above, and printing was `NO` in both
+    configurations until 21 Oct 2026 (R69). The Swift suite proves the Debug
+    host may print (`PrintEntitlementTests`); this pins Release, which ships.
+    """
+
+    def test_every_sandboxed_configuration_may_print(self) -> None:
+        import re
+
+        text = _PBXPROJ.read_text(encoding="utf-8")
+        blocks = re.findall(r"buildSettings = \{(.*?)\n\t\t\t\};", text, re.DOTALL)
+        app = [b for b in blocks if "PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;" in b]
+        assert len(app) == 2, (
+            "expected the app target's Debug and Release configurations; "
+            f"found {len(app)} — the parse no longer sees them"
+        )
+        for block in app:
+            assert "ENABLE_APP_SANDBOX = YES;" in block
+            assert "ENABLE_RESOURCE_ACCESS_PRINTING = YES;" in block, (
+                "a sandboxed configuration has no printing entitlement, so "
+                "File ▸ Print raises 'This application does not support printing'"
+            )
+
+    def test_both_artefact_gates_read_print_from_the_signed_app(self) -> None:
+        """The pbxproj is the setting; the gates read what was actually signed."""
+        for gate in (_PKG_GATE, _DMG_GATE):
+            body = gate.read_text(encoding="utf-8")
+            assert "<key>com.apple.security.print</key>" in body, (
+                f"{gate.name} does not check the print entitlement on the artefact"
+            )

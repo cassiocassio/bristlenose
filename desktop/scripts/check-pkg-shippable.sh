@@ -205,6 +205,16 @@ else
     die "host app-sandbox" "MISSING — ITMS-90296 auto-reject"
 fi
 
+# Printing. Without it the sandbox refuses the print panel and File ▸ Print says
+# "This application does not support printing" (R69: it was off in every build
+# until 21 Oct 2026). Generated from ENABLE_RESOURCE_ACCESS_PRINTING, so the
+# pbxproj test cannot see a channel that drops it; this reads the artefact.
+if grep -q '<key>com.apple.security.print</key>' <<<"$ENTS"; then
+    ok "host print" "present"
+else
+    die "host print" "MISSING — File ▸ Print raises 'does not support printing'"
+fi
+
 # The app group Background Assets needs to hand the PII model pack to the
 # sidecar. Its absence is a SILENT capability loss, which is why it is gated
 # here rather than trusted: the archive signs perfectly well without it and

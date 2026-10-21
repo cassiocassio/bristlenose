@@ -242,6 +242,15 @@ else
     else
         pass "app group" "team group only (${TEAM_GROUP}), as Developer-ID requires"
     fi
+    # Printing (R69): the sandbox refuses the print panel without it, and File ▸
+    # Print says "This application does not support printing".
+    if [ -n "$DMG_ENTS" ]; then
+        if grep -q '<key>com.apple.security.print</key>' <<<"$DMG_ENTS"; then
+            pass "print" "present"
+        else
+            fail "print" "MISSING — File ▸ Print raises 'does not support printing'"
+        fi
+    fi
 
     # Alpha life remaining. Reported, not gated — a short-lived sampler is a
     # judgement call, not a defect. Signing timestamp is a proxy for the

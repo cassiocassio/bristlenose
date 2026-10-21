@@ -126,6 +126,12 @@ Items that look fully active (no dimming) but do nothing when clicked.
   `guard let webView`, not the presence of `window.__bristlenose`. A status page
   is a real document and prints (`MenuCommands.swift:620-628`). Print
   *fidelity* is now a CSS concern (`@media print`), not a Swift one.
+  **It still never printed in a sandboxed build until 21 Oct 2026 (R69):** the
+  host had no `com.apple.security.print` (`ENABLE_RESOURCE_ACCESS_PRINTING = NO`),
+  so every press raised "This application does not support printing". The
+  setting is `YES` now. ⌘P with the item dimmed (Welcome, Settings, no report)
+  was never the cause: the menu bar takes a dimmed item's key equivalent, and no
+  `print:` reaches a responder (`PrintEntitlementTests`).
 - [x] **Codes ▸ Merge Codes** (`mergeCode`) — **withdrawn** 28 Jul 2026, not
   deleted. Merging needs a *source* and a *target*, and the codebook lens has no
   multi-select — so drag-one-code-onto-another in `CodebookPanel` is the only way

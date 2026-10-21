@@ -68,11 +68,10 @@ enum SessionsFetchIdentity {
 /// Rendering it as the same nothing as a failure teaches the researcher to
 /// distrust an accurate screen.
 ///
-/// Deliberately NOT modelled on `MiroAPI.status()`, whose own doc-comment
-/// forbids widening its collapse-everything-to-false shape "to a context where
-/// 'no token' and 'couldn't tell' must be distinguished". This is exactly that
-/// context: the popover is the only session switcher, so "couldn't tell"
-/// strands the researcher while "no sessions" is fine.
+/// Keeps "couldn't tell" apart from "no sessions" for the reason `MiroAPI.status()`
+/// learnt to (it collapsed every failure to signed-out until R78, 21 Oct 2026):
+/// the popover is the only session switcher, so "couldn't tell" strands the
+/// researcher while "no sessions" is fine.
 enum SessionsLoadState: Equatable {
     case loading
     case loaded([SessionsPopoverSpec.Session])

@@ -170,3 +170,37 @@ describe("MiroExportPanel — a board's progress", () => {
     await i18n.changeLanguage("en");
   });
 });
+
+describe("MiroExportPanel — a status check that fails (R78)", () => {
+  beforeEach(async () => {
+    getMiroStatus.mockReset();
+    getMiroBoardStatus.mockReset().mockResolvedValue(status("idle"));
+    await i18n.changeLanguage("en");
+  });
+
+  it("a server error says the request failed, beside the paste field", async () => {
+    getMiroStatus.mockRejectedValue(Object.assign(new Error("GET /miro/status 500"), { status: 500 }));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.requestFailed", { status: 500 })));
+    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"))).toBeTruthy();
+  });
+
+  it("a request that never reached the server says the server could not be reached", async () => {
+    getMiroStatus.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe(i18n.t("miro.serverUnreachable")));
+    expect(screen.getByLabelText(i18n.t("miro.tokenPlaceholder"))).toBeTruthy();
+  });
+
+  it("a connected status whose running-board read fails keeps the form, with no error", async () => {
+    getMiroStatus.mockResolvedValue({ connected: true });
+    getMiroBoardStatus.mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<MiroExportPanel open onClose={() => {}} />);
+    await screen.findByText(i18n.t("miro.createBoard"));
+    await waitFor(() => expect(getMiroBoardStatus).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});

@@ -148,7 +148,15 @@ final class MiroSheetModel: ObservableObject {
     func load() async {
         step = .loading
         error = nil
-        let conn = await api.status()
+        let conn: MiroAPI.Connection
+        do {
+            conn = try await api.status()
+        } catch {
+            // Could not tell is not signed out (R78): Connect stays, and its error line says why.
+            step = .connect
+            self.error = Self.text(for: error, i18n) ?? t("connectError")
+            return
+        }
         userName = conn.userName
         teamName = conn.teamName
         orgName = conn.orgName

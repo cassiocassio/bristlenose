@@ -160,19 +160,31 @@ struct MiroAPI {
 
     /// GET status — is a Miro token configured?
     ///
-    /// Intentionally collapses every failure (network, 5xx, decode) to `false`,
-    /// which routes the sheet to the connect screen. Safe because the recovery is
-    /// idempotent — re-pasting a token just re-runs `/connect`; a transient server
-    /// error at worst costs the user one extra paste, never wrong data. Don't widen
-    /// this to a context where "no token" and "couldn't tell" must be distinguished.
-    func status() async -> Connection {
+    /// Throws when it could not tell, so the sheet can say so rather than show the
+    /// Connect step as if signed out (R78): a transport failure is
+    /// `APIError.serverUnreachable()`, a non-2xx is the server's own error, and a
+    /// 200 that does not decode is `requestFailed` with that status. Only a 200
+    /// that answers `connected: false` means "no token".
+    func status() async throws -> Connection {
         guard let req = request("/status", method: "GET") else {
-            return Connection(connected: false, userName: nil, teamName: nil, orgName: nil)
+            throw APIError.serverUnreachable()
         }
-        guard let (data, resp) = try? await URLSession.shared.data(for: req),
-              let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode),
-              let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data) else {
-            return Connection(connected: false, userName: nil, teamName: nil, orgName: nil)
+        let (data, resp): (Data, URLResponse)
+        do {
+            (data, resp) = try await URLSession.shared.data(for: req)
+        } catch {
+            throw APIError.serverUnreachable()
+        }
+        guard let http = resp as? HTTPURLResponse else {
+            throw APIError.serverUnreachable()
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw apiError(from: data, status: http.statusCode)
+        }
+        guard let parsed = try? JSONDecoder().decode(StatusResponse.self, from: data) else {
+            throw APIError(message: "Request failed (HTTP \(http.statusCode)).",
+                           localeKey: "common.miro.requestFailed",
+                           localeVars: ["status": String(http.statusCode)])
         }
         return Connection(connected: parsed.connected, userName: parsed.user_name,
                           teamName: parsed.team_name, orgName: parsed.org_name)

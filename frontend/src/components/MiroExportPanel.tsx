@@ -226,6 +226,14 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const resume = useEffectEvent(() => {
     void watch(++build.current);
   });
+  // A status read that failed is not "signed out" (R78): the Connect step stays, its error line
+  // says why. `httpError` attaches the HTTP status; a fetch that never reached the server has none.
+  // An event for the same reason as `resume`: it reads `t`.
+  const statusFailed = useEffectEvent((e: unknown) => {
+    const s = (e as { status?: unknown })?.status;
+    setError(typeof s === "number" ? t("miro.requestFailed", { status: s }) : t("miro.serverUnreachable"));
+    setView((v) => (v === "loading" ? "connect" : v));
+  });
 
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
@@ -239,11 +247,14 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     // Which build this opening may pick up: closing the panel before the reads come back moves
     // `build.current` on, and nothing then starts polling behind a shut panel.
     const mine = build.current;
+    // Set once the status has answered: a later failure (the running-board read) is not one.
+    let answered = false;
     getMiroStatus()
       .then((s) => {
         setAccount(accountLine(s));
         setTeamName(s.team_name?.trim() || null);
         setView(s.connected ? "configure" : "connect");
+        answered = true;
         if (!s.connected) return;
         if (mine !== build.current) return;
         // A board still being built when the panel was closed is picked up again, not lost.
@@ -253,7 +264,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
           resume();
         });
       })
-      .catch(() => setView((v) => (v === "loading" ? "connect" : v)));
+      .catch((e) => {
+        if (answered || mine !== build.current) return;
+        statusFailed(e);
+      });
   }, [open, screens]);
 
   // On open, fill the name with what the board would be called anyway, so nothing arrives on

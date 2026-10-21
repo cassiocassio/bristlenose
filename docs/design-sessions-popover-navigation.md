@@ -379,9 +379,9 @@ accurate screen.
 The eight underlying conditions stay distinct in `os.Logger` (status code + the
 middleware's `detail` string is what identified the MiroAPI bug). **All
 Sessions renders unconditionally** — it is a route change needing no fetch, so
-it is the escape hatch when the list fails. Do **not** copy `MiroAPI.status()`;
-its own doc-comment forbids widening it to a context where "no token" and
-"couldn't tell" must differ.
+it is the escape hatch when the list fails. Do **not** copy the shape
+`MiroAPI.status()` had until R78 (21 Oct 2026), which collapsed every failure
+to "no token"; it now throws when it could not tell, and the Miro sheet says so.
 
 The failure string is a localised static from the `MessageKind` vocabulary held
 in the popover's own `@State` — never `error.localizedDescription`, and never

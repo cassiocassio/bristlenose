@@ -35,6 +35,12 @@ def _sid(segments) -> str:
     return m.group(1)
 
 
+# These drive the whole pipeline to test other stages; the discussion stage,
+# on by default, would run on the mocked client and log its failure every
+# drive, unasserted (conftest.no_discussion_stage; #109, decision #97 follow-up).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")
+
+
 def _drive(tmp_path: Path, asked: list[str], *, fail: set[str], chain: bool) -> None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)

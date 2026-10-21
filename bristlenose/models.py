@@ -193,6 +193,11 @@ class InputFile(BaseModel):
     # Container time metadata, captured at ingest; read by utils.session_start.
     container_meta: MediaTimeMeta | None = None
     error: str | None = None
+    #: The stage that wrote ``error``, when it was not stage 2 (which judges a
+    #: file unreadable and is the default): ``"s01_ingest"`` for a copy the
+    #: session registry folds into another session (R49, decision #97). The
+    #: Files bucket labels the row with it.
+    error_stage: str | None = None
 
 
 class InputSession(BaseModel):

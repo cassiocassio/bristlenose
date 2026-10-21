@@ -626,6 +626,7 @@ def fold_duplicate_recording(owner: InputSession, duplicate: InputSession) -> No
     for f in duplicate.files:
         if f.file_type in _MEDIA_TYPES:
             f.error = UnusableReason.DUPLICATE_RECORDING.value
+            f.error_stage = "s01_ingest"
         owner.files.append(f)
     owner.has_existing_transcript = (
         owner.has_existing_transcript or duplicate.has_existing_transcript
@@ -658,6 +659,7 @@ def fold_duplicate_transcript(
     for f in duplicate.files:
         if f.path in copies:
             f.error = UnusableReason.DUPLICATE_TRANSCRIPT.value
+            f.error_stage = "s01_ingest"
             logger.warning(
                 "%s is the same transcript as one beside %s — set aside; %s is used",
                 f.path.name, owner.files[0].path.name, owner.files[0].path.name,

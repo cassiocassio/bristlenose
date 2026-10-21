@@ -4221,7 +4221,7 @@ class Pipeline:
                 if input_file.error is None:
                     succeeded += 1
                     continue
-                # s02 wrote the reason token; unrecognised values are possible
+                # s01's folds or s02 wrote the reason token; unrecognised values are possible
                 # only if that contract drifts, and a shrug beats a KeyError
                 # inside failure reporting.
                 try:
@@ -4232,7 +4232,9 @@ class Pipeline:
                     refusal_stage_failure(
                         source_file=input_file.path.name,
                         reason=reason,
-                        stage="s02_extract_audio",
+                        # Stage 2 unless the file says otherwise: a copy
+                        # folded at ingest is set aside by s01.
+                        stage=input_file.error_stage or "s02_extract_audio",
                         session_id=session.session_id,
                     )
                 )

@@ -26,6 +26,11 @@ from bristlenose.pipeline import Pipeline
 from tests.conftest import iter_transcribe_from
 from tests.test_pipeline_platform_transcripts import _quote, _whisper_segments, audio_session
 
+# These drive the whole pipeline to test other stages; the discussion stage,
+# on by default, would run on the mocked client and log its failure every
+# drive, unasserted (conftest.no_discussion_stage; #109, decision #97 follow-up).
+pytestmark = pytest.mark.usefixtures("no_discussion_stage")
+
 
 def _drive(tmp_path: Path, n_sessions: int, log: dict, stop_in: str | None = None) -> None:
     input_dir = tmp_path / "input"

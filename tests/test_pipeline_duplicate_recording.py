@@ -11,8 +11,11 @@ the fold was written.
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
+
+import pytest
 
 from bristlenose.events import UnusableReason
 from bristlenose.models import FileType, InputFile, InputSession
@@ -160,3 +163,68 @@ class TestDuplicateTranscript:
         h = run_pipeline(tmp_path, build, runs=2)
         assert list(h.session_segments()) == ["s1"]
         assert _refusals(h, 1) == []
+
+
+class TestSetAsideStage:
+    """A row says which stage set the file aside. The folds happen at ingest
+    (the session registry, before stage 2); until 21 Oct 2026 every
+    set-aside file was labelled ``s02_extract_audio``."""
+
+    @staticmethod
+    def _stages(h, run: int = 0) -> list[tuple[str, str | None]]:
+        summary = h.results[run].summary
+        assert summary is not None and summary.ingest is not None
+        return [(f.source_file or "", f.cause.stage) for f in summary.ingest.failed]
+
+    def test_a_folded_recording_copy_is_labelled_ingest(self, tmp_path: Path) -> None:
+        def build(d: Path, _i: int):
+            original = audio_session(d, 1, "P3")
+            return [original, _copy_of(d, original, 2, "P3 (1).wav")]
+
+        assert self._stages(run_pipeline(tmp_path, build)) == [("P3 (1).wav", "s01_ingest")]
+
+    def test_a_folded_transcript_copy_is_labelled_ingest(self, tmp_path: Path) -> None:
+        def build(d: Path, _i: int):
+            return [_transcript_session(d, 1, "transcript.vtt"),
+                    _transcript_session(d, 2, "transcript (1).vtt")]
+
+        assert self._stages(run_pipeline(tmp_path, build)) == [
+            ("transcript (1).vtt", "s01_ingest"),
+        ]
+
+    def test_a_file_stage_2_set_aside_is_still_labelled_stage_2(self, tmp_path: Path) -> None:
+        """The control: stage 2 writes ``error`` and nothing else."""
+        from bristlenose.config import BristlenoseSettings
+        from bristlenose.pipeline import Pipeline
+
+        session = audio_session(tmp_path, 1, "P3")
+        session.files[0].error = UnusableReason.EMPTY.value
+        pipeline = Pipeline(BristlenoseSettings(project_name="t"))
+        pipeline._record_ingest_outcome([session], [])
+        ingest = pipeline._summary.ingest
+        assert ingest is not None
+        assert [f.cause.stage for f in ingest.failed] == ["s02_extract_audio"]
+
+def test_the_harness_runs_the_discussion_stage_without_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``run_pipeline`` is shared by ten suites that drive the whole pipeline
+    to test other stages. The discussion stage is on by default and the
+    harness once handed it a MagicMock client, so every drive from a suite
+    without ``conftest.no_discussion_stage`` logged its failure, unasserted,
+    and a real failure there was invisible (#109 did the same for the caches
+    suite). Here, outside that fixture, on purpose: fresh, then cached.
+
+    Read from the run's own log file: the pipeline's logging setup keeps
+    these records from ``caplog``, so a caplog assertion passes on a harness
+    that logs the failure every run."""
+    # The file's level comes from the environment; a quieter one would hide
+    # the line this looks for.
+    monkeypatch.delenv("BRISTLENOSE_LOG_LEVEL", raising=False)
+    h = run_pipeline(tmp_path, lambda d, _i: [audio_session(d, 1, "bare")], runs=2)
+
+    # The failure's own words, at whatever level they are logged.
+    failures = [line for line in h.log().splitlines()
+                if "discussion stage failed" in line or re.search(r"discussion: s\d+ failed", line)]
+    assert failures == [], failures
+    assert h.discussed == [["s1"]], h.discussed  # ran once, then cached

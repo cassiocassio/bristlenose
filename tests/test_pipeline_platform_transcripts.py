@@ -142,6 +142,8 @@ class Harness:
     quoted_by_run: dict[int, set[str]] = field(default_factory=dict)
     #: Per run, the session ids handed to (stubbed) stage 2 audio extraction.
     extracted: list[list[str]] = field(default_factory=list)
+    #: Per (stubbed) discussion-stage call, the session ids it was given.
+    discussed: list[list[str]] = field(default_factory=list)
     #: Per run, what ``Pipeline.run`` returned — its ``summary`` is the terminus
     #: the CLI prints and the Mac popover reads.
     results: list[PipelineResult] = field(default_factory=list)
@@ -286,6 +288,18 @@ def run_pipeline(
     async def _fake_group(quotes, *_a, **_kw):
         return [], StageOutcome(attempted=1, succeeded=1)
 
+    async def _fake_discuss(transcripts, *_a, **_kw):
+        # Stubbed like every other LLM stage here (as #109 did for the caches
+        # suite): the pipeline's own record and manifest handling still run,
+        # on a stage that succeeds, so a suite without
+        # ``conftest.no_discussion_stage`` no longer logs its failure.
+        from bristlenose.discussion.models import DiscussionRecord
+
+        h.discussed.append(sorted(t.session_id for t in transcripts))
+        return DiscussionRecord(), StageOutcome(
+            attempted=len(transcripts), succeeded=len(transcripts),
+        )
+
     with (
         patch("bristlenose.stages.s01_ingest.ingest", new=_fake_ingest),
         patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions", new=_passthrough),
@@ -297,6 +311,7 @@ def run_pipeline(
         patch("bristlenose.stages.s09_quote_extraction.extract_quotes", new=_fake_extract_quotes),
         patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=_fake_cluster),
         patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=_fake_group),
+        patch("bristlenose.discussion.stage.run_discussion", new=_fake_discuss),
         patch("bristlenose.llm.client.LLMClient", MagicMock()),
     ):
         for i in range(runs):

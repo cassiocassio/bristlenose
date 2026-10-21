@@ -156,6 +156,7 @@ otherwise.
 | Deny proposal | `x` (picked over `ban`) | `xmark` (`nosign` means *forbidden*) | ⊘ |
 | Warning | `triangle-alert` | `exclamationmark.triangle` | ⚠ |
 | Failed | `circle-x` | `xmark.circle` | ✗ |
+| Broken part (couldn't be shown) | `image-off` | `photo.slash` | — (new, 20 Oct 2026). A crashed header, nav or dialog shows this mark alone, muted, with no words and no button (`PanelErrorBoundary` `part`). Not a missing image: the mark is chosen for what everyone already does about one, which is reload (⌘R; View ▸ Reload Report and right-click in the Mac app, which use Refresh's `arrow.clockwise`). The slash is shared with Hide's `eye-off`; the picture keeps them apart. `docs/mockups/error-patterns-and-chrome-crash.html` |
 | Add | `plus` | `plus` | + (codebook) |
 | External link | `external-link` | `arrow.up.forward.square` | ↗ |
 | Close a side panel | `x` (picked over `panel-left-close`) | `sidebar.left` | × ×2 |

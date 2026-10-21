@@ -28,7 +28,7 @@ import {
   MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
   ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
-  RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
+  ImageOff, RotateCcw, RotateCw, Search, Settings, SlidersHorizontal, Sparkle, Tag, TextQuote,
   TriangleAlert, Undo2, X, ZoomIn, ZoomOut, type LucideIcon,
 } from "lucide-react";
 
@@ -87,6 +87,9 @@ const ICONS = {
   warning: TriangleAlert,
   /** An activity that failed or was cancelled. */
   failed: CircleX,
+  /** A part of the report that couldn't be shown. The broken-image mark, for
+   *  what everyone already knows to do about one: reload (PanelErrorBoundary). */
+  broken: ImageOff,
   /** The AutoCode dialogs' title ornament (pick: Lucide sparkle over keeping ✦). */
   ai: Sparkle,
   /** Dev-only playground controls. */

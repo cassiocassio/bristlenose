@@ -368,29 +368,33 @@ describe("a crash in one sidebar", () => {
   });
 });
 
-// Decision #9: the chrome around the lens. Header and nav show the part
-// fallback in their own slot; footer and activity chips draw nothing; a modal
-// shows it inside its own box, and can still be closed.
+// Decision #9: the chrome around the lens. Header and nav show the broken mark
+// in their own slot; footer, activity chips and the invisible syncs draw
+// nothing; a modal shows the mark inside its own box, and can still be closed.
 
-const PART = /^This couldn.t be shown\.Retry$/;
-
+/** The part fallback: the broken mark alone, named for assistive technology,
+ *  with no words on screen, no button and no alert (owner, 20 Oct 2026). */
 function expectPartFallback(slot: Element) {
-  const alert = within(slot as HTMLElement).getByRole("alert");
-  expect(alert).toHaveTextContent(PART);
-  expect(alert).toHaveClass("bn-empty-state", "bn-route-error", "bn-panel-error");
+  const fallback = (slot as HTMLElement).querySelector<HTMLElement>(".bn-part-error");
+  expect(fallback).not.toBeNull();
+  expect(fallback).toHaveClass("bn-route-error");
+  expect(within(fallback!).getByRole("img", { name: "This couldn’t be shown." })).toBeInTheDocument();
+  expect(fallback!.textContent).toBe("");
+  expect(within(fallback!).queryByRole("button")).toBeNull();
+  expect(within(slot as HTMLElement).queryByRole("alert")).toBeNull();
   expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
   expect(console.error).toHaveBeenCalledWith("[PanelError]", expect.any(Error));
 }
 
 /** The whole-report fallback (the /report errorElement) is not on screen. */
 function expectReportStands(container: HTMLElement) {
-  expect(container.querySelector(".bn-route-error:not(.bn-panel-error)")).toBeNull();
+  expect(container.querySelector(".bn-route-error:not(.bn-panel-error):not(.bn-part-error)")).toBeNull();
   expect(screen.getByTestId("signals-lens")).toBeInTheDocument();
 }
 
 /** A bar's fallback sits in the bar's own slot, a direct child of the centre column. */
 function barFallbacks(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(".center > .bn-panel-error"));
+  return Array.from(container.querySelectorAll<HTMLElement>(".center > .bn-part-error"));
 }
 
 describe("a crash in the chrome around the lens", () => {
@@ -440,27 +444,6 @@ describe("a crash in the chrome around the lens", () => {
     expect(screen.getByRole("link", { name: "Quotes" })).toBeInTheDocument();
     expect(console.error).toHaveBeenCalledWith("[PanelError]", expect.any(Error));
   });
-
-  for (const bar of ["navBar", "header"] as const) {
-    it(`in the ${bar === "navBar" ? "nav" : "header"}: Retry reloads the page, as the whole-report Retry does`, () => {
-      // A render crash is usually deterministic, so a remount would crash again;
-      // a reload refetches the data and the code (owner, 20 Oct 2026).
-      const reload = vi.fn();
-      const realLocation = window.location;
-      Object.defineProperty(window, "location", { configurable: true, value: { ...realLocation, reload } });
-      try {
-        boom[bar] = true;
-        const { container } = renderAt("/report/signals/");
-        boom[bar] = false;
-        fireEvent.click(within(barFallbacks(container)[0]).getByRole("button", { name: "Retry" }));
-        expect(reload).toHaveBeenCalledTimes(1);
-        // Not a remount: the fallback stays until the page reloads.
-        expect(barFallbacks(container)).toHaveLength(1);
-      } finally {
-        Object.defineProperty(window, "location", { configurable: true, value: realLocation });
-      }
-    });
-  }
 
   for (const [name, flag] of [
     ["the announcer", "announce"],
@@ -580,25 +563,20 @@ describe("a crash inside an open modal", () => {
     const modal = overlay.querySelector(".bn-modal") as HTMLElement;
     // Another section clears it, the way another lens clears a lens crash.
     fireEvent.click(within(modal).getByRole("button", { name: "Pipeline" }));
-    await waitFor(() => expect(within(modal).queryByRole("alert")).toBeNull());
+    await waitFor(() => expect(modal.querySelector(".bn-part-error")).toBeNull());
     fireEvent.click(within(modal).getByRole("button", { name: "Close" }));
     await waitFor(() => expect(overlay).not.toHaveClass("visible"));
   });
 
-  it("comes back on Retry once it stops throwing", async () => {
-    const { overlay } = await openBroken("export.heading", () => exportMenu(/Export Report/), "bn-export-overlay");
+  it("comes back after a route change once it stops throwing", async () => {
+    const { overlay, router } = await openBroken("export.heading", () => exportMenu(/Export Report/), "bn-export-overlay");
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(overlay).not.toHaveClass("visible"));
     boom.tKey = null;
-    fireEvent.click(within(overlay).getByRole("button", { name: "Retry" }));
+    await act(() => router.navigate("/report/sessions/"));
+    await exportMenu(/Export Report/);
     expect(await within(overlay).findByRole("heading", { name: "Export report" })).toBeInTheDocument();
-    expect(within(overlay).queryByRole("alert")).toBeNull();
-  });
-
-  it("that keeps throwing stays contained in the modal on Retry", async () => {
-    const { container, overlay } = await openBroken("export.heading", () => exportMenu(/Export Report/), "bn-export-overlay");
-    fireEvent.click(within(overlay).getByRole("button", { name: "Retry" }));
-    expectPartFallback(overlay.querySelector(".bn-modal")!);
-    expect(overlay).toHaveClass("visible");
-    expectReportStands(container);
+    expect(overlay.querySelector(".bn-part-error")).toBeNull();
   });
 
   it("in the Mac app (opened from the menu) is contained in the modal, and Escape closes it", async () => {

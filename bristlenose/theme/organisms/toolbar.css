@@ -52,17 +52,21 @@
     line-height: var(--bn-text-label-lh);
 }
 
-/* In a bar's slot (the header or the nav, AppLayout), the bar is short:
-   the sentence and Retry sit in one row. */
-.center > .bn-empty-state.bn-panel-error {
+/* A part of the chrome that couldn't be shown (PanelErrorBoundary `part`):
+   the broken mark alone, quiet, where the part was. In a bar's slot it is a
+   short strip (the bar is gone, so the lens below moves up); in a dialog it
+   sits larger in the content's place. */
+.bn-part-error {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--bn-space-md);
     padding: var(--bn-space-sm) var(--bn-space-md);
+    color: var(--bn-colour-muted);
+    font-size: var(--bn-text-heading);
 }
-.center > .bn-panel-error .bn-btn {
-    margin-top: 0;
+.bn-modal .bn-part-error {
+    padding: var(--bn-space-xl) var(--bn-space-md);
+    font-size: var(--bn-text-display);
 }
 
 /* Refetch overlay — dim existing data while a refetch is in flight.

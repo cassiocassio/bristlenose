@@ -945,16 +945,16 @@ function AppShell() {
       }
     >
       {/* The chrome beside the lens, each in its own boundary (R85, decision #9):
-          a crash in one leaves the report standing. The bars' Retry reloads the
-          page, as the whole-report one does; the modals hold theirs inside
-          their own box, so they can still be closed. */}
+          a crash in one leaves the report standing, and the bars and modals
+          show the broken mark where the part was. The modals hold theirs
+          inside their own box, so they can still be closed. */}
       {!embedded && (
-        <PanelErrorBoundary part reload>
+        <PanelErrorBoundary part>
           <Header onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />
         </PanelErrorBoundary>
       )}
       {!embedded && (
-        <PanelErrorBoundary part reload>
+        <PanelErrorBoundary part>
           <NavBar onExportReport={toggleExport} onSendToMiro={toggleMiro} onSendToFigJam={toggleFigJam} onSettings={toggleSettings} onHelp={() => openDocs(DOCS_URL)} />
         </PanelErrorBoundary>
       )}

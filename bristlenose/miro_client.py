@@ -160,20 +160,6 @@ def exchange_code_for_tokens(client_id: str, code: str, redirect_uri: str,
     return tokens
 
 
-def refresh_access_token(client_id: str, refresh_token: str) -> dict[str, Any]:
-    """Rotate an expiring access token using the refresh token."""
-    resp = httpx.post(OAUTH_TOKEN, data={
-        "grant_type": "refresh_token",
-        "client_id": client_id,
-        "refresh_token": refresh_token,
-    }, timeout=30)
-    if resp.status_code != 200:
-        raise MiroError(f"token refresh failed: {resp.status_code} {resp.text[:200]}")
-    # RFC 6749 §5.1: a 200 token response is a JSON object.
-    tokens: dict[str, Any] = resp.json()
-    return tokens
-
-
 # ---------------------------------------------------------------------------
 # Waits — every backoff sleep goes through `_pause`, so a build can say it is waiting for Miro
 # ---------------------------------------------------------------------------

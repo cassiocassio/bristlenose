@@ -923,7 +923,9 @@ def _discard_stale_redaction(output_dir: Path) -> None:
             logger.info("Removed stale redaction output: %s", target.name)
 
 
-def _load_cached_json(path: Path, *, recomputes: bool = True) -> Any | None:
+def _load_cached_json(
+    path: Path, *, recomputes: bool = True, expect: type | None = None,
+) -> Any | None:
     """Parse an intermediate-cache JSON file, tolerating a corrupt/truncated one.
 
     Returns the parsed object, or ``None`` if the file is missing, truncated,
@@ -942,9 +944,16 @@ def _load_cached_json(path: Path, *, recomputes: bool = True) -> Any | None:
     ``recomputes=False`` for a caller that falls back rather than recompute
     (``transcribe``'s speaker cache): the log line stays, the terminal line,
     which says "recomputing", does not.
+
+    ``expect``: the type the file must parse to (``dict`` for
+    ``session_segments.json``). Valid JSON of another type is discarded as a
+    corrupt file is, rather than handed on to fail at ``.items()``.
     """
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if expect is not None and not isinstance(data, expect):
+            raise ValueError(f"expected {expect.__name__}, found {type(data).__name__}")
+        return data
     except (OSError, ValueError) as exc:
         # ValueError covers json.JSONDecodeError and UnicodeDecodeError — the
         # two ways a half-written/encoding-mangled file fails to parse.
@@ -1851,15 +1860,17 @@ class Pipeline:
             if _ss_verified:
                 import json as _json
 
-                _ss_raw = _json.loads(_ss_path.read_text(encoding="utf-8"))
+                # Unreadable, or not an object: the per-session path below
+                # discards it and transcribes again, as a corrupt file.
+                _ss_raw = _load_cached_json(_ss_path, expect=dict)
                 # A session recorded complete that the file does not hold was
                 # lost by an earlier run: the per-session path below
                 # transcribes it rather than report it as silent.
-                _ss_verified = not (
+                _ss_verified = _ss_raw is not None and not (
                     get_completed_session_ids(_prev_manifest, _M_STAGE_TRANSCRIBE)
                     & {s.session_id for s in sessions}
                 ) - set(_ss_raw)
-            if _ss_verified:
+            if _ss_verified and isinstance(_ss_raw, dict):
                 session_segments = {
                     sid: [TranscriptSegment.model_validate(s) for s in segs]
                     for sid, segs in _ss_raw.items()
@@ -1890,7 +1901,7 @@ class Pipeline:
                 )
                 _cached_segments: dict[str, list[TranscriptSegment]] = {}
                 if _cached_tx_sids and _ss_path.exists():
-                    _ss_raw = _load_cached_json(_ss_path)
+                    _ss_raw = _load_cached_json(_ss_path, expect=dict)
                     if _ss_raw is None:
                         # Corrupt/truncated cache (e.g. power loss mid-write):
                         # drop the cached set so every session is re-transcribed
@@ -3502,7 +3513,7 @@ class Pipeline:
             _cached_sids = fresh_session_ids(
                 _prev, _M_STAGE_TRANSCRIBE, _tx_fps, accept=_tx_fps_legacy,
             )
-            _ss_raw = _load_cached_json(_ss_path) if _cached_sids else None
+            _ss_raw = _load_cached_json(_ss_path, expect=dict) if _cached_sids else None
             if isinstance(_ss_raw, dict):
                 # A session the file does not hold is transcribed, not lost.
                 _cached_segments = {

@@ -708,3 +708,67 @@ def test_run_over_a_corrupt_speaker_cache_still_says_recomputing(
     out = " ".join(capsys.readouterr().out.split())
     assert "s1.json: cache unreadable (JSONDecodeError) — recomputing" in out, out
     assert any("s1 session" in text for text in log.get("roles", [])), log
+
+
+# ── a session_segments.json that parses but is not an object ─────────────────
+
+
+def _segments_file_not_an_object(tmp_path: Path, *, path_taken: str | None) -> None:
+    """Valid JSON, not an object. ``path_taken``: "verified" restamps the
+    stage hash so the file passes it; "per-session" leaves the stage RUNNING,
+    as an interrupted run does, where the hash is never checked."""
+    from bristlenose.hashing import hash_bytes
+
+    path = _intermediate(tmp_path, "session_segments.json")
+    path.write_text(json.dumps([{"s1": []}]), encoding="utf-8")
+    if path_taken is None:
+        return
+    manifest_path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if path_taken == "verified":
+        manifest["stages"]["transcribe"]["content_hash"] = hash_bytes(path.read_bytes())
+    else:
+        manifest["stages"]["transcribe"]["status"] = "running"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+@pytest.mark.parametrize("path_taken", ["verified", "per-session"])
+def test_run_recomputes_over_a_segments_file_that_is_not_an_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], path_taken: str,
+) -> None:
+    # Read on either path, it is a corrupt cache file: discarded, recomputed.
+    _drive(tmp_path, "run", 2, {})
+    _segments_file_not_an_object(tmp_path, path_taken=path_taken)
+    capsys.readouterr()
+
+    log: dict = {}
+    result = _drive(tmp_path, "run", 2, log)
+
+    # Before the fix: a TypeError or AttributeError out of run().
+    assert log.get("transcribed") == [["s1", "s2"]], log
+    assert result is not None and result.summary.transcripts.failed == [], result
+    out = " ".join(capsys.readouterr().out.split())
+    assert "session_segments.json: cache unreadable (ValueError) — recomputing" in out, out
+
+
+def test_transcribe_says_it_recomputes_over_a_segments_file_that_is_not_an_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], caplog: pytest.LogCaptureFixture,
+) -> None:
+    _drive(tmp_path, "run", 2, {})
+    _segments_file_not_an_object(tmp_path, path_taken=None)
+    capsys.readouterr()
+    from bristlenose import pipeline
+
+    pipeline._printed_warnings.clear()
+
+    after: dict = {}
+    with caplog.at_level("WARNING", logger="bristlenose.pipeline"):
+        _drive(tmp_path, "transcribe", 2, after)
+
+    assert after["transcribed"] == [["s1", "s2"]], after
+    # Before the fix: every recording transcribed again, and nothing said why.
+    out = " ".join(capsys.readouterr().out.split())
+    assert "session_segments.json: cache unreadable (ValueError) — recomputing" in out, out
+    assert any(
+        "Discarding corrupt intermediate cache" in r.getMessage() for r in caplog.records
+    ), [r.getMessage() for r in caplog.records]

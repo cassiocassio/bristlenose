@@ -213,7 +213,6 @@
     "onThisMac": "En este Mac",
     "projectIcon": "Icono del proyecto",
     "emptyStateHint": "Arrastra una carpeta aquí o pulsa ⌘N",
-    "addedInterviews": "%d entrevistas añadidas a %@",
     "newProjectSaveTitle": "Crear carpeta del proyecto",
     "newProjectSavePrompt": "Crear",
     "newProjectSaveMessage_one": "Tu entrevista se copiar\u00e1 en esta carpeta.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Esperando la transcripci\u00f3n",
     "includeWaiting_one": "Incluir {{count}} a la espera de transcripci\u00f3n",
     "includeWaiting_other": "Incluir {{count}} a la espera de transcripci\u00f3n"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analiza carpetas",
-    "body": "Este proyecto se cre\u00f3 a partir de archivos sueltos, as\u00ed que no se puede analizar.",
-    "filesHeading": "Archivos de este proyecto"
   },
   "discussion": {
     "notRun": "Este proyecto se analiz\u00f3 antes de que existiera la discusi\u00f3n. Para crearla, elige Analizar en el men\u00fa del proyecto en la barra lateral. Los pasos terminados se reutilizan y tus cambios se conservan.",

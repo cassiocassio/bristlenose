@@ -213,7 +213,6 @@
     "onThisMac": "Su questo Mac",
     "projectIcon": "Icona del progetto",
     "emptyStateHint": "Trascina qui una cartella o premi ⌘N",
-    "addedInterviews": "Aggiunte %d interviste a %@",
     "newProjectSaveTitle": "Crea cartella del progetto",
     "newProjectSavePrompt": "Crea",
     "newProjectSaveMessage_one": "La tua intervista viene copiata in questa cartella.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "In attesa della trascrizione",
     "includeWaiting_one": "Includi {{count}} in attesa di trascrizione",
     "includeWaiting_other": "Includi {{count}} in attesa di trascrizione"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analizza cartelle",
-    "body": "Questo progetto è stato creato da file singoli, quindi non può essere analizzato.",
-    "filesHeading": "File di questo progetto"
   },
   "discussion": {
     "notRun": "Questo progetto \u00e8 stato analizzato prima che esistesse la discussione. Per crearla, scegli Analizza dal menu del progetto nella barra laterale. I passaggi completati vengono riutilizzati e le tue modifiche restano.",

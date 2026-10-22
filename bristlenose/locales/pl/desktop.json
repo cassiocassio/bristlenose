@@ -217,7 +217,6 @@
     "onThisMac": "Na tym Macu",
     "projectIcon": "Ikona projektu",
     "emptyStateHint": "Przeciągnij folder tutaj lub naciśnij ⌘N",
-    "addedInterviews": "Dodano %d wywiadów do %@",
     "newProjectSaveTitle": "Utw\u00f3rz folder projektu",
     "newProjectSavePrompt": "Utw\u00f3rz",
     "newProjectSaveMessage_one": "Tw\u00f3j wywiad zostanie skopiowany do tego folderu.",
@@ -1316,11 +1315,6 @@
     "includeWaiting_many": "Uwzgl\u0119dnij {{count}} nagra\u0144 oczekuj\u0105cych na transkrypcj\u0119",
     "includeWaiting_one": "Uwzgl\u0119dnij {{count}} nagranie oczekuj\u0105ce na transkrypcj\u0119",
     "includeWaiting_other": "Uwzgl\u0119dnij {{count}} nagra\u0144 oczekuj\u0105cych na transkrypcj\u0119"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analizuje foldery",
-    "body": "Ten projekt powstał z pojedynczych plików, więc nie można go przeanalizować.",
-    "filesHeading": "Pliki w tym projekcie"
   },
   "discussion": {
     "notRun": "Ten projekt zosta\u0142 przeanalizowany, zanim pojawi\u0142a si\u0119 dyskusja. Aby j\u0105 utworzy\u0107, wybierz Analizuj w menu projektu na pasku bocznym. Uko\u0144czone etapy zostan\u0105 u\u017cyte ponownie, a Twoje zmiany zostan\u0105 zachowane.",

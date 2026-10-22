@@ -214,7 +214,6 @@
     "onThisMac": "On this Mac",
     "projectIcon": "Project icon",
     "emptyStateHint": "Drag a folder here or press \u2318N",
-    "addedInterviews": "Added %d interviews to %@",
     "newProjectSaveTitle": "Create Project Folder",
     "newProjectSavePrompt": "Create",
     "newProjectSaveMessage_one": "Your interview is copied into this folder.",
@@ -1237,11 +1236,6 @@
     "statusWaitingForTranscript": "Waiting for transcript",
     "includeWaiting_one": "Include {{count}} waiting on transcription",
     "includeWaiting_other": "Include {{count}} waiting on transcription"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyses folders",
-    "body": "This project was created from individual files, so it can’t be analysed.",
-    "filesHeading": "Files in this project"
   },
   "discussion": {
     "notRun": "This project was analysed before the Discussion lens existed. To build it, choose Analyse from the project\u2019s menu in the sidebar. Finished steps are reused, and your edits are kept.",

@@ -54,7 +54,7 @@ word.
 
 Keys in `desktop.json` that only render inside the macOS app shell. CLI serve mode never loads the `desktop` namespace.
 
-All 22 sections, measured 21 Aug 2026. **635 keys.**
+All 22 sections, measured 21 Aug 2026. **635 keys.** _(A snapshot: 22 Oct 2026 removed the `unsupportedSubset` section and `chrome.addedInterviews`; regenerate rather than hand-edit.)_
 
 | Section | Key count | Content |
 |---|---|---|
@@ -78,7 +78,6 @@ All 22 sections, measured 21 Aug 2026. **635 keys.**
 | `sessionsPopover.*` | 5 | Native session-switcher popover: "All Sessions" row, count subtitle (plural forms; cs/pl/ru/uk carry `_few`/`_many`), empty and failure states. Row title reuses `common.autocode.sessionLabel`; the unnamed-speaker placeholder reuses `common.sessions.speakerPlaceholder.*`; Retry reuses `common.buttons.retry` |
 | `availability.*` | 4 | Unmounted-volume / missing-project subtitles |
 | `help.*` (overrides) | 3 | Desktop variants for forked keys — **all three are now dead** (see Forked section below) |
-| `unsupportedSubset.*` | 3 | Content-area state for a project built from individual files rather than a folder |
 | `configReference.*` | 1 | Desktop variant for config reference intro |
 
 **i18n**: all 21 full locales, plus `zh-Hant-HK` as a thin override that inherits via `zh-Hant → en`.

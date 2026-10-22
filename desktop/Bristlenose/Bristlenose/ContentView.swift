@@ -1862,14 +1862,13 @@ struct ContentView: View {
     /// for this project right now.
     ///
     /// Asks `SidebarOutlineController.analyseIsOffered` — the same predicate
-    /// the context menu asks — rather than re-deriving "folder-shaped, has a
-    /// path, pipeline free". Two copies of that reasoning is how a sheet comes
+    /// the context menu asks — rather than re-deriving "has a path, reachable,
+    /// pipeline free". Two copies of that reasoning is how a sheet comes
     /// to offer a run the menu says is unavailable.
     private func analyseActionForSheet(_ sheet: NewFilesSheetState) -> (() -> Void)? {
         guard let project = projectIndex.projects.first(where: { $0.id == sheet.projectID })
         else { return nil }
         guard SidebarOutlineController.analyseIsOffered(
-            isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
             isAvailable: project.isAvailable,
             state: pipelineRunner.state[project.id],
@@ -2116,14 +2115,11 @@ struct ContentView: View {
         )
     }
 
-    // `pipelineHasViewableData` moved to `DetailPaneKind.hasViewableData` —
-    // the pane resolution owns it now, and the lens-availability derivation
-    // reads the same copy.
-
     /// Handle files/folders dropped from Finder onto the sidebar free space,
     /// or onto the empty "Drop a folder" pane (one route for both doors, R46).
     /// - Folder: create project pointing to that directory (scan all files)
-    /// - File(s): create project with inputFiles restricting to the dropped files
+    /// - File(s), several folders or a mix: ask where a new study folder goes
+    ///   and copy them into it (`createProjectFromURLs`)
     /// De-duplicates by path — if a project already exists for that folder, selects it.
     /// `.dropDestination(for: URL.self)` hands us pre-resolved URLs — no
     /// NSItemProvider loading dance. Empty-sidebar drop → create/locate
@@ -2245,11 +2241,11 @@ struct ContentView: View {
     /// Create a project from classified URLs (after duplicate check passes).
     private func createProjectFromURLs(directories: [URL], files: [URL],
                                        intoFolder folderID: UUID? = nil) {
-        // All drops create one project. The name comes from the first item.
-        // - Single folder: path = folder, inputFiles = nil (scan whole directory)
-        // - Multiple folders: path = first folder, inputFiles = all folder paths
-        // - File(s): path = first file's parent, inputFiles = file paths
-        // - Mix of files and folders: path = first item's dir, inputFiles = all paths
+        // All drops create one folder study.
+        // - Single folder: path = folder (the pipeline scans all of it)
+        // - Anything else (loose files, several folders, a mix): the user names
+        //   and places a new folder, the items are copied in, and it is a
+        //   folder study like any other
         if directories.count == 1 && files.isEmpty {
             // Single folder — classic mode, scan everything in it.
             let url = directories[0]
@@ -2365,7 +2361,7 @@ struct ContentView: View {
                     // Where studies live, learned rather than configured — the
                     // next New Project panel starts here instead of Documents.
                     ProjectFolderDefaults.remember(projectFolder: target)
-                    // Folder-shaped (inputFiles == nil) → analysable. The project
+                    // A folder study → analysable. The project
                     // name follows the panel filename (single source of truth).
                     let project: Project
                     if let relocateID {
@@ -2444,9 +2440,8 @@ struct ContentView: View {
     /// - target `.running` / `.queued` / `.failed` / `.failedWithDiagnostic` /
     ///   `.unreachable`: refused during the drag on both sidebars
     ///   (`StudyFinderDrop`, R47); a drop that still arrives returns silently
-    /// - anything else: copy the files. A folder-shaped study then runs
-    ///   (incrementally if already analysed; `PipelineRunner` queues it behind
-    ///   another run); a file-subset study registers them and does not run
+    /// - anything else: copy the files, then run (incrementally if already
+    ///   analysed; `PipelineRunner` queues it behind another run)
     private func handleDropOnProject(id: UUID, urls: [URL]) {
         let accepted = Self.filterAcceptedURLs(urls)
         guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
@@ -2456,7 +2451,8 @@ struct ContentView: View {
         // Empty placeholder ("+ New Project" with no folder yet): the drop
         // establishes the project's location instead of copying files into a
         // nonexistent target. Same end-state as a drop on empty sidebar:
-        // single folder → adopt path + auto-run; multi-item → file-subset.
+        // single folder → adopt path + auto-run; multi-item → ask where a new
+        // study folder goes and copy the items into it.
         if project.path.isEmpty {
             establishEmptyProject(id: id, accepted: accepted)
             return
@@ -2546,16 +2542,8 @@ struct ContentView: View {
             return
         }
 
-        let alreadyAnalysed: Bool = {
-            if case .ready = pipelineRunner.state[id] { return true }
-            return false
-        }()
-        // Folder-shaped projects (inputFiles == nil) scan their folder at
-        // run time, so the freshly-copied files become visible to the CLI
-        // automatically. File-subset projects must register the new paths
-        // via addFiles — but the CLI can't run them (no `--files` yet), so
-        // those don't auto-run.
-        let wasFolderShaped = (project.inputFiles == nil)
+        // A study scans its folder at run time, so the freshly-copied files
+        // become visible to the CLI automatically.
         selection = [.project(id)]
 
         // Immediate "Adding N interviews…" ack (Phase 2), held for a ~2 s floor
@@ -2584,73 +2572,23 @@ struct ContentView: View {
                     projectName: project.name,
                     acceptedExtensions: Self.acceptedExtensions
                 )
-                if !wasFolderShaped, copied.isEmpty {
-                    // Every dropped file was already in the project, byte for
-                    // byte, so nothing was copied and there is nothing to
-                    // register. Showing the sheet here would read "Added 0
-                    // interviews" — outcome 3b in
-                    // docs/design-analysis-lifecycle.md §5.1, a record saying
-                    // work happened when none did. The drop was understood and
-                    // correctly changed nothing, so the acknowledgement is the
-                    // same 400 ms row accent the self-drop case above uses:
-                    // §4.2 removed all five drop toasts and the standing rule
-                    // is not to add new ones.
-                    dropTargetProjectID = id
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 400_000_000)
-                        if dropTargetProjectID == id { dropTargetProjectID = nil }
-                    }
-                } else if !wasFolderShaped {
-                    projectIndex.addFiles(to: id, files: copied.map(\.path))
-                    // Only the file-subset path surfaces the "Added N…" sheet — it
-                    // doesn't auto-run, so the sheet is its sole feedback. On the
-                    // folder-shaped auto-run path the sheet is a modal the §7
-                    // storyboard explicitly rejects (the "Adding N interviews…"
-                    // subtitle + the run IS the acknowledgement). See
-                    // docs/mockups/incremental-analysis-flows.html §7.
-                    // `copied` carries only what genuinely landed — a file
-                    // skipped as already-present is not in it, so the count and
-                    // the list are both true.
-                    newFilesSheet = NewFilesSheetState(
-                        projectID: id,
-                        projectName: project.name,
-                        files: copied
-                    )
-                }
-                if wasFolderShaped {
-                    // Seed the watcher with the copied names so the "+N
-                    // unanalysed" pill stays hidden — a run starts immediately
-                    // below, so they are "known", not surprise drops. Handoff
-                    // §Watcher lifecycle / Stacking rule.
-                    projectIndex.seedKnownBasenames(
-                        projectID: id,
-                        basenames: Set(copied.map { $0.lastPathComponent })
-                    )
-                }
-                // ...and deliberately NOT on the file-subset path, where no run
-                // starts. Those files are exactly the drift the pill exists for,
-                // so seeding them switched off the only durable signal the
-                // researcher had — which is precisely why a toast had grown here
-                // to replace it. The row now says "+N unanalysed" and keeps
-                // saying it. `docs/design-analysis-lifecycle.md` §4.2.
-                if alreadyAnalysed && !wasFolderShaped {
-                    // The copy succeeded and the files are in the folder; a run
-                    // is folder-scoped (`["run", project.path]`), so a
-                    // re-analysis picks them up. The row carries that state now
-                    // — nothing to announce.
-                    return
-                }
-                if wasFolderShaped {
-                    // Folder-shaped project (analysed or not): the CLI rescans
-                    // the folder at run time, so the freshly-copied files fold in
-                    // incrementally — the per-session cache re-transcribes only
-                    // the new sessions + re-clusters, and curation is preserved
-                    // on re-import. This is the incremental-add path (Phase 1).
-                    // NB Beta-must: #post-TF gating (destructive re-analyse +
-                    // warning modal is the TF path) is a product decision — see
-                    // docs/private/handoffs/incremental-swift-step4.md.
-                    pipelineRunner.start(project: project)
-                }
+                // Seed the watcher with the copied names so the "+N
+                // unanalysed" pill stays hidden — a run starts immediately
+                // below, so they are "known", not surprise drops. Handoff
+                // §Watcher lifecycle / Stacking rule.
+                projectIndex.seedKnownBasenames(
+                    projectID: id,
+                    basenames: Set(copied.map { $0.lastPathComponent })
+                )
+                // Analysed or not: the CLI rescans the folder at run time, so
+                // the freshly-copied files fold in incrementally — the
+                // per-session cache re-transcribes only the new sessions +
+                // re-clusters, and curation is preserved on re-import. This is
+                // the incremental-add path (Phase 1).
+                // NB Beta-must: #post-TF gating (destructive re-analyse +
+                // warning modal is the TF path) is a product decision — see
+                // docs/private/handoffs/incremental-swift-step4.md.
+                pipelineRunner.start(project: project)
             } catch is CancellationError {
                 // Pill already showed "Cancelling…" and rolled back. No toast.
             } catch CopyMachinery.CopyError.insufficientDiskSpace(let needed, let available) {
@@ -2843,7 +2781,6 @@ struct ContentView: View {
             isAvailable: windowProject?.isAvailable ?? false,
             showShoal: windowProject.map(shouldShowShoal) ?? false,
             pathIsEmpty: windowProject?.path.isEmpty ?? true,
-            isFileSubset: windowProject?.inputFiles != nil,
             pipelineState: windowProject.flatMap { pipelineRunner.state[$0.id] }
         )
     }
@@ -3687,7 +3624,7 @@ struct ContentView: View {
         if let project = windowProject {
             // One switch over the shared pane resolution. The branch
             // conditions — and the rationale that used to live on them (the
-            // idle-vs-scanning distinction, the file-subset trust-UX rule) —
+            // idle-vs-scanning distinction) —
             // moved to `DetailPaneKind.resolve`, which `lensAvailability`
             // reads too, so the pane and the affordances gated on it cannot
             // disagree.
@@ -3707,8 +3644,6 @@ struct ContentView: View {
                 )
             case .dragInterviews:
                 dragInterviewsPane(project)
-            case .unsupportedSubset:
-                UnsupportedSubsetView(project: project)
             case .report:
                 ZStack {
                     // This pane renders ONE project, so it reads that

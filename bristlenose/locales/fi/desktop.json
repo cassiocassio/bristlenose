@@ -213,7 +213,6 @@
     "onThisMac": "Tällä Macilla",
     "projectIcon": "Projektin kuvake",
     "emptyStateHint": "Vedä kansio tähän tai paina ⌘N",
-    "addedInterviews": "Lisättiin %d haastattelua kohteeseen %@",
     "newProjectSaveTitle": "Luo projektikansio",
     "newProjectSavePrompt": "Luo",
     "newProjectSaveMessage_one": "Haastattelusi kopioidaan t\u00e4h\u00e4n kansioon.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Odottaa litterointia",
     "includeWaiting_one": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottava",
     "includeWaiting_other": "Sis\u00e4llyt\u00e4 {{count}} litterointia odottavaa"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analysoi kansioita",
-    "body": "Tämä projekti luotiin yksittäisistä tiedostoista, joten sitä ei voi analysoida.",
-    "filesHeading": "Tämän projektin tiedostot"
   },
   "discussion": {
     "notRun": "T\u00e4m\u00e4 projekti analysoitiin ennen keskustelun k\u00e4ytt\u00f6\u00f6nottoa. Luo keskustelu valitsemalla Analysoi projektin valikosta sivupalkissa. Valmiit vaiheet k\u00e4ytet\u00e4\u00e4n uudelleen, ja muutoksesi s\u00e4ilyv\u00e4t.",

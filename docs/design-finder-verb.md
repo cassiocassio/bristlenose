@@ -156,7 +156,7 @@ helper is named for the label not yet adopted.
 | 3 | `menu.quotes.revealTranscripts` — `MenuCommands.swift:691`, `ContentView.swift:2655` | Reveal Transcripts in Finder | **Show Transcripts in Finder** (keep key, change value) |
 | 4 | `export.clips.reveal` — [`AppLayout.tsx:581`](../frontend/src/layouts/AppLayout.tsx) | Show in folder | **open — see below** |
 | 5 | `export.clips.revealMac` | Reveal in Finder | **delete** — 20 locales, zero call sites |
-| 6 | [`UnsupportedSubsetView.swift:77`](../desktop/Bristlenose/Bristlenose/UnsupportedSubsetView.swift) | hardcoded `Text("Show in Finder")` | `i18n.t(…)` — right words, wrong mechanism |
+| 6 | ~~`UnsupportedSubsetView.swift:77`~~ (file deleted 22 Oct 2026 with the loose-file study) | hardcoded `Text("Show in Finder")` | moot: the view is gone |
 | 7 | `menu.quotes.revealInTranscript` — `MenuCommands.swift:952` | Reveal in Transcript | **open — see below** |
 
 **#5 is the elegant move.** `export.clips.revealMac` is the *sole* English home
@@ -244,7 +244,7 @@ locales**.
 
 Actionable regardless of where §4's open calls land.
 
-- **[`UnsupportedSubsetView.swift`](../desktop/Bristlenose/Bristlenose/UnsupportedSubsetView.swift)
+- **~~`UnsupportedSubsetView.swift`~~ (deleted 22 Oct 2026 with the loose-file study)
   has 4 hardcoded strings, not 1** — lines 20, 26, 32, 77. English in 19 locales,
   in a view that only renders when something already went wrong. The button needs
   **no new key**: `I18n.swift:43` lists `common` in its namespaces, so

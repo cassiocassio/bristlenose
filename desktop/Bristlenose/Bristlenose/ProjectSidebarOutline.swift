@@ -2145,7 +2145,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // defect itself — beside a footer naming Re-analyse. The popover may
         // act on the thing it shows; incremental Analyse is not that.
         let offered = !data.databaseForked && Self.analyseIsOffered(
-            isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
             isAvailable: project.isAvailable,
             state: pipelineRunner?.state[id],
@@ -2391,7 +2390,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         switch state { case .running, .queued: return true; default: return false }
     }
 
-    /// A folder-shaped project with files on disk but no finished report, and
+    /// A project with files on disk but no finished report, and
     /// not currently running — the stopped / failed / never-analysed cases. The
     /// files belong to the project, so offer "Analyse" rather than dead-end on
     /// the "No interviews to analyse yet" empty state. Excludes analysed
@@ -2413,7 +2412,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard let p = projectIndex?.projects.first(where: { $0.id == id })
         else { return false }
         return Self.reAnalyseIsOffered(
-            isFolderShaped: p.inputFiles == nil,
             hasPath: !p.path.isEmpty,
             isAvailable: p.isAvailable,
             state: state,
@@ -2425,7 +2423,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         guard let p = projectIndex?.projects.first(where: { $0.id == id })
         else { return false }
         return Self.analyseIsOffered(
-            isFolderShaped: p.inputFiles == nil,
             hasPath: !p.path.isEmpty,
             isAvailable: p.isAvailable,
             state: state,
@@ -2439,7 +2436,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// The unanalysed sheet is the second caller: it lists files that are not
     /// in the analysis, so its primary action is the same verb the context menu
     /// offers, and the two must agree about when that verb is available. A
-    /// second copy of "folder-shaped, has a path, pipeline free" is how they
+    /// second copy of "has a path, reachable, pipeline free" is how they
     /// would come to disagree — the same failure the pane and the menu had
     /// about whether there was anything to analyse at all.
     /// Whether **Re-analyse…** is worth offering: there is an analysis to
@@ -2500,19 +2497,19 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// run could not reach (R63). Same predicate the serve start and Locate…
     /// already gate on.
     nonisolated static func reAnalyseIsOffered(
-        isFolderShaped: Bool, hasPath: Bool, isAvailable: Bool,
+        hasPath: Bool, isAvailable: Bool,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
-        guard isFolderShaped, hasPath, isAvailable else { return false }
+        guard hasPath, isAvailable else { return false }
         guard pipelineIsFree(state) else { return false }
         return (data?.sessionCount ?? 0) > 0
     }
 
     nonisolated static func analyseIsOffered(
-        isFolderShaped: Bool, hasPath: Bool, isAvailable: Bool,
+        hasPath: Bool, isAvailable: Bool,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
-        guard isFolderShaped, hasPath, isAvailable else { return false }
+        guard hasPath, isAvailable else { return false }
         guard pipelineIsFree(state) else { return false }
         // A run that did not finish has work to do whatever the folder says.
         // Stopped or failed after transcription, every recording has its

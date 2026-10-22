@@ -54,7 +54,7 @@ enum LensAvailability: Equatable {
             return .unavailable(.noProject)
         case .unavailable:
             return .unavailable(.projectUnreachable)
-        case .shoal, .dragInterviews, .unsupportedSubset:
+        case .shoal, .dragInterviews:
             return .unavailable(.noDocument)
         case .report:
             break

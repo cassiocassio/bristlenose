@@ -20,20 +20,14 @@ enum DetailPaneKind: Equatable {
     /// Nothing to analyse yet, or a folder project that has never produced a
     /// report — the "Drag interviews here" pane.
     case dragInterviews
-    /// File-subset project with no viewable analysis — the CLI can't analyse
-    /// this shape yet, so the pane shows the files instead. A subset project
-    /// that somehow HAS analysis data (analysed while folder-shaped, files
-    /// added later) falls through to `.report`: the run state must not block
-    /// viewing what's already there.
-    case unsupportedSubset
     /// The serve-backed surface — boot view, then the report WKWebView.
     case report
 
     /// Mirror of the `detail` cascade, in its original order: unreachable
     /// beats everything; the shoal owns the pane during analysis; an empty
-    /// folder prompts for interviews; an unanalysed file-subset explains
-    /// itself; a never-run folder prompts again (`.idle` only — `.scanning`
-    /// falls through to the serve so an already-analysed project boots rather
+    /// folder prompts for interviews; a never-run folder prompts again
+    /// (`.idle` only — `.scanning` falls through to the serve so an
+    /// already-analysed project boots rather
     /// than flashing an empty pane before the manifest read resolves; failed /
     /// cancelled / partial states keep the serve surface, which carries the
     /// cause and log tail).
@@ -42,14 +36,12 @@ enum DetailPaneKind: Equatable {
         isAvailable: Bool,
         showShoal: Bool,
         pathIsEmpty: Bool,
-        isFileSubset: Bool,
         pipelineState: PipelineState?
     ) -> DetailPaneKind {
         guard hasProject else { return .noProject }
         if !isAvailable { return .unavailable }
         if showShoal { return .shoal }
         if pathIsEmpty { return .dragInterviews }
-        if isFileSubset && !hasViewableData(pipelineState) { return .unsupportedSubset }
         if case .idle = pipelineState ?? .scanning { return .dragInterviews }
         return .report
     }
@@ -103,21 +95,6 @@ enum DetailPaneKind: Equatable {
         case .queued(let position): return .queued(position: position)
         case .running: return .analysing
         default: return nil
-        }
-    }
-
-    /// Whether a pipeline state means the project has analysis data the user
-    /// should be able to view. `.ready` and `.partial` both qualify;
-    /// `.completedPartial` ran to terminus and wrote a (degraded) report.
-    /// `.failedWithDiagnostic` deliberately stays false — the abandon path
-    /// leaves no report on disk. (Moved from `ContentView`, where it gated the
-    /// file-subset pane and, wrongly, nothing else.)
-    static func hasViewableData(_ state: PipelineState?) -> Bool {
-        switch state {
-        case .ready, .partial, .completedPartial:
-            return true
-        default:
-            return false
         }
     }
 }

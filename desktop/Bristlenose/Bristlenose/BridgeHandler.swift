@@ -418,7 +418,6 @@ final class BridgeHandler: ObservableObject {
         selectedProjectTakesFiles = project.isAvailable && StudyFinderDrop.accepts(state: state)
         selectedProjectNeedsFolderAccess = state?.needsFolderAccess == true
         selectedProjectIsAnalysed = SidebarOutlineController.reAnalyseIsOffered(
-            isFolderShaped: project.inputFiles == nil,
             hasPath: !project.path.isEmpty,
             isAvailable: project.isAvailable,
             state: state,

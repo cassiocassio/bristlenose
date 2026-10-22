@@ -213,7 +213,6 @@
     "onThisMac": "Sur ce Mac",
     "projectIcon": "Icône du projet",
     "emptyStateHint": "Glissez un dossier ici ou appuyez sur ⌘N",
-    "addedInterviews": "%d entretiens ajoutés à %@",
     "newProjectSaveTitle": "Cr\u00e9er le dossier du projet",
     "newProjectSavePrompt": "Cr\u00e9er",
     "newProjectSaveMessage_one": "Votre entretien est copi\u00e9 dans ce dossier.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "En attente de la transcription",
     "includeWaiting_one": "Inclure {{count}} en attente de transcription",
     "includeWaiting_other": "Inclure {{count}} en attente de transcription"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyse des dossiers",
-    "body": "Ce projet a \u00e9t\u00e9 cr\u00e9\u00e9 \u00e0 partir de fichiers isol\u00e9s ; il ne peut donc pas \u00eatre analys\u00e9.",
-    "filesHeading": "Fichiers de ce projet"
   },
   "discussion": {
     "notRun": "Ce projet a \u00e9t\u00e9 analys\u00e9 avant l\u2019arriv\u00e9e de la discussion. Pour la cr\u00e9er, choisissez Analyser dans le menu du projet, dans la barre lat\u00e9rale. Les \u00e9tapes termin\u00e9es sont r\u00e9utilis\u00e9es et vos modifications sont conserv\u00e9es.",

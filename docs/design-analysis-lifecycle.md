@@ -120,7 +120,7 @@ it at some point:
 
 | Need | Route instead | State |
 |---|---|---|
-| Add an interview | Analyse (incremental) | Folder-shaped: shipped. File-subset: still Re-analyse only (§4.1) — a gap |
+| Add an interview | Analyse (incremental) | Shipped. (The file-subset gap closed 22 Oct 2026: that study type was retired, §1.1.) |
 | Get a new feature on an old project | Analyse builds what is missing | Shipped for the Discussion lens (`a9f04089`) |
 | Apply or remove PII redaction | A display layer; v1 a plain Analyse (the toggle is in the cache key) | Needs redaction applied to curated text first — `design-redact-pii.md` |
 | Pick up a schema change | A real migration | Reprocessing is the beta stopgap (codebook v2 D28), not a user path after GA |
@@ -138,6 +138,15 @@ forward. Built 15 Oct 2026: the start times cross by recording content
 id crosses with them (`study_marker.py`).
 
 ### 1.1 Two project shapes, and why it changes every answer
+
+> **One shape since 22 Oct 2026.** A study is always a folder study. The
+> file-subset shape was retired: nothing had created one since 10 Jul 2026
+> (`0ac2136d`, loose files go into a new folder chosen in a save panel), and a
+> legacy record now reads as a folder study of its `path`, so it may analyse a
+> broader folder than the files it once listed. `wasFolderShaped`,
+> `Project.inputFiles` and the "can't analyse" pane are gone. The File-subset
+> column below, and every file-subset row or paragraph later in this doc, is
+> history.
 
 `wasFolderShaped = (project.inputFiles == nil)` (`ContentView.swift:1705`) splits
 the lifecycle in two, and nothing below makes sense without it.

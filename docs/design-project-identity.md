@@ -562,7 +562,7 @@ add → analyse → move → reopen → copy → reopen before phase 2 lands.
   dropping loose files asks for a folder through a save panel, copies the files
   in, and makes a folder project (`ContentView.processDroppedURLs`). Subset
   projects in an older `projects.json` stay in their "can't be analysed" state
-  (`UnsupportedSubsetView`), carry no output folder and so no marker, and the
+  (`UnsupportedSubsetView`, deleted with the loose-file study on 22 Oct 2026), carry no output folder and so no marker, and the
   sidebar treats them as having no study id. Whether to offer such a project a
   one-click move into a folder is a product call, not identity work.
 - **Phase 6's search is built (15 Oct 2026), on a visible beacon.** The spike:

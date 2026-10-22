@@ -23,9 +23,9 @@ struct CloudImportHandoffTests {
 
     // MARK: - The ordinary path
 
-    @Test("A folder-shaped project analyses what just arrived")
-    func folderShapedAnalyses() {
-        #expect(CloudImportHandoff.decide(landed: 4, shape: .folder, state: .idle) == .analyse)
+    @Test("A project analyses what just arrived")
+    func projectAnalyses() {
+        #expect(CloudImportHandoff.decide(landed: 4, state: .idle) == .analyse)
     }
 
     @Test("An already-analysed project folds them in rather than declining")
@@ -34,10 +34,10 @@ struct CloudImportHandoffTests {
         // "it's already been analysed, don't touch it" would leave four new
         // interviews sitting in a finished study, which is precisely the
         // outcome the researcher imported them to avoid. `handleDropOnProject`
-        // made the same call for dragged files — analysed or not, a
-        // folder-shaped project rescans at run time.
+        // made the same call for dragged files — analysed or not, a project
+        // rescans its folder at run time.
         #expect(CloudImportHandoff.decide(
-            landed: 1, shape: .folder, state: .ready(Date())) == .analyse)
+            landed: 1, state: .ready(Date())) == .analyse)
     }
 
     @Test("A project nobody has scanned yet analyses")
@@ -46,7 +46,7 @@ struct CloudImportHandoffTests {
         // unresolved state as a reason to decline would make the behaviour
         // depend on how quickly the sidebar finished scanning — a race, and one
         // that would drop the run silently.
-        #expect(CloudImportHandoff.decide(landed: 2, shape: .folder, state: nil) == .analyse)
+        #expect(CloudImportHandoff.decide(landed: 2, state: nil) == .analyse)
     }
 
     @Test("A partial batch is still worth analysing")
@@ -54,7 +54,7 @@ struct CloudImportHandoffTests {
         // Settled: "Process a partial batch — incremental analysis makes that
         // ordinary." Two of six landing is two interviews' worth of findings,
         // and the four that failed stay ticked for Retry.
-        #expect(CloudImportHandoff.decide(landed: 2, shape: .folder, state: .idle) == .analyse)
+        #expect(CloudImportHandoff.decide(landed: 2, state: .idle) == .analyse)
     }
 
     // MARK: - Nothing landed
@@ -65,16 +65,7 @@ struct CloudImportHandoffTests {
         // or Stop was pressed before the first one settled: there is no new
         // material, so a run would re-do the existing study for no reason and
         // bill for it.
-        #expect(CloudImportHandoff.decide(landed: 0, shape: .folder, state: .idle)
-                == .nothing(.nothingLanded))
-    }
-
-    @Test("Nothing landed outranks every other input")
-    func nothingLandedOutranksShape() {
-        // Checked first deliberately — a file-subset project with an empty
-        // batch must not reach `registerOnly` and record zero paths as though
-        // something had happened.
-        #expect(CloudImportHandoff.decide(landed: 0, shape: .fileSubset, state: nil)
+        #expect(CloudImportHandoff.decide(landed: 0, state: .idle)
                 == .nothing(.nothingLanded))
     }
 
@@ -84,13 +75,13 @@ struct CloudImportHandoffTests {
     func runningDeclines() {
         // Its inputs were fixed when it started, so these files belong to the
         // next run, not this one.
-        #expect(CloudImportHandoff.decide(landed: 3, shape: .folder, state: .running)
+        #expect(CloudImportHandoff.decide(landed: 3, state: .running)
                 == .nothing(.runInProgress))
     }
 
     @Test("A queued project is left alone")
     func queuedDeclines() {
-        #expect(CloudImportHandoff.decide(landed: 3, shape: .folder, state: .queued(position: 1))
+        #expect(CloudImportHandoff.decide(landed: 3, state: .queued(position: 1))
                 == .nothing(.runInProgress))
     }
 
@@ -99,7 +90,7 @@ struct CloudImportHandoffTests {
         // Re-running a known-broken pipeline burns LLM spend repeating the same
         // failure. Retry is a button the researcher presses.
         #expect(CloudImportHandoff.decide(
-            landed: 3, shape: .folder,
+            landed: 3,
             state: .failed(.passthrough("boom"), category: .unknown)) == .nothing(.previousRunFailed))
     }
 
@@ -111,34 +102,15 @@ struct CloudImportHandoffTests {
         // whose failure is best understood. Two enum cases, one meaning —
         // pinned separately because the compiler will not ask.
         #expect(CloudImportHandoff.decide(
-            landed: 3, shape: .folder,
+            landed: 3,
             state: .failedWithDiagnostic(summary: PipelineSummary())) == .nothing(.previousRunFailed))
     }
 
     @Test("An unreachable project is left alone")
     func unreachableDeclines() {
         #expect(CloudImportHandoff.decide(
-            landed: 3, shape: .folder,
+            landed: 3,
             state: .unreachable(reason: .folderMissing)) == .nothing(.projectUnreachable))
-    }
-
-    // MARK: - File-subset projects
-
-    @Test("A file-subset project records the paths but starts nothing")
-    func fileSubsetRegistersOnly() {
-        // The CLI has no `--files`, so it cannot scope a run to just the
-        // additions. Recording them is what makes the next full run see them.
-        #expect(CloudImportHandoff.decide(landed: 2, shape: .fileSubset, state: .idle)
-                == .registerOnly)
-    }
-
-    @Test("A busy file-subset project declines rather than registering")
-    func fileSubsetRespectsRunState() {
-        // Shape is decided last, after the run-state guards — otherwise a
-        // file-subset project would have its `inputFiles` rewritten underneath
-        // a run that had already read them.
-        #expect(CloudImportHandoff.decide(landed: 2, shape: .fileSubset, state: .running)
-                == .nothing(.runInProgress))
     }
 
     // MARK: - Who tells the researcher
@@ -156,7 +128,6 @@ struct CloudImportHandoffTests {
         // arrived in a real folder and nothing is going to read them — and it
         // works from the sidebar with the import window closed, which is the
         // case this whole feature keeps having to answer for.
-        #expect(!CloudImportHandoff.seedsWatcher(.registerOnly))
         #expect(!CloudImportHandoff.seedsWatcher(.nothing(.nothingLanded)))
         #expect(!CloudImportHandoff.seedsWatcher(.nothing(.runInProgress)))
         #expect(!CloudImportHandoff.seedsWatcher(.nothing(.previousRunFailed)))

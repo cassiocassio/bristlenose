@@ -113,7 +113,8 @@ final class CopyMachinery: ObservableObject {
     }
 
     /// Plan + execute one copy. Returns the destination URLs of every
-    /// successfully-copied file (suitable for `addFiles`).
+    /// successfully-copied file (the caller seeds the folder watcher with
+    /// their names).
     ///
     /// `isDataless` is injectable because no test can make a real cloud
     /// placeholder; production always uses `CopyMachinery.isDataless`.

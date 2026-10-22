@@ -30,10 +30,11 @@ struct Location: Codable, Hashable {
 
 /// A project entry in the sidebar — a logical container referencing files on disk.
 ///
-/// `path` is the project's home directory (pipeline output goes here).
-/// `inputFiles` optionally restricts which files the pipeline processes:
-/// - nil → scan the entire directory (folder-drop or legacy projects)
-/// - populated → process only these files (file-drop projects)
+/// `path` is the project's home directory (pipeline output goes here), and the
+/// pipeline scans all of it: a study is always a folder study. A legacy record
+/// from the retired loose-file study may still list its files; the decoder
+/// ignores that key, so it reads as a folder study of `path` and the next save
+/// drops it (22 Oct 2026).
 ///
 /// This follows the Logic Pro / Final Cut precedent: the project is a logical
 /// thing, the files are references. See `docs/design-project-sidebar.md`.
@@ -56,7 +57,6 @@ struct Project: Identifiable, Hashable, Codable {
     /// on first availability resolution if not present.
     var resourceIdentifier: String?
     var schemaVersion: Int
-    var inputFiles: [String]?
     var location: Location?
     var bookmarkData: Data?
     var icon: String?
@@ -107,7 +107,6 @@ struct Project: Identifiable, Hashable, Codable {
         case schemaVersion = "schema_version"
         case lastSeenPath = "last_seen_path"
         case resourceIdentifier = "resource_identifier"
-        case inputFiles = "input_files"
         case location
         case bookmarkData = "bookmark_data"
         case folderId = "folder_id"
@@ -134,7 +133,6 @@ struct Project: Identifiable, Hashable, Codable {
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
         lastSeenPath = try container.decodeIfPresent(String.self, forKey: .lastSeenPath) ?? path
         resourceIdentifier = try container.decodeIfPresent(String.self, forKey: .resourceIdentifier)
-        inputFiles = try container.decodeIfPresent([String].self, forKey: .inputFiles)
         icon = try container.decodeIfPresent(String.self, forKey: .icon)
         location = try container.decodeIfPresent(Location.self, forKey: .location)
         if let b64 = try container.decodeIfPresent(String.self, forKey: .bookmarkData) {
@@ -169,7 +167,6 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encode(schemaVersion, forKey: .schemaVersion)
         try container.encode(lastSeenPath, forKey: .lastSeenPath)
         try container.encodeIfPresent(resourceIdentifier, forKey: .resourceIdentifier)
-        try container.encodeIfPresent(inputFiles, forKey: .inputFiles)
         try container.encodeIfPresent(icon, forKey: .icon)
         try container.encodeIfPresent(location, forKey: .location)
         try container.encodeIfPresent(bookmarkData?.base64EncodedString(), forKey: .bookmarkData)
@@ -185,7 +182,7 @@ struct Project: Identifiable, Hashable, Codable {
         try container.encodeIfPresent(copiedFrom, forKey: .copiedFrom)
     }
 
-    init(id: UUID, name: String, path: String, inputFiles: [String]? = nil,
+    init(id: UUID, name: String, path: String,
          icon: String? = nil, location: Location? = nil, bookmarkData: Data? = nil,
          folderId: UUID? = nil, position: Int = 0, createdAt: Date = Date(),
          lastOpened: Date? = nil, lastPipelineRunAt: Date? = nil,
@@ -199,7 +196,6 @@ struct Project: Identifiable, Hashable, Codable {
         self.lastSeenPath = lastSeenPath ?? path
         self.resourceIdentifier = resourceIdentifier
         self.schemaVersion = schemaVersion
-        self.inputFiles = inputFiles
         self.icon = icon
         self.location = location
         self.bookmarkData = bookmarkData
@@ -498,11 +494,9 @@ final class ProjectIndex: ObservableObject {
 
     /// Create a new project with the given name and path.
     /// The name is de-duplicated if it already exists (appends " 2", " 3", etc.).
-    /// `inputFiles` optionally restricts which files the pipeline processes
-    /// (nil = scan the whole directory).
     /// Returns the new project so the caller can select it.
     @discardableResult
-    func addProject(name: String, path: String, inputFiles: [String]? = nil,
+    func addProject(name: String, path: String,
                     intoFolder folderID: UUID? = nil) -> Project {
         let finalName = uniqueName(name, excluding: nil)
         // The path and the bookmark name one spelling from the start (R50), so
@@ -539,7 +533,6 @@ final class ProjectIndex: ObservableObject {
             id: UUID(),
             name: finalName,
             path: path,
-            inputFiles: inputFiles,
             icon: assignedIcon,
             location: location,
             bookmarkData: bookmark,
@@ -749,18 +742,6 @@ final class ProjectIndex: ObservableObject {
     func recordPipelineRun(id: UUID, at date: Date = Date()) {
         guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
         projects[index].lastPipelineRunAt = date
-        save()
-    }
-
-    /// Append files to an existing project's input list.
-    /// De-duplicates against files already in the project.
-    func addFiles(to id: UUID, files: [String]) {
-        guard let index = projects.firstIndex(where: { $0.id == id }) else { return }
-        var existing = projects[index].inputFiles ?? []
-        let newFiles = files.filter { !existing.contains($0) }
-        guard !newFiles.isEmpty else { return }
-        existing.append(contentsOf: newFiles)
-        projects[index].inputFiles = existing
         save()
     }
 

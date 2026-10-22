@@ -213,7 +213,6 @@
     "onThisMac": "På denne Mac",
     "projectIcon": "Projektsymbol",
     "emptyStateHint": "Træk en mappe hertil, eller tryk på ⌘N",
-    "addedInterviews": "Tilføjede %d interviews til %@",
     "newProjectSaveTitle": "Opret projektmappe",
     "newProjectSavePrompt": "Opret",
     "newProjectSaveMessage_one": "Dit interview kopieres ind i denne mappe.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Venter p\u00e5 transskription",
     "includeWaiting_one": "Medtag {{count}}, der venter p\u00e5 transskription",
     "includeWaiting_other": "Medtag {{count}}, der venter p\u00e5 transskription"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyserer mapper",
-    "body": "Dette projekt blev oprettet ud fra enkeltfiler, så det kan ikke analyseres.",
-    "filesHeading": "Filer i dette projekt"
   },
   "discussion": {
     "notRun": "Dette projekt blev analyseret, f\u00f8r diskussionen fandtes. V\u00e6lg Analys\u00e9r i projektets menu i indholdsoversigten for at oprette den. F\u00e6rdige trin genbruges, og dine \u00e6ndringer bevares.",

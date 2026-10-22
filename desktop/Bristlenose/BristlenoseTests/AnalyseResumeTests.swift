@@ -30,7 +30,7 @@ import Testing
     @Test func aRunThatDidNotFinishOffersAnalyseWithNothingNew() {
         for state in unfinished {
             #expect(SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: true, hasPath: true, isAvailable: true,
+                hasPath: true, isAvailable: true,
                 state: state, data: transcribed),
                 "\(state): the only verb left would be Re-analyse…, which discards the work")
         }
@@ -40,11 +40,8 @@ import Testing
     @Test func anUnfinishedRunStillNeedsItsFolder() {
         for state in unfinished {
             #expect(!SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: true, hasPath: true, isAvailable: false,
+                hasPath: true, isAvailable: false,
                 state: state, data: transcribed), "\(state): ejected drive (R63)")
-            #expect(!SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: false, hasPath: true, isAvailable: true,
-                state: state, data: transcribed), "\(state): file-subset project")
         }
     }
 
@@ -52,7 +49,7 @@ import Testing
     @Test func aFinishedAnalysisWithNothingNewIsUnchanged() {
         for state in [PipelineState.idle, .ready(Date()), .completedPartial(summary: PipelineSummary())] {
             #expect(!SidebarOutlineController.analyseIsOffered(
-                isFolderShaped: true, hasPath: true, isAvailable: true,
+                hasPath: true, isAvailable: true,
                 state: state, data: transcribed), "\(state)")
         }
     }

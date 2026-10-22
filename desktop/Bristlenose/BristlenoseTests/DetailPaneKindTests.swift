@@ -8,13 +8,12 @@ import Testing
 /// silently changing which pane (and which lens availability) a state maps to.
 struct DetailPaneKindTests {
 
-    /// Baseline inputs for a healthy, analysed, folder-shaped project.
+    /// Baseline inputs for a healthy, analysed project.
     private func resolve(
         hasProject: Bool = true,
         isAvailable: Bool = true,
         showShoal: Bool = false,
         pathIsEmpty: Bool = false,
-        isFileSubset: Bool = false,
         pipelineState: PipelineState? = .ready(Date(timeIntervalSince1970: 0))
     ) -> DetailPaneKind {
         DetailPaneKind.resolve(
@@ -22,7 +21,6 @@ struct DetailPaneKindTests {
             isAvailable: isAvailable,
             showShoal: showShoal,
             pathIsEmpty: pathIsEmpty,
-            isFileSubset: isFileSubset,
             pipelineState: pipelineState
         )
     }
@@ -41,18 +39,6 @@ struct DetailPaneKindTests {
 
     @Test func emptyPathPrompts() {
         #expect(resolve(pathIsEmpty: true) == .dragInterviews)
-    }
-
-    @Test func fileSubsetWithoutDataExplainsItself() {
-        #expect(resolve(isFileSubset: true, pipelineState: .idle) == .unsupportedSubset)
-    }
-
-    /// The trust-UX rule: a subset project that HAS analysis data (analysed
-    /// while folder-shaped, files added later) shows the report — the run
-    /// state must not block viewing what's already there.
-    @Test func fileSubsetWithDataShowsReport() {
-        #expect(resolve(isFileSubset: true, pipelineState: .partial(kind: "transcribe-only", stagesComplete: [])) == .report)
-        #expect(resolve(isFileSubset: true, pipelineState: .completedPartial(summary: PipelineSummary())) == .report)
     }
 
     @Test func neverRunFolderPrompts() {
@@ -74,19 +60,6 @@ struct DetailPaneKindTests {
         #expect(resolve(pipelineState: .failed(.passthrough("boom"), category: .auth)) == .report)
         #expect(resolve(pipelineState: .failedWithDiagnostic(summary: PipelineSummary())) == .report)
         #expect(resolve(pipelineState: .stopped(stagesComplete: [])) == .report)
-    }
-
-    @Test func hasViewableDataTable() {
-        #expect(DetailPaneKind.hasViewableData(.ready(Date(timeIntervalSince1970: 0))))
-        #expect(DetailPaneKind.hasViewableData(.partial(kind: "transcribe-only", stagesComplete: [])))
-        #expect(DetailPaneKind.hasViewableData(.completedPartial(summary: PipelineSummary())))
-        #expect(!DetailPaneKind.hasViewableData(.idle))
-        #expect(!DetailPaneKind.hasViewableData(.scanning))
-        #expect(!DetailPaneKind.hasViewableData(.running))
-        #expect(!DetailPaneKind.hasViewableData(.failed(.passthrough("x"), category: .network)))
-        // Abandon path leaves no report on disk — deliberately not viewable.
-        #expect(!DetailPaneKind.hasViewableData(.failedWithDiagnostic(summary: PipelineSummary())))
-        #expect(!DetailPaneKind.hasViewableData(nil))
     }
 }
 

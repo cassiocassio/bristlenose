@@ -116,8 +116,7 @@ enum QueueRestorePolicy {
 
     /// Whether a study folder holds at least one file the pipeline would
     /// ingest, looking as deep as Python does and stopping at the first. The
-    /// whole folder, as the run reads it (`run` is given the folder, never
-    /// `Project.inputFiles`). Same
+    /// whole folder, as the run reads it (`run` is given the folder). Same
     /// extensions as the folder watcher, companions (`.txt` notes) excluded,
     /// hidden entries and `bristlenose-output/` skipped. A folder that can't
     /// be listed, or a link not followed, makes it `.unknown`, never `.gone`.

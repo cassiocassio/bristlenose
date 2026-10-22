@@ -41,8 +41,8 @@ struct ProjectFilesPopover: View {
     var databaseForked: Bool = false
     /// Starts the run **and** closes the popover — the caller owns both.
     ///
-    /// `nil` when a run can't start right now (already running, or a file-subset
-    /// project the CLI can't scope). Absent rather than dimmed — the
+    /// `nil` when a run can't start right now (already running, say). Absent
+    /// rather than dimmed — the
     /// context-menu rule, applied to a popover.
     ///
     /// Closing is the caller's job because **`@Environment(\.dismiss)` is inert

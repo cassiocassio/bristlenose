@@ -213,7 +213,6 @@
     "onThisMac": "Bu Mac’te",
     "projectIcon": "Proje simgesi",
     "emptyStateHint": "Buraya bir klasör sürükleyin ya da ⌘N tuşuna basın",
-    "addedInterviews": "%@ projesine %d görüşme eklendi",
     "newProjectSaveTitle": "Proje Klas\u00f6r\u00fc Olu\u015ftur",
     "newProjectSavePrompt": "Olu\u015ftur",
     "newProjectSaveMessage_one": "G\u00f6r\u00fc\u015fmeniz bu klas\u00f6re kopyalan\u0131r.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "De\u015fifre bekleniyor",
     "includeWaiting_one": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et",
     "includeWaiting_other": "De\u015fifre bekleyen {{count}} kayd\u0131 dahil et"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose klasörleri çözümler",
-    "body": "Bu proje tek tek dosyalardan oluşturuldu, bu yüzden çözümlenemez.",
-    "filesHeading": "Bu projedeki dosyalar"
   },
   "discussion": {
     "notRun": "Bu proje, tart\u0131\u015fma \u00f6zelli\u011fi eklenmeden \u00f6nce analiz edildi. Olu\u015fturmak i\u00e7in kenar \u00e7ubu\u011funda projenin men\u00fcs\u00fcnden Analiz Et\u2019i se\u00e7in. Tamamlanan ad\u0131mlar yeniden kullan\u0131l\u0131r ve d\u00fczenlemeleriniz korunur.",

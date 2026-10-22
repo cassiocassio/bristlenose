@@ -70,7 +70,7 @@ enum NewProjectDestination {
                     completion(nil)
                     return
                 }
-                // Folder-shaped (`inputFiles == nil`), so the CLI rescans it at
+                // A folder study, so the CLI rescans it at
                 // run time and folds in whatever the import writes there. The
                 // project name follows the panel's filename — one source of
                 // truth for what the researcher just named.

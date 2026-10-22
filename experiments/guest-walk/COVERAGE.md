@@ -74,7 +74,7 @@ screens pink, all of them model text).
 ## Stage 6: lifecycle edges
 
 - Project unavailable: folder moved (Locate… panel, Spotlight "is this the folder?" sheet,
-  wrong-folder alert), volume gone, unsupported loose files
+  wrong-folder alert), volume gone (the unsupported-loose-files pane was retired 22 Oct 2026)
 - Ollama setup pill and popover phases (no daemon, choosing a model); Whisper download
   pill (needs about 1.6 GB of network, so once a week, not nightly)
 - AutoCode on a codebook (runs on Ollama, so no sign-in): job chip, threshold review modal

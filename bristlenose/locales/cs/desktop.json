@@ -217,7 +217,6 @@
     "onThisMac": "Na tomto Macu",
     "projectIcon": "Ikona projektu",
     "emptyStateHint": "Přetáhněte složku sem nebo stiskněte ⌘N",
-    "addedInterviews": "Přidáno %d rozhovorů do %@",
     "newProjectSaveTitle": "Vytvo\u0159it slo\u017eku projektu",
     "newProjectSavePrompt": "Vytvo\u0159it",
     "newProjectSaveMessage_one": "V\u00e1\u0161 rozhovor se zkop\u00edruje do t\u00e9to slo\u017eky.",
@@ -1297,11 +1296,6 @@
     "includeWaiting_few": "Zahrnout {{count}} nahr\u00e1vky \u010dekaj\u00edc\u00ed na p\u0159epis",
     "includeWaiting_one": "Zahrnout {{count}} nahr\u00e1vku \u010dekaj\u00edc\u00ed na p\u0159epis",
     "includeWaiting_other": "Zahrnout {{count}} nahr\u00e1vek \u010dekaj\u00edc\u00edch na p\u0159epis"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyzuje slo\u017eky",
-    "body": "Tento projekt vznikl z jednotliv\u00fdch soubor\u016f, tak\u017ee ho nelze analyzovat.",
-    "filesHeading": "Soubory v tomto projektu"
   },
   "discussion": {
     "notRun": "Tento projekt byl analyzov\u00e1n d\u0159\u00edve, ne\u017e diskuze existovala. Vytvo\u0159\u00edte ji volbou Analyzovat v nab\u00eddce projektu na bo\u010dn\u00edm panelu. Dokon\u010den\u00e9 kroky se pou\u017eij\u00ed znovu a va\u0161e \u00fapravy z\u016fstanou zachov\u00e1ny.",

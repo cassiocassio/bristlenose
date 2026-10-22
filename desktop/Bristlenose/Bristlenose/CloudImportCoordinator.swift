@@ -83,7 +83,6 @@ final class CloudImportCoordinator: ObservableObject {
 
         let action = CloudImportHandoff.decide(
             landed: result.landed.count,
-            shape: project.inputFiles == nil ? .folder : .fileSubset,
             state: pipelineRunner?.state[result.projectID])
 
         // Seeding suppresses the row's new-files count pill, so it happens only
@@ -100,14 +99,10 @@ final class CloudImportCoordinator: ObservableObject {
         switch action {
         case .analyse:
             // Fresh or incremental is the pipeline's call, not ours: a
-            // folder-shaped project rescans its folder at run time, so an
+            // project rescans its folder at run time, so an
             // already-analysed one folds the new recordings in and re-uses the
             // per-session cache for the rest.
             pipelineRunner?.start(project: project)
-        case .registerOnly:
-            // The CLI has no `--files`, so it cannot scope a run to just these.
-            // Recording them means the next full run sees them.
-            index.addFiles(to: result.projectID, files: result.landed.map(\.path))
         case .nothing:
             break
         }

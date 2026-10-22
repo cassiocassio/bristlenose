@@ -445,6 +445,47 @@ struct ProjectIndexTests {
         #expect(p.lastSeenPath == "/tmp/already-v1-elsewhere")
     }
 
+    /// A record from the retired loose-file study (22 Oct 2026) still loads,
+    /// as a folder study of its `path`, and the next save drops the file list.
+    @MainActor @Test func loadLegacyLooseFileRecord_readsAsFolderStudy() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let fileURL = tempDir.appendingPathComponent("projects.json")
+
+        let legacy = """
+        {
+          "version": "1.0",
+          "folders": [],
+          "projects": [
+            {
+              "id": "00000000-0000-0000-0000-000000000003",
+              "name": "Loose files",
+              "path": "/x",
+              "schema_version": 1,
+              "last_seen_path": "/x",
+              "input_files": ["/x/a.mp4"],
+              "position": 0,
+              "created_at": "2026-04-01T00:00:00Z"
+            }
+          ]
+        }
+        """
+        try legacy.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        let index = ProjectIndex(fileURL: fileURL)
+        let p = try #require(index.projects.first)
+        #expect(p.name == "Loose files")
+        #expect(p.path == "/x")
+
+        // Any save re-encodes every project; the retired key must not survive it.
+        index.recordPipelineRun(id: p.id)
+        let saved = try String(contentsOf: fileURL, encoding: .utf8)
+        #expect(saved.contains("Loose files"))
+        #expect(!saved.contains("input_files"))
+    }
+
     // MARK: - Phase 0b ProjectAvailability
 
     /// A project with a path that exists returns `.ready`.

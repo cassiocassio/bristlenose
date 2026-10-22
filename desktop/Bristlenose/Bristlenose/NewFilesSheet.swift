@@ -14,23 +14,20 @@ import SwiftUI
 // "unanalysed files" panel that subsumes this. Sidebar count + delta in
 // `ProjectRow` stays — that's chrome and belongs in native.
 //
-// **Half of it is already gone (27 Aug 2026).** The `.watcher` mode — the
-// "pulse-to-pill-to-sheet" path this header used to describe as the cohort's
-// first visible proof of incremental detection — is now `ProjectFilesPopover`,
-// anchored to the row's ⓘ / ⚠ glyph. The argument was not the one above: a
-// context menu shows verbs and *cannot show a list*, so the file list has no
-// other home, and a modal is the wrong price to pay for reading three
-// filenames. Only `.copy` still has a live route, and it is a completion
-// acknowledgement that probably wants `ToastStore` rather than a sheet at all.
-// So this file is one mode from deletable, and neither (a) nor (b) has to
-// happen first.
+// **One mode left (22 Oct 2026).** The `.copy` mode ("Added N interviews to
+// X") was the drag-onto acknowledgement for a loose-file study, which never
+// auto-ran; that study shape was retired on 22 Oct 2026, and a drop onto a
+// folder study runs, so the run is the acknowledgement. What remains is
+// `.watcher` — the files on disk that are not in the analysis — opened from
+// the SwiftUI sidebar row (`ContentView.openUnanalysedSheet`, the flag-off
+// path). The AppKit sidebar shows the same list in `ProjectFilesPopover`,
+// anchored to the row's ⓘ / ⚠ glyph (27 Aug 2026): a context menu shows
+// verbs and *cannot show a list*, and a modal is the wrong price to pay for
+// reading three filenames. So this sheet goes when the SwiftUI sidebar does.
 
-/// Source that opened the sheet. `.copy` mirrors the original Phase 2 #11
-/// drag-onto flow ("Added N interviews to X"); `.watcher` is the Phase 2 #14
-/// Finder-side flow with the longer "These files aren't part of your
-/// analysis yet." framing.
+/// Source that opened the sheet: the Phase 2 #14 Finder-side flow, with the
+/// "These files aren't part of your analysis yet." framing.
 enum NewFilesSheetSource: Equatable {
-    case copy(files: [URL])
     case watcher(newFiles: [URL], missingFiles: [URL])
 }
 
@@ -42,14 +39,6 @@ struct NewFilesSheetState: Identifiable {
     let projectName: String
     let source: NewFilesSheetSource
 
-    /// Convenience constructor preserving the pre-#14 call sites that pass
-    /// just the copied URL list (drag-onto completion).
-    init(projectID: UUID, projectName: String, files: [URL]) {
-        self.projectID = projectID
-        self.projectName = projectName
-        self.source = .copy(files: files)
-    }
-
     /// Watcher-mode constructor (Phase 2 #14).
     init(projectID: UUID, projectName: String, newFiles: [URL], missingFiles: [URL]) {
         self.projectID = projectID
@@ -60,8 +49,6 @@ struct NewFilesSheetState: Identifiable {
     /// Files shown in the scroll body, in display order.
     var files: [URL] {
         switch source {
-        case .copy(let files):
-            return files
         case .watcher(let new, let missing):
             return new + missing
         }
@@ -76,8 +63,8 @@ struct NewFilesSheet: View {
     /// The sheet used to end in **Close** and nothing else — it reported files
     /// that were not in the analysis and offered no way to put them there,
     /// which is a dead end at exactly the moment the researcher has decided to
-    /// act. `nil` when the project cannot run right now (already running, or
-    /// a file-subset project the CLI cannot scope), in which case the sheet
+    /// act. `nil` when the project cannot run right now (already running,
+    /// say), in which case the sheet
     /// stays informational rather than dimming a control it can never enable —
     /// the context-menu rule, applied to a sheet.
     var onAnalyse: (() -> Void)?
@@ -85,11 +72,6 @@ struct NewFilesSheet: View {
 
     private var heading: String {
         switch state.source {
-        case .copy(let files):
-            return String(
-                format: i18n.t("desktop.chrome.addedInterviews"),
-                files.count, state.projectName
-            )
         case .watcher:
             return i18n.t("desktop.chrome.unanalysedSheetTitle",
                           ["project": state.projectName])
@@ -97,10 +79,10 @@ struct NewFilesSheet: View {
     }
 
     private var footer: String? {
-        if case .watcher = state.source {
+        switch state.source {
+        case .watcher:
             return i18n.t("desktop.chrome.unanalysedSheetFooter")
         }
-        return nil
     }
 
     var body: some View {

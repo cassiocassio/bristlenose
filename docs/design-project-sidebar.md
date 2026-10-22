@@ -211,13 +211,11 @@ Show "(empty)" or "(2 archived)" so an empty disclosed folder doesn't look broke
 **Updated Mar 2026** — follows Logic Pro / Final Cut / GarageBand precedent: the project is a logical container with file references, not a directory alias. No filesystem changes on drop (no creating folders, no moving files).
 
 When files/folders are dragged from Finder:
-- **Drag a single folder** → `path` = folder, `inputFiles` = nil (scan entire directory)
-- **Drag multiple folders** → one project, `path` = first folder, `inputFiles` = all folder paths
-- **Drag file(s)** → one project, `path` = first file's parent dir, `inputFiles` = exactly the dropped files (never siblings)
-- **Drag mix of files + folders** → one project, `path` = first item's dir, `inputFiles` = all paths
+- **Drag a single folder** → `path` = folder; the pipeline scans all of it
+- ~~**Drag multiple folders / file(s) / a mix** → one project, `path` = first item's dir, `inputFiles` = the dropped paths~~ **Retired.** Since 10 Jul 2026 (`0ac2136d`) these ask for a new folder in a save panel, copy the items into it, and make a folder study. The file list itself was deleted on 22 Oct 2026: a study is always a folder study
 - ~~No dedup — dropping the same folder twice creates two projects (user may tag/analyse differently).~~ **Retired 13 Oct 2026.** Dead in the shipped app since `754f0658` (8 Jun 2026): a re-drop of a tracked folder selects its row (or runs it if never analysed), with no prompt. Two rows on one folder could never work — they would share one database and one output. The dedupe key moves from the path string to the study marker ([design-project-identity.md](design-project-identity.md) §9); "analyse the same interviews differently" is a Finder duplicate of the folder, which is an independent study
 - The `name` field is display-only. It must never be used to construct filesystem paths. The `path` field is set at creation and changed only by relocate (Locate…, or a watcher-reported move) and by bookmark healing at launch and volume mount
-- `inputFiles` (optional `[String]?` in `projects.json` as `input_files`): when nil, the pipeline scans the entire `path` directory. When populated, only those files/directories are processed. This is how single-file projects and multi-source projects coexist with the legacy folder-scan model
+- ~~`inputFiles` (optional `[String]?` in `projects.json` as `input_files`): when nil, the pipeline scans the entire `path` directory. When populated, only those files/directories are processed.~~ **Retired 22 Oct 2026.** A legacy record's `input_files` key is ignored on decode, so it reads as a folder study of its `path` (possibly a broader folder than the files it listed), and the next save drops the key
 
 ## Rename interaction
 
@@ -364,8 +362,8 @@ All items disabled when nothing is selected.
 >
 > | Target state | Shipped behaviour |
 > |---|---|
-> | `.idle` / `.scanning` | `addFiles` + auto-run, toast "Added N interviews to …" (no Undo button) |
-> | `.ready` | ~~Blocker toast~~ **Reversed for folder-shaped projects — files are copied in and folded via `addFiles`.** `.ready` is deliberately *not* an early return (`ContentView.swift:1380`); a folder-shaped project rescans at run time so the copies fold in. The blocker toast survives for one **narrow** case only: a **file-subset** project (`alreadyAnalysed && !wasFolderShaped`, `ContentView.swift:1421`) — the CLI can't scope a `--files` run, so new files wait for a full re-analysis. `dropOntoAnalysedProject` is therefore **still live**, not orphaned (_corrected 30 Jul 2026 — an audit reported it orphaned; it is used at `ContentView.swift:1425`_). |
+> | `.idle` / `.scanning` | files copied in + auto-run _(the "Added N interviews" toast became a sheet on 15 May 2026, shown only for the file-subset shape, and went with it on 22 Oct 2026)_ |
+> | `.ready` | ~~Blocker toast~~ **Reversed — files are copied in and the run that starts folds them in.** `.ready` is deliberately *not* an early return; a study rescans its folder at run time. _(The one narrow exception, an analysed **file-subset** project, retired with that shape on 22 Oct 2026; `dropOntoAnalysedProject` is gone.)_ |
 > | `.failed` | Toast redirects user to pill-popover Retry |
 > | `.running` / `.queued` | Toast "Finish or stop the current run before adding more" |
 > | `.unreachable` | Blocked with explanation toast |
@@ -466,17 +464,15 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 
 **Shipped:**
 - Drag-and-drop from Finder onto sidebar — files and folders, single and multiple
-  - Single folder → project scans whole directory (`inputFiles: nil`)
-  - Multiple folders → one project, `inputFiles` lists all folder paths
-  - Single/multiple files → one project, `inputFiles` = exactly the dropped files (never siblings)
-  - Mixed files + folders → one project, all paths in `inputFiles`
+  - Single folder → project scans whole directory
+  - ~~Multiple folders, files, or a mix → one project whose `inputFiles` lists the dropped paths~~ — superseded 10 Jul 2026 by the save-panel folder study, and the list deleted 22 Oct 2026; see the drop rules above
   - ~~No dedup — same folder dropped twice creates two projects (user may analyse differently)~~ — retired 13 Oct 2026; see the drop rules above
   - Project named after first item (folder name or filename stem) — drag-create adopts it with no inline rename (New Project from the `+⌄` or ⌘N still opens for rename; commit `09f8625`)
-- `Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories. Follows Logic Pro / Final Cut precedent: project is a logical container, files are references
+- ~~`Project.inputFiles` (`input_files` in JSON) — optional `[String]?`. nil = scan whole directory (backward compatible). Populated = process only listed files/directories.~~ — retired 22 Oct 2026; a study is always a folder study
 - Right-click context menu on project rows: Show in Finder, Rename, Delete (destructive role)
 - Context menu actions scoped to right-clicked row (not necessarily the selected row)
 - ⌘⌫ keyboard shortcut for Delete in Project menu
-- `ProjectIndex.addFiles(to:files:)` — append files to existing project with dedup
+- ~~`ProjectIndex.addFiles(to:files:)` — append files to existing project with dedup~~ — deleted 22 Oct 2026 with `inputFiles`
 - `ProjectIndex.findByPath()` — lookup by filesystem path
 - Async URL loading from drop providers via `withTaskGroup` + `withCheckedContinuation`
 
@@ -486,7 +482,7 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 - ~~Drop-on-existing-project-row~~ — **shipped** via `SidebarDropDelegate` frame hit-test
 - Drag-to-reorder — needs multi-select first. Phase 3 in design doc
 - ~~Duplicate folder drop warning~~ — **shipped** as `duplicateDropAlert` (`ContentView.swift:301-323`)
-- ~~Toast for "added interviews to project"~~ — **shipped** (`desktop.chrome.addedInterviews`, `ContentView.swift:586-592`)
+- ~~Toast for "added interviews to project"~~ — shipped, then retired: it became the heading of `NewFilesSheet`'s `.copy` mode on 15 May 2026 (`51c6cb45`), shown only for a file-subset study, and went with that mode and `desktop.chrome.addedInterviews` on 22 Oct 2026
 - Empty state `ContentUnavailableView` as drag target
 - ~~UTType validation for media files~~ — **shipped** as extension allow-list (`acceptedExtensions`, `ContentView.swift:1219-1230`); not UTType-based but equivalent outcome
 
@@ -494,16 +490,16 @@ Replace `ProjectStub` array with `ProjectIndex` loading from `projects.json`.
 > - **Multi-select** shipped via `List(selection: Set<SidebarSelection>)` (`ContentView.swift` sidebar). Context-menu Delete uses the Finder pattern (`removeFromSidebarContextMenu`, `ContentView.swift:797`) — right-clicking a row in the selection acts on the whole selection; right-clicking outside acts only on that row. ⌘⌫ bulk-deletes. The earlier "context-menu Delete deletes only focused row" bug is resolved; verified by smoke 21 May 2026.
 > - **Drop-on-existing-project-row** shipped via `SidebarDropDelegate` with frame hit-testing (workaround for `.onDrop` + List selection breakage). Outcome is state-dependent (see drop matrix above).
 > - **Duplicate folder drop warning** shipped as `duplicateDropAlert` with Open Existing / Create Anyway / Cancel (`ContentView.swift:301-323`).
-> - **"Added interviews to project" toast** shipped via `desktop.chrome.addedInterviews` format string (`ContentView.swift:586-592`) for `.idle` / `.scanning` targets.
+> - ~~**"Added interviews to project" toast** shipped via `desktop.chrome.addedInterviews` format string (`ContentView.swift:586-592`) for `.idle` / `.scanning` targets.~~ Retired: on a folder study the run is the acknowledgement. The key's last reader, `NewFilesSheet`'s `.copy` mode, was deleted 22 Oct 2026.
 > - **Drag-to-folder (internal)** shipped via `.draggable` + `SidebarDropDelegate` hit-test on folder rows.
 > - **File-type validation** shipped as extension allow-list (`acceptedExtensions` Set in `ContentView.swift:1219-1230`) — not UTType-based as originally specced, but equivalent outcome for accepted formats. **It is one of three Swift mirrors** of `bristlenose.models.ALL_EXTENSIONS`, pinned since 19 Aug 2026 by `tests/test_accepted_extension_parity.py`; see `design-sidebar-drop-behaviour.md` §Extension-set invariants for why drift here is silent rather than mild.
-> - **Subset-project state** (drag of single file(s)) shipped via `UnsupportedSubsetView` — displays "Bristlenose analyses folders" detail view for projects created from individual files.
+> - ~~**Subset-project state** (drag of single file(s)) shipped via `UnsupportedSubsetView` — displays "Bristlenose analyses folders" detail view for projects created from individual files.~~ Retired 22 Oct 2026 with the file-subset shape.
 >
 > Still accurately parked: drag-to-reorder, spring-loaded folders, empty-state ContentUnavailableView.
 > (**Slow-double-click rename left this list on 28 Jul 2026** — shipped on the AppKit path; see the
 > struck bullet above and `design-desktop-sidebar-appkit.md` §2.6.)
 
-**Files**: `ProjectIndex.swift` (model, CRUD, inputFiles, `pendingRename` trigger), `ContentView.swift` (drop handling, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut, menu-bar Rename), and — for the shipped AppKit path — `ProjectSidebarOutline.swift` (context menus, inline rename, slow-second-click). `ProjectRow.swift` / `FolderRow.swift` are the flag-off SwiftUI path being deleted; their rename code is inert whenever `BristlenoseAppKitSidebar` is on.
+**Files**: `ProjectIndex.swift` (model, CRUD, `pendingRename` trigger), `ContentView.swift` (drop handling, async URL loading), `MenuCommands.swift` (⌘⌫ shortcut, menu-bar Rename), and — for the shipped AppKit path — `ProjectSidebarOutline.swift` (context menus, inline rename, slow-second-click). `ProjectRow.swift` / `FolderRow.swift` are the flag-off SwiftUI path being deleted; their rename code is inert whenever `BristlenoseAppKitSidebar` is on.
 
 ### Phase 3 — Folders
 
@@ -589,12 +585,12 @@ Added during 23 Apr 2026 QA pass — shipped reality for "how can a user start/r
 
 | State | Pill popover Retry | Menu `Project > Re-analyse…` | Drop on row (state-dependent) | Drop on empty area |
 |---|---|---|---|---|
-| `.idle` (never run or post-cancel) | n/a | disabled (`Phase 2+`) | auto-run via `addFiles` + spawn | new project; single-folder duplicate → `duplicateDropAlert` (Open Existing / Create Anyway / Cancel) |
+| `.idle` (never run or post-cancel) | n/a | disabled (`Phase 2+`) | files copied in + auto-run | new project; single-folder duplicate → `duplicateDropAlert` (Open Existing / Create Anyway / Cancel) |
 | `.scanning` (initial manifest read) | n/a | disabled | auto-run | as above |
 | `.queued` | n/a | disabled | rejected with toast | as above |
 | `.running` (includes attached orphan) | shows Stop, not Retry | disabled | rejected with toast | as above |
 | `.failed` | ✅ Retry | disabled | redirects user to toolbar Retry (toast text: "Use Retry on the toolbar to try this run again") | as above |
-| `.ready` | n/a | disabled | ~~blocker toast~~ **accepts the drop — files copied + folded via `addFiles`** (`ContentView.swift:1380`) | as above |
+| `.ready` | n/a | disabled | ~~blocker toast~~ **accepts the drop — files copied in, and the run that starts folds them in** | as above |
 | `.unreachable` (moved / offline volume) | n/a | disabled | blocked with explanation toast | as above |
 
 **Empty-area drop note:** "Drop on empty area" creates a new project on first drop. For single-folder drops matching an existing project path, `duplicateDropAlert` (`ContentView.swift:301-323`) intercepts before creation — the user picks Open Existing / Create Anyway / Cancel. Multi-item drops bypass the dedup check.

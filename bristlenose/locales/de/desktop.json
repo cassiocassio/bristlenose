@@ -213,7 +213,6 @@
     "onThisMac": "Auf diesem Mac",
     "projectIcon": "Projektsymbol",
     "emptyStateHint": "Ordner hierher ziehen oder ⌘N drücken",
-    "addedInterviews": "%d Interviews zu %@ hinzugefügt",
     "newProjectSaveTitle": "Projektordner erstellen",
     "newProjectSavePrompt": "Erstellen",
     "newProjectSaveMessage_one": "Ihr Interview wird in diesen Ordner kopiert.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Warten auf Transkript",
     "includeWaiting_one": "{{count}} mit ausstehender Transkription einbeziehen",
     "includeWaiting_other": "{{count}} mit ausstehender Transkription einbeziehen"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analysiert Ordner",
-    "body": "Dieses Projekt wurde aus einzelnen Dateien erstellt und kann daher nicht analysiert werden.",
-    "filesHeading": "Dateien in diesem Projekt"
   },
   "discussion": {
     "notRun": "Dieses Projekt wurde analysiert, bevor es die Diskussion gab. W\u00e4hlen Sie zum Erstellen \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste. Abgeschlossene Schritte werden wiederverwendet, und Ihre \u00c4nderungen bleiben erhalten.",

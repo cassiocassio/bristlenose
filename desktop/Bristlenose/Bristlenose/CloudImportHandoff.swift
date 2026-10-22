@@ -20,7 +20,7 @@ struct CloudImportBatchResult: Equatable {
 /// half a researcher notices, because a folder of MP4s is the drudgery they
 /// were trying to delegate.
 ///
-/// **Why it is a separate, pure type.** The decision has four inputs and no
+/// **Why it is a separate, pure type.** The decision has two inputs and no
 /// side effects, and every one of its branches is otherwise unreachable
 /// without a paid tenant, a live download and a subprocess: "a batch landed
 /// into a project whose last run failed" is not a state you can get to by
@@ -33,27 +33,11 @@ struct CloudImportBatchResult: Equatable {
 /// not get two different answers about whether their study re-runs.
 enum CloudImportHandoff {
 
-    /// How the destination project is shaped, which decides whether a run can
-    /// see the new files at all.
-    enum Shape: Equatable {
-        /// `inputFiles == nil` — the CLI rescans the folder at run time, so
-        /// whatever the import wrote folds in by itself. The common case, and
-        /// the shape `NewProjectDestination` always creates.
-        case folder
-        /// `inputFiles != nil` — the project names its inputs, so new paths
-        /// must be registered or a run will not see them. The CLI has no
-        /// `--files` yet, so it cannot scope a run to just the additions.
-        case fileSubset
-    }
-
     enum Action: Equatable {
         /// Seed the folder watcher with the landed names, then start a run.
         /// Incremental if the project has already been analysed, fresh if not
         /// — that difference is the pipeline's, not ours.
         case analyse
-        /// Register the paths so a later full run includes them, but start
-        /// nothing.
-        case registerOnly
         case nothing(Decline)
     }
 
@@ -79,7 +63,7 @@ enum CloudImportHandoff {
     ///   many were requested — a partial batch is ordinary and gets processed
     ///   (incremental analysis is what makes that ordinary), but a batch that
     ///   landed nothing has nothing to analyse.
-    static func decide(landed: Int, shape: Shape, state: PipelineState?) -> Action {
+    static func decide(landed: Int, state: PipelineState?) -> Action {
         guard landed > 0 else { return .nothing(.nothingLanded) }
 
         switch state {
@@ -94,12 +78,7 @@ enum CloudImportHandoff {
         case .unreachable:
             return .nothing(.projectUnreachable)
         default:
-            break
-        }
-
-        switch shape {
-        case .folder:     return .analyse
-        case .fileSubset: return .registerOnly
+            return .analyse
         }
     }
 
@@ -109,7 +88,7 @@ enum CloudImportHandoff {
     /// **Only when a run is starting**, and the asymmetry is the point. Seeding
     /// suppresses the row's new-files count pill, which is right when the run
     /// itself is the acknowledgement and wrong in every other case: a batch
-    /// that landed into a busy, failed or file-subset project has put real
+    /// that landed into a busy or failed project has put real
     /// files in a real folder that nothing is going to read, and the count pill
     /// is the affordance that already says so — from the sidebar, with the
     /// import window long closed.

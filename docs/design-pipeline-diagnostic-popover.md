@@ -281,7 +281,7 @@ different form when that's more appropriate and natural to the moment.
 | **Dialog / confirmation** (blocking on the user) | prompt + action button(s) | 4 `.alert` sites; AI & Privacy consent sheet; OllamaDownloadPill needs-Ollama phase | shipped |
 | **Terminal failure with reason** | failure buckets + reason + Copy / Show Log | diagnostic popover (`unifiedPopoverBody`) | shipped |
 | **Ephemeral note** (toast) | bottom-of-window, auto-dismiss or undo | ~~informational toast (3s); undoable-removal toast (8s) — `ToastSurface`~~ | **retired 19 Aug 2026** — all six removed; the display-kind has no shipped instance on the Mac. See the anti-pattern below |
-| **Info / explanatory card** | full-content prose + per-item actions | `UnsupportedSubsetView` | shipped |
+| **Info / explanatory card** | full-content prose + per-item actions | ~~`UnsupportedSubsetView`~~ (deleted 22 Oct 2026) | retired |
 | **Success poster** | small graphical summary of a settled good state | — _none_ | **not shipped** — the one genuine candidate-new (optional; see deferred appendix) |
 
 Two facts the inventory settled, recorded here so they aren't re-litigated:
@@ -362,7 +362,7 @@ is no live picker.
 | Toasts (`ToastSurface`, 2) | informational (3s) / undoable removal (8s, shows count + name) | Ephemeral note | real-condition-only |
 | `BootView` | startingSidecar / loadingReport | Indeterminate progress | transient (cold start) |
 | `BootView` | failed (message + Retry + details disclosure) | Terminal failure with reason | partial — misconfigure `BRISTLENOSE_DEV_SIDECAR_PATH` / `_EXTERNAL_PORT` |
-| `UnsupportedSubsetView` | files-not-folder card | Info / explanatory card | real-condition-only |
+| ~~`UnsupportedSubsetView`~~ | files-not-folder card, deleted 22 Oct 2026 with the loose-file study | Info / explanatory card | retired |
 
 _(Sibling surfaces, out of scope for a popover catalog but noted: sidebar
 inline indicators — row-subtitle status, session count, scan spinner, ~~iCloud

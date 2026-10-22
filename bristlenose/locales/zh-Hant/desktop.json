@@ -211,7 +211,6 @@
     "onThisMac": "在這部 Mac 上",
     "projectIcon": "專案圖像",
     "emptyStateHint": "將檔案夾拖移至此，或按 ⌘N",
-    "addedInterviews": "已將 %d 則訪談加入 %@",
     "newProjectSaveTitle": "\u5efa\u7acb\u5c08\u6848\u6a94\u6848\u593e",
     "newProjectSavePrompt": "\u5efa\u7acb",
     "newProjectSaveMessage_other": "\u4f60\u7684\u8a2a\u8ac7\u5c07\u62f7\u8c9d\u5230\u6b64\u6a94\u6848\u593e\u3002",
@@ -1190,11 +1189,6 @@
     "transcriptImported": "\u5df2\u532f\u5165",
     "statusWaitingForTranscript": "\u6b63\u5728\u7b49\u5f85\u9010\u5b57\u7a3f",
     "includeWaiting_other": "\u5305\u542b {{count}} \u6bb5\u7b49\u5f85\u9010\u5b57\u7a3f\u7684\u9304\u5f71"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose 分析的是檔案夾",
-    "body": "這個專案是由個別檔案建立的，因此無法分析。",
-    "filesHeading": "這個專案的檔案"
   },
   "discussion": {
     "notRun": "\u6b64\u5c08\u6848\u5728\u8a0e\u8ad6\u529f\u80fd\u63a8\u51fa\u524d\u5df2\u5b8c\u6210\u5206\u6790\u3002\u82e5\u8981\u5efa\u7acb\u8a0e\u8ad6\uff0c\u8acb\u5728\u5074\u908a\u6b04\u7684\u5c08\u6848\u9078\u55ae\u4e2d\u9078\u64c7\u300c\u5206\u6790\u300d\u3002\u5df2\u5b8c\u6210\u7684\u6b65\u9a5f\u6703\u91cd\u8907\u4f7f\u7528\uff0c\u4f60\u7684\u7de8\u8f2f\u4e5f\u6703\u4fdd\u7559\u3002",

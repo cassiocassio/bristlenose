@@ -213,7 +213,6 @@
     "onThisMac": "En aquest Mac",
     "projectIcon": "Icona del projecte",
     "emptyStateHint": "Arrossega-hi una carpeta o prem ⌘N",
-    "addedInterviews": "S'han afegit %d entrevistes a %@",
     "newProjectSaveTitle": "Creació de la carpeta del projecte",
     "newProjectSavePrompt": "Crea",
     "newProjectSaveMessage_one": "La teva entrevista es copia dins d'aquesta carpeta.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Esperant la transcripci\u00f3",
     "includeWaiting_one": "Inclou {{count}} a l'espera de transcripci\u00f3",
     "includeWaiting_other": "Inclou {{count}} a l'espera de transcripci\u00f3"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analitza carpetes",
-    "body": "Aquest projecte s’ha creat a partir de fitxers solts, per això no es pot analitzar.",
-    "filesHeading": "Fitxers d’aquest projecte"
   },
   "discussion": {
     "notRun": "Aquest projecte es va analitzar abans que exist\u00eds la discussi\u00f3. Per crear-la, tria Analitza al men\u00fa del projecte a la barra lateral. Els passos acabats es reutilitzen i els teus canvis es conserven.",

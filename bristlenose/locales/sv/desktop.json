@@ -213,7 +213,6 @@
     "onThisMac": "På den här datorn",
     "projectIcon": "Projektsymbol",
     "emptyStateHint": "Dra en mapp hit eller tryck på ⌘N",
-    "addedInterviews": "Lade till %d intervjuer i %@",
     "newProjectSaveTitle": "Skapa projektmapp",
     "newProjectSavePrompt": "Skapa",
     "newProjectSaveMessage_one": "Din intervju kopieras till den h\u00e4r mappen.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "V\u00e4ntar p\u00e5 transkription",
     "includeWaiting_one": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription",
     "includeWaiting_other": "Ta med {{count}} som v\u00e4ntar p\u00e5 transkription"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyserar mappar",
-    "body": "Det här projektet skapades från enskilda filer och kan därför inte analyseras.",
-    "filesHeading": "Filer i det här projektet"
   },
   "discussion": {
     "notRun": "Det h\u00e4r projektet analyserades innan diskussionen fanns. V\u00e4lj Analysera i projektets meny i sidof\u00e4ltet f\u00f6r att skapa den. F\u00e4rdiga steg \u00e5teranv\u00e4nds och dina \u00e4ndringar finns kvar.",

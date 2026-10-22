@@ -213,7 +213,6 @@
     "onThisMac": "Op deze Mac",
     "projectIcon": "Projectsymbool",
     "emptyStateHint": "Sleep hier een map of druk op ⌘N",
-    "addedInterviews": "%d interviews toegevoegd aan %@",
     "newProjectSaveTitle": "Maak projectmap aan",
     "newProjectSavePrompt": "Maak aan",
     "newProjectSaveMessage_one": "Je interview wordt naar deze map gekopieerd.",
@@ -1232,11 +1231,6 @@
     "statusWaitingForTranscript": "Wacht op transcript",
     "includeWaiting_one": "{{count}} in afwachting van transcriptie meenemen",
     "includeWaiting_other": "{{count}} in afwachting van transcriptie meenemen"
-  },
-  "unsupportedSubset": {
-    "title": "Bristlenose analyseert mappen",
-    "body": "Dit project is gemaakt van losse bestanden en kan daarom niet worden geanalyseerd.",
-    "filesHeading": "Bestanden in dit project"
   },
   "discussion": {
     "notRun": "Dit project is geanalyseerd voordat de discussie bestond. Kies om haar te maken Analyseer in het menu van het project in de navigatiekolom. Afgeronde stappen worden hergebruikt en je wijzigingen blijven behouden.",

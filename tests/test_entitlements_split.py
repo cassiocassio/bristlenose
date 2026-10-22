@@ -228,13 +228,14 @@ class TestTheEntitlementsAreActuallyCommitted:
         """The entitlement was exactly the skip-worktree edit that went missing
         on 12 Sep 2026 while every working-tree test passed."""
         for rel in ("desktop/Bristlenose/Bristlenose/Bristlenose.entitlements",
-                    "desktop/Bristlenose/Bristlenose/BristlenoseDebug.entitlements"):
+                    "desktop/Bristlenose/Bristlenose/BristlenoseDebug.entitlements",
+                    "desktop/Bristlenose/Bristlenose/BristlenoseDeveloperID.entitlements"):
             assert self._from_head(rel).get(_ASSOCIATED_DOMAINS) == _WEBCREDENTIALS, (
                 f"{rel} at HEAD has no {_ASSOCIATED_DOMAINS} — a fresh clone "
                 "would build a Zoom sign-in that never returns"
             )
 
-    def test_neither_file_is_skip_worktree(self) -> None:
+    def test_no_entitlements_file_is_skip_worktree(self) -> None:
         """The flag makes any future edit to these invisible to git status."""
         out = subprocess.run(
             ["git", "ls-files", "-v", "--", "desktop/Bristlenose/Bristlenose/"],
@@ -246,9 +247,9 @@ class TestTheEntitlementsAreActuallyCommitted:
             for line in out.splitlines()
             if line.startswith("S") and line.endswith(".entitlements")
         ]
-        assert "desktop/Bristlenose/Bristlenose/Bristlenose.entitlements" not in hidden, (
-            "Bristlenose.entitlements is skip-worktree again — edits to it will "
-            "not commit and this suite will pass against a tree nobody else has."
+        assert hidden == [], (
+            f"skip-worktree entitlements: {hidden} — edits to them will not "
+            "commit and this suite will pass against a tree nobody else has."
         )
 
 

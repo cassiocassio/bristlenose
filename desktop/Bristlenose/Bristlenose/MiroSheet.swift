@@ -47,7 +47,8 @@ final class MiroSheetModel: ObservableObject {
 
     private let api: MiroAPI
     private let i18n: I18n
-    private var exportTask: Task<Void, Never>?
+    /// Readable so a test can wait for a build to end (`MiroSheetStatusTests`).
+    private(set) var exportTask: Task<Void, Never>?
     /// Opened on the Screens lens: the board is the screens, a frame per screengrab
     /// (docs/design-screens-export.md §6), not the quotes in section columns.
     let screens: Bool
@@ -266,6 +267,9 @@ final class MiroSheetModel: ObservableObject {
                 // back rather than leaving the bar frozen.
                 if !Task.isCancelled { self.step = .configure }
             } catch {
+                // Our own Cancel during a request: URLSession throws URLError(.cancelled), not
+                // CancellationError, and an error written now would be for a sheet that is gone.
+                if Task.isCancelled { return }
                 self.error = Self.text(for: error, i18n) ?? t("exportError")
                 self.step = .configure
             }

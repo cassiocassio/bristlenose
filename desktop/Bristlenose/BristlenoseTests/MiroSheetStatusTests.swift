@@ -106,4 +106,26 @@ struct MiroSheetStatusTests {
         #expect(m.error == i18n.t(key))
         #expect(m.busy == false)
     }
+
+    @Test("cancelling a board build mid-request is a cancel, not an error")
+    func cancelledBuildLeavesNoError() async throws {
+        let serve = try SilentServe()
+        defer { serve.stop() }
+        await serve.ready()
+        #expect(serve.port != 0, "precondition: the loopback server is listening")
+
+        let m = MiroSheetModel(port: Int(serve.port), token: nil, projectName: "p", i18n: english())
+        m.createBoard()
+        #expect(m.step == .creating)
+        // Wait on the start request reaching the server, so the cancel lands on a call in flight.
+        let deadline = Date().addingTimeInterval(10)
+        while !serve.requestArrived, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(serve.requestArrived, "precondition: the start request is in flight")
+
+        m.cancelExport()
+        await m.exportTask?.value
+
+        #expect(m.error == nil, "a cancelled build wrote an error nobody sees")
+        #expect(m.step == .creating, "a cancelled build moved the dismissed sheet back to its form")
+    }
 }

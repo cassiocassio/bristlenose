@@ -119,6 +119,7 @@ vi.mock("../contexts/ActivityStore", () => ({
   addJob: vi.fn(),
   removeJob: vi.fn(),
   getJobs: vi.fn(() => new Map()),
+  newJobId: vi.fn((kind: string) => `${kind}:t-1`),
 }));
 vi.mock("../utils/toast", () => ({ toast: vi.fn() }));
 

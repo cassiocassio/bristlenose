@@ -331,9 +331,10 @@ class AutoCodeJobsResponse(BaseModel):
 def list_autocode_jobs(project_id: int, request: Request) -> AutoCodeJobsResponse:
     """The project's AutoCode runs still pending or running.
 
-    A reloaded report asks this once to put back the chips the reload lost (R14): the
-    chip list lives only in the page, and the per-framework status read cannot say
-    which frameworks to ask about.
+    A reloaded report asks this once to put back the chips of runs it has no chip for
+    (R14): a window carries its own chips across a reload (RE#38), but not another
+    window's, and the per-framework status read cannot say which frameworks to ask
+    about.
     """
     db = _get_db(request)
     try:

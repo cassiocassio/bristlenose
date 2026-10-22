@@ -5,8 +5,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./api", () => ({
-  startClipExtraction: vi.fn().mockResolvedValue({ total: 2, pii_warning: false }),
-  startScreensExport: vi.fn().mockResolvedValue({ status: "started", total: 3 }),
+  startClipExtraction: vi.fn().mockResolvedValue({ total: 2, pii_warning: false, job_id: "c7" }),
+  startScreensExport: vi.fn().mockResolvedValue({ status: "started", total: 3, job_id: "s7" }),
 }));
 vi.mock("./toast", () => ({ toast: vi.fn() }));
 vi.mock("./announce", () => ({ announce: vi.fn() }));
@@ -28,6 +28,8 @@ describe("exportScreens", () => {
     expect(second).toHaveLength(1);
     expect(second[0]).not.toBe(first[0]);
     expect(getJobs().get(second[0])).toMatchObject({ type: "screens", copyWhenDone: true, total: 3 });
+    // The export's own id, so the chip never stands for a newer one after a reload (RE#38).
+    expect(getJobs().get(second[0])?.jobId).toBe("s7");
   });
 });
 
@@ -43,5 +45,6 @@ describe("extractVideoClips (R13)", () => {
     expect(second).toHaveLength(1);
     expect(second[0]).not.toBe(first[0]);
     expect(getJobs().get(second[0])).toMatchObject({ type: "clips", total: 2 });
+    expect(getJobs().get(second[0])?.jobId).toBe("c7");
   });
 });

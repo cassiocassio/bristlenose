@@ -79,7 +79,8 @@ def test_each_still_is_written_full_size_and_replaces_the_last_export(
     (folder / "notes.txt").write_text("the researcher's own")
     with AuthTestClient(app) as client:
         x0, _, x1, _ = client.get("/api/projects/1/screens").json()["screens"][0]["tabs"][0]["crop"]
-        assert client.post(_BASE).json() == {"status": "started", "total": 1}
+        started = client.post(_BASE).json()
+        assert {k: started[k] for k in ("status", "total")} == {"status": "started", "total": 1}
         body = _finish(client)
     assert body["status"] == "completed" and body["files"] == ["p1-01.jpg"]
     jpg = folder / "p1-01.jpg"
@@ -101,7 +102,8 @@ def test_nothing_is_exported_while_screens_are_off(project: Path,  # noqa: F811
 def test_a_study_with_no_screens_says_so(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
     monkeypatch.setenv("BRISTLENOSE_SCREEN_TEXT", "1")
     app = create_app(project_dir=project, dev=False, db_url="sqlite://")
-    assert AuthTestClient(app).post(_BASE).json() == {"status": "no_screens", "total": 0}
+    assert AuthTestClient(app).post(_BASE).json() == {"status": "no_screens", "total": 0,
+                                                       "job_id": None}
 
 
 def test_a_name_is_written_in_the_folder_and_a_link_there_is_replaced_not_followed(tmp_path: Path) -> None:

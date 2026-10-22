@@ -442,6 +442,102 @@ describe("Activity chips after a reload", () => {
 });
 
 // ---------------------------------------------------------------------------
+// RE#38 (#35, #36): the window keeps its chips across a reload. A Copy Screens still running when
+// the report reloaded came back as a plain export and never reached the clipboard.
+// ---------------------------------------------------------------------------
+
+describe("A Copy Screens across a reload", () => {
+  let postMessage: ReturnType<typeof vi.fn>;
+  let serverJob = "s1";
+  const carry = (entry: Record<string, unknown>) =>
+    sessionStorage.setItem("bristlenose-activity:1:", JSON.stringify([["screens:1", entry]]));
+  const copyEntry = {
+    type: "screens", frameworkId: "", frameworkTitle: "", total: 2, copyWhenDone: true, jobId: "s1",
+  };
+  const copies = () =>
+    postMessage.mock.calls.map((c) => c[0]).filter((m) => m?.type === "screens-pasteboard-write");
+
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    serverJob = "s1";
+    postMessage = vi.fn();
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage } },
+    };
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/export/screens/status")
+        ? { status: "completed", progress: 2, total: 2, completed_count: 2, skipped_count: 0, current: "",
+            output_dir: "/Users/r/Study A/bristlenose-output/screens", files: ["p1-01.jpg", "p1-02.jpg"],
+            job_id: serverJob }
+        : url.includes("/export/clips/status")
+          ? { status: "idle", progress: 0, total: 0, completed_count: 0, skipped_count: 0, current_clip: "",
+              output_dir: null, job_id: null }
+          : url.includes("/sessions")
+            ? { sessions: [] }
+            : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+    delete (window as unknown as Record<string, unknown>).webkit;
+  });
+
+  it("finishing during the reload, still copies, once, in the window that asked", async () => {
+    carry(copyEntry);
+    renderRoute("/report/sessions/");
+    await waitFor(() => expect(copies()).toHaveLength(1), { timeout: 5000 });
+    expect(copies()[0]).toEqual({
+      type: "screens-pasteboard-write",
+      dir: "/Users/r/Study A/bristlenose-output/screens",
+      files: ["p1-01.jpg", "p1-02.jpg"],
+    });
+    expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 2500));
+    });
+    expect(copies()).toHaveLength(1);
+    // Carried as finished, so the next reload shows it without copying again.
+    const kept = JSON.parse(sessionStorage.getItem("bristlenose-activity:1:") ?? "[]");
+    expect(kept[0][1].outcome.status).toBe("completed");
+  }, 10_000);
+
+  it("is not copied again by a reload after it was copied", async () => {
+    carry({
+      ...copyEntry,
+      outcome: { status: "completed", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null },
+    });
+    renderRoute("/report/sessions/");
+    expect(await screen.findByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 2500));
+    });
+    expect(copies()).toHaveLength(0);
+  }, 10_000);
+
+  it("never copies a newer export another window started", async () => {
+    serverJob = "s2";
+    carry(copyEntry);
+    renderRoute("/report/sessions/");
+    // The carried chip was read back and its export asked after, before it went.
+    const screensReads = () =>
+      vi.mocked(globalThis.fetch).mock.calls.filter((c) => String(c[0]).includes("/export/screens/status"));
+    await waitFor(() => expect(screensReads().length).toBeGreaterThan(0), { timeout: 5000 });
+    expect(JSON.parse(sessionStorage.getItem("bristlenose-activity:1:") ?? "[]")).toEqual([]);
+    await waitFor(() => expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument(), { timeout: 5000 });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 2500));
+    });
+    expect(copies()).toHaveLength(0);
+  }, 10_000);
+});
+
+// ---------------------------------------------------------------------------
 // R72: in the Mac app the chip's Reveal asked the sandboxed sidecar to run `open -R`, which does
 // nothing there (and the clips route said it had). The app reveals through its own bridge.
 // ---------------------------------------------------------------------------

@@ -34,7 +34,7 @@ import { UndoSync } from "../components/UndoSync";
 import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
-import { useActivityJobs, removeJob, rehydrateActivityJobs } from "../contexts/ActivityStore";
+import { useActivityJobs, removeJob, rehydrateActivityJobs, sameExport, settleJob } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useAnchorReporter } from "../hooks/useAnchorReporter";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
@@ -741,12 +741,22 @@ function AppShell() {
             },
             actionLabel: i18n.t("export.clips.reveal"),
             onCancel: () => {
-              cancelClipExtraction().catch((err) =>
-                console.error("Cancel clip extraction failed:", err),
-              );
+              // Only this chip's export: a chip carried across a reload may not have read yet,
+              // and the cancel route stops whatever export the server holds (RE#38).
+              getClipExtractionStatus()
+                .then((s) => (sameExport(j.jobId, s.job_id) ? cancelClipExtraction() : undefined))
+                .catch((err) => console.error("Cancel clip extraction failed:", err));
             },
+            outcome: j.outcome,
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getClipExtractionStatus();
+              // The server holds one clip export; a newer one than this chip's has replaced it,
+              // and its chip is in the window that started it (RE#38).
+              if (!sameExport(j.jobId, s.job_id)) {
+                console.info(`Activity: clip export ${j.jobId} was replaced by ${s.job_id}; its chip goes`);
+                removeJob(id);
+                throw new Error("replaced by a newer clip export");
+              }
               // The server holds the job before the export's start returns, so "idle" means it
               // has forgotten it (it restarted): the export ended, it is not still running (R13).
               const status = s.status === "idle" ? "failed" : s.status;
@@ -780,11 +790,17 @@ function AppShell() {
             // (`screensCopied`), never here, where the copy has not happened yet.
             completedLabel: i18n.t("export.screens.done", { count: j.total ?? 0 }),
             frameworkId: "",
-            onComplete: () => {
-              if (!copy) return;
-              getScreensExportStatus()
+            onComplete: (outcome) => {
+              // Only a finished export is copied: not a cancelled or failed one, and not one whose
+              // status could not be read (the lost state), whose real ending comes later.
+              if (!copy || outcome.status !== "completed") return;
+              return getScreensExportStatus()
                 .then((s) => {
-                  // Terminal includes cancelled and failed: only a finished export is copied.
+                  // Only the export this window asked to copy, never a newer one (RE#38).
+                  if (!sameExport(j.jobId, s.job_id)) {
+                    toast(i18n.t("export.screens.copyFailed"), 6000);
+                    return;
+                  }
                   if (s.status === "completed" && s.output_dir && s.files.length > 0) {
                     postScreensPasteboardWrite(s.output_dir, s.files);
                   } else if (s.status === "completed") {
@@ -801,10 +817,20 @@ function AppShell() {
             },
             actionLabel: i18n.t("export.screens.reveal"),
             onCancel: () => {
-              cancelScreensExport().catch((err) => console.error("Cancel screens export failed:", err));
+              // As for clips: only this chip's export (RE#38).
+              getScreensExportStatus()
+                .then((s) => (sameExport(j.jobId, s.job_id) ? cancelScreensExport() : undefined))
+                .catch((err) => console.error("Cancel screens export failed:", err));
             },
+            outcome: j.outcome,
             pollFn: async (): Promise<NormalisedJobStatus> => {
               const s = await getScreensExportStatus();
+              // As for clips: a newer export has replaced this chip's (RE#38).
+              if (!sameExport(j.jobId, s.job_id)) {
+                console.info(`Activity: screens export ${j.jobId} was replaced by ${s.job_id}; its chip goes`);
+                removeJob(id);
+                throw new Error("replaced by a newer screens export");
+              }
               // As for clips: the server holds the job before the export's start returns, so "idle",
               // even on the first read, means it has forgotten it (it restarted) (R13).
               const status = s.status === "idle" ? "failed" : s.status;
@@ -836,6 +862,7 @@ function AppShell() {
               defaultValue: "Re-coded new sessions for {{title}}",
             }),
             frameworkId: j.frameworkId,
+            outcome: j.outcome,
             onComplete: () => {
               window.dispatchEvent(new Event("codebook-changed"));
               document.dispatchEvent(new CustomEvent("bn:tags-changed"));
@@ -867,6 +894,7 @@ function AppShell() {
           label: i18n.t("autocode.chip.coding", { title: j.frameworkTitle }),
           completedLabel: i18n.t("autocode.chip.coded", { title: j.frameworkTitle }),
           frameworkId: j.frameworkId,
+          outcome: j.outcome,
           onComplete: () => {
             window.dispatchEvent(new Event("codebook-changed"));
             // The proposals live on the quotes, and the lenses that draw them reload on
@@ -986,7 +1014,7 @@ function AppShell() {
       />
       <SettingsModal open={settingsOpen} onClose={toggleSettings} />
       <PanelErrorBoundary quiet>
-        <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} />
+        <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} onSettled={settleJob} />
       </PanelErrorBoundary>
       {/* Invisible, so a crash in one draws nothing and leaves the report standing. */}
       <PanelErrorBoundary quiet>

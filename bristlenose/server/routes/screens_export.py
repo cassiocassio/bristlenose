@@ -17,6 +17,7 @@ import logging
 import os
 import platform
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Any, Literal
 
@@ -140,6 +141,9 @@ async def _run(project_id: int, job: dict[str, Any], out_dir: Path, folder: Path
 class ScreensExportStart(BaseModel):
     status: str
     total: int
+    #: This export's own id, repeated by every status read (as for clips: a window carrying the
+    #: chip across a reload knows by it that the export is still the one it started).
+    job_id: str | None = None
 
 
 class ScreensExportStatus(BaseModel):
@@ -152,6 +156,8 @@ class ScreensExportStatus(BaseModel):
     output_dir: str | None
     #: The files written, in export order — for the Mac app's clipboard copy.
     files: list[str]
+    #: The export the server holds (``None`` when it holds none).
+    job_id: str | None = None
 
 
 @router.post("/projects/{project_id}/export/screens")
@@ -188,13 +194,14 @@ async def start_screens_export(request: Request, project_id: int) -> ScreensExpo
     folder.mkdir(parents=True, exist_ok=True)
     if folder.is_symlink() or not folder.resolve().is_relative_to(out_dir.resolve()):
         raise HTTPException(status_code=409, detail="The screens folder is not inside the output folder")
-    job: dict[str, Any] = {"status": "running", "progress": 0, "total": len(shots),
+    job: dict[str, Any] = {"job_id": uuid.uuid4().hex,
+                           "status": "running", "progress": 0, "total": len(shots),
                            "completed_count": 0, "skipped_count": 0, "current": "",
                            "output_dir": None, "files": []}
     _jobs[project_id] = job
     # Held by the job: the loop keeps only a weak reference to a bare task.
     job["task"] = asyncio.create_task(_run(project_id, job, out_dir, folder, shots, videos))
-    return ScreensExportStart(status="started", total=len(shots))
+    return ScreensExportStart(status="started", total=len(shots), job_id=job["job_id"])
 
 
 @router.get("/projects/{project_id}/export/screens/status")
@@ -205,6 +212,7 @@ async def screens_export_status(project_id: int) -> ScreensExportStatus:
         total=job.get("total", 0), completed_count=job.get("completed_count", 0),
         skipped_count=job.get("skipped_count", 0), current=job.get("current", ""),
         output_dir=job.get("output_dir"), files=job.get("files", []),
+        job_id=job.get("job_id"),
     )
 
 

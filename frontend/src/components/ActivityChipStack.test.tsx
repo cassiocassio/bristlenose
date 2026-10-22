@@ -812,4 +812,93 @@ describe("ActivityChipStack", () => {
       expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "running");
     });
   });
+
+  // RE#38: a window keeps its chips across a reload. A chip that had already finished comes back
+  // carrying how it ended, and must neither ask again nor do its ending a second time (a Copy
+  // Screens would copy again, an AutoCode failure would be posted to the shell again).
+  describe("a chip that comes back already finished", () => {
+    const finished: NormalisedJobStatus = {
+      status: "completed", progressLabel: null, durationLabel: null, errorMessage: null, partialMessage: null,
+    };
+
+    it("shows how it ended, asks nothing and does not end again", async () => {
+      const onComplete = vi.fn();
+      const onSettled = vi.fn();
+      const pollFn = vi.fn((): Promise<NormalisedJobStatus> => Promise.resolve({ ...finished, status: "running" }));
+      render(
+        <ActivityChipStack
+          jobs={[makeJob({ id: "screens:1", pollFn, onComplete, outcome: finished })]}
+          onDismiss={vi.fn()}
+          onSettled={onSettled}
+        />,
+      );
+      await act(async () => {});
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "completed");
+      expect(pollFn).not.toHaveBeenCalled();
+      expect(onComplete).not.toHaveBeenCalled();
+      expect(onSettled).not.toHaveBeenCalled();
+    });
+
+    it("says how a chip ended, once, so the window can carry it", async () => {
+      const onSettled = vi.fn();
+      const pollFn = vi.fn(() => Promise.resolve(finished));
+      render(<ActivityChipStack jobs={[makeJob({ id: "clips:1", pollFn })]} onDismiss={vi.fn()} onSettled={onSettled} />);
+      await act(async () => {});
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(onSettled).toHaveBeenCalledTimes(1);
+      expect(onSettled).toHaveBeenCalledWith("clips:1", finished);
+    });
+
+    it("tells the completion handler how the job ended, and records the ending after it settles", async () => {
+      let finish!: () => void;
+      const onComplete = vi.fn(() => new Promise<void>((r) => (finish = r)));
+      const onSettled = vi.fn();
+      const pollFn = vi.fn(() => Promise.resolve(finished));
+      render(
+        <ActivityChipStack jobs={[makeJob({ id: "screens:1", pollFn, onComplete })]} onDismiss={vi.fn()} onSettled={onSettled} />,
+      );
+      await act(async () => {});
+      expect(onComplete).toHaveBeenCalledWith(finished);
+      expect(onSettled).not.toHaveBeenCalled();
+      await act(async () => finish());
+      expect(onSettled).toHaveBeenCalledWith("screens:1", finished);
+    });
+
+    it("still records the ending when the completion handler throws", async () => {
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      const onSettled = vi.fn();
+      const onComplete = vi.fn(() => {
+        throw new Error("boom");
+      });
+      render(
+        <ActivityChipStack
+          jobs={[makeJob({ id: "clips:1", pollFn: () => Promise.resolve(finished), onComplete })]}
+          onDismiss={vi.fn()}
+          onSettled={onSettled}
+        />,
+      );
+      await act(async () => {});
+      expect(onSettled).toHaveBeenCalledWith("clips:1", finished);
+      err.mockRestore();
+    });
+
+    it("does not carry a chip that ended only because nothing could be read", async () => {
+      const onSettled = vi.fn();
+      const pollFn = vi.fn(() => Promise.reject(new Error("Failed to fetch")));
+      render(<ActivityChipStack jobs={[makeJob({ id: "clips:1", pollFn })]} onDismiss={vi.fn()} onSettled={onSettled} />);
+      await act(async () => {});
+      for (let i = 0; i < 5; i++) {
+        await act(async () => {
+          vi.advanceTimersByTime(2000);
+        });
+      }
+      expect(screen.getByTestId("bn-activity-chip")).toHaveAttribute("data-status", "failed");
+      expect(onSettled).not.toHaveBeenCalled();
+    });
+  });
 });

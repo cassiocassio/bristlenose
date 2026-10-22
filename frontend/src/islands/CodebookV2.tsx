@@ -35,7 +35,7 @@ import type { ApiError } from "../utils/api";
 import { autocodeRefusal } from "../utils/autocodeRefusal";
 import { autocodeFailure } from "../utils/autocodeFailure";
 import { toast } from "../utils/toast";
-import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
+import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
 import type {
   CodebookResponse,
   RemoveFrameworkInfo,
@@ -136,9 +136,6 @@ function provenanceFor(
     ? { text: i18n.t("codebook.onByDefault"), isPerson: false }
     : { text: i18n.t("codebook.availableByDefault"), isPerson: false };
 }
-
-/** Numbers each AutoCode run's activity job (see onInstall). */
-let autocodeJobSeq = 0;
 
 export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
   const { t } = useTranslation();
@@ -473,7 +470,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
         for (const [jobId, job] of getJobs()) {
           if (job.type === "autocode" && job.frameworkId === id) removeJob(jobId);
         }
-        addJob(`autocode:${id}:${++autocodeJobSeq}`, {
+        addJob(newJobId(`autocode:${id}`), {
           type: "autocode",
           frameworkId: id,
           frameworkTitle: title,

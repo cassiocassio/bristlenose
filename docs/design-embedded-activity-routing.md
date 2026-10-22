@@ -199,6 +199,21 @@ Web keeps its HTTP poll; embedded, `useBridgeActivitySync` posts
   from `AppLayout` on load, reads the clip and screens status routes and
   `GET …/autocode/jobs` and puts back the chips of jobs still running. Running jobs
   only; a restored Copy Screens is a plain export (the server does not record the copy).
+  **Widened 22 Oct 2026 (RE#38, decisions #35, #36):** each window first puts back
+  its *own* chips, which `ActivityStore` keeps in session storage
+  (`bristlenose-activity:<project>`), so a job that finished during the reload ends
+  Done with its action, a finished chip comes back with its `outcome` and does not
+  end again, a dismissed one stays gone, and a Copy Screens still copies, in the
+  window that asked only. The server's read above then adds only jobs the window has
+  no chip for (another window's, which stay plain). Clip and screens jobs carry a
+  `job_id`, repeated by their status reads; a carried chip whose id is no longer the
+  server's has been replaced by a newer export and is dropped on load, finished or not,
+  never shown, revealed or copied (`sameExport`), and Cancel stops only the chip's own
+  export. The key names the serve (a digest of its per-start bearer token), so a serve
+  restart, which ends every export anyway, starts empty in a browser too (the CLI's
+  serves share a port and so a tab); nothing is persisted on the server (decision #38).
+  A chip records its ending (`settleJob`) after its completion handler settles, and a
+  Copy Screens copies only on a real `completed`, never on the lost state.
 
 ### Option B — Native polls the sidecar HTTP directly
 

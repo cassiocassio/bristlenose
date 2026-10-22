@@ -23,7 +23,7 @@
 
 import type { TFunction } from "i18next";
 import { startClipExtraction, startScreensExport } from "./api";
-import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
+import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
 import { getSubtitlePrefs } from "./subtitlePrefs";
 import { announce } from "./announce";
@@ -151,8 +151,6 @@ export function saveQuotesSpreadsheet(
  * no-scope union. Registers an activity chip and surfaces ffmpeg-missing /
  * in-progress / failed states via toast.
  */
-let clipsJobSeq = 0;
-
 export async function extractVideoClips(
   ids: string[] | null,
   t: TFunction,
@@ -167,7 +165,10 @@ export async function extractVideoClips(
     // Each export is its own job, as for screens below: under one fixed id the last export's
     // finished chip stood for the next one until its first read (R13).
     for (const [id, job] of getJobs()) if (job.type === "clips") removeJob(id);
-    addJob(`clips:${++clipsJobSeq}`, { type: "clips", frameworkId: "", frameworkTitle: "", total: result.total });
+    addJob(newJobId("clips"), {
+      type: "clips", frameworkId: "", frameworkTitle: "", total: result.total,
+      ...(result.job_id ? { jobId: result.job_id } : {}),
+    });
     // One toast at a time replaces the last, so both notices share one, held
     // long enough to read. A toast speaks itself, but the progress line below
     // lands in the same frame and would replace it, so the spoken line carries
@@ -187,8 +188,6 @@ export async function extractVideoClips(
   }
 }
 
-let screensJobSeq = 0;
-
 /**
  * Write every still the Screens lens shows to bristlenose-output/screens/, one per participant per
  * screen, in time order (docs/design-screens-export.md §4). With `copy`, the job's chip puts the
@@ -205,8 +204,9 @@ export async function exportScreens(t: TFunction, copy = false): Promise<void> {
     // second Copy Screens look finished at once and never reach the clipboard. The last one's chip
     // goes, since the server keeps one export per project.
     for (const [id, job] of getJobs()) if (job.type === "screens") removeJob(id);
-    addJob(`screens:${++screensJobSeq}`, {
+    addJob(newJobId("screens"), {
       type: "screens", frameworkId: "", frameworkTitle: "", total: result.total, copyWhenDone: copy,
+      ...(result.job_id ? { jobId: result.job_id } : {}),
     });
     announce(t("export.screens.progress", { progress: 0, total: result.total }));
   } catch (err: unknown) {

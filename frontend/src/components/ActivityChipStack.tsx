@@ -75,8 +75,10 @@ export interface ActivityJob {
   completedLabel?: string;
   /** Framework ID for the status API. */
   frameworkId: string;
-  /** Called once when job transitions to completed/failed/cancelled. */
-  onComplete?: () => void;
+  /** Called once when job transitions to completed/failed/cancelled, with how it ended (the
+   *  lost state reads `failed`). May return a promise: the ending is recorded (`onSettled`) once
+   *  it settles, so a reload in the middle of a Copy Screens' own read still copies. */
+  onComplete?: (outcome: NormalisedJobStatus) => void | Promise<unknown>;
   /** Called when user clicks the action link (e.g. "View Analysis"). */
   onAction?: () => void;
   /** Action link text. */
@@ -90,6 +92,12 @@ export interface ActivityJob {
    * Must return a NormalisedJobStatus. A throw is a failed poll; a run of them ends the job.
    */
   pollFn?: () => Promise<NormalisedJobStatus>;
+  /**
+   * How the job ended, seen by this window before a reload (RE#38). The chip shows it and does
+   * nothing more: no read, and no `onComplete`, which has already run (a Copy Screens would copy
+   * again).
+   */
+  outcome?: NormalisedJobStatus;
 }
 
 interface ActivityChipStackProps {
@@ -97,6 +105,9 @@ interface ActivityChipStackProps {
   jobs: ActivityJob[];
   /** Called when user dismisses a completed/failed chip. */
   onDismiss: (jobId: string) => void;
+  /** Called once with how a job ended (never the lost state, which a later answer may replace),
+   *  so the window can carry the chip, finished, across a reload. */
+  onSettled?: (jobId: string, outcome: NormalisedJobStatus) => void;
 }
 
 function formatDuration(startedAt: string, completedAt: string): string {
@@ -203,7 +214,7 @@ function answered(prev: NormalisedJobStatus | null | undefined, norm: Normalised
   return norm;
 }
 
-export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
+export function ActivityChipStack({ jobs, onDismiss, onSettled }: ActivityChipStackProps) {
   const { t } = useTranslation();
   const [statuses, setStatuses] = useState<Record<string, NormalisedJobStatus | null>>({});
   const [expanded, setExpanded] = useState(false);
@@ -271,15 +282,15 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
     for (const id of [...inFlight.current.keys()]) if (!live.has(id)) inFlight.current.delete(id);
     if (jobs.length === 0) return;
 
-    // Immediate poll for all jobs.
+    // Immediate poll for all jobs, but one that came back finished.
     for (const job of jobs) {
-      pollJob(job);
+      if (!job.outcome) pollJob(job);
     }
 
     const id = setInterval(() => {
       for (const job of jobs) {
         // Don't poll terminal jobs.
-        if (isTerminal(statusesRef.current[job.id]?.status)) continue;
+        if (job.outcome || isTerminal(statusesRef.current[job.id]?.status)) continue;
         pollJob(job);
       }
     }, POLL_INTERVAL);
@@ -306,18 +317,28 @@ export function ActivityChipStack({ jobs, onDismiss }: ActivityChipStackProps) {
         if (norm?.failureKind && norm.provider) {
           postLLMFailure(norm.failureKind, norm.provider);
         }
-        job.onComplete?.();
+        let ending: unknown;
+        try {
+          ending = job.onComplete?.(norm);
+        } catch (err) {
+          console.error("Activity: a job's completion handler threw", err);
+        }
+        if (norm !== LOST) {
+          const id = job.id;
+          void Promise.resolve(ending)
+            .catch(() => undefined)
+            .then(() => onSettled?.(id, norm));
+        }
       }
     }
-  }, [jobs, statuses]);
+  }, [jobs, statuses, onSettled]);
 
   if (jobs.length === 0) return null;
 
-  const chipJobs = jobs.map((job) => ({
-    job,
-    norm: statuses[job.id] ?? null,
-    chip: toChipJob(job, statuses[job.id] ?? null),
-  }));
+  const chipJobs = jobs.map((job) => {
+    const norm = statuses[job.id] ?? job.outcome ?? null;
+    return { job, norm, chip: toChipJob(job, norm) };
+  });
 
   const runningCount = chipJobs.filter((c) => c.chip.status === "running").length;
   const showSummary = jobs.length >= 2;

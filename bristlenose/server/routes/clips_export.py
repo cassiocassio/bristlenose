@@ -14,6 +14,7 @@ import os
 import platform
 import subprocess
 import tempfile
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -676,6 +677,9 @@ class ClipStartRequest(BaseModel):
 class ClipStartResponse(BaseModel):
     status: str
     total: int
+    #: This export's own id, which every status read repeats: a window that carries the chip
+    #: across a reload knows by it that the server's one export is still the one it started.
+    job_id: str | None = None
     pii_warning: bool = False
     # Burn-in was asked for but this ffmpeg can't do it (no libass/x264 —
     # Homebrew's build). The clips and their .vtt files are still made.
@@ -694,6 +698,8 @@ class ClipStatusResponse(BaseModel):
     #: Clips a subtitled copy was attempted for; more than ``burned_count``
     #: means some copies failed, which the report says rather than "Done".
     burn_attempted: int = 0
+    #: The export the server holds (``None`` when it holds none); see ``ClipStartResponse``.
+    job_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -802,7 +808,9 @@ async def start_clip_extraction(
         clips_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialise job state
+        job_id = uuid.uuid4().hex
         _jobs[project_id] = {
+            "job_id": job_id,
             "status": "running",
             "progress": 0,
             "total": len(specs),
@@ -824,6 +832,7 @@ async def start_clip_extraction(
         return ClipStartResponse(
             status="started",
             total=len(specs),
+            job_id=job_id,
             pii_warning=anonymise,
             burn_unavailable=burn_requested and not burn,
         )
@@ -864,6 +873,7 @@ async def get_clip_status(
         burned_count=job.get("burned_count", 0),
         current_clip=job.get("current_clip", ""),
         output_dir=job.get("output_dir"),
+        job_id=job.get("job_id"),
     )
 
 

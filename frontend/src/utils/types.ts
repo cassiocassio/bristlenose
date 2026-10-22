@@ -375,6 +375,8 @@ export interface ClipJobStartResponse {
   pii_warning: boolean;
   /** Burn-in was asked for but the server's ffmpeg can't (no libass). */
   burn_unavailable?: boolean;
+  /** This export's own id, which every status read repeats (RE#38). */
+  job_id?: string | null;
 }
 
 export interface ClipJobStatus {
@@ -388,12 +390,16 @@ export interface ClipJobStatus {
   /** Subtitled copies made, and attempted (burn-in asked for and possible). */
   burned_count?: number;
   burn_attempted?: number;
+  /** The export the server holds, null when it holds none (RE#38). */
+  job_id?: string | null;
 }
 
 /** POST /export/screens: every still the Screens lens shows, written to a folder. */
 export interface ScreensExportStart {
   status: "started" | "no_screens";
   total: number;
+  /** This export's own id, which every status read repeats (RE#38). */
+  job_id?: string | null;
 }
 
 export interface ScreensExportStatus {
@@ -406,6 +412,8 @@ export interface ScreensExportStatus {
   output_dir: string | null;
   /** The files written, in export order (the Mac app's clipboard copy). */
   files: string[];
+  /** The export the server holds, null when it holds none (RE#38). */
+  job_id?: string | null;
 }
 
 /** POST /export/screens/miro: the screens as a Miro board, a frame per screengrab. */

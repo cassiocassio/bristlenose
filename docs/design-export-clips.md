@@ -226,7 +226,9 @@ Shared across all export features. Strips path separators, traversal sequences, 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `POST /api/projects/{id}/export/clips` | POST | Start async clip extraction job |
-| `GET /api/projects/{id}/export/clips/status` | GET | Job progress: `{state, progress, total, current_clip}` |
+| `GET /api/projects/{id}/export/clips/status` | GET | Job progress: `{status, progress, total, completed_count, skipped_count, current_clip, output_dir, burned_count, burn_attempted, job_id}` |
+
+The job lives in the serve's memory, one per project, and a serve restart ends it (decision #38, 22 Oct 2026: not persisted; the folder and its manifest are the record). `job_id` names the export; the start response returns it, and a chip a window carried across a reload uses it to tell its own export from a newer one (RE#38).
 
 ### Tasks
 

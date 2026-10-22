@@ -96,6 +96,11 @@ browser Clipboard API cannot write files (Chrome writes one image per copy), so 
 route to the same clipboard is Finder: Show in Finder, select all, ⌘C. That is why the folder's
 manifest is a dotfile.
 
+The copy belongs to the window that asked. Its chip remembers that it is a copy across a reload
+(⌘R, Retry), so the files still reach the clipboard when the export finishes; no other window copies,
+and a chip whose export a newer one has replaced (the status read's `job_id` differs) copies
+nothing (RE#38, decision #35, 22 Oct 2026).
+
 ## 6. A Miro board
 
 Built on the existing bridge (`board_layout.py`, `miro_client.py`, `routes/miro.py`,

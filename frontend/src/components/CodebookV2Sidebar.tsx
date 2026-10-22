@@ -60,12 +60,9 @@ import {
 import type { CodebookResponse, TemplateListResponse } from "../utils/types";
 import { selectCodebookV2, useCodebookV2Store } from "../contexts/CodebookV2Store";
 import { adoptFrameworkDisabled } from "../contexts/SidebarStore";
-import { addJob, getJobs, removeJob } from "../contexts/ActivityStore";
+import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
 import { isExportMode } from "../utils/exportData";
 import i18n from "../i18n";
-
-/** Numbers each catch-up's activity job (see onToggle). */
-let catchUpJobSeq = 0;
 
 // ── The platform switch ────────────────────────────────────────────────────
 
@@ -316,7 +313,7 @@ export function CodebookV2Sidebar() {
             for (const [jobId, job] of getJobs()) {
               if (job.type === "catchup" && job.frameworkId === fid) removeJob(jobId);
             }
-            addJob(`catchup:${fid}:${++catchUpJobSeq}`, {
+            addJob(newJobId(`catchup:${fid}`), {
               type: "catchup",
               frameworkId: fid,
               frameworkTitle: next.find((b) => b.id === fid)?.title ?? fid,

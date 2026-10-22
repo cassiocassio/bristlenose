@@ -413,12 +413,13 @@ async def _run_miro(project_id: int, job: dict[str, Any], *args: Any) -> None:
         logger.warning("Screens Miro board failed: %s", exc)
         if job["status"] != "cancelled":  # a cancel stays a cancel, whatever the call in hand did
             job["status"] = "failed"
-            # As the quotes board: Miro refusing the token has no reason of its own at the raise,
-            # and the clients have a sentence for it, so it is named rather than shown as "check
-            # your connection". Anything else unnamed reads as the clients' generic export error.
+            # As the quotes board, in the same order: once the board exists, any failure is
+            # board_incomplete with its link (miro_export wraps post-creation errors that way);
+            # before it, a refused token is named rather than shown as "check your connection".
+            # Anything else unnamed reads as the clients' generic export error.
             job["reason"] = exc.reason or (
-                "token_rejected" if exc.status in (401, 403)
-                else "board_incomplete" if job.get("board_url") else None)
+                "board_incomplete" if job.get("board_url")
+                else "token_rejected" if exc.status in (401, 403) else None)
     except Exception:
         logger.exception("Screens Miro board failed")
         if job["status"] != "cancelled":

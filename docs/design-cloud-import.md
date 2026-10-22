@@ -304,15 +304,37 @@ trued-against: HEAD@main 2878f68e
      and no way back except **Stop**. "Queued" is also a lie there — nothing is
      queued, we are waiting on a person. Wants its own state, *Waiting for
      permission*, and a deadline.
+     _(22 Oct 2026: the state is built, the deadline is not. `isAwaitingGrant`
+     (`CloudImportStore.swift:830`, raised around `prepareBatch` at :865)
+     draws ticked rows as *Waiting for permission* instead of *Queued*
+     (`CloudImportOutlineView.swift:1229`), shipped in `59105fa2`. The grant
+     wait still has no timeout, so **Stop** is still the way out; it now bumps
+     a generation counter, so a grant that lands after Stop cannot start the
+     abandoned batch (`stopFetch`, :993).)_
   2. **Stop → Import does not cleanly re-open the Picker** — observed
      re-opening the browser but not at the grant page, which suggests the
      consumed Picker session (`fid=`) is being reused rather than minted.
+     _(22 Oct 2026: still open, and not reproduced since. Our code holds no
+     Picker session between calls: `pickMedia` mints a fresh PKCE pair and
+     `state` every time (`GoogleOAuth.swift:435`), and no `fid` appears in
+     the Swift sources. So the suspected reuse is not ours to find in code,
+     and what was observed remains unexplained.)_
   3. **The media grant is re-asked far more often than Google requires.**
      Three causes, all ours: `pickMedia` hardcodes `prompt=consent`, which
      *forces* the consent screen even for files already granted;
      `requestMediaGrant` never consults `grantedFileIDs`, so it re-picks files
      it already holds; and `openLive` builds a fresh source per window open,
      discarding `grantedFileIDs` and `mediaToken` with it.
+     _(22 Oct 2026: two causes are fixed and the third turned out not to be
+     one. `requestMediaGrant` now consults `grantedFileIDs` through
+     `MediaGrantPlan.decide`, which asks nothing when the batch is already
+     granted and the token usable (`GoogleMeetSource.swift:1942`, :1960;
+     `dca4c1be`). `openLive` restores the media grant with its file ids from
+     the Keychain when it builds the source (`CloudImportCoordinator.swift:238`,
+     landing at `GoogleMeetSource.swift:407`), and a new pick is published back
+     (`publishGrant`, :1987; `a10b45c8`). `prompt=consent` is still hardcoded
+     (`GoogleOAuth.swift:450`), on purpose: Google documents it as Required on
+     this flow (item 1 of the research entry above).)_
   4. **It cannot simply be folded into the first sign-in**, and that is not a
      bug: Google refuses a picker authorization carrying any other scope (the
      comment at `GoogleOAuth.pickMedia` records this), and the grant is bound

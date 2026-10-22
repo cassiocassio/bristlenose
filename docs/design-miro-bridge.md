@@ -764,6 +764,10 @@ the speaker-code boundary). And the CLI is contradictory:
 `configure miro` (`cli.py:2035`) stores the token but prints *"…a parked feature
 (future idea) — not yet available."* — fix that message when un-parking (tracked as
 discrepancy #11 in the website repo's `NOTES-product-discrepancies.md`).
+_(22 Oct 2026: no longer true — `configure miro` validates and stores the token
+(`validate_miro_token`, then `set_verified`; `configure` now starts at `cli.py:2530`); the
+parked-feature message went in `99f4bf92` (31 Aug 2026), and the save line now points at
+**Send to Miro** under `bristlenose serve`.)_
 
 **Account / workspace identity (29 Jun).** Both surfaces now show *which* Miro account a
 board will land in — a safety feature (researchers have personal + client accounts; a board

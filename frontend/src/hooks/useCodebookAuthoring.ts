@@ -54,7 +54,7 @@ export interface CodebookAuthoring {
   pendingMerge: PendingMerge | null;
   onConfirmMerge: () => void;
   onCancelMerge: () => void;
-  /** A rename that was refused because another group holds the name. Feed to `NameClashDialog`. */
+  /** A rename (group or tag) or a new tag refused because the name is taken. Feed to `NameClashDialog`. */
   nameClash: string | null;
   onDismissNameClash: () => void;
 }
@@ -87,6 +87,23 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
       if (typeof (err as ApiError | null)?.status === "number") onChanged();
     },
     [onChanged],
+  );
+
+  // A tag name another tag holds is the server's plain 409 (any case, any group
+  // in the project): said by name in the dialog a group rename uses, not as
+  // "Couldn't save", then re-read so the title snaps back (RE#20, decision #20).
+  // A 409 carrying a reason is a refusal of another kind, said by `failed`.
+  const tagNameFailed = useCallback(
+    (name: string) => (err: unknown) => {
+      const { status, reason } = (err ?? {}) as ApiError;
+      if (status !== 409 || reason) {
+        failed(err);
+        return;
+      }
+      setNameClash(name);
+      onChanged();
+    },
+    [failed, onChanged],
   );
 
   const nextColourSet = useCallback(() => {
@@ -152,9 +169,9 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
     (name: string, groupId: number) => {
       createCodebookTag(name, groupId)
         .then(onChanged)
-        .catch(failed);
+        .catch(tagNameFailed(name));
     },
-    [onChanged, failed],
+    [onChanged, tagNameFailed],
   );
 
   const onDeleteTag = useCallback(
@@ -170,9 +187,9 @@ export function useCodebookAuthoring({ groups, onChanged }: Options): CodebookAu
     (tag: CodebookTagResponse, newName: string) => {
       updateCodebookTag(tag.id, { name: newName })
         .then(onChanged)
-        .catch(failed);
+        .catch(tagNameFailed(newName));
     },
-    [onChanged, failed],
+    [onChanged, tagNameFailed],
   );
 
   // --- Drag and drop ---

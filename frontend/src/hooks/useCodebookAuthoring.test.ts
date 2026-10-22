@@ -6,7 +6,7 @@
  * like nothing happened. Each failure now says "Couldn't save" and re-reads the
  * codebook, so the screen shows what the server holds.
  */
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useCodebookAuthoring } from "./useCodebookAuthoring";
 import type { CodebookGroupResponse, CodebookTagResponse } from "../utils/types";
 
@@ -32,7 +32,9 @@ import {
   updateCodebookTag,
 } from "../utils/api";
 
-const refused = Object.assign(new Error("PATCH 409"), { status: 409 });
+// Any answer the server gave that is not a name clash (a 409 with no reason is
+// one, for a tag: below).
+const refused = Object.assign(new Error("PATCH 500"), { status: 500 });
 const tag = { id: 1, name: "Trust" } as CodebookTagResponse;
 const other = { id: 2, name: "Ease" } as CodebookTagResponse;
 const group = { id: 5, name: "G", colour_set: "ux" } as CodebookGroupResponse;
@@ -110,5 +112,39 @@ describe("a codebook edit that does not save says so", () => {
     await settle();
     expect(toastSaveFailed).not.toHaveBeenCalled();
     expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A tag name another tag holds is said by name, in the dialog a group rename
+ * already uses, not as "Couldn't save your change." (RE#20, decision #20). The
+ * server is the one rule (any case, any group in the project): its plain 409.
+ */
+describe("a tag name another tag holds", () => {
+  const taken = Object.assign(new Error("PATCH 409"), { status: 409 });
+
+  it.each([
+    ["rename a tag", updateCodebookTag, "Ease",
+      (r: ReturnType<typeof setup>["result"]) => r.current.groupProps.onRenameTag(tag, "Ease")],
+    ["create a tag", createCodebookTag, "New",
+      (r: ReturnType<typeof setup>["result"]) => r.current.groupProps.onCreateTag("New", 5)],
+  ] as const)("%s opens the name-clash dialog", async (_name, fn, name, act_) => {
+    vi.mocked(fn as () => Promise<unknown>).mockImplementationOnce(() => Promise.reject(taken));
+    const { result, onChanged } = setup();
+    act(() => act_(result));
+    // The dialog's state is set from the rejection, outside act: wait for it.
+    await waitFor(() => expect(result.current.nameClash).toBe(name));
+    expect(toastSaveFailed).not.toHaveBeenCalled();
+    expect(onChanged).toHaveBeenCalledTimes(1); // the title snaps back to what saved
+  });
+
+  it("a 409 that names another reason still says that", async () => {
+    const running = Object.assign(new Error("PATCH 409"), { status: 409, reason: "run_in_progress" });
+    vi.mocked(updateCodebookTag).mockImplementationOnce(() => Promise.reject(running));
+    const { result } = setup();
+    act(() => result.current.groupProps.onRenameTag(tag, "Ease"));
+    await settle();
+    expect(result.current.nameClash).toBeNull();
+    expect(toastSaveFailed).toHaveBeenCalledWith(running);
   });
 });

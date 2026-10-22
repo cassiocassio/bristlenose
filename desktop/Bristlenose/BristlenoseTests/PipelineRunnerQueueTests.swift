@@ -1377,9 +1377,30 @@ struct PipelineRunnerQueueTests {
 
         rig.writeFinishedRun(in: p, runId: "r2", tokens: nil)
         rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
-        try? await Task.sleep(for: .milliseconds(300))
+        try #require(rig.runner.activationReadsInFlight > 0, "coming forward read nothing")
+        await until { rig.runner.activationReadsInFlight == 0 }
+        try #require(rig.runner.activationReadsInFlight == 0, "the read never landed")
 
         #expect(rig.runner.state[p.id] == before)
+    }
+
+    /// Review, 22 Oct 2026: a read in flight across the end of the app's own
+    /// run saw its live `run.pid`; landing over the ending the run just wrote,
+    /// it brought the run back as somebody else's. Only a read issued over the
+    /// row as it stands may replace it.
+    @Test func onlyAReadOfTheRowAsItStandsReplacesIt() {
+        let stopped = PipelineState.stopped(stagesComplete: [])
+        #expect(PipelineRunner.isReadOfThisRow(current: stopped, issuedOver: stopped))
+        #expect(!PipelineRunner.isReadOfThisRow(current: stopped, issuedOver: .running), "issued while our run was live")
+        #expect(!PipelineRunner.isReadOfThisRow(current: stopped, issuedOver: nil), "a read settling a run")
+    }
+
+    /// Review, 22 Oct 2026: a read on coming forward that timed out (a sleeping
+    /// drive) left a Ready row on "Not responding" with nothing to read it again.
+    @Test func aTimedOutReadOnComingForwardIsNotApplied() {
+        #expect(!PipelineRunner.activationKeeps(.manifest(.unreachable(reason: .timedOut))))
+        #expect(PipelineRunner.activationKeeps(.manifest(.ready(Date()))))
+        #expect(PipelineRunner.activationKeeps(.manifest(.running)))
     }
 
     /// #40: what an activation rescan reads. Not a run or a queue place (the

@@ -166,7 +166,8 @@ struct PipelineRunnerOrphanTests {
             processUID: { _ in uid },
             startTime: { _ in start },
             parentPID: { _ in parent },
-            currentUID: 501)
+            currentUID: 501,
+            currentPID: 777)
     }
 
     @Test func verdictTable() {
@@ -182,6 +183,7 @@ struct PipelineRunnerOrphanTests {
         #expect(verdict("42\n100.200", start: nil) == .indeterminate, "start query failed")
         #expect(verdict("42\n100.200", parent: 4242) == .ownedByAnotherCopy, "its app is still running")
         #expect(verdict("42\n100.200", parent: nil) == .indeterminate, "parent query failed")
+        #expect(verdict("42\n100.200", parent: 777) == .alive(42), "this process's own spawn is ours, not another copy's")
         #expect(verdict("42\n100.201", parent: 4242) == .stale, "a reused pid is stale whoever its parent")
         #expect(verdict("garbage") == .stale)
         #expect(verdict("") == .stale)

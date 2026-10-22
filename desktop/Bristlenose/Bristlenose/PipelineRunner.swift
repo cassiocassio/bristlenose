@@ -764,6 +764,9 @@ final class PipelineRunner: ObservableObject {
     /// Studies an activation rescan is reading now: a read that hangs (a
     /// sleeping drive) is not stacked by the next ⌘-Tab.
     private var activationScans: Set<UUID> = []
+    /// How many activation reads have not landed. For tests that assert a read
+    /// changed nothing: they wait for it to land rather than sleep.
+    var activationReadsInFlight: Int { activationScans.count }
 
     /// The projects whose last run left a session waiting for Whisper.
     var projectsWaitingForWhisper: [UUID] {
@@ -867,10 +870,12 @@ final class PipelineRunner: ObservableObject {
         if state[projectID] == nil {
             state[projectID] = .scanning
         }
+        let issuedOver = state[projectID]
 
         Task.detached { [weak self] in
             let outcome = await Self.performScan(project: project, manifestURL: manifestURL)
-            await self?.applyScan(outcome: outcome, project: project, projectID: projectID)
+            await self?.applyScan(outcome: outcome, project: project, projectID: projectID,
+                                  issuedOver: issuedOver)
         }
     }
 
@@ -893,7 +898,12 @@ final class PipelineRunner: ObservableObject {
         return .manifest(resolved)
     }
 
-    private func applyScan(outcome: ScanOutcome, project: Project, projectID: UUID) {
+    /// - Parameter issuedOver: the row when the read was issued. A read may
+    ///   replace an ending only if the row has not moved since: one in flight
+    ///   across the end of the app's own run saw its live `run.pid` and would
+    ///   bring the finished run back as somebody else's (review, 22 Oct 2026).
+    private func applyScan(outcome: ScanOutcome, project: Project, projectID: UUID,
+                           issuedOver: PipelineState?) {
         switch outcome {
         case .orphan(let pid):
             // A rescan during a run THIS process owns finds its own PID file
@@ -906,7 +916,7 @@ final class PipelineRunner: ObservableObject {
             }
             attachOrphan(project: project, pid: pid)
         case .manifest(let resolved):
-            applyScanResult(resolved, for: projectID)
+            applyScanResult(resolved, for: projectID, issuedOver: issuedOver)
             if case .running = state[projectID], !ownsRun(projectID) {
                 watchForeignRun(project)
             }
@@ -989,16 +999,31 @@ final class PipelineRunner: ObservableObject {
             let projectID = project.id
             let manifestURL = Self.manifestURL(for: project)
             activationScans.insert(projectID)
+            let issuedOver = state[projectID]
             Task.detached { [weak self] in
                 let outcome = await Self.performScan(project: project, manifestURL: manifestURL)
-                await self?.finishActivationScan(outcome, project: project)
+                await self?.finishActivationScan(outcome, project: project, issuedOver: issuedOver)
             }
         }
     }
 
-    private func finishActivationScan(_ outcome: ScanOutcome, project: Project) {
+    private func finishActivationScan(_ outcome: ScanOutcome, project: Project,
+                                      issuedOver: PipelineState?) {
         activationScans.remove(project.id)
-        applyScan(outcome: outcome, project: project, projectID: project.id)
+        guard Self.activationKeeps(outcome) else {
+            Self.logger.notice("a read on coming forward timed out project=\(project.id.uuidString, privacy: .public) — the row is left as it was")
+            return
+        }
+        applyScan(outcome: outcome, project: project, projectID: project.id, issuedOver: issuedOver)
+    }
+
+    /// Whether an activation read is applied. One that timed out (a sleeping
+    /// drive) says nothing new about a row at rest, and written, "Not
+    /// responding" would stay: activation skips `.unreachable`, and nothing
+    /// else reads that row again until relaunch (review, 22 Oct 2026).
+    nonisolated static func activationKeeps(_ outcome: ScanOutcome) -> Bool {
+        if case .manifest(.unreachable(reason: .timedOut)) = outcome { return false }
+        return true
     }
 
     /// A row an activation rescan reads: one at rest. Not a run or a place in
@@ -1121,7 +1146,8 @@ final class PipelineRunner: ObservableObject {
         processUID: (pid_t) -> uid_t?,
         startTime: (pid_t) -> String?,
         parentPID: (pid_t) -> pid_t?,
-        currentUID: uid_t
+        currentUID: uid_t,
+        currentPID: pid_t
     ) -> OwnedRunVerdict {
         let lines = pidFileContents
             .split(separator: "\n", omittingEmptySubsequences: false)
@@ -1138,7 +1164,8 @@ final class PipelineRunner: ObservableObject {
         // A hosted run is reparented to launchd the moment its app goes (and
         // then stops itself), so only that run is an orphan to attach.
         guard let parent = parentPID(pid) else { return .indeterminate }
-        return parent == 1 ? .alive(pid) : .ownedByAnotherCopy
+        // Our own spawn is ours too (`applyScan` turns it away as our own run).
+        return parent == 1 || parent == currentPID ? .alive(pid) : .ownedByAnotherCopy
     }
 
     /// Read the app's PID file for `project` and verify the pid is (a) alive,
@@ -1170,7 +1197,8 @@ final class PipelineRunner: ObservableObject {
             processUID: processUID,
             startTime: startTime,
             parentPID: parentPID,
-            currentUID: getuid()
+            currentUID: getuid(),
+            currentPID: getpid()
         )
         switch verdict {
         case .alive(let pid):
@@ -1555,9 +1583,11 @@ final class PipelineRunner: ObservableObject {
     /// state the runner owns — those come from the runner, not the manifest.
     /// A `.running` that a scan read off another process's run is disk's, and
     /// disk may end it (R22).
-    private func applyScanResult(_ resolved: PipelineState, for projectID: UUID) {
+    private func applyScanResult(_ resolved: PipelineState, for projectID: UUID,
+                                 issuedOver: PipelineState? = nil) {
         let current = state[projectID]
-        if resolved == .running, Self.isAtRestAfterARun(current) {
+        let readOfThisRow = Self.isReadOfThisRow(current: current, issuedOver: issuedOver)
+        if resolved == .running, readOfThisRow, Self.isAtRestAfterARun(current) {
             // A run is live on disk that this app did not start (a CLI run
             // begun after the row settled, decision #40): newer than the
             // ending the row shows, which it would otherwise keep through the
@@ -1571,7 +1601,7 @@ final class PipelineRunner: ObservableObject {
             // disk is the only witness to its end (R22). Kept, this read
             // "Analysing" until quit.
             state[projectID] = resolved
-        case .some(let failure) where failure.isStranded:
+        case .some(let failure) where failure.isStranded && readOfThisRow:
             // "Analysis stopped unexpectedly" is itself a read of disk (a
             // `run_started` whose process is gone), so a later read replaces
             // it (decision #41): the next run's end, or Python's reconcile.
@@ -1594,6 +1624,12 @@ final class PipelineRunner: ObservableObject {
             // at rest, and each write republishes the sidebar.
             if current != resolved { state[projectID] = resolved }
         }
+    }
+
+    /// Only a scan issued over the row as it stands may replace an ending
+    /// (`applyScan`); reads that settle a run pass nothing.
+    nonisolated static func isReadOfThisRow(current: PipelineState?, issuedOver: PipelineState?) -> Bool {
+        issuedOver != nil && issuedOver == current
     }
 
     /// A row a run has ended on, which only a live run on disk may replace

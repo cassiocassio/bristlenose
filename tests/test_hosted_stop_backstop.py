@@ -106,6 +106,10 @@ def test_a_stuck_hosted_stop_is_ended_and_recorded_cancelled(tmp_path: Path) -> 
     (terminus,) = _termini(f)
     assert isinstance(terminus, RunCancelledEvent)
     assert terminus.cause.signal_name == "SIGINT"
+    from bristlenose.run_lifecycle import pid_file_path
+
+    # Stuck short of the normal path's removal: the backstop removes its own.
+    assert not pid_file_path(tmp_path).exists(), "the backstop left its own run.pid"
 
 
 def test_a_stop_that_wrote_its_terminus_and_then_hung_writes_no_second(tmp_path: Path) -> None:

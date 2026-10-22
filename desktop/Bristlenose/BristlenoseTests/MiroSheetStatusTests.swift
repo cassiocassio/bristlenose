@@ -92,4 +92,18 @@ struct MiroSheetStatusTests {
         #expect(m.error == nil, "a cancelled load wrote an error nobody sees")
         #expect(m.step == .loading, "a cancelled load moved the sheet off its loading step")
     }
+
+    @Test("connecting while the server is down says so, not 'check the token'")
+    func connectUnreachableSaysSo() async {
+        let i18n = english()
+        let key = "common.miro.serverUnreachable"
+        #expect(i18n.t(key) != key)
+        #expect(i18n.t(key) != i18n.t("common.miro.connectError"), "precondition: the two lines differ")
+        // Port 0 refuses at once, as a gone sidecar does; the token is never the question.
+        let m = MiroSheetModel(port: 0, token: nil, projectName: "p", i18n: i18n)
+        m.token = "pasted-token"
+        await m.connect()
+        #expect(m.error == i18n.t(key))
+        #expect(m.busy == false)
+    }
 }

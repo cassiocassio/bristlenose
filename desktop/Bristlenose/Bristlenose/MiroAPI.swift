@@ -200,7 +200,12 @@ struct MiroAPI {
         guard let req = request("/connect", method: "POST", body: ["token": miroToken]) else {
             throw APIError.serverUnreachable()
         }
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        let (data, resp): (Data, URLResponse)
+        do {
+            (data, resp) = try await URLSession.shared.data(for: req)
+        } catch {
+            throw APIError.serverUnreachable()
+        }
         guard let http = resp as? HTTPURLResponse else {
             throw APIError.serverUnreachable()
         }

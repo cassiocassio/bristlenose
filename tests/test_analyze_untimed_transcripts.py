@@ -50,12 +50,14 @@ def test_the_loader_states_an_untimed_transcript_beside_a_timed_one(tmp_path: Pa
     ]
 
 
-@pytest.mark.parametrize("text", [
-    "# Transcript: s1\n# Source: a.mp4\n# Date: 2026-01-01\n# Duration: 00:10\n\n",
-    "",
+@pytest.mark.parametrize("text, reason", [
+    ("# Transcript: s1\n# Source: a.mp4\n# Date: 2026-01-01\n# Duration: 00:10\n\n",
+     UnusableReason.NO_LINES),
+    # Zero bytes is a failed transfer, as for a subtitle (EMPTY).
+    ("", UnusableReason.EMPTY),
 ])
 def test_a_transcript_with_no_lines_is_named_as_that_not_as_a_format(
-    tmp_path: Path, text: str
+    tmp_path: Path, text: str, reason: UnusableReason
 ) -> None:
     """A Bristlenose .txt emptied by hand, header kept, is not a format we can't
     read: "Not a format Bristlenose reads." sent the researcher looking for a
@@ -64,7 +66,7 @@ def test_a_transcript_with_no_lines_is_named_as_that_not_as_a_format(
     skipped: list = []
 
     assert load_transcripts_from_dir(tmp_path, skipped=skipped) == []
-    assert [(s.path.name, s.reason) for s in skipped] == [("s1.txt", UnusableReason.NO_LINES)]
+    assert [(s.path.name, s.reason) for s in skipped] == [("s1.txt", reason)]
 
 
 def test_analyze_names_the_untimed_transcript_and_records_it(runner, tmp_path: Path) -> None:
@@ -80,7 +82,7 @@ def test_analyze_names_the_untimed_transcript_and_records_it(runner, tmp_path: P
     # It found a file and refused it, so "No transcript files found." was false
     # straight after naming it (RE#20, decision #81).
     assert "No transcript files found" not in result.output, result.output
-    assert "No analysable interviews found." in result.output, result.output
+    assert result.output.count("No analysable interviews found.") == 1, result.output
     events = out_dir / ".bristlenose" / "pipeline-events.jsonl"
     terminus = json.loads(events.read_text(encoding="utf-8").splitlines()[-1])
     assert terminus["event"] == "run_failed", terminus

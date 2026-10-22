@@ -198,6 +198,11 @@ def _print_stage(
     console.print(f" {cli_prefix(kind)} {message}{' ' * padding}{trailing}")
 
 
+def _has_recording(session: InputSession) -> bool:
+    """Whether the session holds an audio or video file Whisper would transcribe."""
+    return any(f.file_type in (FileType.AUDIO, FileType.VIDEO) for f in session.files)
+
+
 #: What a run that found files and refused every one says, after naming them.
 #: The Mac's missing-input line in the same words (RE#20, decisions #81, #34).
 NOTHING_ANALYSABLE = "No analysable interviews found."
@@ -1820,7 +1825,8 @@ class Pipeline:
             # empty result ended "Done" with an empty report (R116). The files
             # it declined are named first, in the files bucket too (R119's twin).
             self._record_ingest_outcome([], declined)
-            console.print(f"[red]{_nothing_found_line(declined, 'No supported files found.')}[/red]")
+            if not declined:  # else the failure line says it, after the list (#81)
+                console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
@@ -2273,11 +2279,25 @@ class Pipeline:
                     )
 
                 if self.settings.skip_transcription:
+                    # A recording with no words because it was never sent to
+                    # Whisper; one that failed (a cloud fetch) says so instead.
+                    _tx_failed_sids = {
+                        f.session_id for f in _fresh_transcript_outcome.failed
+                    }
                     _skipped_tx_sids = {
                         s.session_id for s in sessions
-                        if not s.has_existing_transcript
+                        if _has_recording(s)
+                        and s.session_id not in _tx_failed_sids
                         and not session_segments.get(s.session_id)
                     }
+                    # Not transcribed is not new yet: the next plain run adds it.
+                    _new_tx_sessions = [
+                        s for s in _new_tx_sessions if s.session_id not in _skipped_tx_sids
+                    ]
+                    if self._summary.new_sessions is not None:
+                        self._summary.new_sessions = len(_new_tx_sessions) or None
+                        if not _new_tx_sessions:
+                            self._summary.reflow_scope = None
                 _tx_sessions = [s for s in sessions if s.session_id not in _skipped_tx_sids]
                 total_segments = sum(
                     len(s) for s in session_segments.values()
@@ -2411,6 +2431,9 @@ class Pipeline:
                 self._summary.transcripts.attempted > 0
                 and self._summary.transcripts.succeeded == 0
                 and not _silent_sids
+                # Left by choice (--skip-transcription), like a silent one: a
+                # stated outcome, not a reason to throw the run away (#74).
+                and not _skipped_tx_sids
                 and not _only_deferred
             ):
                 raise PipelineAbandonedError(
@@ -3706,7 +3729,8 @@ class Pipeline:
         if not sessions:
             # Named first, in the files bucket too (R119's twin).
             self._record_ingest_outcome([], declined)
-            console.print(f"[red]{_nothing_found_line(declined, 'No supported files found.')}[/red]")
+            if not declined:  # else the failure line says it, after the list (#81)
+                console.print("[red]No supported files found.[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
@@ -4073,7 +4097,8 @@ class Pipeline:
             _print_refusals(refused)
         if not clean_transcripts:
             # A failed run, as `run` has it on an empty folder (R116).
-            console.print(f"[red]{_nothing_found_line(declined, 'No transcript files found.')}[/red]")
+            if not declined:  # else the failure line says it, after the list (#81)
+                console.print("[red]No transcript files found.[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
@@ -5214,10 +5239,13 @@ def load_transcripts_from_dir(
             # Lines with no timecodes are a format this reader doesn't read
             # (R119); a header and nothing else is a transcript with nothing in
             # it, emptied by hand (decision #80).
+            # Zero bytes is a failed transfer, as for a subtitle file.
             skipped.append(
                 SkippedFile(path, UnusableReason.UNSUPPORTED_FORMAT, "no timecoded lines")
                 if has_lines
                 else SkippedFile(path, UnusableReason.NO_LINES, "no lines")
+                if data
+                else SkippedFile(path, UnusableReason.EMPTY, "0 bytes")
             )
 
     return transcripts

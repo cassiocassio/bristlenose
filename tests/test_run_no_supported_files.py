@@ -103,7 +103,7 @@ def test_a_folder_of_only_declined_files_names_each_one(
     assert "notes.xlsx — Not a format Bristlenose reads." in result.output, result.output
     # Not "No supported files found." straight after naming two (decision #81).
     assert "No supported files found" not in result.output, result.output
-    assert "No analysable interviews found." in result.output, result.output
+    assert result.output.count("No analysable interviews found.") == 1, result.output
     assert _terminus(input_dir)["cause"]["message"] == "No analysable interviews found."
     ingest = _terminus(input_dir)["summary"]["ingest"]
     assert ingest is not None

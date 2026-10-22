@@ -704,6 +704,36 @@ def test_a_skip_transcription_run_does_not_call_what_it_skipped_silent(
     assert transcripts.attempted == transcripts.succeeded + len(transcripts.failed)
 
 
+def test_a_skip_run_beside_a_transcript_counts_only_what_it_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Two recordings left untranscribed and one session read from its .vtt:
+    # the stage counts the one it read, and the line names the two it left.
+    import io
+
+    from rich.console import Console
+
+    import bristlenose.pipeline as pipeline_module
+
+    out = io.StringIO()
+    monkeypatch.setattr(pipeline_module, "console", Console(file=out, width=200))
+
+    result = _drive(tmp_path, "run", 2, {}, skip=True, broken_docx=True, beside="vtt")
+
+    printed = out.getvalue()
+    assert "2 recordings not transcribed (--skip-transcription)" in printed, printed
+    assert "Transcribed 1 session" in printed, printed
+    assert result is not None
+    transcripts = result.summary.transcripts
+    assert transcripts.attempted == 1, transcripts
+    assert transcripts.attempted == transcripts.succeeded + len(
+        {f.session_id for f in transcripts.failed}
+    ), transcripts
+    assert not any(
+        f.cause.reason == "no_speech" for f in transcripts.failed
+    ), transcripts
+
+
 def test_a_plain_run_heals_what_an_older_skip_transcription_run_left(
     tmp_path: Path,
 ) -> None:

@@ -423,7 +423,8 @@ class TestStartAutoCodeJob:
     ) -> None:
         """A cancelled/failed job must NOT permanently block a retry — otherwise
         the Apply button stays enabled but every click 409s and is swallowed, so
-        it 'does nothing'. Starting again replaces the dead job with a fresh one."""
+        it 'does nothing'. Starting again runs the dead job again, on the same
+        row, keeping what it coded (#127)."""
         db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
         try:
             db.add(AutoCodeJob(
@@ -452,7 +453,7 @@ class TestStartAutoCodeJob:
             jobs = db.query(AutoCodeJob).filter_by(
                 project_id=1, framework_id="garrett"
             ).all()
-            assert len(jobs) == 1  # dead job replaced, not duplicated
+            assert len(jobs) == 1  # dead job run again, not duplicated
             assert jobs[0].status == "pending"
         finally:
             db.close()

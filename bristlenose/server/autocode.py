@@ -192,6 +192,12 @@ async def run_autocode_job(
     from the API endpoint.  It manages its own DB sessions and handles
     errors gracefully — the caller does not await this.
 
+    A job that a Stop or a failure left never applied keeps what it coded when
+    Apply runs it again (#127): only quotes with no proposal on the job, in
+    sessions it has not stamped, are sent, so nothing is paid for twice and a tag
+    the researcher denied stays denied. A first apply has neither, and sends
+    every quote; one with nothing left to send completes without an LLM call.
+
     When ``project_dir`` is provided, telemetry contextvars are bound for
     the duration of the job so per-call rows land in
     ``<output_dir>/.bristlenose/llm-calls.jsonl``.
@@ -201,7 +207,14 @@ async def run_autocode_job(
     from bristlenose.llm.prompts import get_prompt_template
     from bristlenose.llm.structured import AutoCodeBatchResult
     from bristlenose.server.codebook import get_template
-    from bristlenose.server.models import AutoCodeJob, ProposedTag, Quote, TagDefinition
+    from bristlenose.server.models import (
+        AutoCodeJob,
+        AutoCodeSessionStamp,
+        ProposedTag,
+        Quote,
+        TagDefinition,
+    )
+    from bristlenose.server.models import Session as SessionModel
 
     # Bind telemetry context for the duration of the job. ``project_dir``
     # may be either the project root or the bristlenose-output dir; resolve
@@ -250,6 +263,47 @@ async def run_autocode_job(
             db.commit()
             return
 
+        # What a Stop or a failure left this job is kept (#127): a quote with a
+        # proposal on it, or in a session it stamped, was paid for, and sending
+        # it again paid twice and brought tags the researcher denied back as
+        # pending. Until 22 Oct 2026 Apply deleted the job and sent everything.
+        stamped = {
+            row[0]
+            for row in db.query(SessionModel.session_id)
+            .join(AutoCodeSessionStamp, AutoCodeSessionStamp.session_id == SessionModel.id)
+            .filter(AutoCodeSessionStamp.job_id == job.id)
+        }
+        proposed_ids = {
+            row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job.id)
+        }
+        to_send = [
+            q for q in quotes_rows if q.session_id not in stamped and q.id not in proposed_ids
+        ]
+        # An unstamped session with nothing left to send was coded already.
+        done_already = {q.session_id for q in quotes_rows if q.session_id not in stamped} - {
+            q.session_id for q in to_send
+        }
+        already_done = len(quotes_rows) - len(to_send)
+        kept_proposals = len(proposed_ids)
+        kept_tokens = (job.input_tokens or 0, job.output_tokens or 0)
+
+        job.total_quotes = len(quotes_rows)
+        job.processed_quotes = already_done
+        if not to_send:
+            stamp_sessions(db, job.id, _session_pks(db, project_id, done_already))
+            job.proposed_count = kept_proposals
+            db.flush()
+            db.expire(job, ["status"])
+            if job.status != "cancelled":  # a Stop since it started stands
+                job.status = "completed"
+                job.completed_at = datetime.now(timezone.utc)
+            db.commit()
+            logger.info(
+                "AutoCode job %s: every quote was coded by an earlier pass, nothing sent",
+                framework_id,
+            )
+            return
+
         # Build batch items
         batch_items = [
             QuoteBatchItem(
@@ -260,10 +314,9 @@ async def run_autocode_job(
                 topic_label=q.topic_label or "",
                 sentiment=q.sentiment or "",
             )
-            for q in quotes_rows
+            for q in to_send
         ]
 
-        job.total_quotes = len(batch_items)
         job.llm_provider = settings.llm_provider
         job.llm_model = settings.llm_model
         db.commit()
@@ -272,9 +325,10 @@ async def run_autocode_job(
         taxonomy_text = build_tag_taxonomy(template)
 
         logger.info(
-            "AutoCode job started: framework=%s quotes=%d model=%s",
+            "AutoCode job started: framework=%s quotes=%d (%d coded already) model=%s",
             framework_id,
             len(batch_items),
+            already_done,
             settings.llm_model,
         )
 
@@ -315,7 +369,7 @@ async def run_autocode_job(
         # Process batches with bounded concurrency
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
         proposed_count = 0
-        processed_count = 0
+        processed_count = already_done
         progress_lock = asyncio.Lock()
         # Read into locals: ``job`` is reassigned later in this function, so
         # its not-None narrowing does not reach the closure below.
@@ -466,9 +520,9 @@ async def run_autocode_job(
         # The sessions this pass coded, in the same transaction as their
         # proposals; a session in a batch that failed or was never sent stays
         # owed, and the next re-apply codes it (RE#66).
-        stamp_sessions(
-            db, job_id, _session_pks(db, project_id, _sessions_answered(batches, batch_results)),
-        )
+        stamp_sessions(db, job_id, _session_pks(
+            db, project_id, done_already | _sessions_answered(batches, batch_results),
+        ))
 
         logger.info(
             "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
@@ -482,9 +536,9 @@ async def run_autocode_job(
         if job.status == "cancelled":
             # Keep "cancelled" status but save any partial results.
             job.processed_quotes = processed_count
-            job.proposed_count = proposed_count
-            job.input_tokens = llm_client.tracker.input_tokens
-            job.output_tokens = llm_client.tracker.output_tokens
+            job.proposed_count = kept_proposals + proposed_count
+            job.input_tokens = kept_tokens[0] + llm_client.tracker.input_tokens
+            job.output_tokens = kept_tokens[1] + llm_client.tracker.output_tokens
             db.commit()
             return
 
@@ -503,12 +557,14 @@ async def run_autocode_job(
                 job.llm_provider or None, first_error
             ).value
             job.error_message = str(first_error)
-        nothing_landed = processed_count == 0 and bool(batch_errors)
+        # This pass's own batches: what an earlier pass coded does not make a
+        # pass that coded nothing a partial success (#127).
+        nothing_landed = processed_count == already_done and bool(batch_errors)
         job.status = "failed" if nothing_landed else "completed"
         job.processed_quotes = processed_count
-        job.proposed_count = proposed_count
-        job.input_tokens = llm_client.tracker.input_tokens
-        job.output_tokens = llm_client.tracker.output_tokens
+        job.proposed_count = kept_proposals + proposed_count
+        job.input_tokens = kept_tokens[0] + llm_client.tracker.input_tokens
+        job.output_tokens = kept_tokens[1] + llm_client.tracker.output_tokens
         # `completed_at` is NOT a timestamp of "the job stopped" — it means
         # "applied at least once", and three things read it that way. It gates
         # `reapply_active_frameworks`' ever-applied set and every re-apply; its
@@ -520,7 +576,7 @@ async def run_autocode_job(
         # framework would join the maintained set having applied nothing, and
         # Apply would refuse the retry. Left NULL, the job is exactly the shape
         # the rest of the system already calls an initial-apply orphan, and a
-        # retry codes the whole corpus as it should.
+        # retry codes what no pass has coded yet (#127).
         #
         # A genuine partial sets it: some quotes really were coded, and the
         # sessions in its failed batches carry no stamp, so the next re-apply
@@ -637,7 +693,7 @@ def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
 
 def delete_jobs(db: SASession, job_ids: list[int]) -> None:
     """Delete AutoCode jobs with their proposals and stamps (uncommitted): an
-    uninstall, or Apply replacing a job that was never applied."""
+    uninstall. Apply on a never-applied job keeps it (#127)."""
     from bristlenose.server.models import AutoCodeJob, AutoCodeSessionStamp, ProposedTag
 
     if not job_ids:
@@ -769,7 +825,8 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     - **Initial-apply orphan** (``completed_at IS NULL``): ``run_autocode_job``
       crashed before finishing the first pass, so nothing usable was produced →
       mark ``failed`` with a retryable ``error_message``. The start-job guard
-      treats ``failed`` as a dead job and clears it on the next run.
+      lets Apply run a never-applied ``failed`` job again, keeping what it
+      coded (#127).
     - **Catch-up orphan** (``completed_at IS NOT NULL``): the on-enable catch-up
       set an applied job ``running`` and was cut off before it finished → mark
       ``failed``, unclassified, so a chip still polling a restarted serve says

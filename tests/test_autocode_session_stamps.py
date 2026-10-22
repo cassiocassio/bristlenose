@@ -66,15 +66,16 @@ def _settings() -> MagicMock:
 class _LLM:
     """Patch LLMClient with ``analyze``; the prompt each call carried is kept."""
 
-    def __init__(self, analyze: AsyncMock) -> None:
+    def __init__(self, analyze: AsyncMock, tokens: tuple[int, int] = (0, 0)) -> None:
         self.analyze = analyze
+        self.tokens = tokens
 
     def __enter__(self) -> _LLM:
         client = MagicMock()
         client.analyze = self.analyze
-        client.tracker = MagicMock(input_tokens=0, output_tokens=0)
+        client.tracker = MagicMock(input_tokens=self.tokens[0], output_tokens=self.tokens[1])
         self._p = patch("bristlenose.llm.client.LLMClient", return_value=client)
-        self._p.__enter__()
+        self.client_cls = self._p.__enter__()
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -513,3 +514,278 @@ class TestRemovingWhatAStampPointsAt:
         assert _count(factory, AutoCodeSessionStamp) == 0
         assert _count(factory, QuoteTag) == 0
 
+
+
+def _app(factory):  # type: ignore[no-untyped-def]
+    """The AutoCode routes over ``factory``, refusals answered as the serve does."""
+    from fastapi import FastAPI
+
+    from bristlenose.server.refusal import RefusalError, refusal_handler
+    from bristlenose.server.routes.autocode import router
+
+    app = FastAPI()
+    app.include_router(router)
+    app.add_exception_handler(RefusalError, refusal_handler)
+    app.state.db_factory = factory
+    app.state.project_dir = None
+    return app
+
+
+def _apply(factory, analyze: AsyncMock, tokens: tuple[int, int] = (0, 0)) -> _LLM:
+    """Press Apply: the real route, then the job it spawns, with the LLM mocked."""
+    from fastapi.testclient import TestClient
+
+    app = _app(factory)
+    settings = _settings()
+    settings.anthropic_api_key = "test-key"
+    spawned: list[object] = []
+
+    def keep(coro: object) -> MagicMock:
+        spawned.append(coro)
+        return MagicMock()
+
+    with (
+        patch("bristlenose.server.routes.autocode.load_settings", return_value=settings),
+        patch("bristlenose.server.routes.autocode.asyncio.create_task", side_effect=keep),
+    ):
+        resp = TestClient(app).post("/api/projects/1/autocode/garrett")
+    assert resp.status_code == 200, resp.text
+    assert len(spawned) == 1
+    with _LLM(analyze, tokens) as llm:
+        asyncio.run(spawned[0])  # type: ignore[arg-type]
+    return llm
+
+
+def _stopped_first_apply(factory, stop_on: str, tokens: tuple[int, int] = (0, 0),
+                         tagged: int = 1) -> None:
+    """A first apply whose Stop lands while the batch carrying ``stop_on`` codes:
+    that batch answers (tagging its first ``tagged`` quotes), the next is never
+    sent."""
+    db = factory()
+    db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="pending"))
+    db.commit()
+    db.close()
+
+    async def analyze(**kw: object) -> AutoCodeBatchResult:
+        if stop_on in str(kw["user_prompt"]):
+            _set_status(factory, "cancelled")
+            return _result(tagged)
+        return _result(2)
+
+    with _LLM(AsyncMock(side_effect=analyze), tokens):
+        asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+    job = _job(factory)
+    assert (job.status, job.completed_at) == ("cancelled", None)
+
+
+def _proposals(factory) -> dict[str, str]:
+    """``{quote text tail: proposal status}`` on the garrett job."""
+    db = factory()
+    try:
+        return {
+            text.split(" quote ")[1]: status
+            for status, text in db.query(ProposedTag.status, Quote.text)
+            .join(Quote, Quote.id == ProposedTag.quote_id)
+        }
+    finally:
+        db.close()
+
+
+def _review(factory, decisions: dict[str, str]) -> None:
+    """The researcher's review of a stopped apply's proposals (an old release
+    showed them; migration 022 un-applied such a job)."""
+    db = factory()
+    for p, text in db.query(ProposedTag, Quote.text).join(Quote, Quote.id == ProposedTag.quote_id):
+        status = decisions.get(text.split(" quote ")[1])
+        if status is None:
+            continue
+        p.status = status
+        if status == "accepted":
+            db.add(QuoteTag(quote_id=p.quote_id, tag_definition_id=p.tag_definition_id,
+                            source="autocode"))
+    db.commit()
+    db.close()
+
+
+class TestApplyKeepsANeverAppliedJobsWork:
+    """#127: Apply on a stopped or failed first apply deleted its proposals and
+    stamps and sent the whole corpus again, so the coded half was paid for twice
+    and the tags the researcher had denied came back pending."""
+
+    @pytest.mark.parametrize("status", ["cancelled", "failed"])
+    def test_a_stopped_first_apply_keeps_its_work(self, factory, status: str) -> None:
+        for sid in ("s1", "s2", "s3"):
+            _session(factory, sid)
+        _stopped_first_apply(factory, stop_on="s2-0", tokens=(100, 10))
+        _review(factory, {"s1-0": "denied", "s1-1": "accepted"})
+        db = factory()
+        db.query(AutoCodeJob).update({
+            "status": status, "error_message": "boom", "failure_kind": "rate_limited",
+            "started_at": datetime(2020, 1, 1),
+        })
+        db.commit()
+        db.close()
+        job_id = _job(factory).id
+        assert _stamped(factory) == {"s1", "s2"}
+
+        llm = _apply(factory, _answer_all(), tokens=(30, 3))
+
+        # Only s3 was sent: s1 and s2 were coded, s2-1 left untagged in a coded
+        # session (the stamp is the cost gate).
+        assert len(llm.prompts()) == 1
+        assert "s3-0" in llm.prompts()[0] and "s3-1" in llm.prompts()[0]
+        assert "s1-" not in llm.prompts()[0] and "s2-" not in llm.prompts()[0]
+        assert _proposals(factory) == {
+            "s1-0": "denied", "s1-1": "accepted", "s2-0": "pending",
+            "s3-0": "pending", "s3-1": "pending",
+        }
+        assert _count(factory, QuoteTag) == 1
+        assert _stamped(factory) == {"s1", "s2", "s3"}
+        job = _job(factory)
+        assert job.id == job_id
+        assert (job.status, job.error_message, job.failure_kind) == ("completed", "", "")
+        assert job.completed_at is not None
+        assert job.started_at > datetime(2020, 1, 1)
+        assert (job.total_quotes, job.processed_quotes, job.proposed_count) == (6, 6, 5)
+        assert (job.input_tokens, job.output_tokens) == (130, 13)
+
+    def test_a_half_coded_session_sends_only_its_rest(self, factory) -> None:
+        _session(factory, "s1", n=4)  # two batches in one session
+        _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
+        assert _stamped(factory) == set()
+
+        llm = _apply(factory, _answer_all())
+
+        assert len(llm.prompts()) == 1
+        assert "s1-2" in llm.prompts()[0] and "s1-0" not in llm.prompts()[0]
+        assert _stamped(factory) == {"s1"}
+        assert _job(factory).processed_quotes == _job(factory).total_quotes == 4
+
+    def test_a_fully_proposed_corpus_completes_without_a_call(self, factory) -> None:
+        """The Stop landed on the last batch; and, as migration 022 leaves an
+        old stopped first apply, no stamps: proposed quotes are coded all the
+        same, and their sessions are stamped now."""
+        _session(factory, "s1")
+        _session(factory, "s2")
+        _stopped_first_apply(factory, stop_on="s2-0", tagged=2)
+        db = factory()
+        db.query(AutoCodeSessionStamp).delete()
+        db.commit()
+        db.close()
+
+        llm = _apply(factory, _answer_all())
+
+        assert llm.client_cls.call_count == 0
+        assert llm.prompts() == []
+        assert _stamped(factory) == {"s1", "s2"}
+        job = _job(factory)
+        assert job.status == "completed" and job.completed_at is not None
+        assert (job.total_quotes, job.processed_quotes, job.proposed_count) == (4, 4, 4)
+
+    def test_proposed_quotes_are_skipped_without_a_stamp(self, factory) -> None:
+        """Migration 022 un-applies an old stopped first apply before its backfill,
+        so its sessions carry no stamp: what has a proposal is still not sent,
+        and a session all of whose quotes have one is stamped by this pass."""
+        _session(factory, "s1")
+        _session(factory, "s2")
+        _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
+        _review(factory, {"s1-0": "denied"})
+        db = factory()
+        db.query(AutoCodeSessionStamp).delete()
+        db.commit()
+        db.close()
+
+        llm = _apply(factory, _answer_all())
+
+        assert len(llm.prompts()) == 1
+        assert "s2-0" in llm.prompts()[0] and "s1-" not in llm.prompts()[0]
+        assert _proposals(factory)["s1-0"] == "denied"
+        assert _stamped(factory) == {"s1", "s2"}
+
+    def test_a_failed_job_with_nothing_kept_codes_everything(self, factory) -> None:
+        _session(factory, "s1")
+        _session(factory, "s2")
+        db = factory()
+        db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="failed"))
+        db.commit()
+        db.close()
+
+        llm = _apply(factory, _answer_all())
+
+        assert len(llm.prompts()) == 2
+        assert _stamped(factory) == {"s1", "s2"}
+        assert _job(factory).status == "completed"
+
+    def test_a_retry_that_fails_keeps_the_earlier_work(self, factory) -> None:
+        for sid in ("s1", "s2", "s3"):
+            _session(factory, sid)
+        _stopped_first_apply(factory, stop_on="s2-0")
+        _review(factory, {"s1-0": "denied"})
+
+        _apply(factory, AsyncMock(side_effect=RuntimeError("credit balance is too low")))
+
+        job = _job(factory)
+        assert (job.status, job.completed_at) == ("failed", None)
+        assert job.failure_kind != ""
+        assert _proposals(factory) == {"s1-0": "denied", "s1-1": "pending", "s2-0": "pending"}
+        assert _stamped(factory) == {"s1", "s2"}
+
+        # And the next Apply still sends only s3.
+        llm = _apply(factory, _answer_all())
+        assert len(llm.prompts()) == 1 and "s3-0" in llm.prompts()[0]
+        assert _job(factory).status == "completed"
+
+
+class TestApplyWaitsForAStoppedRunner:
+    """#127 review: a Stop sets the row "cancelled" at once, but the batch already
+    sent still answers. Apply in that moment started a second runner on the same
+    row: both sent the same quotes, and the loser's collision marked it failed."""
+
+    def test_apply_is_refused_while_the_stopped_runner_still_runs(self, factory) -> None:
+        from fastapi.testclient import TestClient
+
+        from bristlenose.server.routes import autocode as route
+
+        _session(factory, "s1")
+        _stopped_first_apply(factory, stop_on="s1-0")
+        app = _app(factory)
+        still_running = MagicMock()
+        still_running.done.return_value = False
+        settings = _settings()
+        settings.anthropic_api_key = "test-key"
+        with (
+            patch.dict(route._AUTOCODE_LIVE, {(1, "garrett"): still_running}),
+            patch("bristlenose.server.routes.autocode.load_settings", return_value=settings),
+            patch("bristlenose.server.routes.autocode.asyncio.create_task") as spawn,
+        ):
+            resp = TestClient(app).post("/api/projects/1/autocode/garrett")
+        assert resp.status_code == 409
+        assert resp.json()["reason"] == "already_running"
+        spawn.assert_not_called()
+        assert _job(factory).status == "cancelled"
+
+    def test_the_runner_is_live_until_it_ends(self, factory) -> None:
+        from bristlenose.server.routes import autocode as route
+
+        _session(factory, "s1")
+        with patch.dict(route._AUTOCODE_LIVE, clear=True):
+            _apply(factory, _answer_all())
+            task = route._AUTOCODE_LIVE[(1, "garrett")]
+            forget = [c.args[0] for c in task.add_done_callback.call_args_list]
+            for callback in forget:
+                callback(task)
+            assert (1, "garrett") not in route._AUTOCODE_LIVE
+
+    def test_a_stop_while_nothing_is_left_to_send_stands(self, factory) -> None:
+        _session(factory, "s1")
+        _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
+        real = ac._session_pks
+
+        def stop_meanwhile(*args: object) -> list[int]:
+            _set_status(factory, "cancelled")
+            return real(*args)  # type: ignore[arg-type]
+
+        with patch.object(ac, "_session_pks", side_effect=stop_meanwhile):
+            _apply(factory, _answer_all())
+        job = _job(factory)
+        assert (job.status, job.completed_at) == ("cancelled", None)

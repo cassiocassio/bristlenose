@@ -105,13 +105,18 @@ proposals with confidence + rationale).
 ## Gotchas
 
 - **Re-run guard**: Unique constraint on `(project_id, framework_id)` — one job per
-  codebook per project. **Only pending/running (409 `ALREADY_RUNNING`) and
-  completed (409 `ALREADY_APPLIED`) block.** A `cancelled` or `failed` job is
-  deleted and re-run (`routes/autocode.py:264-271`).
-- **Denied proposals are kept for telemetry — except on the retry path.** Deleting
-  a dead job deletes *every* `ProposedTag` for it, denied rows included
-  (`routes/autocode.py:265-267`). Any telemetry analysis must treat a re-run
-  framework as having lost its prior decisions.
+  codebook per project. **Pending/running (409 `ALREADY_RUNNING`) and any applied
+  job, `completed_at` set whatever its status (409 `ALREADY_APPLIED`, #64), block.**
+  A `cancelled` or `failed` job that was never applied is run again on the same row
+  (`start_autocode_job`), unless its stopped runner is still alive (the batch sent
+  before the Stop has not answered): that is `ALREADY_RUNNING` too, judged by the
+  task (`_AUTOCODE_LIVE`), never the row, or two runners sent the same quotes.
+- **Denied proposals are kept for telemetry, on the retry path too (#127, 22 Oct
+  2026).** Apply on a never-applied job keeps its proposals and stamps and sends
+  only quotes with no proposal on the job, in sessions it has not stamped
+  (`run_autocode_job`), so nothing is paid for twice and a denied tag stays denied;
+  one with nothing left to send completes without an LLM call. Until then the
+  retry deleted the job, every `ProposedTag` with it, and sent the whole corpus.
 - **Cloud-only**: Prompt weight ~14K-17K tokens per call. Ollama excluded (4K
   context can't fit taxonomy + quotes) — 503 `PROVIDER_LOCAL`.
 - **Background task**: First feature to call LLMs from serve mode. Uses

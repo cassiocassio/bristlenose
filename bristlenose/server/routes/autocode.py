@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
-from bristlenose.server.autocode import delete_jobs, run_autocode_job
+from bristlenose.server.autocode import run_autocode_job
 from bristlenose.server.codebook import get_template
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
@@ -35,6 +35,14 @@ router = APIRouter(prefix="/api")
 # mid-flight — stranding the job "running" (its finally never runs). Mirrors
 # ``_CATCH_UP_TASKS`` in routes/data.py. Discard on completion.
 _AUTOCODE_TASKS: set[asyncio.Task[Any]] = set()
+
+# The runner each (project, framework) has in flight. A Stop sets the row
+# "cancelled" at once, but the batch already sent still answers and its runner
+# goes on until it reads the Stop; an Apply in between started a second runner on
+# the same row, both sent the same quotes, and the loser's collision marked the
+# job failed (#127 review). The task, never the row, says whether one is live,
+# as ``autocode.live_reapply`` does for re-applies.
+_AUTOCODE_LIVE: dict[tuple[int, str], asyncio.Task[Any]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -202,21 +210,24 @@ async def start_autocode_job(
             )
 
         # Check for an existing job. A *cancelled* or *failed* job that was never
-        # applied produced no usable result, so it must not permanently block a
-        # retry — otherwise the Apply button stays enabled (acDisabled only covers
-        # running/completed) yet every click 409s and the frontend swallows it, so
-        # the button "does nothing". Clear the dead job below and let a fresh run
-        # proceed. A pending/running job is genuinely in flight, and an applied
-        # job has results — both keep the 409. Applied is ``completed_at``, not
-        # status: a failed or stopped catch-up leaves an applied job "failed" or
-        # "cancelled", and clearing it deleted every proposal of the original
-        # apply and coded the whole corpus again (#64, RE#66).
+        # applied must not permanently block a retry — otherwise the Apply button
+        # stays enabled (acDisabled only covers running/completed) yet every click
+        # 409s and the frontend swallows it, so the button "does nothing". It is
+        # run again below, keeping what it coded (#127). A pending/running job is
+        # genuinely in flight, and an applied job has results — both keep the
+        # 409. Applied is ``completed_at``, not status: a failed or stopped
+        # catch-up leaves an applied job "failed" or "cancelled", and clearing it
+        # deleted every proposal of the original apply and coded the whole corpus
+        # again (#64, RE#66).
         existing = (
             db.query(AutoCodeJob)
             .filter_by(project_id=project_id, framework_id=framework_id)
             .first()
         )
-        if existing and existing.status in ("pending", "running"):
+        live = _AUTOCODE_LIVE.get((project_id, framework_id))
+        if (existing and existing.status in ("pending", "running")) or (
+            live is not None and not live.done()
+        ):
             raise RefusalError(
                 409,
                 RefusalReason.ALREADY_RUNNING,
@@ -274,23 +285,23 @@ async def start_autocode_job(
             )
 
         # A cancelled/failed job that was never applied (the only survivors of
-        # the guards above) is discarded now — along with any partial proposals
-        # and stamps — so the (project_id, framework_id) unique constraint
-        # doesn't block the retry.
+        # the guards above) is run again, keeping its proposals and stamps: the
+        # job sends only what no pass has coded (#127). Until 22 Oct 2026 it was
+        # deleted, and the quotes it had coded were paid for twice, with the
+        # tags the researcher had denied back as pending. Its last failure goes.
         if existing:
-            delete_jobs(db, [existing.id])
-            # A bulk delete leaves the row in the identity map; the new job can
-            # take its rowid, which SQLAlchemy warned about.
-            db.expunge(existing)
-            db.flush()
-
-        # Create job row
-        job = AutoCodeJob(
-            project_id=project_id,
-            framework_id=framework_id,
-            status="pending",
-        )
-        db.add(job)
+            job = existing
+            job.status = "pending"
+            job.error_message = ""
+            job.failure_kind = ""
+            job.started_at = datetime.now(timezone.utc)
+        else:
+            job = AutoCodeJob(
+                project_id=project_id,
+                framework_id=framework_id,
+                status="pending",
+            )
+            db.add(job)
         db.commit()
 
         # Spawn background task — fire and forget, but hold a strong reference
@@ -306,6 +317,14 @@ async def start_autocode_job(
         )
         _AUTOCODE_TASKS.add(task)
         task.add_done_callback(_AUTOCODE_TASKS.discard)
+        key = (project_id, framework_id)
+        _AUTOCODE_LIVE[key] = task
+
+        def _forget(t: asyncio.Task[Any]) -> None:
+            if _AUTOCODE_LIVE.get(key) is t:
+                del _AUTOCODE_LIVE[key]
+
+        task.add_done_callback(_forget)
 
         return _job_to_out(job)
 

@@ -13,6 +13,10 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
 
 ## Changelog
 
+- _2026-10-22_ — **Apply on a never-applied job keeps its work** (#127, owner). A
+  stopped or failed first apply was deleted and the whole corpus sent again; the
+  job now runs again on its own row, sending only quotes with no proposal and no
+  stamp, so nothing is paid twice and denied tags stay denied. §4a.
 - _2026-10-22_ — **per-session stamps replace the watermark** (RE#66, decisions
   #60–#67, owner). A session counts as coded by a codebook only when every one of
   its quotes was sent in a batch that answered (`autocode_session_stamps`,
@@ -331,7 +335,14 @@ their stamps; the job stays `cancelled` and the rest stays owed (#60). A Stop on
 first apply leaves `completed_at` empty: a stopped first apply is not an applied
 one, and nothing maintains it (#65). A run's re-apply that leaves nothing owed sets
 a `failed` or `cancelled` applied job back to `completed` and clears its error
-(#61).
+(#61). Apply on a stopped or failed first apply runs the same job again and keeps
+its proposals (accepted, denied and pending) and stamps: it sends only quotes with
+no proposal on the job, in sessions it has not stamped, as a re-apply does, and
+stamps the sessions it codes; with nothing left to send it completes without an
+LLM call (#127). While the stopped run's last batch is still out, Apply is
+refused as already running, so two runners never code one job. Until 22 Oct 2026
+Apply deleted the job and sent every quote, so the coded half was paid for twice
+and the tags the researcher had denied came back pending.
 
 **Serve crash.** No job survives a restart. On startup `reconcile_orphaned_jobs`
 (`bristlenose/server/autocode.py`) sweeps in-flight jobs: `completed_at IS NULL`

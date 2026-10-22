@@ -21,6 +21,7 @@ struct TranscriptionSettingsView: View {
     @AppStorage(BristlenoseFlags.appleSpeechKey) private var appleSpeechFlag: Bool = false
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
+    @ObservedObject private var whisperDownload = WhisperDownloadModel.shared
 
     /// The flag (read through `@AppStorage` so a flip re-renders), the helper
     /// in this bundle, and macOS 26. Below 26 there is nothing to choose, so the
@@ -44,6 +45,11 @@ struct TranscriptionSettingsView: View {
             } else {
                 backendSection
                 modelSection
+                // Whisper downloads in the background from launch, so its
+                // Download Now / Stop / status row is here without the Apple
+                // choice too. Download Now is not held by the 20 GB floor.
+                Section { WhisperStatusRow(download: whisperDownload) }
+                    .task { await whisperDownload.refresh() }
             }
 
             // Read shared screens — the Screens lens's on-device reading of the

@@ -980,6 +980,8 @@ struct ContentView: View {
         // When consent is granted (version updated), start serve for the
         // already-selected project if one exists.
         .onChange(of: consentVersion) { _, _ in
+            // The Whisper download waits for the disclosure too.
+            if hasConsent { WhisperDownloadModel.shared.checkAtLaunch() }
             if hasConsent, let project = selectedProject {
                 if !project.path.isEmpty && project.isAvailable {
                     serveFleet.manager(for: project.id).start(projectPath: project.path)
@@ -2991,9 +2993,8 @@ struct ContentView: View {
             OllamaDownloadPill(model: ollamaDownload)
         }
         .withoutSharedBackground()
-        // Sibling app-global pill: the one Whisper download, while Apple's
-        // speech model transcribes a first run (parked behind
-        // `BristlenoseFlags.appleSpeech`; self-hides unless bytes are moving).
+        // Sibling app-global pill: the one Whisper download, which starts in the
+        // background from launch (self-hides unless bytes are moving or it failed).
         ToolbarItem(placement: .status) {
             WhisperDownloadPill(model: WhisperDownloadModel.shared)
         }

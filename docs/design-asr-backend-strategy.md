@@ -74,13 +74,15 @@ The Whisper model is **never instantiated** when all sessions have existing tran
 - `pipeline.py:2026-2035` — pipeline skips `transcribe_sessions()` entirely if `needs_transcription` is empty.
 - `s05_transcribe.py:58-65` — stage itself short-circuits before any backend init.
 
-This is intentional. The desktop app's first-run UX depends on it: users who happen to bring Teams Premium / Zoom transcripts never see the 1.5GB download. A "warm up the backend on app launch" optimisation would defeat this — **don't add one**.
+This is intentional for the **run**: a run whose sessions all have transcripts never instantiates Whisper and never fetches it.
+
+**The Mac app's download is a separate thing, and since 22 Oct 2026 it starts at launch** (owner's call, 18 Oct 2026, reversing the "don't add one" rule this section used to state). The reasoning that reversed it: sequence beats broadband — a researcher without a Claude key spends minutes on account, card and key while nothing downloads, then waits 1.6 GB. So `WhisperDownloadModel.checkAtLaunch()` fetches the model in the background once the AI disclosure is acknowledged, only with at least 20 GB free (`autoStartFloorBytes`; Settings ▸ Transcription ▸ Download Now ignores the floor), never over a Stop the researcher chose (remembered across launches), with progress in the toolbar pill. A run started meanwhile waits on that download rather than fetching a second copy (`_BRISTLENOSE_WHISPER_FETCH_PID`, `preflight/whisper.py` `_wait_for_host_fetch`), and fetches itself only if the app's job has gone or stalled for ten minutes. The CLI is unchanged: it fetches on first transcription.
 
 A regression test pinning this behaviour (mock the model classes, assert never called when all sessions have transcripts) is tracked in the project board.
 
 ## Desktop first-run plan
 
-- Whisper download happens **inside the app on first run**, not at install / not bundled.
+- Whisper download happens **inside the app, in the background from launch** (after the AI disclosure, 20 GB free), not at install / not bundled.
 - ~5 minute wait on typical connection.
 - Covered by first-run content (TBD — Track B Branch 2+): explainer, sample report tour, settings walkthrough, maybe a tiny demo dataset.
 - Replaces "stare at progress bar" with "explore the product while we fetch the model."

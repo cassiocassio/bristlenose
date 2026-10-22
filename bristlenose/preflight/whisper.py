@@ -475,6 +475,23 @@ def preflight_whisper(
 
     _print_banner(console, repo_id, state)
 
+    # The Mac app is already fetching this model in the background (it starts
+    # at launch): wait on that download instead of writing a second partial of
+    # the same repo, and pass its bytes on so the run's row and ring follow it.
+    host_pid = _host_fetch_pid()
+    if host_pid is not None:
+        if status is not None:
+            status.stop()
+        try:
+            ready = _wait_for_host_fetch(repo_id, host_pid, on_download_progress)
+        finally:
+            if status is not None:
+                status.start()
+        if ready:
+            logger.info("preflight_whisper: %s arrived via the app's download", repo_id)
+            return
+        logger.info("preflight_whisper: the app's download ended without %s; fetching", repo_id)
+
     # Option B: step aside, let HF Hub print natively.
     if status is not None:
         status.stop()
@@ -536,6 +553,87 @@ def _server_total_bytes(repo_id: str) -> int:
     except Exception:  # noqa: BLE001 — a missing total is shown as unknown
         logger.info("could not read %s's size from the Hub", repo_id, exc_info=True)
         return 0
+
+
+#: The Mac app's own download job sets this on a run it starts while that job
+#: runs (``WhisperDownloadModel.whisperFetchEnvironment``).
+_HOST_FETCH_PID_ENV = "_BRISTLENOSE_WHISPER_FETCH_PID"
+#: How long a wait that cannot see the app's job sees no bytes move before it
+#: stops trusting it (only when the process cannot be asked: see
+#: :func:`_host_fetch_alive`).
+_HOST_FETCH_STALL_S = 600.0
+_HOST_FETCH_POLL_S = 0.5
+
+
+def _host_fetch_pid() -> int | None:
+    raw = os.environ.get(_HOST_FETCH_PID_ENV, "").strip()
+    return int(raw) if raw.isdigit() and int(raw) > 0 else None
+
+
+def _host_fetch_alive(pid: int) -> bool | None:
+    """Whether the app's download process still exists: True, False, or None
+    when the system will not say (another user's process, a sandbox)."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return None
+    return True
+
+
+def _bytes_in_flight(repo_id: str) -> int:
+    """Finished blobs plus the newest partial: what a download in another
+    process has written so far (hf_xet writes each file into a fresh
+    ``.incomplete`` and renames it when done)."""
+    blobs = _repo_cache_dir(repo_id) / "blobs"
+    try:
+        partials = [
+            f for f in blobs.iterdir() if f.is_file() and f.name.endswith(".incomplete")
+        ]
+        newest = max(partials, key=lambda f: f.stat().st_mtime, default=None)
+        in_flight = newest.stat().st_size if newest is not None else 0
+    except OSError:
+        in_flight = 0
+    return _bytes_on_disk(repo_id) + in_flight
+
+
+def _wait_for_host_fetch(
+    repo_id: str,
+    pid: int,
+    on_progress: Callable[[int, int], None] | None,
+    *,
+    clock: Callable[[], float] | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> bool:
+    """Wait on the app's download of ``repo_id``. True once it is cached;
+    False when the app's job has gone without it (the run then fetches it
+    itself). A job known to be alive is waited on for as long as it runs: the
+    researcher can stop it from the app. Only when the process cannot be asked
+    does a wait with no bytes moving for ``_HOST_FETCH_STALL_S`` give up, since
+    the size of a partial file is not a trustworthy sign of progress under
+    hf_xet (docs/design-apple-first-transcription.md)."""
+    # Looked up at call time, so a patched ``time`` reaches them.
+    clock = clock or time.monotonic
+    sleep = sleep or time.sleep
+    total = _server_total_bytes(repo_id) if on_progress is not None else 0
+    last_bytes = -1
+    last_change = clock()
+    while True:
+        if cache_state(repo_id) == "cached":
+            return True
+        alive = _host_fetch_alive(pid)
+        if alive is False:
+            return cache_state(repo_id) == "cached"
+        done = _bytes_in_flight(repo_id)
+        if done != last_bytes:
+            last_bytes, last_change = done, clock()
+        elif alive is None and clock() - last_change > _HOST_FETCH_STALL_S:
+            logger.info("preflight_whisper: the app's download of %s stalled", repo_id)
+            return False
+        if on_progress is not None:
+            on_progress(min(done, total) if total else done, total)
+        sleep(_HOST_FETCH_POLL_S)
 
 
 def _bytes_on_disk(repo_id: str) -> int:

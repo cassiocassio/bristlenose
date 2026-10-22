@@ -227,3 +227,83 @@ def test_a_predicted_total_leaves_out_the_download() -> None:
 
     pipeline._carry_eta(remaining)
     assert 399 < pipeline._last_predicted_total < 402
+
+
+# ── a run while the Mac app's own download runs waits on it ─────────────────
+# The app starts the Whisper download in the background from launch (owner,
+# 18 and 22 Oct 2026); a run started meanwhile must not fetch a second copy.
+
+
+def _host_downloading(monkeypatch, *, states, alive=True, bytes_seq=(0,)):
+    used = _missing_model(monkeypatch, tty=False)
+    monkeypatch.setenv("_BRISTLENOSE_WHISPER_FETCH_PID", "4321")
+    states_it = iter(states)
+    last = [states[-1]]
+
+    def state(_r):
+        last[0] = next(states_it, last[0])
+        return last[0]
+
+    monkeypatch.setattr(whisper, "cache_state", state)
+    monkeypatch.setattr(whisper, "_host_fetch_alive", lambda _pid: alive)
+    bytes_it = iter(bytes_seq)
+    held = [bytes_seq[-1]]
+
+    def in_flight(_r):
+        held[0] = next(bytes_it, held[0])
+        return held[0]
+
+    monkeypatch.setattr(whisper, "_bytes_in_flight", in_flight)
+    monkeypatch.setattr(whisper, "_server_total_bytes", lambda _r: 1000)
+    naps = [0]
+
+    def sleep(_s):
+        # A wait that never ends fails here, fast, rather than hanging the suite.
+        naps[0] += 1
+        assert naps[0] < 200, "the run waited on the app's download for ever"
+
+    monkeypatch.setattr(whisper.time, "sleep", sleep)
+    return used
+
+
+def test_the_run_waits_for_the_apps_download_and_reports_its_bytes(monkeypatch) -> None:
+    used = _host_downloading(
+        monkeypatch, states=["missing", "missing", "missing", "cached"], bytes_seq=(0, 700),
+    )
+    seen: list[tuple[int, int]] = []
+    _preflight(lambda done, total: seen.append((done, total)))
+    assert used == []
+    assert seen == [(0, 1000), (700, 1000)]
+
+
+def test_when_the_apps_download_has_gone_the_run_fetches_itself(monkeypatch) -> None:
+    used = _host_downloading(monkeypatch, states=["missing"], alive=False)
+    _preflight(lambda *_a: None)
+    assert used == ["lines"]
+
+
+def test_a_stalled_download_the_run_cannot_see_is_not_waited_on_for_ever(monkeypatch) -> None:
+    # The process cannot be asked (None), and no bytes move: give up and fetch.
+    used = _host_downloading(monkeypatch, states=["missing"], alive=None, bytes_seq=(300,))
+    ticks = iter(range(0, 10_000, 100))
+    monkeypatch.setattr(whisper.time, "monotonic", lambda: float(next(ticks)))
+    _preflight(lambda *_a: None)
+    assert used == ["lines"]
+
+
+def test_a_download_known_to_be_alive_is_waited_on_though_its_file_sits_still(monkeypatch) -> None:
+    # hf_xet's partial file can sit still while bytes land: a live job is waited on.
+    used = _host_downloading(
+        monkeypatch, states=["missing"] * 50 + ["cached"], bytes_seq=(300,),
+    )
+    ticks = iter(range(0, 100_000, 100))
+    monkeypatch.setattr(whisper.time, "monotonic", lambda: float(next(ticks)))
+    _preflight(lambda *_a: None)
+    assert used == []
+
+
+def test_without_the_apps_download_nothing_changes(monkeypatch) -> None:
+    used = _missing_model(monkeypatch, tty=False)
+    monkeypatch.delenv("_BRISTLENOSE_WHISPER_FETCH_PID", raising=False)
+    _preflight(lambda *_a: None)
+    assert used == ["lines"]

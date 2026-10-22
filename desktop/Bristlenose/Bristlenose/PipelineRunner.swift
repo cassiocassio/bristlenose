@@ -2319,6 +2319,11 @@ var args = ["run", project.path, "--no-serve"]
         // Sandbox (Python can't read Keychain itself). See
         // BristlenoseShared.childEnvironment.
         proc.environment = BristlenoseShared.childEnvironment(for: resolvedMode)
+        // While the app is downloading Whisper, the run waits on that download
+        // rather than fetching a second copy (bristlenose/preflight/whisper.py).
+        proc.environment?.merge(
+            WhisperDownloadModel.whisperFetchEnvironment(pid: WhisperDownloadModel.shared.downloadPID)
+        ) { _, new in new }
 
         let pipe = Pipe()
         proc.standardOutput = pipe

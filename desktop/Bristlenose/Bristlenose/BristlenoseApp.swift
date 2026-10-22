@@ -264,8 +264,12 @@ struct BristlenoseApp: App {
                         Task { @MainActor in serveFleet.applyEnvChange() }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
-                    // Parked behind BristlenoseFlags.appleSpeech; once per process.
-                    WhisperDownloadModel.shared.appLaunched()
+                    // Whisper starts downloading in the background once the AI
+                    // disclosure is acknowledged; once per process.
+                    WhisperDownloadModel.shared.runIsLive = { [weak pipelineRunner] in
+                        pipelineRunner?.state.values.contains(.running) ?? false
+                    }
+                    WhisperDownloadModel.shared.checkAtLaunch()
                     pipelineRunner.scanAllProjects(projectIndex.projects)
                     // The queue the last Quit or crash left, in order, when it
                     // is fresh and its studies are still there (R19). Once per

@@ -212,3 +212,51 @@ import Testing
         #expect(SubtitleVariant.waitingForWhisper.glyphAction == .none)
     }
 }
+
+/// The download starts in the background from launch (owner, 18 and 22 Oct
+/// 2026): only after the AI disclosure, never over a remembered Stop, only for a
+/// model missing or partial, and only with 20 GB free (unknown starts).
+@Suite struct WhisperAutoStartTests {
+    typealias Model = WhisperDownloadModel
+    let plenty: Int64 = 100_000_000_000
+
+    @Test func startsWhenMissingOrPartialAndThereIsRoom() {
+        for phase in [Model.Phase.missing, .partial] {
+            #expect(Model.shouldAutoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false))
+        }
+    }
+
+    @Test func waitsForTheDisclosure() {
+        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: false, runIsLive: false))
+    }
+
+    @Test func notWhileAnAnalysisRuns() {
+        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: true))
+    }
+
+    @Test func aStopIsRemembered() {
+        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: plenty, stoppedByUser: true, hasConsent: true, runIsLive: false))
+    }
+
+    @Test func neverBelowTheFloorAndExactlyAtItIsEnough() {
+        let floor = Model.autoStartFloorBytes
+        #expect(floor == 20_000_000_000)
+        #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: floor - 1, stoppedByUser: false, hasConsent: true, runIsLive: false))
+        #expect(Model.shouldAutoStart(phase: .missing, freeBytes: floor, stoppedByUser: false, hasConsent: true, runIsLive: false))
+    }
+
+    @Test func unknownFreeSpaceStarts() {
+        #expect(Model.shouldAutoStart(phase: .missing, freeBytes: nil, stoppedByUser: false, hasConsent: true, runIsLive: false))
+    }
+
+    @Test func nothingToDoOnDiskDownloadingFailedOrUnasked() {
+        for phase in [Model.Phase.onDisk, .downloading, .failed, .unknown] {
+            #expect(!Model.shouldAutoStart(phase: phase, freeBytes: plenty, stoppedByUser: false, hasConsent: true, runIsLive: false), "\(phase)")
+        }
+    }
+
+    @Test func aRunIsToldOnlyWhileTheDownloadRuns() {
+        #expect(Model.whisperFetchEnvironment(pid: nil).isEmpty)
+        #expect(Model.whisperFetchEnvironment(pid: 4321) == ["_BRISTLENOSE_WHISPER_FETCH_PID": "4321"])
+    }
+}

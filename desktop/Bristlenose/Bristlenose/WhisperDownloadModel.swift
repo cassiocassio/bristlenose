@@ -4,15 +4,17 @@ import os
 
 // The one Whisper download, app-wide (docs/design-apple-first-transcription.md §3 D).
 //
-// While Apple's speech model transcribes a first run, the 1.6 GB Whisper model
-// downloads behind it, once, for every window. The app owns that download: the
-// Python run never fetches on the Apple path, because two fetchers of one repo
-// each write their own partial under hf_xet. The job runs the sidecar's own
-// `doctor --fetch --progress-lines` and reads its `@download` lines; whether
-// Whisper is on disk is always Python's answer (`doctor --whisper-status`),
-// never a cache path computed here.
+// The 1.6 GB Whisper model downloads in the background, once, for every window:
+// from launch once the AI disclosure is acknowledged (owner, 18 and 22 Oct
+// 2026), and behind Apple's speech model when that transcribes a first run. The
+// app owns that download: a run started meanwhile waits on it rather than
+// fetching (two fetchers of one repo each write their own partial under
+// hf_xet). The job runs the sidecar's own `doctor --fetch --progress-lines` and
+// reads its `@download` lines; whether Whisper is on disk is always Python's
+// answer (`doctor --whisper-status`), never a cache path computed here.
 //
-// Parked behind `BristlenoseFlags.appleSpeechAvailable` with everything else on this path.
+// The Apple-speech half (`startIfNeeded`) is still parked behind
+// `BristlenoseFlags.appleSpeechAvailable`.
 
 // MARK: - Lines from the sidecar (pure)
 
@@ -154,7 +156,7 @@ final class WhisperDownloadModel: ObservableObject {
     private var rate = DownloadRate()
     private var stopRequested = false
     private var stderrTail: [String] = []
-    /// `appLaunched()` runs once per process, though every window's
+    /// `checkAtLaunch()` runs once per process, though every window's
     /// `onAppear` calls it.
     private var launched = false
 
@@ -213,16 +215,60 @@ final class WhisperDownloadModel: ObservableObject {
 
     // MARK: Lifecycle
 
-    /// At launch: ask Python whether Whisper is on disk, and start again a
-    /// download a previous launch left partial — unless the researcher stopped
-    /// it (the appliance copes; it does not overrule).
-    func appLaunched() {
-        guard BristlenoseFlags.appleSpeechAvailable, !launched else { return }
+    /// Free space below which the app does not start the 1.6 GB on its own
+    /// (owner, 18 Oct 2026: "rude"). Download Now in Settings is not held by it.
+    nonisolated static let autoStartFloorBytes: Int64 = 20_000_000_000
+
+    /// Whether the app starts the download by itself: only after the AI
+    /// disclosure is acknowledged (owner, 22 Oct 2026), never over a Stop the
+    /// researcher chose, never while an analysis runs (it may be fetching the
+    /// model itself, and two fetchers each write their own partial), only for
+    /// a model missing or left partial, and only with room to spare. Unknown
+    /// free space starts: no crying wolf.
+    nonisolated static func shouldAutoStart(
+        phase: Phase, freeBytes: Int64?, stoppedByUser: Bool, hasConsent: Bool, runIsLive: Bool
+    ) -> Bool {
+        guard hasConsent, !stoppedByUser, !runIsLive else { return false }
+        guard phase == .missing || phase == .partial else { return false }
+        guard let freeBytes else { return true }
+        return freeBytes >= autoStartFloorBytes
+    }
+
+    /// At launch, and again when the AI disclosure is acknowledged: ask Python
+    /// whether Whisper is on disk and, if not, start fetching it in the
+    /// background, so the first analysis doesn't wait 1.6 GB after the key.
+    /// Once per process; never under a test host, which is the real app.
+    func checkAtLaunch() {
+        guard !launched, !KeychainHelper.isUnderTestHost, PipelineRunner.hasAIConsent else { return }
         launched = true
+        // No sidecar to ask (the External Server dev scheme): nothing to fetch
+        // with, and a failure pill every launch would say nothing true.
+        guard Self.sidecar() != nil else { return }
         Task { @MainActor in
             await refresh()
-            if phase == .partial, !stoppedByUser { start() }
+            if Self.shouldAutoStart(
+                phase: phase, freeBytes: OllamaCatalog.freeDiskBytes(),
+                stoppedByUser: stoppedByUser, hasConsent: true, runIsLive: runIsLive()
+            ) { start() }
         }
+    }
+
+    /// Whether an analysis is running, set by the app (`PipelineRunner`). The
+    /// launch check reads it after its own probe, so a run that started in
+    /// that gap, and so fetched the model itself, is not joined by a second.
+    var runIsLive: @MainActor () -> Bool = { false }
+
+    /// The download's process, while it runs: a run started meanwhile waits
+    /// on it instead of fetching a second copy (`whisperFetchEnvironment`).
+    var downloadPID: pid_t? {
+        guard phase == .downloading, let p = process, p.isRunning else { return nil }
+        return p.processIdentifier
+    }
+
+    /// What a run needs to wait on the app's download rather than fetch its own.
+    nonisolated static func whisperFetchEnvironment(pid: pid_t?) -> [String: String] {
+        guard let pid else { return [:] }
+        return ["_BRISTLENOSE_WHISPER_FETCH_PID": String(pid)]
     }
 
     /// A run went to Apple's model (the sidecar printed `@transcription-engine

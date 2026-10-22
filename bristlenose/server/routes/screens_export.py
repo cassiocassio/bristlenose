@@ -216,10 +216,18 @@ async def screens_export_status(project_id: int) -> ScreensExportStatus:
     )
 
 
+class ExportCancelRequest(BaseModel):
+    #: The export the chip stands for; as for clips, a named cancel stops only that one (RE#38).
+    job_id: str | None = None
+
+
 @router.post("/projects/{project_id}/export/screens/cancel")
-async def cancel_screens_export(project_id: int) -> dict[str, Any]:
-    """Stop after the still being written; those already written stay."""
+async def cancel_screens_export(project_id: int, body: ExportCancelRequest | None = None) -> dict[str, Any]:
+    """Stop after the still being written; those already written stay. A cancel naming another
+    export than the one held is refused (409): a newer export replaced the chip's."""
     job = _jobs.get(project_id)
+    if job is not None and body is not None and body.job_id and body.job_id != job.get("job_id"):
+        raise HTTPException(status_code=409, detail="That screens export has been replaced")
     if job is None or job.get("status") != "running":
         raise HTTPException(status_code=404, detail="No screens export in progress")
     job["status"] = "cancelled"

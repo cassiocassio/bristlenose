@@ -882,8 +882,16 @@ async def get_clip_status(
 # ---------------------------------------------------------------------------
 
 
+class ExportCancelRequest(BaseModel):
+    #: The export the chip stands for. Named, the route stops only that export and refuses
+    #: (409) when the server holds another, which a newer export started since (RE#38).
+    job_id: str | None = None
+
+
 @router.post("/projects/{project_id}/export/clips/cancel")
-async def cancel_clip_extraction(project_id: int) -> dict[str, Any]:
+async def cancel_clip_extraction(
+    project_id: int, body: ExportCancelRequest | None = None,
+) -> dict[str, Any]:
     """Signal a running clip-extraction job to stop after the current clip.
 
     The background loop polls the job's status each iteration and breaks when it
@@ -891,6 +899,8 @@ async def cancel_clip_extraction(project_id: int) -> dict[str, Any]:
     nothing is in flight.
     """
     job = _jobs.get(project_id)
+    if job is not None and body is not None and body.job_id and body.job_id != job.get("job_id"):
+        raise HTTPException(status_code=409, detail="That clip export has been replaced")
     if job is None or job.get("status") not in ("pending", "running"):
         raise HTTPException(status_code=404, detail="No clip extraction in progress")
     job["status"] = "cancelled"

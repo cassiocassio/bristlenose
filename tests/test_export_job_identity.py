@@ -82,3 +82,20 @@ def test_a_study_with_no_screens_starts_no_job_and_names_none(tmp_path: Path) ->
             patch.object(screens_export, "video_sessions", return_value={}):
         body = client.post("/api/projects/1/export/screens").json()
     assert body["status"] == "no_screens" and body["job_id"] is None
+
+
+def test_a_cancel_naming_another_export_is_refused_and_stops_nothing() -> None:
+    """A chip cancels only its own export: the cancel names it, and a newer one another window
+    started since is left running (RE#38). Without a name the route stops what is running."""
+    app = create_app(project_dir=_FIXTURE, dev=True, db_url="sqlite://")
+    with AuthTestClient(app) as client:
+        for kind, jobs in (("clips", clips_export._jobs), ("screens", screens_export._jobs)):
+            jobs[1] = {"job_id": "newer", "status": "running"}
+            stale = client.post(f"/api/projects/1/export/{kind}/cancel", json={"job_id": "older"})
+            assert stale.status_code == 409, kind
+            assert jobs[1]["status"] == "running", kind
+            own = client.post(f"/api/projects/1/export/{kind}/cancel", json={"job_id": "newer"})
+            assert own.status_code == 200 and jobs[1]["status"] == "cancelled", kind
+            jobs[1] = {"job_id": "newer", "status": "running"}
+            bare = client.post(f"/api/projects/1/export/{kind}/cancel")
+            assert bare.status_code == 200 and jobs[1]["status"] == "cancelled", kind

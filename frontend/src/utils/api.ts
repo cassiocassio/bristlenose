@@ -781,8 +781,10 @@ export function getClipExtractionStatus(): Promise<ClipJobStatus> {
   return apiGet<ClipJobStatus>("/export/clips/status", STATUS_READ_TIMEOUT_MS);
 }
 
-export function cancelClipExtraction(): Promise<{ cancelled: boolean }> {
-  return apiPost<{ cancelled: boolean }>("/export/clips/cancel", {});
+/** Stop a clip export. Named by `jobId`, only that export: the server refuses (409) when it
+ *  holds another, which a newer export started since (RE#38). */
+export function cancelClipExtraction(jobId?: string): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/export/clips/cancel", jobId ? { job_id: jobId } : {});
 }
 
 export function revealClips(): Promise<{ revealed: boolean; path: string }> {
@@ -801,8 +803,9 @@ export function getScreensExportStatus(): Promise<ScreensExportStatus> {
   return apiGet<ScreensExportStatus>("/export/screens/status", STATUS_READ_TIMEOUT_MS);
 }
 
-export function cancelScreensExport(): Promise<{ cancelled: boolean }> {
-  return apiPost<{ cancelled: boolean }>("/export/screens/cancel", {});
+/** Stop a screens export; as for clips, named by `jobId` it stops only that one. */
+export function cancelScreensExport(jobId?: string): Promise<{ cancelled: boolean }> {
+  return apiPost<{ cancelled: boolean }>("/export/screens/cancel", jobId ? { job_id: jobId } : {});
 }
 
 export function revealScreens(): Promise<{ revealed: boolean; path: string }> {

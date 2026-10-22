@@ -56,11 +56,19 @@ function notify(): void {
 // The list above lives in the page, so a reload emptied it. It is kept in session storage, which
 // belongs to this window (a browser tab, or the Mac app's web view, which ⌘R and Retry reload in
 // place) and goes with it: another window keeps its own list, and quitting the app or restarting
-// the serve, which ends every export anyway, starts empty (the key names the serve, `serveStamp`). A dismissed chip has left the list, so
-// it does not come back. Set by `rehydrateActivityJobs`, never in an exported report.
+// the serve, which ends every export anyway, starts empty (the key names the serve, `serveStamp`).
+// A dismissed chip has left the list, so it does not come back. Set by `rehydrateActivityJobs`,
+// never in an exported report.
 
 const STORAGE_PREFIX = "bristlenose-activity:";
 let storageKey: string | null = null;
+/** Where this window keeps its chips for `projectId`, or null when the page cannot tell its serve
+ *  from another (no token): then they are not kept, rather than shared between studies. */
+export function activityStorageKey(projectId: string): string | null {
+  const stamp = serveStamp();
+  return stamp ? `${STORAGE_PREFIX}${projectId}:${stamp}` : null;
+}
+
 /** The chips this load brought back from the last one; only they can stand for an export the
  *  server has since replaced (a chip started now names the export its own start returned). */
 let carriedIds = new Set<string>();
@@ -68,11 +76,12 @@ let carriedIds = new Set<string>();
 /**
  * Which serve the page came from. Every serve says project 1, and the CLI's serves share one port
  * and so one origin, so a tab reloaded onto another study's serve would otherwise get this study's
- * chips. The bearer token is minted per serve start; only a digest of it goes into the key.
+ * chips. The bearer token is minted per serve start; only a digest of it goes into the key. With
+ * no token there is nothing to tell serves apart by, so nothing is kept (`activityStorageKey`).
  */
 function serveStamp(): string {
   const token = (window as unknown as Record<string, unknown>).__BRISTLENOSE_AUTH_TOKEN__;
-  if (typeof token !== "string") return "";
+  if (typeof token !== "string" || token === "") return "";
   let h = 0x811c9dc5;
   for (let i = 0; i < token.length; i++) h = Math.imul(h ^ token.charCodeAt(i), 0x01000193);
   return (h >>> 0).toString(36);
@@ -224,8 +233,8 @@ function hasJob(test: (job: ActivityJobEntry) => boolean): boolean {
 export function rehydrateActivityJobs(projectId: string): Promise<void> {
   if (isExportMode() || rehydratedProjectId === projectId) return Promise.resolve();
   rehydratedProjectId = projectId;
-  const key = `${STORAGE_PREFIX}${projectId}:${serveStamp()}`;
-  if (storageKey !== key) {
+  const key = activityStorageKey(projectId);
+  if (key !== null && storageKey !== key) {
     storageKey = key;
     const back = carried(storageKey).filter(([id]) => !jobs.has(id));
     carriedIds = new Set(back.map(([id]) => id));

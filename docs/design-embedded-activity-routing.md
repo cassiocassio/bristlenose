@@ -208,10 +208,14 @@ Web keeps its HTTP poll; embedded, `useBridgeActivitySync` posts
   no chip for (another window's, which stay plain). Clip and screens jobs carry a
   `job_id`, repeated by their status reads; a carried chip whose id is no longer the
   server's has been replaced by a newer export and is dropped on load, finished or not,
-  never shown, revealed or copied (`sameExport`), and Cancel stops only the chip's own
-  export. The key names the serve (a digest of its per-start bearer token), so a serve
-  restart, which ends every export anyway, starts empty in a browser too (the CLI's
-  serves share a port and so a tab); nothing is persisted on the server (decision #38).
+  never shown, revealed or copied (`sameExport`). Cancel names the chip's export
+  (`job_id` in the body); the server refuses a cancel naming another (409) and the chip
+  goes, so a newer export another window started is never stopped. The key names the
+  serve (a digest of its per-start bearer token), so a serve restart, which ends every
+  export anyway, starts empty in a browser too (the CLI's serves share a port and so a
+  tab); a page with no token keeps nothing (`activityStorageKey`). Known limit: a token
+  pinned in the shell (`_BRISTLENOSE_AUTH_TOKEN`) is the same for every serve, so their
+  lists share a key. Nothing is persisted on the server (decision #38).
   A chip records its ending (`settleJob`) after its completion handler settles, and a
   Copy Screens copies only on a real `completed`, never on the lost state.
 

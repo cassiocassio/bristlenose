@@ -5,7 +5,7 @@ import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
 import { closeToc, openTocPush, resetSidebarStore } from "./contexts/SidebarStore";
 import { resetQuoteGroupingSlot } from "./contexts/QuoteGroupingSlot";
-import { addJob, resetActivityStore } from "./contexts/ActivityStore";
+import { activityStorageKey, addJob, resetActivityStore } from "./contexts/ActivityStore";
 import { act } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
@@ -449,8 +449,10 @@ describe("Activity chips after a reload", () => {
 describe("A Copy Screens across a reload", () => {
   let postMessage: ReturnType<typeof vi.fn>;
   let serverJob = "s1";
+  // A real serve's token: with none, nothing is kept across a reload.
+  const key = () => activityStorageKey("1")!;
   const carry = (entry: Record<string, unknown>) =>
-    sessionStorage.setItem("bristlenose-activity:1:", JSON.stringify([["screens:1", entry]]));
+    sessionStorage.setItem(key(), JSON.stringify([["screens:1", entry]]));
   const copyEntry = {
     type: "screens", frameworkId: "", frameworkTitle: "", total: 2, copyWhenDone: true, jobId: "s1",
   };
@@ -466,6 +468,7 @@ describe("A Copy Screens across a reload", () => {
       messageHandlers: { navigation: { postMessage } },
     };
     (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_AUTH_TOKEN__ = "serve-token";
     _resetEmbeddedCache();
     vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
       const url = String(input);
@@ -486,6 +489,7 @@ describe("A Copy Screens across a reload", () => {
   afterEach(() => {
     resetActivityStore();
     delete (window as unknown as Record<string, unknown>).webkit;
+    delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_AUTH_TOKEN__;
   });
 
   it("finishing during the reload, still copies, once, in the window that asked", async () => {
@@ -503,7 +507,7 @@ describe("A Copy Screens across a reload", () => {
     });
     expect(copies()).toHaveLength(1);
     // Carried as finished, so the next reload shows it without copying again.
-    const kept = JSON.parse(sessionStorage.getItem("bristlenose-activity:1:") ?? "[]");
+    const kept = JSON.parse(sessionStorage.getItem(key()) ?? "[]");
     expect(kept[0][1].outcome.status).toBe("completed");
   }, 10_000);
 
@@ -528,13 +532,67 @@ describe("A Copy Screens across a reload", () => {
     const screensReads = () =>
       vi.mocked(globalThis.fetch).mock.calls.filter((c) => String(c[0]).includes("/export/screens/status"));
     await waitFor(() => expect(screensReads().length).toBeGreaterThan(0), { timeout: 5000 });
-    expect(JSON.parse(sessionStorage.getItem("bristlenose-activity:1:") ?? "[]")).toEqual([]);
+    expect(JSON.parse(sessionStorage.getItem(key()) ?? "[]")).toEqual([]);
     await waitFor(() => expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument(), { timeout: 5000 });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 2500));
     });
     expect(copies()).toHaveLength(0);
   }, 10_000);
+});
+
+describe("Cancel on a chip carried across a reload", () => {
+  let cancelStatus = 200;
+  const w = window as unknown as Record<string, unknown>;
+  const cancels = () =>
+    vi.mocked(globalThis.fetch).mock.calls.filter((c) => String(c[0]).includes("/export/clips/cancel"));
+
+  beforeEach(() => {
+    resetSidebarStore();
+    resetActivityStore();
+    cancelStatus = 200;
+    w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-token";
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/export/clips/cancel")) {
+        return new Response(JSON.stringify({ detail: "replaced" }), {
+          status: cancelStatus, headers: { "Content-Type": "application/json" },
+        });
+      }
+      const body = url.includes("/export/clips/status")
+        ? { status: "running", progress: 1, total: 4, completed_count: 1, skipped_count: 0, current_clip: "",
+            output_dir: null, job_id: "c1" }
+        : url.includes("/sessions")
+          ? { sessions: [] }
+          : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    sessionStorage.setItem(activityStorageKey("1")!, JSON.stringify([
+      ["clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", total: 4, jobId: "c1" }],
+    ]));
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+    delete w.__BRISTLENOSE_AUTH_TOKEN__;
+  });
+
+  it("names its own export, so a newer one another window started is never stopped", async () => {
+    renderRoute("/report/sessions/");
+    const cancel = await screen.findByTestId("bn-activity-chip-cancel", {}, { timeout: 5000 });
+    act(() => cancel.click());
+    await waitFor(() => expect(cancels()).toHaveLength(1));
+    expect(JSON.parse(String(cancels()[0][1]?.body))).toEqual({ job_id: "c1" });
+  });
+
+  it("goes when the server says its export was replaced", async () => {
+    cancelStatus = 409;
+    renderRoute("/report/sessions/");
+    const cancel = await screen.findByTestId("bn-activity-chip-cancel", {}, { timeout: 5000 });
+    act(() => cancel.click());
+    await waitFor(() => expect(screen.queryByTestId("bn-activity-chip")).not.toBeInTheDocument());
+    expect(cancels()).toHaveLength(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

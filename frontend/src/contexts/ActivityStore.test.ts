@@ -4,6 +4,7 @@ import {
   addJob,
   removeJob,
   settleJob,
+  activityStorageKey,
   getJobs,
   useActivityJobs,
   resetActivityStore,
@@ -276,8 +277,12 @@ describe("a window's chips across a reload", () => {
     await rehydrateActivityJobs(projectId);
   }
 
+  const w = window as unknown as Record<string, unknown>;
+  const key = () => activityStorageKey("1")!;
+
   beforeEach(() => {
     resetActivityStore();
+    w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-a";
     vi.mocked(isExportMode).mockReturnValue(false);
     clips.mockReset().mockResolvedValue(idle);
     screens.mockReset().mockResolvedValue(idle);
@@ -286,6 +291,22 @@ describe("a window's chips across a reload", () => {
 
   afterEach(() => {
     resetActivityStore();
+    delete w.__BRISTLENOSE_AUTH_TOKEN__;
+  });
+
+  it("keeps nothing when the page cannot tell its serve from another", async () => {
+    // No token: every serve on the port would share one list, so none is kept or read.
+    delete w.__BRISTLENOSE_AUTH_TOKEN__;
+    const set = vi.spyOn(Storage.prototype, "setItem");
+    try {
+      await rehydrateActivityJobs("1");
+      addJob("clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", total: 4, jobId: "c1" });
+      expect(set).not.toHaveBeenCalled();
+      await reload();
+      expect(getJobs().size).toBe(0);
+    } finally {
+      set.mockRestore();
+    }
   });
 
   it("puts back the chips the window had, in order, as they were", async () => {
@@ -364,9 +385,7 @@ describe("a window's chips across a reload", () => {
   it("a reload onto another serve starts empty", async () => {
     // Every serve says project 1 and the CLI's share a port, so a tab reloaded after
     // `serve studyB` must not show study A's chips. Each serve mints its own token.
-    const w = window as unknown as Record<string, unknown>;
     try {
-      w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-a";
       await rehydrateActivityJobs("1");
       addJob("clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", total: 4, jobId: "c1" });
       w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-b";
@@ -376,7 +395,7 @@ describe("a window's chips across a reload", () => {
       await reload();
       expect([...getJobs().keys()]).toEqual(["clips:1"]);
     } finally {
-      delete w.__BRISTLENOSE_AUTH_TOKEN__;
+      w.__BRISTLENOSE_AUTH_TOKEN__ = "serve-a";
     }
   });
 
@@ -426,7 +445,7 @@ describe("a window's chips across a reload", () => {
   });
 
   it("does not take a carried chip that claims to have ended running", async () => {
-    sessionStorage.setItem("bristlenose-activity:1:", JSON.stringify([
+    sessionStorage.setItem(key(), JSON.stringify([
       ["clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", outcome: { ...done, status: "running" } }],
     ]));
     await rehydrateActivityJobs("1");
@@ -441,7 +460,7 @@ describe("a window's chips across a reload", () => {
     try {
       settleJob("screens:1", done);
       removeJob("screens:1");
-      expect(sessionStorage.getItem("bristlenose-activity:1:")).toBeNull();
+      expect(sessionStorage.getItem(key())).toBeNull();
       expect(warn).toHaveBeenCalledTimes(1);
     } finally {
       set.mockRestore();
@@ -498,10 +517,10 @@ describe("a window's chips across a reload", () => {
   });
 
   it("ignores a carried list it cannot read", async () => {
-    sessionStorage.setItem("bristlenose-activity:1:", "{not json");
+    sessionStorage.setItem(key(), "{not json");
     await rehydrateActivityJobs("1");
     expect(getJobs().size).toBe(0);
-    sessionStorage.setItem("bristlenose-activity:1:", JSON.stringify([
+    sessionStorage.setItem(key(), JSON.stringify([
       ["x", { type: "rocket", frameworkId: "", frameworkTitle: "" }],
       ["y", { type: "clips" }],
       7,

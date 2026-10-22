@@ -741,11 +741,12 @@ function AppShell() {
             },
             actionLabel: i18n.t("export.clips.reveal"),
             onCancel: () => {
-              // Only this chip's export: a chip carried across a reload may not have read yet,
-              // and the cancel route stops whatever export the server holds (RE#38).
-              getClipExtractionStatus()
-                .then((s) => (sameExport(j.jobId, s.job_id) ? cancelClipExtraction() : undefined))
-                .catch((err) => console.error("Cancel clip extraction failed:", err));
+              // Only this chip's export (RE#38): the server refuses a cancel naming another,
+              // which means a newer export replaced this one, so its chip goes.
+              cancelClipExtraction(j.jobId).catch((err: { status?: number }) => {
+                if (err?.status === 409) removeJob(id);
+                else console.error("Cancel clip extraction failed:", err);
+              });
             },
             outcome: j.outcome,
             pollFn: async (): Promise<NormalisedJobStatus> => {
@@ -817,10 +818,11 @@ function AppShell() {
             },
             actionLabel: i18n.t("export.screens.reveal"),
             onCancel: () => {
-              // As for clips: only this chip's export (RE#38).
-              getScreensExportStatus()
-                .then((s) => (sameExport(j.jobId, s.job_id) ? cancelScreensExport() : undefined))
-                .catch((err) => console.error("Cancel screens export failed:", err));
+              // As for clips: only this chip's export, and a refusal means it was replaced.
+              cancelScreensExport(j.jobId).catch((err: { status?: number }) => {
+                if (err?.status === 409) removeJob(id);
+                else console.error("Cancel screens export failed:", err);
+              });
             },
             outcome: j.outcome,
             pollFn: async (): Promise<NormalisedJobStatus> => {

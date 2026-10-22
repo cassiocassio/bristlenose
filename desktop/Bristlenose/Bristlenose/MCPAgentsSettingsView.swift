@@ -59,6 +59,10 @@ struct MCPAgentsSettingsView: View {
     /// "Or connect by hand" on the ChatGPT tab, closed by default: the plugin
     /// is the route, the pasted config is for Codex in a terminal or an IDE.
     @State private var chatGPTManualOpen = false
+    /// The last Install on that row opened nothing (decision #42). Cleared
+    /// by the next attempt.
+    @State private var claudeInstallFailed = false
+    @State private var chatGPTInstallFailed = false
     @State private var copiedResetTask: Task<Void, Never>?
     /// Projects unticked while this pane has been open. They stay on screen as
     /// dimmed receipts and can be re-ticked to undo; cleared on `.onAppear`, so
@@ -884,7 +888,7 @@ struct MCPAgentsSettingsView: View {
                 // The pane's ONE prominent action (HIG: a single filled
                 // button per surface; the per-tab Copy stays bordered).
                 Button(i18n.t(extensionState.buttonKey)) {
-                    MCPExtensionInstaller.install()
+                    claudeInstallFailed = !MCPExtensionInstaller.install()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!MCPExtensionInstaller.canPackage)
@@ -907,6 +911,17 @@ struct MCPAgentsSettingsView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
         )
+    }
+
+    /// Under an install row whose last press opened nothing — no package to
+    /// build, nothing that would open it (decision #42, 22 Oct 2026). One
+    /// sentence for both rows, in the foot-line style of the lines beside it.
+    private var installFailedLine: some View {
+        Text(i18n.t("desktop.mcpAgents.installFailed"))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .textSelection(.enabled)
     }
 
     /// What we ship, compared against what called us. Derived, never assumed.
@@ -974,7 +989,7 @@ struct MCPAgentsSettingsView: View {
             switch chatGPTAvailability {
             case .ready, .notBundled, .notInApplications:
                 Button(i18n.t(chatGPTButtonKey)) {
-                    ChatGPTPluginInstaller.install()
+                    chatGPTInstallFailed = !ChatGPTPluginInstaller.install()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(chatGPTAvailability != .ready)
@@ -1085,6 +1100,7 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 installRow
+                if claudeInstallFailed { installFailedLine }
                 // Directly under the row it describes, because it is a fact
                 // ABOUT the thing that row installs — not a consequence of
                 // pressing it (that's the prompt note below, which is
@@ -1160,6 +1176,7 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 chatGPTRow
+                if chatGPTInstallFailed { installFailedLine }
                 if let line = chatGPTFootLine {
                     Text(line)
                         .font(.footnote)
@@ -1429,12 +1446,15 @@ enum MCPExtensionInstaller {
     /// Written into our own container, which Claude reads through LaunchServices
     /// (measured 29 Sep 2026, §6.7 P0.4). Returns false if it could not be built.
     @MainActor @discardableResult
-    static func installNative() -> Bool {
+    static func installNative(
+        container: URL? = MCPHandshake.defaultDirectory(),
+        open: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    ) -> Bool {
         guard let helper = helperURL else {
             log.error("native extension: no helper in the bundle")
             return false
         }
-        guard let container = MCPHandshake.defaultDirectory() else {
+        guard let container else {
             log.error("native extension: no container to write it to")
             return false
         }
@@ -1447,7 +1467,7 @@ enum MCPExtensionInstaller {
             try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
             let dest = container.appendingPathComponent(filename)
             try data.write(to: dest, options: .atomic)
-            guard NSWorkspace.shared.open(dest) else {
+            guard open(dest) else {
                 log.error("native extension: built, but nothing opened it")
                 return false
             }
@@ -1460,18 +1480,27 @@ enum MCPExtensionInstaller {
 
     /// Copy-then-open. 0644 is fine — the `.mcpb` carries no secret (the
     /// token travels in the handshake, not the extension).
-    @MainActor static func install() {
-        if usesNativeHelper, installNative() { return }
-        // What a researcher sees here is unchanged, and says nothing: the
-        // Node extension in place of the native one, or no install at all
-        // (R42, open — it needs words). The log at least records which.
+    ///
+    /// Returns whether something was actually opened — the native package,
+    /// the Node extension, or the bundled copy as a last resort. False is the
+    /// install that left the researcher with nothing, and the row says so
+    /// (`desktop.mcpAgents.installFailed`, decision #42, 22 Oct 2026).
+    /// `container` and `open` are seams for tests.
+    @MainActor @discardableResult
+    static func install(
+        container: URL? = MCPHandshake.defaultDirectory(),
+        open: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    ) -> Bool {
+        if usesNativeHelper, installNative(container: container, open: open) { return true }
+        // The Node extension in place of the native one says nothing on
+        // screen, and is not meant to (out of scope for #42); the log
+        // records it.
         if usesNativeHelper {
             log.error("native extension failed — falling back to the Node extension")
         }
-        guard let bundled = bundledURL,
-              let container = MCPHandshake.defaultDirectory() else {
+        guard let bundled = bundledURL, let container else {
             log.error("no extension to install: no bundled Node extension or no container")
-            return
+            return false
         }
         let dest = container.appendingPathComponent(filename)
         let fm = FileManager.default
@@ -1488,16 +1517,20 @@ enum MCPExtensionInstaller {
             } else {
                 try fm.copyItem(at: bundled, to: dest)
             }
-            if !NSWorkspace.shared.open(dest) {
+            guard open(dest) else {
                 log.error("Node extension: copied, but nothing opened it")
+                return false
             }
+            return true
         } catch {
             // Degraded, not broken: last resort is opening the bundled copy
             // directly — worse (path churns on update) but not wrong.
             log.error("Node extension could not be copied: \(error.localizedDescription, privacy: .public) — opening the bundled copy")
-            if !NSWorkspace.shared.open(bundled) {
+            guard open(bundled) else {
                 log.error("the bundled Node extension did not open either")
+                return false
             }
+            return true
         }
     }
 }

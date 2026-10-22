@@ -67,8 +67,20 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
             " processed_quotes, proposed_count, catch_up_total, catch_up_processed,"
             " error_message, failure_kind, llm_provider, llm_model, prompt_version,"
             " input_tokens, output_tokens, started_at, completed_at)"
-            " VALUES (1, 'uxr', 'cancelled', 0, 0, 0, 0, 0, '', '', '', '', '', 0, 0,"
+            " VALUES (1, 'uxr', 'cancelled', 10, 4, 4, 0, 0, '', '', '', '', '', 0, 0,"
             " '2020-01-01 09:00:00', '2020-01-01 09:30:00.123456')",
+        )
+        # A catch-up stopped on an older release, then a run's re-apply that coded
+        # everything: it ran on the cancelled job and moved completed_at past its
+        # start, leaving the first apply's signature on a fully coded codebook.
+        coded_after_a_stop = _insert(
+            conn,
+            "INSERT INTO autocode_jobs (project_id, framework_id, status, total_quotes,"
+            " processed_quotes, proposed_count, catch_up_total, catch_up_processed,"
+            " error_message, failure_kind, llm_provider, llm_model, prompt_version,"
+            " input_tokens, output_tokens, started_at, completed_at)"
+            " VALUES (1, 'yablonski', 'cancelled', 12, 12, 12, 0, 0, '', '', '', '', '',"
+            " 0, 0, '2020-01-01 09:00:00', '2020-01-01 10:00:00.000000')",
         )
         # A catch-up stopped since 20 Oct: its start is past the job's completed_at.
         stopped_catch_up = _insert(
@@ -95,11 +107,14 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
     assert sorted(rows) == sorted([
         (applied, sessions["s1"]), (applied, sessions["s3"]),
         (stopped_catch_up, sessions["s1"]), (stopped_catch_up, sessions["s3"]),
+        (coded_after_a_stop, sessions["s1"]), (coded_after_a_stop, sessions["s3"]),
     ])
     # The stopped first apply is not applied (#65): nothing maintains it, and
     # Apply can retry it. The stopped catch-up keeps its job's time.
     assert completed[stopped_first] is None
     assert completed[stopped_catch_up] is not None
+    # Nothing was cut off (every quote it sent answered): still applied.
+    assert completed[coded_after_a_stop] is not None
     from tests.test_migrations import MIGRATION_HEAD
 
     assert version == MIGRATION_HEAD

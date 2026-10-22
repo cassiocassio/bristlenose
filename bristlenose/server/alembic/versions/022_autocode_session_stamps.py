@@ -19,9 +19,20 @@ unstamped but applied, the next run would auto-accept the whole uncoded corpus
 at the default cutoff with no review, the harm #65 refused. Such a job is told
 from a stopped catch-up by its times: a first apply's ``started_at`` is its
 creation, before the Stop, while starting a catch-up moves ``started_at`` past
-the job's ``completed_at``. A heuristic, said so: a catch-up stopped before
-20 Oct 2026, when a Stop still moved ``completed_at``, reads the same; a catch-up
-had no Stop button, so none is expected. Its pending proposals stay for review.
+the job's ``completed_at``. And only a Stop that cut quotes off counts
+(``processed_quotes < total_quotes``): a run's re-apply ran on a cancelled job
+and moved ``completed_at`` past its start, so a stopped catch-up that a run then
+finished reads like a first apply, and un-applying it would hide a fully coded
+codebook's proposals, end its maintenance and let Apply wipe it.
+
+A heuristic, said so. A catch-up stopped before 20 Oct 2026, when a Stop still
+moved ``completed_at``, reads the same; a catch-up had no Stop button, so none is
+expected. The other way: a first apply stopped, then switched off and on, whose
+catch-up completed, now reads "completed" and is backfilled as coded, so the
+quotes the Stop cut off stay uncoded. An un-applied job keeps its pending
+proposals in the database, but the Quotes lens shows no cancelled job's
+proposals, as before, and nothing in the app reaches the proposals endpoint for
+one.
 
 Guarded per the Alembic discipline: ``upgrade()`` runs on a fresh DB too, where
 ``create_all()`` has already made the table (and there is nothing to backfill).
@@ -48,7 +59,7 @@ def upgrade() -> None:
     op.execute(sa.text(
         "UPDATE autocode_jobs SET completed_at = NULL"
         " WHERE status = 'cancelled' AND completed_at IS NOT NULL"
-        " AND started_at <= completed_at"
+        " AND started_at <= completed_at AND processed_quotes < total_quotes"
     ))
     if not _has_table("autocode_session_stamps"):
         op.create_table(

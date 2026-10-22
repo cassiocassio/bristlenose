@@ -369,6 +369,54 @@ class TestStartAutoCodeJob:
         finally:
             db.close()
 
+    @pytest.mark.parametrize("status", ["cancelled", "failed"])
+    def test_apply_over_an_applied_job_is_refused(
+        self, client_with_garrett: TestClient, status: str
+    ) -> None:
+        """#64: a failed or stopped catch-up leaves an applied job "failed" or
+        "cancelled", and Apply then deleted every proposal of the original apply
+        and coded the whole corpus again. An applied job (completed_at set) is
+        refused like a completed one, whatever its status (RE#66)."""
+        from datetime import datetime
+
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            job = AutoCodeJob(
+                project_id=1, framework_id="garrett", status=status,
+                completed_at=datetime(2026, 10, 20, 10, 0, 0),
+            )
+            db.add(job)
+            db.flush()
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            tag = db.query(TagDefinition).first()
+            assert quote is not None and tag is not None
+            db.add(ProposedTag(
+                job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+                confidence=0.9, rationale="r",
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings") as mock_ls,
+            patch(
+                "bristlenose.server.routes.autocode.run_autocode_job",
+                new_callable=AsyncMock,
+            ),
+            patch("bristlenose.server.routes.autocode.asyncio.create_task"),
+        ):
+            mock_ls.return_value = _mock_cloud_settings()
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+
+        assert resp.status_code == 409
+        assert resp.json()["reason"] == "already_applied"
+        db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            assert db.query(ProposedTag).count() == 1
+        finally:
+            db.close()
+
     @pytest.mark.parametrize("dead_status", ["cancelled", "failed"])
     def test_dead_job_can_be_rerun(
         self, client_with_garrett: TestClient, dead_status: str
@@ -509,7 +557,9 @@ class TestCancelAutoCodeJob:
     def test_cancel_running_job(
         self, client_with_garrett: TestClient
     ) -> None:
-        """Cancelling a running job sets status to cancelled."""
+        """Cancelling a running job sets status to cancelled, and a stopped first
+        apply is not an applied one: completed_at stays empty, so no run or
+        re-enable maintains it (#65, RE#66)."""
         db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
         try:
             db.add(AutoCodeJob(
@@ -525,14 +575,13 @@ class TestCancelAutoCodeJob:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "cancelled"
-        assert data["completed_at"] is not None
+        assert data["completed_at"] is None
 
-    def test_a_stopped_catch_up_keeps_its_watermark(
+    def test_a_stopped_catch_up_keeps_its_completed_at(
         self, client_with_garrett: TestClient
     ) -> None:
-        """A Stop moved completed_at to the Stop time, past sessions the catch-up
-        never coded, so no later re-apply would code them (R12 wave 6). A Stop
-        sets the time only on a job that has none: the first apply's."""
+        """A Stop moved completed_at to the Stop time (R12 wave 6). A Stop never
+        sets it now (#65, RE#66): a catch-up's job keeps the time it has."""
         from datetime import datetime
 
         db = client_with_garrett.app.state.db_factory()  # type: ignore[union-attr]
@@ -1106,3 +1155,61 @@ class TestDenyAllProposals:
     def test_deny_all_404_no_job(self, client: TestClient) -> None:
         resp = client.post("/api/projects/1/autocode/garrett/deny-all")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# GET /quotes — an applied codebook's proposals, whatever its last catch-up did
+# ---------------------------------------------------------------------------
+
+
+def _proposal_count(body: object) -> int:
+    """Every proposed tag anywhere in the quotes payload."""
+    if isinstance(body, dict):
+        here = len(body["proposed_tags"]) if isinstance(body.get("proposed_tags"), list) else 0
+        return here + sum(_proposal_count(v) for k, v in body.items() if k != "proposed_tags")
+    if isinstance(body, list):
+        return sum(_proposal_count(v) for v in body)
+    return 0
+
+
+class TestProposalsInTheQuotesLens:
+    def _seed(self, client: TestClient, status: str, completed_at: object) -> None:
+        db = client.app.state.db_factory()  # type: ignore[union-attr]
+        try:
+            job = AutoCodeJob(
+                project_id=1, framework_id="garrett", status=status,
+                completed_at=completed_at,
+            )
+            db.add(job)
+            db.flush()
+            quote = db.query(Quote).filter_by(project_id=1).first()
+            tag = db.query(TagDefinition).first()
+            assert quote is not None and tag is not None
+            db.add(ProposedTag(
+                job_id=job.id, quote_id=quote.id, tag_definition_id=tag.id,
+                confidence=0.9, rationale="r",
+            ))
+            db.commit()
+        finally:
+            db.close()
+
+    @pytest.mark.parametrize("status", ["completed", "running", "failed", "cancelled"])
+    def test_an_applied_codebooks_proposals_show_whatever_its_status(
+        self, client_with_garrett: TestClient, status: str,
+    ) -> None:
+        """The lens read proposals from "completed" jobs only, so while a catch-up
+        ran ("running"), after one failed or a restart cut it off ("failed",
+        RE#66 #63), or after a Stop ("cancelled"), the first apply's pending
+        proposals vanished from every quote. Applied is ``completed_at``."""
+        from datetime import datetime
+
+        self._seed(client_with_garrett, status, datetime(2026, 10, 20, 10, 0, 0))
+        body = client_with_garrett.get("/api/projects/1/quotes").json()
+        assert _proposal_count(body) == 1
+
+    def test_a_first_apply_still_coding_shows_none(
+        self, client_with_garrett: TestClient,
+    ) -> None:
+        self._seed(client_with_garrett, "running", None)
+        body = client_with_garrett.get("/api/projects/1/quotes").json()
+        assert _proposal_count(body) == 0

@@ -1144,6 +1144,10 @@ def _reconcile_orphaned_autocode_jobs(session_factory: Callable[[], Session]) ->
         db.close()
 
 
+# Strong references to the after-run re-apply tasks (see _make_run_completed_handler).
+_REAPPLY_AFTER_RUN_TASKS: set[asyncio.Task[None]] = set()
+
+
 def _make_run_completed_handler(
     app: FastAPI,
     session_factory: Callable[[], Session],
@@ -1240,19 +1244,35 @@ def _make_run_completed_handler(
         if st_job is not None:
             st_job.start()
         # After the new sessions import + publish, re-apply already-applied
-        # codebooks to the newly-added quotes — delta only, at each job's stored
+        # codebooks to the sessions they owe — delta only, at each job's stored
         # cutoff, no review. A safe no-op when nothing was applied or nothing is
-        # new, so it's fine to fire on every run_completed. Publish above happens
+        # owed, so it's fine to fire on every run_completed. Publish above happens
         # first (the SPA polls it); tags land on a later poll. Guarded — a
         # re-apply failure never breaks the import/publish contract.
+        #
+        # On its own task, never awaited here: the watcher awaits this handler,
+        # so while a re-apply spent (or waited on a live catch-up, which has no
+        # time limit) the serve read no events, and a second run's progress and
+        # completion went unseen until it ended (#67, RE#66).
         try:
             from bristlenose.config import load_settings
             from bristlenose.server.autocode import reapply_active_frameworks
 
             settings = getattr(app.state, "settings", None) or load_settings()
-            await reapply_active_frameworks(session_factory, project_id, settings)
+            reapply = reapply_active_frameworks(session_factory, project_id, settings)
         except Exception:
             logger.exception("Auto re-apply after run_completed failed")
+            return
+
+        async def _reapply_after_run() -> None:
+            try:
+                await reapply
+            except Exception:
+                logger.exception("Auto re-apply after run_completed failed")
+
+        task = asyncio.create_task(_reapply_after_run())
+        _REAPPLY_AFTER_RUN_TASKS.add(task)  # a bare task can be GC'd mid-flight
+        task.add_done_callback(_REAPPLY_AFTER_RUN_TASKS.discard)
 
     return _on_run_completed
 

@@ -930,19 +930,15 @@ def remove_framework(
         # reversible one, and it already preserves everything.
         #
         # The project-scoped rows go unconditionally.
-        job_ids = [
+        # With the job go its proposals and its session stamps.
+        from bristlenose.server.autocode import delete_jobs
+
+        delete_jobs(db, [
             r[0]
             for r in db.query(AutoCodeJob.id)
             .filter_by(project_id=project_id, framework_id=framework_id)
             .all()
-        ]
-        if job_ids:
-            db.query(ProposedTag).filter(
-                ProposedTag.job_id.in_(job_ids)
-            ).delete(synchronize_session=False)
-            db.query(AutoCodeJob).filter(
-                AutoCodeJob.id.in_(job_ids)
-            ).delete(synchronize_session=False)
+        ])
 
         # The INSTANCE-scoped rows only when nothing else references them.
         # CodebookGroup and TagDefinition are shared across projects — the same

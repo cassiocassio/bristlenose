@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
-from bristlenose.server.autocode import run_autocode_job
+from bristlenose.server.autocode import delete_jobs, run_autocode_job
 from bristlenose.server.codebook import get_template
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
@@ -201,13 +201,16 @@ async def start_autocode_job(
                 f"Framework template '{framework_id}' not found",
             )
 
-        # Check for an existing job. A *cancelled* or *failed* job produced no
-        # usable result, so it must not permanently block a retry — otherwise the
-        # Apply button stays enabled (acDisabled only covers running/completed) yet
-        # every click 409s and the frontend swallows it, so the button "does
-        # nothing". Clear the dead job below and let a fresh run proceed. A
-        # pending/running job is genuinely in flight, and a completed job has
-        # results (the UI morphs to "View Report") — both keep the 409.
+        # Check for an existing job. A *cancelled* or *failed* job that was never
+        # applied produced no usable result, so it must not permanently block a
+        # retry — otherwise the Apply button stays enabled (acDisabled only covers
+        # running/completed) yet every click 409s and the frontend swallows it, so
+        # the button "does nothing". Clear the dead job below and let a fresh run
+        # proceed. A pending/running job is genuinely in flight, and an applied
+        # job has results — both keep the 409. Applied is ``completed_at``, not
+        # status: a failed or stopped catch-up leaves an applied job "failed" or
+        # "cancelled", and clearing it deleted every proposal of the original
+        # apply and coded the whole corpus again (#64, RE#66).
         existing = (
             db.query(AutoCodeJob)
             .filter_by(project_id=project_id, framework_id=framework_id)
@@ -219,7 +222,7 @@ async def start_autocode_job(
                 RefusalReason.ALREADY_RUNNING,
                 f"AutoCode is already running for framework '{framework_id}'",
             )
-        if existing and existing.status == "completed":
+        if existing and (existing.status == "completed" or existing.completed_at is not None):
             raise RefusalError(
                 409,
                 RefusalReason.ALREADY_APPLIED,
@@ -270,14 +273,15 @@ async def start_autocode_job(
                 "in your .env file.",
             )
 
-        # A cancelled/failed job (the only survivors of the guards above) is
-        # discarded now — along with any partial proposals — so the
-        # (project_id, framework_id) unique constraint doesn't block the retry.
+        # A cancelled/failed job that was never applied (the only survivors of
+        # the guards above) is discarded now — along with any partial proposals
+        # and stamps — so the (project_id, framework_id) unique constraint
+        # doesn't block the retry.
         if existing:
-            db.query(ProposedTag).filter_by(job_id=existing.id).delete(
-                synchronize_session=False
-            )
-            db.delete(existing)
+            delete_jobs(db, [existing.id])
+            # A bulk delete leaves the row in the identity map; the new job can
+            # take its rowid, which SQLAlchemy warned about.
+            db.expunge(existing)
             db.flush()
 
         # Create job row
@@ -419,11 +423,11 @@ def cancel_autocode_job(
             )
 
         job.status = "cancelled"
-        # Only a first apply's Stop sets the time. A catch-up's job already has
-        # one, its watermark: moved to the Stop, it passed sessions the catch-up
-        # never coded, and no later re-apply would code them (R12 wave 6).
-        if job.completed_at is None:
-            job.completed_at = datetime.now(timezone.utc)
+        # A Stop never sets completed_at, which means "applied at least once". A
+        # stopped first apply is not an applied one: set, it joined maintenance,
+        # so the next run auto-accepted new sessions at the default cutoff and the
+        # quotes the Stop cut off were never coded (#65, RE#66). A catch-up's job
+        # keeps the time it has.
         db.commit()
         return _job_to_out(job)
 

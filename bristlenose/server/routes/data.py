@@ -1634,10 +1634,11 @@ def _schedule_catch_up(
 ) -> None:
     """Fire one delta re-apply for a just-re-enabled framework (best-effort).
 
-    A framework flipped disabled → enabled catches up on the sessions added while
-    it was off (design-codebook-state-model.md §4a). Reuses the same non-clobbering
-    delta the ``run_completed`` path uses, scoped to this one framework; a safe
-    no-op when it was never applied or has no new sessions. Fire-and-forget — never
+    A framework flipped disabled → enabled catches up on the sessions it owes:
+    those added while it was off, and any a failed pass left
+    (design-codebook-state-model.md §4a). Reuses the same non-clobbering delta the
+    ``run_completed`` path uses, scoped to this one framework; a safe no-op when it
+    was never applied or owes nothing. Fire-and-forget — never
     blocks or fails the PUT.
     """
     import asyncio
@@ -1680,8 +1681,8 @@ def _start_catch_ups(
     """Of the re-enabled frameworks, pick the ones with a real catch-up to run and
     mark their job "running" now.
 
-    A framework catches up only if it has a completed job AND at least one session
-    was imported since that job finished (the frozen watermark; §4a). Setting the
+    A framework catches up only if it has an applied job AND it owes at least one
+    session (a session with quotes and no stamp from the job; §4a). Setting the
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
     where it would otherwise see the stale "completed" and resolve instantly. A
@@ -1690,8 +1691,8 @@ def _start_catch_ups(
     "running" with no task behind it is started again. Zeroes the catch-up's own
     counts, which the chip reads. Cheap: two indexed queries per framework, no LLM.
     """
+    from bristlenose.server.autocode import owed_sessions
     from bristlenose.server.models import AutoCodeJob
-    from bristlenose.server.models import Session as SessionModel
 
     started: list[str] = []
     for fid in framework_ids:
@@ -1706,20 +1707,13 @@ def _start_catch_ups(
             # A re-apply still coding this delta: a catch-up (the switch went off
             # and on while it ran), whose chip is already up and resolves when it
             # ends, or a finished run's, which codes these sessions without one.
-            # A second would code the same sessions again on the same job.
+            # A second would code the same sessions again on the same job. One
+            # gap (RE#66, open): a run's re-apply skips the batches it reaches
+            # while the switch is off, so an off-and-on during it leaves those
+            # owed until the next run or switch-on.
             continue
-        has_new = (
-            db.query(SessionModel.session_id)
-            .filter(
-                SessionModel.project_id == project_id,
-                SessionModel.first_imported_at.isnot(None),
-                SessionModel.first_imported_at > job.completed_at,
-            )
-            .first()
-            is not None
-        )
-        if not has_new:
-            continue  # no new sessions since last apply → silent no-op
+        if not owed_sessions(db, job):
+            continue  # nothing owed → silent no-op
         job.status = "running"
         job.started_at = _now()
         job.catch_up_total = 0
@@ -1776,7 +1770,7 @@ async def put_framework_states(
             )
         db.commit()
         # OFF → ON transition: was explicitly disabled, now enabled (sent true or
-        # omitted → default enabled). Of those, only the ones with new sessions to
+        # omitted → default enabled). Of those, only the ones owing sessions to
         # code get a catch-up (job marked "running" synchronously so the chip catches
         # it); the rest are silent no-ops.
         reenabled = [fw for fw in was_disabled if data.get(fw, True)]

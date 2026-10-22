@@ -612,6 +612,41 @@ class TestReimportRemovedSession:
         # Stale theme should be gone
         assert db.query(ThemeGroup).count() == 0
 
+    def test_a_withdrawn_session_takes_its_stamps(self, db: Session, tmp_path: Path) -> None:
+        """An AutoCode stamp points at its session (RE#66), so a re-import that
+        withdraws the session deletes the stamp with it, or the delete fails on
+        the foreign key and the whole import with it."""
+        from bristlenose.server.models import AutoCodeJob, AutoCodeSessionStamp
+
+        _write_pipeline_output(tmp_path, [{
+            "screen_label": "Login", "description": "", "display_order": 1,
+            "quotes": [
+                _make_quote("s1", "p1", 10.0, "Login was easy"),
+                _make_quote("s2", "p1", 15.0, "Login was confusing"),
+            ],
+        }], [])
+        project = import_project(db, tmp_path)
+        job = AutoCodeJob(project_id=project.id, framework_id="garrett", status="completed")
+        db.add(job)
+        db.flush()
+        for sess in db.query(SessionModel).all():
+            db.add(AutoCodeSessionStamp(job_id=job.id, session_id=sess.id))
+        db.commit()
+
+        _write_pipeline_output(tmp_path, [{
+            "screen_label": "Login", "description": "", "display_order": 1,
+            "quotes": [_make_quote("s1", "p1", 10.0, "Login was easy")],
+        }], [])
+        import_project(db, tmp_path)
+
+        stamped = {
+            sid for (sid,) in db.query(SessionModel.session_id).join(
+                AutoCodeSessionStamp, AutoCodeSessionStamp.session_id == SessionModel.id,
+            )
+        }
+        assert stamped == {"s1"}
+        assert db.query(AutoCodeSessionStamp).count() == 1
+
     def test_removed_session_cleans_join_rows(
         self, db: Session, tmp_path: Path,
     ) -> None:

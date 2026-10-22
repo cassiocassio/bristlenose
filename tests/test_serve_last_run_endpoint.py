@@ -225,6 +225,15 @@ async def test_handler_imports_before_publishing_last_run(
     assert app.state.last_run[1]["outcome"] == "completed"
 
 
+async def _after_run_tasks() -> None:
+    """Wait for the re-apply tasks the handler started, rather than for a count
+    of yields that depends on how many awaits the stub has."""
+    from bristlenose.server.app import _REAPPLY_AFTER_RUN_TASKS
+
+    if _REAPPLY_AFTER_RUN_TASKS:
+        await asyncio.wait_for(asyncio.gather(*_REAPPLY_AFTER_RUN_TASKS), timeout=5)
+
+
 @pytest.mark.asyncio
 async def test_handler_reapplies_active_codebooks(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
@@ -248,11 +257,44 @@ async def test_handler_reapplies_active_codebooks(
 
     handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
     await handler(_completed(new_run_id()))
+    await _after_run_tasks()  # the re-apply runs on its own task (#67)
 
     # last_run is published AND the re-apply was invoked for the project.
     assert app.state.last_run[1]["outcome"] == "completed"
     assert called.get("project_id") == 1
     assert app.state.last_run[1]["completed_at"] == _TS
+
+
+@pytest.mark.asyncio
+async def test_handler_does_not_wait_for_the_re_apply(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """#67: the handler awaited the re-apply, and the watcher awaits the handler,
+    so while a codebook re-applied (or waited on a live catch-up, with no limit)
+    the serve read no events: a second run's progress and completion went unseen.
+    The re-apply now runs on its own task (RE#66)."""
+    project_dir = _seed_project(tmp_path)
+    app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
+    app.state.last_run = {}
+    app.state.settings = object()
+    release = asyncio.Event()
+    finished: list[int] = []
+
+    async def slow_reapply(_factory: Any, project_id: int, _settings: Any) -> dict:
+        await release.wait()
+        finished.append(project_id)
+        return {}
+
+    monkeypatch.setattr(
+        "bristlenose.server.autocode.reapply_active_frameworks", slow_reapply,
+    )
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+    await asyncio.wait_for(handler(_completed(new_run_id())), timeout=5)
+    assert app.state.last_run[1]["outcome"] == "completed"
+    assert finished == []
+    release.set()
+    await _after_run_tasks()
+    assert finished == [1]
 
 
 # ---------------------------------------------------------------------------

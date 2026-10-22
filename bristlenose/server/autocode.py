@@ -25,11 +25,12 @@ from bristlenose.llm.failure_classifier import classify_exception
 from bristlenose.server.codebook import CodebookTemplate, TemplateGroup, TemplateTag
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from sqlalchemy.orm import Session as SASession
 
     from bristlenose.config import BristlenoseSettings
+    from bristlenose.server.models import AutoCodeJob
 
 logger = logging.getLogger(__name__)
 
@@ -321,10 +322,12 @@ async def run_autocode_job(
         job_id = job.id
         total_quotes = job.total_quotes
 
-        async def _process_batch(batch: list[QuoteBatchItem]) -> list[ProposedTag]:
+        async def _process_batch(batch: list[QuoteBatchItem]) -> list[ProposedTag] | None:
             nonlocal processed_count
             async with semaphore:
                 # Cancellation checkpoint — check DB before starting LLM call.
+                # None = not sent, which neither answered nor failed: its
+                # sessions stay unstamped (RE#66).
                 cancel_db = db_factory()
                 try:
                     cancel_job = (
@@ -333,7 +336,7 @@ async def run_autocode_job(
                         .first()
                     )
                     if cancel_job and cancel_job.status == "cancelled":
-                        return []
+                        return None
                 finally:
                     cancel_db.close()
 
@@ -451,6 +454,8 @@ async def run_autocode_job(
                 if first_error is None:
                     first_error = batch_result
                 continue
+            if batch_result is None:
+                continue  # not sent: the job was stopped
             for proposal in batch_result:
                 prev = best_by_quote.get(proposal.quote_id)
                 if prev is None or proposal.confidence > prev.confidence:
@@ -458,6 +463,12 @@ async def run_autocode_job(
         for proposal in best_by_quote.values():
             db.add(proposal)
             proposed_count += 1
+        # The sessions this pass coded, in the same transaction as their
+        # proposals; a session in a batch that failed or was never sent stays
+        # owed, and the next re-apply codes it (RE#66).
+        stamp_sessions(
+            db, job_id, _session_pks(db, project_id, _sessions_answered(batches, batch_results)),
+        )
 
         logger.info(
             "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
@@ -498,23 +509,22 @@ async def run_autocode_job(
         job.proposed_count = proposed_count
         job.input_tokens = llm_client.tracker.input_tokens
         job.output_tokens = llm_client.tracker.output_tokens
-        # `completed_at` is NOT a timestamp of "the job stopped" — it is the
-        # applied watermark, and three things read it that way. It gates
-        # `reapply_active_frameworks`' ever-applied set; it is the cutoff
-        # `reapply_to_new_quotes` codes the delta *after*; and its presence is
-        # how `reconcile_orphaned_jobs` tells an initial-apply orphan from an
-        # interrupted catch-up.
+        # `completed_at` is NOT a timestamp of "the job stopped" — it means
+        # "applied at least once", and three things read it that way. It gates
+        # `reapply_active_frameworks`' ever-applied set and every re-apply; its
+        # presence is how `reconcile_orphaned_jobs` tells an initial-apply orphan
+        # from an interrupted catch-up; and Apply refuses a job that has it. Which
+        # sessions are coded is the stamps' job, not this one's (RE#66).
         #
-        # So stamping it on a job that coded nothing is worse than cosmetic: the
-        # framework joins the maintained set having applied nothing, and every
-        # future catch-up codes only sessions imported *since the failure* — the
-        # quotes it was installed for sit before the watermark and are never
-        # revisited. Left NULL, the job is exactly the shape the rest of the
-        # system already calls an initial-apply orphan, and a retry codes the
-        # whole corpus as it should.
+        # So setting it on a job that coded nothing is worse than cosmetic: the
+        # framework would join the maintained set having applied nothing, and
+        # Apply would refuse the retry. Left NULL, the job is exactly the shape
+        # the rest of the system already calls an initial-apply orphan, and a
+        # retry codes the whole corpus as it should.
         #
-        # A genuine partial keeps its stamp: some quotes really were coded, so
-        # the delta is the right unit of work from here.
+        # A genuine partial sets it: some quotes really were coded, and the
+        # sessions in its failed batches carry no stamp, so the next re-apply
+        # codes them.
         if not nothing_landed:
             job.completed_at = datetime.now(timezone.utc)
         db.commit()
@@ -554,6 +564,89 @@ async def run_autocode_job(
 # Default accept cutoff when a framework was applied without an explicit
 # threshold (mirrors the review dialog's DEFAULT_UPPER = 0.70).
 DEFAULT_ACCEPT_THRESHOLD = 0.70
+
+
+def _sessions_answered(
+    batches: list[list[QuoteBatchItem]], results: list[Any],
+) -> set[str]:
+    """The sessions whose every quote sent in this pass was in a batch that
+    answered. A batch that failed (an exception) or was never sent (None) leaves
+    each of its sessions owed, wherever else that session's quotes went."""
+    answered: set[str] = set()
+    missed: set[str] = set()
+    for batch, result in zip(batches, results, strict=True):
+        ok = result is not None and not isinstance(result, BaseException)
+        (answered if ok else missed).update(item.session_id for item in batch)
+    return answered - missed
+
+
+def _session_pks(db: SASession, project_id: int, session_ids: set[str]) -> list[int]:
+    """Session row ids for a project's ``"s1"``-style session ids."""
+    from bristlenose.server.models import Session as SessionModel
+
+    if not session_ids:
+        return []
+    return [
+        row[0]
+        for row in db.query(SessionModel.id).filter(
+            SessionModel.project_id == project_id,
+            SessionModel.session_id.in_(sorted(session_ids)),
+        )
+    ]
+
+
+def stamp_sessions(db: SASession, job_id: int, session_pks: Iterable[int]) -> None:
+    """Record the sessions ``job_id`` has coded. Uncommitted: the caller commits
+    them with the proposals they stand for."""
+    from bristlenose.server.models import AutoCodeSessionStamp
+
+    for pk in session_pks:
+        db.add(AutoCodeSessionStamp(job_id=job_id, session_id=pk))
+
+
+def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
+    """The sessions ``job`` still owes, ``{"s1": Session.id}``: a session with at
+    least one quote and no stamp from this job (RE#66).
+
+    This replaced the watermark (``first_imported_at > completed_at``), which a
+    partial failure moved past the sessions it never coded. A session with no
+    quotes is not owed: nothing would be sent, and a catch-up chip over it would
+    say "Re-coded" over nothing.
+    """
+    from sqlalchemy import exists, select
+
+    from bristlenose.server.models import AutoCodeSessionStamp, Quote
+    from bristlenose.server.models import Session as SessionModel
+
+    stamped = select(AutoCodeSessionStamp.session_id).where(
+        AutoCodeSessionStamp.job_id == job.id
+    )
+    has_quote = exists().where(
+        Quote.project_id == SessionModel.project_id,
+        Quote.session_id == SessionModel.session_id,
+    )
+    return {
+        row[0]: row[1]
+        for row in db.query(SessionModel.session_id, SessionModel.id).filter(
+            SessionModel.project_id == job.project_id,
+            SessionModel.id.not_in(stamped),
+            has_quote,
+        )
+    }
+
+
+def delete_jobs(db: SASession, job_ids: list[int]) -> None:
+    """Delete AutoCode jobs with their proposals and stamps (uncommitted): an
+    uninstall, or Apply replacing a job that was never applied."""
+    from bristlenose.server.models import AutoCodeJob, AutoCodeSessionStamp, ProposedTag
+
+    if not job_ids:
+        return
+    for model in (AutoCodeSessionStamp, ProposedTag):
+        db.query(model).filter(model.job_id.in_(job_ids)).delete(synchronize_session=False)
+    db.query(AutoCodeJob).filter(AutoCodeJob.id.in_(job_ids)).delete(
+        synchronize_session=False
+    )
 
 
 # The live re-apply task per (project, framework). Both re-apply paths register
@@ -632,6 +725,34 @@ def _set_job_status(
         db.rollback()
 
 
+def _clear_failure_once_owed_nothing(db: SASession, job: AutoCodeJob) -> None:
+    """A run's re-apply that leaves nothing owed has coded what a failed or
+    stopped catch-up, or a partial first apply, left, so the job says so (#61,
+    RE#66): it read "failed" with the old error until the next catch-up, and a
+    partial first apply ("completed" with its failure) kept its failure for good.
+    Uncommitted; one UPDATE that a running or pending row refuses, so a
+    catch-up's own status is never written over."""
+    from sqlalchemy import or_
+
+    from bristlenose.server.models import AutoCodeJob
+
+    if owed_sessions(db, job):
+        return
+    db.query(AutoCodeJob).filter(
+        AutoCodeJob.id == job.id,
+        AutoCodeJob.status.not_in(("running", "pending")),
+        or_(
+            AutoCodeJob.status.in_(("failed", "cancelled")),
+            AutoCodeJob.failure_kind != "",
+            AutoCodeJob.error_message != "",
+        ),
+    ).update(
+        {AutoCodeJob.status: "completed", AutoCodeJob.error_message: "",
+         AutoCodeJob.failure_kind: ""},
+        synchronize_session=False,
+    )
+
+
 def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int:
     """Reset AutoCodeJob rows stranded ``pending``/``running`` by a crash.
 
@@ -642,18 +763,22 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     showing forever — CodebookPanel renders that framework's AutoCode button
     disabled/"running" until a successful catch-up or manual re-run resets it.
 
-    Two orphan classes, told apart by ``completed_at`` — the same watermark
-    ``reapply_active_frameworks`` already trusts over ``status`` (see ca944a0a):
+    Two orphan classes, told apart by ``completed_at`` — the "applied at least once"
+    flag ``reapply_active_frameworks`` already trusts over ``status`` (see ca944a0a):
 
     - **Initial-apply orphan** (``completed_at IS NULL``): ``run_autocode_job``
       crashed before finishing the first pass, so nothing usable was produced →
       mark ``failed`` with a retryable ``error_message``. The start-job guard
       treats ``failed`` as a dead job and clears it on the next run.
     - **Catch-up orphan** (``completed_at IS NOT NULL``): the on-enable catch-up
-      transiently flipped an already-completed job to ``running`` and crashed
-      before its ``finally`` restored ``completed``. The initial apply DID finish
-      → restore ``completed`` (exactly what the finally would have done). Marking
-      it ``failed`` would misreport a framework that has real applied tags.
+      set an applied job ``running`` and was cut off before it finished → mark
+      ``failed``, unclassified, so a chip still polling a restarted serve says
+      "Tagging failed." rather than "Re-coded" over nothing (#63, RE#66). It wrote
+      no stamp, so its sessions are still owed and the next run or re-enable
+      codes them; ``completed_at`` keeps the codebook maintained, and Apply
+      refuses an applied job, so ``failed`` no longer invites a re-Apply that
+      would delete the original proposals. Until 22 Oct 2026 this restored
+      ``completed`` with the catch-up's counts at zero.
 
     Runs synchronously at startup, before the event watcher and before any new
     job can be created in this process, so an unconditional sweep is safe — there
@@ -671,9 +796,14 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     changed = 0
     for job in query.all():
         if job.completed_at is not None:
-            # Catch-up orphan: the initial apply finished; only the transient
-            # chip-status flip was interrupted. Restore the true state.
-            job.status = "completed"
+            # Catch-up orphan: applied, but this catch-up never finished. Its
+            # sessions carry no stamp, so they are owed whatever this says.
+            job.status = "failed"
+            job.failure_kind = ""
+            job.error_message = (
+                "Re-coding was interrupted before it finished (the app closed or "
+                "crashed mid-run). The sessions it had not coded are coded next time."
+            )
         else:
             # Initial-apply orphan: never completed. Fail it so the UI stops
             # showing "running" and offers a retry.
@@ -696,13 +826,16 @@ async def reapply_to_new_quotes(
     settings: BristlenoseSettings,
     track_status: bool = False,
 ) -> int:
-    """Re-apply an already-applied framework to the quotes it hasn't seen yet.
+    """Re-apply an already-applied framework to the sessions it still owes.
 
-    Codes ONLY the delta — quotes with no ``ProposedTag`` from the framework's
-    existing job (i.e. newly-added ones) — and auto-accepts at the researcher's
-    stored cutoff, with no review modal. Existing quotes and human tags are never
-    touched (the accept is non-clobbering). Returns the number of new QuoteTags
-    created (0 if there's nothing to do).
+    Codes ONLY the delta — the quotes of sessions with no stamp from the
+    framework's job (``owed_sessions``) that have no proposal on it yet — and
+    auto-accepts at the researcher's stored cutoff, with no review modal.
+    Existing quotes and human tags are never touched (the accept is
+    non-clobbering). A session is stamped when every quote sent from it was in a
+    batch that answered; one in a batch that failed, or that a Stop or a switch
+    turned off never sent, stays owed for the next re-apply (RE#66). Returns the
+    number of new QuoteTags created (0 if there's nothing to do).
 
     Safe no-op when the framework was never applied (no completed job) — so it
     can be fired unconditionally per linked framework after a re-run.
@@ -711,8 +844,16 @@ async def reapply_to_new_quotes(
     status so a frontend activity chip can poll it: the caller sets ``running``
     *synchronously* (to win the chip's first poll), and this restores ``completed``
     on success — or on the no-delta early return — and sets ``failed`` on error.
-    The default (the silent ``run_completed`` path) never touches job status.
+    A Stop (the job set ``cancelled``) is read before each batch; what had already
+    answered is kept and the job stays cancelled (#60).
+
+    The default (the silent ``run_completed`` path) reads the codebook's switch
+    before each batch instead, so one switched off mid-way stops at the next
+    batch (#62). It touches job status only to clear a failed or stopped
+    catch-up's failure once nothing is left owed (#61).
     """
+    from sqlalchemy import select
+
     from bristlenose.llm import telemetry
     from bristlenose.llm.boundary import wrap_untrusted
     from bristlenose.llm.client import LLMClient
@@ -726,9 +867,6 @@ async def reapply_to_new_quotes(
         Quote,
         QuoteTag,
         TagDefinition,
-    )
-    from bristlenose.server.models import (
-        Session as SessionModel,
     )
 
     db = db_factory()
@@ -756,34 +894,41 @@ async def reapply_to_new_quotes(
         if threshold is None:
             threshold = DEFAULT_ACCEPT_THRESHOLD
 
-        # Delta = quotes from sessions imported AFTER this framework was applied.
-        # ``Session.first_imported_at`` is set once per session and never updated,
-        # so (a) a clean/full re-run of existing sessions doesn't falsely mark
-        # them new, and (b) an existing quote the LLM simply didn't tag is never
-        # re-sent — both would happen with a "quote has no proposal" heuristic.
-        # ``completed_at`` advances to each re-apply's time (below), so each new
-        # session is coded exactly once.
+        # Delta = the quotes of the sessions this job still owes (RE#66). A stamp
+        # is per session and written once, so (a) a clean/full re-run of coded
+        # sessions doesn't mark them new, and (b) a quote the LLM simply didn't
+        # tag in a stamped session is never re-sent (in an owed one it is: the
+        # stamp is a cost gate, §4a). Within an owed session, a quote that
+        # already has a proposal on this job is skipped: a stopped or partial
+        # pass coded it, and a second proposal would break (job, quote).
+        # ``completed_at`` is "applied at least once"; never applied, nothing to do.
         if job.completed_at is None:
             return 0
-        new_session_ids = [
-            row[0]
-            for row in db.query(SessionModel.session_id).filter(
-                SessionModel.project_id == project_id,
-                SessionModel.first_imported_at.isnot(None),
-                SessionModel.first_imported_at > job.completed_at,
-            )
-        ]
-        if not new_session_ids:
+        owed = owed_sessions(db, job)
+        if not owed:
+            # Nothing owed may still follow a Stop that landed on the last batch,
+            # or a failed catch-up whose sessions a re-import withdrew (#61).
+            if not track_status:
+                _clear_failure_once_owed_nothing(db, job)
+                db.commit()
             return 0
+        proposed = select(ProposedTag.quote_id).where(ProposedTag.job_id == job_id)
         new_quotes = (
             db.query(Quote)
             .filter(
                 Quote.project_id == project_id,
-                Quote.session_id.in_(new_session_ids),
+                Quote.session_id.in_(sorted(owed)),
+                Quote.id.not_in(proposed),
             )
             .all()
         )
+        # An owed session with nothing left to send was coded already.
+        done_already = set(owed) - {q.session_id for q in new_quotes}
         if not new_quotes:
+            stamp_sessions(db, job_id, [owed[sid] for sid in done_already])
+            if not track_status:
+                _clear_failure_once_owed_nothing(db, job)
+            db.commit()
             return 0
 
         batch_items = [
@@ -824,12 +969,20 @@ async def reapply_to_new_quotes(
         ]
         semaphore = asyncio.Semaphore(settings.llm_concurrency)
 
-        def _stopped() -> bool:
-            """A Stop on the catch-up (its job set "cancelled"), read fresh."""
+        def _halted() -> bool:
+            """Read fresh before each batch. A catch-up's Stop sets its job
+            "cancelled" (R12 wave 6); a run's re-apply has no Stop, but its
+            codebook can be switched off while it codes ("off means off", #62).
+            Either way an uninstall ends it: the job is gone, or the codebook no
+            longer linked, and every batch after it was paid for and rolled back."""
             check = db_factory()
             try:
                 j = check.get(AutoCodeJob, job_id)
-                return j is not None and j.status == "cancelled"
+                if j is None:
+                    return True
+                if track_status:
+                    return j.status == "cancelled"
+                return framework_id not in _maintained_framework_ids(check, project_id)
             finally:
                 check.close()
 
@@ -837,10 +990,10 @@ async def reapply_to_new_quotes(
             batch: list[QuoteBatchItem],
         ) -> list[tuple[int, int, float, str]] | None:
             async with semaphore:
-                # A catch-up can be stopped: check before each batch, as
-                # run_autocode_job does, so a Stop ends the spending (R12 wave 6).
-                # None = not sent, which neither answered nor failed.
-                if track_status and _stopped():
+                # Checked before each batch, as run_autocode_job does, so a Stop
+                # or a switch-off ends the spending. None = not sent, which
+                # neither answered nor failed: its sessions stay owed.
+                if _halted():
                     return None
                 user_prompt = prompt_tmpl.user.format(
                     codebook_title=template.title,
@@ -858,6 +1011,10 @@ async def reapply_to_new_quotes(
                 out: list[tuple[int, int, float, str]] = []
                 for a in result.assignments:
                     if a.quote_index < 0 or a.quote_index >= len(batch):
+                        logger.warning(
+                            "Re-apply %s: invalid quote_index %d in batch of %d",
+                            framework_id, a.quote_index, len(batch),
+                        )
                         continue
                     tag_def_id = resolve_tag_name_to_id(a.tag_name, tag_map)
                     if tag_def_id is None:
@@ -865,16 +1022,41 @@ async def reapply_to_new_quotes(
                     out.append(
                         (batch[a.quote_index].db_id, tag_def_id, a.confidence, a.rationale)
                     )
+                if result.assignments and not out:
+                    # Its sessions are stamped all the same: the batch answered.
+                    # Said, because a tag rename the sync missed looks like this.
+                    logger.warning(
+                        "Re-apply %s: a batch answered %d assignments and none named "
+                        "a tag in the codebook", framework_id, len(result.assignments),
+                    )
                 return out
 
         results = await asyncio.gather(
             *(_batch(b) for b in batches), return_exceptions=True
         )
-        # Every batch failing coded nothing: a failure, through the except below,
-        # so the watermark stays put and the next catch-up codes these sessions.
-        # Recorded as "completed", the sessions were skipped for good and the chip
-        # said done (R12 review).
+        # Every batch failing coded nothing: a failure, through the except below.
+        # No session is stamped, so the next catch-up or run codes them. Recorded
+        # as "completed", the chip said done (R12 review).
+        # Uninstalled while it coded: nothing to keep, and nothing failed. Storing
+        # against the deleted job hit the foreign key, which was logged as a
+        # failed re-apply (RE#66 review).
+        if db.query(AutoCodeJob.id).filter(AutoCodeJob.id == job_id).first() is None:
+            logger.info("Re-apply %s: the codebook was removed, nothing kept", framework_id)
+            return 0
         failures = [r for r in results if isinstance(r, BaseException)]
+        if failures:
+            # Each of these is sent again by the next run or re-enable; one that
+            # fails every time is paid for every time, so it is said each time.
+            missed = sorted({
+                item.session_id
+                for b, r in zip(batches, results, strict=True)
+                if isinstance(r, BaseException)
+                for item in b
+            })
+            logger.warning(
+                "Re-apply %s: %d of %d batches failed; sessions still owed: %s",
+                framework_id, len(failures), len(results), ", ".join(missed),
+            )
         if failures and len(failures) == len(results):
             raise failures[0]
         # Only a batch that answered counts as processed, as in run_autocode_job:
@@ -894,9 +1076,9 @@ async def reapply_to_new_quotes(
         # ProposedTag unique constraint is (job_id, quote_id) — one tag per quote
         # per job — so an LLM that returns two assignments for the same quote would
         # otherwise raise IntegrityError at commit, rolling back the ENTIRE re-apply
-        # including the completed_at watermark advance below. That makes the same
-        # new sessions re-selected and re-fail on every subsequent run, forever,
-        # silently. Deduping here keeps the collision from ever forming.
+        # including its stamps. The same sessions would then be re-selected and
+        # re-fail on every subsequent run, forever, silently. Deduping here keeps
+        # the collision from ever forming.
         best_by_quote: dict[int, tuple[int, int, float, str]] = {}
         for res in results:
             if isinstance(res, BaseException):
@@ -915,7 +1097,7 @@ async def reapply_to_new_quotes(
             # marks the quote as "seen" so a later re-apply won't re-code it.
             db.add(
                 ProposedTag(
-                    job_id=job.id,
+                    job_id=job_id,
                     quote_id=quote_id,
                     tag_definition_id=tag_def_id,
                     confidence=confidence,
@@ -943,12 +1125,20 @@ async def reapply_to_new_quotes(
                     )
                     accepted += 1
 
-        values: dict[Any, Any] = {
-            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + len(batch_items),
+        # The sessions this pass coded, with the proposals they stand for; the
+        # rest stay owed (RE#66).
+        coded = done_already | _sessions_answered(batches, list(results))
+        stamp_sessions(db, job_id, [owed[sid] for sid in sorted(coded)])
+
+        # Sent, not selected: a Stop or a switch-off leaves batches unsent, and
+        # counting them over-reported the denominator.
+        sent = sum(len(b) for b, r in zip(batches, results, strict=True) if r is not None)
+        counts: dict[Any, Any] = {
+            AutoCodeJob.total_quotes: AutoCodeJob.total_quotes + sent,
             AutoCodeJob.processed_quotes: AutoCodeJob.processed_quotes + processed,
             AutoCodeJob.proposed_count: AutoCodeJob.proposed_count + new_proposed,
-            AutoCodeJob.completed_at: now,
         }
+        values: dict[Any, Any] = {**counts, AutoCodeJob.completed_at: now}
         finish = db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id)
         if track_status:
             # Route set this to "running" for the chip; restore it now, with no
@@ -967,11 +1157,20 @@ async def reapply_to_new_quotes(
             # over (an ORM assignment reloaded the job and replaced it).
             finish = finish.filter(AutoCodeJob.status != "cancelled")
         if finish.update(values, synchronize_session=False) == 0:
-            # Stopped: its proposals and tags go with it, and the watermark stays
-            # where it was, so the next catch-up or run codes these sessions.
-            db.rollback()
-            logger.info("Re-apply %s: stopped, nothing kept", framework_id)
-            return 0
+            # Stopped (#60): what answered is kept, with its stamps, and the job
+            # stays cancelled. What the Stop never sent stays owed, so the next
+            # catch-up or run codes it. Until 22 Oct 2026 a Stop kept nothing,
+            # and the batches already paid for were sent again.
+            db.query(AutoCodeJob).filter(AutoCodeJob.id == job_id).update(
+                counts, synchronize_session=False,
+            )
+            db.commit()
+            logger.info(
+                "Re-apply %s: stopped, kept %d proposals", framework_id, new_proposed,
+            )
+            return accepted
+        if not track_status:
+            _clear_failure_once_owed_nothing(db, job)
         db.commit()
         logger.info(
             "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
@@ -1006,6 +1205,39 @@ async def reapply_to_new_quotes(
         db.close()
 
 
+def _maintained_framework_ids(db: SASession, project_id: int) -> set[str]:
+    """Frameworks still installed in this project (≥1 linked group) and not
+    switched off. Absence of a state row means enabled (the default), so the
+    switch only ever excludes."""
+    from bristlenose.server.models import (
+        CodebookGroup,
+        ProjectCodebookGroup,
+        ProjectFrameworkState,
+    )
+
+    linked = {
+        row[0]
+        for row in db.query(CodebookGroup.framework_id)
+        .join(
+            ProjectCodebookGroup,
+            ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
+        )
+        .filter(
+            ProjectCodebookGroup.project_id == project_id,
+            CodebookGroup.framework_id.isnot(None),
+        )
+        .distinct()
+        if row[0] is not None
+    }
+    disabled = {
+        row[0]
+        for row in db.query(ProjectFrameworkState.framework_id).filter_by(
+            project_id=project_id, enabled=False
+        )
+    }
+    return linked - disabled
+
+
 async def reapply_active_frameworks(
     db_factory: Callable[[], SASession],
     project_id: int,
@@ -1013,84 +1245,71 @@ async def reapply_active_frameworks(
 ) -> dict[str, int]:
     """Re-apply every already-applied, still-installed, **enabled** framework.
 
-    Called after a re-run that added sessions: for each framework that has a
-    completed AutoCode job, is still linked into this project (at least one of its
-    groups in ``project_codebook_groups``), and is **not disabled**, code the delta
-    at that job's stored cutoff. Each is a safe no-op if there are no new quotes.
-    Returns ``{framework_id: n_accepted}``.
+    Called after a re-run that added sessions: for each framework that has an
+    applied AutoCode job, is still linked into this project (at least one of its
+    groups in ``project_codebook_groups``), and is **not disabled**, code the
+    sessions it owes at that job's stored cutoff. Each is a safe no-op if nothing
+    is owed. Returns ``{framework_id: n_accepted}``.
 
-    The gate is **ever-applied ∩ currently linked ∩ enabled**. Disable means
-    off ("off means off", design-codebook-state-model.md §8): a disabled codebook
-    stops maintaining new sessions, so a run while it's off leaves the new quotes
-    uncoded. Its watermark (`AutoCodeJob.completed_at`) freezes; re-enabling fires a
-    one-shot catch-up over everything added since (routes/data.py `put_framework_
-    states`). "Stop tracking entirely" is still **Remove** (drops the link). Runs
-    the frameworks sequentially so spend stays legible in the logs.
+    The gate is **ever-applied ∩ currently linked ∩ enabled**, read again just
+    before each framework's turn, so one switched off while an earlier one codes
+    is not coded (#62, RE#66); ``reapply_to_new_quotes`` reads the switch before
+    each batch too. Disable means off ("off means off",
+    design-codebook-state-model.md §8): a disabled codebook stops maintaining new
+    sessions, so a run while it's off leaves them owed, and re-enabling fires a
+    one-shot catch-up over them (routes/data.py `put_framework_states`). "Stop
+    tracking entirely" is still **Remove** (drops the link). Runs the frameworks
+    one at a time so spend stays legible in the logs.
 
-    A framework an on-enable catch-up is still coding is waited for first, then
-    re-applied (finding nothing left, as a rule), and each re-apply here is
-    registered while it runs so no catch-up starts over it (``_REAPPLY_IN_FLIGHT``).
+    A framework an on-enable catch-up is still coding waits for it, then is
+    re-applied (finding nothing left, as a rule); every other framework goes
+    first, so a long or stuck catch-up holds only its own codebook (#67). Each
+    re-apply here is registered while it runs so no catch-up starts over it
+    (``_REAPPLY_IN_FLIGHT``).
     """
-    from bristlenose.server.models import (
-        AutoCodeJob,
-        CodebookGroup,
-        ProjectCodebookGroup,
-        ProjectFrameworkState,
-    )
+    from bristlenose.server.models import AutoCodeJob
 
     db = db_factory()
     try:
-        # Frameworks still installed in this project (≥1 linked group).
-        linked_framework_ids = {
-            row[0]
-            for row in db.query(CodebookGroup.framework_id)
-            .join(
-                ProjectCodebookGroup,
-                ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
-            )
-            .filter(
-                ProjectCodebookGroup.project_id == project_id,
-                CodebookGroup.framework_id.isnot(None),
-            )
-            .distinct()
-        }
-        # Frameworks explicitly turned OFF (enabled=False). Absence of a row means
-        # enabled (the default) — so this only ever *excludes*, never requires a row.
-        disabled_framework_ids = {
-            row[0]
-            for row in db.query(ProjectFrameworkState.framework_id).filter_by(
-                project_id=project_id, enabled=False
-            )
-        }
-        # Gate = ever-applied ∩ currently linked ∩ enabled. "Ever-applied" is
-        # ``completed_at IS NOT NULL``, NOT ``status == "completed"``: the on-enable
-        # catch-up transiently sets a healthy job to "running", and a crash in that
-        # window (SIGKILL, parent-death mid-LLM) would leave it stuck "running"
-        # forever. Gating on status would then SILENTLY drop that framework from all
-        # future maintenance — new sessions never coded, no error. completed_at is
-        # the real "has been applied at least once" predicate and survives the
-        # transient status, so a crashed catch-up self-heals on the next run.
-        framework_ids = [
+        maintained = _maintained_framework_ids(db, project_id)
+        # "Ever-applied" is ``completed_at IS NOT NULL``, NOT ``status ==
+        # "completed"``: the on-enable catch-up sets a healthy job "running", and
+        # a failed or stopped catch-up leaves it "failed" or "cancelled". Gating
+        # on status would SILENTLY drop that framework from all future
+        # maintenance — new sessions never coded, no error.
+        pending = [
             row[0]
             for row in db.query(AutoCodeJob.framework_id)
             .filter(
                 AutoCodeJob.project_id == project_id,
                 AutoCodeJob.completed_at.isnot(None),
             )
-            .distinct()
-            if row[0] in linked_framework_ids
-            and row[0] not in disabled_framework_ids
+            .order_by(AutoCodeJob.id)
+            if row[0] in maintained
         ]
     finally:
         db.close()
 
     results: dict[str, int] = {}
-    for framework_id in framework_ids:
-        # A loop, not one wait: another catch-up may start between this one
-        # ending and this coroutine resuming. Waited with asyncio.wait, which
-        # never cancels the catch-up if this run's re-apply is itself cancelled.
-        while (live := live_reapply(project_id, framework_id)) is not None:
-            await asyncio.wait({live})
+    while pending:
+        ready = [f for f in pending if live_reapply(project_id, f) is None]
+        if not ready:
+            # Every framework left has a catch-up coding it: wait for the first to
+            # end. asyncio.wait never cancels the catch-ups if this is cancelled.
+            live = {t for f in pending if (t := live_reapply(project_id, f)) is not None}
+            if live:
+                await asyncio.wait(live, return_when=asyncio.FIRST_COMPLETED)
+            continue
+        framework_id = ready[0]
+        pending.remove(framework_id)
+        db = db_factory()
+        try:
+            still_on = framework_id in _maintained_framework_ids(db, project_id)
+        finally:
+            db.close()
+        if not still_on:
+            logger.info("Re-apply %s: switched off or removed since the run ended", framework_id)
+            continue
         task = asyncio.ensure_future(
             reapply_to_new_quotes(db_factory, project_id, framework_id, settings)
         )

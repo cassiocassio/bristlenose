@@ -13,6 +13,23 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
 
 ## Changelog
 
+- _2026-10-22_ — **per-session stamps replace the watermark** (RE#66, decisions
+  #60–#67, owner). A session counts as coded by a codebook only when every one of
+  its quotes was sent in a batch that answered (`autocode_session_stamps`,
+  migration 022, backfilled from the old watermark so an upgraded project's next
+  re-apply sends what it would have sent). A partial failure, at a first apply, a
+  catch-up or a run's re-apply, moved `completed_at` past the sessions it never
+  coded, and they were never coded by that codebook again; now they stay owed and
+  the next run or re-enable codes them. `completed_at` now only means "applied at
+  least once". What falls out of it: a stopped catch-up keeps the batches that
+  answered (#60); a run's re-apply that leaves nothing owed clears a failed
+  catch-up's error (#61); a run's re-apply reads the switch before each codebook
+  and each batch (#62); a catch-up the serve's restart cut off is `failed`, not
+  `completed` at zero (#63); Apply refuses a job with `completed_at`, whatever its
+  status (#64); a Stop on a first apply leaves `completed_at` empty, so a stopped
+  first apply is not maintained (#65); and the run's re-apply runs on its own
+  task, so the event watcher never waits on it, and a codebook with a live
+  catch-up holds only itself (#67). §4a rewritten.
 - _2026-10-20_ — the on-enable catch-up's chip lost its producer with v1
   (`baa1aa0e`, 31 Aug): `CodebookPanel` added it, and the v2 navigator that took
   over the switch read `catchUp` from `PUT /framework-states` and dropped it, so
@@ -221,9 +238,9 @@ The floor codebook has **no** version of this machine — only the hide/show ove
 |---|---|
 | Add codebook | insert `ProjectCodebookGroup` links (+ tag defs) |
 | Apply | `AutoCodeJob` runs → `ProposedTag`s → accepted become `QuoteTag(autocode)`; cutoff/prompt stamped |
-| Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only new sessions' quotes (`first_imported_at > completed_at`), non-clobbering |
+| Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only the sessions it owes (no stamp, §4a), non-clobbering |
 | Disable | set `enabled=false` — *(described)* stops the delta re-apply; results retained |
-| Enable | set `enabled=true` — *(described)* one catch-up delta for sessions added while off (watermark froze) |
+| Enable | set `enabled=true` — *(described)* one catch-up delta for the sessions owed (those added while off, and any a failed pass left) |
 | Hide group | insert `hidden_tag_groups` |
 | Remove | drop `ProjectCodebookGroup` links; **no promise** to keep `QuoteTag`/`ProposedTag` |
 
@@ -256,52 +273,76 @@ on a deep link straight to the codebook lens. The surface that owns the switch
 owns the authoritative set, and mirrors it into the store rather than reading
 its payload out of it.
 
-### 4a. How re-enable knows what to code (no explicit "coded" flag)
+### 4a. How re-enable knows what to code: per-session stamps
 
-There is **no per-session "this session was coded by codebook X" marker.** Re-apply
-scope is inferred from two timestamps: a session's `first_imported_at` and the
-codebook's last `completed_at`. **These do two separate jobs — don't conflate them:**
+**A session is coded by a codebook when it carries that codebook's stamp**
+(`autocode_session_stamps`: one row per job and session, migration 022). A pass,
+whether the first apply, a catch-up or a run's re-apply, stamps a session when every quote it
+sent from that session was in a batch that answered, in the same transaction as
+the proposals. A session with at least one quote and no stamp is **owed**
+(`autocode.owed_sessions`), and the next re-apply sends its quotes that have no
+proposal on the job yet. A batch that failed, or that a Stop or a switch-off never
+sent, leaves its sessions owed; a session with no quotes is never owed, so a
+catch-up chip never says "Re-coded" over nothing. `completed_at` means only
+"applied at least once": it gates maintenance, it is how the startup sweep tells
+the two orphans apart, and Apply refuses a job that has it.
 
-- **The timestamps are a *cost gate*, not a correctness rule.** "Session came in after
-  the codebook last finished → probably uncoded → go look." Their only job is to avoid
-  re-spending the LLM on sessions we're confident are done.
+_Superseded 22 Oct 2026 (RE#66):_ until then scope was inferred from two
+timestamps, a session's `first_imported_at` and the codebook's last
+`completed_at`, which each re-apply advanced. The text below said a partial run
+could not move it past uncoded sessions, and it could: a pass where some batches
+failed (a rate limit on two of six) still advanced it, and those sessions were
+never coded by that codebook again. That was the "normal-lifecycle partial-run
+edge" this section's deferred fallback named. Migration 022 backfilled stamps for
+what the watermark claimed (sessions first imported at or before `completed_at`,
+and those with no import time), so nothing an upgraded project had paid for is
+sent again, and what a past partial failure lost stays lost: nothing recorded
+which batches failed.
+
+The two jobs below still hold, with the stamp in the timestamp's place:
+
+- **The stamp is a *cost gate*, not a correctness rule.** Its only job is to avoid
+  re-spending the LLM on sessions we know are done. Erring broad (a quote the model
+  left untagged, in a session whose other batch failed, is sent again) costs a
+  little wasted work, never a double-code.
 - **Correctness lives in the per-quote guard that already ships.** Before applying a
-  tag the delta skips any `(quote, tag)` that already has a `QuoteTag`. So the
-  timestamp erring **too broad** costs a little wasted work (re-examine, skip) — it
-  can **never** double-code or clobber a decision. _Corrected 31 Aug 2026: this
-  read "and never touches `source="human"`", which describes the effect as though
-  it were the mechanism. The guard has no source predicate — it is a bare
-  pair-existence check. A human tag survives because it **occupies the pair**, not
-  because it is recognised. The outcome is the same today; it would stop being the
-  same the moment any path removes and re-applies a tag, or applies the same tag
-  under a second `tag_definition_id`._
+  tag the delta skips any `(quote, tag)` that already has a `QuoteTag`. A human tag
+  survives because it **occupies the pair**, not because it is recognised: the guard
+  has no source predicate (corrected 31 Aug 2026). It would stop protecting it the
+  moment any path removes and re-applies a tag, or applies the same tag under a
+  second `tag_definition_id`. And within an owed session a quote that already has a
+  proposal on the job is not sent, so a half-coded session never breaks
+  `(job, quote)`.
 
-The only way the timestamp could *miss* (skip genuinely-uncoded quotes) is a codebook
-that stamped `completed_at` while its run was actually incomplete. In the normal
-lifecycle that can't happen — `completed_at` only advances on a **completed** run;
-failed/cancelled runs leave the watermark where it was, so those sessions get picked up
-next time. Disable simply freezes the watermark (the codebook stops running), new
-sessions pile above the line, and re-enable fires one delta over everything above it —
-unless that codebook's previous catch-up, or a finished run's re-apply of it, is still
-running, in which case the re-enable starts nothing and the running one codes the same
-sessions (20 Oct 2026). A run that finishes while a catch-up codes waits for it, then
-re-applies whatever is left, which is nothing as a rule.
+Disable stops the re-applies: new sessions pile up owed, and re-enable fires one
+catch-up over them, unless that codebook's previous catch-up, or a finished run's
+re-apply of it, is still running, in which case the re-enable starts nothing and
+the running one codes them (20 Oct 2026). A run's re-apply reads the switch again
+before each codebook and before each batch, so one switched off while the run
+codes stops at the next batch (#62). _Open (RE#66):_ switched off and back on
+while that run's re-apply still codes, the batches it skipped while off stay owed
+until the next run or switch-on, since the switch-on started nothing over the
+live re-apply. It waits for a live catch-up of the same
+codebook, and codes every other codebook first, so a long catch-up holds only its
+own; it runs on its own task, never inside the event watcher (#67).
 
-The one abnormal path where the watermark *could* lie — a **serve crash** mid-run
-that strands a job `running`/`pending` — is handled separately, not by the deferred
-stamp below. On startup `reconcile_orphaned_jobs` (`bristlenose/server/autocode.py`)
-sweeps in-flight jobs (none survive a serve restart): a job with `completed_at IS NULL`
-(initial apply never finished) → `failed`, so the watermark never advanced and the delta
-re-codes those sessions next time; a job with `completed_at` set (only the transient
-on-enable catch-up chip-flip was interrupted) → restored to `completed`. So the watermark
-stays honest across crashes without the per-session flag. _(Shipped 26 Jul 2026 — commit
-"codebook: harden catch-up against crash-orphaning + false-success".)_
+**Stops and failures.** A Stop on a catch-up keeps the batches that answered and
+their stamps; the job stays `cancelled` and the rest stays owed (#60). A Stop on a
+first apply leaves `completed_at` empty: a stopped first apply is not an applied
+one, and nothing maintains it (#65). A run's re-apply that leaves nothing owed sets
+a `failed` or `cancelled` applied job back to `completed` and clears its error
+(#61).
 
-**Bulletproof fallback (deferred):** if a *normal-lifecycle* partial-run edge ever forces
-the issue, the robust answer is the explicit per-session (or per-quote) "coded by
-framework X" stamp. More bookkeeping; not worth it for v1, where watermark-scope +
-per-quote-guard + the crash reconciliation above is correct for the real lifecycle.
-Recorded here so the reasoning isn't re-derived.
+**Serve crash.** No job survives a restart. On startup `reconcile_orphaned_jobs`
+(`bristlenose/server/autocode.py`) sweeps in-flight jobs: `completed_at IS NULL`
+(initial apply never finished) → `failed`, retryable; `completed_at` set (a catch-up
+the restart cut off) → `failed`, unclassified, so a chip still polling says
+"Tagging failed." (#63). That catch-up wrote no stamps, so its sessions are owed
+either way. Until 22 Oct 2026 it was restored to `completed` with its counts at
+zero, and a surviving chip said "Re-coded" over nothing; `failed` was avoided then
+because it invited a re-Apply that deleted the original proposals, which Apply now
+refuses (#64). _(Sweep shipped 26 Jul 2026, "codebook: harden catch-up against
+crash-orphaning + false-success".)_
 
 ---
 
@@ -408,8 +449,9 @@ autocomplete) and should be reverted.
   re-enable.** Rationale: you might never re-enable, so never spend on a switched-off
   lens; and when you do re-enable, the LLM cost/time of coding the newly-added sessions
   is implicit and accepted (re-enable is an auto-tagged-codebook feature — the spend is
-  inherent to the gesture). Mechanically: the session-recency watermark froze while
-  disabled, so re-enable fires one delta over everything added since.
+  inherent to the gesture). Mechanically: no re-apply stamps a session while the codebook is
+  disabled, so re-enable fires one delta over every session it owes (§4a; a
+  session-recency watermark until 22 Oct 2026).
 
 **Open**
 - **Q-C:** denial-ledger — a future "re-apply after codebook edit" would resurrect

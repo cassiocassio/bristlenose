@@ -34,6 +34,7 @@ from sqlalchemy.orm import Session
 from bristlenose.models import INAUDIBLE_TOKEN
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
+    AutoCodeSessionStamp,
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
@@ -2992,6 +2993,11 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
         db.query(TopicBoundary).filter(
             TopicBoundary.session_id.in_(stale_session_db_ids)
+        ).delete(synchronize_session="fetch")
+        # An AutoCode stamp says a codebook coded the session (RE#66); it goes
+        # with it, or the session's delete fails on the foreign key.
+        db.query(AutoCodeSessionStamp).filter(
+            AutoCodeSessionStamp.session_id.in_(stale_session_db_ids)
         ).delete(synchronize_session="fetch")
 
         # SessionSpeaker + orphaned Person rows

@@ -97,6 +97,7 @@ class TestTableCreation:
         "elaboration_caches",
         "import_conflicts",
         "autocode_jobs",
+        "autocode_session_stamps",
         "proposed_tags",
         "tag_prompts",
         "tag_prompt_decisions",

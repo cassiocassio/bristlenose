@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
@@ -294,11 +295,19 @@ def _load_researcher_state(
     for b in badges:
         badges_map.setdefault(b.quote_id, []).append(b.sentiment)
 
-    # ProposedTag — pending proposals from completed AutoCode jobs
+    # ProposedTag — pending proposals from applied AutoCode jobs. Applied is
+    # ``completed_at``, not status: a catch-up running, failed, cut off by a
+    # restart or stopped leaves an applied job "running", "failed" or
+    # "cancelled", and every pending proposal of the first apply vanished from
+    # the lens until the next catch-up worked (RE#66). A first apply still coding
+    # has no ``completed_at``, and shows none.
     proposed_map: dict[int, list[ProposedTagBrief]] = {}
     completed_jobs = (
         db.query(AutoCodeJob)
-        .filter_by(project_id=project_id, status="completed")
+        .filter(
+            AutoCodeJob.project_id == project_id,
+            or_(AutoCodeJob.status == "completed", AutoCodeJob.completed_at.isnot(None)),
+        )
         .all()
     )
     if completed_jobs:

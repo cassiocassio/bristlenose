@@ -913,3 +913,28 @@ class ProposedTag(Base):
     __table_args__ = (
         UniqueConstraint("job_id", "quote_id", name="uq_proposed_tag_job_quote"),
     )
+
+
+class AutoCodeSessionStamp(Base):
+    """A session one AutoCode job has coded: every one of its quotes was sent in
+    a batch that answered (RE#66, migration 022).
+
+    A session without a stamp is owed, and the next re-apply (a finished run's,
+    or the catch-up on switching the codebook back on) codes its quotes that have
+    no proposal on the job yet. Until 22 Oct 2026 one timestamp per codebook,
+    ``AutoCodeJob.completed_at``, said which sessions were done, and a pass where
+    some batches failed moved it past them for good. Machine state, not
+    curation: it goes with its job (uninstall) and with its session (a re-import
+    that withdraws it).
+    """
+
+    __tablename__ = "autocode_session_stamps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("autocode_jobs.id"), index=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True)
+    coded_at: Mapped[datetime] = mapped_column(default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("job_id", "session_id", name="uq_autocode_stamp_job_session"),
+    )

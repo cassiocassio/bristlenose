@@ -719,6 +719,45 @@ class TestRemoveFramework:
         finally:
             db.close()
 
+    def test_remove_framework_deletes_the_jobs_stamps(self) -> None:
+        """An AutoCode stamp points at its job (RE#66), so the uninstall deletes
+        it with the job, or the job's delete fails on the foreign key and the
+        uninstall with it."""
+        from datetime import datetime
+
+        from bristlenose.server.models import (
+            AutoCodeJob,
+            AutoCodeSessionStamp,
+            ProposedTag,
+        )
+        from bristlenose.server.models import Session as SessionModel
+
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        tc = AuthTestClient(app)
+        tc.post("/api/projects/1/codebook/import-template", json={"template_id": "garrett"})
+        db = app.state.db_factory()
+        try:
+            job = AutoCodeJob(project_id=1, framework_id="garrett", status="completed",
+                              completed_at=datetime(2026, 10, 20))
+            db.add(job)
+            db.flush()
+            for (sid,) in db.query(SessionModel.id).filter_by(project_id=1):
+                db.add(AutoCodeSessionStamp(job_id=job.id, session_id=sid))
+            db.commit()
+            assert db.query(AutoCodeSessionStamp).count() > 0
+        finally:
+            db.close()
+
+        resp = tc.delete("/api/projects/1/codebook/remove-framework/garrett")
+        assert resp.status_code == 200, resp.text
+        db = app.state.db_factory()
+        try:
+            assert db.query(AutoCodeSessionStamp).count() == 0
+            assert db.query(ProposedTag).count() == 0
+            assert db.query(AutoCodeJob).count() == 0
+        finally:
+            db.close()
+
     def test_remove_framework_preserves_user_groups(self, client: TestClient) -> None:
         """User-created groups should not be affected by framework removal."""
         # Create a user group first

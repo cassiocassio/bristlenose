@@ -379,15 +379,15 @@ class TestRunAutoCodeJob:
     def test_a_job_that_coded_nothing_leaves_the_watermark_unset(
         self, project_with_garrett
     ) -> None:
-        """``completed_at`` is the APPLIED watermark, not a stop time.
+        """``completed_at`` means "applied at least once", not a stop time.
 
-        Three readers treat it that way: ``reapply_active_frameworks`` gates its
-        ever-applied set on it, ``reapply_to_new_quotes`` codes only sessions
-        imported after it, and ``reconcile_orphaned_jobs`` uses its presence to
-        tell an initial-apply orphan from an interrupted catch-up. Stamping it
-        on a job that coded nothing would enrol the framework in maintenance
-        having applied nothing — and every later catch-up would then skip the
-        very quotes it was installed for, because they predate the failure.
+        Its readers treat it that way: ``reapply_active_frameworks`` and every
+        re-apply gate on it, ``reconcile_orphaned_jobs`` uses its presence to
+        tell an initial-apply orphan from an interrupted catch-up, and Apply
+        refuses a job that has it (RE#66). Setting it on a job that coded nothing
+        would enrol the framework in maintenance having applied nothing, and
+        refuse the retry that would code the quotes it was installed for.
+        (Until 22 Oct 2026 it was also the cutoff the re-apply coded after.)
         """
         project_id, framework_id, db_factory = project_with_garrett
 
@@ -1024,8 +1024,9 @@ class TestReapplyToNewQuotes:
     def _add_quotes(self, db_factory, project_id, n) -> None:
         """Add a genuinely-new session (imported after the apply) with n quotes.
 
-        first_imported_at = 2021, later than the apply's pinned 2020 completed_at,
-        so the session-recency delta treats these quotes as new.
+        The apply stamped nothing for it, so it is owed and the re-apply codes it
+        (RE#66; the fixture's own quotes sit in a session with no row, so are
+        never owed). first_imported_at = 2021 is kept from the watermark era.
         """
         db = db_factory()
         try:
@@ -1472,8 +1473,8 @@ class TestReapplyToNewQuotes:
     ) -> None:
         """A Stop during a catch-up was never read: it went on spending, wrote its
         tags, and then wrote "completed" over the Stop (R12 wave 6). It now stops
-        before the next batch, keeps nothing, leaves the job cancelled, and
-        leaves the watermark where it was, so the sessions are coded next time."""
+        before the next batch and leaves the job cancelled. The batch that had
+        already answered is kept (#60, RE#66); what was never sent stays owed."""
         import bristlenose.server.autocode as ac
 
         project_id, framework_id, db_factory = project_with_garrett
@@ -1504,15 +1505,14 @@ class TestReapplyToNewQuotes:
                     track_status=True,
                 )
             )
-        assert accepted == 0
+        assert accepted == 2
         assert analyze.await_count == 1  # the second batch was never sent
         job = self._job(db_factory, project_id, framework_id)
         assert job.status == "cancelled"
         assert job.completed_at == datetime(2020, 1, 1)
-        assert job.total_quotes == 10
         db = db_factory()
         try:
-            assert db.query(QuoteTag).count() == 0
+            assert db.query(QuoteTag).count() == 2
         finally:
             db.close()
 
@@ -1623,7 +1623,8 @@ class TestReapplyToNewQuotes:
     ) -> None:
         """Every batch failing coded nothing, yet the job said "completed" and
         the watermark moved past the new sessions, so no later catch-up would
-        ever code them. It is a failure now, and the sessions stay new."""
+        ever code them. It is a failure now, and the sessions stay owed (no
+        stamp; since RE#66 completed_at is no longer the cutoff)."""
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
         self._add_quotes(db_factory, project_id, 3)
@@ -1872,7 +1873,7 @@ class TestStartCatchUps:
 
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
-        # No _add_quotes → no session imported after the apply watermark.
+        # No _add_quotes → nothing owed.
 
         db = db_factory()
         try:
@@ -2178,12 +2179,12 @@ class TestReconcileOrphanedJobs:
         db_session.refresh(job)
         assert job.status == "failed"
 
-    def test_catch_up_orphan_restored_to_completed(self, db_session) -> None:
-        """A running job that HAD completed (catch-up flip crashed) → completed.
-
-        completed_at is set, so the initial apply finished — the data-loss half
-        is already safe (ca944a0a); here we restore the status so the UI stops
-        showing 'running' without misreporting real applied work as 'failed'.
+    def test_catch_up_orphan_becomes_failed(self, db_session) -> None:
+        """A running job that HAD completed (a catch-up the restart cut off) →
+        failed, unclassified, so a chip still polling says "Tagging failed."
+        rather than "Re-coded" over nothing (#63, RE#66). Its sessions are still
+        owed (no stamp was written), and Apply refuses an applied job, so failed
+        no longer invites a re-Apply that deletes the original proposals.
         """
         from datetime import datetime, timezone
 
@@ -2205,8 +2206,9 @@ class TestReconcileOrphanedJobs:
 
         assert reconcile_orphaned_jobs(db_session) == 1
         db_session.refresh(job)
-        assert job.status == "completed"
-        assert job.error_message == ""  # not misreported as a failure
+        assert job.status == "failed"
+        assert job.failure_kind == ""
+        assert job.completed_at is not None  # still applied: still maintained
 
     def test_terminal_jobs_left_alone(self, db_session) -> None:
         """completed / failed / cancelled jobs are never touched."""

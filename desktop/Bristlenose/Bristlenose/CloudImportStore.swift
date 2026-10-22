@@ -874,6 +874,10 @@ final class CloudImportStore: ObservableObject {
                         reason: .accessNotGranted, isRetryable: true)
                 }
                 isFetching = false
+                // The batch is over, so its ring goes too — inside the
+                // generation guard above, like the success path's. Left set,
+                // the sidebar row drew "0 of N" for the life of the app.
+                batch = nil
                 return
             }
 

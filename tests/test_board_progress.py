@@ -433,6 +433,28 @@ def test_miro_refusing_the_token_is_named_not_shown_as_a_connection_problem(
     assert s["status"] == "failed" and s["reason"] == "token_rejected"
 
 
+def test_the_screens_board_names_a_refused_token_as_the_quotes_board_does(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import asyncio
+
+    from bristlenose.server.routes import screens_export as se
+    from tests.test_serve_screens_export import _JPEG, _job, _screens
+    from tests.test_serve_screens_export import _FakeMiro as _ScreensMiro
+
+    def refuse(*_a: Any, **_k: Any) -> Any:
+        raise mc.MiroError("POST /boards -> 401 unauthorized", status=401)
+
+    _ScreensMiro().install(monkeypatch)
+    monkeypatch.setattr(mc, "create_board", refuse)
+    monkeypatch.setattr(se, "render_still", lambda *a, **k: _JPEG)
+    job = _job()
+    monkeypatch.setitem(se._miro_jobs, 1, job)
+    asyncio.run(se._run_miro(1, job, "tok", "Board", tmp_path, _screens(2), {"s1": tmp_path / "v.mp4"},
+                             {}, "none"))
+    s = asyncio.run(se.screens_miro_status(1))
+    assert s.status == "failed" and s.reason == "token_rejected"
+
+
 @pytest.mark.parametrize("content", ['{"profiles": []}', '{"profiles": {"miro": []}}',
                                      '{"profiles": {"miro": {"group": {"mean": "x"}}}}', "not json"])
 def test_a_malformed_rates_file_costs_the_estimate_not_the_export(tmp_path: Path, content: str) -> None:

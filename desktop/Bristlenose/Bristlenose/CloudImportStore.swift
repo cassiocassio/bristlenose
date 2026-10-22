@@ -865,10 +865,15 @@ final class CloudImportStore: ObservableObject {
             isAwaitingGrant = true
             do {
                 try await source.prepareBatch(rowIDs: queue.map(\.id))
-                isAwaitingGrant = false
+                // Guarded on both arms. Stop cannot close the consent window,
+                // so a stopped batch's grant can land, or be dismissed, while
+                // a replacement is waiting on its own — and unguarded, this
+                // cleared the replacement's "waiting for you to grant access".
+                // Stop has already cleared it for the batch it stopped.
+                if self.fetchGeneration == mine { isAwaitingGrant = false }
             } catch {
-                isAwaitingGrant = false
                 guard self.fetchGeneration == mine else { return }
+                isAwaitingGrant = false
                 for row in queue {
                     outcomes[row.id] = .failed(
                         reason: .accessNotGranted, isRetryable: true)
@@ -933,7 +938,9 @@ final class CloudImportStore: ObservableObject {
                         // unguarded: Stop bumps the same generation, so a
                         // guard would also suppress the "Stopped" a plain Stop
                         // shows, and a replacement's own progress and outcome
-                        // overwrite them.
+                        // overwrite them. They rely on a superseded row task
+                        // only ever settling `.cancelled`; the newer batch's
+                        // `removeAll()` and its own writes overwrite it.
                         if self.fetchGeneration == mine {
                             self.rowTasks[row.id] = nil
                             // Counted on *settling*, not on succeeding: the row

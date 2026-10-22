@@ -186,4 +186,97 @@ struct CloudImportBatchLifecycleTests {
 
         store.stopFetch()
     }
+
+    // MARK: - A stopped batch's grant, landing during the next batch's
+
+    /// Holds every grant until the test ends it, the way a consent window sits
+    /// in the researcher's browser. The continuation is deliberately not
+    /// cancellation-aware: Stop cancels the coordinator's `Task`, and that does
+    /// not reach into an `ASWebAuthenticationSession` either.
+    private final class HeldGrantSource: CloudImportSource {
+        let rows: [CloudImportRow]
+        private let lock = NSLock()
+        private var held: [CheckedContinuation<Void, Error>] = []
+        private var _returned = 0
+
+        init(rows: [CloudImportRow]) { self.rows = rows }
+
+        var asked: Int { lock.lock(); defer { lock.unlock() }; return held.count }
+        var returned: Int { lock.lock(); defer { lock.unlock() }; return _returned }
+
+        var accountEmail: String? { "researcher@example.com" }
+        var accountTier: GoogleAccountTier { .unknown }
+        func signIn() async throws {}
+
+        struct Declined: Error {}
+
+        func prepareBatch(rowIDs: [String]) async throws {
+            defer { lock.lock(); _returned += 1; lock.unlock() }
+            try await withCheckedThrowingContinuation { (grant: CheckedContinuation<Void, Error>) in
+                lock.lock(); held.append(grant); lock.unlock()
+            }
+        }
+
+        /// Ends the `index`th grant asked for: granted, or dismissed.
+        func end(_ index: Int, granted: Bool) {
+            lock.lock(); let grant = held[index]; lock.unlock()
+            if granted { grant.resume() } else { grant.resume(throwing: Declined()) }
+        }
+
+        func list(window: DateInterval) async -> MeetingListing {
+            MeetingListing(
+                rows: rows,
+                arithmetic: JoinArithmetic(eventsInWindow: rows.count, fetchable: rows.count,
+                                           organisedByOthers: 0, outcome: .exhausted),
+                window: window)
+        }
+
+        func fetch(
+            row: CloudImportRow,
+            destination: URL,
+            progress: @escaping @Sendable (FetchProgress) -> Void
+        ) async -> FetchOutcome {
+            .cancelled
+        }
+    }
+
+    @Test("A stopped batch's grant, landing late, leaves the next batch waiting for its own",
+          arguments: [true, false])
+    func supersededGrantLeavesReplacementAwaiting(stoppedGrantIsGranted: Bool) async {
+        // Import opens a consent window; Stop; Import again opens a second.
+        // The first window cannot be closed by Stop, so the researcher can
+        // still grant or dismiss it — and the stopped batch, returning, cleared
+        // "waiting for you to grant access" while the replacement was still
+        // blocked on exactly that.
+        let source = HeldGrantSource(rows: [row("a")])
+        let store = CloudImportStore(source: source)
+        await store.load()
+        store.selectAllVisible()
+
+        store.startFetch(destination: destination, projectID: UUID())
+        await until { source.asked == 1 }
+        #expect(source.asked == 1, "premise: the first batch is waiting on its grant")
+
+        store.stopFetch()
+        store.startFetch(destination: destination, projectID: UUID())
+        await until { source.asked == 2 }
+        #expect(source.asked == 2, "premise: the replacement is waiting on its own grant")
+        #expect(store.isAwaitingGrant, "premise: the replacement's rows say so")
+
+        source.end(0, granted: stoppedGrantIsGranted)
+        await until { source.returned == 1 }
+        #expect(source.returned == 1, "premise: the stopped batch's grant has returned")
+        // The coordinator's next line runs on the main actor after the grant
+        // returns, and nothing outside the store can see it run. Time, as in
+        // `supersededBatch()`; the red run against the unguarded store is
+        // what shows it is long enough.
+        try? await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(store.isAwaitingGrant,
+                "the replacement is still waiting for the researcher to grant access")
+
+        store.stopFetch()
+        source.end(1, granted: false)
+        await until { source.returned == 2 }
+    }
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { QuoteSections } from "./QuoteSections";
 import { QuoteThemes } from "./QuoteThemes";
 import type { QuotesListResponse } from "../utils/types";
@@ -11,7 +11,7 @@ vi.mock("../utils/api", () => ({
   patchEdits: vi.fn(() => Promise.resolve()),
 }));
 
-import { apiGet, getCodebook } from "../utils/api";
+import { apiGet, getCodebook, patchEdits } from "../utils/api";
 const mockApiGet = vi.mocked(apiGet);
 const mockGetCodebook = vi.mocked(getCodebook);
 
@@ -138,6 +138,20 @@ describe("QuoteSections", () => {
       await redo();
     });
     expect(screen.getByText("Sign-in")).toBeInTheDocument();
+  });
+
+  // Decision #30: the report does not show spacing, so respacing a heading's
+  // description is no edit — no write, no "Undo Edit Description".
+  it("a description changed only in spacing writes nothing", async () => {
+    mockQuotesApi(MOCK_QUOTES);
+    render(<QuoteSections projectId="1" />);
+    await waitFor(() => expect(screen.getByText("Login")).toBeInTheDocument());
+    vi.mocked(patchEdits).mockClear();
+    act(() => screen.getByRole("button", { name: "Edit section description" }).click());
+    const desc = screen.getByTestId("bn-group-section-1-desc");
+    desc.textContent = "Login  screen findings";
+    fireEvent.keyDown(desc, { key: "Enter" });
+    expect(patchEdits).not.toHaveBeenCalled();
   });
 
   it("anchors a section on its id, so renaming it moves no link", async () => {

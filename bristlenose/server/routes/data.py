@@ -140,6 +140,8 @@ class TagDelta(BaseModel):
     # How the added tags were applied. A gesture adds by hand; an undo of a
     # removal puts the tag back as it was, so an accepted suggestion comes back
     # autocode and pins nothing (decision #14). The four values QuoteTag holds.
+    # An undo field only: no forward gesture sets it, since a hand-made tag sent
+    # as autocode would go unpinned and a re-analysis could drop it.
     source: Literal["human", "autocode", "pipeline", "codebook-builder"] = "human"
 
 

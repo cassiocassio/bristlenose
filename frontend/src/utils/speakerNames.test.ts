@@ -349,6 +349,15 @@ describe("nameSpeaker — the undo entry of a rename that fails", () => {
     expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: true });
   });
 
+  it("a rename and its in-flight undo that both fail leave nothing to undo or redo", async () => {
+    putMock.mockRejectedValueOnce(new Error("offline")).mockRejectedValueOnce(new Error("offline"));
+    const named = nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    const undone = undo();
+    await expect(named).rejects.toThrow();
+    expect(await undone).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
   it("keeps the entry when a participant's name landed and only the flag failed", async () => {
     peopleMock.mockResolvedValue(structuredClone(people));
     putMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("PUT 500"));

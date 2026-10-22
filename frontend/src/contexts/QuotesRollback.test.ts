@@ -249,6 +249,29 @@ describe("the undo stack after a failed save", () => {
     expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "star" });
   });
 
+  it("a star and its undo that both fail leave nothing to undo or redo", async () => {
+    initFromQuotes([quote()]);
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    failNext(patchStarred);
+    expect(await undo()).toBe(false);
+    await settle();
+    expect(getQuotesSnapshot().starred.q1).toBeUndefined();
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
+  it("two failed stars in flight give back the redo the first ended", async () => {
+    initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
+    addTag("q1", tag("Trust"));
+    await undo();
+    failNext(patchStarred);
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    setStarred(["q2"], true);
+    await settle();
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "addTag" });
+  });
+
   it("an undo the server could only partly place has moved, and is not offered again", async () => {
     initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
     addTag("q1", tag("Trust"));

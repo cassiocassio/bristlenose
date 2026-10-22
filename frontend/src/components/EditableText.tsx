@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { isExportMode } from "../utils/exportData";
+import { sameWords } from "../utils/sameWords";
 
 const srOnlyStyle: React.CSSProperties = {
   position: "absolute",
@@ -36,6 +37,12 @@ interface EditableTextProps {
   "data-edit-key"?: string;
   /** When true (set synchronously by a parent), blur is suppressed. */
   suppressBlurRef?: React.RefObject<boolean>;
+  /**
+   * Display text, where a change only in spacing is no edit (decision #30):
+   * leaving it with the same words as it showed, or as the original, cancels.
+   * Off for names matched as typed (codebook tags and groups).
+   */
+  spacingIsNoEdit?: boolean;
 }
 
 export function EditableText({
@@ -54,6 +61,7 @@ export function EditableText({
   "data-testid": testId,
   "data-edit-key": editKey,
   suppressBlurRef,
+  spacingIsNoEdit = false,
 }: EditableTextProps) {
   const ref = useRef<HTMLElement>(null);
   const [internalEditing, setInternalEditing] = useState(false);
@@ -67,7 +75,10 @@ export function EditableText({
   const finishEdit = useCallback(
     (newText: string) => {
       if (trigger === "click") setInternalEditing(false);
-      if (newText !== baseline) {
+      const unchanged = spacingIsNoEdit
+        ? sameWords(newText, value) || sameWords(newText, baseline)
+        : newText === baseline;
+      if (!unchanged) {
         setAnnouncement("Saved");
         onCommit(newText);
       } else {
@@ -75,7 +86,7 @@ export function EditableText({
         onCancel();
       }
     },
-    [trigger, baseline, onCommit, onCancel],
+    [trigger, baseline, value, spacingIsNoEdit, onCommit, onCancel],
   );
 
   // Announce edit mode entry to screen readers.

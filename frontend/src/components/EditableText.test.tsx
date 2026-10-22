@@ -212,6 +212,49 @@ describe("EditableText", () => {
     expect(onCommit).toHaveBeenCalledWith("updated");
   });
 
+  // Decision #30: a heading's or description's spacing is not shown, so a
+  // change only in spacing is no edit. Codebook names are matched as typed.
+  describe("spacingIsNoEdit", () => {
+    function leave(value: string, typed: string | null, spacingIsNoEdit = true, originalValue = value) {
+      const onCommit = vi.fn();
+      render(
+        <EditableText
+          value={value}
+          originalValue={originalValue}
+          onCommit={onCommit}
+          onCancel={() => {}}
+          isEditing={true}
+          spacingIsNoEdit={spacingIsNoEdit}
+          data-testid="et"
+        />,
+      );
+      const el = screen.getByTestId("et");
+      if (typed !== null) el.textContent = typed;
+      fireEvent.keyDown(el, { key: "Enter" });
+      return onCommit;
+    }
+
+    it("an untouched heading with a trailing space commits nothing", () => {
+      expect(leave("Onboarding ", null)).not.toHaveBeenCalled();
+    });
+
+    it("adding only a space commits nothing", () => {
+      expect(leave("Two words", "Two  words")).not.toHaveBeenCalled();
+    });
+
+    it("respacing a renamed heading commits nothing", () => {
+      expect(leave("Renamed thing", "Renamed  thing", true, "Original")).not.toHaveBeenCalled();
+    });
+
+    it("a change of words still commits", () => {
+      expect(leave("Two words", "Three words")).toHaveBeenCalledWith("Three words");
+    });
+
+    it("off, a spacing fix is a change (a codebook name)", () => {
+      expect(leave("a  b", "a b", false)).toHaveBeenCalledWith("a b");
+    });
+  });
+
   it("calls onCancel on Escape key", () => {
     const onCancel = vi.fn();
     render(

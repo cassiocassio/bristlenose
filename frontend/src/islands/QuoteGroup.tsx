@@ -854,6 +854,7 @@ export function QuoteGroup({
             onCommit={handleHeadingCommit}
             onCancel={() => setIsEditingHeading(false)}
             trigger="external"
+            spacingIsNoEdit
             className="editable-text"
             data-testid={`bn-group-${anchor}-title`}
             data-edit-key={`${editKeyBase}:title`}
@@ -897,6 +898,7 @@ export function QuoteGroup({
             onCommit={handleDescCommit}
             onCancel={() => setIsEditingDesc(false)}
             trigger="external"
+            spacingIsNoEdit
             className="editable-text"
             data-testid={`bn-group-${anchor}-desc`}
             data-edit-key={`${editKeyBase}:desc`}

@@ -130,6 +130,51 @@ describe("UndoStore", () => {
     expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first", pushes: 2 });
   });
 
+  it("two acts withdrawn in the order recorded give back the branch the first ended", async () => {
+    pushUndo({ action: "first", undo: () => {}, redo: () => {} });
+    await undo();
+    const a = { action: "a", undo: () => {}, redo: () => {} };
+    const b = { action: "b", undo: () => {}, redo: () => {} };
+    pushUndo(a);
+    pushUndo(b);
+    dropUndo(a);
+    dropUndo(b);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
+  });
+
+  it("an act whose undo was running when its write failed leaves if that undo fails too", async () => {
+    let fail!: (e: Error) => void;
+    const act = {
+      action: "first",
+      undo: () => new Promise<void>((_, rej) => { fail = rej; }),
+      redo: () => {},
+    };
+    pushUndo(act);
+    const undone = undo();
+    dropUndo(act);
+    fail(new Error("refused"));
+    expect(await undone).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
+  it("an act whose undo was running when its write failed stays if that undo lands", async () => {
+    let land!: () => void;
+    const act = {
+      action: "first",
+      undo: () => new Promise<void>((r) => { land = r; }),
+      redo: () => Promise.reject(new Error("refused")),
+    };
+    pushUndo(act);
+    const undone = undo();
+    dropUndo(act);
+    land();
+    expect(await undone).toBe(true);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
+    // It is real now: a redo that fails keeps it, as any act's would.
+    expect(await redo()).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
+  });
+
   it("a withdrawn act gives back an act it pushed off the bottom", () => {
     for (let i = 0; i < UNDO_DEPTH; i++) pushUndo({ action: `a${i}`, undo: () => {}, redo: () => {} });
     const failed = { action: "over", undo: () => {}, redo: () => {} };

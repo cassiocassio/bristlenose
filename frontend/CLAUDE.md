@@ -121,7 +121,8 @@ all answered the store puts it back to what the server is known to hold
 (`send` in `QuotesContext.tsx`, R7). **The undo stack follows the write
 (decision #15, 22 Oct 2026):** a gesture none of whose write landed is
 withdrawn (`recordGesture` → `dropUndo`, which also gives back the redo branch
-it ended), unless an undo of it has already run; and an entry's undo or redo
+it ended, through any later failed act); an act whose undo was already running
+leaves only if that undo fails too; and an entry's undo or redo
 fails only when none of its write landed (`mustLand`), so a failed one stays
 where it was. The exported gesture functions stay `void`; their `write*` twins return
 what landed, because a promise returned into a test's `act(() => …)` makes it

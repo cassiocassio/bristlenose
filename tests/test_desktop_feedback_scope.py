@@ -86,6 +86,17 @@ def test_each_window_wires_its_own_doors() -> None:
     assert "feedbackRequests: bridgeHandler.feedbackRequests" in wiring
 
 
+def test_the_boot_pane_opens_its_own_windows_sheet() -> None:
+    # N08: after a failed retry the boot pane offers Send Feedback…, which sets
+    # this window's flag, the sidebar ladybug's door, never a broadcast.
+    view = _sources()["ContentView.swift"]
+    start = view.index("BootView(phase: .failed(")
+    call = view[start : view.index("project: project.id)", start)]
+    assert "showingFeedbackSheet = true" in call
+    assert "NotificationCenter" not in call
+    assert "isRetry: true" in call
+
+
 def test_the_window_whose_page_asked_presents_the_sheet() -> None:
     handler = _block_after(_doors(), ".onChange(of: feedbackRequests)")
     assert "isShowing = true" in handler

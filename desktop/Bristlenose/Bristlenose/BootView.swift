@@ -19,12 +19,13 @@ struct BootView: View {
         case startingSidecar
         /// Sidecar is up; React SPA is mounting.
         case loadingReport
-        /// Sidecar failed to start. `message` is shown verbatim under the
-        /// status line; `retry` reattempts; `details` reveals raw output.
         /// The sidecar could not start. The message is a `FailureMessage` so
         /// the line under the localised title is localised too — it was the
-        /// English half of a half-translated view.
-        case failed(message: FailureMessage, retry: () -> Void)
+        /// English half of a half-translated view. `retry` reattempts;
+        /// `sendFeedback` opens this window's feedback sheet, offered in Retry's
+        /// place once a retry has itself failed (`failureAction`). Show details
+        /// reveals the raw output either way.
+        case failed(message: FailureMessage, retry: () -> Void, sendFeedback: () -> Void)
         /// Lazy start: this window has a study but deliberately has not begun
         /// serving it, because nobody is looking. Renders **at rest** — no verb,
         /// no motion. `.idle` used to map to `.startingSidecar`, which was true
@@ -142,7 +143,7 @@ struct BootView: View {
                 .progressViewStyle(.linear)
                 .frame(maxWidth: 240)
 
-        case .failed(let message, let retry):
+        case .failed(let message, let retry, let sendFeedback):
             VStack(spacing: 10) {
                 Text(statusText)
                     .font(.headline)
@@ -152,8 +153,17 @@ struct BootView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
                 HStack(spacing: 12) {
-                    Button(i18n.t("desktop.boot.retry"), action: retry)
-                        .keyboardShortcut(.defaultAction)
+                    // One primary button, and Return follows it.
+                    switch Self.failureAction(
+                        startedByRetry: serveManagerForPane?.startedByRetry ?? false
+                    ) {
+                    case .retry:
+                        Button(i18n.t("desktop.boot.retry"), action: retry)
+                            .keyboardShortcut(.defaultAction)
+                    case .sendFeedback:
+                        Button(i18n.t("desktop.menu.help.sendFeedback"), action: sendFeedback)
+                            .keyboardShortcut(.defaultAction)
+                    }
                     Button(i18n.t(detailsExpanded
                                   ? "desktop.boot.hideDetails"
                                   : "desktop.boot.showDetails")) {
@@ -175,5 +185,21 @@ struct BootView: View {
                 }
             }
         }
+    }
+}
+
+extension BootView {
+    /// The failure pane's primary button.
+    enum FailureAction: Equatable {
+        case retry
+        case sendFeedback
+    }
+
+    /// Retry on a first failure; Send Feedback… once a start the researcher
+    /// asked for with Retry has failed too. Owner decision, 22 Oct 2026: they
+    /// don't want to hit retry 10 times. A failure that survives a retry is
+    /// worth telling us about, and the sheet is the way to do that from here.
+    static func failureAction(startedByRetry: Bool) -> FailureAction {
+        startedByRetry ? .sendFeedback : .retry
     }
 }

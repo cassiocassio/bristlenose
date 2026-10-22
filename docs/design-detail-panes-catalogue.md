@@ -242,7 +242,7 @@ Run failure renders as **both** a native diagnostic popover (sidebar-anchored) *
 | N05 | `inputFiles != nil` & no viewable data | "analyses folders" + file list | reveal files; **can't analyse** | ⚪ |
 | N06 | serve `.idle/.starting` | spinner + "Starting…" | none | 🟢 |
 | N07 | serve `.running` & `!isReady` | spinner overlay, 2s-timeout clear | none | ⚪ |
-| N08 | serve `.failed` | warning + **Retry** + details | retry serve | 🟢 |
+| N08 | serve `.failed` | warning + **Retry** (first failure) / **Send Feedback…** (after a failed retry) + details | retry serve / open this window's feedback sheet | 🟢 |
 | N09 | serve `.running` & ready | → React SPA (web gate) | full report tooling | 🔵 |
 | N10 | `selectionCount > 1` | stack + "N selected / pick one" | none | ⚪ |
 | N11 | no selection — **zero projects _or_ projects exist** | rotating-cell welcome home | drop / setup / consent | 🟢 |
@@ -318,7 +318,7 @@ view isn't internationalised. `{{…}}` / `%d` / `%@` mark runtime-interpolated 
 | N07 | Tagline (body) | `boot.tagline` | Sensemaking for User Research |
 | N08 | Headline | `boot.failedTitle` | Couldn't start Bristlenose |
 | N08 | Body | _dynamic_ error | the captured error message |
-| N08 | Buttons | `boot.retry` · `boot.showDetails` / `boot.hideDetails` | Retry · Show details / Hide details |
+| N08 | Buttons | `boot.retry` · `menu.help.sendFeedback` · `boot.showDetails` / `boot.hideDetails` | Retry (first failure) / Send Feedback… (after a failed retry) · Show details / Hide details |
 | N10 | Headline | `chrome.multipleSelected` | `%d items selected` |
 | N10 | Body | `chrome.multipleSelectedHint` | Select a single project to view its report. |
 | ~~N11~~ | _all rows below_ | **Not wired since 2026-07-15** — `WelcomeHomeView` is deliberately un-i18n'd while the copy iterates. The keys are **retained on purpose**, not tombstoned: they are already-translated raw material for the deferred localisation pass, and the three marked ✅ below are verbatim-live copy today. Do not sweep them as orphans — canonical rationale in [design-welcome-screen.md](design-welcome-screen.md) § Copy & i18n. | |

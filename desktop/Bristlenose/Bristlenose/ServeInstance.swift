@@ -29,7 +29,22 @@ import Foundation
 final class ServeInstance: ObservableObject {
 
     /// Lifecycle of this sidecar's process.
-    @Published var state: ServeState = .idle
+    ///
+    /// Reaching `.running` clears `startedByRetry` here, the one site every
+    /// `.running` writer passes through (a fresh spawn's readiness line, an
+    /// external server, a warm re-point), so none of them can forget it.
+    @Published var state: ServeState = .idle {
+        didSet {
+            if case .running = state, startedByRetry { startedByRetry = false }
+        }
+    }
+
+    /// True while the current start attempt is one the researcher asked for
+    /// with the boot pane's Retry. Set by `ServeManager.start(projectPath:isRetry:)`,
+    /// cleared by every other start and on reaching `.running`. A `.failed`
+    /// state with this set is a retry that failed, and the boot pane then offers
+    /// Send Feedback… instead of another Retry (`BootView.failureAction`).
+    @Published var startedByRetry = false
 
     /// Captured stdout/stderr, for the diagnostics pane and failure summaries.
     @Published var outputLines: [String] = []

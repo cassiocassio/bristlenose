@@ -1249,9 +1249,10 @@ struct ContentView: View {
         // `.serverless` config (canonical endpoint, enabled — same path the alpha
         // expiry flow uses), so the menu item is never a dead click.
         //
-        // Four doors, each opening ONE sheet (R82): Help ▸ Send Feedback with
+        // Five doors, each opening ONE sheet (R82): Help ▸ Send Feedback with
         // this window in front (`perform(.showFeedback)`), the sidebar ladybug,
-        // this window's page asking, and the menu's no-project-window fallback,
+        // the boot pane's Send Feedback… after a failed retry, this window's
+        // page asking, and the menu's no-project-window fallback,
         // the only broadcast, which one window takes by claiming
         // `FeedbackFallback`. The last two are `FeedbackDoors`.
         .modifier(FeedbackDoors(
@@ -3800,7 +3801,11 @@ struct ContentView: View {
 
                     case .failed(let error):
                         BootView(phase: .failed(message: error, retry: {
-                            serveFleet.manager(for: project.id).start(projectPath: project.path)
+                            serveFleet.manager(for: project.id)
+                                .start(projectPath: project.path, isRetry: true)
+                        }, sendFeedback: {
+                            // THIS window's sheet (R82), the ladybug's door, not a broadcast.
+                            showingFeedbackSheet = true
                         }), project: project.id)
                     }
                 }

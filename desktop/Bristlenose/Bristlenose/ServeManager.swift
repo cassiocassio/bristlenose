@@ -435,6 +435,10 @@ final class ServeManager: ObservableObject {
     /// native localhost API clients (e.g. `MiroAPI`) alongside `authToken`.
     var runningPort: Int? { instance.runningPort }
 
+    /// Whether the current start attempt came from the boot pane's Retry. See
+    /// `ServeInstance.startedByRetry`.
+    var startedByRetry: Bool { instance.startedByRetry }
+
     private var process: Process? {
         get { instance.process }
         set { instance.process = newValue }
@@ -523,8 +527,13 @@ final class ServeManager: ObservableObject {
     /// post-Locate resume, post-failure retry) skip the teardown entirely.
     /// `switchProject(to:)` is the orchestrator for the prior-running case.
     ///
-    /// - Parameter projectPath: Absolute path to the project directory.
-    func start(projectPath: String) {
+    /// - Parameters:
+    ///   - projectPath: Absolute path to the project directory.
+    ///   - isRetry: true only from the boot pane's Retry. Recorded as
+    ///     `ServeInstance.startedByRetry`, so a retry that fails offers Send
+    ///     Feedback… rather than another Retry. Every other caller leaves it false,
+    ///     which clears the bit.
+    func start(projectPath: String, isRetry: Bool = false) {
         // Expired alpha `.dmg` builds never start the sidecar (AlphaBuild is a
         // no-op on Debug / App Store / TestFlight). The expiry flow blocks the
         // window with modals, but guard here too so no start path — launch
@@ -569,6 +578,12 @@ final class ServeManager: ObservableObject {
                 break
             }
         }
+
+        // After the same-path return above, so a window re-fronting the study
+        // while a retry boots does not clear it; before the `mode` guard below,
+        // so a Retry with no sidecar to run (start returns at once, the state
+        // stays failed) still counts as a retry that failed.
+        instance.startedByRetry = isRetry
 
         if process != nil {
             stop()

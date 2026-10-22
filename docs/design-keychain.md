@@ -398,12 +398,15 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   recorded the split as agreement, and the CLI ran on a key Settings said
   "isn't being used", for good. "Confirmed" is the read-back: a read that
   answers with another key keeps the login copy back; one that answers with
-  the new key, or a write that landed while its read was refused, lets the
-  login copy follow. "Known to exist" is a stamp, or failing one the ledger's
+  the new key or with no item at all, or a write that landed while its read
+  was refused, lets the login copy follow. "Known to exist" is a stamp, or failing one the ledger's
   last stamp, because a nil stamp means absent *or* could not ask (as in
   `remove`). With no synced item ever seen (an ad-hoc build, whose synced
   keychain answers nothing), the login copy still takes the key, because it
-  is the only copy that works.
+  is the only copy that works. The read side keeps the same rule: an
+  adoption of the CLI's copy that the synced copy refuses records nothing,
+  so the app's copy serves and the adoption is tried again, rather than the
+  split being saved as agreement.
 - **A read compares both copies' modification dates with a ledger** (in
   UserDefaults) of what they were when they last agreed. Unchanged → read the
   app's copy, touch nothing else. The copy that moved wins: the CLI rewrote the

@@ -363,17 +363,55 @@ struct SharedKeychainItemTests {
     }
 
     /// A synced write that reports failure but stored the key is judged by its
-    /// read-back, as every write here is: the login copy follows (#11 review).
+    /// read-back, as every write here is: the login copy follows, and the save
+    /// is a save (#11 review).
     @Test func write_storedButReportedRefused_stillWritesTheLoginCopy() {
         withWorld { w in
             #expect(write(w, "sk-old") == true)
             w.clock.tick()
             w.synced.writesReportFalse = true
 
-            _ = write(w, "sk-new")
+            #expect(write(w, "sk-new") == true)
 
             #expect(syncedValue(w) == "sk-new")
             #expect(loginValue(w) == "sk-new")
+        }
+    }
+
+    /// A synced copy that answers "no such item" is a real answer: there is no
+    /// key there to protect, so the login copy takes the new one even though
+    /// the ledger remembers a synced item (#11 review).
+    @Test func write_refusedWhereTheSyncedItemIsGone_stillWritesTheLoginCopy() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.synced.delete(service: service, account: account, interaction: .allowed)
+            w.clock.tick()
+            w.synced.refuseWrites = true
+
+            #expect(write(w, "sk-new") == false)
+            #expect(loginValue(w) == "sk-new")
+            #expect(quietRead(w) == "sk-new")
+        }
+    }
+
+    /// The CLI rewrote its copy and the synced copy refuses the adoption. The
+    /// app keeps reading its own copy, and nothing is recorded as agreement,
+    /// so the adoption is tried again and lands once the synced copy takes it.
+    /// It used to return the CLI's key once, record the split, and serve the
+    /// old key for good (#11 follow-up).
+    @Test func adoptionRefusedBySyncedCopy_isRetriedNotRecorded() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.clock.tick()
+            plantLogin(w, "sk-cli")
+            w.synced.refuseWrites = true
+
+            #expect(askingRead(w) == "sk-old")
+            #expect(askingRead(w) == "sk-old")
+
+            w.synced.refuseWrites = false
+            #expect(askingRead(w) == "sk-cli")
+            #expect(syncedValue(w) == "sk-cli")
         }
     }
 

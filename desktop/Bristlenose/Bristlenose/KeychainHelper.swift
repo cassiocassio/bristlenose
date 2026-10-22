@@ -874,7 +874,12 @@ enum SharedKeychainItem {
             if loginWins, let loginValue {
                 if !synced.write(service: service, account: account, value: loginValue,
                                  interaction: interaction) {
+                    // Nothing recorded: saving the ledger now would call the
+                    // split agreement, and every later read would serve the old
+                    // key while the CLI ran on the new one. The app's copy serves
+                    // and the adoption is tried again (#11 follow-up).
                     log.error("could not adopt the CLI's copy of \(service, privacy: .public) into the synced store")
+                    return syncedValue
                 }
                 now.synced = stamp(synced, service: service, account: account)
                 now.save(defaults, service: service, account: account)
@@ -900,7 +905,7 @@ enum SharedKeychainItem {
     }
 
     /// Write both copies and read both back. `true` only if the app's own copy
-    /// round-tripped; a refused login copy is logged, because that is the CLI's
+    /// reads back the key, whatever its write reported; a refused login copy is logged, because that is the CLI's
     /// loss and not the app's. A refused synced copy that still holds another
     /// key leaves the login copy alone, so the two never disagree about which
     /// key is in use (decision #11). A save is a person's act, so it may ask.
@@ -927,16 +932,20 @@ enum SharedKeychainItem {
         // The app's own copy kept another key (decision #11). Writing the login
         // copy now would hand `bristlenose run` a key the app says isn't being
         // used, and the ledger would record the split as agreement, so it would
-        // never heal. Neither copy changes. The read decides when it answers; a
-        // refused write decides when it doesn't, if a synced item is known to
-        // exist. A nil stamp is "absent or could not ask", so the ledger's last
+        // never heal. Neither copy changes. The read decides when it answers
+        // (no item is an answer); a refused write decides when it doesn't, if a
+        // synced item is known to exist. A nil stamp is "absent or could not ask", so the ledger's last
         // stamp stands in, as in `remove`. With no synced item ever seen (an
         // ad-hoc build answers nothing), the login copy is the only one that
         // works, and takes the key below.
         let keptAnother: Bool
-        if case .found(let held) = syncedRead {
+        switch syncedRead {
+        case .found(let held):
             keptAnother = held != value
-        } else {
+        case .missing:
+            // A real answer: there is no key there to protect.
+            keptAnother = false
+        case .refused, .wouldPrompt:
             let syncedKnown = stamp(synced, service: service, account: account) != nil
                 || Ledger.load(defaults, service: service, account: account)?.synced != nil
             keptAnother = !syncedWrote && syncedKnown
@@ -952,14 +961,14 @@ enum SharedKeychainItem {
         if !loginWrote || !loginBack {
             log.error("login copy of \(service, privacy: .public) did not round-trip — bristlenose run will not see it")
         }
-        if !syncedWrote || !syncedBack {
+        if !syncedBack {
             log.error("synced copy of \(service, privacy: .public) did not round-trip")
         }
         Ledger(synced: stamp(synced, service: service, account: account),
                login: stamp(login, service: service, account: account),
                loginRefused: false)
             .save(defaults, service: service, account: account)
-        return syncedWrote && syncedBack
+        return syncedBack
     }
 
     /// Delete both copies. A login copy `bristlenose configure` created cannot

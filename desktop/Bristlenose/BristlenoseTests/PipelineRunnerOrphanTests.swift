@@ -31,17 +31,56 @@ struct PipelineRunnerOrphanTests {
 
     /// Our own process: alive, our uid, and recorded by the same libproc query
     /// the production check reads with. It must be recognised, and the file
-    /// must still be there afterwards.
+    /// must still be there afterwards. Its parent is reported as launchd, as an
+    /// orphan's is once its app has gone.
     @Test func aLiveOwnedRunIsRecognisedAndItsFileKept() throws {
         let p = project()
         let start = try #require(EventLogReader.procStartTime(pid: getpid()))
         let url = try writePIDFile("\(getpid())\n\(start)\n", for: p)
         defer { try? FileManager.default.removeItem(at: url) }
 
-        let found = PipelineRunner.aliveOwnedRunPID(for: p)
+        let found = PipelineRunner.aliveOwnedRunPID(for: p, parentPID: { _ in 1 })
 
         #expect(found == getpid(), "a live run of ours was not recognised")
         #expect(FileManager.default.fileExists(atPath: url.path), "the PID file was deleted on a check that should have passed")
+    }
+
+    /// Decision #12: a second copy of the app (a Debug build beside the
+    /// installed one shares the container) found the first copy's live run and
+    /// attached it, so its Stop and its ⌘Q signalled a run it did not start. A
+    /// run whose parent is alive is another copy's: not attached, file kept.
+    /// This process stands in for that run; its parent is reported as another
+    /// process (a dead parent would read 1: the kernel reparents at once).
+    @Test func aLiveRunOfAnotherCopyIsNotAttachedAndItsFileKept() throws {
+        let p = project()
+        let start = try #require(EventLogReader.procStartTime(pid: getpid()))
+        let url = try writePIDFile("\(getpid())\n\(start)\n", for: p)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        #expect(PipelineRunner.aliveOwnedRunPID(for: p, parentPID: { _ in 4242 }) == nil, "attached another copy's live run")
+        #expect(FileManager.default.fileExists(atPath: url.path), "deleted the PID file of another copy's live run")
+    }
+
+    /// The probe reads the kernel's parent, as `getppid` does.
+    @Test func theParentProbeReadsTheRealParent() {
+        #expect(EventLogReader.procParentPID(pid: getpid()) == getppid())
+    }
+
+    /// The same, through the scan: it reads the study off disk instead of
+    /// attaching, and leaves the other copy's file in place.
+    @Test func aScanOfAnotherCopysRunReadsDiskAndKeepsTheFile() async throws {
+        let p = project()
+        let start = try #require(EventLogReader.procStartTime(pid: getpid()))
+        let url = try writePIDFile("\(getpid())\n\(start)\n", for: p)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let manifest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("bn-orphan-scan-\(UUID().uuidString)/pipeline-manifest.json")
+
+        let outcome = await PipelineRunner.performScan(
+            project: p, manifestURL: manifest, parentPID: { _ in 4242 })
+
+        if case .orphan = outcome { Issue.record("attached another copy's live run") }
+        #expect(FileManager.default.fileExists(atPath: url.path))
     }
 
     /// A file from a build before the start token existed: pid alone. Stale,
@@ -119,12 +158,14 @@ struct PipelineRunnerOrphanTests {
     private func verdict(_ contents: String,
                          alive: Bool = true,
                          uid: uid_t? = 501,
-                         start: String? = "100.200") -> PipelineRunner.OwnedRunVerdict {
+                         start: String? = "100.200",
+                         parent: pid_t? = 1) -> PipelineRunner.OwnedRunVerdict {
         PipelineRunner.ownedRunVerdict(
             pidFileContents: contents,
             isAlive: { _ in alive },
             processUID: { _ in uid },
             startTime: { _ in start },
+            parentPID: { _ in parent },
             currentUID: 501)
     }
 
@@ -139,6 +180,9 @@ struct PipelineRunnerOrphanTests {
         #expect(verdict("42\n100.200", uid: 502) == .stale, "another user's process")
         #expect(verdict("42\n100.200", uid: nil) == .indeterminate, "uid query failed")
         #expect(verdict("42\n100.200", start: nil) == .indeterminate, "start query failed")
+        #expect(verdict("42\n100.200", parent: 4242) == .ownedByAnotherCopy, "its app is still running")
+        #expect(verdict("42\n100.200", parent: nil) == .indeterminate, "parent query failed")
+        #expect(verdict("42\n100.201", parent: 4242) == .stale, "a reused pid is stale whoever its parent")
         #expect(verdict("garbage") == .stale)
         #expect(verdict("") == .stale)
         #expect(verdict("-3\n1.2") == .stale)

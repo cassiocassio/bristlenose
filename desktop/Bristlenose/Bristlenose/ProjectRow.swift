@@ -364,9 +364,11 @@ struct ProjectRow: View {
             progress: liveData.progress[project.id]
         )
         if activity != .none {
+            // No hover-× on a run the app can't stop (decision #39).
             ProjectRowActivityIndicator(
                 kind: activity,
-                onStop: { pipelineRunner.cancel(project: project) }
+                onStop: pipelineRunner.canStop(project.id)
+                    ? { pipelineRunner.cancel(project: project) } : nil
             )
         } else if let copyState {
             // Copy is a per-project op, so its progress + cancel live on the row

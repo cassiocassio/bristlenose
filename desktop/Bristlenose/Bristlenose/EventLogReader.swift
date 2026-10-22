@@ -290,10 +290,7 @@ enum EventLogReader {
             if pythonOwnedRunIsAlive(at: pidURL) {
                 return .running
             }
-            return .failed(
-                FailureMessage.keyed("desktop.pipeline.failure.stranded"),
-                category: .unknown,
-            )
+            return .failed(stranded, category: .unknown)
         case "run_completed":
             return mapCompleted(event: event, stagesComplete: stagesComplete)
         case "run_cancelled":
@@ -360,6 +357,9 @@ enum EventLogReader {
         }
         return .ready(date)
     }
+
+    /// What a `run_started` whose process is gone reads as.
+    static let stranded = FailureMessage.keyed("desktop.pipeline.failure.stranded")
 
     /// Returns `true` iff `<output>/.bristlenose/run.pid` exists, parses,
     /// and its `(pid, start_time)` matches a live process.
@@ -439,6 +439,16 @@ enum EventLogReader {
         let n = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
         guard n == size else { return nil }
         return info.pbi_uid
+    }
+
+    /// The parent pid of `pid`, from the same libproc query; nil when the query
+    /// fails. 1 (launchd) for a run whose app has gone.
+    static func procParentPID(pid: Int32) -> pid_t? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        let n = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
+        guard n == size else { return nil }
+        return pid_t(info.pbi_ppid)
     }
 
     /// Read the last `maxBytes` bytes of `url`. Returns `(data, wasTruncated)`

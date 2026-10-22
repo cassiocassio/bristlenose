@@ -2257,7 +2257,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         let availability = projectIndex?.projects.first { $0.id == id }?.availability
 
         // Run / copy lifecycle first (ProjectRow order). Hidden, not dimmed, when N/A.
-        if isRunningOrQueued(state) {
+        if pipelineRunner?.canStop(id) == true {
             menu.addItem(menuItem("desktop.menu.project.stopAnalysis", #selector(menuStopAnalysis(_:))))
             menu.addItem(.separator())
         }
@@ -2693,6 +2693,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // `pipelineRunner.cancel` is idempotent + acks immediately (sets
             // isStopping → "Stopping…"); the × stays through stopping since the
             // run is `.running` until the process exits (ProjectRow parity).
+            // No hover-× on a run the app can't stop: a CLI run, or another
+            // copy of the app's (decision #39).
+            guard pipelineRunner?.canStop(id) == true else {
+                return .ring(fraction: fraction, onStop: nil)
+            }
             return .ring(fraction: fraction,
                          onStop: { [weak self] in self?.pipelineRunner?.cancel(project: project) })
         case .copying(let fraction):

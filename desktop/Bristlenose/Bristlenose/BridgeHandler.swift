@@ -372,6 +372,9 @@ final class BridgeHandler: ObservableObject {
     /// Project ▸ Stop Analysis (⌘.) — the menu-bar accelerator for the
     /// hover-× / context-menu Stop. Dimmed (not hidden) when false, per HIG.
     @Published var selectedProjectIsRunning: Bool = false
+    /// Whether that run is one Stop can reach: not a run another process owns
+    /// (`PipelineRunner.canStop`). Gates Project ▸ Stop Analysis (decision #39).
+    @Published var selectedProjectCanStop: Bool = false
     /// Whether the selected project has an analysis that Re-analyse could
     /// replace. Read by the Project menu, which dims rather than hides —
     /// the sidebar's context menu asks the same question of
@@ -411,8 +414,9 @@ final class BridgeHandler: ObservableObject {
     /// so Project ▸ Re-analyse stayed dimmed after a first analysis until the
     /// study was reselected (R64).
     func mirrorSelectedProjectRun(project: Project, state: PipelineState?,
-                                  data: UnanalysedState?) {
+                                  data: UnanalysedState?, runIsOwnedElsewhere: Bool = false) {
         selectedProjectIsRunning = SidebarOutlineController.isRunningOrQueued(state)
+        selectedProjectCanStop = selectedProjectIsRunning && !runIsOwnedElsewhere
         // An unreachable folder can keep `.ready` (an ejected drive), so the
         // folder's own availability is asked too: files would copy into nothing.
         selectedProjectTakesFiles = project.isAvailable && StudyFinderDrop.accepts(state: state)
@@ -1448,6 +1452,7 @@ final class BridgeHandler: ObservableObject {
         selectedProjectAvailable = true
         selectedProjectNeedsFolderAccess = false
         selectedProjectIsRunning = false
+        selectedProjectCanStop = false
         selectedProjectIsAnalysed = false
         hasSelectedProject = false
         selectedProjectTakesFiles = false

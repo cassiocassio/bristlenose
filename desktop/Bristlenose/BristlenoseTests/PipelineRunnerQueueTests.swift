@@ -1283,6 +1283,135 @@ struct PipelineRunnerQueueTests {
         #expect(rig.runner.state[a.id] == .running)
     }
 
+    // MARK: - RE#12: runs the app doesn't own (decisions #39, #40, #41)
+
+    private func dotBristlenose(_ p: Project) throws -> URL {
+        let dir = URL(fileURLWithPath: p.path).appendingPathComponent("bristlenose-output/.bristlenose")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// A study whose last run left `line` newest in its events log, scanned.
+    private func studyEndedWith(_ rig: Rig, _ name: String, _ line: String) async throws -> (Project, URL) {
+        let p = rig.project(name)
+        let dir = try dotBristlenose(p)
+        let started = #"{"schema_version":5,"ts":"2026-10-20T09:00:00Z","event":"run_started","run_id":"r1","kind":"run","started_at":"2026-10-20T09:00:00Z"}"#
+        try Data((started + "\n" + line + "\n").utf8).write(to: dir.appendingPathComponent(EventLogReader.filename))
+        rig.runner.scan(project: p)
+        await until { ![nil, .scanning].contains(rig.runner.state[p.id]) }
+        return (p, dir)
+    }
+
+    private static let cancelled = #"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_cancelled","run_id":"r1","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"cancelled","cause":null}"#
+    private static let failedLine = #"{"schema_version":5,"ts":"2026-10-20T10:00:00Z","event":"run_failed","run_id":"r1","kind":"run","started_at":"2026-10-20T09:00:00Z","ended_at":"2026-10-20T10:00:00Z","outcome":"failed","cause":{"category":"unknown","message":"boom"}}"#
+    private static let cliStarted = #"{"schema_version":5,"ts":"2026-10-20T11:00:00Z","event":"run_started","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z"}"#
+
+    /// #40: a CLI run begun after the row settled is read when the app comes
+    /// forward, and then watched to its end. It read Ready until relaunch.
+    @Test func comingForwardSeesACLIRunStartedAfterLaunch() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let p = rig.project("A")
+        rig.writeFinishedRun(in: p, tokens: nil)
+        rig.runner.scan(project: p)
+        await until { if case .ready = rig.runner.state[p.id] { return true }; return false }
+        let dir = try dotBristlenose(p)
+        try append(Self.cliStarted, to: dir)
+        try writePythonPID(getpid(), in: dir)
+
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        await until { rig.runner.state[p.id] == .running }
+        #expect(rig.runner.state[p.id] == .running, "the CLI run was not seen on coming forward")
+
+        try append(#"{"schema_version":5,"ts":"2026-10-20T12:00:00Z","event":"run_completed","run_id":"cli-run","kind":"run","started_at":"2026-10-20T11:00:00Z","ended_at":"2026-10-20T12:00:00Z","outcome":"completed","cause":null}"#, to: dir)
+        await until { rig.runner.state[p.id] != .running }
+        guard case .ready = rig.runner.state[p.id] else {
+            Issue.record("\(String(describing: rig.runner.state[p.id])) after the CLI run finished")
+            return
+        }
+        #expect(rig.launches.isEmpty)
+    }
+
+    /// #40: a live run on disk is newer than the ending a row shows. A Stopped
+    /// row kept "Stopped" through a CLI run and after it.
+    @Test func aCLIRunReplacesTheEndingARowShows() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await studyEndedWith(rig, "A", Self.cancelled)
+        try #require(rig.runner.state[p.id] == .stopped(stagesComplete: []))
+        try append(Self.cliStarted, to: dir)
+        try writePythonPID(getpid(), in: dir)
+
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        await until { rig.runner.state[p.id] == .running }
+
+        #expect(rig.runner.state[p.id] == .running)
+    }
+
+    /// #41: "Analysis stopped unexpectedly" is a read of disk, so a later read
+    /// replaces it: here a CLI run that started and finished between scans.
+    @Test func aStrandedRowIsReplacedByALaterRead() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, dir) = try await foreignRun(rig)
+        try writePythonPID(999_999, in: dir)
+        await until { rig.runner.state[p.id]?.isStranded == true }
+        try #require(rig.runner.state[p.id]?.isStranded == true)
+
+        rig.writeFinishedRun(in: p, runId: "cli-run-2", tokens: nil)
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        await until { rig.runner.state[p.id]?.isStranded != true }
+
+        guard case .ready = rig.runner.state[p.id] else {
+            Issue.record("still \(String(describing: rig.runner.state[p.id])) over a fresh report")
+            return
+        }
+    }
+
+    /// #41 is the one exception: any other failure keeps its protection, so a
+    /// manifest read never erases a diagnostic.
+    @Test func anyOtherFailureIsKeptThroughALaterRead() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let (p, _) = try await studyEndedWith(rig, "A", Self.failedLine)
+        guard case .failed = rig.runner.state[p.id] else {
+            Issue.record("precondition: \(String(describing: rig.runner.state[p.id]))"); return
+        }
+        let before = rig.runner.state[p.id]
+
+        rig.writeFinishedRun(in: p, runId: "r2", tokens: nil)
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        try? await Task.sleep(for: .milliseconds(300))
+
+        #expect(rig.runner.state[p.id] == before)
+    }
+
+    /// #40: what an activation rescan reads. Not a run or a queue place (the
+    /// runner's, or watched), not a scan under way, not a folder that is away.
+    @Test func whatComingForwardReadsAgain() {
+        let reads = PipelineRunner.takesActivationRescan
+        #expect(!reads(nil))
+        #expect(!reads(.scanning))
+        #expect(!reads(.running))
+        #expect(!reads(.queued(position: 1)))
+        #expect(!reads(.unreachable(reason: .folderMissing)))
+        #expect(reads(.idle))
+        #expect(reads(.ready(Date())))
+        #expect(reads(.stopped(stagesComplete: [])))
+        #expect(reads(.failed(EventLogReader.stranded, category: .unknown)))
+    }
+
+    /// #39: Stop is offered on the app's own run and queue, never on a run
+    /// another process owns, where it sent nothing.
+    @Test func stopIsOfferedOnlyWhereItCanReach() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A"), b = rig.project("B")
+        rig.runner.start(project: a)
+        rig.runner.start(project: b)
+        #expect(rig.runner.canStop(a.id), "the app's own run")
+        #expect(rig.runner.canStop(b.id), "a place in the queue")
+
+        let (cli, _) = try await foreignRun(rig)
+        #expect(!rig.runner.canStop(cli.id), "a CLI run: Stop would send nothing")
+        #expect(!rig.runner.canStop(rig.project("C").id), "nothing running")
+    }
+
     // MARK: - R25: a failed run is judged on all of its output
 
     @Test func aFailureIsJudgedOnLinesStillInThePipeAtExit() async throws {

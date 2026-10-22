@@ -1400,7 +1400,7 @@ private struct ProjectMenuContent: View {
                 windowCommands?.perform(.stopProject)
             }
             .keyboardShortcut(".", modifiers: .command)
-            .disabled(!bridgeHandler.selectedProjectIsRunning || !enabled(.stopProject))
+            .disabled(!bridgeHandler.selectedProjectCanStop || !enabled(.stopProject))
 
             // Routed natively (`windowCommands`), not through the web bridge —
             // it deletes a directory and spawns a subprocess, and the bridge

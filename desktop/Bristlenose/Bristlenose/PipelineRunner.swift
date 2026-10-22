@@ -261,6 +261,13 @@ extension PipelineState {
         return false
     }
 
+    /// "Analysis stopped unexpectedly": a `run_started` whose process is gone,
+    /// read off disk (`EventLogReader.deriveState`), never a run's own verdict.
+    var isStranded: Bool {
+        if case .failed(let message, _) = self { return message == EventLogReader.stranded }
+        return false
+    }
+
     /// The analysis couldn't start for want of an AI provider. The diagnostic
     /// popover offers Settings ▸ LLM Provider in `Show Log`'s place, as it
     /// offers Locate… for a folder it can't read: the one act that fixes what
@@ -744,10 +751,19 @@ final class PipelineRunner: ObservableObject {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopAllForQuit() }
         }
+        activationObserver = notificationCenter.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.rescanOnActivation() }
+        }
     }
 
     private var whisperReadyObserver: NSObjectProtocol?
     private var terminationObserver: NSObjectProtocol?
+    private var activationObserver: NSObjectProtocol?
+    /// Studies an activation rescan is reading now: a read that hangs (a
+    /// sleeping drive) is not stacked by the next ⌘-Tab.
+    private var activationScans: Set<UUID> = []
 
     /// The projects whose last run left a session waiting for Whisper.
     var projectsWaitingForWhisper: [UUID] {
@@ -860,9 +876,10 @@ final class PipelineRunner: ObservableObject {
 
     nonisolated static func performScan(
         project: Project, manifestURL: URL,
-        startTime: (pid_t) -> String? = EventLogReader.procStartTime
+        startTime: (pid_t) -> String? = EventLogReader.procStartTime,
+        parentPID: (pid_t) -> pid_t? = EventLogReader.procParentPID
     ) async -> ScanOutcome {
-        if let pid = aliveOwnedRunPID(for: project, startTime: startTime) {
+        if let pid = aliveOwnedRunPID(for: project, startTime: startTime, parentPID: parentPID) {
             return .orphan(pid: pid)
         }
         // No live orphan. The PID file's fate was decided inside
@@ -955,6 +972,45 @@ final class PipelineRunner: ObservableObject {
         }
     }
 
+    /// Read again each study the app is not running when the app comes forward
+    /// (decision #40). A `bristlenose run` started in Terminal on a sidebar
+    /// study after launch was seen only by a later launch, rename or drop: the
+    /// row said Ready while it ran, and Analyse failed over it ("another run is
+    /// in progress"). Whoever started it switches back to look, so activation
+    /// is when to read, as `ProjectIndex` reads folder drift. Studies the
+    /// runner owns, ones already watched or queued, and ones whose folder is
+    /// away (`ProjectIndex.onFolderReturned` reads those when they come back)
+    /// are left alone.
+    func rescanOnActivation() {
+        guard let projects = projectIndex?.projects else { return }
+        for project in projects
+        where Self.takesActivationRescan(state[project.id])
+            && !ownsRun(project.id) && !activationScans.contains(project.id) {
+            let projectID = project.id
+            let manifestURL = Self.manifestURL(for: project)
+            activationScans.insert(projectID)
+            Task.detached { [weak self] in
+                let outcome = await Self.performScan(project: project, manifestURL: manifestURL)
+                await self?.finishActivationScan(outcome, project: project)
+            }
+        }
+    }
+
+    private func finishActivationScan(_ outcome: ScanOutcome, project: Project) {
+        activationScans.remove(project.id)
+        applyScan(outcome: outcome, project: project, projectID: project.id)
+    }
+
+    /// A row an activation rescan reads: one at rest. Not a run or a place in
+    /// the queue (the runner's, or watched), not a scan under way, and not a
+    /// folder that is away.
+    nonisolated static func takesActivationRescan(_ state: PipelineState?) -> Bool {
+        switch state {
+        case nil, .scanning, .running, .queued, .unreachable: return false
+        default: return true
+        }
+    }
+
     /// A read of disk that can end a watch: not "still going", and not "could
     /// not read".
     private nonisolated static func isSettled(_ state: PipelineState) -> Bool {
@@ -1005,6 +1061,18 @@ final class PipelineRunner: ObservableObject {
         return false
     }
 
+    /// Whether Stop is offered for the project: a run or a place in the queue
+    /// that is this app's. A run another process owns (a CLI run, another copy
+    /// of the app) can't be signalled from the sandbox, so its Stop is hidden
+    /// rather than left to do nothing (decision #39).
+    func canStop(_ projectID: UUID) -> Bool {
+        switch state[projectID] {
+        case .queued: return true
+        case .running: return !isForeignRunning(projectID)
+        default: return false
+        }
+    }
+
     // MARK: - Orphan attach (Slice 7)
 
     /// What the PID file says about a run, judged against the live process
@@ -1022,6 +1090,13 @@ final class PipelineRunner: ObservableObject {
         /// so a relaunch mid-run showed Analysing with an inert Stop while
         /// Analyse could spawn a second run against the same folder.
         case indeterminate
+        /// A live run of ours whose parent is still running: another copy of
+        /// the app spawned it (a Debug build beside the installed app share one
+        /// container). **Keep the file, don't attach**: attached, this copy's
+        /// Stop and Quit would signal the other copy's run (decision #12). An
+        /// orphan proper has been reparented to launchd. The scan reads it off
+        /// disk instead, as a run another process owns (R22).
+        case ownedByAnotherCopy
     }
 
     /// The PID file is `"<pid>\n<start_time>\n<provider>"` (the third line,
@@ -1045,6 +1120,7 @@ final class PipelineRunner: ObservableObject {
         isAlive: (pid_t) -> Bool,
         processUID: (pid_t) -> uid_t?,
         startTime: (pid_t) -> String?,
+        parentPID: (pid_t) -> pid_t?,
         currentUID: uid_t
     ) -> OwnedRunVerdict {
         let lines = pidFileContents
@@ -1058,7 +1134,11 @@ final class PipelineRunner: ObservableObject {
         guard !recorded.isEmpty else { return .stale }
         guard recorded != noStartToken else { return .indeterminate }
         guard let live = startTime(pid) else { return .indeterminate }
-        return live == recorded ? .alive(pid) : .stale
+        guard live == recorded else { return .stale }
+        // A hosted run is reparented to launchd the moment its app goes (and
+        // then stops itself), so only that run is an orphan to attach.
+        guard let parent = parentPID(pid) else { return .indeterminate }
+        return parent == 1 ? .alive(pid) : .ownedByAnotherCopy
     }
 
     /// Read the app's PID file for `project` and verify the pid is (a) alive,
@@ -1074,7 +1154,8 @@ final class PipelineRunner: ObservableObject {
     nonisolated static func aliveOwnedRunPID(
         for project: Project,
         processUID: (pid_t) -> uid_t? = EventLogReader.procUID,
-        startTime: (pid_t) -> String? = EventLogReader.procStartTime
+        startTime: (pid_t) -> String? = EventLogReader.procStartTime,
+        parentPID: (pid_t) -> pid_t? = EventLogReader.procParentPID
     ) -> pid_t? {
         let url = pidFileURL(for: project)
         guard let data = try? Data(contentsOf: url),
@@ -1088,6 +1169,7 @@ final class PipelineRunner: ObservableObject {
             isAlive: { kill($0, 0) == 0 },
             processUID: processUID,
             startTime: startTime,
+            parentPID: parentPID,
             currentUID: getuid()
         )
         switch verdict {
@@ -1098,6 +1180,9 @@ final class PipelineRunner: ObservableObject {
             return nil
         case .indeterminate:
             logger.warning("orphan check could not finish for project=\(project.id.uuidString, privacy: .public) — keeping its PID file")
+            return nil
+        case .ownedByAnotherCopy:
+            logger.notice("a live run of another copy of the app for project=\(project.id.uuidString, privacy: .public) — not attaching")
             return nil
         }
     }
@@ -1471,12 +1556,27 @@ final class PipelineRunner: ObservableObject {
     /// A `.running` that a scan read off another process's run is disk's, and
     /// disk may end it (R22).
     private func applyScanResult(_ resolved: PipelineState, for projectID: UUID) {
-        switch state[projectID] {
+        let current = state[projectID]
+        if resolved == .running, Self.isAtRestAfterARun(current) {
+            // A run is live on disk that this app did not start (a CLI run
+            // begun after the row settled, decision #40): newer than the
+            // ending the row shows, which it would otherwise keep through the
+            // run and after it. The watch below settles it when it ends.
+            state[projectID] = resolved
+            return
+        }
+        switch current {
         case .running where !ownsRun(projectID):
             // A run another process owns, read off disk in the first place:
             // disk is the only witness to its end (R22). Kept, this read
             // "Analysing" until quit.
             state[projectID] = resolved
+        case .some(let failure) where failure.isStranded:
+            // "Analysis stopped unexpectedly" is itself a read of disk (a
+            // `run_started` whose process is gone), so a later read replaces
+            // it (decision #41): the next run's end, or Python's reconcile.
+            // Kept, it outlived a CLI run's fresh report until relaunch.
+            if resolved != failure { state[projectID] = resolved }
         case .running, .queued, .stopped, .partial, .failed,
              .completedPartial, .failedWithDiagnostic:
             // .running/.queued: live state owned by the runner, not the manifest.
@@ -1490,7 +1590,18 @@ final class PipelineRunner: ObservableObject {
             // just injected a synthesized diagnostic for visual evaluation.
             return
         default:
-            state[projectID] = resolved
+            // Unchanged, nothing is written: activation rescans every study
+            // at rest, and each write republishes the sidebar.
+            if current != resolved { state[projectID] = resolved }
+        }
+    }
+
+    /// A row a run has ended on, which only a live run on disk may replace
+    /// (`applyScanResult`).
+    private nonisolated static func isAtRestAfterARun(_ state: PipelineState?) -> Bool {
+        switch state {
+        case .stopped, .partial, .failed, .completedPartial, .failedWithDiagnostic: return true
+        default: return false
         }
     }
 

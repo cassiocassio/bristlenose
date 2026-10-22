@@ -1520,7 +1520,8 @@ struct ContentView: View {
                 bridgeHandler.hasSelectedProject = true
                 bridgeHandler.mirrorSelectedProjectRun(
                     project: project, state: pipelineRunner.state[id],
-                    data: projectIndex.unanalysed[id])
+                    data: projectIndex.unanalysed[id],
+                    runIsOwnedElsewhere: !pipelineRunner.canStop(id))
                 projectIndex.updateLastOpened(id: id)
                 // Gate serve on consent + availability — nothing is sent to a
                 // provider before the user has seen the AI data disclosure
@@ -1603,6 +1604,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectCanStop = false
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName =
@@ -1615,6 +1617,7 @@ struct ContentView: View {
             bridgeHandler.selectedProjectPath = ""
             bridgeHandler.selectedProjectRevealablePath = ""
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectCanStop = false
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedFolderName = ""
@@ -3438,10 +3441,12 @@ struct ContentView: View {
            let project = projectIndex.projects.first(where: { $0.id == id }) {
             bridgeHandler.mirrorSelectedProjectRun(
                 project: project, state: pipelineRunner.state[id],
-                data: projectIndex.unanalysed[id])
+                data: projectIndex.unanalysed[id],
+                runIsOwnedElsewhere: !pipelineRunner.canStop(id))
         } else {
             bridgeHandler.selectedProjectNeedsFolderAccess = false
             bridgeHandler.selectedProjectIsRunning = false
+            bridgeHandler.selectedProjectCanStop = false
             bridgeHandler.selectedProjectIsAnalysed = false
             bridgeHandler.hasSelectedProject = false
             bridgeHandler.selectedProjectTakesFiles = false
@@ -3524,7 +3529,7 @@ struct ContentView: View {
         .contextMenu {
             // Run / copy lifecycle, most contextually-relevant first. Hidden
             // (not dimmed) when N/A — context-menu HIG.
-            if isRunningOrQueued(pipelineRunner.state[project.id]) {
+            if pipelineRunner.canStop(project.id) {
                 Button(i18n.t("desktop.menu.project.stopAnalysis")) {
                     pipelineRunner.cancel(project: project)
                 }

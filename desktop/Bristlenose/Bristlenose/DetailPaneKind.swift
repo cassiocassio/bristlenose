@@ -20,13 +20,19 @@ enum DetailPaneKind: Equatable {
     /// Nothing to analyse yet, or a folder project that has never produced a
     /// report — the "Drag interviews here" pane.
     case dragInterviews
+    /// A never-run study whose folder `run` refuses by name — the home folder
+    /// or a system root (`ScanSelection.refusal`, `_refuse_reason` in
+    /// Python). "Drag Interviews Here" would send the researcher to add files
+    /// to a folder that can never be analysed, so the pane says why instead,
+    /// in the sentence the serve's status page uses (decision #110, 22 Oct 2026).
+    case unsuitableFolder
     /// The serve-backed surface — boot view, then the report WKWebView.
     case report
 
     /// Mirror of the `detail` cascade, in its original order: unreachable
     /// beats everything; the shoal owns the pane during analysis; an empty
-    /// folder prompts for interviews; a never-run folder prompts again
-    /// (`.idle` only — `.scanning` falls through to the serve so an
+    /// folder prompts for interviews; a never-run folder prompts again, unless
+    /// `run` refuses the folder itself (`folderRefused`) (`.idle` only — `.scanning` falls through to the serve so an
     /// already-analysed project boots rather
     /// than flashing an empty pane before the manifest read resolves; failed /
     /// cancelled / partial states keep the serve surface, which carries the
@@ -36,13 +42,16 @@ enum DetailPaneKind: Equatable {
         isAvailable: Bool,
         showShoal: Bool,
         pathIsEmpty: Bool,
-        pipelineState: PipelineState?
+        pipelineState: PipelineState?,
+        folderRefused: Bool = false
     ) -> DetailPaneKind {
         guard hasProject else { return .noProject }
         if !isAvailable { return .unavailable }
         if showShoal { return .shoal }
         if pathIsEmpty { return .dragInterviews }
-        if case .idle = pipelineState ?? .scanning { return .dragInterviews }
+        if case .idle = pipelineState ?? .scanning {
+            return folderRefused ? .unsuitableFolder : .dragInterviews
+        }
         return .report
     }
 

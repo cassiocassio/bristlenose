@@ -2784,7 +2784,10 @@ struct ContentView: View {
             isAvailable: windowProject?.isAvailable ?? false,
             showShoal: windowProject.map(shouldShowShoal) ?? false,
             pathIsEmpty: windowProject?.path.isEmpty ?? true,
-            pipelineState: windowProject.flatMap { pipelineRunner.state[$0.id] }
+            pipelineState: windowProject.flatMap { pipelineRunner.state[$0.id] },
+            folderRefused: windowProject.map { p in
+                !p.path.isEmpty && ScanSelection.refusal(for: URL(fileURLWithPath: p.path)) != nil
+            } ?? false
         )
     }
 
@@ -3649,6 +3652,15 @@ struct ContentView: View {
                 )
             case .dragInterviews:
                 dragInterviewsPane(project)
+            case .unsuitableFolder:
+                // `run` refuses the home folder and system roots by name, so
+                // "Drag Interviews Here" would ask for files that could never
+                // be analysed. The status page's sentence, as its headline
+                // there and here, with the warning kind's own symbol (#110).
+                ContentUnavailableView(
+                    i18n.t("desktop.chrome.unsuitableFolder"),
+                    systemImage: MessageKind.warning.symbolName
+                )
             case .report:
                 ZStack {
                     // This pane renders ONE project, so it reads that

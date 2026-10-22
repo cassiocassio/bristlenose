@@ -34,6 +34,7 @@ struct LensAvailabilityTests {
     @Test func nonDocumentPanesAreUnavailable() {
         #expect(derive(pane: .shoal, prior: true) == .unavailable(.noDocument))
         #expect(derive(pane: .dragInterviews, prior: true) == .unavailable(.noDocument))
+        #expect(derive(pane: .unsuitableFolder, prior: true) == .unavailable(.noDocument))
     }
 
     // MARK: - Serve gate

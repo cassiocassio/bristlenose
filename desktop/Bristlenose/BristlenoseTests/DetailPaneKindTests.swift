@@ -14,14 +14,16 @@ struct DetailPaneKindTests {
         isAvailable: Bool = true,
         showShoal: Bool = false,
         pathIsEmpty: Bool = false,
-        pipelineState: PipelineState? = .ready(Date(timeIntervalSince1970: 0))
+        pipelineState: PipelineState? = .ready(Date(timeIntervalSince1970: 0)),
+        folderRefused: Bool = false
     ) -> DetailPaneKind {
         DetailPaneKind.resolve(
             hasProject: hasProject,
             isAvailable: isAvailable,
             showShoal: showShoal,
             pathIsEmpty: pathIsEmpty,
-            pipelineState: pipelineState
+            pipelineState: pipelineState,
+            folderRefused: folderRefused
         )
     }
 
@@ -43,6 +45,16 @@ struct DetailPaneKindTests {
 
     @Test func neverRunFolderPrompts() {
         #expect(resolve(pipelineState: .idle) == .dragInterviews)
+    }
+
+    /// A home folder or system root never prompts for interviews: `run`
+    /// refuses the folder, so the pane says so (decision #110, 22 Oct 2026).
+    @Test func aRefusedFolderSaysWhyInsteadOfPrompting() {
+        #expect(resolve(pipelineState: .idle, folderRefused: true) == .unsuitableFolder)
+        // The refusal decides only the never-run pane: an unreachable folder
+        // and an analysed study keep their own panes.
+        #expect(resolve(isAvailable: false, pipelineState: .idle, folderRefused: true) == .unavailable)
+        #expect(resolve(folderRefused: true) == .report)
     }
 
     /// `.scanning` (and a missing state, which defaults to it) falls through

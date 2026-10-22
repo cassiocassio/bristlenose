@@ -303,6 +303,10 @@ private struct DebugMenuContent: View {
         // The moderator-identity picker, AppKit beside WebKit, on real tokens.
         Button("Picker Lab") { openWindow(id: "picker-lab") }
 
+        // Every changed surface in the state that shows it, on fake inputs —
+        // the real views, with Mark Reviewed per commit list.
+        Button("Review Gallery") { openWindow(id: "review-gallery") }
+
         // Debug lens — test content on a visible grid, inside the report
         // webview itself (measures the production CSS in situ). Routes the
         // SPA to /report/specimen; needs a served project.

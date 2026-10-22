@@ -121,6 +121,7 @@ for f in "${TARGETS[@]}"; do
         -e "BRISTLENOSE_DEV_" \
         -e "BRISTLENOSE_DEBUG_" \
         -e "Design-review sample" \
+        -e "Review Gallery" \
         || true)
     # `BRISTLENOSE_DEV_*` catches dev escape-hatch env vars (legacy guard).
     # `BRISTLENOSE_DEBUG_*` catches the diagnostic-fixture env var
@@ -128,7 +129,10 @@ for f in "${TARGETS[@]}"; do
     # "Design-review sample" is a distinctive English literal from the
     #   `allStatesContext` debug view in PipelineActivityItem.swift; its
     #   presence in a Release binary means a `#if DEBUG` block leaked.
-    # All three classes of literal are `#if DEBUG`-guarded in Swift; a
+    # "Review Gallery" is the DEBUG-only review window's title and menu
+    #   item (ReviewGalleryView.swift, BristlenoseApp.swift); it must never
+    #   reach a .dmg beta or App Store build.
+    # All four classes of literal are `#if DEBUG`-guarded in Swift; a
     # leak here means the guard moved or was removed.
     if [ -n "$hits" ]; then
         LEAK_COUNT=$((LEAK_COUNT + 1))

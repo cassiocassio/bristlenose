@@ -430,7 +430,7 @@ final class PipelineRunner: ObservableObject {
     /// at every start/attach/exit site: `state` only mutates on coarse
     /// transitions (idle→running→terminal), and `setHeld` is idempotent, so this
     /// can't thrash on progress churn (progress lives in `liveData`, not `state`).
-    private let sleepAssertion = RunSleepAssertion()
+    private let sleepAssertion: RunSleepAssertion
 
     private func syncSleepAssertion() {
         sleepAssertion.setHeld(state.values.contains(where: \.keepsMachineAwake))
@@ -665,8 +665,9 @@ final class PipelineRunner: ObservableObject {
     ) throws -> LaunchedRun
 
     /// - Parameters:
-    ///   - notificationCenter: where Quit is observed. A test passes its own,
-    ///     so posting Quit there reaches no other object in the test host.
+    ///   - notificationCenter: where Quit, activation and Whisper-ready are
+    ///     observed. A test passes its own, so posting there reaches no other
+    ///     object in the test host, and nothing the app posts reaches it.
     ///   - sendSignal: how a signal is sent to a run at Quit; returns 0 or the errno.
     ///   - hasConsent: whether the AI disclosure has been acknowledged.
     ///   - keyReadiness: what the key overlay would inject into a run now.
@@ -687,6 +688,9 @@ final class PipelineRunner: ObservableObject {
     ///     re-read from disk (R22).
     ///   - foreignRunPatience: how many reads in a row that can't tell whether
     ///     such a run has ended before the row takes what disk says.
+    ///   - sleepAssertion: what holds idle sleep off while a run executes. A
+    ///     runner whose `.running` states are fixtures (Review Gallery) passes
+    ///     one that asserts nothing.
     init(
         notificationCenter: NotificationCenter = .default,
         sendSignal: @escaping (pid_t, Int32) -> Int32 = { Darwin.kill($0, $1) == 0 ? 0 : errno },
@@ -716,8 +720,12 @@ final class PipelineRunner: ObservableObject {
         },
         endStateTimeout: Duration = .seconds(5),
         slowEndRereadInterval: Duration = .seconds(5),
-        orphanPollInterval: Duration = .seconds(2)
+        orphanPollInterval: Duration = .seconds(2),
+        sleepAssertion: RunSleepAssertion? = nil
     ) {
+        // Nil is the real one, built here: a `RunSleepAssertion()` default
+        // argument would be evaluated outside the main actor it belongs to.
+        self.sleepAssertion = sleepAssertion ?? RunSleepAssertion()
         self.orphanPollInterval = orphanPollInterval
         self.foreignRunPatience = foreignRunPatience
         self.manifestRead = manifestRead
@@ -739,7 +747,7 @@ final class PipelineRunner: ObservableObject {
         // first-run model, the wrong language) runs again, and the per-session
         // fingerprints mean only those sessions are transcribed
         // (docs/design-apple-first-transcription.md §2).
-        whisperReadyObserver = NotificationCenter.default.addObserver(
+        whisperReadyObserver = notificationCenter.addObserver(
             forName: .bristlenoseWhisperReady, object: nil, queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.rerunDeferredProjects() }

@@ -510,6 +510,17 @@ struct BristlenoseApp: App {
         .defaultSize(width: 1100, height: 640)
         .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
 
+        // Every changed surface in the state that shows the change, on fake
+        // inputs — the real views, a registry of entries, review state per
+        // commit list. docs/mockups/review-gallery.html. Diagnostics ▸ Review Gallery.
+        Window("Review Gallery", id: "review-gallery") {
+            ReviewGalleryView()
+                .environmentObject(i18n)
+                .tint(paletteAccent)
+        }
+        .defaultSize(width: 1200, height: 800)
+        .commandsRemoved()   // no auto Window-menu entry — see Type Parity above
+
         #endif
     }
 }

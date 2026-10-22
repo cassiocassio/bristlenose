@@ -204,8 +204,8 @@ surface to remember. That is precisely what happened: the mapping was written
 out three times, five auxiliary `Window` scenes (System Health, Type Parity,
 Run Inspector, Shoal Screensaver, Shoal Tuner) had never had it applied at all,
 and the export save panel plus both Locate panels shipped light-over-dark.
-Fixed 2 Aug 2026 by moving to the single `NSApp.appearance` seam. Shimmer Tuner
-and Keycap Gallery are **not** in that list — they set their own
+Fixed 2 Aug 2026 by moving to the single `NSApp.appearance` seam. Shimmer Tuner,
+Keycap Gallery and Review Gallery are **not** in that list — they set their own
 `.preferredColorScheme` from a local toggle because they're design tools that
 preview both schemes on demand. That's a third legitimate exception, and it's
 why the seam gate deliberately doesn't police `.preferredColorScheme` sites. **The tell for this whole class: a surface that is correct in Automatic

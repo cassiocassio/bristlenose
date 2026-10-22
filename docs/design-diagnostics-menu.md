@@ -147,7 +147,7 @@ if showDiagnosticsMenu {
         Divider()
         // Section 3 — full-fat harness, dev machines only
         DiagnosticsHarnessItems(...)           // fake-state injectors, Type Parity,
-                                               // Ollama pill
+                                               // Ollama pill, Review Gallery
         #endif
     }
 }
@@ -231,6 +231,9 @@ Phase-2 split. Never set on App Store / TestFlight.
   - **Section 2** (`exposesDebugTools`): the committed "Open Admin Panel" item.
   - **Section 3** (`#if DEBUG`): the existing harness (`DebugMenuContent` —
     Type Parity, fixtures, Shoal tuning, Ollama pill), unchanged, folded in.
+    Review Gallery joined it on 22 Oct 2026 (`docs/mockups/review-gallery.html`
+    §1–§2): the real views of each changed surface on fake inputs, Tier D
+    like the other labs.
 - Move Reveal/Open-Log/Copy-Provenance **out** of the `#if DEBUG`
   `DebugMenuActions` file so they compile in Release (re-guard only the D
   members, or split the file).

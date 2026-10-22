@@ -161,7 +161,7 @@ struct SidebarLabView: View {
     /// are the shipping cells. Sized to its rows and never scrolls.
     private var lensBlock: some View {
         let lensRows = LensItem.all.map { OutlineNode(.lens($0.tab)) }
-        return SidebarLabOutline(
+        return LabOutlineHost(
             index: fixture.index, i18n: i18n,
             roots: [OutlineNode(.group(OutlineTree.lensesGroupKey), children: lensRows)],
             selection: .constant([]),
@@ -176,7 +176,7 @@ struct SidebarLabView: View {
     }
 
     private func outline(roots: [OutlineNode]) -> some View {
-        SidebarLabOutline(
+        LabOutlineHost(
             index: fixture.index, i18n: i18n,
             roots: roots,
             selection: $selection,
@@ -379,54 +379,7 @@ final class SidebarLabFixture: ObservableObject {
 
 // MARK: - Outline host
 
-/// Hosts the shipping `SidebarOutlineController` with only the knobs the lab
-/// varies. Mirrors `ProjectSidebarOutline.updateNSViewController` minus the
-/// app services (runner, copy, cloud import), which are optional on the
-/// controller and irrelevant to scroll geometry.
-private struct SidebarLabOutline: NSViewControllerRepresentable {
-    let index: ProjectIndex
-    let i18n: I18n
-    let roots: [OutlineNode]
-    @Binding var selection: Set<SidebarSelection>
-    let activeTab: Tab?
-    let floats: Bool
-    let scrolls: Bool
-    let onActivateLens: (Tab) -> Void
-    let onContentHeight: ((CGFloat) -> Void)?
-    let onController: (SidebarOutlineController) -> Void
-
-    func makeNSViewController(context: Context) -> SidebarOutlineController {
-        let controller = SidebarOutlineController()
-        controller.projectIndex = index
-        controller.i18n = i18n
-        DispatchQueue.main.async { onController(controller) }
-        return controller
-    }
-
-    func updateNSViewController(_ controller: SidebarOutlineController, context: Context) {
-        controller.projectIndex = index
-        controller.i18n = i18n
-        controller.onSelectionChange = { new in
-            if selection != new { selection = new }
-        }
-        controller.onActivateLens = onActivateLens
-        controller.update(roots: roots, selection: selection, activeTab: activeTab, lensesEnabled: true)
-
-        let outlineView = controller.outlineView
-        outlineView.floatsGroupRows = floats
-        if let sv = outlineView.enclosingScrollView {
-            sv.hasVerticalScroller = scrolls
-            sv.verticalScrollElasticity = scrolls ? .automatic : .none
-            // A fixed block must not inherit titlebar insets it never sits under.
-            sv.automaticallyAdjustsContentInsets = scrolls
-            if !scrolls { sv.contentInsets = NSEdgeInsetsZero }
-        }
-        if let onContentHeight, outlineView.numberOfRows > 0 {
-            let h = outlineView.rect(ofRow: outlineView.numberOfRows - 1).maxY
-            DispatchQueue.main.async { onContentHeight(ceil(h)) }
-        }
-    }
-}
+// `LabOutlineHost` (LabOutlineHost.swift) — shared with Review Gallery.
 
 // MARK: - Web detail
 

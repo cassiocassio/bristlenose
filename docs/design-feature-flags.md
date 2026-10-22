@@ -131,7 +131,8 @@ enum DistributionChannel {
   env reads in `ServeManager` / `PipelineRunner`), fake-state harnesses
   (`DiagnosticFixture`, `OllamaDownloadModel.DebugScene`, `AlphaBuild`'s days
   override), internal QA windows (`SeamLabView`, `KeycapGalleryView`,
-  `TypeParityHTML` are whole files wrapped in `#if DEBUG`), the BuildInfo
+  `TypeParityHTML`, `ReviewGalleryView` + `ReviewGalleryRegistry` are whole
+  files wrapped in `#if DEBUG`), the BuildInfo
   footer overlay, `webView.isInspectable`, and Section 3 of the Diagnostics
   menu.
 - **`DEVELOPER_ID_BETA`** — set as `SWIFT_ACTIVE_COMPILATION_CONDITIONS` in

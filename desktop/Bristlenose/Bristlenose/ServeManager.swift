@@ -302,7 +302,15 @@ final class ServeManager: ObservableObject {
     ///   one it spawns a real process, without one `start()` returns at the
     ///   `mode` guard. Pass `.success(.external(port:))` for a `start()` that
     ///   runs to completion and spawns nothing.
-    init(resolvedMode: Result<SidecarMode, SidecarResolveError>? = nil) {
+    ///
+    /// - Parameter notificationCenter: where the app-wide observers (Agent
+    ///   Access flips, Quit) are registered. The app takes `.default`; a
+    ///   manager that must not answer the app's notifications — Review
+    ///   Gallery's, whose handshake sync would otherwise reconcile the real
+    ///   handshake file — passes its own (`PipelineRunner`'s shape).
+    init(resolvedMode: Result<SidecarMode, SidecarResolveError>? = nil,
+         notificationCenter: NotificationCenter = .default) {
+        self.notificationCenter = notificationCenter
         // The env-var string literals for the dev escape hatch live only
         // inside `#if DEBUG`-guarded code so the Release Mach-O has no
         // reference to them. `desktop/scripts/check-release-binary.sh`
@@ -391,7 +399,7 @@ final class ServeManager: ObservableObject {
         // Read shared screens went off, and marks the rest to restart when someone
         // looks at them.
 
-        agentAccessObserver = NotificationCenter.default.addObserver(
+        agentAccessObserver = notificationCenter.addObserver(
             forName: .bristlenoseAgentAccessChanged,
             object: nil,
             queue: .main
@@ -408,7 +416,7 @@ final class ServeManager: ObservableObject {
         // ContentView to run the handler. Quitting from that state left the
         // teardown to the sidecar's own parent-death watcher: a backstop, not a
         // shutdown path. The object that owns the process owns its shutdown.
-        terminationObserver = NotificationCenter.default.addObserver(
+        terminationObserver = notificationCenter.addObserver(
             forName: NSApplication.willTerminateNotification,
             object: nil,
             queue: .main
@@ -438,6 +446,22 @@ final class ServeManager: ObservableObject {
     /// Whether the current start attempt came from the boot pane's Retry. See
     /// `ServeInstance.startedByRetry`.
     var startedByRetry: Bool { instance.startedByRetry }
+
+    #if DEBUG
+    /// Review Gallery seam: a manager that has never started reads as one whose
+    /// Retry failed, so `BootView` offers Send Feedback… (the sibling of
+    /// `PipelineRunner._debugSetState`). Never started, so nothing resets it.
+    func debugMarkStartedByRetry() {
+        instance.startedByRetry = true
+    }
+
+    /// Review Gallery seam: lines for the boot pane's Show details, which reads
+    /// `outputLines`. Redacted as `handleLine` redacts, so the buffer holds
+    /// nothing a real stdout line could not.
+    func debugAppendOutput(_ lines: [String]) {
+        outputLines.append(contentsOf: lines.map { BristlenoseShared.redactKeys(in: $0) })
+    }
+    #endif
 
     private var process: Process? {
         get { instance.process }
@@ -512,12 +536,19 @@ final class ServeManager: ObservableObject {
     /// long as this object does, which is the app's lifetime.
     private var terminationObserver: Any?
 
+    /// Where `agentAccessObserver` and `terminationObserver` are registered.
+    let notificationCenter: NotificationCenter
+
     deinit {
         // ServeManager is app-lifetime today, but the poll loop shouldn't
         // outlive its owner if that ever changes.
         agentPollTask?.cancel()
         agentPulseTask?.cancel()
         screensPollTask?.cancel()
+        // A block observer's token outlives its object unless removed; a
+        // short-lived manager (Review Gallery's) would leave one per build.
+        if let agentAccessObserver { notificationCenter.removeObserver(agentAccessObserver) }
+        if let terminationObserver { notificationCenter.removeObserver(terminationObserver) }
     }
 
     /// Start serving a project. Callers must call `stop()` or

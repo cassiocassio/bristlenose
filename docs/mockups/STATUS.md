@@ -213,6 +213,7 @@ state is still evidenced, the day is not.
 | `release-machine-paths.html` | 23 Aug 2026 | IMPLEMENTED — “companion mockup” to `design-release-machine.md`; `scripts/release.sh` ships |
 | `report-freshness-banner.html` | 3 Sep 2026 | PROPOSED 2026 — **not built**. (The “freshness” in `ServeManager`/`AgentActivity` is the MCP tool-call window, an unrelated thing) |
 | `responsive-quote-grid.html` | 19 Feb 2026 | IMPLEMENTED — “the **original grid**”, against which `grid-lanes-quotes.html` was the masonry bake-off. Interactive, with a slider and HUD, so it doubles as an instrument |
+| `review-gallery.html` | 22 Oct 2026 | PROPOSED 22 Oct 2026 — one place to see every changed surface in the state that shows the change: a DEBUG Mac window (§1–§2) and a `serve --dev` web page with a fault bar (§3). **Being built, Phase 1 (22 Oct 2026):** the Mac window only — Diagnostics ▸ Review Gallery (`ReviewGalleryView.swift`, `ReviewGalleryRegistry.swift`), `#if DEBUG` only, never the `.dmg` beta or the App Store. The web page (§3) is not built. |
 | `screens-context-menu.html` | 15 Oct 2026 | *unreviewed* — added by `3725a938`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `screens-leader-styles.html` | 15 Oct 2026 | *unreviewed* — added by `73e438ff`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `screens-lens-speculative.html` | 15 Oct 2026 | *unreviewed* — added by `4de689bf`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |

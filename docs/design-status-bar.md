@@ -113,7 +113,7 @@ Search · **pipeline pill** · Settings.
 completedPartial / failed / failedWithDiagnostic) · stage progress
 ("Step 4 of 12 · extract quotes") · stage ETA · current LLM latency · sidecar
 health · last-analysed time · project availability (ready / cantFind:moved /
-:unmountedVolume / :network / cloudEvicted) · folder-watcher new-file pulse ·
+:unmountedVolume / :network / ~~cloudEvicted~~ _(removed 22 Oct 2026; `design-cloud-files.md`)_) · folder-watcher new-file pulse ·
 provider chip ("Claude · sonnet-4") · Whisper backend.
 
 **Project / corpus info:** quote / session / participant / tag / theme /
@@ -156,7 +156,7 @@ actions, low real-estate cost.**
   can't be the only path.
 
 **3. Project availability (when non-ready)**
-- Pro: window-level surface for cantFind/cloudEvicted when the sidebar is
+- Pro: window-level surface for cantFind~~/cloudEvicted~~ (no cloud state since 22 Oct 2026) when the sidebar is
   collapsed.
 - Con: sidebar row already shows it; only justified if sidebar can hide.
 

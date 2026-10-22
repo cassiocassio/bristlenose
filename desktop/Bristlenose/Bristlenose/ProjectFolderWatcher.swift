@@ -16,7 +16,8 @@ struct UnanalysedState: Equatable {
     /// Matched by basename. Empty when there's nothing new.
     let newFiles: [URL]
     /// Files previously ingested that are no longer present and are not
-    /// iCloud-evicted. Surfaces in the row subtitle delta and the sheet.
+    /// cloud-evicted (an evicted file still exists; it is not shown as anything,
+    /// `docs/design-cloud-files.md`). Surfaces in the row subtitle delta and the sheet.
     let missingFiles: [URL]
     /// Count of rows in the `sessions` table — the canonical "size of the
     /// study" metric rendered on the row's title line. Nil when the DB

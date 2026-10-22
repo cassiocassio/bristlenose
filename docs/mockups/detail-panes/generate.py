@@ -66,6 +66,7 @@ VERDICT = {
     "thin":       ("#EFEFF1", "#5A5A5F", "Thin / under-designed"),
     "accidental": ("#FFF2E0", "#9A5B00", "Accidental / plumbing"),
     "gap":        ("#FFE9E7", "#B3261E", "GAP — no pane"),
+    "retired":    ("#EFEFF1", "#5A5A5F", "Retired — removed"),
 }
 
 
@@ -525,8 +526,12 @@ def build():
 
     r = rows_with(0)
 
+    # N03 is RETIRED (22 Oct 2026): the `.inCloud` state, its cloud glyph and this pane
+    # were deleted (bbf75243). A gone cloud folder is N02 (Project Moved or Deleted,
+    # Locate…); an evicted one reads ready. Policy: docs/design-cloud-files.md.
+    # The frame is kept only as history, labelled retired — do not restore it.
     r[0].update(sub="In iCloud", trail="cloud")
-    frames.append(("N03-unavailable-cloud", "Unavailable — in iCloud", "designed",
+    frames.append(("N03-unavailable-cloud", "Unavailable — in iCloud (retired 22 Oct 2026)", "retired",
                    state_pane("cloud", "In iCloud",
                               "Connect the drive to access this project.",
                               tone=C_CLOUD), r))

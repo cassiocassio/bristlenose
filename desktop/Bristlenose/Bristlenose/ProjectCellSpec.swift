@@ -55,7 +55,8 @@ enum ProjectCellSpec {
         NSImage.SymbolConfiguration(pointSize: 16, weight: .regular)
     }
 
-    /// Inline subtitle-glyph config (prefix ⚠/❓/failure glyph + trailing iCloud) —
+    /// Inline subtitle-glyph config (prefix ⚠/❓/failure glyph + trailing agent badge;
+    /// the trailing iCloud glyph was removed 22 Oct 2026, `docs/design-cloud-files.md`) —
     /// `.imageScale(.small)` on a caption in `ProjectRow`. Sized to sit inline with
     /// the caption subtitle text; smaller than the leading identity icon.
     static var subtitleGlyphConfig: NSImage.SymbolConfiguration {

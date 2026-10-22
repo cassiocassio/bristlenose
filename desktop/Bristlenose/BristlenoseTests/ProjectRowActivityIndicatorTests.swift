@@ -5,7 +5,7 @@ import XCTest
 /// The `switch` is exhaustive (no `default:`), so the compiler already forces a
 /// decision on any new `PipelineState` case; these tests pin the *mapping*
 /// (only `.running` shows the activity indicator; everything else defers to the
-/// cloud glyph / subtitle text).
+/// subtitle text — the cloud glyph was removed 22 Oct 2026).
 final class ProjectRowActivityIndicatorTests: XCTestCase {
 
     func testRunningMapsToRunning() {

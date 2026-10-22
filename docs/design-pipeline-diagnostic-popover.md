@@ -365,8 +365,8 @@ is no live picker.
 | `UnsupportedSubsetView` | files-not-folder card | Info / explanatory card | real-condition-only |
 
 _(Sibling surfaces, out of scope for a popover catalog but noted: sidebar
-inline indicators — row-subtitle status, session count, scan spinner, iCloud
-download arrow — are persistent inline status, not popovers.)_
+inline indicators — row-subtitle status, session count, scan spinner, ~~iCloud
+download arrow~~ _(removed 22 Oct 2026; `design-cloud-files.md`)_ — are persistent inline status, not popovers.)_
 
 ### Invocation coverage (a finding, not a proposal)
 

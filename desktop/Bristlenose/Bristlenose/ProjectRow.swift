@@ -11,7 +11,7 @@ import SwiftUI
 ///   right column). Empty when the analysis DB isn't readable.
 /// - Subtitle-line right = run or copy activity (the ring). No storage-location
 ///   glyph: a folder a sync client manages is shown like any folder (decided
-///   22 Oct 2026, `docs/design-cloud-wait-label.md`).
+///   22 Oct 2026, `docs/design-cloud-files.md`).
 ///
 /// **Precedence chain for the subtitle** lives in the pure, testable
 /// `ProjectSubtitle.resolve` (see memory `feedback_exception_precedence_chain`

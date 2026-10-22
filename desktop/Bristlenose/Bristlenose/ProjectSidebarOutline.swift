@@ -1641,8 +1641,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // The agent badge must survive that collapse: exposure is
             // permanent state on an otherwise-idle row, so a clean shared
             // project is EXACTLY the case that must show it (§5a-bis). The
-            // ring/cloud slots can't reach here — both always carry
-            // subtitle text — so only `.agent` crosses over.
+            // ring slot can't reach here — it always carries subtitle text
+            // (the cloud slot went with `.inCloud`, 22 Oct 2026) — so only
+            // `.agent` crosses over.
             guard let subtitle else {
                 var exposed: Bool?
                 if case .agent(let now) = cellRightSlot(for: project) { exposed = now }

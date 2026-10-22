@@ -6,7 +6,7 @@ import Testing
 /// gone was still spawned against its missing path.
 ///
 /// A folder a sync client manages has no state of its own (decided 22 Oct 2026,
-/// `docs/design-cloud-wait-label.md`): an evicted folder is still there,
+/// `docs/design-cloud-files.md`): an evicted folder is still there,
 /// resolves `.ready` and runs, the sidecar fetching its files on demand
 /// (`docs/design-project-storage.md` §3); a gone one is `.cantFind`, like any
 /// gone folder, and is refused with Locate… offered. These pin that split, and

@@ -232,7 +232,7 @@ stateDiagram-v2
     Partial --> Running: Re-analyse (confirm)
     Failed --> Running: Analyse (retry)
 
-    Analysed --> Unreachable: volume unmounted / moved / evicted
+    Analysed --> Unreachable: volume unmounted / moved / gone
     Unreachable --> Analysed: Locate… or remount
     Analysed --> Forked: folder renamed while serving — the restarted serve re-imports under the new path (register row 29)
     Forked --> Running: Re-analyse (Analyse is hidden)
@@ -400,7 +400,7 @@ Both verbs need the same input: *does this project have work to do?*
 | Running | — | — | hide | hide | **Stop Analysis** ⌘. |
 | Failed / partial | any | any | Analyse (retry) | Re-analyse… | hide |
 | File-subset, analysed | >0 | >0 | hide *(correct today)* | **Re-analyse…** — the only route | hide |
-| `cantFind` / evicted | — | — | hide | hide | hide |
+| `cantFind` (a gone folder, cloud or not; this row said "evicted" until 22 Oct 2026, but an evicted folder still exists and reads `.ready` — `design-cloud-files.md`) | — | — | hide | hide | hide |
 
 Read "hide" as hide in a **context** menu and dim in the **menu bar**, per the
 rule below. The one exception is *unimplemented*, which hides in both — a

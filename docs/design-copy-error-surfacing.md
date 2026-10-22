@@ -252,7 +252,10 @@ spawned sidecar. Consequences:
   `is_dataless()`, and `ensure_materialised()` with `MATERIALISE_TIMEOUT_SECONDS`.
   The desktop copy path (`CopyMachinery.copy()`, the blind `copyItem` in its
   per-file loop) does not, and should mirror
-  it rather than invent a third pattern.
+  it rather than invent a third pattern. _Superseded 20–22 Oct 2026: the copy
+  path does not mirror it. A `copyItem` over a placeholder can be neither bounded
+  nor cancelled, so `CopyMachinery` **refuses** a dataless drop up front and
+  re-checks before each file (`c9176819`); pattern A in `design-cloud-files.md`._
 - `brctl download` / `brctl evict` are **hidden, not gone** on 26.4.1. The
   morning's claim that they "no longer exist" came from running them with *no
   argument*, which prints the usage — the usage omits them, but given a path both
@@ -478,5 +481,8 @@ bears on the open question recorded in `design-cloud-wait-label.md` (which
 superseded the argument between `design-sidebar-activity-indicators.md` and
 `design-project-storage.md`):
 shipping practice is *no label* — hydrate, bound it, log — which is the
-posture set on 4 Sep 2026. It does not settle whether Bristlenose says
-anything; it establishes that nobody else does.
+posture set on 4 Sep 2026. ~~It does not settle whether Bristlenose says
+anything; it establishes that nobody else does.~~ _Settled 22 Oct 2026:
+Bristlenose says nothing either — no wait label, no provider advice; a read
+that outlives the bound is an ordinary retryable `cloud_fetch` failure
+(`design-cloud-files.md`; the label doc is marked rejected)._

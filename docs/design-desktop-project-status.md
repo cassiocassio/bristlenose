@@ -16,6 +16,7 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-10-22_ — cloud truing: the fetch rows of the severity table, the `downloading-from-iCloud` rung of the precedence chain and the iCloud gaps in the §4 catalogue are struck, not deleted. There is no wait label, fetch state or at-rest cloud state; a read that outlives the bound is an ordinary per-file `cloud_fetch` failure. Policy: `design-cloud-files.md`.
 - _2026-10-13_ — trued up: the forked delta added to the shipped vocabulary, the severity table, the glyph rule, both precedence chains and the Swift-over-Python note; readers scoped to row 1. Anchors: `ProjectSubtitle.swift` `pickDelta`, `SourceFilesReader.reportProjectID`, `c3b887cb`, `eb8509e1`.
 - _2026-09-12_ — **Truing pass (session docs).** Two corrections, one set of owners. (1) The availability table's **iCloud-evicted → `inCloud`** cell is the *intended* state, not the measured one: with the folder present, availability resolves `.ready` and `.inCloud` is unreachable for evicted media (`design-project-storage.md` §3, measured 29 Jul 2026) — the cell now says so. (2) The fetch rows in the severity table gained their owners: severity and glyph are ruled **here**; copy and keys are the 1 Aug mockup (`docs/mockups/cloud-fetch-states.html`); scope (iCloud Drive / Google Drive / OneDrive only), policy and build state are `design-cloud-wait-label.md`. The 30-minute "never completed" row is confirmed against `MATERIALISE_TIMEOUT_SECONDS` in `bristlenose/utils/fs.py`. (3) Which half is built, so the rows don't read as shipped: the sidecar's bounded fetch is; the `cloud_fetch` failure category is declared and mirrored but has no producer; the fetching / still-fetching states have no channel (measured 12 Sep 2026 — the first version of this bullet, the same day, called the failure category built).
 - _2026-08-18_ — **Truing pass (`--topic cloud-import`).** Three corrections, one addition. (1) **The 29 Jul "two shipped branches are unreachable" finding has half-expired** — `lastPipelineRunAt` gained a write site on **30 Jul**, *one day after* it was written up (`ProjectIndex.recordPipelineRun`, `ProjectIndex.swift:586`, called from `ContentView.swift:591`; commit *"desktop: Connect Agent sheet + menu item, and /api/health advertises the mount"*). So `+N unanalysed` **does** render now, and the TRAP below is closed rather than pending. `.ready(date:)` is still never drawn — but by Schema E's design, not by accident, which is the opposite kind of fact. Left as the clearest example in this doc of why a dated counterfactual needs re-checking before it's cited. (2) **The precedence chain named 9–10 states against an enum that has 17** — completed, with the idle tier's real order read off `resolveIdle`. (3) **Schema E's "the collapse rule is exactly one state" is now two.** (4) **Cloud import added to §4's catalogue** — a per-project transfer whose window can be closed, carrying three rulings that were only in code comments. Also fixed §4's "File import / copy" row, stale since 19 Jun and self-flagged as unaddressed in the 15 Jul entry.
@@ -130,16 +131,19 @@ Worked rulings (the precedents):
 |---|---|---|
 | retry after rate-limit (mid-run) | info | "just progress" — transient auto-recovery |
 | interview transcribed to silence | warning | human needs to look; not a failure |
-| iCloud-evicted while offline | info | "like the weather" — will resolve |
-| fetching from a cloud provider | info | just happening; indeterminate (progress is *not* observable — providers swap the file in atomically) |
-| still fetching after ~3 min | warning | a human should look, but nothing failed and the run continues |
-| fetch never completed (30 min) | error | the run stops; the file never arrived |
+| ~~iCloud-evicted while offline~~ | ~~info~~ | ~~"like the weather" — will resolve~~ — not a state; rejected 22 Oct 2026 |
+| ~~fetching from a cloud provider~~ | ~~info~~ | ~~just happening; indeterminate (progress is *not* observable — providers swap the file in atomically)~~ — no fetch state; rejected 22 Oct 2026 |
+| ~~still fetching after ~3 min~~ | ~~warning~~ | ~~a human should look, but nothing failed and the run continues~~ — no wait hint; rejected 22 Oct 2026 |
+| fetch never completed (30 min) | error | ~~the run stops~~ an ordinary per-file `cloud_fetch` failure, retryable; the other sessions carry on (22 Oct 2026) |
 | file resident but unreadable | error | genuinely damaged — the message the fetch states exist to stop firing wrongly |
 | partial completion | warning | something didn't go right |
 | drive unplugged / volume ejected | warning | project not usable |
 | analysed files missing from disk | warning | "beyond neutral" — files gone |
 | report database holds a second project row | error | the report is reading a different row from the one the last run wrote; nothing self-resolves, the database has to be rebuilt (`SubtitleDelta.databaseForked`, 12 Oct 2026) |
 
+_Superseded 22 Oct 2026: of the four fetch rows only the 30-minute one survives, as an ordinary
+per-file failure. No fetching or still-fetching state and no at-rest cloud state will be built, and
+the mockup below is marked rejected — `design-cloud-files.md`. The paragraph is kept as history._
 The four fetch rows are ruled here for **severity**. Their copy and keys are the 1 Aug 2026 mockup
 (`docs/mockups/cloud-fetch-states.html` — "Fetching from {{provider}} · n of m", "Still fetching…",
 "Couldn’t fetch…"); their scope, policy and build state are `design-cloud-wait-label.md`. As of
@@ -207,7 +211,7 @@ no glyph with nothing asking why.
 When several conditions are true, the row shows one winner (never composed), most-demanding first:
 
 `drive-unplugged (cantFind) › failed › running` *(the verb ladder; retries ride it as info)* `›
-stopped / partial › adding-interviews › importing-batch › copying › downloading-from-iCloud ›
+stopped / partial › adding-interviews › importing-batch › copying › ~~downloading-from-iCloud~~ _(never built; rejected 22 Oct 2026, `design-cloud-files.md`)_ ›
 database-forked › files-missing › unanalysed › starting › ready`
 
 **`SubtitleVariant` is the single source of truth and currently has 17 cases**
@@ -223,8 +227,8 @@ Baked-in rulings (user, 18 Jun 2026): **`cantFind` / drive-unplugged outranks AL
 construction (you can't copy media into a folder you can't find, so that pairing never co-occurs), and a
 run against a vanished folder is already doomed, so "can't reach the folder" is the only honest line.
 This matches the shipped `subtitleVariant` early-return. And **drive-unplugged outranks files-missing**
-(whole project gone vs source drift). The self-resolving states below activity (`downloading-from-iCloud`
-is "weather", not a dead end) keep a *starting* order, to be tuned once it's seen live.
+(whole project gone vs source drift). The self-resolving states below activity (~~`downloading-from-iCloud`
+is "weather", not a dead end~~ — no such state, 22 Oct 2026) keep a *starting* order, to be tuned once it's seen live.
 
 ### Schema E — the clean row is silent (settled 29 Jul 2026)
 
@@ -367,7 +371,7 @@ Analysing and Queued rows; a dropped one shows nothing. Catalogue in §4.
 
 Not a clean "Swift vs Python" line; it's *who detects/owns the state*:
 
-1. **Pure Swift — Python never sees it.** Availability (iCloud eviction, volume unmount via
+1. **Pure Swift — Python never sees it.** Availability (~~iCloud eviction,~~ _not a state since 22 Oct 2026_; volume unmount via
    NSFilePresenter + volume notifications), queue position, stopping/scanning, sidecar process
    lifecycle, file copy.
 2. **Swift detects *over* Python data.** Session count + unanalysed/missing delta —
@@ -406,12 +410,12 @@ architecture, not a string reference):
 
 | Kind | What it knows · source | Surfaced today | Could surface (gap) |
 |---|---|---|---|
-| **Availability / storage** | folder reachable — volume / network / bookmark / iCloud · `ProjectAvailability`, `ProjectFolderWatcher` | leading glyph + subtitle qualifier + row dim + tooltip | iCloud **download progress** (`Progress?` captured, shown as a static glyph); auto-retry-on-remount |
+| **Availability / storage** | folder reachable — volume / network / bookmark / iCloud · `ProjectAvailability`, `ProjectFolderWatcher` | leading glyph + subtitle qualifier + row dim + tooltip | ~~iCloud **download progress** (`Progress?` captured, shown as a static glyph);~~ _(rejected 22 Oct 2026, `design-cloud-files.md`)_ auto-retry-on-remount |
 | **Run lifecycle (desktop brackets)** | queue / stop / scan / orphan-attach + Python's outcome+category · `PipelineRunner` | subtitle (precedence chain) + activity pill + diagnostic popover | a "Preparing…" beat before the first Python event; queue-position movement |
 | **Sidecar / serve** | is *this project's* serve process up · `ServeManager`, `BootView` | **detail-pane BootView only — not the row** | whether a per-row "starting…" belongs there (open) |
-| **File import / copy** | drag-import byte progress, disk-space precheck · `CopyMachinery` | **the target project's row** — `.addingInterviews` ack, then `.copying(fraction:)` + hover-cancel ring | evicted-source precheck; a copy that outlives the window |
+| **File import / copy** | drag-import byte progress, disk-space precheck · `CopyMachinery` | **the target project's row** — `.addingInterviews` ack, then `.copying(fraction:)` + hover-cancel ring | ~~evicted-source precheck~~ _(built 20 Oct 2026 as a refusal, `c9176819`)_; a copy that outlives the window |
 | **Cloud import (Meet / Teams)** | per-batch done/total for a remote fetch into this project · `CloudImportStore.batch` | **the row** — `.importingBatch` renders "3 of 4" with **no verb**, reusing `Kind.ring` + hover-cancel → `stopFetch` (AppKit sidebar; the SwiftUI row draws nothing) | per-file granularity on the row (the window has it); reopening the window from the ring |
-| **Source watch / count** | # interviews, unanalysed/missing delta · `ProjectFolderWatcher`, `SourceFilesReader` | title-right count + subtitle delta + tooltip | a "scanning…" tick; evicted-vs-deleted split in "missing" |
+| **Source watch / count** | # interviews, unanalysed/missing delta · `ProjectFolderWatcher`, `SourceFilesReader` | title-right count + subtitle delta + tooltip | a "scanning…" tick; ~~evicted-vs-deleted split in "missing"~~ _(rejected 22 Oct 2026: no at-rest cloud state, `design-cloud-files.md`)_ |
 
 ### The placement axis — per-project on the row, app-global in the title-bar pill (settled, user 19 Jun 2026)
 

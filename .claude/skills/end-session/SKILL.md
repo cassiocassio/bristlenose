@@ -285,7 +285,7 @@ git log "$WINDOW_BASE"..HEAD --format="%H%n%B%n---END---" | \
 
 **Doc targets** for promotion (proposed in this order; user can override):
 - `docs/design-decisions.md` — the default for user-facing affordance choices.
-- The most-relevant `docs/design-*.md` — when the decision is feature-specific (e.g. iCloud handling → `docs/design-multi-project.md`).
+- The most-relevant `docs/design-*.md` — when the decision is feature-specific (e.g. iCloud handling → `docs/design-cloud-files.md`).
 - Root `CLAUDE.md` or a sibling `CLAUDE.md` — when the decision is internal mechanics that future Claude might re-invent (use `proc_pidpath` not `subprocess`, `cp -RL` breaks bundle rpath, etc.). The grep already prefilters for affordance-shaped language, so this branch is rare but real.
 
 **Already-recorded check** — before prompting, grep the proposed target for the feature/affordance keyword. If the decision is already there, silently drop the candidate. Avoids reflexive-dismissal noise.

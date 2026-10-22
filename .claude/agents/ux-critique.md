@@ -33,6 +33,7 @@ When given a design to review (file path, screenshot, URL, or description):
    - `bristlenose/theme/CSS-REFERENCE.md` — per-component CSS docs
    - `docs/design-react-component-library.md` — React primitive dictionary
    - `frontend/CLAUDE.md` — React/frontend conventions
+   - `docs/design-cloud-files.md` — when the surface touches a blocking read, a cloud placeholder or a missing folder: a settled policy (no wait label, no cloud glyph, no provider advice); don't flag its absence
 4. **Produce a structured review** with two sections (see format below).
 
 # Source-of-claim tagging (every finding, no exceptions)

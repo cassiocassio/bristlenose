@@ -141,7 +141,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 **Pipeline, data and participant privacy** — [full entries](.claude/gotchas.md#pipeline-data-and-participant-privacy)
 
 - **Rollups and caches lie quietly**: `attempted == succeeded + failed` holds by construction (check across buckets); the pipeline has three stage vocabularies sharing only `transcribe` and `render`; a stage-level `COMPLETE` overrides the per-session map, absence is not a state, and a cache hit must write the manifest forward. The CLI verb is `transcribe`, not `transcribe-only`.
-- **User folders**: filter with `is_os_metadata()` (`._*`, `.DS_Store`) and skip dataless iCloud files before reading; `.ts` is excluded from media extensions on purpose.
+- **User folders**: filter with `is_os_metadata()` (`._*`, `.DS_Store`); a dataless (cloud placeholder) file is read with a bound (`fs.ensure_materialised`), never skipped and never narrated (`docs/design-cloud-files.md`); `.ts` is excluded from media extensions on purpose.
 - **Participant data**: `pii_summary.txt`, `llm-calls.jsonl` and the transcription-quality record are re-identification keys, never in an export; `model_copy()` is shallow (clear `words`); only `pii_score_threshold` is wired (PERSON's bar; patterns floor at 0.40); embedded `<script>` JSON escapes `<` `>` `&` (`script_json`); a clean `CredentialStore.set()` proves nothing (`set_verified()`); `record_call` needs three contextvars (`serve_run_context()`).
 - **Codebooks**: identical tag counts across a framework's groups are the tell of invented tags; an authored codebook carries only its author's terms, cited.
 
@@ -191,6 +191,7 @@ Area gotchas live with the code: React/TypeScript/frontend gotchas (routing, vid
 - `docs/design-minimap.md`, `docs/design-inspector-panel.md`, `docs/design-finding-weight.md`
 
 **Pipeline / backend:**
+- `docs/design-cloud-files.md` — **read before anything iCloud- or File-Provider-shaped.** The one statement of what can and cannot be known about cloud-backed files and what Bristlenose shows: a bounded read, an ordinary retryable failure, the existing can't-find pane; no wait label, no cloud glyph, no provider advice. Re-proposed five times before 22 Oct 2026; not reopened by a new framing
 - `docs/design-analysis-lifecycle.md` — **the cross-cutting view of analyse / re-analyse / incremental**: one state machine, sequence diagrams, the affordance inventory, and the observed failure modes (four outcomes, not three). Read before adding or changing any analysis-triggering control
 - `docs/design-pipeline-resilience.md` — manifest, event sourcing, resume, provenance
 - `docs/design-screens.md` — **the plan for screens (proposal, 13 Oct 2026; one project, Mac first, OCR engine pluggable):** joins what was said, what was on the shared screen and which screen they were on. Read before touching OCR, screen text, the Screens lens, or quote↔screen joins; its two evidence records are `design-screen-text-search.md` and `design-screens-lens.md`. **Its §4 privacy line was corrected 17 Oct 2026: Bristlenose never sends screens anywhere on its own (never to the LLM); anything the researcher chooses — exports, their cloud tools, MCP — is open.** The exports (folder, clipboard, Miro board) are planned in `design-screens-export.md`

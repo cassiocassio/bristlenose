@@ -55,7 +55,7 @@ Per the §2.2 guard, the project `List` (its `@State Set<SidebarSelection>` sele
 ### 3.2 Row anatomy — *absence is information*
 Variable height, not the current always-reserved two-line band:
 - **Idle row** → single tight line (icon · name · count). **Live row** → a second line appears *only* while there is status (run progress). Animate the height change — but **guard `@Environment(\.accessibilityReduceMotion)`** (instant resize when on), and **never reflow a row under an active pointer or during a drag-reorder** (spatial-stability: don't shove a row out from under the reader's cursor).
-- **Title-line trailing order** (resolves the collision with the same-day-trued `design-project-sidebar.md` "Row anatomy"): the **session count** is the default occupant; the **storage/sync qualifier** (iCloud arrow, external-drive hint) *replaces* it when the project is unavailable/syncing. Precedence: in-flight scan > failure glyph > availability qualifier > count. The activity/copy ring keeps the *subtitle* trailing slot during runs.
+- **Title-line trailing order** (resolves the collision with the same-day-trued `design-project-sidebar.md` "Row anatomy"): the **session count** is the default occupant; the **storage/sync qualifier** (~~iCloud arrow,~~ external-drive hint) *replaces* it when the project is unavailable~~/syncing~~ _(no cloud arrow or syncing state since 22 Oct 2026; `design-cloud-files.md`)_. Precedence: in-flight scan > failure glyph > availability qualifier > count. The activity/copy ring keeps the *subtitle* trailing slot during runs.
 
 ### 3.3 Top controls + New — *rev 3, 3 Oct 2026*
 **Decided and built (3 Oct 2026):** the sidebar's own toolbar carries two controls, NetNewsWire-style:

@@ -37,7 +37,7 @@ state is still evidenced, the day is not.
 | `analysis-inspector-panel-v2.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v3.html` — second iteration |
 | `analysis-inspector-panel-v3.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — `InspectorPanel.tsx` ships |
 | `analysis-inspector-panel.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · SUPERSEDED 19 Mar 2026 by `analysis-inspector-panel-v2.html` — first iteration |
-| `analysis-lifecycle-states.html` | 22 Aug 2026 | IMPLEMENTED — the analysis lifecycle states ship on the sidebar row |
+| `analysis-lifecycle-states.html` | 22 Oct 2026 | IMPLEMENTED — the analysis lifecycle states ship on the sidebar row, except “inCloud — downloading”, never built and removed 22 Oct 2026 (`docs/design-cloud-files.md`) |
 
 ## chat-lens
 
@@ -50,7 +50,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `cloud-fetch-states.html` | 12 Sep 2026 | IMPLEMENTED — “Every state, message and copy rule … **open it, it’s the visual spec**” — _except the three fetch states_ (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`): the sidecar half is built (`ensure_materialised`, `cloud_provider_for`), but those three are **rejected** (22 Oct 2026): Bristlenose does not detect or narrate a sync client's fetch, and `docs/design-cloud-wait-label.md` records why. Do not pick them up |
+| `cloud-fetch-states.html` | 22 Oct 2026 | PROPOSED 1 Aug 2026 · **ABANDONED 22 Oct 2026** — rejected for everything cloud-related: the fetch states (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`) were never built, and the `inCloud` state and cloud glyph it draws were deleted (`bbf75243`). It is not the visual spec for anything cloud. Policy: `docs/design-cloud-files.md`; the label's history: `docs/design-cloud-wait-label.md`. The sidecar's bounded read (`ensure_materialised`) is built, but as an ordinary per-file failure, not as anything drawn here. Do not pick them up. _(Was: IMPLEMENTED — “Every state, message and copy rule … open it, it’s the visual spec”.)_ |
 
 ## cloud-import
 
@@ -125,7 +125,7 @@ state is still evidenced, the day is not.
 | `fit-cascade-lab.html` | 15 Oct 2026 | *unreviewed* — added by `ed116819`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `mcp-agents-pane.html` | 22 Aug 2026 | IMPLEMENTED — “the pane design is … drawn at the shipped” size; `MCPAgentsSettingsView.swift` ships |
 | `mcp-extension-ux.html` | 3 Aug 2026 | IMPLEMENTED — the `.mcpb` extension shipped 1 Aug 2026 |
-| `mcp-spike-ux-walkthrough.html` | 1 Aug 2026 | PROPOSED 1 Aug 2026 · IMPLEMENTED — the spike accepted 30 Jul 2026 |
+| `mcp-spike-ux-walkthrough.html` | 22 Oct 2026 | PROPOSED 1 Aug 2026 · IMPLEMENTED — the spike accepted 30 Jul 2026; its “In iCloud” row and `icloud` glyph are history (removed 22 Oct 2026, `docs/design-cloud-files.md`) |
 | `mcp-files-and-folders.html` | 29 Sep 2026 | *unreviewed* — landed with `8f29792`; `docs/design-mcp-files-and-folders.md` describes it as the fallback route's copy; not yet classified against the code |
 | `mcp-native-proxy-decisions.html` | 29 Sep 2026 | *unreviewed* — landed with `c6a653b` alongside `docs/design-mcp-native-proxy.md`; not yet classified against the code |
 
@@ -288,7 +288,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `sidebar-activity-indicators.html` | 14 Jun 2026 | PROPOSED 14 Jun 2026 · IMPLEMENTED — `ProjectRowActivityIndicator.swift` ships |
+| `sidebar-activity-indicators.html` | 22 Oct 2026 | PROPOSED 14 Jun 2026 · IMPLEMENTED — `ProjectRowActivityIndicator.swift` ships; its “In iCloud” row and cloud legend entry are **not** (removed 22 Oct 2026, `docs/design-cloud-files.md`) |
 | `sidebar-all-tabs-v1.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v2.html` — first iteration |
 | `sidebar-all-tabs-v2.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 18 Mar 2026 by `sidebar-all-tabs-v3.html` — second iteration |
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |

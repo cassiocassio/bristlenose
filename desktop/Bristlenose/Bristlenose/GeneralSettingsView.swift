@@ -136,9 +136,10 @@ struct GeneralSettingsView: View {
             // which under App Sandbox is the container and never matches.
             let path = UserHome.abbreviate(url.path)
             // Attribution, never a warning: a project folder inside the client's
-            // Dropbox or SharePoint tree is the intended setup, and naming the
-            // provider is what stops a three-minute dataless fetch reading as
-            // Bristlenose being slow (design-project-storage §3).
+            // Dropbox or SharePoint tree is the intended setup. Naming the
+            // provider is settled (owner, 22 Oct 2026): it is context the
+            // researcher uses, and nothing goes past the name
+            // (`docs/design-cloud-files.md` § The rule).
             guard let provider = ProjectIndex.cloudProviderLabel(for: url.path) else {
                 return path
             }

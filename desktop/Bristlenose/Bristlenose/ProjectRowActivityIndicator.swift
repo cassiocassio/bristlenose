@@ -11,8 +11,9 @@ import SwiftUI
 /// **Vocabulary** (see `docs/design-sidebar-activity-indicators.md`): motion =
 /// healthy / ambient; static colour = attention. This slot carries the *motion*
 /// signal for an in-flight run *or copy*. Failure / partial-completion stay in
-/// the subtitle text + their `MessageKind` glyph — not here. Availability (the
-/// cloud glyph) is a separate concern owned by `ProjectRow.subtitleRightSlot`.
+/// the subtitle text + their `MessageKind` glyph — not here. Availability is a
+/// separate concern (there is no cloud glyph since 22 Oct 2026,
+/// `docs/design-cloud-files.md`).
 ///
 /// **Determinacy.** A run shows the determinate, Welford-ETA-weighted ring
 /// (`.running(fraction:)`, nil → indeterminate spinner before calibration); a

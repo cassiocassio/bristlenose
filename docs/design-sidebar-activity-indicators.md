@@ -300,9 +300,12 @@ introspectable, and only coarsely (`ubiquitousItemDownloadingStatusKey`); `perce
 deprecated (the URL resource key `NSURLUbiquitousItemPercentDownloadedKey`, since 10.8, with
 Apple's own note to use `NSMetadataUbiquitousItemPercentDownloadedKey` on `NSMetadataItem`
 instead — which is *not* deprecated and is what `design-cloud-wait-label.md` §5 probes; SDK
-headers read 12 Sep 2026) and third-party File Providers are opaque — no reliable progress to show. Shipped posture
+headers read 12 Sep 2026) and third-party File Providers are opaque — no reliable progress to show. ~~Shipped posture
 (commits `e4037d5`, `b0ed701`): detect iCloud-eviction, render a static outline `icloud` glyph
-(status-only, no click), let macOS fetch transparently on open. Dropbox / Google Drive are not
+(status-only, no click),~~ let macOS fetch transparently on open. _Superseded 22 Oct 2026: the
+`icloud` glyph and the `.inCloud` state it drew were deleted (`bbf75243`); there is no at-rest
+cloud glyph or state — an evicted folder reads `.ready`, a gone one `.cantFind`
+(`design-cloud-files.md`)._ Dropbox / Google Drive are not
 special-cased — that's the user's relationship with their cloud provider, not ours. A determinate
 "Downloading X of Y" + Cancel was proposed and walked back earlier. **No active "Fetching…"
 indicator.** The activity-indicator work must not touch the cloud/availability path.
@@ -323,7 +326,7 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > slow"; a named one reads as "the network is slow", and each provider has a different
 > fix path.
 >
-> **Closed 22 Oct 2026:** the label is rejected (`design-cloud-wait-label.md`), and `.inCloud` and `desktop.availability.inCloud` were deleted. The rest of this note is history.
+> **Closed 22 Oct 2026:** the label is rejected (`design-cloud-files.md` is the policy; `design-cloud-wait-label.md` the history), and `.inCloud` and `desktop.availability.inCloud` were deleted. The rest of this note is history.
 >
 > Neither position's label has shipped; the detection half did (29 Jul 2026, `b9325004`). The only live string was `desktop.availability.inCloud`
 > = "In iCloud", reached via `.inCloud` — which the storage doc shows is **unreachable
@@ -344,7 +347,7 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > **Where it now lives (4 Sep 2026, later the same day):** `design-cloud-wait-label.md` —
 > scope and policy as decided, a per-store table of what a third-party app can actually
 > know (label yes, pie no), the one open measurement, and what a pick-up would build.
-> Propose the label there. This note stays as the record that the two docs disagreed.
+> ~~Propose the label there.~~ (Rejected 22 Oct 2026 — don't; `design-cloud-files.md`.) This note stays as the record that the two docs disagreed.
 
 ## Folders
 
@@ -426,4 +429,4 @@ accessibility ordering; two progress kinds one shape (copy bytes vs pipeline tim
 - `docs/design-pipeline-diagnostic-popover.md` — `MessageKind` taxonomy.
 - `docs/design-motion.md` — motion vocabulary.
 - `docs/design-multi-project.md` — multi-project scope.
-- Commits `e4037d5`, `b0ed701` — cloud-evicted shipped decisions.
+- Commits `e4037d5`, `b0ed701` — cloud-evicted shipped decisions (the glyph and state removed 22 Oct 2026, `bbf75243`; policy `design-cloud-files.md`).

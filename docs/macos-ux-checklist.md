@@ -31,6 +31,7 @@ A standing reference for Bristlenose's native Mac shell — a **remember-and-con
 - Sidebar row-height follows the user's icon-size setting `✓`
 - **Background run-complete notification** `◐` direction recorded, **post-TF** — banner + single *informational* Dock bounce; no badge; Dock progress = future. TF ships on in-app surfaces. [`design-desktop-nav-toolbar-rearrangement.md` §10.4]
 - Web pane API (WKWebView at floor / SwiftUI `WebView` on 26) `✓` [`design-desktop-nav-toolbar-rearrangement.md` §10.8]
+- Cloud-backed files (placeholders, a fetch in progress, a folder that has gone) `✓` settled — bounded read, no wait label, no cloud glyph, no provider advice; a gone folder is the can't-find pane [`design-cloud-files.md`]
 
 ## Reading list (to build platform knowledge)
 

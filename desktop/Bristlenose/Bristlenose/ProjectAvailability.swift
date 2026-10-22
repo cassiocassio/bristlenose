@@ -21,7 +21,7 @@ enum ProjectAvailability: Equatable {
     /// client manages is present (`.ready`, an evicted one included, which is
     /// read like any folder) or gone (`.cantFind`). Bristlenose cannot know a
     /// sync client is fetching, so it never says so
-    /// (`docs/design-cloud-wait-label.md`).
+    /// (`docs/design-cloud-files.md`).
     case cantFind(reason: CantFindReason)
 }
 

@@ -64,6 +64,14 @@ filesystem, because the whole design rests on `rename(2)` being atomic and free;
 an Application Support location would be a cross-device copy of a directory that
 can hold gigabytes of extracted audio, on the failure path, at the moment the
 disk is most likely to be full.
+
+A RE-ANALYSE THAT DOES NOT FINISH
+---------------------------------
+"Successful" means every session analysed, not "some quotes": a Re-analyse that
+came back with 4 quotes against 353 used to discard the 353 and their curation
+(R108). It now puts the report back as a failed run does, and its tree is kept
+at `failed_path_for` — the paid work — until the next run without --clean
+finishes it (`resume_attempt`, R109) or a --clean sweeps it.
 """
 
 from __future__ import annotations
@@ -71,6 +79,7 @@ from __future__ import annotations
 import contextlib
 import enum
 import glob
+import json
 import logging
 import os
 import shutil
@@ -90,6 +99,12 @@ _APPEND_ONLY = (
 #: Pipeline scratch, not part of the report. Dropped rather than stashed — see
 #: `stash()`.
 _SCRATCH = Path(".bristlenose") / "temp"
+
+#: In a kept attempt: how many bytes of each `_APPEND_ONLY` file the report's
+#: copy already holds. A restore appends only what follows, so an attempt put
+#: back a second time (`resume_attempt`, then another unfinished run) does not
+#: write its first run onto the report's history twice.
+_HISTORY_PUBLISHED = Path(".bristlenose") / "history-published.json"
 
 
 class RestoreOutcome(enum.Enum):
@@ -278,14 +293,15 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
     failed = failed_path_for(output_dir)
     moved_failed = False
     try:
-        # A previous restore may have died between its rename and its cleanup,
-        # leaving this path occupied. `rename` onto a non-empty directory is
-        # ENOTEMPTY, which would otherwise surface as a bare FAILED.
-        shutil.rmtree(failed, ignore_errors=True)
-
         # Step the failed tree aside rather than reading it into memory — the
         # log can be large, and a rename costs nothing.
         if output_dir.exists():
+            # A previous restore may have died between its rename and its
+            # cleanup, leaving this path occupied. `rename` onto a non-empty
+            # directory is ENOTEMPTY, which would otherwise surface as a bare
+            # FAILED. Only then: with no output, a tree here is the attempt a
+            # put-back or `resume_attempt` was cut short over, kept to finish.
+            shutil.rmtree(failed, ignore_errors=True)
             output_dir.rename(failed)
             moved_failed = True
 
@@ -301,22 +317,58 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
         return RestoreOutcome.FAILED
 
     history_ok = True
-    if moved_failed:
+    if failed.is_dir():
+        published = _read_published(failed)
         for rel in _APPEND_ONLY:
-            history_ok = _append_onto(failed / rel, output_dir / rel) and history_ok
+            history_ok = _append_onto(
+                failed / rel, output_dir / rel, skip=published.get(rel.name, 0),
+            ) and history_ok
+        if history_ok:
+            _write_published(failed)
 
     # THE FAILED TREE IS KEPT, not deleted. It holds the manifest, the
     # `intermediate/` stage cache and any transcripts the run got as far as
     # writing — after an hour of Whisper that is the expensive thing on disk,
-    # and the only thing that makes a retry cheaper than starting over.
-    # `stash()` clears it next run, so it is a one-run tenancy, not litter.
+    # and the only thing that makes a retry cheaper than starting over. The
+    # next run without --clean finishes it (`resume_attempt`); a --clean
+    # sweeps it (`stash()`).
     logger.info("output_backup: restored %s from %s", output_dir, backup)
     if moved_failed:
         logger.info("output_backup: failed run's tree kept at %s", failed)
     return RestoreOutcome.RESTORED if history_ok else RestoreOutcome.RESTORED_WITHOUT_HISTORY
 
 
-def _append_onto(src: Path, dest: Path) -> bool:
+def _read_published(tree: Path) -> dict[str, int]:
+    """How much of *tree*'s history a report already holds; {} when none."""
+    try:
+        raw = json.loads((tree / _HISTORY_PUBLISHED).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, int)}
+
+
+def _write_published(tree: Path) -> None:
+    """Record that the report now holds all of *tree*'s history.
+
+    A failed write is said and then tolerated: the cost is the attempt's
+    earlier runs appearing twice in the report's history, not a lost report.
+    """
+    sizes = {
+        rel.name: (tree / rel).stat().st_size
+        for rel in _APPEND_ONLY if (tree / rel).is_file()
+    }
+    if not sizes:
+        return
+    try:
+        (tree / _HISTORY_PUBLISHED).write_text(json.dumps(sizes), encoding="utf-8")
+    except OSError as exc:
+        logger.warning("output_backup: could not record %s's history as kept (%s)",
+                       tree, exc)
+
+
+def _append_onto(src: Path, dest: Path, *, skip: int = 0) -> bool:
     """Append `src`'s bytes to `dest`. False if the history was NOT preserved.
 
     `O_NOFOLLOW` + `0o600`, matching `run_lifecycle.append_event` and
@@ -332,6 +384,8 @@ def _append_onto(src: Path, dest: Path) -> bool:
     """
     if not src.is_file():
         return True  # Nothing to preserve is not a failure to preserve it.
+    if src.stat().st_size <= skip:
+        return True  # All of it is already there.
     start = dest.stat().st_size if dest.exists() else 0
     fd = None
     try:
@@ -340,6 +394,7 @@ def _append_onto(src: Path, dest: Path) -> bool:
         with open(fd, "wb", closefd=True) as fh_dest:
             fd = None  # now owned by the file object
             with src.open("rb") as fh_src:
+                fh_src.seek(skip)
                 shutil.copyfileobj(fh_src, fh_dest)
             fh_dest.flush()
             os.fsync(fh_dest.fileno())
@@ -359,6 +414,68 @@ def _append_onto(src: Path, dest: Path) -> bool:
             os.truncate(dest, start)
         return False
     return True
+
+
+def resume_attempt(output_dir: Path) -> Path | None:
+    """Put a kept attempt back in place to be finished; set the report aside.
+
+    A Re-analyse that did not finish leaves the previous report in place and
+    its own tree at `failed_path_for` (`_restore`). The next run without
+    --clean finishes that attempt rather than the report, which is already
+    finished (R109): this swaps them, so the pipeline resumes from the
+    attempt's manifest and pays only for what is missing.
+
+    Returns where the report was set aside, for the caller to settle exactly as
+    it settles a `stash()`: discarded when the run finishes, put back when it
+    does not. None when no report was moved, whether or not the attempt was.
+    """
+    failed = failed_path_for(output_dir)
+    if not failed.is_dir():
+        return None
+    if project_is_locked(output_dir):
+        logger.warning(
+            "output_backup: a live run owns %s — not resuming the attempt at %s",
+            output_dir, failed,
+        )
+        return None
+    backup = backup_path_for(output_dir)
+    _clear_discarding(backup)
+    if backup.exists():
+        # `reclaim_stale` declined it, so it may be the only copy of a report.
+        logger.warning(
+            "output_backup: %s exists and was not reclaimed — not resuming the "
+            "attempt at %s over it", backup, failed,
+        )
+        return None
+    if output_dir.exists():
+        scratch = output_dir / _SCRATCH
+        if scratch.exists():
+            shutil.rmtree(scratch, ignore_errors=True)
+        try:
+            output_dir.rename(backup)
+        except OSError as exc:
+            logger.warning(
+                "output_backup: could not set %s aside to resume the attempt (%s); "
+                "the run resumes the report instead", output_dir, exc,
+            )
+            return None
+    try:
+        failed.rename(output_dir)
+    except OSError as exc:
+        logger.error("output_backup: could not move the attempt at %s into place (%s)",
+                     failed, exc)
+        if backup.exists():
+            try:
+                backup.rename(output_dir)
+            except OSError as exc2:
+                # The run goes ahead as a --clean would, the report set aside
+                # behind it and settled the same way.
+                logger.error("output_backup: and could not put %s back (%s)",
+                             output_dir, exc2)
+                return backup
+        return None
+    logger.info("output_backup: resuming the attempt kept at %s", failed)
+    return backup if backup.exists() else None
 
 
 def project_is_locked(output_dir: Path) -> bool:

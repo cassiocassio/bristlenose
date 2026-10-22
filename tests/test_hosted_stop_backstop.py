@@ -436,3 +436,117 @@ def test_a_stop_that_never_unwinds_is_recorded_by_the_backstop_not_killed(
     """)
     assert code == 128 + signal.SIGINT, f"ended by {code}, not the backstop"
     assert len(termini) == 1 and isinstance(termini[0], RunCancelledEvent), termini
+
+
+# --- The backstop puts a set-aside report back (#29) --------------------------
+
+
+def test_a_stuck_stop_puts_the_previous_report_back_before_it_exits(
+    tmp_path: Path,
+) -> None:
+    """A Re-analyse whose unwind sticks short of the CLI's own put-back used to
+    exit with the report set aside, and the server will not reclaim it: a
+    cancelled run is not a crash. The researcher saw the half-built attempt."""
+    from bristlenose.utils import output_backup
+
+    out = tmp_path / "study" / "bristlenose-output"
+    out.mkdir(parents=True)
+    (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+    backup = output_backup.stash(out)
+    assert backup is not None
+    out.mkdir()
+    sentinel = tmp_path / "ready"
+    preamble = GRACE.format(grace=0.5) + (
+        "\nfrom bristlenose.utils import output_backup as _ob"
+        f"\n_rl_mod.set_backstop_put_back(lambda: _ob.restore("
+        f"Path({str(backup)!r}), Path({str(out)!r})))"
+    )
+    proc = _spawn_lifecycle_subprocess(out, _stuck_body(sentinel), preamble=preamble, env=HOSTED)
+    f = events_path(out)
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        proc.send_signal(signal.SIGINT)
+        code = _wait_exit(proc, 30.0)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert code == 128 + signal.SIGINT, code
+    assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "old"
+    assert not backup.exists()
+    # The stop is recorded on the report that is back.
+    (terminus,) = _termini(events_path(out))
+    assert isinstance(terminus, RunCancelledEvent)
+
+
+def _cli_runner(monkeypatch):
+    from typer.testing import CliRunner
+
+    monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
+    monkeypatch.setattr("bristlenose.cli._maybe_guide_provider_setup", lambda s: None)
+    monkeypatch.setattr("bristlenose.cli._maybe_auto_doctor", lambda s, c: True)
+    monkeypatch.setattr("bristlenose.preflight.api_key.preflight_api_key", lambda **kw: None)
+    return CliRunner()
+
+
+def test_the_cli_gives_the_backstop_its_put_back_while_the_report_is_aside(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    import bristlenose.run_lifecycle as rl
+    from bristlenose.cli import app
+
+    input_dir = tmp_path / "interviews"
+    out = input_dir / "bristlenose-output"
+    out.mkdir(parents=True)
+    (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+    seen: list[str] = []
+
+    async def _stuck_then_backstop(*a, **k):
+        # What the backstop does from its thread, holding the exit.
+        rl._run_backstop_put_back()
+        seen.append((out / "bristlenose-report.html").read_text(encoding="utf-8"))
+        raise RuntimeError("never reached in a real stuck stop")
+
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _stuck_then_backstop)
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+
+    assert seen == ["old"]
+    assert rl._backstop_put_back is None
+
+
+def test_a_backstop_after_the_report_was_replaced_puts_nothing_back(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    import bristlenose.run_lifecycle as rl
+    from bristlenose.cli import app
+    from bristlenose.events import PipelineSummary
+    from bristlenose.utils import output_backup
+
+    input_dir = tmp_path / "interviews"
+    out = input_dir / "bristlenose-output"
+    out.mkdir(parents=True)
+    (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+
+    class _Result:
+        llm_model = "claude-sonnet-4-6"
+        llm_input_tokens = llm_output_tokens = 0
+        llm_calls = 1
+        total_quotes = 3
+        summary = PipelineSummary()
+
+    async def _run(_self, _in, o, *a, **k):
+        (Path(o) / "bristlenose-report.html").write_text("new", encoding="utf-8")
+        return _Result()
+
+    real_discard = output_backup.discard
+
+    def _backstop_fires_as_the_discard_starts(backup):
+        rl._run_backstop_put_back()
+        return real_discard(backup)
+
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _run)
+    monkeypatch.setattr(output_backup, "discard", _backstop_fires_as_the_discard_starts)
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+
+    assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "new"

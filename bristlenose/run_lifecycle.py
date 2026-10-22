@@ -103,6 +103,11 @@ _hosted_backstop: Callable[[int], None] | None = None
 #: set aside until the next run. Bounded, so a stuck restore cannot hold it.
 _exit_hold = threading.RLock()  # re-entered: the CLI holds it around restore
 _EXIT_HOLD_TIMEOUT_S = 30.0
+#: The put-back the backstop runs before it exits: set by the CLI once it has
+#: set a report aside, cleared (under the exit hold) once the CLI has settled
+#: it. A backstop firing while the unwind is stuck short of the CLI's own
+#: put-back used to exit with the report still set aside (#29).
+_backstop_put_back: Callable[[], object] | None = None
 
 
 @contextmanager
@@ -110,6 +115,31 @@ def holding_exit() -> Iterator[None]:
     """Keep the hosted backstop from exiting the process until this block ends."""
     with _exit_hold:
         yield
+
+
+def set_backstop_put_back(put_back: Callable[[], object] | None) -> None:
+    """What the hosted backstop puts back before it exits; None once settled.
+
+    Clear it holding the exit (``holding_exit``) before discarding or putting
+    back, so a backstop never puts back a report the run has replaced.
+    """
+    global _backstop_put_back
+    _backstop_put_back = put_back
+
+
+def _run_backstop_put_back() -> None:
+    """Called by the backstop holding the exit: the CLI cannot be mid put-back."""
+    global _backstop_put_back
+    put_back, _backstop_put_back = _backstop_put_back, None
+    if put_back is None:
+        return
+    try:
+        outcome = put_back()
+    except Exception:  # noqa: BLE001 — said; the next run reclaims the report
+        log.exception("hosted stop backstop could not put the previous report back")
+        return
+    log.warning("hosted stop backstop: putting the previous report back: %s",
+                getattr(outcome, "value", outcome))
 
 
 def _arm_hosted_backstop(signum: int) -> None:
@@ -134,6 +164,8 @@ def _arm_hosted_backstop(signum: int) -> None:
             if not held:
                 log.warning("hosted stop backstop: a restore held the exit for %g s; "
                             "exiting anyway", _EXIT_HOLD_TIMEOUT_S)
+            else:
+                _run_backstop_put_back()
             try:
                 os._exit(128 + signum)
             finally:  # only reached where _exit is stubbed (tests)

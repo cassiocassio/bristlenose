@@ -198,3 +198,40 @@ def test_re_analyse_after_a_rename_keeps_when_the_interview_happened(
         after = {s["session_id"]: s["session_date"] for s in study.sessions(client, expect=2)}
     assert before["s1"].startswith("2026-10-02T13:33:12"), before
     assert after["s1"] == before["s1"], "a Re-analyse after a rename lost the interview's date"
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Re-analyse under a live server moves the output folder the server holds open; "
+    "Windows refuses the move (as for test_re_analyse_is_a_deliberate_reset…)",
+)
+def test_an_unfinished_re_analyse_keeps_the_report_and_the_retry_pays_only_for_the_rest(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """R108 + R109, through the real pipeline: a Re-analyse with a session
+    failed leaves the report and its star in place; the next run finishes the
+    attempt, transcribing only the session that failed, and replaces it."""
+    from bristlenose.events import CauseCategoryEnum
+    from bristlenose.utils import output_backup
+
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav", "Interview 3.wav")
+    out = study.folder / "bristlenose-output"
+    with study.serve() as client:
+        study.run()
+        star = study.quote_ids(client)[0]
+        study.star(client, star)
+
+        study.run(clean=True, fail={"Interview 3.wav": CauseCategoryEnum.NETWORK})
+        assert "Your previous report is still here" in study.last_output
+        study.sessions(client, expect=3)
+        assert star in study.starred(client), "an unfinished Re-analyse lost a star"
+        assert output_backup.failed_path_for(out).is_dir()
+
+        study.run()
+        assert study.transcribed[2] == ["Interview 3.wav"], (
+            "the retry paid again for sessions the attempt had finished"
+        )
+        study.sessions(client, expect=3)
+        study.assert_healthy()
+    assert not output_backup.failed_path_for(out).exists()
+    assert not output_backup.backup_path_for(out).exists()

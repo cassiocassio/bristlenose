@@ -266,7 +266,10 @@ Path to a \fIbristlenose.toml\fR config file.
 .BR \-\-clean
 Start afresh. The previous output is moved to
 .I .bristlenose\-output\-previous/
-and removed once the run succeeds; if the run fails it is put back.
+and removed once every session has been analysed. If the run fails, or any
+session fails, it is put back and the attempt is kept at
+.IR .bristlenose\-output\-failed/ ;
+the next run without \fB\-\-clean\fR finishes it.
 .TP
 .BR \-\-no\-serve
 Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR

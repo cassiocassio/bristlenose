@@ -193,7 +193,8 @@ class TestFullCycle:
         assert not output_backup.backup_path_for(out).exists()
 
     def test_the_kept_tree_is_a_one_run_tenancy(self, tmp_path: Path) -> None:
-        """Kept, not accumulated. The next run's stash sweeps it."""
+        """Kept, not accumulated. The next --clean's stash sweeps it; a run
+        without --clean finishes it instead (`TestAKeptAttemptIsFinished`)."""
         out = tmp_path / "bristlenose-output"
         _make_report(out, marker="v1", events="a\n")
         backup = output_backup.stash(out)
@@ -357,3 +358,77 @@ class TestTheErrorBranches:
 
         assert output_backup.reclaim_stale(out) is RestoreOutcome.NOTHING_TO_DO
         assert (out / _MARKER).read_text(encoding="utf-8") == "LIVE RUN IS WRITING HERE"
+
+
+class TestAKeptAttemptIsFinished:
+    """A Re-analyse that did not finish is resumed by the next run (R109)."""
+
+    def _unfinished(self, out: Path) -> Path:
+        _make_report(out, marker="report", events="r1\n")
+        backup = output_backup.stash(out)
+        _make_report(out, marker="attempt", events="a1\n")
+        assert output_backup.restore(backup, out) is RestoreOutcome.RESTORED
+        return output_backup.failed_path_for(out)
+
+    def test_the_attempt_takes_the_reports_place(self, tmp_path: Path) -> None:
+        out = tmp_path / "bristlenose-output"
+        attempt = self._unfinished(out)
+
+        backup = output_backup.resume_attempt(out)
+
+        assert backup == output_backup.backup_path_for(out)
+        assert (out / _MARKER).read_text(encoding="utf-8") == "attempt"
+        assert (backup / _MARKER).read_text(encoding="utf-8") == "report"
+        assert not attempt.exists()
+
+    def test_an_attempt_put_back_again_adds_only_its_new_history(
+        self, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "bristlenose-output"
+        self._unfinished(out)
+        backup = output_backup.resume_attempt(out)
+        with (out / ".bristlenose" / "pipeline-events.jsonl").open("a") as fh:
+            fh.write("a2\n")
+
+        output_backup.restore(backup, out)
+
+        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
+        assert events == "r1\na1\na2\n"
+
+    def test_not_while_a_live_run_owns_the_project(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        out = tmp_path / "bristlenose-output"
+        attempt = self._unfinished(out)
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: True)
+
+        assert output_backup.resume_attempt(out) is None
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        assert attempt.is_dir()
+
+    def test_not_over_a_backup_that_was_never_reclaimed(self, tmp_path: Path) -> None:
+        out = tmp_path / "bristlenose-output"
+        attempt = self._unfinished(out)
+        _make_report(output_backup.backup_path_for(out), marker="only copy", events="x\n")
+
+        assert output_backup.resume_attempt(out) is None
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        assert attempt.is_dir()
+
+    def test_a_swap_cut_between_its_renames_loses_neither(self, tmp_path: Path) -> None:
+        """No output, the report set aside, the attempt kept: what a kill
+        between `resume_attempt`'s renames, or a put-back's, leaves. The
+        recovery used to delete the attempt before putting the report back."""
+        out = tmp_path / "bristlenose-output"
+        attempt = self._unfinished(out)
+        out.rename(output_backup.backup_path_for(out))
+        with (attempt / ".bristlenose" / "pipeline-events.jsonl").open("a") as fh:
+            fh.write("a2\n")
+
+        assert output_backup.reclaim_stale(out) is RestoreOutcome.RESTORED
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        assert (attempt / _MARKER).read_text(encoding="utf-8") == "attempt"
+        # What the report did not yet hold of the attempt's history, once.
+        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
+        assert events == "r1\na1\na2\n"

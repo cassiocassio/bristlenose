@@ -155,18 +155,18 @@ class TestStatusReportsTheStash:
         assert "in flight" in text
         assert "rm -rf" not in text
 
-    def test_a_failed_tree_is_not_promised_as_a_resume(
+    def test_a_failed_tree_says_which_run_finishes_it(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
     ) -> None:
-        """Nothing reads ``.bristlenose-output-failed/`` but ``status`` and the
-        next run, which replaces it (handoff P4)."""
+        """``.bristlenose-output-failed/`` is an unfinished Re-analyse: the next
+        run without --clean finishes it, a --clean sweeps it (R109)."""
         monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
         out = tmp_path / "bristlenose-output"
         output_backup.failed_path_for(out).mkdir()
         cli._report_stashed_output(out)
         text = " ".join(capsys.readouterr().out.split())
-        assert "resume" not in text
-        assert "failed" in text
+        assert "the next run without --clean finishes it" in text
+        assert "--clean discards it" in text
 
 
 class TestAnalyzeProjectName:

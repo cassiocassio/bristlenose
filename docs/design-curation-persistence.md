@@ -254,7 +254,8 @@ the paths that don't preserve — so a reader could leave believing curation alw
 survives. It doesn't, in three distinct ways._
 
 1. **`--clean` discards the persistence layer itself.** `bristlenose run --clean`
-   moves `output_dir` aside and deletes the copy once the run succeeds
+   moves `output_dir` aside and deletes the copy once the run succeeds — every
+   session analysed, since 22 Oct 2026 (R108)
    (`cli.py:1352-1360`, `utils/output_backup.py`; it was `shutil.rmtree` until
    30 Aug 2026). The SQLite database holding every `durable_id`, `frozen_form`,
    star, tag and edit lives at `<output_dir>/.bristlenose/bristlenose.db` —

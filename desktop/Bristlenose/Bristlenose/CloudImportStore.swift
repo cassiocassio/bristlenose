@@ -938,9 +938,11 @@ final class CloudImportStore: ObservableObject {
                         // unguarded: Stop bumps the same generation, so a
                         // guard would also suppress the "Stopped" a plain Stop
                         // shows, and a replacement's own progress and outcome
-                        // overwrite them. They rely on a superseded row task
-                        // only ever settling `.cancelled`; the newer batch's
-                        // `removeAll()` and its own writes overwrite it.
+                        // overwrite them. What they rely on is that the newer
+                        // batch's `removeAll()` and its own later writes for
+                        // the row win, so a superseded row's late write (even
+                        // an `.imported` whose hop landed after Stop) is at
+                        // most momentary.
                         if self.fetchGeneration == mine {
                             self.rowTasks[row.id] = nil
                             // Counted on *settling*, not on succeeding: the row

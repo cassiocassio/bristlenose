@@ -119,6 +119,8 @@ struct CloudImportBatchLifecycleTests {
         #expect(store.outcomes["a"] == .failed(reason: .accessNotGranted, isRetryable: true),
                 "premise: it ended on the declined grant")
         #expect(store.batch == nil, "a batch that is over must not leave its ring on the sidebar")
+        #expect(!store.isAwaitingGrant,
+                "a declined grant is not still waiting for the researcher to grant access")
     }
 
     // MARK: - A stopped batch, replaced before it settled
@@ -238,6 +240,28 @@ struct CloudImportBatchLifecycleTests {
         ) async -> FetchOutcome {
             .cancelled
         }
+    }
+
+    @Test("A granted grant clears the batch's waiting state")
+    func grantedGrantClearsAwaiting() async {
+        // The other half of the guard the next test pins: the batch the grant
+        // belongs to must still clear "waiting for you to grant access" once
+        // it lands.
+        let source = HeldGrantSource(rows: [row("a")])
+        let store = CloudImportStore(source: source)
+        await store.load()
+        store.selectAllVisible()
+
+        store.startFetch(destination: destination, projectID: UUID())
+        await until { source.asked == 1 }
+        #expect(source.asked == 1, "premise: the batch is waiting on its grant")
+        #expect(store.isAwaitingGrant, "premise: its rows say so")
+
+        source.end(0, granted: true)
+        await until { !store.isFetching }
+        #expect(!store.isFetching, "premise: the granted batch ran and ended")
+
+        #expect(!store.isAwaitingGrant, "a granted batch is no longer waiting for its grant")
     }
 
     @Test("A stopped batch's grant, landing late, leaves the next batch waiting for its own",

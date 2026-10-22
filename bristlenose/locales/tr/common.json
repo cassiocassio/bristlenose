@@ -610,6 +610,7 @@
     "loading": "Deşifre yükleniyor…",
     "noData": "Kullanılabilir deşifre verisi yok.",
     "sessionGone": "Bu oturum artık raporda yok.",
+    "allSessions": "Tüm oturumlar",
     "inaudible": "Anla\u015f\u0131lm\u0131yor"
   },
   "emptyState": {

@@ -669,6 +669,7 @@
     "loading": "Načítání přepisu…",
     "noData": "Nejsou k dispozici žádná data přepisu.",
     "sessionGone": "Toto sezení už ve zprávě není.",
+    "allSessions": "Všechna sezení",
     "inaudible": "Nesrozumiteln\u00e9"
   },
   "emptyState": {

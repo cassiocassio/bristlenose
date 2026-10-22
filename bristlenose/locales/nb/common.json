@@ -610,6 +610,7 @@
     "loading": "Laster inn transkripsjon …",
     "noData": "Ingen transkripsjonsdata tilgjengelig.",
     "sessionGone": "Denne økten er ikke lenger i rapporten.",
+    "allSessions": "Alle økter",
     "inaudible": "Uh\u00f8rbart"
   },
   "emptyState": {

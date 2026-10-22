@@ -610,6 +610,7 @@
     "loading": "Ladataan litterointia…",
     "noData": "Litterointitietoja ei ole saatavilla.",
     "sessionGone": "Tämä istunto ei ole enää raportissa.",
+    "allSessions": "Kaikki istunnot",
     "inaudible": "Ep\u00e4selv\u00e4"
   },
   "emptyState": {

@@ -610,6 +610,7 @@
     "loading": "Cargando transcripción…",
     "noData": "No hay datos de transcripción disponibles.",
     "sessionGone": "Esta sesión ya no está en el informe.",
+    "allSessions": "Todas las sesiones",
     "inaudible": "Inaudible"
   },
   "emptyState": {

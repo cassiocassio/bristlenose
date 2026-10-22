@@ -612,6 +612,7 @@
     "loading": "Loading transcript…",
     "noData": "No transcript data available.",
     "sessionGone": "This session is no longer in the report.",
+    "allSessions": "All sessions",
     "inaudible": "Inaudible"
   },
   "emptyState": {

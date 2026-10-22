@@ -578,6 +578,7 @@
     "loading": "전사 로드 중…",
     "noData": "전사 데이터가 없습니다.",
     "sessionGone": "이 세션은 더 이상 보고서에 없습니다.",
+    "allSessions": "모든 세션",
     "inaudible": "\ub4e4\ub9ac\uc9c0 \uc54a\uc74c"
   },
   "emptyState": {

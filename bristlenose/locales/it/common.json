@@ -610,6 +610,7 @@
     "loading": "Caricamento della trascrizione…",
     "noData": "Nessun dato di trascrizione disponibile.",
     "sessionGone": "Questa sessione non è più nel report.",
+    "allSessions": "Tutte le sessioni",
     "inaudible": "Incomprensibile"
   },
   "emptyState": {

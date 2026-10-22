@@ -610,6 +610,7 @@
     "loading": "Transcript laden…",
     "noData": "Geen transcriptgegevens beschikbaar.",
     "sessionGone": "Deze sessie staat niet meer in het rapport.",
+    "allSessions": "Alle sessies",
     "inaudible": "Onverstaanbaar"
   },
   "emptyState": {

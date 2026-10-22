@@ -219,6 +219,25 @@ describe("TranscriptPage", () => {
     }
   });
 
+  it("a session the report no longer has says so, with a way back and no Retry (#55)", async () => {
+    // Retry reloaded into the same 404. The server answered: the session is
+    // gone (a re-run removed it), so the lens says that, not "couldn't be shown".
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mockedGetTranscript.mockRejectedValue(
+        Object.assign(new Error("GET /transcripts/s9 404: Session not found"), { status: 404 }),
+      );
+      render(<TranscriptPage projectId="1" sessionId="s9" />);
+      const box = await screen.findByTestId("transcript-error");
+      expect(box).toHaveTextContent("This session is no longer in the report.");
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      const back = screen.getByRole("link", { name: "All sessions" });
+      expect(back.getAttribute("href")).toMatch(/\/report\/sessions$/);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("a failure with no message is still a failure, not an empty transcript", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {

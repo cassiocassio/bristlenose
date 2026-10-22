@@ -610,6 +610,7 @@
     "loading": "Transkript wird geladen…",
     "noData": "Keine Transkriptdaten verfügbar.",
     "sessionGone": "Dieses Interview ist nicht mehr im Bericht.",
+    "allSessions": "Alle Interviews",
     "inaudible": "Unverst\u00e4ndlich"
   },
   "emptyState": {

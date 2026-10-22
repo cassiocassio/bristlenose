@@ -610,6 +610,7 @@
     "loading": "Chargement de la transcription…",
     "noData": "Aucune donnée de transcription disponible.",
     "sessionGone": "Cet entretien n’est plus dans le rapport.",
+    "allSessions": "Tous les entretiens",
     "inaudible": "Inaudible"
   },
   "emptyState": {

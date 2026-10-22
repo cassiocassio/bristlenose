@@ -680,6 +680,7 @@
     "loading": "Wczytywanie transkrypcji…",
     "noData": "Brak dostępnych danych transkrypcji.",
     "sessionGone": "Tej sesji nie ma już w raporcie.",
+    "allSessions": "Wszystkie sesje",
     "inaudible": "Niezrozumia\u0142e"
   },
   "emptyState": {

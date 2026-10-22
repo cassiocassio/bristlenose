@@ -578,6 +578,7 @@
     "loading": "正在載入逐字稿⋯",
     "noData": "沒有可用的逐字稿資料。",
     "sessionGone": "這個場次已不在報告中。",
+    "allSessions": "所有場次",
     "inaudible": "\u807d\u4e0d\u6e05\u695a"
   },
   "emptyState": {

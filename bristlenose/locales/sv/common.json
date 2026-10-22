@@ -610,6 +610,7 @@
     "loading": "Läser in transkription…",
     "noData": "Ingen transkriptionsdata tillgänglig.",
     "sessionGone": "Den här sessionen finns inte längre i rapporten.",
+    "allSessions": "Alla sessioner",
     "inaudible": "Oh\u00f6rbart"
   },
   "emptyState": {

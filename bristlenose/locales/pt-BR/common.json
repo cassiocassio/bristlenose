@@ -610,6 +610,7 @@
     "loading": "Carregando transcrição…",
     "noData": "Nenhum dado de transcrição disponível.",
     "sessionGone": "Esta sessão não está mais no relatório.",
+    "allSessions": "Todas as sessões",
     "inaudible": "Inaud\u00edvel"
   },
   "emptyState": {

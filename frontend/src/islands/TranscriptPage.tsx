@@ -67,7 +67,7 @@ import {
   patchDeletedBadges,
   patchTags,
 } from "../utils/api";
-import type { SessionListItem } from "../utils/api";
+import type { ApiError, SessionListItem } from "../utils/api";
 import { formatFinderDate, formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
 import { markArrived } from "../utils/arrival";
@@ -376,11 +376,17 @@ function inIsland(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('[contenteditable="false"]') !== null;
 }
 
+/** Where a page for a session the report no longer has points back to. */
+const SESSIONS_PATH = "/report/sessions";
+
 export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptPageProps) {
   void _projectId; // API base URL from window global already includes project ID
   const { t } = useTranslation();
   const [data, setData] = useState<TranscriptPageResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The server's answer was "no such session" (a re-run removed it): Retry
+  // would reload into the same 404 (RE#20, decision #55).
+  const [sessionGone, setSessionGone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionList, setSessionList] = useState<SessionListItem[]>([]);
   const bodyRef = useRef<HTMLElement | null>(null);
@@ -404,6 +410,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         if (ticket !== readTicket.current) return;
         setData(resp);
         setError(null);
+        setSessionGone(false);
       })
       .catch((err) => {
         if (ticket !== readTicket.current) return;
@@ -412,6 +419,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         // Never empty: an empty string reads as "no error" and the page would
         // say there is no transcript.
         setError(String(err?.message || "read failed"));
+        setSessionGone((err as ApiError | null)?.status === 404);
       })
       .finally(() => {
         if (ticket === readTicket.current) setLoading(false);
@@ -902,7 +910,21 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   if (error || !data) {
     return (
       <div className="bn-error" data-testid="transcript-error">
-        {error ? <ErrorNotice scope="lens" /> : t("transcript.noData")}
+        {error && sessionGone ? (
+          <div className="bn-empty-state" role="status">
+            <p>{t("transcript.sessionGone")}</p>
+            <a
+              href={reportHref(SESSIONS_PATH)}
+              onClick={(e) => followInApp(e, SESSIONS_PATH)}
+            >
+              {t("transcript.allSessions")}
+            </a>
+          </div>
+        ) : error ? (
+          <ErrorNotice scope="lens" />
+        ) : (
+          t("transcript.noData")
+        )}
       </div>
     );
   }

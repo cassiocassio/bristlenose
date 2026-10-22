@@ -887,7 +887,8 @@
       "unavailable": "Ei käytettävissä",
       "checking": "Tarkistetaan…",
       "outOfCredit": "Saldo lopussa",
-      "local": "Paikallinen"
+      "local": "Paikallinen",
+      "keyNotSaved": "Avainta ei tallennettu"
     },
     "copyCommand": "Kopioi komento",
     "console": {

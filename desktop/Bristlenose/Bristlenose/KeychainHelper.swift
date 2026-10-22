@@ -901,7 +901,9 @@ enum SharedKeychainItem {
 
     /// Write both copies and read both back. `true` only if the app's own copy
     /// round-tripped; a refused login copy is logged, because that is the CLI's
-    /// loss and not the app's. A save is a person's act, so it may ask.
+    /// loss and not the app's. A refused synced copy that still holds another
+    /// key leaves the login copy alone, so the two never disagree about which
+    /// key is in use (decision #11). A save is a person's act, so it may ask.
     @discardableResult
     static func write(service: String, account: String, value: String,
                       synced: any RawKeychain, login: any RawKeychain,
@@ -919,11 +921,21 @@ enum SharedKeychainItem {
                               defaults: UserDefaults) -> Bool {
         let syncedWrote = synced.write(service: service, account: account, value: value,
                                        interaction: interaction)
-        let loginWrote = login.write(service: service, account: account, value: value,
-                                     interaction: interaction)
         // A clean return is not evidence anything was stored — read both back.
         let syncedBack = synced.read(service: service, account: account,
                                      interaction: interaction).value == value
+        // The app's own copy refused the key and still holds another (decision
+        // #11). Writing the login copy now would hand `bristlenose run` a key
+        // the app says isn't being used, and the ledger would record the split
+        // as agreement, so it would never heal. Neither copy changes. With no
+        // synced item at all (an ad-hoc build answers nothing), the login copy
+        // is the only one that works, and takes the key below.
+        if !(syncedWrote && syncedBack), stamp(synced, service: service, account: account) != nil {
+            log.error("synced copy of \(service, privacy: .public) refused the new key — login copy left as it was")
+            return false
+        }
+        let loginWrote = login.write(service: service, account: account, value: value,
+                                     interaction: interaction)
         let loginBack = login.read(service: service, account: account,
                                    interaction: interaction).value == value
         if !loginWrote || !loginBack {

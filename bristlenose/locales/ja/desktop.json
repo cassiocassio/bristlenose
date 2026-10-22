@@ -867,7 +867,8 @@
       "unavailable": "利用不可",
       "checking": "確認中…",
       "outOfCredit": "クレジット不足",
-      "local": "ローカル"
+      "local": "ローカル",
+      "keyNotSaved": "キー未保存"
     },
     "copyCommand": "コマンドをコピー",
     "console": {

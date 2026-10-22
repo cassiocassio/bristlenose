@@ -44,6 +44,13 @@ struct APIKeyDrafts {
         }
     }
 
+    /// The caption under a provider's name in the list.
+    enum RowCaption: Equatable {
+        case status(ProviderStatus)
+        /// The row's last save did not reach the Keychain.
+        case keyNotSaved
+    }
+
     func text(_ provider: LLMProvider) -> String { typed[provider, default: ""] }
 
     mutating func edit(_ provider: LLMProvider, _ text: String) { typed[provider] = text }
@@ -81,6 +88,15 @@ struct APIKeyDrafts {
         let left = store.get(provider: keychainKey)
         load(provider, stored: left)
         return left == nil
+    }
+
+    /// What the provider's row in the list says under its name. A key whose
+    /// last save failed outranks every status, because the status describes
+    /// the key the Keychain still holds, not the one just pasted (decision #6:
+    /// a save that failed on leaving the row was otherwise seen only on coming
+    /// back to it).
+    func caption(_ provider: LLMProvider, status: ProviderStatus) -> RowCaption {
+        failed.contains(provider) ? .keyNotSaved : .status(status)
     }
 
     mutating func commit(_ provider: LLMProvider, store: any KeychainStore) -> Outcome {

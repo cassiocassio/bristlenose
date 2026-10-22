@@ -867,7 +867,8 @@
       "unavailable": "사용 불가",
       "checking": "확인 중…",
       "outOfCredit": "크레딧 소진",
-      "local": "로컬"
+      "local": "로컬",
+      "keyNotSaved": "키가 저장되지 않음"
     },
     "copyCommand": "명령어 복사",
     "console": {

@@ -927,7 +927,8 @@
       "unavailable": "Niedostępny",
       "checking": "Sprawdzanie…",
       "outOfCredit": "Brak środków",
-      "local": "Lokalny"
+      "local": "Lokalny",
+      "keyNotSaved": "Nie zapisano klucza"
     },
     "copyCommand": "Kopiuj polecenie",
     "console": {

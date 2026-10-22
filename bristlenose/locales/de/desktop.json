@@ -887,7 +887,8 @@
       "unavailable": "Nicht verfügbar",
       "checking": "Wird geprüft…",
       "outOfCredit": "Kein Guthaben",
-      "local": "Lokal"
+      "local": "Lokal",
+      "keyNotSaved": "Schlüssel nicht gespeichert"
     },
     "copyCommand": "Befehl kopieren",
     "console": {

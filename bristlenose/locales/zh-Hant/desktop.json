@@ -867,7 +867,8 @@
       "unavailable": "無法使用",
       "checking": "正在檢查⋯",
       "outOfCredit": "額度用盡",
-      "local": "本機"
+      "local": "本機",
+      "keyNotSaved": "金鑰未儲存"
     },
     "copyCommand": "拷貝指令",
     "console": {

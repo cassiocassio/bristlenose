@@ -887,7 +887,8 @@
       "unavailable": "No disponible",
       "checking": "En comprovació",
       "outOfCredit": "Sense crèdit",
-      "local": "Local"
+      "local": "Local",
+      "keyNotSaved": "Clau no desada"
     },
     "copyCommand": "Copia l'ordre",
     "console": {

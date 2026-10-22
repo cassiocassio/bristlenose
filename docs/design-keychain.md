@@ -390,7 +390,15 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
 
 - **A write goes to both copies and reads both back.** `set` returns `true`
   only if the app's own copy round-tripped; a refused login copy is logged as
-  the CLI's loss, not shown as a key that did not save.
+  the CLI's loss, not shown as a key that did not save. **A key the app's own
+  copy refuses changes neither copy** (decision #11, 22 Oct 2026): when the
+  synced copy still holds a different key after the write, the login copy is
+  left as it was, so `bristlenose run` keeps the key the app uses. Until then
+  the login copy took the new key, the ledger recorded the split as agreement,
+  and the CLI ran on a key Settings said "isn't being used", for good. With no
+  synced item to protect (an ad-hoc build, whose synced keychain answers
+  nothing), the login copy still takes the key, because it is the only copy
+  that works.
 - **A read compares both copies' modification dates with a ledger** (in
   UserDefaults) of what they were when they last agreed. Unchanged → read the
   app's copy, touch nothing else. The copy that moved wins: the CLI rewrote the
@@ -475,12 +483,15 @@ path, which reads `.quiet` (`LLMSettingsView.swift`, the `measuring` flag); the 
   the next `configure` moves the stamp and an asking read adopts it as any CLI
   write. The withheld stamp lives in the app's UserDefaults, so a lost ledger
   (a wiped container, `reset-sandbox-state.sh`) reads that copy as first
-  sight and an asking read adopts it again, one dialog; a tombstone the
-  keychain itself carries would close that, and is a product call. Whether
-  the app should also take the CLI's copy by a route not yet
-  measured — rewriting the item's ACL, which may raise macOS's *"wants to
-  change the access"* dialog, then deleting — is an open product call, not a
-  rule. Over SSH with no GUI
+  sight and an asking read adopts it again, one dialog. A tombstone the
+  keychain itself carries would close that; **decided not to build** (#103,
+  22 Oct 2026): only a wiped container loses the ledger, and the cost is one
+  dialog that adopts the researcher's own key. **Nor does the app take the
+  CLI's copy** (#102, same day): the only route is rewriting the item's ACL,
+  which would put macOS's *"wants to change the access"* password dialog on a
+  Remove, and the CLI's item is the CLI's. Not measured, by decision; the
+  researcher removes it in Keychain Access (the CLI has no remove command).
+  Over SSH with no GUI
   session, a first `security -w` on an app-created item fails instead of
   prompting; the CLI then reports no key, as it always did with a locked
   keychain.

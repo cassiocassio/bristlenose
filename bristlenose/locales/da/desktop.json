@@ -887,7 +887,8 @@
       "unavailable": "Ikke tilgængelig",
       "checking": "Tjekker…",
       "outOfCredit": "Ingen kredit tilbage",
-      "local": "Lokal"
+      "local": "Lokal",
+      "keyNotSaved": "Nøglen er ikke gemt"
     },
     "copyCommand": "Kopiér kommando",
     "console": {

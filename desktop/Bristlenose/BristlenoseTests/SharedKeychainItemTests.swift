@@ -310,11 +310,33 @@ struct SharedKeychainItemTests {
     }
 
     /// The app's own copy refused — `-34018` on an ad-hoc build — is the app's
-    /// failure and the save says so.
+    /// failure and the save says so. With no synced item there, the login copy
+    /// is the only one that works, so it still takes the key.
     @Test func write_refusedSyncedCopy_isReportedFalse() {
         withWorld { w in
             w.synced.refuseWrites = true
             #expect(write(w, "sk") == false)
+            #expect(loginValue(w) == "sk")
+        }
+    }
+
+    /// The synced copy refuses to overwrite an older key it still holds. The
+    /// login copy is left as it was, so `bristlenose run` keeps the key the app
+    /// uses instead of one the app says was not saved, and the two never split
+    /// (decision #11, 22 Oct 2026).
+    @Test func write_refusedOverAnOlderKey_leavesTheLoginCopyAlone() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.clock.tick()
+            w.synced.refuseWrites = true
+
+            #expect(write(w, "sk-new") == false)
+
+            #expect(syncedValue(w) == "sk-old")
+            #expect(loginValue(w) == "sk-old")
+            #expect(quietRead(w) == "sk-old")
+            #expect(askingRead(w) == "sk-old")
+            #expect(loginValue(w) == "sk-old")
         }
     }
 

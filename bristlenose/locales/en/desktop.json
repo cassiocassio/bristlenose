@@ -892,7 +892,8 @@
       "unavailable": "Unavailable",
       "checking": "Checking…",
       "outOfCredit": "Out of credit",
-      "local": "Local"
+      "local": "Local",
+      "keyNotSaved": "Key not saved"
     },
     "copyCommand": "Copy command",
     "console": {

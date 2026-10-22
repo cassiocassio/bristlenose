@@ -251,6 +251,9 @@ struct APIKeyDraftsTests {
         drafts.edit(.claude, "sk-new")
 
         #expect(drafts.commit(.claude, store: store) == .saved("sk-new"))
+        #expect(store.login.read(service: KeychainHelper.serviceNames["anthropic"]!,
+                                 account: KeychainHelper.account,
+                                 interaction: .allowed).value == "sk-new")
     }
 
     /// The synced write is refused over an older synced key: a run still reads
@@ -271,6 +274,9 @@ struct APIKeyDraftsTests {
 
         #expect(drafts.commit(.claude, store: store) == .failed)
         #expect(store.get(provider: "anthropic") == "sk-old")
+        // And the CLI's copy: "isn't being used" is true there too (#11).
+        #expect(store.login.read(service: service, account: KeychainHelper.account,
+                                 interaction: .allowed).value == "sk-old")
     }
 
     @Test func reconciler_bothRefused_isFailed() {
@@ -282,6 +288,50 @@ struct APIKeyDraftsTests {
         drafts.edit(.claude, "sk-new")
 
         #expect(drafts.commit(.claude, store: store) == .failed)
+    }
+
+    // MARK: - #6: the row in the provider list
+
+    /// A key that failed to save on leaving its row says so in the list, not
+    /// only under a field that is no longer on screen (decision #6, 22 Oct 2026).
+    @Test func aFailedSave_showsKeyNotSaved_inTheRow_whateverTheStatus() {
+        let store = SpyKeychain()
+        store.mode = .refuse
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: "sk-old")
+        drafts.edit(.claude, "sk-new")
+        #expect(drafts.commit(.claude, store: store) == .failed)
+
+        for status in [ProviderStatus.online, .checking, .invalid, .notSetUp] {
+            #expect(drafts.caption(.claude, status: status) == .keyNotSaved)
+        }
+        #expect(drafts.caption(.chatGPT, status: .online) == .status(.online))
+    }
+
+    @Test func aSaveAfterAFailure_putsTheStatusBack() {
+        let store = SpyKeychain()
+        store.mode = .refuse
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: nil)
+        drafts.edit(.claude, "sk-new")
+        _ = drafts.commit(.claude, store: store)
+        store.mode = .normal
+        _ = drafts.commit(.claude, store: store)
+
+        #expect(drafts.caption(.claude, status: .checking) == .status(.checking))
+    }
+
+    @Test func clearingAfterAFailure_putsTheStatusBack() {
+        let store = SpyKeychain()
+        store.mode = .refuse
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: nil)
+        drafts.edit(.claude, "sk-new")
+        _ = drafts.commit(.claude, store: store)
+        store.mode = .normal
+        drafts.clear(.claude, store: store)
+
+        #expect(drafts.caption(.claude, status: .notSetUp) == .status(.notSetUp))
     }
 
     @Test func ollamaHasNoKey_andNeverCommits() {

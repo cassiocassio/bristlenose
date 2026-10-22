@@ -887,7 +887,8 @@
       "unavailable": "Niet beschikbaar",
       "checking": "Controleren…",
       "outOfCredit": "Geen tegoed",
-      "local": "Lokaal"
+      "local": "Lokaal",
+      "keyNotSaved": "Sleutel niet bewaard"
     },
     "copyCommand": "Kopieer opdracht",
     "console": {

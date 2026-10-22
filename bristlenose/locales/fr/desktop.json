@@ -887,7 +887,8 @@
       "unavailable": "Indisponible",
       "checking": "Vérification…",
       "outOfCredit": "Crédit épuisé",
-      "local": "Local"
+      "local": "Local",
+      "keyNotSaved": "Clé non enregistrée"
     },
     "copyCommand": "Copier la commande",
     "console": {

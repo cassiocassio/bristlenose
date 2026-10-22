@@ -887,7 +887,8 @@
       "unavailable": "Inte tillgänglig",
       "checking": "Kontrollerar…",
       "outOfCredit": "Slut på kredit",
-      "local": "Lokal"
+      "local": "Lokal",
+      "keyNotSaved": "Nyckeln har inte sparats"
     },
     "copyCommand": "Kopiera kommando",
     "console": {

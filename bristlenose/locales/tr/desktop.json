@@ -887,7 +887,8 @@
       "unavailable": "Kullanılamıyor",
       "checking": "Denetleniyor…",
       "outOfCredit": "Kredi bitti",
-      "local": "Yerel"
+      "local": "Yerel",
+      "keyNotSaved": "Anahtar kaydedilmedi"
     },
     "copyCommand": "Komutu kopyala",
     "console": {

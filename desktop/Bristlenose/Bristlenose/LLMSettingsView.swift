@@ -227,13 +227,28 @@ struct LLMSettingsView: View {
                             .foregroundStyle(
                                 statusFor(provider) == .notSetUp
                                     ? .secondary : .primary)
-                        HStack(spacing: 6) {
-                            statusIndicator(for: provider, dotSize: 10)
-                            Text(provider.statusLabel(for: statusFor(provider), i18n: i18n))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        switch keyDrafts.caption(provider, status: statusFor(provider)) {
+                        case .status(let status):
+                            HStack(spacing: 6) {
+                                statusIndicator(for: provider, dotSize: 10)
+                                Text(provider.statusLabel(for: status, i18n: i18n))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .modifier(OptionalHelp(text: statusErrors[provider]?.resolved(i18n)))
+                        case .keyNotSaved:
+                            // The field's own error, shown where the row is still
+                            // on screen after the row it was typed in is left.
+                            Label {
+                                Text(i18n.t("desktop.llmSettings.status.keyNotSaved"))
+                            } icon: {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(.red)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .help(i18n.t("desktop.llmSettings.keyNotSaved"))
                         }
-                        .modifier(OptionalHelp(text: statusErrors[provider]?.resolved(i18n)))
                     }
                     .padding(.vertical, 2)
                     .animation(

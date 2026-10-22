@@ -2547,10 +2547,10 @@ struct ContentView: View {
                 "files for a study that can't take them now were not added: \(filteredURLs.count, privacy: .public)")
             return
         }
-        // Decided at the gesture, not when the copy lands: files dropped on a
-        // running or queued study join the folder and wait as "+N unanalysed"
-        // (decision #100), even if that run ends while they copy.
-        let startsRun = SidebarOutlineController.startsRunAfterCopy(state: pipelineRunner.state[id])
+        // Asked at the gesture and again when the copy lands: files dropped
+        // on a running or queued study join the folder and wait as "+N
+        // unanalysed" (decision #100), even if that run ends while they copy.
+        let droppedOn = pipelineRunner.state[id]
 
         // A study scans its folder at run time, so the freshly-copied files
         // become visible to the CLI automatically.
@@ -2582,10 +2582,13 @@ struct ContentView: View {
                     projectName: project.name,
                     acceptedExtensions: Self.acceptedExtensions
                 )
-                // Over a run already under way or queued, nothing starts for
-                // them: unseeded, they are the "+N unanalysed" the row shows
-                // once it ends (decision #100).
-                guard startsRun else { return }
+                // Over a run under way or queued — at the drop, or now the
+                // copy has ended (Analyse pressed mid-batch: that run may have
+                // scanned past them) — nothing starts for them: unseeded, they
+                // are the "+N unanalysed" the row shows once it ends (#100).
+                guard SidebarOutlineController.startsRunAfterCopy(
+                    droppedOn: droppedOn, copyEnded: pipelineRunner.state[id]
+                ) else { return }
                 // Seed the watcher with the copied names so the "+N
                 // unanalysed" pill stays hidden — a run starts immediately
                 // below, so they are "known", not surprise drops. Handoff

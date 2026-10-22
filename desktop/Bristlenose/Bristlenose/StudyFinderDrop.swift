@@ -4,8 +4,8 @@ import Foundation
 /// sidebars give (R47).
 ///
 /// The AppKit outline's `validateDrop` refuses two drags: one onto a study that
-/// is running, queued, failed or unreachable
-/// (`SidebarOutlineController.acceptsFinderDrop(state:)`), and one carrying
+/// has failed or is unreachable (a running or queued one takes files since
+/// decision #100; `SidebarOutlineController.acceptsFinderDrop(state:)`), and one carrying
 /// nothing a study can ingest (`acceptsFinderFiles`, R48). AppKit then draws no
 /// highlight and springs the drag back.
 ///

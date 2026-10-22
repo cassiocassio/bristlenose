@@ -226,6 +226,10 @@ final class CopyMachinery: ObservableObject {
                         // the final name was visible, half-written, for as long
                         // as it took.
                         let staging = Self.stagingURL(for: item.destination)
+                        // A quit or crash mid-copy leaves one behind, and
+                        // `copyItem` refuses a destination that exists: clear
+                        // it first, or the next drop of this file fails once.
+                        try? FileManager.default.removeItem(at: staging)
                         do {
                             try copyFile(item.source, staging)
                             try FileManager.default.moveItem(at: staging, to: item.destination)

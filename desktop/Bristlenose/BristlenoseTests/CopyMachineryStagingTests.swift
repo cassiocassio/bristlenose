@@ -28,6 +28,14 @@ struct CopyMachineryStagingTests {
         return url
     }
 
+    /// `FileManager.copyItem` refuses a destination that exists (EEXIST); a
+    /// fake that overwrites, as `Data.write` does, cannot see a leftover.
+    nonisolated static func refuseExisting(_ url: URL) throws {
+        if FileManager.default.fileExists(atPath: url.path) {
+            throw CocoaError(.fileWriteFileExists)
+        }
+    }
+
     /// Every entry in `dir`, hidden ones included.
     private func everything(in dir: URL) -> [String] {
         ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).sorted()
@@ -51,6 +59,8 @@ struct CopyMachineryStagingTests {
             acceptedExtensions: ["mp4"],
             isDataless: { _ in false },
             copyFile: { from, to in
+                // Refuse an existing destination, as `copyItem` does.
+                try Self.refuseExisting(to)
                 // Half the file is on disk: what would a run read now?
                 try Data("the whole".utf8).write(to: to)
                 sightings.record(ScanSelection.readableFiles(under: study).map(\.lastPathComponent))
@@ -84,11 +94,43 @@ struct CopyMachineryStagingTests {
                 acceptedExtensions: ["mp4"],
                 isDataless: { _ in false },
                 copyFile: { _, to in
+                    try Self.refuseExisting(to)
                     try Data("a rec".utf8).write(to: to)
                     throw DiskGone()
                 }
             )
         }
         #expect(everything(in: study).isEmpty)
+    }
+
+    /// A quit or crash mid-copy leaves the hidden staging file behind. The
+    /// next drop of the same recording must still land: `copyItem` refuses a
+    /// destination that exists, so the copy used to fail once, with a toast
+    /// naming a file the researcher cannot see (review of 8332d20c).
+    @Test("a staging file left by a crash does not fail the next copy")
+    func aLeftoverStagingFileDoesNotFailTheNextCopy() async throws {
+        let src = makeTempDir()
+        let study = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: src)
+            try? FileManager.default.removeItem(at: study)
+        }
+        let recording = src.appendingPathComponent("Session 6.mp4")
+        try Data("a whole recording".utf8).write(to: recording)
+        let leftover = CopyMachinery.stagingURL(for: study.appendingPathComponent("Session 6.mp4"))
+        try Data("a recor".utf8).write(to: leftover)
+
+        // The real byte copy, which refuses an existing destination.
+        let copied = try await CopyMachinery().copy(
+            urls: [recording], into: study,
+            projectID: UUID(), projectName: "Probe",
+            acceptedExtensions: ["mp4"],
+            isDataless: { _ in false }
+        )
+
+        #expect(copied.map(\.lastPathComponent) == ["Session 6.mp4"])
+        #expect(try Data(contentsOf: study.appendingPathComponent("Session 6.mp4"))
+                == Data("a whole recording".utf8))
+        #expect(everything(in: study) == ["Session 6.mp4"])
     }
 }

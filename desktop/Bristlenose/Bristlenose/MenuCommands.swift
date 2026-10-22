@@ -549,8 +549,9 @@ private struct FileMenuContent: View {
         // Selection-targeted (group 3), so it needs a selected project as well
         // as a window — it was gated on the window alone, which let a
         // researcher pick files with nothing selected and then be told off.
-        // …and a study that can take files: a busy one would accept the pick
-        // and do nothing, as a drop on it is refused (R47).
+        // …and a study that can take files: a failed or unreachable one would
+        // accept the pick and do nothing, as a drop on it is refused (R47). A
+        // running or queued one takes them (decision #100).
         .disabled(!bridgeHandler.hasSelectedProject
                   || !bridgeHandler.selectedProjectTakesFiles
                   || !WindowCommand.addFiles.isEnabled(hasKeyWindow: windowCommands != nil))

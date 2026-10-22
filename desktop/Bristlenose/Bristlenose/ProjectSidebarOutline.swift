@@ -1571,6 +1571,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         }
     }
 
+    /// The same answer asked twice — at the drop, and again when the copy
+    /// ends. A run that started while the files copied (Analyse pressed
+    /// mid-batch) may have scanned the folder before they landed, so seeding
+    /// them as known would hide files nothing analysed; a run that ended
+    /// while they copied still starts nothing (decision #100).
+    nonisolated static func startsRunAfterCopy(
+        droppedOn: PipelineState?, copyEnded: PipelineState?
+    ) -> Bool {
+        startsRunAfterCopy(state: droppedOn) && startsRunAfterCopy(state: copyEnded)
+    }
+
     /// Whether a Finder drag carries anything the drop handlers keep: a
     /// folder, or a file of a type the pipeline ingests. The same filter the
     /// handlers apply (`ContentView.filterAcceptedURLs`), asked before the drop.

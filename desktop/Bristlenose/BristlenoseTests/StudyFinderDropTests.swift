@@ -93,6 +93,18 @@ struct StudyFinderDropTests {
         #expect(SidebarOutlineController.startsRunAfterCopy(state: state))
     }
 
+    /// Asked again when the copy ends (review of 8332d20c): Analyse pressed
+    /// while a slow batch copies starts a run whose scan may already have
+    /// passed, so the files must not be seeded as known, and a run that ended
+    /// mid-copy still starts nothing.
+    @Test func aRunStartedOrEndedDuringTheCopyStartsNothing() {
+        #expect(!SidebarOutlineController.startsRunAfterCopy(droppedOn: .idle, copyEnded: .running))
+        #expect(!SidebarOutlineController.startsRunAfterCopy(droppedOn: .idle, copyEnded: .queued(position: 1)))
+        #expect(!SidebarOutlineController.startsRunAfterCopy(droppedOn: .running, copyEnded: .ready(Date())))
+        #expect(SidebarOutlineController.startsRunAfterCopy(droppedOn: .idle, copyEnded: .idle))
+        #expect(SidebarOutlineController.startsRunAfterCopy(droppedOn: .ready(Date()), copyEnded: .ready(Date())))
+    }
+
     @Test func leavingAStudyClearsOnlyItsOwnHighlight() {
         let study = UUID(), other = UUID()
         #expect(StudyFinderDrop.highlight(isOver: false, study: study, current: study,

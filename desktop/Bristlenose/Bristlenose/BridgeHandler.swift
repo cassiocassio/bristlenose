@@ -387,7 +387,8 @@ final class BridgeHandler: ObservableObject {
     /// menu-bar answer to "not right now".
     @Published var hasSelectedProject: Bool = false
     /// Whether the selected study can take files now: its folder is there,
-    /// and it is not running, queued, failed or unreachable. Read by File ▸ Add Files… beside
+    /// and it has not failed and is reachable (a running or queued study takes
+    /// files, decision #100). Read by File ▸ Add Files… beside
     /// `hasSelectedProject`; the same rule the sidebars ask of a Finder drop
     /// (`StudyFinderDrop.accepts`), which springs back on a busy study. The
     /// panel used to open, take the pick, and do nothing (R47 follow-up).

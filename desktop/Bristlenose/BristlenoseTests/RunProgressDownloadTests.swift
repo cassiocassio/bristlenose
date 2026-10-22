@@ -98,14 +98,16 @@ import Testing
             "desktop.chrome.pipeline.etaMinutes": "~{{count}} min left",
             "desktop.chrome.pipeline.analysing": "Analysing…",
         ]
+        let localize: (String, [String: String]) -> String = { key, args in
+            var s = templates[key] ?? key
+            for (k, v) in args { s = s.replacingOccurrences(of: "{{\(k)}}", with: v) }
+            return s
+        }
         return RunProgressSubtitle.compose(
             stage: stage, sessionsComplete: complete, sessionsTotal: total,
             etaRemainingSeconds: eta, separator: " · ",
-            localize: { key, args in
-                var s = templates[key] ?? key
-                for (k, v) in args { s = s.replacingOccurrences(of: "{{\(k)}}", with: v) }
-                return s
-            }
+            localize: localize,
+            pluralize: { key, n in localize(key, ["count": String(n)]) }
         )
     }
 

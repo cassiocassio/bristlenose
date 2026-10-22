@@ -28,6 +28,14 @@ import Testing
         return s
     }
 
+    /// The fake's plural ignores the category (English needs none): readable
+    /// sessions get their own words, everything else reuses the template table.
+    private func pluralize(_ base: String, _ count: Int) -> String {
+        base == "desktop.chrome.pipeline.sessionsReadable"
+            ? (count == 1 ? "1 readable" : "\(count) readable")
+            : localize(base, ["count": String(count)])
+    }
+
     private func compose(
         stage: String? = nil,
         complete: Int? = nil,
@@ -39,7 +47,7 @@ import Testing
         RunProgressSubtitle.compose(
             stage: stage, sessionsComplete: complete, sessionsTotal: total,
             etaRemainingSeconds: eta, resuming: resuming, separator: separator,
-            localize: localize
+            localize: localize, pluralize: pluralize
         )
     }
 
@@ -182,29 +190,54 @@ import Testing
     // MARK: - ETA buckets
 
     @Test func etaUnderAMinute() {
-        #expect(RunProgressSubtitle.etaText(45, localize: localize) == "<1 min left")
+        #expect(RunProgressSubtitle.etaText(45, localize: localize, pluralize: pluralize) == "<1 min left")
     }
 
     @Test func etaRoundsToNearestMinute() {
-        #expect(RunProgressSubtitle.etaText(130, localize: localize) == "~2 min left")
-        #expect(RunProgressSubtitle.etaText(62, localize: localize) == "~1 min left")
+        #expect(RunProgressSubtitle.etaText(130, localize: localize, pluralize: pluralize) == "~2 min left")
+        #expect(RunProgressSubtitle.etaText(62, localize: localize, pluralize: pluralize) == "~1 min left")
     }
 
     @Test func etaNilForNonPositiveOrNonFinite() {
-        #expect(RunProgressSubtitle.etaText(0, localize: localize) == nil)
-        #expect(RunProgressSubtitle.etaText(-5, localize: localize) == nil)
-        #expect(RunProgressSubtitle.etaText(nil, localize: localize) == nil)
-        #expect(RunProgressSubtitle.etaText(.infinity, localize: localize) == nil)
-        #expect(RunProgressSubtitle.etaText(.nan, localize: localize) == nil)
+        #expect(RunProgressSubtitle.etaText(0, localize: localize, pluralize: pluralize) == nil)
+        #expect(RunProgressSubtitle.etaText(-5, localize: localize, pluralize: pluralize) == nil)
+        #expect(RunProgressSubtitle.etaText(nil, localize: localize, pluralize: pluralize) == nil)
+        #expect(RunProgressSubtitle.etaText(.infinity, localize: localize, pluralize: pluralize) == nil)
+        #expect(RunProgressSubtitle.etaText(.nan, localize: localize, pluralize: pluralize) == nil)
+    }
+
+    /// The shipped locale files, read from the source tree (not the app bundle's
+    /// copy, which an incremental build may not have refreshed).
+    nonisolated private static let localesURL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // BristlenoseTests
+        .deletingLastPathComponent()   // Bristlenose
+        .deletingLastPathComponent()   // desktop
+        .deletingLastPathComponent()   // repo root
+        .appendingPathComponent("bristlenose/locales")
+
+    /// One minute agrees in the singular where the language marks it: the
+    /// Romance locales read "~1 min restantes" while the key had one form.
+    @MainActor @Test func oneMinuteTakesTheSingularInTheRealLocales() {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: Self.localesURL)
+        let eta: (Double) -> String? = { seconds in
+            RunProgressSubtitle.etaText(seconds, localize: { i18n.t($0, $1) },
+                                        pluralize: { i18n.plural($0, count: $1) })
+        }
+        let singular = [
+            "fr": "~1 min restante", "es": "~1 min restante", "it": "~1 min rimanente",
+            "pt-BR": "~1 min restante", "pt-PT": "~1 min restante", "ca": "~1 min restant",
+            "en": "~1 min left",
+        ]
+        for (locale, expected) in singular {
+            i18n.setLocale(locale)
+            #expect(eta(62) == expected, "\(locale)")
+        }
+        i18n.setLocale("fr")
+        #expect(eta(130) == "~2 min restantes")
     }
 
     // MARK: - Readable sessions (progressive lenses, Phase 5)
-
-    private func pluralize(_ base: String, _ count: Int) -> String {
-        base == "desktop.chrome.pipeline.sessionsReadable"
-            ? (count == 1 ? "1 readable" : "\(count) readable")
-            : base
-    }
 
     private func composeReadable(stage: String?, readable: Int?) -> String {
         RunProgressSubtitle.compose(

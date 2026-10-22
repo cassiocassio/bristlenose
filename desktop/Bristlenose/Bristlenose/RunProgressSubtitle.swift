@@ -77,16 +77,20 @@ enum RunProgressSubtitle {
 
     /// Localised "~N min left" / "<1 min left", or nil when there's no usable
     /// estimate. Minute granularity (not seconds) so the text doesn't jitter at
-    /// the 1 Hz poll rate; "min" is an invariant abbreviation, so no CLDR plural.
+    /// the 1 Hz poll rate. "min" is invariant, but the word beside it is not:
+    /// French, Spanish, Italian, Portuguese and Catalan agree it with the count
+    /// ("~1 min restante"), so the minutes go through `pluralize` (`i18n.plural`).
     static func etaText(
-        _ seconds: Double?, localize: (String, [String: String]) -> String
+        _ seconds: Double?,
+        localize: (String, [String: String]) -> String,
+        pluralize: (String, Int) -> String
     ) -> String? {
         guard let seconds, seconds.isFinite, seconds > 0 else { return nil }
         if seconds < 60 {
             return localize("desktop.chrome.pipeline.etaUnderMinute", [:])
         }
         let minutes = max(1, Int((seconds / 60).rounded()))
-        return localize("desktop.chrome.pipeline.etaMinutes", ["count": String(minutes)])
+        return pluralize("desktop.chrome.pipeline.etaMinutes", minutes)
     }
 
     /// Compose the in-flight subtitle from the progress fields. Returns the
@@ -109,7 +113,7 @@ enum RunProgressSubtitle {
         sessionsReadable: Int? = nil,
         separator: String,
         localize: (String, [String: String]) -> String,
-        pluralize: ((String, Int) -> String)? = nil
+        pluralize: (String, Int) -> String
     ) -> String {
         // The detail markers (per-session fraction, ETA) that trail the verb.
         var detail: [String] = []
@@ -128,7 +132,7 @@ enum RunProgressSubtitle {
         // while they are still arriving. Its own count, not "N of M": the
         // transcription count leaves out platform transcripts, which never go
         // through Whisper, so it cannot be the denominator.
-        if let readable = sessionsReadable, readable > 0, let pluralize,
+        if let readable = sessionsReadable, readable > 0,
             stage.map(arrivalStages.contains) ?? true {
             detail.append(pluralize("desktop.chrome.pipeline.sessionsReadable", readable))
         }
@@ -136,7 +140,7 @@ enum RunProgressSubtitle {
         // analysis estimate, which does not move while the bytes arrive; the
         // ring shows the download's own progress instead.
         if stage != RunProgressMath.downloadStage,
-            let eta = etaText(etaRemainingSeconds, localize: localize) {
+            let eta = etaText(etaRemainingSeconds, localize: localize, pluralize: pluralize) {
             detail.append(eta)
         }
         // Lead with the stage verb when the event names a known stage.

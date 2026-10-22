@@ -56,9 +56,12 @@ import Testing
             key == "desktop.chrome.pipeline.etaMinutes" ? "~\(vars["count"] ?? "?") min left"
                 : key == "desktop.chrome.pipeline.etaUnderMinute" ? "<1 min left" : key
         }
-        #expect(MiroBoardBuildText.eta(build("quotes"), localize: localize) == nil)
-        #expect(MiroBoardBuildText.eta(build("quotes", eta: 150), localize: localize) == "~3 min left")
-        #expect(MiroBoardBuildText.eta(build("quotes", eta: 20), localize: localize) == "<1 min left")
+        let pluralize: (String, Int) -> String = { key, n in localize(key, ["count": String(n)]) }
+        #expect(MiroBoardBuildText.eta(build("quotes"), localize: localize, pluralize: pluralize) == nil)
+        #expect(MiroBoardBuildText.eta(build("quotes", eta: 150), localize: localize,
+                                       pluralize: pluralize) == "~3 min left")
+        #expect(MiroBoardBuildText.eta(build("quotes", eta: 20), localize: localize,
+                                       pluralize: pluralize) == "<1 min left")
     }
 
     @Test func theServersStatusDecodes() throws {

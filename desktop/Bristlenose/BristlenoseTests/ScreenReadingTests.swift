@@ -153,7 +153,8 @@ import Testing
         try FileManager.default.createDirectory(at: en, withIntermediateDirectories: true)
         let desktop: [String: Any] = ["chrome": ["pipeline": [
             "screens": "Screens · {{done}} of {{total}}",
-            "etaMinutes": "~{{count}} min left",
+            "etaMinutes_one": "~{{count}} min left",
+            "etaMinutes_other": "~{{count}} min left",
             "etaUnderMinute": "<1 min left",
         ]]]
         try JSONSerialization.data(withJSONObject: desktop)

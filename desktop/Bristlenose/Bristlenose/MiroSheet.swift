@@ -275,7 +275,10 @@ final class MiroSheetModel: ObservableObject {
     /// The creating step's line, bar and time left (`MiroBoardBuildText`, shared with the web).
     func buildLine() -> String { MiroBoardBuildText.line(build) { self.i18n.t($0, $1) } }
     func buildFraction() -> Double? { MiroBoardBuildText.fraction(build) }
-    func buildETA() -> String? { MiroBoardBuildText.eta(build) { self.i18n.t($0, $1) } }
+    func buildETA() -> String? {
+        MiroBoardBuildText.eta(build, localize: { self.i18n.t($0, $1) },
+                               pluralize: { self.i18n.plural($0, count: $1) })
+    }
 
     func cancelExport() { exportTask?.cancel() }
 

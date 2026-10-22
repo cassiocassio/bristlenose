@@ -187,7 +187,7 @@ import Testing
         let row = RunProgressSubtitle.compose(
             stage: p.stage, sessionsComplete: p.sessionsComplete,
             sessionsTotal: p.sessionsTotal, etaRemainingSeconds: p.etaRemainingSeconds,
-            separator: " · ", localize: { key, _ in key })
+            separator: " · ", localize: { key, _ in key }, pluralize: { key, _ in key })
         #expect(!row.contains("sessionsCount"), "the row still carries a count: \(row)")
         p = at(p, 30, stage: "quotes", complete: 1, total: 8)  // its own first session
         #expect(p.sessionsComplete == 1 && p.sessionsTotal == 8)

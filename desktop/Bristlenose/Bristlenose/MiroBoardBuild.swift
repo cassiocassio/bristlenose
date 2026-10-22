@@ -55,7 +55,9 @@ enum MiroBoardBuildText {
 
     /// Time left, in the run's own words (`RunProgressSubtitle.etaText`): whole minutes, or
     /// "<1 min". Nothing until the server has earned an estimate.
-    static func eta(_ build: MiroBoardBuild?, localize: (String, [String: String]) -> String) -> String? {
-        RunProgressSubtitle.etaText(build?.eta_seconds, localize: localize)
+    static func eta(_ build: MiroBoardBuild?,
+                    localize: (String, [String: String]) -> String,
+                    pluralize: (String, Int) -> String) -> String? {
+        RunProgressSubtitle.etaText(build?.eta_seconds, localize: localize, pluralize: pluralize)
     }
 }

@@ -30,6 +30,9 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GATE="$SCRIPT_DIR/check-pkg-shippable.sh"
 [ -x "$GATE" ] || { echo "gate not executable: $GATE" >&2; exit 2; }
+# Synthetic fixtures must never reach Apple: the gate runs altool --validate-app
+# with the machine's App Store Connect key unless the identity is ad-hoc.
+export SIGN_IDENTITY=-
 
 PASS=0; FAIL=0; SKIP=0
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/bn-gate-test.XXXXXX")
@@ -165,10 +168,12 @@ make_pkg "$A" "$D/t.pkg" && expect_reject "cloud sign-in ID absent" "missing or 
 # A herestring, not a pipe: under pipefail `grep -q` SIGPIPEs the gate, the
 # pipeline reads false, and this branch would report a pass it never checked.
 c3_out=$("$GATE" "$WORK/c3/t.pkg" 2>&1)
-if grep -q "missing or placeholder" <<<"$c3_out"; then
-    fail "cloud sign-in IDs — row fails a fixture that carries all three IDs"
-else
+# Assert the ✓ detail, not the absence of the ✗: a gate that never ran (no c3
+# pkg) prints neither, and an absence check would pass it.
+if grep -q "Teams + Meet client IDs baked" <<<"$c3_out"; then
     pass "cloud sign-in IDs present → row passes"
+else
+    fail "cloud sign-in IDs — row did not pass a fixture that carries all three IDs"
 fi
 
 # --- 8. usage: not a pkg ------------------------------------------------------

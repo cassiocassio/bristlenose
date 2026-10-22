@@ -195,7 +195,7 @@ class TestTheBuildActuallySelectsIt:
 
 
 class TestTheEntitlementsAreActuallyCommitted:
-    """Reading the working tree is not enough for these two files.
+    """Reading the working tree is not enough for these files.
 
     `Bristlenose.entitlements` was `skip-worktree` — set to keep a parked local
     `associated-domains` edit out of commits — so `git status` reported clean

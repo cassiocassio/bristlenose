@@ -304,11 +304,11 @@ trued-against: HEAD@main 2878f68e
      and no way back except **Stop**. "Queued" is also a lie there — nothing is
      queued, we are waiting on a person. Wants its own state, *Waiting for
      permission*, and a deadline.
-     _(22 Oct 2026: the state is built, the deadline is not. `isAwaitingGrant`
+     _(22 Oct 2026: the state is built; the deadline was rejected on purpose (`CloudImportStore.swift:598-602`). `isAwaitingGrant`
      (`CloudImportStore.swift:830`, raised around `prepareBatch` at :865)
      draws ticked rows as *Waiting for permission* instead of *Queued*
      (`CloudImportOutlineView.swift:1229`), shipped in `59105fa2`. The grant
-     wait still has no timeout, so **Stop** is still the way out; it now bumps
+     wait has no timeout by that decision, so **Stop** is the way out; it now bumps
      a generation counter, so a grant that lands after Stop cannot start the
      abandoned batch (`stopFetch`, :993).)_
   2. **Stop → Import does not cleanly re-open the Picker** — observed
@@ -332,7 +332,7 @@ trued-against: HEAD@main 2878f68e
      `dca4c1be`). `openLive` restores the media grant with its file ids from
      the Keychain when it builds the source (`CloudImportCoordinator.swift:238`,
      landing at `GoogleMeetSource.swift:407`), and a new pick is published back
-     (`publishGrant`, :1987; `a10b45c8`). `prompt=consent` is still hardcoded
+     (`publishGrant`, defined :442, called :1987; `a10b45c8`). `prompt=consent` is still hardcoded
      (`GoogleOAuth.swift:450`), on purpose: Google documents it as Required on
      this flow (item 1 of the research entry above).)_
   4. **It cannot simply be folded into the first sign-in**, and that is not a
@@ -422,6 +422,11 @@ trued-against: HEAD@main 2878f68e
   5. **Cancel is batch-only.** Wants a per-row cancel beside each progress bar,
      and the whole-batch cancel to be reachable from the sidebar ring once
      that exists (item 2 of the previous entry).
+     _(22 Oct 2026: both done. Per-row cancel is `cancelRow(_:)`
+     (`CloudImportStore.swift:988`), wired to the cancel button beside each
+     progress bar (`CloudImportOutlineView.swift:1208`, :1911-1914), from
+     `b28efd02`; the sidebar ring stops the whole batch
+     (`ProjectSidebarOutline.swift:2717`).)_
   6. **Zoom's tolerance is unmeasured** and parked — Meet and Teams ship first.
 - _2026-08-17_ — **item 1 of the design session is built: already-in-this-project,
   by duration.** `ImportRowState.imported` has a producer for the first time —

@@ -69,7 +69,7 @@ describe("panel progress", () => {
     expect(els.stop.disabled).toBe(false);
     expect(els.status.textContent).toBe("Building the board… 0 of 4 quotes");
 
-    fromCode({ type: "failed", message: "Stopped after 1 of 4 quotes." });
+    fromCode({ type: "failed", message: "Stopped after 1 of 4 quotes. Undo removes what was drawn; then try again." });
     expect(els.bar.classList.contains("on")).toBe(false);
     expect(els.stop.hidden).toBe(true);
   });

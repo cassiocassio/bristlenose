@@ -96,6 +96,9 @@ def test_a_stuck_hosted_stop_is_ended_and_recorded_cancelled(tmp_path: Path) -> 
     try:
         _wait_for_run_started(f)
         _wait_for_ready(sentinel)
+        from bristlenose.run_lifecycle import pid_file_path
+
+        assert pid_file_path(tmp_path).exists(), "precondition: the run wrote its run.pid"
         proc.send_signal(signal.SIGINT)
         code = _wait_exit(proc, 30.0)
     finally:

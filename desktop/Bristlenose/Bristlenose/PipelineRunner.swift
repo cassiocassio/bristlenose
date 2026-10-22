@@ -764,9 +764,9 @@ final class PipelineRunner: ObservableObject {
     /// Studies an activation rescan is reading now: a read that hangs (a
     /// sleeping drive) is not stacked by the next ⌘-Tab.
     private var activationScans: Set<UUID> = []
-    /// How many activation reads have not landed. For tests that assert a read
-    /// changed nothing: they wait for it to land rather than sleep.
-    var activationReadsInFlight: Int { activationScans.count }
+    /// Activation reads applied so far. For tests that assert a read changed
+    /// nothing: they wait for it to be applied rather than sleep.
+    private(set) var activationReadsApplied = 0
 
     /// The projects whose last run left a session waiting for Whisper.
     var projectsWaitingForWhisper: [UUID] {
@@ -882,7 +882,9 @@ final class PipelineRunner: ObservableObject {
     nonisolated static func performScan(
         project: Project, manifestURL: URL,
         startTime: (pid_t) -> String? = EventLogReader.procStartTime,
-        parentPID: (pid_t) -> pid_t? = EventLogReader.procParentPID
+        parentPID: (pid_t) -> pid_t? = EventLogReader.procParentPID,
+        allowTimeout: Bool = true,
+        read: @escaping @Sendable (URL) async -> PipelineState = { await parseManifest(at: $0) }
     ) async -> ScanOutcome {
         if let pid = aliveOwnedRunPID(for: project, startTime: startTime, parentPID: parentPID) {
             return .orphan(pid: pid)
@@ -893,7 +895,7 @@ final class PipelineRunner: ObservableObject {
         // 12 Oct 2026 and undid that keep one frame up — the callee logged
         // "keeping its PID file" and this line deleted it (review finding 1).
         let resolved = await readManifestState(
-            at: manifestURL, timeout: scanTimeout, allowTimeout: true
+            at: manifestURL, timeout: scanTimeout, allowTimeout: allowTimeout, read: read
         )
         return .manifest(resolved)
     }
@@ -1000,8 +1002,14 @@ final class PipelineRunner: ObservableObject {
             let manifestURL = Self.manifestURL(for: project)
             activationScans.insert(projectID)
             let issuedOver = state[projectID]
+            // Untimed: the study stays in `activationScans` until its read has
+            // really settled, so a share that is mounted but hung holds one
+            // blocked thread per study, not one per ⌘-Tab (review, 22 Oct
+            // 2026), and its row keeps what it said.
+            let read = manifestRead
             Task.detached { [weak self] in
-                let outcome = await Self.performScan(project: project, manifestURL: manifestURL)
+                let outcome = await Self.performScan(
+                    project: project, manifestURL: manifestURL, allowTimeout: false, read: read)
                 await self?.finishActivationScan(outcome, project: project, issuedOver: issuedOver)
             }
         }
@@ -1010,20 +1018,8 @@ final class PipelineRunner: ObservableObject {
     private func finishActivationScan(_ outcome: ScanOutcome, project: Project,
                                       issuedOver: PipelineState?) {
         activationScans.remove(project.id)
-        guard Self.activationKeeps(outcome) else {
-            Self.logger.notice("a read on coming forward timed out project=\(project.id.uuidString, privacy: .public) — the row is left as it was")
-            return
-        }
         applyScan(outcome: outcome, project: project, projectID: project.id, issuedOver: issuedOver)
-    }
-
-    /// Whether an activation read is applied. One that timed out (a sleeping
-    /// drive) says nothing new about a row at rest, and written, "Not
-    /// responding" would stay: activation skips `.unreachable`, and nothing
-    /// else reads that row again until relaunch (review, 22 Oct 2026).
-    nonisolated static func activationKeeps(_ outcome: ScanOutcome) -> Bool {
-        if case .manifest(.unreachable(reason: .timedOut)) = outcome { return false }
-        return true
+        activationReadsApplied += 1
     }
 
     /// A row an activation rescan reads: one at rest. Not a run or a place in

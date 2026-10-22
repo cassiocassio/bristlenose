@@ -1376,12 +1376,46 @@ struct PipelineRunnerQueueTests {
         let before = rig.runner.state[p.id]
 
         rig.writeFinishedRun(in: p, runId: "r2", tokens: nil)
+        let applied = rig.runner.activationReadsApplied
         rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
-        try #require(rig.runner.activationReadsInFlight > 0, "coming forward read nothing")
-        await until { rig.runner.activationReadsInFlight == 0 }
-        try #require(rig.runner.activationReadsInFlight == 0, "the read never landed")
+        await until { rig.runner.activationReadsApplied > applied }
+        try #require(rig.runner.activationReadsApplied > applied, "the read was never applied")
 
         #expect(rig.runner.state[p.id] == before)
+    }
+
+    /// Review, 22 Oct 2026: on a share that is mounted but hung, a timed read
+    /// gave up at 5 s and left its thread blocked; the study was free to be
+    /// read again, so every ⌘-Tab added another blocked thread. The read on
+    /// coming forward is untimed, and a study waits on its one read.
+    @Test func aHungReadOnComingForwardIsNotStacked() async throws {
+        final class Gate: @unchecked Sendable {
+            var open = false
+            var calls = 0
+        }
+        let gate = Gate()
+        let rig = Rig(manifestRead: { url in
+            gate.calls += 1
+            while !gate.open { try? await Task.sleep(for: .milliseconds(20)) }
+            return await PipelineRunner.parseManifest(at: url)
+        })
+        defer { gate.open = true; rig.cleanUp() }
+        let p = rig.project("A")
+        rig.runner.scan(project: p)
+        await until { rig.runner.state[p.id] == .idle }
+        try #require(rig.runner.state[p.id] == .idle)
+
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        await until { gate.calls == 1 }
+        try await Task.sleep(for: PipelineRunner.scanTimeout + .seconds(1))
+        #expect(rig.runner.activationReadsApplied == 0, "the read was given up while still blocked")
+
+        rig.center.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        gate.open = true
+        await until { rig.runner.activationReadsApplied > 0 }
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(gate.calls == 1, "a second read was stacked on the hung one")
+        #expect(rig.runner.state[p.id] == .idle)
     }
 
     /// Review, 22 Oct 2026: a read in flight across the end of the app's own
@@ -1395,13 +1429,6 @@ struct PipelineRunnerQueueTests {
         #expect(!PipelineRunner.isReadOfThisRow(current: stopped, issuedOver: nil), "a read settling a run")
     }
 
-    /// Review, 22 Oct 2026: a read on coming forward that timed out (a sleeping
-    /// drive) left a Ready row on "Not responding" with nothing to read it again.
-    @Test func aTimedOutReadOnComingForwardIsNotApplied() {
-        #expect(!PipelineRunner.activationKeeps(.manifest(.unreachable(reason: .timedOut))))
-        #expect(PipelineRunner.activationKeeps(.manifest(.ready(Date()))))
-        #expect(PipelineRunner.activationKeeps(.manifest(.running)))
-    }
 
     /// #40: what an activation rescan reads. Not a run or a queue place (the
     /// runner's, or watched), not a scan under way, not a folder that is away.

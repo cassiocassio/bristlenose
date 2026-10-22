@@ -412,6 +412,18 @@ def _remove_pid_file(output_dir: Path) -> None:
         pass
 
 
+def _remove_own_pid_file(output_dir: Path, run_id: str) -> None:
+    """Remove ``run.pid`` only while it is still this run's.
+
+    For a path that can run after the run has let go of the file: a stopped
+    run's normal path removes it, and a new run may write its own before a hung
+    exit's backstop fires (decision #51)."""
+    existing = _read_pid_file(output_dir)
+    if existing is None or existing.get("run_id") != run_id:
+        return
+    _remove_pid_file(output_dir)
+
+
 def _is_alive_owned(pid_file: dict[str, Any]) -> bool:
     """True iff the recorded (pid, start_time) matches a live process."""
     pid = pid_file.get("pid")
@@ -1034,7 +1046,7 @@ def run_lifecycle(
             run_id, _HOSTED_STOP_GRACE_S, signal.Signals(signum).name,
             "" if wrote else " (terminus already written, or its write stuck)",
         )
-        _remove_pid_file(output_dir)
+        _remove_own_pid_file(output_dir, run_id)
 
     # `append_event` itself is INSIDE the guard, and that placement is the whole
     # point. A signal arriving during startup used to raise KeyboardInterrupt

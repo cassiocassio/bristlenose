@@ -136,6 +136,48 @@ def test_a_stop_that_wrote_its_terminus_and_then_hung_writes_no_second(tmp_path:
     assert isinstance(terminus, RunCancelledEvent)
 
 
+def test_a_backstop_leaves_a_newer_runs_pid_file(tmp_path: Path) -> None:
+    """The normal path writes its terminus and removes run.pid, then the exit hangs.
+    A new run (a CLI run, say) writes its own run.pid in that window; the stopped
+    run's backstop must not delete it (decision #51)."""
+    import json
+
+    from bristlenose.run_lifecycle import pid_file_path
+
+    sentinel = tmp_path / "ready"
+    preamble = GRACE.format(grace=3.0) + (
+        "\nimport atexit, threading\natexit.register(lambda: threading.Event().wait())"
+    )
+    body = f"""
+        import signal
+        Path({str(sentinel)!r}).write_text("ready")
+        signal.pause()
+    """
+    proc = _spawn_lifecycle_subprocess(tmp_path, body, preamble=preamble, env=HOSTED)
+    f = events_path(tmp_path)
+    pid_file = pid_file_path(tmp_path)
+    newer = {"pid": os.getpid(), "start_time": "0.0", "run_id": "a-newer-run"}
+    try:
+        _wait_for_run_started(f)
+        _wait_for_ready(sentinel)
+        assert pid_file.exists()
+        proc.send_signal(signal.SIGINT)
+        deadline = time.time() + 2.5
+        while (pid_file.exists() or not _termini(f)) and time.time() < deadline:
+            time.sleep(0.01)
+        assert not pid_file.exists() and _termini(f), "the stop never unwound"
+        assert proc.poll() is None, "the run exited before its backstop could fire"
+        pid_file.write_text(json.dumps(newer))
+        code = _wait_exit(proc, 30.0)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait(timeout=10)
+    assert code == 128 + signal.SIGINT, f"ended by {code}, not the backstop"
+    assert pid_file.exists(), "the backstop deleted a newer run's run.pid"
+    assert json.loads(pid_file.read_text())["run_id"] == "a-newer-run"
+
+
 def test_a_cli_run_is_not_cut_short(tmp_path: Path) -> None:
     """The CLI keeps a second Ctrl-C as the user's force; no timer decides for them."""
     sentinel = tmp_path / "ready"

@@ -659,4 +659,27 @@ describe("Reveal in Finder on a finished export", () => {
     });
     expect(serverReveals()).toHaveLength(0);
   });
+
+  it("a reveal the server could not do says so, not only the console (#44)", async () => {
+    const fetchAnswers = vi.mocked(globalThis.fetch).getMockImplementation()!;
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) =>
+      String(input).includes("/reveal")
+        ? new Response(JSON.stringify({ revealed: false, path: "/x/clips" }), {
+            status: 200, headers: { "Content-Type": "application/json" },
+          })
+        : fetchAnswers(input, init),
+    );
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      renderRoute("/report/sessions/"); // a browser: the server's reveal route
+      act(() => {
+        addJob("clips", { type: "clips", frameworkId: "", frameworkTitle: "", total: 2 });
+      });
+      const action = await screen.findByTestId("bn-activity-chip-action", {}, { timeout: 5000 });
+      act(() => action.click());
+      expect(await screen.findByText("Couldn’t show the folder.")).toBeInTheDocument();
+    } finally {
+      logged.mockRestore();
+    }
+  });
 });

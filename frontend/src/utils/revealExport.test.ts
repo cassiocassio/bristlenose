@@ -7,7 +7,10 @@ vi.mock("./api", () => ({
   revealScreens: vi.fn(() => Promise.resolve({ revealed: true, path: "" })),
 }));
 
-import { fileUri, revealExport } from "./revealExport";
+vi.mock("./toast", () => ({ toast: vi.fn() }));
+
+import { fileUri, revealExport, revealExportOrSay } from "./revealExport";
+import { toast } from "./toast";
 import { _resetEmbeddedCache } from "./embedded";
 import {
   getClipExtractionStatus,
@@ -105,5 +108,42 @@ describe("revealExport", () => {
     vi.mocked(getScreensExportStatus).mockRejectedValue(new Error("timed out"));
     await expect(revealExport("screens")).rejects.toThrow("timed out");
     expect(postMessage).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A failed Show in folder said nothing: the chip had already closed and the
+ * failure went to the console only (RE#20, decision #44). It now says so.
+ */
+describe("revealExportOrSay", () => {
+  it("says the folder couldn't be shown when the server could not", async () => {
+    vi.mocked(revealClips).mockResolvedValueOnce({ revealed: false, path: "/x/clips" });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await revealExportOrSay("clips");
+      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", 6000);
+      expect(logged).toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("says the same in the app when there is no finished export to show", async () => {
+    embed();
+    vi.mocked(getScreensExportStatus).mockResolvedValueOnce({
+      ...screensStatus(null, []), status: "failed" as never,
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await revealExportOrSay("screens");
+      expect(toast).toHaveBeenCalledWith("Couldn’t show the folder.", 6000);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("says nothing when the folder was shown", async () => {
+    await revealExportOrSay("screens");
+    expect(toast).not.toHaveBeenCalled();
   });
 });

@@ -66,7 +66,7 @@ import {
   getClipExtractionStatus,
   getScreensExportStatus,
 } from "../utils/api";
-import { revealExport } from "../utils/revealExport";
+import { revealExportOrSay } from "../utils/revealExport";
 import {
   copyQuotesToClipboard,
   saveQuotesSpreadsheet,
@@ -735,9 +735,7 @@ function AppShell() {
             },
             onAction: () => {
               // In the app through the native bridge; the sandboxed sidecar cannot (R72).
-              revealExport("clips").catch((err) =>
-                console.error("Reveal clips failed:", err),
-              );
+              void revealExportOrSay("clips");
             },
             actionLabel: i18n.t("export.clips.reveal"),
             onCancel: () => {
@@ -814,7 +812,7 @@ function AppShell() {
                 });
             },
             onAction: () => {
-              revealExport("screens").catch((err) => console.error("Reveal screens failed:", err));
+              void revealExportOrSay("screens");
             },
             actionLabel: i18n.t("export.screens.reveal"),
             onCancel: () => {

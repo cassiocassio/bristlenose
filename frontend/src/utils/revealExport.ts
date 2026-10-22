@@ -8,7 +8,9 @@
  * server's reveal route is the only way, and stays.
  */
 
+import i18n from "../i18n";
 import { isEmbedded } from "./embedded";
+import { toast } from "./toast";
 import { postProjectAction } from "../shims/bridge";
 import {
   getClipExtractionStatus,
@@ -49,4 +51,19 @@ export async function revealExport(kind: "clips" | "screens"): Promise<void> {
     throw new Error(`no finished ${kind} export to reveal`);
   }
   postProjectAction("reveal-in-finder", { uri: fileUri(target) });
+}
+
+/**
+ * The chip's Show in folder: reveal, and say so when it could not. The chip has
+ * already closed, so a failure the console alone heard looked like nothing
+ * happening (RE#20, decision #44). In the app a reveal the native side refuses
+ * is not seen here; only one that never got that far.
+ */
+export async function revealExportOrSay(kind: "clips" | "screens"): Promise<void> {
+  try {
+    await revealExport(kind);
+  } catch (err) {
+    console.error(`Reveal ${kind} failed:`, err);
+    toast(i18n.t("export.revealFailed"), 6000);
+  }
 }

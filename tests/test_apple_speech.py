@@ -467,7 +467,8 @@ def test_decide_engine_reads_settings_env_and_helper(tmp_path: Path, monkeypatch
         on = BristlenoseSettings(experimental_apple_speech=True)
         choice = s05.decide_engine(on)
         assert choice.is_apple and choice.locale == "en-GB"
-        assert not s05.decide_engine(BristlenoseSettings()).is_apple  # flag off by default
+        # The kill switch turns it off.
+        assert not s05.decide_engine(BristlenoseSettings(experimental_apple_speech=False)).is_apple
         never = BristlenoseSettings(experimental_apple_speech=True, apple_speech=MODE_NEVER)
         assert not s05.decide_engine(never).is_apple
         # A UI language the app fell back to is not the researcher's.
@@ -566,11 +567,12 @@ def test_doctor_fetch_already_on_disk(monkeypatch) -> None:
     assert lines == ["@download-start org/model 0", "@download-done 0"]
 
 
-def test_settings_default_keeps_the_flag_off() -> None:
+def test_settings_default_has_apple_speech_on_with_a_kill_switch() -> None:
     from bristlenose.config import BristlenoseSettings
 
     s = BristlenoseSettings()
-    assert s.experimental_apple_speech is False
+    assert s.experimental_apple_speech is True  # unparked 22 Oct 2026
+    assert BristlenoseSettings(experimental_apple_speech=False).experimental_apple_speech is False
     assert s.apple_speech == MODE_UNTIL_WHISPER
     assert os.environ.get("BRISTLENOSE_EXPERIMENTAL_APPLE_SPEECH") in (None, "", "0")
 

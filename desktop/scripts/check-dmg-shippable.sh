@@ -167,12 +167,18 @@ else
         fail "native MCP helper" "$(printf '%s' "$MCP_OUT" | grep FAIL | head -1 | sed 's/^ *//')"
     fi
 
-    # The Apple speech helper is parked: Debug builds only
-    # (design-apple-first-transcription.md §8). A copy in a .dmg is a leak.
-    if [ "$(find "$INNER_APP/Contents" -type f -name bristlenose-speech | wc -l | tr -d ' ')" = 0 ]; then
-        pass "Apple speech helper" "absent (parked)"
+    # The Apple speech helper ships in every build since 22 Oct 2026
+    # (design-apple-first-transcription.md §8): required, and each copy must
+    # pass its one gate.
+    SPEECH_COPIES=()
+    while IFS= read -r -d '' h; do SPEECH_COPIES+=("$h"); done \
+        < <(find "$INNER_APP/Contents" -type f -name bristlenose-speech -print0)
+    if [ "${#SPEECH_COPIES[@]}" -eq 0 ]; then
+        fail "Apple speech helper" "missing from the image"
+    elif SPEECH_OUT="$("$(dirname "$0")/check-speech-helper.sh" "${SPEECH_COPIES[@]}" 2>&1)"; then
+        pass "Apple speech helper" "${#SPEECH_COPIES[@]} cop$([ "${#SPEECH_COPIES[@]}" = 1 ] && echo y || echo ies), gate passed"
     else
-        fail "Apple speech helper" "a parked copy is inside the image"
+        fail "Apple speech helper" "$(printf '%s' "$SPEECH_OUT" | grep FAIL | head -1 | sed 's/^ *//')"
     fi
 
     # Assert the reason, not the word. `grep -q accepted` passes on any output

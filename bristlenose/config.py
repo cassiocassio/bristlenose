@@ -187,10 +187,10 @@ class BristlenoseSettings(BaseSettings):
 
     # Apple's on-device speech model as Whisper's first-run stopgap
     # (bristlenose/apple_speech.py, docs/design-apple-first-transcription.md).
-    # Parked behind this flag, off, until its language gate is measured on more
-    # than five files: BRISTLENOSE_EXPERIMENTAL_APPLE_SPEECH=1. Inert without the
-    # Mac app's bundled helper, so the CLI never takes the path either way.
-    experimental_apple_speech: bool = False
+    # On since 22 Oct 2026 (owner: unpark now); kept as a kill switch,
+    # BRISTLENOSE_EXPERIMENTAL_APPLE_SPEECH=0. Inert without the Mac app's
+    # bundled helper, so the CLI never takes the path either way.
+    experimental_apple_speech: bool = True
     #: "until-whisper" (Apple until Whisper is on disk), "prefer" (Apple in its
     #: nine languages, Whisper for the rest) or "never" (Whisper only). Settings
     #: ▸ Transcription ▸ Transcribe with, via BRISTLENOSE_APPLE_SPEECH.

@@ -247,8 +247,10 @@ fi
 #
 # Every nested Mach-O of type EXECUTABLE must carry app-sandbox. `codesign
 # --verify` passes without it; only App Store Connect objects, after a 644 MB
-# upload. Today that set is exactly four: the host, ffmpeg, ffprobe, and the
-# sidecar — the same three-plus-host the 14 Jul rejection named.
+# upload. Today that set is the host, ffmpeg, ffprobe, the sidecar (the
+# three-plus-host the 14 Jul rejection named), the native MCP helper's copies,
+# and, since 22 Oct 2026, the Apple speech helper. The check below counts
+# whatever is there, so this list is a description, not the gate.
 #
 # EXECUTABLES ONLY, and the distinction is load-bearing. `find -perm -111`
 # matches 227 Mach-Os here, but 207 are *bundles* (Python .so extension modules)
@@ -295,18 +297,24 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6c. The Apple speech helper — PARKED (design-apple-first-transcription.md §8)
+# 6c. The Apple speech helper (design-apple-first-transcription.md §3 A, §8)
 #
-# Embedded in Debug builds only while BristlenoseAppleSpeech is parked. A copy
-# in a release archive is a leak (an exported override, a stale product), and
-# nothing else here would notice: it is sandboxed like any helper. When the
-# feature graduates, replace this with a run of check-speech-helper.sh.
+# Graduated 22 Oct 2026: every build embeds it, and the sidecar launches it to
+# transcribe a first run while Whisper downloads. Absent is a broken build (the
+# first run then waits for Whisper with nothing saying why); present, each copy
+# must pass its one gate: arm64, the app's floor, Info.plist id, sandbox +
+# inherit and nothing else, Hardened Runtime.
 # ---------------------------------------------------------------------------
-SPEECH_COPIES="$(find "$APP/Contents" -type f -name bristlenose-speech | wc -l | tr -d ' ')"
-if [ "$SPEECH_COPIES" = 0 ]; then
-    ok "Apple speech helper" "absent (parked)"
+SPEECH_COPIES=()
+while IFS= read -r -d '' h; do SPEECH_COPIES+=("$h"); done \
+    < <(find "$APP/Contents" -type f -name bristlenose-speech -print0)
+if [ "${#SPEECH_COPIES[@]}" -eq 0 ]; then
+    die "Apple speech helper" "missing from this build"
+elif "$(dirname "$0")/check-speech-helper.sh" "${SPEECH_COPIES[@]}" >/dev/null 2>"$SCRATCH_MCP"; then
+    ok "Apple speech helper" "${#SPEECH_COPIES[@]} cop$([ "${#SPEECH_COPIES[@]}" = 1 ] && echo y || echo ies), gate passed"
 else
-    die "Apple speech helper" "$SPEECH_COPIES parked cop(ies) in a release archive"
+    die "Apple speech helper" "check-speech-helper.sh refused it"
+    sed 's/^/        /' "$SCRATCH_MCP" >&2
 fi
 
 # ---------------------------------------------------------------------------

@@ -260,3 +260,25 @@ import Testing
         #expect(Model.whisperFetchEnvironment(pid: 4321) == ["_BRISTLENOSE_WHISPER_FETCH_PID": "4321"])
     }
 }
+
+
+/// Apple-first transcription graduated on 22 Oct 2026: on by default, and the
+/// defaults key is only a kill switch for a tester who hits trouble.
+@Suite struct AppleSpeechSwitchTests {
+    private func defaults() -> UserDefaults {
+        let name = "AppleSpeechSwitchTests-\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: name)!
+        d.removePersistentDomain(forName: name)
+        return d
+    }
+
+    @Test func onWhenNothingIsWritten() {
+        #expect(BristlenoseFlags.appleSpeech(in: defaults()))
+    }
+
+    @Test func writtenOffIsTheKillSwitch() {
+        let d = defaults()
+        d.set(false, forKey: BristlenoseFlags.appleSpeechKey)
+        #expect(!BristlenoseFlags.appleSpeech(in: d))
+    }
+}

@@ -13,8 +13,8 @@ import os
 // reads its `@download` lines; whether Whisper is on disk is always Python's
 // answer (`doctor --whisper-status`), never a cache path computed here.
 //
-// The Apple-speech half (`startIfNeeded`) is still parked behind
-// `BristlenoseFlags.appleSpeechAvailable`.
+// The Apple-speech half (`startIfNeeded`) runs when `BristlenoseFlags.appleSpeechAvailable`
+// (on by default since 22 Oct 2026; the defaults key is a kill switch).
 
 // MARK: - Lines from the sidecar (pure)
 

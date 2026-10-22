@@ -18,7 +18,7 @@ struct TranscriptionSettingsView: View {
     @AppStorage("whisperModel") private var model: String = "large-v3-turbo"
     @AppStorage(ScreenTextPreference.key)
     private var readSharedScreens: Bool = ScreenTextPreference.defaultValue
-    @AppStorage(BristlenoseFlags.appleSpeechKey) private var appleSpeechFlag: Bool = false
+    @AppStorage(BristlenoseFlags.appleSpeechKey) private var appleSpeechFlag: Bool = true
     @AppStorage(DiagnosticsPreference.key)
     private var showDiagnostics: Bool = DiagnosticsPreference.defaultValue
     @ObservedObject private var whisperDownload = WhisperDownloadModel.shared

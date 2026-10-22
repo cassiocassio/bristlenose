@@ -1,13 +1,14 @@
 ---
-status: built, parked behind a flag (§8)
+status: built, on by default since 22 Oct 2026 (§8)
 date: 18 Oct 2026
 revised: 18 Oct 2026, after five reviews (§7); built the same day (§8)
 ---
 
 # Apple first, Whisper next: the first recordings on a new Mac
 
-**Built 18 Oct 2026 and parked: off unless `BristlenoseAppleSpeech` (Mac) and
-`experimental_apple_speech` (Python) are on. §8 records what was built, where it
+**Built 18 Oct 2026; unparked 22 Oct 2026 (owner: unpark now, without the wider
+gate measurement). `BristlenoseAppleSpeech` (Mac) and `experimental_apple_speech`
+(Python) are now default-on kill switches. §8 records what was built, where it
 departs from §1–§4, and what is still owed.** Evidence:
 `experiments/apple-speech/README.md` (the trial, 18 Oct 2026). Storyboard:
 `docs/mockups/apple-first-first-run.html`.

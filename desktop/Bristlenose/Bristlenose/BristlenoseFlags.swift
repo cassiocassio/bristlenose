@@ -83,21 +83,23 @@ enum BristlenoseFlags {
 
     /// Transcribe a first run with **Apple's on-device speech model** while
     /// Whisper downloads behind it (`docs/design-apple-first-transcription.md`).
-    /// **Default off** — parked until the language gate is measured on more than
-    /// five files. Off, nothing on this path runs: no helper is offered to the
-    /// sidecar, no download job starts, and Settings ▸ Transcription keeps its
-    /// shipped layout. Mirrors Python's `experimental_apple_speech`.
+    /// **On by default since 22 Oct 2026** (owner: unpark now). This is the
+    /// kill switch, kept for a tester who hits trouble: off, no helper is
+    /// offered to the sidecar and Settings ▸ Transcription keeps its old
+    /// layout. Mirrors Python's `experimental_apple_speech` (default on too).
     ///
-    /// Flip with: `defaults write app.bristlenose BristlenoseAppleSpeech -bool YES`
+    /// Turn off with: `defaults write app.bristlenose BristlenoseAppleSpeech -bool NO`
     static let appleSpeechKey = "BristlenoseAppleSpeech"
-    static var appleSpeech: Bool {
-        UserDefaults.standard.bool(forKey: appleSpeechKey)
+    static var appleSpeech: Bool { appleSpeech(in: .standard) }
+
+    /// On unless written off: a missing key is the graduated default.
+    static func appleSpeech(in defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: appleSpeechKey) as? Bool ?? true
     }
 
-    /// The flag **and** the helper in this bundle. While parked the helper is
-    /// embedded in Debug builds only, so a `defaults write` on a TestFlight or
-    /// `.dmg` build must not offer a choice that does nothing, nor start the
-    /// download job for it. Every Swift caller asks this, not `appleSpeech`.
+    /// The switch **and** the helper in this bundle: CI stubs the sidecar and a
+    /// Dev Sidecar build may lack it, so nothing offers a choice that does
+    /// nothing. Every Swift caller asks this, not `appleSpeech`.
     static var appleSpeechAvailable: Bool {
         appleSpeech && FileManager.default.isExecutableFile(
             atPath: Bundle.main.bundleURL

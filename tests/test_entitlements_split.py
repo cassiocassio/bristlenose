@@ -353,3 +353,28 @@ class TestTheSandboxAllowsPrinting:
             assert "<key>com.apple.security.print</key>" in body, (
                 f"{gate.name} does not check the print entitlement on the artefact"
             )
+
+
+class TestTheSpeechHelperShipsAndIsGated:
+    """Apple-first transcription graduated on 22 Oct 2026: the sidecar launches
+    `bristlenose-speech` on a first run, so every build must embed it and every
+    shippable gate must require it and run its one check. While it was parked
+    the gates did the opposite (a copy in a release archive was a leak), and a
+    gate left in that shape would now fail every correct release."""
+
+    def test_every_configuration_embeds_the_helper(self) -> None:
+        text = _PBXPROJ.read_text(encoding="utf-8")
+        assert "speech-helper/build-helper.sh" in text
+        assert "BRISTLENOSE_BUNDLE_SPEECH_HELPER" not in text, (
+            "the Debug-only override is back: a release archive would ship "
+            "without the helper, and a first run would wait for Whisper"
+        )
+        assert "Helpers/bristlenose-speech" not in text, (
+            "the phase still removes the helper from some configuration"
+        )
+
+    def test_both_shippable_gates_require_and_check_it(self) -> None:
+        for gate in (_PKG_GATE, _DMG_GATE):
+            body = gate.read_text(encoding="utf-8")
+            assert "check-speech-helper.sh" in body, f"{gate.name} does not check the helper"
+            assert "absent (parked)" not in body, f"{gate.name} still treats the helper as parked"

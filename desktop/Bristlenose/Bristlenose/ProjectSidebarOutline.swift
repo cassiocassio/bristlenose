@@ -1525,19 +1525,40 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// Whether a Finder drop on a project can be accepted, decided from the
     /// state alone so `validateDrop` can answer mid-drag.
     ///
-    /// The same three refusals `ContentView` used to make after the drop, moved
-    /// to where the HIG puts them. `.failed` is a policy refusal rather than a
-    /// physical one — copying is possible, but the run would not start and the
-    /// files would sit unanalysed — and it is kept as-is here: this change swaps
-    /// the *grammar* of the refusal, not the set of things refused. Whether a
-    /// failed project should accept files at all is a separate question.
+    /// The refusals `ContentView` used to make after the drop, moved to where
+    /// the HIG puts them. `.failed` is a policy refusal rather than a physical
+    /// one — copying is possible, but the run would not start and the files
+    /// would sit unanalysed — and it stays refused.
+    ///
+    /// **A running or queued study takes files** (decision #100, 22 Oct 2026,
+    /// reversing that part of 5598bd39). Add Files… picked while a run started
+    /// under its panel used to drop the pick; now the files are copied in, no
+    /// run is started for them, and they read "+N unanalysed" once the run
+    /// ends (`startsRunAfterCopy`). The copy lands each file under a name the
+    /// run's scan skips and renames it into place (`CopyMachinery`), so a run
+    /// reading the folder never sees half a file.
     nonisolated static func acceptsFinderDrop(state: PipelineState?) -> Bool {
         guard let state else { return true }
         // Exhaustive on purpose: a new state is decided here, not defaulted in.
         switch state {
-        case .running, .queued, .failed, .failedWithDiagnostic, .unreachable:
+        case .failed, .failedWithDiagnostic, .unreachable:
             return false
-        case .scanning, .idle, .ready, .partial, .stopped, .completedPartial:
+        case .running, .queued, .scanning, .idle, .ready, .partial, .stopped, .completedPartial:
+            return true
+        }
+    }
+
+    /// Whether files dropped (or added) on a study in `state` start a run
+    /// once copied — and so are seeded as known, keeping "+N unanalysed"
+    /// hidden for files a run is about to read. Not over a run already under
+    /// way or queued: that run is not restarted for them, and they are exactly
+    /// the drift the "+N" is for (decision #100).
+    nonisolated static func startsRunAfterCopy(state: PipelineState?) -> Bool {
+        switch state {
+        case .running, .queued:
+            return false
+        case .failed, .failedWithDiagnostic, .unreachable,
+             .scanning, .idle, .ready, .partial, .stopped, .completedPartial, .none:
             return true
         }
     }

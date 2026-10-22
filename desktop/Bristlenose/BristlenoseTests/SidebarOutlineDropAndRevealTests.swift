@@ -342,6 +342,23 @@ struct SidebarOutlineDropAndRevealTests {
         }
     }
 
+    /// Decision #100 (22 Oct 2026): a study being analysed takes the drag,
+    /// which 5598bd39 had refused here.
+    @Test func aStudyBeingAnalysedTakesTheDrag() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let runner = PipelineRunner()            // the controller holds it weakly
+        rig.controller.pipelineRunner = runner
+        let study = rig.index.addProject(name: "Study", path: rig.tempDir.path)
+        rig.publish()
+        let item = rig.outlineView.item(atRow: try #require(rig.row(of: study.id)))
+        let video = rig.tempDir.appendingPathComponent("Session 1.MOV")
+
+        for state in StudyFinderDropTests.analysing {
+            runner._debugSetState(state, for: study.id)
+            #expect(validate(rig, [video], onto: item) == .copy, "\(state) refused the drag")
+        }
+    }
+
     // MARK: - R56: the other rows keep updating while a name is typed
 
     private func cell(_ rig: OutlineRig, _ id: UUID) -> NSTableCellView? {

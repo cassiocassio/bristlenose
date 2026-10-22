@@ -58,7 +58,8 @@ struct MenuGateTests {
 
     // MARK: R47 follow-up — Add Files… dims on a study that can't take files
 
-    /// The panel opened on a running study, took the pick and did nothing.
+    /// The panel opened on a study that could not take files, took the pick
+    /// and did nothing. (A running study takes them since decision #100.)
     @Test func addFilesDimsWhileTheStudyCannotTakeFiles() {
         let bridge = BridgeHandler()
         let study = Project(id: UUID(), name: "Study", path: NSTemporaryDirectory())
@@ -68,6 +69,11 @@ struct MenuGateTests {
         for busy in StudyFinderDropTests.busy {
             bridge.mirrorSelectedProjectRun(project: study, state: busy, data: data(sessions: nil))
             #expect(!bridge.selectedProjectTakesFiles, "Add Files… stayed lit on \(busy)")
+        }
+        // Decision #100: a study being analysed takes the pick.
+        for analysing in StudyFinderDropTests.analysing {
+            bridge.mirrorSelectedProjectRun(project: study, state: analysing, data: data(sessions: nil))
+            #expect(bridge.selectedProjectTakesFiles, "Add Files… dimmed on \(analysing)")
         }
         bridge.mirrorSelectedProjectRun(project: study, state: .ready(Date()), data: data(sessions: 6))
         #expect(bridge.selectedProjectTakesFiles, "Add Files… stayed dimmed after the run")

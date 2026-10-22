@@ -118,13 +118,16 @@ final class CopyMachinery: ObservableObject {
     ///
     /// `isDataless` is injectable because no test can make a real cloud
     /// placeholder; production always uses `CopyMachinery.isDataless`.
+    /// `copyFile` is the byte copy itself (`FileManager.copyItem`), injectable
+    /// so a test can look at the folder while a file is part-written.
     func copy(
         urls: [URL],
         into projectFolder: URL,
         projectID: UUID,
         projectName: String,
         acceptedExtensions: Set<String>,
-        isDataless: @escaping @Sendable (URL) -> Bool = CopyMachinery.isDataless
+        isDataless: @escaping @Sendable (URL) -> Bool = CopyMachinery.isDataless,
+        copyFile: @escaping @Sendable (URL, URL) throws -> Void = { try FileManager.default.copyItem(at: $0, to: $1) }
     ) async throws -> [URL] {
         guard inFlight == nil else {
             throw CopyError.alreadyInFlight
@@ -214,7 +217,22 @@ final class CopyMachinery: ObservableObject {
                         // copyItem on APFS same-volume uses clonefile(2): O(1).
                         // Cross-volume: synchronous copy, no cancellation mid-file
                         // — Cancel takes effect at the next file boundary.
-                        try FileManager.default.copyItem(at: item.source, to: item.destination)
+                        //
+                        // Written under a hidden staging name and renamed into
+                        // place, so the file appears whole or not at all. A run
+                        // can be reading this folder while it copies (a drop on
+                        // a running study, decision #100), and `run`'s scan and
+                        // the watcher's skip dot-files; a cross-volume copy to
+                        // the final name was visible, half-written, for as long
+                        // as it took.
+                        let staging = Self.stagingURL(for: item.destination)
+                        do {
+                            try copyFile(item.source, staging)
+                            try FileManager.default.moveItem(at: staging, to: item.destination)
+                        } catch {
+                            try? FileManager.default.removeItem(at: staging)
+                            throw error
+                        }
                         written.append(item.destination)
                         copiedBytes += CopyMachinery.fileSize(of: item.source) ?? 0
                     }
@@ -556,6 +574,15 @@ final class CopyMachinery: ObservableObject {
         var st = stat()
         if stat(url.path, &st) == 0, st.st_flags & UInt32(SF_DATALESS) != 0 { return true }
         return ProjectFolderWatcher.isCloudEvicted(url)
+    }
+
+    /// Where a file is written before it is renamed to `destination`: beside
+    /// it (one volume, so the rename is atomic), hidden by a leading dot
+    /// (`run`'s scan, `ScanSelection` and Finder all skip hidden entries), and
+    /// with a suffix no reader takes for a recording.
+    nonisolated static func stagingURL(for destination: URL) -> URL {
+        destination.deletingLastPathComponent()
+            .appendingPathComponent(".\(destination.lastPathComponent).bristlenose-copy")
     }
 
     nonisolated static func fileSize(of url: URL) -> Int64? {

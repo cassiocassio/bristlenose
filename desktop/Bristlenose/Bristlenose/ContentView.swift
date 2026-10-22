@@ -2440,9 +2440,11 @@ struct ContentView: View {
     ///
     /// Drop-policy matrix (plan §Phase 5 finding 40; the refusals moved into
     /// the drag on 19 Aug 2026, `docs/design-analysis-lifecycle.md` §4.2):
-    /// - target `.running` / `.queued` / `.failed` / `.failedWithDiagnostic` /
-    ///   `.unreachable`: refused during the drag on both sidebars
-    ///   (`StudyFinderDrop`, R47); a drop that still arrives returns silently
+    /// - target `.failed` / `.failedWithDiagnostic` / `.unreachable`: refused
+    ///   during the drag on both sidebars (`StudyFinderDrop`, R47); a drop
+    ///   that still arrives returns silently
+    /// - target `.running` / `.queued`: copy the files and start nothing; they
+    ///   read "+N unanalysed" once that run ends (decision #100, 22 Oct 2026)
     /// - anything else: copy the files, then run (incrementally if already
     ///   analysed; `PipelineRunner` queues it behind another run)
     private func handleDropOnProject(id: UUID, urls: [URL]) {
@@ -2538,12 +2540,17 @@ struct ContentView: View {
         // `docs/design-analysis-lifecycle.md` §4.2.
         guard SidebarOutlineController.acceptsFinderDrop(state: pipelineRunner.state[id])
         else {
-            // Reachable from Add Files… when a run starts while its panel is
-            // open: the menu item was lit when it opened. Say so in the log.
+            // Reachable from Add Files… when the study fails or its folder
+            // stops answering while the panel is open: the menu item was lit
+            // when it opened. Say so in the log.
             Logger(subsystem: "app.bristlenose", category: "drop").notice(
                 "files for a study that can't take them now were not added: \(filteredURLs.count, privacy: .public)")
             return
         }
+        // Decided at the gesture, not when the copy lands: files dropped on a
+        // running or queued study join the folder and wait as "+N unanalysed"
+        // (decision #100), even if that run ends while they copy.
+        let startsRun = SidebarOutlineController.startsRunAfterCopy(state: pipelineRunner.state[id])
 
         // A study scans its folder at run time, so the freshly-copied files
         // become visible to the CLI automatically.
@@ -2575,6 +2582,10 @@ struct ContentView: View {
                     projectName: project.name,
                     acceptedExtensions: Self.acceptedExtensions
                 )
+                // Over a run already under way or queued, nothing starts for
+                // them: unseeded, they are the "+N unanalysed" the row shows
+                // once it ends (decision #100).
+                guard startsRun else { return }
                 // Seed the watcher with the copied names so the "+N
                 // unanalysed" pill stays hidden — a run starts immediately
                 // below, so they are "known", not surprise drops. Handoff

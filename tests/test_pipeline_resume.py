@@ -974,6 +974,35 @@ def test_input_mismatch_demotes_the_stage_but_keeps_its_sessions(tmp_path: Path)
     assert get_completed_session_ids(prev, STAGE_TOPIC_SEGMENTATION) == {"s1", "s2"}
 
 
+def test_a_demote_says_nothing_in_the_terminal(tmp_path: Path, monkeypatch):
+    """A demote hands the stage to the per-session check, which reports what
+    actually re-runs. Saying "re-running stage" first claimed work that did not
+    happen: after `analyze`, `run` printed it for topics and quotes and then
+    reused every unedited session (decision #118, owner, 22 Oct 2026)."""
+    import bristlenose.pipeline as pipeline
+    from bristlenose.manifest import load_manifest
+
+    said: list[str] = []
+    monkeypatch.setattr(pipeline, "_print_warn", said.append)
+
+    _manifest_with_fingerprinted_sessions(tmp_path, STAGE_TOPIC_SEGMENTATION)
+    out = tmp_path / ".bristlenose" / "intermediate" / "topic_boundaries.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("[]", encoding="utf-8")
+    prev = load_manifest(tmp_path)
+    assert pipeline._is_stage_verified(
+        prev, STAGE_TOPIC_SEGMENTATION, [out], current_input_hashes={"upstream": "NEW"},
+    ) is False
+
+    _manifest_with_fingerprinted_sessions(tmp_path, STAGE_IDENTIFY_SPEAKERS)
+    prev = load_manifest(tmp_path)
+    assert pipeline._is_speaker_stage_verified(
+        prev, STAGE_IDENTIFY_SPEAKERS, {}, current_input_hashes={"upstream": "NEW"},
+    ) is False
+
+    assert said == []
+
+
 def test_content_corruption_still_pops_the_stage(tmp_path: Path):
     """A corrupt intermediate is not a changed input — nothing in it can be
     trusted, per-session records included."""

@@ -435,8 +435,10 @@ def _is_stage_verified(
     # Phase 2c: input change detection — before the files, so a missing
     # output cannot hide a changed input behind a plain False.
     if _inputs_changed(record.input_hashes, current_input_hashes):
-        logger.info("Stage %s inputs changed — re-running", stage)
-        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
+        # The log only: the per-session check that follows reports what
+        # actually re-runs. A terminal line here claimed a whole-stage re-run
+        # that a fingerprint-aware resume mostly skips (decision #118).
+        logger.info("Stage %s inputs changed — checking each session", stage)
         _demote_stage(manifest, stage)  # type: ignore[arg-type]
         return False
 
@@ -491,8 +493,10 @@ def _is_speaker_stage_verified(
 
     # Phase 2c: input change detection
     if _inputs_changed(record.input_hashes, current_input_hashes):
-        logger.info("Stage %s inputs changed — re-running", stage)
-        _print_warn(f"{stage}: inputs changed since last run — re-running stage")
+        # The log only: the per-session check that follows reports what
+        # actually re-runs. A terminal line here claimed a whole-stage re-run
+        # that a fingerprint-aware resume mostly skips (decision #118).
+        logger.info("Stage %s inputs changed — checking each session", stage)
         _demote_stage(manifest, stage)  # type: ignore[arg-type]
         return False
 

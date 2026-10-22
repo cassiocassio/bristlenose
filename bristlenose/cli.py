@@ -1092,6 +1092,24 @@ def _has_no_deliverable(output_dir: Path) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _refuse_unsuitable_input(input_dir: Path) -> None:
+    """Refuse a home folder or system root by name, before anything is written.
+
+    Raised from inside the scan it reached the researcher as a traceback, after
+    the output folder, a ``--clean`` stash and the setup checks (RE#20, #110).
+    """
+    from bristlenose.stages.s01_ingest import (
+        UnsuitableInputDirError,
+        refuse_unsuitable_input_dir,
+    )
+
+    try:
+        refuse_unsuitable_input_dir(input_dir)
+    except UnsuitableInputDirError as exc:
+        _say(MessageKind.ERROR, str(exc))
+        raise typer.Exit(2) from exc
+
+
 @app.command()
 def run(
     input_dir: Annotated[
@@ -1195,6 +1213,7 @@ def run(
     ] = False,
 ) -> None:
     """Analyse a folder of interviews and open the report in your browser."""
+    _refuse_unsuitable_input(input_dir)
     if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
         # Leaving the app stops the run, a force-quit or crash included (R19).
         # Our stdout is a pipe to the app, so a run that outlived it failed at
@@ -1687,6 +1706,7 @@ def transcribe(
     ] = False,
 ) -> None:
     """Only run transcription (no LLM analysis). Produces raw transcripts."""
+    _refuse_unsuitable_input(input_dir)
     # Default output location: inside the input folder
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"

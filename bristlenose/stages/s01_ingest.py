@@ -130,6 +130,21 @@ def _refuse_reason(input_dir: Path) -> str | None:
     return None
 
 
+def refuse_unsuitable_input_dir(input_dir: Path) -> None:
+    """Raise :class:`UnsuitableInputDirError` if *input_dir* can't be a study folder.
+
+    The CLI calls this before it touches the disk (output folder, a ``--clean``
+    stash, the setup checks), so a refused folder is refused by name and left
+    exactly as it was; the scan calls it again for every other caller.
+    """
+    reason = _refuse_reason(input_dir)
+    if reason is not None:
+        raise UnsuitableInputDirError(
+            f"{input_dir} can't be analysed because {reason}. "
+            "Point Bristlenose at the folder holding your recordings."
+        )
+
+
 def discover_files(
     input_dir: Path, skipped: list[SkippedFile] | None = None
 ) -> list[InputFile]:
@@ -173,12 +188,7 @@ def iter_scanned_files(
         UnsuitableInputDirError: *input_dir* is a filesystem or system root
             (on the first ``next``).
     """
-    reason = _refuse_reason(input_dir)
-    if reason is not None:
-        raise UnsuitableInputDirError(
-            f"{input_dir} can't be analysed because {reason}. "
-            "Point Bristlenose at the folder holding your recordings."
-        )
+    refuse_unsuitable_input_dir(input_dir)
 
     seen: set[Path] = set()
     links: list[tuple[Path, int]] = []

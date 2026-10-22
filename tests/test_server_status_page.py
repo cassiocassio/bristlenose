@@ -31,6 +31,7 @@ from bristlenose.events import (
     events_path,
     new_run_id,
 )
+from bristlenose.i18n import t
 from bristlenose.run_condition import read_condition
 from bristlenose.server.app import create_app
 from bristlenose.server.status_page import (
@@ -254,7 +255,24 @@ class TestDetectStatus:
         monkeypatch.setenv("HOME", str(project))
         info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
         assert info is not None
-        assert "No interviews" in info.short
+        # Says why, as `run` does: "No interviews… Drop a folder…" sent the
+        # researcher to add files to a folder that can never be analysed (#110).
+        assert info.short == t("desktop.chrome.unsuitableFolder")
+        assert info.long is None
+        assert info.kind is MessageKind.WARNING
+
+    def test_never_run_page_names_a_refused_folder_outside_the_app_too(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`serve ~` in a browser: not "$ bristlenose run interviews/" (#110)."""
+        project = tmp_path / "home"
+        out = project / "bristlenose-output"
+        out.mkdir(parents=True)
+        monkeypatch.setenv("HOME", str(project))
+        info = detect_status(out, _cond(out), platform="", project_dir=project)
+        assert info is not None
+        assert info.short == t("desktop.chrome.unsuitableFolder")
+        assert not info.long_is_mono
 
     def test_completed_lets_spa_render(self, tmp_path: Path) -> None:
         _seed_completed(tmp_path)

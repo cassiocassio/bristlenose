@@ -213,6 +213,13 @@ def _holds_interviews(project_dir: Path) -> bool:
         return False
 
 
+def _refuses_folder(project_dir: Path) -> bool:
+    """Whether `run` refuses the folder by name (a home folder or system root)."""
+    from bristlenose.stages.s01_ingest import _refuse_reason
+
+    return _refuse_reason(project_dir) is not None
+
+
 def detect_status(
     output_dir: Path,
     condition: Condition,
@@ -238,6 +245,17 @@ def detect_status(
     latest = condition.latest
 
     if outcome == "no-run":
+        if project_dir is not None and _refuses_folder(project_dir):
+            # `run` refuses this folder by name; "No interviews… Drop a
+            # folder…" sent the researcher to add files to a folder that can
+            # never be analysed (decision #110). Warning: not usable as it is.
+            return StatusInfo(
+                kind=MessageKind.WARNING,
+                short=t("desktop.chrome.unsuitableFolder"),
+                long=None,
+                details=None,
+                outcome="no-run",
+            )
         if platform == "desktop" and project_dir is not None and _holds_interviews(project_dir):
             # Interviews are there and nothing ran: the Mac refused the run (no
             # AI provider), or Python's setup check stopped it before the run

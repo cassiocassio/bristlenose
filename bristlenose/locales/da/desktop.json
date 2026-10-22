@@ -425,6 +425,7 @@
         "no_speech": "Ingen tale fundet — der blev ikke sagt noget i denne optagelse.",
         "unreadable_folder": "Denne mappe kunne ikke åbnes.",
         "unreadable": "Filen kunne ikke læses.",
+        "cloud_fetch": "Filen blev ikke hentet til denne Mac i tide.",
         "duplicate_recording": "En anden optagelse til denne session — den anden blev brugt.",
         "duplicate_transcript": "En anden kopi af denne sessions transskription — den anden blev brugt."
       }

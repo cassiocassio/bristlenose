@@ -149,6 +149,48 @@ class TestDetectedLanguageIsRecordedOnlyWhenDetected:
         assert languages == {}
 
 
+class TestACloudTimeoutDuringDecodeIsCloudFetch:
+    """An audio file is read straight from the study folder (stage 2 leaves it
+    alone), so its cloud fetch happens inside the backend's decode
+    (``s05b_voice.load_audio_16k`` → ``ensure_materialised``). When that read
+    outlasts the bound, the session fails as ``cloud_fetch``, retryable and
+    worded as the constant — not as ``whisper``, which the stage's fallback
+    for an uncategorised error used to make it (docs/design-cloud-files.md,
+    pattern B)."""
+
+    def test_the_session_fails_as_cloud_fetch_not_whisper(self, monkeypatch, tmp_path) -> None:
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.refusals import CLOUD_FETCH_MESSAGE
+        from bristlenose.stages import s05_transcribe
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        def _fake_init(_settings):
+            def _t(path, _settings, **_kw):
+                raise CloudFetchTimeoutError(
+                    f"{path.name} was still being fetched from iCloud Drive after 30 minutes"
+                )
+            return _t
+
+        monkeypatch.setattr(s05_transcribe, "_init_mlx_backend", _fake_init)
+        monkeypatch.setattr(
+            s05_transcribe, "_resolve_backend", lambda _c, _h: "mlx",  # noqa: ARG005
+        )
+        sessions = TestDetectedLanguageIsRecordedOnlyWhenDetected()._sessions(tmp_path)
+        settings = type("S", (), {
+            "whisper_backend": "mlx", "whisper_model": "tiny", "whisper_language": "auto",
+        })()
+
+        _results, _languages, outcome = s05_transcribe.transcribe_sessions(sessions, settings)
+
+        assert outcome.succeeded == 0
+        assert len(outcome.failed) == 1
+        cause = outcome.failed[0].cause
+        assert cause.category == CauseCategoryEnum.CLOUD_FETCH, cause.category
+        assert cause.message == CLOUD_FETCH_MESSAGE
+        assert cause.session_id == "s1"
+        assert cause.stage == "s05_transcribe"
+
+
 class TestTheDetectedLanguageReachesTheTranscriptHeader:
     """The researcher-facing end of the chain — the only surface that shows it."""
 

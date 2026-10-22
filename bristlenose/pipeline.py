@@ -71,7 +71,7 @@ from bristlenose.models import (
     ThemeGroup,
     TranscriptSegment,
 )
-from bristlenose.refusals import UnusableReason
+from bristlenose.refusals import UnusableReason, cloud_fetch_failure
 from bristlenose.refusals import stage_failure as refusal_stage_failure
 from bristlenose.session_registry import SessionRegistry
 from bristlenose.ui_kinds import MessageKind, cli_prefix
@@ -573,6 +573,43 @@ def _transcribed_files(session: InputSession) -> list[InputFile]:
     type, hours of audio, the time estimate) count the interview once. Before
     stage 2 nothing else sets ``error``."""
     return [f for f in session.files if f.error is None]
+
+
+def _cloud_fetch_failures(
+    sessions: list[InputSession], *, stage: str,
+) -> list[StageFailure]:
+    """One ``CLOUD_FETCH`` failure per recording stage 2 could not read in time.
+
+    Stage 2 writes the ``cloud_fetch`` token on the ``InputFile`` when a cloud
+    placeholder's bytes outlast the read bound, and leaves the session without
+    audio. Folded into the transcript outcome, the session is recorded FAILED in
+    the manifest (so the next run reads it again), kept out of the silent
+    sessions (it is not "no speech"), and counted by the abandon check. The
+    message is the constant, never the provider or the file
+    (docs/design-cloud-files.md, pattern B).
+    """
+    return [
+        cloud_fetch_failure(
+            source_file=f.path.name, stage=stage, session_id=s.session_id,
+        )
+        for s in sessions
+        for f in s.files
+        if f.error == CauseCategoryEnum.CLOUD_FETCH.value
+    ]
+
+
+def _with_cloud_fetch_failures(
+    outcome: StageOutcome, sessions: list[InputSession],
+) -> StageOutcome:
+    """*outcome* with ``_cloud_fetch_failures(sessions)`` folded in, each one an
+    attempt that failed."""
+    extra = _cloud_fetch_failures(sessions, stage="s02_extract_audio")
+    if not extra:
+        return outcome
+    return outcome.model_copy(update={
+        "attempted": outcome.attempted + len(extra),
+        "failed": [*outcome.failed, *extra],
+    })
 
 
 def _transcription_fingerprints(
@@ -2085,6 +2122,13 @@ class Pipeline:
                     )
                     if _chain is not None:
                         _chain.stop()  # every session was offered; nothing should be left
+                    # A recording stage 2 (or `_ensure_audio`) could not read in
+                    # time produced nothing and raised nothing that reached
+                    # here: without this it would read as silent (NO_SPEECH),
+                    # be recorded complete, and never be tried again.
+                    _fresh_transcript_outcome = _with_cloud_fetch_failures(
+                        _fresh_transcript_outcome, _remaining_sessions,
+                    )
                     # A session whose transcription FAILED is not complete: its
                     # record would make the next run serve the empty result from
                     # the cache instead of trying again. That made a failed
@@ -3639,6 +3683,11 @@ class Pipeline:
                 )
             else:
                 _fresh_segments, _transcript_outcome_t = {}, StageOutcome()
+            # As run() does: a recording not downloaded in time is a retryable
+            # failure, not a silent session.
+            _transcript_outcome_t = _with_cloud_fetch_failures(
+                _transcript_outcome_t, _remaining,
+            )
             session_segments = {**_cached_segments, **_fresh_segments}
             # Mirror the run() rollup — and it must be the *post-6497711a*
             # shape, not the one this comment used to describe. Counting
@@ -4220,6 +4269,12 @@ class Pipeline:
             for input_file in session.files:
                 if input_file.error is None:
                     succeeded += 1
+                    continue
+                if input_file.error == CauseCategoryEnum.CLOUD_FETCH.value:
+                    # Not a refusal: the file was not here in time, and the
+                    # transcripts bucket states it as a retryable failure
+                    # (`_cloud_fetch_failures`). Stated here too, it would
+                    # read as a file Bristlenose could not use.
                     continue
                 # s01's folds or s02 wrote the reason token; unrecognised values are possible
                 # only if that contract drifts, and a shrug beats a KeyError

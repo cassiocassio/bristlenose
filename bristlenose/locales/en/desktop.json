@@ -426,6 +426,7 @@
         "no_speech": "No speech found — nothing was said in this recording.",
         "unreadable_folder": "This folder couldn't be opened.",
         "unreadable": "The file couldn't be read.",
+        "cloud_fetch": "Wasn't downloaded to this Mac in time.",
         "duplicate_recording": "A second recording for this session — the other one was used.",
         "duplicate_transcript": "A second copy of this session's transcript — the other one was used."
       }

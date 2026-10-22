@@ -533,6 +533,18 @@ def categorise_exception(exc: BaseException, *, provider: str | None = None) -> 
     if isinstance(exc, TruncatedResponseError):
         return Cause(category=CauseCategoryEnum.OUTPUT_TRUNCATED, message=msg)
 
+    # A cloud placeholder whose bytes outlasted the read bound: retryable, and
+    # not a broken file or tool. The message is the constant, never str(exc),
+    # which names the provider and the file — those stay in log lines
+    # (docs/design-cloud-files.md, pattern B). Reached by a decode in s05 (an
+    # audio file read straight from the folder) and by the registry's early
+    # fetch. Local imports, as above.
+    from bristlenose.refusals import CLOUD_FETCH_MESSAGE
+    from bristlenose.utils.fs import CloudFetchTimeoutError
+
+    if isinstance(exc, CloudFetchTimeoutError):
+        return Cause(category=CauseCategoryEnum.CLOUD_FETCH, message=CLOUD_FETCH_MESSAGE)
+
     # Disk space.
     if isinstance(exc, OSError) and getattr(exc, "errno", None) == 28:  # ENOSPC
         return Cause(category=CauseCategoryEnum.DISK, message=msg)

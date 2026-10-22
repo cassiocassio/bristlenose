@@ -18,8 +18,9 @@ from pathlib import Path
 
 import pytest
 
-from bristlenose.events import UnusableReason
+from bristlenose.events import CauseCategoryEnum, UnusableReason
 from bristlenose.i18n import FALLBACK_ONLY_LOCALES
+from bristlenose.refusals import CLOUD_FETCH_MESSAGE
 
 _LOCALES_DIR = Path(__file__).resolve().parents[1] / "bristlenose" / "locales"
 
@@ -124,6 +125,25 @@ def test_every_unusable_reason_has_a_localised_string(locale: str) -> None:
         )
 
 
+CLOUD_FETCH_KEY = CauseCategoryEnum.CLOUD_FETCH.value
+
+
+@pytest.mark.parametrize("locale", _ALL_LOCALES)
+def test_the_cloud_fetch_reason_has_a_localised_string(locale: str) -> None:
+    """A recording not downloaded in time renders as prose in every locale.
+
+    The Python side states it once, in English, on the wire
+    (`refusals.CLOUD_FETCH_MESSAGE`); the popover keys off the category. In
+    English the two must be the same sentence, so the forensic record and the
+    row never disagree. Policy for the wording: `docs/design-cloud-files.md`.
+    """
+    reason = _load_desktop(locale)["pipeline"]["diagnostic"]["reason"]
+    assert reason.get(CLOUD_FETCH_KEY, "").strip(), (
+        f"locale={locale} missing diagnostic.reason.{CLOUD_FETCH_KEY}"
+    )
+    if locale == "en":
+        assert reason[CLOUD_FETCH_KEY] == CLOUD_FETCH_MESSAGE
+
 @pytest.mark.parametrize("locale", [loc for loc in _ALL_LOCALES if loc != "en"])
 def test_reason_strings_are_not_english_placeholders(locale: str) -> None:
     """A seeded locale must not silently carry the English through.
@@ -148,7 +168,9 @@ def test_reason_keys_are_exactly_the_enum() -> None:
     rename reads as a complete locale to every count-based check while
     translating something nothing can emit.
     """
-    expected = {value.value for value in UnusableReason}
+    # `cloud_fetch` is not a refusal (the file is fine; a retry can fix it), so
+    # it has its own category rather than an `UnusableReason`, and keys off it.
+    expected = {value.value for value in UnusableReason} | {CLOUD_FETCH_KEY}
     for locale in _ALL_LOCALES:
         actual = set(_load_desktop(locale)["pipeline"]["diagnostic"]["reason"])
         assert actual == expected, (

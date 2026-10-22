@@ -200,23 +200,37 @@ class TestReadSitesAreGuarded:
             monkeypatch.setattr(module.subprocess, "run", never)
         return ran
 
-    def test_extract_audio_is_fatal_but_says_downloading(
-        self, tmp_path: Path, monkeypatch
+    @pytest.mark.parametrize("site", ["extract_audio_from_video", "has_audio_stream"])
+    def test_stage_2_reads_raise_the_fetch_timeout_unwrapped(
+        self, tmp_path: Path, monkeypatch, site: str,
     ) -> None:
-        """Transcription can't proceed without audio, so this one fails the run —
-        but with the fetch message, never an ffmpeg one."""
-        import bristlenose.utils.audio as audio_mod
-        from bristlenose.utils.audio import AudioToolError, extract_audio_from_video
+        """Stage 2's two reads let ``CloudFetchTimeoutError`` through as itself,
+        never as ``AudioToolError``: wrapped, it aborted the whole run as a
+        broken toolchain (category unknown), when one recording was merely not
+        downloaded in time (docs/design-cloud-files.md, pattern B). And the
+        subprocess is never reached — reaching it is the original defect.
 
-        self._explode(monkeypatch, audio_mod)
+        The provider rides in the exception for the log line only: what a
+        researcher reads is the categorised cause, and that names neither the
+        provider nor the file."""
+        import bristlenose.utils.audio as audio_mod
+        from bristlenose.refusals import CLOUD_FETCH_MESSAGE
+        from bristlenose.run_lifecycle import categorise_exception
+        from bristlenose.utils.audio import AudioToolError
+
+        ran = self._explode(monkeypatch, audio_mod)
         src = tmp_path / "interview.mov"
         src.write_bytes(b"x")
-        with pytest.raises(AudioToolError) as exc:
-            extract_audio_from_video(src, tmp_path / "out.wav")
-        assert "fetched" in str(exc.value)
-        assert "Dropbox" in str(exc.value)
-        # The old failure mode, in one assertion.
-        assert "ffmpeg" not in str(exc.value).lower()
+        call = getattr(audio_mod, site)
+        args = (src, tmp_path / "out.wav") if site == "extract_audio_from_video" else (src,)
+        with pytest.raises(CloudFetchTimeoutError) as exc:
+            call(*args)
+        assert not isinstance(exc.value, AudioToolError)
+        assert ran == [], "ffmpeg/ffprobe ran despite an unmaterialised source"
+        cause = categorise_exception(exc.value)
+        assert cause.message == CLOUD_FETCH_MESSAGE
+        assert "Dropbox" not in (cause.message or "")
+        assert "interview.mov" not in (cause.message or "")
 
     def test_media_probe_degrades_to_none_pair(self, tmp_path: Path, monkeypatch, caplog) -> None:
         """The scan-time probe (duration + container meta, one ffprobe). A

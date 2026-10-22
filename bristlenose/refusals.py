@@ -31,9 +31,11 @@ from bristlenose.events import Cause, CauseCategoryEnum, StageFailure, UnusableR
 #: because the reason is now **on the wire** (``Cause.reason``) and ``refusals``
 #: imports ``events``, so it could not stay here without a cycle.
 __all__ = [
+    "CLOUD_FETCH_MESSAGE",
     "MESSAGES",
     "UnusableReason",
     "classify_unreadable",
+    "cloud_fetch_failure",
     "looks_like_a_recording",
     "stage_failure",
 ]
@@ -163,6 +165,36 @@ def stage_failure(
             # `message` is the English a CLI user reads, an older desktop build
             # falls back to, and a bug report gets pasted with.
             reason=reason,
+            stage=stage,
+            session_id=session_id,
+        ),
+    )
+
+
+#: What a researcher reads when a cloud placeholder's bytes did not arrive
+#: within the read bound (``fs.ensure_materialised``). A fact, not advice, and
+#: never the provider or the file: those belong in log lines, which are
+#: forensic (docs/design-cloud-files.md, pattern B). The basename rides in
+#: ``StageFailure.source_file``, as for every refusal above.
+CLOUD_FETCH_MESSAGE = "Wasn't downloaded to this Mac in time."
+
+
+def cloud_fetch_failure(
+    *, source_file: str, stage: str, session_id: str | None = None
+) -> StageFailure:
+    """One recording whose cloud download outlasted the read bound.
+
+    Not a refusal: the file is not judged unusable, it simply was not here in
+    time, so the category is ``CLOUD_FETCH`` (retryable) rather than
+    ``UNUSABLE_INPUT``, and the next run reads it again. ``source_file`` is a
+    basename, as for :func:`stage_failure`.
+    """
+    return StageFailure(
+        session_id=session_id,
+        source_file=source_file,
+        cause=Cause(
+            category=CauseCategoryEnum.CLOUD_FETCH,
+            message=CLOUD_FETCH_MESSAGE,
             stage=stage,
             session_id=session_id,
         ),

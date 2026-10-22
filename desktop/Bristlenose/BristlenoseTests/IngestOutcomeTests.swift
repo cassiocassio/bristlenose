@@ -238,6 +238,18 @@ import Foundation
         #expect(ProjectDiagnosticPopover.reasonKey(for: cause(reason: "")) == nil)
     }
 
+    @Test func aCloudFetchFailureKeysOffItsCategory() {
+        // Not a refusal, so no `reason`: the category names the sentence.
+        let c = Cause(category: .cloudFetch, message: "English fallback")
+        #expect(ProjectDiagnosticPopover.reasonKey(for: c)
+                == "desktop.pipeline.diagnostic.reason.cloud_fetch")
+    }
+
+    @Test func aRefusalStillKeysOffItsReason() {
+        #expect(ProjectDiagnosticPopover.reasonKey(for: cause(reason: "empty"))
+                == "desktop.pipeline.diagnostic.reason.empty")
+    }
+
     // MARK: - The round trip, against the shipped locale files
 
     @MainActor
@@ -278,6 +290,18 @@ import Foundation
                 #expect(!text.hasPrefix("desktop.pipeline."),
                         "locale=\(locale) reason=\(reason) leaked the raw key")
             }
+        }
+    }
+
+    @MainActor @Test func aCloudFetchRowTranslatesInEveryLocale() {
+        let locales = ["en", "es", "ca", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru",
+                       "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant"]
+        for locale in locales {
+            let text = ProjectDiagnosticPopover.localisedReason(
+                for: Cause(category: .cloudFetch, message: "ENGLISH"), i18n: i18n(locale)
+            )
+            #expect(text != "ENGLISH", "locale=\(locale) fell back to the English message")
+            #expect(!text.hasPrefix("desktop.pipeline."), "locale=\(locale) leaked the raw key")
         }
     }
 

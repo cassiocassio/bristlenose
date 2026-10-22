@@ -224,6 +224,27 @@ def test_categorise_api_server():
     assert cause.category == CauseCategoryEnum.API_SERVER
 
 
+def test_categorise_cloud_fetch_timeout():
+    """A placeholder whose bytes outlast the read bound is ``cloud_fetch``,
+    retryable, worded as the constant: never ``unknown``, and never the
+    provider or the file, which ``str(exc)`` carries for the log line
+    (docs/design-cloud-files.md, pattern B). The real message shape, from
+    ``fs.ensure_materialised``."""
+    from bristlenose.events import is_retryable
+    from bristlenose.refusals import CLOUD_FETCH_MESSAGE
+    from bristlenose.utils.fs import CloudFetchTimeoutError
+
+    exc = CloudFetchTimeoutError(
+        "P07 Interview.mov was still being fetched from Dropbox after 30 minutes"
+    )
+    cause = categorise_exception(exc)
+    assert cause.category == CauseCategoryEnum.CLOUD_FETCH
+    assert cause.message == CLOUD_FETCH_MESSAGE
+    assert "Dropbox" not in cause.message
+    assert "P07" not in cause.message
+    assert is_retryable(cause.category)
+
+
 def test_categorise_unknown_default():
     cause = categorise_exception(ValueError("something broke"))
     assert cause.category == CauseCategoryEnum.UNKNOWN

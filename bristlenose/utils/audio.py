@@ -261,17 +261,19 @@ def extract_audio_from_video(
 
     Raises:
         AudioToolError: If ffmpeg fails to run or exits non-zero.
+        CloudFetchTimeoutError: If *video_path* is a cloud placeholder whose
+            bytes did not arrive within the bound. Deliberately NOT wrapped in
+            ``AudioToolError``: a slow download is one session's retryable
+            failure, not a broken toolchain (docs/design-cloud-files.md,
+            pattern B), so the caller records it per session and carries on.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        # Fetch first if this is a cloud placeholder. The 600s budget below is
-        # generous, but a large recording on a domestic uplink can outlast it —
-        # and when it does, ffmpeg's timeout reads as "your video is broken".
-        # Same reasoning as has_audio_stream; see docs/design-project-storage.md.
-        ensure_materialised(video_path)
-    except CloudFetchTimeoutError as exc:
-        raise AudioToolError(str(exc)) from exc
+    # Fetch first if this is a cloud placeholder. The 600s budget below is
+    # generous, but a large recording on a domestic uplink can outlast it —
+    # and when it does, ffmpeg's timeout reads as "your video is broken".
+    # Same reasoning as has_audio_stream; see docs/design-project-storage.md.
+    ensure_materialised(video_path)
 
     # Use hardware video decode on macOS (VideoToolbox / Media Engine).
     # Harmless no-op for audio-only inputs; ignored if unsupported.
@@ -317,15 +319,16 @@ def has_audio_stream(file_path: Path) -> bool:
             tool must fail loud, not silently skip transcription. Uses
             ``-v error`` (not ``-v quiet``) so the failure reason survives in
             stderr for the exception message.
+        CloudFetchTimeoutError: if *file_path* is a cloud placeholder whose
+            bytes did not arrive within the bound. Not an ``AudioToolError``:
+            the caller records it as that session's retryable ``cloud_fetch``
+            failure (docs/design-cloud-files.md, pattern B).
     """
-    try:
-        # Fetch first if this is a cloud placeholder. Without this the download
-        # happens *inside* the 30s timeout below and surfaces as "ffprobe timed
-        # out", which reads as "your video is broken" — the opposite of what
-        # happened. Reproduced 29 Jul 2026; see docs/design-project-storage.md.
-        ensure_materialised(file_path)
-    except CloudFetchTimeoutError as exc:
-        raise AudioToolError(str(exc)) from exc
+    # Fetch first if this is a cloud placeholder. Without this the download
+    # happens *inside* the 30s timeout below and surfaces as "ffprobe timed
+    # out", which reads as "your video is broken" — the opposite of what
+    # happened. Reproduced 29 Jul 2026; see docs/design-project-storage.md.
+    ensure_materialised(file_path)
     try:
         result = subprocess.run(
             [

@@ -6,6 +6,7 @@ import asyncio
 import logging
 from pathlib import Path
 
+from bristlenose.events import CauseCategoryEnum
 from bristlenose.models import FileType, InputSession
 from bristlenose.refusals import MESSAGES, UnusableReason, classify_unreadable
 from bristlenose.utils.audio import (
@@ -13,6 +14,7 @@ from bristlenose.utils.audio import (
     extract_audio_from_video,
     has_audio_stream,
 )
+from bristlenose.utils.fs import CloudFetchTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +134,11 @@ async def _extract_one(
     - a video with no audio stream at all (a silent screen recording), which is
       valid and merely untranscribable — also recorded, so its absence from the
       report is stated rather than inferred.
+    - ``CloudFetchTimeoutError`` — a cloud placeholder whose bytes did not
+      arrive within the read bound. Nothing is wrong with the file or the tool;
+      it was not here in time. Recorded as ``cloud_fetch`` (retryable) and the
+      run goes on with the other sessions; the next run reads it again
+      (docs/design-cloud-files.md, pattern B).
     """
     async with semaphore:
         # has_audio_stream and extract_audio_from_video are blocking
@@ -142,6 +149,9 @@ async def _extract_one(
         # the file, not on the tool.
         try:
             has_audio = await asyncio.to_thread(has_audio_stream, video_path)
+        except CloudFetchTimeoutError as exc:
+            _record_not_downloaded(session, video_path, exc)
+            return
         except MediaFileDamagedError as exc:
             _record_unusable(
                 session, video_path, classify_unreadable(video_path), exc
@@ -156,6 +166,9 @@ async def _extract_one(
             extracted = await asyncio.to_thread(
                 extract_audio_from_video, video_path, output_path
             )
+        except CloudFetchTimeoutError as exc:
+            _record_not_downloaded(session, video_path, exc)
+            return
         except MediaFileDamagedError as exc:
             _record_unusable(
                 session, video_path, classify_unreadable(video_path), exc
@@ -197,4 +210,30 @@ def _record_unusable(
         video_path.name,
         MESSAGES[reason],
         f" ({exc})" if exc else "",
+    )
+
+
+def _record_not_downloaded(
+    session: InputSession,
+    video_path: Path,
+    exc: CloudFetchTimeoutError,
+) -> None:
+    """Mark *video_path* as not downloaded in time, so the run can go on.
+
+    Writes the ``cloud_fetch`` category token to ``InputFile.error``: not an
+    ``UnusableReason``, because the file was never judged — its bytes simply
+    did not arrive. The pipeline turns the token into a retryable
+    ``CLOUD_FETCH`` failure on the transcripts bucket
+    (``refusals.cloud_fetch_failure``), never into a refusal, so the next run
+    reads the file again. The provider and the wait are in the log line only.
+    """
+    for input_file in session.files:
+        if input_file.path == video_path:
+            input_file.error = CauseCategoryEnum.CLOUD_FETCH.value
+            break
+    logger.warning(
+        "%s: %s — not downloaded in time, skipping this file, the run continues. (%s)",
+        session.session_id,
+        video_path.name,
+        exc,
     )

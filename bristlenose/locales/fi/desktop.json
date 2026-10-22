@@ -425,6 +425,7 @@
         "no_speech": "Puhetta ei löytynyt — tässä tallenteessa ei sanota mitään.",
         "unreadable_folder": "Tätä kansiota ei voitu avata.",
         "unreadable": "Tiedostoa ei voitu lukea.",
+        "cloud_fetch": "Tiedostoa ei ladattu tähän Maciin ajoissa.",
         "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin.",
         "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin."
       }

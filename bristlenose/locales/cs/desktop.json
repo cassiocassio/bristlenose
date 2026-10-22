@@ -464,6 +464,7 @@
         "no_speech": "Nebyla nalezena řeč — v této nahrávce nikdo nemluví.",
         "unreadable_folder": "Tuto složku se nepodařilo otevřít.",
         "unreadable": "Soubor se nepodařilo přečíst.",
+        "cloud_fetch": "Soubor se nestihl stáhnout do tohoto Macu.",
         "duplicate_recording": "Druhá nahrávka pro toto sezení — použita byla ta druhá.",
         "duplicate_transcript": "Druhá kopie přepisu tohoto sezení — použita byla ta druhá."
       }

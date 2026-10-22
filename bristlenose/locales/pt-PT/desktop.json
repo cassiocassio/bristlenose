@@ -425,6 +425,7 @@
         "no_speech": "Nenhuma fala encontrada — nada foi dito nesta gravação.",
         "unreadable_folder": "Não foi possível abrir esta pasta.",
         "unreadable": "Não foi possível ler o ficheiro.",
+        "cloud_fetch": "O ficheiro não foi descarregado para este Mac a tempo.",
         "duplicate_recording": "Uma segunda gravação para esta sessão — foi usada a outra.",
         "duplicate_transcript": "Uma segunda cópia da transcrição desta sessão — foi usada a outra."
       }

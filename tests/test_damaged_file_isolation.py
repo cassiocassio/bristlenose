@@ -143,6 +143,49 @@ class TestBatchSurvival:
         with pytest.raises(AudioToolError):
             asyncio.run(extract_audio_for_sessions(sessions, tmp_path / "work"))
 
+    @pytest.mark.parametrize("site", ["has_audio_stream", "extract_audio_from_video"])
+    def test_a_recording_never_downloaded_does_not_abort_the_batch(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, site: str,
+    ) -> None:
+        """A cloud placeholder whose bytes outlast the read bound is one
+        session's retryable failure, not a broken toolchain: the siblings keep
+        their audio, and the file is marked ``cloud_fetch`` — not as damaged,
+        which would tell the researcher to re-request an upload that is fine
+        (docs/design-cloud-files.md, pattern B). On either of stage 2's reads."""
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        sessions = [_session(tmp_path, n) for n in
+                    ("healthy-1.mp4", "evicted.mp4", "healthy-2.mp4")]
+
+        def maybe_timeout(path: Path, *rest):  # type: ignore[no-untyped-def]
+            if path.name == "evicted.mp4":
+                raise CloudFetchTimeoutError(
+                    "evicted.mp4 was still being fetched from iCloud after 30 minutes"
+                )
+            return rest[0] if rest else True
+
+        monkeypatch.setattr(s02_extract_audio, "has_audio_stream",
+                            maybe_timeout if site == "has_audio_stream" else (lambda p: True))
+        monkeypatch.setattr(s02_extract_audio, "extract_audio_from_video",
+                            maybe_timeout if site == "extract_audio_from_video"
+                            else (lambda src, out: out))
+
+        asyncio.run(extract_audio_for_sessions(sessions, tmp_path / "work"))
+
+        healthy = [s for s in sessions if s.session_id.startswith("healthy")]
+        assert all(s.audio_path is not None for s in healthy), (
+            "healthy sessions lost their audio because a sibling never downloaded"
+        )
+        evicted = next(s for s in sessions if s.session_id == "evicted.mp4")
+        assert evicted.audio_path is None
+        assert evicted.files[0].error == CauseCategoryEnum.CLOUD_FETCH.value, (
+            "a recording not downloaded in time was not recorded as such"
+        )
+        assert evicted.files[0].error not in {r.value for r in UnusableReason}, (
+            "a slow download was judged a damaged file"
+        )
+
 
 class TestUnsupportedFilesAreStated:
     def test_discover_reports_what_it_declined(self, tmp_path: Path) -> None:

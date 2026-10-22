@@ -603,6 +603,9 @@ struct ProjectDiagnosticPopover: View {
     /// testable here without a configured `I18n`; the translation round-trip is
     /// tested separately against the real locale files.
     static func reasonKey(for cause: Cause) -> String? {
+        // A recording not downloaded in time is not a refusal and carries no
+        // `reason`; its category is the key (`docs/design-cloud-files.md`).
+        if cause.category == .cloudFetch { return "desktop.pipeline.diagnostic.reason.cloud_fetch" }
         guard let reason = cause.reason, !reason.isEmpty else { return nil }
         return "desktop.pipeline.diagnostic.reason.\(reason)"
     }

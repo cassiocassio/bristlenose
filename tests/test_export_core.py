@@ -175,8 +175,9 @@ class TestExtractQuotesForExport:
         assert len(quotes) == 1
         assert quotes[0].participant_code == "p1"
 
-    def test_quote_ids_includes_hidden(self, db_session):
-        """When specific quote_ids are given, hidden quotes are included."""
+    def test_quote_ids_leaves_out_hidden(self, db_session):
+        """A hidden quote is left out of a selection too (owner, 22 Oct 2026, #122).
+        Until then a selection included it."""
         from bristlenose.server.models import Quote
 
         q = (
@@ -192,7 +193,7 @@ class TestExtractQuotesForExport:
         quotes = extract_quotes_for_export(
             db_session, project_id=1, quote_ids=[dom_id]
         )
-        assert len(quotes) == 1
+        assert quotes == []
 
     def test_edited_text_preferred(self, db_session):
         """Edited text should override original quote text."""

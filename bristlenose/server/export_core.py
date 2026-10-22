@@ -165,7 +165,8 @@ def extract_quotes_for_export(
         Project to export from.
     quote_ids:
         Optional list of DOM IDs (e.g. ``["q-p1-10", "q-p1-26"]``).
-        When provided, only these quotes are exported (hidden status ignored).
+        When provided, only these quotes are exported, leaving out any the
+        researcher hid (owner, 22 Oct 2026, #122: as clips do).
         When ``None``, all non-hidden quotes are exported.
     anonymise:
         When ``True``, ``participant_name`` is set to ``""``.
@@ -258,14 +259,14 @@ def extract_quotes_for_export(
 def _resolve_quote_ids(
     db: DbSession, project_id: int, dom_ids: list[str]
 ) -> list[Quote]:
-    """Resolve DOM IDs to Quote rows (order preserved), leaving out any that no
-    longer count as evidence (``speaker_slots.evidence_out``).
+    """Resolve DOM IDs to Quote rows (order preserved), leaving out any that
+    don't count (``speaker_slots.analysis_quotes``): out of evidence, or hidden.
 
     Each quote appears once, however many times its id was sent: a repeated id
     used to put the same quote in an export twice. Two quotes from one speaker
     within the same second are two ids (``q-p1-10``, ``q-p1-10-1``), each
     naming its own row."""
-    out = speaker_slots.evidence_out(db, project_id)
+    counted = {q.id for q in speaker_slots.analysis_quotes(db, project_id)}
     quotes: list[Quote] = []
     seen: set[int] = set()
     for dom_id in dict.fromkeys(dom_ids):
@@ -285,7 +286,7 @@ def _resolve_quote_ids(
             .order_by(Quote.start_timecode, Quote.id)
             .first()
         )
-        if q and q.id not in seen and speaker_slots.counts(q, out):
+        if q and q.id not in seen and q.id in counted:
             seen.add(q.id)
             quotes.append(q)
     return quotes

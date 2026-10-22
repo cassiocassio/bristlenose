@@ -514,39 +514,45 @@ def get_dashboard(
                 )
             )
 
-        # --- Quotes (all, for stats + featured selection) ---
-        all_quotes = speaker_slots.evidence_quotes(db, project_id)
+        # --- Quotes (the counted ones, for stats + featured selection) ---
+        # A hidden quote counts nowhere (owner, 22 Oct 2026, #121): the tile
+        # agrees with the Quotes lens it links to, whose count leaves hidden
+        # quotes out, and the tag pair below counts the same quotes.
+        all_quotes = speaker_slots.analysis_quotes(db, project_id)
         n_quotes = len(all_quotes)
+        counted = {q.id for q in all_quotes}
 
-        # The tag pair.  Both halves count rows in ``quote_tags``, split on
-        # provenance, so they are comparable and together account for every
-        # tag on the project — a tag is machine-authored or it is the
-        # researcher's, never neither.
+        # The tag pair.  Both halves count rows in ``quote_tags`` on the counted
+        # quotes, split on provenance, so they are comparable and together
+        # account for every tag the report counts — a tag is machine-authored or
+        # it is the researcher's, never neither.
         #
-        # ``source == "human"`` matches the desktop Re-analyse sheet's count
-        # (``CurationCountsReader``) exactly, so the two surfaces cannot report
-        # different numbers for the same database.  Note this is deliberately
-        # NOT the Freeze pin predicate (``importer._pinned_quote_ids``), which
-        # additionally excludes sentiment-framework tags: a hand-applied
+        # ``source == "human"`` used to match the desktop Re-analyse sheet's
+        # count (``CurationCountsReader``) exactly. Since #121 it no longer
+        # does when a hidden or out-of-evidence quote carries a human tag: the
+        # sheet counts curation a re-analysis puts at risk, which includes
+        # those tags, and this tile counts what the report counts. Note this is
+        # deliberately NOT the Freeze pin predicate (``importer._pinned_quote_ids``),
+        # which additionally excludes sentiment-framework tags: a hand-applied
         # "frustration" is a user tag here even though it is not researcher
         # commitment there.
-        n_user_tags = (
-            db.query(QuoteTag)
-            .join(Quote, QuoteTag.quote_id == Quote.id)
-            .filter(Quote.project_id == project_id, QuoteTag.source == "human")
-            .count()
-        )
-        n_ai_tags = (
-            db.query(QuoteTag)
-            .join(Quote, QuoteTag.quote_id == Quote.id)
-            .filter(Quote.project_id == project_id, QuoteTag.source != "human")
-            .count()
-        )
+        tag_sources = [
+            source
+            for quote_id, source in (
+                db.query(QuoteTag.quote_id, QuoteTag.source)
+                .join(Quote, QuoteTag.quote_id == Quote.id)
+                .filter(Quote.project_id == project_id)
+                .all()
+            )
+            if quote_id in counted
+        ]
+        n_user_tags = sum(1 for source in tag_sources if source == "human")
+        n_ai_tags = len(tag_sources) - n_user_tags
 
         # --- Featured quotes ---
         # A hidden quote is never featured: the row drops it anyway, so it
         # would only take a slot a counted quote could fill.
-        featured = pick_featured_quotes(speaker_slots.analysis_quotes(db, project_id), n=9)
+        featured = pick_featured_quotes(all_quotes, n=9)
         speaker_names = _resolve_speaker_names(db, project_id)
 
         # Batch load starred/hidden state for featured quotes.

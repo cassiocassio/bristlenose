@@ -346,7 +346,8 @@ async def find_candidates(
                 topic_label=q.topic_label or "",
                 sentiment=q.sentiment or "",
             )
-            for q in speaker_slots.evidence_quotes(db, project_id)
+            # A hidden quote is never a candidate (owner, 22 Oct 2026, #128).
+            for q in speaker_slots.analysis_quotes(db, project_id)
             if q.id not in coded_ids
         ]
         # Map db_id -> DOM id for the response.

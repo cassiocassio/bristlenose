@@ -32,6 +32,7 @@ from bristlenose.server.models import (
 )
 from bristlenose.server.routes import clips_export
 from tests.conftest import AuthTestClient
+from tests.test_codebook_builder import client_with_coded_tag  # noqa: F401  (fixture)
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 _ALL = ("q-p1-10", "q-p1-26", "q-p1-46", "q-p1-66")
@@ -215,6 +216,105 @@ class TestSessionsJourney:
         assert self._journey(client)
         with patch.object(speaker_slots, "evidence_quotes", lambda db, pid: []):
             assert self._journey(client) == []
+
+
+class TestDashboardTotals:
+    """#121 (owner, 22 Oct 2026): the quotes tile and the tag pair count nowhere
+    either, so the tile agrees with the Quotes lens it links to, whose count
+    already leaves hidden quotes out (``filter.ts``)."""
+
+    @staticmethod
+    def _stats(client: TestClient) -> tuple[int, int, int]:
+        s = client.get("/api/projects/1/dashboard").json()["stats"]
+        return s["quotes_count"], s["user_tags_count"], s["ai_tags_count"]
+
+    def test_a_hidden_quote_leaves_the_quotes_tile_and_the_tag_pair(
+        self, client: TestClient,
+    ) -> None:
+        resp = client.patch("/api/projects/1/tags", json={"q-p1-10": {"add": ["mine"]}})
+        assert resp.status_code == 200
+        assert self._stats(client) == (4, 1, 4)
+        _hide(client, "q-p1-10")
+        assert self._stats(client) == (3, 0, 3)
+
+    def test_the_tag_pair_reads_the_evidence_filter(self, client: TestClient) -> None:
+        """A quote out of evidence (recoded speaker, moved paragraph) is not counted."""
+        from bristlenose.server import speaker_slots
+
+        client.patch("/api/projects/1/tags", json={"q-p1-10": {"add": ["mine"]}})
+        with patch.object(speaker_slots, "evidence_quotes", lambda db, pid: []):
+            assert self._stats(client) == (0, 0, 0)
+
+
+class TestScopedExports:
+    """#122 (owner, 22 Oct 2026): a scoped export leaves a hidden quote out, as
+    clips do. CSV, XLSX, Miro and FigJam all resolve ids in ``export_core``."""
+
+    def test_a_hidden_quote_in_the_selection_is_not_exported(
+        self, client: TestClient,
+    ) -> None:
+        def ids() -> list[str]:
+            from bristlenose.server.export_core import extract_quotes_for_export
+            from bristlenose.server.grounding import quote_dom_id
+
+            db = client.app.state.db_factory()  # type: ignore[attr-defined]
+            try:
+                rows = extract_quotes_for_export(db, 1, ["q-p1-10", "q-p1-26"])
+                quotes = {q.id: q for q in db.query(Quote).all()}
+                return [quote_dom_id(quotes[r.quote_id].participant_id,
+                                     quotes[r.quote_id].start_timecode, r.ordinal)
+                        for r in rows]
+            finally:
+                db.close()
+
+        assert ids() == ["q-p1-10", "q-p1-26"]
+        _hide(client, "q-p1-10")
+        assert ids() == ["q-p1-26"]
+
+    @pytest.mark.parametrize("path", ["quotes.csv", "quotes.xlsx", "figjam-board.json"])
+    def test_a_selection_of_only_hidden_quotes_exports_nothing(
+        self, client: TestClient, path: str,
+    ) -> None:
+        url = f"/api/projects/1/export/{path}?quote_ids=q-p1-10"
+        assert client.get(url).status_code == 200
+        _hide(client, "q-p1-10")
+        assert client.get(url).status_code == 404
+
+
+class TestCodebookBuilder:
+    """#128 (owner, 22 Oct 2026): a hidden quote is never a candidate."""
+
+    def test_a_hidden_quote_is_not_scanned(
+        self, client_with_coded_tag,  # noqa: F811  (the fixture imported above)
+    ) -> None:
+        from unittest.mock import AsyncMock
+
+        from tests.test_codebook_builder import (
+            _candidate_result_all_match,
+            _patch_llm,
+            _synth_result,
+        )
+
+        client, tag_id = client_with_coded_tag
+        url = f"/api/projects/1/codebook/tags/{tag_id}/builder"
+        with _patch_llm(AsyncMock(return_value=_synth_result())):
+            client.post(f"{url}/synthesize")
+
+        def scanned() -> int:
+            with _patch_llm(AsyncMock(return_value=_candidate_result_all_match(1, 0.9))):
+                resp = client.post(f"{url}/candidates", json={"min_confidence": 0.5})
+            assert resp.status_code == 200
+            return resp.json()["scanned"]
+
+        assert scanned() == 1  # the one quote not yet carrying the tag
+        db = client.app.state.db_factory()
+        try:
+            uncoded = db.query(Quote).filter_by(project_id=1).order_by(Quote.id).all()[3]
+            dom = f"q-{uncoded.participant_id}-{int(uncoded.start_timecode)}"
+        finally:
+            db.close()
+        _hide(client, dom)
+        assert scanned() == 0
 
 
 class TestCodebook:

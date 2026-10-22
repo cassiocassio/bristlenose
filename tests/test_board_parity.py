@@ -223,7 +223,7 @@ def _attributions(view: dict) -> list[str]:
     None,                                              # all but hidden
     ["q-p1-46", "q-p1-10"],                            # a selection, in click order
     ["q-p1-10", "q-p1-010", "q-p1-10", "q-p1-66"],     # repeated, and a second spelling
-    ["q-p1-26", "nonsense", "q-p9-999"],               # malformed and stale ids beside a good one
+    ["q-p1-46", "nonsense", "q-p9-999"],               # malformed and stale ids beside a good one
 ])
 def test_a_selection_puts_the_same_quotes_on_both_boards(db, quote_ids) -> None:
     client, session = db
@@ -234,15 +234,15 @@ def test_a_selection_puts_the_same_quotes_on_both_boards(db, quote_ids) -> None:
     assert len(set(_attributions(b))) == len(_attributions(b)), "a repeated id is one quote"
 
 
-def test_hidden_quotes_stay_off_both_boards_unless_selected(db) -> None:
+def test_hidden_quotes_stay_off_both_boards_even_when_selected(db) -> None:
     client, session = db
     client.put("/api/projects/1/hidden", json={"q-p1-26": True})
     a, b = _both(session, None)
     assert "— P1 · 00:26" not in _attributions(a) == _attributions(b)
     assert a["title"] == b["title"] == "Study — research board (3 quotes)"
-    # An explicit selection is the researcher's word for it, hidden or not, on either board.
-    a, b = _both(session, ["q-p1-26"])
-    assert _attributions(a) == _attributions(b) == ["— P1 · 00:26"]
+    # A selection leaves a hidden quote off too, on either board (owner, 22 Oct 2026, #122).
+    a, b = _both(session, ["q-p1-26", "q-p1-46"])
+    assert _attributions(a) == _attributions(b) == ["— P1 · 00:46"]
 
 
 def test_a_long_quote_breaks_in_the_same_place_on_both_boards(db, monkeypatch) -> None:

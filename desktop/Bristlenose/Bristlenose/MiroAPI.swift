@@ -133,15 +133,6 @@ struct MiroAPI {
         return req
     }
 
-    /// Pull the server's `detail` off a non-2xx response for a useful message.
-    private func detail(from data: Data, status: Int) -> String {
-        if let body = try? JSONDecoder().decode(ErrorBody.self, from: data),
-           let d = body.detail, !d.isEmpty {
-            return d
-        }
-        return "Request failed (HTTP \(status))."
-    }
-
     /// The server's own `detail` when it sent one, plus the key its `reason`
     /// names when the failure is one a researcher reads. `detail` stays on the
     /// error either way — it is what a bug report wants, and it is the fallback

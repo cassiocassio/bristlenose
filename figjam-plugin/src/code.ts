@@ -29,7 +29,6 @@ let stopRequested = false;
 figma.ui.onmessage = (msg: { type: string; text?: string }) => {
   if (msg.type === "build" && typeof msg.text === "string") void start(msg.text);
   if (msg.type === "stop") stopRequested = true;
-  if (msg.type === "cancel") figma.closePlugin();
 };
 
 // A board file dropped on the canvas while the panel is open. Only a .json is

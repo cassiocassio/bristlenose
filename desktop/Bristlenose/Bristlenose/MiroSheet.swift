@@ -544,16 +544,3 @@ struct MiroSheet: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-// MARK: - Inline clickable-text affordance
-
-private extension View {
-    /// Native inline-link affordance per the no-web-idioms rule: a pointing-hand
-    /// cursor on hover, no anchor-blue, no underline, no background fill. Pair with
-    /// `.buttonStyle(.plain)` on text buttons that open help / disconnect.
-    func inlineLinkCursor() -> some View {
-        onHover { inside in
-            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
-    }
-}

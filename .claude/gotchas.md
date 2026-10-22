@@ -416,6 +416,29 @@ satisfy is not a test.**
 
 **Tell for both:** a gate whose verdict changes when you add a comment.
 
+### A negative fixture proves nothing when every fixture is rejected — match the row's ✗ line, and pass an intact one
+
+`test-check-pkg-shippable.sh` had six negative cases that could not fail
+(measured 22 Oct 2026). Every synthetic `.pkg` is rejected whatever the case
+(unsigned installer, no provisioning profile), so the exit-code check always
+held; and each case grepped for the row **label**, which the gate's ✓ line
+prints too. Turning the export compliance row's `die` into an `ok` left the
+harness at 9 passed. Matching the `die` **detail** is not enough either: a `die`
+turned into an `ok` keeps its text, so the pattern needs the ✗ glyph too
+(`"✗.*<label>"`). And the negative half alone cannot catch a row that **always**
+fails, so an intact fixture must print each row's ✓ line. Prove both halves by
+mutation: each row's `die`→`ok` and `ok`→`die`, each red on exactly its own case.
+
+**The positive control found the second bug at once.** The "intact" fixture
+was never intact: `sign_app` signed the host binary with `--options=runtime
+--entitlements …` and then ran a bare `codesign --force --sign - "$app"`, and
+**signing a bundle re-signs its main executable**, dropping both. Every fixture
+failed hardened runtime and both sandbox rows, so the cases for those rows passed
+on the host whatever their own mutation did. Sign the bundle with the host's
+options, not the binary and then the bundle bare.
+
+**Tell:** a reject-case harness with no case asserting a ✓ line.
+
 ### A new gate that contradicts a pinned contract fails the whole suite, not one test
 
 Adding an `assert` to `I18n.t` for "namespace not loaded" turned **307 Swift tests

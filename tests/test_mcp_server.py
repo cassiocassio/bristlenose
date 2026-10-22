@@ -313,10 +313,10 @@ class TestSignals:
             for s in result["signals"]
         ), "a de-badged quote must not drive a sentiment cell"
 
-    def test_tool_and_route_diverge_on_hidden_quotes_by_design(self, app_fx, db) -> None:
-        """Report view vs engine view — the divergence is intentional (review
-        contradiction ruling A): hiding a quote changes the tool's signals
-        and deliberately does NOT change the analysis route's."""
+    def test_tool_and_route_agree_on_hidden_quotes(self, app_fx, db) -> None:
+        """A hidden quote counts nowhere (owner, 22 Oct 2026): hiding one changes
+        the tool's signals and the Signals route's alike. Until then the route
+        kept counting it, by design (review contradiction ruling A)."""
         _seed_second_frustration(db)
         before = _tool_get_signals(db, 1, "sentiment", 10)
         assert any(
@@ -332,11 +332,10 @@ class TestSignals:
             for s in after["signals"]
         )
         route = AuthTestClient(app_fx).get("/api/projects/1/signals/sentiment").json()
-        assert any(
-            s["location"] == "Dashboard" and s["sentiment"] == "frustration"
-            and s["count"] == 2
-            for s in route["signals"]
-        ), "engine view should still count the hidden quote"
+        # One frustration quote is left, too few for a signal, so read the cell.
+        assert route["sectionMatrix"]["cells"]["Dashboard|frustration"]["count"] == 1, (
+            "the Signals route should leave the hidden quote out too"
+        )
 
     def test_numbers_match_direct_analysis_call(self, db) -> None:
         _seed_second_frustration(db)

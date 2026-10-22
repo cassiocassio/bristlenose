@@ -210,8 +210,8 @@ def _aggregate_sentiments(
     db: Session,
     project_id: int,
 ) -> dict[str, dict[str, int]]:
-    """Aggregate sentiment counts by session_id."""
-    quotes = speaker_slots.evidence_quotes(db, project_id)
+    """Aggregate sentiment counts by session_id. A hidden quote counts nowhere."""
+    quotes = speaker_slots.analysis_quotes(db, project_id)
     result: dict[str, dict[str, int]] = {}
     for q in quotes:
         if q.sentiment:
@@ -544,7 +544,9 @@ def get_dashboard(
         )
 
         # --- Featured quotes ---
-        featured = pick_featured_quotes(all_quotes, n=9)
+        # A hidden quote is never featured: the row drops it anyway, so it
+        # would only take a slot a counted quote could fill.
+        featured = pick_featured_quotes(speaker_slots.analysis_quotes(db, project_id), n=9)
         speaker_names = _resolve_speaker_names(db, project_id)
 
         # Batch load starred/hidden state for featured quotes.

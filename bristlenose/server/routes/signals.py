@@ -351,7 +351,7 @@ class _SharedProjectData:
 
 def _load_shared_data(db: Session, project_id: int) -> _SharedProjectData | None:
     """Load quotes, section/theme mappings — shared across codebook partitions."""
-    all_quotes = speaker_slots.evidence_quotes(db, project_id)
+    all_quotes = speaker_slots.analysis_quotes(db, project_id)
     if not all_quotes:
         return None
 
@@ -764,6 +764,11 @@ def _compute_group_analysis(
     quote_tag_names: dict[int, dict[str, list[str]]] = {}
     accepted_count = 0
     for qt in accepted_tags:
+        # A tag on a quote that isn't counted (hidden, out of evidence, or in
+        # another project: this query has no project filter) contributes
+        # nothing, not even to the "based on N tags" footer.
+        if qt.quote_id not in shared.quote_by_id:
+            continue
         gname = tag_def_to_group.get(qt.tag_definition_id)
         tname = tag_def_to_name.get(qt.tag_definition_id, "")
         if gname:
@@ -790,6 +795,8 @@ def _compute_group_analysis(
 
     pending_count = 0
     for pt in pending_proposals:
+        if pt.quote_id not in shared.quote_by_id:
+            continue
         if (pt.quote_id, pt.tag_definition_id) in accepted_pairs:
             continue
         gname = tag_def_to_group.get(pt.tag_definition_id)

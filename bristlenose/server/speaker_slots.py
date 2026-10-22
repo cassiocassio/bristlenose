@@ -26,7 +26,13 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session as DbSession
 
-from bristlenose.server.models import Person, Quote, SessionSpeaker, TranscriptSegment
+from bristlenose.server.models import (
+    Person,
+    Quote,
+    QuoteState,
+    SessionSpeaker,
+    TranscriptSegment,
+)
 from bristlenose.server.models import Session as SessionModel
 
 logger = logging.getLogger(__name__)
@@ -403,6 +409,22 @@ def evidence_quotes(db: DbSession, project_id: int) -> list[Quote]:
     out = evidence_out(db, project_id)
     quotes = db.query(Quote).filter_by(project_id=project_id).all()
     return [q for q in quotes if counts(q, out)] if out or out.quotes else quotes
+
+
+def analysis_quotes(db: DbSession, project_id: int) -> list[Quote]:
+    """The evidence quotes the researcher has not hidden: what is counted.
+
+    A hidden quote is discounted evidence and counts nowhere (owner, 22 Oct
+    2026): Signals, the per-session sentiment bars (/sessions, /dashboard),
+    the Dashboard's featured quotes and the clip export read this. ``evidence_quotes`` keeps hidden quotes, because the Quotes lens must
+    return them to be unhidden and coverage measures what was extracted."""
+    hidden = {
+        quote_id
+        for (quote_id,) in db.query(QuoteState.quote_id)
+        .join(Quote, Quote.id == QuoteState.quote_id)
+        .filter(Quote.project_id == project_id, QuoteState.is_hidden == True)  # noqa: E712
+    }
+    return [q for q in evidence_quotes(db, project_id) if q.id not in hidden]
 
 
 def by_uuid(db: DbSession, uuid: str) -> Person | None:

@@ -752,7 +752,7 @@ async def start_clip_extraction(
         starred_quotes = _load_starred_quotes(db, project_id)
         starred_ids = {q.id for q in starred_quotes}
 
-        all_quotes = speaker_slots.evidence_quotes(db, project_id)
+        all_quotes = speaker_slots.analysis_quotes(db, project_id)
 
         if body is not None and body.ids is not None:
             # Scoped export — clip exactly the quotes the picker handed over.

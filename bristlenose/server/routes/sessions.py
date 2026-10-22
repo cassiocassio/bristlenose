@@ -367,9 +367,10 @@ def _aggregate_sentiments(
 ) -> dict[str, dict[str, int]]:
     """Aggregate sentiment counts by session_id.
 
-    Returns session_id → {sentiment: count}.
+    Returns session_id → {sentiment: count}. A hidden quote counts nowhere
+    (owner, 22 Oct 2026): these are the Sessions lens row's sentiment bars.
     """
-    quotes = speaker_slots.evidence_quotes(db, project_id)
+    quotes = speaker_slots.analysis_quotes(db, project_id)
     result: dict[str, dict[str, int]] = {}
     for q in quotes:
         if q.sentiment:

@@ -138,6 +138,10 @@ The session converged on a clean three-tier model. The alpha ships only the firs
 
 **Planned and parked the same day: `docs/design-delete-and-bin.md`.** Nothing is ever removed, only marked; the Bin is its own place at the bottom of the sidebar, not an area of the Quotes page, which supersedes "Trash isn't banished to a sidebar destination" above. That doc also records the consequences across analysis, re-analysis and exports.
 
+### 22 Oct 2026 — Signals decided: a hidden quote counts nowhere
+
+The owner chose reading (a). A hidden quote is left out of Signals (grids, totals, metrics and cards, all three lenses), the per-session sentiment bars (the Sessions lens sparkline, and the Dashboard's copy of its counts), the Dashboard's featured quotes and the clip export, on read, through `speaker_slots.analysis_quotes`. Signals now agrees with the chat lens and MCP. Quote coverage still counts it, because coverage measures extraction. The Quotes lens still lists it behind its counter so it can be unhidden. **This retires the Archive row's "Counted in signals: Yes"** in the table above: today's Hide is no longer "structurally Archive". When Delete ships, Hide and Delete differ in where the quote lives (greyed in place, or in the Bin) and in what survives a re-run, not in what is counted. `docs/design-delete-and-bin.md` "Hide stays as Archive" is read in that light.
+
 This three-tier model is also why Bin/Wastebasket/Trash is the right metaphor *only* at this level: it names a place quotes go to be excluded from the analysis story, not a place where source data dies. Mail's Trash analogy holds (the source server has a copy, the local trash is a folder, restoring is one click).
 
 ### Note: Archive is the live alternative — don't decide yet

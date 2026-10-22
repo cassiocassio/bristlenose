@@ -56,11 +56,13 @@ look up. Both validate by **corpus membership**, which is deliberately
 stricter than DB presence: a hidden or truncated-out quote is not citable.
 
 **`load_signals(db, project_id, lens, curated=True)` is the REPORT VIEW and
-diverges from `routes/signals.py` on purpose** — hidden quotes excluded,
-researcher edits applied, removed sentiment badges honoured, unreviewed
-`ProposedTag` rows excluded (accepted `QuoteTag` rows are the only tag
-truth), `Uncategorised` filtered like the route does. The signals routes
-keep the engine view. The divergence is pinned by a test; don't "fix" it.
+diverges from `routes/signals.py` on purpose** — researcher edits applied,
+removed sentiment badges honoured, unreviewed `ProposedTag` rows excluded
+(accepted `QuoteTag` rows are the only tag truth), `Uncategorised` filtered
+like the route does. The signals routes keep the engine view. The divergence
+is pinned by a test; don't "fix" it. **Hidden quotes are no longer part of the
+divergence (22 Oct 2026):** both leave them out, the routes through
+`speaker_slots.analysis_quotes` (see § Evidence is filtered on read).
 
 ## MCP endpoint (`/mcp/`) — the §9a spike
 
@@ -368,6 +370,14 @@ everywhere (§J8.12).
 drop quotes credited to a slot recoded out of participant, and quotes overlapping a
 paragraph moved to another speaker, until the session is re-analysed (R3,
 `routes/reanalyse.py`). Count quotes through them, not a bare `Quote` query.
+**`speaker_slots.analysis_quotes` is the same minus hidden quotes** (owner, 22 Oct
+2026: a hidden quote is discounted evidence and counts nowhere). Signals (all three
+lenses), the per-session sentiment bars (`/sessions` draws them as the Sessions
+lens sparkline; `/dashboard` carries a copy), the Dashboard's featured quotes and
+the clip export read it;
+`evidence_quotes` stays as it is, because the Quotes lens must return a hidden quote
+to unhide it and Dashboard coverage measures extraction. Pinned by
+`tests/test_serve_hidden_counts_nowhere.py`.
 
 **Transcript layout edits** (`transcript_layout_edits`, migrations 015–016): a
 paragraph split, join, or move to another speaker (`/split`, `/join`, `/reassign`,

@@ -328,8 +328,9 @@ class TestDashboardFeaturedQuotes:
         assert len(matching) == 1
         assert matching[0]["is_starred"] is True
 
-    def test_hidden_reflected_in_featured(self, client: TestClient) -> None:
-        """Hide a quote, then check it shows as hidden in featured."""
+    def test_hidden_quote_leaves_featured(self, client: TestClient) -> None:
+        """A hidden quote counts nowhere, so it is never featured (22 Oct 2026).
+        Until then it was featured with ``is_hidden`` and the row dropped it."""
         data = client.get("/api/projects/1/dashboard").json()
         first_dom_id = data["featured_quotes"][0]["dom_id"]
 
@@ -338,9 +339,8 @@ class TestDashboardFeaturedQuotes:
             json={first_dom_id: True},
         )
         data = client.get("/api/projects/1/dashboard").json()
-        matching = [fq for fq in data["featured_quotes"] if fq["dom_id"] == first_dom_id]
-        assert len(matching) == 1
-        assert matching[0]["is_hidden"] is True
+        assert first_dom_id not in [fq["dom_id"] for fq in data["featured_quotes"]]
+        assert data["featured_quotes"]
 
 
 # ---------------------------------------------------------------------------

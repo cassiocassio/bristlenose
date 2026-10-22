@@ -17,6 +17,7 @@ collision and all.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,7 @@ from bristlenose.models import (
     PersonEntry,
     SpeakerRole,
 )
+from bristlenose.utils.fs import replace_retrying
 
 if TYPE_CHECKING:
     from bristlenose.stages.s05b_identify_speakers import SpeakerInfo
@@ -116,18 +118,88 @@ _HEADER = (
 # ---------------------------------------------------------------------------
 
 
+class UnreadablePeopleFileError(Exception):
+    """``people.yaml`` is there but will not read: the researcher's own file.
+
+    A typo in a hand edit is the usual cause, so the file is theirs to fix and
+    is never written over: a run carries on without the names in it and says
+    which line to look at (decision #17, 22 Oct 2026). Until then the run
+    stopped with a traceback at the render stage, after every paid stage.
+    """
+
+    def __init__(self, line: int | None = None, column: int | None = None) -> None:
+        super().__init__(f"{PEOPLE_FILENAME} unreadable at line {line}, column {column}")
+        self.line = line
+        self.column = column
+
+    def message(self) -> str:
+        """The terminal line (English by design: the CLI is the operator surface)."""
+        if self.line is not None and self.column is not None:
+            return (
+                f"{PEOPLE_FILENAME} couldn't be read (line {self.line}, column "
+                f"{self.column}), so it was left as it is, and names you added aren't "
+                f"in this report. Fix that line, then run again."
+            )
+        return (
+            f"{PEOPLE_FILENAME} couldn't be read, so it was left as it is, and names "
+            f"you added aren't in this report. Fix it, then run again."
+        )
+
+
 def load_people_file(output_dir: Path) -> PeopleFile | None:
     """Load an existing ``people.yaml`` from *output_dir*.
 
-    Returns ``None`` if the file does not exist or is empty.
+    Returns ``None`` if the file does not exist or is empty. Raises
+    :class:`UnreadablePeopleFileError` if it is there but will not parse or does not
+    have the expected shape; :func:`read_people_file` is the tolerant form.
     """
     path = output_dir / PEOPLE_FILENAME
     if not path.exists():
         return None
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    try:
+        text = path.read_text(encoding="utf-8")
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        # A problem found at the end of the file (an unclosed quote or bracket)
+        # started where its context mark says; the end of the file is not a
+        # line the researcher can fix.
+        context = getattr(exc, "context_mark", None)
+        if mark is not None and context is not None and mark.index >= len(text.rstrip()):
+            mark = context
+        if mark is None:
+            raise UnreadablePeopleFileError() from exc
+        raise UnreadablePeopleFileError(mark.line + 1, mark.column + 1) from exc
+    except (OSError, ValueError) as exc:
+        # ValueError: a date that does not exist (`2026-02-30`) is built by
+        # the YAML constructor and raises outside YAMLError; UnicodeDecodeError
+        # is one too.
+        raise UnreadablePeopleFileError() from exc
     if raw is None:
         return None
-    return PeopleFile.model_validate(raw)
+    try:
+        return PeopleFile.model_validate(raw)
+    except ValueError as exc:  # pydantic's ValidationError is a ValueError
+        raise UnreadablePeopleFileError() from exc
+
+
+def read_people_file(
+    output_dir: Path,
+) -> tuple[PeopleFile | None, UnreadablePeopleFileError | None]:
+    """``load_people_file`` that never raises for a damaged file.
+
+    Returns ``(people, None)``, or ``(None, problem)`` when the file is there
+    and will not read. A caller that would write the file must not when
+    ``problem`` is set: the bytes are the researcher's edit, typo and all.
+    """
+    try:
+        return load_people_file(output_dir), None
+    except UnreadablePeopleFileError as problem:
+        logger.warning(
+            "people | %s unreadable (line %s, column %s); left in place, not rewritten",
+            output_dir / PEOPLE_FILENAME, problem.line, problem.column,
+        )
+        return None, problem
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +396,19 @@ def write_people_file(people: PeopleFile, output_dir: Path) -> Path:
         allow_unicode=True,
     )
 
-    path.write_text(_HEADER + yaml_content, encoding="utf-8")
+    # Through a temporary file, flushed before the replace: a crash or a full
+    # disk mid-write must leave the old file whole, never a truncated one the
+    # next run cannot read (decision #17).
+    tmp = path.with_name(f".{PEOPLE_FILENAME}.tmp")
+    try:
+        with tmp.open("w", encoding="utf-8") as fh:
+            fh.write(_HEADER + yaml_content)
+            fh.flush()
+            os.fsync(fh.fileno())
+        replace_retrying(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     logger.info("Wrote people file: %s", path)
     return path
 

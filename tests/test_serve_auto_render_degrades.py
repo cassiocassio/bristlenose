@@ -54,12 +54,18 @@ def _render_capturing(project: Path) -> list[logging.LogRecord]:
     return handler.records
 
 
-def test_a_people_yaml_typo_is_skipped_not_fatal(project: Path) -> None:
-    (project / "bristlenose-output" / "people.yaml").write_text(
-        'participants:\n  p1:\n    editable: {full_name: "Ann\n', encoding="utf-8",
-    )
+def test_a_people_yaml_typo_neither_stops_the_render_nor_is_written_over(
+    project: Path,
+) -> None:
+    """Since decision #17 (22 Oct 2026) the render reads past the typo, without
+    the names in it, and leaves the researcher's file as it is; it used to raise
+    here and the static re-render was skipped."""
+    typo = 'participants:\n  p1:\n    editable: {full_name: "Ann\n'
+    people = project / "bristlenose-output" / "people.yaml"
+    people.write_text(typo, encoding="utf-8")
     records = _render_capturing(project)
-    assert any("static report" in r.getMessage() for r in records)
+    assert not any("static report" in r.getMessage() for r in records)
+    assert people.read_text(encoding="utf-8") == typo
 
 
 @pytest.mark.parametrize("name", ["screen_clusters.json", "extracted_quotes.json"])

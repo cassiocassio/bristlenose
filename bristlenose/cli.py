@@ -1273,11 +1273,16 @@ def run(
             # Print a one-line resume summary from the manifest (Phase 1e)
             from bristlenose.status import format_resume_summary, get_project_status
 
-            _status = get_project_status(_attempt if resume_kept_attempt else output_dir)
+            _resumed = _attempt if resume_kept_attempt else output_dir
+            _status = get_project_status(_resumed)
             if _status is not None:
                 console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
-            else:
+            elif not has_manifest(_resumed):
                 console.print("[dim]Resuming from previous run...[/dim]")
+            # Otherwise the manifest is there and will not read: nothing is
+            # resumed, so nothing is said here; the run sets the file aside and
+            # says what that costs (decision #18 — this used to read "Resuming
+            # from previous run..." while every stage ran again).
         elif _has_no_deliverable(output_dir):
             # Nothing but internal state survives from a run that produced no
             # analysis. Reuse the directory silently — demanding --clean here
@@ -2357,6 +2362,7 @@ def status(
     ] = False,
 ) -> None:
     """Show pipeline status for a project (read-only, no LLM calls)."""
+    from bristlenose.manifest import has_manifest
     from bristlenose.output_paths import project_output_dir
     from bristlenose.status import get_project_status
 
@@ -2373,6 +2379,22 @@ def status(
         raise typer.Exit(1)
 
     project_status = get_project_status(output_dir)
+    if project_status is None and has_manifest(output_dir):
+        # There is one and it will not read: say so, not "no manifest". Moves
+        # nothing (status is read-only); the next run sets it aside (#18).
+        from rich.markup import escape
+
+        _say(
+            MessageKind.WARNING,
+            f"The pipeline manifest in [bold]{escape(str(output_dir))}[/bold] couldn't "
+            f"be read, so Bristlenose can't tell which stages are done.",
+        )
+        console.print(
+            f"Run [bold]bristlenose run {escape(str(project_dir))}[/bold] to rebuild it "
+            f"— every stage runs again."
+        )
+        _report_stashed_output(output_dir)
+        raise typer.Exit(1)
     if project_status is None:
         console.print(
             f"No pipeline manifest in [bold]{output_dir}[/bold].\n"

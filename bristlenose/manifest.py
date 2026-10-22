@@ -185,6 +185,56 @@ def load_manifest(output_dir: Path, *, strict: bool = False) -> PipelineManifest
         return None
 
 
+def set_aside_unreadable(output_dir: Path) -> Path | None:
+    """Keep a copy of a manifest that will not read as ``<name>.damaged-<stamp>``.
+
+    Returns the copy's path, or ``None`` when there was nothing to keep: no
+    manifest, one that reads, or one that could not even be opened (an
+    ``OSError`` says nothing about its contents). A run calls this before it
+    writes its own, so the damaged bytes survive the write (decision #18,
+    22 Oct 2026, the rule ``projects.json`` already follows).
+
+    A copy, not a move: the original stays until the run's first write
+    replaces it, so a run that ends before that write (an empty folder, a
+    Stop during ingest) still leaves a manifest, and the next ``run`` resumes
+    rather than refusing the folder for want of ``--clean`` (R111's guard;
+    code review of RE#17). If the copy fails, the run's write replaces the
+    file as before, and that is logged.
+    """
+    import shutil
+
+    path = _manifest_path(output_dir)
+    try:
+        PipelineManifest.model_validate_json(path.read_text(encoding="utf-8"))
+        return None
+    except OSError:  # absent, or not openable: nothing known about the bytes
+        return None
+    except ValueError:  # ValidationError, UnicodeDecodeError: it will not read
+        pass
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+    aside = path.with_name(f"{path.name}.damaged-{stamp}")
+    try:
+        shutil.copy2(path, aside)
+    except OSError:
+        logger.warning("manifest | unreadable at %s and could not be copied aside; "
+                       "the run's next write replaces it", path, exc_info=True)
+        return None
+    logger.warning("manifest | unreadable, a copy kept as %s", aside.name)
+    return aside
+
+
+def held_resume_vouches(output_dir: Path) -> bool:
+    """A held copy from an unfinished run reads and records a finished stage,
+    so ``resume_manifest`` may reuse something from it. A held copy with no
+    finished stage vouches for nothing: every stage runs again."""
+    held = _resume_path(output_dir)
+    try:
+        manifest = PipelineManifest.model_validate_json(held.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return any(r.status == StageStatus.COMPLETE for r in manifest.stages.values())
+
+
 def has_manifest(output_dir: Path) -> bool:
     """A run has been here: the manifest file exists, readable or not."""
     return _manifest_path(output_dir).exists()

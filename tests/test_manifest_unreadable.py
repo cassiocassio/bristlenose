@@ -76,14 +76,25 @@ def cli_to_pipeline(monkeypatch):
 
 
 class TestTheCommands:
-    def test_status_says_there_is_no_record(self, tmp_path: Path) -> None:
-        out = tmp_path / "interviews" / "bristlenose-output"
-        _corrupt(out)
-        result = CliRunner().invoke(app, ["status", str(tmp_path / "interviews")])
+    def test_status_says_the_record_cannot_be_read(self, tmp_path: Path) -> None:
+        """There is a manifest: "No pipeline manifest" was untrue (decision #18).
+
+        Read-only, so it moves nothing; the next run sets the file aside.
+        """
+        # A bracket in the path is Rich markup unless escaped (review #5).
+        out = tmp_path / "Interviews [acme]" / "bristlenose-output"
+        path = _corrupt(out)
+        result = CliRunner().invoke(app, ["status", str(tmp_path / "Interviews [acme]")])
         assert result.exception is None or isinstance(result.exception, SystemExit), (
             result.exception
         )
-        assert "No pipeline manifest" in result.output
+        said = " ".join(result.output.split())
+        assert "No pipeline manifest" not in said
+        assert "couldn't be read, so Bristlenose can't tell which stages are done." in said
+        assert "to rebuild it — every stage runs again." in said
+        # Both lines name the folder: the manifest's path and the command.
+        assert said.count("[acme]") == 2, said
+        assert path.read_text(encoding="utf-8") == _TRUNCATED
 
     def test_run_resumes_into_the_folder_instead_of_crashing(
         self, cli_to_pipeline: CliRunner, tmp_path: Path, monkeypatch,
@@ -114,6 +125,8 @@ class TestTheCommands:
         result = cli_to_pipeline.invoke(app, ["run", str(input_dir), "--no-serve"])
         assert reached, result.output
         assert "already exists" not in result.output
+        # Nothing is resumed from a record that will not read (decision #18).
+        assert "Resuming" not in result.output
 
 
 def test_the_progressive_importer_waits_on_an_unreadable_manifest(tmp_path: Path) -> None:

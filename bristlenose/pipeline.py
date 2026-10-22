@@ -46,6 +46,7 @@ from bristlenose.manifest import (
     create_manifest,
     fresh_session_ids,
     get_completed_session_ids,
+    held_resume_vouches,
     hold_for_resume,
     mark_session_complete,
     mark_session_failed,
@@ -53,6 +54,7 @@ from bristlenose.manifest import (
     mark_stage_running,
     release_resume,
     resume_manifest,
+    set_aside_unreadable,
     write_manifest,
 )
 from bristlenose.manifest import STAGE_RENDER as _M_STAGE_RENDER
@@ -1807,6 +1809,19 @@ class Pipeline:
         # Load existing manifest for resume, or create fresh. The previous
         # run's records are held aside until this run completes, so a stop
         # part-way does not erase the stages it never reached.
+        # A manifest that will not read is set aside first, never written over,
+        # and the researcher is told what it costs (decision #18).
+        _aside = set_aside_unreadable(output_dir) if output_dir.exists() else None
+        if _aside is not None:
+            _said = (
+                f"The pipeline manifest couldn't be read, so it was set aside as "
+                f"{_aside.name}."
+            )
+            # A readable held copy from an unfinished run still vouches for the
+            # stages it records, so "every stage" would be untrue then.
+            if not held_resume_vouches(output_dir):
+                _said += " Every stage runs again, including the LLM stages."
+            _print_warn(rich_escape(_said))
         _prev_manifest = resume_manifest(output_dir) if output_dir.exists() else None
         hold_for_resume(_prev_manifest, output_dir)
         manifest = create_manifest(self.settings.project_name, __version__)
@@ -3546,8 +3561,8 @@ class Pipeline:
                 build_display_name_map,
                 compute_participant_stats,
                 extract_names_from_labels,
-                load_people_file,
                 merge_people,
+                read_people_file,
                 session_speaker_names,
                 session_speaker_stats,
                 suggest_short_names,
@@ -3555,7 +3570,9 @@ class Pipeline:
                 write_session_speakers,
             )
 
-            existing_people = load_people_file(output_dir)
+            existing_people, people_unreadable = read_people_file(output_dir)
+            if people_unreadable is not None:
+                _print_warn(rich_escape(people_unreadable.message()))
             computed_stats = compute_participant_stats(sessions, transcripts)
             people = merge_people(existing_people, computed_stats)
 
@@ -3575,12 +3592,17 @@ class Pipeline:
                         pid_speaker_info[code] = info
                     elif info.role == SpeakerRole.RESEARCHER and code.startswith("m"):
                         pid_speaker_info[code] = info
-            auto_populate_names(
-                people, pid_speaker_info, label_names, platform_names=platform_names,
-            )
-            suggest_short_names(people)
-
-            write_people_file(people, output_dir)
+            # Never over a file that would not read: it is the researcher's
+            # edit, and the line the warning names is theirs to fix (#17). Nor
+            # are names filled in for it: a detected name may be the real one
+            # the researcher replaced with a pseudonym, so the report shows
+            # codes until the file reads again.
+            if people_unreadable is None:
+                auto_populate_names(
+                    people, pid_speaker_info, label_names, platform_names=platform_names,
+                )
+                suggest_short_names(people)
+                write_people_file(people, output_dir)
             # Moderator and observer codes restart per session, so the people
             # file can hold one name for all of them; serve identifies each
             # session's from this instead, and takes its stats from it.
@@ -4002,21 +4024,23 @@ class Pipeline:
             auto_populate_names,
             compute_participant_stats,
             extract_names_from_labels,
-            load_people_file,
             merge_people,
+            read_people_file,
             suggest_short_names,
             write_people_file,
         )
 
-        existing_people = load_people_file(output_dir)
+        existing_people, people_unreadable = read_people_file(output_dir)
+        if people_unreadable is not None:
+            _print_warn(rich_escape(people_unreadable.message()))
         computed_stats = compute_participant_stats(sessions, transcripts)
         people = merge_people(existing_people, computed_stats)
 
-        label_names = extract_names_from_labels(transcripts)
-        auto_populate_names(people, {}, label_names)
-        suggest_short_names(people)
-
-        write_people_file(people, output_dir)
+        if people_unreadable is None:
+            label_names = extract_names_from_labels(transcripts)
+            auto_populate_names(people, {}, label_names)
+            suggest_short_names(people)
+            write_people_file(people, output_dir)
 
         elapsed = time.perf_counter() - pipeline_start
 
@@ -4357,9 +4381,11 @@ class Pipeline:
             status.update("[dim]Rendering output...[/dim]")
             t0 = time.perf_counter()
 
-            from bristlenose.people import build_display_name_map, load_people_file
+            from bristlenose.people import build_display_name_map, read_people_file
 
-            people = load_people_file(output_dir)
+            people, people_unreadable = read_people_file(output_dir)
+            if people_unreadable is not None:
+                _print_warn(rich_escape(people_unreadable.message()))
             display_names = build_display_name_map(people) if people else {}
 
             analysis = _compute_analysis(
@@ -4994,9 +5020,11 @@ class Pipeline:
         _registry.settle_starts(sessions, input_dir)
 
         # --- Load existing people file for display names ---
-        from bristlenose.people import build_display_name_map, load_people_file
+        from bristlenose.people import build_display_name_map, read_people_file
 
-        people = load_people_file(output_dir)
+        people, people_unreadable = read_people_file(output_dir)
+        if people_unreadable is not None:
+            _print_warn(rich_escape(people_unreadable.message()))
         display_names = build_display_name_map(people) if people else {}
 
         # --- Load transcripts for coverage calculation ---

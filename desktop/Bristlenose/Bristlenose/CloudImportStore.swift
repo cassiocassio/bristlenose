@@ -922,16 +922,31 @@ final class CloudImportStore: ObservableObject {
                         )
                         self.outcomes[row.id] = outcome
                         self.progress[row.id] = nil
-                        self.rowTasks[row.id] = nil
-                        // Counted on *settling*, not on succeeding: the row
-                        // question behind "3 of 4" is how many are still to
-                        // wait for, and a failed or cancelled one is no longer
-                        // being waited for. A ring that stalls at 3 because the
-                        // fourth failed is the ring saying nothing at all.
-                        if let current = self.batch {
-                            self.batch = BatchProgress(projectID: current.projectID,
-                                                       done: current.done + 1,
-                                                       total: current.total)
+                        // **The batch's bookkeeping is this batch's alone.** A
+                        // row stopped by Stop settles after it, often after
+                        // Import has started a replacement holding the same
+                        // row (Stop leaves it ticked). Unguarded, that late
+                        // settle dropped the replacement's handle on the row —
+                        // so neither its stop button nor Stop could reach the
+                        // live transfer — and counted itself into the
+                        // replacement's ring. The two writes above stay
+                        // unguarded: Stop bumps the same generation, so a
+                        // guard would also suppress the "Stopped" a plain Stop
+                        // shows, and a replacement's own progress and outcome
+                        // overwrite them.
+                        if self.fetchGeneration == mine {
+                            self.rowTasks[row.id] = nil
+                            // Counted on *settling*, not on succeeding: the row
+                            // question behind "3 of 4" is how many are still to
+                            // wait for, and a failed or cancelled one is no
+                            // longer being waited for. A ring that stalls at 3
+                            // because the fourth failed is the ring saying
+                            // nothing at all.
+                            if let current = self.batch {
+                                self.batch = BatchProgress(projectID: current.projectID,
+                                                           done: current.done + 1,
+                                                           total: current.total)
+                            }
                         }
                         // A row that landed stops being tickable; one that
                         // failed stays ticked so Retry has something to act on.
@@ -952,7 +967,11 @@ final class CloudImportStore: ObservableObject {
                     startNext()
                 }
             }
-            isFetching = false
+            // Guarded like everything below it. Stop has already cleared this,
+            // and a superseded batch settling late would otherwise end the
+            // replacement mid-transfer: no Stop button, and Import allowed
+            // over the top of it.
+            if self.fetchGeneration == mine { isFetching = false }
             // Hand the landed files on **before** the ring clears: `batch` is
             // what carries the destination project, and this is the last
             // moment it exists. Same generation guard as the line below, for

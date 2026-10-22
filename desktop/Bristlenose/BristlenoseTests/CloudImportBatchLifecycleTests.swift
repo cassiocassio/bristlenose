@@ -120,4 +120,70 @@ struct CloudImportBatchLifecycleTests {
                 "premise: it ended on the declined grant")
         #expect(store.batch == nil, "a batch that is over must not leave its ring on the sidebar")
     }
+
+    // MARK: - A stopped batch, replaced before it settled
+
+    /// Import, Stop, Import again — the second Import before the stopped
+    /// transfer has settled, which is the ordinary pace of a researcher who
+    /// stopped by mistake. Waits until the stopped batch's transfer has
+    /// returned and its coordinator has had time to finish.
+    ///
+    /// The wait for the coordinator is time, not a signal: nothing outside the
+    /// store can see it finish, and the defect *is* what it does on the way
+    /// out. The red run against the unfixed store is what shows the wait is
+    /// long enough to see it.
+    private func supersededBatch() async -> (CloudImportStore, StubSource, UUID) {
+        let source = StubSource(rows: [row("a")])
+        let store = CloudImportStore(source: source)
+        await store.load()
+        store.selectAllVisible()
+
+        store.startFetch(destination: destination, projectID: UUID())
+        await until { source.calls == 1 }
+        #expect(source.calls == 1, "premise: the first batch's transfer is under way")
+
+        // No `await` between these: the stopped transfer cannot settle in
+        // between, so the replacement is genuinely running when it does.
+        store.stopFetch()
+        let replacement = UUID()
+        store.startFetch(destination: destination, projectID: replacement)
+        #expect(store.isFetching, "premise: the replacement started")
+
+        await until { source.calls == 2 && source.returns == 1 }
+        #expect(source.returns == 1, "premise: the stopped transfer has returned")
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        return (store, source, replacement)
+    }
+
+    @Test("A stopped batch settling late does not end the one that replaced it")
+    func supersededBatchLeavesReplacementFetching() async {
+        // `isFetching` drives the window's Stop button and gates the next
+        // Import. The stopped batch cleared it on the way out, so the
+        // replacement read as finished mid-transfer: no Stop, and a second
+        // Import allowed over the top of it.
+        let (store, _, replacement) = await supersededBatch()
+
+        #expect(store.isFetching, "the replacement is still transferring")
+        #expect(store.batch?.projectID == replacement)
+
+        store.stopFetch()
+    }
+
+    @Test("A stopped batch settling late does not count toward, or orphan, the replacement's row")
+    func supersededBatchLeavesReplacementRowAlone() async {
+        // The same row is in both batches (Stop leaves it ticked, so Import
+        // picks it up again). The stopped transfer, settling, counted itself
+        // into the replacement's ring — "1 of 1" with the file still moving —
+        // and dropped the replacement's handle on that row, so the row's own
+        // stop button, and Stop, could no longer reach the transfer.
+        let (store, source, _) = await supersededBatch()
+
+        #expect(store.batch?.done == 0, "nothing in the replacement has settled")
+
+        store.cancelRow("a")
+        await until { source.returns == 2 }
+        #expect(source.returns == 2, "stopping the row reaches the transfer actually running")
+
+        store.stopFetch()
+    }
 }

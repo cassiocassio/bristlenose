@@ -9,10 +9,11 @@ from run's transcription also keeps the speakers run identified.
 ``run`` itself, given a session its manifest records as transcribed but the
 cache file does not hold, transcribes it rather than report it as silent.
 
-``analyze`` into a run's output overwrites the intermediate files the run's
-manifest vouches for, so the next ``run`` reads them as corrupt and re-pays
-every session's analysis. That half waits on a product decision (see the
-strict xfail below).
+``analyze`` into a run's output overwrote the intermediate files the run's
+manifest vouches for, so the next ``run`` read them as corrupt and re-paid
+every session's analysis. It now records what it analysed, per session, against
+the transcript file it read; the next ``run`` keeps every session whose
+transcript is still that file (decision #58, 22 Oct 2026).
 
 Real ``Pipeline`` methods and real manifest; ingest, stage 2, Whisper and every
 LLM stage are stubbed (the harness of ``test_pipeline_interrupted_rerun``).
@@ -30,7 +31,13 @@ from typer.testing import CliRunner
 
 from bristlenose.cli import app
 from bristlenose.config import BristlenoseSettings
-from bristlenose.events import Cause, CauseCategoryEnum, PipelineAbandonedError, StageOutcome
+from bristlenose.events import (
+    Cause,
+    CauseCategoryEnum,
+    PipelineAbandonedError,
+    StageFailure,
+    StageOutcome,
+)
 from bristlenose.models import (
     FileType,
     InputFile,
@@ -75,7 +82,7 @@ def _broken_docx_session(input_dir: Path, n: int, *, beside: str | None = None) 
 def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
-    beside: str | None = None,
+    beside: str | None = None, topics_fail: bool = False, quotes_fail: bool = False,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -127,8 +134,20 @@ def _drive(
 
     async def _topics(transcripts, *_a, **_kw):
         log.setdefault("topics", []).append(sorted(t.session_id for t in transcripts))
+        from bristlenose.models import TopicBoundary, TransitionType
+
+        # analyze's topic maps differ from the run's, as a real model's do.
+        boundaries = [TopicBoundary(
+            timecode_seconds=0.0, topic_label="Analysed",
+            transition_type=next(iter(TransitionType)),
+        )] if mode == "analyze" else []
         maps = [SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
-                                boundaries=[]) for t in transcripts]
+                                boundaries=list(boundaries)) for t in transcripts]
+        if topics_fail:
+            return maps, StageOutcome(attempted=len(maps), succeeded=0, failed=[
+                StageFailure(session_id=t.session_id, cause=Cause(
+                    category=CauseCategoryEnum.UNKNOWN, message="stub failure"))
+                for t in transcripts])
         return maps, StageOutcome(attempted=len(maps), succeeded=len(maps))
 
     async def _quotes(transcripts, *_a, **_kw):
@@ -138,9 +157,15 @@ def _drive(
         base = 10 if mode == "analyze" else 0
         quotes = [_quote(t.session_id, t.participant_id, base + n)
                   for t in transcripts for n in range(3)]
+        if quotes_fail:
+            return [], StageOutcome(attempted=len(transcripts), succeeded=0, failed=[
+                StageFailure(session_id=t.session_id, cause=Cause(
+                    category=CauseCategoryEnum.UNKNOWN, message="stub failure"))
+                for t in transcripts])
         return quotes, StageOutcome(attempted=len(transcripts), succeeded=len(transcripts))
 
     async def _one(_quotes, *_a, **_kw):
+        log.setdefault("clustered", []).append(1)
         return [], StageOutcome(attempted=1, succeeded=1)
 
     async def _discuss(transcripts, *_a, **_kw):
@@ -330,25 +355,118 @@ def test_transcribe_with_no_earlier_run_transcribes_everything(tmp_path: Path) -
     assert log["transcribed"] == [["s1", "s2"]], log
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "R115 analyze half: analyze overwrites the intermediates run()'s manifest "
-        "vouches for, and the next run reads them as corrupt and re-pays. Which "
-        "fix (analyze records its outputs, refuses a run project, or a demote on "
-        "mismatch) is a product decision."
-    ),
-)
-def test_a_run_after_analyze_does_not_re_pay_the_analysis(tmp_path: Path) -> None:
+def test_a_run_after_analyze_keeps_what_analyze_paid_for(tmp_path: Path) -> None:
+    # The README's workflow: analyze the project's own transcripts. analyze
+    # overwrote the files run's manifest vouched for, so the next run read them
+    # as changed on disk and paid for every session's analysis again.
     _drive(tmp_path, "run", 2, {})
     _drive(tmp_path, "analyze", 2, {})
 
     after: dict = {}
     _drive(tmp_path, "run", 2, after)
 
-    # At HEAD: {'quoted': [['s1', 's2']]} — every session's quotes re-paid.
-    assert "quoted" not in after, after
-    assert "topics" not in after, after
+    # At HEAD: {'quoted': [['s1', 's2']], 'topics': [['s1', 's2']]}.
+    assert not {"topics", "quoted", "clustered"} & set(after), after
+    # It kept analyze's analysis, not the run's older one.
+    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text())
+    assert {m["boundaries"][0]["topic_label"] for m in maps} == {"Analysed"}, maps
+    quotes = json.loads(_intermediate(tmp_path, "extracted_quotes.json").read_text())
+    assert {q["text"].split(" from")[0] for q in quotes} == {"Quote 10", "Quote 11", "Quote 12"}
+
+    # And the run after that, on the run's own record, redoes nothing.
+    again: dict = {}
+    _drive(tmp_path, "run", 2, again)
+    assert not {"topics", "quoted"} & set(again), again
+
+
+def test_a_run_after_analyze_re_pays_only_a_hand_edited_transcript(tmp_path: Path) -> None:
+    # analyze analysed the edit; run analyses the recording's transcript, which
+    # is not the edit, so that one session is analysed again and no other.
+    _drive(tmp_path, "run", 2, {})
+    path = tmp_path / "output" / "transcripts-raw" / "s1.txt"
+    path.write_text(path.read_text(encoding="utf-8").replace("Welcome", "Hello"),
+                    encoding="utf-8")
+    _drive(tmp_path, "analyze", 2, {})
+
+    after: dict = {}
+    _drive(tmp_path, "run", 2, after)
+
+    assert after.get("topics") == [["s1"]], after
+    assert after.get("quoted") == [["s1"]], after
+
+
+@pytest.mark.parametrize("fail", ["topics_fail", "quotes_fail"])
+def test_an_analyze_that_fails_leaves_the_run_s_analysis_as_it_was(
+    tmp_path: Path, fail: str,
+) -> None:
+    # Every topic (or quote) call failed: analyze abandons, and wrote its
+    # topics over the run's first, so the next run paid for every session again.
+    _drive(tmp_path, "run", 2, {})
+    with pytest.raises(PipelineAbandonedError):
+        _drive(tmp_path, "analyze", 2, {}, **{fail: True})
+
+    after: dict = {}
+    _drive(tmp_path, "run", 2, after)
+    assert not {"topics", "quoted", "clustered"} & set(after), after
+
+
+def test_a_copy_beside_its_transcript_is_never_vouched_for(tmp_path: Path) -> None:
+    # Copy, edit, analyze: s1-edited.txt beside s1.txt, header still s1. analyze
+    # reads both as s1; vouching for s1 by either file served the pair's
+    # doubled analysis as the recording's. The next run analyses s1 again.
+    _drive(tmp_path, "run", 2, {})
+    raw = tmp_path / "output" / "transcripts-raw"
+    (raw / "s1-edited.txt").write_text(
+        (raw / "s1.txt").read_text(encoding="utf-8").replace("Welcome", "Hello"),
+        encoding="utf-8",
+    )
+    _drive(tmp_path, "analyze", 2, {})
+    (raw / "s1-edited.txt").unlink()
+
+    after: dict = {}
+    _drive(tmp_path, "run", 2, after)
+
+    assert after.get("quoted") == [["s1"]], after
+    maps = json.loads(_intermediate(tmp_path, "topic_boundaries.json").read_text())
+    assert sorted(m["session_id"] for m in maps) == ["s1", "s2"], maps
+
+
+def test_a_stage_key_the_run_does_not_watch_is_a_change() -> None:
+    # The strict arm that keeps analyze's stage off run's whole-stage cache.
+    from bristlenose.pipeline import _inputs_changed
+
+    assert _inputs_changed({"analyzed_transcripts": "x"}, {"upstream": "u", "pii_enabled": "False"})
+    assert not _inputs_changed({"upstream": "u"}, {"upstream": "u", "pii_enabled": "False"})
+
+
+def test_a_transcript_file_run_cannot_read_is_an_error_not_a_re_pay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A missing file is no key; any other failure to read one run has just
+    # written is not quietly turned into paying for every session again.
+    from bristlenose.pipeline import _transcript_file_hashes
+
+    (tmp_path / "s1.txt").write_text("x", encoding="utf-8")
+    assert set(_transcript_file_hashes(tmp_path, ["s1", "s2"])) == {"s1"}
+
+    def _denied(self: Path) -> bytes:
+        raise PermissionError(13, "denied", str(self))
+
+    monkeypatch.setattr(Path, "read_bytes", _denied)
+    with pytest.raises(PermissionError):
+        _transcript_file_hashes(tmp_path, ["s1"])
+
+
+def test_analyze_with_no_manifest_writes_none(tmp_path: Path) -> None:
+    # A folder of transcripts run never vouched for: nothing to keep, and
+    # analyze still writes no manifest of its own.
+    _drive(tmp_path, "run", 2, {})
+    manifest = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest.unlink()
+
+    _drive(tmp_path, "analyze", 2, {})
+
+    assert not manifest.exists()
 
 
 def test_the_harness_runs_the_discussion_stage_without_an_error(
@@ -531,6 +649,49 @@ def test_a_plain_run_transcribes_what_a_skip_transcription_run_left(tmp_path: Pa
     again: dict = {}
     _drive(tmp_path, "run", 2, again)
     assert "transcribed" not in again, again
+
+
+def test_a_plain_run_heals_what_an_older_skip_transcription_run_left(
+    tmp_path: Path,
+) -> None:
+    # A build before 20 Oct 2026 did not watch skip_transcription: its manifest
+    # verifies the stage, the cache file holds no session, and no session is
+    # recorded, so every recording read "No speech found" on every run.
+    _drive(tmp_path, "run", 2, {}, skip=True)
+    _forget_skip(tmp_path)
+
+    after: dict = {}
+    result = _drive(tmp_path, "run", 2, after)
+
+    assert after.get("transcribed") == [["s1", "s2"]], after
+    assert result is not None and result.summary.transcripts.failed == [], result.summary
+    again: dict = {}
+    _drive(tmp_path, "run", 2, again)
+    assert "transcribed" not in again, again
+
+
+def _forget_skip(tmp_path: Path) -> None:
+    """What an older build's skip-transcription run left: no skip marker."""
+    path = tmp_path / "output" / ".bristlenose" / "pipeline-manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    del manifest["stages"]["transcribe"]["input_hashes"]["skip_transcription"]
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_what_an_older_skip_run_left_beside_a_transcribed_session_is_a_retry(
+    tmp_path: Path,
+) -> None:
+    # s1 transcribed by a plain run, s2 added under an older skip run: the
+    # heal transcribes s2 alone, and counts it as a retry, not a new interview.
+    _drive(tmp_path, "run", 1, {})
+    _drive(tmp_path, "run", 2, {}, skip=True)
+    _forget_skip(tmp_path)
+
+    after: dict = {}
+    result = _drive(tmp_path, "run", 2, after)
+
+    assert after.get("transcribed") == [["s2"]], after
+    assert result is not None and result.summary.new_sessions is None, result.summary
 
 
 def test_a_transcript_that_cannot_be_read_says_so_on_every_run(tmp_path: Path) -> None:

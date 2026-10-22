@@ -808,6 +808,77 @@ def _transcript_fingerprint(transcript: FullTranscript, *extra: str) -> str:
     return hash_bytes("|".join([payload, *extra]).encode("utf-8"))
 
 
+def _transcript_file_fingerprint(file_hash: str, *extra: str) -> str:
+    """What a session's topics (and quotes) depend on, as ``analyze`` sees it:
+    the transcript file it read (``file_hash``, its bytes' hash), plus any
+    *extra* inputs the caller names.
+
+    A transcript read back from its ``.txt`` never fingerprints as the run's
+    own does — end times, speaker labels and words do not round-trip — so
+    ``analyze`` keys its records by the file, and ``run`` accepts a record
+    whose key is the file it has just written for that session. An unedited
+    transcript keeps what ``analyze`` paid for; a hand-edited one is analysed
+    again, since ``run`` analyses the recording's transcript (decision #58).
+    """
+    return hash_bytes("|".join(["transcript-file", file_hash, *extra]).encode("utf-8"))
+
+
+def _transcript_file_hashes(transcripts_dir: Path, session_ids: Iterable[str]) -> dict[str, str]:
+    """Each session's ``<sid>.txt`` in *transcripts_dir*, by its bytes' hash —
+    the files ``analyze`` would read, as ``run`` has just written them."""
+    hashes: dict[str, str] = {}
+    for sid in session_ids:
+        try:
+            hashes[sid] = hash_bytes((transcripts_dir / f"{sid}.txt").read_bytes())
+        except FileNotFoundError:
+            continue  # no file, nothing analyze could have read: no key
+    return hashes
+
+
+def _fingerprints_key(fingerprints: dict[str, str]) -> str:
+    """One value for a stage's per-session fingerprints, in session order."""
+    return hash_bytes("|".join(f"{sid}={fp}" for sid, fp in sorted(fingerprints.items())).encode())
+
+
+def _record_analyzed_stage(
+    manifest: PipelineManifest,
+    stage: str,
+    output_dir: Path,
+    paths: list[Path],
+    *,
+    session_ids: Iterable[str] | None = None,
+    outcome: StageOutcome | None = None,
+    fingerprints: dict[str, str] | None = None,
+    input_hashes: dict[str, str],
+    provider: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Record over the run's record what ``analyze`` has just written for
+    *stage*, so the next ``run`` does not read it as changed on disk.
+
+    A per-session stage gets one record per session keyed by its transcript
+    file (``_transcript_file_fingerprint``), and stage-level inputs the run
+    never watches: the run then takes the per-session path and keeps every
+    session whose file it writes unchanged, rather than verify the stage
+    whole, which would serve the analysis of a hand-edited transcript as the
+    recording's (decision #58).
+    """
+    mark_stage_running(manifest, stage)  # replaces the run's record, sessions too
+    if session_ids is not None and outcome is not None:
+        _record_session_outcomes(
+            manifest, stage, session_ids, outcome,
+            provider=provider, model=model, input_hashes=fingerprints,
+        )
+    present = [p.read_bytes() for p in paths if p.exists()]
+    mark_stage_complete(
+        manifest, stage,
+        content_hash=hash_bytes(b"".join(present)) if present else None,
+        input_hashes=input_hashes,
+        output_path=paths[0] if len(paths) == 1 else None,
+    )
+    write_manifest(manifest, output_dir)
+
+
 _REPORT_FILE_RE = re.compile(r"^bristlenose-.+-report\.(?:html|md)$")
 
 
@@ -1957,19 +2028,23 @@ class Pipeline:
                 _prev_manifest, _M_STAGE_TRANSCRIBE, [_ss_path],
                 current_input_hashes=_tx_input_hashes,
             )
+            # Sessions the stage verified but the file does not hold: on inputs
+            # it has just proved unchanged, retries, not new.
+            _left_tx_sids: set[str] = set()
             if _ss_verified:
                 import json as _json
 
                 # Unreadable, or not segments: the per-session path below
                 # discards it and transcribes again, as a corrupt file.
                 _ss_raw = _read_session_segments(_ss_path)
-                # A session recorded complete that the file does not hold was
-                # lost by an earlier run: the per-session path below
-                # transcribes it rather than report it as silent.
-                _ss_verified = _ss_raw is not None and not (
-                    get_completed_session_ids(_prev_manifest, _M_STAGE_TRANSCRIBE)
-                    & {s.session_id for s in sessions}
-                ) - set(_ss_raw)
+                # A session the file does not hold, on a stage verified whole,
+                # was lost by an earlier run (recorded complete) or left by a
+                # skip-transcription run before the stage watched skip (never
+                # recorded; a FAILED record would not verify). The per-session
+                # path below transcribes it rather than report it as silent;
+                # after that it is held, or recorded FAILED.
+                _left_tx_sids = {s.session_id for s in sessions} - set(_ss_raw or ())
+                _ss_verified = _ss_raw is not None and not _left_tx_sids
             if _ss_verified and _ss_raw is not None:
                 session_segments = _ss_raw
                 total_segments = sum(len(s) for s in session_segments.values())
@@ -2021,7 +2096,9 @@ class Pipeline:
                 ]
 
                 # A retry is not a new interview (_retried_transcription_sids).
-                _retried_tx_sids = _retried_transcription_sids(_prev_manifest, _lost_tx_sids)
+                _retried_tx_sids = _retried_transcription_sids(
+                    _prev_manifest, _lost_tx_sids | _left_tx_sids,
+                )
                 _new_tx_sessions = [
                     s for s in _remaining_sessions if s.session_id not in _retried_tx_sids
                 ]
@@ -2804,6 +2881,16 @@ class Pipeline:
             _topic_session_fps = {
                 t.session_id: _transcript_fingerprint(t) for t in clean_transcripts
             }
+            # The same transcripts as files, as `analyze` reads them: a session
+            # `analyze` analysed from an unedited file keeps its topics.
+            _analyzed_file_hashes = _transcript_file_hashes(
+                output_dir / ("transcripts-cooked" if self.settings.pii_enabled
+                              else "transcripts-raw"),
+                _topic_session_fps,
+            )
+            _topic_file_fps = {
+                sid: _transcript_file_fingerprint(h) for sid, h in _analyzed_file_hashes.items()
+            }
             self._emit_stage_entry(STAGE_TOPICS)
             if _analysis is not None:
                 # After the entry, so the row says topics while the last
@@ -2834,6 +2921,7 @@ class Pipeline:
                 # unchanged and only run the LLM on the rest.
                 _cached_topic_sids = fresh_session_ids(
                     _prev_manifest, STAGE_TOPIC_SEGMENTATION, _topic_session_fps,
+                    accept=_topic_file_fps,
                 )
                 _cached_topic_maps: list[SessionTopicMap] = []
                 if _cached_topic_sids and _tb_path.exists():
@@ -3012,6 +3100,14 @@ class Pipeline:
                 )
                 for t in clean_transcripts
             }
+            _quote_file_fps = {
+                sid: _transcript_file_fingerprint(
+                    h,
+                    _json_dumps_sorted(_topic_maps_by_sid[sid].model_dump(mode="json"))
+                    if sid in _topic_maps_by_sid else "",
+                )
+                for sid, h in _analyzed_file_hashes.items()
+            }
             _qe_input_hashes = {
                 "upstream": _tb_hash or _MISSING_HASH,
                 "transcripts": hash_bytes(
@@ -3053,6 +3149,7 @@ class Pipeline:
                 # topic map are unchanged and only run the LLM on the rest.
                 _cached_quote_sids = fresh_session_ids(
                     _prev_manifest, STAGE_QUOTE_EXTRACTION, _quote_session_fps,
+                    accept=_quote_file_fps,
                 )
                 _cached_quotes: list[ExtractedQuote] = []
                 if _cached_quote_sids and _eq_path.exists():
@@ -3908,7 +4005,22 @@ class Pipeline:
         # line is refused by name in the files bucket, as `run` refuses a
         # format it declines, never dropped without a word (R119).
         declined: list[SkippedFile] = []
-        clean_transcripts = load_transcripts_from_dir(transcripts_dir, skipped=declined)
+        _file_hashes: dict[str, str] = {}
+        clean_transcripts = load_transcripts_from_dir(
+            transcripts_dir, skipped=declined, file_hashes=_file_hashes,
+        )
+        # A project `run` has analysed: what this writes over the files its
+        # manifest vouches for, it records there, per session, against the
+        # transcript file it read, so the next run keeps it rather than pay
+        # for every session again (decision #58). With no manifest it starts
+        # none; with no intermediates written the run's still hold.
+        from bristlenose.manifest import load_manifest
+
+        _manifest = load_manifest(output_dir) if self.settings.write_intermediate else None
+        _intermediate = output_dir / ".bristlenose" / "intermediate"
+        _topic_fps = {
+            sid: _transcript_file_fingerprint(h) for sid, h in _file_hashes.items()
+        }
         if declined:
             refused = [
                 refusal_stage_failure(
@@ -3989,11 +4101,6 @@ class Pipeline:
                     clean_transcripts, llm_client, concurrency=concurrency,
                     errors=_seg_errors_a,
                 )
-            if self.settings.write_intermediate:
-                write_intermediate_json(
-                    topic_maps, "topic_boundaries.json", output_dir,
-                    self.settings.project_name,
-                )
             total_boundaries = sum(len(m.boundaries) for m in topic_maps)
             _seg_elapsed_a = time.perf_counter() - t0
             _msg_8a = f"Segmented {count_noun(total_boundaries, 'topic boundary')}"
@@ -4053,10 +4160,44 @@ class Pipeline:
                     ),
                     summary=self._summary,
                 )
+            # After both abandon checks: an analysis that failed leaves the
+            # run's topics and quotes where they were.
+            if self.settings.write_intermediate:
+                write_intermediate_json(
+                    topic_maps, "topic_boundaries.json", output_dir,
+                    self.settings.project_name,
+                )
+            if _manifest is not None:
+                _record_analyzed_stage(
+                    _manifest, STAGE_TOPIC_SEGMENTATION, output_dir,
+                    [_intermediate / "topic_boundaries.json"],
+                    session_ids=[tm.session_id for tm in topic_maps],
+                    outcome=_seg_outcome_a, fingerprints=_topic_fps,
+                    input_hashes={"analyzed_transcripts": _fingerprints_key(_topic_fps)},
+                    provider=self.settings.llm_provider, model=self.settings.llm_model,
+                )
             if self.settings.write_intermediate:
                 write_intermediate_json(
                     all_quotes, "extracted_quotes.json", output_dir,
                     self.settings.project_name,
+                )
+            if _manifest is not None:
+                _maps_by_sid = {tm.session_id: tm for tm in topic_maps}
+                _quote_fps = {
+                    sid: _transcript_file_fingerprint(
+                        h,
+                        _json_dumps_sorted(_maps_by_sid[sid].model_dump(mode="json"))
+                        if sid in _maps_by_sid else "",
+                    )
+                    for sid, h in _file_hashes.items()
+                }
+                _record_analyzed_stage(
+                    _manifest, STAGE_QUOTE_EXTRACTION, output_dir,
+                    [_intermediate / "extracted_quotes.json"],
+                    session_ids=[t.session_id for t in clean_transcripts],
+                    outcome=_quote_outcome_a, fingerprints=_quote_fps,
+                    input_hashes={"analyzed_transcripts": _fingerprints_key(_quote_fps)},
+                    provider=self.settings.llm_provider, model=self.settings.llm_model,
                 )
             _quotes_elapsed_a = time.perf_counter() - t0
             _msg_9a = f"Extracted {count_noun(len(all_quotes), 'quote')}"
@@ -4119,6 +4260,17 @@ class Pipeline:
                 write_intermediate_json(
                     theme_groups, "theme_groups.json", output_dir,
                     self.settings.project_name,
+                )
+            if _manifest is not None:
+                # As run records it: upstream is the quotes file, so a run that
+                # keeps every session's quotes keeps these too.
+                _eq_file = _intermediate / "extracted_quotes.json"
+                _record_analyzed_stage(
+                    _manifest, STAGE_CLUSTER_AND_GROUP, output_dir,
+                    [_intermediate / "screen_clusters.json", _intermediate / "theme_groups.json"],
+                    input_hashes={"upstream": (
+                        hash_bytes(_eq_file.read_bytes()) if _eq_file.exists() else _MISSING_HASH
+                    )},
                 )
             _print_step(
                 f"Clustered {count_noun(len(screen_clusters), 'screen')}"
@@ -4848,6 +5000,7 @@ class Pipeline:
 def load_transcripts_from_dir(
     transcripts_dir: Path,
     skipped: list[SkippedFile] | None = None,
+    file_hashes: dict[str, str] | None = None,
 ) -> list[PiiCleanTranscript]:
     """Load transcript .txt files from a directory into PiiCleanTranscript objects.
 
@@ -4868,6 +5021,11 @@ def load_transcripts_from_dir(
     A file with no timecoded line (a plain-text transcript, "Interviewer: …")
     yields nothing, and goes in *skipped*, when given, as a format this reader
     does not read, so `analyze` can say so by name rather than drop it (R119).
+
+    *file_hashes*, when given, gets each loaded session's file by its bytes'
+    hash, which is how `analyze` records what it analysed (decision #58). A
+    session two files claim (a copy beside its original, header unchanged) gets
+    no hash: both are loaded as before, and nothing vouches for the pair.
     """
     import re
     from datetime import datetime, timezone
@@ -4877,6 +5035,7 @@ def load_transcripts_from_dir(
     from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
+    claimed: set[str] = set()
 
     for path in sorted(transcripts_dir.glob("*.txt")):
         if is_os_metadata(path):
@@ -4992,6 +5151,12 @@ def load_transcripts_from_dir(
             participant_id = session_id if session_id.startswith("p") else ""
 
         if segments:
+            if file_hashes is not None:
+                if session_id in claimed:
+                    file_hashes.pop(session_id, None)
+                else:
+                    file_hashes[session_id] = hash_bytes(path.read_bytes())
+            claimed.add(session_id)
             transcripts.append(
                 PiiCleanTranscript(
                     session_id=session_id,

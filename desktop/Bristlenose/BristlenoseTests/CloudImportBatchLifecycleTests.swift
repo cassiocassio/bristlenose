@@ -15,18 +15,19 @@ import Testing
 @Suite("How a cloud batch ends")
 struct CloudImportBatchLifecycleTests {
 
-    /// Declines the grant, or holds each transfer until it is cancelled. The
-    /// counters are locked because `fetch` runs off the main actor.
+    /// Declines the grant (or ends it with `grantError`, the way a real source
+    /// reports a closed Picker), or holds each transfer until it is cancelled.
+    /// The counters are locked because `fetch` runs off the main actor.
     private final class StubSource: CloudImportSource {
         let rows: [CloudImportRow]
-        let declinesGrant: Bool
+        let grantError: Error?
         private let lock = NSLock()
         private var _calls = 0
         private var _returns = 0
 
-        init(rows: [CloudImportRow], declinesGrant: Bool = false) {
+        init(rows: [CloudImportRow], declinesGrant: Bool = false, grantError: Error? = nil) {
             self.rows = rows
-            self.declinesGrant = declinesGrant
+            self.grantError = grantError ?? (declinesGrant ? Declined() : nil)
         }
 
         var calls: Int { lock.lock(); defer { lock.unlock() }; return _calls }
@@ -39,7 +40,7 @@ struct CloudImportBatchLifecycleTests {
         struct Declined: Error {}
 
         func prepareBatch(rowIDs: [String]) async throws {
-            if declinesGrant { throw Declined() }
+            if let grantError { throw grantError }
         }
 
         func list(window: DateInterval) async -> MeetingListing {
@@ -121,6 +122,33 @@ struct CloudImportBatchLifecycleTests {
         #expect(store.batch == nil, "a batch that is over must not leave its ring on the sidebar")
         #expect(!store.isAwaitingGrant,
                 "a declined grant is not still waiting for the researcher to grant access")
+    }
+
+    // MARK: - A closed Picker
+
+    @Test("Closing the Picker without choosing leaves the rows ticked, not failed")
+    func cancelledPickerLeavesRowsTicked() async {
+        // Owner decision, 22 Oct 2026: closing Google's Picker is the
+        // researcher's choice, not a refusal. Nothing was written for any row,
+        // so no row says "access not granted", there is no terminus, the ticks
+        // stand for the next Import, and the batch's ring and waiting state go.
+        let store = CloudImportStore(
+            source: StubSource(rows: [row("a"), row("b")],
+                               grantError: GoogleOAuthError.cancelled))
+        await store.load()
+        store.selectAllVisible()
+
+        store.startFetch(destination: destination, projectID: UUID())
+        #expect(store.batch != nil, "premise: Import puts the ring up")
+        await until { !store.isFetching }
+
+        #expect(!store.isFetching, "premise: the batch ended")
+        #expect(store.outcomes.isEmpty, "a closed Picker fails no row")
+        #expect(store.terminus == nil, "a closed Picker leaves no terminus")
+        #expect(store.ticked == ["a", "b"], "the ticks stand, so Import asks again")
+        #expect(store.batch == nil, "a batch that is over must not leave its ring on the sidebar")
+        #expect(!store.isAwaitingGrant,
+                "a closed Picker is not still waiting for the researcher to grant access")
     }
 
     // MARK: - A stopped batch, replaced before it settled

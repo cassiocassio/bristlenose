@@ -871,6 +871,15 @@ final class CloudImportStore: ObservableObject {
                 // cleared the replacement's "waiting for you to grant access".
                 // Stop has already cleared it for the batch it stopped.
                 if self.fetchGeneration == mine { isAwaitingGrant = false }
+            } catch GoogleOAuthError.cancelled {
+                // The researcher closed the Picker: their choice, not a refusal.
+                // Nothing was written for any row, so the ticks stand and Import
+                // asks again — the same picture Stop leaves before a transfer.
+                guard self.fetchGeneration == mine else { return }
+                isAwaitingGrant = false
+                isFetching = false
+                batch = nil
+                return
             } catch {
                 guard self.fetchGeneration == mine else { return }
                 isAwaitingGrant = false

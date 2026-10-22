@@ -137,6 +137,10 @@ class TagDelta(BaseModel):
 
     add: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     remove: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+    # How the added tags were applied. A gesture adds by hand; an undo of a
+    # removal puts the tag back as it was, so an accepted suggestion comes back
+    # autocode and pins nothing (decision #14). The four values QuoteTag holds.
+    source: Literal["human", "autocode", "pipeline", "codebook-builder"] = "human"
 
 
 class BadgeDelta(BaseModel):
@@ -1029,7 +1033,8 @@ def patch_tags(
     keeps off ``/quotes`` (R2), and a deleted tag still in the client's map
     came back under Uncategorised (R3). A delta names only what the gesture
     changed. An added name nobody has made yet is the new-tag path, as in
-    ``put_tags``; a name already on the quote keeps its provenance.
+    ``put_tags``; a name already on the quote keeps its provenance. An add is
+    human unless the delta says otherwise (an undo putting a removed tag back).
     """
     _check_delta_size(data)
     db = _get_db(request)
@@ -1077,9 +1082,9 @@ def patch_tags(
                     quote_id=quote.id, tag_definition_id=td_id
                 ).first():
                     continue
-                db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td_id, source="human"))
+                db.add(QuoteTag(quote_id=quote.id, tag_definition_id=td_id, source=delta.source))
                 # The pin predicate, as in put_tags.
-                if not _is_sentiment_tag(db, td_id):
+                if delta.source == "human" and not _is_sentiment_tag(db, td_id):
                     _mint_pin(db, quote)
 
         db.commit()

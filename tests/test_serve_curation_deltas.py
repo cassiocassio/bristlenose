@@ -207,6 +207,47 @@ class TestPatchTags:
             db.close()
         assert _quote(client, "p1", 10).durable_id is None
 
+    def test_an_undone_removal_comes_back_with_the_source_it_had(
+        self, client: TestClient,
+    ) -> None:
+        # ⌘Z of removing an accepted suggestion sends the tag's source with the
+        # add (decision #14): it comes back autocode, and the quote is not pinned.
+        client.patch(f"{_P}/tags", json={"q-p1-10": {"add": ["machine"], "source": "autocode"}})
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            td = db.query(TagDefinition).filter_by(name="machine").one()
+            assert db.query(QuoteTag).filter_by(tag_definition_id=td.id).one().source == "autocode"
+        finally:
+            db.close()
+        assert _quote(client, "p1", 10).durable_id is None
+
+    def test_a_source_nobody_writes_is_refused(self, client: TestClient) -> None:
+        r = client.patch(f"{_P}/tags", json={"q-p1-10": {"add": ["x"], "source": "robot"}})
+        assert r.status_code == 422
+
+    def test_every_source_the_code_writes_can_be_restored(self) -> None:
+        # An undo sends the removed tag's source back; a value the PATCH refuses
+        # would fail that undo every time. Every QuoteTag(source="…") in the code
+        # must be one TagDelta accepts.
+        import ast
+        import typing
+
+        from bristlenose.server.routes.data import TagDelta
+
+        allowed = set(typing.get_args(TagDelta.model_fields["source"].annotation))
+        written: dict[str, str] = {}
+        for path in (Path(__file__).parent.parent / "bristlenose").rglob("*.py"):
+            for node in ast.walk(ast.parse(path.read_text(), str(path))):
+                if (
+                    isinstance(node, ast.Call)
+                    and getattr(node.func, "id", getattr(node.func, "attr", None)) == "QuoteTag"
+                ):
+                    for kw in node.keywords:
+                        if kw.arg == "source" and isinstance(kw.value, ast.Constant):
+                            written[kw.value.value] = f"{path.name}:{node.lineno}"
+        assert {"autocode", "pipeline", "codebook-builder"} <= set(written), written
+        assert set(written) <= allowed, {v: w for v, w in written.items() if v not in allowed}
+
     def test_a_sentiment_named_tag_does_not_pin(self, client: TestClient) -> None:
         db = client.app.state.db_factory()  # type: ignore[attr-defined]
         try:

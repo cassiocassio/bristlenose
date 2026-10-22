@@ -319,6 +319,44 @@ describe("nameSpeaker — a rename that fails", () => {
   });
 });
 
+// Decision #32 under #15's rule (22 Oct 2026): the entry is recorded at once,
+// so an undo pressed in flight still waits for the write, and withdrawn if the
+// write fails, since the rename never happened.
+describe("nameSpeaker — the undo entry of a rename that fails", () => {
+  const ann: SpeakerNameState = { full_name: "Ann Archer", short_name: "Ann", confirmed: false };
+  const annie: SpeakerNameState = { full_name: "Ann Archer", short_name: "Annie", confirmed: true };
+  const people = { p1: { full_name: "Ann Archer", short_name: "Ann", role: "" } };
+
+  it("leaves nothing to undo, and writes nothing on ⌘Z", async () => {
+    putMock.mockRejectedValueOnce(new Error("PUT 409"));
+    await expect(nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked })).rejects.toThrow();
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+    putMock.mockClear();
+    expect(await undo()).toBe(false);
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  // The undo's write went out after it and landed, so the act stays where
+  // that left it, and Redo writes the pick for real.
+  it("an undo pressed while it was in flight keeps the act", async () => {
+    let fail!: (e: unknown) => void;
+    putMock.mockReturnValueOnce(new Promise<void>((_, rej) => { fail = rej; }));
+    const named = nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    const undone = undo();
+    fail(new Error("offline"));
+    await expect(named).rejects.toThrow();
+    expect(await undone).toBe(true);
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: true });
+  });
+
+  it("keeps the entry when a participant's name landed and only the flag failed", async () => {
+    peopleMock.mockResolvedValue(structuredClone(people));
+    putMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("PUT 500"));
+    await expect(nameSpeaker({ sessionId: "s1", code: "p1", before: ann, after: annie })).rejects.toThrow();
+    expect(getUndoState().undoAction).toBe("renameParticipant");
+  });
+});
+
 describe("nameSpeaker — the undo entry", () => {
   it("names the act for the Edit menu", async () => {
     await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });

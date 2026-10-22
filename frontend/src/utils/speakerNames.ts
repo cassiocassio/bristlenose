@@ -21,7 +21,7 @@
 
 import { getPeople, isSessionScopedCode, sendPut, toastSaveFailed } from "./api";
 import { isExportMode } from "./exportData";
-import { pushUndo } from "../contexts/UndoStore";
+import { dropUndo, pushUndo } from "../contexts/UndoStore";
 import {
   PEOPLE_CHANGED_EVENT,
   type PeopleChangedDetail,
@@ -120,8 +120,22 @@ async function writeSlot(
       ...people,
       [code]: { ...entry, full_name, short_name: state.short_name },
     });
+    // The name has changed on the server whatever the flag's write does.
+    await sendPut(slotPath(sessionId, code), { confirmed: state.confirmed }).catch(
+      (err: unknown) => {
+        throw new PartlyWritten(err);
+      },
+    );
+    return;
   }
   await sendPut(slotPath(sessionId, code), { confirmed: state.confirmed });
+}
+
+/** A participant's write whose name landed and whose flag did not. */
+class PartlyWritten extends Error {
+  constructor(readonly cause: unknown) {
+    super("the name was written, the flag was not");
+  }
 }
 
 /** Bumped by every act and every undo or redo on a slot, so a failed write
@@ -184,10 +198,16 @@ export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs)
       throw err;
     });
   };
-  pushUndo({
+  const undoEntry = {
     action: actionFor(code, before, after),
     undo: () => step(before, after),
     redo: () => step(after, before),
+  };
+  // Recorded at once, so an undo pressed while the write is in flight waits
+  // for it; withdrawn if the rename did not happen at all (decisions #15, #32).
+  pushUndo(undoEntry);
+  done.catch((err: unknown) => {
+    if (!(err instanceof PartlyWritten)) dropUndo(undoEntry);
   });
   return done;
 }

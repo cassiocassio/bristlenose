@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   UNDO_DEPTH,
   clearUndo,
+  dropUndo,
   getUndoState,
   pushUndo,
   redo,
@@ -115,6 +116,57 @@ describe("UndoStore", () => {
     refuse = false;
     expect(await undo()).toBe(true);
     expect(getUndoState()).toMatchObject({ undoAction: "first", redoAction: "second" });
+  });
+
+  // Decision #15: an act whose own write failed is withdrawn, and the stack is
+  // as it was before it: the redo branch it ended comes back.
+  it("a withdrawn act gives back the redo branch it ended", async () => {
+    pushUndo({ action: "first", undo: () => {}, redo: () => {} });
+    await undo();
+    const failed = { action: "second", undo: () => {}, redo: () => {} };
+    pushUndo(failed);
+    expect(getUndoState().canRedo).toBe(false);
+    dropUndo(failed);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first", pushes: 2 });
+  });
+
+  it("a withdrawn act gives back an act it pushed off the bottom", () => {
+    for (let i = 0; i < UNDO_DEPTH; i++) pushUndo({ action: `a${i}`, undo: () => {}, redo: () => {} });
+    const failed = { action: "over", undo: () => {}, redo: () => {} };
+    pushUndo(failed);
+    dropUndo(failed);
+    let n = 0;
+    // Count by undoing: the oldest is back, so there are UNDO_DEPTH again.
+    while (getUndoState().canUndo) { void undo(); n++; }
+    expect(n).toBe(UNDO_DEPTH);
+  });
+
+  it("after a newer act, a withdrawn act leaves the redo branch ended", async () => {
+    pushUndo({ action: "first", undo: () => {}, redo: () => {} });
+    await undo();
+    const failed = { action: "second", undo: () => {}, redo: () => {} };
+    pushUndo(failed);
+    pushUndo({ action: "third", undo: () => {}, redo: () => {} });
+    dropUndo(failed);
+    expect(getUndoState()).toMatchObject({ undoAction: "third", canRedo: false });
+  });
+
+  it("an act an undo has run on is not withdrawn: its write may have landed", async () => {
+    const act = { action: "first", undo: () => {}, redo: () => {} };
+    pushUndo(act);
+    await undo();
+    dropUndo(act);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
+  });
+
+  // Its own write failed, but the redo's write after it landed: the act is real.
+  it("an act undone and redone before its write failed is not withdrawn", async () => {
+    const act = { action: "first", undo: () => {}, redo: () => {} };
+    pushUndo(act);
+    await undo();
+    await redo();
+    dropUndo(act);
+    expect(getUndoState()).toMatchObject({ undoAction: "first", canRedo: false });
   });
 
   it("a failed redo leaves the act to redo", async () => {

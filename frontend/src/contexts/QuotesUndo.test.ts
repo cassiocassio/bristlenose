@@ -144,8 +144,10 @@ describe("hide", () => {
     hideQuotes(["q1"]);
     vi.advanceTimersByTime(HIDE_DURATION);
     await undo();
-    await redo();
+    // A hide's redo resolves once the collapse has committed and saved.
+    const redone = redo();
     vi.advanceTimersByTime(HIDE_DURATION);
+    expect(await redone).toBe(true);
     expect(getQuotesSnapshot().hidden).toEqual({ q1: true });
   });
 
@@ -154,8 +156,9 @@ describe("hide", () => {
     vi.advanceTimersByTime(HIDE_DURATION);
     unhideQuotes(["q1"]);
     expect(getUndoState().undoAction).toBe("unhide");
-    await undo();
+    const undone = undo();
     vi.advanceTimersByTime(HIDE_DURATION);
+    expect(await undone).toBe(true);
     expect(getQuotesSnapshot().hidden).toEqual({ q1: true });
   });
 });
@@ -185,6 +188,26 @@ describe("tags", () => {
     expect(getQuotesSnapshot().tags.q1[1]).toEqual(tag("B"));
     await redo();
     expect(tagNames("q1")).toEqual(["A", "C"]);
+  });
+
+  it("undoing the removal of an accepted suggestion puts it back as AutoCode (#14)", async () => {
+    resetStore();
+    const accepted = { ...tag("Trust"), source: "autocode" };
+    initFromQuotes([quote("q1", [accepted])]);
+    removeTag("q1", "Trust");
+    patchTagsMock.mockClear();
+    await undo();
+    expect(patchTagsMock).toHaveBeenCalledWith({ q1: { add: ["Trust"], source: "autocode" } });
+    expect(getQuotesSnapshot().tags.q1).toEqual([accepted]);
+  });
+
+  it("undoing the removal of a hand-made tag sends a plain add", async () => {
+    resetStore();
+    initFromQuotes([quote("q1", [{ ...tag("Trust"), source: "human" }])]);
+    removeTag("q1", "Trust");
+    patchTagsMock.mockClear();
+    await undo();
+    expect(patchTagsMock).toHaveBeenCalledWith({ q1: { add: ["Trust"] } });
   });
 
   it("undo is a delta: a tag added since by another path survives", async () => {

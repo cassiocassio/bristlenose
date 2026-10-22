@@ -19,6 +19,7 @@ trued-against: HEAD@main on 2026-10-04
 
 ## Changelog
 
+- _2026-10-22_ — four owner rulings on undo after a failed save (decisions #14, #15, #30–#32). A gesture whose write fails is withdrawn from the stack (`dropUndo`), so Edit ▸ Undo names the act before it rather than a no-op; a write that partly landed keeps its entry. A failed undo or redo of a star, hide, tag or edit now stays where it was, as split and join have since R9 (their undo used to return before its write answered). A speaker rename is still recorded at once, so an undo pressed in flight waits for it, and is withdrawn if the rename failed outright. Undoing the removal of an accepted suggestion puts the tag back as AutoCode, not as a human tag that pinned the quote. A change only in spacing is never a quote edit, in either direction. Eye toggles stay off the stack: view state.
 - _2026-10-20_ — three follow-ups to the delta writes. The eye toggle's `/hidden-tag-groups` takes a `PATCH` of the groups it changed (the SPA no longer sends the whole set, which erased groups hidden on the server when an eye was clicked before the first read landed). A failed undo or redo of a speaker name says so (a failed `/people` read used to be silent) and puts the name back on screen. A quote edit opened and left unchanged records nothing, by blur, click outside or Enter as well as by unmount. Later the same day: a failed rename on the Sessions grid puts the name back too, as its undo does (the grid drew the new name and kept it); and "unchanged" means unchanged from before the edit, since a bracket drag re-bases the edit's words on what was typed and a typed edit with its bracket put back was being dropped.
 - _2026-10-04_ — trued against the build: status `partial`; the 28 Jul "what exists" table kept beside a 4 Oct one; the substrate section records that deltas shipped instead of snapshots; the divide's points 1–4 and the open questions annotated with what was decided. New finding recorded under point 2: a pending sidebar removal shadowed the whole report stack, indefinitely — fixed the same day (a new report act settles it).
 - _2026-10-04_ — built: the report stack (`contexts/UndoStore.ts`, `components/UndoSync.tsx`, the `undo-state` channel live both ways with named Undo and Redo), first for speaker names, then star/hide/tag, then text edits.
@@ -62,7 +63,9 @@ where it was, beneath any act done meanwhile, so Edit offers the same Undo again
 rather than a Redo for something never undone; a redo that fails after a new
 act is dropped, since that act ended the redo branch. The entry's write says
 why it failed (paragraph edits through `toastSaveFailed`, like their first
-write).
+write). Since 22 Oct 2026 the same holds for star, hide, tag and edit, and an
+act whose own write failed leaves the stack altogether (`dropUndo`, decision
+#15).
 
 **28 Jul 2026 survey, kept as written:**
 
@@ -152,7 +155,8 @@ snapshot-and-replay undo without any new server vocabulary.
 > stack: view state), and a speaker name's failed rename, undo or redo puts
 > the name back unless a later act on that slot moved it (`speakerNames.ts`).
 > The rename's own entry is still recorded at once, before its write lands, as a
-> quote's is.
+> quote's is, and since 22 Oct 2026 it is withdrawn if the rename failed
+> outright, as a quote gesture's is (decisions #15, #32).
 
 Two caveats that stop it being free:
 

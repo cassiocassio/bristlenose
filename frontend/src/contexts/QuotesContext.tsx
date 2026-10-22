@@ -49,7 +49,7 @@ import type { ApiError } from "../utils/api";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { isExportMode } from "../utils/exportData";
-import { pushUndo } from "./UndoStore";
+import { dropUndo, pushUndo } from "./UndoStore";
 
 // ── State shape ──────────────────────────────────────────────────────────
 
@@ -381,10 +381,10 @@ const unsettled = new Map<string, Unsettled>();
  * That value is the one before the first unanswered write, moved on by each
  * write that lands, so a later gesture that saved keeps its value (a star made
  * again after a failed one stays), and two failures in a row go back to before
- * both. The gesture's undo entry stays on the stack; its inverse finds nothing
- * to change and sends nothing.
+ * both. Resolves with how much of this write landed, and never rejects: the
+ * write has already said why it failed.
  */
-function send(write: Promise<void>, changes: Change[]): void {
+function send(write: Promise<void>, changes: Change[]): Promise<Landed> {
   for (const c of changes) {
     const u = unsettled.get(c.key);
     if (u) u.count += 1;
@@ -406,15 +406,56 @@ function send(write: Promise<void>, changes: Change[]): void {
       if (u.failed) setState(u.server);
     }
   };
-  write.then(
-    () => answered(() => true),
+  return write.then(
+    () => {
+      answered(() => true);
+      return "all";
+    },
     (err: unknown) => {
       // A write the server could only partly place names the quotes it could
       // not (a re-run removed them); the rest landed.
       const unresolved = (err as ApiError | null)?.unresolved;
-      answered(unresolved ? (c) => !unresolved.includes(c.id) : () => false);
+      const landed = unresolved ? (c: Change) => !unresolved.includes(c.id) : () => false;
+      answered(landed);
+      return changes.some(landed) ? "some" : "none";
     },
   );
+}
+
+/** How much of a write landed. A gesture that writes nothing lands "all":
+ *  nothing it meant to change is left unsaved. */
+type Landed = "all" | "some" | "none";
+
+const LANDED: Promise<Landed> = Promise.resolve("all");
+
+/** An undo or redo none of whose write landed fails, so the stack keeps it
+ *  where it was and Edit still offers it (R9). One that partly landed has
+ *  moved: the quotes it could not place are gone (a re-run removed them), and
+ *  offering it again would fail the same way for ever. */
+function mustLand(written: Promise<Landed>): Promise<void> {
+  return written.then((landed) => {
+    if (landed === "none") throw new Error("not saved");
+  });
+}
+
+/**
+ * Put a gesture on the undo stack. Its undo and redo are the gesture's
+ * internal `write*` twin with recording off. A gesture none of whose write
+ * landed never happened, so its entry is withdrawn and Edit ▸ Undo names the
+ * act before it (decision #15); one that partly landed keeps it, and so does
+ * one an undo has already run on (`dropUndo`).
+ */
+function recordGesture(
+  action: string,
+  written: Promise<Landed>,
+  undo: () => Promise<Landed>,
+  redo: () => Promise<Landed>,
+): void {
+  const entry = { action, undo: () => mustLand(undo()), redo: () => mustLand(redo()) };
+  pushUndo(entry);
+  void written.then((landed) => {
+    if (landed === "none") dropUndo(entry);
+  });
 }
 
 /** Whether a write of this kind (`tags`, `badges`) on this quote is still
@@ -544,10 +585,10 @@ const badgeChange = (id: string, sentiment: string, deleted: boolean): Change =>
 });
 
 /** Send a star or hide change for these quotes. */
-function sendFlag(key: "starred" | "hidden", ids: string[], on: boolean): void {
-  if (ids.length === 0) return;
+function sendFlag(key: "starred" | "hidden", ids: string[], on: boolean): Promise<Landed> {
+  if (ids.length === 0) return LANDED;
   const write = key === "starred" ? patchStarred(each(ids, on)) : patchHidden(each(ids, on));
-  send(write, ids.map((id) => flagChange(key, id, on)));
+  return send(write, ids.map((id) => flagChange(key, id, on)));
 }
 
 /** `{ id: value }` for each id. */
@@ -559,8 +600,9 @@ function each<T>(ids: string[], value: T): Record<string, T> {
 
 // ── Undo (docs/design-people.md §B10, contexts/UndoStore.ts) ──────────────
 //
-// Each gesture below records ONE entry whose undo and redo are the same store
-// calls with `record` off, so an undo does not record itself. The inverse is
+// Each gesture below records ONE entry whose undo and redo are its internal
+// `write*` twin with `record` off, so an undo does not record itself (and a spy
+// on the exported function never sees an undo). The inverse is
 // a delta over the quotes the gesture actually changed — never a snapshot of
 // the whole map, which would also revert whatever was changed since by a path
 // that is not on the stack (an AutoCode accept, a refetch).
@@ -580,12 +622,17 @@ export function toggleStar(domId: string, newState: boolean): void {
  * `starActionIsUnstar` — see the note there.
  */
 export function setStarred(domIds: string[], newState: boolean, record = true): void {
+  void writeStarred(domIds, newState, record);
+}
+
+/** `setStarred`, resolving with what landed (the undo stack reads it). */
+function writeStarred(domIds: string[], newState: boolean, record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
 
   const targets = domIds.filter((id) => !!state.starred[id] !== newState);
-  if (targets.length === 0) return;
+  if (targets.length === 0) return LANDED;
 
   setState((prev) => {
     const starred = { ...prev.starred };
@@ -595,15 +642,17 @@ export function setStarred(domIds: string[], newState: boolean, record = true): 
     }
     return { ...prev, starred };
   });
-  sendFlag("starred", targets, newState);
+  const written = sendFlag("starred", targets, newState);
   announce(i18n.t(newState ? "announce.starred" : "announce.unstarred"));
   if (record) {
-    pushUndo({
-      action: newState ? "star" : "unstar",
-      undo: () => setStarred(targets, !newState, false),
-      redo: () => setStarred(targets, newState, false),
-    });
+    recordGesture(
+      newState ? "star" : "unstar",
+      written,
+      () => writeStarred(targets, !newState, false),
+      () => writeStarred(targets, newState, false),
+    );
   }
+  return written;
 }
 
 /**
@@ -617,12 +666,17 @@ export function setStarred(domIds: string[], newState: boolean, record = true): 
  * fly-down cascade is applied by the group to the elements once they render.
  */
 export function unhideQuotes(domIds: string[], record = true): void {
+  void writeUnhide(domIds, record);
+}
+
+/** `unhideQuotes`, resolving with what landed. */
+function writeUnhide(domIds: string[], record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
 
   const targets = domIds.filter((id) => state.hidden[id] || state.hiding.has(id));
-  if (targets.length === 0) return;
+  if (targets.length === 0) return LANDED;
   // A quote still mid-collapse was never sent as hidden: nothing to write.
   const landed = targets.filter((id) => state.hidden[id]);
 
@@ -637,15 +691,17 @@ export function unhideQuotes(domIds: string[], record = true): void {
     }
     return { ...prev, hidden, hiding };
   });
-  sendFlag("hidden", landed, false);
+  const written = sendFlag("hidden", landed, false);
   announce(i18n.t("announce.restored"));
   if (record) {
-    pushUndo({
-      action: "unhide",
-      undo: () => hideQuotes(targets, false),
-      redo: () => unhideQuotes(targets, false),
-    });
+    recordGesture(
+      "unhide",
+      written,
+      () => writeHide(targets, false),
+      () => writeUnhide(targets, false),
+    );
   }
+  return written;
 }
 
 /**
@@ -673,15 +729,20 @@ export const HIDE_DURATION = 300;
  * there is no direction argument; `unhideQuotes` restores.
  */
 export function hideQuotes(domIds: string[], record = true): void {
+  void writeHide(domIds, record);
+}
+
+/** `hideQuotes`, resolving with what landed once the collapse has committed. */
+function writeHide(domIds: string[], record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
 
   // Skip anything already hidden or already animating. Without this a second
   // press during the collapse window schedules a duplicate commit for the
   // same quotes.
   const targets = domIds.filter((id) => !state.hidden[id] && !state.hiding.has(id));
-  if (targets.length === 0) return;
+  if (targets.length === 0) return LANDED;
 
   setState((prev) => {
     const hiding = new Set(prev.hiding);
@@ -691,12 +752,17 @@ export function hideQuotes(domIds: string[], record = true): void {
 
   // ONE timer for the gesture, not one per quote. The commit is a single
   // state write and a single PATCH however many quotes are in it.
+  let committed: (written: Promise<Landed>) => void = () => undefined;
+  const written = new Promise<Landed>((resolve) => (committed = resolve));
   setTimeout(() => {
     // A quote restored during the collapse (⌘Z straight after a hide) has
     // already left `hiding`; committing it would hide it again behind the
     // undo's back.
     const landing = targets.filter((id) => state.hiding.has(id));
-    if (landing.length === 0) return;
+    if (landing.length === 0) {
+      committed(LANDED);
+      return;
+    }
     setState((prev) => {
       const hidden = { ...prev.hidden };
       const hiding = new Set(prev.hiding);
@@ -706,17 +772,19 @@ export function hideQuotes(domIds: string[], record = true): void {
       }
       return { ...prev, hidden, hiding };
     });
-    sendFlag("hidden", landing, true);
+    committed(sendFlag("hidden", landing, true));
     announce(i18n.t("announce.hidden"));
   }, HIDE_DURATION);
 
   if (record) {
-    pushUndo({
-      action: "hide",
-      undo: () => unhideQuotes(targets, false),
-      redo: () => hideQuotes(targets, false),
-    });
+    recordGesture(
+      "hide",
+      written,
+      () => writeUnhide(targets, false),
+      () => writeHide(targets, false),
+    );
   }
+  return written;
 }
 
 /** The undo action naming an edit to this key of the shared edits map. */
@@ -734,33 +802,35 @@ function editAction(key: string): string {
  * value — absent meaning "never edited", which the undo restores by removing
  * the key, so the quote or heading falls back to the pipeline's text.
  */
-function setEdit(key: string, text: string | undefined, record: boolean): void {
+function setEdit(key: string, text: string | undefined, record: boolean): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
   const before = state.edits[key];
-  if (before === text) return;
+  if (before === text) return LANDED;
   setState((prev) => {
     const edits = { ...prev.edits };
     if (text === undefined) delete edits[key];
     else edits[key] = text;
     return { ...prev, edits };
   });
-  send(patchEdits({ [key]: text ?? null }), [
+  const written = send(patchEdits({ [key]: text ?? null }), [
     { key: `edits:${key}`, id: key, before: withEdit(key, before), after: withEdit(key, text) },
   ]);
   if (record) {
-    pushUndo({
-      action: editAction(key),
-      undo: () => setEdit(key, before, false),
-      redo: () => setEdit(key, text, false),
-    });
+    recordGesture(
+      editAction(key),
+      written,
+      () => setEdit(key, before, false),
+      () => setEdit(key, text, false),
+    );
   }
+  return written;
 }
 
 /** Commit a quote's text — an edit, or the card's revert to the original. */
 export function commitEdit(domId: string, newText: string): void {
-  setEdit(domId, newText, true);
+  void setEdit(domId, newText, true);
 }
 
 /**
@@ -769,7 +839,7 @@ export function commitEdit(domId: string, newText: string): void {
  * (`section-cluster-{id}:title`, `theme-group-{id}:desc`).
  */
 export function commitHeadingEdit(headingKey: string, newText: string): void {
-  setEdit(headingKey, newText, true);
+  void setEdit(headingKey, newText, true);
 }
 
 export function addTag(domId: string, tag: TagResponse): void {
@@ -786,40 +856,47 @@ export function addTag(domId: string, tag: TagResponse): void {
  * that rule — manual adds, quick-apply and the sidebar all come through here).
  */
 export function addTagToQuotes(domIds: string[], tag: TagResponse, record = true): void {
+  void writeTagAdd(domIds, tag, record);
+}
+
+/** `addTagToQuotes`, resolving with what landed. */
+function writeTagAdd(domIds: string[], tag: TagResponse, record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
   const lower = tag.name.toLowerCase();
   const targets = [...new Set(domIds)].filter(
     (id) => !(state.tags[id] || []).some((t) => t.name.toLowerCase() === lower),
   );
-  if (targets.length === 0) return;
+  if (targets.length === 0) return LANDED;
   setState((prev) => {
     const tags = { ...prev.tags };
     for (const id of targets) tags[id] = [...(tags[id] || []), tag];
     return { ...prev, tags };
   });
-  send(
+  const written = send(
     patchTags(each(targets, { add: [tag.name] })),
     targets.map((id) => tagChange(id, tag, Infinity, true)),
   );
   lastUsedTag = tag;
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
   if (record) {
-    pushUndo({
-      action: "addTag",
-      undo: () => removeTagFromQuotes(targets, tag.name),
-      redo: () => addTagToQuotes(targets, tag, false),
-    });
+    recordGesture(
+      "addTag",
+      written,
+      () => removeTagFromQuotes(targets, tag.name),
+      () => writeTagAdd(targets, tag, false),
+    );
   }
+  return written;
 }
 
 /** Remove a tag by name from several quotes in one write. Undo's inverse of
  *  `addTagToQuotes`; not a gesture of its own, so it records nothing. */
-function removeTagFromQuotes(domIds: string[], tagName: string): void {
-  if (isExportMode()) return;
+function removeTagFromQuotes(domIds: string[], tagName: string): Promise<Landed> {
+  if (isExportMode()) return LANDED;
   const targets = domIds.filter((id) => (state.tags[id] || []).some((t) => t.name === tagName));
-  if (targets.length === 0) return;
+  if (targets.length === 0) return LANDED;
   const removed: Record<string, { tag: TagResponse; index: number }> = {};
   for (const id of targets) {
     const list = state.tags[id] || [];
@@ -834,20 +911,26 @@ function removeTagFromQuotes(domIds: string[], tagName: string): void {
     }
     return { ...prev, tags };
   });
-  send(
+  const written = send(
     patchTags(each(targets, { remove: [tagName] })),
     targets.map((id) => tagChange(id, removed[id].tag, removed[id].index, false)),
   );
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
+  return written;
 }
 
 export function removeTag(domId: string, tagName: string, record = true): void {
+  void writeTagRemove(domId, tagName, record);
+}
+
+/** `removeTag`, resolving with what landed. */
+function writeTagRemove(domId: string, tagName: string, record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
+  if (isExportMode()) return LANDED;
   const existing = state.tags[domId] || [];
   const index = existing.findIndex((t) => t.name === tagName);
-  if (index < 0) return;
+  if (index < 0) return LANDED;
   const removed = existing[index];
   setState((prev) => {
     const tags = { ...prev.tags };
@@ -855,22 +938,28 @@ export function removeTag(domId: string, tagName: string, record = true): void {
     if (tags[domId].length === 0) delete tags[domId];
     return { ...prev, tags };
   });
-  send(patchTags({ [domId]: { remove: [tagName] } }), [tagChange(domId, removed, index, false)]);
+  const written = send(
+    patchTags({ [domId]: { remove: [tagName] } }),
+    [tagChange(domId, removed, index, false)],
+  );
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
   if (record) {
-    pushUndo({
-      action: "removeTag",
-      undo: () => restoreTag(domId, removed, index),
-      redo: () => removeTag(domId, tagName, false),
-    });
+    recordGesture(
+      "removeTag",
+      written,
+      () => restoreTag(domId, removed, index),
+      () => writeTagRemove(domId, tagName, false),
+    );
   }
+  return written;
 }
 
-/** Put a removed tag back where it was. */
-function restoreTag(domId: string, tag: TagResponse, index: number): void {
-  if (isExportMode()) return;
+/** Put a removed tag back where it was, applied as it was: an accepted
+ *  suggestion comes back AutoCode, not as the researcher's own (decision #14). */
+function restoreTag(domId: string, tag: TagResponse, index: number): Promise<Landed> {
+  if (isExportMode()) return LANDED;
   const existing = state.tags[domId] || [];
-  if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) return;
+  if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) return LANDED;
   setState((prev) => {
     const tags = { ...prev.tags };
     const list = [...(tags[domId] || [])];
@@ -878,8 +967,13 @@ function restoreTag(domId: string, tag: TagResponse, index: number): void {
     tags[domId] = list;
     return { ...prev, tags };
   });
-  send(patchTags({ [domId]: { add: [tag.name] } }), [tagChange(domId, tag, index, true)]);
+  const asApplied = tag.source && tag.source !== "human" ? { source: tag.source } : {};
+  const written = send(
+    patchTags({ [domId]: { add: [tag.name], ...asApplied } }),
+    [tagChange(domId, tag, index, true)],
+  );
   announce(i18n.t("announce.tagAdded", { name: tag.name }));
+  return written;
 }
 
 export function deleteBadge(domId: string, sentiment: string): void {

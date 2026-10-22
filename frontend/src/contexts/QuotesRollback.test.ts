@@ -22,7 +22,7 @@ import {
   setStarred,
   unhideQuotes,
 } from "./QuotesContext";
-import { resetUndoStore, undo } from "./UndoStore";
+import { getUndoState, redo, resetUndoStore, undo } from "./UndoStore";
 import { _resetExportCache } from "../utils/exportData";
 
 vi.mock("../utils/api", () => ({
@@ -163,6 +163,113 @@ describe("a failed write takes the screen back", () => {
     restoreBadges("q1");
     await settle();
     expect(getQuotesSnapshot().deletedBadges.q1).toEqual(["negative"]);
+  });
+});
+
+// Decision #15 (22 Oct 2026): a gesture whose save failed never happened, so
+// Edit ▸ Undo names the act before it; an undo or redo whose save failed stays
+// where it was (R9), so the menu still offers it.
+describe("the undo stack after a failed save", () => {
+  it("a star that did not save leaves nothing to undo", async () => {
+    initFromQuotes([quote()]);
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    expect(getUndoState().undoAction).toBe("star");
+    await settle();
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: false });
+  });
+
+  it("the act before a failed one is the one Undo names", async () => {
+    initFromQuotes([quote()]);
+    addTag("q1", tag("Trust"));
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    await settle();
+    expect(getUndoState().undoAction).toBe("addTag");
+  });
+
+  it("a hide, an edit, a tag added and a tag removed that did not save", async () => {
+    vi.useFakeTimers();
+    try {
+      initFromQuotes([quote({ tags: [tag("A")] })]);
+      failNext(patchHidden);
+      hideQuotes(["q1"]);
+      await vi.runAllTimersAsync();
+      failNext(patchEdits);
+      commitEdit("q1", "second");
+      failNext(patchTags);
+      addTag("q1", tag("Trust"));
+      failNext(patchTags);
+      removeTag("q1", "A");
+      await vi.runAllTimersAsync();
+      expect(getUndoState().canUndo).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("an undo that did not save is still the act to undo", async () => {
+    initFromQuotes([quote()]);
+    setStarred(["q1"], true);
+    await settle();
+    failNext(patchStarred);
+    expect(await undo()).toBe(false);
+    expect(getQuotesSnapshot().starred.q1).toBe(true);
+    expect(getUndoState()).toMatchObject({ undoAction: "star", canRedo: false });
+  });
+
+  it("a redo that did not save is still the act to redo", async () => {
+    initFromQuotes([quote()]);
+    setStarred(["q1"], true);
+    await settle();
+    await undo();
+    failNext(patchStarred);
+    expect(await redo()).toBe(false);
+    expect(getQuotesSnapshot().starred.q1).toBeUndefined();
+    expect(getUndoState()).toMatchObject({ redoAction: "star", canUndo: false });
+  });
+
+  it("a failed star gives back the redo it ended", async () => {
+    initFromQuotes([quote()]);
+    addTag("q1", tag("Trust"));
+    await undo();
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    await settle();
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "addTag" });
+  });
+
+  // Its undo's write went out and landed, so the act stays where that left it.
+  it("an undo pressed before a failed star answers keeps the act", async () => {
+    initFromQuotes([quote()]);
+    failNext(patchStarred);
+    setStarred(["q1"], true);
+    await undo();
+    await settle();
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "star" });
+  });
+
+  it("an undo the server could only partly place has moved, and is not offered again", async () => {
+    initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
+    addTag("q1", tag("Trust"));
+    setStarred(["q1", "q2"], true);
+    await settle();
+    vi.mocked(patchStarred).mockImplementationOnce(() =>
+      Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q2"] })),
+    );
+    expect(await undo()).toBe(true);
+    await settle();
+    expect(getUndoState()).toMatchObject({ undoAction: "addTag", redoAction: "star" });
+  });
+
+  it("a write the server could only partly place keeps its entry", async () => {
+    initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
+    vi.mocked(patchStarred).mockImplementationOnce(() =>
+      Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q2"] })),
+    );
+    setStarred(["q1", "q2"], true);
+    await settle();
+    expect(getUndoState().undoAction).toBe("star");
   });
 });
 

@@ -66,6 +66,12 @@ let snapshot: UndoState = EMPTY;
 let pushes = 0;
 /** Bumped by every clear, so a write that fails after one puts nothing back. */
 let clears = 0;
+/** Acts an undo or redo has run on: their writes may have landed, so they
+ *  are never withdrawn (`dropUndo`). */
+let stepped = new WeakSet<UndoEntry>();
+/** What the last push replaced, so withdrawing that act puts it back. */
+let lastPush: { entry: UndoEntry; redo: UndoEntry[]; shifted?: UndoEntry; pushes: number } | null =
+  null;
 
 const listeners = new Set<() => void>();
 
@@ -101,7 +107,8 @@ export function useUndoState(): UndoState {
 export function pushUndo(entry: UndoEntry): void {
   undoStack.push(entry);
   pushes += 1;
-  if (undoStack.length > UNDO_DEPTH) undoStack.shift();
+  const shifted = undoStack.length > UNDO_DEPTH ? undoStack.shift() : undefined;
+  lastPush = { entry, redo: redoStack, shifted, pushes };
   redoStack = [];
   emit();
 }
@@ -133,6 +140,7 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
   const [from, to] = stacks();
   const entry = from.pop();
   if (!entry) return false;
+  stepped.add(entry);
   const at = from.length;
   const clearedAt = clears;
   const pushedAt = pushes;
@@ -155,9 +163,32 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
   }
 }
 
+/**
+ * Withdraw an act whose own write failed (decision #15): it never happened, so
+ * Edit ▸ Undo names the act before it rather than one whose undo does nothing.
+ * When nothing has been recorded since, the redo branch it ended and any act
+ * it pushed off the bottom come back too, so the stack is as it was. An act an
+ * undo or redo has already run on stays: that write may have landed, and the
+ * stack follows it (R9). `pushes` does not go back — the Mac has already read
+ * the rise.
+ */
+export function dropUndo(entry: UndoEntry): void {
+  if (stepped.has(entry)) return;
+  const i = undoStack.lastIndexOf(entry);
+  if (i < 0) return;
+  undoStack.splice(i, 1);
+  if (lastPush?.entry === entry && lastPush.pushes === pushes) {
+    redoStack = lastPush.redo;
+    if (lastPush.shifted) undoStack.unshift(lastPush.shifted);
+  }
+  lastPush = null;
+  emit();
+}
+
 /** Forget both stacks — the data the entries describe has been replaced. */
 export function clearUndo(): void {
   clears += 1;
+  lastPush = null;
   if (undoStack.length === 0 && redoStack.length === 0) return;
   undoStack = [];
   redoStack = [];
@@ -169,6 +200,8 @@ export function resetUndoStore(): void {
   clears += 1;
   undoStack = [];
   redoStack = [];
+  stepped = new WeakSet();
+  lastPush = null;
   pushes = 0;
   snapshot = EMPTY;
   listeners.clear();

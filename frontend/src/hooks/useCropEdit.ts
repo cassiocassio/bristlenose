@@ -138,8 +138,10 @@ export function useCropEdit({
       // The card's unmount path commits through here too (QuoteCard, R88).
       // Compared with the text before the edit, not `words`: a bracket drag
       // re-bases `words` on what was typed, which would read as unchanged.
-      const unchanged = preEditTextRef.current.split(/\s+/).filter(Boolean).join(" ");
-      if (newText.length > 0 && newText !== unchanged) {
+      // Both sides single-spaced: the report does not show spacing, so a
+      // change only in spacing is no edit either way (decision #30).
+      const spaced = (text: string) => text.split(/\s+/).filter(Boolean).join(" ");
+      if (newText.length > 0 && spaced(newText) !== spaced(preEditTextRef.current)) {
         onCommit(newText);
       } else {
         onCancel();

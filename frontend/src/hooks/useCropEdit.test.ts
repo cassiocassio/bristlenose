@@ -90,6 +90,27 @@ describe("useCropEdit", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  // Decision #30 (22 Oct 2026): the report does not show spacing, so a change
+  // only in spacing is no edit, whichever way it goes.
+  it("an untouched quote whose text has a double space commits nothing", () => {
+    const { result, onCommit, onCancel } = makeHook("hello  world");
+    act(() => result.current.enterEditMode());
+    const el = document.createElement("span");
+    el.textContent = "hello  world";
+    act(() => result.current.commitEdit(el));
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("adding only a space commits nothing", () => {
+    const { result, onCommit } = makeHook("hello world");
+    act(() => result.current.enterEditMode());
+    const el = document.createElement("span");
+    el.textContent = "hello   world";
+    act(() => result.current.commitEdit(el));
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
   it("commitEdit with empty text calls onCancel", () => {
     const { result, onCancel } = makeHook("hello world");
     act(() => result.current.enterEditMode());

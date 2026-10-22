@@ -327,6 +327,9 @@ export function toastSaveFailed(err: unknown): void {
 export interface CurationDelta {
   add?: string[];
   remove?: string[];
+  /** Tags only: how the added tags were applied, when an undo puts a removed
+   *  one back (`QuoteTag.source`). Absent, the server records "human". */
+  source?: string;
 }
 
 const writeQueues = new Map<string, Promise<void>>();

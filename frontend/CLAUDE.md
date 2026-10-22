@@ -118,7 +118,14 @@ from store state. Writes to one path are queued, in order, so a star and its
 unstar, or an act and its ⌘Z, cannot commit the wrong way round (R4), and one
 that hangs fails after 30 s; a failed one toasts, and once a value's writes are
 all answered the store puts it back to what the server is known to hold
-(`send` in `QuotesContext.tsx`, R7).
+(`send` in `QuotesContext.tsx`, R7). **The undo stack follows the write
+(decision #15, 22 Oct 2026):** a gesture none of whose write landed is
+withdrawn (`recordGesture` → `dropUndo`, which also gives back the redo branch
+it ended), unless an undo of it has already run; and an entry's undo or redo
+fails only when none of its write landed (`mustLand`), so a failed one stays
+where it was. The exported gesture functions stay `void`; their `write*` twins return
+what landed, because a promise returned into a test's `act(() => …)` makes it
+an un-awaited async act that breaks every later `renderHook` in the file.
 
 **A per-item store call inside a bulk gesture is still n writes.** Measured 22
 Sep 2026, under the whole-map helpers: hiding a selection cost **9 writes for 3
@@ -134,8 +141,8 @@ it** — looping an existing per-item one is the defect. The last one,
 `addTag` looped by quick-apply, the tag sidebar and a selection's tag input,
 became `addTagToQuotes` on 4 Oct 2026. **And the bulk function is also where
 undo lives:** each gesture records one entry on the report's stack
-(`contexts/UndoStore.ts`), and its inverse is the same function with
-`record = false` — so a gesture that loops a per-item call is also n undo
+(`contexts/UndoStore.ts`), and its inverse is the same function's internal
+`write*` twin with `record = false` — so a gesture that loops a per-item call is also n undo
 entries and an undo that races itself.
 
 **Two things that made the hide case hard, and generalise.** (1) The

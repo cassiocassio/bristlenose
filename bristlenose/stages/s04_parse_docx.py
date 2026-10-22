@@ -22,25 +22,20 @@ logger = logging.getLogger(__name__)
 #: pipeline folds it into the transcribe stage's input fingerprint, so a
 #: .docx session is re-parsed on the next run rather than served from a cache
 #: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
-DOCX_PARSER_VERSION = 3
+DOCX_PARSER_VERSION = 4
 
-# Teams transcript patterns:
-# "Speaker Name  00:01:23" or "Speaker Name 0:01:23"
-_TEAMS_SPEAKER_LINE = re.compile(
-    r"^(.+?)\s+(\d{1,2}:\d{2}(?::\d{2})?)\s*$"
-)
-
-# The same header, but insisting on the RUN OF SPACES Teams puts between the
-# name and the timecode ("Martin Storey   0:04" — three, in the specimen).
+# Teams speaker heading: "Martin Storey   0:04" — the name, a run of ordinary
+# spaces, then M:SS or H:MM:SS, as the first line of its paragraph.
 #
-# This exists only to license a ONE-header transcript. Two headers is weak
-# evidence on its own because `_TEAMS_SPEAKER_LINE` is loose enough to match an
-# ordinary sentence ending in a clock time, so the original guard demanded two
-# of them. But the observed Teams export is a single 39-second turn, and one
-# header is all a short interview ever has — the guard refused a valid file.
-# The wide separator is the discriminator that a prose line ("Total runtime
-# 1:45", one space) does not have.
-_TEAMS_SPEAKER_LINE_WIDE = re.compile(
+# Measured, not assumed: every heading in a 38-minute export from a business
+# tenant (27 Sep 2026, 214 of 214) and the one in the 15 Aug 2026 fixture
+# (`tests/fixtures/platform-transcripts/teams-meeting-recording-2026-08-15.json`)
+# puts THREE spaces between name and timecode. One space is a prose shape,
+# never Teams': "Let's meet at 10:30" inside a turn, or "Total runtime 1:45" in
+# an untimed Word transcript. A one-space matcher read such a line as a new
+# speaker at that time, splitting the real turn and inventing a participant.
+# Two or more is the measured shape with a margin; one is never accepted.
+_TEAMS_SPEAKER_LINE = re.compile(
     r"^(.+?)\s{2,}(\d{1,2}:\d{2}(?::\d{2})?)\s*$"
 )
 
@@ -134,9 +129,11 @@ def _parse_docx(path: Path) -> list[TranscriptSegment]:
         return []
 
     # Google Meet first: its timecode+"Name: text" pairing is the more specific
-    # shape, and a Meet document can incidentally satisfy the looser Teams
-    # header pattern (the localised "Transcription ended after 00:00:39" trailer
-    # matches `_TEAMS_SPEAKER_LINE`, for one).
+    # shape, so it gets the first look at a document that has bare timecodes
+    # and `Name: text` turns. The observed Meet export has no line in Teams'
+    # heading shape (its "Transcription ended after 00:00:39" trailer has one
+    # space, which the old one-space matcher accepted), so the order now only
+    # matters for a document that carries both shapes.
     meet_segments, meet_dropped, meet_orphans = _try_parse_gmeet_format(lines)
     if meet_segments:
         logger.info(
@@ -329,8 +326,6 @@ def _try_parse_teams_format(lines: list[str]) -> list[TranscriptSegment] | None:
     current_start: float | None = None
     current_end: float | None = None
     current_texts: list[str] = []
-    matched_headers = 0
-    strong_headers = 0  # arrow notation, or a name/timecode gap of 2+ spaces
 
     for para in lines:
         # Try matching speaker + timestamp (arrow format)
@@ -346,11 +341,9 @@ def _try_parse_teams_format(lines: list[str]) -> list[TranscriptSegment] | None:
             current_start = parse_timecode(arrow_match.group(2))
             current_end = parse_timecode(arrow_match.group(3))
             current_texts = []
-            matched_headers += 1
-            strong_headers += 1  # "-->" is unambiguous; one is enough
             continue
 
-        # Try matching speaker + timestamp (simple format)
+        # Try matching speaker + timestamp (Teams' heading, measured shape)
         speaker_match = _TEAMS_SPEAKER_LINE.match(para)
         if speaker_match:
             # Flush previous segment
@@ -362,10 +355,7 @@ def _try_parse_teams_format(lines: list[str]) -> list[TranscriptSegment] | None:
             current_speaker = speaker_match.group(1).strip()
             current_start = parse_timecode(speaker_match.group(2))
             current_end = None
-            if _TEAMS_SPEAKER_LINE_WIDE.match(para):
-                strong_headers += 1
             current_texts = []
-            matched_headers += 1
             continue
 
         # Try timestamp-only line
@@ -390,11 +380,10 @@ def _try_parse_teams_format(lines: list[str]) -> list[TranscriptSegment] | None:
             current_speaker, current_start, current_end, current_texts
         ))
 
-    # Two loose headers, or one unambiguous one. A header with no speech under
-    # it produced no segment, so `segments` non-empty is part of the evidence.
+    # One heading in Teams' shape is enough: a short interview has one turn,
+    # and the shape itself is the evidence. A heading with no speech under it
+    # produced no segment, so `segments` non-empty is part of the evidence.
     if not segments:
-        return None
-    if matched_headers < 2 and strong_headers < 1:
         return None
 
     return segments

@@ -499,11 +499,19 @@ Phase 3 is a grab-bag of nice-to-haves. Can be done incrementally as users reque
 | Platform | Format in VTT/SRT | Example |
 |----------|-------------------|---------|
 | Teams VTT | `<v Name>text</v>` | `<v Sarah Jones>Hello</v>` |
-| Teams DOCX | `Name  HH:MM:SS` header | `Sarah Jones  0:03:12` |
+| Teams DOCX | `Name   M:SS` header (three spaces) | `Sarah Jones   3:12` |
 | Zoom VTT/SRT | `Name: text` prefix | `Sarah Jones: Hello everyone` |
 | Google Meet DOCX | `Name  HH:MM` header | `Sarah Jones  00:05` |
 | Otter TXT | `Name  M:SS` header | `Speaker 1  0:49` |
 | Rev TXT | `Name (HH:MM:SS):` | `Speaker 1 (00:00:00):` |
+
+**Teams DOCX heading, measured 22 Oct 2026.** The heading is the first line of
+its paragraph: the name, three ordinary spaces, then `M:SS` (or `H:MM:SS` past
+the hour). Every heading in a 38-minute export from a business tenant (214 of
+214) and the one in the 15 Aug 2026 fixture has that shape. This row used to
+show two spaces, and the parser accepted one, so a line of speech such as
+"Let's meet at 10:30" became a speaker at 10:30. The parser now requires two or
+more spaces (`_TEAMS_SPEAKER_LINE` in `s04_parse_docx.py`).
 
 ## Open questions
 

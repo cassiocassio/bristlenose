@@ -492,10 +492,53 @@ class TestParagraphIsNotTheUnitOfStructure:
         assert segments[0].speaker_label == "Martin Storey"
         assert segments[0].start_time == 4.0
 
+    def test_speech_ending_in_a_clock_time_stays_speech(self, tmp_path: Path) -> None:
+        """A line of speech ending in a time is not a new speaker at that time.
+
+        Teams writes three spaces between name and timecode. A one-space
+        matcher read "Let's meet at 10:30" as a speaker called "Let's meet at"
+        starting at 630 s, splitting the real turn and inventing a participant.
+        """
+        paragraphs = [
+            "Martin Storey   0:04\nSo how did it go?\nLet's meet at 10:30\nThen we talk.",
+            "Ana Ferrer   0:20\nFine.",
+        ]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert [s.speaker_label for s in segments] == ["Martin Storey", "Ana Ferrer"]
+        assert [s.start_time for s in segments] == [4.0, 20.0]
+        assert "Let's meet at 10:30" in segments[0].text
+
+    def test_real_shape_multi_turn_with_leading_line_break(
+        self, tmp_path: Path
+    ) -> None:
+        """Every paragraph of a real export opens with a line break."""
+        paragraphs = [
+            "\nMartin Storey   0:04\nSo how did the checkout go?",
+            "\nAna Ferrer   0:12\nIt kept resetting the address.",
+            "\nMartin Storey   1:05\nDid you try again?",
+            "\nAna Ferrer   1:20\nTwice, then I gave up.",
+        ]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert len(segments) == 4
+        assert [s.speaker_label for s in segments] == [
+            "Martin Storey", "Ana Ferrer", "Martin Storey", "Ana Ferrer",
+        ]
+        assert [s.start_time for s in segments] == [4.0, 12.0, 65.0, 80.0]
+        assert all(s.start_time != 0.0 for s in segments)
+
+    def test_one_space_header_is_not_a_speaker(self, tmp_path: Path) -> None:
+        """One space between name and time is a prose shape, never Teams'."""
+        paragraphs = ["Martin Storey 0:04", "Martin Storey 0:04"]
+        segments = parse_docx_file(_make_docx(tmp_path, paragraphs))
+
+        assert all(s.speaker_label is None for s in segments)
+
     def test_prose_ending_in_a_clock_time_is_not_a_speaker(
         self, tmp_path: Path
     ) -> None:
-        """The single-header licence rests on Teams' run of spaces.
+        """A speaker heading needs Teams' run of spaces.
 
         "Total runtime 1:45" is one space and must not become a speaker, or an
         untimed agency transcript silently acquires a fabricated participant.

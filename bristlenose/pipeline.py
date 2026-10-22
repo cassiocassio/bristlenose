@@ -198,6 +198,20 @@ def _print_stage(
     console.print(f" {cli_prefix(kind)} {message}{' ' * padding}{trailing}")
 
 
+#: What a run that found files and refused every one says, after naming them.
+#: The Mac's missing-input line in the same words (RE#20, decisions #81, #34).
+NOTHING_ANALYSABLE = "No analysable interviews found."
+
+
+def _nothing_found_line(refused: Sequence[object], empty_line: str) -> str:
+    """*empty_line* for a folder with nothing in it; else :data:`NOTHING_ANALYSABLE`.
+
+    "No supported files found." straight after naming the files it refused read
+    as a contradiction (decision #81).
+    """
+    return NOTHING_ANALYSABLE if refused else empty_line
+
+
 def _print_refusals(failed: list[StageFailure]) -> None:
     """Name every file that isn't in the report, and why.
 
@@ -1806,11 +1820,13 @@ class Pipeline:
             # empty result ended "Done" with an empty report (R116). The files
             # it declined are named first, in the files bucket too (R119's twin).
             self._record_ingest_outcome([], declined)
-            console.print("[red]No supported files found.[/red]")
+            console.print(f"[red]{_nothing_found_line(declined, 'No supported files found.')}[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
-                    message="No supported files found in input directory.",
+                    message=_nothing_found_line(
+                        declined, "No supported files found in input directory."
+                    ),
                     stage="s01_ingest",
                 ),
                 summary=self._summary,
@@ -3671,11 +3687,13 @@ class Pipeline:
         if not sessions:
             # Named first, in the files bucket too (R119's twin).
             self._record_ingest_outcome([], declined)
-            console.print("[red]No supported files found.[/red]")
+            console.print(f"[red]{_nothing_found_line(declined, 'No supported files found.')}[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
-                    message="No supported files found in input directory.",
+                    message=_nothing_found_line(
+                        declined, "No supported files found in input directory."
+                    ),
                     stage="s01_ingest",
                 ),
                 summary=self._summary,
@@ -4036,11 +4054,11 @@ class Pipeline:
             _print_refusals(refused)
         if not clean_transcripts:
             # A failed run, as `run` has it on an empty folder (R116).
-            console.print("[red]No transcript files found.[/red]")
+            console.print(f"[red]{_nothing_found_line(declined, 'No transcript files found.')}[/red]")
             raise PipelineAbandonedError(
                 cause=Cause(
                     category=CauseCategoryEnum.MISSING_INPUT,
-                    message="No transcript files found.",
+                    message=_nothing_found_line(declined, "No transcript files found."),
                 ),
                 summary=self._summary,
             )

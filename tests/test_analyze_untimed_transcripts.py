@@ -77,6 +77,10 @@ def test_analyze_names_the_untimed_transcript_and_records_it(runner, tmp_path: P
 
     assert result.exit_code == 1, result.output
     assert "jane.txt — Not a format Bristlenose reads." in result.output, result.output
+    # It found a file and refused it, so "No transcript files found." was false
+    # straight after naming it (RE#20, decision #81).
+    assert "No transcript files found" not in result.output, result.output
+    assert "No analysable interviews found." in result.output, result.output
     events = out_dir / ".bristlenose" / "pipeline-events.jsonl"
     terminus = json.loads(events.read_text(encoding="utf-8").splitlines()[-1])
     assert terminus["event"] == "run_failed", terminus

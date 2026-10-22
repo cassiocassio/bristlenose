@@ -48,7 +48,10 @@ def test_a_folder_with_nothing_to_read_fails_rather_than_finishing(
 
     assert result.exit_code == 1, result.output
     assert "Done" not in result.output, result.output
-    assert "No supported files found" in result.output
+    # An empty folder keeps its line; one with refused files names them and
+    # then says nothing in it could be analysed (decision #81).
+    expected = "No analysable interviews found." if contents else "No supported files found"
+    assert expected in result.output, result.output
     terminus = _terminus(input_dir)
     assert terminus["event"] == "run_failed", terminus
     assert terminus["cause"]["category"] == "missing_input", terminus
@@ -98,7 +101,10 @@ def test_a_folder_of_only_declined_files_names_each_one(
     assert "2 files not analysed" in result.output, result.output
     assert "guide.pdf — Not a format Bristlenose reads." in result.output, result.output
     assert "notes.xlsx — Not a format Bristlenose reads." in result.output, result.output
-    assert "No supported files found" in result.output
+    # Not "No supported files found." straight after naming two (decision #81).
+    assert "No supported files found" not in result.output, result.output
+    assert "No analysable interviews found." in result.output, result.output
+    assert _terminus(input_dir)["cause"]["message"] == "No analysable interviews found."
     ingest = _terminus(input_dir)["summary"]["ingest"]
     assert ingest is not None
     assert ingest["succeeded"] == 0, ingest

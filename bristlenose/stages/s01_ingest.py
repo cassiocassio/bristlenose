@@ -914,7 +914,9 @@ def ingest(
         )
 
     if not files:
-        logger.warning("No supported files found in %s", input_dir)
+        # Not "no supported files" straight after naming the ones refused (#81).
+        if not skipped:
+            logger.warning("No supported files found in %s", input_dir)
         return []
 
     logger.info("Found %d supported files", len(files))

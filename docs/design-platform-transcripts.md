@@ -501,7 +501,7 @@ Phase 3 is a grab-bag of nice-to-haves. Can be done incrementally as users reque
 | Teams VTT | `<v Name>text</v>` | `<v Sarah Jones>Hello</v>` |
 | Teams DOCX | `Name   M:SS` header (three spaces) | `Sarah Jones   3:12` |
 | Zoom VTT/SRT | `Name: text` prefix | `Sarah Jones: Hello everyone` |
-| Google Meet DOCX | `Name  HH:MM` header | `Sarah Jones  00:05` |
+| Google Meet DOCX | bare `HH:MM:SS` line, then `Name: text` turns under it | `00:00:11` then `Sarah Jones: Hello everyone` |
 | Otter TXT | `Name  M:SS` header | `Speaker 1  0:49` |
 | Rev TXT | `Name (HH:MM:SS):` | `Speaker 1 (00:00:00):` |
 

@@ -35,6 +35,7 @@ DOCX_PARSER_VERSION = 4
 # an untimed Word transcript. A one-space matcher read such a line as a new
 # speaker at that time, splitting the real turn and inventing a participant.
 # Two or more is the measured shape with a margin; one is never accepted.
+# `\s` also admits a tab or a no-break space as the gap, neither observed.
 _TEAMS_SPEAKER_LINE = re.compile(
     r"^(.+?)\s{2,}(\d{1,2}:\d{2}(?::\d{2})?)\s*$"
 )

@@ -310,7 +310,8 @@ class SessionRegistry:
         used = {_number(sid) for sid in self.sessions.values()}
         next_n = max(used, default=0) + 1
         keys = [
-            session_key(s.files) if s.files else f"sid:{s.session_id}" for s in sessions
+            session_key(s.files, root=input_dir) if s.files else f"sid:{s.session_id}"
+            for s in sessions
         ]
         # The same stem in two subfolders is two sessions (ingest keeps them
         # apart); their keys collide, so those — and only those — carry the
@@ -320,7 +321,7 @@ class SessionRegistry:
         named: list[str] = []
         for session, key in zip(sessions, keys, strict=True):
             if key in collisions and session.files:
-                key = session_key(session.files, qualified=True)
+                key = session_key(session.files, qualified=True, root=input_dir)
             if key in seen:
                 # Grouping makes keys unique; if that ever breaks, keep the two
                 # sessions apart rather than give them one number.
@@ -607,9 +608,12 @@ class SessionRegistry:
 
     # ── starts ───────────────────────────────────────────────────────────
 
-    def settle_starts(self, sessions: list[InputSession]) -> None:
+    def settle_starts(
+        self, sessions: list[InputSession], input_dir: Path | None = None,
+    ) -> None:
         """Keep each session's best start: this run's, unless a stored one ranks
         at least as well. Mutates ``session_date`` / ``session_start_source``.
+        ``input_dir`` keys a session as `apply` did.
 
         Ties keep the stored value on purpose — the same signal read again on
         a machine in another zone, or with a file that has since moved, should
@@ -629,7 +633,8 @@ class SessionRegistry:
 
                     for qualified in (False, True):
                         stored = self.carried.get(
-                            _name_carry_key(session_key(session.files, qualified=qualified)))
+                            _name_carry_key(session_key(
+                                session.files, qualified=qualified, root=input_dir)))
                         if stored is not None:
                             break
                 carried = stored is not None

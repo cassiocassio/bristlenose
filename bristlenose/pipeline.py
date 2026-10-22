@@ -1752,7 +1752,7 @@ class Pipeline:
         sessions = session_registry.apply(
             sessions, input_dir, fetch=not self.settings.skip_transcription,
         )
-        session_registry.settle_starts(sessions)
+        session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
         # What the Sessions lens shows from the first second of a first
         # analysis: every session, with whatever ingest knows about it.
@@ -3585,7 +3585,7 @@ class Pipeline:
             )
         session_registry = SessionRegistry.load(output_dir)
         sessions = session_registry.apply(sessions, input_dir, fetch=True)
-        session_registry.settle_starts(sessions)
+        session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
 
         ingest_elapsed = time.perf_counter() - t0
@@ -4777,7 +4777,7 @@ class Pipeline:
         # Read-only: the ids and starts the run gave these sessions.
         _registry = SessionRegistry.load(output_dir)
         sessions = _registry.apply(sessions, input_dir)
-        _registry.settle_starts(sessions)
+        _registry.settle_starts(sessions, input_dir)
 
         # --- Load existing people file for display names ---
         from bristlenose.people import build_display_name_map, load_people_file

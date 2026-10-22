@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from bristlenose.models import FileType, InputFile
+import pytest
+
+from bristlenose.models import FileType, InputFile, InputSession
 from bristlenose.stages.s01_ingest import (
     _is_zoom_local_dir,
     _normalise_stem,
@@ -535,6 +537,81 @@ class TestGroupIntoSessions:
             s for s in sessions if any(f.path.name.startswith("audioAlex") for f in s.files)
         )
         assert with_track.audio_path == self._ZOOM_TODAY / "audio1470811890.m4a"
+        set_aside = {f.path.name: f.error for f in with_track.files}
+        assert set_aside == {
+            "audioAlexExample11470811890.m4a": "duplicate_recording",
+            "audioSamSample21470811890.m4a": "duplicate_recording",
+            "video1470811890.mp4": None,
+            "audio1470811890.m4a": None,
+        }
+
+    # -- Zoom local folders: the claim stops at the input folder -------------
+    #
+    # A track is claimed by the meeting folder one level up only when that
+    # folder is part of the study. Pointing Bristlenose at "Audio Record/"
+    # itself, to transcribe each person's track, gives one session per track.
+
+    def _zoom_today_tree(self, root: Path) -> Path:
+        """The observed folder on disk, under *root*; returns the meeting folder."""
+        meeting = root / "2026-10-22 09.51.39 Alex Example's Zoom Meeting"
+        tracks = meeting / "Audio Record"
+        tracks.mkdir(parents=True)
+        # Distinct bytes, so the registry never folds two files as one copy.
+        for n, path in enumerate([
+            tracks / "audioAlexExample11470811890.m4a",
+            tracks / "audioSamSample21470811890.m4a",
+            meeting / "video1470811890.mp4",
+            meeting / "audio1470811890.m4a",
+        ]):
+            path.write_bytes(bytes([n]) * 16)
+        return meeting
+
+    def _ingest(self, input_dir: Path, monkeypatch: pytest.MonkeyPatch) -> list[InputSession]:
+        from bristlenose.stages import s01_ingest
+
+        monkeypatch.setattr(s01_ingest, "probe_media", lambda p: (12.0, None))
+        return s01_ingest.ingest(input_dir)
+
+    def test_zoom_meeting_folder_inside_the_input_is_one_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._zoom_today_tree(tmp_path)
+        sessions = self._ingest(tmp_path, monkeypatch)
+        assert [len(s.files) for s in sessions] == [4]
+
+    def test_zoom_meeting_folder_as_the_input_is_one_session(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        meeting = self._zoom_today_tree(tmp_path)
+        sessions = self._ingest(meeting, monkeypatch)
+        assert [len(s.files) for s in sessions] == [4]
+
+    def test_zoom_audio_record_as_the_input_is_a_session_per_track(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The meeting folder is above the input, so it claims nothing."""
+        from bristlenose.session_registry import SessionRegistry
+
+        tracks = self._zoom_today_tree(tmp_path) / "Audio Record"
+        sessions = self._ingest(tracks, monkeypatch)
+        assert sorted(s.files[0].path.name for s in sessions) == [
+            "audioAlexExample11470811890.m4a",
+            "audioSamSample21470811890.m4a",
+        ]
+        # And the registry keys them apart, as it did before the folder rule
+        # reached a subfolder: not both "zoom:<meeting>".
+        registry = SessionRegistry.load(tmp_path / "out")
+        registry.apply(sessions, tracks)
+        names = sorted(k for k in registry.sessions if not k.startswith("fp:"))
+        assert names == ["stem:audioalexexample11470811890", "stem:audiosamsample21470811890"]
+        # A Re-analyse's carried start finds the track by that same key.
+        from bristlenose.session_registry import _name_carry_key
+
+        registry.carried = {_name_carry_key("stem:audioalexexample11470811890"): {
+            "utc": "2026-10-22T08:51:39+00:00", "source": "cloud_import"}}
+        registry.settle_starts(sessions, tracks)
+        alex = next(s for s in sessions if s.files[0].path.name.startswith("audioAlex"))
+        assert alex.session_start_source == "cloud_import"
 
     def test_zoom_local_track_has_the_meetings_key(self) -> None:
         """The session registry keys on the folder; a track must not move it."""

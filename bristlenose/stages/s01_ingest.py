@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import sys
 import unicodedata
@@ -533,18 +534,45 @@ def _is_zoom_local_dir(dir_name: str) -> bool:
     return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))
 
 
-def _zoom_local_dir_of(path: Path) -> str | None:
+def _zoom_local_dir_of(path: Path, root: Path | None = None) -> str | None:
     """The Zoom local folder *path* belongs to, or None.
 
     A file in a subfolder of one belongs to it too: with "Record separate
     participant audio files" on, the client puts one track per person in
     ``Audio Record/`` (observed 2021 and 22 Oct 2026). Matched by place, not
     by that folder's name, which the client may localise.
+
+    That claim stops at *root*, the input folder: a meeting folder above it is
+    not part of the study, so pointing Bristlenose at ``Audio Record/`` itself
+    gives a session per track. ``None`` leaves the claim unbounded.
     """
-    for folder in (path.parent, path.parent.parent):
-        if folder.name and _is_zoom_local_dir(folder.name):
-            return folder.name
+    if path.parent.name and _is_zoom_local_dir(path.parent.name):
+        return path.parent.name
+    folder = path.parent.parent
+    if folder.name and _is_zoom_local_dir(folder.name) and _within(folder, root):
+        return folder.name
     return None
+
+
+def _within(folder: Path, root: Path | None) -> bool:
+    """Whether *folder* is *root* or inside it; always, with no root.
+
+    Resolved, so ``/tmp`` and ``/private/tmp`` agree; or as written, so a
+    meeting folder linked into the study (discovery keeps the link's path)
+    still counts.
+    """
+    if root is None:
+        return True
+
+    def lexical(p: Path) -> Path:
+        return Path(os.path.normpath(p.absolute()))
+
+    try:
+        if folder.resolve().is_relative_to(root.resolve()):
+            return True
+    except (OSError, RuntimeError):  # a link loop, a vanished target
+        pass
+    return lexical(folder).is_relative_to(lexical(root))
 
 
 def _stem_of(path: Path) -> str:
@@ -693,7 +721,9 @@ def fold_duplicate_transcript(
     )
 
 
-def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
+def session_key(
+    files: list[InputFile], *, qualified: bool = False, root: Path | None = None
+) -> str:
     """The stable identity of a session's file group — what the grouping keys on.
 
     Derived from the files rather than from the sid, so the same interview gets
@@ -708,9 +738,12 @@ def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
     in a run would otherwise share a key — the same stem in two subfolders
     (``_split_by_folder_if_colliding``). Only the registry asks for it, and only
     on a collision, so every other project's keys are untouched.
+
+    ``root`` is the input folder, bounding the Zoom claim as the grouping does
+    (`_zoom_local_dir_of`).
     """
     for f in files:
-        zoom_dir = _zoom_local_dir_of(f.path)
+        zoom_dir = _zoom_local_dir_of(f.path, root)
         if zoom_dir is not None:
             return f"zoom:{zoom_dir}"
     for f in files:
@@ -724,7 +757,7 @@ def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
 
 
 def group_into_sessions(
-    files: list[InputFile], *, order_by_start: bool = False
+    files: list[InputFile], *, order_by_start: bool = False, root: Path | None = None
 ) -> list[InputSession]:
     """Group files into sessions and assign participant numbers.
 
@@ -740,12 +773,15 @@ def group_into_sessions(
 
     Participant numbers (p1, p2, ...) are assigned by the creation date of the
     session's earliest file.
+
+    ``root`` is the input folder: a Zoom meeting folder above it claims none of
+    the files (`_zoom_local_dir_of`).
     """
     # -- Pass 1: Zoom local folders (all files in the folder = one session) ------
     zoom_dir_groups: dict[str, list[InputFile]] = {}
     remaining: list[InputFile] = []
     for f in files:
-        zoom_dir = _zoom_local_dir_of(f.path)
+        zoom_dir = _zoom_local_dir_of(f.path, root)
         if zoom_dir is not None:
             zoom_dir_groups.setdefault(zoom_dir, []).append(f)
         else:
@@ -872,7 +908,7 @@ def ingest(
         return []
 
     logger.info("Found %d supported files", len(files))
-    sessions = group_into_sessions(files, order_by_start=order_by_start)
+    sessions = group_into_sessions(files, order_by_start=order_by_start, root=input_dir)
     logger.info("Grouped into %d sessions", len(sessions))
 
     return sessions

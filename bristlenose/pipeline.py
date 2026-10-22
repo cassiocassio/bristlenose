@@ -5045,6 +5045,7 @@ def load_transcripts_from_dir(
         source_file = ""
         session_date = datetime.now(tz=timezone.utc)
         duration = 0.0
+        has_lines = False  # anything beyond the `#` header
 
         # A transcript saved from a Windows editor is UTF-16 or 1252 (R118).
         # One read: the hash below vouches for the bytes parsed here.
@@ -5079,6 +5080,7 @@ def load_transcripts_from_dir(
                 continue
             if line.startswith("#"):
                 continue
+            has_lines = True
 
             # Parse transcript lines: [MM:SS] or [H:MM:SS] [speaker_code] text
             # The bracket token is the speaker code (p1, m1, o1, ...) or
@@ -5172,8 +5174,13 @@ def load_transcripts_from_dir(
         elif skipped is not None:
             from bristlenose.stages.s01_ingest import SkippedFile
 
+            # Lines with no timecodes are a format this reader doesn't read
+            # (R119); a header and nothing else is a transcript with nothing in
+            # it, emptied by hand (decision #80).
             skipped.append(
                 SkippedFile(path, UnusableReason.UNSUPPORTED_FORMAT, "no timecoded lines")
+                if has_lines
+                else SkippedFile(path, UnusableReason.NO_LINES, "no lines")
             )
 
     return transcripts

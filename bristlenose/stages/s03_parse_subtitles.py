@@ -258,9 +258,10 @@ def decode_text_any_encoding(data: bytes, name: str) -> str:
 def empty_subtitle_reason(path: Path) -> UnusableReason | None:
     """Why a subtitle file that parsed to no segments holds no speech, or None.
 
-    ``EMPTY`` when it holds nothing (0 bytes, or a VTT with no cues, header
-    lines and notes alone); ``UNREADABLE`` when no cue timing reads, so it is
-    not a subtitle file or every cue was skipped; None when it has cues and no
+    ``EMPTY`` when it holds nothing (0 bytes); ``NO_LINES`` for a VTT with no
+    cues, header lines and notes alone (decision #80, 22 Oct 2026 — ``EMPTY``
+    blamed a transfer); ``UNREADABLE`` when no cue timing reads, so it is not
+    a subtitle file or every cue was skipped; None when it has cues and no
     words, which is "nothing was said". Until 20 Oct 2026 all three were
     stated as nothing said (R117).
     """
@@ -272,7 +273,7 @@ def empty_subtitle_reason(path: Path) -> UnusableReason | None:
         return UnusableReason.EMPTY
     if body[:6].upper() == "WEBVTT":
         # webvtt raises on a timing it cannot read, so a VTT here has none.
-        return None if "-->" in body else UnusableReason.EMPTY
+        return None if "-->" in body else UnusableReason.NO_LINES
     if not any(_SRT_TIMING_RE.match(line) for line in body.splitlines()):
         return UnusableReason.UNREADABLE
     return None

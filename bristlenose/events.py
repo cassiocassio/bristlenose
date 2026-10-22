@@ -175,6 +175,12 @@ class UnusableReason(str, Enum):
     #: 21 Oct 2026). Its own word because "a second recording" is not what a
     #: transcript is.
     DUPLICATE_TRANSCRIPT = "duplicate_transcript"
+    #: A transcript or subtitle file that reads and holds no lines: a
+    #: Bristlenose ``.txt`` emptied by hand to its header, a VTT with no cues.
+    #: Not ``EMPTY`` (its sentence is about a failed transfer) and not
+    #: ``UNSUPPORTED_FORMAT`` (the format is one we read) — RE#20, decision
+    #: #80, 22 Oct 2026.
+    NO_LINES = "no_lines"
 
 
 class EventTypeEnum(str, Enum):

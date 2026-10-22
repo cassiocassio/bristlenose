@@ -4,8 +4,9 @@ A subtitle that parsed to no segments reached the pipeline as a session with no
 words, and the silent-recording rule stated it as `NO_SPEECH`, "No speech found —
 nothing was said in this recording". For a 0-byte file, a header-only VTT or a
 text file wearing a .srt extension that is false: the file held nothing, or was
-not a subtitle file. These now take the existing `EMPTY` and `UNREADABLE`
-reasons. A file with cues and no words still reads as nothing said.
+not a subtitle file. These now take `EMPTY` (0 bytes), `NO_LINES` (a header and
+no cues, since 22 Oct 2026, decision #80) and `UNREADABLE`. A file with cues and
+no words still reads as nothing said.
 """
 
 from __future__ import annotations
@@ -37,7 +38,8 @@ def _gather(path: Path, kind: FileType):
 
 @pytest.mark.parametrize("name, data, reason", [
     ("empty.srt", b"", UnusableReason.EMPTY),
-    ("header-only.vtt", b"WEBVTT\n\n", UnusableReason.EMPTY),
+    # A VTT with a header and no cues holds no lines, not a failed transfer (#80).
+    ("header-only.vtt", b"WEBVTT\n\n", UnusableReason.NO_LINES),
     ("notes.srt", b"Interview notes, not subtitles.\nSee the recording.\n", UnusableReason.UNREADABLE),
 ])
 def test_a_subtitle_with_nothing_in_it_is_refused_by_the_right_name(
@@ -65,9 +67,10 @@ def test_cues_with_no_words_are_still_nothing_said(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("name, data, reason", [
-    # A YouTube-style export with header lines and no cues: empty, not "not a subtitle".
+    # A YouTube-style export with header lines and no cues: no lines, not "not a
+    # subtitle" and not a failed transfer (#80).
     ("headers.vtt", b"WEBVTT\nKind: captions\nLanguage: en\n\nNOTE exported\n\n",
-     UnusableReason.EMPTY),
+     UnusableReason.NO_LINES),
     # Every cue's timing malformed (R124 skips them all): it could not be read.
     ("bad-timings.srt", b"1\n00:00:aa,000 --> 00:00:02,000\nHello\n\n"
      b"2\n00;00;03,000 --> 00;00;04,000\nThere\n\n", UnusableReason.UNREADABLE),

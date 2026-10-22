@@ -72,6 +72,7 @@ MESSAGES: dict[UnusableReason, str] = {
     UnusableReason.DUPLICATE_TRANSCRIPT: (
         "A second copy of this session's transcript — the other one was used."
     ),
+    UnusableReason.NO_LINES: "No lines in this transcript — there is nothing to analyse.",
 }
 
 #: Leading bytes that identify a media container. Enough to answer the only

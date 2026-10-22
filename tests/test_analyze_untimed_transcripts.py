@@ -50,6 +50,23 @@ def test_the_loader_states_an_untimed_transcript_beside_a_timed_one(tmp_path: Pa
     ]
 
 
+@pytest.mark.parametrize("text", [
+    "# Transcript: s1\n# Source: a.mp4\n# Date: 2026-01-01\n# Duration: 00:10\n\n",
+    "",
+])
+def test_a_transcript_with_no_lines_is_named_as_that_not_as_a_format(
+    tmp_path: Path, text: str
+) -> None:
+    """A Bristlenose .txt emptied by hand, header kept, is not a format we can't
+    read: "Not a format Bristlenose reads." sent the researcher looking for a
+    conversion (RE#20, decision #80). Untimed text with lines keeps its reason."""
+    (tmp_path / "s1.txt").write_text(text, encoding="utf-8")
+    skipped: list = []
+
+    assert load_transcripts_from_dir(tmp_path, skipped=skipped) == []
+    assert [(s.path.name, s.reason) for s in skipped] == [("s1.txt", UnusableReason.NO_LINES)]
+
+
 def test_analyze_names_the_untimed_transcript_and_records_it(runner, tmp_path: Path) -> None:
     transcripts = tmp_path / "transcripts"
     transcripts.mkdir()

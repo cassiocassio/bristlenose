@@ -352,11 +352,19 @@ class TestIsZoomLocalDir:
     def test_rejects_teams_style(self) -> None:
         assert not _is_zoom_local_dir("User Research 20260130_093012")
 
-    def test_rejects_no_meeting_id(self) -> None:
-        assert not _is_zoom_local_dir("2026-01-15 14.30.22 Interview")
+    def test_matches_folder_without_meeting_id(self) -> None:
+        """Observed 22 Oct 2026: today's desktop client writes no meeting ID
+        ("2026-10-22 09.51.39 <Host>'s Zoom Meeting"). This case used to be
+        a rejection, written before any real folder was seen."""
+        assert _is_zoom_local_dir("2026-10-22 09.51.39 Alex Example's Zoom Meeting")
 
-    def test_rejects_short_id(self) -> None:
-        assert not _is_zoom_local_dir("2026-01-15 14.30.22 Interview 12345")
+    def test_rejects_date_without_zoom_time(self) -> None:
+        """The dotted time after the date is what marks Zoom's folder."""
+        assert not _is_zoom_local_dir("2026-01-15 Interview")
+        assert not _is_zoom_local_dir("2026-01-15 1430 Interview")
+
+    def test_rejects_screen_recording_name(self) -> None:
+        assert not _is_zoom_local_dir("Screen Recording 2026-01-15 at 14.30.22")
 
 
 # ---------------------------------------------------------------------------
@@ -472,6 +480,68 @@ class TestGroupIntoSessions:
         sessions = group_into_sessions(files)
         assert len(sessions) == 1
         assert sessions[0].has_existing_transcript is True
+
+    # -- Zoom local folders: real specimens ----------------------------------
+    #
+    # Observed 22 Oct 2026 on Martin's own meetings (names replaced, shape
+    # kept). Today's client writes no meeting ID in the folder name, so the
+    # folder rule missed it and one meeting became one session per file: the
+    # video, the mixed audio, and each per-participant track, all transcribed.
+
+    _ZOOM_TODAY = Path("/input/2026-10-22 09.51.39 Alex Example's Zoom Meeting")
+    _ZOOM_2021 = Path("/input/2021-06-14 11.44.02 Alex Example's Zoom Meeting 95138721600")
+
+    def _zoom_today_files(self) -> list[InputFile]:
+        """The folder as today's client writes it with "Record separate
+        participant audio files" on. Tracks first, as a walk may list them."""
+        tracks = self._ZOOM_TODAY / "Audio Record"
+        return [
+            _file("audioAlexExample11470811890.m4a", FileType.AUDIO, parent=tracks),
+            _file("audioSamSample21470811890.m4a", FileType.AUDIO, parent=tracks),
+            _file("video1470811890.mp4", FileType.VIDEO, parent=self._ZOOM_TODAY),
+            _file("audio1470811890.m4a", FileType.AUDIO, parent=self._ZOOM_TODAY),
+        ]
+
+    def test_zoom_local_folder_today_is_one_session(self) -> None:
+        sessions = group_into_sessions(self._zoom_today_files())
+        assert len(sessions) == 1
+        assert len(sessions[0].files) == 4
+
+    def test_zoom_local_folder_2021_tracks_join_the_meeting(self) -> None:
+        """The 2021 client's folder matched already; its per-participant
+        tracks in "Audio Record/" did not, and were a session each."""
+        tracks = self._ZOOM_2021 / "Audio Record"
+        files = [
+            _file("zoom_0.mp4", FileType.VIDEO, parent=self._ZOOM_2021),
+            _file("audio_only.m4a", FileType.AUDIO, parent=self._ZOOM_2021),
+            _file("audio_only_16778242_Alex_Example.m4a", FileType.AUDIO, parent=tracks),
+            _file("audio_only_16779266_Sam_Sample.m4a", FileType.AUDIO, parent=tracks),
+        ]
+        sessions = group_into_sessions(files)
+        assert len(sessions) == 1
+        assert len(sessions[0].files) == 4
+
+    def test_zoom_local_mixed_audio_is_the_one_transcribed(self, tmp_path: Path) -> None:
+        """Stage 2 transcribes the session's first audio file. That must be
+        the meeting's mixed track, never one participant's alone; the tracks
+        are kept in the session and stated as set aside."""
+        import asyncio
+
+        from bristlenose.stages.s02_extract_audio import extract_audio_for_sessions
+
+        sessions = group_into_sessions(self._zoom_today_files())
+        asyncio.run(extract_audio_for_sessions(sessions, tmp_path))
+        with_track = next(
+            s for s in sessions if any(f.path.name.startswith("audioAlex") for f in s.files)
+        )
+        assert with_track.audio_path == self._ZOOM_TODAY / "audio1470811890.m4a"
+
+    def test_zoom_local_track_has_the_meetings_key(self) -> None:
+        """The session registry keys on the folder; a track must not move it."""
+        from bristlenose.stages.s01_ingest import session_key
+
+        files = self._zoom_today_files()
+        assert session_key(files) == session_key(files[2:])
 
     def test_video_only_no_transcript(self) -> None:
         """Video file alone → has_existing_transcript=False."""

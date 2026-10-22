@@ -107,6 +107,13 @@ cannot download transcripts.
 
 **Session folder naming**: `{YYYY-MM-DD} {HH.MM.SS} {Topic} {MeetingID}/`
 
+**Observed on real recordings, 22 Oct 2026** (the owner's own test meetings; the table above is partly constructed):
+
+- **Local, today's desktop client:** folder `{YYYY-MM-DD} {HH.MM.SS} {Topic}/`, **no meeting ID**, holding `video{N}.mp4`, `audio{N}.m4a`, `recording.conf` (JSON naming the pair), `zoomver.tag` and `double_click_to_convert_0{1,2,3}.zoom` (unconverted, not media). No captions file was saved. With *Record separate participant audio files* on, an `Audio Record/` subfolder holds `audio{DisplayName}{digits}{N}.m4a`, one per person. Until this date the folder rule required the ID, so a meeting became one session per file; now the folder is the session, subfolder included, and the mixed `audio{N}.m4a` is the one transcribed (the per-person tracks are kept and stated as set aside).
+- **Local, 2021 client:** the ID form above, holding `zoom_0.mp4`, `audio_only.m4a`, `playback.m3u`, and `Audio Record/audio_only_{id}_{First}_{Last}.m4a` per person.
+- **Cloud, web download** (Zoom Hub and the player page give the same three): `GMT{YYYYMMDD}-{HHMMSS}_Recording_640x360.mp4`, `…_Recording.m4a`, `…_Recording.transcript.vtt`. These pair under the portal rule (`_ZOOM_PORTAL_RE`). No `.cc.vtt` and no chat file, though *Save closed caption as a VTT file* was on. A second download overwrites the first in Safari, so no ` (1)` name arises; a copy under another name is identical bytes, which the fingerprint fold already treats as one session.
+- **Cloud, Mac app import:** renamed on download (`{YYYY-MM-DD} {HHMM} — {Topic}.mp4` + `.vtt`), one session.
+
 **Speaker names**: Zoom display names — reliable when participants are signed in.
 Phone dial-in shows as phone number or "Call-in User 1".
 
@@ -200,8 +207,9 @@ and its platform transcript are automatically paired even when stems don't match
 - [x] **1a. Teams suffix stripping**: strip `-Meeting Recording`, date/time suffix
   (`{YYYYMMDD}_{HHMMSS}`), and `-meeting transcript` from stems before matching
 - [x] **1b. Zoom folder-as-session**: when an input subdirectory looks like a Zoom local
-  recording folder (`YYYY-MM-DD HH.MM.SS {Topic} {ID}/`), treat all files inside as one
-  session regardless of individual filenames
+  recording folder (`YYYY-MM-DD HH.MM.SS {Topic} [{ID}]/`; the ID is optional since
+  22 Oct 2026, when today's client was observed writing none), treat all files inside
+  as one session regardless of individual filenames, its `Audio Record/` subfolder included
 - [x] **1c. Zoom cloud ID matching**: extract the numeric meeting ID from Zoom cloud
   download filenames (`{Topic}_{ID}_{Date}`) and group files sharing the same ID
 - [x] **1d. Google Meet title+date matching**: ~~strip `({date})` parenthetical and

@@ -390,9 +390,17 @@ _ZOOM_PORTAL_RE = re.compile(
     r"^(gmt\d{8}-\d{6})_recording(?:_\d{2,5}x\d{2,5})?(?:\.transcript)?$",
 )
 
-# Zoom local folder: "2026-01-15 14.30.22 Topic 987654321"
+# Zoom local folder, as the desktop client writes it. Two observed shapes:
+#
+#   2021-06-14 11.44.02 <Host>'s Zoom Meeting 95138721600   (2021 client)
+#   2026-10-22 09.51.39 <Host>'s Zoom Meeting               (22 Oct 2026)
+#
+# Today's client drops the meeting ID, so the rule required one and missed
+# every new folder: video, mixed audio and each participant's track became a
+# session apiece. The dotted time after the date is what marks Zoom's folder;
+# the ID, when there is one, is just the end of the title.
 _ZOOM_LOCAL_DIR_RE = re.compile(
-    r"^\d{4}-\d{2}-\d{2}\s+\d{2}\.\d{2}\.\d{2}\s+.+\s+\d{9,11}$",
+    r"^\d{4}-\d{2}-\d{2}\s+\d{2}\.\d{2}\.\d{2}\s+.+$",
 )
 
 # Google Meet (prep for Phase 2): "Title (2026-01-28 at 14 30 GMT-5)"
@@ -523,6 +531,20 @@ def _normalise_stem(stem: str) -> str:
 def _is_zoom_local_dir(dir_name: str) -> bool:
     """Return True if *dir_name* matches the Zoom local recording folder pattern."""
     return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))
+
+
+def _zoom_local_dir_of(path: Path) -> str | None:
+    """The Zoom local folder *path* belongs to, or None.
+
+    A file in a subfolder of one belongs to it too: with "Record separate
+    participant audio files" on, the client puts one track per person in
+    ``Audio Record/`` (observed 2021 and 22 Oct 2026). Matched by place, not
+    by that folder's name, which the client may localise.
+    """
+    for folder in (path.parent, path.parent.parent):
+        if folder.name and _is_zoom_local_dir(folder.name):
+            return folder.name
+    return None
 
 
 def _stem_of(path: Path) -> str:
@@ -688,9 +710,9 @@ def session_key(files: list[InputFile], *, qualified: bool = False) -> str:
     on a collision, so every other project's keys are untouched.
     """
     for f in files:
-        parent = f.path.parent.name
-        if parent and _is_zoom_local_dir(parent):
-            return f"zoom:{parent}"
+        zoom_dir = _zoom_local_dir_of(f.path)
+        if zoom_dir is not None:
+            return f"zoom:{zoom_dir}"
     for f in files:
         stamp, key = _stamp_and_title(_stem_of(f.path))
         if stamp is not None:
@@ -723,11 +745,15 @@ def group_into_sessions(
     zoom_dir_groups: dict[str, list[InputFile]] = {}
     remaining: list[InputFile] = []
     for f in files:
-        parent = f.path.parent.name
-        if parent and _is_zoom_local_dir(parent):
-            zoom_dir_groups.setdefault(parent, []).append(f)
+        zoom_dir = _zoom_local_dir_of(f.path)
+        if zoom_dir is not None:
+            zoom_dir_groups.setdefault(zoom_dir, []).append(f)
         else:
             remaining.append(f)
+    # The meeting folder's own files first: stage 2 transcribes the first
+    # audio file, which must be the mixed track, not one participant's.
+    for zoom_dir, group in zoom_dir_groups.items():
+        group.sort(key=lambda f: f.path.parent.name != zoom_dir)
 
     # -- Pass 2: normalised stem matching on remaining files ---------------------
     stem_groups = [

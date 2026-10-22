@@ -184,9 +184,11 @@ _TEAMS_UTC_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Zoom local recording folder: "2026-01-15 14.30.22 Topic 987654321".
+# Zoom local recording folder: "2026-01-15 14.30.22 Topic 987654321", and
+# since today's client (observed 22 Oct 2026) with no meeting ID. Keep in step
+# with `s01_ingest._ZOOM_LOCAL_DIR_RE`.
 _ZOOM_LOCAL_DIR_RE = re.compile(
-    r"^(\d{4})-(\d{2})-(\d{2})\s+(\d{2})\.(\d{2})\.(\d{2})\s+.+\s+\d{9,11}$",
+    r"^(\d{4})-(\d{2})-(\d{2})\s+(\d{2})\.(\d{2})\.(\d{2})\s+.+$",
 )
 
 # macOS Screen Recording: "Screen Recording 2026-01-27 at 23.37.37", localised

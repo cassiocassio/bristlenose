@@ -146,6 +146,16 @@ class TestRungs:
         assert start.source is StartSource.FILENAME_LOCAL
         assert start.instant == _utc(2026, 1, 15, 14, 30, 22)  # GMT in January
 
+    def test_zoom_local_folder_without_meeting_id(self, london) -> None:
+        """Observed 22 Oct 2026: today's client names the folder with no
+        meeting ID; its stamp is still the meeting's start on the local clock."""
+        f = _file("audio1470811890.m4a",
+                  parent="/input/2026-10-22 09.51.39 Alex Example's Zoom Meeting",
+                  file_type=FileType.AUDIO)
+        start = resolve_session_start([f])
+        assert start.source is StartSource.FILENAME_LOCAL
+        assert start.instant == _utc(2026, 10, 22, 8, 51, 39)  # BST in October
+
     @pytest.mark.parametrize(
         ("name", "expected"),
         [

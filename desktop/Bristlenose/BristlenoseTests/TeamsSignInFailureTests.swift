@@ -133,4 +133,28 @@ struct TeamsSignInFailureTests {
         }
         #expect(worthRetrying)
     }
+
+    // MARK: - A refusal with no words of Microsoft's own
+
+    /// An authorize-leg refusal with no `error_description` is the case our
+    /// sentences exist for, in the researcher's language. It used to arrive
+    /// carrying an English placeholder as its description, which read as
+    /// Microsoft's own words and was passed through untranslated in all 21
+    /// locales. The log keeps an English sentence either way.
+    @Test("A refusal Microsoft gave no reason for is said in the app's language")
+    func reasonlessRefusalIsLocalised() {
+        let other = MicrosoftOAuthError.authorizeRefusal(code: "access_denied", description: nil)
+        #expect(other.signInMessage.key == "desktop.cloudImport.signInDeclinedNoReason")
+        #expect(other.signInMessage.english == "Microsoft declined the sign-in and didn't say why.")
+        #expect(other.errorDescription == "Microsoft declined the sign-in and didn't say why.")
+
+        let declined = MicrosoftOAuthError.authorizeRefusal(code: "AADSTS65004", description: nil)
+        #expect(declined.signInMessage.key == "desktop.cloudImport.signInDeclined")
+        #expect(declined.errorDescription == "Sign-in was declined.")
+
+        // And Microsoft's own words, when it gives some, still win.
+        let worded = MicrosoftOAuthError.authorizeRefusal(
+            code: "AADSTS65004", description: "User declined to consent to access the app.")
+        #expect(worded.signInMessage == .passthrough("User declined to consent to access the app."))
+    }
 }

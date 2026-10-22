@@ -272,6 +272,20 @@ enum MicrosoftOAuthError: LocalizedError, Equatable {
         }
     }
 
+    /// The error for a refusal on the authorize leg, from the callback's
+    /// `error` and optional `error_description`.
+    ///
+    /// **A missing description stays empty.** `signInMessage` reads an empty
+    /// description as "Microsoft gave no words of its own", and that is the
+    /// only route to the localised sentences (`signInDeclined`,
+    /// `signInDeclinedNoReason`). An English placeholder here was passed
+    /// through as though it were Microsoft's own words, in every locale. The
+    /// log keeps its English: `message(rawDescription:)` supplies it for an
+    /// empty description.
+    static func authorizeRefusal(code: String, description: String?) -> MicrosoftOAuthError {
+        .consentRefused(code: code, description: description ?? "")
+    }
+
     var errorDescription: String? {
         switch self {
         case .notConfigured:
@@ -334,10 +348,7 @@ final class MicrosoftOAuthClient: NSObject {
         case .stateMismatch:
             throw MicrosoftOAuthError.stateMismatch
         case .failure(let error, let description):
-            throw MicrosoftOAuthError.consentRefused(
-                code: error,
-                description: description ?? "Microsoft declined the sign-in."
-            )
+            throw MicrosoftOAuthError.authorizeRefusal(code: error, description: description)
         case .malformed:
             throw MicrosoftOAuthError.noAuthorizationCode
         }

@@ -69,8 +69,12 @@ let clears = 0;
 /** Acts an undo or redo has run on: their writes may have landed, so they
  *  are not taken off the stack at once (`dropUndo`). */
 let stepped = new WeakSet<UndoEntry>();
-/** Stepped acts whose own write failed: they leave the stack as soon as an
- *  undo or redo of them fails too, and stay if one lands. */
+/** Acts an undo or redo of which has landed: real, whatever their own write
+ *  did, so never withdrawn. */
+let landed = new WeakSet<UndoEntry>();
+/** Stepped acts whose own write failed before any step of them landed: they
+ *  leave the stack as soon as an undo or redo of them fails too, and stay if
+ *  one lands. */
 let withdrawn = new WeakSet<UndoEntry>();
 
 /** What a push replaced: the redo branch it ended and any act it pushed off
@@ -160,6 +164,7 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
   try {
     await (kind === "undo" ? entry.undo() : entry.redo());
     // A write of it landed: whatever its own write did, the act is real now.
+    landed.add(entry);
     withdrawn.delete(entry);
     return true;
   } catch (err) {
@@ -171,6 +176,7 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
     if (i >= 0) away.splice(i, 1);
     // Its own write failed and so did this one: nothing of it landed.
     if (withdrawn.has(entry)) {
+      handBack(entry);
       emit();
       return false;
     }
@@ -192,6 +198,7 @@ async function step(kind: "undo" | "redo"): Promise<boolean> {
  * already read the rise.
  */
 export function dropUndo(entry: UndoEntry): void {
+  if (landed.has(entry)) return;
   if (stepped.has(entry)) {
     withdrawn.add(entry);
     return;
@@ -199,19 +206,29 @@ export function dropUndo(entry: UndoEntry): void {
   const i = undoStack.lastIndexOf(entry);
   if (i < 0) return;
   undoStack.splice(i, 1);
-  const r = pushLog.findIndex((p) => p.entry === entry);
-  if (r >= 0) {
-    const [record] = pushLog.splice(r, 1);
-    const next = pushLog[r];
-    if (!next) {
-      redoStack = record.redo;
-      undoStack.unshift(...record.shifted);
-    } else {
-      next.redo = record.redo;
-      next.shifted = [...record.shifted, ...next.shifted];
-    }
-  }
+  handBack(entry);
   emit();
+}
+
+/**
+ * Give back what a withdrawn act's push replaced: to the stacks when no act
+ * was recorded after it, else to the next push, which in time would have
+ * ended that branch itself. Its record leaves the log, so an earlier act
+ * withdrawn later hands on past it.
+ */
+function handBack(entry: UndoEntry): void {
+  const r = pushLog.findIndex((p) => p.entry === entry);
+  if (r < 0) return;
+  const [record] = pushLog.splice(r, 1);
+  const next = pushLog[r];
+  if (next) {
+    next.redo = [...record.redo, ...next.redo.filter((e) => e !== entry)];
+    next.shifted = [...record.shifted, ...next.shifted];
+  } else {
+    // Beneath anything undone since: those were undone after it was recorded.
+    redoStack = [...record.redo, ...redoStack.filter((e) => e !== entry)];
+    undoStack.unshift(...record.shifted);
+  }
 }
 
 /** Forget both stacks — the data the entries describe has been replaced. */
@@ -230,6 +247,7 @@ export function resetUndoStore(): void {
   undoStack = [];
   redoStack = [];
   stepped = new WeakSet();
+  landed = new WeakSet();
   withdrawn = new WeakSet();
   pushLog = [];
   pushes = 0;

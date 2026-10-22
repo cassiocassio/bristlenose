@@ -175,6 +175,75 @@ describe("UndoStore", () => {
     expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "first" });
   });
 
+  // Review of 128964db: its undo and redo both landed before its own write
+  // failed, so the act is real and a later failed undo keeps it (R9).
+  it("an act undone and redone before its write failed stays, and R9 keeps it", async () => {
+    let refuse = false;
+    const act = {
+      action: "first",
+      undo: () => (refuse ? Promise.reject(new Error("offline")) : undefined),
+      redo: () => {},
+    };
+    pushUndo(act);
+    await undo();
+    await redo();
+    dropUndo(act);
+    refuse = true;
+    expect(await undo()).toBe(false);
+    expect(getUndoState()).toMatchObject({ undoAction: "first", canRedo: false });
+  });
+
+  it("an act whose undo was running gives back the redo it ended when both fail", async () => {
+    pushUndo({ action: "x", undo: () => {}, redo: () => {} });
+    await undo();
+    let fail!: (e: Error) => void;
+    const act = {
+      action: "a",
+      undo: () => new Promise<void>((_, rej) => { fail = rej; }),
+      redo: () => {},
+    };
+    pushUndo(act);
+    const undone = undo();
+    dropUndo(act);
+    fail(new Error("refused"));
+    expect(await undone).toBe(false);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "x" });
+  });
+
+  it("once it has left, an earlier withdrawn act hands its branch on past it", async () => {
+    pushUndo({ action: "x", undo: () => {}, redo: () => {} });
+    await undo();
+    const p = { action: "p", undo: () => {}, redo: () => {} };
+    pushUndo(p);
+    let fail!: (e: Error) => void;
+    const act = {
+      action: "a",
+      undo: () => new Promise<void>((_, rej) => { fail = rej; }),
+      redo: () => {},
+    };
+    pushUndo(act);
+    const undone = undo();
+    dropUndo(act);
+    fail(new Error("refused"));
+    await undone;
+    dropUndo(p);
+    expect(getUndoState()).toMatchObject({ canUndo: false, redoAction: "x" });
+  });
+
+  // An act undone and then superseded by a new push ended the branch before
+  // it in time, so an earlier withdrawn act's branch ends there too.
+  it("a branch an undone, superseded act would have ended stays ended", async () => {
+    pushUndo({ action: "x", undo: () => {}, redo: () => {} });
+    await undo();
+    const p = { action: "p", undo: () => {}, redo: () => {} };
+    pushUndo(p);
+    pushUndo({ action: "a", undo: () => {}, redo: () => {} });
+    await undo();
+    pushUndo({ action: "b", undo: () => {}, redo: () => {} });
+    dropUndo(p);
+    expect(getUndoState()).toMatchObject({ undoAction: "b", canRedo: false });
+  });
+
   it("a withdrawn act gives back an act it pushed off the bottom", () => {
     for (let i = 0; i < UNDO_DEPTH; i++) pushUndo({ action: `a${i}`, undo: () => {}, redo: () => {} });
     const failed = { action: "over", undo: () => {}, redo: () => {} };

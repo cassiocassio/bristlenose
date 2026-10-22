@@ -238,16 +238,16 @@ struct LLMSettingsView: View {
                             .modifier(OptionalHelp(text: statusErrors[provider]?.resolved(i18n)))
                         case .keyNotSaved:
                             // The field's own error, shown where the row is still
-                            // on screen after the row it was typed in is left.
-                            Label {
-                                Text(i18n.t("desktop.llmSettings.status.keyNotSaved"))
-                            } icon: {
+                            // on screen after the row it was typed in is left. The
+                            // icon takes the dot's slot, so the row doesn't move.
+                            HStack(spacing: 6) {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .foregroundStyle(.red)
+                                    .frame(width: 14, height: 14)
+                                Text(i18n.t("desktop.llmSettings.status.keyNotSaved"))
+                                    .foregroundStyle(.secondary)
                             }
                             .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .help(i18n.t("desktop.llmSettings.keyNotSaved"))
                         }
                     }
                     .padding(.vertical, 2)

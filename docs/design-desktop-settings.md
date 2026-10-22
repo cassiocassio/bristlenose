@@ -84,7 +84,7 @@ Grouped controls, top to bottom: **Application appearance** radio (auto/light/da
 
 Left sidebar list of 5 pre-populated providers (Claude, ChatGPT, Gemini, Azure, Ollama) with two orthogonal indicators per row:
 - **Radio/checkmark** — which provider is active (user choice, `@AppStorage("activeProvider")`)
-- **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable")
+- **Status dot** — whether the provider is configured (green "Online" / grey "Not set up" / red "Invalid" / orange "Unavailable"). While the row's last key save failed, the dot and label give way to the field's red icon and "Key not saved" (`APIKeyDrafts.caption`, decision #6, 22 Oct 2026), so a save that failed on leaving the row shows in the list rather than only under a field no longer on screen
 
 Right detail pane shows the selected provider's settings: API key (`SecureField` → `KeychainHelper.set`, which writes the app's data-protection item **and** the login-keychain copy the CLI reads, and reads both back; this pane is also the only reader that may raise the keychain dialog — `interaction: .allowed` — so a key `bristlenose configure` wrote is adopted here and nowhere else, `design-keychain.md` §"One keyspace, two keychains"), model picker (per-provider known models + "Custom…"), concurrency slider. Azure adds endpoint/deployment/version fields. Ollama shows a **read-only** static display of the URL (`localhost:11434`) — the field is hardwired in the desktop GUI as a trust-boundary closure (commit `dbd54ec`, 30 Apr 2026): a social-engineered user pasting an attacker URL would silently exfiltrate transcripts over plain HTTP, contradicting the "transcripts stay on your Mac" claim. Status derives from an HTTP probe to `<hardwired-url>/api/tags`, parsing the models list to distinguish "not running" from "running but no models pulled"; see `LLMValidator.probeOllama`. CLI users and CI keep the override path via the `BRISTLENOSE_LOCAL_URL` env var (parent-process only — see §Preferences below).
 
@@ -310,8 +310,9 @@ so it commits when the pane is left or the window resigns key. (R34, 20 Oct 2026
 text is held against what the Keychain had when the row was loaded; a commit
 acts only on an edit, so it is safe from every exit above. The read-back decides
 the outcome, never `set`'s return: a failed save keeps the pasted key on screen
-with `desktop.llmSettings.keyNotSaved` under the field, posts nothing and
-validates nothing (R36), and a pasted key left without Return is saved on a row
+with `desktop.llmSettings.keyNotSaved` under the field and
+`desktop.llmSettings.status.keyNotSaved` in the row's caption, posts nothing
+and validates nothing (R36), and a pasted key left without Return is saved on a row
 change or window close rather than overwritten when the row is shown again (R38).
 
 **Quit saves the key too, but does not restart the serve.** AppKit closes no

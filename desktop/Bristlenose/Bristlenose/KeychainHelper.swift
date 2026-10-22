@@ -922,16 +922,27 @@ enum SharedKeychainItem {
         let syncedWrote = synced.write(service: service, account: account, value: value,
                                        interaction: interaction)
         // A clean return is not evidence anything was stored — read both back.
-        let syncedBack = synced.read(service: service, account: account,
-                                     interaction: interaction).value == value
-        // The app's own copy refused the key and still holds another (decision
-        // #11). Writing the login copy now would hand `bristlenose run` a key
-        // the app says isn't being used, and the ledger would record the split
-        // as agreement, so it would never heal. Neither copy changes. With no
-        // synced item at all (an ad-hoc build answers nothing), the login copy
-        // is the only one that works, and takes the key below.
-        if !(syncedWrote && syncedBack), stamp(synced, service: service, account: account) != nil {
-            log.error("synced copy of \(service, privacy: .public) refused the new key — login copy left as it was")
+        let syncedRead = synced.read(service: service, account: account, interaction: interaction)
+        let syncedBack = syncedRead.value == value
+        // The app's own copy kept another key (decision #11). Writing the login
+        // copy now would hand `bristlenose run` a key the app says isn't being
+        // used, and the ledger would record the split as agreement, so it would
+        // never heal. Neither copy changes. The read decides when it answers; a
+        // refused write decides when it doesn't, if a synced item is known to
+        // exist. A nil stamp is "absent or could not ask", so the ledger's last
+        // stamp stands in, as in `remove`. With no synced item ever seen (an
+        // ad-hoc build answers nothing), the login copy is the only one that
+        // works, and takes the key below.
+        let keptAnother: Bool
+        if case .found(let held) = syncedRead {
+            keptAnother = held != value
+        } else {
+            let syncedKnown = stamp(synced, service: service, account: account) != nil
+                || Ledger.load(defaults, service: service, account: account)?.synced != nil
+            keptAnother = !syncedWrote && syncedKnown
+        }
+        if keptAnother {
+            log.error("synced copy of \(service, privacy: .public) kept another key — login copy left as it was")
             return false
         }
         let loginWrote = login.write(service: service, account: account, value: value,
@@ -1082,9 +1093,15 @@ final class InMemoryRawKeychain: RawKeychain {
     var now: () -> Date = Date.init
     /// Every read refused — the keychain that cannot answer.
     var refuseReads = false
+    /// Decrypts refused while attributes still answer — a keychain item that
+    /// exists but cannot be read just now.
+    var refuseDataReads = false
     /// Every dialog declined.
     var declinePrompts = false
     var refuseWrites = false
+    /// Writes are stored but reported as refused — a clean-looking failure
+    /// the read-back has to see through.
+    var writesReportFalse = false
     /// Every delete refused, the item kept — what `-25244` does to the app's
     /// own copy when the ACL disagrees, or a locked keychain.
     var refuseDeletes = false
@@ -1102,7 +1119,7 @@ final class InMemoryRawKeychain: RawKeychain {
 
     func read(service: String, account: String, interaction: KeychainInteraction) -> RawRead {
         reads += 1
-        guard !refuseReads else { return .refused }
+        guard !refuseReads, !refuseDataReads else { return .refused }
         let key = Key(service: service, account: account)
         guard var item = items[key], !item.value.isEmpty else { return .missing }
         if item.foreign && !item.trusted {
@@ -1122,7 +1139,7 @@ final class InMemoryRawKeychain: RawKeychain {
         guard !refuseWrites else { return false }
         items[Key(service: service, account: account)] =
             Item(value: value, modified: now(), foreign: false, trusted: true)
-        return true
+        return !writesReportFalse
     }
 
     /// Deleting another tool's item is refused, as the real keychain refuses

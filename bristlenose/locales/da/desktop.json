@@ -888,7 +888,7 @@
       "checking": "Tjekker…",
       "outOfCredit": "Ingen kredit tilbage",
       "local": "Lokal",
-      "keyNotSaved": "Nøglen er ikke gemt"
+      "keyNotSaved": "Nøgle ikke gemt"
     },
     "copyCommand": "Kopiér kommando",
     "console": {

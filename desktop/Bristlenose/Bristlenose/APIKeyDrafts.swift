@@ -101,6 +101,8 @@ struct APIKeyDrafts {
 
     mutating func commit(_ provider: LLMProvider, store: any KeychainStore) -> Outcome {
         guard let keychainKey = provider.keychainProvider, isDirty(provider) else {
+            // Back at what the Keychain holds: nothing failed to save any more.
+            failed.remove(provider)
             return .unchanged
         }
         let value = typed[provider, default: ""]

@@ -337,6 +337,61 @@ struct SharedKeychainItemTests {
             #expect(quietRead(w) == "sk-old")
             #expect(askingRead(w) == "sk-old")
             #expect(loginValue(w) == "sk-old")
+            // Not rewritten with the same value either: the one write is sk-old's.
+            #expect(w.login.writes == 1)
+        }
+    }
+
+    /// The synced write landed but its read-back was refused, while the item
+    /// still answers attributes. That is not "kept another key", so the login
+    /// copy takes the key too, and the two agree once the synced copy answers
+    /// again (#11 review: the early return used to leave the login copy on the
+    /// old key, and a read during the refusal recorded that as agreement).
+    @Test func write_landedButUnreadable_stillWritesTheLoginCopy() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.clock.tick()
+            w.synced.refuseDataReads = true
+
+            #expect(write(w, "sk-new") == false)
+            _ = quietRead(w)
+            w.synced.refuseDataReads = false
+
+            #expect(quietRead(w) == "sk-new")
+            #expect(loginValue(w) == "sk-new")
+        }
+    }
+
+    /// A synced write that reports failure but stored the key is judged by its
+    /// read-back, as every write here is: the login copy follows (#11 review).
+    @Test func write_storedButReportedRefused_stillWritesTheLoginCopy() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.clock.tick()
+            w.synced.writesReportFalse = true
+
+            _ = write(w, "sk-new")
+
+            #expect(syncedValue(w) == "sk-new")
+            #expect(loginValue(w) == "sk-new")
+        }
+    }
+
+    /// A synced keychain that answers nothing for a moment (locked, no
+    /// interaction allowed) still holds the older key: its last known stamp
+    /// stands in, as in `remove`, so the login copy is left alone. Without it
+    /// the login copy took the key, the row read saved, and the next read
+    /// put both copies back to the old key (#11 review).
+    @Test func write_refusedByAnUnansweringSyncedCopy_leavesTheLoginCopyAlone() {
+        withWorld { w in
+            #expect(write(w, "sk-old") == true)
+            w.clock.tick()
+            w.synced.refuseWrites = true
+            w.synced.refuseReads = true
+
+            #expect(write(w, "sk-new") == false)
+            #expect(loginValue(w) == "sk-old")
+            #expect(w.login.writes == 1)
         }
     }
 

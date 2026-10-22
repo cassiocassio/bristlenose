@@ -321,6 +321,22 @@ struct APIKeyDraftsTests {
         #expect(drafts.caption(.claude, status: .checking) == .status(.checking))
     }
 
+    /// After a failed save, typing the stored key back is not an edit, and it
+    /// is not a failure either: the Keychain holds exactly what the field shows.
+    @Test func retypingTheStoredKeyAfterAFailure_putsTheStatusBack() {
+        let store = SpyKeychain()
+        store.inner.set(provider: "anthropic", value: "sk-old")
+        store.mode = .refuse
+        var drafts = APIKeyDrafts()
+        drafts.load(.claude, stored: "sk-old")
+        drafts.edit(.claude, "sk-new")
+        #expect(drafts.commit(.claude, store: store) == .failed)
+        drafts.edit(.claude, "sk-old")
+
+        #expect(drafts.commit(.claude, store: store) == .unchanged)
+        #expect(drafts.caption(.claude, status: .online) == .status(.online))
+    }
+
     @Test func clearingAfterAFailure_putsTheStatusBack() {
         let store = SpyKeychain()
         store.mode = .refuse

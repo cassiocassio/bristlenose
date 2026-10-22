@@ -392,13 +392,18 @@ The rule, in full on `SharedKeychainItem`'s doc comment:
   only if the app's own copy round-tripped; a refused login copy is logged as
   the CLI's loss, not shown as a key that did not save. **A key the app's own
   copy refuses changes neither copy** (decision #11, 22 Oct 2026): when the
-  synced copy still holds a different key after the write, the login copy is
-  left as it was, so `bristlenose run` keeps the key the app uses. Until then
-  the login copy took the new key, the ledger recorded the split as agreement,
-  and the CLI ran on a key Settings said "isn't being used", for good. With no
-  synced item to protect (an ad-hoc build, whose synced keychain answers
-  nothing), the login copy still takes the key, because it is the only copy
-  that works.
+  app's copy cannot be confirmed as updated and a synced copy is known to
+  exist, the login copy is left as it was, so `bristlenose run` keeps the key
+  the app uses. Until then the login copy took the new key, the ledger
+  recorded the split as agreement, and the CLI ran on a key Settings said
+  "isn't being used", for good. "Confirmed" is the read-back: a read that
+  answers with another key keeps the login copy back; one that answers with
+  the new key, or a write that landed while its read was refused, lets the
+  login copy follow. "Known to exist" is a stamp, or failing one the ledger's
+  last stamp, because a nil stamp means absent *or* could not ask (as in
+  `remove`). With no synced item ever seen (an ad-hoc build, whose synced
+  keychain answers nothing), the login copy still takes the key, because it
+  is the only copy that works.
 - **A read compares both copies' modification dates with a ledger** (in
   UserDefaults) of what they were when they last agreed. Unchanged → read the
   app's copy, touch nothing else. The copy that moved wins: the CLI rewrote the

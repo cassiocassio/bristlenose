@@ -204,6 +204,7 @@
     "newProject": "Nyt projekt",
     "dragInterviews": "Træk interviews hertil",
     "dragInterviewsDescription": "Tilføj interviewoptagelser eller transskriptioner for at komme i gang.",
+    "unsuitableFolder": "Bristlenose kan ikke analysere din hjemmemappe eller en systemmappe. Vælg den mappe, der indeholder dine interviews.",
     "projectUnavailable": "Projekt utilgængeligt",
     "projectUnavailableHint": "Tilslut disken for at få adgang til dette projekt.",
     "projectMoved": "Projekt flyttet eller slettet",
@@ -367,7 +368,7 @@
       "whisper": "Transskription mislykkedes \u2013 talemodellen blev ikke indl\u00e6st.",
       "userSignal": "K\u00f8rslen blev stoppet.",
       "missingDep": "Ops\u00e6tning kr\u00e6ves \u2013 et n\u00f8dvendigt v\u00e6rkt\u00f8j er ikke installeret.",
-      "missingInput": "En n\u00f8dvendig inputfil mangler.",
+      "missingInput": "Der blev ikke fundet nogen interviews, der kan analyseres.",
       "missingBinary": "FFmpeg blev ikke fundet.",
       "outputExists": "Allerede analyseret \u2013 en ny analyse ville erstatte de eksisterende resultater.",
       "providerNotSetUp": "{{provider}} er ikke sat op endnu.",
@@ -426,7 +427,8 @@
         "unreadable": "Filen kunne ikke læses.",
         "cloud_fetch": "Filen blev ikke hentet til denne Mac i tide.",
         "duplicate_recording": "En anden optagelse til denne session — den anden blev brugt.",
-        "duplicate_transcript": "En anden kopi af denne sessions transskription — den anden blev brugt."
+        "duplicate_transcript": "En anden kopi af denne sessions transskription — den anden blev brugt.",
+        "no_lines": "Ingen linjer i denne transskription — der er intet at analysere."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projekter",
     "header": "Agenter ser kun \u00e5bne projekter",
     "install": "Installer udvidelse\u2026",
+    "installFailed": "Installationen kunne ikke startes. Pr\u00f8v igen, og send os detaljerne, hvis det bliver ved med at ske.",
     "chatgptHint": "Tilf\u00f8jer Bristlenose til ChatGPT som et plugin. ChatGPT \u00e5bnes og beder dig installere det.",
     "installPlugin": "Installer plugin\u2026",
     "reinstallPlugin": "Geninstaller plugin\u2026",

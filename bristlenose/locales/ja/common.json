@@ -284,6 +284,7 @@
     "anonymiseHint": "メタデータ、ファイル名、話者ラベルから名前を取り除きます。参加者コード (p1、p2) は保持されます。モデレーター名は保持されます。発言テキスト内に出てくる名前は削除されません。",
     "exporting": "書き出し中…",
     "exportFailed": "書き出しに失敗しました",
+    "revealFailed": "フォルダを表示できませんでした。",
     "copyQuotes": "発言をコピー",
     "copyQuotesCount_one": "{{count}} 件の発言をコピー",
     "copyQuotesCount_other": "{{count}} 件の発言をコピー",
@@ -595,6 +596,7 @@
     "observers": "オブザーバー",
     "loading": "トランスクリプトを読み込み中…",
     "noData": "トランスクリプトデータはありません。",
+    "sessionGone": "このセッションはレポートにもうありません。",
     "inaudible": "\u805e\u304d\u53d6\u308a\u4e0d\u80fd"
   },
   "emptyState": {
@@ -746,6 +748,7 @@
   "sync": {
     "saveFailed": "変更を保存できませんでした。接続を確認してください。",
     "saveRefused": "変更を保存できませんでした。",
+    "quoteGone": "その発言はレポートにもうないため、変更は保存されませんでした。",
     "runInProgress": "分析が実行中です。終了してからもう一度お試しください。"
   },
   "screens": {

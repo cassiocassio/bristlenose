@@ -202,6 +202,7 @@
     "newProject": "新規プロジェクト",
     "dragInterviews": "インタビューをここにドラッグ",
     "dragInterviewsDescription": "インタビューの録音またはトランスクリプトを追加して開始します。",
+    "unsuitableFolder": "Bristlenoseはホームフォルダやシステムフォルダを分析できません。インタビューが入っているフォルダを選んでください。",
     "projectUnavailable": "プロジェクトを利用できません",
     "projectUnavailableHint": "このプロジェクトにアクセスするには、ドライブを接続してください。",
     "projectMoved": "プロジェクトが移動または削除されました",
@@ -411,7 +412,7 @@
       "whisper": "\u6587\u5b57\u8d77\u3053\u3057\u306b\u5931\u6557\u3057\u307e\u3057\u305f\u3002\u97f3\u58f0\u30e2\u30c7\u30eb\u3092\u8aad\u307f\u8fbc\u3081\u307e\u305b\u3093\u3067\u3057\u305f\u3002",
       "userSignal": "\u5b9f\u884c\u3092\u505c\u6b62\u3057\u307e\u3057\u305f\u3002",
       "missingDep": "\u30bb\u30c3\u30c8\u30a2\u30c3\u30d7\u304c\u5fc5\u8981\u3067\u3059\u3002\u5fc5\u8981\u306a\u30c4\u30fc\u30eb\u304c\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002",
-      "missingInput": "\u5fc5\u8981\u306a\u5165\u529b\u30d5\u30a1\u30a4\u30eb\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
+      "missingInput": "\u5206\u6790\u3067\u304d\u308b\u30a4\u30f3\u30bf\u30d3\u30e5\u30fc\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
       "missingBinary": "FFmpeg \u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3002",
       "outputExists": "\u5206\u6790\u6e08\u307f\u3067\u3059\u3002\u518d\u5206\u6790\u3059\u308b\u3068\u65e2\u5b58\u306e\u7d50\u679c\u304c\u7f6e\u304d\u63db\u308f\u308a\u307e\u3059\u3002",
       "providerNotSetUp": "{{provider}} はまだ設定されていません。",
@@ -469,7 +470,8 @@
         "unreadable": "ファイルを読み取れませんでした。",
         "cloud_fetch": "時間内にこの Mac にダウンロードされませんでした。",
         "duplicate_recording": "このセッションの2つ目の録音です — もう一方が使用されました。",
-        "duplicate_transcript": "このセッションのトランスクリプトの2つ目のコピーです — もう一方が使用されました。"
+        "duplicate_transcript": "このセッションのトランスクリプトの2つ目のコピーです — もう一方が使用されました。",
+        "no_lines": "このトランスクリプトには行がありません — 分析する対象がありません。"
       }
     }
   },
@@ -1015,6 +1017,7 @@
     "projects_other": "\u30d7\u30ed\u30b8\u30a7\u30af\u30c8 {{count}} \u4ef6",
     "header": "\u30a8\u30fc\u30b8\u30a7\u30f3\u30c8\u306f\u958b\u3044\u3066\u3044\u308b\u30d7\u30ed\u30b8\u30a7\u30af\u30c8\u306e\u307f\u3092\u53c2\u7167\u3057\u307e\u3059",
     "install": "\u6a5f\u80fd\u62e1\u5f35\u3092\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u2026",
+    "installFailed": "\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3092\u958b\u59cb\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f\u3002\u3082\u3046\u4e00\u5ea6\u8a66\u3057\u3066\u3001\u7e70\u308a\u8fd4\u3057\u8d77\u304d\u308b\u5834\u5408\u306f\u8a73\u7d30\u3092\u304a\u9001\u308a\u304f\u3060\u3055\u3044\u3002",
     "chatgptHint": "Bristlenose \u3092\u30d7\u30e9\u30b0\u30a4\u30f3\u3068\u3057\u3066 ChatGPT \u306b\u8ffd\u52a0\u3057\u307e\u3059\u3002ChatGPT \u304c\u958b\u304d\u3001\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u3092\u6c42\u3081\u307e\u3059\u3002",
     "installPlugin": "\u30d7\u30e9\u30b0\u30a4\u30f3\u3092\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u2026",
     "reinstallPlugin": "\u30d7\u30e9\u30b0\u30a4\u30f3\u3092\u518d\u30a4\u30f3\u30b9\u30c8\u30fc\u30eb\u2026",

@@ -204,6 +204,7 @@
     "newProject": "Projecte nou",
     "dragInterviews": "Arrossega-hi les entrevistes",
     "dragInterviewsDescription": "Afegeix enregistraments o transcripcions d'entrevistes per començar.",
+    "unsuitableFolder": "Bristlenose no pot analitzar la carpeta d'inici ni una carpeta del sistema. Tria la carpeta que conté les entrevistes.",
     "projectUnavailable": "Projecte no disponible",
     "projectUnavailableHint": "Connecta la unitat per accedir a aquest projecte.",
     "projectMoved": "El projecte s'ha mogut o s'ha eliminat",
@@ -367,7 +368,7 @@
       "whisper": "Ha fallat la transcripci\u00f3: el model de veu no s'ha carregat.",
       "userSignal": "S'ha aturat l'execuci\u00f3.",
       "missingDep": "Cal configuraci\u00f3: falta una eina necess\u00e0ria.",
-      "missingInput": "Falta un fitxer d'entrada necessari.",
+      "missingInput": "No s'ha trobat cap entrevista que es pugui analitzar.",
       "missingBinary": "No s'ha trobat FFmpeg.",
       "outputExists": "Ja s'ha analitzat: tornar a analitzar substituiria els resultats existents.",
       "providerNotSetUp": "{{provider}} encara no està configurat.",
@@ -426,7 +427,8 @@
         "unreadable": "No s'ha pogut llegir el fitxer.",
         "cloud_fetch": "No s'ha baixat a aquest Mac a temps.",
         "duplicate_recording": "Una segona gravació per a aquesta sessió — s'ha fet servir l'altra.",
-        "duplicate_transcript": "Una segona còpia de la transcripció d'aquesta sessió — s'ha fet servir l'altra."
+        "duplicate_transcript": "Una segona còpia de la transcripció d'aquesta sessió — s'ha fet servir l'altra.",
+        "no_lines": "Aquesta transcripció no té cap línia — no hi ha res a analitzar."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projectes",
     "header": "Els agents nom\u00e9s veuen projectes oberts",
     "install": "Instal\u00b7la l'extensi\u00f3\u2026",
+    "installFailed": "No s'ha pogut iniciar la instal\u00b7laci\u00f3. Torna-ho a provar i, si continua passant, envia'ns els detalls.",
     "chatgptHint": "Afegeix el Bristlenose al ChatGPT com a complement. El ChatGPT s'obrir\u00e0 i et demanar\u00e0 que l'instal\u00b7lis.",
     "installPlugin": "Instal\u00b7la el complement\u2026",
     "reinstallPlugin": "Torna a instal\u00b7lar el complement\u2026",

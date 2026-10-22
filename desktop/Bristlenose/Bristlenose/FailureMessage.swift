@@ -129,7 +129,7 @@ extension FailureMessage {
         "desktop.pipeline.failure.whisper": "Transcription failed — the speech model didn't load.",
         "desktop.pipeline.failure.userSignal": "Run was stopped.",
         "desktop.pipeline.failure.missingDep": "Setup needed — a required tool isn't installed.",
-        "desktop.pipeline.failure.missingInput": "A required input file is missing.",
+        "desktop.pipeline.failure.missingInput": "No analysable interviews found.",
         "desktop.pipeline.failure.missingBinary": "FFmpeg couldn't be found.",
         "desktop.pipeline.failure.outputExists": "Already analysed — re-analysing would replace the existing results.",
         "desktop.pipeline.failure.providerNotSetUp": "{{provider}} isn't set up yet.",

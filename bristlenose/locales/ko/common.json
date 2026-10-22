@@ -274,6 +274,7 @@
     "anonymiseHint": "메타데이터, 파일 이름 및 발화자 라벨에서 이름을 제거합니다. 코드(p1, p2)는 유지됩니다. 진행자 이름은 보존됩니다. 인용문 텍스트 내의 이름은 제거되지 않습니다.",
     "exporting": "내보내는 중…",
     "exportFailed": "내보내기 실패",
+    "revealFailed": "폴더를 표시할 수 없습니다.",
     "copyQuotes": "인용구 복사",
     "copyQuotesCount_other": "인용구 {{count}}개 복사",
     "saveAsSpreadsheet": "스프레드시트로 저장",
@@ -576,6 +577,7 @@
     "observers": "관찰자",
     "loading": "전사 로드 중…",
     "noData": "전사 데이터가 없습니다.",
+    "sessionGone": "이 세션은 더 이상 보고서에 없습니다.",
     "inaudible": "\ub4e4\ub9ac\uc9c0 \uc54a\uc74c"
   },
   "emptyState": {
@@ -727,6 +729,7 @@
   "sync": {
     "saveFailed": "\ubcc0\uacbd \uc0ac\ud56d\uc744 \uc800\uc7a5\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uc138\uc694.",
     "saveRefused": "\ubcc0\uacbd \uc0ac\ud56d\uc744 \uc800\uc7a5\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
+    "quoteGone": "\ud574\ub2f9 \uc778\uc6a9\ubb38\uc774 \ub354 \uc774\uc0c1 \ubcf4\uace0\uc11c\uc5d0 \uc5c6\uc5b4 \ubcc0\uacbd \uc0ac\ud56d\uc774 \uc800\uc7a5\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
     "runInProgress": "\ubd84\uc11d\uc774 \uc2e4\ud589 \uc911\uc785\ub2c8\ub2e4. \ub05d\ub09c \ud6c4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694."
   },
   "screens": {

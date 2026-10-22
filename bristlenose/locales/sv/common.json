@@ -289,6 +289,7 @@
     "anonymiseHint": "Tar bort namn från metadata, filnamn och talaretiketter. Behåller deltagarkoder (p1, p2). Moderatornamn bevaras. Namn som nämns i citattexten tas INTE bort.",
     "exporting": "Exporterar…",
     "exportFailed": "Exporten misslyckades",
+    "revealFailed": "Mappen kunde inte visas.",
     "copyQuotes": "Kopiera citat",
     "copyQuotesCount_one": "Kopiera {{count}} citat",
     "copyQuotesCount_other": "Kopiera {{count}} citat",
@@ -608,6 +609,7 @@
     "observers": "Observatörer",
     "loading": "Läser in transkription…",
     "noData": "Ingen transkriptionsdata tillgänglig.",
+    "sessionGone": "Den här sessionen finns inte längre i rapporten.",
     "inaudible": "Oh\u00f6rbart"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Det gick inte att spara ändringen. Kontrollera din anslutning.",
     "saveRefused": "Det gick inte att spara ändringen.",
+    "quoteGone": "Det citatet finns inte längre i rapporten, så ändringen sparades inte.",
     "runInProgress": "En analys körs. Försök igen när den är klar."
   },
   "screens": {

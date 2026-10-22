@@ -204,6 +204,7 @@
     "newProject": "Yeni Proje",
     "dragInterviews": "Görüşmeleri Buraya Sürükleyin",
     "dragInterviewsDescription": "Başlamak için görüşme kayıtları veya dökümler ekleyin.",
+    "unsuitableFolder": "Bristlenose ana klasörünüzü veya bir sistem klasörünü analiz edemez. Görüşmelerinizin bulunduğu klasörü seçin.",
     "projectUnavailable": "Proje Kullanılamıyor",
     "projectUnavailableHint": "Bu projeye erişmek için sürücüyü bağlayın.",
     "projectMoved": "Proje Taşındı veya Silindi",
@@ -367,7 +368,7 @@
       "whisper": "Deste\u011fe d\u00f6k\u00fcm ba\u015far\u0131s\u0131z oldu \u2014 konu\u015fma modeli y\u00fcklenmedi.",
       "userSignal": "\u00c7al\u0131\u015ft\u0131rma durduruldu.",
       "missingDep": "Kurulum gerekiyor \u2014 gerekli bir ara\u00e7 y\u00fckl\u00fc de\u011fil.",
-      "missingInput": "Gerekli bir girdi dosyas\u0131 eksik.",
+      "missingInput": "Analiz edilebilecek g\u00f6r\u00fc\u015fme bulunamad\u0131.",
       "missingBinary": "FFmpeg bulunamad\u0131.",
       "outputExists": "Zaten analiz edildi \u2014 yeniden analiz mevcut sonu\u00e7lar\u0131n yerini al\u0131r.",
       "providerNotSetUp": "{{provider}} henüz ayarlanmadı.",
@@ -426,7 +427,8 @@
         "unreadable": "Dosya okunamadı.",
         "cloud_fetch": "Dosya zamanında bu Mac’e indirilmedi.",
         "duplicate_recording": "Bu oturum için ikinci bir kayıt — diğeri kullanıldı.",
-        "duplicate_transcript": "Bu oturumun dökümünün ikinci bir kopyası — diğeri kullanıldı."
+        "duplicate_transcript": "Bu oturumun dökümünün ikinci bir kopyası — diğeri kullanıldı.",
+        "no_lines": "Bu dökümde satır yok — analiz edilecek bir şey yok."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} proje",
     "header": "Arac\u0131lar yaln\u0131zca a\u00e7\u0131k projeleri g\u00f6r\u00fcr",
     "install": "Geni\u015fletmeyi Y\u00fckle\u2026",
+    "installFailed": "Kurulum ba\u015flat\u0131lamad\u0131. Yeniden deneyin; sorun s\u00fcrerse bize ayr\u0131nt\u0131lar\u0131 g\u00f6nderin.",
     "chatgptHint": "Bristlenose'u ChatGPT'ye eklenti olarak ekler. ChatGPT a\u00e7\u0131l\u0131r ve y\u00fcklemenizi ister.",
     "installPlugin": "Eklentiyi Y\u00fckle\u2026",
     "reinstallPlugin": "Eklentiyi Yeniden Y\u00fckle\u2026",

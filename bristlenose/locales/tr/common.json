@@ -289,6 +289,7 @@
     "anonymiseHint": "Meta verilerden, dosya adlarından ve konuşmacı etiketlerinden adları çıkarır. Katılımcı kodlarını (p1, p2) korur. Moderatör adları saklanır. Alıntı metni içinde geçen adlar KALDIRILMAZ.",
     "exporting": "Dışa aktarılıyor…",
     "exportFailed": "Dışa aktarma başarısız oldu",
+    "revealFailed": "Klasör gösterilemedi.",
     "copyQuotes": "Alıntıları Kopyala",
     "copyQuotesCount_one": "{{count}} Alıntıyı Kopyala",
     "copyQuotesCount_other": "{{count}} Alıntıyı Kopyala",
@@ -608,6 +609,7 @@
     "observers": "Gözlemciler",
     "loading": "Deşifre yükleniyor…",
     "noData": "Kullanılabilir deşifre verisi yok.",
+    "sessionGone": "Bu oturum artık raporda yok.",
     "inaudible": "Anla\u015f\u0131lm\u0131yor"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Değişiklik kaydedilemedi. Bağlantınızı kontrol edin.",
     "saveRefused": "Değişiklik kaydedilemedi.",
+    "quoteGone": "Bu alıntı artık raporda yok, bu yüzden değişiklik kaydedilmedi.",
     "runInProgress": "Bir analiz çalışıyor. Bittiğinde yeniden deneyin."
   },
   "screens": {

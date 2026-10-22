@@ -289,6 +289,7 @@
     "anonymiseHint": "Poistaa nimet metatiedoista, tiedostonimistä ja puhujanimikkeistä. Säilyttää osallistujakoodit (p1, p2). Moderaattorien nimet säilytetään. Sitaattitekstin sisällä mainittuja nimiä EI poisteta.",
     "exporting": "Viedään…",
     "exportFailed": "Vienti epäonnistui",
+    "revealFailed": "Kansiota ei voitu näyttää.",
     "copyQuotes": "Kopioi sitaatit",
     "copyQuotesCount_one": "Kopioi {{count}} sitaatti",
     "copyQuotesCount_other": "Kopioi {{count}} sitaattia",
@@ -608,6 +609,7 @@
     "observers": "Tarkkailijat",
     "loading": "Ladataan litterointia…",
     "noData": "Litterointitietoja ei ole saatavilla.",
+    "sessionGone": "Tämä istunto ei ole enää raportissa.",
     "inaudible": "Ep\u00e4selv\u00e4"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Muutosta ei voitu tallentaa. Tarkista verkkoyhteys.",
     "saveRefused": "Muutosta ei voitu tallentaa.",
+    "quoteGone": "Sitaatti ei ole enää raportissa, joten muutostasi ei tallennettu.",
     "runInProgress": "Analyysi on käynnissä. Yritä uudelleen, kun se on valmis."
   },
   "screens": {

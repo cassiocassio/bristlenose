@@ -289,6 +289,7 @@
     "anonymiseHint": "Remove nomes de metadados, nomes de arquivos e rótulos de falantes. Mantém os códigos de participantes (p1, p2). Os nomes dos moderadores são preservados. Nomes mencionados dentro do texto das citações NÃO são removidos.",
     "exporting": "Exportando…",
     "exportFailed": "Falha na exportação",
+    "revealFailed": "Não foi possível mostrar a pasta.",
     "copyQuotes": "Copiar citações",
     "copyQuotesCount_one": "Copiar {{count}} citação",
     "copyQuotesCount_other": "Copiar {{count}} citações",
@@ -608,6 +609,7 @@
     "observers": "Observadores",
     "loading": "Carregando transcrição…",
     "noData": "Nenhum dado de transcrição disponível.",
+    "sessionGone": "Esta sessão não está mais no relatório.",
     "inaudible": "Inaud\u00edvel"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Não foi possível salvar a alteração. Verifique sua conexão.",
     "saveRefused": "Não foi possível salvar a alteração.",
+    "quoteGone": "Essa citação não está mais no relatório, então a alteração não foi salva.",
     "runInProgress": "Há uma análise em andamento. Tente de novo quando ela terminar."
   },
   "screens": {

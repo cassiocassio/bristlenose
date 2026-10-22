@@ -289,6 +289,7 @@
     "anonymiseHint": "Elimina nombres de metadatos, nombres de archivo y etiquetas de hablantes. Conserva los códigos (p1, p2). Los nombres de moderadores se conservan. Los nombres dentro del texto de las citas NO se eliminan.",
     "exporting": "Exportando…",
     "exportFailed": "La exportación falló",
+    "revealFailed": "No se ha podido mostrar la carpeta.",
     "copyQuotes": "Copiar citas",
     "copyQuotesCount_one": "Copiar {{count}} cita",
     "copyQuotesCount_other": "Copiar {{count}} citas",
@@ -608,6 +609,7 @@
     "observers": "Observadores",
     "loading": "Cargando transcripción…",
     "noData": "No hay datos de transcripción disponibles.",
+    "sessionGone": "Esta sesión ya no está en el informe.",
     "inaudible": "Inaudible"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "No se ha podido guardar el cambio. Comprueba tu conexión.",
     "saveRefused": "No se ha podido guardar el cambio.",
+    "quoteGone": "Esa cita ya no está en el informe, así que el cambio no se ha guardado.",
     "runInProgress": "Hay un análisis en curso. Vuelve a intentarlo cuando termine."
   },
   "screens": {

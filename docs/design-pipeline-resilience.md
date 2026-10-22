@@ -464,7 +464,7 @@ Per-event field semantics:
 | `network` | `failed` | yes | TCP/DNS/timeout, no provider response |
 | `whisper` | `failed` | sometimes (depends on `code`) | Whisper model load / transcription failure (e.g. corrupted audio, OOM) |
 | `missing_dep` | `failed` | no — install dependency first | ffmpeg / whisper model / spaCy etc. not installed |
-| `missing_input` | `failed` | no — supply the file | A required input file is missing |
+| `missing_input` | `failed` | no — supply the file | No analysable interviews found (empty folder, every file refused, or every docx unparsable — RE#20) |
 | `missing_binary` | `failed` | no — bundle/install the binary | Bare-name shellout failure (the ffmpeg-under-sandbox class) |
 | `disk` | `failed` | no — free space first | ENOSPC / write failure |
 | `output_truncated` | `failed` | no — switch model or pre-segment | Model output cap hit even after smart-splitting the session. **Splitting is reached from truncation only** — a timeout (`network` / `api_server`) does not trigger it, though it is the failure a large session actually hits; see Still open (deferred) |

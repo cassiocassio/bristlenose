@@ -289,6 +289,7 @@
     "anonymiseHint": "Fjerner navn fra metadata, filnavn og taleretiketter. Beholder deltakerkoder (p1, p2). Moderatornavn beholdes. Navn som er nevnt i selve sitatteksten fjernes IKKE.",
     "exporting": "Eksporterer …",
     "exportFailed": "Eksporten mislyktes",
+    "revealFailed": "Mappen kunne ikke vises.",
     "copyQuotes": "Kopier sitater",
     "copyQuotesCount_one": "Kopier {{count}} sitat",
     "copyQuotesCount_other": "Kopier {{count}} sitater",
@@ -608,6 +609,7 @@
     "observers": "Observatører",
     "loading": "Laster inn transkripsjon …",
     "noData": "Ingen transkripsjonsdata tilgjengelig.",
+    "sessionGone": "Denne økten er ikke lenger i rapporten.",
     "inaudible": "Uh\u00f8rbart"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Kunne ikke lagre endringen. Sjekk tilkoblingen din.",
     "saveRefused": "Kunne ikke lagre endringen.",
+    "quoteGone": "Det sitatet er ikke lenger i rapporten, så endringen ble ikke lagret.",
     "runInProgress": "En analyse kjører. Prøv igjen når den er ferdig."
   },
   "screens": {

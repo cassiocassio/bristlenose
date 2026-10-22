@@ -289,6 +289,7 @@
     "anonymiseHint": "Verwijdert namen uit metadata, bestandsnamen en sprekerlabels. Behoudt deelnemercodes (p1, p2). Namen van moderators blijven behouden. Namen die in de citaattekst voorkomen, worden NIET verwijderd.",
     "exporting": "Exporteren…",
     "exportFailed": "Export mislukt",
+    "revealFailed": "De map kon niet worden getoond.",
     "copyQuotes": "Citaten kopiëren",
     "copyQuotesCount_one": "{{count}} citaat kopiëren",
     "copyQuotesCount_other": "{{count}} citaten kopiëren",
@@ -608,6 +609,7 @@
     "observers": "Waarnemers",
     "loading": "Transcript laden…",
     "noData": "Geen transcriptgegevens beschikbaar.",
+    "sessionGone": "Deze sessie staat niet meer in het rapport.",
     "inaudible": "Onverstaanbaar"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Je wijziging kon niet worden bewaard. Controleer je verbinding.",
     "saveRefused": "Je wijziging kon niet worden bewaard.",
+    "quoteGone": "Dat citaat staat niet meer in het rapport, dus je wijziging is niet bewaard.",
     "runInProgress": "Er loopt een analyse. Probeer het opnieuw als die klaar is."
   },
   "screens": {

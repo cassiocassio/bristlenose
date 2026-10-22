@@ -202,6 +202,7 @@
     "newProject": "新增專案",
     "dragInterviews": "將訪談拖移至此",
     "dragInterviewsDescription": "加入訪談錄音或逐字稿即可開始。",
+    "unsuitableFolder": "Bristlenose 無法分析你的個人專屬檔案夾或系統檔案夾。請選擇存放訪談的檔案夾。",
     "projectUnavailable": "專案無法使用",
     "projectUnavailableHint": "連接磁碟機以存取此專案。",
     "projectMoved": "專案已移動或刪除",
@@ -348,7 +349,7 @@
       "whisper": "\u8f49\u9304\u5931\u6557\uff0c\u8a9e\u97f3\u6a21\u578b\u672a\u80fd\u8f09\u5165\u3002",
       "userSignal": "\u57f7\u884c\u5df2\u505c\u6b62\u3002",
       "missingDep": "\u9700\u8981\u8a2d\u5b9a\uff1a\u5c1a\u672a\u5b89\u88dd\u5fc5\u8981\u7684\u5de5\u5177\u3002",
-      "missingInput": "\u7f3a\u5c11\u5fc5\u8981\u7684\u8f38\u5165\u6a94\u6848\u3002",
+      "missingInput": "\u627e\u4e0d\u5230\u53ef\u5206\u6790\u7684\u8a2a\u8ac7\u3002",
       "missingBinary": "\u627e\u4e0d\u5230 FFmpeg\u3002",
       "outputExists": "\u5df2\u5206\u6790\u5b8c\u6210\uff1b\u91cd\u65b0\u5206\u6790\u6703\u53d6\u4ee3\u73fe\u6709\u7d50\u679c\u3002",
       "providerNotSetUp": "{{provider}} 尚未設定。",
@@ -406,7 +407,8 @@
         "unreadable": "無法讀取這個檔案。",
         "cloud_fetch": "未能及時下載到這台 Mac。",
         "duplicate_recording": "此工作階段的第二段錄音 — 已使用另一段。",
-        "duplicate_transcript": "此工作階段逐字稿的第二份副本 — 已使用另一份。"
+        "duplicate_transcript": "此工作階段逐字稿的第二份副本 — 已使用另一份。",
+        "no_lines": "這份逐字稿沒有任何內容行 — 沒有可分析的內容。"
       }
     }
   },
@@ -1015,6 +1017,7 @@
     "projects_other": "{{count}} \u500b\u5c08\u6848",
     "header": "\u4ee3\u7406\u7a0b\u5f0f\u53ea\u6703\u770b\u5230\u958b\u555f\u4e2d\u7684\u5c08\u6848",
     "install": "\u5b89\u88dd\u5ef6\u4f38\u529f\u80fd\u22ef",
+    "installFailed": "\u7121\u6cd5\u958b\u59cb\u5b89\u88dd\u3002\u8acb\u91cd\u8a66\uff1b\u82e5\u554f\u984c\u6301\u7e8c\u767c\u751f\uff0c\u8acb\u5c07\u8a73\u7d30\u8cc7\u6599\u50b3\u9001\u7d66\u6211\u5011\u3002",
     "chatgptHint": "\u5c07 Bristlenose \u4ee5\u5916\u639b\u7a0b\u5f0f\u5f62\u5f0f\u52a0\u5165 ChatGPT\u3002ChatGPT \u6703\u958b\u555f\u4e26\u8981\u6c42\u4f60\u5b89\u88dd\u3002",
     "installPlugin": "\u5b89\u88dd\u5916\u639b\u7a0b\u5f0f\u22ef",
     "reinstallPlugin": "\u91cd\u65b0\u5b89\u88dd\u5916\u639b\u7a0b\u5f0f\u22ef",

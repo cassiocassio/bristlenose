@@ -204,6 +204,7 @@
     "newProject": "Uusi projekti",
     "dragInterviews": "Vedä haastattelut tähän",
     "dragInterviewsDescription": "Aloita lisäämällä haastattelutallenteita tai litterointeja.",
+    "unsuitableFolder": "Bristlenose ei voi analysoida kotikansiotasi tai järjestelmäkansiota. Valitse kansio, jossa haastattelusi ovat.",
     "projectUnavailable": "Projekti ei ole käytettävissä",
     "projectUnavailableHint": "Yhdistä asema käyttääksesi tätä projektia.",
     "projectMoved": "Projekti siirretty tai poistettu",
@@ -367,7 +368,7 @@
       "whisper": "Litterointi ep\u00e4onnistui \u2013 puhemallia ei ladattu.",
       "userSignal": "Ajo pys\u00e4ytettiin.",
       "missingDep": "M\u00e4\u00e4ritys tarvitaan \u2013 tarvittavaa ty\u00f6kalua ei ole asennettu.",
-      "missingInput": "Tarvittava sy\u00f6tetiedosto puuttuu.",
+      "missingInput": "Analysoitavia haastatteluja ei l\u00f6ytynyt.",
       "missingBinary": "FFmpegi\u00e4 ei l\u00f6ytynyt.",
       "outputExists": "Jo analysoitu \u2013 uusi analyysi korvaisi nykyiset tulokset.",
       "providerNotSetUp": "Palvelua {{provider}} ei ole vielä määritetty.",
@@ -426,7 +427,8 @@
         "unreadable": "Tiedostoa ei voitu lukea.",
         "cloud_fetch": "Tiedostoa ei ladattu tähän Maciin ajoissa.",
         "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin.",
-        "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin."
+        "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin.",
+        "no_lines": "Tässä litteroinnissa ei ole rivejä — analysoitavaa ei ole."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projektia",
     "header": "Agentit n\u00e4kev\u00e4t vain avoimet projektit",
     "install": "Asenna laajennus\u2026",
+    "installFailed": "Asennusta ei voitu aloittaa. Yrit\u00e4 uudelleen, ja jos ongelma toistuu, l\u00e4het\u00e4 meille tiedot.",
     "chatgptHint": "Lis\u00e4\u00e4 Bristlenosen ChatGPT:hen lis\u00e4osana. ChatGPT avautuu ja pyyt\u00e4\u00e4 sinua asentamaan sen.",
     "installPlugin": "Asenna lis\u00e4osa\u2026",
     "reinstallPlugin": "Asenna lis\u00e4osa uudelleen\u2026",

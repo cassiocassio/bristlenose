@@ -289,6 +289,7 @@
     "anonymiseHint": "Elimina els noms de les metadades, els noms de fitxer i les etiquetes dels parlants. Conserva els codis dels participants (p1, p2). Els noms dels moderadors es conserven. Els noms esmentats dins del text de les cites NO s'eliminen.",
     "exporting": "S'està exportant…",
     "exportFailed": "L'exportació ha fallat",
+    "revealFailed": "No s’ha pogut mostrar la carpeta.",
     "copyQuotes": "Copia les cites",
     "copyQuotesCount_one": "Copia {{count}} cita",
     "copyQuotesCount_other": "Copia {{count}} cites",
@@ -608,6 +609,7 @@
     "observers": "Observadors",
     "loading": "S'està carregant la transcripció…",
     "noData": "No hi ha dades de transcripció disponibles.",
+    "sessionGone": "Aquesta sessió ja no és a l'informe.",
     "inaudible": "Inaudible"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "No s’ha pogut desar el canvi. Comprova la connexió.",
     "saveRefused": "No s’ha pogut desar el canvi.",
+    "quoteGone": "Aquesta cita ja no és a l'informe, així que el canvi no s'ha desat.",
     "runInProgress": "S’està fent una anàlisi. Torna-ho a provar quan acabi."
   },
   "screens": {

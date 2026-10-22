@@ -208,6 +208,7 @@
     "newProject": "Nový projekt",
     "dragInterviews": "Přetáhněte rozhovory sem",
     "dragInterviewsDescription": "Začněte přidáním nahrávek rozhovorů nebo přepisů.",
+    "unsuitableFolder": "Bristlenose nemůže analyzovat vaši domovskou složku ani systémovou složku. Vyberte složku, ve které máte rozhovory.",
     "projectUnavailable": "Projekt není dostupný",
     "projectUnavailableHint": "Pro přístup k tomuto projektu připojte disk.",
     "projectMoved": "Projekt přesunut nebo smazán",
@@ -404,7 +405,7 @@
       "whisper": "P\u0159epis selhal \u2013 \u0159e\u010dov\u00fd model se nena\u010detl.",
       "userSignal": "B\u011bh byl zastaven.",
       "missingDep": "Je pot\u0159eba nastaven\u00ed \u2013 chyb\u00ed pot\u0159ebn\u00fd n\u00e1stroj.",
-      "missingInput": "Chyb\u00ed pot\u0159ebn\u00fd vstupn\u00ed soubor.",
+      "missingInput": "Nebyly nalezeny \u017e\u00e1dn\u00e9 rozhovory, kter\u00e9 lze analyzovat.",
       "missingBinary": "FFmpeg nebyl nalezen.",
       "outputExists": "Ji\u017e analyzov\u00e1no \u2013 op\u011btovn\u00e1 anal\u00fdza by nahradila st\u00e1vaj\u00edc\u00ed v\u00fdsledky.",
       "providerNotSetUp": "Poskytovatel {{provider}} ještě není nastaven.",
@@ -465,7 +466,8 @@
         "unreadable": "Soubor se nepodařilo přečíst.",
         "cloud_fetch": "Soubor se nestihl stáhnout do tohoto Macu.",
         "duplicate_recording": "Druhá nahrávka pro toto sezení — použita byla ta druhá.",
-        "duplicate_transcript": "Druhá kopie přepisu tohoto sezení — použita byla ta druhá."
+        "duplicate_transcript": "Druhá kopie přepisu tohoto sezení — použita byla ta druhá.",
+        "no_lines": "V tomto přepisu nejsou žádné řádky — není co analyzovat."
       }
     }
   },
@@ -1086,6 +1088,7 @@
     "projects_other": "{{count}} projekt\u016f",
     "header": "Agenti vid\u00ed pouze otev\u0159en\u00e9 projekty",
     "install": "Instalovat roz\u0161\u00ed\u0159en\u00ed\u2026",
+    "installFailed": "Instalaci se nepoda\u0159ilo spustit. Zkuste to znovu, a pokud se to bude opakovat, po\u0161lete n\u00e1m podrobnosti.",
     "chatgptHint": "P\u0159id\u00e1 Bristlenose do ChatGPT jako z\u00e1suvn\u00fd modul. ChatGPT se otev\u0159e a po\u017e\u00e1d\u00e1 v\u00e1s o instalaci.",
     "installPlugin": "Instalovat z\u00e1suvn\u00fd modul\u2026",
     "reinstallPlugin": "P\u0159einstalovat z\u00e1suvn\u00fd modul\u2026",

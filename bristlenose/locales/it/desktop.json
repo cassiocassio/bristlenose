@@ -204,6 +204,7 @@
     "newProject": "Nuovo progetto",
     "dragInterviews": "Trascina qui le interviste",
     "dragInterviewsDescription": "Aggiungi registrazioni o trascrizioni di interviste per iniziare.",
+    "unsuitableFolder": "Bristlenose non può analizzare la cartella Inizio o una cartella di sistema. Scegli la cartella che contiene le interviste.",
     "projectUnavailable": "Progetto non disponibile",
     "projectUnavailableHint": "Connetti l'unità per accedere a questo progetto.",
     "projectMoved": "Progetto spostato o eliminato",
@@ -367,7 +368,7 @@
       "whisper": "Trascrizione non riuscita: il modello vocale non \u00e8 stato caricato.",
       "userSignal": "L'esecuzione \u00e8 stata interrotta.",
       "missingDep": "Configurazione necessaria: uno strumento richiesto non \u00e8 installato.",
-      "missingInput": "Manca un file di input necessario.",
+      "missingInput": "Nessuna intervista analizzabile trovata.",
       "missingBinary": "FFmpeg non \u00e8 stato trovato.",
       "outputExists": "Gi\u00e0 analizzato: una nuova analisi sostituirebbe i risultati esistenti.",
       "providerNotSetUp": "{{provider}} non è ancora configurato.",
@@ -426,7 +427,8 @@
         "unreadable": "Non è stato possibile leggere il file.",
         "cloud_fetch": "Il file non è stato scaricato su questo Mac in tempo.",
         "duplicate_recording": "Una seconda registrazione per questa sessione — è stata usata l'altra.",
-        "duplicate_transcript": "Una seconda copia della trascrizione di questa sessione — è stata usata l'altra."
+        "duplicate_transcript": "Una seconda copia della trascrizione di questa sessione — è stata usata l'altra.",
+        "no_lines": "Nessuna riga in questa trascrizione — non c'è nulla da analizzare."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} progetti",
     "header": "Gli agenti vedono solo i progetti aperti",
     "install": "Installa estensione\u2026",
+    "installFailed": "Impossibile avviare l\u2019installazione. Riprova e, se continua a succedere, inviaci i dettagli.",
     "chatgptHint": "Aggiunge Bristlenose a ChatGPT come plug-in. ChatGPT si aprir\u00e0 e ti chieder\u00e0 di installarlo.",
     "installPlugin": "Installa plug-in\u2026",
     "reinstallPlugin": "Reinstalla plug-in\u2026",

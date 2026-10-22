@@ -289,6 +289,7 @@
     "anonymiseHint": "Strips participant names from metadata, filenames, and speaker labels, leaving codes (p1, p2). Moderators and observers keep their names. Names spoken inside quotes are NOT removed.",
     "exporting": "Exporting…",
     "exportFailed": "Export failed",
+    "revealFailed": "Couldn’t show the folder.",
     "copyQuotes": "Copy Quotes",
     "copyQuotesCount_one": "Copy {{count}} Quote",
     "copyQuotesCount_other": "Copy {{count}} Quotes",
@@ -610,6 +611,7 @@
     "observers": "Observers",
     "loading": "Loading transcript…",
     "noData": "No transcript data available.",
+    "sessionGone": "This session is no longer in the report.",
     "inaudible": "Inaudible"
   },
   "emptyState": {
@@ -762,6 +764,7 @@
   "sync": {
     "saveFailed": "Couldn’t save your change — check your connection.",
     "saveRefused": "Couldn’t save your change.",
+    "quoteGone": "That quote is no longer in the report, so your change wasn’t saved.",
     "runInProgress": "An analysis is running. Try again when it finishes."
   },
   "screens": {

@@ -204,6 +204,7 @@
     "newProject": "Nouveau projet",
     "dragInterviews": "Glissez les entretiens ici",
     "dragInterviewsDescription": "Ajoutez des enregistrements ou des transcriptions d’entretiens pour commencer.",
+    "unsuitableFolder": "Bristlenose ne peut pas analyser votre dossier de départ ni un dossier système. Choisissez le dossier qui contient vos entretiens.",
     "projectUnavailable": "Projet non disponible",
     "projectUnavailableHint": "Connectez le disque pour accéder à ce projet.",
     "projectMoved": "Projet déplacé ou supprimé",
@@ -367,7 +368,7 @@
       "whisper": "\u00c9chec de la transcription : le mod\u00e8le vocal ne s\u2019est pas charg\u00e9.",
       "userSignal": "L\u2019ex\u00e9cution a \u00e9t\u00e9 arr\u00eat\u00e9e.",
       "missingDep": "Configuration requise : un outil n\u00e9cessaire n\u2019est pas install\u00e9.",
-      "missingInput": "Un fichier d\u2019entr\u00e9e n\u00e9cessaire est manquant.",
+      "missingInput": "Aucun entretien analysable trouv\u00e9.",
       "missingBinary": "FFmpeg est introuvable.",
       "outputExists": "D\u00e9j\u00e0 analys\u00e9 : une nouvelle analyse remplacerait les r\u00e9sultats existants.",
       "providerNotSetUp": "{{provider}} n'est pas encore configuré.",
@@ -426,7 +427,8 @@
         "unreadable": "Impossible de lire le fichier.",
         "cloud_fetch": "Le fichier n’a pas été téléchargé sur ce Mac à temps.",
         "duplicate_recording": "Un second enregistrement pour cet entretien — l'autre a été utilisé.",
-        "duplicate_transcript": "Une seconde copie de la transcription de cet entretien — l'autre a été utilisée."
+        "duplicate_transcript": "Une seconde copie de la transcription de cet entretien — l'autre a été utilisée.",
+        "no_lines": "Aucune ligne dans cette transcription — il n'y a rien à analyser."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projets",
     "header": "Les agents ne voient que les projets ouverts",
     "install": "Installer l\u2019extension\u2026",
+    "installFailed": "Impossible de lancer l\u2019installation. R\u00e9essayez et, si le probl\u00e8me persiste, envoyez-nous les d\u00e9tails.",
     "chatgptHint": "Ajoute Bristlenose \u00e0 ChatGPT comme module. ChatGPT s'ouvrira et vous demandera de l'installer.",
     "installPlugin": "Installer le module\u2026",
     "reinstallPlugin": "R\u00e9installer le module\u2026",

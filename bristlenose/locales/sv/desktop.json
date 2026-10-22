@@ -204,6 +204,7 @@
     "newProject": "Nytt projekt",
     "dragInterviews": "Dra intervjuer hit",
     "dragInterviewsDescription": "Lägg till intervjuinspelningar eller transkriptioner för att komma igång.",
+    "unsuitableFolder": "Bristlenose kan inte analysera din hemmapp eller en systemmapp. Välj mappen som innehåller dina intervjuer.",
     "projectUnavailable": "Projektet är inte tillgängligt",
     "projectUnavailableHint": "Anslut enheten för att komma åt projektet.",
     "projectMoved": "Projektet flyttat eller raderat",
@@ -367,7 +368,7 @@
       "whisper": "Transkriberingen misslyckades \u2013 talmodellen laddades inte.",
       "userSignal": "K\u00f6rningen stoppades.",
       "missingDep": "Konfiguration kr\u00e4vs \u2013 ett n\u00f6dv\u00e4ndigt verktyg \u00e4r inte installerat.",
-      "missingInput": "En n\u00f6dv\u00e4ndig indatafil saknas.",
+      "missingInput": "Inga intervjuer som kan analyseras hittades.",
       "missingBinary": "FFmpeg hittades inte.",
       "outputExists": "Redan analyserad \u2013 en ny analys skulle ers\u00e4tta de befintliga resultaten.",
       "providerNotSetUp": "{{provider}} är inte konfigurerad ännu.",
@@ -426,7 +427,8 @@
         "unreadable": "Det gick inte att läsa filen.",
         "cloud_fetch": "Filen hämtades inte till den här Macen i tid.",
         "duplicate_recording": "En andra inspelning för den här sessionen – den andra användes.",
-        "duplicate_transcript": "En andra kopia av den här sessionens transkription – den andra användes."
+        "duplicate_transcript": "En andra kopia av den här sessionens transkription – den andra användes.",
+        "no_lines": "Inga rader i den här transkriptionen – det finns inget att analysera."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projekt",
     "header": "Agenter ser bara \u00f6ppna projekt",
     "install": "Installera till\u00e4gg\u2026",
+    "installFailed": "Det gick inte att starta installationen. F\u00f6rs\u00f6k igen, och skicka oss detaljerna om det forts\u00e4tter att h\u00e4nda.",
     "chatgptHint": "L\u00e4gger till Bristlenose i ChatGPT som ett plugin. ChatGPT \u00f6ppnas och ber dig installera det.",
     "installPlugin": "Installera plugin\u2026",
     "reinstallPlugin": "Installera om plugin\u2026",

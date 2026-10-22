@@ -274,6 +274,7 @@
     "anonymiseHint": "從中繼資料、檔案名稱與發言者標籤中移除姓名。保留參與者代碼（p1、p2）。主持人姓名會予以保留。引述文字中提及的姓名「不會」被移除。",
     "exporting": "正在匯出⋯",
     "exportFailed": "匯出失敗",
+    "revealFailed": "無法顯示檔案夾。",
     "copyQuotes": "拷貝引述",
     "copyQuotesCount_other": "拷貝 {{count}} 則引述",
     "saveAsSpreadsheet": "儲存為試算表",
@@ -576,6 +577,7 @@
     "observers": "觀察員",
     "loading": "正在載入逐字稿⋯",
     "noData": "沒有可用的逐字稿資料。",
+    "sessionGone": "這個場次已不在報告中。",
     "inaudible": "\u807d\u4e0d\u6e05\u695a"
   },
   "emptyState": {
@@ -727,6 +729,7 @@
   "sync": {
     "saveFailed": "無法儲存變更。請檢查網路連線。",
     "saveRefused": "無法儲存變更。",
+    "quoteGone": "這則引述已不在報告中，因此未儲存你的變更。",
     "runInProgress": "分析正在執行。請在完成後再試一次。"
   },
   "screens": {

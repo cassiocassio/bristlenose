@@ -204,6 +204,7 @@
     "newProject": "Neues Projekt",
     "dragInterviews": "Interviews hierher ziehen",
     "dragInterviewsDescription": "Fügen Sie Interviewaufnahmen oder Transkripte hinzu, um zu beginnen.",
+    "unsuitableFolder": "Bristlenose kann Ihren Benutzerordner oder einen Systemordner nicht analysieren. Wählen Sie den Ordner mit Ihren Interviews.",
     "projectUnavailable": "Projekt nicht verfügbar",
     "projectUnavailableHint": "Verbinden Sie das Laufwerk, um auf dieses Projekt zuzugreifen.",
     "projectMoved": "Projekt verschoben oder gelöscht",
@@ -367,7 +368,7 @@
       "whisper": "Transkription fehlgeschlagen \u2013 das Sprachmodell wurde nicht geladen.",
       "userSignal": "Der Lauf wurde gestoppt.",
       "missingDep": "Einrichtung erforderlich \u2013 ein ben\u00f6tigtes Werkzeug ist nicht installiert.",
-      "missingInput": "Eine ben\u00f6tigte Eingabedatei fehlt.",
+      "missingInput": "Keine analysierbaren Interviews gefunden.",
       "missingBinary": "FFmpeg wurde nicht gefunden.",
       "outputExists": "Bereits analysiert \u2013 eine erneute Analyse w\u00fcrde die vorhandenen Ergebnisse ersetzen.",
       "providerNotSetUp": "{{provider}} ist noch nicht eingerichtet.",
@@ -426,7 +427,8 @@
         "unreadable": "Die Datei konnte nicht gelesen werden.",
         "cloud_fetch": "Die Datei wurde nicht rechtzeitig auf diesen Mac geladen.",
         "duplicate_recording": "Eine zweite Aufnahme für dieses Interview — die andere wurde verwendet.",
-        "duplicate_transcript": "Eine zweite Kopie des Transkripts dieses Interviews — die andere wurde verwendet."
+        "duplicate_transcript": "Eine zweite Kopie des Transkripts dieses Interviews — die andere wurde verwendet.",
+        "no_lines": "Keine Zeilen in diesem Transkript — es gibt nichts zu analysieren."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} Projekte",
     "header": "Agenten sehen nur ge\u00f6ffnete Projekte",
     "install": "Erweiterung installieren\u2026",
+    "installFailed": "Die Installation konnte nicht gestartet werden. Versuchen Sie es erneut, und senden Sie uns die Details, falls es weiterhin passiert.",
     "chatgptHint": "F\u00fcgt Bristlenose als Plug-in zu ChatGPT hinzu. ChatGPT \u00f6ffnet sich und bittet dich, es zu installieren.",
     "installPlugin": "Plug-in installieren\u2026",
     "reinstallPlugin": "Plug-in neu installieren\u2026",

@@ -289,6 +289,7 @@
     "anonymiseHint": "Elimina i nomi dai metadati, dai nomi dei file e dalle etichette degli interlocutori. Mantiene i codici dei partecipanti (p1, p2). I nomi dei moderatori vengono conservati. I nomi citati all'interno del testo delle citazioni NON vengono rimossi.",
     "exporting": "Esportazione…",
     "exportFailed": "Esportazione non riuscita",
+    "revealFailed": "Impossibile mostrare la cartella.",
     "copyQuotes": "Copia citazioni",
     "copyQuotesCount_one": "Copia {{count}} citazione",
     "copyQuotesCount_other": "Copia {{count}} citazioni",
@@ -608,6 +609,7 @@
     "observers": "Osservatori",
     "loading": "Caricamento della trascrizione…",
     "noData": "Nessun dato di trascrizione disponibile.",
+    "sessionGone": "Questa sessione non è più nel report.",
     "inaudible": "Incomprensibile"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Impossibile salvare la modifica. Controlla la connessione.",
     "saveRefused": "Impossibile salvare la modifica.",
+    "quoteGone": "Questa citazione non è più nel report, quindi la modifica non è stata salvata.",
     "runInProgress": "È in corso un’analisi. Riprova quando è terminata."
   },
   "screens": {

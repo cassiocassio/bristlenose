@@ -208,6 +208,7 @@
     "newProject": "Nowy projekt",
     "dragInterviews": "Przeciągnij wywiady tutaj",
     "dragInterviewsDescription": "Dodaj nagrania wywiadów lub transkrypcje, aby rozpocząć.",
+    "unsuitableFolder": "Bristlenose nie może analizować folderu domowego ani folderu systemowego. Wybierz folder, w którym są wywiady.",
     "projectUnavailable": "Projekt niedostępny",
     "projectUnavailableHint": "Podłącz dysk, aby uzyskać dostęp do tego projektu.",
     "projectMoved": "Projekt przeniesiony lub usunięty",
@@ -405,7 +406,7 @@
       "whisper": "Transkrypcja nie powiod\u0142a si\u0119 \u2013 nie wczytano modelu mowy.",
       "userSignal": "Przebieg zosta\u0142 zatrzymany.",
       "missingDep": "Wymagana konfiguracja \u2013 potrzebne narz\u0119dzie nie jest zainstalowane.",
-      "missingInput": "Brakuje wymaganego pliku wej\u015bciowego.",
+      "missingInput": "Nie znaleziono wywiad\u00f3w, kt\u00f3re mo\u017cna przeanalizowa\u0107.",
       "missingBinary": "Nie znaleziono FFmpeg.",
       "outputExists": "Ju\u017c przeanalizowano \u2013 ponowna analiza zast\u0105pi\u0142aby istniej\u0105ce wyniki.",
       "providerNotSetUp": "Dostawca {{provider}} nie jest jeszcze skonfigurowany.",
@@ -466,7 +467,8 @@
         "unreadable": "Nie udało się odczytać pliku.",
         "cloud_fetch": "Plik nie został pobrany na tego Maca na czas.",
         "duplicate_recording": "Drugie nagranie dla tej sesji — użyto innego.",
-        "duplicate_transcript": "Druga kopia transkrypcji tej sesji — użyto innej."
+        "duplicate_transcript": "Druga kopia transkrypcji tej sesji — użyto innej.",
+        "no_lines": "Brak wierszy w tej transkrypcji — nie ma czego analizować."
       }
     }
   },
@@ -1087,6 +1089,7 @@
     "projects_other": "{{count}} projekt\u00f3w",
     "header": "Agenci widz\u0105 tylko otwarte projekty",
     "install": "Zainstaluj rozszerzenie\u2026",
+    "installFailed": "Nie uda\u0142o si\u0119 rozpocz\u0105\u0107 instalacji. Spr\u00f3buj ponownie, a je\u015bli problem b\u0119dzie si\u0119 powtarza\u0142, wy\u015blij nam szczeg\u00f3\u0142y.",
     "chatgptHint": "Dodaje Bristlenose do ChatGPT jako wtyczk\u0119. ChatGPT si\u0119 otworzy i poprosi o instalacj\u0119.",
     "installPlugin": "Zainstaluj wtyczk\u0119\u2026",
     "reinstallPlugin": "Zainstaluj wtyczk\u0119 ponownie\u2026",

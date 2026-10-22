@@ -315,6 +315,7 @@
     "anonymiseHint": "Odstraní jména z metadat, názvů souborů a označení mluvčích. Zachová kódy účastníků (p1, p2). Jména moderátorů jsou zachována. Jména zmíněná v textu citátů NEJSOU odstraněna.",
     "exporting": "Exportování…",
     "exportFailed": "Export se nezdařil",
+    "revealFailed": "Složku se nepodařilo zobrazit.",
     "copyQuotes": "Kopírovat citáty",
     "copyQuotesCount_one": "Kopírovat {{count}} citát",
     "copyQuotesCount_few": "Kopírovat {{count}} citáty",
@@ -667,6 +668,7 @@
     "observers": "Pozorovatelé",
     "loading": "Načítání přepisu…",
     "noData": "Nejsou k dispozici žádná data přepisu.",
+    "sessionGone": "Toto sezení už ve zprávě není.",
     "inaudible": "Nesrozumiteln\u00e9"
   },
   "emptyState": {
@@ -828,6 +830,7 @@
   "sync": {
     "saveFailed": "Změnu se nepodařilo uložit. Zkontrolujte připojení.",
     "saveRefused": "Změnu se nepodařilo uložit.",
+    "quoteGone": "Tento citát už ve zprávě není, takže se změna neuložila.",
     "runInProgress": "Probíhá analýza. Zkuste to znovu, až skončí."
   },
   "screens": {

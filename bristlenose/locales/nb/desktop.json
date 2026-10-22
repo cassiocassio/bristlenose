@@ -204,6 +204,7 @@
     "newProject": "Nytt prosjekt",
     "dragInterviews": "Dra intervjuer hit",
     "dragInterviewsDescription": "Legg til intervjuopptak eller transkripsjoner for å komme i gang.",
+    "unsuitableFolder": "Bristlenose kan ikke analysere hjemmemappen din eller en systemmappe. Velg mappen som inneholder intervjuene dine.",
     "projectUnavailable": "Prosjekt utilgjengelig",
     "projectUnavailableHint": "Koble til disken for å få tilgang til dette prosjektet.",
     "projectMoved": "Prosjekt flyttet eller slettet",
@@ -367,7 +368,7 @@
       "whisper": "Transkripsjon mislyktes \u2013 talemodellen ble ikke lastet inn.",
       "userSignal": "Kj\u00f8ringen ble stoppet.",
       "missingDep": "Oppsett kreves \u2013 et n\u00f8dvendig verkt\u00f8y er ikke installert.",
-      "missingInput": "En n\u00f8dvendig inndatafil mangler.",
+      "missingInput": "Fant ingen intervjuer som kan analyseres.",
       "missingBinary": "Fant ikke FFmpeg.",
       "outputExists": "Allerede analysert \u2013 en ny analyse ville erstatte de eksisterende resultatene.",
       "providerNotSetUp": "{{provider}} er ikke satt opp ennå.",
@@ -426,7 +427,8 @@
         "unreadable": "Filen kunne ikke leses.",
         "cloud_fetch": "Filen ble ikke lastet ned til denne Macen i tide.",
         "duplicate_recording": "Et annet opptak for denne økten – det andre ble brukt.",
-        "duplicate_transcript": "En annen kopi av transkripsjonen for denne økten – den andre ble brukt."
+        "duplicate_transcript": "En annen kopi av transkripsjonen for denne økten – den andre ble brukt.",
+        "no_lines": "Ingen linjer i denne transkripsjonen – det er ingenting å analysere."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} prosjekter",
     "header": "Agenter ser bare \u00e5pne prosjekter",
     "install": "Installer utvidelse\u2026",
+    "installFailed": "Kunne ikke starte installasjonen. Pr\u00f8v igjen, og send oss detaljene hvis det fortsetter \u00e5 skje.",
     "chatgptHint": "Legger til Bristlenose i ChatGPT som et tillegg. ChatGPT \u00e5pnes og ber deg installere det.",
     "installPlugin": "Installer tillegg\u2026",
     "reinstallPlugin": "Installer tillegg p\u00e5 nytt\u2026",

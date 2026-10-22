@@ -205,6 +205,7 @@
     "newProject": "New Project",
     "dragInterviews": "Drag Interviews Here",
     "dragInterviewsDescription": "Add interview recordings or transcripts to get started.",
+    "unsuitableFolder": "Bristlenose can’t analyse your home folder or a system folder. Choose the folder that holds your interviews.",
     "projectUnavailable": "Project Unavailable",
     "projectUnavailableHint": "Connect the drive to access this project.",
     "projectMoved": "Project Moved or Deleted",
@@ -368,7 +369,7 @@
       "whisper": "Transcription failed \u2014 the speech model didn't load.",
       "userSignal": "Run was stopped.",
       "missingDep": "Setup needed \u2014 a required tool isn't installed.",
-      "missingInput": "A required input file is missing.",
+      "missingInput": "No analysable interviews found.",
       "missingBinary": "FFmpeg couldn't be found.",
       "outputExists": "Already analysed \u2014 re-analysing would replace the existing results.",
       "providerNotSetUp": "{{provider}} isn't set up yet.",
@@ -427,7 +428,8 @@
         "unreadable": "The file couldn't be read.",
         "cloud_fetch": "Wasn't downloaded to this Mac in time.",
         "duplicate_recording": "A second recording for this session — the other one was used.",
-        "duplicate_transcript": "A second copy of this session's transcript — the other one was used."
+        "duplicate_transcript": "A second copy of this session's transcript — the other one was used.",
+        "no_lines": "No lines in this transcript — there is nothing to analyse."
       }
     }
   },
@@ -1044,6 +1046,7 @@
     "projects_other": "{{count}} projects",
     "header": "Agents only see open projects",
     "install": "Install Extension\u2026",
+    "installFailed": "Couldn\u2019t start the installation. Try again, and if it keeps happening, send us the details.",
     "chatgptHint": "Adds Bristlenose to ChatGPT as a plugin. ChatGPT will open and ask you to install it.",
     "installPlugin": "Install Plugin\u2026",
     "reinstallPlugin": "Reinstall Plugin\u2026",

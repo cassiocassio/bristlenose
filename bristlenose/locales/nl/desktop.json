@@ -204,6 +204,7 @@
     "newProject": "Nieuw project",
     "dragInterviews": "Sleep interviews hierheen",
     "dragInterviewsDescription": "Voeg interviewopnamen of transcripten toe om te beginnen.",
+    "unsuitableFolder": "Bristlenose kan je thuismap of een systeemmap niet analyseren. Kies de map met je interviews.",
     "projectUnavailable": "Project niet beschikbaar",
     "projectUnavailableHint": "Sluit de schijf aan om toegang te krijgen tot dit project.",
     "projectMoved": "Project verplaatst of verwijderd",
@@ -367,7 +368,7 @@
       "whisper": "Transcriptie mislukt \u2014 het spraakmodel is niet geladen.",
       "userSignal": "De run is gestopt.",
       "missingDep": "Instellen nodig \u2014 een vereist hulpmiddel is niet ge\u00efnstalleerd.",
-      "missingInput": "Er ontbreekt een vereist invoerbestand.",
+      "missingInput": "Geen analyseerbare interviews gevonden.",
       "missingBinary": "FFmpeg is niet gevonden.",
       "outputExists": "Al geanalyseerd \u2014 opnieuw analyseren zou de bestaande resultaten vervangen.",
       "providerNotSetUp": "{{provider}} is nog niet ingesteld.",
@@ -426,7 +427,8 @@
         "unreadable": "Het bestand kon niet worden gelezen.",
         "cloud_fetch": "Het bestand is niet op tijd naar deze Mac gedownload.",
         "duplicate_recording": "Een tweede opname voor deze sessie — de andere is gebruikt.",
-        "duplicate_transcript": "Een tweede kopie van het transcript van deze sessie — de andere is gebruikt."
+        "duplicate_transcript": "Een tweede kopie van het transcript van deze sessie — de andere is gebruikt.",
+        "no_lines": "Geen regels in dit transcript — er valt niets te analyseren."
       }
     }
   },
@@ -1039,6 +1041,7 @@
     "projects_other": "{{count}} projecten",
     "header": "Agenten zien alleen geopende projecten",
     "install": "Extensie installeren\u2026",
+    "installFailed": "De installatie kon niet worden gestart. Probeer het opnieuw en stuur ons de details als het blijft gebeuren.",
     "chatgptHint": "Voegt Bristlenose als plug-in toe aan ChatGPT. ChatGPT wordt geopend en vraagt je om de installatie.",
     "installPlugin": "Plug-in installeren\u2026",
     "reinstallPlugin": "Plug-in opnieuw installeren\u2026",

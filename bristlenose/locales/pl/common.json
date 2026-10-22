@@ -319,6 +319,7 @@
     "anonymiseHint": "Usuwa nazwiska z metadanych, nazw plików i etykiet mówców. Zachowuje kody uczestników (p1, p2). Nazwiska moderatorów są zachowane. Nazwiska wspomniane w treści cytatów NIE są usuwane.",
     "exporting": "Eksportowanie…",
     "exportFailed": "Eksport nie powiódł się",
+    "revealFailed": "Nie udało się pokazać folderu.",
     "copyQuotes": "Kopiuj cytaty",
     "copyQuotesCount_one": "Kopiuj {{count}} cytat",
     "copyQuotesCount_few": "Kopiuj {{count}} cytaty",
@@ -678,6 +679,7 @@
     "observers": "Obserwatorzy",
     "loading": "Wczytywanie transkrypcji…",
     "noData": "Brak dostępnych danych transkrypcji.",
+    "sessionGone": "Tej sesji nie ma już w raporcie.",
     "inaudible": "Niezrozumia\u0142e"
   },
   "emptyState": {
@@ -839,6 +841,7 @@
   "sync": {
     "saveFailed": "Nie można zapisać zmiany. Sprawdź połączenie.",
     "saveRefused": "Nie można zapisać zmiany.",
+    "quoteGone": "Tego cytatu nie ma już w raporcie, więc zmiana nie została zapisana.",
     "runInProgress": "Trwa analiza. Spróbuj ponownie, gdy się zakończy."
   },
   "screens": {

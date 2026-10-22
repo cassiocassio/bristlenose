@@ -202,6 +202,7 @@
     "newProject": "새 프로젝트",
     "dragInterviews": "여기에 인터뷰를 드래그하세요",
     "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요.",
+    "unsuitableFolder": "Bristlenose는 홈 폴더나 시스템 폴더를 분석할 수 없습니다. 인터뷰가 들어 있는 폴더를 선택하세요.",
     "projectUnavailable": "프로젝트를 사용할 수 없음",
     "projectUnavailableHint": "이 프로젝트에 접근하려면 드라이브를 연결하세요.",
     "projectMoved": "프로젝트가 이동 또는 삭제됨",
@@ -348,7 +349,7 @@
       "whisper": "\uc804\uc0ac\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4. \uc74c\uc131 \ubaa8\ub378\uc744 \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
       "userSignal": "\uc2e4\ud589\uc774 \uc911\uc9c0\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
       "missingDep": "\uc124\uc815\uc774 \ud544\uc694\ud569\ub2c8\ub2e4. \ud544\uc694\ud55c \ub3c4\uad6c\uac00 \uc124\uce58\ub418\uc5b4 \uc788\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
-      "missingInput": "\ud544\uc694\ud55c \uc785\ub825 \ud30c\uc77c\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
+      "missingInput": "\ubd84\uc11d\ud560 \uc218 \uc788\ub294 \uc778\ud130\ubdf0\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
       "missingBinary": "FFmpeg\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.",
       "outputExists": "\uc774\ubbf8 \ubd84\uc11d\ub418\uc5c8\uc2b5\ub2c8\ub2e4. \ub2e4\uc2dc \ubd84\uc11d\ud558\uba74 \uae30\uc874 \uacb0\uacfc\uac00 \ub300\uccb4\ub429\ub2c8\ub2e4.",
       "providerNotSetUp": "{{provider}} 설정이 아직 완료되지 않았습니다.",
@@ -406,7 +407,8 @@
         "unreadable": "파일을 읽을 수 없습니다.",
         "cloud_fetch": "제시간에 이 Mac에 다운로드되지 않았습니다.",
         "duplicate_recording": "이 세션의 두 번째 녹음입니다 — 다른 녹음이 사용되었습니다.",
-        "duplicate_transcript": "이 세션 전사본의 두 번째 사본입니다 — 다른 사본이 사용되었습니다."
+        "duplicate_transcript": "이 세션 전사본의 두 번째 사본입니다 — 다른 사본이 사용되었습니다.",
+        "no_lines": "이 전사본에 줄이 없습니다 — 분석할 내용이 없습니다."
       }
     }
   },
@@ -1015,6 +1017,7 @@
     "projects_other": "\ud504\ub85c\uc81d\ud2b8 {{count}}\uac1c",
     "header": "\uc5d0\uc774\uc804\ud2b8\ub294 \uc5f4\ub824 \uc788\ub294 \ud504\ub85c\uc81d\ud2b8\ub9cc \ubd05\ub2c8\ub2e4",
     "install": "\ud655\uc7a5 \ud504\ub85c\uadf8\ub7a8 \uc124\uce58\u2026",
+    "installFailed": "\uc124\uce58\ub97c \uc2dc\uc791\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uace0, \uacc4\uc18d \ubc1c\uc0dd\ud558\uba74 \uc138\ubd80 \uc815\ubcf4\ub97c \ubcf4\ub0b4 \uc8fc\uc138\uc694.",
     "chatgptHint": "Bristlenose\ub97c ChatGPT\uc5d0 \ud50c\ub7ec\uadf8\uc778\uc73c\ub85c \ucd94\uac00\ud569\ub2c8\ub2e4. ChatGPT\uac00 \uc5f4\ub9ac\uace0 \uc124\uce58\ub97c \uc694\uccad\ud569\ub2c8\ub2e4.",
     "installPlugin": "\ud50c\ub7ec\uadf8\uc778 \uc124\uce58\u2026",
     "reinstallPlugin": "\ud50c\ub7ec\uadf8\uc778 \uc7ac\uc124\uce58\u2026",

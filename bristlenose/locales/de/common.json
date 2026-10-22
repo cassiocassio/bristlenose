@@ -289,6 +289,7 @@
     "anonymiseHint": "Entfernt Namen aus Metadaten, Dateinamen und Sprecherbezeichnungen. Behält Codes (p1, p2) bei. Moderatorennamen bleiben erhalten. Namen im Zitattext werden NICHT entfernt.",
     "exporting": "Wird exportiert…",
     "exportFailed": "Export fehlgeschlagen",
+    "revealFailed": "Der Ordner konnte nicht angezeigt werden.",
     "copyQuotes": "Zitate kopieren",
     "copyQuotesCount_one": "{{count}} Zitat kopieren",
     "copyQuotesCount_other": "{{count}} Zitate kopieren",
@@ -608,6 +609,7 @@
     "observers": "Beobachter",
     "loading": "Transkript wird geladen…",
     "noData": "Keine Transkriptdaten verfügbar.",
+    "sessionGone": "Dieses Interview ist nicht mehr im Bericht.",
     "inaudible": "Unverst\u00e4ndlich"
   },
   "emptyState": {
@@ -759,6 +761,7 @@
   "sync": {
     "saveFailed": "Ihre Änderung konnte nicht gesichert werden. Prüfen Sie Ihre Verbindung.",
     "saveRefused": "Ihre Änderung konnte nicht gesichert werden.",
+    "quoteGone": "Dieses Zitat ist nicht mehr im Bericht, daher wurde Ihre Änderung nicht gesichert.",
     "runInProgress": "Es läuft eine Analyse. Versuchen Sie es erneut, wenn sie fertig ist."
   },
   "screens": {

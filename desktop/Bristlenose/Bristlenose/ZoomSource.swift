@@ -500,7 +500,15 @@ final class ZoomSource: CloudImportSource {
                 Self.log.notice("zoom preflight unavailable — eligibility gate not applied")
             }
         }
-        if identity == nil { identity = try? await fetchIdentity() }
+        // Backfill the address, and **publish it**, as Teams and Meet do:
+        // `saveZoom(previousKey:)` rekeys the stored grant out of the anonymous
+        // slot only on a publish carrying the identity. Held in memory alone,
+        // the account stayed nameless in Settings ▸ Accounts. Guarded, so a
+        // failed lookup does not write.
+        if identity == nil, let found = try? await fetchIdentity() {
+            identity = found
+            publishGrant()
+        }
 
         if let notice = preflight?.notice, notice.replacesListing {
             // Eligible-but-empty and ineligible are different answers, and this

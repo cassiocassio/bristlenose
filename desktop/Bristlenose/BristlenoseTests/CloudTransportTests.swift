@@ -1723,7 +1723,10 @@ struct ZoomRotationTests {
         StubURLProtocol.reset()
         StubURLProtocol.enqueue(rotated)
         StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true}}"#))
-        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.org"}"#))
+        // No address: a found one is published by the identity backfill (a
+        // live grant, pinned by `restoredSessionPublishesBackfilledIdentity`),
+        // and this test is about the rotation branch alone publishing nothing.
+        StubURLProtocol.enqueue(.json(#"{}"#))
         StubURLProtocol.enqueue(.json(#"{"meetings":[],"total_records":0}"#))
 
         let published = Published()
@@ -1767,6 +1770,36 @@ struct ZoomRotationTests {
                 "the gate has to ask before it can answer")
         #expect(!paths.contains { $0.hasSuffix("/users/me/recordings") },
                 "an account that cannot cloud-record must not be listed as though it could")
+    }
+
+    @Test("A name found after a restored sign-in is saved to the grant")
+    func restoredSessionPublishesBackfilledIdentity() async throws {
+        // Teams and Meet publish after backfilling the address; Zoom only held
+        // it in memory. The stored grant then stayed under the anonymous key —
+        // nameless in Settings ▸ Accounts, in the one slot every unnamed
+        // sign-in shares — because `saveZoom(previousKey:)` rekeys only on a
+        // publish that carries the identity.
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json(#"{"recording":{"cloud_recording":true}}"#))
+        StubURLProtocol.enqueue(.json(#"{"email":"martin@example.org"}"#))
+        StubURLProtocol.enqueue(.json(#"{"meetings":[],"total_records":0}"#))
+
+        let live = ZoomTokens(accessToken: "A", refreshToken: "R",
+                              expiresAt: Date().addingTimeInterval(3600),
+                              scopes: ZoomScopes.requested)
+        let published = Published()
+        let adapter = ZoomSource(config: config,
+                                 session: StubURLProtocol.session(),
+                                 restoredTokens: live,
+                                 onGrantChanged: { published.record($0) })
+        _ = await adapter.list(window: window)
+        await published.waitForRecord()
+
+        let paths = StubURLProtocol.requests.compactMap(\.url?.path)
+        #expect(paths.contains { $0.hasSuffix("/users/me") },
+                "premise: the backfill asked who the account is")
+        #expect(published.last??.identity == "martin@example.org",
+                "the address has to reach the stored grant, not just this adapter")
     }
 
     @Test("Zoom saying no tombstones the account; a rate limit does not")

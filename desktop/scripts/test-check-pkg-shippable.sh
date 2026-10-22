@@ -56,6 +56,9 @@ build_app() {
   <key>CFBundleShortVersionString</key><string>9.9.9</string>
   <key>CFBundleVersion</key><string>99999</string>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
+  <key>MicrosoftOAuthClientID</key><string>00000000-0000-0000-0000-000000000000</string>
+  <key>MicrosoftOAuthRedirectURI</key><string>msauth.app.bristlenose://auth</string>
+  <key>GoogleOAuthClientID</key><string>0-test.apps.googleusercontent.com</string>
 </dict></plist>
 PLIST
     for m in Contents/Resources Contents/Resources/bristlenose-sidecar; do
@@ -149,7 +152,26 @@ codesign --force --entitlements "$ENTS" --sign - "$A/Contents/MacOS/Bristlenose"
 codesign --force --sign - "$A" 2>/dev/null
 make_pkg "$A" "$D/t.pkg" && expect_reject "hardened runtime absent" "hardened runtime" "$D/t.pkg"
 
-# --- 7. usage: not a pkg ------------------------------------------------------
+# --- 7. cloud sign-in ID missing ---------------------------------------------
+# The quiet one: an app without the baked IDs offers Teams and Meet and cannot
+# start either sign-in, and on a Mac whose defaults hold the IDs it looks fine.
+# The pattern is the ✗ line's detail, not the row label, which the ✓ line prints
+# too; and the intact fixture of case 3 must not trip the row, or a row that
+# always fails would pass this case.
+D=$WORK/c7; mkdir -p "$D"; A=$(build_app "$D")
+/usr/libexec/PlistBuddy -c 'Delete :GoogleOAuthClientID' "$A/Contents/Info.plist" >/dev/null 2>&1
+sign_app "$A" "$ENTS"
+make_pkg "$A" "$D/t.pkg" && expect_reject "cloud sign-in ID absent" "missing or placeholder: GoogleOAuthClientID" "$D/t.pkg"
+# A herestring, not a pipe: under pipefail `grep -q` SIGPIPEs the gate, the
+# pipeline reads false, and this branch would report a pass it never checked.
+c3_out=$("$GATE" "$WORK/c3/t.pkg" 2>&1)
+if grep -q "missing or placeholder" <<<"$c3_out"; then
+    fail "cloud sign-in IDs — row fails a fixture that carries all three IDs"
+else
+    pass "cloud sign-in IDs present → row passes"
+fi
+
+# --- 8. usage: not a pkg ------------------------------------------------------
 if "$GATE" "$WORK/nope.pkg" >/dev/null 2>&1; then
     fail "missing file — gate accepted a nonexistent path"
 else

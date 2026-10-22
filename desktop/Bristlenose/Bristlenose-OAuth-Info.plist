@@ -13,8 +13,9 @@
 
   Changing an ID strands every tester's stored grant: they must sign in again.
   Zoom is deliberately absent; its production ID comes with Zoom's approval.
-  Pinned by BristlenoseTests/OAuthBundledClientIDTests.swift and by
-  desktop/scripts/check-dmg-shippable.sh.
+  Pinned by BristlenoseTests/OAuthBundledClientIDTests.swift and by both
+  artefact gates, desktop/scripts/check-dmg-shippable.sh (the .dmg) and
+  desktop/scripts/check-pkg-shippable.sh (the TestFlight .pkg).
 -->
 <plist version="1.0">
 <dict>

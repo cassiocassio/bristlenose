@@ -172,6 +172,22 @@ if [ -n "$WANT_VER" ] && [ -n "$WANT_BUILD" ] && [ "$VERSION_OK" -eq 1 ]; then
     ok "version" "$GOT_VER ($GOT_BUILD) · agrees with tree"
 fi
 
+# Cloud-import sign-in. A tester has no hand-set client ID, so an app built
+# without the baked ones offers Teams and Meet and cannot start either
+# sign-in — which on the maintainer's Mac, where the defaults hold the IDs,
+# looks exactly like working (Bristlenose-OAuth-Info.plist). Same row as
+# check-dmg-shippable.sh's.
+MISSING_IDS=""
+for key in MicrosoftOAuthClientID MicrosoftOAuthRedirectURI GoogleOAuthClientID; do
+    val="$(/usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" 2>/dev/null || echo '')"
+    case "$val" in ''|*__*) MISSING_IDS="$MISSING_IDS $key" ;; esac
+done
+if [ -z "$MISSING_IDS" ]; then
+    ok "cloud sign-in IDs" "Teams + Meet client IDs baked"
+else
+    die "cloud sign-in IDs" "missing or placeholder:$MISSING_IDS"
+fi
+
 # ---------------------------------------------------------------------------
 # 4. Signature validity
 # ---------------------------------------------------------------------------

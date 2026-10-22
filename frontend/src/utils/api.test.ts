@@ -229,7 +229,8 @@ describe("a curation write that the server could not place", () => {
     fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: ["q-p9-1"] }));
     const err = await patchStarred({ "q-p9-1": true, "q-p1-10": true }).catch((e: unknown) => e);
     expect((err as { unresolved?: string[] }).unresolved).toEqual(["q-p9-1"]);
-    expect(said()).not.toMatch(/connection/i);
+    // Says the quote is gone, not the generic "Couldn't save" (RE#20 #21).
+    expect(said()).toBe("That quote is no longer in the report, so your change wasn’t saved.");
   });
 
   it("resolves when the server placed everything", async () => {

@@ -297,13 +297,16 @@ function sendWrite(
  * to check their network (14 Oct 2026).
  */
 export function toastSaveFailed(err: unknown): void {
-  const { reason, status } = (err ?? {}) as ApiError;
+  const { reason, status, unresolved } = (err ?? {}) as ApiError;
   const message =
     reason === "run_in_progress"
       ? i18n.t("sync.runInProgress")
-      : typeof status === "number"
-        ? i18n.t("sync.saveRefused")
-        : i18n.t("sync.saveFailed");
+      : unresolved?.length
+        ? // A re-run removed the quote; the store re-reads them (RE#20 #21).
+          i18n.t("sync.quoteGone")
+        : typeof status === "number"
+          ? i18n.t("sync.saveRefused")
+          : i18n.t("sync.saveFailed");
   toast(message, 4000);
 }
 

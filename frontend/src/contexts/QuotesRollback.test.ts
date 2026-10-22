@@ -405,6 +405,30 @@ describe("a write the server could only partly place", () => {
     await settle();
     expect(getQuotesSnapshot().starred).toEqual({ q1: true });
   });
+
+  it("re-reads the quotes so the one a re-run removed leaves the screen (#21)", async () => {
+    // The quote stayed on screen after "Couldn't save", inviting the same
+    // gesture again. The existing re-read (every quotes island listens) takes
+    // it off; a write that fails for another reason re-reads nothing.
+    const reread = vi.fn();
+    document.addEventListener("bn:tags-changed", reread);
+    try {
+      initFromQuotes([quote({ dom_id: "q1" }), quote({ dom_id: "q2" })]);
+      failNext(patchStarred);
+      setStarred(["q1"], true);
+      await settle();
+      expect(reread).not.toHaveBeenCalled();
+
+      vi.mocked(patchStarred).mockImplementationOnce(() =>
+        Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q2"] })),
+      );
+      setStarred(["q2"], true);
+      await settle();
+      expect(reread).toHaveBeenCalledTimes(1);
+    } finally {
+      document.removeEventListener("bn:tags-changed", reread);
+    }
+  });
 });
 
 // Accepting or denying a suggestion looked done when it failed: the console

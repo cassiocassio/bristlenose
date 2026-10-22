@@ -417,6 +417,9 @@ function send(write: Promise<void>, changes: Change[]): Promise<Landed> {
       const unresolved = (err as ApiError | null)?.unresolved;
       const landed = unresolved ? (c: Change) => !unresolved.includes(c.id) : () => false;
       answered(landed);
+      // The quote is gone from the server: re-read, so it leaves the screen
+      // rather than invite the same gesture again (RE#20, decision #21).
+      if (unresolved?.length) document.dispatchEvent(new CustomEvent("bn:tags-changed"));
       return changes.some(landed) ? "some" : "none";
     },
   );

@@ -42,6 +42,11 @@ class RefusalReason(str, Enum):
     PROPOSAL_ACCEPTED = "proposal_accepted"
     PROPOSAL_DENIED = "proposal_denied"
 
+    # A transcript asked for by a session the report no longer has (a re-run
+    # removed it): the lens says so instead of offering a Retry that reloads
+    # into the same 404 (RE#20, decision #55). Not "Project not found".
+    SESSION_NOT_FOUND = "session_not_found"
+
 
 class RefusalError(Exception):
     """A refusal that names itself.

@@ -225,7 +225,9 @@ describe("TranscriptPage", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
       mockedGetTranscript.mockRejectedValue(
-        Object.assign(new Error("GET /transcripts/s9 404: Session not found"), { status: 404 }),
+        Object.assign(new Error("GET /transcripts/s9 404: Session not found"), {
+          status: 404, reason: "session_not_found",
+        }),
       );
       render(<TranscriptPage projectId="1" sessionId="s9" />);
       const box = await screen.findByTestId("transcript-error");
@@ -233,6 +235,21 @@ describe("TranscriptPage", () => {
       expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
       const back = screen.getByRole("link", { name: "All sessions" });
       expect(back.getAttribute("href")).toMatch(/\/report\/sessions$/);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("a 404 that is not the session's (the project) keeps the lens sentence and Retry", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      mockedGetTranscript.mockRejectedValue(
+        Object.assign(new Error("GET /transcripts/s1 404: Project not found"), { status: 404 }),
+      );
+      render(<TranscriptPage projectId="1" sessionId="s1" />);
+      const box = await screen.findByTestId("transcript-error");
+      expect(box).toHaveTextContent("This lens couldn’t be shown.");
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     } finally {
       logged.mockRestore();
     }

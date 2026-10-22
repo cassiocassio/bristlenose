@@ -33,12 +33,16 @@ class TestTranscriptEndpoint:
         assert resp.status_code == 200
 
     def test_404_nonexistent_session(self, client: TestClient) -> None:
+        # Named, so the transcript lens can say the session is gone (#55).
         resp = client.get("/api/projects/1/transcripts/s99")
         assert resp.status_code == 404
+        assert resp.json()["reason"] == "session_not_found"
 
     def test_404_nonexistent_project(self, client: TestClient) -> None:
+        # Not the session's reason: a missing project is not "a session gone".
         resp = client.get("/api/projects/999/transcripts/s1")
         assert resp.status_code == 404
+        assert "reason" not in resp.json()
 
     def test_response_has_required_fields(self, client: TestClient) -> None:
         data = client.get("/api/projects/1/transcripts/s1").json()

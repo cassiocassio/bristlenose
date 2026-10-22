@@ -33,6 +33,7 @@ from bristlenose.server.models import (
     TranscriptSegment,
 )
 from bristlenose.server.models import Session as SessionModel
+from bristlenose.server.refusal import RefusalError, RefusalReason
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -211,7 +212,7 @@ def get_transcript(
             .first()
         )
         if not sess:
-            raise HTTPException(status_code=404, detail="Session not found")
+            raise RefusalError(404, RefusalReason.SESSION_NOT_FOUND, "Session not found")
 
         # Speakers: every slot, identified or not (an unidentified moderator
         # reads ``m?``), under the identity's code (route C, speaker_slots).

@@ -419,7 +419,8 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
         // Never empty: an empty string reads as "no error" and the page would
         // say there is no transcript.
         setError(String(err?.message || "read failed"));
-        setSessionGone((err as ApiError | null)?.status === 404);
+        // The session's own 404 names itself; a missing project does not.
+        setSessionGone((err as ApiError | null)?.reason === "session_not_found");
       })
       .finally(() => {
         if (ticket === readTicket.current) setLoading(false);

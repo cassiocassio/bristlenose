@@ -256,6 +256,74 @@ struct ExportSaveFlowTests {
         #expect(rig.alerts.count == 1)
     }
 
+    // MARK: - #24: the row says "Exporting…" until the panel
+
+    /// From the press, through the seconds the server spends building the
+    /// file, to the save panel — and not a moment past it (decision #24).
+    @Test func exportingIsSaidFromThePressUntilThePanel() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let bridge = rig.coordinator.bridgeHandler
+        var atPanel: Bool?
+        rig.atPanel = { _ in atPanel = bridge.isExportingReport }
+        rig.serve.hold = { _ in true }
+
+        bridge.reportExportPressed()          // as `menuAction("exportReport")` does
+        #expect(bridge.isExportingReport, "the press was not answered")
+        await rig.export()
+        await rig.until { rig.serve.requested.count == 1 }
+        // The server is still building it.
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(bridge.isExportingReport, "the line went before the panel came up")
+
+        rig.serve.release()
+        await rig.until { rig.saved != nil }
+        #expect(atPanel == false, "the save panel came up over \"Exporting…\"")
+        #expect(!bridge.isExportingReport)
+    }
+
+    /// A refused export ends it too: the alert, not "Exporting…", is next.
+    @Test func aServerErrorEndsExporting() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let bridge = rig.coordinator.bridgeHandler
+        rig.serve.status = { _ in 500 }
+        bridge.reportExportPressed()
+        await rig.export()
+        await rig.until { !rig.alerts.isEmpty }
+        #expect(!rig.alerts.isEmpty)
+        #expect(!bridge.isExportingReport, "a refused export still said Exporting…")
+    }
+
+    /// A press the page never turns into a download — a partial report it
+    /// refuses, or a script that never ran — lets go on its own.
+    @Test func aPressThatStartsNoDownloadLetsGo() async throws {
+        let bridge = BridgeHandler()
+        bridge.reportExportStartPatience = .milliseconds(100)
+        bridge.reportExportPressed()
+        #expect(bridge.isExportingReport)
+        let deadline = Date().addingTimeInterval(ExportRig.patience)
+        while bridge.isExportingReport, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(!bridge.isExportingReport, "Exporting… stayed up with no export behind it")
+    }
+
+    /// Once the download has begun, its own ends clear the line: the
+    /// fallback must not cut a slow export's "Exporting…" short.
+    @Test func aBegunDownloadOutlastsTheFallback() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let bridge = rig.coordinator.bridgeHandler
+        bridge.reportExportStartPatience = .milliseconds(100)
+        rig.serve.hold = { _ in true }
+        bridge.reportExportPressed()
+        await rig.export()
+        await rig.until { rig.serve.requested.count == 1 }
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(bridge.isExportingReport, "the fallback cleared a download still building")
+        rig.serve.release()
+        await rig.until { rig.saved != nil }
+        #expect(!bridge.isExportingReport)
+    }
+
     /// Ticking Anonymise hands the pending export to the refetch: a press
     /// while it is fetched is still a second press.
     @Test func aPressWhileTheAnonymisedCopyIsFetchedAsksNothing() async throws {

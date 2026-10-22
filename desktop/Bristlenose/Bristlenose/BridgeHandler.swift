@@ -405,6 +405,63 @@ final class BridgeHandler: ObservableObject {
     /// proves nothing about the layout.
     @Published var reportCrash: ReportCrash?
 
+    // MARK: - Export Report pending (R76, RE#20 #24)
+
+    /// An Export Report is between the press and its save panel. The server
+    /// builds the whole file before WebKit asks where to save it, which takes
+    /// seconds, and nothing on screen said so: `ContentView` reads this into
+    /// the sidebar row of the study this window shows, which says
+    /// "Exporting…" (decision #24, 22 Oct 2026).
+    ///
+    /// Set by the press (`menuAction`) and by the download the page started
+    /// (`WebView.Coordinator.adoptDownload`); cleared when the save panel is
+    /// about to show, when the export fails or is refused, by a project
+    /// switch (`reset`), and, when no download begins at all — the page
+    /// refused a partial report, or its script never ran — by
+    /// `reportExportStartPatience` running out.
+    @Published private(set) var isExportingReport = false
+
+    /// How long a press waits for its download to begin before the row lets
+    /// go. The page starts the download in the same turn as the press, so a
+    /// press that has not started one by then never will. A seam for tests.
+    var reportExportStartPatience: Duration = .seconds(5)
+
+    private var reportExportFallback: Task<Void, Never>?
+
+    /// Export Report was pressed. Returns whether this press began the
+    /// pending state — a press while one is pending changes nothing, as the
+    /// coordinator drops its download (R76).
+    @discardableResult
+    func reportExportPressed() -> Bool {
+        guard !isExportingReport else { return false }
+        isExportingReport = true
+        let patience = reportExportStartPatience
+        reportExportFallback?.cancel()
+        reportExportFallback = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: patience)
+            guard !Task.isCancelled, let self, self.isExportingReport else { return }
+            Self.log.notice("export: no download began after the press — Exporting… cleared")
+            self.reportExportSettled()
+        }
+        return true
+    }
+
+    /// The page's Export Report download has begun: its own ends — the save
+    /// panel, a failure, a refusal — clear the line from here, so the
+    /// fallback stands down.
+    func reportExportDownloadBegan() {
+        reportExportFallback?.cancel()
+        reportExportFallback = nil
+        if !isExportingReport { isExportingReport = true }
+    }
+
+    /// The save panel is about to show, or the export ended without one.
+    func reportExportSettled() {
+        reportExportFallback?.cancel()
+        reportExportFallback = nil
+        if isExportingReport { isExportingReport = false }
+    }
+
     /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
     /// folder-access half — from the facts that decide them.
     ///
@@ -978,6 +1035,9 @@ final class BridgeHandler: ObservableObject {
             Self.log.fault("menuAction(\(action, privacy: .public)) dropped — no webView registered [docState=\(String(describing: self.documentState), privacy: .public)]")
             return
         }
+        // From the press, not the download: the page's click reaches WebKit a
+        // turn later, and the row should answer the press (decision #24).
+        let beganExport = action == "exportReport" && reportExportPressed()
         let js: String
         var args: [String: Any] = ["action": action]
         if let payload {
@@ -995,6 +1055,8 @@ final class BridgeHandler: ObservableObject {
                 )
             } catch {
                 Self.log.error("menuAction(\(action, privacy: .public)) failed: \(String(describing: error), privacy: .public)")
+                // The page never ran the export, so no download will end it.
+                if beganExport { reportExportSettled() }
             }
         }
     }
@@ -1390,6 +1452,8 @@ final class BridgeHandler: ObservableObject {
         documentState = .loading
         // The crashed document goes with the selection it belonged to.
         reportCrash = nil
+        // So does a pending export: its row is the old selection's.
+        reportExportSettled()
         // The next document says what it withholds; until then nothing is.
         lensReadiness = .all
         pendingLensIntent = nil

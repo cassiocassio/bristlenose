@@ -166,6 +166,11 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// notifications this controller used to observe, which arrived in every
     /// open window at once.
     let renameRequest: Int
+    /// The study whose report this window is exporting, from the Export
+    /// Report press until its save panel shows (decision #24, 22 Oct 2026).
+    /// Kept by the window's `BridgeHandler`, paired with the study by
+    /// `ContentView` as `reportCrash` is. Nil the rest of the time.
+    var exportingReportProjectID: UUID? = nil
     /// The study a drop just landed on, held for the 0.4 s acknowledgement
     /// `ContentView` times (a re-dropped analysed folder, a moved study, files
     /// already there). The SwiftUI row strokes it; this sidebar marks the row as
@@ -204,6 +209,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.mcpMounted = mcpMounted
         controller.handshakeProjectPaths = handshakeProjectPaths
         controller.reportCrash = reportCrash
+        controller.exportingReportProjectID = exportingReportProjectID
         controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
@@ -287,6 +293,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// The window's report crash and the study it belongs to — see the
     /// representable's `reportCrash`.
     var reportCrash: (projectID: UUID, crash: ReportCrash)?
+    /// See the representable's `exportingReportProjectID`.
+    var exportingReportProjectID: UUID?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     /// See the representable's `canShareWithAgents` / `mcpMounted`.
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
@@ -2024,6 +2032,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             pipelineState: pipelineRunner?.state[id],
             isStopping: liveData?.progress[id]?.isStopping ?? false,
             addingCount: pipelineRunner?.addingInterviews[id],
+            exportingReport: exportingReportProjectID == id,
             copy: copyDisplay(for: project),
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },

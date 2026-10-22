@@ -655,6 +655,8 @@ struct WebView: NSViewRepresentable {
                     return
                 }
                 pendingReportExport = download
+                // The row's "Exporting…" now ends with this download (#24).
+                bridgeHandler.reportExportDownloadBegan()
             }
             pendingRequestURL[ObjectIdentifier(download)] = requestURL
         }
@@ -666,7 +668,9 @@ struct WebView: NSViewRepresentable {
         /// The download is over, one way or another: an export behind it may go.
         @MainActor
         private func reportExportEnded(_ download: WKDownload) {
-            if pendingReportExport === download { pendingReportExport = nil }
+            guard pendingReportExport === download else { return }
+            pendingReportExport = nil
+            bridgeHandler.reportExportSettled()
         }
 
         func webView(
@@ -710,6 +714,9 @@ struct WebView: NSViewRepresentable {
             let requestURL = pendingRequestURL[id] ?? response.url
             defer { pendingRequestURL.removeValue(forKey: id) }
             let alreadyChosen = chosenDestination.removeValue(forKey: id)
+            // The server has answered: the panel, or the failure, is what the
+            // researcher sees next, so the row stops saying "Exporting…" (#24).
+            if pendingReportExport === download { bridgeHandler.reportExportSettled() }
 
             // An error answer is not the export. WebKit hands a download its
             // response whatever the status (measured 20 Oct 2026: a 500 reached

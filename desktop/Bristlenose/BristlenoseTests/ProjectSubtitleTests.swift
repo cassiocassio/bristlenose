@@ -20,6 +20,7 @@ import Testing
         pipelineState: PipelineState? = nil,
         isStopping: Bool = false,
         addingCount: Int? = nil,
+        exportingReport: Bool = false,
         copy: CopyDisplay? = nil,
         lastRunAt: Date? = nil,
         missingCount: Int = 0,
@@ -31,12 +32,34 @@ import Testing
             pipelineState: pipelineState,
             isStopping: isStopping,
             addingCount: addingCount,
+            exportingReport: exportingReport,
             copy: copy,
             importBatch: importBatch,
             lastRunAt: lastRunAt,
             missingCount: missingCount,
             unanalysedCount: unanalysedCount
         )
+    }
+
+    // MARK: - Export Report pending (decision #24, 22 Oct 2026)
+
+    /// The press is answered on the row until the save panel shows: an idle
+    /// study at rest, with deltas or a copy behind it, reads "Exporting…".
+    @Test func exportingTakesTheIdleLine() {
+        #expect(resolve(exportingReport: true) == .exportingReport)
+        #expect(resolve(pipelineState: .ready(aDate), exportingReport: true,
+                        unanalysedCount: 3) == .exportingReport)
+        #expect(resolve(exportingReport: true, copy: .copying(fraction: 0.4)) == .exportingReport)
+        #expect(resolve(exportingReport: true, importBatch: (done: 1, total: 4)) == .exportingReport)
+    }
+
+    /// An idle-tier activity, like "Adding N interviews…": the run's own line
+    /// and the adding acknowledgement keep theirs.
+    @Test func exportingYieldsToARunAndToAdding() {
+        #expect(resolve(pipelineState: .running, exportingReport: true) == .running)
+        #expect(resolve(addingCount: 2, exportingReport: true) == .addingInterviews(count: 2))
+        #expect(resolve(availability: .cantFind(reason: .moved), exportingReport: true)
+                == .cantFind(reason: .moved))
     }
 
     // MARK: - Tier 1 — availability outranks ALL activity (18 Jun ruling)

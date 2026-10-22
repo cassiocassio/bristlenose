@@ -52,8 +52,8 @@ enum SidebarSubtitleText {
             // popover says it whole).
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .importingBatch, .readingScreens, .copyCancelling,
-             .waitingForWhisper:
+             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
+             .copyCancelling, .waitingForWhisper:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -114,6 +114,8 @@ enum SidebarSubtitleText {
             return i18n.t(reason.localeKey)
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
+        case .exportingReport:
+            return i18n.t("common.export.exporting")
         case .copying(let fraction):
             let percent = min(100, max(0, Int((fraction * 100).rounded())))
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])

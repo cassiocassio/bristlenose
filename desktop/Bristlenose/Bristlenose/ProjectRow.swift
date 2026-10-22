@@ -278,7 +278,7 @@ struct ProjectRow: View {
             diagnosticSubtitle(kind: .warning,
                                text: i18n.t("desktop.pipeline.diagnostic.header.reportError"))
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
+             .addingInterviews, .exportingReport, .copying, .copyCancelling, .waitingForWhisper:
             subtitleText(prefix: nil,
                          text: pipelineActivityText(subtitleVariant, separator: " · ") ?? "",
                          style: .secondary)
@@ -325,6 +325,10 @@ struct ProjectRow: View {
             return i18n.t(reason.localeKey)
         case .addingInterviews(let count):
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
+        case .exportingReport:
+            // Unreachable here, like `.reportError`: the window's export is
+            // published to the AppKit sidebar, the shipped row.
+            return i18n.t("common.export.exporting")
         case .readingScreens:
             // Unreachable here, like `.importingBatch` below.
             return nil
@@ -707,7 +711,7 @@ struct ProjectRow: View {
         case .reportError:
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .copying, .copyCancelling, .waitingForWhisper:
+             .addingInterviews, .exportingReport, .copying, .copyCancelling, .waitingForWhisper:
             // Comma separator: VoiceOver reads commas as pauses
             // ("Transcribing, 7 of 8, ~1 min left"); "·" doesn't.
             return pipelineActivityText(variant, separator: ", ")

@@ -45,7 +45,7 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 68 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+What is left is 67 keys, and they are not one thing either. `_KNOWN_ORPHANS`
 below carries them in 17 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
@@ -321,9 +321,9 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
             "wholesale.",
         leaves="""
             clips.donePartial clips.noMedia clips.revealMac
-            copyQuotesCount_one copyQuotesCount_other exporting
+            copyQuotesCount_one copyQuotesCount_other
             exportingQuotes_other fromSessions_one fromSessions_other
-        """,  # 9
+        """,  # 8 — `exporting` is read again by the Mac row (RE#20 #24)
     ),
     "desktop.welcome.": _Block(
         tag=DEAD,

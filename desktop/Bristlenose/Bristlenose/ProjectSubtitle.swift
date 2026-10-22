@@ -67,6 +67,13 @@ enum SubtitleVariant: Equatable {
     /// it can't flash-and-vanish on a near-instant clonefile copy, then it yields
     /// to the copy/scan states and finally the stage ladder. Phase 2.
     case addingInterviews(count: Int)
+    /// File ▸ Export Report… (or the toolbar's) was pressed in the window
+    /// showing THIS project, and the save panel has not come up yet: the
+    /// server builds the whole report first, which takes seconds. Renders
+    /// "Exporting…" — the gesture's acknowledgement, like "Adding N
+    /// interviews…", and like it an idle-tier activity (decision #24, 22 Oct
+    /// 2026). No ring: there is nothing to cancel before the panel.
+    case exportingReport
     /// A drag-import copy is landing files in THIS project. Carries the 0…1
     /// byte fraction; the view renders "Copying · N%" + a determinate ring
     /// (with hover-cancel) in the trailing slot — the row's *only* copy surface
@@ -195,7 +202,7 @@ extension SubtitleVariant {
             // delta is the same disagreement with a date in front of it.
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .copying, .importingBatch, .readingScreens,
+             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
              .copyCancelling, .waitingForWhisper, .placeholder:
             return .none
         }
@@ -255,7 +262,7 @@ extension SubtitleVariant {
             // picture and how it amends the `info` ruling.
             return .info
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .copying, .importingBatch, .readingScreens,
+             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
              .copyCancelling, .waitingForWhisper, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
@@ -316,7 +323,7 @@ enum ProjectSubtitle {
     /// §Precedence, §5):**
     /// `cantFind (availability) › failed › running › unreachable ›
     /// completedPartial › reportError › queued / stopped / partial ›
-    /// (idle: adding › batch › copying › forked › reportError › screens ›
+    /// (idle: adding › exporting › batch › copying › forked › reportError › screens ›
     /// missing › unanalysed › silence)`. The report crash (21 Oct 2026)
     /// yields to the verb-led and cause-shaped states and to the idle
     /// activities and the error-kind delta, and takes the line from the rest
@@ -337,6 +344,7 @@ enum ProjectSubtitle {
         pipelineState: PipelineState?,
         isStopping: Bool,
         addingCount: Int?,
+        exportingReport: Bool = false,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
@@ -392,6 +400,7 @@ enum ProjectSubtitle {
             // it resolves the same as idle here.
             return resolveIdle(
                 addingCount: addingCount,
+                exportingReport: exportingReport,
                 copy: copy,
                 importBatch: importBatch,
                 screens: screens,
@@ -418,6 +427,7 @@ enum ProjectSubtitle {
     /// is non-zero at all.
     private static func resolveIdle(
         addingCount: Int?,
+        exportingReport: Bool,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
@@ -432,6 +442,10 @@ enum ProjectSubtitle {
         // to `.running` automatically — that's returned by the main switch before
         // we ever reach the idle tier.
         if let addingCount { return .addingInterviews(count: addingCount) }
+        // The Export Report press, until its save panel shows (#24). After
+        // "Adding", which has its own short floor; above the longer-running
+        // batch and copy, because it answers a press the researcher just made.
+        if exportingReport { return .exportingReport }
         // A cloud batch outranks a local copy, and both outrank the resting
         // date/delta. The order matters in exactly one situation and it is a
         // real one: a researcher can drop files on a project while a cloud

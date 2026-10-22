@@ -3100,6 +3100,9 @@ struct ContentView: View {
                     bridgeHandler.reportCrash.map { (projectID: p.id, crash: $0) }
                 },
                 renameRequest: renameRequest,
+                // Export Report acts on this window's document, so the row
+                // is the sole-selected study's, paired as the crash is (#24).
+                exportingReportProjectID: bridgeHandler.isExportingReport ? selectedProject?.id : nil,
                 flashProjectID: dropTargetProjectID
             )
             // Run the list up under the toolbar, as a SwiftUI `List` sidebar

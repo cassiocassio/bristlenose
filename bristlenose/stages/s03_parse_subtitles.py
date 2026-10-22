@@ -215,7 +215,13 @@ def read_text_any_encoding(path: Path) -> str:
     1252: a Chinese, Japanese or Cyrillic legacy file read that way is
     fluent-looking nonsense that would be analysed and paid for.
     """
-    data = path.read_bytes()
+    return decode_text_any_encoding(path.read_bytes(), path.name)
+
+
+def decode_text_any_encoding(data: bytes, name: str) -> str:
+    """``read_text_any_encoding`` on bytes already read: a caller that hashes
+    the file decodes the bytes it hashed, never a second read. *name* is the
+    file's, for the log line."""
     if data.startswith(codecs.BOM_UTF8):
         return data.decode("utf-8-sig")
     if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
@@ -245,7 +251,7 @@ def read_text_any_encoding(path: Path) -> str:
         raise UnicodeDecodeError(
             "cp1252", data, 0, len(data), "not UTF-8, and not plausibly Windows-1252",
         )
-    logger.warning("%s is not UTF-8; read as Windows-1252", path.name)
+    logger.warning("%s is not UTF-8; read as Windows-1252", name)
     return text
 
 

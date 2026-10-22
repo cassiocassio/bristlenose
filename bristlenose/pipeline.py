@@ -5031,7 +5031,7 @@ def load_transcripts_from_dir(
     from datetime import datetime, timezone
 
     from bristlenose.models import INAUDIBLE_TOKEN, SpeakerRole
-    from bristlenose.stages.s03_parse_subtitles import read_text_any_encoding
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
     from bristlenose.utils.timecodes import parse_header_datetime, parse_timecode
 
     transcripts: list[PiiCleanTranscript] = []
@@ -5047,7 +5047,9 @@ def load_transcripts_from_dir(
         duration = 0.0
 
         # A transcript saved from a Windows editor is UTF-16 or 1252 (R118).
-        for line in read_text_any_encoding(path).splitlines():
+        # One read: the hash below vouches for the bytes parsed here.
+        data = path.read_bytes()
+        for line in decode_text_any_encoding(data, path.name).splitlines():
             line = line.strip()
             if not line:
                 continue
@@ -5155,7 +5157,7 @@ def load_transcripts_from_dir(
                 if session_id in claimed:
                     file_hashes.pop(session_id, None)
                 else:
-                    file_hashes[session_id] = hash_bytes(path.read_bytes())
+                    file_hashes[session_id] = hash_bytes(data)
             claimed.add(session_id)
             transcripts.append(
                 PiiCleanTranscript(

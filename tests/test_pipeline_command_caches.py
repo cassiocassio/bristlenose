@@ -457,6 +457,33 @@ def test_a_transcript_file_run_cannot_read_is_an_error_not_a_re_pay(
         _transcript_file_hashes(tmp_path, ["s1"])
 
 
+def test_the_file_key_vouches_for_the_bytes_analyze_parsed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # One read per file: an editor saving between a parse and a second read
+    # for the hash would key the session to bytes analyze never analysed.
+    from bristlenose.pipeline import load_transcripts_from_dir
+
+    _drive(tmp_path, "run", 1, {})
+    raw = tmp_path / "output" / "transcripts-raw"
+    reads: list[str] = []
+    real = Path.read_bytes
+
+    def _counted(self: Path) -> bytes:
+        reads.append(self.name)
+        return real(self)
+
+    monkeypatch.setattr(Path, "read_bytes", _counted)
+    monkeypatch.setattr(Path, "read_text", lambda *_a, **_k: pytest.fail("second read"))
+    hashes: dict[str, str] = {}
+    load_transcripts_from_dir(raw, file_hashes=hashes)
+
+    assert reads == ["s1.txt"], reads
+    from bristlenose.hashing import hash_bytes
+
+    assert hashes == {"s1": hash_bytes(real(raw / "s1.txt"))}
+
+
 def test_analyze_with_no_manifest_writes_none(tmp_path: Path) -> None:
     # A folder of transcripts run never vouched for: nothing to keep, and
     # analyze still writes no manifest of its own.

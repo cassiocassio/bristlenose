@@ -106,6 +106,23 @@ OUTPUT_DIR_NAME = "bristlenose-output"
 _MAX_SCAN_DEPTH = 3
 
 
+def _home_folders() -> set[Path]:
+    """``$HOME``, and the account's own home folder when that differs.
+
+    In the Mac app the sidecar's ``$HOME`` is the sandbox container, so
+    ``Path.home()`` alone never names ``/Users/<name>``; the account database
+    does (as ``UserHome.swift`` reads it). Windows has no ``pwd``.
+    """
+    homes = {Path.home().resolve()}
+    try:
+        import pwd
+
+        homes.add(Path(pwd.getpwuid(os.getuid()).pw_dir).resolve())
+    except (ImportError, KeyError, OSError):
+        pass
+    return homes
+
+
 def _refuse_reason(input_dir: Path) -> str | None:
     """Return why *input_dir* cannot be a study folder, or None if it can.
 
@@ -114,16 +131,16 @@ def _refuse_reason(input_dir: Path) -> str | None:
     entirely reasonable places to keep a study, so refusing them would be wrong.
     """
     resolved = input_dir.resolve()
-    home = Path.home().resolve()
+    homes = _home_folders()
 
     if resolved == Path(resolved.anchor):
         return "it is the root of the filesystem"
-    if resolved == home:
+    if resolved in homes:
         return "it is your home folder"
     system_roots = {
         Path("/Applications"), Path("/System"), Path("/Library"), Path("/Volumes"),
         Path("/private"), Path("/usr"), Path("/bin"), Path("/sbin"), Path("/etc"),
-        Path("/var"), Path("/opt"), Path("/cores"), home / "Library",
+        Path("/var"), Path("/opt"), Path("/cores"), *(home / "Library" for home in homes),
     }
     if resolved in system_roots:
         return "it is a system folder"

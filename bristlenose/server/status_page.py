@@ -215,9 +215,16 @@ def _holds_interviews(project_dir: Path) -> bool:
 
 def _refuses_folder(project_dir: Path) -> bool:
     """Whether `run` refuses the folder by name (a home folder or system root)."""
-    from bristlenose.stages.s01_ingest import _refuse_reason
+    from bristlenose.stages.s01_ingest import (
+        UnsuitableInputDirError,
+        refuse_unsuitable_input_dir,
+    )
 
-    return _refuse_reason(project_dir) is not None
+    try:
+        refuse_unsuitable_input_dir(project_dir)
+    except UnsuitableInputDirError:
+        return True
+    return False
 
 
 def detect_status(

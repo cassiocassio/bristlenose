@@ -433,8 +433,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · eksik",
     "networkUnreachable": "{{host}} · erişilemiyor",
-    "missing": "eksik",
-    "inCloud": "iCloud’da"
+    "missing": "eksik"
   },
   "boot": {
     "failure": {

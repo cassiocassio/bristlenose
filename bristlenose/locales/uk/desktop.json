@@ -473,8 +473,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · відсутній",
     "networkUnreachable": "{{host}} · недоступний",
-    "missing": "відсутній",
-    "inCloud": "У iCloud"
+    "missing": "відсутній"
   },
   "boot": {
     "failure": {

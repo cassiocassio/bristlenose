@@ -476,8 +476,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · 見つかりません",
     "networkUnreachable": "{{host}} · 接続できません",
-    "missing": "見つかりません",
-    "inCloud": "iCloud にあります"
+    "missing": "見つかりません"
   },
   "boot": {
     "failure": {

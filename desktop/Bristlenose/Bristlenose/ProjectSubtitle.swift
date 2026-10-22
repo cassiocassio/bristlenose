@@ -329,10 +329,7 @@ enum ProjectSubtitle {
     ///
     /// `cantFind` outranks *all* activity: you can't open the report if the
     /// folder's gone, and a run against a vanished folder is already doomed, so
-    /// "can't reach the folder" is the only honest line. `.inCloud` falls
-    /// through to the pipeline state: it is a cloud folder that has gone, and
-    /// a scan or a refused run reads it as `.unreachable(.folderMissing)`. An
-    /// evicted folder never reaches it (it resolves `.ready`). Copying sits *below* the verb-led pipeline
+    /// "can't reach the folder" is the only honest line. Copying sits *below* the verb-led pipeline
     /// states (you can't run and copy at once in practice) but *above* the
     /// resting date/delta — an active import outranks "last analysed N days ago".
     static func resolve(
@@ -350,7 +347,7 @@ enum ProjectSubtitle {
         databaseForked: Bool = false
     ) -> SubtitleVariant {
         // Tier 1 — availability beats everything when the project can't be
-        // reached. `.ready` / `.inCloud` fall through.
+        // reached. `.ready` falls through.
         if case .cantFind(let reason) = availability {
             return .cantFind(reason: reason)
         }

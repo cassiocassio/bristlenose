@@ -3,14 +3,14 @@ import Testing
 @testable import Bristlenose
 
 /// R63's follow-up (decision #8, 20 Oct 2026): a study whose cloud folder has
-/// gone (`.inCloud`) was still spawned against its missing path, because the
-/// refusal asked for `.cantFind` alone.
+/// gone was still spawned against its missing path.
 ///
-/// The prior record settles what each case is (`docs/design-project-storage.md`
-/// §3, `docs/mockups/cloud-fetch-states.html` §F): an evicted folder is still
-/// there, resolves `.ready` and runs, the sidecar fetching its files on demand;
-/// `.inCloud` is reached only once the folder itself is gone. These pin that
-/// split, and that the refused row reads what a scan of the folder reads.
+/// A folder a sync client manages has no state of its own (decided 22 Oct 2026,
+/// `docs/design-cloud-wait-label.md`): an evicted folder is still there,
+/// resolves `.ready` and runs, the sidecar fetching its files on demand
+/// (`docs/design-project-storage.md` §3); a gone one is `.cantFind`, like any
+/// gone folder, and is refused with Locate… offered. These pin that split, and
+/// that a refusal writes the runner state a scan of the folder reads.
 @MainActor
 @Suite struct SpawnRefusalTests {
 
@@ -52,7 +52,6 @@ import Testing
             .cantFind(reason: .networkUnreachable(host: "nas.local")),
             .cantFind(reason: .moved),
             .cantFind(reason: .missingBookmark),
-            .inCloud(downloading: nil),
         ]
         for availability in gone {
             #expect(PipelineRunner.spawnRefusal(for: availability)
@@ -76,12 +75,23 @@ import Testing
         #expect(PipelineRunner.spawnRefusal(for: p.availability) == nil)
     }
 
-    @Test func aCloudFolderThatIsGoneIsInCloud() {
+    /// No cloud-specific state: a cloud folder that has gone is a gone folder.
+    @Test func aCloudFolderThatIsGoneCannotBeFound() {
         let (root, index) = Self.scratch(); defer { try? FileManager.default.removeItem(at: root) }
         let p = Self.cloudProject(index, root: root, "Gone")
         try? FileManager.default.removeItem(atPath: p.path)
 
-        #expect(p.availability == .inCloud(downloading: nil))
+        #expect(p.location?.type == .cloud)
+        #expect(Self.cannotBeFound(p.availability))
+        #expect(PipelineRunner.spawnRefusal(for: p.availability) == .unreachable(reason: .folderMissing))
+        // The moved-folder treatment, as for any gone folder: Locate…, no cloud glyph.
+        #expect(p.availability.primaryAction == .locate)
+        #expect(p.availability.sfSymbolName == "questionmark.folder")
+    }
+
+    static func cannotBeFound(_ availability: ProjectAvailability) -> Bool {
+        if case .cantFind = availability { return true }
+        return false
     }
 
     // MARK: - What the row says
@@ -97,16 +107,23 @@ import Testing
         #expect(PipelineRunner.spawnRefusal(for: p.availability) == scanned)
     }
 
-    @Test func aRefusedCloudStudysRowSaysFolderNotFound() {
+    /// A refused study whose cloud folder has gone gets the moved-folder row,
+    /// as any gone folder does: availability outranks the refusal.
+    @Test func aRefusedCloudStudysRowSaysItCannotBeFound() {
+        let (root, index) = Self.scratch(); defer { try? FileManager.default.removeItem(at: root) }
+        let p = Self.cloudProject(index, root: root, "Gone")
+        try? FileManager.default.removeItem(atPath: p.path)
+
         let variant = ProjectSubtitle.resolve(
-            availability: .inCloud(downloading: nil),
-            pipelineState: PipelineRunner.spawnRefusal(for: .inCloud(downloading: nil)),
+            availability: p.availability,
+            pipelineState: PipelineRunner.spawnRefusal(for: p.availability),
             isStopping: false, addingCount: nil, copy: nil, importBatch: nil,
             lastRunAt: nil, missingCount: 0, unanalysedCount: 0
         )
-        #expect(variant == .unreachable(reason: .folderMissing))
-        #expect(variant.glyphKind == .warning)
-        #expect(variant.isUnreachable)
+        guard case .cantFind = variant else {
+            Issue.record("a gone cloud folder's row read \(variant), not the missing-folder line")
+            return
+        }
     }
 
     // MARK: - Through the runner
@@ -115,7 +132,7 @@ import Testing
         let rig = PipelineRunnerQueueTests.Rig(); defer { rig.cleanUp() }
         let a = Self.cloudProject(rig.index, root: rig.root, "A")
         try? FileManager.default.removeItem(atPath: a.path)
-        #expect(a.availability == .inCloud(downloading: nil))
+        #expect(Self.cannotBeFound(a.availability))
 
         rig.runner.start(project: a)
 
@@ -132,7 +149,7 @@ import Testing
         rig.runner.start(project: b)
         rig.runner.start(project: c)
         try? FileManager.default.removeItem(atPath: b.path)
-        #expect(b.availability == .inCloud(downloading: nil))
+        #expect(Self.cannotBeFound(b.availability))
 
         try #require(rig.launches.first).exit()
         await until { rig.launches.count == 2 }

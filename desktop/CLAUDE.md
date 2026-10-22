@@ -567,7 +567,7 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   tertiary (pale) when on-but-not-open; secondary (solid) when the serve
   is up — driven by `Project.agentAccess` + `servingProjectPath`, NOT
   `mcp.active` (that poll still feeds `agentActiveNow` for the install
-  row's status line). Precedence unchanged: ring > copy > agent > cloud —
+  row's status line). Precedence unchanged: ring > copy > agent (the cloud glyph that sat last was removed with `.inCloud`, 22 Oct 2026) —
   during a run the ring hides the antenna, accepted deliberately.
   **But `servingProjectPath` is NOT the spec** (verified 19 Aug 2026):
   §5a-bis says solid means *handshake live*, and `syncHandshake()` also

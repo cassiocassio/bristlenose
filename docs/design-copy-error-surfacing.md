@@ -267,7 +267,7 @@ spawned sidecar. Consequences:
   `github.com/cassiocassio/iCloud-wizzard-behind-the-curtain`; correct those first,
   then this.
 
-**`.inCloud` is unreachable for evicted media, and that is documented.**
+**`.inCloud` was unreachable for evicted media, and was deleted on 22 Oct 2026.**
 `ProjectAvailability` short-circuits on `fileExists(atPath: path)` — the project
 *folder* — before any location check. An evicted folder still exists, so it
 resolves `.ready` and holds a lease. The chain "cloud state → no lease → EPERM

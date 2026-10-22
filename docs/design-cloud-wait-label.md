@@ -1,10 +1,19 @@
 ---
-status: pending
+status: rejected
+rejected: 2026-10-22
 last-trued: 2026-09-12
 trued-against: HEAD@main on 2026-09-12 (fs.py, events.py, EventLogReader.swift, CopyMachinery.swift at fbd8f4f3)
 ---
 
-> **Pending / aspirational.** The surface this doc specifies is unbuilt; scope and policy are
+> **Rejected, 22 Oct 2026. Do not build, do not re-propose.** Bristlenose cannot know that a
+> sync client is fetching a file, and it is not its job to: a folder that is present is read
+> like any folder (the sidecar's `ensure_materialised` waits for a dataless file as an ordinary
+> read), and a folder that is gone is a missing folder (`.cantFind`, the Project Moved or
+> Deleted pane, Locate…). No "Waiting for iCloud…" label, no cloud glyph, no cloud-specific
+> pane or advice. This was the label's fifth proposal; the app's `.inCloud` availability state,
+> which only ever reached a folder that had gone, was deleted the same day. Kept as history.
+>
+> _Was:_ **Pending / aspirational.** The surface this doc specifies is unbuilt; scope and policy are
 > decided; §4 and the built/not-built inventory were re-measured 12 Sep 2026 and corrected —
 > the first version of this doc, the same day, called the `cloud_fetch` failure "already
 > wired" (the category is declared and mirrored; nothing produces it). Check `TODO.md` and
@@ -26,7 +35,7 @@ trued-against: HEAD@main on 2026-09-12 (fs.py, events.py, EventLogReader.swift, 
 
 # "Waiting for iCloud…" — the cloud-wait label
 
-**Status: future enhancement, not scheduled.** Written 4 Sep 2026 to hold a
+**Status: rejected 22 Oct 2026 (see the banner above).** _Was: future enhancement, not scheduled._ Written 4 Sep 2026 to hold a
 question that had been argued three times in six weeks — for in
 `design-project-storage.md` §3 (29 Jul), walked back in
 `design-sidebar-activity-indicators.md`, re-proposed on 4 Sep without noticing

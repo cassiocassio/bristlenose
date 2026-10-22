@@ -55,7 +55,7 @@ everything else is wiring data that already exists.
 | Message | Source (already there) | Kind | Today | On the row |
 |---|---|---|---|---|
 | Copying files in | `CopyMachinery.inFlight` | info | toolbar pill | "Copying · 3 of 5 files" |
-| Downloading from iCloud | `inCloud(downloading: Progress?)` | info | static glyph | "Downloading from iCloud · 60%" |
+| ~~Downloading from iCloud~~ | ~~`inCloud(downloading: Progress?)`~~ — deleted 22 Oct 2026 | — | — | — |
 | Cached / cold-run ladder | `run_progress` (the `cached-run-emit` fix) | info | frozen "Analysing…" | "Extracting quotes · ~1 min left" |
 | Mid-run health | `run_progress` + a `health` field | info | silent | "Extracting quotes · retrying" *(UX TBD — empirical)* |
 | Starting… (sidecar) | `ServeManager.starting` | info | detail-pane only | "Starting…" *(only if slow)* |
@@ -71,8 +71,8 @@ file-item source exists) — on the row because copy is a per-project op (the pl
 the other three: **Starting…** was evaluated and **dropped** — one serve
 follows the selected project, so the only row that could show it is the selected one, whose detail
 pane already shows the BootView (always-redundant; the table's "open" hedge resolved to "no").
-**iCloud download** was **skipped** — `inCloud(downloading:)` is always nil (no observer), and a
-download affordance was rejected (F49); the `Progress?` field stays vestigial. **Mid-run health** is
+**iCloud download** was **skipped** — `inCloud(downloading:)` was always nil (no observer), and a
+download affordance was rejected (F49); the `Progress?` field stayed vestigial until the case itself was deleted on 22 Oct 2026. **Mid-run health** is
 **deferred** — it needs cross-layer plumbing (retry signal → pipeline emit) plus a render the brief
 defers to empirical play. So the shipped row vocabulary is: cantFind › failed › running ›
 stopped/partial › **copying** › missing › unanalysed › ready. _13 Oct 2026: a third delta, **forked** (`SubtitleDelta.databaseForked`, 12 Oct), sits first among the deltas — see §Precedence and the glyph rule._
@@ -463,10 +463,11 @@ Also deliberately *off* the row, different-surface: export (toolbar chip), AI-co
 
 | Condition | Reality | CLI experience | Desktop state |
 |---|---|---|---|
-| **iCloud-evicted** | dataless, same path | slow read → **succeeds** (online) | `inCloud` — *intended; measured unreachable for evicted media, since the folder exists and availability resolves `.ready` (storage doc §3, 29 Jul 2026)* |
+| **iCloud-evicted** | dataless, same path | slow read → **succeeds** (online) | none — the folder exists, so availability resolves `.ready`; the `inCloud` case that was meant for this row never reached it and was deleted 22 Oct 2026 |
 | **Volume ejected** | path genuinely gone | **`FileNotFoundError`** — hard fail | `cantFind(.unmountedVolume)` |
 
-One says *wait*; one says *cannot proceed*. Same glyph family, opposite severity — they must never
+_22 Oct 2026: there is no *wait* state any more — an evicted folder is simply `.ready` and a gone one is
+`.cantFind`, so the paragraph that follows argued for a distinction the app no longer draws._ One says *wait*; one says *cannot proceed*. Same glyph family, opposite severity — they must never
 collapse together in the precedence chain. (And the CLI is *right* to do nothing about iCloud —
 macOS materialises the file on read; the only gap is offline, where the read hangs instead of
 downloading.)

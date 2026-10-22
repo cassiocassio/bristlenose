@@ -472,8 +472,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · chybí",
     "networkUnreachable": "{{host}} · nedostupný",
-    "missing": "chybí",
-    "inCloud": "Na iCloudu"
+    "missing": "chybí"
   },
   "boot": {
     "failure": {

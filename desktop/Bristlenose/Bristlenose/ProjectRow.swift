@@ -4,14 +4,14 @@ import SwiftUI
 ///
 /// **Anatomy (two-line):**
 /// - Title line: identity icon · project name · *(right)* session count
-/// - Subtitle line: optional ⚠/❓ prefix glyph · status text · optional delta segment · *(right)* cloud arrow
+/// - Subtitle line: optional ⚠/❓ prefix glyph · status text · optional delta segment · *(right)* activity ring
 ///
 /// **Right-edge convention:**
 /// - Title-line right = canonical data quantity (the session count — Finder's
 ///   right column). Empty when the analysis DB isn't readable.
-/// - Subtitle-line right = storage location qualifier (currently just the
-///   iCloud download arrow). Finder-esque, only appears when the project's
-///   sources live in iCloud.
+/// - Subtitle-line right = run or copy activity (the ring). No storage-location
+///   glyph: a folder a sync client manages is shown like any folder (decided
+///   22 Oct 2026, `docs/design-cloud-wait-label.md`).
 ///
 /// **Precedence chain for the subtitle** lives in the pure, testable
 /// `ProjectSubtitle.resolve` (see memory `feedback_exception_precedence_chain`
@@ -206,7 +206,7 @@ struct ProjectRow: View {
     // MARK: - Subtitle line
 
     /// Subtitle line: prefix glyph + status text + optional tappable delta,
-    /// with the cloud arrow right-aligned on the same line. Always renders
+    /// with the activity ring right-aligned on the same line. Always renders
     /// something (even if a hidden placeholder) so row heights stay fixed —
     /// Mail/Notes/Finder convention.
     @ViewBuilder
@@ -352,16 +352,11 @@ struct ProjectRow: View {
 
     /// Right-aligned subtitle slot. Precedence: per-project run activity wins,
     /// then an in-flight copy (the determinate ring + hover-cancel — copy's home
-    /// now that the toolbar pill is gone), then the iCloud status glyph, then
-    /// empty.
+    /// now that the toolbar pill is gone), then empty.
     ///
     /// The activity indicator carries the *motion* signal for an in-flight run
-    /// or copy (the determinate ring; hover swaps it for a cancel ×). The cloud
-    /// glyph is the outline `icloud` (not `.fill`, not `.and.arrow.down`):
-    /// status-only, no action attached — Finder's treatment for cloud-managed
-    /// locations. macOS fetches evicted files transparently on open; no explicit
-    /// download affordance for TF. Run, copy, and iCloud-eviction are mutually
-    /// exclusive in practice, but the precedence keeps it honest either way.
+    /// or copy (the determinate ring; hover swaps it for a cancel ×). There is
+    /// no cloud glyph: it was removed with the `.inCloud` state, 22 Oct 2026.
     @ViewBuilder
     private var subtitleRightSlot: some View {
         let activity = ProjectRowActivityIndicator.Kind.from(
@@ -390,10 +385,6 @@ struct ProjectRow: View {
                     .frame(width: 16, height: 16)
                     .accessibilityHidden(true)
             }
-        } else if case .inCloud = availability {
-            Image(systemName: "icloud")
-                .foregroundStyle(.secondary)
-                .imageScale(.small)
         }
     }
 
@@ -734,8 +725,6 @@ struct ProjectRow: View {
                 case .moved, .missingBookmark:
                     label += ", \(i18n.t("desktop.chrome.projectMoved"))"
                 }
-            case .inCloud:
-                label += ", \(i18n.t("desktop.availability.inCloud"))"
             case .ready:
                 break
             }

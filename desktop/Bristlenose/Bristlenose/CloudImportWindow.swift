@@ -801,7 +801,7 @@ struct CloudImportWindow: View {
     ///
     /// Still owed, and deliberately not done here because it changes the
     /// surface: the picker offers projects whose lease is unavailable
-    /// (`.cantFind`, `.inCloud`, past the watcher cap, or no bookmark data).
+    /// (`.cantFind`, past the watcher cap, or no bookmark data).
     /// Falling back to the raw path keeps today's behaviour for those rather
     /// than introducing a refusal state this pass has no design for.
     ///

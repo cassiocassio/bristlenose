@@ -98,7 +98,7 @@ struct UnanalysedState: Equatable {
 /// life of the watcher; NSFilePresenter callbacks fire from arbitrary
 /// queues and must find scope still open. Caller (typically `ProjectIndex`)
 /// owns watcher lifecycle: register on `→ .ready`, dispose on
-/// `→ .cantFind` / `→ .inCloud`.
+/// `→ .cantFind`.
 ///
 /// **As deep as `run` looks.** The scan is `ScanSelection` — `run`'s file
 /// selection — and `subitemMayChangeTheCount(_:)` lets through a change anywhere

@@ -323,7 +323,9 @@ indicator.** The activity-indicator work must not touch the cloud/availability p
 > slow"; a named one reads as "the network is slow", and each provider has a different
 > fix path.
 >
-> Neither position's label has shipped; the detection half did (29 Jul 2026, `b9325004`). The only live string is `desktop.availability.inCloud`
+> **Closed 22 Oct 2026:** the label is rejected (`design-cloud-wait-label.md`), and `.inCloud` and `desktop.availability.inCloud` were deleted. The rest of this note is history.
+>
+> Neither position's label has shipped; the detection half did (29 Jul 2026, `b9325004`). The only live string was `desktop.availability.inCloud`
 > = "In iCloud", reached via `.inCloud` — which the storage doc shows is **unreachable
 > for evicted media** (the folder still exists, so availability resolves `.ready`) — and
 > which is hardcoded to iCloud although `detectLocation` already yields the provider

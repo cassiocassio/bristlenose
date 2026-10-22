@@ -192,7 +192,7 @@ Saying it would let the researcher choose.
 ## 2. The state machine
 
 States are the project row's, as the researcher sees it. The Swift types behind
-them are `ProjectAvailability` (`ready` / `cantFind` / `inCloud`) and
+them are `ProjectAvailability` (`ready` / `cantFind`) and
 `SubtitleVariant` (`ready` / `failed` / `failedDiagnostic` / `completedPartial`
 / `stopping` / `deltaOnly` / `placeholder`); `deltaOnly` carries a `SubtitleDelta`
 (`unanalysed` / `missing` / `databaseForked` — the last since 12 Oct 2026, an

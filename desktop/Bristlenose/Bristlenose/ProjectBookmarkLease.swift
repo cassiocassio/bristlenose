@@ -39,7 +39,7 @@ enum BookmarkLeaseError: Error, CustomStringConvertible {
 /// - Borrowers (file watcher, copy worker, sidecar spawn) receive `lease.url`
 ///   and do NOT call `start/stopAccessingSecurityScopedResource` themselves.
 /// - The lease is released (set to nil) when the project transitions to
-///   `cantFind` or `inCloud(downloading:)`.
+///   `cantFind`.
 ///
 /// **Stale bookmark handling:** if the resolved bookmark is stale, the lease
 /// still succeeds (the URL is valid for this session), but the caller may

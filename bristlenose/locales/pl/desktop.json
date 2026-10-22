@@ -473,8 +473,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · brak",
     "networkUnreachable": "{{host}} · nieosiągalny",
-    "missing": "brak",
-    "inCloud": "W iCloud"
+    "missing": "brak"
   },
   "boot": {
     "failure": {

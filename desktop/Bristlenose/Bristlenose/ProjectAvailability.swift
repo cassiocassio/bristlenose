@@ -4,8 +4,8 @@ import Foundation
 
 /// Whether a project's on-disk home is reachable, and if not, why.
 ///
-/// Collapses six internal sub-reasons (volume / network / cloud / moved /
-/// missing-bookmark / bookmark-stale) down to **three** user-visible buckets
+/// Collapses the internal sub-reasons (volume / network / moved /
+/// missing-bookmark) down to **two** user-visible buckets
 /// per HANDOFF §8+9. Researchers can't tell unmounted from moved at a glance,
 /// and the earlier UI tried to make them.
 ///
@@ -16,13 +16,13 @@ enum ProjectAvailability: Equatable {
     case ready
     /// Path doesn't resolve. Reason hints why (for telemetry / copy) but the
     /// UI affordance is the same: a single "Locate…" action.
+    ///
+    /// There is no cloud state, by decision (22 Oct 2026): a folder a sync
+    /// client manages is present (`.ready`, an evicted one included, which is
+    /// read like any folder) or gone (`.cantFind`). Bristlenose cannot know a
+    /// sync client is fetching, so it never says so
+    /// (`docs/design-cloud-wait-label.md`).
     case cantFind(reason: CantFindReason)
-    /// The folder is in a cloud provider's storage and is not at its path:
-    /// deleted or moved in the cloud, or its provider signed out. Not an
-    /// evicted folder — that is still there and resolves `.ready` (measured,
-    /// `docs/design-project-storage.md` §3). `downloading` is never set; no
-    /// download is offered (`docs/design-desktop-project-status.md`).
-    case inCloud(downloading: Progress?)
 }
 
 /// Why a project can't be found. Internal sub-reasons; collapse to "Can't find
@@ -47,8 +47,6 @@ enum ProjectAction: Equatable {
     /// Re-anchor the project to a new folder via Spotlight one-shot or
     /// NSOpenPanel. See HANDOFF §8+9 for the flow.
     case locate
-    /// Trigger an iCloud download for an evicted file/folder.
-    case downloadFromCloud
 }
 
 // MARK: - UI mapping
@@ -72,8 +70,6 @@ extension ProjectAvailability {
                 // identically to `.moved`.
                 return "questionmark.folder"
             }
-        case .inCloud:
-            return "icloud.and.arrow.down"
         }
     }
 
@@ -84,8 +80,6 @@ extension ProjectAvailability {
             return .none
         case .cantFind:
             return .locate
-        case .inCloud:
-            return .downloadFromCloud
         }
     }
 
@@ -110,8 +104,6 @@ extension ProjectAvailability {
             case .moved, .missingBookmark:
                 return i18n.t("desktop.availability.missing")
             }
-        case .inCloud:
-            return i18n.t("desktop.availability.inCloud")
         }
     }
 
@@ -135,10 +127,10 @@ extension Project {
     /// 2. File exists at `path` → `.ready`
     /// 3. Location says volume + volume not mounted → `.unmountedVolume`
     /// 4. Location says network + share not mounted → `.networkUnreachable`
-    /// 5. Location says cloud → `.inCloud(downloading: nil)`
-    /// 6. v1 record with no bookmark and no location verdict →
+    /// 5. v1 record with no bookmark and no location verdict →
     ///    `.cantFind(.missingBookmark)`
-    /// 7. Otherwise → `.cantFind(.moved)`
+    /// 6. Otherwise → `.cantFind(.moved)` (a cloud folder that has gone
+    ///    included: no cloud-specific state, by decision)
     var availability: ProjectAvailability {
         guard !path.isEmpty else { return .ready }
         if FileManager.default.fileExists(atPath: path) { return .ready }
@@ -179,9 +171,7 @@ extension Project {
                         host: location.volumeName ?? location.displayHint
                     ))
                 }
-            case .cloud:
-                return .inCloud(downloading: nil)
-            case .local:
+            case .cloud, .local:
                 break
             }
         }

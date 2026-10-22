@@ -433,8 +433,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · saknas",
     "networkUnreachable": "{{host}} · går inte att nå",
-    "missing": "saknas",
-    "inCloud": "I iCloud"
+    "missing": "saknas"
   },
   "boot": {
     "failure": {

@@ -548,7 +548,6 @@ struct ProjectIndexTests {
         #expect(ProjectAvailability.ready.primaryAction == .none)
         #expect(ProjectAvailability.cantFind(reason: .moved).sfSymbolName == "questionmark.folder")
         #expect(ProjectAvailability.cantFind(reason: .moved).primaryAction == .locate)
-        #expect(ProjectAvailability.inCloud(downloading: nil).primaryAction == .downloadFromCloud)
     }
 
     // MARK: - restoreProject (undoable removal)

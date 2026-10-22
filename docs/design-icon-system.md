@@ -347,7 +347,7 @@ Same concept, different symbol today, with the pick:
 | Status dot | `Circle()` vs `circle.fill` | `circle.fill` |
 | Direction | fixed `chevron.left/right` (carousel, a disclosure) vs RTL-aware | `.backward` / `.forward` everywhere |
 | Drive / network unavailable | sidebar specific, detail pane generic | the sidebar's specific pair in both places |
-| In iCloud | `icloud.and.arrow.down` vs `icloud` | not a conflict if they mean different states; check each use |
+| ~~In iCloud~~ | ~~`icloud.and.arrow.down` vs `icloud`~~ | resolved 22 Oct 2026: both uses deleted with the `.inCloud` state |
 | Send to Miro | `square.grid.2x2` (also Heatmap, All Sessions) | `square.and.arrow.up`, since it is an export |
 | `list.bullet`, `waveform` | each carries two or three meanings | one meaning each; pick when touched |
 | Disclosure | rotated `chevron.forward` | the system control (`DisclosureGroup`, `NSOutlineView`), not a symbol |

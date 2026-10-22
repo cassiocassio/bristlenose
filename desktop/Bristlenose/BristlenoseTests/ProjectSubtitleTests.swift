@@ -58,18 +58,6 @@ import Testing
             == .cantFind(reason: .moved))
     }
 
-    @Test func inCloudFallsThroughToTheIdleChain() {
-        // iCloud-evicted is NOT cantFind (macOS materialises on open): it falls
-        // through to the idle chain, with the cloud glyph riding the row's right
-        // slot. Under Schema E a clean project says nothing at all.
-        #expect(resolve(availability: .inCloud(downloading: nil), lastRunAt: aDate)
-            == .placeholder)
-        // ...but a drift delta is an exception and still earns its line.
-        #expect(resolve(availability: .inCloud(downloading: nil), lastRunAt: aDate,
-                        unanalysedCount: 2)
-            == .deltaOnly(.unanalysed(count: 2)))
-    }
-
     // MARK: - Tier 2–4 — pipeline activity
 
     @Test func failedCarriesSummary() {

@@ -50,7 +50,7 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
-| `cloud-fetch-states.html` | 12 Sep 2026 | IMPLEMENTED — “Every state, message and copy rule … **open it, it’s the visual spec**” — _except the three fetch states_ (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`): the sidecar half is built (`ensure_materialised`, `cloud_provider_for`), but no key is seeded, no subtitle variant exists `on_wait` is unwired and the `cloud_fetch` failure category has no producer (measured 12 Sep 2026); `docs/design-cloud-wait-label.md` is the pick-up |
+| `cloud-fetch-states.html` | 12 Sep 2026 | IMPLEMENTED — “Every state, message and copy rule … **open it, it’s the visual spec**” — _except the three fetch states_ (`cloudFetching`, `cloudFetchSlow`, `cloudFetchFailed`): the sidecar half is built (`ensure_materialised`, `cloud_provider_for`), but those three are **rejected** (22 Oct 2026): Bristlenose does not detect or narrate a sync client's fetch, and `docs/design-cloud-wait-label.md` records why. Do not pick them up |
 
 ## cloud-import
 

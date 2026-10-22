@@ -124,7 +124,7 @@ import Testing
         let a = rig.index.addProject(name: "A", path: dir.path)
         Self.remove(a)
         rig.index.syncWatchers()
-        #expect(a.availability == .inCloud(downloading: nil))
+        #expect(SpawnRefusalTests.cannotBeFound(a.availability))
         rig.runner.start(project: a)
         #expect(rig.runner.state[a.id] == .unreachable(reason: .folderMissing))
 

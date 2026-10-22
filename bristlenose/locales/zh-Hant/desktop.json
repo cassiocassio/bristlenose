@@ -413,8 +413,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · 遺失",
     "networkUnreachable": "{{host}} · 無法連線",
-    "missing": "遺失",
-    "inCloud": "在 iCloud 中"
+    "missing": "遺失"
   },
   "boot": {
     "failure": {

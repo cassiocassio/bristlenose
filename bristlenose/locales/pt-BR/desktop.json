@@ -433,8 +433,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · ausente",
     "networkUnreachable": "{{host}} · inacessível",
-    "missing": "ausente",
-    "inCloud": "No iCloud"
+    "missing": "ausente"
   },
   "boot": {
     "failure": {

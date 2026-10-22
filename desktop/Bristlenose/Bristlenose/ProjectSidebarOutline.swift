@@ -1842,8 +1842,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// The agent-access antenna, built once for both cell layouts so the
-    /// two can't drift. Solid (secondary, the quiet ambient family the
-    /// iCloud glyph belongs to) = exposed now; pale (tertiary) = shared but
+    /// two can't drift. Solid (secondary, the quiet ambient family) = exposed now; pale (tertiary) = shared but
     /// the project isn't open. Never a control — status is attention, not
     /// affordance (§5a-bis, the Mail model).
     private func agentBadgeView(exposedNow: Bool, projectID: UUID?) -> NSImageView {
@@ -2670,7 +2669,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
 
     /// What the subtitle-right slot shows, by `ProjectRow.subtitleRightSlot`'s
     /// precedence (`:327-360`) plus the agent badge: run activity > in-flight
-    /// copy > agent-access antenna > iCloud glyph > empty.
+    /// copy > agent-access antenna > empty.
     /// `onStop` (Phase 4) is the hover-× cancel — run cancel / copy cancel; nil
     /// during the cancel-rollback spinner (you can't cancel a cancel).
     ///
@@ -2684,7 +2683,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         /// is not open (reachable the moment it is). Off = no badge at
         /// all: absence is the information.
         case agent(exposedNow: Bool)
-        case cloud
         case none
     }
 
@@ -2728,7 +2726,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         if project.agentAccess {
             return .agent(exposedNow: handshakeProjectPaths.contains { AgentActivity.samePath($0, project.path) })
         }
-        if case .inCloud = project.availability { return .cloud }
         return .none
     }
 
@@ -2908,8 +2905,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             constraints.append(subtitleField.leadingAnchor.constraint(equalTo: nameField.leadingAnchor))
         }
 
-        // Subtitle-right — run/copy ring (Phase 3) takes precedence, then the iCloud
-        // status glyph, then nothing (ProjectRow.subtitleRightSlot :327-360). The
+        // Subtitle-right — run/copy ring (Phase 3) takes precedence, then the
+        // agent antenna, then nothing (ProjectRow.subtitleRightSlot). The
         // ring carries its Phase-4 hover-× cancel via `onStop`.
         switch rightSlot {
         case .ring(let fraction, let onStop):
@@ -2936,22 +2933,6 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                                                   constant: -ProjectCellSpec.trailingInset),
                 antenna.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
                 subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: antenna.leadingAnchor,
-                                                        constant: -ProjectCellSpec.subtitleInternal),
-            ]
-        case .cloud:
-            let cloud = NSImageView()
-            cloud.image = NSImage(systemSymbolName: "icloud", accessibilityDescription: nil)
-            cloud.symbolConfiguration = ProjectCellSpec.subtitleGlyphConfig
-            cloud.contentTintColor = .secondaryLabelColor
-            cloud.translatesAutoresizingMaskIntoConstraints = false
-            cloud.setContentHuggingPriority(.required, for: .horizontal)
-            cloud.setContentCompressionResistancePriority(.required, for: .horizontal)
-            cell.addSubview(cloud)
-            constraints += [
-                cloud.trailingAnchor.constraint(equalTo: cell.trailingAnchor,
-                                                constant: -ProjectCellSpec.trailingInset),
-                cloud.centerYAnchor.constraint(equalTo: subtitleField.centerYAnchor),
-                subtitleField.trailingAnchor.constraint(lessThanOrEqualTo: cloud.leadingAnchor,
                                                         constant: -ProjectCellSpec.subtitleInternal),
             ]
         case .none:

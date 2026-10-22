@@ -3958,13 +3958,6 @@ struct ContentView: View {
                     }
                 }
             }
-        case .inCloud:
-            ContentUnavailableView {
-                Label(i18n.t("desktop.availability.inCloud"),
-                      systemImage: "icloud.and.arrow.down")
-            } description: {
-                Text(i18n.t("desktop.chrome.projectUnavailableHint"))
-            }
         case .ready:
             EmptyView()
         }

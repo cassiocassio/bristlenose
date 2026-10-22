@@ -370,7 +370,7 @@ final class ProjectIndex: ObservableObject {
     @Published var pendingSelection: SidebarSelection?
 
     /// Bookmark leases held while a project is `.ready`. Released on
-    /// transition to `.cantFind` / `.inCloud` or when the project is removed.
+    /// transition to `.cantFind` or when the project is removed.
     /// Co-terminous with the watcher in `watchers`.
     private var leases: [UUID: ProjectBookmarkLease] = [:]
     /// Folder watchers, one per `.ready` project. Caps at ~50 to stay
@@ -1431,7 +1431,7 @@ final class ProjectIndex: ObservableObject {
                     continue
                 }
                 startLeaseAndWatcher(for: project)
-            case .cantFind, .inCloud:
+            case .cantFind:
                 unreachable.insert(project.id)
                 releaseLeaseAndWatcher(for: project.id)
             }

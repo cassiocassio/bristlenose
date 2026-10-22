@@ -413,8 +413,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · 없음",
     "networkUnreachable": "{{host}} · 연결할 수 없음",
-    "missing": "없음",
-    "inCloud": "iCloud에 있음"
+    "missing": "없음"
   },
   "boot": {
     "failure": {

@@ -433,8 +433,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · introuvable",
     "networkUnreachable": "{{host}} · injoignable",
-    "missing": "introuvable",
-    "inCloud": "Dans iCloud"
+    "missing": "introuvable"
   },
   "boot": {
     "failure": {

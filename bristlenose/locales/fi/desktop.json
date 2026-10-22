@@ -433,8 +433,7 @@
   "availability": {
     "unmountedVolume": "{{name}} · puuttuu",
     "networkUnreachable": "{{host}} · ei tavoitettavissa",
-    "missing": "puuttuu",
-    "inCloud": "iCloudissa"
+    "missing": "puuttuu"
   },
   "boot": {
     "failure": {

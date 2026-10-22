@@ -2100,18 +2100,16 @@ final class PipelineRunner: ObservableObject {
 
     /// The state a spawn writes instead of running, or nil to run (R63).
     ///
-    /// Any study whose folder isn't at its path is refused, `.inCloud` as well
-    /// as `.cantFind`: availability returns `.inCloud` only after the folder
-    /// itself failed `fileExists`, so it is a cloud folder that has gone
-    /// (deleted, moved, its provider signed out), never an evicted one. An
-    /// evicted folder is still there, resolves `.ready`, and runs: the sidecar
-    /// fetches its files on demand (`docs/design-project-storage.md` §3). The
-    /// refusal reads what a scan of the folder reads, "Folder not found".
+    /// Any study whose folder isn't at its path is refused (`.cantFind`, a
+    /// cloud folder that has gone included). An evicted folder is still there,
+    /// resolves `.ready`, and runs: the sidecar fetches its files on demand
+    /// (`docs/design-project-storage.md` §3). The refusal reads what a scan of
+    /// the folder reads, "Folder not found".
     nonisolated static func spawnRefusal(for availability: ProjectAvailability) -> PipelineState? {
         switch availability {
         case .ready:
             return nil
-        case .cantFind, .inCloud:
+        case .cantFind:
             return .unreachable(reason: .folderMissing)
         }
     }

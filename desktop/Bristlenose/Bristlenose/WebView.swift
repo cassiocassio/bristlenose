@@ -377,6 +377,11 @@ struct WebView: NSViewRepresentable {
         /// press in that time put up a second save panel (R76).
         @MainActor private var pendingReportExport: WKDownload?
 
+        /// The pending export has not reached its save panel yet, so the
+        /// row's "Exporting…" is its own (#24). False for an anonymised
+        /// refetch, whose panel has already been answered.
+        @MainActor private var reportExportAwaitingPanel = false
+
         /// Run the save panel and return where to save, or nil for Cancel. A
         /// seam so a test can stand in for the researcher; the accessory's
         /// controller is passed so it can tick Anonymise.
@@ -652,9 +657,15 @@ struct WebView: NSViewRepresentable {
                 if pendingReportExport != nil {
                     log.notice("export: Export Report pressed again while one is pending — dropped")
                     download.cancel { _ in }
+                    // Past its panel, the pending export says nothing on the
+                    // row, so this press's "Exporting…" goes with its
+                    // download. Before the panel it is the first export's
+                    // line, and stays.
+                    if !reportExportAwaitingPanel { bridgeHandler.reportExportSettled() }
                     return
                 }
                 pendingReportExport = download
+                reportExportAwaitingPanel = true
                 // The row's "Exporting…" now ends with this download (#24).
                 bridgeHandler.reportExportDownloadBegan()
             }
@@ -670,6 +681,7 @@ struct WebView: NSViewRepresentable {
         private func reportExportEnded(_ download: WKDownload) {
             guard pendingReportExport === download else { return }
             pendingReportExport = nil
+            reportExportAwaitingPanel = false
             bridgeHandler.reportExportSettled()
         }
 
@@ -716,7 +728,10 @@ struct WebView: NSViewRepresentable {
             let alreadyChosen = chosenDestination.removeValue(forKey: id)
             // The server has answered: the panel, or the failure, is what the
             // researcher sees next, so the row stops saying "Exporting…" (#24).
-            if pendingReportExport === download { bridgeHandler.reportExportSettled() }
+            if pendingReportExport === download {
+                reportExportAwaitingPanel = false
+                bridgeHandler.reportExportSettled()
+            }
 
             // An error answer is not the export. WebKit hands a download its
             // response whatever the status (measured 20 Oct 2026: a 500 reached

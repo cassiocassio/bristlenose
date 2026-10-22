@@ -324,6 +324,64 @@ struct ExportSaveFlowTests {
         #expect(!bridge.isExportingReport)
     }
 
+    /// A second press after the panel, while the saved copy is still being
+    /// fetched, is dropped — and so is its "Exporting…", at once, not after
+    /// the fallback (review of ce125ffc).
+    @Test func aPressDroppedAfterThePanelLetsGoAtOnce() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let bridge = rig.coordinator.bridgeHandler
+        bridge.reportExportStartPatience = .seconds(60)
+        rig.atPanel = { $0?.anonymise = true }
+        rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
+        bridge.reportExportPressed()
+        await rig.export()
+        await rig.until { rig.serve.requested.count == 2 }
+        #expect(!bridge.isExportingReport, "precondition: the panel has been and gone")
+
+        #expect(bridge.reportExportPressed())
+        await rig.export()
+        await rig.until({ !bridge.isExportingReport }, seconds: 5)
+        #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
+        rig.serve.release()
+        await rig.until { rig.saved == "<html>ANONYMISED</html>" }
+    }
+
+    /// A second press before the panel is dropped too, but the first export
+    /// is still building: its "Exporting…" stays.
+    @Test func aPressDroppedBeforeThePanelKeepsTheFirstExporting() async throws {
+        let rig = try ExportRig(); defer { rig.cleanup() }
+        let bridge = rig.coordinator.bridgeHandler
+        bridge.reportExportStartPatience = .seconds(60)
+        rig.serve.hold = { _ in true }
+        bridge.reportExportPressed()
+        await rig.export()
+        await rig.until { rig.serve.requested.count == 1 }
+        #expect(!bridge.reportExportPressed(), "a press while pending changes nothing")
+        await rig.export()
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(bridge.isExportingReport, "the dropped press cleared the first export's line")
+        rig.serve.release()
+        await rig.until { rig.saved != nil }
+        #expect(!bridge.isExportingReport)
+    }
+
+    /// The press is answered from `menuAction`, the one door File ▸ Export
+    /// Report… and the toolbar both use — and a script that never ran lets go.
+    @Test func menuActionExportReportSaysExporting() async throws {
+        let bridge = BridgeHandler()
+        bridge.reportExportStartPatience = .seconds(60)
+        let webView = WKWebView()       // no report loaded: the script call fails
+        bridge.webView = webView
+        bridge.menuAction("exportReport")
+        #expect(bridge.isExportingReport, "the press through menuAction said nothing")
+        let deadline = Date().addingTimeInterval(ExportRig.patience)
+        while bridge.isExportingReport, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(!bridge.isExportingReport, "a press whose script failed kept Exporting… up")
+        withExtendedLifetime(webView) {}
+    }
+
     /// Ticking Anonymise hands the pending export to the refetch: a press
     /// while it is fetched is still a second press.
     @Test func aPressWhileTheAnonymisedCopyIsFetchedAsksNothing() async throws {

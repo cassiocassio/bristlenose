@@ -88,6 +88,13 @@ window.onmessage = (event: MessageEvent) => {
   const msg = event.data?.pluginMessage as FromCode | undefined;
   if (!msg) return;
   if (msg.type === "progress") {
+    // A file dropped on the canvas starts a build the panel did not, so its first count shows
+    // the bar and Stop. Once they are showing, a Stop already pressed stays pressed.
+    if (!bar.classList.contains("on")) {
+      bar.classList.add("on");
+      stop.hidden = false;
+      stop.disabled = false;
+    }
     fill.style.width = `${msg.total ? Math.round((100 * msg.done) / msg.total) : 100}%`;
     if (!stop.disabled) show(`Building the board… ${msg.done} of ${msg.total} quotes`);
   } else {

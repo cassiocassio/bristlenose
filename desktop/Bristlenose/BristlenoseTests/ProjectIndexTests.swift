@@ -299,6 +299,26 @@ struct ProjectIndexTests {
         #expect(location.displayHint == "OneDrive")
     }
 
+    /// The provider is named, never managed (owner, 22 Oct 2026): the name is
+    /// context for the researcher. It comes from the CloudStorage folder name,
+    /// not an allowlist, so Google Drive takes its product name and a vendor
+    /// we never listed, such as Box, keeps its own.
+    @Test func detectLocation_googleDrivePath() {
+        let location = ProjectIndex.detectLocation(
+            for: "/Users/test/Library/CloudStorage/GoogleDrive-someone@example.com/My Drive/research"
+        )
+        #expect(location.type == .cloud)
+        #expect(location.displayHint == "Google Drive")
+    }
+
+    @Test func detectLocation_boxPath() {
+        let location = ProjectIndex.detectLocation(
+            for: "/Users/test/Library/CloudStorage/Box-Box/research"
+        )
+        #expect(location.type == .cloud)
+        #expect(location.displayHint == "Box")
+    }
+
     // MARK: - JSON round-trip
 
     @MainActor @Test func jsonRoundTrip_persistsAndReloads() {

@@ -2047,6 +2047,9 @@ class Pipeline:
             # Sessions the stage verified but the file does not hold: on inputs
             # it has just proved unchanged, retries, not new.
             _left_tx_sids: set[str] = set()
+            # Recordings a --skip-transcription run left alone: not attempted,
+            # so neither transcribed nor silent (decision #74).
+            _skipped_tx_sids: set[str] = set()
             if _ss_verified:
                 import json as _json
 
@@ -2269,12 +2272,19 @@ class Pipeline:
                         _json.dumps(_ss_data, indent=2), encoding="utf-8",
                     )
 
+                if self.settings.skip_transcription:
+                    _skipped_tx_sids = {
+                        s.session_id for s in sessions
+                        if not s.has_existing_transcript
+                        and not session_segments.get(s.session_id)
+                    }
+                _tx_sessions = [s for s in sessions if s.session_id not in _skipped_tx_sids]
                 total_segments = sum(
                     len(s) for s in session_segments.values()
                 )
                 total_audio = sum(
                     f.duration_seconds or 0
-                    for s in sessions for f in _transcribed_files(s)
+                    for s in _tx_sessions for f in _transcribed_files(s)
                 )
                 audio_str = (
                     _format_duration(total_audio) if total_audio else ""
@@ -2283,13 +2293,13 @@ class Pipeline:
                 _n_new_tx = len(_new_tx_sessions)
                 if _cached_segments and _n_new_tx:
                     msg = (
-                        f"Transcribed {count_noun(len(sessions), 'session')}"
+                        f"Transcribed {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')},"
                         f" {count_noun(_n_new_tx, 'new session')})"
                     )
                 else:
                     msg = (
-                        f"Transcribed {count_noun(len(sessions), 'session')}"
+                        f"Transcribed {count_noun(len(_tx_sessions), 'session')}"
                         f" ({count_noun(total_segments, 'segment')}"
                     )
                     if audio_str:
@@ -2301,7 +2311,14 @@ class Pipeline:
                 _transcribe_elapsed = time.perf_counter() - t0 - (
                     self._transcription_held if _chain is not None else 0.0
                 )
-                _print_step(msg, _transcribe_elapsed)
+                if _tx_sessions:
+                    _print_step(msg, _transcribe_elapsed)
+                if _skipped_tx_sids:
+                    _print_stage(
+                        f"{count_noun(len(_skipped_tx_sids), 'recording')} not transcribed"
+                        " (--skip-transcription)",
+                        MessageKind.SKIPPED,
+                    )
                 _stage_actuals[STAGE_TRANSCRIBE] = StageActual(
                     elapsed=_transcribe_elapsed,
                     input_size=total_audio_mins,
@@ -2347,6 +2364,7 @@ class Pipeline:
             _silent_sids = {
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids
+                and s.session_id not in _skipped_tx_sids
                 and not session_segments.get(s.session_id)
             }
             _silent_failures = [
@@ -2362,9 +2380,10 @@ class Pipeline:
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids
                 and s.session_id not in _silent_sids
+                and s.session_id not in _skipped_tx_sids
             ]
             self._summary.transcripts = StageOutcome(
-                attempted=len(sessions),
+                attempted=len(sessions) - len(_skipped_tx_sids),
                 succeeded=len(_succeeded_sids),
                 failed=list(_fresh_transcript_outcome.failed) + _silent_failures,
                 duration_ms=(

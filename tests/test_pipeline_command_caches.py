@@ -678,6 +678,32 @@ def test_a_plain_run_transcribes_what_a_skip_transcription_run_left(tmp_path: Pa
     assert "transcribed" not in again, again
 
 
+def test_a_skip_transcription_run_does_not_call_what_it_skipped_silent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The researcher asked for no transcription; "No speech found — nothing was
+    # said in this recording" for each recording, and a warning on the Mac, was
+    # false. One line says what was not done (RE#20, decision #74).
+    import io
+
+    from rich.console import Console
+
+    import bristlenose.pipeline as pipeline_module
+
+    out = io.StringIO()
+    monkeypatch.setattr(pipeline_module, "console", Console(file=out, width=200))
+
+    result = _drive(tmp_path, "run", 2, {}, skip=True)
+
+    printed = out.getvalue()
+    assert "No speech found" not in printed, printed
+    assert "2 recordings not transcribed (--skip-transcription)" in printed, printed
+    assert result is not None
+    transcripts = result.summary.transcripts
+    assert transcripts.failed == [], transcripts
+    assert transcripts.attempted == transcripts.succeeded + len(transcripts.failed)
+
+
 def test_a_plain_run_heals_what_an_older_skip_transcription_run_left(
     tmp_path: Path,
 ) -> None:

@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Toinen kopiointi on jo k\u00e4ynniss\u00e4.",
     "copySourceNotDownloaded": "Mit\u00e4\u00e4n ei kopioitu: Osaa pudotetuista kohteista ei ole viel\u00e4 ladattu t\u00e4h\u00e4n Maciin. Lataa ne Finderissa ja pudota ne uudelleen.",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
+    "projectListDamagedTitle": "Projektiluetteloa ei voitu lukea",
+    "projectListDamagedMessage": "Se siirrettiin sivuun ja uusi luettelo aloitettiin. Projektisi ovat koskemattomina kansioissaan raportteineen ja muokkauksineen – lisää kukin takaisin vetämällä sen kansio sivupalkkiin.",
     "filesPopover": {
       "unanalysedTitle": "Analysoimattomat tiedostot",
       "missingTitle": "Puuttuvat tiedostot",
@@ -387,7 +389,7 @@
         "timedOut": "Kansio ei vastannut \u2013 kyseess\u00e4 voi olla irrotettu levy tai verkkojako.",
         "unreadable": "Kansio on olemassa, mutta sen sis\u00e4lt\u00f6\u00e4 ei voitu lukea.",
         "folderMissing": "Kansio ei ole siell\u00e4, miss\u00e4 t\u00e4m\u00e4 projekti odottaa sit\u00e4 \u2013 se on ehk\u00e4 siirretty.",
-        "damaged": "T\u00e4m\u00e4n projektin hakemistotiedostoa ei voitu lukea \u2013 uusi analyysi luo sen uudelleen.",
+        "damaged": "T\u00e4m\u00e4n projektin hakemistotiedostoa ei voitu lukea \u2013 analyysi luo sen uudelleen ja suorittaa kaikki vaiheet alusta.",
         "scanFailed": "Tarkistus p\u00e4\u00e4ttyi ilman tulosta \u2013 projektin avaaminen uudelleen yritt\u00e4\u00e4 uudestaan."
       },
       "pill": {

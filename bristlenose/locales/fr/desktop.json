@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Une autre copie est d\u00e9j\u00e0 en cours.",
     "copySourceNotDownloaded": "Rien n\u2019a \u00e9t\u00e9 copi\u00e9 : une partie des \u00e9l\u00e9ments d\u00e9pos\u00e9s n\u2019est pas encore t\u00e9l\u00e9charg\u00e9e sur ce Mac. T\u00e9l\u00e9chargez-la dans le Finder, puis d\u00e9posez-la \u00e0 nouveau.",
     "copyDiskSpaceMessage": "Cette copie n\u00e9cessite %@ libres, mais seuls %@ sont disponibles sur le volume de destination.",
+    "projectListDamagedTitle": "Votre liste de projets n\u2019a pas pu \u00eatre lue",
+    "projectListDamagedMessage": "Elle a \u00e9t\u00e9 mise de c\u00f4t\u00e9 et une nouvelle liste a \u00e9t\u00e9 cr\u00e9\u00e9e. Vos projets sont intacts dans leurs dossiers, avec leurs rapports et vos modifications \u2014 glissez chaque dossier dans la barre lat\u00e9rale pour le rajouter.",
     "filesPopover": {
       "unanalysedTitle": "Fichiers non analys\u00e9s",
       "missingTitle": "Fichiers manquants",
@@ -387,7 +389,7 @@
         "timedOut": "Le dossier n'a pas r\u00e9pondu : il peut s'agir d'un disque d\u00e9connect\u00e9 ou d'un partage r\u00e9seau.",
         "unreadable": "Le dossier est pr\u00e9sent, mais son contenu n'a pas pu \u00eatre lu.",
         "folderMissing": "Le dossier ne se trouve pas \u00e0 l'emplacement attendu par ce projet : il a peut-\u00eatre \u00e9t\u00e9 d\u00e9plac\u00e9.",
-        "damaged": "Le fichier d'index de ce projet n'a pas pu \u00eatre lu ; une nouvelle analyse le reconstruira.",
+        "damaged": "Le fichier d'index de ce projet n'a pas pu \u00eatre lu ; l'analyser le reconstruira en refaisant toutes les \u00e9tapes.",
         "scanFailed": "L'exploration s'est termin\u00e9e sans r\u00e9sultat ; rouvrir le projet r\u00e9essaiera."
       },
       "pill": {

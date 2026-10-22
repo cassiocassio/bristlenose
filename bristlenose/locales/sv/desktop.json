@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "En annan kopiering p\u00e5g\u00e5r redan.",
     "copySourceNotDownloaded": "Inget kopierades: En del av det du sl\u00e4ppte \u00e4r inte h\u00e4mtat till den h\u00e4r Macen \u00e4n. H\u00e4mta det i Finder och sl\u00e4pp det igen.",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
+    "projectListDamagedTitle": "Projektlistan kunde inte läsas",
+    "projectListDamagedMessage": "Den har lagts åt sidan och en ny lista har påbörjats. Dina projekt är orörda i sina mappar, med rapporter och redigeringar – dra varje mapp till sidofältet för att lägga till den igen.",
     "filesPopover": {
       "unanalysedTitle": "Oanalyserade filer",
       "missingTitle": "Saknade filer",
@@ -387,7 +389,7 @@
         "timedOut": "Mappen svarade inte \u2013 det kan vara en fr\u00e5nkopplad disk eller en n\u00e4tverksplats.",
         "unreadable": "Mappen finns, men inneh\u00e5llet kunde inte l\u00e4sas.",
         "folderMissing": "Mappen finns inte d\u00e4r projektet f\u00f6rv\u00e4ntar sig den \u2013 den kan ha flyttats.",
-        "damaged": "Projektets indexfil kunde inte l\u00e4sas \u2013 en ny analys bygger om den.",
+        "damaged": "Projektets indexfil kunde inte l\u00e4sas \u2013 en analys bygger om den och k\u00f6r alla steg igen.",
         "scanFailed": "Genoms\u00f6kningen avslutades utan resultat \u2013 \u00f6ppna projektet igen f\u00f6r att f\u00f6rs\u00f6ka p\u00e5 nytt."
       },
       "pill": {

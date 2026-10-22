@@ -333,6 +333,21 @@ final class ProjectIndex: ObservableObject {
 
     @Published var projects: [Project] = []
     @Published var folders: [Folder] = []
+    /// `projects.json` would not decode at launch and was set aside, so the
+    /// sidebar starts empty. One window says so, once, with a sheet alert
+    /// (decision #19, 22 Oct 2026); until then the researcher met an empty
+    /// Welcome screen and nothing else. Read through
+    /// `claimListSetAsideNotice()`, so two windows restored at launch don't
+    /// both show it (the per-window-handler-on-an-app-wide-flag trap).
+    private(set) var listWasSetAside = false
+    private var listSetAsideNoticeClaimed = false
+
+    /// True for exactly one caller, and only after a set-aside.
+    func claimListSetAsideNotice() -> Bool {
+        guard listWasSetAside, !listSetAsideNoticeClaimed else { return false }
+        listSetAsideNoticeClaimed = true
+        return true
+    }
     /// Per-project data state — unanalysed files, missing files, and
     /// session count — published by `ProjectFolderWatcher`. Absent entry =
     /// no watcher running (project not ready, or watcher not yet started).
@@ -1738,6 +1753,11 @@ final class ProjectIndex: ObservableObject {
                 saveRefused = true
                 log.error("could not set the damaged file aside (\(error.localizedDescription, privacy: .public)); saves are refused so it is not overwritten")
             }
+            // Either way the sidebar is empty for a reason the researcher
+            // cannot see, so it is said (the refused case was accepted: a
+            // project added back lasts until the next launch, which tries the
+            // set-aside again).
+            listWasSetAside = true
         }
     }
 

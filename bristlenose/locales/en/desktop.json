@@ -274,6 +274,8 @@
     "copyAlreadyInFlight": "Another copy is already in flight.",
     "copySourceNotDownloaded": "Nothing was copied: part of this drop isn\u2019t downloaded to this Mac yet. Download it in Finder, then drop it again.",
     "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume.",
+    "projectListDamagedTitle": "Your project list couldn't be read",
+    "projectListDamagedMessage": "It was set aside and a new list started. Your projects are untouched in their folders, with their reports and edits \u2014 drag each folder into the sidebar to add it back.",
     "filesPopover": {
       "unanalysedTitle": "Unanalysed files",
       "missingTitle": "Missing files",
@@ -388,7 +390,7 @@
         "timedOut": "The folder didn't answer \u2014 it may be a disconnected drive or network share.",
         "unreadable": "The folder is there, but its contents couldn't be read.",
         "folderMissing": "The folder isn't where this project expects it \u2014 it may have moved.",
-        "damaged": "This project's index file couldn't be read \u2014 re-analysing will rebuild it.",
+        "damaged": "This project's index file couldn't be read \u2014 analysing will rebuild it, running every step again.",
         "scanFailed": "The scan ended without a result \u2014 reopening the project will try again."
       },
       "pill": {

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Damaged Files Policy</title>
+<style>
+/* ════ docs/mockups/analysis-lifecycle-states.html — lines 8–233 (lifted verbatim) ════ */
+/* REAL Bristlenose tokens, inlined from bristlenose/theme/tokens.css +
+   colors/palette-*.css. MessageKind tints from MessageKind.swift. */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg: light-dark(#ffffff,#111111);
+  --bn-colour-text: light-dark(#1a1a1a,#e5e7eb);
+  --bn-colour-muted: light-dark(#6b7280,#9ca3af);
+  --bn-colour-border: light-dark(#e5e7eb,#2d2d2d);
+  --bn-colour-accent: light-dark(#007aff,#0a84ff);
+  --bn-colour-hover: light-dark(#e8f0fe,#1e293b);
+  --bn-colour-quote-bg: light-dark(#f9fafb,#1a1a1a);
+  --bn-colour-badge-bg: light-dark(#f3f4f6,#252525);
+  --bn-colour-badge-text: light-dark(#374151,#d1d5db);
+  --bn-colour-border-hover: light-dark(#d1d5db,#3a3a3a);
+  --bn-colour-shadow: light-dark(rgba(0,0,0,.1),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c7ccd1,#3a3f45);
+  --bn-positive: light-dark(#16a34a,#4ade80);
+  --sys-orange: light-dark(#c93400,#ff9f0a);
+  --sys-green: light-dark(#1d7f3a,#30d158);
+  --sys-red: light-dark(#c9342b,#ff453a);
+  --sys-cyan: light-dark(#0071a4,#64d2ff);
+  --sidebar-bg: light-dark(#f2f2f4,#1c1c1e);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg: light-dark(#fdfbf7,#1a1816);
+  --bn-colour-text: light-dark(#1b2230,#e8e3d6);
+  --bn-colour-muted: light-dark(#4a698a,#7ba8a0);
+  --bn-colour-border: light-dark(#d4c9a8,#2d2820);
+  --bn-colour-accent: light-dark(#0f5c9e,#4d9fe0);
+  --bn-colour-hover: light-dark(#ede5d1,#252118);
+  --bn-colour-quote-bg: light-dark(#f0e9d8,#211e18);
+  --bn-colour-badge-bg: light-dark(#e8dfc9,#2d2820);
+  --bn-colour-badge-text: light-dark(#2d3654,#c4b898);
+  --bn-colour-border-hover: light-dark(#b8ad91,#4a4030);
+  --bn-colour-shadow: light-dark(rgba(30,20,10,.12),rgba(0,0,0,.4));
+  --bn-off-track: light-dark(#c9bd9c,#4a4030);
+  --sidebar-bg: light-dark(#f0e9d8,#211e18);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text);
+  font-family:var(--bn-font-body); font-size:var(--bn-text-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1000px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.masthead { border-bottom:1px solid var(--bn-colour-border); padding-bottom:var(--bn-space-lg); margin-bottom:var(--bn-space-lg); }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.masthead h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.35rem 0 .5rem; font-weight:490; }
+.masthead p { font-size:var(--bn-text-body); color:var(--bn-colour-muted); max-width:72ch; margin:.4rem 0; }
+.controls { display:flex; gap:.4rem; align-items:center; margin-bottom:var(--bn-space-lg); }
+.controls .lbl { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin-right:.3rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.28rem .7rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.key { display:flex; gap:1.4rem; flex-wrap:wrap; font-size:var(--bn-text-label); color:var(--bn-colour-muted);
+  border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem 1rem; margin-bottom:var(--bn-space-xl); }
+.key b { font-weight:490; color:var(--bn-colour-text); }
+.key .sw-a { display:inline-block; width:26px; height:13px; border:1px solid var(--bn-colour-border-hover); border-radius:2px; background:var(--bn-colour-bg); vertical-align:-2px; margin-right:.4rem; }
+.key .sw-c { display:inline-block; width:26px; height:13px; border-radius:2px; vertical-align:-2px; margin-right:.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 4px,var(--bn-colour-border) 4px 5px); border:1px solid var(--bn-colour-border); }
+.sec-head { margin:2.6rem 0 .9rem; }
+.sec-head h2 { font-size:var(--bn-text-title); font-weight:490; margin:0 0 .2rem; }
+.sec-head .sub { color:var(--bn-colour-muted); font-size:var(--bn-text-label); margin:0; max-width:74ch; }
+.frame { border:1px solid var(--bn-colour-border-hover); border-radius:var(--bn-radius-lg); overflow:hidden; background:var(--bn-colour-quote-bg); margin-bottom:.9rem; }
+.frame-bar { display:flex; align-items:center; gap:.45rem; padding:.5rem .8rem; background:var(--bn-colour-badge-bg); border-bottom:1px solid var(--bn-colour-border); }
+.frame-bar .tl { width:10px; height:10px; border-radius:50%; background:var(--bn-off-track); }
+.frame-bar .cap { margin-left:.5rem; font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); color:var(--bn-colour-muted); }
+.frame-body { padding:1.4rem; display:flex; justify-content:center; gap:2rem; flex-wrap:wrap; }
+.comm { border-left:3px solid var(--bn-colour-accent); padding:1rem 1.2rem; margin:0 0 2.4rem;
+  background:repeating-linear-gradient(135deg,transparent 0 7px,light-dark(rgba(0,0,0,.022),rgba(255,255,255,.022)) 7px 8px); }
+.comm .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-transform:uppercase; letter-spacing:.08em; color:var(--bn-colour-accent); font-weight:490; }
+.comm h3 { font-size:var(--bn-text-label); font-weight:490; margin:.9rem 0 .3rem; }
+.comm p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); max-width:76ch; margin:.35rem 0; }
+.comm code { font-family:var(--bn-font-mono); font-size:.95em; background:var(--bn-colour-badge-bg); padding:.05rem .3rem; border-radius:var(--bn-radius-sm); color:var(--bn-colour-badge-text); }
+
+/* ── sidebar rows ─────────────────────────────────────────────────────── */
+.sb { width:268px; background:var(--sidebar-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.45rem .35rem; }
+.sb-lab { font-size:var(--bn-text-micro); font-family:var(--bn-font-mono); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); padding:.15rem .55rem .4rem; }
+.row { display:flex; align-items:flex-start; gap:.5rem; padding:.35rem .55rem; border-radius:5px; }
+.row + .row { margin-top:.1rem; }
+.row.sel { background:var(--bn-colour-accent); }
+.row.sel .r-name, .row.sel .r-sub, .row.sel .r-count { color:#fff; }
+.row.sel .r-sub { opacity:.85; }
+.r-ico { width:17px; height:17px; flex-shrink:0; margin-top:1px; opacity:.85; }
+.r-ico svg { width:100%; height:100%; display:block; }
+.r-body { flex:1; min-width:0; }
+.r-name { font-size:var(--bn-text-label); font-weight:490; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.r-sub { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); margin-top:.05rem; display:flex; align-items:center; gap:.3rem; }
+.r-count { font-size:var(--bn-text-badge); color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; flex-shrink:0; margin-top:1px; }
+.g { width:12px; height:12px; flex-shrink:0; }
+.g svg { width:100%; height:100%; display:block; }
+.tint-warn { color:var(--sys-orange); } .tint-err { color:var(--sys-red); }
+.tint-ok { color:var(--sys-green); } .tint-info { color:var(--bn-colour-accent); }
+.spin { width:12px; height:12px; border:1.6px solid var(--bn-off-track); border-top-color:var(--bn-colour-accent); border-radius:50%; animation:sp .9s linear infinite; flex-shrink:0; }
+@keyframes sp { to { transform:rotate(360deg); } }
+.pair { display:flex; flex-direction:column; align-items:center; gap:.45rem; }
+.stateno { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.06em; padding:.1rem .55rem .25rem; }
+
+/* ── macOS menu ───────────────────────────────────────────────────────── */
+.menu { width:296px; background:light-dark(rgba(246,246,248,.98),rgba(56,56,58,.98));
+  border:1px solid light-dark(rgba(0,0,0,.12),rgba(255,255,255,.12)); border-radius:8px;
+  box-shadow:0 12px 36px var(--bn-colour-shadow); padding:.28rem; }
+.mi { display:flex; align-items:center; gap:.55rem; padding:.26rem .6rem; border-radius:5px; font-size:var(--bn-text-label); }
+.mi .mi-ico { width:15px; text-align:center; opacity:.75; font-size:.8rem; }
+.mi .sc { margin-left:auto; color:var(--bn-colour-muted); font-size:var(--bn-text-badge); font-family:var(--bn-font-mono); }
+.mi.dis { opacity:.36; }
+.mi.hl { background:var(--bn-colour-accent); color:#fff; }
+.mi.hl .sc { color:rgba(255,255,255,.8); }
+.mi.new { background:light-dark(rgba(0,122,255,.1),rgba(10,132,255,.16)); box-shadow:inset 0 0 0 1px var(--bn-colour-accent); }
+.msep { height:1px; background:light-dark(rgba(0,0,0,.11),rgba(255,255,255,.13)); margin:.28rem .5rem; }
+
+/* ── confirm sheet ────────────────────────────────────────────────────── */
+.sheet { width:420px; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border);
+  border-radius:12px; box-shadow:0 18px 52px var(--bn-colour-shadow); padding:1.4rem 1.5rem 1.1rem; text-align:center; }
+.sheet .icn { font-size:2rem; line-height:1; margin-bottom:.6rem; }
+.sheet h4 { font-size:var(--bn-text-heading); font-weight:490; margin:0 0 .4rem; }
+.sheet p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.3rem 0; }
+.sheet .btns { display:flex; gap:.5rem; justify-content:flex-end; margin-top:1.2rem; }
+.sbtn { font:inherit; font-size:var(--bn-text-label); font-weight:490; padding:.34rem .95rem; border-radius:6px;
+  border:1px solid var(--bn-colour-border-hover); background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.sbtn.destructive { background:var(--sys-red); border-color:var(--sys-red); color:#fff; }
+.sbtn.default { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.loss { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); text-align:left;
+  background:var(--bn-colour-quote-bg); border:1px solid var(--bn-colour-border); border-radius:6px;
+  padding:.6rem .8rem; margin:.9rem 0 0; color:var(--bn-colour-text); }
+.sm-wrap { width:100%; overflow-x:auto; }
+.sm { width:100%; min-width:900px; height:auto; display:block; }
+.sm .st { fill:var(--bn-colour-bg); stroke:var(--bn-colour-border-hover); stroke-width:1.2; }
+.sm .st.run { stroke:var(--bn-colour-accent); stroke-width:2; }
+.sm .st.bad { stroke:var(--sys-orange); }
+.sm .st.err { stroke:var(--sys-red); }
+.sm .lbl { fill:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:13px; font-weight:490; text-anchor:middle; }
+.sm .sub { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; text-anchor:middle; }
+.sm .ed { stroke:var(--bn-colour-muted); stroke-width:1.3; fill:none; }
+.sm .ed.user { stroke:var(--bn-colour-accent); stroke-dasharray:5 3; }
+.sm .et { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; text-anchor:middle; }
+.sm .et.user { fill:var(--bn-colour-accent); }
+.sq { width:100%; min-width:820px; height:auto; display:block; }
+.sq .p { fill:var(--bn-colour-bg); stroke:var(--bn-colour-border-hover); stroke-width:1.2; }
+.sq .p.actor { stroke:var(--bn-colour-accent); stroke-width:1.8; }
+.sq .pt { fill:var(--bn-colour-text); font-family:var(--bn-font-body); font-size:11.5px; font-weight:490; text-anchor:middle; }
+.sq .life { stroke:var(--bn-colour-border); stroke-width:1; stroke-dasharray:3 4; }
+.sq .msg { stroke:var(--bn-colour-text); stroke-width:1.2; fill:none; opacity:.75; }
+.sq .msg.ret { stroke:var(--bn-colour-accent); stroke-dasharray:5 3; }
+.sq .mt { fill:var(--bn-colour-text); font-family:var(--bn-font-mono); font-size:10px; opacity:.85; }
+.sq .mt.ret { fill:var(--bn-colour-accent); }
+.sq .self { fill:none; stroke:var(--bn-colour-muted); stroke-width:1.1; }
+.sq .st2 { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; }
+.sq .noteb { fill:var(--bn-colour-quote-bg); stroke:var(--bn-colour-border); stroke-width:1; }
+.sq .noten { fill:var(--bn-colour-muted); font-family:var(--bn-font-mono); font-size:9.5px; }
+.pane { width:400px; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  background:var(--bn-colour-bg); padding:2.6rem 1.6rem; text-align:center; }
+.pane .picon { font-size:2rem; opacity:.32; line-height:1; }
+.pane h4 { font-size:1.35rem; font-weight:490; margin:1rem 0 .4rem; color:var(--bn-colour-muted); }
+.pane h4.live { color:var(--bn-colour-text); }
+.pane p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:.2rem 0 0; }
+.pane .abtn { margin-top:1.2rem; font:inherit; font-size:var(--bn-text-label); font-weight:490;
+  padding:.36rem 1.3rem; border-radius:6px; border:1px solid var(--bn-colour-accent);
+  background:var(--bn-colour-accent); color:#fff; cursor:pointer; }
+.sqcap { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); text-transform:uppercase; letter-spacing:.05em; margin:1.4rem 0 .4rem; }
+.legend { display:flex; gap:1.6rem; flex-wrap:wrap; font-size:var(--bn-text-badge); color:var(--bn-colour-muted); padding:.5rem 0 0; }
+.legend i { display:inline-block; width:26px; height:0; border-top:1.5px solid var(--bn-colour-muted); vertical-align:4px; margin-right:.35rem; }
+.legend i.user { border-top-style:dashed; border-color:var(--bn-colour-accent); }
+@media (prefers-reduced-motion: reduce) { .spin { animation:none; } }
+
+/* ── Drop-outcome toasts (§Drop outcomes) ───────────────────────────────
+   Geometry lifted from ToastSurface.swift so this reads at shipped size:
+   HStack spacing 12 · padding 16/10 · corner 8 · .callout (13pt) ·
+   .regularMaterial · shadow black@10% r4 y2. ToastOverlay pins it to the
+   window bottom with 16pt of clearance, horizontally centred.            */
+.win { position:relative; height:300px; border-radius:var(--bn-radius-lg);
+       overflow:hidden; border:1px solid var(--bn-colour-border);
+       background:var(--bn-colour-bg); display:flex; }
+.win-side { width:158px; flex:none; border-right:1px solid var(--bn-colour-border);
+            background:var(--bn-colour-badge-bg); padding:.7rem .55rem; }
+.win-side .r { font-size:var(--bn-text-caption); color:var(--bn-colour-muted);
+               padding:.28rem .4rem; border-radius:var(--bn-radius-sm);
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.win-side .r.sel { background:var(--bn-colour-hover); color:var(--bn-colour-text); }
+.win-main { flex:1; position:relative; padding:.9rem 1rem; }
+.win-main .ghost { height:9px; border-radius:3px; background:var(--bn-colour-border);
+                   opacity:.5; margin-bottom:.5rem; }
+.toast { display:inline-flex; align-items:center; gap:12px;
+         padding:10px 16px; border-radius:8px;
+         background:light-dark(rgba(246,246,248,.92), rgba(56,56,60,.94));
+         backdrop-filter:saturate(180%) blur(20px);
+         box-shadow:0 2px 4px rgba(0,0,0,.10);
+         font-size:13px; line-height:1.25; color:var(--bn-colour-text);
+         border:.5px solid light-dark(rgba(0,0,0,.06), rgba(255,255,255,.10)); }
+.toast .act { font-size:13px; color:var(--bn-colour-accent); }
+.toast-dock { position:absolute; left:0; right:0; bottom:16px;
+              display:flex; justify-content:center; pointer-events:none; }
+.toast-stack { display:flex; flex-direction:column; gap:.85rem; align-items:flex-start;
+               width:100%; max-width:640px; }
+.toast-row { display:flex; align-items:center; gap:.9rem; width:100%; }
+.toast-row .when { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro);
+                   color:var(--bn-colour-muted); width:150px; flex:none; text-align:right; }
+
+/* ── Decided: native drop feedback (§Drop outcomes) ─────────────────────
+   NSDragOperation [] → AppKit draws no row highlight, swaps the pointer to
+   operation-not-allowed, and springs the item back. Nothing to localise.   */
+.cursor { display:inline-flex; align-items:center; gap:.4rem;
+          font-size:var(--bn-text-caption); color:var(--bn-colour-muted); }
+.cursor .glyph { display:inline-flex; align-items:center; justify-content:center;
+                 width:22px; height:22px; border-radius:50%;
+                 border:1.5px solid var(--bn-colour-muted); position:relative; }
+.cursor .glyph::after { content:""; position:absolute; width:1.5px; height:20px;
+                        background:var(--bn-colour-muted); transform:rotate(45deg); }
+.ghost-drag { display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .55rem;
+              border-radius:var(--bn-radius-sm); background:var(--bn-colour-badge-bg);
+              border:1px solid var(--bn-colour-border); font-size:var(--bn-text-caption);
+              opacity:.75; }
+.superseded { opacity:.5; }
+.super-note { border-left:3px solid var(--bn-off-track); background:transparent;
+              padding:.7rem 1rem; margin:0 0 1.2rem; font-size:var(--bn-text-label);
+              color:var(--bn-colour-muted); }
+.super-note b { color:var(--bn-colour-text); }
+
+
+/* ════ RE#17 additions — geometry from the Swift named in each comment ════ */
+/* ProjectDiagnosticPopover.swift: width 360, inset 16, VStack spacing 10;
+   header .headline + .bordered .small buttons; body .callout + .caption path. */
+.pop { width:360px; padding:16px; background:light-dark(rgba(246,246,248,.98),rgba(44,44,46,.98));
+  border:1px solid light-dark(rgba(0,0,0,.12),rgba(255,255,255,.12)); border-radius:10px;
+  box-shadow:0 12px 36px var(--bn-colour-shadow); color:var(--bn-colour-text); }
+.pop-h { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.pop-t { font-size:13px; font-weight:700; }
+.sp { flex:1; }
+.pob { font:inherit; font-size:11px; padding:2px 8px; border-radius:5px; color:var(--bn-colour-text);
+  background:light-dark(rgba(0,0,0,.05),rgba(255,255,255,.1)); border:.5px solid light-dark(rgba(0,0,0,.15),rgba(255,255,255,.15)); }
+.pob.ico { display:inline-flex; align-items:center; padding:3px 6px; }
+.pop-b .callout { font-size:12px; line-height:1.35; margin:0 0 6px; }
+.pop-b .cap2 { font-size:10px; color:var(--bn-colour-muted); margin:0; }
+.stack { display:flex; flex-direction:column; align-items:flex-start; gap:.7rem; }
+.wrong { outline:2px dashed var(--sys-red); outline-offset:3px; }
+.owner { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); color:var(--sys-orange);
+  text-transform:uppercase; letter-spacing:.06em; margin-left:auto; }
+/* An empty-sidebar window with a sheet alert (NSAlert.beginSheetModal). */
+.mwin { position:relative; width:640px; height:340px; border-radius:var(--bn-radius-lg); overflow:hidden;
+  border:1px solid var(--bn-colour-border); background:var(--bn-colour-bg); display:flex; }
+.mwin-side { width:190px; flex:none; background:var(--sidebar-bg); border-right:1px solid var(--bn-colour-border); padding:.6rem .35rem; }
+.mwin-main { flex:1; display:flex; align-items:center; justify-content:center; }
+.wel { text-align:center; max-width:300px; }
+.wel h4 { font-size:var(--bn-text-heading); font-weight:490; margin:.7rem 0 .3rem; }
+.wel p { font-size:var(--bn-text-label); color:var(--bn-colour-muted); margin:0; }
+.appicon { width:56px; height:56px; margin:0 auto; border-radius:13px;
+  background:linear-gradient(160deg,light-dark(#5aa2ff,#3a7fe0),light-dark(#1d5fd0,#174a9e)); box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.appicon.sm2 { width:44px; height:44px; border-radius:10px; opacity:.85; }
+.dim { position:absolute; inset:0; background:light-dark(rgba(0,0,0,.06),rgba(0,0,0,.25)); }
+.alert { position:absolute; top:0; left:50%; transform:translateX(-50%); width:260px; text-align:center;
+  background:light-dark(rgba(246,246,248,.98),rgba(50,50,52,.98)); border:1px solid light-dark(rgba(0,0,0,.12),rgba(255,255,255,.12));
+  border-top:none; border-radius:0 0 12px 12px; box-shadow:0 14px 40px var(--bn-colour-shadow); padding:1.1rem 1rem .9rem; }
+.alert h4 { font-size:13px; font-weight:700; margin:.7rem 0 .35rem; }
+.alert p { font-size:11px; line-height:1.35; margin:0 0 .9rem; }
+.abtn2 { font:inherit; font-size:13px; width:100%; padding:.3rem; border-radius:6px; border:none;
+  background:var(--bn-colour-accent); color:#fff; }
+/* Terminal: Rich colours from ui_kinds.CLI_COLOUR (yellow ⚠, red ✗, green ✓). */
+.term { width:100%; max-width:780px; margin:0; background:#1e1e1e; color:#d4d4d4; border-radius:6px;
+  padding:.9rem 1rem; font-family:var(--bn-font-mono); font-size:12px; line-height:1.5; white-space:pre-wrap; overflow-x:auto; }
+.term .ty { color:#e5c07b; } .term .tr { color:#e06c75; } .term .tg { color:#98c379; }
+.term .td { color:#7f848e; } .term .tb { font-weight:700; color:#fff; }
+table.plan { border-collapse:collapse; width:100%; font-size:var(--bn-text-label); margin:.6rem 0 1.4rem; }
+table.plan th, table.plan td { text-align:left; vertical-align:top; padding:.4rem .5rem; border-bottom:1px solid var(--bn-colour-border); }
+table.plan th { font-weight:490; color:var(--bn-colour-muted); font-size:var(--bn-text-caption); }
+table.plan code { font-family:var(--bn-font-mono); font-size:.85em; }
+.st-ship { color:var(--sys-green); } .st-ok { color:var(--bn-colour-accent); } .st-open { color:var(--sys-orange); font-weight:490; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">RE#17 · decisions #17 #18 #19 · 22 Oct 2026</div>
+  <h1>Damaged files: what the researcher sees</h1>
+  <p>One rule for three files. Bristlenose never writes over a file it couldn’t read. A file the researcher edits (<code>people.yaml</code>) is left where it is, and the message names the broken line. A file Bristlenose keeps for itself (the pipeline manifest, <code>projects.json</code>) is set aside as <code>.damaged-&lt;stamp&gt;</code> and a new one is started. The message appears once, where the researcher is looking: the terminal for the CLI, the app for the Mac.</p>
+</header>
+<div class="controls"><span class="lbl">Palette</span>
+  <button class="pbtn on" data-p="default">Default</button><button class="pbtn" data-p="edo">Edo</button>
+  <span class="lbl" style="margin-left:1rem">Scheme</span>
+  <button class="pbtn on" data-s="light dark">System</button><button class="pbtn" data-s="light">Light</button><button class="pbtn" data-s="dark">Dark</button></div>
+<div class="key"><span><span class="sw-a"></span><b>Artefact</b>: the real pixels. Every word is a shipped key, or the frame bar flags it as owner-written.</span>
+  <span><span class="sw-c"></span><b>Commentary</b>: why it works. Not the product.</span></div>
+
+<div class="sec-head"><h2>1 · Mac: the project’s manifest is damaged (#18)</h2>
+<p class="sub">The row, its diagnostic popover (click the glyph), and the context menu. A truncated file is the realistic case: a power cut or full disk while it was being written.</p></div>
+
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">before — today, a truncated manifest</span></div>
+  <div class="frame-body"><div class="stack"><div class="sb">
+      <div class="sb-lab">Projects</div>
+      <div class="row"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Onboarding diaries</div></div></div>
+      <div class="row sel"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Spring usability study</div>
+        <div class="r-sub"><span class="g tint-err"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="currentColor"/><path d="M5.6 5.6 10.4 10.4M10.4 5.6 5.6 10.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></span> Can’t be read</div></div></div>
+      <div class="row"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Checkout interviews</div></div></div>
+    </div><div class="wrong"><div class="pop ">
+      <div class="pop-h"><span class="pop-t">Can’t be read</span><span class="sp"></span><button class="pob">Locate…</button><button class="pob ico" title="Copy details"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="5" width="8.5" height="9" rx="1.6"/><path d="M3.5 10.5h-.3A1.2 1.2 0 0 1 2 9.3V3.2C2 2.5 2.5 2 3.2 2h6.1c.7 0 1.2.5 1.2 1.2v.3"/></svg></button></div>
+      <div class="pop-b"><p class="callout">The folder is there, but its contents couldn’t be read.</p><p class="cap2">/Users/sam/Research/Spring usability study</p></div>
+    </div></div></div><div class="wrong"><div class="menu">
+      <div class="mi">Open in New Window</div><div class="msep"></div>
+      <div class="mi">Show in Finder</div><div class="mi">Rename…</div><div class="mi">Choose Icon</div>
+      <div class="msep"></div><div class="mi">Remove from Sidebar</div>
+    </div></div></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">after — a truncated or misshapen manifest reads as damaged, and Analyse is offered <span class='owner'>sentence: owner to choose (below)</span></span></div>
+  <div class="frame-body"><div class="stack"><div class="sb">
+      <div class="sb-lab">Projects</div>
+      <div class="row"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Onboarding diaries</div></div></div>
+      <div class="row sel"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Spring usability study</div>
+        <div class="r-sub"><span class="g tint-err"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="currentColor"/><path d="M5.6 5.6 10.4 10.4M10.4 5.6 5.6 10.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg></span> Project file damaged</div></div></div>
+      <div class="row"><span class="r-ico">📁</span><div class="r-body"><div class="r-name">Checkout interviews</div></div></div>
+    </div><div class="pop ">
+      <div class="pop-h"><span class="pop-t">Project file damaged</span><span class="sp"></span><button class="pob">Show Log</button><button class="pob ico" title="Copy details"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="5" width="8.5" height="9" rx="1.6"/><path d="M3.5 10.5h-.3A1.2 1.2 0 0 1 2 9.3V3.2C2 2.5 2.5 2 3.2 2h6.1c.7 0 1.2.5 1.2 1.2v.3"/></svg></button></div>
+      <div class="pop-b"><p class="callout">This project’s index file couldn’t be read — analysing will rebuild it, running every step again.</p><p class="cap2">/Users/sam/Research/Spring usability study</p></div>
+    </div></div><div class="menu"><div class="mi new">Analyse</div><div class="msep"></div>
+      <div class="mi">Open in New Window</div><div class="msep"></div>
+      <div class="mi">Show in Finder</div><div class="mi">Rename…</div><div class="mi">Choose Icon</div>
+      <div class="msep"></div><div class="mi">Remove from Sidebar</div>
+    </div></div></div>
+
+<div class="comm"><span class="tag">Commentary</span>
+<h3>What’s wrong today</h3>
+<p><code>PipelineRunner.swift</code> reads the manifest with <code>JSONSerialization</code>. When parsing throws, which is what a truncated file does, the code falls into the same <code>catch</code> as a failed read, so the row says <b>Can’t be read</b>. That state also sets <code>needsFolderAccess</code>, so the popover offers <b>Locate…</b>, a folder-permission remedy for a folder that is fine. Only a file that parses but has the wrong shape reaches “Project file damaged”.</p>
+<p>Either way the row is a dead end. <code>pipelineIsFree</code> refuses every <code>.unreachable</code>, so the menu has neither Analyse nor Re-analyse, although the shipped sentence says “re-analysing will rebuild it”. Re-analyse would be the wrong verb anyway: it’s <code>--clean</code>, which discards the researcher’s stars and tags.</p>
+<h3>After</h3>
+<p>A failed read stays <code>.unreadable</code>. A read that worked but won’t parse is <code>.damaged</code>, which is error kind, as it already is. <code>.damaged</code> counts as “pipeline free” for <b>Analyse</b> only. The run sets the file aside (<code>pipeline-manifest.json.damaged-&lt;stamp&gt;</code>) and runs every stage again. Nothing new is drawn: the pill, the glyph, the popover, Show Log and the menu item all ship today. The only change is the one sentence.</p>
+<p>Not built (owner, 22 Oct): a last-good copy of the manifest. It’s parked until after V1. R111 came from the 19 Oct audit’s probe, a damaged manifest has never been seen in the wild, and since 04d30698 the write fsyncs before it replaces the file.</p>
+</div>
+
+<div class="sec-head"><h2>1b · The popover sentence: three candidates</h2>
+<p class="sub">Same popover, same width (360 pt) and type sizes. Only the sentence changes, in all 21 locales.</p></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">option A — minimal edit (recommended) <span class='owner'>owner-written · new copy</span></span></div>
+  <div class="frame-body"><div class="pop ">
+      <div class="pop-h"><span class="pop-t">Project file damaged</span><span class="sp"></span><button class="pob">Show Log</button><button class="pob ico" title="Copy details"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="5" width="8.5" height="9" rx="1.6"/><path d="M3.5 10.5h-.3A1.2 1.2 0 0 1 2 9.3V3.2C2 2.5 2.5 2 3.2 2h6.1c.7 0 1.2.5 1.2 1.2v.3"/></svg></button></div>
+      <div class="pop-b"><p class="callout">This project’s index file couldn’t be read — analysing will rebuild it, running every step again.</p><p class="cap2">/Users/sam/Research/Spring usability study</p></div>
+    </div></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">option B — names the quote risk <span class='owner'>owner-written · new copy</span></span></div>
+  <div class="frame-body"><div class="pop ">
+      <div class="pop-h"><span class="pop-t">Project file damaged</span><span class="sp"></span><button class="pob">Show Log</button><button class="pob ico" title="Copy details"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="5" width="8.5" height="9" rx="1.6"/><path d="M3.5 10.5h-.3A1.2 1.2 0 0 1 2 9.3V3.2C2 2.5 2.5 2 3.2 2h6.1c.7 0 1.2.5 1.2 1.2v.3"/></svg></button></div>
+      <div class="pop-b"><p class="callout">This project’s index file couldn’t be read. Analysing rebuilds it by running every step again; stars and tags on quotes that change may be lost.</p><p class="cap2">/Users/sam/Research/Spring usability study</p></div>
+    </div></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">option C — keep today’s sentence (shipped) · menu offers Analyse, sentence says re-analysing</span></div>
+  <div class="frame-body"><div class="pop ">
+      <div class="pop-h"><span class="pop-t">Project file damaged</span><span class="sp"></span><button class="pob">Show Log</button><button class="pob ico" title="Copy details"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="5" y="5" width="8.5" height="9" rx="1.6"/><path d="M3.5 10.5h-.3A1.2 1.2 0 0 1 2 9.3V3.2C2 2.5 2.5 2 3.2 2h6.1c.7 0 1.2.5 1.2 1.2v.3"/></svg></button></div>
+      <div class="pop-b"><p class="callout">This project’s index file couldn’t be read — re-analysing will rebuild it.</p><p class="cap2">/Users/sam/Research/Spring usability study</p></div>
+    </div></div></div>
+<div class="comm"><span class="tag">Commentary</span>
+<p><b>A</b> keeps today’s shape (an em-dash clause, as in its siblings in the <code>diagnostic.unreachable.*</code> family) and its first half. It changes the verb to the one on the menu and says what the rebuild costs.</p>
+<p><b>B</b> is honest about a second cost: re-extracted quotes won’t come out identical, so curation on those that change can be orphaned. It runs to two clauses and adds a loss warning without a confirm. The house rule is to confirm only for a real loss, and this one is uncertain.</p>
+<p><b>C</b> needs no translation work, but its verb disagrees with the menu item. That mismatch is the bug this decision exists to remove.</p></div>
+
+<div class="sec-head"><h2>2 · Mac: <code>projects.json</code> is damaged (#19)</h2>
+<p class="sub">At launch, after the file has been set aside. Shown once.</p></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">before — today: an empty Welcome screen, no word</span></div>
+  <div class="frame-body"><div class="mwin">
+      <div class="mwin-side"><div class="sb-lab">Projects</div></div>
+      <div class="mwin-main"><div class="wel"><div class="appicon sm2"></div><h4>Welcome to Bristlenose</h4>
+        <p>Drag a folder of interview recordings into the sidebar, or click + New Project to start.</p></div></div>
+      
+    </div></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">after — one sheet alert on the main window, OK dismisses it <span class='owner'>title + body: approved 22 Oct · new copy</span></span></div>
+  <div class="frame-body"><div class="mwin">
+      <div class="mwin-side"><div class="sb-lab">Projects</div></div>
+      <div class="mwin-main"><div class="wel"><div class="appicon sm2"></div><h4>Welcome to Bristlenose</h4>
+        <p>Drag a folder of interview recordings into the sidebar, or click + New Project to start.</p></div></div>
+      <div class="dim"></div><div class="alert">
+          <div class="appicon"></div>
+          <h4>Your project list couldn’t be read</h4>
+          <p>It was set aside and a new list started. Your projects are untouched in their folders, with their reports and edits — drag each folder into the sidebar to add it back.</p>
+          <button class="abtn2">OK</button>
+        </div>
+    </div></div></div>
+<div class="comm"><span class="tag">Commentary</span>
+<p><b>Mechanism:</b> a stock <code>NSAlert</code> (<code>.warning</code>), presented as a sheet on the first window once launch has settled. It isn’t app-modal, because the message is about this window’s empty sidebar. It shows once, after <code>ProjectIndex.load()</code> has moved the file to <code>projects.json.damaged-&lt;stamp&gt;</code>, and never again unless another file is damaged. There is no Show in Finder: the copy sits in the app’s container, where a researcher can do nothing with it.</p>
+<p><b>Remedy 1</b> (do something): drag the folders back. The research is safe, because each project’s database and edits live in its own folder (<code>bristlenose-output/.bristlenose/bristlenose.db</code>, matched by the study marker). What is lost is the sidebar arrangement: groups, order, icons and agent access.</p>
+<p><b>Edge case, accepted:</b> if the set-aside itself fails (<code>saveRefused</code>), the same alert shows, but projects added back last only until the next launch. That launch tries the set-aside again.</p></div>
+
+<div class="sec-head"><h2>3 · CLI: <code>people.yaml</code> and the manifest (#17, #18)</h2>
+<p class="sub">English by design (the terminal is the operator surface). Glyphs and colours come from <code>ui_kinds.py</code>.</p></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">before — run, people.yaml with a typo: every paid stage done, then a traceback</span></div>
+  <div class="frame-body"><pre class="term"><span class="tg">✓</span> Extracted quotes             1m 12s
+<span class="tg">✓</span> Grouped themes                  41s
+<span class="td">Traceback (most recent call last):</span>
+<span class="td">  File ".../bristlenose/pipeline.py", line 3359, in run</span>
+<span class="td">    existing_people = load_people_file(output_dir)</span>
+<span class="td">  …</span>
+<span class="tr">yaml.scanner.ScannerError: while scanning a quoted scalar</span>
+<span class="td">  in "&lt;unicode string&gt;", line 4, column 18</span></pre></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">after — run completes; the file is left exactly as the researcher wrote it <span class='owner'>approved 22 Oct</span></span></div>
+  <div class="frame-body"><pre class="term"><span class="tg">✓</span> Extracted quotes             1m 12s
+<span class="tg">✓</span> Grouped themes                  41s
+<span class="ty">⚠</span> people.yaml couldn’t be read (line 4, column 18), so it was left as it is, and names you added aren’t in this report. Fix that line, then run again.
+<span class="tg">✓</span> Rendered report                  3s</pre></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">before — run, damaged manifest</span></div>
+  <div class="frame-body"><pre class="term">$ bristlenose run interviews/
+<span class="td">Resuming from previous run...</span>
+<span class="tg">✓</span> Transcribed 6 sessions      14m 02s
+<span class="td">  … every stage runs again, LLM calls paid again</span></pre></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">after — run, damaged manifest <span class='owner'>new copy · CLI only</span></span></div>
+  <div class="frame-body"><pre class="term">$ bristlenose run interviews/
+<span class="ty">⚠</span> The pipeline manifest couldn’t be read, so it was set aside as pipeline-manifest.json.damaged-2026-10-22T21-04-05. Every stage runs again, including the LLM stages.
+<span class="tg">✓</span> Transcribed 6 sessions      14m 02s</pre></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">before — status, damaged manifest (says there is none)</span></div>
+  <div class="frame-body"><pre class="term">$ bristlenose status interviews/
+No pipeline manifest in <span class="tb">interviews/bristlenose-output</span>.
+Run <span class="tb">bristlenose run interviews/</span> to start.</pre></div></div>
+<div class="frame "><div class="frame-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="cap">after — status, damaged manifest (read-only: moves nothing) <span class='owner'>new copy · CLI only</span></span></div>
+  <div class="frame-body"><pre class="term">$ bristlenose status interviews/
+<span class="ty">⚠</span> The pipeline manifest in <span class="tb">interviews/bristlenose-output</span> couldn’t be read, so Bristlenose can’t tell which stages are done.
+Run <span class="tb">bristlenose run interviews/</span> to rebuild it — every stage runs again.</pre></div></div>
+<div class="comm"><span class="tag">Commentary</span>
+<p><b>people.yaml</b> is the researcher’s file (“edit them freely”, says its header), so a typo is theirs to fix, and the fix is one line in a file left exactly where they made it. The run gets the same tolerance in <code>analyze</code>, <code>render</code> and coverage. With no decision needed, <code>write_people_file</code> becomes atomic (tmp + fsync + replace), so Bristlenose can no longer truncate the file itself.</p>
+<p><b>“Pipeline manifest”</b> stays CLI vocabulary. <code>status</code> already uses it, and a CLI researcher can find the file. The Mac never says it: there it is the shipped “Project file damaged”.</p></div>
+
+<div class="sec-head"><h2>String plan</h2></div>
+<table class="plan">
+<tr><th>Where</th><th>Key</th><th>English</th><th>Status</th></tr>
+<tr><td>Mac row + popover header</td><td><code>desktop.chrome.pipeline.unreachable.damaged</code></td><td>Project file damaged</td><td class="st-ship">shipped, unchanged</td></tr>
+<tr><td>Mac popover sentence</td><td><code>desktop.pipeline.diagnostic.unreachable.damaged</code></td><td>option A / B / C above</td><td class="st-open">owner to choose · 21 locales</td></tr>
+<tr><td>Mac menu</td><td><code>desktop.menu.project.analyse</code></td><td>Analyse</td><td class="st-ship">shipped, newly offered here</td></tr>
+<tr><td>Mac alert title</td><td><code>desktop.projectList.damagedTitle</code> (new)</td><td>Your project list couldn’t be read</td><td class="st-ok">approved 22 Oct · 21 locales</td></tr>
+<tr><td>Mac alert body</td><td><code>desktop.projectList.damagedBody</code> (new)</td><td>It was set aside and a new list started. Your projects are untouched in their folders, with their reports and edits — drag each folder into the sidebar to add it back.</td><td class="st-ok">approved 22 Oct · 21 locales</td></tr>
+<tr><td>Mac alert button</td><td><code>buttons.ok</code> (common)</td><td>OK</td><td class="st-ship">shipped</td></tr>
+<tr><td>CLI run</td><td>— (English)</td><td>people.yaml couldn’t be read (line N, column M), so it was left as it is, and names you added aren’t in this report. Fix that line, then run again.</td><td class="st-ok">approved 22 Oct</td></tr>
+<tr><td>CLI run</td><td>— (English)</td><td>The pipeline manifest couldn’t be read, so it was set aside as … Every stage runs again, including the LLM stages.</td><td class="st-ok">drafted in brief</td></tr>
+<tr><td>CLI status</td><td>— (English)</td><td>The pipeline manifest in X couldn’t be read, so Bristlenose can’t tell which stages are done. / Run … to rebuild it — every stage runs again.</td><td class="st-ok">drafted in brief</td></tr>
+</table>
+</div>
+<script>
+document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{document.documentElement.dataset.colorTheme=b.dataset.p;document.querySelectorAll('[data-p]').forEach(x=>x.classList.toggle('on',x===b));});
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{document.documentElement.style.colorScheme=b.dataset.s;document.querySelectorAll('[data-s]').forEach(x=>x.classList.toggle('on',x===b));});
+</script>
+</body></html>

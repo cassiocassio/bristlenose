@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Es l\u00e4uft bereits ein anderer Kopiervorgang.",
     "copySourceNotDownloaded": "Es wurde nichts kopiert: Ein Teil der abgelegten Objekte ist noch nicht auf diesen Mac geladen. Laden Sie ihn im Finder und legen Sie ihn dann erneut ab.",
     "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
+    "projectListDamagedTitle": "Die Projektliste konnte nicht gelesen werden",
+    "projectListDamagedMessage": "Sie wurde beiseitegelegt und eine neue Liste angelegt. Ihre Projekte sind in ihren Ordnern unver\u00e4ndert, mit ihren Berichten und Bearbeitungen \u2013 ziehen Sie jeden Ordner in die Seitenleiste, um ihn wieder hinzuzuf\u00fcgen.",
     "filesPopover": {
       "unanalysedTitle": "Nicht analysierte Dateien",
       "missingTitle": "Fehlende Dateien",
@@ -387,7 +389,7 @@
         "timedOut": "Der Ordner hat nicht geantwortet \u2013 m\u00f6glicherweise ein getrenntes Laufwerk oder eine Netzwerkfreigabe.",
         "unreadable": "Der Ordner ist vorhanden, aber sein Inhalt konnte nicht gelesen werden.",
         "folderMissing": "Der Ordner befindet sich nicht am erwarteten Ort \u2013 m\u00f6glicherweise wurde er verschoben.",
-        "damaged": "Die Indexdatei dieses Projekts konnte nicht gelesen werden \u2013 eine erneute Analyse erstellt sie neu.",
+        "damaged": "Die Indexdatei dieses Projekts konnte nicht gelesen werden \u2013 Analysieren erstellt sie neu und f\u00fchrt dabei alle Schritte erneut aus.",
         "scanFailed": "Die Pr\u00fcfung endete ohne Ergebnis \u2013 beim erneuten \u00d6ffnen des Projekts wird es nochmals versucht."
       },
       "pill": {

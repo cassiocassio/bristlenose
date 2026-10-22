@@ -2551,6 +2551,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         state: PipelineState?, data: UnanalysedState?
     ) -> Bool {
         guard hasPath, isAvailable else { return false }
+        // A damaged manifest is no reason to strand the study: a run sets it
+        // aside and rebuilds it by running every stage again, which is what
+        // the popover says. Analyse only — Re-analyse is `--clean` and would
+        // discard the researcher's edits (decision #18, 22 Oct 2026).
+        if case .unreachable(reason: .damaged) = state { return true }
         guard pipelineIsFree(state) else { return false }
         // A run that did not finish has work to do whatever the folder says.
         // Stopped or failed after transcription, every recording has its

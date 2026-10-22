@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Zaten ba\u015fka bir kopyalama s\u00fcr\u00fcyor.",
     "copySourceNotDownloaded": "Hi\u00e7bir \u015fey kopyalanmad\u0131: B\u0131rakt\u0131\u011f\u0131n\u0131z \u00f6\u011felerin bir k\u0131sm\u0131 hen\u00fcz bu Mac\u2019e indirilmedi. Finder\u2019da indirin, sonra yeniden b\u0131rak\u0131n.",
     "copyDiskSpaceMessage": "Bu kopyalama %@ boş alan gerektiriyor, ancak hedef birimde yalnızca %@ kullanılabilir.",
+    "projectListDamagedTitle": "Proje listeniz okunamadı",
+    "projectListDamagedMessage": "Bir kenara alındı ve yeni bir liste başlatıldı. Projeleriniz, raporları ve düzenlemeleriyle birlikte klasörlerinde olduğu gibi duruyor; her klasörü yeniden eklemek için kenar çubuğuna sürükleyin.",
     "filesPopover": {
       "unanalysedTitle": "\u00c7\u00f6z\u00fcmlenmemi\u015f dosyalar",
       "missingTitle": "Eksik dosyalar",
@@ -387,7 +389,7 @@
         "timedOut": "Klas\u00f6r yan\u0131t vermedi; ba\u011flant\u0131s\u0131 kesilmi\u015f bir disk veya a\u011f payla\u015f\u0131m\u0131 olabilir.",
         "unreadable": "Klas\u00f6r var, ancak i\u00e7eri\u011fi okunamad\u0131.",
         "folderMissing": "Klas\u00f6r bu projenin bekledi\u011fi yerde de\u011fil; ta\u015f\u0131nm\u0131\u015f olabilir.",
-        "damaged": "Bu projenin dizin dosyas\u0131 okunamad\u0131; yeniden \u00e7\u00f6z\u00fcmleme onu yeniden olu\u015fturur.",
+        "damaged": "Bu projenin dizin dosyas\u0131 okunamad\u0131; analiz, t\u00fcm ad\u0131mlar\u0131 yeniden \u00e7al\u0131\u015ft\u0131rarak onu yeniden olu\u015fturur.",
         "scanFailed": "Tarama sonu\u00e7 vermeden bitti; projeyi yeniden a\u00e7mak yeniden dener."
       },
       "pill": {

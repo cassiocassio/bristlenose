@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "\u00c8 gi\u00e0 in corso un\u2019altra copia.",
     "copySourceNotDownloaded": "Non \u00e8 stato copiato nulla: parte degli elementi trascinati non \u00e8 ancora scaricata su questo Mac. Scaricala nel Finder, poi trascinala di nuovo.",
     "copyDiskSpaceMessage": "Questa copia richiede %@ liberi, ma sul volume di destinazione sono disponibili solo %@.",
+    "projectListDamagedTitle": "Non \u00e8 stato possibile leggere l\u2019elenco dei progetti",
+    "projectListDamagedMessage": "\u00c8 stato messo da parte ed \u00e8 stato avviato un nuovo elenco. I tuoi progetti sono intatti nelle loro cartelle, con i loro report e le modifiche: trascina ogni cartella nella barra laterale per aggiungerla di nuovo.",
     "filesPopover": {
       "unanalysedTitle": "File non analizzati",
       "missingTitle": "File mancanti",
@@ -387,7 +389,7 @@
         "timedOut": "La cartella non ha risposto: potrebbe essere un disco scollegato o una condivisione di rete.",
         "unreadable": "La cartella \u00e8 presente, ma non \u00e8 stato possibile leggerne il contenuto.",
         "folderMissing": "La cartella non si trova dove questo progetto la cerca: potrebbe essere stata spostata.",
-        "damaged": "Non \u00e8 stato possibile leggere il file di indice di questo progetto: una nuova analisi lo ricostruir\u00e0.",
+        "damaged": "Non \u00e8 stato possibile leggere il file di indice di questo progetto: analizzarlo lo ricostruir\u00e0, ripetendo tutti i passaggi.",
         "scanFailed": "La scansione \u00e8 terminata senza risultato: riaprire il progetto riprover\u00e0."
       },
       "pill": {

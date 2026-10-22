@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Ja hi ha una altra c\u00f2pia en curs.",
     "copySourceNotDownloaded": "No s\u2019ha copiat res: una part del que has deixat anar encara no s\u2019ha baixat a aquest Mac. Baixa-ho al Finder i torna-ho a deixar anar.",
     "copyDiskSpaceMessage": "Aquesta còpia necessita %@ lliures, però al volum de destinació només n'hi ha %@ de disponibles.",
+    "projectListDamagedTitle": "No s'ha pogut llegir la llista de projectes",
+    "projectListDamagedMessage": "S'ha apartat i s'ha començat una llista nova. Els projectes continuen intactes a les seves carpetes, amb els informes i les edicions; arrossega cada carpeta a la barra lateral per tornar-la a afegir.",
     "filesPopover": {
       "unanalysedTitle": "Fitxers sense analitzar",
       "missingTitle": "Fitxers que falten",
@@ -387,7 +389,7 @@
         "timedOut": "La carpeta no ha respost: pot ser un disc desconnectat o un recurs de xarxa.",
         "unreadable": "La carpeta hi \u00e9s, per\u00f2 no se n'ha pogut llegir el contingut.",
         "folderMissing": "La carpeta no \u00e9s on aquest projecte l'espera: pot ser que s'hagi mogut.",
-        "damaged": "No s'ha pogut llegir el fitxer d'\u00edndex d'aquest projecte; tornar-lo a analitzar el reconstruir\u00e0.",
+        "damaged": "No s'ha pogut llegir el fitxer d'\u00edndex d'aquest projecte; analitzar-lo el reconstruir\u00e0 i tornar\u00e0 a executar tots els passos.",
         "scanFailed": "L'exploraci\u00f3 ha acabat sense resultat; tornar a obrir el projecte ho tornar\u00e0 a intentar."
       },
       "pill": {

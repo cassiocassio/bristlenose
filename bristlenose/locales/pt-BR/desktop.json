@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "J\u00e1 h\u00e1 outra c\u00f3pia em andamento.",
     "copySourceNotDownloaded": "Nada foi copiado: parte do que voc\u00ea soltou ainda n\u00e3o foi baixada para este Mac. Baixe no Finder e solte de novo.",
     "copyDiskSpaceMessage": "Esta cópia precisa de %@ livres, mas há apenas %@ disponível no volume de destino.",
+    "projectListDamagedTitle": "Não foi possível ler sua lista de projetos",
+    "projectListDamagedMessage": "Ela foi deixada de lado e uma nova lista foi iniciada. Seus projetos estão intactos nas pastas, com relatórios e edições — arraste cada pasta para a barra lateral para adicioná-la de novo.",
     "filesPopover": {
       "unanalysedTitle": "Arquivos n\u00e3o analisados",
       "missingTitle": "Arquivos ausentes",
@@ -387,7 +389,7 @@
         "timedOut": "A pasta n\u00e3o respondeu \u2014 pode ser um disco desconectado ou um compartilhamento de rede.",
         "unreadable": "A pasta existe, mas n\u00e3o foi poss\u00edvel ler seu conte\u00fado.",
         "folderMissing": "A pasta n\u00e3o est\u00e1 onde este projeto espera \u2014 ela pode ter sido movida.",
-        "damaged": "N\u00e3o foi poss\u00edvel ler o arquivo de \u00edndice deste projeto \u2014 analisar novamente ir\u00e1 recri\u00e1-lo.",
+        "damaged": "N\u00e3o foi poss\u00edvel ler o arquivo de \u00edndice deste projeto \u2014 analisar ir\u00e1 recri\u00e1-lo, executando todas as etapas novamente.",
         "scanFailed": "A verifica\u00e7\u00e3o terminou sem resultado \u2014 reabrir o projeto tentar\u00e1 novamente."
       },
       "pill": {

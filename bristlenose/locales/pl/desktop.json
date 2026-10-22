@@ -307,6 +307,8 @@
     "copyAlreadyInFlight": "Inne kopiowanie jest ju\u017c w toku.",
     "copySourceNotDownloaded": "Niczego nie skopiowano: cz\u0119\u015b\u0107 upuszczonych element\u00f3w nie zosta\u0142a jeszcze pobrana na tego Maca. Pobierz j\u0105 w Finderze, a potem upu\u015b\u0107 ponownie.",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
+    "projectListDamagedTitle": "Nie udało się odczytać listy projektów",
+    "projectListDamagedMessage": "Została odłożona na bok i rozpoczęto nową listę. Twoje projekty są nienaruszone w swoich folderach, razem z raportami i zmianami — przeciągnij każdy folder na pasek boczny, aby dodać go ponownie.",
     "filesPopover": {
       "unanalysedTitle": "Nieprzeanalizowane pliki",
       "missingTitle": "Brakuj\u0105ce pliki",
@@ -425,7 +427,7 @@
         "timedOut": "Folder nie odpowiedzia\u0142 \u2014 mo\u017ce to by\u0107 od\u0142\u0105czony dysk lub udzia\u0142 sieciowy.",
         "unreadable": "Folder istnieje, ale nie uda\u0142o si\u0119 odczyta\u0107 jego zawarto\u015bci.",
         "folderMissing": "Folder nie znajduje si\u0119 tam, gdzie oczekuje go ten projekt \u2014 m\u00f3g\u0142 zosta\u0107 przeniesiony.",
-        "damaged": "Nie uda\u0142o si\u0119 odczyta\u0107 pliku indeksu tego projektu \u2014 ponowna analiza odtworzy go.",
+        "damaged": "Nie uda\u0142o si\u0119 odczyta\u0107 pliku indeksu tego projektu \u2014 analiza odtworzy go, wykonuj\u0105c ponownie wszystkie kroki.",
         "scanFailed": "Skanowanie zako\u0144czy\u0142o si\u0119 bez wyniku \u2014 ponowne otwarcie projektu spr\u00f3buje jeszcze raz."
       },
       "pill": {

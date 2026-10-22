@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Ya hay otra copia en curso.",
     "copySourceNotDownloaded": "No se ha copiado nada: parte de lo que has soltado a\u00fan no est\u00e1 descargado en este Mac. Desc\u00e1rgalo en el Finder y vuelve a soltarlo.",
     "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino.",
+    "projectListDamagedTitle": "No se ha podido leer la lista de proyectos",
+    "projectListDamagedMessage": "Se ha apartado y se ha empezado una lista nueva. Tus proyectos siguen intactos en sus carpetas, con sus informes y ediciones: arrastra cada carpeta a la barra lateral para volver a a\u00f1adirla.",
     "filesPopover": {
       "unanalysedTitle": "Archivos sin analizar",
       "missingTitle": "Archivos que faltan",
@@ -387,7 +389,7 @@
         "timedOut": "La carpeta no ha respondido: puede ser un disco desconectado o un recurso de red.",
         "unreadable": "La carpeta existe, pero no se ha podido leer su contenido.",
         "folderMissing": "La carpeta no est\u00e1 donde este proyecto la espera: puede que se haya movido.",
-        "damaged": "No se ha podido leer el archivo de \u00edndice de este proyecto; volver a analizarlo lo reconstruir\u00e1.",
+        "damaged": "No se ha podido leer el archivo de \u00edndice de este proyecto; analizarlo lo reconstruir\u00e1 y volver\u00e1 a ejecutar todos los pasos.",
         "scanFailed": "La exploraci\u00f3n ha terminado sin resultado; volver a abrir el proyecto lo intentar\u00e1 de nuevo."
       },
       "pill": {

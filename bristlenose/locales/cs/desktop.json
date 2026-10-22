@@ -306,6 +306,8 @@
     "copyAlreadyInFlight": "U\u017e prob\u00edh\u00e1 jin\u00e9 kop\u00edrov\u00e1n\u00ed.",
     "copySourceNotDownloaded": "Nic nebylo zkop\u00edrov\u00e1no: \u010d\u00e1st p\u0159eta\u017een\u00fdch polo\u017eek je\u0161t\u011b nen\u00ed sta\u017een\u00e1 do tohoto Macu. St\u00e1hn\u011bte ji ve Finderu a pak ji p\u0159et\u00e1hn\u011bte znovu.",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
+    "projectListDamagedTitle": "Seznam projektů se nepodařilo přečíst",
+    "projectListDamagedMessage": "Byl odložen stranou a začal nový seznam. Vaše projekty zůstaly nedotčené ve svých složkách, včetně zpráv a úprav – každou složku přetáhněte do postranního panelu, abyste ji znovu přidali.",
     "filesPopover": {
       "unanalysedTitle": "Neanalyzovan\u00e9 soubory",
       "missingTitle": "Chyb\u011bj\u00edc\u00ed soubory",
@@ -424,7 +426,7 @@
         "timedOut": "Slo\u017eka neodpov\u011bd\u011bla \u2013 m\u016f\u017ee j\u00edt o odpojen\u00fd disk nebo s\u00ed\u0165ov\u00e9 \u00falo\u017ei\u0161t\u011b.",
         "unreadable": "Slo\u017eka existuje, ale jej\u00ed obsah se nepoda\u0159ilo p\u0159e\u010d\u00edst.",
         "folderMissing": "Slo\u017eka nen\u00ed tam, kde ji tento projekt o\u010dek\u00e1v\u00e1 \u2013 mo\u017en\u00e1 byla p\u0159esunuta.",
-        "damaged": "Indexov\u00fd soubor tohoto projektu se nepoda\u0159ilo p\u0159e\u010d\u00edst \u2013 op\u011btovn\u00e1 anal\u00fdza jej vytvo\u0159\u00ed znovu.",
+        "damaged": "Indexov\u00fd soubor tohoto projektu se nepoda\u0159ilo p\u0159e\u010d\u00edst \u2013 anal\u00fdza jej vytvo\u0159\u00ed znovu a znovu prob\u011bhnou v\u0161echny kroky.",
         "scanFailed": "Kontrola skon\u010dila bez v\u00fdsledku \u2013 po op\u011btovn\u00e9m otev\u0159en\u00ed projektu prob\u011bhne znovu."
       },
       "pill": {

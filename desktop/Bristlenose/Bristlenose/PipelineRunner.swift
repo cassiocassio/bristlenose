@@ -1840,15 +1840,20 @@ final class PipelineRunner: ObservableObject {
         let stages: [String: Any]
         do {
             manifestData = try Data(contentsOf: url)
-            guard let json = try JSONSerialization.jsonObject(with: manifestData)
-                    as? [String: Any],
-                  let parsedStages = json["stages"] as? [String: Any] else {
-                return .unreachable(reason: .damaged)
-            }
-            stages = parsedStages
         } catch {
+            // The read itself failed: under the sandbox, a lost folder grant.
             return .unreachable(reason: .unreadable)
         }
+        // Read, but it will not parse: the file is damaged, not the folder. A
+        // truncated manifest (a power cut or full disk mid-write) used to land
+        // in the read's `catch`, so the row said "Can't be read" and offered
+        // Locate… for a folder that was fine (decision #18, 22 Oct 2026).
+        guard let json = try? JSONSerialization.jsonObject(with: manifestData)
+                as? [String: Any],
+              let parsedStages = json["stages"] as? [String: Any] else {
+            return .unreachable(reason: .damaged)
+        }
+        stages = parsedStages
 
         // Phase 1f Slice 4 — prefer the events log when present. Falls back
         // to the strict manifest inference below for projects that predate

@@ -173,6 +173,28 @@ private struct CopyDropPresentation: ViewModifier {
     }
 }
 
+/// The once-only sheet alert for a `projects.json` that would not decode and
+/// was set aside at launch (decision #19, 22 Oct 2026): why the sidebar is
+/// empty, and that the projects themselves are safe in their folders. The
+/// first window to appear claims it, so it is said once however many windows
+/// are restored.
+private struct ProjectListSetAsideAlert: ViewModifier {
+    let projectIndex: ProjectIndex
+    let i18n: I18n
+    @State private var showing = false
+
+    func body(content: Content) -> some View {
+        content
+            .task { if projectIndex.claimListSetAsideNotice() { showing = true } }
+            .alert(i18n.t("desktop.chrome.projectListDamagedTitle"), isPresented: $showing) {
+                Button(i18n.t("common.buttons.ok")) {}
+                    .keyboardShortcut(.defaultAction)
+            } message: {
+                Text(i18n.t("desktop.chrome.projectListDamagedMessage"))
+            }
+    }
+}
+
 /// State for the Spotlight one-shot confirm sheet. Carries the resume
 /// continuation so the LocateFlow can wait for the user's choice.
 struct SpotlightConfirmState: Identifiable {
@@ -1295,6 +1317,7 @@ struct ContentView: View {
             diskSpaceMessage: diskSpaceMessage(for:),
             analyseAction: analyseActionForSheet(_:)
         ))
+        .modifier(ProjectListSetAsideAlert(projectIndex: projectIndex, i18n: i18n))
         .sheet(item: $reAnalyseConfirm) { pending in
             ReAnalyseConfirmSheet(
                 projectName: pending.project.name,

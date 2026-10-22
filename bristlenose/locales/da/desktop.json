@@ -273,6 +273,8 @@
     "copyAlreadyInFlight": "Der er allerede en anden kopiering i gang.",
     "copySourceNotDownloaded": "Intet blev kopieret: En del af det, du slap, er endnu ikke hentet til denne Mac. Hent det i Finder, og slip det igen.",
     "copyDiskSpaceMessage": "Denne kopiering kræver %@ ledig plads, men der er kun %@ tilgængelig på destinationsdisken.",
+    "projectListDamagedTitle": "Projektlisten kunne ikke læses",
+    "projectListDamagedMessage": "Den er lagt til side, og en ny liste er startet. Dine projekter er urørte i deres mapper med rapporter og redigeringer – træk hver mappe ind i sidepanelet for at tilføje den igen.",
     "filesPopover": {
       "unanalysedTitle": "Ikke-analyserede arkiver",
       "missingTitle": "Manglende arkiver",
@@ -387,7 +389,7 @@
         "timedOut": "Mappen svarede ikke \u2013 det kan v\u00e6re en frakoblet disk eller et netv\u00e6rksdrev.",
         "unreadable": "Mappen findes, men indholdet kunne ikke l\u00e6ses.",
         "folderMissing": "Mappen er ikke, hvor dette projekt forventer den \u2013 den er m\u00e5ske blevet flyttet.",
-        "damaged": "Projektets indeksarkiv kunne ikke l\u00e6ses \u2013 en ny analyse opbygger det igen.",
+        "damaged": "Projektets indeksarkiv kunne ikke l\u00e6ses \u2013 en analyse opbygger det igen og k\u00f8rer alle trin forfra.",
         "scanFailed": "Scanningen sluttede uden resultat \u2013 \u00e5bn projektet igen for at pr\u00f8ve p\u00e5 ny."
       },
       "pill": {

@@ -24,8 +24,10 @@ from bristlenose.server.app import create_app
 from bristlenose.server.models import (
     AutoCodeJob,
     ClusterQuote,
+    Project,
     ProposedTag,
     Quote,
+    QuoteTag,
     TagDefinition,
 )
 from bristlenose.server.routes import clips_export
@@ -189,6 +191,77 @@ class TestDashboard:
 
 async def _no_job(*_args: object, **_kwargs: object) -> None:
     """The manifest is the evidence; cutting the clips is another test's job."""
+
+
+class TestSessionsJourney:
+    """Sessions is the raw record: hiding only greys a quote's ink there (owner,
+    22 Oct 2026), so a journey keeps a screen evidenced by a hidden quote."""
+
+    @staticmethod
+    def _journey(client: TestClient) -> list[str]:
+        return client.get("/api/projects/1/sessions").json()["sessions"][0]["journey_labels"]
+
+    def test_a_hidden_quote_keeps_its_journey_step(self, client: TestClient) -> None:
+        before = self._journey(client)
+        assert before
+        _hide(client, *_ALL)
+        assert self._journey(client) == before
+
+    def test_a_quote_out_of_evidence_leaves_the_journey(self, client: TestClient) -> None:
+        """A quote whose words moved to another speaker is not theirs until a
+        re-analysis (``speaker_slots.evidence_quotes``); nor is the screen."""
+        from bristlenose.server import speaker_slots
+
+        assert self._journey(client)
+        with patch.object(speaker_slots, "evidence_quotes", lambda db, pid: []):
+            assert self._journey(client) == []
+
+
+class TestCodebook:
+    @staticmethod
+    def _sentiment(client: TestClient) -> tuple[dict[str, int], int, int]:
+        data = client.get("/api/projects/1/codebook").json()
+        (group,) = [g for g in data["groups"] if g["framework_id"] == "sentiment"]
+        tags = {t["name"]: t["count"] for t in group["tags"] if t["count"]}
+        return tags, group["total_quotes"], data["framework_quote_totals"]["sentiment"]
+
+    def test_a_hidden_quote_leaves_the_tag_counts(self, client: TestClient) -> None:
+        assert self._sentiment(client) == ({"frustration": 2, "confusion": 1, "delight": 1}, 4, 4)
+        _hide(client, "q-p1-10")
+        assert self._sentiment(client) == ({"frustration": 2, "delight": 1}, 3, 3)
+
+    def test_another_projects_tags_are_not_counted(self, client: TestClient) -> None:
+        """Tag definitions are instance-scoped; quote tags belong to a project."""
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            other = Project(name="Other", input_dir="/elsewhere", output_dir="/elsewhere/out")
+            db.add(other)
+            db.flush()
+            q = Quote(project_id=other.id, session_id="s1", participant_id="p1",
+                      start_timecode=5.0, end_timecode=9.0, text="Elsewhere",
+                      quote_type="screen_specific")
+            db.add(q)
+            db.flush()
+            confusion = db.query(TagDefinition).filter_by(name="confusion").one()
+            db.add(QuoteTag(quote_id=q.id, tag_definition_id=confusion.id))
+            db.add(ProposedTag(job_id=_job(db, other.id), quote_id=q.id,
+                               tag_definition_id=confusion.id, confidence=0.8,
+                               rationale="test", status="pending"))
+            db.commit()
+        finally:
+            db.close()
+        data = client.get("/api/projects/1/codebook").json()
+        (group,) = [g for g in data["groups"] if g["framework_id"] == "sentiment"]
+        (confusion,) = [t for t in group["tags"] if t["name"] == "confusion"]
+        assert (confusion["count"], confusion["tentative_count"]) == (1, 0)
+        assert self._sentiment(client)[1:] == (4, 4)
+
+
+def _job(db, project_id: int) -> int:  # type: ignore[no-untyped-def]
+    job = AutoCodeJob(project_id=project_id, framework_id="sentiment", status="completed")
+    db.add(job)
+    db.flush()
+    return job.id
 
 
 class TestClips:

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.codebook import CODEBOOK_TEMPLATES, get_template
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
@@ -110,26 +111,40 @@ def _check_project(db: Session, project_id: int) -> Project:
     return project
 
 
-def _tag_quote_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
-    """Return {tag_definition_id: quote_count} for the given tag IDs."""
+def _tag_quote_ids(
+    db: Session, tag_ids: list[int], counted: set[int],
+) -> dict[int, set[int]]:
+    """Return {tag_definition_id: the counted quotes it is on}.
+
+    Tag definitions are shared by every project, so a bare QuoteTag query
+    counts other projects' quotes too. ``counted`` is this project's
+    ``speaker_slots.analysis_quotes``: a hidden quote counts nowhere (owner,
+    22 Oct 2026)."""
+    out: dict[int, set[int]] = {}
     if not tag_ids:
-        return {}
+        return out
     rows = (
-        db.query(QuoteTag.tag_definition_id, func.count(QuoteTag.id))
+        db.query(QuoteTag.tag_definition_id, QuoteTag.quote_id)
         .filter(QuoteTag.tag_definition_id.in_(tag_ids))
-        .group_by(QuoteTag.tag_definition_id)
         .all()
     )
-    return dict(rows)
+    for tag_id, quote_id in rows:
+        if quote_id in counted:
+            out.setdefault(tag_id, set()).add(quote_id)
+    return out
 
 
-def _tag_tentative_counts(db: Session, tag_ids: list[int]) -> dict[int, int]:
-    """Return {tag_definition_id: pending_proposal_count} for the given tag IDs."""
+def _tag_tentative_counts(
+    db: Session, project_id: int, tag_ids: list[int],
+) -> dict[int, int]:
+    """Return {tag_definition_id: this project's pending_proposal_count}."""
     if not tag_ids:
         return {}
     rows = (
         db.query(ProposedTag.tag_definition_id, func.count(ProposedTag.id))
+        .join(Quote, Quote.id == ProposedTag.quote_id)
         .filter(
+            Quote.project_id == project_id,
             ProposedTag.tag_definition_id.in_(tag_ids),
             ProposedTag.status == "pending",
         )
@@ -221,8 +236,9 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
                     all_tag_ids.append(td.id)
 
         # Get quote counts and tentative (pending proposal) counts per tag
-        counts = _tag_quote_counts(db, all_tag_ids)
-        tentative_counts = _tag_tentative_counts(db, all_tag_ids)
+        counted = {q.id for q in speaker_slots.analysis_quotes(db, project_id)}
+        tagged = _tag_quote_ids(db, all_tag_ids, counted)
+        tentative_counts = _tag_tentative_counts(db, project_id, all_tag_ids)
 
         # Build response — Uncategorised is included as a regular group
         # with is_default=True, rendered last.
@@ -238,19 +254,15 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
             tags_out: list[CodebookTagOut] = []
             seen_quotes: set[int] = set()
             for i, td in enumerate(g.tag_definitions):
-                tag_count = counts.get(td.id, 0)
+                tag_quotes = tagged.get(td.id, set())
+                tag_count = len(tag_quotes)
                 tag_tentative = tentative_counts.get(td.id, 0)
                 tags_out.append(CodebookTagOut(
                     id=td.id, name=td.name, count=tag_count,
                     tentative_count=tag_tentative, colour_index=i,
                 ))
                 all_tag_names.append(td.name)
-                qt_rows = (
-                    db.query(QuoteTag.quote_id)
-                    .filter_by(tag_definition_id=td.id)
-                    .all()
-                )
-                seen_quotes.update(r[0] for r in qt_rows)
+                seen_quotes.update(tag_quotes)
             if g.framework_id:
                 framework_quotes.setdefault(g.framework_id, set()).update(seen_quotes)
             return CodebookGroupOut(

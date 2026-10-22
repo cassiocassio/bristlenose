@@ -373,8 +373,10 @@ paragraph moved to another speaker, until the session is re-analysed (R3,
 **`speaker_slots.analysis_quotes` is the same minus hidden quotes** (owner, 22 Oct
 2026: a hidden quote is discounted evidence and counts nowhere). Signals (all three
 lenses), the per-session sentiment bars (`/sessions` draws them as the Sessions
-lens sparkline; `/dashboard` carries a copy), the Dashboard's featured quotes and
-the clip export read it;
+lens sparkline; `/dashboard` carries a copy), the Dashboard's featured quotes, the
+Codebook lens's tag counts and the clip export read it; the transcript, the journey
+and the session timeline keep hidden quotes, because Sessions is the record and
+hiding only greys a quote's ink there (owner, 22 Oct 2026);
 `evidence_quotes` stays as it is, because the Quotes lens must return a hidden quote
 to unhide it and Dashboard coverage measures extraction. Pinned by
 `tests/test_serve_hidden_counts_nowhere.py`.

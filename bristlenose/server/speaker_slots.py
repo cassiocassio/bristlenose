@@ -416,7 +416,9 @@ def analysis_quotes(db: DbSession, project_id: int) -> list[Quote]:
 
     A hidden quote is discounted evidence and counts nowhere (owner, 22 Oct
     2026): Signals, the per-session sentiment bars (/sessions, /dashboard),
-    the Dashboard's featured quotes and the clip export read this. ``evidence_quotes`` keeps hidden quotes, because the Quotes lens must
+    the Dashboard's featured quotes, the Codebook lens's tag counts and the
+    clip export read this. Sessions' transcript, journey and timeline do not:
+    they are the record, where hiding only greys a quote's ink. ``evidence_quotes`` keeps hidden quotes, because the Quotes lens must
     return them to be unhidden and coverage measures what was extracted."""
     hidden = {
         quote_id

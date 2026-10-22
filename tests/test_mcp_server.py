@@ -324,6 +324,10 @@ class TestSignals:
             and s["quote_count"] == 2
             for s in before["signals"]
         )
+        client = AuthTestClient(app_fx)
+        cell = "Dashboard|frustration"
+        assert client.get("/api/projects/1/signals/sentiment").json()[
+            "sectionMatrix"]["cells"][cell]["count"] == 2
         _hide(db, 80)
         after = _tool_get_signals(db, 1, "sentiment", 10)
         assert not any(
@@ -331,9 +335,9 @@ class TestSignals:
             and s["quote_count"] == 2
             for s in after["signals"]
         )
-        route = AuthTestClient(app_fx).get("/api/projects/1/signals/sentiment").json()
+        route = client.get("/api/projects/1/signals/sentiment").json()
         # One frustration quote is left, too few for a signal, so read the cell.
-        assert route["sectionMatrix"]["cells"]["Dashboard|frustration"]["count"] == 1, (
+        assert route["sectionMatrix"]["cells"][cell]["count"] == 1, (
             "the Signals route should leave the hidden quote out too"
         )
 

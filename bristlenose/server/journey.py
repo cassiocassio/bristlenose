@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from bristlenose.server import speaker_slots
 from bristlenose.server.heading_names import HeadingNames
 from bristlenose.server.models import ClusterQuote, Quote, ScreenCluster
 
@@ -43,6 +44,11 @@ def derive_journeys_with_anchors(
     )
     names = HeadingNames.load(db, project_id)
 
+    # A journey is part of the session's record, so a hidden quote keeps its
+    # step (hiding only greys its ink there, owner, 22 Oct 2026); a quote out
+    # of evidence (its words moved to another speaker) does not.
+    evidence = {q.id for q in speaker_slots.evidence_quotes(db, project_id)}
+
     # participant_id → {shown section name: min_start_seconds}
     label_anchors: dict[str, dict[str, float]] = {}
     # participant_id → ordered list of first-seen labels (display_order)
@@ -50,7 +56,7 @@ def derive_journeys_with_anchors(
 
     for cluster in clusters:
         cqs = db.query(ClusterQuote).filter_by(cluster_id=cluster.id).all()
-        quote_ids = [cq.quote_id for cq in cqs]
+        quote_ids = [cq.quote_id for cq in cqs if cq.quote_id in evidence]
         if not quote_ids:
             continue
 

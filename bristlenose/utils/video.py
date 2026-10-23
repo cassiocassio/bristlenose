@@ -170,9 +170,10 @@ def extract_thumbnails(
         sid = session.session_id
         output_path = thumbnails_dir / f"{sid}.jpg"
 
-        # Find the video file.
+        # Find the video file — never one set aside (a copy, or a file that
+        # joined the session after it was analysed, #129).
         video_file = next(
-            (f for f in session.files if f.file_type == FileType.VIDEO),
+            (f for f in session.files if f.file_type == FileType.VIDEO and f.error is None),
             None,
         )
 

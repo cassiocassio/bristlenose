@@ -6,6 +6,8 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-10-23_ — §5: a session keeps the recording it was keyed by as its primary while it is in the group, so a later video cannot make it "new"; and an analysed session keeps the files it was analysed from, a file joining it later set aside as `added_after_analysis` (decision #129). Anchors: register row 57; `tests/test_late_file_set_aside.py`.
+
 - _2026-10-21_ — §11a: identical *transcript* files with no recording fold too (decision #97), the copy set aside as `duplicate_transcript`. Anchors: register row 55; `TestDuplicateTranscript` in `tests/test_pipeline_duplicate_recording.py`.
 
 - _2026-10-20_ — §11a's first departure closed (R49): identical bytes under two names are one session again, as §5 said; the copy is set aside and stated, its transcription never paid for. Anchors: register row 55; `tests/test_pipeline_duplicate_recording.py`.
@@ -176,6 +178,18 @@ file share a stem and form one session (`s01_ingest.group_into_sessions`).
 Identity is the fingerprint of the session's primary file, video before
 audio before transcript. Grouping decides what sits together; the
 fingerprint decides which session it is.
+
+*23 Oct 2026:* "video before audio" would let a video dropped beside an
+analysed audio file name the session, and a session keyed by the audio's
+bytes would be found by nothing and analysed again as a new one. So a
+session whose name already holds the content key of a recording still in
+the group keeps that recording as its primary (`SessionRegistry._held_primary`;
+an evicted one is known by its place). And an analysed session keeps the
+files it was analysed from (decision #129): a file that joins it later is set
+aside as `added_after_analysis` and stated, never read
+(`pipeline._set_aside_late_files`). Which files those were is read back from
+the transcription `input_hash`, which hashes exactly their content: the
+subset of the session's files that hashes to it.
 
 **Caches key on it.** The transcription `input_hash` becomes the fingerprint
 plus, for transcript files, the parser version, so a rename inside the folder

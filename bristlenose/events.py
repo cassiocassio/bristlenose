@@ -181,6 +181,13 @@ class UnusableReason(str, Enum):
     #: ``UNSUPPORTED_FORMAT`` (the format is one we read) — RE#20, decision
     #: #80, 22 Oct 2026.
     NO_LINES = "no_lines"
+    #: A file that joined a session after the session was analysed — a
+    #: ``.vtt`` dropped beside an analysed recording, a track added to an
+    #: analysed Zoom folder. Set aside so the analysis keeps the files it was
+    #: made from: read, it re-paid the session, renumbered its speakers and
+    #: doubled its curated quotes (decision #129, 23 Oct 2026). A fresh start
+    #: (Re-analyse, ``--clean``) reads it.
+    ADDED_AFTER_ANALYSIS = "added_after_analysis"
 
 
 class EventTypeEnum(str, Enum):

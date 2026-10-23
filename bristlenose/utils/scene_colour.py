@@ -289,7 +289,9 @@ def extract_scene_colours(
     written: dict[str, Path] = {}
     for session in sessions:
         transcript = by_sid.get(session.session_id)
-        video = next((f.path for f in session.files if f.file_type == FileType.VIDEO), None)
+        # Never a video set aside (a copy, or one added after analysis, #129).
+        video = next((f.path for f in session.files
+                      if f.file_type == FileType.VIDEO and f.error is None), None)
         if transcript is None or video is None or not video.exists():
             continue
         turns = turns_of(transcript)

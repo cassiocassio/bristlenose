@@ -2932,7 +2932,9 @@ Three consequences for the build:
   its number was handed to the next new participant with the name typed for the
   first. Measured before the fix: `s2`'s `p2` re-identified as an observer, then a
   new session's participant got `p2`. A `p` recode retires a number the same way,
-  so this was a prerequisite.
+  so this was a prerequisite. Its cost, a known v1 limit: recoded out and back, a
+  participant returns under a new number and their curated quotes stay hidden under
+  the old one (§J8.22, decision #130).
 - **File format.** The pin is a new key. The registry is unreleased (3 Oct), so a
   key added before 0.33.0 ships is additive and free; added after, an older
   binary's `save()` would drop it silently (the J2 downgrade hazard), and it needs
@@ -3434,6 +3436,30 @@ people as unique and roles as per-session is the People lens's long-term goal.
     next Analyse without a confirm, including one started only for new files, so the curated
     quotes of a recoded speaker are hidden at that run (the importer's rule above) without a
     sheet having said so first.
+    **Known limit for v1: a recode out and back (owner, decision #130, 23 Oct 2026).**
+    Measured on the lifecycle rig (the real `bristlenose run` and serve, mocked models), a
+    participant with curated quotes, recoded to observer, analysed, recoded back to
+    participant and analysed again:
+    - *Out:* their starred, tagged and edited quotes are kept but hidden, still credited to the
+      old participant code, which no longer has a slot or a name; a quote that was only hidden
+      is deleted with its hide, and their uncurated quotes go.
+    - *Back:* they return under a **new** participant number, because a number is never issued
+      twice (above), with a fresh, uncurated, visible quote for every turn. Nothing links the
+      hidden curated copies to them: each curated quote now has an exact duplicate at the same
+      start, and the quote that was only hidden is visible again. When the speaker was the
+      session's only participant, the curated copies can also drop out of their section into
+      Uncategorised.
+    - *What the researcher can do:* unhide the curated copies in the Quotes lens and hide their
+      new twins. They stay credited to the old code, so they read as that code, not the
+      person's name, and count as an extra participant in an export.
+    Rare (two paid Analyses, a change of mind between them) and left for after v1. The
+    fixes considered: move the curation from the hidden copies onto the new quotes by turn
+    start when a pin brings a speaker back in (the safer), or give a returning speaker their
+    old number (the smaller, but it bends the never-reissue rule). Two strict xfails stand for
+    it in `tests/test_late_file_set_aside.py` ("no two quotes at one start with the same words";
+    "every quote's participant has a slot"); the first of them had a second path, a transcript
+    file joining an analysed recording, which decision #129 closed by setting such a file
+    aside.
 
 23. **Built 6 Oct 2026 — the picker opens on the name, ready to overtype** (owner, the same
     day; web and Mac). A click on the current name always edits it, proposed or confirmed —

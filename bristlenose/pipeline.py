@@ -571,18 +571,190 @@ def _session_input_fingerprint(
     """
     if input_dir is None:
         return _session_metadata_fingerprint(session, None)
-    from bristlenose.utils.fingerprint import content_fingerprint
-
-    fps = [
-        content_fingerprint(f.path) or (last_known(f.path) if last_known else None)
-        for f in _transcribed_files(session)
-    ]
+    fps = [fp for _f, fp in _file_fingerprints(session, last_known)]
     if not fps or any(fp is None for fp in fps):
         return _session_metadata_fingerprint(session, input_dir)
-    parts = "content=" + "|".join(sorted(fp for fp in fps if fp is not None))
-    if session.has_existing_transcript:
+    return _content_fingerprint_of(
+        [fp for fp in fps if fp is not None], session.has_existing_transcript,
+    )
+
+
+def _file_fingerprints(
+    session: InputSession, last_known: Callable[[Path], str | None] | None = None,
+) -> list[tuple[InputFile, str | None]]:
+    """Each file transcription reads, with its content fingerprint — or the
+    one last seen at its place, for a file whose bytes are not on disk."""
+    from bristlenose.utils.fingerprint import content_fingerprint
+
+    return [
+        (f, content_fingerprint(f.path) or (last_known(f.path) if last_known else None))
+        for f in _transcribed_files(session)
+    ]
+
+
+def _content_fingerprint_of(fps: Sequence[str], has_transcript: bool) -> str:
+    """The content form of a session's transcription fingerprint, from its
+    files' fingerprints: the one spelling, shared by the record a run writes
+    and the search that reads it back (``_set_aside_late_files``)."""
+    parts = "content=" + "|".join(sorted(fps))
+    if has_transcript:
         parts += f"|parser={_transcript_parser_version()}"
     return hash_bytes(parts.encode("utf-8"))
+
+
+_MEDIA_TYPES = frozenset({FileType.AUDIO, FileType.VIDEO})
+_TRANSCRIPT_TYPES = frozenset({FileType.SUBTITLE_SRT, FileType.SUBTITLE_VTT, FileType.DOCX})
+
+#: How many subsets of one session's files ``_set_aside_late_files`` tries
+#: before it gives up and reads them all, as a run did before the freeze.
+_LATE_FILE_SEARCH_BOUND = 4096
+
+
+def _set_aside_late_files(
+    sessions: list[InputSession],
+    prev_manifest: PipelineManifest | None,
+    input_dir: Path,
+    registry: SessionRegistry,
+) -> None:
+    """Set aside each file that joined a session after it was analysed.
+
+    Decision #129 (owner, 23 Oct 2026): for v1 an analysed session keeps
+    exactly the files it was analysed from. A ``.vtt`` dropped beside an
+    analysed recording, or a track added to an analysed Zoom folder, used to
+    change the session under the researcher's feet: the transcript was
+    replaced, the session and the study-wide clustering paid for again, its
+    speakers renumbered (the registry keys codes by label) and every curated
+    quote doubled by an uncurated twin; a recording re-ran Whisper. Such a
+    file is now set aside like a duplicate copy (``ADDED_AFTER_ANALYSIS``):
+    never read, out of the transcription fingerprint, and named on the run's
+    summary. A fresh start has no previous manifest, so it reads everything.
+
+    **Analysed** is the previous run's per-session records: quote extraction
+    COMPLETE (what RE#13 counts as an analysed session) and transcription
+    COMPLETE with a fingerprint. Never a stage-level status, never a path. A
+    session only ever transcribed (``transcribe`` writes no manifest) or whose
+    quotes failed is not analysed, and reads a file added to it.
+
+    **Which files it was analysed from** is read back from that fingerprint,
+    which hashes the content of exactly those files: the session's files whose
+    subset hashes to it, largest subset first. A match is exact, not a guess.
+    No match — a file edited (#58), one removed, a parser bump, a manifest
+    written before content keys — reads every file, as before.
+
+    One join is left alone: a recording arriving for a session analysed from
+    transcript files only. Its transcript is still read from those files, so
+    nothing it was analysed from changes, and the session gains playback — a
+    path the registry and the importer were built for (judgement call, RE#129,
+    pending the owner).
+    """
+    analysed = (
+        get_completed_session_ids(prev_manifest, STAGE_QUOTE_EXTRACTION)
+        & get_completed_session_ids(prev_manifest, _M_STAGE_TRANSCRIBE)
+    )
+    if not analysed or prev_manifest is None:
+        return
+    records = prev_manifest.stages[_M_STAGE_TRANSCRIBE].sessions or {}
+    for session in sessions:
+        record = records.get(session.session_id)
+        if session.session_id not in analysed or record is None or not record.input_hash:
+            continue
+        pairs = _file_fingerprints(
+            session, lambda f: registry.last_known_fingerprint(f, input_dir),
+        )
+        known: list[tuple[InputFile, str | None]] = [(f, fp) for f, fp in pairs if fp is not None]
+        # A cloud placeholder with no fingerprint on record: if the files that
+        # can be fingerprinted are the analysed set without it, it joined later.
+        unknown = [f for f, fp in pairs if fp is None]
+        if not known:
+            continue
+
+        def matches(
+            kept: Sequence[tuple[InputFile, str | None]], recorded: str = record.input_hash,
+        ) -> bool:
+            return _content_fingerprint_of(
+                [fp for _f, fp in kept if fp is not None],
+                any(f.file_type in _TRANSCRIPT_TYPES for f, _fp in kept),
+            ) == recorded
+
+        if matches(known):
+            if not unknown:
+                continue  # unchanged
+            late: list[InputFile] | None = []
+        else:
+            late = _late_files(known, matches)
+        if late is None:
+            # Not silent: on this path a file added beside an edit (or to a
+            # session recorded before content keys) is read, as before #129.
+            logger.warning(
+                "%s has changed since it was analysed, not only by files added to it, "
+                "so every file it holds is read", session.session_id,
+            )
+            continue
+        late = late + unknown
+        kept_media = any(
+            f.file_type in _MEDIA_TYPES for f, _fp in known if f not in late
+        )
+        set_aside = 0
+        for f in late:
+            if f.file_type in _MEDIA_TYPES and not kept_media:
+                logger.info(
+                    "%s: %s joins a session analysed from its transcript; the "
+                    "transcript is still read from %s",
+                    session.session_id, f.path.name,
+                    ", ".join(g.path.name for g, _fp in known if g not in late),
+                )
+                continue
+            f.error = UnusableReason.ADDED_AFTER_ANALYSIS.value
+            f.error_stage = "s01_ingest"
+            set_aside += 1
+            logger.warning(
+                "%s: %s was added after the session was analysed — set aside",
+                session.session_id, f.path.name,
+            )
+        if not set_aside:
+            continue  # only a recording joined a transcript-only session
+        kept = _transcribed_files(session)
+        session.has_existing_transcript = any(f.file_type in _TRANSCRIPT_TYPES for f in kept)
+        # What the session's files say about it comes from the files it keeps:
+        # the first file names its transcript's source (s06), and its start is
+        # theirs, not a late file's container clock.
+        session.files.sort(key=lambda f: f.error is not None)
+        from bristlenose.utils.session_start import resolve_session_start
+
+        start = resolve_session_start(kept)
+        session.session_date = start.instant
+        session.session_start_source = start.source.value
+
+
+def _late_files(
+    known: list[tuple[InputFile, str | None]],
+    matches: Callable[[Sequence[tuple[InputFile, str | None]]], bool],
+) -> list[InputFile] | None:
+    """The fewest files whose removal leaves a set that ``matches``, or None.
+
+    Tried by how many are dropped, one first, and among equals the files
+    listed last first, so which of two byte-identical files is set aside is
+    decided, not left to chance. Gives up after ``_LATE_FILE_SEARCH_BOUND``
+    subsets.
+    """
+    from itertools import combinations
+
+    tried = 0
+    order = list(reversed(range(len(known))))
+    for n_dropped in range(1, len(known)):
+        for dropped in combinations(order, n_dropped):
+            tried += 1
+            if tried > _LATE_FILE_SEARCH_BOUND:
+                logger.warning(
+                    "%d files in one session: too many to tell which were added after "
+                    "it was analysed", len(known),
+                )
+                return None
+            drop = set(dropped)
+            kept = [pair for i, pair in enumerate(known) if i not in drop]
+            if matches(kept):
+                return [known[i][0] for i in sorted(drop)]
+    return None
 
 
 def _session_metadata_fingerprint(session: InputSession, input_dir: Path | None) -> str:
@@ -1926,6 +2098,9 @@ class Pipeline:
         sessions = session_registry.apply(
             sessions, input_dir, fetch=not self.settings.skip_transcription,
         )
+        # An analysed session keeps the files it was analysed from (#129):
+        # before anything dates, counts, fingerprints or reads them.
+        _set_aside_late_files(sessions, _prev_manifest, input_dir, session_registry)
         session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
         # What the Sessions lens shows from the first second of a first
@@ -2012,7 +2187,7 @@ class Pipeline:
             # decision tree".
             _needs_ffmpeg = any(
                 f.file_type == FileType.VIDEO and not s.has_existing_transcript
-                for s in sessions for f in s.files
+                for s in sessions for f in _transcribed_files(s)
             )
             if _needs_ffmpeg:
                 from bristlenose.preflight.ffmpeg import preflight_ffmpeg
@@ -3841,6 +4016,10 @@ class Pipeline:
             )
         session_registry = SessionRegistry.load(output_dir)
         sessions = session_registry.apply(sessions, input_dir, fetch=True)
+        # A project `run` has analysed: what it read is what `transcribe`
+        # reads too (#129), and the per-session cache check below relies on it.
+        _prev = resume_manifest(output_dir) if output_dir.exists() else None
+        _set_aside_late_files(sessions, _prev, input_dir, session_registry)
         session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
 
@@ -3864,7 +4043,7 @@ class Pipeline:
         # session whose inputs have not changed, the per-session check run()
         # makes, rather than send every recording through Whisper again
         # (R115). Read only: `transcribe` writes no manifest and no cache.
-        _prev = resume_manifest(output_dir) if output_dir.exists() else None
+        # (`_prev` is read above, before the late files were set aside.)
         _ss_path = output_dir / ".bristlenose" / "intermediate" / "session_segments.json"
         _tx_fps, _tx_fps_legacy = _transcription_fingerprints(
             sessions, input_dir, session_registry,

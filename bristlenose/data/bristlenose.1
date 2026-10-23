@@ -281,6 +281,9 @@ and it is put back if the run produces nothing. Exported
 and
 .I screens/
 folders move into the new output, named with the previous analysis's date.
+A file added beside an interview after it was analysed (a transcript beside its
+recording, a recording in its meeting folder) is set aside by a run without
+\fB\-\-clean\fR, and named in the run's summary; \fB\-\-clean\fR reads it.
 .TP
 .BR \-\-no\-serve
 Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR

@@ -276,7 +276,8 @@ import Foundation
         // exist; this pins that this pane actually resolves them.
         let reasons = ["unsupported_format", "empty", "incomplete", "not_a_recording",
                        "no_audio", "no_speech", "unreadable_folder", "unreadable",
-                       "duplicate_recording", "duplicate_transcript", "no_lines"]
+                       "duplicate_recording", "duplicate_transcript", "no_lines",
+                       "added_after_analysis"]
         let locales = ["en", "es", "ca", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru",
                        "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant"]
         for locale in locales {

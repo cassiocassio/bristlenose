@@ -470,10 +470,18 @@ class TestPlatformNamesReachThePeopleFile:
 #     same batch brought a new recording (the new recording kept the stage
 #     off the full-cache path, and the per-session path trusted every record);
 #   * otherwise it re-Whispered EVERY session (the stage record was popped).
+#
+# Since decision #129 (23 Oct 2026) such a transcript is neither read nor
+# ignored silently: it is set aside and named, and the analysed session keeps
+# the files it was analysed from (``tests/test_late_file_set_aside.py``).
 
 
 class TestPerSessionFingerprints:
-    def test_late_transcript_with_new_recording_is_not_ignored(self, tmp_path: Path) -> None:
+    def test_late_transcript_with_new_recording_is_set_aside_and_named(
+        self, tmp_path: Path,
+    ) -> None:
+        from bristlenose.refusals import UnusableReason
+
         early = datetime(2026, 9, 1, 10, 0, tzinfo=timezone.utc)
         later = datetime(2026, 9, 8, 10, 0, tzinfo=timezone.utc)
 
@@ -489,14 +497,18 @@ class TestPerSessionFingerprints:
 
         # Run 1 Whispered the bare recording; run 2 Whispered only the new one.
         assert h.transcribed == [["s1"], ["s2"]]
-        # The late transcript replaced the Whisper text for s1 …
+        # s1 keeps the transcript it was analysed from …
         segs = h.session_segments()
-        assert {s.source for s in segs["s1"]} == {"vtt"}
-        assert {s.speaker_label for s in h.speaker_segments("s1")} == {
-            "Martin Storey", "Priya Nair",
-        }
-        # … and everything downstream of it was redone for s1, not served stale.
-        assert sorted(h.quoted[1]) == ["s1", "s2"]
+        assert {s.source for s in segs["s1"]} == {"whisper"}
+        # … nothing downstream of it was redone …
+        assert h.quoted[1] == ["s2"]
+        # … and the late transcript is named on the summary, not dropped.
+        summary = h.results[1].summary
+        assert summary is not None and summary.ingest is not None
+        assert [(f.session_id, f.source_file, f.cause.reason)
+                for f in summary.ingest.failed] == [
+            ("s1", "P07 Interview.vtt", UnusableReason.ADDED_AFTER_ANALYSIS.value),
+        ]
 
     def test_adding_a_recording_does_not_rewhisper_the_others(self, tmp_path: Path) -> None:
         def sessions(d: Path, run: int) -> list[InputSession]:

@@ -469,7 +469,8 @@
         "cloud_fetch": "Soubor se nestihl stáhnout do tohoto Macu.",
         "duplicate_recording": "Druhá nahrávka pro toto sezení — použita byla ta druhá.",
         "duplicate_transcript": "Druhá kopie přepisu tohoto sezení — použita byla ta druhá.",
-        "no_lines": "V tomto přepisu nejsou žádné řádky — není co analyzovat."
+        "no_lines": "V tomto přepisu nejsou žádné řádky — není co analyzovat.",
+        "added_after_analysis": "Přidáno až po analýze tohoto sezení — sezení si ponechává soubory, ze kterých bylo analyzováno."
       }
     }
   },

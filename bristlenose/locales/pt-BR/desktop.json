@@ -430,7 +430,8 @@
         "cloud_fetch": "O arquivo não foi baixado para este Mac a tempo.",
         "duplicate_recording": "Uma segunda gravação para esta sessão — a outra foi usada.",
         "duplicate_transcript": "Uma segunda cópia da transcrição desta sessão — a outra foi usada.",
-        "no_lines": "Nenhuma linha nesta transcrição — não há nada para analisar."
+        "no_lines": "Nenhuma linha nesta transcrição — não há nada para analisar.",
+        "added_after_analysis": "Adicionado depois que esta sessão foi analisada — a sessão mantém os arquivos a partir dos quais foi analisada."
       }
     }
   },

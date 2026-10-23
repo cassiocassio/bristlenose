@@ -448,16 +448,21 @@ def ingest_facts(sessions: list[InputSession]) -> list[dict[str, object]]:
     media = (FileType.AUDIO, FileType.VIDEO)
     out: list[dict[str, object]] = []
     for s in sessions:
-        durations = [f.duration_seconds for f in s.files if f.file_type in media and f.duration_seconds]
-        named = next((f for f in s.files if f.file_type in media), s.files[0] if s.files else None)
+        # Only the files the session uses: not a copy or a file added after it
+        # was analysed (#129), which ingest set aside.
+        used = [f for f in s.files if f.error is None]
+        durations = [f.duration_seconds for f in used if f.file_type in media and f.duration_seconds]
+        named = next((f for f in used if f.file_type in media), used[0] if used else None)
+        has_video = any(f.file_type == FileType.VIDEO for f in used)
         entry: dict[str, object] = {
             "session_id": s.session_id,
             "session_number": s.session_number,
             "start": s.session_date.isoformat(),
-            "has_video": s.has_video,
+            "has_video": has_video,
             # Whisper will take it: the readable transcript arrives after
             # decoding. A platform transcript is read as soon as it is parsed.
-            "transcribes": not s.has_existing_transcript and (s.has_audio or s.has_video),
+            "transcribes": not s.has_existing_transcript and any(
+                f.file_type in media for f in used),
         }
         if named is not None:
             entry["source"] = named.path.name
@@ -480,6 +485,8 @@ def _last_cue_end(session: InputSession) -> float | None:
     from bristlenose.utils.fs import is_dataless
 
     for f in session.files:
+        if f.error is not None:
+            continue  # set aside at ingest: never read
         try:
             if is_dataless(f.path):
                 continue

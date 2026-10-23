@@ -1409,6 +1409,7 @@
  "desktop.pipeline.diagnostic.pill.out_of_credit": "bd4f49",
  "desktop.pipeline.diagnostic.pill.quota": "a06130",
  "desktop.pipeline.diagnostic.pill.unknown": "1480ec",
+ "desktop.pipeline.diagnostic.reason.added_after_analysis": "75140c",
  "desktop.pipeline.diagnostic.reason.duplicate_recording": "b70d26",
  "desktop.pipeline.diagnostic.reason.duplicate_transcript": "17c91d",
  "desktop.pipeline.diagnostic.reason.empty": "f0eef4",

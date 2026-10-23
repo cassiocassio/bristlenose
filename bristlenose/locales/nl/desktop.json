@@ -430,7 +430,8 @@
         "cloud_fetch": "Het bestand is niet op tijd naar deze Mac gedownload.",
         "duplicate_recording": "Een tweede opname voor deze sessie — de andere is gebruikt.",
         "duplicate_transcript": "Een tweede kopie van het transcript van deze sessie — de andere is gebruikt.",
-        "no_lines": "Geen regels in dit transcript — er valt niets te analyseren."
+        "no_lines": "Geen regels in dit transcript — er valt niets te analyseren.",
+        "added_after_analysis": "Toegevoegd nadat deze sessie was geanalyseerd — de sessie houdt de bestanden waaruit ze is geanalyseerd."
       }
     }
   },

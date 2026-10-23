@@ -430,7 +430,8 @@
         "cloud_fetch": "Tiedostoa ei ladattu tähän Maciin ajoissa.",
         "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin.",
         "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin.",
-        "no_lines": "Tässä litteroinnissa ei ole rivejä — analysoitavaa ei ole."
+        "no_lines": "Tässä litteroinnissa ei ole rivejä — analysoitavaa ei ole.",
+        "added_after_analysis": "Lisätty tämän istunnon analysoinnin jälkeen — istunto säilyttää tiedostot, joista se analysoitiin."
       }
     }
   },

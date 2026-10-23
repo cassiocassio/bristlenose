@@ -410,7 +410,8 @@
         "cloud_fetch": "未能及時下載到這台 Mac。",
         "duplicate_recording": "此工作階段的第二段錄音 — 已使用另一段。",
         "duplicate_transcript": "此工作階段逐字稿的第二份副本 — 已使用另一份。",
-        "no_lines": "這份逐字稿沒有任何內容行 — 沒有可分析的內容。"
+        "no_lines": "這份逐字稿沒有任何內容行 — 沒有可分析的內容。",
+        "added_after_analysis": "在此工作階段分析後才加入 — 工作階段保留分析時所用的檔案。"
       }
     }
   },

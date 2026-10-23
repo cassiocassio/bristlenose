@@ -430,7 +430,8 @@
         "cloud_fetch": "Filen hämtades inte till den här Macen i tid.",
         "duplicate_recording": "En andra inspelning för den här sessionen – den andra användes.",
         "duplicate_transcript": "En andra kopia av den här sessionens transkription – den andra användes.",
-        "no_lines": "Inga rader i den här transkriptionen – det finns inget att analysera."
+        "no_lines": "Inga rader i den här transkriptionen – det finns inget att analysera.",
+        "added_after_analysis": "Tillagd efter att den här sessionen analyserades – sessionen behåller filerna den analyserades från."
       }
     }
   },

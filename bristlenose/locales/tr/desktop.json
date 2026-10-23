@@ -430,7 +430,8 @@
         "cloud_fetch": "Dosya zamanında bu Mac’e indirilmedi.",
         "duplicate_recording": "Bu oturum için ikinci bir kayıt — diğeri kullanıldı.",
         "duplicate_transcript": "Bu oturumun dökümünün ikinci bir kopyası — diğeri kullanıldı.",
-        "no_lines": "Bu dökümde satır yok — analiz edilecek bir şey yok."
+        "no_lines": "Bu dökümde satır yok — analiz edilecek bir şey yok.",
+        "added_after_analysis": "Bu oturum analiz edildikten sonra eklendi — oturum, analiz edildiği dosyaları korur."
       }
     }
   },

@@ -430,7 +430,8 @@
         "cloud_fetch": "No se ha descargado en este Mac a tiempo.",
         "duplicate_recording": "Una segunda grabación para esta sesión — se usó la otra.",
         "duplicate_transcript": "Una segunda copia de la transcripción de esta sesión — se usó la otra.",
-        "no_lines": "Esta transcripción no tiene líneas — no hay nada que analizar."
+        "no_lines": "Esta transcripción no tiene líneas — no hay nada que analizar.",
+        "added_after_analysis": "Añadido después de analizar esta sesión — la sesión conserva los archivos con los que se analizó."
       }
     }
   },

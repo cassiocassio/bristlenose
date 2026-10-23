@@ -330,7 +330,9 @@ class SessionRegistry:
             seen.add(key)
             named.append(key)
 
-        primaries = [_primary_file(s) for s in sessions]
+        primaries = [
+            self._held_primary(s, key, input_dir) for s, key in zip(sessions, named, strict=True)
+        ]
         fps = [_fingerprint(f) for f in primaries]
         places = [_place(f, input_dir) for f in primaries]
         # Two copies of one recording in a study are kept as two sessions, as
@@ -548,6 +550,42 @@ class SessionRegistry:
             session.participant_number = n
         kept = [s for i, s in enumerate(sessions) if i not in folded]
         return sorted(kept, key=lambda s: s.session_number)
+
+    def _held_primary(
+        self, session: InputSession, name_key: str, input_dir: Path | None = None,
+    ) -> Path | None:
+        """The file that names ``session`` (``_primary_file``), unless the
+        session its name holds is keyed by the content of another recording
+        here: then that recording, still.
+
+        A video dropped beside an analysed audio file, or a second video
+        added to an analysed Zoom folder that sorts first, would otherwise
+        displace the recording the session was keyed by, and the session
+        would be found by nothing and analysed again as a new one, its
+        curation left behind on the old number (RE#129, 23 Oct 2026). Only
+        the content key the session's own name holds counts, so a copy of
+        another session's recording is never taken for this one's. A recording
+        evicted to the cloud is known by the fingerprint last seen at its place.
+        """
+        default = _primary_file(session)
+        sid = self.sessions.get(name_key)
+        if sid is None or not _is_media(default):
+            return default
+        held = {
+            key[len(FP_PREFIX):] for key, owner in self.sessions.items()
+            if owner == sid and key.startswith(FP_PREFIX)
+        }
+        def fp(path: Path | None) -> str | None:
+            if path is None:
+                return None
+            return _fingerprint(path) or self.last_known_fingerprint(path, input_dir)
+
+        if not held or fp(default) in held:
+            return default
+        for f in session.files:
+            if f.path != default and _is_media(f.path) and fp(f.path) in held:
+                return f.path
+        return default
 
     def _holds_media_key(self, sid: str) -> bool:
         """Whether ``sid`` holds a content key taken from a recording."""

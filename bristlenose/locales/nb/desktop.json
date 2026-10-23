@@ -430,7 +430,8 @@
         "cloud_fetch": "Filen ble ikke lastet ned til denne Macen i tide.",
         "duplicate_recording": "Et annet opptak for denne økten – det andre ble brukt.",
         "duplicate_transcript": "En annen kopi av transkripsjonen for denne økten – den andre ble brukt.",
-        "no_lines": "Ingen linjer i denne transkripsjonen – det er ingenting å analysere."
+        "no_lines": "Ingen linjer i denne transkripsjonen – det er ingenting å analysere.",
+        "added_after_analysis": "Lagt til etter at denne økten ble analysert – økten beholder filene den ble analysert fra."
       }
     }
   },

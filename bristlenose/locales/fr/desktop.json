@@ -430,7 +430,8 @@
         "cloud_fetch": "Le fichier n’a pas été téléchargé sur ce Mac à temps.",
         "duplicate_recording": "Un second enregistrement pour cet entretien — l'autre a été utilisé.",
         "duplicate_transcript": "Une seconde copie de la transcription de cet entretien — l'autre a été utilisée.",
-        "no_lines": "Aucune ligne dans cette transcription — il n'y a rien à analyser."
+        "no_lines": "Aucune ligne dans cette transcription — il n'y a rien à analyser.",
+        "added_after_analysis": "Ajouté après l'analyse de cet entretien — l'entretien garde les fichiers à partir desquels il a été analysé."
       }
     }
   },

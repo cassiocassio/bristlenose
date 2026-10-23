@@ -470,7 +470,8 @@
         "cloud_fetch": "Plik nie został pobrany na tego Maca na czas.",
         "duplicate_recording": "Drugie nagranie dla tej sesji — użyto innego.",
         "duplicate_transcript": "Druga kopia transkrypcji tej sesji — użyto innej.",
-        "no_lines": "Brak wierszy w tej transkrypcji — nie ma czego analizować."
+        "no_lines": "Brak wierszy w tej transkrypcji — nie ma czego analizować.",
+        "added_after_analysis": "Dodano po przeanalizowaniu tej sesji — sesja zachowuje pliki, z których została przeanalizowana."
       }
     }
   },

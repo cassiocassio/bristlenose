@@ -430,7 +430,8 @@
         "cloud_fetch": "Die Datei wurde nicht rechtzeitig auf diesen Mac geladen.",
         "duplicate_recording": "Eine zweite Aufnahme für dieses Interview — die andere wurde verwendet.",
         "duplicate_transcript": "Eine zweite Kopie des Transkripts dieses Interviews — die andere wurde verwendet.",
-        "no_lines": "Keine Zeilen in diesem Transkript — es gibt nichts zu analysieren."
+        "no_lines": "Keine Zeilen in diesem Transkript — es gibt nichts zu analysieren.",
+        "added_after_analysis": "Nach der Analyse dieses Interviews hinzugefügt — das Interview behält die Dateien, aus denen es analysiert wurde."
       }
     }
   },

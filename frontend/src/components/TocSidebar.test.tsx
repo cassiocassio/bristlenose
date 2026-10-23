@@ -239,3 +239,20 @@ describe("Sessions", () => {
     expect(screen.queryByRole("link", { name: "Checkout" })).toBeNull();
   });
 });
+
+// RE#33 review: a failed re-read after a run was swallowed whole.
+describe("A failed read", () => {
+  it("says so in the console", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      seedStore();
+      grouping("sections");
+      vi.mocked(apiGet).mockImplementation(((path: string) =>
+        path === "/quotes" ? Promise.reject(new Error("503")) : Promise.resolve(SESSIONS)) as never);
+      render(<TocSidebar />);
+      await waitFor(() => expect(logged).toHaveBeenCalledWith("Contents: /quotes failed", expect.any(Error)));
+    } finally {
+      logged.mockRestore();
+    }
+  });
+});

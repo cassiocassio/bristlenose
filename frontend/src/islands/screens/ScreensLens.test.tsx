@@ -881,6 +881,67 @@ describe("polling /screens", () => {
     expect(screensCalls()).toBe(1);
   });
 
+  /** /screens answers in turn from `answers` (an Error rejects), repeating the last. */
+  function screensInTurn(answers: (ScreensResponse | Error)[]) {
+    let n = 0;
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") {
+        const a = answers[Math.min(n++, answers.length - 1)];
+        return a instanceof Error ? Promise.reject(a) : Promise.resolve(a);
+      }
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      if (path === "/screens/arrangements") return Promise.resolve({ versions: serverArrangements });
+      return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+    }) as typeof apiGet);
+  }
+
+  // A failed look is tried once more and then stops (owner, 23 Oct 2026: not-needy UX); it used to
+  // retry on the poll's back-off up to SCREENS_POLL_LIMIT, about three hours of silent looks.
+  it("tries a failed look once more, then stops: two failures, no third look", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    screensInTurn([new Error("401")]);
+    render(<ScreensLens />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(24 * 3600_000);
+    });
+    expect(screensCalls()).toBe(2);
+  });
+
+  it("stops after two failures in a row mid-poll, whatever the poll had left", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    screensInTurn([{ ...base, pending: true }, new Error("401"), new Error("401"), { ...base, pending: true }]);
+    render(<ScreensLens />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(24 * 3600_000);
+    });
+    expect(screensCalls()).toBe(3);
+  });
+
+  it("keeps polling while the job reads, a retried failure included: that is progress, not a retry", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    screensInTurn([{ ...base, pending: true }, new Error("401"), { ...base, pending: true }]);
+    render(<ScreensLens />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+    });
+    expect(screensCalls()).toBeGreaterThan(10);
+  });
+
+  it("gives a later failure its own retry once a look has answered in between", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("401");
+    screensInTurn([{ ...base, pending: true }, err, { ...base, pending: true }, err, { ...base, pending: true }]);
+    render(<ScreensLens />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+    });
+    expect(screensCalls()).toBeGreaterThan(5);
+  });
+
   it("gives up after a bounded number of looks when nothing ever changes", async () => {
     vi.useFakeTimers();
     mockApi(base);
@@ -2295,6 +2356,25 @@ describe("arrangements come from the project's database (15 Oct 2026)", () => {
     // The server's arrangement stands: the 14 Oct entry did not replace it.
     expect(vi.mocked(sendPut)).not.toHaveBeenCalled();
     expect(stored("url:/shoppingcart|s1")).toEqual({ "q-p1-30": { kind: "edge", edge: "L", along: 0.3, out: 32, z: 31 } });
+  });
+
+  // Not-needy UX (owner, 23 Oct 2026): it used to ask again on the poll's back-off up to
+  // SCREENS_POLL_LIMIT, more than three hours of silent reads.
+  it("asks once more when the read fails, then stops: two failures, no third read", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(apiGet).mockImplementation(((path: string) => {
+      if (path === "/screens") return Promise.resolve(screensResponse());
+      if (path === "/quotes") return Promise.resolve(QUOTES);
+      if (path.startsWith("/screens/still")) return Promise.resolve({ src: "data:image/jpeg;base64,AA==" });
+      if (path === "/screens/arrangements") return Promise.reject(new Error("401"));
+      return Promise.reject(new Error(path));
+    }) as typeof apiGet);
+    render(<ScreensLens />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(24 * 3600_000);
+    });
+    expect(vi.mocked(apiGet).mock.calls.filter(([p]) => p === "/screens/arrangements")).toHaveLength(2);
   });
 
   it("draws no board until they are read, so a custom board never shows automatic first", async () => {

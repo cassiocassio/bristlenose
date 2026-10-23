@@ -76,15 +76,18 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   useEffect(() => {
     apiGet<QuotesListResponse>("/quotes")
       .then(setData)
-      .catch(() => {
-        // Silently fail — the main content area shows the error.
+      .catch((e: unknown) => {
+        // The lens says so on screen; the contents list keeps what it has.
+        console.error("Contents: /quotes failed", e);
       });
   }, [refreshKey]);
 
   // Re-fetch when autocode tags change (same event QuoteSections listens to).
   useEffect(() => {
     const handler = () => {
-      apiGet<QuotesListResponse>("/quotes").then(setData).catch(() => {});
+      apiGet<QuotesListResponse>("/quotes")
+        .then(setData)
+        .catch((e: unknown) => console.error("Contents: /quotes failed after a tag change", e));
     };
     document.addEventListener("bn:tags-changed", handler);
     return () => document.removeEventListener("bn:tags-changed", handler);

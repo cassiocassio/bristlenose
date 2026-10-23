@@ -17,6 +17,7 @@ import {
   resetLastRunStore,
   stopLastRunPolling,
   triggerManualRefresh,
+  useLastRun,
 } from "../contexts/LastRunStore";
 import { resetStore } from "../contexts/QuotesContext";
 import { TocShowingContext } from "../contexts/TocShowing";
@@ -183,11 +184,12 @@ describe("QuotesTab — cross-island refetch contract", () => {
       expect(themesKeys).toContain(0);
     });
 
-    // Let the seed poll bump refreshKey from 0 → 1.
-    await waitFor(() => {
-      expect(sectionsKeys).toContain(1);
-      expect(themesKeys).toContain(1);
-    });
+    // The seed poll records the run the islands have just read, and bumps nothing. Wait for the
+    // record itself, so the assertion cannot run before the poll has answered.
+    const probe = renderHook(() => useLastRun());
+    await waitFor(() => expect(probe.result.current.lastRun?.run_id).toBe(SEED_RUN.run_id));
+    expect(Math.max(...sectionsKeys)).toBe(0);
+    expect(Math.max(...themesKeys)).toBe(0);
 
     const sectionsMaxBefore = Math.max(...sectionsKeys);
     const themesMaxBefore = Math.max(...themesKeys);

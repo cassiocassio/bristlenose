@@ -102,6 +102,49 @@ describe("useScreensAvailable", () => {
     expect(statusCalls()).toBe(STATUS_POLL_LIMIT);
   });
 
+  // A failed look is tried once more and then stops (owner, 23 Oct 2026: not-needy UX); it used to
+  // retry every STATUS_POLL_MS up to STATUS_POLL_LIMIT, an hour of silent looks.
+  it("tries a failed look once more, then stops: two failures, no third look", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(apiGet).mockRejectedValue(new Error("401"));
+    renderHook(() => useScreensAvailable());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATUS_POLL_MS * (STATUS_POLL_LIMIT + 50));
+    });
+    expect(statusCalls()).toBe(2);
+  });
+
+  it("keeps looking while reading, a retried failure included", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let n = 0;
+    vi.mocked(apiGet).mockImplementation((() => {
+      n += 1;
+      return n === 2 ? Promise.reject(new Error("401")) : Promise.resolve({ ...base, running: true });
+    }) as typeof apiGet);
+    renderHook(() => useScreensAvailable());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 10);
+    });
+    expect(statusCalls()).toBe(11);
+  });
+
+  it("gives a later failure its own retry once a look has answered in between", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let n = 0;
+    vi.mocked(apiGet).mockImplementation((() => {
+      n += 1;
+      return n === 2 || n === 4 ? Promise.reject(new Error("401")) : Promise.resolve({ ...base, running: true });
+    }) as typeof apiGet);
+    renderHook(() => useScreensAvailable());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATUS_POLL_MS * 10);
+    });
+    expect(statusCalls()).toBe(11);
+  });
+
   it("looks again when a run finishes", async () => {
     vi.mocked(apiGet).mockResolvedValue(base);
     const { result } = renderHook(() => useScreensAvailable());

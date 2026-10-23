@@ -71,7 +71,7 @@ describe("LastRunStore — initial state", () => {
 });
 
 describe("LastRunStore — first poll baseline", () => {
-  it("bumps refreshKey when first poll returns any terminus", async () => {
+  it("records the first poll's run without bumping: the lenses have just read it", async () => {
     fetchMock.mockResolvedValueOnce(
       makeResponse({
         run_id: "01J123",
@@ -93,7 +93,7 @@ describe("LastRunStore — first poll baseline", () => {
       expect.any(Object),
     );
     expect(result.current.lastRun?.run_id).toBe("01J123");
-    expect(result.current.refreshKey).toBe(1);
+    expect(result.current.refreshKey).toBe(0);
   });
 
   it("leaves state untouched when first poll returns null", async () => {
@@ -107,6 +107,93 @@ describe("LastRunStore — first poll baseline", () => {
     });
 
     expect(result.current.lastRun).toBeNull();
+    expect(result.current.refreshKey).toBe(0);
+  });
+
+  const run = { run_id: "01J123", outcome: "completed", completed_at: "2026-05-09T12:00:00Z" };
+
+  it("bumps for a run that completes after a first poll that found none", async () => {
+    fetchMock.mockResolvedValueOnce(makeResponse(null)).mockResolvedValueOnce(makeResponse(run));
+    const { result } = renderHook(() => useLastRun());
+    vi.useFakeTimers();
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3001);
+    });
+    expect(result.current.lastRun?.run_id).toBe("01J123");
+    expect(result.current.refreshKey).toBe(1);
+  });
+
+  // Hidden at open is the one exception (owner's ruling, 23 Oct 2026): the run may have finished
+  // while hidden, after the lenses read, so the first answer once shown bumps.
+  it("bumps when the first answer comes later because the page was hidden at open", async () => {
+    let hidden = true;
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => (hidden ? "hidden" : "visible"),
+    });
+    fetchMock.mockResolvedValue(makeResponse(run));
+    const { result } = renderHook(() => useLastRun());
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    hidden = false;
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.lastRun?.run_id).toBe("01J123");
+    expect(result.current.refreshKey).toBe(1);
+  });
+
+  it("leaves the baseline to the next answer when the open-time poll fails", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("network down")).mockResolvedValueOnce(makeResponse(run));
+    const { result } = renderHook(() => useLastRun());
+    vi.useFakeTimers();
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3001);
+    });
+    expect(result.current.lastRun?.run_id).toBe("01J123");
+    expect(result.current.refreshKey).toBe(0);
+  });
+
+  // The baseline is state, not a property of the open-time call: a switch that lands while the old
+  // project's poll is in flight skips that call, and must still not bump for the new project.
+  it("keeps the new project's baseline when the switch lands during the old project's poll", async () => {
+    let answerOld!: (r: FetchResponse) => void;
+    fetchMock
+      .mockReturnValueOnce(new Promise<FetchResponse>((r) => (answerOld = r)))
+      .mockResolvedValueOnce(makeResponse({ ...run, run_id: "01J900" }));
+    const { result } = renderHook(() => useLastRun());
+    vi.useFakeTimers();
+    await act(async () => {
+      startLastRunPolling("1");
+      await Promise.resolve();
+    });
+    await act(async () => {
+      startLastRunPolling("2"); // project 1's poll is still in flight: this one is skipped
+      answerOld(makeResponse(run)); // and project 1's answer is discarded
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3001);
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/projects/2/last-run", expect.any(Object));
+    expect(result.current.lastRun?.run_id).toBe("01J900");
     expect(result.current.refreshKey).toBe(0);
   });
 });
@@ -134,7 +221,7 @@ describe("LastRunStore — run_id is the comparison key", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(result.current.refreshKey).toBe(1);
+    expect(result.current.refreshKey).toBe(0);
 
     // Advance to next poll tick.
     await act(async () => {
@@ -142,7 +229,7 @@ describe("LastRunStore — run_id is the comparison key", () => {
       await Promise.resolve();
     });
 
-    expect(result.current.refreshKey).toBe(1);
+    expect(result.current.refreshKey).toBe(0);
     expect(result.current.lastRun?.run_id).toBe("01J123");
   });
 
@@ -171,13 +258,13 @@ describe("LastRunStore — run_id is the comparison key", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(result.current.refreshKey).toBe(1);
+    expect(result.current.refreshKey).toBe(0);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3001);
       await Promise.resolve();
     });
-    expect(result.current.refreshKey).toBe(2);
+    expect(result.current.refreshKey).toBe(1);
     expect(result.current.lastRun?.run_id).toBe("01J200");
   });
 });
@@ -309,7 +396,7 @@ describe("LastRunStore — triggerManualRefresh", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(result.current.refreshKey).toBe(1);
+    expect(result.current.refreshKey).toBe(0);
     announceMock.mockClear();
 
     await act(async () => {
@@ -317,7 +404,7 @@ describe("LastRunStore — triggerManualRefresh", () => {
     });
 
     // Bump even though server returned same run_id.
-    expect(result.current.refreshKey).toBeGreaterThanOrEqual(2);
+    expect(result.current.refreshKey).toBe(1);
     expect(announceMock).toHaveBeenCalledWith("announce.pipelineCompleted");
   });
 

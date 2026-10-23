@@ -427,7 +427,8 @@ export function ScreensLens() {
   // The researcher's arrangements, from the project's database, read before any board shows: a
   // custom board drawn automatic first would jump, and one drawn automatic over an arrangement the
   // server holds would be overwritten by its first drag. So a failed read keeps the board waiting
-  // and asks again, on the screens poll's back-off. Read only once /screens says the lens is on:
+  // and asks once more, on the screens poll's back-off, then stops (console only; ⌘R asks
+  // again). Read only once /screens says the lens is on:
   // the read also sends up this browser's old copy, which an explicit off must not bring back.
   const [arrangementsReady, setArrangementsReady] = useState(() => arrangementsLoaded(projectId));
   const [arrangementsError, setArrangementsError] = useState(false);
@@ -436,15 +437,18 @@ export function ScreensLens() {
     if (!lensOn || arrangementsLoaded(projectId)) return;
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const read = (attempt: number) => {
+    // `failures`: the failed reads in a row. Two stop it.
+    const read = (attempt: number, failures: number) => {
       void loadArrangements(projectId).then((ok) => {
         if (!live) return;
         setArrangementsReady(ok);
         setArrangementsError(!ok);
-        if (!ok && attempt + 1 < SCREENS_POLL_LIMIT) timer = setTimeout(() => read(attempt + 1), pollDelay(attempt + 1));
+        if (!ok && failures === 0 && attempt + 1 < SCREENS_POLL_LIMIT) {
+          timer = setTimeout(() => read(attempt + 1, failures + 1), pollDelay(attempt + 1));
+        }
       });
     };
-    read(0);
+    read(0, 0);
     return () => {
       live = false;
       if (timer) clearTimeout(timer);
@@ -466,12 +470,15 @@ export function ScreensLens() {
   // The screen an arrival opened, until its title on the board has flashed (utils/arrival.ts).
   const arrivedKey = useRef<string | null>(null);
 
-  // Screens: polled while the job is still reading, capped, and re-read when the data moves.
+  // Screens: polled while the job is still reading, capped, and re-read when the data moves. A
+  // failed look is not progress: it is tried once more, then the lens stops asking (console only;
+  // the next run's refreshKey or ⌘R looks again).
   useEffect(() => {
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let lastIndexed = -1;
-    const load = (attempt: number) => {
+    // `attempt` counts the poll's looks; `failures`, the failed looks in a row.
+    const load = (attempt: number, failures: number) => {
       apiGet<ScreensResponse>("/screens")
         .then((r) => {
           if (!live) return;
@@ -496,20 +503,20 @@ export function ScreensLens() {
           if (r.enabled && !r.unavailable && r.screens.length > 0) markScreensFound();
           const next = r.indexed !== lastIndexed && lastIndexed >= 0 ? 0 : attempt + 1;
           lastIndexed = r.indexed;
-          if (shouldPoll(r) && next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next), pollDelay(next));
+          if (shouldPoll(r) && next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next, 0), pollDelay(next));
         })
         .catch((e: unknown) => {
           // The cause reaches the console; the page says what happened, not the server's words.
           console.error("Screens: /screens failed", e);
           if (!live) return;
           setScreensError(true);
-          // A failure is usually transient (the sidecar restarting): look again, on the same
-          // back-off and within the same cap as the poll, rather than stop for good.
+          // Usually transient (the sidecar restarting): one more look on the poll's back-off, then stop.
+          if (failures > 0) return;
           const next = attempt + 1;
-          if (next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next), pollDelay(next));
+          if (next < SCREENS_POLL_LIMIT) timer = setTimeout(() => load(next, failures + 1), pollDelay(next));
         });
     };
-    load(0);
+    load(0, 0);
     return () => {
       live = false;
       if (timer) clearTimeout(timer);
@@ -787,7 +794,7 @@ export function ScreensLens() {
       {progress}
     </section>
   );
-  // A failed look with screens already on the page keeps them, and looks again (the poll's retry).
+  // A failed look with screens already on the page keeps them (and looks once more).
   if (screensError && !data) return shell(<p className="bn-empty-state" role="alert">{t("screens.loadFailed")}</p>);
   if (quotesError) return shell(<p className="bn-empty-state" role="alert">{t("screens.quotesFailed")}</p>);
   if (!data) return shell(<p className="bn-empty-state" aria-busy="true">{t("screens.loading")}</p>);

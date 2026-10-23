@@ -7,7 +7,8 @@
  *
  * Read from `GET …/screens/status` (server/routes/screens.py), the cheap progress read the Mac's
  * sidebar row uses: on mount, on every run's completion (`refreshKey`), and every STATUS_POLL_MS
- * while reading is in progress, for at most STATUS_POLL_LIMIT looks. The lens, when its own read
+ * while reading is in progress, for at most STATUS_POLL_LIMIT looks. A failed look is tried once
+ * more and then stops, console only (owner, 23 Oct 2026: not-needy UX). The lens, when its own read
  * finds screens, says so here too (`markScreensFound`), so the nav never trails what the lens is
  * already showing.
  *
@@ -84,20 +85,22 @@ export function useScreensAvailable(): boolean {
     if (isExportMode()) return;
     let live = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const look = (n: number) => {
+    // `n` counts the looks; `failures`, the failed looks in a row.
+    const look = (n: number, failures: number) => {
       apiGet<ScreensStatus>("/screens/status")
         .then((s) => {
           if (!live) return;
           set(screensAvailable(s));
-          if (statusStillReading(s) && n + 1 < STATUS_POLL_LIMIT) timer = setTimeout(() => look(n + 1), STATUS_POLL_MS);
+          if (statusStillReading(s) && n + 1 < STATUS_POLL_LIMIT) timer = setTimeout(() => look(n + 1, 0), STATUS_POLL_MS);
         })
-        .catch(() => {
-          // A 401 while the sidecar restarts, or an older server: keep what we had, and look again
-          // within the same cap rather than stop for good.
-          if (live && n + 1 < STATUS_POLL_LIMIT) timer = setTimeout(() => look(n + 1), STATUS_POLL_MS);
+        .catch((e: unknown) => {
+          // A 401 while the sidecar restarts, or an older server: keep what we had, look once
+          // more, then stop.
+          console.error("Screens: /screens/status failed", e);
+          if (live && failures === 0 && n + 1 < STATUS_POLL_LIMIT) timer = setTimeout(() => look(n + 1, 1), STATUS_POLL_MS);
         });
     };
-    look(0);
+    look(0, 0);
     return () => {
       live = false;
       if (timer) clearTimeout(timer);

@@ -12,10 +12,18 @@
  *   - Skip the next poll if a fetch from the previous tick is still
  *     in-flight (single boolean — not a debounce window).
  *   - 401 → silent back-off; the sidecar may be restarting. Don't toast.
- *   - Mount baseline is `lastSeenRunId = null`. The first poll that
- *     returns *any* terminus refetches unconditionally — closes the
- *     hole where the pipeline completed before the SPA opened the
- *     project.
+ *   - The first answer for a project is the baseline: the lenses read
+ *     beside it, so the run it names is the one they read, and it is
+ *     recorded without bumping `refreshKey` (as ConditionStore records its
+ *     first version). A bump there made every page load read the landing
+ *     lens twice and play the hand-over dim over identical data (RE#33
+ *     review). It is state (`baselinePending`), not a property of the
+ *     call, so a switch that lands while the old project's poll is in
+ *     flight keeps it; a failed poll leaves it for the next answer.
+ *   - Hidden at open is the exception, kept by the owner's ruling (23 Oct
+ *     2026): the skipped poll gives up the baseline, so the first answer
+ *     once shown bumps, since the run may have finished while hidden. On
+ *     the Mac that can re-read and dim once over the same data. Accepted.
  *   - `run_id` is a ULID (monotonic), used as the comparison key.
  *     `completed_at` is for display.
  *
@@ -62,6 +70,8 @@ const listeners = new Set<() => void>();
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let inFlight = false;
 let activeProjectId: string | null = null;
+/** The next answer for this project is the baseline (see the header). */
+let baselinePending = false;
 let visibilityListenerInstalled = false;
 
 // ── Internal helpers ────────────────────────────────────────────────────
@@ -89,7 +99,11 @@ function isHidden(): boolean {
 async function pollOnce(): Promise<void> {
   if (inFlight) return; // previous tick still resolving
   if (activeProjectId === null) return;
-  if (isHidden()) return;
+  if (isHidden()) {
+    // Hidden before the baseline landed: give it up, so the first answer once shown bumps.
+    baselinePending = false;
+    return;
+  }
 
   const projectId = activeProjectId;
   inFlight = true;
@@ -107,6 +121,9 @@ async function pollOnce(): Promise<void> {
     // Project switched mid-flight — discard.
     if (activeProjectId !== projectId) return;
 
+    const baseline = baselinePending;
+    baselinePending = false;
+
     if (body === null) {
       // No run yet. Keep state as-is (mount baseline).
       return;
@@ -115,6 +132,11 @@ async function pollOnce(): Promise<void> {
     const prev = state.lastRun;
     if (prev?.run_id === body.run_id) {
       // Same run — keep refreshKey stable.
+      return;
+    }
+    if (baseline) {
+      // The run the lenses are reading now: record it, re-read nothing.
+      setState({ ...state, lastRun: body });
       return;
     }
     setState({
@@ -179,14 +201,14 @@ export function startLastRunPolling(projectId: string): void {
   if (activeProjectId === projectId) return;
 
   activeProjectId = projectId;
-  // Reset state when switching projects so the new project's first
-  // returning terminus is treated as "new" by consumers.
+  // Reset state when switching projects; the new project's first answer
+  // is its baseline.
   state = { lastRun: null, refreshKey: state.refreshKey };
+  baselinePending = true;
   listeners.forEach((l) => l());
 
   installVisibilityListener();
-  // First poll immediately so the SPA reconciles against any run that
-  // completed before the project was opened.
+  // First poll immediately: the baseline the later polls compare against.
   pollOnce().then(() => {
     if (activeProjectId !== null) scheduleNextTick();
   });
@@ -241,6 +263,7 @@ export function bumpRefreshKey(): void {
 export function resetLastRunStore(): void {
   stopLastRunPolling();
   inFlight = false;
+  baselinePending = false;
   state = { lastRun: null, refreshKey: 0 };
   listeners.forEach((l) => l());
 }

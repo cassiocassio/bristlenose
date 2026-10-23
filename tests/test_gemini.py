@@ -330,6 +330,134 @@ class TestLLMClientAnalyzeGoogle:
             )
 
 
+def _fast_gemini_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Shrink google-genai's own retry backoff (1 s doubling) to milliseconds,
+    and clear the proxy variables its httpx client would otherwise follow."""
+    from google.genai import _api_client
+
+    monkeypatch.setattr(_api_client, "_RETRY_INITIAL_DELAY", 0.001)
+    monkeypatch.setattr(_api_client, "_RETRY_JITTER", 0.001)
+    for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy",
+                "all_proxy"):
+        monkeypatch.delenv(var, raising=False)
+
+
+class TestGeminiCallEnds:
+    """A Gemini call to a peer that has gone quiet ends, it doesn't hang (R30).
+
+    The google-genai SDK sends with no timeout unless asked: a connection
+    killed by sleep or a network change (no data, no FIN, no RST) then
+    blocks the call for good, and every stage but s09 waits on it with no
+    deadline of its own. The other cloud clients carry 600 s.
+    """
+
+    @pytest.mark.asyncio
+    async def test_silent_peer_raises_instead_of_hanging(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import asyncio
+
+        import httpx
+        from pydantic import BaseModel
+
+        from bristlenose.llm import client as client_mod
+
+        class SimpleResult(BaseModel):
+            answer: str
+
+        reached: list[bool] = []
+
+        async def silent(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            reached.append(True)
+            await reader.read(65536)
+            await asyncio.sleep(60)
+
+        # genai's httpx client trusts the environment: a proxy variable would
+        # send the request elsewhere and fail fast, passing for the wrong reason.
+        _fast_gemini_backoff(monkeypatch)
+        server = await asyncio.start_server(silent, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        monkeypatch.setenv("GOOGLE_GEMINI_BASE_URL", f"http://127.0.0.1:{port}")
+        monkeypatch.setattr(client_mod, "_GEMINI_TIMEOUT_S", 0.5)
+        try:
+            call = asyncio.ensure_future(
+                LLMClient(_google_settings()).analyze("s", "u", SimpleResult)
+            )
+            done, _ = await asyncio.wait({call}, timeout=10)
+            if not done:
+                call.cancel()
+            assert done, "the Gemini call was still waiting after 10 s"
+            assert isinstance(call.exception(), httpx.TimeoutException)
+            # Each timed-out attempt is retried, as a lost connection after wake is.
+            assert len(reached) == client_mod._CLOUD_MAX_RETRIES + 1
+        finally:
+            server.close()
+
+    @pytest.mark.asyncio
+    async def test_retries_like_the_other_cloud_clients(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A 503 is retried, as Claude's and ChatGPT's SDKs retry it: seven
+        attempts in all. Gemini's SDK never retries unless asked (R30)."""
+        import asyncio
+
+        from google.genai import errors as genai_errors
+        from pydantic import BaseModel
+
+        from bristlenose.llm.client import _CLOUD_MAX_RETRIES
+
+        class SimpleResult(BaseModel):
+            answer: str
+
+        hits: list[int] = []
+        body = b'{"error": {"code": 503, "message": "busy", "status": "UNAVAILABLE"}}'
+
+        async def busy(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            await reader.read(65536)
+            hits.append(1)
+            writer.write(
+                b"HTTP/1.1 503 Service Unavailable\r\nContent-Type: application/json\r\n"
+                b"Content-Length: " + str(len(body)).encode() + b"\r\n"
+                b"Connection: close\r\n\r\n" + body
+            )
+            await writer.drain()
+            writer.close()
+
+        _fast_gemini_backoff(monkeypatch)
+        server = await asyncio.start_server(busy, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
+        monkeypatch.setenv("GOOGLE_GEMINI_BASE_URL", f"http://127.0.0.1:{port}")
+        try:
+            with pytest.raises(genai_errors.ServerError):
+                await asyncio.wait_for(
+                    LLMClient(_google_settings()).analyze("s", "u", SimpleResult), 30
+                )
+            assert len(hits) == _CLOUD_MAX_RETRIES + 1
+        finally:
+            server.close()
+
+    @pytest.mark.asyncio
+    async def test_request_carries_ten_minutes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The SDK reads the timeout in milliseconds: pin the seconds on the wire."""
+        import httpx
+        from pydantic import BaseModel
+
+        class SimpleResult(BaseModel):
+            answer: str
+
+        seen: list[object] = []
+
+        async def spy_send(self: httpx.AsyncClient, request: httpx.Request, **kw: object) -> None:
+            seen.append(request.extensions.get("timeout"))
+            raise httpx.ConnectError("stop here", request=request)
+
+        _fast_gemini_backoff(monkeypatch)
+        monkeypatch.setattr(httpx.AsyncClient, "send", spy_send)
+        with pytest.raises(httpx.ConnectError):
+            await LLMClient(_google_settings()).analyze("s", "u", SimpleResult)
+        assert seen and seen[0] == {"connect": 600.0, "read": 600.0, "write": 600.0, "pool": 600.0}
+
+
 # ---------------------------------------------------------------------------
 # Doctor checks
 # ---------------------------------------------------------------------------

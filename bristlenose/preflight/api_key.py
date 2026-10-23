@@ -508,8 +508,14 @@ def _validate_google(
     from google.genai import errors as genai_errors
     from google.genai import types
 
+    from bristlenose.llm.client import _GEMINI_TIMEOUT_S
+
     params = _params_for("google", model, params)
-    client = genai.Client(api_key=api_key)
+    # The run's timeout: without one the SDK waits for good (R30).
+    client = genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(timeout=int(_GEMINI_TIMEOUT_S * 1000)),
+    )
     try:
         client.models.generate_content(
             model=model,
@@ -766,9 +772,6 @@ def preflight_api_key(
       Defence-in-depth for spoofed-TTY CI runners (Buildkite, tmux-from-cron,
       `script(1)` wrappers) where the TTY heuristic isn't reliable.
     - **Provider == "local"** (Ollama): skip — no key, no billing.
-    - **Provider with no rich support** (azure, google): skip rich validation;
-      let downstream LLM calls surface failure naturally with the generic
-      "Provider says: ..." copy on the call-site.
     - **Recently validated** (24h TTL) with the same request (model,
       parameters, key and endpoint, :func:`request_fingerprint`): skip the
       network call.

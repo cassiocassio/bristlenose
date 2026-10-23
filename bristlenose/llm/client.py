@@ -293,6 +293,14 @@ _ANTHROPIC_ACCEPTS_SAMPLING: frozenset[str] = frozenset(
 # output cap it guesses could run past ten minutes (above ~21K tokens).
 _ANTHROPIC_TIMEOUT_S = 600.0
 
+# google-genai sends with no timeout at all unless given one, so a connection
+# that sleep or a network change killed quietly (no data, no FIN, no RST)
+# held the call, and the run, for good: only s09 has a deadline of its own.
+# 600 s per attempt, like the Anthropic and OpenAI clients (R30). The SDK also
+# sends it to the server as X-Server-Timeout; a non-streaming answer that long
+# was already past s09's 570 s pass deadline. The preflight reads this too.
+_GEMINI_TIMEOUT_S = 600.0
+
 
 def request_params(
     provider: str, model: str, max_tokens: int, temperature: float
@@ -370,7 +378,8 @@ def request_params(
 # reactive layer only; global adaptive concurrency (AIMD) is a measure-first
 # follow-up if the logs ever show *sustained* (not transient) 429 pressure.
 # Local (Ollama) talks to localhost — no provider rate limits — so it keeps the
-# SDK default and its own JSON-parse retry loop.
+# SDK default and its own JSON-parse retry loop. Gemini's SDK never retries
+# unless asked; it is given the same budget as attempts (R30).
 _CLOUD_MAX_RETRIES = 6
 
 
@@ -1246,6 +1255,11 @@ class LLMClient:
         if self._google_client is None:
             self._google_client = genai.Client(
                 api_key=self.settings.google_api_key,
+                http_options=types.HttpOptions(
+                    timeout=int(_GEMINI_TIMEOUT_S * 1000),
+                    # The SDK's own backoff (1 s doubling, 60 s cap); Retry-After unread.
+                    retry_options=types.HttpRetryOptions(attempts=_CLOUD_MAX_RETRIES + 1),
+                ),
             )
 
         client = self._google_client.aio

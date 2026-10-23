@@ -1116,3 +1116,53 @@ class TestPreflightSendsThePipelinesRequest:
                             lambda: tmp_path / "state.json")
         preflight_api_key(settings=settings, console=_console())
         assert fake.Anthropic.return_value.messages.create.call_count == 1
+
+
+class TestGooglePreflightEnds:
+    """The preflight's own Gemini client carries the run's timeout (R30).
+
+    It is built apart from the run's, so it drifted: with no timeout, a
+    connection lost at the start of a run held ``run`` before its first stage.
+    """
+
+    def test_silent_peer_returns_instead_of_hanging(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import socket
+        import threading
+
+        from bristlenose.llm import client as client_mod
+
+        for var in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy",
+                    "all_proxy"):
+            monkeypatch.delenv(var, raising=False)
+        listener = socket.socket()
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        held: list[socket.socket] = []
+
+        def accept_and_hold() -> None:
+            conn, _ = listener.accept()
+            conn.recv(65536)
+            held.append(conn)  # never answered; closed at the end
+
+        threading.Thread(target=accept_and_hold, daemon=True).start()
+        monkeypatch.setenv(
+            "GOOGLE_GEMINI_BASE_URL", f"http://127.0.0.1:{listener.getsockname()[1]}"
+        )
+        monkeypatch.setattr(client_mod, "_GEMINI_TIMEOUT_S", 0.5)
+        result: list[object] = []
+        worker = threading.Thread(
+            target=lambda: result.append(_validate_google("g-key", "gemini-2.5-flash")),
+            daemon=True,
+        )
+        try:
+            worker.start()
+            worker.join(10)
+            assert not worker.is_alive(), "the Gemini preflight was still waiting after 10 s"
+            assert held, "the request never reached the silent server"
+            assert result and not result[0].ok  # type: ignore[attr-defined]
+        finally:
+            for conn in held:
+                conn.close()
+            listener.close()

@@ -210,7 +210,7 @@ Moderator and observer names (m1, m2, o1) are not stripped. The boundary is **pa
 
 - Kept in process memory (and exported to the process environment for reload recovery) — never written to disk
 - Injected into the SPA HTML served to the browser
-- Printed to stdout for the desktop app to capture
+- Printed to stdout only when the desktop app hosts the server, for it to capture (a CLI `serve` never prints it; the desktop keeps the line out of its own diagnostics)
 - Required as `Authorization: Bearer <token>` on all `/api/*` and `/mcp/*` requests (media routes are protected by a path-traversal guard and extension allowlist instead — `<video>` elements cannot send headers)
 - Exempt for `/api/health` (version/status only, no project data), `/report/*`, and a browser-shaped `GET /mcp/` (a static explainer page carrying directions only — no project data, no token). `/report/*` is not only static assets: the SPA page it serves **carries the token** (`window.__BRISTLENOSE_AUTH_TOKEN__`) and sets the `bristlenose_auth` cookie, so anything that can read `/report/` can call the API. That is why the page must never be readable from another origin — see *DNS rebinding* below. Its files come only from the output directory's `assets/`. After a failed or cancelled run, `/report/` answers with a status page carrying the structured cause (category, stage, provider, a bristlenose-constructed message — see the privacy contract under *Event log* above) and never the log: before 28 Sep 2026 it appended the last 4 KB of `bristlenose.log`, which holds absolute paths and input filenames
 

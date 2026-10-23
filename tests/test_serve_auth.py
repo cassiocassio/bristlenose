@@ -37,6 +37,38 @@ def token(app) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Token on stdout
+# ---------------------------------------------------------------------------
+
+
+class TestTokenStdoutLine:
+    """The ``auth-token:`` stdout line exists for the desktop host alone.
+
+    A CLI serve that printed it left the bearer in terminal scrollback and in
+    any log its stdout was piped to.
+    """
+
+    def test_cli_serve_does_not_print_token(self, monkeypatch, capsys) -> None:
+        monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        out = capsys.readouterr().out
+        assert "[bristlenose] auth-token:" not in out
+        assert app.state.auth_token not in out
+
+    def test_desktop_hosted_serve_prints_token(self, monkeypatch, capsys) -> None:
+        monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
+        # The same gate installs an atexit handshake cleanup; keep test churn
+        # from stacking handlers.
+        monkeypatch.setattr(
+            "bristlenose.server.lifecycle.install_handshake_cleanup", lambda _id: None
+        )
+        app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
+        out = capsys.readouterr().out
+        # The exact line ServeManager.swift's handleLine parses.
+        assert f"[bristlenose] auth-token: {app.state.auth_token}\n" in out
+
+
+# ---------------------------------------------------------------------------
 # Token generation
 # ---------------------------------------------------------------------------
 

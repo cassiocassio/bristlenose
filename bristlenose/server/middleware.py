@@ -125,7 +125,8 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
 
     The token is generated per server instance by ``create_app()`` and stored
     on ``app.state.auth_token``.  The same token is injected into the SPA HTML
-    and printed to stdout for the desktop app to capture.
+    and, when the desktop app hosts the server, printed to stdout for it to
+    capture.
 
     Returns a fixed 401 JSON body for all auth failures — no distinction
     between missing/wrong token, no hints about expected format.

@@ -1542,6 +1542,20 @@ final class ServeManager: ObservableObject {
         options: [.anchorsMatchLines]
     )
 
+    /// Exact prefix of the sidecar's bearer-token stdout line
+    /// (`bristlenose/server/app.py`, printed only for a desktop host).
+    static let authTokenLinePrefix = "[bristlenose] auth-token: "
+
+    /// What of an ANSI-stripped sidecar line may be kept in `outputLines` or
+    /// a parked buffer: `nil` for the auth-token line, otherwise the line with
+    /// key shapes redacted. Those buffers are shown selectable in the
+    /// boot-failure pane and their tail goes into exit errors, and
+    /// `redactKeys` matches provider keys only — not the bearer.
+    static func displayableLine(_ clean: String) -> String? {
+        if clean.hasPrefix(authTokenLinePrefix) { return nil }
+        return BristlenoseShared.redactKeys(in: clean)
+    }
+
     private func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
@@ -1557,8 +1571,9 @@ final class ServeManager: ObservableObject {
         // Parked lines are buffered on their own entry (capped) so the pipe
         // keeps draining and can't block the writer.
         guard let fronted = process, ObjectIdentifier(fronted) == procID else {
-            if var entry = parked, ObjectIdentifier(entry.process) == procID {
-                entry.buffer.append(BristlenoseShared.redactKeys(in: clean))
+            if var entry = parked, ObjectIdentifier(entry.process) == procID,
+               let shown = Self.displayableLine(clean) {
+                entry.buffer.append(shown)
                 if entry.buffer.count > 50 { entry.buffer.removeFirst(entry.buffer.count - 50) }
                 parked = entry
             }
@@ -1569,8 +1584,8 @@ final class ServeManager: ObservableObject {
         // base64url (secrets.token_urlsafe), extremely unlikely to match the
         // key shapes above, but we want the unredacted source regardless so
         // the parser's exact-prefix match is never interfered with.
-        if authToken == nil, clean.hasPrefix("[bristlenose] auth-token: ") {
-            let token = String(clean.dropFirst("[bristlenose] auth-token: ".count))
+        if authToken == nil, clean.hasPrefix(Self.authTokenLinePrefix) {
+            let token = String(clean.dropFirst(Self.authTokenLinePrefix.count))
                 .trimmingCharacters(in: .whitespaces)
             // Validate URL-safe characters only (safety invariant from secrets.token_urlsafe)
             if token.range(of: "^[A-Za-z0-9_-]+$", options: .regularExpression) != nil {
@@ -1583,8 +1598,9 @@ final class ServeManager: ObservableObject {
 
         // Redact key-shaped substrings for everything published downstream:
         // outputLines (displayed, exposed in error messages, suffix used in
-        // termination failure reporting).
-        outputLines.append(BristlenoseShared.redactKeys(in: clean))
+        // termination failure reporting). The token line is never published.
+        guard let shown = Self.displayableLine(clean) else { return }
+        outputLines.append(shown)
 
         // Detect readiness AND extract the port: bristlenose serve prints
         // "  Report: http://127.0.0.1:NNNN/report/" *after* the socket is

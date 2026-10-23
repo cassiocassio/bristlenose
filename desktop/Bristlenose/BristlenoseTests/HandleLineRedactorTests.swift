@@ -121,3 +121,36 @@ struct HandleLineRedactorTests {
         #expect(out == line)
     }
 }
+
+/// Tests for ServeManager.displayableLine — what of a sidecar stdout line is
+/// kept in `outputLines` (shown selectable in the boot-failure pane, tail
+/// quoted in exit errors). The bearer-token line is consumed, never kept:
+/// `redactKeys` matches provider key shapes, not the bearer.
+@Suite("ServeManager.displayableLine")
+@MainActor
+struct DisplayableLineTests {
+
+    // Shape of secrets.token_urlsafe(32); obviously fake.
+    static let fakeBearer = String(repeating: "Q", count: 43)
+
+    @Test func drops_auth_token_line() {
+        let line = ServeManager.authTokenLinePrefix + Self.fakeBearer
+        #expect(ServeManager.displayableLine(line) == nil)
+    }
+
+    @Test func prefix_matches_the_python_print() {
+        // bristlenose/server/app.py prints exactly this prefix.
+        #expect(ServeManager.authTokenLinePrefix == "[bristlenose] auth-token: ")
+    }
+
+    @Test func keeps_ordinary_lines() {
+        let line = "  Report: http://127.0.0.1:54321/report/"
+        #expect(ServeManager.displayableLine(line) == line)
+    }
+
+    @Test func still_redacts_keys_on_kept_lines() {
+        let line = "boom: " + HandleLineRedactorTests.fakeAnthropic
+        let out = ServeManager.displayableLine(line)
+        #expect(out == "boom: ***REDACTED***")
+    }
+}

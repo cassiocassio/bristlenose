@@ -198,8 +198,11 @@ def create_app(
 
         install_handshake_cleanup(app.state.mcp_instance_id)
     # Print BEFORE the "Report:" readiness line so ServeManager.swift
-    # has the token before transitioning to .running.
-    print(f"[bristlenose] auth-token: {auth_token}", flush=True)
+    # has the token before transitioning to .running. Only for the desktop
+    # host, its one reader: a CLI serve would otherwise leave the bearer in
+    # terminal scrollback and any log its stdout is piped to.
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        print(f"[bristlenose] auth-token: {auth_token}", flush=True)
 
     # Cache-Control: no-store on /api/projects/* — defence-in-depth for the
     # desktop multi-project switch. WKWebView is torn down on project change

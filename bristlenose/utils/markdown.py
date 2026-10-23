@@ -595,6 +595,20 @@ def format_finder_date(dt: datetime, *, now: datetime | None = None) -> str:
     return f"{dt.day} {month} {dt.year} at {time_part}"
 
 
+def format_finder_day(dt: datetime) -> str:
+    """The day of ``format_finder_date``'s absolute branch: ``3 Oct 2026``.
+
+    For a name that outlives the moment it was made (a folder), so never
+    "Today", and no ``HH:MM``: Finder shows a colon in a name as a slash. An
+    aware value is the day on this machine's clock, as ``format_finder_date``.
+    """
+    if dt.tzinfo is not None:
+        from bristlenose.utils.timecodes import to_local
+
+        dt = to_local(dt)
+    return f"{dt.day} {_MONTH_ABBR[dt.month]} {dt.year}"
+
+
 def format_finder_filename(name: str, *, max_len: int = 24) -> str:
     """Truncate a filename in macOS Finder style, keeping the extension.
 

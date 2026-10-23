@@ -445,15 +445,16 @@ def test_a_stop_that_never_unwinds_is_recorded_by_the_backstop_not_killed(
     assert len(termini) == 1 and isinstance(termini[0], RunCancelledEvent), termini
 
 
-# --- The backstop puts a set-aside report back (#29) --------------------------
+# --- The backstop settles a set-aside report (#29) -----------------------------
 
 
 def test_a_stuck_stop_puts_the_previous_report_back_before_it_exits(
     tmp_path: Path,
 ) -> None:
-    """A Re-analyse whose unwind sticks short of the CLI's own put-back used to
+    """A Re-analyse whose unwind sticks short of the CLI's own settle used to
     exit with the report set aside, and the server will not reclaim it: a
-    cancelled run is not a crash. The researcher saw the half-built attempt."""
+    cancelled run is not a crash. The researcher saw the half-built attempt.
+    Stopped before any session landed, the report comes back (`settle`)."""
     from bristlenose.utils import output_backup
 
     out = tmp_path / "study" / "bristlenose-output"
@@ -465,7 +466,7 @@ def test_a_stuck_stop_puts_the_previous_report_back_before_it_exits(
     sentinel = tmp_path / "ready"
     preamble = GRACE.format(grace=0.5) + (
         "\nfrom bristlenose.utils import output_backup as _ob"
-        f"\n_rl_mod.set_backstop_put_back(lambda: _ob.restore("
+        f"\n_rl_mod.set_backstop_settle(lambda: _ob.settle("
         f"Path({str(backup)!r}), Path({str(out)!r})))"
     )
     proc = _spawn_lifecycle_subprocess(out, _stuck_body(sentinel), preamble=preamble, env=HOSTED)
@@ -497,7 +498,7 @@ def _cli_runner(monkeypatch):
     return CliRunner()
 
 
-def test_the_cli_gives_the_backstop_its_put_back_while_the_report_is_aside(
+def test_the_cli_gives_the_backstop_its_settle_while_the_report_is_aside(
     tmp_path: Path, monkeypatch,
 ) -> None:
     import bristlenose.run_lifecycle as rl
@@ -511,7 +512,7 @@ def test_the_cli_gives_the_backstop_its_put_back_while_the_report_is_aside(
 
     async def _stuck_then_backstop(*a, **k):
         # What the backstop does from its thread, holding the exit.
-        rl._run_backstop_put_back()
+        rl._run_backstop_settle()
         seen.append((out / "bristlenose-report.html").read_text(encoding="utf-8"))
         raise RuntimeError("never reached in a real stuck stop")
 
@@ -519,10 +520,44 @@ def test_the_cli_gives_the_backstop_its_put_back_while_the_report_is_aside(
     _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
 
     assert seen == ["old"]
-    assert rl._backstop_put_back is None
+    assert rl._backstop_settle is None
 
 
-def test_a_backstop_after_the_report_was_replaced_puts_nothing_back(
+def test_a_stuck_stop_after_a_session_landed_keeps_the_fresh_analysis(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """The backstop decides as the CLI would have (owner, 23 Oct 2026)."""
+    import bristlenose.run_lifecycle as rl
+    from bristlenose.cli import app
+    from bristlenose.utils import output_backup
+    from tests.test_output_backup import _land_a_session
+
+    input_dir = tmp_path / "interviews"
+    out = input_dir / "bristlenose-output"
+    out.mkdir(parents=True)
+    (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+
+    seen: list[tuple[str, bool]] = []
+
+    async def _landed_then_stuck(_self, _in, o, *a, **k):
+        (Path(o) / "bristlenose-report.html").write_text("fresh", encoding="utf-8")
+        _land_a_session(Path(o))
+        # What the backstop does from its thread; read before the CLI's own
+        # `finally` settles, so this pins the backstop, not the CLI.
+        rl._run_backstop_settle()
+        seen.append((
+            (out / "bristlenose-report.html").read_text(encoding="utf-8"),
+            output_backup.backup_path_for(out).exists(),
+        ))
+        raise RuntimeError("never reached in a real stuck stop")
+
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _landed_then_stuck)
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+
+    assert seen == [("fresh", False)]
+
+
+def test_a_backstop_after_the_report_was_replaced_settles_nothing(
     tmp_path: Path, monkeypatch,
 ) -> None:
     import bristlenose.run_lifecycle as rl
@@ -549,7 +584,7 @@ def test_a_backstop_after_the_report_was_replaced_puts_nothing_back(
     real_discard = output_backup.discard
 
     def _backstop_fires_as_the_discard_starts(backup):
-        rl._run_backstop_put_back()
+        rl._run_backstop_settle()
         return real_discard(backup)
 
     monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _run)

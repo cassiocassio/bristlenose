@@ -173,14 +173,12 @@ class TestFullCycle:
         assert not output_backup.backup_path_for(out).exists()
         assert sorted(p.name for p in tmp_path.iterdir()) == ["bristlenose-output"]
 
-    def test_failure_keeps_the_failed_tree_for_resume(self, tmp_path: Path) -> None:
-        """A late failure's partial work is the expensive thing on disk.
-
-        After an hour of Whisper the manifest and `intermediate/` cache are what
-        make a retry cheaper than starting over. Deleting them to keep the
-        folder tidy would make a stage-11 failure cost as much to redo as a
-        stage-1 one.
-        """
+    def test_failure_drops_the_runs_tree_once_its_history_is_across(
+        self, tmp_path: Path
+    ) -> None:
+        """A run put back produced nothing to keep (`settle`), so nothing finishes
+        from its tree: it goes once its history is on the report's log. Kept, it
+        was what a later plain run swapped in over the report (22 Oct 2026)."""
         out = tmp_path / "bristlenose-output"
         _make_report(out, marker="v1", events="a\n")
 
@@ -189,21 +187,9 @@ class TestFullCycle:
         output_backup.restore(backup, out)
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "v1", "the report is back"
-        assert (output_backup.failed_path_for(out) / _MARKER).read_text(encoding="utf-8") == "partial"
-        assert not output_backup.backup_path_for(out).exists()
-
-    def test_the_kept_tree_is_a_one_run_tenancy(self, tmp_path: Path) -> None:
-        """Kept, not accumulated. The next --clean's stash sweeps it; a run
-        without --clean finishes it instead (`TestAKeptAttemptIsFinished`)."""
-        out = tmp_path / "bristlenose-output"
-        _make_report(out, marker="v1", events="a\n")
-        backup = output_backup.stash(out)
-        _make_report(out, marker="partial", events="b\n")
-        output_backup.restore(backup, out)
-
-        output_backup.stash(out)
-
+        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text() == "a\nb\n"
         assert not output_backup.failed_path_for(out).exists()
+        assert not output_backup.backup_path_for(out).exists()
 
     def test_a_stranded_scratch_tree_does_not_break_the_next_restore(
         self, tmp_path: Path
@@ -360,75 +346,120 @@ class TestTheErrorBranches:
         assert (out / _MARKER).read_text(encoding="utf-8") == "LIVE RUN IS WRITING HERE"
 
 
-class TestAKeptAttemptIsFinished:
-    """A Re-analyse that did not finish is resumed by the next run (R109)."""
+def _land_a_session(out: Path, *, quotes: int = 1) -> None:
+    """A session whose quotes are in: the quotes file, then its manifest record."""
+    import json
 
-    def _unfinished(self, out: Path) -> Path:
-        _make_report(out, marker="report", events="r1\n")
-        backup = output_backup.stash(out)
-        _make_report(out, marker="attempt", events="a1\n")
-        assert output_backup.restore(backup, out) is RestoreOutcome.RESTORED
-        return output_backup.failed_path_for(out)
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        mark_session_complete,
+        write_manifest,
+    )
 
-    def test_the_attempt_takes_the_reports_place(self, tmp_path: Path) -> None:
-        out = tmp_path / "bristlenose-output"
-        attempt = self._unfinished(out)
+    intermediate = out / ".bristlenose" / "intermediate"
+    intermediate.mkdir(parents=True, exist_ok=True)
+    (intermediate / "extracted_quotes.json").write_text(json.dumps(
+        [{"session_id": "s1", "participant_id": "p1"}] * quotes), encoding="utf-8")
+    manifest = create_manifest("t", "0")
+    mark_session_complete(manifest, STAGE_QUOTE_EXTRACTION, "s1")
+    write_manifest(manifest, out)
 
-        backup = output_backup.resume_attempt(out)
 
-        assert backup == output_backup.backup_path_for(out)
-        assert (out / _MARKER).read_text(encoding="utf-8") == "attempt"
-        assert (backup / _MARKER).read_text(encoding="utf-8") == "report"
-        assert not attempt.exists()
+class TestTheAnalysedSessionRule:
+    """`holds_an_analysed_session`: what makes a fresh start the report."""
 
-    def test_an_attempt_put_back_again_adds_only_its_new_history(
+    def test_a_session_with_quotes_counts(self, tmp_path: Path) -> None:
+        out = _make_report(tmp_path / "out", marker="a", events="x\n")
+        _land_a_session(out)
+        assert output_backup.holds_an_analysed_session(out)
+
+    def test_a_session_with_no_quotes_does_not(self, tmp_path: Path) -> None:
+        out = _make_report(tmp_path / "out", marker="a", events="x\n")
+        _land_a_session(out, quotes=0)
+        assert not output_backup.holds_an_analysed_session(out)
+
+    def test_quotes_with_no_record_do_not(self, tmp_path: Path) -> None:
+        """The record is written after the quotes: quotes alone may be half a write."""
+        out = _make_report(tmp_path / "out", marker="a", events="x\n")
+        _land_a_session(out)
+        (out / ".bristlenose" / "pipeline-manifest.json").unlink()
+        assert not output_backup.holds_an_analysed_session(out)
+
+    def test_an_unreadable_quotes_file_does_not(self, tmp_path: Path) -> None:
+        out = _make_report(tmp_path / "out", marker="a", events="x\n")
+        _land_a_session(out)
+        (out / ".bristlenose" / "intermediate" / "extracted_quotes.json").write_text("[{")
+        assert not output_backup.holds_an_analysed_session(out)
+
+    def test_no_output_does_not(self, tmp_path: Path) -> None:
+        assert not output_backup.holds_an_analysed_session(tmp_path / "absent")
+
+
+class TestSettle:
+    def test_a_put_back_cut_between_its_renames_is_finished_by_the_next_run(
         self, tmp_path: Path
     ) -> None:
+        """No output, the report set aside, the run's tree stepped aside: what a
+        kill inside `_restore` leaves. The report comes back with the run's
+        history, once, and the tree goes."""
         out = tmp_path / "bristlenose-output"
-        self._unfinished(out)
-        backup = output_backup.resume_attempt(out)
-        with (out / ".bristlenose" / "pipeline-events.jsonl").open("a") as fh:
-            fh.write("a2\n")
-
-        output_backup.restore(backup, out)
-
-        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
-        assert events == "r1\na1\na2\n"
-
-    def test_not_while_a_live_run_owns_the_project(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
-        out = tmp_path / "bristlenose-output"
-        attempt = self._unfinished(out)
-        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: True)
-
-        assert output_backup.resume_attempt(out) is None
-        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
-        assert attempt.is_dir()
-
-    def test_not_over_a_backup_that_was_never_reclaimed(self, tmp_path: Path) -> None:
-        out = tmp_path / "bristlenose-output"
-        attempt = self._unfinished(out)
-        _make_report(output_backup.backup_path_for(out), marker="only copy", events="x\n")
-
-        assert output_backup.resume_attempt(out) is None
-        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
-        assert attempt.is_dir()
-
-    def test_a_swap_cut_between_its_renames_loses_neither(self, tmp_path: Path) -> None:
-        """No output, the report set aside, the attempt kept: what a kill
-        between `resume_attempt`'s renames, or a put-back's, leaves. The
-        recovery used to delete the attempt before putting the report back."""
-        out = tmp_path / "bristlenose-output"
-        attempt = self._unfinished(out)
-        out.rename(output_backup.backup_path_for(out))
-        with (attempt / ".bristlenose" / "pipeline-events.jsonl").open("a") as fh:
-            fh.write("a2\n")
+        _make_report(out, marker="report", events="r1\n")
+        output_backup.stash(out)
+        _make_report(output_backup.failed_path_for(out), marker="attempt", events="a1\n")
 
         assert output_backup.reclaim_stale(out) is RestoreOutcome.RESTORED
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "report"
-        assert (attempt / _MARKER).read_text(encoding="utf-8") == "attempt"
-        # What the report did not yet hold of the attempt's history, once.
-        events = (out / ".bristlenose" / "pipeline-events.jsonl").read_text()
-        assert events == "r1\na1\na2\n"
+        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text() == "r1\na1\n"
+        assert not output_backup.failed_path_for(out).exists()
+
+    def test_an_export_that_will_not_move_keeps_the_report_until_it_does(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """Never delete an export with the report it sat in."""
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        (out / "clips").mkdir()
+        (out / "clips" / "c.mp4").write_text("clip", encoding="utf-8")
+        backup = output_backup.stash(out)
+        _make_report(out, marker="fresh", events="f1\n")
+        _land_a_session(out)
+        real_rename = Path.rename
+
+        def _refuse_clips(self, target):
+            if self.name == "clips":
+                raise OSError("busy")
+            return real_rename(self, target)
+
+        monkeypatch.setattr(Path, "rename", _refuse_clips)
+        assert output_backup.settle(backup, out) is RestoreOutcome.CARRY_INCOMPLETE
+        assert (backup / "clips" / "c.mp4").read_text(encoding="utf-8") == "clip"
+        assert not (backup / ".bristlenose-backup-spent").exists()
+
+        monkeypatch.setattr(Path, "rename", real_rename)
+        assert output_backup.reclaim_stale(out) is RestoreOutcome.REPLACED
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "fresh"
+        carried = [p for p in out.iterdir() if p.name.startswith("clips (")]
+        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text() == "clip"
+        assert not backup.exists()
+
+    def test_a_leftover_tree_is_swept_by_the_next_run(self, tmp_path: Path) -> None:
+        """A `-failed` tree from a build with the hold-back: nothing reads it."""
+        out = _make_report(tmp_path / "bristlenose-output", marker="report", events="r\n")
+        _make_report(output_backup.failed_path_for(out), marker="attempt", events="a\n")
+
+        assert output_backup.reclaim_stale(out) is RestoreOutcome.NOTHING_TO_DO
+
+        assert not output_backup.failed_path_for(out).exists()
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+
+    def test_not_while_a_live_run_owns_the_project(self, tmp_path: Path, monkeypatch) -> None:
+        out = _make_report(tmp_path / "bristlenose-output", marker="report", events="r\n")
+        _make_report(output_backup.failed_path_for(out), marker="attempt", events="a\n")
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: True)
+
+        output_backup.reclaim_stale(out)
+
+        assert output_backup.failed_path_for(out).is_dir()

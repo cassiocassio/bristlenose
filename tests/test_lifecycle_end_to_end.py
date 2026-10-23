@@ -205,12 +205,14 @@ def test_re_analyse_after_a_rename_keeps_when_the_interview_happened(
     reason="Re-analyse under a live server moves the output folder the server holds open; "
     "Windows refuses the move (as for test_re_analyse_is_a_deliberate_reset…)",
 )
-def test_an_unfinished_re_analyse_keeps_the_report_and_the_retry_pays_only_for_the_rest(
+def test_a_partial_re_analyse_replaces_the_report_and_analyse_finishes_it(
     tmp_path: Path, fast_watcher,
 ) -> None:
-    """R108 + R109, through the real pipeline: a Re-analyse with a session
-    failed leaves the report and its star in place; the next run finishes the
-    attempt, transcribing only the session that failed, and replaces it."""
+    """Ruled 23 Oct 2026, through the real pipeline: a Re-analyse with a session
+    failed is still a fresh start, so it replaces the report (its star goes,
+    as the Re-analyse sheet said). The ordinary Analyse then finishes it,
+    transcribing only the session that failed, and curation made on the fresh
+    report survives it. No plain run replaces a report."""
     from bristlenose.events import CauseCategoryEnum
     from bristlenose.utils import output_backup
 
@@ -218,20 +220,22 @@ def test_an_unfinished_re_analyse_keeps_the_report_and_the_retry_pays_only_for_t
     out = study.folder / "bristlenose-output"
     with study.serve() as client:
         study.run()
-        star = study.quote_ids(client)[0]
-        study.star(client, star)
+        old_star = study.quote_ids(client)[0]
+        study.star(client, old_star)
 
         study.run(clean=True, fail={"Interview 3.wav": CauseCategoryEnum.NETWORK})
-        assert "Your previous report is still here" in study.last_output
-        study.sessions(client, expect=3)
-        assert star in study.starred(client), "an unfinished Re-analyse lost a star"
-        assert output_backup.failed_path_for(out).is_dir()
+        assert "Your previous report is still here" not in study.last_output
+        study.sessions(client, expect=2)
+        assert old_star not in study.starred(client), "a fresh start kept the old curation"
+        new_star = study.quote_ids(client)[-1]
+        study.star(client, new_star)
 
         study.run()
         assert study.transcribed[2] == ["Interview 3.wav"], (
-            "the retry paid again for sessions the attempt had finished"
+            "Analyse paid again for sessions the fresh start had finished"
         )
         study.sessions(client, expect=3)
+        assert new_star in study.starred(client), "Analyse lost curation on the fresh report"
         study.assert_healthy()
     assert not output_backup.failed_path_for(out).exists()
     assert not output_backup.backup_path_for(out).exists()

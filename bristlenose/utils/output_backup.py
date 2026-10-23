@@ -65,13 +65,22 @@ an Application Support location would be a cross-device copy of a directory that
 can hold gigabytes of extracted audio, on the failure path, at the moment the
 disk is most likely to be full.
 
-A RE-ANALYSE THAT DOES NOT FINISH
----------------------------------
-"Successful" means every session analysed, not "some quotes": a Re-analyse that
-came back with 4 quotes against 353 used to discard the 353 and their curation
-(R108). It now puts the report back as a failed run does, and its tree is kept
-at `failed_path_for` — the paid work — until the next run without --clean
-finishes it (`resume_attempt`, R109) or a --clean sweeps it.
+A FRESH START REPLACES THE REPORT ONCE IT HAS A SESSION
+------------------------------------------------------
+Re-analyse is a deliberate fresh start (owner, 23 Oct 2026). Its analysis
+replaces the report as soon as it holds one analysed session, a session whose
+quotes are on disk (`holds_an_analysed_session`), even if other sessions
+failed: the rest is finished by an ordinary Analyse, like any partial run. Only
+a run that produced nothing puts the report back. Nothing of the old analysis
+is kept but what the researcher exported: `clips/` and `screens/` move into the
+new output under the old analysis's date (`carry_exports`). One rule, one
+place (`settle`), whether the run ended, raised, was stopped, stuck past the
+hosted backstop, or crashed and is settled by the next run.
+
+A 22 Oct design held the report back when any session failed, kept the attempt
+beside it, and let the next plain run swap the attempt in. That plain run then
+discarded the report, curation made on it since included, with no question
+asked. It is gone: no run without --clean replaces a report.
 """
 
 from __future__ import annotations
@@ -82,6 +91,7 @@ import glob
 import json
 import logging
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -99,13 +109,6 @@ _APPEND_ONLY = (
 #: Pipeline scratch, not part of the report. Dropped rather than stashed — see
 #: `stash()`.
 _SCRATCH = Path(".bristlenose") / "temp"
-
-#: In a kept attempt: how many bytes of each `_APPEND_ONLY` file the report's
-#: copy already holds. A restore appends only what follows, so an attempt put
-#: back a second time (`resume_attempt`, then another unfinished run) does not
-#: write its first run onto the report's history twice.
-_HISTORY_PUBLISHED = Path(".bristlenose") / "history-published.json"
-
 
 class RestoreOutcome(enum.Enum):
     """What a restore actually achieved. Four states, not two.
@@ -126,6 +129,12 @@ class RestoreOutcome(enum.Enum):
     #: The restore failed partway. `output_dir` may not exist at all, and both
     #: copies are in dot-directories Finder will not show. Loud, always.
     FAILED = "failed"
+    #: Not a restore: the run's analysis held a session, so it is the report
+    #: now, and the one set aside was discarded (`settle`).
+    REPLACED = "replaced"
+    #: As REPLACED, but an export folder would not move, so the report set aside
+    #: is kept, unspent, until the next run's `reclaim_stale` carries the rest.
+    CARRY_INCOMPLETE = "carry_incomplete"
 
     @property
     def report_is_back(self) -> bool:
@@ -159,7 +168,12 @@ def _clear_discarding(backup: Path) -> None:
 
 
 def failed_path_for(output_dir: Path) -> Path:
-    """Where a failed run's tree is kept, so a resume is a rename away."""
+    """Where a restore steps the run's tree while it copies the history across.
+
+    Deleted as soon as the history is across. A tree here was left by a restore
+    cut short, or by a build that kept failed attempts (22 Oct 2026): nothing
+    reads it, and `stash` and `reclaim_stale` clear it.
+    """
     return output_dir.parent / f".{output_dir.name}-failed"
 
 
@@ -220,9 +234,10 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
             )
             return None
 
-    # Last run's kept-failed tree: one run's tenancy. It existed so THIS run
-    # could have resumed from it, and this run has chosen not to.
-    shutil.rmtree(failed_path_for(output_dir), ignore_errors=True)
+    # A tree a cut-short restore left: nothing reads it. Its exports join the
+    # report about to be set aside, and settle with it.
+    if failed_path_for(output_dir).exists():
+        _drop_tree(failed_path_for(output_dir), exports_to=output_dir)
 
     scratch = output_dir / _SCRATCH
     if scratch.exists():
@@ -293,14 +308,13 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
     failed = failed_path_for(output_dir)
     moved_failed = False
     try:
-        # Step the failed tree aside rather than reading it into memory — the
+        # Step the run's tree aside rather than reading it into memory — the
         # log can be large, and a rename costs nothing.
         if output_dir.exists():
             # A previous restore may have died between its rename and its
             # cleanup, leaving this path occupied. `rename` onto a non-empty
             # directory is ENOTEMPTY, which would otherwise surface as a bare
-            # FAILED. Only then: with no output, a tree here is the attempt a
-            # put-back or `resume_attempt` was cut short over, kept to finish.
+            # FAILED.
             shutil.rmtree(failed, ignore_errors=True)
             output_dir.rename(failed)
             moved_failed = True
@@ -318,57 +332,37 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
 
     history_ok = True
     if failed.is_dir():
-        published = _read_published(failed)
+        # The run's tree: stepped aside above, or by a restore cut short
+        # between its renames, which left no output and this.
         for rel in _APPEND_ONLY:
-            history_ok = _append_onto(
-                failed / rel, output_dir / rel, skip=published.get(rel.name, 0),
-            ) and history_ok
-        if history_ok:
-            _write_published(failed)
+            history_ok = _append_onto(failed / rel, output_dir / rel) and history_ok
+        # The run produced nothing to keep (`settle`), so once its history is
+        # across its tree goes: there is no attempt to finish from.
+        _drop_tree(failed, exports_to=output_dir)
 
-    # THE FAILED TREE IS KEPT, not deleted. It holds the manifest, the
-    # `intermediate/` stage cache and any transcripts the run got as far as
-    # writing — after an hour of Whisper that is the expensive thing on disk,
-    # and the only thing that makes a retry cheaper than starting over. The
-    # next run without --clean finishes it (`resume_attempt`); a --clean
-    # sweeps it (`stash()`).
     logger.info("output_backup: restored %s from %s", output_dir, backup)
-    if moved_failed:
-        logger.info("output_backup: failed run's tree kept at %s", failed)
     return RestoreOutcome.RESTORED if history_ok else RestoreOutcome.RESTORED_WITHOUT_HISTORY
 
 
-def _read_published(tree: Path) -> dict[str, int]:
-    """How much of *tree*'s history a report already holds; {} when none."""
-    try:
-        raw = json.loads((tree / _HISTORY_PUBLISHED).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(raw, dict):
-        return {}
-    return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, int)}
+def _drop_tree(tree: Path, *, exports_to: Path) -> None:
+    """Delete a run's tree nothing will read. Said when something stays.
 
-
-def _write_published(tree: Path) -> None:
-    """Record that the report now holds all of *tree*'s history.
-
-    A failed write is said and then tolerated: the cost is the attempt's
-    earlier runs appearing twice in the report's history, not a lost report.
+    Exports go first: a researcher can export clips or screens from a fresh
+    analysis while it runs, into this tree, and an export is never deleted.
+    They move into *exports_to* under the run's own date (`carry_exports`).
+    If one will not move, the tree is kept for the next run to try again.
     """
-    sizes = {
-        rel.name: (tree / rel).stat().st_size
-        for rel in _APPEND_ONLY if (tree / rel).is_file()
-    }
-    if not sizes:
+    if not carry_exports(tree, exports_to):
+        logger.warning("output_backup: kept %s, which holds an export that would not "
+                       "move", tree)
         return
-    try:
-        (tree / _HISTORY_PUBLISHED).write_text(json.dumps(sizes), encoding="utf-8")
-    except OSError as exc:
-        logger.warning("output_backup: could not record %s's history as kept (%s)",
-                       tree, exc)
+    shutil.rmtree(tree, ignore_errors=True)
+    if tree.exists():
+        logger.warning("output_backup: could not fully delete %s; the next run removes it",
+                       tree)
 
 
-def _append_onto(src: Path, dest: Path, *, skip: int = 0) -> bool:
+def _append_onto(src: Path, dest: Path) -> bool:
     """Append `src`'s bytes to `dest`. False if the history was NOT preserved.
 
     `O_NOFOLLOW` + `0o600`, matching `run_lifecycle.append_event` and
@@ -384,8 +378,6 @@ def _append_onto(src: Path, dest: Path, *, skip: int = 0) -> bool:
     """
     if not src.is_file():
         return True  # Nothing to preserve is not a failure to preserve it.
-    if src.stat().st_size <= skip:
-        return True  # All of it is already there.
     start = dest.stat().st_size if dest.exists() else 0
     fd = None
     try:
@@ -394,7 +386,6 @@ def _append_onto(src: Path, dest: Path, *, skip: int = 0) -> bool:
         with open(fd, "wb", closefd=True) as fh_dest:
             fd = None  # now owned by the file object
             with src.open("rb") as fh_src:
-                fh_src.seek(skip)
                 shutil.copyfileobj(fh_src, fh_dest)
             fh_dest.flush()
             os.fsync(fh_dest.fileno())
@@ -416,66 +407,173 @@ def _append_onto(src: Path, dest: Path, *, skip: int = 0) -> bool:
     return True
 
 
-def resume_attempt(output_dir: Path) -> Path | None:
-    """Put a kept attempt back in place to be finished; set the report aside.
+def holds_an_analysed_session(output_dir: Path) -> bool:
+    """Has this run produced a session worth replacing a report with?
 
-    A Re-analyse that did not finish leaves the previous report in place and
-    its own tree at `failed_path_for` (`_restore`). The next run without
-    --clean finishes that attempt rather than the report, which is already
-    finished (R109): this swaps them, so the pipeline resumes from the
-    attempt's manifest and pays only for what is missing.
-
-    Returns where the report was set aside, for the caller to settle exactly as
-    it settles a `stash()`: discarded when the run finishes, put back when it
-    does not. None when no report was moved, whether or not the attempt was.
+    A session whose quote extraction is recorded done (the record the server
+    imports a session's quotes by, ``lens_readiness.quoted_in_manifest``) and
+    which has at least one quote on disk. A session recorded done with no
+    quotes (a silent recording) is not an analysis: an emptied or silent folder
+    used to replace a report with an empty one (R116). Read from disk, not from
+    the run's result, so the same answer comes back after a run that raised,
+    was stopped or was killed. Anything unreadable answers False, and the
+    report set aside comes back.
     """
-    failed = failed_path_for(output_dir)
-    if not failed.is_dir():
-        return None
-    if project_is_locked(output_dir):
-        logger.warning(
-            "output_backup: a live run owns %s — not resuming the attempt at %s",
-            output_dir, failed,
-        )
-        return None
-    backup = backup_path_for(output_dir)
-    _clear_discarding(backup)
-    if backup.exists():
-        # `reclaim_stale` declined it, so it may be the only copy of a report.
-        logger.warning(
-            "output_backup: %s exists and was not reclaimed — not resuming the "
-            "attempt at %s over it", backup, failed,
-        )
-        return None
-    if output_dir.exists():
-        scratch = output_dir / _SCRATCH
-        if scratch.exists():
-            shutil.rmtree(scratch, ignore_errors=True)
-        try:
-            output_dir.rename(backup)
-        except OSError as exc:
-            logger.warning(
-                "output_backup: could not set %s aside to resume the attempt (%s); "
-                "the run resumes the report instead", output_dir, exc,
-            )
-            return None
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        get_completed_session_ids,
+        load_manifest,
+    )
+
+    if not output_dir.is_dir():
+        return False
+    sids = get_completed_session_ids(load_manifest(output_dir), STAGE_QUOTE_EXTRACTION)
+    if not sids:
+        return False
+    quotes_file = output_dir / ".bristlenose" / "intermediate" / "extracted_quotes.json"
     try:
-        failed.rename(output_dir)
+        quotes = json.loads(quotes_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(quotes, list):
+        return False
+    return any(isinstance(q, dict) and q.get("session_id") in sids for q in quotes)
+
+
+#: Folders the researcher exported into the output, carried into a fresh
+#: start's output rather than discarded with the old analysis (owner, 23 Oct
+#: 2026). The clip export writes `clips/`, the screens export `screens/`.
+_EXPORT_FOLDERS = ("clips", "screens")
+
+#: A carried folder's name. DRAFT wording (copy-for-approval-2026-10-23.md,
+#: RE#13), English whatever the UI language, like the files inside it.
+_CARRIED_NAME = "{folder} (from the analysis of {day})"
+
+#: A folder an earlier fresh start carried: carried along again, as it is.
+_CARRIED = re.compile(
+    r"(?:" + "|".join(_EXPORT_FOLDERS) + r") \(from the analysis of [^)]+\)(?: \d+)?"
+)
+
+
+def _analysis_day(report: Path) -> str | None:
+    """The day the analysis in *report* was started: its first run's start.
+
+    The events log of an output folder begins with the run that made it (a
+    first analysis or a fresh start); later Analyse runs append. None when
+    nothing says, and the caller dates each folder by its own time instead.
+    The manifest's `created_at` is only the fallback: the pipeline makes a new
+    manifest on every run, so it dates the last Analyse, not the analysis.
+    """
+    from datetime import datetime
+
+    from bristlenose.utils.markdown import format_finder_day
+
+    events = report / ".bristlenose" / "pipeline-events.jsonl"
+    try:
+        with events.open(encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    started = json.loads(line).get("started_at")
+                except (ValueError, AttributeError):
+                    continue
+                if isinstance(started, str):
+                    # The events log writes "…Z", which `fromisoformat` reads
+                    # only from Python 3.11.
+                    return format_finder_day(
+                        datetime.fromisoformat(started.replace("Z", "+00:00")))
+    except (OSError, ValueError):
+        pass
+    from bristlenose.manifest import load_manifest
+
+    manifest = load_manifest(report)
+    if manifest is not None:
+        try:
+            return format_finder_day(
+                datetime.fromisoformat(manifest.created_at.replace("Z", "+00:00")))
+        except ValueError:
+            pass
+    return None
+
+
+def _free_name(parent: Path, name: str) -> str:
+    """*name*, or the first of "*name* 2", "*name* 3"… not taken in *parent*."""
+    candidate, n = name, 1
+    while (parent / candidate).exists():
+        n += 1
+        candidate = f"{name} {n}"
+    return candidate
+
+
+def carry_exports(report: Path, output_dir: Path) -> bool:
+    """Move the exports out of a replaced *report* into *output_dir*.
+
+    `clips/` and `screens/` take the old analysis's date; folders an earlier
+    fresh start carried move as they are. A name already taken gets " 2", " 3",
+    so nothing is written over. False when any folder could not be moved: the
+    caller must then keep *report*, never delete an export with it.
+    """
+    from datetime import datetime
+
+    from bristlenose.utils.markdown import format_finder_day
+
+    # Never raises: it runs inside the CLI's `finally`, and an escape there
+    # would replace the run's own failure with a traceback no log holds.
+    try:
+        entries = sorted(report.iterdir(), key=lambda e: (e.name in _EXPORT_FOLDERS, e.name))
     except OSError as exc:
-        logger.error("output_backup: could not move the attempt at %s into place (%s)",
-                     failed, exc)
-        if backup.exists():
-            try:
-                backup.rename(output_dir)
-            except OSError as exc2:
-                # The run goes ahead as a --clean would, the report set aside
-                # behind it and settled the same way.
-                logger.error("output_backup: and could not put %s back (%s)",
-                             output_dir, exc2)
-                return backup
-        return None
-    logger.info("output_backup: resuming the attempt kept at %s", failed)
-    return backup if backup.exists() else None
+        logger.warning("output_backup: could not list %s for exports (%s); it is kept "
+                       "until it can be", report, exc)
+        return False
+    day = _analysis_day(report)
+    moved_all = True
+    # Folders already carried go first, so each keeps the name it was given.
+    for entry in entries:
+        try:
+            if not entry.is_dir() or entry.is_symlink():
+                continue
+            if entry.name in _EXPORT_FOLDERS:
+                when = day or format_finder_day(datetime.fromtimestamp(entry.stat().st_mtime))
+                name = _CARRIED_NAME.format(folder=entry.name, day=when)
+            elif _CARRIED.fullmatch(entry.name):
+                name = entry.name
+            else:
+                continue
+            target = output_dir / _free_name(output_dir, name)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            entry.rename(target)
+        except OSError as exc:
+            logger.warning("output_backup: could not carry %s into %s (%s); the "
+                           "previous report is kept until it can be", entry, output_dir, exc)
+            moved_all = False
+            continue
+        logger.info("output_backup: carried %s to %s", entry, target)
+    return moved_all
+
+
+def settle(backup: Path | None, output_dir: Path, *, produced: bool = False) -> RestoreOutcome:
+    """Decide between the report set aside and the run in its place.
+
+    The run's analysis replaces the report once it holds a session
+    (`holds_an_analysed_session`, or *produced*: the caller saw quotes in the
+    run's result, which also covers a run that wrote no intermediates). The
+    exports are carried across and the report is discarded. Otherwise the
+    report is put back with the run's history (`restore`). Holds the exit
+    throughout, as `restore` does, so a hosted backstop never exits between
+    the carry and the discard.
+    """
+    if backup is None or not backup.exists():
+        return RestoreOutcome.NOTHING_TO_DO
+    from bristlenose.run_lifecycle import holding_exit
+
+    with holding_exit():
+        if not (produced or holds_an_analysed_session(output_dir)):
+            return _restore(backup, output_dir)
+        if not carry_exports(backup, output_dir):
+            # Kept, unspent: the next run's `reclaim_stale` settles it again and
+            # carries what is left. An export is never deleted with it.
+            return RestoreOutcome.CARRY_INCOMPLETE
+        discard(backup)
+    return RestoreOutcome.REPLACED
 
 
 def project_is_locked(output_dir: Path) -> bool:
@@ -495,7 +593,9 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
 
     A signalled death runs no cleanup, so the backup from that run is still on
     disk while the output directory holds whatever the dead run managed to
-    write. Restoring here is what makes the crash case survivable at all.
+    write. Settling it here is what makes the crash case survivable at all, and
+    by the rule the run would have applied (`settle`): a run killed after a
+    session landed is the report, one killed before is not.
 
     **It must decline while another run is live.** This runs well before
     `run_lifecycle` takes the concurrent-run lock, so nothing has yet checked
@@ -513,6 +613,7 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
     """
     backup = backup_path_for(output_dir)
     if not backup.exists():
+        _clear_leftover_attempt(output_dir)
         return RestoreOutcome.NOTHING_TO_DO
 
     if (backup / _SPENT_MARKER).exists():
@@ -533,8 +634,29 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
         )
         return RestoreOutcome.NOTHING_TO_DO
 
-    logger.warning("output_backup: recovering a previous report from %s", backup)
-    return restore(backup, output_dir)
+    outcome = settle(backup, output_dir)
+    if outcome is RestoreOutcome.REPLACED:
+        logger.warning("output_backup: %s holds a fresh analysis; deleted the previous "
+                       "report set aside at %s", output_dir, backup)
+    elif outcome is RestoreOutcome.CARRY_INCOMPLETE:
+        logger.warning("output_backup: %s holds a fresh analysis; the previous report at "
+                       "%s is kept until an export in it moves", output_dir, backup)
+    else:
+        logger.warning("output_backup: recovering a previous report from %s: %s",
+                       backup, outcome.value)
+    return outcome
+
+
+def _clear_leftover_attempt(output_dir: Path) -> None:
+    """Delete a tree at `failed_path_for` no run is using.
+
+    Left by a restore cut short, or kept by a build with the 22 Oct hold-back.
+    Nothing reads it, and it holds a copy of the participants' data.
+    """
+    failed = failed_path_for(output_dir)
+    if failed.exists() and not project_is_locked(output_dir):
+        logger.warning("output_backup: deleting %s, a run's tree nothing reads", failed)
+        _drop_tree(failed, exports_to=output_dir)
 
 
 def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:

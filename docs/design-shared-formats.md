@@ -102,6 +102,7 @@ not a new invention, which is most of why it is cheap.
 |---|---|---|---|---|---|
 | `duration_human` | elapsed span | `format_duration_human` (`utils/timecodes.py`) | `formatDurationHuman` | `DurationFormat.human` | **aligned**, pinned |
 | `finder_date` | Finder-style relative timestamp | `format_finder_date` | `formatFinderDate` | `SessionsFinderDate.format` | **aligned by pair**, one deliberate fork |
+| `finder_day` | the day in a name that outlives it (a Re-analyse's carried export folder, `clips (from the analysis of 3 Oct 2026)`) | `format_finder_day` (`utils/markdown.py`) | — | — | **Python only** (23 Oct 2026). `finder_date`'s absolute branch without the time: no "Today", which would go stale in a folder name, and no colon, which Finder shows as a slash. Read back only loosely: `output_backup._CARRIED` matches any text in the parentheses |
 | `timecode` | position in a recording | `format_timecode` | `formatTimecode` | — | **aligned**, pinned · also parsed |
 | `finder_filename` | middle-ellipsis truncation | `format_finder_filename` | `formatFinderFilename` | — | **aligned**, pinned |
 | `markdown_speech` | speech escaped for a Markdown transcript | `escape_markdown_speech` (`.md` export) | `escapeMarkdownSpeech` (transcript copy) | — | **aligned**, pinned |

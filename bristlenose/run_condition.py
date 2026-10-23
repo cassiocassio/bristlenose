@@ -124,22 +124,6 @@ def summary_is_degraded(summary: PipelineSummary | None) -> bool:
     return False
 
 
-def summary_left_sessions_unanalysed(summary: PipelineSummary | None) -> bool:
-    """Did any session fail to be transcribed or analysed?
-
-    ``summary_is_degraded`` less the ingest bucket: a file declined at ingest (a
-    stray PDF, a duplicate) is not an analysis left unfinished, and counting it
-    would hold back nearly every Re-analyse. Decides whether a ``--clean`` run
-    replaces the previous report (``cli.run``, R108).
-    """
-    if summary is None:
-        return False
-    return any(
-        bucket is not None and bucket.failed
-        for bucket in (summary.transcripts, summary.topics, summary.quotes, summary.themes)
-    )
-
-
 _LIFECYCLE_EVENTS = frozenset(
     e.value for e in EventTypeEnum if e != EventTypeEnum.RUN_PROGRESS
 )

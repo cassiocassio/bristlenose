@@ -273,12 +273,14 @@ Skip audio transcription (use existing transcripts).
 Path to a \fIbristlenose.toml\fR config file.
 .TP
 .BR \-\-clean
-Start afresh. The previous output is moved to
-.I .bristlenose\-output\-previous/
-and removed once every session has been analysed. If the run fails, or any
-session fails, it is put back and the attempt is kept at
-.IR .bristlenose\-output\-failed/ ;
-the next run without \fB\-\-clean\fR finishes it.
+Start afresh. The previous report is replaced once the fresh analysis has
+produced a session. Until then it is kept at
+.IR .bristlenose\-output\-previous/ ,
+and it is put back if the run produces nothing. Exported
+.I clips/
+and
+.I screens/
+folders move into the new output, named with the previous analysis's date.
 .TP
 .BR \-\-no\-serve
 Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR

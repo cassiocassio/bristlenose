@@ -14,7 +14,8 @@ trued-against: HEAD@main (6562c7be) on 2026-10-14
 
 ## Changelog
 
-- _2026-10-22_ — decision #13 (R108, R109): a Re-analyse replaces the report only when every session was analysed. One that comes back with sessions failed puts the previous report back as a failed run does; the attempt is kept, and the next **Analyse** finishes it instead of re-running the finished report. §3's Re-analyse note and the row-42 caveat updated. Anchors: `resume_attempt` (`utils/output_backup.py`), `summary_left_sessions_unanalysed` (`run_condition.py`), `tests/test_cli_degraded_reanalyse.py`.
+- _2026-10-23_ — decision 1b (owner): Re-analyse is a deliberate fresh start. A `--clean` run replaces the report once it holds an analysed session, other sessions failed or not, and **Analyse** finishes the rest as for any partial run; a run that produced nothing puts the report back, and its tree is deleted, not kept. The 22 Oct hold-back is removed: nothing is kept for a later run to swap in, so no plain run replaces a report. Exported `clips/` and `screens/` move into the new output under the old analysis's date. §3's Re-analyse note and the row-42 caveat updated. Anchors: `settle`, `holds_an_analysed_session`, `carry_exports` (`utils/output_backup.py`), `tests/test_cli_reanalyse_fresh_start.py`.
+- _2026-10-22_ — _(superseded 23 Oct 2026, above)_ decision #13 (R108, R109): a Re-analyse replaces the report only when every session was analysed. One that comes back with sessions failed puts the previous report back as a failed run does; the attempt is kept, and the next **Analyse** finishes it instead of re-running the finished report. §3's Re-analyse note and the row-42 caveat updated. Anchors: `resume_attempt` (`utils/output_backup.py`), `summary_left_sessions_unanalysed` (`run_condition.py`), `tests/test_cli_degraded_reanalyse.py`.
 - _2026-10-21_ — decision #1: **Re-analyse…** asks when the curation count can't be read. `CurationCountsReader.read` returns nil for a database it could not read — unopenable, not a database, a torn page, an I/O error — where it used to return zero, so `--clean` ran unasked; the sheet then shows one sentence in place of the counted list. No database file, or an older schema missing a table, is still a real zero and runs unasked. §3.3 and §4 updated. Anchors: `ReAnalyseDecision` (`ReAnalyseConfirmSheet.swift`), `desktop.chrome.reAnalyseLossUnknown`, `ReAnalyseDecisionTests`, `ProjectDBReadersTests` (`curationCountsAreNil…`).
 - _2026-10-21_ — decision #111 ("match run"): the Mac's count of what a study holds (`UnanalysedState.ingestableFileCount`, and `newFiles` behind the `+N unanalysed` delta) walks the folder with `run`'s file selection, ported to Swift as `ScanSelection` — three levels deep, the same skips, refusals and extensions, list and stat only. A study in per-participant folders now reads "N files to analyse" with **Analyse**, not "Drag Interviews Here"; a recording added to a participant folder rescans; `.txt` notes, which `run` never reads, are no longer listed as unanalysed. Below the top level a folder holding an ingested file counts as analysed whole, because `source_files` records one file per session and the rest of a session (a Zoom folder's audio, a Teams `.vtt`) would otherwise read as unanalysed forever; a file added to an analysed participant folder is therefore not reported (known gap). Anti-drift: `tests/fixtures/scan-selection-contract.json`, asserted by `tests/test_scan_selection_contract.py` (Python, `iter_scanned_files`) and `ScanSelectionContractTests` (Swift). Closes R100-7's count half.
 - _2026-10-21_ — decision #82 (R100): the never-run status page's interview check walks the folder with `run`'s own file selection (`s01_ingest.iter_scanned_files`, which `discover_files` consumes), so a study in per-participant subfolders reads "Not analysed yet.", not "No interviews to analyse yet". It stops at the first file and never opens one. The Mac's `.idle` pane still counts the top level only (R100-7, recorded). Anchors: `status_page._holds_interviews`, `tests/test_server_status_page.py`.
@@ -186,11 +187,12 @@ the import would still report success. Any change that can invalidate a stage
 cache must be read against that sentence. Two live instances since 13 Oct 2026,
 both recorded in [design-progressive-lenses.md](design-progressive-lenses.md): a star on a session whose transcript changes after the
 progressive chain analysed it (Phase 3, Known), and curation made *during* a
-progressive Re-analyse that then fails — the failed tree, database included, is set
-aside; since 22 Oct 2026 the next Analyse finishes it and it becomes the report,
-and only another Re-analyse clears it (inferred from `utils/output_backup.py`,
-not measured; [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md)
-row 42, open).
+progressive Re-analyse that then fails. Since 23 Oct 2026 a run that analysed a
+session is the report, so curation on its quotes stays; only an edit on a session
+that was readable but not yet analysed, in a run that then analysed nothing, goes
+with the run's tree (inferred from `utils/output_backup.py`, not measured;
+[design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) row 42,
+open).
 
 **For a file-subset project the honest offer is Re-analyse.** The toast that
 used to say "isn't supported yet" is gone (§4.2), so nothing misleads any more
@@ -358,12 +360,17 @@ _Since 13 Oct 2026 this is a progressive first analysis_ ([design-progressive-le
 arrive one by one where the status page used to cover the run, the completion
 reload is skipped, and a reader on a lens that becomes withheld is moved to the
 Sessions root. If the run fails, the stash is restored and the server refetches;
-the Mac does nothing further (same item). _Since 22 Oct 2026_ the same happens when
-the run completes with any session failed (transcripts, topics, quotes, themes):
-the previous report stays and the row reads **Partial run**. The attempt is kept
-at `.bristlenose-output-failed`, and the row's **Analyse** (retry) finishes it —
-paying only for the sessions still missing — and replaces the report once every
-session is analysed; another Re-analyse sweeps it (R108, R109).
+the Mac does nothing further (same item). _Since 23 Oct 2026_ (decision 1b) that
+is only for a run that produced nothing, meaning refused, failed, stopped or
+crashed before any session's quotes were in (`output_backup.settle`). A run that
+analysed one session replaces the report even with other sessions failed. Its
+row reads as that run ended (**Partial completion** on a `run_completed` with
+failures, **Run failed** or **Stopped** otherwise), and **Analyse** finishes the
+rest from its manifest, paying only for what is missing. The Mac half of offering
+Analyse on such a row is RE#R3's. A crash is settled by the same rule at the next
+run or server start. The researcher's exported `clips/` and `screens/` move into
+the new output as `clips (from the analysis of <date>)` (draft name), and folders
+earlier fresh starts carried move along unchanged.
 
 ---
 

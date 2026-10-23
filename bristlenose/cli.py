@@ -1297,7 +1297,7 @@ def run(
     ] = False,
     clean: Annotated[
         bool,
-        typer.Option("--clean", help="Start afresh. The previous output is kept aside and removed once every session is analysed."),
+        typer.Option("--clean", help="Start afresh. The previous report is replaced once the fresh analysis has produced a session."),
     ] = False,
     dev: Annotated[
         bool,
@@ -1351,25 +1351,12 @@ def run(
         )
         raise typer.Exit(1)
 
-    # A Re-analyse that did not finish kept its attempt beside the report it
-    # left in place. A run without --clean finishes the attempt, not the report
-    # (R109): it is swapped in just before the pipeline, past every refusal, so
-    # a run turned away in preflight leaves both where they were.
-    from bristlenose.manifest import has_manifest
-
-    _attempt = output_backup.failed_path_for(output_dir)
-    resume_kept_attempt = (
-        not clean
-        and _attempt.is_dir()
-        # Either resumes, or has nothing to lose; a report with no manifest
-        # would meet the refusal below with the report already set aside.
-        and (has_manifest(_attempt) or _has_no_deliverable(_attempt))
-    )
-
     # Fail early if output exists and --clean not given — but allow resume
     # when a pipeline manifest exists (Phase 1c/1d crash recovery).
     output_exists = output_dir.exists() and any(output_dir.iterdir())
     if output_exists and not clean:
+        from bristlenose.manifest import has_manifest
+
         # The file, not its contents: a manifest that will not read still says
         # a run was here, and reads as no record, so the run recomputes rather
         # than refusing the folder (R111).
@@ -1377,12 +1364,9 @@ def run(
             # Print a one-line resume summary from the manifest (Phase 1e)
             from bristlenose.status import format_resume_summary, get_project_status
 
-            _resumed = _attempt if resume_kept_attempt else output_dir
-            _status = get_project_status(_resumed)
+            _status = get_project_status(output_dir)
             if _status is not None:
                 console.print(f"[dim]{format_resume_summary(_status)}[/dim]")
-            elif not has_manifest(_resumed):
-                console.print("[dim]Resuming from previous run...[/dim]")
             # Otherwise the manifest is there and will not read: nothing is
             # resumed, so nothing is said here; the run sets the file aside and
             # says what that costs (decision #18 — this used to read "Resuming
@@ -1553,21 +1537,13 @@ def run(
                 f"\n[dim]Could not set {output_dir} aside — "
                 f"this run will write over it[/dim]"
             )
-    elif resume_kept_attempt:
-        from bristlenose.logging import release_log_file
-
-        release_log_file()
-        # The report goes aside as a --clean's would, and is settled the same
-        # way below: replaced only if this run finishes.
-        output_stash = output_backup.resume_attempt(output_dir)
-        setup_logging(output_dir=output_dir, verbose=verbose)
     if output_stash is not None:
-        from bristlenose.run_lifecycle import set_backstop_put_back
+        from bristlenose.run_lifecycle import set_backstop_settle
 
         _set_aside = output_stash
         # A hosted Stop whose unwind sticks is ended by a backstop that would
         # otherwise exit with the report still set aside (#29).
-        set_backstop_put_back(lambda: output_backup.restore(_set_aside, output_dir))
+        set_backstop_settle(lambda: output_backup.settle(_set_aside, output_dir))
 
     from bristlenose.pipeline import Pipeline
 
@@ -1581,8 +1557,6 @@ def run(
     # which is the single most likely way a run ends early — has to reach the same
     # decision. One place to get right rather than four.
     run_produced_a_report = False
-    run_left_sessions_unanalysed = False
-    kept_for_retry = False
     try:
         with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
             pipeline.set_progress_sink(_run_handle.progress)
@@ -1601,14 +1575,6 @@ def run(
         # previous report and then told the researcher nothing was found —
         # the original incident, living inside its own fix.
         run_produced_a_report = getattr(result, "total_quotes", 0) > 0
-        # And a report is not a replacement while sessions are missing from it:
-        # a Re-analyse with 4 quotes back against 353 discarded the 353 and
-        # their curation (R108).
-        from bristlenose.run_condition import summary_left_sessions_unanalysed
-
-        run_left_sessions_unanalysed = summary_left_sessions_unanalysed(
-            getattr(result, "summary", None)
-        )
     except ConcurrentRunError as exc:
         # NOT a restore case, and the only one: another process owns this output
         # directory and is writing to it right now. Putting our stash back would
@@ -1624,62 +1590,64 @@ def run(
         _print_pipeline_failure(exc.cause, input_dir, settings)
         raise typer.Exit(1) from exc
     finally:
-        from bristlenose.run_lifecycle import holding_exit, set_backstop_put_back
+        from bristlenose.run_lifecycle import holding_exit, set_backstop_settle
 
-        # Only a run that finished replaces a report it set aside. One that
-        # set nothing aside (a first analysis, a resume) keeps what it made.
-        unfinished = output_stash is not None and run_left_sessions_unanalysed
-        if run_produced_a_report and not unfinished:
-            with holding_exit():
-                # Before the discard: a backstop must not put back a report
-                # this run has replaced.
-                set_backstop_put_back(None)
-            # Only now is the old report spent.
-            output_backup.discard(output_stash)
-        else:
-            # Held from the log release to the outcome line: a hosted
-            # backstop exiting in between loses the restore or what it says.
-            with holding_exit():
-                set_backstop_put_back(None)
-                if output_stash is not None:
-                    # Windows will not rename a folder with an open file in it, and
-                    # the pipeline's log file is open inside output_dir.
-                    from bristlenose.logging import release_log_file
+        # A fresh start replaces the report it set aside once it holds an
+        # analysed session, even with other sessions failed: the rest is an
+        # ordinary Analyse away (owner, 23 Oct 2026). One that produced nothing
+        # puts it back. `settle` reads that from disk, so a run that raised or
+        # was stopped after a session landed is decided the same way. Held from
+        # the log release to the outcome line: a hosted backstop exiting in
+        # between loses the settle or what it says.
+        with holding_exit():
+            set_backstop_settle(None)
+            if output_stash is not None:
+                # Windows will not rename a folder with an open file in it, and
+                # the pipeline's log file is open inside output_dir.
+                from bristlenose.logging import release_log_file
 
-                    release_log_file()
-                outcome = output_backup.restore(output_stash, output_dir)
-                if output_stash is not None:
-                    # Re-attach before saying anything: the released handler — or,
-                    # where renaming an open file works, one still pointing at the
-                    # tree `restore` just moved away — would put every line from
-                    # here, including the one a post-mortem looks for, nowhere useful.
-                    setup_logging(output_dir=output_dir, verbose=verbose)
-                if outcome is output_backup.RestoreOutcome.RESTORED and run_produced_a_report:
-                    # Said after the summary, below: the run did finish.
-                    kept_for_retry = True
-                elif outcome is output_backup.RestoreOutcome.RESTORED:
-                    _say(
-                        MessageKind.INFO,
-                        "Your previous report is still here — this run changed nothing.",
-                        indent="  ",
-                    )
-                elif outcome is output_backup.RestoreOutcome.RESTORED_WITHOUT_HISTORY:
-                    # The events tail is the OLD run_completed, so the project will
-                    # read as having succeeded. Say so rather than let the UI lie.
-                    _say(
-                        MessageKind.WARNING,
-                        "Your previous report is back, but this run's history could "
-                        "not be preserved — the project may still show as completed.",
-                        indent="  ",
-                    )
-                elif outcome is output_backup.RestoreOutcome.FAILED:
-                    _say(
-                        MessageKind.ERROR,
-                        f"Could not put your previous report back. It is safe at "
-                        f"{output_backup.backup_path_for(output_dir)} — the next "
-                        f"run will recover it.",
-                        indent="  ",
-                    )
+                release_log_file()
+            outcome = output_backup.settle(
+                output_stash, output_dir, produced=run_produced_a_report,
+            )
+            if output_stash is not None:
+                # Re-attach before saying anything: the released handler — or,
+                # where renaming an open file works, one still pointing at the
+                # tree `restore` just moved away — would put every line from
+                # here, including the one a post-mortem looks for, nowhere useful.
+                setup_logging(output_dir=output_dir, verbose=verbose)
+            if outcome is output_backup.RestoreOutcome.RESTORED:
+                _say(
+                    MessageKind.INFO,
+                    "Your previous report is still here — this run changed nothing.",
+                    indent="  ",
+                )
+            elif outcome is output_backup.RestoreOutcome.RESTORED_WITHOUT_HISTORY:
+                # The events tail is the OLD run_completed, so the project will
+                # read as having succeeded. Say so rather than let the UI lie.
+                _say(
+                    MessageKind.WARNING,
+                    "Your previous report is back, but this run's history could "
+                    "not be preserved — the project may still show as completed.",
+                    indent="  ",
+                )
+            elif outcome is output_backup.RestoreOutcome.CARRY_INCOMPLETE:
+                # DRAFT wording (copy-for-approval-2026-10-23.md, RE#13).
+                _say(
+                    MessageKind.WARNING,
+                    f"An exported folder couldn't be moved into the new report, so the "
+                    f"previous report is kept at {output_backup.backup_path_for(output_dir)} "
+                    f"until the next run moves it.",
+                    indent="  ",
+                )
+            elif outcome is output_backup.RestoreOutcome.FAILED:
+                _say(
+                    MessageKind.ERROR,
+                    f"Could not put your previous report back. It is safe at "
+                    f"{output_backup.backup_path_for(output_dir)} — the next "
+                    f"run will recover it.",
+                    indent="  ",
+                )
         output_stash = None
 
     # Legacy path: pipeline ran cleanly but produced zero usable quotes
@@ -1728,25 +1696,14 @@ def run(
     # `--no-serve` is the desktop sidecar's escape hatch: pipeline runs, summary
     # prints, then exit cleanly without binding a server port. The desktop app
     # manages its own serve lifecycle through ServeManager. Hidden from --help.
-    def _say_if_kept() -> None:
-        if kept_for_retry:
-            _say(
-                MessageKind.WARNING,
-                "Your previous report is still here, because some sessions failed. "
-                "Run again without --clean to finish this analysis; what worked is kept.",
-                indent="  ",
-            )
-
     if no_serve:
         _print_pipeline_summary(result)
-        _say_if_kept()
         return
 
     try:
         port = _find_open_port()
     except RuntimeError:
         _print_pipeline_summary(result)
-        _say_if_kept()
         _say(MessageKind.WARNING, "No available port (8150–8159)", indent="  ")
         return
 
@@ -1754,7 +1711,6 @@ def run(
     if port != 8150:
         console.print(f"  [dim]Port 8150 in use, trying {port}… ok[/dim]")
     _print_pipeline_summary(result, serve_url=serve_url)
-    _say_if_kept()
     if dev:
         console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
     console.print("  [dim]Press Ctrl-C to stop the server[/dim]")
@@ -2514,7 +2470,7 @@ def status(
 
 
 def _report_stashed_output(output_dir: Path) -> None:
-    """Name any stashed or kept-failed tree sitting beside the output.
+    """Name any stashed or failed-run tree sitting beside the output.
 
     Both are dot-prefixed so Bristlenose cannot re-ingest a stashed report as
     interview material — which also means Finder never shows them. They hold a
@@ -2531,17 +2487,18 @@ def _report_stashed_output(output_dir: Path) -> None:
         # it may be the only copy of the report, so no delete hint for it.
         if output_backup.project_is_locked(output_dir):
             note = "your previous report, kept while a run is in flight"
+        elif output_backup.holds_an_analysed_session(output_dir):
+            # A Re-analyse that analysed a session and was then cut short: by
+            # the rule it is the report now (`output_backup.settle`).
+            note = "your previous report, replaced by a fresh analysis; the next run deletes it"
         else:
             note = "your previous report; the next run puts it back"
         _say(MessageKind.INFO, f"{backup.name} — {note}")
     failed = output_backup.failed_path_for(output_dir)
     if failed.exists():
-        # An unfinished Re-analyse, beside the report it left in place (R109).
-        _say(
-            MessageKind.INFO,
-            f"{failed.name} — an unfinished Re-analyse; the next run without --clean "
-            "finishes it, --clean discards it",
-        )
+        # Left by a put-back cut short, or kept by a build with the 22 Oct
+        # hold-back. Nothing reads it.
+        _say(MessageKind.INFO, f"{failed.name} — a failed run's work; the next run deletes it")
         console.print(f"    Delete with: [bold]rm -rf {failed}[/bold]")
 
 
@@ -3420,8 +3377,8 @@ def _help_commands() -> None:
     console.print("  -l, --llm               claude | chatgpt | azure | gemini | local")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
-    console.print("  --clean                 Start afresh. The previous output is kept aside")
-    console.print("                          and removed once every session is analysed.")
+    console.print("  --clean                 Start afresh. The previous report is replaced once")
+    console.print("                          the fresh analysis has produced a session.")
     console.print("  -v, --verbose           Verbose logging")
     console.print()
     console.print("[bold]bristlenose transcribe[/bold] <input-dir> \\[options]")

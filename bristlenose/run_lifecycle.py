@@ -103,11 +103,12 @@ _hosted_backstop: Callable[[int], None] | None = None
 #: set aside until the next run. Bounded, so a stuck restore cannot hold it.
 _exit_hold = threading.RLock()  # re-entered: the CLI holds it around restore
 _EXIT_HOLD_TIMEOUT_S = 30.0
-#: The put-back the backstop runs before it exits: set by the CLI once it has
-#: set a report aside, cleared (under the exit hold) once the CLI has settled
-#: it. A backstop firing while the unwind is stuck short of the CLI's own
-#: put-back used to exit with the report still set aside (#29).
-_backstop_put_back: Callable[[], object] | None = None
+#: What the backstop runs before it exits: set by the CLI once it has set a
+#: report aside, cleared (under the exit hold) once the CLI has settled it.
+#: ``output_backup.settle``, so the stuck Stop is decided as the CLI would have
+#: decided it. A backstop firing while the unwind was stuck short of the CLI's
+#: own settle used to exit with the report still set aside (#29).
+_backstop_settle: Callable[[], object] | None = None
 
 
 @contextmanager
@@ -117,28 +118,28 @@ def holding_exit() -> Iterator[None]:
         yield
 
 
-def set_backstop_put_back(put_back: Callable[[], object] | None) -> None:
-    """What the hosted backstop puts back before it exits; None once settled.
+def set_backstop_settle(settle: Callable[[], object] | None) -> None:
+    """What the hosted backstop settles before it exits; None once settled.
 
-    Clear it holding the exit (``holding_exit``) before discarding or putting
-    back, so a backstop never puts back a report the run has replaced.
+    Clear it holding the exit (``holding_exit``) before the CLI settles, so the
+    backstop never settles a report a second time.
     """
-    global _backstop_put_back
-    _backstop_put_back = put_back
+    global _backstop_settle
+    _backstop_settle = settle
 
 
-def _run_backstop_put_back() -> None:
-    """Called by the backstop holding the exit: the CLI cannot be mid put-back."""
-    global _backstop_put_back
-    put_back, _backstop_put_back = _backstop_put_back, None
-    if put_back is None:
+def _run_backstop_settle() -> None:
+    """Called by the backstop holding the exit: the CLI cannot be mid settle."""
+    global _backstop_settle
+    settle, _backstop_settle = _backstop_settle, None
+    if settle is None:
         return
     try:
-        outcome = put_back()
+        outcome = settle()
     except Exception:  # noqa: BLE001 — said; the next run reclaims the report
-        log.exception("hosted stop backstop could not put the previous report back")
+        log.exception("hosted stop backstop could not settle the previous report")
         return
-    log.warning("hosted stop backstop: putting the previous report back: %s",
+    log.warning("hosted stop backstop: settling the previous report: %s",
                 getattr(outcome, "value", outcome))
 
 
@@ -165,7 +166,7 @@ def _arm_hosted_backstop(signum: int) -> None:
                 log.warning("hosted stop backstop: a restore held the exit for %g s; "
                             "exiting anyway", _EXIT_HOLD_TIMEOUT_S)
             else:
-                _run_backstop_put_back()
+                _run_backstop_settle()
             try:
                 os._exit(128 + signum)
             finally:  # only reached where _exit is stubbed (tests)

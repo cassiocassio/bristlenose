@@ -155,18 +155,35 @@ class TestStatusReportsTheStash:
         assert "in flight" in text
         assert "rm -rf" not in text
 
-    def test_a_failed_tree_says_which_run_finishes_it(
+    def test_a_failed_tree_says_the_next_run_deletes_it(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
     ) -> None:
-        """``.bristlenose-output-failed/`` is an unfinished Re-analyse: the next
-        run without --clean finishes it, a --clean sweeps it (R109)."""
+        """``.bristlenose-output-failed/`` is a failed run's tree nothing reads
+        (left by a cut put-back, or a build with the 22 Oct hold-back)."""
         monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
         out = tmp_path / "bristlenose-output"
         output_backup.failed_path_for(out).mkdir()
         cli._report_stashed_output(out)
         text = " ".join(capsys.readouterr().out.split())
-        assert "the next run without --clean finishes it" in text
-        assert "--clean discards it" in text
+        assert "the next run deletes it" in text
+        assert "rm -rf" in text
+
+    def test_a_backup_replaced_by_a_fresh_analysis_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
+    ) -> None:
+        """A Re-analyse cut short after a session landed: the next run deletes
+        the backup rather than putting it back (`output_backup.settle`)."""
+        from tests.test_output_backup import _land_a_session
+
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
+        out = tmp_path / "bristlenose-output"
+        output_backup.backup_path_for(out).mkdir()
+        out.mkdir()
+        _land_a_session(out)
+        cli._report_stashed_output(out)
+        text = " ".join(capsys.readouterr().out.split())
+        assert "replaced by a fresh analysis" in text
+        assert "puts it back" not in text
 
 
 class TestAnalyzeProjectName:

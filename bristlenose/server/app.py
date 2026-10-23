@@ -131,6 +131,16 @@ def create_app(
             logging.getLogger(__name__).warning(
                 "put back the report a crashed run had set aside: %s", reclaimed.value,
             )
+        elif reclaimed is RestoreOutcome.REPLACED:
+            logging.getLogger(__name__).warning(
+                "a crashed Re-analyse had analysed a session, so its analysis is the "
+                "report and the one it set aside is deleted",
+            )
+        elif reclaimed is RestoreOutcome.CARRY_INCOMPLETE:
+            logging.getLogger(__name__).warning(
+                "a crashed Re-analyse had analysed a session, so its analysis is the "
+                "report; the one it set aside is kept until an exported folder in it moves",
+            )
         elif reclaimed is RestoreOutcome.FAILED:
             from bristlenose.utils.output_backup import backup_path_for
 

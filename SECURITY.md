@@ -72,7 +72,10 @@ While a stash exists it holds a full copy of the output directory, **including `
 
 ```sh
 rm -rf bristlenose-output .bristlenose-output-previous .bristlenose-output-failed .bristlenose
+find . -maxdepth 1 -name '.bristlenose-output-*' -exec rm -rf {} +
 ```
+
+The second line removes what a delete or a put-back cut short can leave beside them (`.bristlenose-output-previous-discarding-…`, `.bristlenose-output-failed-…`); `bristlenose status` names any it finds. It is a separate line because zsh, the macOS shell, refuses a whole command when a wildcard matches nothing.
 
 `bristlenose status` reports either directory when it finds one. They are dot-prefixed so Bristlenose can never re-ingest a stashed report as interview material — which also means Finder will not show them to you.
 

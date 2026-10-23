@@ -1350,6 +1350,12 @@ def run(
             f"recovered. Move it somewhere safe, then re-run.",
         )
         raise typer.Exit(1)
+    if _reclaim is output_backup.RestoreOutcome.CARRY_INCOMPLETE:
+        _say_carry_incomplete(output_dir)
+        if clean:
+            # The stash below would refuse over the unspent backup, and the run
+            # would quietly resume the fresh analysis instead of starting afresh.
+            raise typer.Exit(1)
 
     # Fail early if output exists and --clean not given — but allow resume
     # when a pipeline manifest exists (Phase 1c/1d crash recovery).
@@ -1632,14 +1638,7 @@ def run(
                     indent="  ",
                 )
             elif outcome is output_backup.RestoreOutcome.CARRY_INCOMPLETE:
-                # DRAFT wording (copy-for-approval-2026-10-23.md, RE#13).
-                _say(
-                    MessageKind.WARNING,
-                    f"An exported folder couldn't be moved into the new report, so the "
-                    f"previous report is kept at {output_backup.backup_path_for(output_dir)} "
-                    f"until the next run moves it.",
-                    indent="  ",
-                )
+                _say_carry_incomplete(output_dir, indent="  ")
             elif outcome is output_backup.RestoreOutcome.FAILED:
                 _say(
                     MessageKind.ERROR,
@@ -2469,6 +2468,22 @@ def status(
     _report_stashed_output(output_dir)
 
 
+def _say_carry_incomplete(output_dir: Path, *, indent: str = "") -> None:
+    """A fresh analysis replaced the report, but an export in it would not move.
+
+    DRAFT wording (copy-for-approval-2026-10-23.md, RE#13).
+    """
+    from bristlenose.utils import output_backup
+
+    _say(
+        MessageKind.WARNING,
+        f"An exported folder couldn't be moved into the new report, so the "
+        f"previous report is kept at {output_backup.backup_path_for(output_dir)} "
+        f"until the next run moves it.",
+        indent=indent,
+    )
+
+
 def _report_stashed_output(output_dir: Path) -> None:
     """Name any stashed or failed-run tree sitting beside the output.
 
@@ -2487,19 +2502,22 @@ def _report_stashed_output(output_dir: Path) -> None:
         # it may be the only copy of the report, so no delete hint for it.
         if output_backup.project_is_locked(output_dir):
             note = "your previous report, kept while a run is in flight"
-        elif output_backup.holds_an_analysed_session(output_dir):
+        elif output_backup.backup_is_replaced(output_dir):
             # A Re-analyse that analysed a session and was then cut short: by
             # the rule it is the report now (`output_backup.settle`).
             note = "your previous report, replaced by a fresh analysis; the next run deletes it"
         else:
             note = "your previous report; the next run puts it back"
         _say(MessageKind.INFO, f"{backup.name} — {note}")
-    failed = output_backup.failed_path_for(output_dir)
-    if failed.exists():
-        # Left by a put-back cut short, or kept by a build with the 22 Oct
-        # hold-back. Nothing reads it.
-        _say(MessageKind.INFO, f"{failed.name} — a failed run's work; the next run deletes it")
-        console.print(f"    Delete with: [bold]rm -rf {failed}[/bold]")
+    for leftover in output_backup.leftovers_for(output_dir):
+        # Left by a put-back or a delete cut short, or kept by a build with the
+        # 22 Oct hold-back. Nothing reads them. DRAFT wording (RE#13).
+        if "-discarding" in leftover.name:
+            note = "a replaced report, partly deleted; the next run deletes it"
+        else:
+            note = "a failed run's work; the next run deletes it"
+        _say(MessageKind.INFO, f"{leftover.name} — {note}")
+        console.print(f"    Delete with: [bold]rm -rf {leftover}[/bold]")
 
 
 def _resolve_output_dir(project_dir: Path) -> Path | None:

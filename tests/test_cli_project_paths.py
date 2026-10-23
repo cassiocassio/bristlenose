@@ -185,6 +185,32 @@ class TestStatusReportsTheStash:
         assert "replaced by a fresh analysis" in text
         assert "puts it back" not in text
 
+    def test_a_backup_marked_replaced_says_so_without_a_session_on_disk(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
+    ) -> None:
+        """A run with no intermediates replaced it, then an export would not
+        move: the marker, not the disk, is what says it (`backup_is_replaced`)."""
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
+        out = tmp_path / "bristlenose-output"
+        backup = output_backup.backup_path_for(out)
+        backup.mkdir()
+        (backup / ".bristlenose-backup-replaced").touch()
+        out.mkdir()
+        cli._report_stashed_output(out)
+        text = " ".join(capsys.readouterr().out.split())
+        assert "replaced by a fresh analysis" in text
+
+    def test_a_delete_cut_short_is_named(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
+    ) -> None:
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
+        out = tmp_path / "bristlenose-output"
+        (tmp_path / ".bristlenose-output-previous-discarding-42").mkdir()
+        cli._report_stashed_output(out)
+        text = " ".join(capsys.readouterr().out.split())
+        assert ".bristlenose-output-previous-discarding-42 — a replaced report" in text
+        assert "rm -rf" in text
+
 
 class TestAnalyzeProjectName:
     """``bristlenose analyze <p>/bristlenose-output/transcripts-raw`` named the

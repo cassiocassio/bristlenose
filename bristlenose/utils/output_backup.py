@@ -93,6 +93,7 @@ import logging
 import os
 import re
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 from bristlenose.utils.fs import open_private
@@ -141,6 +142,57 @@ class RestoreOutcome(enum.Enum):
         return self in (RestoreOutcome.RESTORED, RestoreOutcome.RESTORED_WITHOUT_HISTORY)
 
 
+#: This process's hold on each study folder's settle lock: path -> [fd, depth].
+_settle_holds: dict[str, list[int]] = {}
+
+
+@contextlib.contextmanager
+def _settling(output_dir: Path) -> Iterator[None]:
+    """Hold the study folder's settle lock: one settle, reclaim or stash at a time.
+
+    After a crash the report server's `reclaim_after_crash` (at app launch) and
+    a queue-restored run's `reclaim_stale` can both find the backup, both before
+    any PID file exists, and one put-back renaming under the other loses the
+    report's place. An `flock` on the study folder itself, so no file is added
+    to it; released when the descriptor closes, death included. Re-entrant in
+    this process (`reclaim_stale` calls `settle`). The CLI and the hosted
+    backstop never settle together: both hold the exit hold first. Where flock
+    does not exist (Windows), or the folder will not open, it runs unlocked,
+    as before.
+    """
+    try:
+        import fcntl
+    except ImportError:
+        yield
+        return
+    key = str(output_dir.parent.absolute())
+    held = _settle_holds.get(key)
+    if held is not None:
+        held[1] += 1
+        try:
+            yield
+        finally:
+            held[1] -= 1
+        return
+    try:
+        fd = os.open(key, os.O_RDONLY)
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    except OSError:
+        os.close(fd)
+        yield
+        return
+    _settle_holds[key] = [fd, 1]
+    try:
+        yield
+    finally:
+        del _settle_holds[key]
+        os.close(fd)
+
+
 def backup_path_for(output_dir: Path) -> Path:
     """Where `output_dir` is stashed. A hidden sibling, never a child."""
     return output_dir.parent / f".{output_dir.name}-previous"
@@ -149,6 +201,11 @@ def backup_path_for(output_dir: Path) -> Path:
 #: Written into a backup before `discard` moves it: a backup carrying it is
 #: spent, and `reclaim_stale` deletes it rather than restoring it.
 _SPENT_MARKER = ".bristlenose-backup-spent"
+
+#: Written into a backup once a run has replaced it, before its exports are
+#: carried: a backup carrying it is never put back, even when the run's
+#: session cannot be read from disk (`settle`'s *produced*), only finished.
+_REPLACED_MARKER = ".bristlenose-backup-replaced"
 
 
 def _discarding_path(backup: Path) -> Path:
@@ -165,6 +222,20 @@ def _clear_discarding(backup: Path) -> None:
         shutil.rmtree(leftover, ignore_errors=True)
         if leftover.exists():
             logger.warning("output_backup: could not clear %s, a spent backup", leftover)
+
+
+def leftovers_for(output_dir: Path) -> list[Path]:
+    """Trees beside the output that a cut-short delete or put-back left.
+
+    A spent backup's `-discarding-<pid>` and a run's `-failed` (or
+    `-failed-<pid>`, when a kept one held the name). Nothing reads them, and
+    they hold participants' data, so `status` names them and the next run
+    deletes them.
+    """
+    parent, name = output_dir.parent, glob.escape(output_dir.name)
+    return sorted(
+        set(parent.glob(f".{name}-previous-discarding*")) | set(parent.glob(f".{name}-failed*"))
+    )
 
 
 def failed_path_for(output_dir: Path) -> Path:
@@ -199,6 +270,11 @@ def stash(output_dir: Path, *, previous_backup_is_spent: bool = False) -> Path |
     beside the new run's own. It is scratch: no restore needs it, and the old
     upfront `rmtree` deleted it too.
     """
+    with _settling(output_dir):
+        return _stash(output_dir, previous_backup_is_spent=previous_backup_is_spent)
+
+
+def _stash(output_dir: Path, *, previous_backup_is_spent: bool) -> Path | None:
     if not output_dir.exists():
         return None
 
@@ -311,11 +387,15 @@ def _restore(backup: Path, output_dir: Path) -> RestoreOutcome:
         # Step the run's tree aside rather than reading it into memory — the
         # log can be large, and a rename costs nothing.
         if output_dir.exists():
-            # A previous restore may have died between its rename and its
-            # cleanup, leaving this path occupied. `rename` onto a non-empty
-            # directory is ENOTEMPTY, which would otherwise surface as a bare
-            # FAILED.
-            shutil.rmtree(failed, ignore_errors=True)
+            # A tree already here (a restore cut short, a `stash` that kept one
+            # whose export would not move, a build with the 22 Oct hold-back)
+            # is cleared first, its exports into the report coming back. One
+            # that is kept leaves its name, and this run's tree takes its own.
+            if failed.exists():
+                _drop_tree(failed, exports_to=backup)
+            if failed.exists():
+                failed = failed.with_name(f"{failed.name}-{os.getpid()}")
+                shutil.rmtree(failed, ignore_errors=True)
             output_dir.rename(failed)
             moved_failed = True
 
@@ -561,19 +641,36 @@ def settle(backup: Path | None, output_dir: Path, *, produced: bool = False) -> 
     throughout, as `restore` does, so a hosted backstop never exits between
     the carry and the discard.
     """
-    if backup is None or not backup.exists():
-        return RestoreOutcome.NOTHING_TO_DO
     from bristlenose.run_lifecycle import holding_exit
 
-    with holding_exit():
-        if not (produced or holds_an_analysed_session(output_dir)):
+    with holding_exit(), _settling(output_dir):
+        if backup is None or not backup.exists():
+            return RestoreOutcome.NOTHING_TO_DO
+        if not (produced or backup_is_replaced(output_dir)):
             return _restore(backup, output_dir)
+        try:
+            (backup / _REPLACED_MARKER).touch()
+        except OSError as exc:
+            logger.warning("output_backup: could not mark %s replaced (%s)", backup, exc)
         if not carry_exports(backup, output_dir):
-            # Kept, unspent: the next run's `reclaim_stale` settles it again and
-            # carries what is left. An export is never deleted with it.
+            # Kept, unspent, marked replaced: the next run's `reclaim_stale`
+            # carries what is left and discards it, and never puts it back. An
+            # export is never deleted with it.
             return RestoreOutcome.CARRY_INCOMPLETE
         discard(backup)
     return RestoreOutcome.REPLACED
+
+
+def backup_is_replaced(output_dir: Path) -> bool:
+    """Has a fresh run replaced the report set aside beside *output_dir*?
+
+    Its analysis holds a session on disk, or a settle already decided so and
+    marked the backup (a run whose session is not on disk, cut short after).
+    """
+    return (
+        (backup_path_for(output_dir) / _REPLACED_MARKER).exists()
+        or holds_an_analysed_session(output_dir)
+    )
 
 
 def project_is_locked(output_dir: Path) -> bool:
@@ -611,7 +708,14 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
     that emits WARNING and above. At INFO, the single most consequential silent
     act in the module was recorded nowhere at all.
     """
+    with _settling(output_dir):
+        return _reclaim_stale(output_dir)
+
+
+def _reclaim_stale(output_dir: Path) -> RestoreOutcome:
     backup = backup_path_for(output_dir)
+    # Spent backups whose delete was cut short: proven spent, never restorable.
+    _clear_discarding(backup)
     if not backup.exists():
         _clear_leftover_attempt(output_dir)
         return RestoreOutcome.NOTHING_TO_DO
@@ -653,8 +757,9 @@ def _clear_leftover_attempt(output_dir: Path) -> None:
     Left by a restore cut short, or kept by a build with the 22 Oct hold-back.
     Nothing reads it, and it holds a copy of the participants' data.
     """
-    failed = failed_path_for(output_dir)
-    if failed.exists() and not project_is_locked(output_dir):
+    if project_is_locked(output_dir):
+        return
+    for failed in output_dir.parent.glob(f".{glob.escape(output_dir.name)}-failed*"):
         logger.warning("output_backup: deleting %s, a run's tree nothing reads", failed)
         _drop_tree(failed, exports_to=output_dir)
 

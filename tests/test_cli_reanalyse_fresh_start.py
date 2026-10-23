@@ -475,3 +475,35 @@ def test_the_folder_date_is_the_old_analysis_day_on_this_machine() -> None:
     assert format_finder_day(datetime(2026, 1, 9, 23, 0, tzinfo=timezone.utc)) in (
         "9 Jan 2026", "10 Jan 2026",  # local zone
     )
+
+
+@pytest.mark.skipif(
+    __import__("sys").platform == "win32" or __import__("os").geteuid() == 0,
+    reason="needs a folder this user cannot write",
+)
+def test_a_clean_refuses_while_an_export_is_still_to_carry(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """Finding 2, unstubbed: a crashed fresh run that analysed a session, and an
+    old `clips/` that will not move. `--clean` used to find the backup unspent,
+    fail to stash, print "this run will write over it" and resume the fresh
+    analysis: a fresh start that quietly wasn't one."""
+    input_dir, out_dir = _paths(tmp_path)
+    _seed_report(out_dir, "old", created="2026-10-03T09:00:00Z")
+    (out_dir / "clips").mkdir()
+    (out_dir / "clips" / "c.mp4").write_text("clip", encoding="utf-8")
+    backup = output_backup.stash(out_dir)
+    _seed_report(out_dir, "fresh")
+    _land_sessions(out_dir, ["s1"])
+    seen = _pipeline_returns(monkeypatch, "again", quotes=353)
+    backup.chmod(0o500)
+    try:
+        result = _invoke(runner, input_dir, clean=True)
+    finally:
+        backup.chmod(0o700)
+
+    assert result.exit_code == 1, result.output
+    assert "seen" not in seen and "started_on" not in seen, "the pipeline ran"
+    assert "previous report is kept" in " ".join(result.output.split())
+    assert _read(out_dir / _MARKER) == "fresh"
+    assert _read(backup / "clips" / "c.mp4") == "clip"

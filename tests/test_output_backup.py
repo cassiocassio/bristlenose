@@ -9,6 +9,7 @@ seconds later, leaving neither the old report nor a new one. See
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -463,3 +464,110 @@ class TestSettle:
         output_backup.reclaim_stale(out)
 
         assert output_backup.failed_path_for(out).is_dir()
+
+
+_CAN_CHMOD = sys.platform != "win32" and os.geteuid() != 0
+
+
+class TestTheFreshEyesFindings:
+    """The coordinator's Fable check of 33a6e01cb, 23 Oct 2026."""
+
+    def test_a_put_back_carries_the_exports_of_a_tree_already_beside_it(
+        self, tmp_path: Path
+    ) -> None:
+        """A `-failed` tree a `stash` kept (or a hold-back build left) is
+        cleared by the next put-back: its export joins the report, never
+        deleted with it (finding 1)."""
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        backup = output_backup.stash(out)
+        old = _make_report(output_backup.failed_path_for(out), marker="old run", events="o\n")
+        (old / "clips").mkdir()
+        (old / "clips" / "c.mp4").write_text("clip", encoding="utf-8")
+        _make_report(out, marker="attempt", events="a1\n")  # produced nothing
+
+        assert output_backup.settle(backup, out) is RestoreOutcome.RESTORED
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        carried = [p for p in out.iterdir() if p.name.startswith("clips (")]
+        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text() == "clip"
+        assert output_backup.leftovers_for(out) == []
+
+    @pytest.mark.skipif(not _CAN_CHMOD, reason="needs a folder this user cannot write")
+    def test_a_tree_whose_export_will_not_move_is_kept_by_a_put_back(
+        self, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        backup = output_backup.stash(out)
+        old = _make_report(output_backup.failed_path_for(out), marker="old run", events="o\n")
+        (old / "clips").mkdir()
+        (old / "clips" / "c.mp4").write_text("clip", encoding="utf-8")
+        _make_report(out, marker="attempt", events="a1\n")
+        old.chmod(0o500)
+        try:
+            assert output_backup.settle(backup, out).report_is_back
+        finally:
+            old.chmod(0o700)
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+        assert (old / "clips" / "c.mp4").read_text() == "clip"
+        # This run's own tree took another name and went.
+        assert output_backup.leftovers_for(out) == [old]
+
+    def test_a_replaced_backup_is_never_put_back(self, tmp_path: Path, monkeypatch) -> None:
+        """A run whose session is not on disk (no intermediates) replaced the
+        report, then an export would not move: the next reclaim must finish the
+        replacement, not restore the old report over it (finding 5)."""
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        (out / "clips").mkdir()
+        backup = output_backup.stash(out)
+        _make_report(out, marker="fresh", events="f1\n")
+        monkeypatch.setattr(output_backup, "carry_exports", lambda *_a: False)
+        assert output_backup.settle(backup, out, produced=True) is (
+            RestoreOutcome.CARRY_INCOMPLETE)
+        monkeypatch.undo()
+
+        assert output_backup.reclaim_stale(out) is RestoreOutcome.REPLACED
+
+        assert (out / _MARKER).read_text(encoding="utf-8") == "fresh"
+        assert not backup.exists()
+
+    def test_the_next_run_sweeps_a_delete_cut_short(self, tmp_path: Path) -> None:
+        """A `-discarding-<pid>` tree holds participants' data; a researcher who
+        only ever runs plain runs must not keep it for ever (finding 4)."""
+        out = _make_report(tmp_path / "bristlenose-output", marker="r", events="r\n")
+        cut = output_backup.backup_path_for(out).with_name(".bristlenose-output-previous-discarding-1")
+        _make_report(cut, marker="old", events="o\n")
+        assert output_backup.leftovers_for(out) == [cut]
+
+        output_backup.reclaim_stale(out)
+
+        assert not cut.exists()
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="flock")
+    def test_two_reclaims_take_turns(self, tmp_path: Path) -> None:
+        """The serve's reclaim at launch and a queue-restored run's can both
+        find a crash's backup before any PID file exists (finding 3)."""
+        import fcntl
+        import threading
+
+        out = tmp_path / "bristlenose-output"
+        _make_report(out, marker="report", events="r1\n")
+        output_backup.stash(out)
+        _make_report(out, marker="attempt", events="a1\n")
+        fd = os.open(tmp_path, os.O_RDONLY)
+        fcntl.flock(fd, fcntl.LOCK_EX)  # another process mid-settle
+        results: list[RestoreOutcome] = []
+        t = threading.Thread(target=lambda: results.append(output_backup.reclaim_stale(out)))
+        t.start()
+        t.join(0.5)
+        try:
+            assert t.is_alive() and not results, "the reclaim ran under another's settle"
+            assert (out / _MARKER).read_text(encoding="utf-8") == "attempt"
+        finally:
+            os.close(fd)
+        t.join(5)
+        assert results == [RestoreOutcome.RESTORED]
+        assert (out / _MARKER).read_text(encoding="utf-8") == "report"

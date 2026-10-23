@@ -187,6 +187,24 @@ def _validate_repairing(
         raise first_error
 
 
+def _failure_summary(exc: BaseException) -> str:
+    """One log line for a failed call, carrying none of the model's reply.
+
+    A ValidationError's ``str`` runs to several lines and quotes each bad
+    ``input_value`` -- a fragment of the reply, so of the participant's words.
+    Name the field paths and error types instead. Anything else is collapsed to
+    one line and capped, so an HTML error page can't flood the log.
+    """
+    if isinstance(exc, ValidationError):
+        errors = exc.errors(include_input=False, include_url=False)
+        fields = ", ".join(
+            f"{'.'.join(str(p) for p in e['loc']) or '(root)'} ({e['type']})" for e in errors[:5]
+        )
+        more = f" +{len(errors) - 5} more" if len(errors) > 5 else ""
+        return f"{len(errors)} validation error(s): {fields}{more}"
+    return " ".join(str(exc).split())[:500]
+
+
 # Claude models that still accept sampling parameters. Anthropic removed
 # `temperature` / `top_p` / `top_k` from Opus 4.7 and Sonnet 5 onward: a
 # non-default value is a hard 400, NOT a silently-ignored field. We always send
@@ -596,7 +614,7 @@ class LLMClient:
                     self._provider_request_model(),
                     response_model.__name__,
                     type(exc).__name__,
-                    exc,
+                    _failure_summary(exc),
                 )
                 raise
         finally:

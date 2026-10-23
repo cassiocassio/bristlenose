@@ -204,3 +204,41 @@ def test_every_shipped_response_model_survives_a_repair_attempt():
     for model in (QuoteExtractionResult, ScreenClusteringResult, ThematicGroupingResult):
         assert repair_candidates({}, model) == []
         repair_candidates(dict.fromkeys(model.model_fields, "x"), model)
+
+
+def test_a_failed_call_logs_field_paths_not_the_reply(caplog):
+    """`llm_call_failed` is one line and quotes none of the model's reply.
+
+    pydantic's message runs to several lines and repeats each bad
+    ``input_value``, which is the participant's words. Seen in the any-llm
+    walks (23 Oct 2026), where a Mistral Small reply dropped required fields.
+    """
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.llm.client import LLMClient
+
+    words = "I nearly cancelled the whole renewal"
+    bad = {"quotes": [{"verbatim_excerpt": words}]}
+    client = LLMClient(BristlenoseSettings(  # type: ignore[arg-type]
+        llm_provider="anthropic", anthropic_api_key="sk-ant-test-key",
+        llm_model="claude-sonnet-4-6", llm_max_tokens=8192,
+    ))
+    response = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="tool_use", name="structured_output", input=bad)],
+        usage=SimpleNamespace(input_tokens=100, output_tokens=5),
+        model="claude-sonnet-4-6",
+    )
+    client._anthropic_client = AsyncMock()
+    client._anthropic_client.messages.create = AsyncMock(return_value=response)
+
+    with caplog.at_level(logging.WARNING), pytest.raises(ValidationError):
+        asyncio.run(client.analyze("sys", "usr", QuoteExtractionResult))
+
+    [line] = [r.getMessage() for r in caplog.records if "llm_call_failed" in r.getMessage()]
+    assert "\n" not in line
+    assert words not in line
+    assert "quotes.0." in line and "(missing)" in line

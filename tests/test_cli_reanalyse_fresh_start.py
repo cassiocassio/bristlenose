@@ -399,8 +399,12 @@ class TestAnExportIsNeverDeleted:
         _invoke(runner, input_dir, clean=True)
 
         assert _read(out_dir / _MARKER) == "old"
-        kept = out_dir / "clips (from the analysis of 23 Oct 2026)" / "new.mp4"
-        assert _read(kept) == "mid-run clip"
+        # The folder is dated by the attempt's own start, which this run writes
+        # now, so the test finds the one carried folder rather than predicting
+        # today's date (it failed the first time it ran after midnight).
+        carried = [p for p in out_dir.iterdir() if p.name.startswith("clips (from the analysis of ")]
+        assert len(carried) == 1, [p.name for p in out_dir.iterdir()]
+        assert _read(carried[0] / "new.mp4") == "mid-run clip"
         _no_litter(out_dir)
 
     def test_a_carry_that_cannot_list_the_report_does_not_raise(

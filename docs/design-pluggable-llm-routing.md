@@ -13,6 +13,8 @@ trued-against: HEAD@main on 2026-10-11
 
 ## Changelog
 
+- _2026-10-23_ — added §"Prior art: unified-provider libraries" (any-llm and
+  Otari, not adopted; when to look again; what to verify first).
 - _2026-10-11_ — trued up: status pending → partial; corrected the dispatch
   description (env var `BRISTLENOSE_LLM_PROVIDER`, the provider ladder, telemetry
   now records tokens and cost, structured-output repair, the stage ContextVar);
@@ -245,6 +247,22 @@ Matrix form: run N models × M stages, write a comparison table. This is the thi
 - The per-stage view already exists as `bristlenose pipeline` (and the Settings ▸ Pipeline tab), not in `doctor`; per-stage choices belong there. Apple FM shows its `is_available()` reason when missing.
 - Desktop settings panel: per-stage dropdown seeded with the provider's compatible models. Groupings: "On this Mac (free)", "Budget cloud", "Frontier cloud", "Enterprise (Azure)".
 - First-run: no change. Global default still works. Per-stage routing is an optional power-user layer, not something a new user has to configure.
+
+### Prior art: unified-provider libraries (not adopted, 23 Oct 2026)
+
+[mozilla-ai/any-llm](https://github.com/mozilla-ai/any-llm) (`any-llm-sdk`, Apache-2.0) gives one `completion(model="provider:model", …)` call over the official provider SDKs, with OpenAI-shaped responses, per-provider install extras, and no proxy. A sibling project, [Otari](https://github.com/mozilla-ai/otari), is a gateway for budgets, keys and usage. It was looked at and not adopted, for two reasons.
+
+- **It covers the part of the code that is already easy.** The four `_analyze_*` call paths in `llm/client.py` are short. Most of the module, and most of `llm/structured.py`, handles how the providers differ on structured output: `openai_strict_schema`, `_flatten_schema_for_gemini`, `_validate_repairing` and `repair_candidates`, `_clamp_max_tokens`, `TruncatedResponseError`, the `llm_request` telemetry record and `failure_classifier.py`, which reads each SDK's own exception types. A shared call signature leaves all of that where it is.
+- **The reliability phase.** Swapping the transport changes every analysis stage and adds a dependency to the sidecar, and a user sees no difference.
+
+It is worth another look when either of these comes up:
+
+- **This doc's §1 resolver.** A `provider:model` string is a compact routing key, and it fits with validating the provider and model as a pair (§"Future: selection-tier validation").
+- **A provider beyond the current five.** These are parked until after launch. A new adapter per provider is where the hand-written client costs the most.
+
+Otari is relevant if relay or session credits come back.
+
+Questions to answer first. These were not checked against the code on 23 Oct 2026, because the README is silent on them: whether `response_format` or structured output passes through on each provider, whether there is an async `acompletion`, whether Gemini is supported (the README does not name it), how provider errors come through (wrapped or re-raised), and the release cadence (the GitHub Releases section was empty).
 
 ## Sequencing
 

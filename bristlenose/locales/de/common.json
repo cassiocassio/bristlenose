@@ -490,6 +490,7 @@
       "invalidKey": "Ihr API-Schl\u00fcssel wurde abgelehnt.",
       "serverError": "Der KI-Anbieter ist nicht erreichbar. Versuchen Sie es in K\u00fcrze erneut.",
       "badRequest": "Der KI-Anbieter hat die Anfrage abgelehnt.",
+      "modelUnavailable": "Der KI-Anbieter bietet das gewählte Modell nicht an. Wählen Sie ein anderes und versuchen Sie es erneut.",
       "network": "KI-Anbieter nicht erreichbar. Pr\u00fcfen Sie Ihre Verbindung.",
       "unknown": "Verschlagwortung fehlgeschlagen."
     },

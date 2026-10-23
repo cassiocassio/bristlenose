@@ -548,6 +548,12 @@ When you find yourself wanting to surface a new error, status, or note,
    4. `dominantCategory()`'s `pillPrecedence` — a category outside the chain
       silently collapses to `.unknown` in the pill.
    5. The pill-label locale namespace (`desktop.pipeline.diagnostic.pill.*`).
+      _23 Oct 2026: this namespace has no reader. `dominantCategory()`'s one
+      production caller is the English pasteboard line, and
+      `tests/test_locale_key_readers.py` registers the six existing leaves as a
+      reserved orphan block, so a seventh key would trip its orphan gate. Skip
+      this site until that register item is decided; `model_unavailable`
+      (R102) took sites 1–4 only._
 
    A new toast surface needs `ToastStore.show(_, kind:)`.
 
@@ -1026,7 +1032,7 @@ Get this wrong and the researcher cannot tell whether their curation survived.
 
 The cause column largely exists as `pipeline.diagnostic.pill.*` labels, but those
 are **nouns sized for a row**; the popover has room for a sentence that names the
-actor. The action column is new — ten strings, 21 locales, and separable from the
+actor. The action column is new — eleven strings, 21 locales, and separable from the
 gates that let the report through at all.
 
 | category | cause line | action line |
@@ -1035,6 +1041,7 @@ gates that let the report through at all.
 | `auth` | Claude wouldn't accept the API key. | Check the key in Settings ▸ LLM Provider, then analyse again. |
 | `quota` | Claude is rate-limiting requests. | Nothing needs fixing — try again in a few minutes. |
 | `api_server` | Claude had a problem at their end. | Nothing to fix here — try again shortly. |
+| `model_unavailable` | Claude doesn't offer the chosen model. | Choose another in Settings ▸ LLM Provider, then analyse again. |
 | `network` | Couldn't reach Claude. | Check your connection, then analyse again. |
 | `disk` | The disk ran out of space while transcribing. | Free up space on _\<volume\>_, then analyse again. |
 | `unusable_input` | _per-file reasons — no global cause line_ | Replace or remove _\<these N\>_, then analyse again. |

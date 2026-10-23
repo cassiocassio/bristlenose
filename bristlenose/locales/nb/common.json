@@ -490,6 +490,7 @@
       "invalidKey": "API-n\u00f8kkelen din ble avvist.",
       "serverError": "KI-leverand\u00f8ren er utilgjengelig. Pr\u00f8v igjen snart.",
       "badRequest": "KI-leverand\u00f8ren avviste foresp\u00f8rselen.",
+      "modelUnavailable": "KI-leverandøren tilbyr ikke den valgte modellen. Velg en annen, og prøv igjen.",
       "network": "Kunne ikke n\u00e5 KI-leverand\u00f8ren. Sjekk tilkoblingen din.",
       "unknown": "Merking mislyktes."
     },

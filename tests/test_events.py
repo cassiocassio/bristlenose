@@ -146,6 +146,9 @@ def test_cause_category_matches_swift_enum():
         # Apple's first-run model sent the session on to Whisper (wrong
         # language). Mirrored as `.deferred` in Swift's `CauseCategory`.
         "deferred",
+        # The provider doesn't serve the model (R102). Mirrored as
+        # `.modelUnavailable` in both Swift enums.
+        "model_unavailable",
         "unknown",
     }
     actual = {c.value for c in CauseCategoryEnum}
@@ -167,6 +170,7 @@ def test_is_retryable_rule():
     assert is_retryable(CauseCategoryEnum.MISSING_BINARY) is False
     assert is_retryable(CauseCategoryEnum.DISK) is False
     assert is_retryable(CauseCategoryEnum.OUTPUT_TRUNCATED) is False
+    assert is_retryable(CauseCategoryEnum.MODEL_UNAVAILABLE) is False
     assert is_retryable(CauseCategoryEnum.QUOTA) is True
     assert is_retryable(CauseCategoryEnum.NETWORK) is True
     assert is_retryable(CauseCategoryEnum.UNKNOWN) is True

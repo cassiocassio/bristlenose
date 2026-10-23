@@ -535,6 +535,7 @@
       "invalidKey": "V\u00e1\u0161 kl\u00ed\u010d API byl odm\u00edtnut.",
       "serverError": "Poskytovatel AI je nedostupn\u00fd. Zkuste to za chv\u00edli.",
       "badRequest": "Poskytovatel AI odm\u00edtl po\u017eadavek.",
+      "modelUnavailable": "Poskytovatel AI nenabízí zvolený model. Vyberte jiný a zkuste to znovu.",
       "network": "Nepoda\u0159ilo se spojit s poskytovatelem AI. Zkontrolujte p\u0159ipojen\u00ed.",
       "unknown": "Ozna\u010dov\u00e1n\u00ed selhalo."
     },

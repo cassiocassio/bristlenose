@@ -490,6 +490,7 @@
       "invalidKey": "Tu clave de API ha sido rechazada.",
       "serverError": "El proveedor de IA no est\u00e1 disponible. Int\u00e9ntalo en breve.",
       "badRequest": "El proveedor de IA ha rechazado la petici\u00f3n.",
+      "modelUnavailable": "El proveedor de IA no ofrece el modelo elegido. Elige otro y vuelve a intentarlo.",
       "network": "No se ha podido contactar con el proveedor de IA. Comprueba tu conexi\u00f3n.",
       "unknown": "Ha fallado el etiquetado."
     },

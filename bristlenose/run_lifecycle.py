@@ -524,6 +524,7 @@ _LLM_KIND_TO_CAUSE = {
     _LLMFailureKind.RATE_LIMITED: CauseCategoryEnum.QUOTA,
     _LLMFailureKind.SERVER_ERROR: CauseCategoryEnum.API_SERVER,
     _LLMFailureKind.BAD_REQUEST: CauseCategoryEnum.API_REQUEST,
+    _LLMFailureKind.MODEL_UNAVAILABLE: CauseCategoryEnum.MODEL_UNAVAILABLE,
 }
 
 # Filesystem path token — any run of non-whitespace, non-quote characters
@@ -714,6 +715,7 @@ def _build_cause(
     if provider == "anyllm" and category in (
         CauseCategoryEnum.QUOTA,
         CauseCategoryEnum.API_REQUEST,
+        CauseCategoryEnum.MODEL_UNAVAILABLE,
         CauseCategoryEnum.API_SERVER,
         CauseCategoryEnum.UNKNOWN,
     ):

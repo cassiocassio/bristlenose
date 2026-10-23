@@ -50,7 +50,7 @@ struct PipelineRunnerCopyTests {
         // one time the app is already in trouble. Catch the gap here instead.
         let categories: [PipelineFailureCategory] = [
             .auth, .outOfCredit, .network, .quota, .disk, .whisper, .userSignal,
-            .apiRequest, .apiServer, .missingDep, .missingInput, .missingBinary,
+            .apiRequest, .modelUnavailable, .apiServer, .missingDep, .missingInput, .missingBinary,
             .outputExists, .providerNotSetUp, .outputTruncated, .unusableInput, .unknown,
         ]
         for category in categories {

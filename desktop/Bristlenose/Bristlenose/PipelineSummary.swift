@@ -49,14 +49,17 @@ struct PipelineSummary: Codable, Equatable {
 
     /// Spec-locked precedence chain for pill-label selection
     /// (`docs/design-pipeline-diagnostic-popover.md`):
-    /// AUTH > OUT_OF_CREDIT > MISSING_BINARY > QUOTA > NETWORK > UNKNOWN.
+    /// AUTH > OUT_OF_CREDIT > MODEL_UNAVAILABLE > MISSING_BINARY > QUOTA >
+    /// NETWORK > UNKNOWN.
     /// Ties prefer the non-retryable cause — `outOfCredit` sits beside `auth`
     /// (both are account-level and terminal until the user acts out-of-band),
     /// and above `quota`, which is a transient throttle worth retrying.
+    /// `modelUnavailable` is terminal the same way: every call refuses the same
+    /// model until the researcher chooses another (R102).
     /// Categories not in the chain still appear in the popover with their real
     /// labels — this only selects the single pill string.
     static let pillPrecedence: [CauseCategory] = [
-        .auth, .outOfCredit, .missingBinary, .quota, .network, .unknown,
+        .auth, .outOfCredit, .modelUnavailable, .missingBinary, .quota, .network, .unknown,
     ]
 
     /// Returns the dominant category for the pill. Highest failure count
@@ -210,6 +213,9 @@ enum CauseCategory: String, Codable, Equatable, CaseIterable {
     /// Transient rate-limit / throttling. Billing exhaustion is `outOfCredit`.
     case quota
     case apiRequest = "api_request"
+    /// The provider doesn't serve the model asked for (R102). Mirrors Python
+    /// `CauseCategoryEnum.MODEL_UNAVAILABLE`.
+    case modelUnavailable = "model_unavailable"
     case apiServer = "api_server"
     case network
     case whisper

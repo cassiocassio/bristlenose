@@ -490,6 +490,7 @@
       "invalidKey": "Din API-n\u00f8gle blev afvist.",
       "serverError": "AI-udbyderen er utilg\u00e6ngelig. Pr\u00f8v igen om lidt.",
       "badRequest": "AI-udbyderen afviste foresp\u00f8rgslen.",
+      "modelUnavailable": "AI-udbyderen tilbyder ikke den valgte model. Vælg en anden, og prøv igen.",
       "network": "Kunne ikke n\u00e5 AI-udbyderen. Tjek din forbindelse.",
       "unknown": "Tagging mislykkedes."
     },

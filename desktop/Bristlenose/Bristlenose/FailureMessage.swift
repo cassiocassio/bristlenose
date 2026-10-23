@@ -121,6 +121,8 @@ extension FailureMessage {
         "desktop.pipeline.failure.quotaGeneric": "Rate limit reached. Try again soon.",
         "desktop.pipeline.failure.apiRequest": "{{provider}} rejected the request.",
         "desktop.pipeline.failure.apiRequestGeneric": "The AI provider rejected the request.",
+        "desktop.pipeline.failure.modelUnavailable": "{{provider}} doesn't offer the chosen model. Choose another in Settings ▸ LLM Provider, then analyse again.",
+        "desktop.pipeline.failure.modelUnavailableGeneric": "The AI provider doesn't offer the chosen model. Choose another in Settings ▸ LLM Provider, then analyse again.",
         "desktop.pipeline.failure.apiServer": "{{provider}} is unavailable. Try again shortly.",
         "desktop.pipeline.failure.apiServerGeneric": "The AI provider is unavailable. Try again shortly.",
         "desktop.pipeline.failure.outputTruncated": "This session is too dense for {{provider}}'s output limit. Try a model with a larger output, or split the recording.",

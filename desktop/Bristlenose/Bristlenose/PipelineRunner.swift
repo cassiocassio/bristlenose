@@ -36,6 +36,11 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     case unusableInput = "unusable_input"
     case userSignal = "user_signal"
     case apiRequest = "api_request"
+    /// The provider doesn't serve the model the run asked for — retired,
+    /// deprecated, unknown, or no such Azure deployment. The remedy is another
+    /// model, so it is not `apiRequest`'s "rejected the request" (R102).
+    /// Mirrors Python `CauseCategoryEnum.MODEL_UNAVAILABLE`.
+    case modelUnavailable = "model_unavailable"
     case apiServer = "api_server"
     case missingDep = "missing_dep"
     case missingInput = "missing_input"
@@ -92,6 +97,7 @@ enum PipelineFailureCategory: String, Codable, Equatable {
         case .whisper: leaf = "whisper"
         case .userSignal: leaf = "userSignal"
         case .apiRequest: leaf = "apiRequest"
+        case .modelUnavailable: leaf = "modelUnavailable"
         case .apiServer: leaf = "apiServer"
         case .missingDep: leaf = "missingDep"
         case .missingInput: leaf = "missingInput"
@@ -128,8 +134,8 @@ enum PipelineFailureCategory: String, Codable, Equatable {
     /// `tests/test_pipeline_failure_keys.py`.
     var namesProvider: Bool {
         switch self {
-        case .auth, .outOfCredit, .network, .quota, .apiRequest, .apiServer,
-             .outputTruncated, .providerNotSetUp:
+        case .auth, .outOfCredit, .network, .quota, .apiRequest, .modelUnavailable,
+             .apiServer, .outputTruncated, .providerNotSetUp:
             return true
         case .disk, .whisper, .userSignal, .missingDep, .missingInput,
              .missingBinary, .outputExists, .unusableInput, .unknown:
@@ -3139,7 +3145,18 @@ var args = ["run", project.path, "--no-serve"]
         // prints "model: gemini-2.5-flash" / "not_found_error", which the old
         // broad whisper pattern (bare "model") mis-grabbed — surfacing an LLM
         // 404 as "Transcription failed" (5 Jun 2026 ghost-debugging session).
-        if matches(tail, #"provider says|not_found_error|no such model|model not found"#) {
+        //
+        // A model the provider doesn't serve first (R102): the raw 404 shapes,
+        // and the preflight's own sentences for it (`preflight.api_key.*model*`
+        // in en/preflight.json, English on every channel). Before "provider
+        // says", which the generic preflight sentence also carries.
+        if matches(
+            tail,
+            #"not_found_error|model_not_found|deploymentnotfound|no such model|model not found|requested model is not available|denied access to the requested model|deployment wasn't found|local model isn't pulled|doesn't offer (the|that) model"#
+        ) {
+            return .modelUnavailable
+        }
+        if matches(tail, #"provider says"#) {
             return .apiRequest
         }
         // Whisper requires a REAL error signature, never the benign preflight

@@ -490,6 +490,7 @@
       "invalidKey": "La tua chiave API \u00e8 stata rifiutata.",
       "serverError": "Il fornitore di IA non \u00e8 disponibile. Riprova a breve.",
       "badRequest": "Il fornitore di IA ha rifiutato la richiesta.",
+      "modelUnavailable": "Il fornitore di IA non offre il modello scelto. Scegline un altro e riprova.",
       "network": "Impossibile raggiungere il fornitore di IA. Controlla la connessione.",
       "unknown": "Etichettatura non riuscita."
     },

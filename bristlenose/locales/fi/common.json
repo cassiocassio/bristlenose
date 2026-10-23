@@ -490,6 +490,7 @@
       "invalidKey": "API-avaimesi hyl\u00e4ttiin.",
       "serverError": "Teko\u00e4lypalvelu ei ole k\u00e4ytett\u00e4viss\u00e4. Yrit\u00e4 pian uudelleen.",
       "badRequest": "Teko\u00e4lypalvelu hylk\u00e4si pyynn\u00f6n.",
+      "modelUnavailable": "Tekoälypalvelu ei tarjoa valittua mallia. Valitse toinen ja yritä uudelleen.",
       "network": "Teko\u00e4lypalveluun ei saatu yhteytt\u00e4. Tarkista verkkoyhteys.",
       "unknown": "Merkint\u00e4 ep\u00e4onnistui."
     },

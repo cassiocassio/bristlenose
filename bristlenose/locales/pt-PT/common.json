@@ -490,6 +490,7 @@
       "invalidKey": "A sua chave de API foi rejeitada.",
       "serverError": "O fornecedor de IA est\u00e1 indispon\u00edvel. Tente novamente em breve.",
       "badRequest": "O fornecedor de IA rejeitou o pedido.",
+      "modelUnavailable": "O fornecedor de IA não disponibiliza o modelo escolhido. Escolha outro e tente novamente.",
       "network": "N\u00e3o foi poss\u00edvel contactar o fornecedor de IA. Verifique a liga\u00e7\u00e3o.",
       "unknown": "Falha na etiquetagem."
     },

@@ -55,6 +55,13 @@ const FAILURES: Record<string, Failure> = {
     key: "codebook.autocodeFailure.badRequest",
     fallback: "The AI provider rejected the request.",
   },
+  // Retired, deprecated or unknown model (R102): the same model is refused on
+  // every attempt, so the researcher must choose another.
+  model_unavailable: {
+    kind: "error",
+    key: "codebook.autocodeFailure.modelUnavailable",
+    fallback: "The AI provider doesn't offer the chosen model. Choose another, then try again.",
+  },
   network: {
     kind: "warning",
     key: "codebook.autocodeFailure.network",

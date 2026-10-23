@@ -118,7 +118,7 @@ def _dominant_cause(
     Strategy: most common category wins. If tied, prefer non-retryable —
     those are the ones the user actually needs to act on. Specific
     precedence within non-retryable, in descending action-priority:
-    AUTH > MISSING_BINARY > MISSING_DEP > MISSING_INPUT > DISK. Within
+    AUTH > MODEL_UNAVAILABLE > MISSING_BINARY > MISSING_DEP > MISSING_INPUT > DISK. Within
     retryable, just pick the first encountered. Falls back to a synthetic
     Cause built from ``default_category`` + ``message`` when ``failures``
     is empty (shouldn't happen on the abandon path, but defensive).
@@ -148,6 +148,8 @@ def _dominant_cause(
         # Tie — prefer non-retryable in priority order.
         priority = [
             CauseCategoryEnum.AUTH,
+            # Non-retryable like AUTH: every call refuses the same model (R102).
+            CauseCategoryEnum.MODEL_UNAVAILABLE,
             CauseCategoryEnum.MISSING_BINARY,
             CauseCategoryEnum.MISSING_DEP,
             CauseCategoryEnum.MISSING_INPUT,

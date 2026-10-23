@@ -308,6 +308,15 @@ def _validate_anthropic(
             ok=False, error_class="rate_limit", raw_message=str(exc)
         )
     except anthropic.APIStatusError as exc:
+        # A retired or unknown model is a 404 ``not_found_error`` naming the
+        # model. Read by the run's own classifier, so the check and the run
+        # agree on what it is (R102); it fell to "Provider says: …" before.
+        from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
+
+        if classify_exception("anthropic", exc) is LLMFailureKind.MODEL_UNAVAILABLE:
+            return ValidationResult(
+                ok=False, error_class="model_unavailable", raw_message=str(exc)
+            )
         return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except Exception as exc:
         # Surface network / TLS / proxy faults with their own message before
@@ -690,6 +699,7 @@ def _validate_anyllm(
             LLMFailureKind.OUT_OF_CREDIT: "billing_empty",
             LLMFailureKind.RATE_LIMITED: "rate_limit",
             LLMFailureKind.NETWORK: "network",
+            LLMFailureKind.MODEL_UNAVAILABLE: "model_unavailable",
         }.get(kind)
         if bucket is None and type(exc).__name__ == "ModelNotFoundError":
             bucket = "model_unavailable"

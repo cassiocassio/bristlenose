@@ -490,6 +490,7 @@
       "invalidKey": "Je API-sleutel is geweigerd.",
       "serverError": "De AI-provider is niet beschikbaar. Probeer het straks opnieuw.",
       "badRequest": "De AI-provider heeft het verzoek geweigerd.",
+      "modelUnavailable": "De AI-provider biedt het gekozen model niet aan. Kies een ander en probeer het opnieuw.",
       "network": "Kan de AI-provider niet bereiken. Controleer je verbinding.",
       "unknown": "Taggen mislukt."
     },

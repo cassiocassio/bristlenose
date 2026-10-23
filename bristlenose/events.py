@@ -99,6 +99,10 @@ class CauseCategoryEnum(str, Enum):
     OUT_OF_CREDIT = "out_of_credit"  # billing exhausted; terminal until top-up
     QUOTA = "quota"  # rate-limited / transient quota; back off and retry
     API_REQUEST = "api_request"
+    # The provider doesn't serve the model the run asked for — retired,
+    # deprecated, unknown, or no such Azure deployment. Not a malformed request:
+    # the remedy is another model (R102).
+    MODEL_UNAVAILABLE = "model_unavailable"
     API_SERVER = "api_server"
     NETWORK = "network"
     WHISPER = "whisper"
@@ -206,6 +210,9 @@ _RETRYABLE: dict[CauseCategoryEnum, bool] = {
     CauseCategoryEnum.OUT_OF_CREDIT: False,
     CauseCategoryEnum.QUOTA: True,
     CauseCategoryEnum.API_REQUEST: True,  # depends on `code`; default true
+    # The same model is refused again on every attempt; the remedy is choosing
+    # another one, like OUTPUT_TRUNCATED.
+    CauseCategoryEnum.MODEL_UNAVAILABLE: False,
     CauseCategoryEnum.API_SERVER: True,
     CauseCategoryEnum.NETWORK: True,
     CauseCategoryEnum.WHISPER: True,  # depends on `code`; default true

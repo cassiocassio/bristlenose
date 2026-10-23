@@ -490,6 +490,7 @@
       "invalidKey": "Votre cl\u00e9 d'API a \u00e9t\u00e9 refus\u00e9e.",
       "serverError": "Le fournisseur d'IA est indisponible. R\u00e9essayez sous peu.",
       "badRequest": "Le fournisseur d'IA a refus\u00e9 la requ\u00eate.",
+      "modelUnavailable": "Le fournisseur d'IA ne propose pas le modèle choisi. Choisissez-en un autre, puis réessayez.",
       "network": "Impossible de joindre le fournisseur d'IA. V\u00e9rifiez votre connexion.",
       "unknown": "\u00c9chec de l'\u00e9tiquetage."
     },

@@ -94,6 +94,13 @@ struct PipelineSummaryTests {
         #expect(summary.dominantCategory() == .auth)
     }
 
+    @Test func dominantCategoryTieBreakModelUnavailableBeatsQuota() {
+        // A model the provider no longer serves is refused on every retry; the
+        // pasteboard line must not read "Rate limited" for it (R102).
+        let summary = makeSummary(failures: [(.modelUnavailable, 2), (.quota, 2)])
+        #expect(summary.dominantCategory() == .modelUnavailable)
+    }
+
     @Test func dominantCategoryTieBreakMissingBinaryBeatsQuota() {
         let summary = makeSummary(failures: [(.missingBinary, 2), (.quota, 2)])
         #expect(summary.dominantCategory() == .missingBinary)

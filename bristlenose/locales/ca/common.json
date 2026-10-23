@@ -490,6 +490,7 @@
       "invalidKey": "La teva clau d'API ha estat rebutjada.",
       "serverError": "El prove\u00efdor d'IA no est\u00e0 disponible. Torna-ho a provar aviat.",
       "badRequest": "El prove\u00efdor d'IA ha rebutjat la petici\u00f3.",
+      "modelUnavailable": "El proveïdor d'IA no ofereix el model triat. Tria'n un altre i torna-ho a provar.",
       "network": "No s'ha pogut contactar amb el prove\u00efdor d'IA. Comprova la connexi\u00f3.",
       "unknown": "Ha fallat l'etiquetatge."
     },

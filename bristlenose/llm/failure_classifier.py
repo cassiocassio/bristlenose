@@ -46,7 +46,10 @@ class LLMFailureKind(str, Enum):
     RATE_LIMITED = "rate_limited"  # transient; back off and retry
     INVALID_KEY = "invalid_key"  # auth failed; fix/replace the key
     SERVER_ERROR = "server_error"  # provider 5xx / overloaded; transient
-    BAD_REQUEST = "bad_request"  # malformed / model-not-found; NOT billing
+    # The provider doesn't serve the model asked for: retired, deprecated,
+    # unknown, or (Azure) no such deployment. Terminal until the model changes.
+    MODEL_UNAVAILABLE = "model_unavailable"
+    BAD_REQUEST = "bad_request"  # malformed request; NOT billing, NOT the model
     NETWORK = "network"  # couldn't reach the provider
     UNKNOWN = "unknown"
 
@@ -56,6 +59,7 @@ _ANTHROPIC = "anthropic"
 _OPENAI = "openai"
 _AZURE = "azure"
 _GOOGLE = "google"
+_LOCAL = "local"
 
 
 @dataclass(frozen=True)
@@ -144,6 +148,33 @@ _RULES: tuple[_Rule, ...] = (
     _Rule(LLMFailureKind.INVALID_KEY, status=401),
     _Rule(LLMFailureKind.INVALID_KEY, status=403),
 
+    # --- MODEL_UNAVAILABLE — the model is retired, deprecated or unknown (R102).
+    #     Before the bare-status rules below, which read these 404s as a generic
+    #     bad request. Each provider's structured field, with the message where
+    #     the field alone also covers a 404 for something that isn't a model. ---
+    # Claude: 404 not_found_error, message "model: <id>".
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_ANTHROPIC}),
+          code=r"not_found_error", message=r"\bmodel\b"),
+    # ChatGPT: model_not_found, for an unknown model and a deprecated one alike.
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_OPENAI, _AZURE}),
+          code=r"model_not_found"),
+    # Azure: the deployment name (the model, as Azure sees it) doesn't exist.
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_AZURE}),
+          code=r"DeploymentNotFound"),
+    # Gemini: 404 NOT_FOUND, "models/<id> is not found for API version …".
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_GOOGLE}),
+          code=r"NOT_FOUND", message=r"\bmodels/\S+ is not found"),
+    # Ollama: "model 'x' not found" / 'model "x" not found, try pulling it first'.
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_LOCAL}),
+          message=r"\bmodel ['\"][^'\"]+['\"] not found"),
+    # Provider-less wording, for any-llm and the generic path: OpenAI-compatible
+    # servers repeat OpenAI's sentence.
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE,
+          message=r"\bthe model `[^`]+` (does not exist|has been deprecated)"),
+    # OpenRouter (through any-llm), for an id it has no endpoint for. Not its
+    # "No endpoints found matching your data policy", which is a setting.
+    _Rule(LLMFailureKind.MODEL_UNAVAILABLE, message=r"\bno endpoints found for \S"),
+
     # --- RATE_LIMITED — includes Azure quota + Gemini RESOURCE_EXHAUSTED, which
     #     the wire does not separate from billing; classified honestly as rate. ---
     _Rule(LLMFailureKind.RATE_LIMITED, providers=frozenset({_OPENAI}),
@@ -161,7 +192,8 @@ _RULES: tuple[_Rule, ...] = (
     _Rule(LLMFailureKind.SERVER_ERROR, status=529),
     _Rule(LLMFailureKind.SERVER_ERROR, status_range=(500, 599)),
 
-    # --- BAD_REQUEST — a real client error (bad model id, malformed body). Last
+    # --- BAD_REQUEST — a real client error (a malformed body, a refused
+    #     parameter; a missing model is MODEL_UNAVAILABLE above). Last
     #     so a credit-400 / gemini-key-400 is caught above, not swallowed here. ---
     _Rule(LLMFailureKind.BAD_REQUEST, status_range=(400, 499)),
 )
@@ -257,4 +289,9 @@ def _extract_code(exc: BaseException) -> str | None:
         val = getattr(exc, attr, None)
         if isinstance(val, str):
             parts.append(val)
+    # google-genai's ``APIError`` has no ``body``: the status word ("NOT_FOUND",
+    # "RESOURCE_EXHAUSTED") is ``.status``, and ``.code`` is the HTTP status.
+    status_word = getattr(exc, "status", None)
+    if isinstance(status_word, str) and not status_word.isdigit():
+        parts.append(status_word)
     return " ".join(parts) if parts else None

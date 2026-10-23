@@ -1045,6 +1045,15 @@ def _print_pipeline_failure(
     elif category == CauseCategoryEnum.API_REQUEST:
         _say(MessageKind.ERROR, f"{provider_display} rejected the request.")
         console.print("  This can happen with an unsupported model or malformed input.")
+    elif category == CauseCategoryEnum.MODEL_UNAVAILABLE:
+        # Retired, deprecated, unknown, or no such Azure deployment (R102). The
+        # same model is refused on every attempt, so the remedy is another one,
+        # named in the setting this provider reads it from.
+        model = _wire_model_for(settings, provider_key)
+        named = f" {escape(model)}" if model else ""
+        _say(MessageKind.ERROR, f"{provider_display} doesn't offer the model{named}.")
+        console.print(f"  {_model_choice_hint(provider_key, model)}", highlight=False)
+        console.print(f"  then run  [bold]{retry_cmd}[/bold]  again.")
     elif category == CauseCategoryEnum.API_SERVER:
         _say(MessageKind.ERROR, f"{provider_display} had a server error.")
         console.print("  Try again in a few minutes.")
@@ -1080,6 +1089,30 @@ def _print_pipeline_failure(
                 "[bold]bristlenose use provider:model[/bold]",
                 highlight=False,
             )
+
+
+def _wire_model_for(settings: object, provider: str | None) -> str:
+    """The model id this provider is sent, from the setting it reads it from."""
+    field = {
+        "azure": "azure_deployment", "local": "local_model", "anyllm": "anyllm_model",
+    }.get(provider or "", "llm_model")
+    return str(getattr(settings, field, "") or "")
+
+
+def _model_choice_hint(provider: str | None, model: str) -> str:
+    """How to choose another model on the CLI, for this provider (Rich markup)."""
+    from rich.markup import escape
+
+    if provider == "azure":
+        return "Set BRISTLENOSE_AZURE_DEPLOYMENT to a deployment name from the Azure portal,"
+    if provider == "local":
+        pull = f"ollama pull {escape(model)}" if model else "ollama pull <model>"
+        return (
+            f"Pull it with  [bold]{pull}[/bold],  or set BRISTLENOSE_LOCAL_MODEL to one you have,"
+        )
+    if provider == "anyllm":
+        return "Choose another:  [bold]bristlenose use provider:model[/bold],"
+    return "Choose another by setting BRISTLENOSE_LLM_MODEL,"
 
 
 def _active_api_key_suffix(settings: object, provider: str | None) -> str:

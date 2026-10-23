@@ -492,6 +492,7 @@
       "invalidKey": "Your API key was rejected.",
       "serverError": "The AI provider is unavailable. Try again shortly.",
       "badRequest": "The AI provider rejected the request.",
+      "modelUnavailable": "The AI provider doesn't offer the chosen model. Choose another, then try again.",
       "network": "Couldn't reach the AI provider. Check your connection.",
       "unknown": "Tagging failed."
     },

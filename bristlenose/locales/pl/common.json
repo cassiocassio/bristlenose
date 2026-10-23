@@ -546,6 +546,7 @@
       "invalidKey": "Tw\u00f3j klucz API zosta\u0142 odrzucony.",
       "serverError": "Dostawca AI jest niedost\u0119pny. Spr\u00f3buj za chwil\u0119.",
       "badRequest": "Dostawca AI odrzuci\u0142 \u017c\u0105danie.",
+      "modelUnavailable": "Dostawca AI nie oferuje wybranego modelu. Wybierz inny i spróbuj ponownie.",
       "network": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z dostawc\u0105 AI. Sprawd\u017a po\u0142\u0105czenie.",
       "unknown": "Tagowanie nie powiod\u0142o si\u0119."
     },

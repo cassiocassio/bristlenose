@@ -490,6 +490,7 @@
       "invalidKey": "Din API-nyckel avvisades.",
       "serverError": "AI-leverant\u00f6ren \u00e4r otillg\u00e4nglig. F\u00f6rs\u00f6k igen snart.",
       "badRequest": "AI-leverant\u00f6ren avvisade beg\u00e4ran.",
+      "modelUnavailable": "AI-leverantören erbjuder inte den valda modellen. Välj en annan och försök igen.",
       "network": "Kunde inte n\u00e5 AI-leverant\u00f6ren. Kontrollera din anslutning.",
       "unknown": "Taggningen misslyckades."
     },

@@ -1175,6 +1175,11 @@ _UNNAMED_HOST = {"message": "Provider returned error", "code": 502}
 _BAD_KEY = {"message": "User not found.", "code": 401}
 _OWN_LIMIT = {"message": "Rate limit exceeded: free-models-per-day. ", "code": 429}
 _UNKNOWN_MODEL = {"message": "No endpoints found for nvidia/not-a-model.", "code": 404}
+_HOST_MODEL_GONE = {  # the host itself no longer serves the id OpenRouter routed to it
+    "message": "Provider returned error", "code": 404,
+    "metadata": {"raw": "The model `mistral-large-2407` does not exist.",
+                 "provider_name": "Mistral"},
+}
 
 _OPENROUTER_CASES = [
     # (status, body, preflight bucket, host)
@@ -1265,6 +1270,10 @@ def test_configure_keeps_a_key_the_gateway_accepted_when_the_host_is_busy(
         (502, _UNNAMED_HOST, "api_server", ""),
         (401, _BAD_KEY, "auth", None),
         (429, _OWN_LIMIT, "quota", None),
+        # OpenRouter's own "no such id" names the model, as the preflight does
+        # (R102); the host's 404 above stays the host's.
+        (404, _UNKNOWN_MODEL, "model_unavailable", None),
+        (404, _HOST_MODEL_GONE, "model_unavailable", "Mistral"),
     ],
 )
 def test_a_run_records_which_host_failed(

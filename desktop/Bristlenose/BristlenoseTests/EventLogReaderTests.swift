@@ -270,6 +270,7 @@ struct EventLogReaderTests {
         ("whisper", .whisper),
         ("user_signal", .userSignal),
         ("api_request", .apiRequest),
+        ("model_unavailable", .modelUnavailable),
         ("api_server", .apiServer),
         ("missing_dep", .missingDep),
         ("output_truncated", .outputTruncated),

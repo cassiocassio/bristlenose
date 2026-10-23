@@ -59,9 +59,14 @@ struct MCPAgentsSettingsView: View {
     /// "Or connect by hand" on the ChatGPT tab, closed by default: the plugin
     /// is the route, the pasted config is for Codex in a terminal or an IDE.
     @State private var chatGPTManualOpen = false
-    /// The last Install on that row opened nothing (decision #42). Cleared
-    /// by the next attempt.
-    @State private var claudeInstallFailed = false
+    /// The last Install on the Claude row: `.nothing` shows the failure line
+    /// (decision #42). Replaced by the next attempt.
+    @State private var claudeLastInstall: MCPExtensionInstaller.Outcome?
+    /// The last Install on the Claude row that opened something. The Node
+    /// extension's notes follow this one (R42), so a later press that opens
+    /// nothing doesn't hide them while Claude still holds the Node extension.
+    @State private var claudeLastOpened: MCPExtensionInstaller.Outcome?
+    /// The last Install on the ChatGPT row opened nothing (decision #42).
     @State private var chatGPTInstallFailed = false
     @State private var copiedResetTask: Task<Void, Never>?
     /// Projects unticked while this pane has been open. They stay on screen as
@@ -228,6 +233,11 @@ struct MCPAgentsSettingsView: View {
         // the two things that move it.
         .onChange(of: registerRows.count) { refit() }
         .onChange(of: windowRoster.shownProjects.count) { refit() }
+        // An Install's outcome adds or removes a line under its row (the
+        // failure line, or the Node extension's notes), so the pane changes
+        // height under the researcher; without a refit the line is clipped.
+        .onChange(of: claudeLastInstall) { refit() }
+        .onChange(of: chatGPTInstallFailed) { refit() }
         // The count moving is already feedback — to eyes only. A sighted
         // researcher sees "2 projects" become "1 project" in the moment they
         // untick; VoiceOver hears the checkbox say "unchecked" and nothing
@@ -888,7 +898,9 @@ struct MCPAgentsSettingsView: View {
                 // The pane's ONE prominent action (HIG: a single filled
                 // button per surface; the per-tab Copy stays bordered).
                 Button(i18n.t(extensionState.buttonKey)) {
-                    claudeInstallFailed = !MCPExtensionInstaller.install()
+                    let outcome = MCPExtensionInstaller.installOutcome()
+                    claudeLastInstall = outcome
+                    if outcome.opened { claudeLastOpened = outcome }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!MCPExtensionInstaller.canPackage)
@@ -1100,7 +1112,7 @@ struct MCPAgentsSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 installRow
-                if claudeInstallFailed { installFailedLine }
+                if claudeLastInstall == .nothing { installFailedLine }
                 // Directly under the row it describes, because it is a fact
                 // ABOUT the thing that row installs — not a consequence of
                 // pressing it (that's the prompt note below, which is
@@ -1142,8 +1154,12 @@ struct MCPAgentsSettingsView: View {
                 // Neither note applies to the native helper (P5): it reads the
                 // team group, which no dialog and no Files & Folders switch
                 // governs, on any macOS from 15 to 27 (§6.7, P0.1). Only a
-                // build without the helper still installs the Node `.mcpb`.
-                if MCPExtensionInstaller.usesNativeHelper {
+                // build without the helper still installs the Node `.mcpb`, and
+                // so does an Install whose native package failed (R42): the
+                // notes then follow what Claude actually received.
+                if !MCPExtensionInstaller.nodeNotesApply(
+                    usesNativeHelper: MCPExtensionInstaller.usesNativeHelper,
+                    lastOpened: claudeLastOpened) {
                     EmptyView()
                 } else if Self.macOSDeniesCrossTeamContainerReads {
                     HStack(alignment: .top) {
@@ -1337,7 +1353,8 @@ enum MCPExtensionInstaller {
 
     private static let log = Logger(subsystem: "app.bristlenose", category: "mcp-install")
 
-    static var bundledURL: URL? {
+    /// Nonisolated so it can be a default argument (it reads only the bundle).
+    nonisolated static var bundledURL: URL? {
         Bundle.main.resourceURL?.appendingPathComponent(filename)
     }
 
@@ -1382,7 +1399,7 @@ enum MCPExtensionInstaller {
     /// with a real identity. When it is there, Install builds Claude's
     /// extension around it at click time (`NativeExtensionPackage`), and the
     /// Node `.mcpb` is only the fallback for builds without it.
-    static var helperURL: URL? {
+    nonisolated static var helperURL: URL? {
         let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/\(NativeExtensionPackage.helperName)")
         return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
     }
@@ -1448,9 +1465,10 @@ enum MCPExtensionInstaller {
     @MainActor @discardableResult
     static func installNative(
         container: URL? = MCPHandshake.defaultDirectory(),
-        open: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+        open: (URL) -> Bool = { NSWorkspace.shared.open($0) },
+        helper: URL? = helperURL
     ) -> Bool {
-        guard let helper = helperURL else {
+        guard let helper else {
             log.error("native extension: no helper in the bundle")
             return false
         }
@@ -1478,6 +1496,21 @@ enum MCPExtensionInstaller {
         }
     }
 
+    /// What the last Install handed to Claude: the native package, the Node
+    /// extension in its place, or nothing at all.
+    enum Outcome: Equatable {
+        case native, nodeExtension, nothing
+        var opened: Bool { self != .nothing }
+    }
+
+    /// Whether the Node extension's notes (the one-time macOS prompt, or the
+    /// Files & Folders switch on 27) belong under the row: in a build without
+    /// the native helper, and when the last Install that opened anything fell
+    /// back to the Node extension, since that is what Claude received (R42).
+    static func nodeNotesApply(usesNativeHelper: Bool, lastOpened: Outcome?) -> Bool {
+        !usesNativeHelper || lastOpened == .nodeExtension
+    }
+
     /// Copy-then-open. 0644 is fine — the `.mcpb` carries no secret (the
     /// token travels in the handshake, not the extension).
     ///
@@ -1491,26 +1524,43 @@ enum MCPExtensionInstaller {
         container: URL? = MCPHandshake.defaultDirectory(),
         open: (URL) -> Bool = { NSWorkspace.shared.open($0) }
     ) -> Bool {
-        if usesNativeHelper, installNative(container: container, open: open) { return true }
-        // The Node extension in place of the native one says nothing on
-        // screen, and is not meant to (out of scope for #42); the log
-        // records it.
-        if usesNativeHelper {
+        installOutcome(container: container, open: open).opened
+    }
+
+    /// `install()`, saying which extension was opened. `helper` and `bundled`
+    /// are seams for tests, as `container` and `open` are.
+    @MainActor @discardableResult
+    static func installOutcome(
+        container: URL? = MCPHandshake.defaultDirectory(),
+        open: (URL) -> Bool = { NSWorkspace.shared.open($0) },
+        helper: URL? = helperURL,
+        bundled: URL? = bundledURL
+    ) -> Outcome {
+        if helper != nil {
+            if installNative(container: container, open: open, helper: helper) { return .native }
+            // The owner kept this fall-back (decision #42). The row shows the
+            // Node extension's notes after it, since that is what Claude got.
             log.error("native extension failed — falling back to the Node extension")
         }
-        guard let bundled = bundledURL, let container else {
-            log.error("no extension to install: no bundled Node extension or no container")
-            return false
+        guard let bundled, FileManager.default.fileExists(atPath: bundled.path) else {
+            log.error("no extension to install: no Node extension in the bundle")
+            return .nothing
+        }
+        guard let container else {
+            log.error("no extension to install: no container to copy the Node extension to")
+            return .nothing
         }
         let dest = container.appendingPathComponent(filename)
         let fm = FileManager.default
         do {
             try fm.createDirectory(at: container, withIntermediateDirectories: true)
             if fm.fileExists(atPath: dest.path) {
-                // Refresh only when the bundled copy is newer.
-                let bundledDate = (try? fm.attributesOfItem(atPath: bundled.path)[.modificationDate] as? Date) ?? .distantPast
-                let destDate = (try? fm.attributesOfItem(atPath: dest.path)[.modificationDate] as? Date) ?? .distantPast
-                if bundledDate > destDate {
+                // Replace whatever is there unless it is already this copy.
+                // Not by date: the native package shares this filename and is
+                // written at click time, so it is always newer than the
+                // bundled copy, and a date check re-opened a stale native
+                // package as if it were the Node extension (R42 review).
+                if !fm.contentsEqual(atPath: bundled.path, andPath: dest.path) {
                     try fm.removeItem(at: dest)
                     try fm.copyItem(at: bundled, to: dest)
                 }
@@ -1519,18 +1569,18 @@ enum MCPExtensionInstaller {
             }
             guard open(dest) else {
                 log.error("Node extension: copied, but nothing opened it")
-                return false
+                return .nothing
             }
-            return true
+            return .nodeExtension
         } catch {
             // Degraded, not broken: last resort is opening the bundled copy
             // directly — worse (path churns on update) but not wrong.
             log.error("Node extension could not be copied: \(error.localizedDescription, privacy: .public) — opening the bundled copy")
             guard open(bundled) else {
                 log.error("the bundled Node extension did not open either")
-                return false
+                return .nothing
             }
-            return true
+            return .nodeExtension
         }
     }
 }

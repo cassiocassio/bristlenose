@@ -7,7 +7,7 @@ import copy
 import json
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 
@@ -23,7 +23,12 @@ from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
 from bristlenose.llm.pricing import PRICE_TABLE_VERSION
 from bristlenose.llm.prompts import PromptTemplate
-from bristlenose.llm.structured import drop_nulls, openai_strict_schema, repair_candidates
+from bristlenose.llm.structured import (
+    drop_nulls,
+    openai_strict_schema,
+    repair_candidates,
+    salvage_items,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +154,11 @@ def _validate_repairing(
     A repair is a WARNING, never silent. A provider quietly degrading its output
     shape is a thing to notice, not a thing to absorb -- the repair buys the
     researcher their run, and the log line is what says the run needed buying.
+
+    Last resort, for a model that opts in (``salvage_items``): keep the list
+    items that validate and leave out the rest. Decided 23 Oct 2026: a quote is
+    evidence, and one quote missing a field must not cost the session the other
+    twenty-nine. The count rides on the result for the stage to report.
     """
     try:
         return response_model.model_validate(data)
@@ -163,6 +173,15 @@ def _validate_repairing(
                 provider, model, response_model.__name__, what,
             )
             return repaired
+        salvaged = salvage_items(data, response_model)
+        if salvaged is not None:
+            logger.warning(
+                "llm_shape_repair | provider=%s | model=%s | schema=%s | "
+                "repair=dropped %d of %d items | fields=%s",
+                provider, model, response_model.__name__,
+                salvaged.dropped, salvaged.total, ",".join(salvaged.fields),
+            )
+            return cast("T", salvaged.result)
         # Nothing plausible parsed -- raise the ORIGINAL error, not the last
         # repair's. The first one describes the response we actually got.
         raise first_error
@@ -249,7 +268,6 @@ def request_params(
         if max_tokens != fields["llm_max_tokens"].default:
             params["max_tokens"] = max_tokens
         if temperature != fields["llm_temperature"].default:
-            params["temperature"] = temperature
             params["temperature"] = temperature
         # Ask every model to answer without thinking first, as Claude does on
         # the built-in route. Through a gateway a hybrid model thinks by

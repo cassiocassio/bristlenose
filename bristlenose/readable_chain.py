@@ -130,6 +130,9 @@ class ChainAnalysis:
         self.topic_maps: dict[str, tuple[SessionTopicMap, str]] = {}
         #: Session → (quotes, fingerprint of transcript and topic map).
         self.quotes: dict[str, tuple[list[ExtractedQuote], str]] = {}
+        #: Session → quotes left out of the model's reply as incomplete; stage
+        #: 9 reports them for the sessions it takes from here.
+        self.quote_drops: dict[str, int] = {}
         #: Wall time with at least one of the stage's calls in flight, which the
         #: run's timings give back to it. Not the sum of the calls: up to
         #: ``concurrency`` run at once, and summing them would tell the
@@ -194,7 +197,7 @@ class ChainAnalysis:
                         quotes, q_outcome = await extract_quotes(
                             [clean], [topic_map], self._client,
                             min_quote_words=self.settings.min_quote_words,
-                            concurrency=1, errors=[],
+                            concurrency=1, errors=[], dropped=self.quote_drops,
                         )
                 finally:
                     self._leave("quotes")

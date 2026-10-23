@@ -7,12 +7,14 @@ import logging
 from collections.abc import Callable
 from typing import Literal
 
+from pydantic import ValidationError
+
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
 from bristlenose.llm.client import LLMClient, TruncatedResponseError
 from bristlenose.llm.prompts import get_prompt_template
-from bristlenose.llm.structured import QuoteExtractionResult
+from bristlenose.llm.structured import QuoteExtractionResult, dropped_items
 from bristlenose.models import (
     EmotionalTone,
     ExtractedQuote,
@@ -35,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 
 _FAIL_THRESHOLD = 3  # Stop stage after this many consecutive LLM failures
+
+# What the CLI says when a reply fails validation with nothing salvageable.
+_MALFORMED_REPLY = "the model's reply didn't fit the expected format"
 
 # Smart-split (low-output-cap recovery). When a quote-extraction response is
 # truncated at the model's output cap (gpt-4o → 16384, Local → ~2–4K), split
@@ -120,6 +125,7 @@ async def extract_quotes(
     *,
     on_progress: Callable[[int, int], None] | None = None,
     on_session_done: Callable[[str, list[ExtractedQuote]], None] | None = None,
+    dropped: dict[str, int] | None = None,
 ) -> tuple[list[ExtractedQuote], StageOutcome]:
     """Extract verbatim quotes from all transcripts.
 
@@ -140,6 +146,9 @@ async def extract_quotes(
             the stage ends — so a caller can deliver each session's quotes as
             they come (docs/design-progressive-lenses.md, Phase 2). Not fired
             for a failed or early-stopped session.
+        dropped: Optional ``{session_id: n}`` filled for each session that
+            succeeded with ``n`` quotes left out because the model's reply had
+            them incomplete (``salvage_items``). Absent means none left out.
 
     Returns:
         Tuple of (quotes, outcome). ``outcome`` records per-session
@@ -185,7 +194,8 @@ async def extract_quotes(
             try:
                 with telemetry.session(transcript.participant_id):
                     quotes = await _extract_with_split(
-                        transcript, topic_map, llm_client, min_quote_words
+                        transcript, topic_map, llm_client, min_quote_words,
+                        dropped=dropped,
                     )
                 consecutive_failures = 0
                 outcome.succeeded += 1
@@ -211,8 +221,16 @@ async def extract_quotes(
                     transcript.session_id,
                     exc,
                 )
+                if dropped is not None:
+                    # A chunk that was salvaged before another failed: the
+                    # session has no quotes, so none were "left out" of it.
+                    dropped.pop(transcript.session_id, None)
                 if errors is not None:
-                    errors.append(str(exc))
+                    # The CLI prints this. Pydantic's own text is multi-line
+                    # and names schema paths, which says nothing to a researcher.
+                    errors.append(
+                        _MALFORMED_REPLY if isinstance(exc, ValidationError) else str(exc)
+                    )
                 outcome.failed.append(StageFailure(
                     session_id=transcript.session_id,
                     cause=_build_cause(
@@ -258,6 +276,7 @@ async def _extract_one_pass(
     topic_map: SessionTopicMap | None,
     llm_client: LLMClient,
     min_quote_words: int,
+    dropped: dict[str, int] | None = None,
 ) -> list[ExtractedQuote]:
     """Extract quotes from a single transcript (or one chunk of one).
 
@@ -296,6 +315,9 @@ async def _extract_one_pass(
         response_model=QuoteExtractionResult,
         prompt_template=_tmpl,
     )
+    if dropped is not None and dropped_items(result):
+        sid = transcript.session_id
+        dropped[sid] = dropped.get(sid, 0) + dropped_items(result)
 
     # Convert LLM output to our domain models
     ceiling = timecode_ceiling(transcript)
@@ -436,6 +458,8 @@ async def _extract_with_split(
     llm_client: LLMClient,
     min_quote_words: int,
     depth: int = 0,
+    *,
+    dropped: dict[str, int] | None = None,
 ) -> list[ExtractedQuote]:
     """Extract quotes, splitting the session on truncation or an overlong call.
 
@@ -448,7 +472,9 @@ async def _extract_with_split(
     """
     try:
         quotes = await asyncio.wait_for(
-            _extract_one_pass(transcript, topic_map, llm_client, min_quote_words),
+            _extract_one_pass(
+                transcript, topic_map, llm_client, min_quote_words, dropped,
+            ),
             timeout=_PASS_DEADLINE_S,
         )
     except asyncio.TimeoutError:
@@ -495,7 +521,8 @@ async def _extract_with_split(
     for chunk in chunks:
         results.extend(
             await _extract_with_split(
-                chunk, topic_map, llm_client, min_quote_words, depth + 1
+                chunk, topic_map, llm_client, min_quote_words, depth + 1,
+                dropped=dropped,
             )
         )
     # Dedup runs at every recursion level; each re-resolves segment_index

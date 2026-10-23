@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-from typing import Any, cast
+from typing import Any, ClassVar, NamedTuple, cast
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, ValidationError, field_validator
 
 # ---------------------------------------------------------------------------
 # Speaker identification (Stage 5b)
@@ -178,9 +178,17 @@ class ExtractedQuoteItem(BaseModel):
 class QuoteExtractionResult(BaseModel):
     """LLM output for quote extraction from one transcript."""
 
+    # One quote missing a field must not cost the session every other quote
+    # (`salvage_items`). Opt-in per model: a quote stands alone, whereas a
+    # dropped screen cluster or theme would orphan the quotes it held.
+    salvage_field: ClassVar[str] = "quotes"
+
     quotes: list[ExtractedQuoteItem] = Field(
         description="All substantive verbatim quotes extracted from the participant's speech"
     )
+
+    # How many quotes `salvage_items` left out of this reply; 0 when it validated whole.
+    _dropped_items: int = PrivateAttr(default=0)
 
 
 # ---------------------------------------------------------------------------
@@ -690,3 +698,51 @@ def repair_candidates(data: Any, model: type[BaseModel]) -> list[tuple[str, Any]
                                 {**data, name: only}))
 
     return out
+
+
+class Salvage(NamedTuple):
+    result: BaseModel
+    dropped: int
+    total: int
+    fields: list[str]  # what was wrong with the dropped items, by field name
+
+
+def salvage_items(data: Any, model: type[BaseModel]) -> Salvage | None:
+    """Keep the list items that validate and leave out the rest.
+
+    Only for a model that names its list in ``salvage_field``. Measured on
+    ``mistral-small-latest``, 23 Oct 2026: one quote in thirty arrived without
+    ``start_timecode``, the whole reply failed, and the session ended with no
+    quotes. Each item is validated alone, inside the rest of the payload, so a
+    defect outside the list still fails every item.
+
+    ``fields`` names what was wrong with the dropped items by field name only:
+    the values are participant speech. Returns ``None`` when nothing in the list
+    validates, so the caller raises the original error rather than return an
+    empty result.
+    """
+    field = getattr(model, "salvage_field", None)
+    if field is None or not isinstance(data, dict) or not isinstance(data.get(field), list):
+        return None
+    kept: list[Any] = []
+    fields: set[str] = set()
+    for item in data[field]:
+        try:
+            model.model_validate({**data, field: [item]})
+        except ValidationError as exc:
+            for err in exc.errors():
+                # loc is (field, 0, <name>, ...): the item's own path.
+                fields.add(".".join(str(p) for p in err["loc"][2:]) or "item")
+            continue
+        kept.append(item)
+    if not kept:
+        return None
+    result = model.model_validate({**data, field: kept})
+    total = len(data[field])
+    result._dropped_items = total - len(kept)  # type: ignore[attr-defined]
+    return Salvage(result, total - len(kept), total, sorted(fields))
+
+
+def dropped_items(result: BaseModel) -> int:
+    """How many list items :func:`salvage_items` left out of ``result``."""
+    return int(getattr(result, "_dropped_items", 0) or 0)

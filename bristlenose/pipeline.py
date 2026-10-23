@@ -1270,6 +1270,9 @@ def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
         m = re.search(r"'message':\s*'([^']+)'", msg)
         if m:
             msg = m.group(1)
+    # One line: the CLI prints this after an em dash, and a multi-line exception
+    # (pydantic's are) was cut mid-word on its second line.
+    msg = msg.strip().split("\n", 1)[0]
     # Detect billing issues and provide a direct link
     if "credit balance" in msg.lower() and provider in _BILLING_URLS:
         link = _BILLING_URLS[provider]
@@ -1277,6 +1280,53 @@ def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
     if len(msg) > _MAX_WARN_LEN:
         msg = msg[:_MAX_WARN_LEN - 1] + "\u2026"
     return msg, link
+
+
+def _session_list(sids: Iterable[str]) -> str:
+    """``s1, s6, s10`` in session order; past six, the first five and a count."""
+    ordered = sorted(set(sids), key=lambda s: (len(s), s))
+    if len(ordered) > 6:
+        return f"{', '.join(ordered[:5])} and {len(ordered) - 5} more"
+    return ", ".join(ordered)
+
+
+def _quote_shortfall(outcome: StageOutcome, dropped: dict[str, int]) -> tuple[str, str]:
+    """What stage 9 lost, in plain words: ``(no_quotes, left_out)``, ``""`` for none.
+
+    Measured on the any-llm Mistral walk, 23 Oct 2026: two of three sessions
+    came back with no quotes and the run said only "Extracted 15 quotes", then
+    a cut-off pydantic message. A researcher read that as fifteen quotes across
+    the study. Name the sessions.
+    """
+    failed = [f.session_id for f in outcome.failed if f.session_id is not None]
+    no_quotes = f"no quotes from {_session_list(failed)}" if failed else ""
+    left_out = ""
+    if total := sum(dropped.values()):
+        left_out = (
+            f"{count_noun(total, 'incomplete quote')} left out ({_session_list(dropped)})"
+        )
+    return no_quotes, left_out
+
+
+def _print_quote_shortfall(
+    outcome: StageOutcome, dropped: dict[str, int], errors: list[str], provider: str,
+) -> None:
+    """The lines under stage 9's step: sessions with no quotes, then quotes left out."""
+    no_quotes, left_out = _quote_shortfall(outcome, dropped)
+    if errors:
+        reason, link = _short_reason(errors, provider)
+        _print_warn(f"{no_quotes[:1].upper()}{no_quotes[1:]} — {reason}" if no_quotes
+                    else reason, link)
+    if left_out:
+        _print_warn(left_out)
+
+
+def _summary_warning(
+    outcome: StageOutcome, dropped: dict[str, int], errors: list[str], provider: str,
+) -> str:
+    """What follows "Done with warnings —": the sessions with no quotes first."""
+    no_quotes, left_out = _quote_shortfall(outcome, dropped)
+    return no_quotes or _short_reason(errors, provider)[0] or left_out
 
 
 def _compute_analysis(
@@ -3163,6 +3213,7 @@ class Pipeline:
 
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
+            _quote_drops: dict[str, int] = {}
             _eq_path = intermediate / "extracted_quotes.json"
             # Quotes depend on the transcripts as well as the topic map. With
             # only the map watched, a changed transcript whose boundaries came
@@ -3252,6 +3303,11 @@ class Pipeline:
                     for q in (_analysis.quotes[t.session_id][0] if _analysis else [])
                 ]
                 _cached_quote_sids = set(_cached_quote_sids) | set(_chain_quote_fps)
+                if _analysis is not None:
+                    _quote_drops.update({
+                        sid: n for sid, n in _analysis.quote_drops.items()
+                        if sid in _chain_quote_fps
+                    })
                 _cached_q_count = len(_cached_quote_sids)
 
                 _remaining_transcripts_q = [
@@ -3320,6 +3376,7 @@ class Pipeline:
                             min_quote_words=self.settings.min_quote_words,
                             concurrency=concurrency,
                             errors=_quote_errors,
+                            dropped=_quote_drops,
                             on_progress=_quotes_progress,
                             on_session_done=_deliver_quotes,
                         )
@@ -3365,7 +3422,7 @@ class Pipeline:
                     _msg_9 = f"Extracted {count_noun(len(all_quotes), 'quote')}"
                 if _quote_errors and len(all_quotes) == 0:
                     _print_error_step(_msg_9, _quotes_elapsed)
-                elif _quote_errors:
+                elif _quote_errors or _quote_drops:
                     _print_warn_step(_msg_9, _quotes_elapsed)
                 else:
                     _print_step(_msg_9, _quotes_elapsed)
@@ -3374,8 +3431,10 @@ class Pipeline:
                     elapsed=_quotes_elapsed, input_size=_n_sessions,
                 )
                 self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
-                if _quote_errors:
-                    _print_warn(*_short_reason(_quote_errors, self.settings.llm_provider))
+                _print_quote_shortfall(
+                    _fresh_quote_outcome, _quote_drops, _quote_errors,
+                    self.settings.llm_provider,
+                )
             # ── Quote outcome rollup + abandon check ───────────────────
             # MUST run BEFORE mark_stage_complete: if we mark the stage
             # complete first and then raise, the manifest poisons the next
@@ -3683,9 +3742,10 @@ class Pipeline:
             _p_error, _p_error_link = _short_reason(
                 _quote_errors or _seg_errors, self.settings.llm_provider,
             )
-        elif len(all_quotes) > 0 and (_quote_errors or _seg_errors):
-            _p_warning, _ = _short_reason(
-                _quote_errors or _seg_errors, self.settings.llm_provider,
+        elif len(all_quotes) > 0 and (_quote_errors or _seg_errors or _quote_drops):
+            _p_warning = _summary_warning(
+                _fresh_quote_outcome, _quote_drops, _quote_errors or _seg_errors,
+                self.settings.llm_provider,
             )
 
         # Delete the decorative shoal feed on success (desktop-only, best-effort).
@@ -4226,12 +4286,14 @@ class Pipeline:
             status.update("[dim]Extracting quotes...[/dim]")
             t0 = time.perf_counter()
             _quote_errors_a: list[str] = []
+            _quote_drops_a: dict[str, int] = {}
             with _llm_telemetry.stage("s09_quote_extraction"):
                 all_quotes, _quote_outcome_a = await extract_quotes(
                     clean_transcripts, topic_maps, llm_client,
                     min_quote_words=self.settings.min_quote_words,
                     concurrency=concurrency,
                     errors=_quote_errors_a,
+                    dropped=_quote_drops_a,
                 )
             # Stamp duration_ms before the abandon check so the partial
             # summary on the abandoned terminus event carries timing too.
@@ -4293,12 +4355,14 @@ class Pipeline:
             _msg_9a = f"Extracted {count_noun(len(all_quotes), 'quote')}"
             if _quote_errors_a and len(all_quotes) == 0:
                 _print_error_step(_msg_9a, _quotes_elapsed_a)
-            elif _quote_errors_a:
+            elif _quote_errors_a or _quote_drops_a:
                 _print_warn_step(_msg_9a, _quotes_elapsed_a)
             else:
                 _print_step(_msg_9a, _quotes_elapsed_a)
-            if _quote_errors_a:
-                _print_warn(*_short_reason(_quote_errors_a, self.settings.llm_provider))
+            _print_quote_shortfall(
+                _quote_outcome_a, _quote_drops_a, _quote_errors_a,
+                self.settings.llm_provider,
+            )
 
             # ── Cluster + group ──
             status.update("[dim]Clustering and grouping...[/dim]")
@@ -4424,9 +4488,10 @@ class Pipeline:
             _p_error_a, _p_error_link_a = _short_reason(
                 _quote_errors_a or _seg_errors_a, self.settings.llm_provider,
             )
-        elif len(all_quotes) > 0 and (_quote_errors_a or _seg_errors_a):
-            _p_warning_a, _ = _short_reason(
-                _quote_errors_a or _seg_errors_a, self.settings.llm_provider,
+        elif len(all_quotes) > 0 and (_quote_errors_a or _seg_errors_a or _quote_drops_a):
+            _p_warning_a = _summary_warning(
+                _quote_outcome_a, _quote_drops_a, _quote_errors_a or _seg_errors_a,
+                self.settings.llm_provider,
             )
 
         return PipelineResult(

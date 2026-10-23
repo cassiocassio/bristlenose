@@ -99,7 +99,7 @@ enum QueueRestorePolicy {
         // a cloud folder that has gone, is not run. An evicted iCloud folder is
         // still there, resolves `.ready` and is restored like any other: the
         // sidecar fetches its files as it reads them, and nothing here
-        // special-cases it (docs/design-project-storage.md §3).
+        // special-cases it (docs/design-cloud-files.md).
         if PipelineRunner.spawnRefusal(for: availability ?? .ready) != nil {
             return .drop(.folderNotFound)
         }

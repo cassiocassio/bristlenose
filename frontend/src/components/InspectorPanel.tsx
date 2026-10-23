@@ -187,7 +187,7 @@ export function InspectorPanel({ sources, shimmerTrigger }: InspectorPanelProps)
       const totalH = contentH + 1 + 28 + 32;
       const maxVh = window.innerHeight * 0.7;
       const autoH = Math.max(MIN_HEIGHT, Math.min(totalH, maxVh));
-      setInspectorHeight(autoH);
+      setInspectorHeight(autoH, true);
       // Mark as measured but keep hasManualHeight from the store action
       measuredRef.current = true;
     });

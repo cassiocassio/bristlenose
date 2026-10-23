@@ -15,6 +15,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { storePref } from "../../utils/nativePrefs";
 
 const OPEN_KEY = "bn-discussion-guide-open";
 
@@ -41,12 +42,9 @@ function readWish(): boolean {
   }
 }
 
+/** Through storePref, so the Mac app keeps it past a relaunch (R89). */
 function writeWish(open: boolean): void {
-  try {
-    localStorage.setItem(OPEN_KEY, String(open));
-  } catch {
-    // as above: just not remembered
-  }
+  storePref(OPEN_KEY, String(open));
 }
 
 let state: GuidePanelState = { wish: readWish(), justOpened: false, shown: false, wanted: 0, pendingGuide: null };

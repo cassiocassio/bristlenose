@@ -223,6 +223,14 @@ struct WebView: NSViewRepresentable {
             forMainFrameOnly: true
         ))
 
+        // The same for zoom and the report's panels (R89). Read when the view
+        // is built, so it carries every change saved before this load.
+        userContentController.addUserScript(WKUserScript(
+            source: BridgeHandler.reportPrefsSeedScript(),
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+
         // Inject auth token for localhost API access control.
         // Validates format before interpolation (security rule 3 compliance).
         if let token = authToken,

@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
+import { applySavedZoom } from "./utils/zoom";
 
 // Initialise i18next — must be imported before any component that uses useTranslation.
 import { desktopEnReady } from "./i18n";
@@ -18,6 +19,10 @@ if (
 ) {
   document.documentElement.setAttribute("data-embedded", "true");
 }
+
+// The saved zoom, before first paint (R89). On the Mac the native seed has put
+// it into this web view's storage already, at document start.
+applySavedZoom();
 
 // ── SPA mode (serve) / Export mode ──────────────────────────────────────
 // When #bn-app-root exists, mount the full React Router app.

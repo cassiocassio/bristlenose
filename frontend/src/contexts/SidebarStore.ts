@@ -19,6 +19,7 @@
 import { useSyncExternalStore } from "react";
 import { getFrameworkStates, getHiddenTagGroups, patchHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
+import { storePref } from "../utils/nativePrefs";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -157,20 +158,13 @@ function readWidth(key: string, fallback: number): number {
   }
 }
 
+// Through storePref, so the Mac app keeps them past a relaunch (R89).
 function writeBool(key: string, value: boolean): void {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
+  storePref(key, String(value));
 }
 
 function writeNumber(key: string, value: number): void {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
+  storePref(key, String(value));
 }
 
 // ── Module-level store ────────────────────────────────────────────────────

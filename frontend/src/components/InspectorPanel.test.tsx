@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import {
   DimensionToggle,
   InspectorPanel,
@@ -170,6 +170,23 @@ describe("InspectorPanel", () => {
     rerender(<InspectorPanel sources={SOURCES} />);
     expect(root.style.getPropertyValue(PANE_HEIGHT_VAR)).toMatch(/^\d+px$/);
     unmount();
+  });
+
+  it("sizes itself to its content without the Mac app keeping that height (R89)", async () => {
+    const w = window as unknown as Record<string, unknown>;
+    const postMessage = vi.fn();
+    w.webkit = { messageHandlers: { navigation: { postMessage } } };
+    try {
+      openInspector();
+      render(<InspectorPanel sources={SOURCES} />);
+      await waitFor(() => expect(localStorage.getItem("bn-inspector-height")).not.toBeNull());
+      const heights = postMessage.mock.calls.filter(
+        (c) => (c[0] as { key?: string }).key === "bn-inspector-height",
+      );
+      expect(heights).toEqual([]);
+    } finally {
+      delete w.webkit;
+    }
   });
 
   it("falls back to sectionContent when themeContent is missing", () => {

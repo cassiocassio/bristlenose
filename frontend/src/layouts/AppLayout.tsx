@@ -110,6 +110,7 @@ import { isReportPartial, startConditionPolling } from "../contexts/ConditionSto
 import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 import { asPhrase } from "../utils/searchMatch";
+import { ZOOM_STEP, applyZoom, getZoom } from "../utils/zoom";
 
 // ── CSV helpers (shared with Toolbar — duplicated to avoid coupling) ─────
 
@@ -148,27 +149,6 @@ function buildCsvString(
     ].join(",");
   });
   return [header.join(","), ...rows].join("\n");
-}
-
-// ── Zoom helpers ─────────────────────────────────────────────────────────
-
-const ZOOM_STEP = 0.1;
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 2.0;
-const ZOOM_KEY = "bristlenose-zoom";
-
-function getZoom(): number {
-  try {
-    const raw = localStorage.getItem(ZOOM_KEY);
-    if (raw) return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, parseFloat(raw)));
-  } catch { /* */ }
-  return 1;
-}
-
-function applyZoom(level: number): void {
-  const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(level * 100) / 100));
-  document.documentElement.style.fontSize = `${clamped * 100}%`;
-  try { localStorage.setItem(ZOOM_KEY, String(clamped)); } catch { /* */ }
 }
 
 // Parked behind featureFlags.figjamExport, so it is fetched only when the flag

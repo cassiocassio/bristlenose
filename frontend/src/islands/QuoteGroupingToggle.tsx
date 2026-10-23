@@ -6,7 +6,9 @@
  * the lens shows them by session and there is no control. Once sections and
  * themes exist the control appears and stays: both groupings are useful after
  * the run too. The choice is a per-viewer convenience, remembered per project
- * in `localStorage` (and the page works without it).
+ * in `localStorage` (and the page works without it). Serve always names the
+ * project "1", so in practice it is one choice per viewer, which the Mac app
+ * keeps across relaunches (R89).
  *
  * It is the shipped split control (`.dimension-toggle`, as in the Signals
  * inspector and the person picker), default first. It sits at the top of the
@@ -16,6 +18,7 @@
 
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { storePref } from "../utils/nativePrefs";
 
 export type QuoteGrouping = "sections" | "session";
 
@@ -35,11 +38,8 @@ export function useQuoteGrouping(projectId: string): [QuoteGrouping, (g: QuoteGr
   const choose = useCallback(
     (g: QuoteGrouping) => {
       setGrouping(g);
-      try {
-        localStorage.setItem(KEY(projectId), g);
-      } catch {
-        /* private window or blocked storage: the choice lasts this page */
-      }
+      // Through storePref, so the Mac app keeps it past a relaunch (R89).
+      storePref(KEY(projectId), g);
     },
     [projectId],
   );

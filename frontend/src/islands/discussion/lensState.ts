@@ -7,6 +7,7 @@
  */
 
 import type { Focus, GuideView, Mode } from "./model";
+import { storePref } from "../../utils/nativePrefs";
 
 export interface LensState {
   mode: Mode;
@@ -32,11 +33,8 @@ export function readLensState(): LensState {
 
 export function writeLensState(s: LensState): void {
   memory = { mode: s.mode, guideView: s.guideView, session: s.session, focus: s.focus };
-  try {
-    if (s.navWidth) localStorage.setItem(WIDTH_KEY, String(Math.round(s.navWidth)));
-  } catch {
-    // as above
-  }
+  // Through storePref, so the Mac app keeps it past a relaunch (R89).
+  if (s.navWidth) storePref(WIDTH_KEY, String(Math.round(s.navWidth)));
 }
 
 /** For tests: forget everything. */

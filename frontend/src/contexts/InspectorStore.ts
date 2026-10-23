@@ -9,6 +9,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { storePref } from "../utils/nativePrefs";
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -69,28 +70,18 @@ function readString(key: string, fallback: string): string {
   }
 }
 
+// Through storePref, so the Mac app keeps open, height and dimension past a
+// relaunch (R89). The source is a codebook id, project data: not mirrored.
 function writeBool(key: string, value: boolean): void {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
+  storePref(key, String(value));
 }
 
-function writeNumber(key: string, value: number): void {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
+function writeNumber(key: string, value: number, mirror = true): void {
+  storePref(key, String(value), mirror);
 }
 
 function writeString(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
+  storePref(key, value);
 }
 
 // ── Module-level store ────────────────────────────────────────────────────
@@ -151,10 +142,12 @@ export function closeInspector(): void {
   });
 }
 
-export function setInspectorHeight(height: number): void {
+/** `measured`: the panel sized itself to its content, so the viewer never
+ *  chose this height and the Mac app keeps no copy of it (R89). */
+export function setInspectorHeight(height: number, measured = false): void {
   const clamped = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, height));
   setState((prev) => {
-    writeNumber(LS_HEIGHT, clamped);
+    writeNumber(LS_HEIGHT, clamped, !measured);
     return { ...prev, height: clamped, hasManualHeight: true };
   });
 }

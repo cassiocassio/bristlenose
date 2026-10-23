@@ -305,6 +305,88 @@ final class BridgeHandler: ObservableObject {
             + " localStorage.setItem('bristlenose-burn-subtitles', '\(burn)'); } catch (e) {}"
     }
 
+    // MARK: Report preferences (R89)
+
+    /// The report's per-viewer preferences that must outlive the web view:
+    /// zoom, quote grouping, and each panel's open state and width. The
+    /// subtitle-prefs mirror made generic: the SPA posts every change of a
+    /// listed key as `report-pref` (`frontend/src/utils/nativePrefs.ts`), each
+    /// post is saved here, and `reportPrefsSeedScript()` puts the saved values
+    /// into every new web view's `.nonPersistent()` storage before the SPA
+    /// reads them. App-wide, not per project or per window, and not live: an
+    /// open window picks up another's change at its next load, and the last
+    /// write wins. Both sides assert `tests/fixtures/report-prefs-contract.json`.
+    static let reportPrefKeys: Set<String> = [
+        "bristlenose-zoom",
+        "bn-toc-open", "bn-tags-open", "bn-toc-width", "bn-tags-width",
+        "bn-inspector-open", "bn-inspector-height", "bn-inspector-dimension",
+        "bn-screens-nav-open", "bn-screens-nav-width",
+        "bn-discussion-guide-open", "bn-discussion-nav-width",
+    ]
+    /// Keys taken by prefix. Serve always names the project "1", so the quote
+    /// grouping is in practice one key.
+    static let reportPrefKeyPrefixes: [String] = ["bristlenose-quote-grouping-"]
+    static let reportPrefsDefaultsKey = "reportPrefs"
+    /// The longest legitimate value is a number or "sections"; anything longer
+    /// is not one of ours and is refused.
+    static let reportPrefMaxLength = 32
+    static let reportPrefMaxKeyLength = 64
+
+    static func isReportPrefKey(_ key: String) -> Bool {
+        guard key.count <= reportPrefMaxKeyLength else { return false }
+        return reportPrefKeys.contains(key) || reportPrefKeyPrefixes.contains { key.hasPrefix($0) }
+    }
+
+    /// Save one post. A string saves; `NSNull` (the SPA's `null`) or no value
+    /// removes; an unlisted key, an overlong value or any other type is
+    /// refused, logged, and leaves the saved copy as it was.
+    static func storeReportPref(key: String, value: Any?, defaults: UserDefaults = .standard) {
+        guard isReportPrefKey(key) else {
+            log.error("report-pref refused: key \(key, privacy: .public) is not listed")
+            return
+        }
+        var saved = savedReportPrefs(defaults: defaults)
+        switch value {
+        case let s as String:
+            guard s.count <= reportPrefMaxLength else {
+                log.error("report-pref refused: \(key, privacy: .public) value of \(s.count) characters")
+                return
+            }
+            saved[key] = s
+        case nil, is NSNull:
+            saved.removeValue(forKey: key)
+        default:
+            log.error("report-pref refused: \(key, privacy: .public) value is not a string")
+            return
+        }
+        defaults.set(saved, forKey: reportPrefsDefaultsKey)
+    }
+
+    /// The saved preferences, listed keys only (an older build may have saved
+    /// a key that has since left the list).
+    static func savedReportPrefs(defaults: UserDefaults = .standard) -> [String: String] {
+        let raw = defaults.dictionary(forKey: reportPrefsDefaultsKey) as? [String: String] ?? [:]
+        return raw.filter { isReportPrefKey($0.key) }
+    }
+
+    /// A document-start script that seeds the saved preferences into a new
+    /// web view's storage. Only a key the storage doesn't already hold is
+    /// set: a fresh partition holds none, and a second window on a partition
+    /// already in use keeps what is live there. The values reach the script
+    /// as JSON data, never as code (security rule 3), inside a function so the
+    /// page gets no globals from it.
+    static func reportPrefsSeedScript(defaults: UserDefaults = .standard) -> String {
+        let saved = savedReportPrefs(defaults: defaults)
+        if saved.isEmpty { return "" }
+        guard let data = try? JSONSerialization.data(withJSONObject: saved, options: [.sortedKeys]),
+              let json = String(data: data, encoding: .utf8) else {
+            log.error("report-pref seed: the saved preferences would not encode; this view starts from defaults")
+            return ""
+        }
+        return "(function () { try { var p = \(json); for (var k in p) {"
+            + " if (localStorage.getItem(k) === null) localStorage.setItem(k, p[k]); } } catch (e) {} })();"
+    }
+
     /// Whether the report's left panel — whichever list the active lens puts
     /// there (Contents / Sessions / Codes / Signals; they share one `tocMode`)
     /// — is open. Mirrored from the SPA via `panel-state`, which is the only
@@ -1069,7 +1151,9 @@ final class BridgeHandler: ObservableObject {
     /// origin validation.
     ///
     /// - Parameter body: The message dictionary from `WKScriptMessage.body`.
-    func handleMessage(_ body: [String: Any]) {
+    /// `defaults` is where a `report-pref` post is saved: a test passes a
+    /// throwaway suite, because the test host is the real app's container.
+    func handleMessage(_ body: [String: Any], defaults: UserDefaults = .standard) {
         guard let type = body["type"] as? String else { return }
 
         switch type {
@@ -1251,6 +1335,16 @@ final class BridgeHandler: ObservableObject {
             if burn != burnSubtitlesInClips { burnSubtitlesInClips = burn }
             UserDefaults.standard.set(player, forKey: Self.playerSubtitlesKey)
             UserDefaults.standard.set(burn, forKey: Self.burnSubtitlesKey)
+
+        case "report-pref":
+            // The saved copy of a report preference (R89). Nothing published:
+            // no native surface shows these, and the next web view is seeded
+            // from what is saved here.
+            if let key = body["key"] as? String {
+                Self.storeReportPref(key: key, value: body["value"], defaults: defaults)
+            } else {
+                Self.log.error("report-pref refused: no key")
+            }
 
         case "lens-availability":
             // Equality-guarded: the SPA posts on each project's first poll and

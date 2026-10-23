@@ -90,6 +90,7 @@ import "./screens.css";
 import { screenRef, screensArrival, screenTitle, stillUrl } from "./screenModel";
 import { Icon } from "../../components/Icon";
 import { markArrived } from "../../utils/arrival";
+import { storePref } from "../../utils/nativePrefs";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -370,12 +371,9 @@ function readNavWidth(): number | null {
   }
 }
 
+/** Through storePref, so the Mac app keeps it past a relaunch (R89). */
 function writeNavWidth(w: number): void {
-  try {
-    localStorage.setItem(NAV_WIDTH_KEY, String(Math.round(w)));
-  } catch {
-    // as above
-  }
+  storePref(NAV_WIDTH_KEY, String(Math.round(w)));
 }
 
 /** Draws one quote with the Quotes lens's card, wired to the report's store. */

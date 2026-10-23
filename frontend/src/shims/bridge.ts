@@ -66,6 +66,8 @@ export type BridgeMessage =
     }
   | ({ type: "person-picker" } & WirePersonPicker)
   | { type: "subtitle-prefs"; player: boolean; burn: boolean }
+  /** Posted by `utils/nativePrefs.ts` `storePref`, which cannot import this module (cycle). */
+  | { type: "report-pref"; key: string; value: string | null }
   | {
       type: "panel-state";
       leftOpen: boolean;

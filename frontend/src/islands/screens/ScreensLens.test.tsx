@@ -1873,6 +1873,21 @@ describe("the navigator", () => {
     expect(split).toHaveAttribute("aria-valuenow", "480");
   });
 
+  it("hands its width to the Mac app, which keeps it past a relaunch (R89)", async () => {
+    const w = window as unknown as Record<string, unknown>;
+    const postMessage = vi.fn();
+    w.webkit = { messageHandlers: { navigation: { postMessage } } };
+    try {
+      mockApi(screensResponse());
+      render(<ScreensLens />);
+      const split = await screen.findByRole("separator", { name: "Resize the list of screens" });
+      fireEvent.keyDown(split, { key: "Home" });
+      expect(postMessage).toHaveBeenCalledWith({ type: "report-pref", key: "bn-screens-nav-width", value: "200" });
+    } finally {
+      delete w.webkit;
+    }
+  });
+
   it("counts a screen's quotes as its board does, though the count is not shown for now", () => {
     const byId = new Map([["a", {} as QuoteResponse], ["b", {} as QuoteResponse]]);
     const s = { key: "k", name: "/k", quotes: 0, tabs: [{ ...TAB, pins: [{ ...TAB.pins[0], dom_id: "a" }], loose: ["a", "b", "gone"] }] };

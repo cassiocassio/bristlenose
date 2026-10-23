@@ -1,0 +1,23 @@
+{
+  "_doc": "The report's per-viewer preferences the Mac app keeps across relaunches (R89). The SPA posts each change as {type: 'report-pref', key, value}; BridgeHandler saves it in UserDefaults and seeds every new web view's localStorage. A key matches if it is listed or starts with a listed prefix (and is at most max_key_length long). Asserted by frontend/src/utils/nativePrefs.test.ts (MIRRORED_PREF_KEYS) and desktop/Bristlenose/BristlenoseTests/ReportPrefsMirrorTests.swift (BridgeHandler.reportPrefKeys): a key added on one side only fails one of the two.",
+  "message_type": "report-pref",
+  "max_value_length": 32,
+  "keys": [
+    "bristlenose-zoom",
+    "bn-toc-open",
+    "bn-tags-open",
+    "bn-toc-width",
+    "bn-tags-width",
+    "bn-inspector-open",
+    "bn-inspector-height",
+    "bn-inspector-dimension",
+    "bn-screens-nav-open",
+    "bn-screens-nav-width",
+    "bn-discussion-guide-open",
+    "bn-discussion-nav-width"
+  ],
+  "key_prefixes": [
+    "bristlenose-quote-grouping-"
+  ],
+  "max_key_length": 64
+}

@@ -13,6 +13,7 @@
  */
 
 import { useSyncExternalStore } from "react";
+import { storePref } from "../../utils/nativePrefs";
 
 const OPEN_KEY = "bn-screens-nav-open";
 
@@ -33,12 +34,9 @@ function readWish(): boolean {
   }
 }
 
+/** Through storePref, so the Mac app keeps it past a relaunch (R89). */
 function writeWish(open: boolean): void {
-  try {
-    localStorage.setItem(OPEN_KEY, String(open));
-  } catch {
-    // as above: just not remembered
-  }
+  storePref(OPEN_KEY, String(open));
 }
 
 let state: NavPanelState = { wish: readWish(), shown: false, wanted: 0 };

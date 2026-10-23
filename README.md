@@ -209,6 +209,8 @@ bristlenose configure any-llm
 | Another provider any-llm supports | Add its part first: `pipx inject bristlenose "any-llm-sdk[<provider>]"`, then `bristlenose configure any-llm` |
 | Claude or Gemini through your company's AWS, Google Cloud or Azure AI account | Not supported |
 
+Choose a provider's larger models. Small ones often leave out a field Bristlenose needs on a long interview, and that session then comes back with no quotes: on the same interviews, Mistral Large ran clean and Mistral Small lost one session in three.
+
 Through OpenRouter, your transcripts go to OpenRouter, which passes them to the model's host: check the data policy of the model you pick, and whether a free tier may use your inputs for training, before you send participant data. Bristlenose doesn't estimate costs for these providers; their own consoles show what you've spent.
 
 Coming to the Mac app.

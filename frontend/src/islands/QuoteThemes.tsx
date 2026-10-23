@@ -7,7 +7,7 @@
  * mutations are visible across all quote islands.
  */
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../components/RouteError";
 import { apiGet, getCodebook } from "../utils/api";
@@ -25,7 +25,7 @@ import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes, highlightTermsOf } from "../utils/filter";
 import { groupAnchor } from "../utils/quoteGroups";
 import { QuoteGroup } from "./QuoteGroup";
-import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
+import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { SectionHeading } from "../components";
 
 interface QuoteThemesProps {
@@ -41,72 +41,63 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
   const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
-  const { isRefetching, beginRefetch, endRefetch } = useRefetching();
 
-  const fetchQuotes = useCallback((replace = false) => {
-    apiGet<QuotesListResponse>("/quotes")
-      .then((json) => {
-        // A failed read is not left over the good one that follows (as in
-        // QuoteSessions): during a run there is a re-read per import.
-        setError(null);
-        setData(json);
-        const allQuotes = [
-          ...json.sections.flatMap((s) => s.quotes),
-          ...json.themes.flatMap((t) => t.quotes),
-        ];
-        // Unjoined quotes too (Phase 2), so a star made before the sections
-        // existed shows wherever the quote is drawn.
-        initFromQuotes([...allQuotes, ...(json.unjoined ?? [])], replace, json.uncategorised);
-        initHeadingEdits(json.sections, json.themes);
-      })
-      .catch((err: Error) => {
-        // The wire string is for the console; the lens says it in its own words (R86).
-        console.error("Quotes read failed:", err);
-        setError(err.message || "read failed");
-      })
-      .finally(() => endRefetch());
-    // Also fetch codebook tag names for auto-suggest vocabulary
-    getCodebook()
-      .then((cb) => {
-        setCodebookTagNames(cb.all_tag_names);
-        const map: Record<string, TagGroupInfo> = {};
-        const groups: TagVocabularyGroup[] = [];
-        for (const g of cb.groups) {
-          const tags: { name: string; colourIndex: number }[] = [];
-          for (let i = 0; i < g.tags.length; i++) {
-            map[g.tags[i].name.toLowerCase()] = {
-              group: g.name,
-              colour_set: g.colour_set,
-              colour_index: g.tags[i].colour_index,
-              frameworkId: g.framework_id,
-            };
-            tags.push({ name: g.tags[i].name, colourIndex: g.tags[i].colour_index });
-          }
-          groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+  // Read on open, again after a run (once more if that fails) and when tags change elsewhere
+  // (the codebook lens applying AutoCode). The codebook comes with the quotes, so a re-read swaps
+  // both together; without it the quotes still show, with no tag vocabulary.
+  const { reload, handingOver } = useLensRead({
+    read: () =>
+      Promise.all([
+        apiGet<QuotesListResponse>("/quotes"),
+        getCodebook().catch((e: unknown) => {
+          console.warn("Quotes: no codebook, so no tag vocabulary", e);
+          return null;
+        }),
+      ]),
+    apply: ([json, cb], kind) => {
+      // A failed read is not left over the good one that follows: during a run there is a
+      // re-read per import.
+      setError(null);
+      setData(json);
+      const allQuotes = [
+        ...json.sections.flatMap((s) => s.quotes),
+        ...json.themes.flatMap((t) => t.quotes),
+      ];
+      // Unjoined quotes too (Phase 2), so a star made before the sections
+      // existed shows wherever the quote is drawn.
+      initFromQuotes([...allQuotes, ...(json.unjoined ?? [])], kind !== "first", json.uncategorised);
+      initHeadingEdits(json.sections, json.themes);
+      if (!cb) return;
+      const map: Record<string, TagGroupInfo> = {};
+      const groups: TagVocabularyGroup[] = [];
+      for (const g of cb.groups) {
+        const tags: { name: string; colourIndex: number }[] = [];
+        for (const tag of g.tags) {
+          map[tag.name.toLowerCase()] = {
+            group: g.name,
+            colour_set: g.colour_set,
+            colour_index: tag.colour_index,
+            frameworkId: g.framework_id,
+          };
+          tags.push({ name: tag.name, colourIndex: tag.colour_index });
         }
-        setTagGroupMap(map);
-        setGroupedVocabulary(groups);
-      })
-      .catch(() => {}); // Non-critical — silently ignore
-  }, [projectId, endRefetch]);
+        groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+      }
+      setCodebookTagNames(cb.all_tag_names);
+      setTagGroupMap(map);
+      setGroupedVocabulary(groups);
+    },
+    // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
+    onError: (err) => setError(err instanceof Error && err.message ? err.message : "read failed"),
+    refreshKey,
+    key: projectId,
+    label: "Quotes read failed:",
+  });
 
   useEffect(() => {
-    fetchQuotes();
-  }, [fetchQuotes]);
-
-  // Re-fetch when the codebook lens applies bulk autocode tags.
-  useEffect(() => {
-    const handler = () => fetchQuotes(true);
-    document.addEventListener("bn:tags-changed", handler);
-    return () => document.removeEventListener("bn:tags-changed", handler);
-  }, [fetchQuotes]);
-
-  // Re-fetch on pipeline-run completion (LastRunStore bump).
-  useEffect(() => {
-    if (refreshKey === 0) return;
-    beginRefetch();
-    fetchQuotes(true);
-  }, [refreshKey, fetchQuotes, beginRefetch]);
+    document.addEventListener("bn:tags-changed", reload);
+    return () => document.removeEventListener("bn:tags-changed", reload);
+  }, [reload]);
 
   // Collect all tag names across all quotes + codebook for the vocabulary.
   const tagVocabulary = useMemo(() => {
@@ -172,7 +163,8 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
 
   const hasMedia = true;
 
-  if (error) {
+  // The notice is for a lens with nothing to show: a failed re-read keeps what is drawn (R86).
+  if (error && !data) {
     return (
       <section>
         <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
@@ -193,7 +185,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
   if (data.themes.length === 0) return null;
 
   return (
-    <section {...refetchOverlayProps(isRefetching)}>
+    <section className={handoverClass(handingOver)}>
       <SectionHeading id="themes">{t("quotes.themes")}</SectionHeading>
       {filteredThemes.map((theme) => {
         const anchor = groupAnchor("theme", theme.theme_id);

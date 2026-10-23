@@ -73,6 +73,7 @@ import { ThresholdReviewModal } from "../components/ThresholdReviewModal";
 import { MergeConfirm, NameClashDialog } from "../components/CodebookAuthoring";
 import { useCodebookAuthoring } from "../hooks/useCodebookAuthoring";
 import { isExportMode } from "../utils/exportData";
+import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import i18n from "../i18n";
 
 /** What the page needs to know about one codebook. Was `RailBook`, which
@@ -247,37 +248,37 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
       : null,
   );
 
-  useEffect(() => {
-    let live = true;
-    // `/codebook` and `/framework-states` are EMBEDDED in an export;
-    // `/codebook/templates` is SERVER_ONLY (routes/export.py), so offline it
-    // throws. A bare Promise.all rejects on that one and blanks the whole lens
-    // — the reader of a leave-behind would get an error where their codebook
-    // should be. Tolerated separately: the catalogue is unavailable offline,
-    // the codebook itself is not.
-    Promise.all([
-      getCodebook(),
-      getCodebookTemplates().catch(() => null),
-      getFrameworkStates(),
-    ])
-      .then(([cb, tpl, st]) => {
-        if (!live) return;
-        // A failed read is not left over a good one that follows.
-        setError(null);
-        setCodebook(cb);
-        setTemplates(tpl);
-        setStates(st);
-      })
-      .catch((e: Error) => {
-        if (!live) return;
-        // The wire string is for the console; the lens says it in its own words (R86).
-        console.error("Codebook read failed:", e);
-        setError(e.message || "read failed");
-      });
-    return () => {
-      live = false;
-    };
-  }, [projectId, refreshKey]);
+  // Read on open, again after a run (once more if that fails) and after a write here or
+  // elsewhere (`codebook-changed`). `/codebook` and `/framework-states` are EMBEDDED in an export;
+  // `/codebook/templates` is SERVER_ONLY (routes/export.py), so offline it throws. A bare
+  // Promise.all rejects on that one and blanks the whole lens — the reader of a leave-behind
+  // would get an error where their codebook should be. Tolerated separately: the catalogue is
+  // unavailable offline, the codebook itself is not.
+  const { reload, handingOver } = useLensRead({
+    read: () =>
+      Promise.all([
+        getCodebook(),
+        getCodebookTemplates().catch((e: unknown) => {
+          // Expected offline; in serve the console says why the catalogue is the old one.
+          if (!isExportMode()) console.warn("Codebook: templates unavailable", e);
+          return null;
+        }),
+        getFrameworkStates(),
+      ]),
+    apply: ([cb, tpl, st]) => {
+      // A failed read is not left over a good one that follows.
+      setError(null);
+      setCodebook(cb);
+      // A catalogue that failed this time keeps the one already read (its titles name the rows).
+      setTemplates((prev) => tpl ?? prev);
+      setStates(st);
+    },
+    // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
+    onError: (e) => setError(e instanceof Error && e.message ? e.message : "read failed"),
+    refreshKey: refreshKey ?? 0,
+    key: projectId,
+    label: "Codebook read failed:",
+  });
 
   const { rows: books } = useMemo((): { rows: LensBook[] } => {
     if (!codebook) return { rows: [] };
@@ -324,20 +325,6 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     }
     return { rows };
   }, [codebook, templates, states, projectName]);
-
-  const reload = useCallback(() => {
-    Promise.all([getCodebook(), getCodebookTemplates(), getFrameworkStates()])
-      .then(([cb, tpl, st]) => {
-        setError(null);
-        setCodebook(cb);
-        setTemplates(tpl);
-        setStates(st);
-      })
-      .catch((e: Error) => {
-        console.error("Codebook read failed:", e);
-        setError(e.message || "read failed");
-      });
-  }, []);
 
   /**
    * Tell everyone the codebook moved.
@@ -794,7 +781,7 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
     // than every other one. A fragment renders no node, so the path holds and
     // the testid moves onto the section itself.
     <>
-      <section data-testid="bn-codebook-v2">
+      <section className={handoverClass(handingOver) || undefined} data-testid="bn-codebook-v2">
         {/* The zone title and its datum. Rendered through `SectionHeading`, not
             a hand-typed `.section-heading` div: that component exists because
             "a class you have to remember to type will eventually be forgotten"
@@ -836,7 +823,8 @@ export function CodebookV2({ projectId, refreshKey, projectName }: Props) {
               defect Codebook v2 shipped with on 30 Aug. */}
           {view === "browse" ? "Codebooks" : "Codebook"}
         </SectionHeading>
-        {error && <ErrorNotice scope="lens" />}
+        {/* For a lens with nothing to show: a failed re-read keeps what is drawn (R86). */}
+        {error && !codebook && <ErrorNotice scope="lens" />}
         {/* No rail here. Codebook navigation is the standard left sidebar
             (`CodebookV2Sidebar`, mounted by AppLayout), which brings the
             toolbar toggle, the `[` key, drag-to-resize, hover-peek and the

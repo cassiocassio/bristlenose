@@ -69,6 +69,7 @@ import {
   type WireEnd,
 } from "./model";
 import { loadDiscussion, type DiscussionLoad } from "./loadDiscussion";
+import { handoverClass, useLensRead } from "../../hooks/useLensRead";
 import { readLensState, writeLensState } from "./lensState";
 import type { DiscussionData, DiscussionQuote, DiscussionSession, DiscussionTurn } from "./types";
 import "./discussion.css";
@@ -251,28 +252,22 @@ export function DiscussionLens() {
   const [failed, setFailed] = useState(false);
   // Again on a refresh (a run imported, a re-analyse finished), as the quotes store is: the record
   // and the store must describe the same quotes, or a quote whose id changed would vanish. The
-  // last load stays on screen while the next one comes.
+  // last load stays on screen while the next one comes, and over a failed one; a failed refresh is
+  // tried once more (useLensRead). A 401, a 500 and an unknown record version all read the same
+  // on screen, so the cause reaches the console.
   const { refreshKey } = useLastRun();
-  useEffect(() => {
-    let live = true;
-    loadDiscussion().then(
-      (l) => {
-        if (!live) return;
-        setLoad(l);
-        setFailed(false);
-      },
-      (e: unknown) => {
-        // A 401, a 500 and an unknown record version all read the same on
-        // screen, so the cause has to reach the console.
-        console.error("discussion: load failed", e);
-        if (live) setFailed(true);
-      },
-    );
-    return () => {
-      live = false;
-    };
-  }, [refreshKey]);
-  if (failed) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
+  const { handingOver } = useLensRead<DiscussionLoad>({
+    read: loadDiscussion,
+    apply: (l) => {
+      setLoad(l);
+      setFailed(false);
+    },
+    onError: () => setFailed(true),
+    refreshKey,
+    key: "discussion",
+    label: "discussion: load failed",
+  });
+  if (failed && !load) return shell(<p className="bn-empty-state" role="alert">{S.failed}</p>);
   if (!load) return shell(<p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
   // Each state says what it is and what to do; none reads as "no questions".
   // An exported report's reader cannot re-run anything, so it gets one plain line.
@@ -283,10 +278,10 @@ export function DiscussionLens() {
   const data = load.data;
   if (!data) return none(S.notRun);
   if (!data.sessions.length) return shell(<p className="bn-empty-state">{S.noSessions}</p>);
-  return <DiscussionView data={data} />;
+  return <DiscussionView data={data} handingOver={handingOver} />;
 }
 
-export function DiscussionView({ data }: { data: DiscussionData }) {
+export function DiscussionView({ data, handingOver = false }: { data: DiscussionData; handingOver?: boolean }) {
   useTranslation();
   // The report's quotes store and the card that draws them (quoteCardHost.tsx). Until the store
   // holds the report's quotes the lens says it is loading, and if they cannot be loaded it says
@@ -297,10 +292,10 @@ export function DiscussionView({ data }: { data: DiscussionData }) {
       ? <p className="bn-empty-state" role="alert">{S.failed}</p>
       : <p className="bn-empty-state" aria-busy="true">{S.loading}</p>);
   }
-  return <DiscussionBody data={data} host={host} />;
+  return <DiscussionBody data={data} host={host} handingOver={handingOver} />;
 }
 
-function DiscussionBody({ data: record, host }: { data: DiscussionData; host: ReportQuotes }) {
+function DiscussionBody({ data: record, host, handingOver }: { data: DiscussionData; host: ReportQuotes; handingOver: boolean }) {
   const { i18n: tr } = useTranslation();
   // The lens shows a record quote only when the store holds it, and not while it is hidden: so
   // every count, shade and fold below follows hiding, and a hidden quote is not evidence (decided
@@ -1108,7 +1103,7 @@ function DiscussionBody({ data: record, host }: { data: DiscussionData; host: Re
   const showKey = keyMarks.size > 0 || tier !== "bar";
 
   return (
-    <div ref={lensRef} className={`dl-lens dl-m-${tier}${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`}
+    <div ref={lensRef} className={handoverClass(handingOver, `dl-lens dl-m-${tier}${focus ? " has-focus" : ""}${guideShown ? "" : " guide-hidden"}`)}
       style={style} data-testid="discussion-lens" data-all={all ? "true" : "false"}>
       <CardFocus scope={scope} onHeld={onHeld} />
       <div ref={barRef} className="dl-bar">

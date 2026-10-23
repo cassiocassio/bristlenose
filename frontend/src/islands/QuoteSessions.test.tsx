@@ -119,6 +119,34 @@ describe("QuoteSessions", () => {
     }
   });
 
+  it("plays the hand-over on its section when a run's quotes land", async () => {
+    vi.mocked(apiGet).mockResolvedValue(DURING_THE_RUN);
+    const { container, rerender } = render(<QuoteSessions projectId="1" refreshKey={0} />);
+    await waitFor(() => expect(screen.getByText("s10 at 30")).toBeInTheDocument());
+    expect(container.querySelector(".bn-handover")).toBeNull();
+    rerender(<QuoteSessions projectId="1" refreshKey={1} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("bn-quotes-by-session")).toHaveClass("bn-handover"),
+    );
+  });
+
+  it("keeps the drawn quotes when a re-read after a tag change fails (R86)", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      vi.mocked(apiGet).mockResolvedValue(DURING_THE_RUN);
+      const { container } = render(<QuoteSessions projectId="1" />);
+      await waitFor(() => expect(screen.getByText("s10 at 30")).toBeInTheDocument());
+      vi.mocked(apiGet).mockRejectedValueOnce(new Error("GET /quotes 500"));
+      act(() => { document.dispatchEvent(new Event("bn:tags-changed")); });
+      await waitFor(() => expect(logged).toHaveBeenCalledWith("Quotes read failed:", expect.any(Error)));
+      expect(screen.getByText("s10 at 30")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(container.querySelector(".bn-handover")).toBeNull();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it("clears a failed refetch once the next one answers", async () => {
     vi.mocked(apiGet).mockRejectedValueOnce(new Error("busy")).mockResolvedValue(DURING_THE_RUN);
     const { rerender, container } = render(<QuoteSessions projectId="1" refreshKey={0} />);

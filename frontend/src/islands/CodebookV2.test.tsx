@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render as rtlRender, screen, waitFor } from "@testing-library/react";
+import { act, render as rtlRender, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { CodebookV2 } from "./CodebookV2";
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { resetCodebookV2Selection } from "../contexts/CodebookV2Store";
+import { RETRY_PAUSE_MS } from "../hooks/useLensRead";
 
 // The island reads `?view=library` via useSearchParams, so a bare render throws
 // "useSearchParams() may be used only in the context of a <Router>". Alias once
@@ -619,6 +620,36 @@ describe("phase 5 — the destructive edge", () => {
       expect(screen.queryByText(/500|\/codebook|Could not load/)).toBeNull();
       expect(logged).toHaveBeenCalledWith(expect.any(String), wire);
     } finally {
+      logged.mockRestore();
+    }
+  });
+});
+
+describe("the read after a run", () => {
+  // A failed re-read put the lens's error notice above a drawn codebook (#33 refined, 23 Oct 2026).
+  it("keeps the drawn codebook when the re-read fails, with no notice, and tries once more", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const api = await import("../utils/api");
+      const view = rtlRender(
+        <MemoryRouter><CodebookV2 projectId="1" projectName="Ikea" refreshKey={0} /></MemoryRouter>,
+      );
+      await screen.findByTestId("bn-codebook-v2");
+      await waitFor(() => expect(api.getCodebook).toHaveBeenCalled());
+      const calls = vi.mocked(api.getCodebook).mock.calls.length;
+      vi.useFakeTimers();
+      vi.mocked(api.getCodebook).mockRejectedValueOnce(new Error("GET /codebook 500")).mockRejectedValueOnce(new Error("GET /codebook 500"));
+      view.rerender(
+        <MemoryRouter><CodebookV2 projectId="1" projectName="Ikea" refreshKey={1} /></MemoryRouter>,
+      );
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.queryByText("This lens couldn’t be shown. Try again, or choose another lens.")).toBeNull();
+      await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_PAUSE_MS * 5); });
+      expect(vi.mocked(api.getCodebook).mock.calls.length).toBe(calls + 2);
+      expect(screen.queryByText("This lens couldn’t be shown. Try again, or choose another lens.")).toBeNull();
+      expect(screen.getByTestId("bn-codebook-v2")).not.toHaveClass("bn-handover");
+    } finally {
+      vi.useRealTimers();
       logged.mockRestore();
     }
   });

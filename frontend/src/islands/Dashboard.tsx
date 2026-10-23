@@ -10,7 +10,7 @@
  * falling back to vanilla JS globals for legacy island mode.
  */
 
-import { useCallback, useContext, useEffect, useState, useMemo } from "react";
+import { useContext, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../components/RouteError";
 import { Badge, PersonBadge, TimecodeLink } from "../components";
@@ -19,7 +19,7 @@ import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { navigateTo } from "../shims/navigation";
-import { refetchOverlayProps } from "../hooks/useRefetching";
+import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
 import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename, formatTimecode } from "../utils/format";
@@ -677,31 +677,26 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isRefetching, setIsRefetching] = useState(false);
 
-  useEffect(() => {
-    if (refreshKey > 0) setIsRefetching(true);
-    apiGet<DashboardResponse>("/dashboard")
-      .then((json) => {
-        // A failed read is not left over a good one that follows.
-        setError(null);
-        setData(json);
-      })
-      .catch((err: Error) => {
-        // The wire string is for the console; the lens says it in its own words (R86).
-        console.error("Dashboard read failed:", err);
-        setError(err.message || "read failed");
-      })
-      .finally(() => setIsRefetching(false));
-  }, [projectId, refreshKey]);
-
+  // Read on open, again after a run (once more if that fails) and after a speaker write.
+  const { reload: reloadDashboard, handingOver } = useLensRead<DashboardResponse>({
+    read: () => apiGet<DashboardResponse>("/dashboard"),
+    apply: (json) => {
+      // A failed read is not left over a good one that follows.
+      setError(null);
+      setData(json);
+    },
+    // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
+    onError: (err) => setError(err instanceof Error && err.message ? err.message : "read failed"),
+    refreshKey,
+    key: projectId,
+    label: "Dashboard read failed:",
+  });
   // Re-read after a speaker is named, picked or cleared — here or by undo.
-  const reloadDashboard = useCallback(() => {
-    apiGet<DashboardResponse>("/dashboard").then(setData).catch(() => undefined);
-  }, []);
   useSpeakersChanged(reloadDashboard);
 
-  if (error) {
+  // The notice is for a lens with nothing to show: a failed re-read keeps what is drawn (R86).
+  if (error && !data) {
     return (
       <div className="bn-dashboard">
         <ErrorNotice scope="lens" />
@@ -723,7 +718,7 @@ export function Dashboard({ projectId, refreshKey = 0 }: DashboardProps) {
   // catches incomplete runs upstream.
 
   return (
-    <div {...refetchOverlayProps(isRefetching, "bn-dashboard")}>
+    <div className={handoverClass(handingOver, "bn-dashboard")}>
       <StatsRow stats={data.stats} />
 
       <CompactSessionsTable

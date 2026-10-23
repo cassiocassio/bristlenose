@@ -294,7 +294,7 @@ All organism files live in `bristlenose/theme/organisms/`. Sixteen files.
 - `.bn-project-stat`, `.bn-project-stats`, `.bn-project-stat--pair`, `.bn-project-stat--pair-half`, `.bn-project-stat--text`, `.bn-project-stat-label`, `.bn-project-stat-value`
 - `.bn-featured-quote`, `.bn-featured-row`, `.bn-featured-footer`, `.bn-empty-state`, `.bn-group-header`
 - `.bn-session-back`, `.bn-session-label`, `.bn-session-subnav`
-- `.bn-refetching`
+- `.bn-handover`
 
 ### TOC — `organisms/toc.css`
 - `.toc`, `.toc-link`, `.toc-heading`, `.toc-sub-heading`, `.toc-row`, `.toc-drag-handle`, `.toc-rail`, `.toc-rail-drag`

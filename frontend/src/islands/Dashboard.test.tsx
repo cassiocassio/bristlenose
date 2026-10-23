@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { NavigateFunction } from "react-router-dom";
 import { installNavigationShims } from "../shims/navigation";
 import { Dashboard } from "./Dashboard";
 import type { DashboardResponse } from "../utils/types";
+import { HANDOVER_MS, RETRY_PAUSE_MS } from "../hooks/useLensRead";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -118,6 +119,81 @@ describe("Dashboard — a failed read", () => {
     } finally {
       logged.mockRestore();
     }
+  });
+});
+
+// After a run the lens reads again. Nothing shows while that read is in flight or when it fails;
+// a failed one is tried once more, silently, and the dim plays only as the new data lands
+// (owner, 23 Oct 2026: #33 refined, post-run dimming).
+describe("Dashboard — the read after a run", () => {
+  const after = { ...baseDashboard, sections: [{ label: "Checkout", anchor: "section-checkout" }] };
+  const fetchMock = () => globalThis.fetch as ReturnType<typeof vi.fn>;
+  const failOnce = () =>
+    fetchMock().mockResolvedValueOnce({
+      ok: false, status: 500, statusText: "busy", json: async () => ({}), text: async () => "busy",
+    });
+  const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0); });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  async function drawn() {
+    mockFetch(baseDashboard);
+    const view = render(<Dashboard projectId="1" refreshKey={0} />);
+    await flush();
+    expect(screen.getByText("Onboarding")).toBeTruthy();
+    return view;
+  }
+
+  it("does not dim while the read is in flight", async () => {
+    const { container, rerender } = await drawn();
+    fetchMock().mockReturnValueOnce(new Promise(() => {}));
+    rerender(<Dashboard projectId="1" refreshKey={1} />);
+    await flush();
+    expect(container.querySelector(".bn-handover, .bn-refetching, [inert]")).toBeNull();
+  });
+
+  it("leaves the drawn lens exactly as it was when the read fails", async () => {
+    const { container, rerender } = await drawn();
+    const before = container.innerHTML;
+    failOnce();
+    rerender(<Dashboard projectId="1" refreshKey={1} />);
+    await flush();
+    expect(container.innerHTML).toBe(before);
+    expect(container.querySelector(".bn-handover, .bn-refetching")).toBeNull();
+  });
+
+  it("tries once more after a pause, and swaps with the hand-over when that answers", async () => {
+    const { container, rerender } = await drawn();
+    failOnce();
+    mockFetch(after);
+    rerender(<Dashboard projectId="1" refreshKey={1} />);
+    await flush();
+    expect(fetchMock()).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_PAUSE_MS); });
+    expect(fetchMock()).toHaveBeenCalledTimes(3);
+    expect(screen.getByText("Checkout")).toBeTruthy();
+    expect(screen.queryByText("Onboarding")).toBeNull();
+    expect(container.querySelector(".bn-handover")).not.toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(HANDOVER_MS); });
+    expect(container.querySelector(".bn-handover")).toBeNull();
+  });
+
+  it("stops after the second failure: no third read, nothing on screen", async () => {
+    const { container, rerender } = await drawn();
+    const before = container.innerHTML;
+    failOnce();
+    failOnce();
+    rerender(<Dashboard projectId="1" refreshKey={1} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_PAUSE_MS * 10); });
+    expect(fetchMock()).toHaveBeenCalledTimes(3);
+    expect(container.innerHTML).toBe(before);
   });
 });
 

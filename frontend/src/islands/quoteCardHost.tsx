@@ -20,6 +20,7 @@ import type { CounterItem } from "../components/Counter";
 import type { TagVocabularyGroup } from "../components/TagInput";
 import { useFocus } from "../contexts/FocusContext";
 import { useLastRun } from "../contexts/LastRunStore";
+import { useLensRead } from "../hooks/useLensRead";
 import {
   acceptProposedTag,
   addTagToQuotes,
@@ -78,56 +79,57 @@ export function useReportQuotes(lens: string): ReportQuotes {
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
   const [tagInfo, setTagInfo] = useState<Record<string, TagInfo>>({});
 
-  // Tags changed somewhere else (an AutoCode run or catch-up finishing, a report applied): reload
-  // as the Quotes lens does, or this lens keeps its old tags and proposals until a run.
-  const [tagsChanged, setTagsChanged] = useState(0);
-  useEffect(() => {
-    const handler = () => setTagsChanged((n) => n + 1);
-    document.addEventListener("bn:tags-changed", handler);
-    return () => document.removeEventListener("bn:tags-changed", handler);
-  }, []);
-
-  // Hydrated as the Quotes lens hydrates it, and again on a refresh.
-  const loadedOnce = useRef(false);
-  useEffect(() => {
-    const replace = loadedOnce.current;
-    loadedOnce.current = true;
-    apiGet<QuotesListResponse>("/quotes")
-      .then((json) => {
-        const all = [
-          ...json.sections.flatMap((s) => s.quotes),
-          ...json.themes.flatMap((th) => th.quotes),
-          ...(json.unjoined ?? []),
-        ];
-        initFromQuotes(all, replace, json.uncategorised);
-        setHasModerator(!!json.has_moderator);
-        setFailed(false);
-        setSettled(true);
-      })
-      .catch((e: unknown) => {
-        console.error(`${lens}: /quotes failed`, e);
-        setFailed(true);
-      });
-    getCodebook()
-      .then((cb) => {
-        setVocabulary(cb.all_tag_names);
-        const info: Record<string, TagInfo> = {};
-        const groups: TagVocabularyGroup[] = [];
-        for (const g of cb.groups) {
-          const tags: { name: string; colourIndex: number }[] = [];
-          for (const tg of g.tags) {
-            info[tg.name.toLowerCase()] = {
-              group: g.name, frameworkId: g.framework_id, colour_set: g.colour_set, colour_index: tg.colour_index,
-            };
-            tags.push({ name: tg.name, colourIndex: tg.colour_index });
-          }
-          groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+  // Hydrated as the Quotes lens hydrates it: on open, again after a run (once more if that fails,
+  // useLensRead) and when tags change somewhere else (an AutoCode run or catch-up finishing, a
+  // report applied), or this lens keeps its old tags and proposals until a run. A failed re-read
+  // keeps what the store holds; only a first read that fails is the lens's to say (R86).
+  const { reload } = useLensRead({
+    read: () =>
+      Promise.all([
+        apiGet<QuotesListResponse>("/quotes"),
+        getCodebook().catch((e: unknown) => {
+          console.warn(`${lens}: no codebook, so no tag vocabulary`, e);
+          return null;
+        }),
+      ]),
+    apply: ([json, cb], kind) => {
+      const all = [
+        ...json.sections.flatMap((s) => s.quotes),
+        ...json.themes.flatMap((th) => th.quotes),
+        ...(json.unjoined ?? []),
+      ];
+      initFromQuotes(all, kind !== "first", json.uncategorised);
+      setHasModerator(!!json.has_moderator);
+      setFailed(false);
+      setSettled(true);
+      if (!cb) return;
+      setVocabulary(cb.all_tag_names);
+      const info: Record<string, TagInfo> = {};
+      const groups: TagVocabularyGroup[] = [];
+      for (const g of cb.groups) {
+        const tags: { name: string; colourIndex: number }[] = [];
+        for (const tg of g.tags) {
+          info[tg.name.toLowerCase()] = {
+            group: g.name, frameworkId: g.framework_id, colour_set: g.colour_set, colour_index: tg.colour_index,
+          };
+          tags.push({ name: tg.name, colourIndex: tg.colour_index });
         }
-        setTagInfo(info);
-        setGroupedVocabulary(groups);
-      })
-      .catch((e: unknown) => console.warn(`${lens}: no codebook, so no tag vocabulary`, e));
-  }, [refreshKey, tagsChanged, lens]);
+        groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+      }
+      setTagInfo(info);
+      setGroupedVocabulary(groups);
+    },
+    onError: (_e, kind) => {
+      if (kind === "first") setFailed(true);
+    },
+    refreshKey,
+    key: lens,
+    label: `${lens}: /quotes failed`,
+  });
+  useEffect(() => {
+    document.addEventListener("bn:tags-changed", reload);
+    return () => document.removeEventListener("bn:tags-changed", reload);
+  }, [reload]);
 
   const byId = useMemo(() => {
     const m = new Map<string, QuoteResponse>();

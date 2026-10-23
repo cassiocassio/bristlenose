@@ -243,3 +243,25 @@ describe("a failed read says so in the lens's words, with Retry", () => {
     });
   }
 });
+
+// After a run the new quotes land with the hand-over on the lens's own section (useLensRead).
+describe.each([
+  ["QuoteSections", (k: number) => <QuoteSections projectId="1" refreshKey={k} />],
+  ["QuoteThemes", (k: number) => <QuoteThemes projectId="1" refreshKey={k} />],
+])("%s — the read after a run", (_name, lens) => {
+  it("plays the hand-over on the drawn section when new quotes land", async () => {
+    mockQuotesApi({
+      ...MOCK_QUOTES,
+      themes: [{
+        theme_id: 1, theme_label: "Trust", description: "", edited_label: null,
+        edited_description: null, is_new: false, quotes: MOCK_QUOTES.sections[0].quotes,
+      }],
+    });
+    const { container, rerender } = render(lens(0));
+    await waitFor(() => expect(container.querySelector("section")).not.toBeNull());
+    await waitFor(() => expect(screen.getAllByText("I found the login confusing").length).toBeGreaterThan(0));
+    expect(container.querySelector(".bn-handover")).toBeNull();
+    rerender(lens(1));
+    await waitFor(() => expect(container.querySelector("section.bn-handover")).not.toBeNull());
+  });
+});

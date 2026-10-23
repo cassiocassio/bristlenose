@@ -74,20 +74,23 @@
     outline: none;
 }
 
-/* Refetch overlay — dim existing data while a refetch is in flight.
-   `inert` is set on the same element from the React hook to block AT
-   and keyboard input; this rule covers visual dim + pointer cursor.
-   Opacity 0.7 keeps body text above WCAG AA against the page bg.
-   `pointer-events: none` is belt-and-braces alongside `inert`. */
-.bn-refetching {
-    opacity: 0.7;
-    pointer-events: none;
-    cursor: progress;
-    transition: opacity var(--bn-transition-fast) ease-out;
+/* Hand-over — a lens's new data, read after a run, lands at the dim and
+   comes up (useLensRead.ts, which keeps the class on for HANDOVER_MS: keep
+   the two durations equal). Only on arrival: nothing dims while a read is in
+   flight or when it fails (owner, 23 Oct 2026). No `inert` and no
+   pointer-events: it would take the focus out of a field mid-edit. The
+   keyframe names only a `from`, as atoms/arrival.css does, so nothing is
+   left behind when it ends. 0.7 keeps body text above WCAG AA. */
+@keyframes bn-handover {
+    from { opacity: 0.7; }
+}
+
+.bn-handover {
+    animation: bn-handover 240ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bn-refetching { transition: none; }
+    .bn-handover { animation: none; }
 }
 
 /* View switcher dropdown */

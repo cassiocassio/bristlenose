@@ -14,7 +14,7 @@
  * freezing or pinning happens here.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../components/RouteError";
 import { apiGet, getCodebook } from "../utils/api";
@@ -31,7 +31,7 @@ import {
 import { useFocus } from "../contexts/FocusContext";
 import { filterQuotes, highlightTermsOf } from "../utils/filter";
 import { QuoteGroup } from "./QuoteGroup";
-import { useRefetching, refetchOverlayProps } from "../hooks/useRefetching";
+import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { SectionHeading } from "../components";
 import { groupQuotesBySession, type SessionGroup } from "../utils/quoteGroups";
 
@@ -58,73 +58,65 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
   const [codebookTagNames, setCodebookTagNames] = useState<string[]>([]);
   const [tagGroupMap, setTagGroupMap] = useState<Record<string, TagGroupInfo>>({});
   const [groupedVocabulary, setGroupedVocabulary] = useState<TagVocabularyGroup[]>([]);
-  const { isRefetching, beginRefetch, endRefetch } = useRefetching();
 
-  const fetchQuotes = useCallback((replace = false) => {
-    apiGet<QuotesListResponse>("/quotes")
-      .then((json) => {
-        // One failed refetch during a run (there is one per import) must not
-        // stay on screen over the good data that follows.
-        setError(null);
-        setData(json);
-        initFromQuotes(
-          [
-            ...json.sections.flatMap((s) => s.quotes),
-            ...json.themes.flatMap((th) => th.quotes),
-            ...(json.unjoined ?? []),
-          ],
-          replace,
-          json.uncategorised,
-        );
-        initHeadingEdits(json.sections, json.themes);
-      })
-      .catch((err: Error) => {
-        // The wire string is for the console; the lens says it in its own words (R86).
-        console.error("Quotes read failed:", err);
-        setError(err.message || "read failed");
-      })
-      .finally(() => endRefetch());
-    getCodebook()
-      .then((cb) => {
-        setCodebookTagNames(cb.all_tag_names);
-        const map: Record<string, TagGroupInfo> = {};
-        const groups: TagVocabularyGroup[] = [];
-        for (const g of cb.groups) {
-          const tags: { name: string; colourIndex: number }[] = [];
-          for (const tag of g.tags) {
-            map[tag.name.toLowerCase()] = {
-              group: g.name,
-              colour_set: g.colour_set,
-              colour_index: tag.colour_index,
-              frameworkId: g.framework_id,
-            };
-            tags.push({ name: tag.name, colourIndex: tag.colour_index });
-          }
-          groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+  // Read on open, again after a run (once more if that fails) and when tags change elsewhere
+  // (the codebook lens applying AutoCode). The codebook comes with the quotes, so a re-read swaps
+  // both together; without it the quotes still show, with no tag vocabulary.
+  const { reload, handingOver } = useLensRead({
+    read: () =>
+      Promise.all([
+        apiGet<QuotesListResponse>("/quotes"),
+        getCodebook().catch((e: unknown) => {
+          console.warn("Quotes: no codebook, so no tag vocabulary", e);
+          return null;
+        }),
+      ]),
+    apply: ([json, cb], kind) => {
+      // A failed read is not left over the good one that follows: during a run there is a
+      // re-read per import.
+      setError(null);
+      setData(json);
+      initFromQuotes(
+        [
+          ...json.sections.flatMap((s) => s.quotes),
+          ...json.themes.flatMap((th) => th.quotes),
+          ...(json.unjoined ?? []),
+        ],
+        kind !== "first",
+        json.uncategorised,
+      );
+      initHeadingEdits(json.sections, json.themes);
+      if (!cb) return;
+      const map: Record<string, TagGroupInfo> = {};
+      const groups: TagVocabularyGroup[] = [];
+      for (const g of cb.groups) {
+        const tags: { name: string; colourIndex: number }[] = [];
+        for (const tag of g.tags) {
+          map[tag.name.toLowerCase()] = {
+            group: g.name,
+            colour_set: g.colour_set,
+            colour_index: tag.colour_index,
+            frameworkId: g.framework_id,
+          };
+          tags.push({ name: tag.name, colourIndex: tag.colour_index });
         }
-        setTagGroupMap(map);
-        setGroupedVocabulary(groups);
-      })
-      .catch(() => {});
-    // projectId: a project switch refetches.
-  }, [projectId, endRefetch]); // eslint-disable-line react-hooks/exhaustive-deps
+        groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
+      }
+      setCodebookTagNames(cb.all_tag_names);
+      setTagGroupMap(map);
+      setGroupedVocabulary(groups);
+    },
+    // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
+    onError: (err) => setError(err instanceof Error && err.message ? err.message : "read failed"),
+    refreshKey,
+    key: projectId,
+    label: "Quotes read failed:",
+  });
 
   useEffect(() => {
-    fetchQuotes();
-  }, [fetchQuotes]);
-
-  useEffect(() => {
-    const handler = () => fetchQuotes(true);
-    document.addEventListener("bn:tags-changed", handler);
-    return () => document.removeEventListener("bn:tags-changed", handler);
-  }, [fetchQuotes]);
-
-  // A run that delivers sessions moves the refresh key once per import.
-  useEffect(() => {
-    if (refreshKey === 0) return;
-    beginRefetch();
-    fetchQuotes(true);
-  }, [refreshKey, fetchQuotes, beginRefetch]);
+    document.addEventListener("bn:tags-changed", reload);
+    return () => document.removeEventListener("bn:tags-changed", reload);
+  }, [reload]);
 
   const groups = useMemo(() => (data ? groupBySession(data) : []), [data]);
 
@@ -162,7 +154,8 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
     </SectionHeading>
   );
 
-  if (error) {
+  // The notice is for a lens with nothing to show: a failed re-read keeps what is drawn (R86).
+  if (error && !data) {
     return (
       <section>
         {heading}
@@ -180,7 +173,7 @@ export function QuoteSessions({ projectId, refreshKey = 0, headingAction }: Quot
   }
 
   return (
-    <section {...refetchOverlayProps(isRefetching)} data-testid="bn-quotes-by-session">
+    <section className={handoverClass(handingOver)} data-testid="bn-quotes-by-session">
       {heading}
       {filtered.map((g) => (
         <QuoteGroup

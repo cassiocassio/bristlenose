@@ -14,6 +14,8 @@ import type { DiscussionData } from "./types";
 import { getQuotesSnapshot, HIDE_DURATION, hideQuotes, initFromQuotes, resetStore } from "../../contexts/QuotesContext";
 import { FocusProvider, useFocus } from "../../contexts/FocusContext";
 import type { QuoteResponse } from "../../utils/types";
+import { bumpRefreshKey, resetLastRunStore } from "../../contexts/LastRunStore";
+import { RETRY_PAUSE_MS } from "../../hooks/useLensRead";
 
 const data = fixture as unknown as DiscussionData;
 
@@ -956,6 +958,50 @@ describe("DiscussionLens", () => {
     api.getSessionList.mockResolvedValue(sessionList);
     render(<DiscussionLens />);
     expect(await screen.findByRole("alert")).toHaveTextContent("could not be loaded");
+  });
+});
+
+describe("DiscussionLens — the read after a run", () => {
+  // A failed re-read over a drawn lens replaced it with the failure line (#33 refined, 23 Oct 2026).
+  it("keeps the drawn lens when the re-read fails, and swaps when the one retry answers", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      serve("ready", record);
+      const { container } = render(<DiscussionLens />);
+      await screen.findByTestId("discussion-lens");
+      vi.useFakeTimers();
+      let n = 0;
+      api.apiGet.mockImplementation((path: string) => {
+        if (path !== "/discussion") return route(path);
+        n += 1;
+        return n === 1 ? Promise.reject(new Error("GET /discussion 500")) : Promise.resolve({ status: "stale", record: null });
+      });
+      act(() => bumpRefreshKey());
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.getByTestId("discussion-lens")).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(container.querySelector(".bn-handover")).toBeNull();
+      await act(async () => { await vi.advanceTimersByTimeAsync(RETRY_PAUSE_MS); });
+      expect(n).toBe(2);
+      expect(screen.getByText(/quotes have changed since the discussion was built/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+      resetLastRunStore();
+      logged.mockRestore();
+    }
+  });
+
+  it("plays the hand-over on the drawn lens when the new record lands", async () => {
+    try {
+      serve("ready", record);
+      render(<DiscussionLens />);
+      await screen.findByTestId("discussion-lens");
+      expect(screen.getByTestId("discussion-lens")).not.toHaveClass("bn-handover");
+      act(() => bumpRefreshKey());
+      await waitFor(() => expect(screen.getByTestId("discussion-lens")).toHaveClass("bn-handover"));
+    } finally {
+      resetLastRunStore();
+    }
   });
 });
 

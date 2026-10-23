@@ -68,7 +68,7 @@ import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
-import { refetchOverlayProps } from "../hooks/useRefetching";
+import { handoverClass, useLensRead } from "../hooks/useLensRead";
 
 // The picker's code is loaded when someone first opens it: the grid is part of
 // first paint, and the picker is needed only on a click. The browser loads the
@@ -208,7 +208,6 @@ export function SessionsTable({
   // `${session}:${code}` of the speaker whose web picker is open.
   const [pickerKey, setPickerKey] = useState<string | null>(null);
 
-  const [isRefetching, setIsRefetching] = useState(false);
   // The timeline slice under each row (GET /tapestry). Absent → no disclosure.
   const [tapestry, setTapestry] = useState<Record<string, TapestrySession> | null>(null);
   // How Whisper heard each recording, under its timeline — only with diagnostics on.
@@ -240,31 +239,31 @@ export function SessionsTable({
   const [reloadKey, setReloadKey] = useState(0);
   // The session whose re-analyse sheet is open (§J7 R3).
   const [reanalysing, setReanalysing] = useState<string | null>(null);
+  // The grid: read on open, again after a run (once more if that fails) and after a speaker
+  // write. A superseded read never overwrites a newer one's answer, either way.
+  const { reload: reloadSessions, handingOver } = useLensRead<SessionsListResponse>({
+    read: () => apiGet<SessionsListResponse>("/sessions"),
+    apply: (json) => {
+      setData(json);
+      setError(null);
+    },
+    // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
+    onError: (err) => setError(err instanceof Error && err.message ? err.message : "read failed"),
+    refreshKey,
+    key: projectId,
+    label: "Sessions read failed:",
+  });
   const reloadAfterWrites = useCallback(() => {
     void Promise.resolve()
       .then(speakerWritesSettled)
-      .then(() => setReloadKey((k) => k + 1));
-  }, []);
+      .then(() => {
+        setReloadKey((k) => k + 1);
+        reloadSessions();
+      });
+  }, [reloadSessions]);
 
+  // The layers under the grid, read with it.
   useEffect(() => {
-    // refreshKey starts at 0; LastRunStore bumps it to 1 on the first
-    // observed terminus. So a non-zero value is by definition a refetch
-    // — no separate "is this the initial mount?" tracking needed.
-    if (refreshKey > 0) setIsRefetching(true);
-    apiGet<SessionsListResponse>("/sessions")
-      .then((json) => {
-        // A superseded read must not overwrite a newer one's answer, either way.
-        if (cancelled) return;
-        setData(json);
-        setError(null);
-      })
-      .catch((err: Error) => {
-        // The wire string is for the console; the lens says it in its own words (R86).
-        console.error("Sessions read failed:", err);
-        if (cancelled) return;
-        setError(err.message || "read failed");
-      })
-      .finally(() => setIsRefetching(false));
 
     // Degraded, not broken: /sessions already carries the server-resolved
     // display name, so a failure here costs the full-name tooltip and the
@@ -722,7 +721,7 @@ export function SessionsTable({
   };
 
   return (
-    <section {...refetchOverlayProps(isRefetching, "bn-session-table")}>
+    <section className={handoverClass(handingOver, "bn-session-table")}>
       {/* Zone title. Must be a direct child of this <section> for the
           flush-to-datum rule to reach it
           (`.center > main > section:first-of-type > .section-heading`).

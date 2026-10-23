@@ -1323,6 +1323,8 @@ class TestRunAll:
             patch("bristlenose.doctor.check_brew_tap_trust") as m9,
             patch("bristlenose.doctor.check_voice") as m10,
             patch("bristlenose.doctor.check_anyllm") as m11,
+            # The any-llm row shows only where it is installed or chosen.
+            patch("bristlenose.doctor._anyllm_present", return_value=True),
         ):
             for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
@@ -2456,7 +2458,10 @@ def test_voice_hint_names_a_command_that_can_work_here(monkeypatch, platform, ve
 
     monkeypatch.setattr(sys, "platform", platform)
     monkeypatch.setattr(sys, "version_info", version)
+    from bristlenose.utils import install_channel
+
     monkeypatch.setattr(sys, "prefix", str(Path(*prefix)))
+    monkeypatch.setattr(install_channel, "installed_extras", list)
     assert voice_install_hint().startswith(hint)
 
 

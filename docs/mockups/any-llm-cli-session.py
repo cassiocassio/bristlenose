@@ -134,7 +134,7 @@ def s3(c: Console) -> None:
     c.print()
     c.print("Which model? Write it as [bold]provider:model[/bold], e.g. mistral:mistral-large-latest", highlight=False)
     c.print("[bold]Model:[/bold] mistral:mistral-large-latest", highlight=False)
-    c.print("Using the Mistral key from your environment.")
+    c.print("Using the Mistral key from your environment (MISTRAL_API_KEY).", highlight=False)
     c.print("Checking with Mistral (~$0.0001, no transcript content)...", end=" ")
     c.print(f"{OK} Valid")
     c.print("[dim]Transcripts will go to Mistral, through any-llm 1.27.0.[/dim]", highlight=False)

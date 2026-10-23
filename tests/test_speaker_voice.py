@@ -603,7 +603,9 @@ class TestDoctor:
         assert [r.status for r in states] == [
             CheckStatus.SKIP, CheckStatus.SKIP, CheckStatus.SKIP, CheckStatus.OK]
         assert "switched off" in states[0].detail
-        assert "bristlenose[voice]" in states[1].detail
+        # The hint also names extras already installed ([voice,any-llm]), so a
+        # --force reinstall never drops them (utils/install_channel.py).
+        assert '"bristlenose[voice' in states[1].detail
         assert "doctor --fetch" in states[2].detail
 
     def test_in_the_mac_app_no_cli_command_is_suggested(self, monkeypatch) -> None:

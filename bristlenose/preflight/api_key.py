@@ -628,29 +628,43 @@ def _validate_anyllm(
         return ValidationResult(ok=False, raw_message=f"not a provider:model string: {model!r}")
     inner, model_id = parts
     params = _params_for("anyllm", model, params)
+    from bristlenose.llm.client import _refuses_json_schema
+
+    schema_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "preflight",
+            "schema": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
+        },
+    }
     try:
         provider = AnyLLM.create(inner, api_key=api_key or None)
-        provider.completion(
-            model=model_id,
-            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "preflight",
-                    "schema": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
-                },
-            },
-            **params,
-        )
+        try:
+            provider.completion(
+                model=model_id,
+                messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+                response_format=schema_format,
+                **params,
+            )
+        except Exception as exc:
+            if not _refuses_json_schema(exc):
+                raise
+            # The run falls back to json_object for a provider that refuses the
+            # schema (DeepSeek, for one); so does its check, or the run could
+            # never start. json_object mode wants the word JSON in the messages.
+            provider.completion(
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": "Reply in JSON."},
+                    {"role": "user", "content": _VALIDATION_PROMPT},
+                ],
+                response_format={"type": "json_object"},
+                **params,
+            )
     except Exception as exc:
         network = _classify_network_error(exc)
         if network is not None:
             return network
-        original = getattr(exc, "original_exception", None)
-        if isinstance(original, BaseException):
-            network = _classify_network_error(original)
-            if network is not None:
-                return network
         kind = anyllm.classify(exc)
         bucket = {
             LLMFailureKind.INVALID_KEY: "invalid_key",
@@ -739,6 +753,12 @@ def preflight_api_key(
         if not ready.ready:
             return
         api_key, source = ready.api_key or "", ready.key_source
+        # The cache key needs the key actually used — "" stands for an
+        # environment key the validator lets any-llm read — and the host, which
+        # a *_API_BASE variable can change. Either changing the same day is a
+        # new request, checked again.
+        _anyllm_fp_key = anyllm.active_key(settings)
+        _anyllm_endpoint = (ready.inner, anyllm.api_base(ready.inner)[0] or "")
     else:
         api_key, source = _api_key_for(settings)
         if not api_key:
@@ -769,9 +789,15 @@ def preflight_api_key(
         )
     elif provider == "local":
         endpoint = (str(settings.local_url),)
+    elif provider == "anyllm":
+        endpoint = _anyllm_endpoint
     else:
         endpoint = ()
-    request = request_fingerprint(_wire_model, params, key=api_key, endpoint=endpoint)
+    request = request_fingerprint(
+        _wire_model, params,
+        key=_anyllm_fp_key if provider == "anyllm" else api_key,
+        endpoint=endpoint,
+    )
 
     state = read_state()
     first_run = bool(state.get("first_run", True))

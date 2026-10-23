@@ -14,6 +14,20 @@ last-trued: 2026-10-23
 
 ## Changelog
 
+- _2026-10-23_ — review of the build (Fable plus five reviewers), folded in:
+  the preflight falls back to `json_object` as the run does (DeepSeek could
+  never start); a rejected stored key is asked for again and a rejected
+  environment key is named, never a loop; a key given to `configure` is the one
+  checked, and a variable that will shadow it is named; readiness never raises
+  (Vertex-style construction errors become `broken`); the destination line and
+  the preflight cache follow `*_API_BASE` overrides, with a warning for plain
+  HTTP off the machine; our own retry on 429/5xx honouring `Retry-After`;
+  Mistral's `model_length` reaches split-and-retry; a key pasted as the model is
+  caught before it is echoed or stored; install hints keep the extras already
+  installed and pin injected SDKs; `doctor`'s any-llm row shows only where it is
+  installed or chosen; a contract test against the real library (skipped where
+  it isn't installed). Still open: the free CI job that installs the extra.
+
 - _2026-10-23_ — built v1, and trued the plan to it: default set Mistral and
   OpenRouter (owner; DeepSeek reachable directly at no cost, since it rides on
   the OpenAI SDK; Groq and Grok through OpenRouter, the name confusion being a

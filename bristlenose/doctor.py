@@ -647,6 +647,12 @@ def check_anyllm_key(settings: BristlenoseSettings) -> CheckResult:
     )
 
 
+def _anyllm_present() -> bool:
+    from bristlenose.llm import anyllm
+
+    return anyllm.install_state() is None
+
+
 def check_anyllm() -> CheckResult:
     """The any-llm row: installed or not, its version, and what it can reach.
 
@@ -1853,7 +1859,13 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_network(settings),
         check_pii(settings),
         check_voice(settings),
-        check_anyllm(),
+        # Only for people who use it: a SKIP row with an install command on
+        # every doctor would be noise for everyone who never asked.
+        *(
+            [check_anyllm()]
+            if getattr(settings, "llm_provider", "") == "anyllm" or _anyllm_present()
+            else []
+        ),
         check_disk_space(settings),
         check_serve_deps(),
         check_auth_token_env(),

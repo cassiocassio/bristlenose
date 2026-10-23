@@ -20,6 +20,7 @@ import difflib
 import importlib.util
 import logging
 import os
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
@@ -61,7 +62,9 @@ _DISPLAY: dict[str, str] = {
 
 #: Inner providers that pass the request on to another company (the model's
 #: host). ``configure`` says so when one is chosen.
-GATEWAYS: frozenset[str] = frozenset({"openrouter", "portkey", "requesty", "edenai"})
+GATEWAYS: frozenset[str] = frozenset(
+    {"openrouter", "portkey", "requesty", "edenai", "otari", "mzai"}
+)
 
 
 def display_name(inner: str) -> str:
@@ -96,7 +99,10 @@ def install_state() -> str | None:
     import is returned verbatim: a present-but-broken install must not be told
     to install what it already has.
     """
-    if importlib.util.find_spec("any_llm") is None:
+    try:
+        if "any_llm" not in sys.modules and importlib.util.find_spec("any_llm") is None:
+            return "not-installed"
+    except (ImportError, ValueError):
         return "not-installed"
     try:
         import any_llm  # noqa: F401
@@ -127,15 +133,18 @@ def enable_unified_exceptions() -> None:
     Bristlenose's process, never the user's shell. (From 1.29 the same switch is
     a ``create`` argument; the variable still works.)
     """
-    os.environ.setdefault("ANY_LLM_UNIFIED_EXCEPTIONS", "1")
+    # Assigned, not setdefault: an inherited =0 would turn the typed errors off
+    # and leave classification reading raw SDK shapes.
+    os.environ["ANY_LLM_UNIFIED_EXCEPTIONS"] = "1"
 
 
 @dataclass(frozen=True)
 class Readiness:
     """The answer to "can a call go out?", worked out offline.
 
-    ``status`` is one of: ``ready``, ``not-installed``, ``broken``, ``no-model``,
-    ``bad-model``, ``native``, ``unknown-provider``, ``sdk-missing``, ``no-key``.
+    ``status`` is one of: ``ready``, ``not-installed``, ``old-python``,
+    ``broken``, ``no-model``, ``bad-model``, ``key-as-model``, ``native``,
+    ``unknown-provider``, ``sdk-missing``, ``no-key``.
     """
 
     status: str
@@ -152,6 +161,8 @@ class Readiness:
     suggestion: str = ""
     #: ``broken`` / ``sdk-missing``: the import error, verbatim.
     detail: str = ""
+    #: A key was given, but this variable is set and wins at run time.
+    shadowed_by: str = ""
 
     @property
     def ready(self) -> bool:
@@ -169,6 +180,8 @@ def readiness(settings: BristlenoseSettings, *, api_key: str | None = None) -> R
     model = (settings.anyllm_model or "").strip()
     state = install_state()
     if state == "not-installed":
+        if sys.version_info < (3, 11):
+            return Readiness("old-python", model=model)
         return Readiness("not-installed", model=model)
     if state is not None:
         return Readiness("broken", model=model, detail=state)
@@ -207,31 +220,92 @@ def readiness_for_model(model: str, *, api_key: str | None = None) -> Readiness:
             detail=str(cls.MISSING_PACKAGES_ERROR),
         )
 
-    # Building the provider is offline: it reads the key and makes a client
-    # object; nothing goes over the network.
+    # Building the provider makes a client object from the key; nothing goes
+    # over the network for the providers we name. Anything it raises besides a
+    # missing key is shown as it is, never allowed to escape: callers include
+    # `doctor` and the server's key checks (Vertex raises google-auth's
+    # DefaultCredentialsError, Azure-hosted Anthropic a ValueError).
+    env_value = env_key(inner)
+    if api_key is not None:
+        # A key the user just gave (configure --key, or the prompt) is the one
+        # to check, even when the provider's variable is also set; that variable
+        # still wins at run time, so say so.
+        try:
+            AnyLLM.create(inner, api_key=api_key)
+        except Exception as exc:  # noqa: BLE001 — shown verbatim
+            return _broken(model, inner, exc)
+        env_name = env_var_name(inner) if env_value else ""
+        return _check_key_is_not_model(Readiness(
+            "ready", model=model, inner=inner, api_key=api_key,
+            key_source="given", shadowed_by=env_name,
+        ))
     try:
         AnyLLM.create(inner)
-        return Readiness("ready", model=model, inner=inner, key_source="environment")
+        return _check_key_is_not_model(
+            Readiness("ready", model=model, inner=inner, key_source="environment",
+                      env_var=env_var_name(inner))
+        )
     except MissingApiKeyError as exc:
         env_var = exc.env_var_name
     except ImportError as exc:
         return Readiness("sdk-missing", model=model, inner=inner, detail=str(exc))
+    except Exception as exc:  # noqa: BLE001 — shown verbatim
+        return _broken(model, inner, exc)
 
-    if api_key is None:
-        api_key = stored_key(inner)
-        source = _store_label() if api_key else ""
-    else:
-        source = "given"
-    if not api_key:
+    stored = stored_key(inner)
+    if not stored:
         return Readiness("no-key", model=model, inner=inner, env_var=env_var)
     try:
-        AnyLLM.create(inner, api_key=api_key)
+        AnyLLM.create(inner, api_key=stored)
     except MissingApiKeyError:
         return Readiness("no-key", model=model, inner=inner, env_var=env_var)
-    return Readiness(
-        "ready", model=model, inner=inner, api_key=api_key,
-        key_source=source, env_var=env_var,
-    )
+    except Exception as exc:  # noqa: BLE001 — shown verbatim
+        return _broken(model, inner, exc)
+    return _check_key_is_not_model(Readiness(
+        "ready", model=model, inner=inner, api_key=stored,
+        key_source=_store_label(), env_var=env_var,
+    ))
+
+
+def _broken(model: str, inner: str, exc: BaseException) -> Readiness:
+    return Readiness("broken", model=model, inner=inner, detail=f"{type(exc).__name__}: {exc}")
+
+
+def _check_key_is_not_model(ready: Readiness) -> Readiness:
+    """``provider:<the key>``: a key pasted where the model goes.
+
+    An exact comparison, not a pattern: the model id is the key that would be
+    sent. Caught before anything echoes, stores or logs the model string.
+    """
+    parts = split_model(ready.model)
+    key = ready.api_key or env_key(ready.inner)
+    if parts and key and parts[1] == key:
+        return Readiness("key-as-model", inner=ready.inner)
+    return ready
+
+
+def env_var_name(inner: str) -> str:
+    """The provider's key variable, when any-llm's class names a real one.
+
+    Display and comparison only, never readiness: ``ENV_API_KEY_NAME`` is
+    ``"None"`` for llama.cpp, empty for Vertex and a sentence for SageMaker, so
+    whether a key is *needed* is answered by building the provider.
+    """
+    try:
+        from any_llm import AnyLLM
+
+        name = getattr(AnyLLM.get_provider_class(inner), "ENV_API_KEY_NAME", "")
+    except Exception:
+        return ""
+    if isinstance(name, str) and name.isidentifier() and name != "None":
+        return name
+    return ""
+
+
+def env_key(inner: str) -> str:
+    """The provider's key from the environment, or ""."""
+    name = env_var_name(inner)
+    return os.environ.get(name, "") if name else ""
 
 
 def stored_key(inner: str) -> str | None:
@@ -241,7 +315,9 @@ def stored_key(inner: str) -> str | None:
     try:
         return get_credential_store().get(credential_key(inner)) or None
     except Exception:  # a store that cannot answer has no key for us
-        logger.debug("credential store read failed for %s", inner, exc_info=True)
+        # WARNING, not DEBUG: the next thing the user reads is "none is
+        # stored", which this makes false.
+        logger.warning("credential store read failed for %s", inner, exc_info=True)
         return None
 
 
@@ -251,20 +327,52 @@ def _store_label() -> str:
     return get_credential_store_label()
 
 
-def destination(inner: str) -> str:
-    """Where transcripts go: the host when any-llm's provider class names one.
+def api_base(inner: str) -> tuple[str | None, str]:
+    """The base URL any-llm will send to, and the variable it came from.
 
-    Never a table we keep: a class with no ``API_BASE`` (Mistral, in 1.27) is
-    named by its product name instead.
+    Resolved as the library does (``AnyLLM._resolve_api_base``): the provider's
+    ``*_API_BASE`` variable over the class default. A variable left in a shell
+    profile by another tool sends the transcripts and the key elsewhere, so it
+    is never shown as the default host.
     """
     try:
         from any_llm import AnyLLM
 
-        base = getattr(AnyLLM.get_provider_class(inner), "API_BASE", None)
+        cls = AnyLLM.get_provider_class(inner)
     except Exception:
-        base = None
-    host = urlparse(base).hostname if isinstance(base, str) else None
-    return f"{display_name(inner)} ({host})" if host else display_name(inner)
+        return None, ""
+    var = getattr(cls, "ENV_API_BASE_NAME", None) or ""
+    override = os.environ.get(var) if var else None
+    if override:
+        return override, var
+    base = getattr(cls, "API_BASE", None)
+    return (base if isinstance(base, str) else None), ""
+
+
+def destination(inner: str) -> str:
+    """Where transcripts go, as a researcher reads it.
+
+    The host the request will reach, from :func:`api_base`; a class with no
+    default host and no override (Mistral, in 1.27) is named by its product
+    name. Never a table we keep.
+    """
+    base, var = api_base(inner)
+    host = urlparse(base).hostname if base else None
+    if not host:
+        return display_name(inner)
+    if var:
+        return f"{display_name(inner)} ({host}, from {var})"
+    return f"{display_name(inner)} ({host})"
+
+
+def insecure_base(inner: str) -> bool:
+    """True when transcripts would go over plain HTTP to a host off this machine."""
+    base, _ = api_base(inner)
+    if not base:
+        return False
+    parsed = urlparse(base)
+    local = {"localhost", "127.0.0.1", "::1"}
+    return parsed.scheme == "http" and (parsed.hostname or "") not in local
 
 
 def install_hint() -> str:
@@ -278,7 +386,9 @@ def inject_hint(inner: str) -> str:
     """How to add the SDK an inner provider needs to this copy of Bristlenose."""
     from bristlenose.utils.install_channel import inject_command
 
-    return inject_command(f"any-llm-sdk[{inner}]")
+    version = installed_version()
+    pin = f"=={version}" if version else ""
+    return inject_command(f"any-llm-sdk[{inner}]{pin}")
 
 
 def classify(exc: BaseException) -> Any:
@@ -291,25 +401,21 @@ def classify(exc: BaseException) -> Any:
     """
     from bristlenose.llm.failure_classifier import LLMFailureKind, classify_fields
 
+    if is_network_error(exc):
+        return LLMFailureKind.NETWORK
     original = getattr(exc, "original_exception", None)
     for candidate in (original, exc):
         if isinstance(candidate, BaseException):
             kind = classify_fields("anyllm", candidate)
             if kind is not LLMFailureKind.UNKNOWN:
                 return kind
-    name = type(exc).__name__
+    # Only what the status can't say: any-llm's errors carry the provider's
+    # status_code, which the rules above already read.
     by_type = {
         "InsufficientFundsError": LLMFailureKind.OUT_OF_CREDIT,
-        "AuthenticationError": LLMFailureKind.INVALID_KEY,
         "MissingApiKeyError": LLMFailureKind.INVALID_KEY,
-        "RateLimitError": LLMFailureKind.RATE_LIMITED,
-        "ModelNotFoundError": LLMFailureKind.BAD_REQUEST,
-        "ContextLengthExceededError": LLMFailureKind.BAD_REQUEST,
-        "InvalidRequestError": LLMFailureKind.BAD_REQUEST,
-        "GatewayTimeoutError": LLMFailureKind.SERVER_ERROR,
-        "UpstreamProviderError": LLMFailureKind.SERVER_ERROR,
     }
-    return by_type.get(name, LLMFailureKind.UNKNOWN)
+    return by_type.get(type(exc).__name__, LLMFailureKind.UNKNOWN)
 
 
 def explain(ready: Readiness) -> list[str]:
@@ -324,7 +430,16 @@ def explain(ready: Readiness) -> list[str]:
             "any-llm isn't installed in this copy of Bristlenose.",
             f"Add it:  {install_hint()}",
         ]
+    if ready.status == "old-python":
+        return [
+            "any-llm needs Python 3.11 or newer; this Bristlenose runs on "
+            f"Python {sys.version_info.major}.{sys.version_info.minor}.",
+            "Reinstall Bristlenose with a newer Python, e.g. "
+            "pipx install --python python3.12 \"bristlenose[any-llm]\"",
+        ]
     if ready.status == "broken":
+        if ready.inner:
+            return [f"any-llm can't set up {name}.", ready.detail]
         return ["any-llm is installed but won't load.", ready.detail]
     if ready.status == "no-model":
         return [
@@ -334,6 +449,11 @@ def explain(ready: Readiness) -> list[str]:
         ]
     if ready.status == "bad-model":
         return ["Write the model as provider:model, e.g. mistral:mistral-large-latest"]
+    if ready.status == "key-as-model":
+        return [
+            f"That's your {name} API key, not a model. Write the model as "
+            "provider:model, e.g. mistral:mistral-large-latest",
+        ]
     if ready.status == "native":
         cli_name, product = NATIVE_PREFIXES[inner]
         return [f"{product} is built in. Use:  bristlenose configure {cli_name}"]
@@ -351,6 +471,7 @@ def explain(ready: Readiness) -> list[str]:
         return [
             f"No {name} API key: {ready.env_var} isn't set and none is stored.",
             "Store one:  bristlenose configure any-llm",
+            f"(A .env file isn't read for {ready.env_var}; set it in your shell.)",
         ]
     return []
 
@@ -374,13 +495,34 @@ def active_key(settings: BristlenoseSettings) -> str:
     parts = split_model(settings.anyllm_model or "")
     if parts is None or install_state() is not None:
         return ""
-    try:
-        from any_llm import AnyLLM
+    return env_key(parts[0]) or stored_key(parts[0]) or ""
 
-        env_name = getattr(AnyLLM.get_provider_class(parts[0]), "ENV_API_KEY_NAME", "")
-    except Exception:
-        env_name = ""
-    if isinstance(env_name, str) and env_name.isidentifier() and os.environ.get(env_name):
-        return os.environ[env_name]
-    return stored_key(parts[0]) or ""
+
+#: Connection-failure classes, matched by name across the SDKs any-llm wraps:
+#: httpx and httpx2 (mistralai imports httpx2 as httpx; its ConnectError is not
+#: httpx's) and openai's own. Names, because the classes are not related.
+_NETWORK_NAMES = frozenset({
+    "ConnectError", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout",
+    "APIConnectionError", "APITimeoutError", "RemoteProtocolError",
+})
+
+
+def is_network_error(exc: BaseException) -> bool:
+    """True when the failure is reaching the provider, not the provider's answer.
+
+    any-llm wraps a connection failure as a status-less ``ProviderError``; the
+    cause is down the chain (``original_exception``, ``__cause__``,
+    ``__context__``), so walk it.
+    """
+    seen: set[int] = set()
+    todo: list[BaseException | None] = [exc]
+    while todo:
+        cur = todo.pop()
+        if cur is None or id(cur) in seen:
+            continue
+        seen.add(id(cur))
+        if type(cur).__name__ in _NETWORK_NAMES:
+            return True
+        todo += [getattr(cur, "original_exception", None), cur.__cause__, cur.__context__]
+    return False
 

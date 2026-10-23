@@ -42,7 +42,11 @@ _MAX_BYTES = 5 * 1024 * 1024
 _BACKUP_COUNT = 2
 
 # Third-party loggers that are always suppressed
-_NOISY_LOGGERS = ("httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper")
+# mistralai (through any-llm) logs whole request bodies at DEBUG when its own
+# MISTRAL_DEBUG is set; kept at WARNING so a DEBUG run log never holds a transcript.
+_NOISY_LOGGERS = (
+    "httpx", "presidio-analyzer", "presidio_analyzer", "faster_whisper", "mistralai",
+)
 
 
 # Control characters (tab aside) and Unicode line breaks, as visible escapes.

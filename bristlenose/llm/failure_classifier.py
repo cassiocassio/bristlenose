@@ -108,7 +108,8 @@ class _Rule:
 # Ordered MOST-SPECIFIC-FIRST — first match wins. Structured-field rules precede
 # message rules precede bare-status rules, per the precedence discipline above.
 _RULES: tuple[_Rule, ...] = (
-    # --- OUT_OF_CREDIT — only Anthropic + OpenAI expose it on the wire. ---
+    # --- OUT_OF_CREDIT — Anthropic and OpenAI on their own wires, plus any
+    #     provider answering 402 (the provider-agnostic rule below). ---
     # Anthropic: the REAL path is a 400 carrying this message (not the 402).
     _Rule(LLMFailureKind.OUT_OF_CREDIT, providers=frozenset({_ANTHROPIC}),
           message=r"credit balance is too low"),

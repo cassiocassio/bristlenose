@@ -814,6 +814,12 @@ def _print_header(settings: BristlenoseSettings, *, show_provider: bool = True, 
             f"Analysis: {settings.anyllm_model} via any-llm → {where}",
             style="dim", markup=False, highlight=False,
         )
+        if split and anyllm.insecure_base(split[0]):
+            _say(
+                MessageKind.WARNING,
+                "Plain HTTP to another machine: your key and transcripts cross the "
+                "network unencrypted.",
+            )
 
 
 def _named_participant_summary(people: object, n_participants: int) -> str:
@@ -978,6 +984,8 @@ def _print_pipeline_failure(
     asks for partial-run context in mid-run DISK / MISSING_BINARY cases,
     surface it via a `--verbose` flag on `run`, not by default.
     """
+    from rich.markup import escape
+
     from bristlenose.events import CauseCategoryEnum
     from bristlenose.llm.billing_hints import billing_for
     from bristlenose.providers import PROVIDERS
@@ -1031,15 +1039,17 @@ def _print_pipeline_failure(
     elif category == CauseCategoryEnum.DISK:
         _say(MessageKind.ERROR, "Ran out of disk space.")
         if message:
-            console.print(f"  {message}")
+            console.print(f"  {escape(message)}")
     elif category in (
         CauseCategoryEnum.MISSING_BINARY,
         CauseCategoryEnum.MISSING_DEP,
         CauseCategoryEnum.MISSING_INPUT,
     ):
-        _say(MessageKind.ERROR, message or "Required component missing.")
+        _say(MessageKind.ERROR, escape(message) or "Required component missing.")
     else:
-        _say(MessageKind.ERROR, message or "Pipeline failed.")
+        # Provider error text can land here; through a gateway any model host
+        # writes it, and Rich would render its [link=…] markup.
+        _say(MessageKind.ERROR, escape(message) or "Pipeline failed.")
 
 
 def _active_api_key_suffix(settings: object, provider: str | None) -> str:
@@ -2811,26 +2821,56 @@ def _configure_anyllm(key: str | None) -> None:
 
     name = anyllm.display_name(ready.inner)
     if ready.key_source == "environment":
-        console.print(f"Using the {name} key from your environment.")
+        console.print(f"Using the {name} key from your environment ({ready.env_var}).")
     elif ready.key_source not in ("", "given"):
         console.print(f"Using the stored {name} key ({ready.key_source}).")
 
-    console.print(f"Checking with {name} (~$0.0001, no transcript content)...", end=" ")
-    result = _validate_anyllm(ready.api_key or "", model)
-    if result.ok:
-        _say(MessageKind.SUCCESS, "Valid")
-    elif result.error_class == "network":
-        _say(MessageKind.WARNING, f"Couldn't reach {name} to check: {escape(result.raw_message)}")
-        console.print("Saving anyway...")
-    else:
-        from bristlenose.llm.billing_hints import recovery_message
+    from bristlenose.llm.billing_hints import recovery_message
 
+    while True:
+        console.print(f"Checking with {name} (~$0.0001, no transcript content)...", end=" ")
+        result = _validate_anyllm(ready.api_key or "", model)
+        if result.ok:
+            _say(MessageKind.SUCCESS, "Valid")
+            break
+        if result.error_class == "network":
+            _say(
+                MessageKind.WARNING,
+                f"Couldn't reach {name} to check: {escape(result.raw_message)}",
+            )
+            console.print("Saving anyway...")
+            break
         _say(
             MessageKind.ERROR,
-            f"Not valid — {recovery_message('anyllm', result.error_class or '', raw_message=result.raw_message)}",
+            "Not valid — "
+            + recovery_message("anyllm", result.error_class or "", raw_message=result.raw_message),
         )
-        raise typer.Exit(1)
+        # A rejected key must be replaceable here: the run's failure banner
+        # sends the user to this command. A stored key is asked for again; an
+        # environment key can only be fixed where it is set.
+        if result.error_class == "invalid_key" and ready.key_source == "environment":
+            console.print(
+                f"  {ready.env_var} is set in your environment and was rejected: "
+                "replace or unset it, then run this again.",
+                markup=False, highlight=False,
+            )
+            raise typer.Exit(1)
+        if result.error_class != "invalid_key" or not _is_tty():
+            raise typer.Exit(1)
+        entered = typer.prompt(f"Enter a new {name} API key", hide_input=True).strip()
+        if not entered:
+            raise typer.Exit(1)
+        ready = anyllm.readiness_for_model(model, api_key=entered)
+        if not ready.ready:
+            _say_anyllm_problem(ready)
+            raise typer.Exit(1)
 
+    if ready.shadowed_by:
+        _say(
+            MessageKind.WARNING,
+            f"{ready.shadowed_by} is set in your environment and is used instead of a "
+            "stored key: unset it to use the key you gave.",
+        )
     if ready.key_source == "given" and ready.api_key:
         store = get_credential_store()
         cred_key = anyllm.credential_key(ready.inner)
@@ -2863,6 +2903,13 @@ def _configure_anyllm(key: str | None) -> None:
         console.print(
             f"Transcripts will go to {where}, through any-llm {anyllm.installed_version()}.",
             style="dim", markup=False, highlight=False,
+        )
+
+    if anyllm.insecure_base(ready.inner):
+        _say(
+            MessageKind.WARNING,
+            "That address is plain HTTP to another machine: your key and transcripts "
+            "would cross the network unencrypted.",
         )
 
     write_user_config_var("BRISTLENOSE_ANYLLM_MODEL", model)

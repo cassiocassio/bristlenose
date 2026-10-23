@@ -19,6 +19,7 @@ from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from bristlenose import __version__
 from bristlenose.config import BristlenoseSettings, load_settings
 from bristlenose.llm import anyllm
 from bristlenose.llm.client import LLMClient, TruncatedResponseError
@@ -64,6 +65,13 @@ class _FakeProvider:
         self.library = library
 
     async def acompletion(self, **kwargs: Any) -> Any:
+        return self.completion(**kwargs)
+
+    def completion(self, **kwargs: Any) -> Any:  # the preflight's sync call
+        unexpected = set(kwargs) - {
+            "model", "messages", "response_format", "max_tokens", "temperature",
+        }
+        assert not unexpected, f"a parameter the call should not send: {unexpected}"
         self.library.calls.append(kwargs)
         reply = self.library.replies.pop(0)
         if isinstance(reply, BaseException):
@@ -82,11 +90,17 @@ class _FakeLibrary:
             # Mistral's class names no API_BASE in 1.27.
             "mistral": types.SimpleNamespace(
                 API_BASE=None, ENV_API_KEY_NAME="MISTRAL_API_KEY", MISSING_PACKAGES_ERROR=None,
+                ENV_API_BASE_NAME="MISTRAL_API_BASE",
             ),
             "openrouter": types.SimpleNamespace(
                 API_BASE="https://openrouter.ai/api/v1",
                 ENV_API_KEY_NAME="OPENROUTER_API_KEY",
                 MISSING_PACKAGES_ERROR=None,
+                ENV_API_BASE_NAME="OPENROUTER_API_BASE",
+            ),
+            # Builds only with cloud credentials it can't find, as Vertex does.
+            "vertexai": types.SimpleNamespace(
+                API_BASE=None, ENV_API_KEY_NAME="", MISSING_PACKAGES_ERROR=None,
             ),
             # A provider whose SDK this install lacks.
             "cohere": types.SimpleNamespace(
@@ -117,13 +131,18 @@ class _FakeLibrary:
                 import os
 
                 spec = library.classes[provider]
+                if provider == "vertexai":
+                    raise ValueError("Your default credentials were not found")
                 needs_key = spec.ENV_API_KEY_NAME not in ("None", "")
                 if needs_key and not api_key and not os.environ.get(spec.ENV_API_KEY_NAME):
                     raise _MissingApiKeyError(provider, spec.ENV_API_KEY_NAME)
                 library.created.append((provider, api_key))
                 return _FakeProvider(library)
 
+        import importlib.machinery
+
         module = types.ModuleType("any_llm")
+        module.__spec__ = importlib.machinery.ModuleSpec("any_llm", None)
         module.AnyLLM = AnyLLM  # type: ignore[attr-defined]
         return module
 
@@ -140,7 +159,8 @@ def fake_anyllm(monkeypatch: pytest.MonkeyPatch) -> _FakeLibrary:
     monkeypatch.setattr(anyllm, "stored_key", lambda inner: None)
     # Set by the client on first use; restored after the test.
     monkeypatch.delenv("ANY_LLM_UNIFIED_EXCEPTIONS", raising=False)
-    for var in ("MISTRAL_API_KEY", "OPENROUTER_API_KEY", "COHERE_API_KEY"):
+    for var in ("MISTRAL_API_KEY", "OPENROUTER_API_KEY", "COHERE_API_KEY",
+                "MISTRAL_API_BASE", "OPENROUTER_API_BASE"):
         monkeypatch.delenv(var, raising=False)
     return library
 
@@ -266,16 +286,49 @@ async def test_a_reply_cut_off_at_the_cap_reaches_split_and_retry(
 
 
 @pytest.mark.asyncio
-async def test_any_llms_own_length_error_is_truncation_too(
+async def test_mistrals_model_length_is_truncation_not_unreadable(
     fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    class LengthFinishReasonError(Exception):
-        completion = None
+    """any-llm 1.27 checks finish_reason against OpenAI's five values, so
+    Mistral's "model_length" (its context window, the only cap once we send no
+    max_tokens) arrives as a pydantic error on that field. It must still reach
+    s09's split-and-retry. The error here has the real one's shape."""
+    from typing import Literal
 
+    class Choice(BaseModel):
+        finish_reason: Literal["stop", "length", "tool_calls", "content_filter", "function_call"]
+
+    try:
+        Choice.model_validate({"finish_reason": "model_length"})
+    except ValidationError as exc:
+        model_length = exc
     monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
-    fake_anyllm.replies.append(LengthFinishReasonError("length limit"))
+    fake_anyllm.replies.append(model_length)
     with pytest.raises(TruncatedResponseError):
         await _client(monkeypatch).analyze("sys", "usr", Theme)
+
+
+@pytest.mark.asyncio
+async def test_a_rate_limit_is_retried_honouring_retry_after(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Mistral's SDK tries once and the OpenAI SDK three times; a small tier's
+    429 would drop the participant. Retried, waiting what the provider asked
+    (any-llm keeps the header as a string)."""
+    import asyncio as _asyncio
+
+    waits: list[float] = []
+
+    async def no_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    monkeypatch.setattr(_asyncio, "sleep", no_sleep)
+    limited = _StatusError(429, "rate limited")
+    limited.retry_after = "7"  # type: ignore[attr-defined]
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies += [limited, _response('{"label": "a", "quotes": []}')]
+    assert (await _client(monkeypatch).analyze("s", "u", Theme)).label == "a"
+    assert waits == [7.0]
 
 
 @pytest.mark.asyncio
@@ -467,16 +520,16 @@ def test_a_provider_key_alone_never_chooses_any_llm(monkeypatch: pytest.MonkeyPa
     ("prefix", "extra", "inject"),
     [
         (("home", "u", ".venv"), 'pip install "bristlenose[any-llm]"',
-         'pip install "any-llm-sdk[cohere]"'),
+         'pip install "any-llm-sdk[cohere]==1.27.0"'),
         (("home", "u", ".local", "pipx", "venvs", "bristlenose"),
          'pipx install --force "bristlenose[any-llm]"',
-         'pipx inject bristlenose "any-llm-sdk[cohere]"'),
+         'pipx inject bristlenose "any-llm-sdk[cohere]==1.27.0"'),
         (("home", "u", ".local", "share", "uv", "tools", "bristlenose"),
          'uv tool install --force "bristlenose[any-llm]"',
-         'uv tool install --force "bristlenose" --with "any-llm-sdk[cohere]"'),
+         'uv tool install --force "bristlenose[any-llm]" --with "any-llm-sdk[cohere]==1.27.0"'),
         (("opt", "homebrew", "Cellar", "bristlenose", "0.43.0", "libexec"),
-         "brew reinstall bristlenose",
-         '$(brew --prefix bristlenose)/libexec/bin/pip install "any-llm-sdk[cohere]"'),
+         '$(brew --prefix bristlenose)/libexec/bin/pip install "bristlenose[any-llm]==' + __version__ + '"',
+         '$(brew --prefix bristlenose)/libexec/bin/pip install "any-llm-sdk[cohere]==1.27.0"'),
     ],
 )
 def test_install_hints_follow_the_channel(
@@ -484,7 +537,11 @@ def test_install_hints_follow_the_channel(
 ) -> None:
     from pathlib import Path
 
+    from bristlenose.utils import install_channel
+
     monkeypatch.setattr(sys, "prefix", str(Path("/", *prefix)))
+    monkeypatch.setattr(install_channel, "installed_extras", list)
+    monkeypatch.setattr(anyllm, "installed_version", lambda: "1.27.0")
     assert anyllm.install_hint() == extra
     assert anyllm.inject_hint("cohere") == inject
 
@@ -528,3 +585,270 @@ async def test_other_errors_are_not_mistaken_for_a_refused_schema(
     with pytest.raises(_StatusError):
         await _client(monkeypatch).analyze("s", "u", Theme)
     assert len(fake_anyllm.calls) == 1
+
+
+def test_an_install_hint_keeps_the_extras_already_there(monkeypatch: pytest.MonkeyPatch) -> None:
+    """pipx/uv --force rebuild from what the command names: naming only one
+    extra would quietly remove the voice pass."""
+    from pathlib import Path
+
+    from bristlenose.utils import install_channel
+
+    monkeypatch.setattr(sys, "prefix", str(Path("/home/u/.local/pipx/venvs/bristlenose")))
+    monkeypatch.setattr(install_channel, "installed_extras", lambda: ["voice"])
+    assert anyllm.install_hint() == 'pipx install --force "bristlenose[any-llm,voice]"'
+
+
+# ---------------------------------------------------------------------------
+# Review pass 2 (23 Oct 2026): preflight, configure, doctor, destination
+# ---------------------------------------------------------------------------
+
+
+def test_the_preflight_sends_the_runs_request_and_falls_back_like_the_run(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check `configure` and `run` make before anything else: the run's
+    shape (a json_schema dict, no sampling), and the run's fallback, or a
+    provider that takes only json_object (DeepSeek) could never start."""
+    from bristlenose.preflight.api_key import _validate_anyllm
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies += [
+        _StatusError(400, "response_format json_schema is not supported"),
+        _response("{}"),
+    ]
+    assert _validate_anyllm("", MODEL).ok
+    first, second = fake_anyllm.calls
+    assert first["response_format"]["type"] == "json_schema"
+    assert "max_tokens" not in first and "temperature" not in first
+    assert second["response_format"] == {"type": "json_object"}
+    assert any("JSON" in m["content"] for m in second["messages"])
+
+
+class APIConnectionError(Exception):  # named as openai's is
+    pass
+
+
+@pytest.mark.parametrize(
+    ("failure", "bucket"),
+    [
+        (_StatusError(402, "Insufficient credits"), "billing_empty"),
+        (_StatusError(401, "bad key"), "invalid_key"),
+        (_StatusError(429, "slow down"), "rate_limit"),
+        (_WrappedError(APIConnectionError("Connection error.")), "network"),
+    ],
+)
+def test_the_preflight_buckets_what_the_provider_says(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch,
+    failure: BaseException, bucket: str,
+) -> None:
+    from bristlenose.preflight.api_key import _validate_anyllm
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies.append(failure)
+    result = _validate_anyllm("", MODEL)
+    assert (result.ok, result.error_class) == (False, bucket)
+
+
+def test_a_run_with_any_llm_reaches_its_preflight(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Dropping anyllm from the preflight's provider set would skip the check
+    silently, and a bad key would surface at stage 8 (R104)."""
+    import io
+
+    from rich.console import Console
+
+    from bristlenose.preflight import api_key as preflight
+
+    seen: list[tuple[str, str]] = []
+
+    def validator(key: str, model: str, *, params: Any = None) -> Any:
+        seen.append((key, model))
+        return preflight.ValidationResult(ok=True)
+
+    monkeypatch.setattr(preflight, "_validate_anyllm", validator)
+    monkeypatch.setattr(preflight, "state_path", lambda: tmp_path / "state.json")
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)  # set suite-wide
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    settings = BristlenoseSettings(llm_provider="anyllm", anyllm_model=MODEL)
+    preflight.preflight_api_key(settings=settings, console=Console(file=io.StringIO()))
+    assert seen == [("", MODEL)]
+
+
+def test_configure_checks_stores_and_switches(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    from typer.testing import CliRunner
+
+    from bristlenose import credentials
+    from bristlenose.cli import app
+    from bristlenose.credentials import FileCredentialStore, read_user_config_var
+    from bristlenose.preflight import api_key as preflight
+
+    store = FileCredentialStore(tmp_path / "keys.env")
+    monkeypatch.setattr(credentials, "get_credential_store", lambda: store)
+    verdict = {"result": preflight.ValidationResult(ok=True)}
+    monkeypatch.setattr(preflight, "_validate_anyllm", lambda *a, **k: verdict["result"])
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", MODEL)
+    runner = CliRunner()
+
+    ok = runner.invoke(app, ["configure", "any-llm", "--key", "sk-secret-123"])
+    assert ok.exit_code == 0, ok.output
+    assert store.get(anyllm.credential_key("mistral")) == "sk-secret-123"
+    assert read_user_config_var("BRISTLENOSE_LLM_PROVIDER") == "anyllm"
+    assert "sk-secret-123" not in ok.output
+
+    store.delete(anyllm.credential_key("mistral"))
+    verdict["result"] = preflight.ValidationResult(ok=False, error_class="invalid_key")
+    refused = runner.invoke(app, ["configure", "any-llm", "--key", "sk-bad"])
+    assert refused.exit_code == 1
+    assert store.get(anyllm.credential_key("mistral")) is None
+
+    verdict["result"] = preflight.ValidationResult(ok=False, error_class="network")
+    offline = runner.invoke(app, ["configure", "any-llm", "--key", "sk-offline"])
+    assert offline.exit_code == 0, offline.output
+    assert store.get(anyllm.credential_key("mistral")) == "sk-offline"
+
+
+def test_a_rejected_environment_key_names_its_variable(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The run's banner sends a rejected key here; for a key from the shell the
+    only fix is where it is set, so say which variable — never loop."""
+    from typer.testing import CliRunner
+
+    from bristlenose.cli import app
+    from bristlenose.preflight import api_key as preflight
+
+    monkeypatch.setattr(
+        preflight, "_validate_anyllm",
+        lambda *a, **k: preflight.ValidationResult(ok=False, error_class="invalid_key"),
+    )
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", MODEL)
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-revoked")
+    result = CliRunner().invoke(app, ["configure", "any-llm"])
+    assert result.exit_code == 1
+    assert "MISTRAL_API_KEY is set in your environment and was rejected" in result.output
+
+
+def test_a_key_pasted_as_the_model_is_caught(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-v1-abc")
+    caught = _ready("openrouter:sk-or-v1-abc")
+    assert caught.status == "key-as-model"
+    assert "sk-or-v1-abc" not in " ".join(anyllm.explain(caught))
+
+
+def test_a_given_key_is_the_one_checked_and_an_env_key_is_named(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-old")
+    given = anyllm.readiness_for_model(MODEL, api_key="sk-new")
+    assert (given.api_key, given.key_source, given.shadowed_by) == (
+        "sk-new", "given", "MISTRAL_API_KEY",
+    )
+
+
+def test_a_provider_that_cannot_be_built_is_shown_not_raised(
+    fake_anyllm: _FakeLibrary,
+) -> None:
+    """Callers include doctor and the server's key checks: an escaping
+    exception aborts doctor and turns the chat lens into a 500."""
+    broken = _ready("vertexai:gemini-pro")
+    assert broken.status == "broken" and "credentials were not found" in broken.detail
+
+
+def test_the_destination_is_where_the_request_goes(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A *_API_BASE variable left by another tool sends the key and the
+    transcripts elsewhere; the line that names the destination must say so."""
+    assert anyllm.destination("openrouter") == "OpenRouter (openrouter.ai)"
+    assert anyllm.destination("mistral") == "Mistral"
+    monkeypatch.setenv("OPENROUTER_API_BASE", "http://proxy.example:8080/v1")
+    assert anyllm.destination("openrouter") == (
+        "OpenRouter (proxy.example, from OPENROUTER_API_BASE)"
+    )
+    assert anyllm.insecure_base("openrouter")
+    monkeypatch.setenv("OPENROUTER_API_BASE", "http://127.0.0.1:8080/v1")
+    assert not anyllm.insecure_base("openrouter")
+
+
+def test_a_connection_failure_is_found_down_the_chain() -> None:
+    class ConnectError(Exception):  # httpx2's, which is not httpx's
+        pass
+
+    inner = RuntimeError("provider error")
+    inner.__cause__ = ConnectError("All connection attempts failed")
+    assert anyllm.is_network_error(_WrappedError(inner))
+    assert not anyllm.is_network_error(_StatusError(400))
+
+
+def test_doctor_rows(fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch) -> None:
+    from bristlenose.doctor import CheckStatus, check_anyllm, check_anyllm_key
+
+    missing_sdk = check_anyllm_key(
+        BristlenoseSettings(llm_provider="anyllm", anyllm_model="cohere:command-r")
+    )
+    assert (missing_sdk.status, missing_sdk.fix_key) == (CheckStatus.FAIL, "anyllm_not_ready")
+    monkeypatch.setattr(anyllm, "install_state", lambda: "not-installed")
+    assert check_anyllm().status is CheckStatus.SKIP  # optional, so never a FAIL
+
+
+@pytest.mark.parametrize("gate", ["desktop", "explicit-model"])
+def test_the_azure_model_copy_keeps_its_gates(monkeypatch: pytest.MonkeyPatch, gate: str) -> None:
+    """CLI only (desktop Azure runs don't move in the reliability phase), and an
+    explicit model always wins."""
+    from bristlenose import config
+
+    monkeypatch.setenv("BRISTLENOSE_LLM_PROVIDER", "azure")
+    monkeypatch.setenv("BRISTLENOSE_AZURE_DEPLOYMENT", "prod-eastus")
+    if gate == "desktop":
+        monkeypatch.setenv(config._HOSTED_BY_DESKTOP_ENV, "1")
+        expected = BristlenoseSettings.model_fields["llm_model"].default
+    else:
+        monkeypatch.setenv("BRISTLENOSE_LLM_MODEL", "gpt-4o")
+        expected = "gpt-4o"
+    assert load_settings().llm_model == expected
+
+
+# ---------------------------------------------------------------------------
+# The real library, where installed: the fake's assumptions, and no telemetry
+# ---------------------------------------------------------------------------
+
+
+def test_the_real_library_has_the_shape_the_fake_assumes() -> None:
+    """Skipped where any-llm isn't installed (CI); runs on a dev machine and in
+    the release walk. The fakes above stand in for exactly these."""
+    import importlib.util
+    import inspect
+    import subprocess
+
+    real = pytest.importorskip("any_llm")
+    if not isinstance(sys.modules.get("any_llm"), type(real)) or not hasattr(real, "__file__"):
+        pytest.skip("a fake any_llm is installed in this process")
+    from any_llm.exceptions import MissingApiKeyError
+
+    assert "api_key" in inspect.signature(real.AnyLLM.create).parameters
+    assert "env_var_name" in inspect.signature(MissingApiKeyError.__init__).parameters
+    for inner in ("mistral", "openrouter", "deepseek"):
+        cls = real.AnyLLM.get_provider_class(inner)
+        assert cls.MISSING_PACKAGES_ERROR is None, inner  # the extra carries them
+        assert hasattr(cls, "ENV_API_BASE_NAME"), inner
+
+    # Nothing that reports anywhere came in with the extra.
+    for name in ("opentelemetry.sdk", "any_llm_platform_client"):
+        assert importlib.util.find_spec(name) is None, f"{name} is installed"
+
+    # And importing it makes no network call.
+    probe = (
+        "import socket\n"
+        "def _no(*a, **k): raise OSError('network at import')\n"
+        "socket.socket.connect = _no\n"
+        "socket.create_connection = _no\n"
+        "import any_llm, any_llm.providers.mistral, any_llm.providers.openrouter\n"
+    )
+    done = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr[-500:]

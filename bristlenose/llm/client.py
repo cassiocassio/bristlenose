@@ -403,6 +403,10 @@ class LLMClient:
             "google": self.settings.google_api_key,
             "local": "",
         }.get(self.provider, "")
+        if self.provider == "anyllm":
+            from bristlenose.llm import anyllm
+
+            key_value = anyllm.active_key(self.settings)
         logger.info(
             "llm_client_target | provider=%s | request_model=%s | endpoint=%s | "
             "key=%s",
@@ -1542,9 +1546,32 @@ class LLMClient:
             )
 
         async def call(fmt: dict[str, Any]) -> Any:
-            return await provider.acompletion(
-                model=model_id, messages=messages, response_format=fmt, **params,
-            )
+            # Our own retry on a rate limit or a provider 5xx. The built-in
+            # providers get _CLOUD_MAX_RETRIES from their SDK clients; through
+            # any-llm 1.27 there is no uniform way to set it (Mistral's SDK tries
+            # once, the OpenAI SDK three times), and a small-tier 429 would
+            # otherwise drop that participant's results. Honours Retry-After.
+            from bristlenose.llm.failure_classifier import LLMFailureKind
+
+            for attempt in range(_CLOUD_MAX_RETRIES):
+                try:
+                    return await provider.acompletion(
+                        model=model_id, messages=messages, response_format=fmt, **params,
+                    )
+                except (asyncio.CancelledError, ValidationError):
+                    raise
+                except Exception as exc:
+                    kind = anyllm.classify(exc)
+                    transient = kind in (LLMFailureKind.RATE_LIMITED, LLMFailureKind.SERVER_ERROR)
+                    if not transient or attempt == _CLOUD_MAX_RETRIES - 1:
+                        raise
+                    delay = _retry_after_seconds(exc) or min(2.0**attempt, 30.0)
+                    logger.info(
+                        "anyllm_retry | model=%s | attempt=%d | kind=%s | wait=%.1fs",
+                        model, attempt + 1, kind.value, delay,
+                    )
+                    await asyncio.sleep(min(delay, 60.0))
+            raise AssertionError("unreachable")  # pragma: no cover
 
         schema_format = {
             "type": "json_schema",
@@ -1569,24 +1596,34 @@ class LLMClient:
             raise
         except ValidationError as exc:
             # any-llm 1.27 validates the provider's reply against OpenAI's shape
-            # and rejects, for one, a finish reason outside OpenAI's five
-            # (fixed in 1.38). The reply is gone before we see it. Never pass the
-            # pydantic text on: it quotes the reply, which quotes the transcript.
+            # and rejects a finish reason outside OpenAI's five (fixed in 1.38).
+            # The reply is gone before we see it. Mistral's "model_length" (the
+            # context window, its only cap once we send no max_tokens) is a
+            # truncation, so it goes to split-and-retry; the input there is a
+            # short enum string, safe to read. Anything else: never pass the
+            # pydantic text on, which quotes the reply, which quotes the transcript.
+            if any(
+                tuple(err.get("loc", ()))[-1:] == ("finish_reason",)
+                and err.get("input") == "model_length"
+                for err in exc.errors()
+            ):
+                record("truncated")
+                raise truncated() from None
             record("error")
             raise RuntimeError(
                 f"{name} returned a response any-llm couldn't read "
                 f"(provider=anyllm, model={model}, {exc.error_count()} validation errors)."
             ) from None
-        except Exception as exc:
-            if type(exc).__name__ == "LengthFinishReasonError":
-                record("truncated", getattr(exc, "completion", None))
-                raise truncated() from exc
+        except Exception:
             record("error")
             raise
 
         usage = getattr(response, "usage", None)
         if usage is not None:
             self.tracker.record(usage.prompt_tokens or 0, usage.completion_tokens or 0)
+        if not getattr(response, "choices", None):
+            record("error", response)
+            raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
         choice = response.choices[0]
         if choice.finish_reason == "length":
             record("truncated", response)
@@ -1609,6 +1646,16 @@ class LLMClient:
             raise
         record("ok", response)
         return result
+
+
+def _retry_after_seconds(exc: BaseException) -> float | None:
+    """The provider's Retry-After, in seconds. any-llm keeps the header verbatim,
+    a string ("7"); the HTTP-date form is not worth parsing here."""
+    raw = getattr(exc, "retry_after", None)
+    try:
+        return float(raw) if raw not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _strip_code_fence(content: str) -> str:

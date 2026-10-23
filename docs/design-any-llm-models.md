@@ -277,6 +277,19 @@ their working directory had the same problem. Walks in a dev checkout pass
 | `0e3d4122f` | A failed call's log line is one line of field paths and never quotes the reply |
 | `ac1e84486` | A failure at the model's host is worded as the host's, not the key's; an unreadable reply names its field paths and says "didn't fit the expected format" |
 
+**Then a review of those fixes** (five reviewers, a compose check, an Ockham
+pass and a cold read by Fable, 23 Oct 2026), which found that the walk fixes
+had defects of their own:
+
+| Commit | What |
+|---|---|
+| `35fa67388` | Salvage keeps a reply only when more quotes pass than fail. A mostly-wrong reply fails the session, so it's retried, not kept as a skewed remnant. The salvage is now tested through each provider's call path, not only the helper |
+| `58dc0deed` | A provider's error is logged as its status and message, never its body, which can carry the transcript back (OpenRouter's moderation `flagged_input`). Seven stage sites no longer log the reply's text |
+| `f61c62c8a` | Provider text in the CLI's warning lines is escaped, so `[openrouter]` isn't eaten and `[/b]` can't crash a run after the paid calls; `configure` stops telling you to run `configure` |
+| `7c5d7a07f` | A later failure is no longer blamed on an earlier host |
+| `663399814` | A thinking refusal is resent without spending a retry, and is matched in its own words, so a model id like `deepseek-reasoner` can't switch thinking back on |
+| `100dc9096` | A skipped session's "unknown" never outvotes the failures that say why (all providers) |
+
 **A product call left open:** on a host failure, `configure` now saves the
 key and model (the key is proven), as it does when the provider can't be
 reached. For a host that stays broken, the run's preflight then says the same

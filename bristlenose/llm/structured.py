@@ -717,9 +717,13 @@ def salvage_items(data: Any, model: type[BaseModel]) -> Salvage | None:
     defect outside the list still fails every item.
 
     ``fields`` names what was wrong with the dropped items by field name only:
-    the values are participant speech. Returns ``None`` when nothing in the list
-    validates, so the caller raises the original error rather than return an
-    empty result.
+    the values are participant speech. Returns ``None`` when more items fail
+    than pass, so the caller raises the original error: a reply that is mostly
+    wrong is a bad reply, not one bad quote, and keeping its remnant would mark
+    the session complete with a skewed sample (a model that breaks one kind of
+    quote loses all of that kind). Majority ceiling decided 23 Oct 2026. The
+    session then fails, is shown as failed and is retried; on any-llm the
+    schema retry asks once more first.
     """
     field = getattr(model, "salvage_field", None)
     if field is None or not isinstance(data, dict) or not isinstance(data.get(field), list):
@@ -735,10 +739,10 @@ def salvage_items(data: Any, model: type[BaseModel]) -> Salvage | None:
                 fields.add(".".join(str(p) for p in err["loc"][2:]) or "item")
             continue
         kept.append(item)
-    if not kept:
+    total = len(data[field])
+    if not kept or total - len(kept) > len(kept):
         return None
     result = model.model_validate({**data, field: kept})
-    total = len(data[field])
     result._dropped_items = total - len(kept)  # type: ignore[attr-defined]
     return Salvage(result, total - len(kept), total, sorted(fields))
 

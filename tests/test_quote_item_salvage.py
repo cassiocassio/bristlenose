@@ -450,3 +450,87 @@ def test_run_prints_the_shortfall_under_stage_9(tmp_path: Path, monkeypatch):
         "No quotes from s1 — the model's reply didn't fit the expected format",
         "1 incomplete quote left out (s10)",
     ]
+
+
+# ---------------------------------------------------------------------------
+# The ceiling, and the providers' own call paths
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("n", "bad", "kept"), [
+    (2, (0,), 1),               # a tie keeps: half is not "mostly wrong"
+    (30, tuple(range(15)), 15),  # fifteen of thirty, still a tie
+    (3, (0, 1), None),          # two of three: a bad reply, not one bad quote
+    (30, tuple(range(16)), None),
+])
+def test_a_reply_that_is_mostly_wrong_is_not_salvaged(n, bad, kept):
+    """More dropped than kept raises the original error, so the session fails
+    and is retried, and is never marked complete with a remnant of a sample: a
+    model that breaks one kind of quote would lose all of that kind
+    (decided 23 Oct 2026, the majority ceiling)."""
+    payload = _reply(n=n, bad=bad)
+    if kept is None:
+        with pytest.raises(ValidationError):
+            _validate_repairing(payload, QuoteExtractionResult, provider="anthropic", model="m")
+    else:
+        result = _validate_repairing(
+            payload, QuoteExtractionResult, provider="anthropic", model="m",
+        )
+        assert len(result.quotes) == kept
+
+
+def _anthropic_client(reply: dict):
+    from types import SimpleNamespace
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.llm.client import LLMClient
+
+    client = LLMClient(BristlenoseSettings(  # type: ignore[arg-type]
+        llm_provider="anthropic", anthropic_api_key="sk-ant-test-key",
+        llm_model="claude-sonnet-4-6", llm_max_tokens=8192,
+    ))
+    response = SimpleNamespace(
+        stop_reason="end_turn",
+        content=[SimpleNamespace(type="tool_use", name="structured_output", input=reply)],
+        usage=SimpleNamespace(input_tokens=100, output_tokens=5),
+        model="claude-sonnet-4-6",
+    )
+    client._anthropic_client = AsyncMock()
+    client._anthropic_client.messages.create = AsyncMock(return_value=response)
+    return client
+
+
+def _google_client(reply: dict):
+    import json
+    from types import SimpleNamespace
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.llm.client import LLMClient
+
+    client = LLMClient(BristlenoseSettings(  # type: ignore[arg-type]
+        llm_provider="google", google_api_key="test-google-key",
+        llm_model="gemini-2.5-flash", llm_max_tokens=8192,
+    ))
+    response = SimpleNamespace(
+        text=json.dumps(reply),
+        usage_metadata=SimpleNamespace(prompt_token_count=100, candidates_token_count=5),
+        candidates=[SimpleNamespace(finish_reason=SimpleNamespace(name="STOP"))],
+    )
+
+    async def generate(*args, **kwargs):
+        return response
+
+    client._google_client = SimpleNamespace(
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content=generate)),
+    )
+    return client
+
+
+@pytest.mark.parametrize("make", [_anthropic_client, _google_client], ids=["claude", "gemini"])
+def test_the_provider_call_keeps_the_valid_quotes(make):
+    """Through `analyze()`, not the helper: the salvage is only as good as the
+    call path that reaches it. any-llm's is pinned in test_anyllm.py."""
+    client = make(_reply(n=3, bad=(1,)))
+    result = asyncio.run(client.analyze("sys", "usr", QuoteExtractionResult))
+    assert [q.verbatim_excerpt for q in result.quotes] == ["quote number 0", "quote number 2"]
+    assert dropped_items(result) == 1

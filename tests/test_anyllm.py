@@ -1398,3 +1398,49 @@ def test_the_run_preflight_names_the_host_too(
     with pytest.raises(preflight.ApiKeyPreflightAbortedError) as refused:
         preflight.preflight_api_key(settings=settings, console=Console(file=io.StringIO()))
     assert str(refused.value).startswith("Mistral, reached through OpenRouter, is busy.")
+
+
+# ---------------------------------------------------------------------------
+# Salvage on any-llm's own call path (review round 2, finding 58)
+# ---------------------------------------------------------------------------
+
+
+def _quotes(n: int, bad: tuple[int, ...]) -> str:
+    quotes = []
+    for i in range(n):
+        q = {
+            "start_timecode": f"00:00:{10 + i:02d}", "end_timecode": f"00:00:{11 + i:02d}",
+            "text": f"quote {i}", "verbatim_excerpt": f"quote {i}",
+            "topic_label": "Onboarding", "quote_type": "general_context",
+        }
+        if i in bad:
+            del q["start_timecode"]
+        quotes.append(q)
+    return json.dumps({"quotes": quotes})
+
+
+@pytest.mark.asyncio
+async def test_one_bad_quote_keeps_the_rest_without_asking_again(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from bristlenose.llm.structured import QuoteExtractionResult, dropped_items
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies.append(_response(_quotes(3, bad=(1,))))
+    result = await _client(monkeypatch).analyze("sys", "usr", QuoteExtractionResult)
+    assert [q.verbatim_excerpt for q in result.quotes] == ["quote 0", "quote 2"]
+    assert dropped_items(result) == 1
+    assert len(fake_anyllm.calls) == 1  # one bad quote isn't worth a second bill
+
+
+@pytest.mark.asyncio
+async def test_a_mostly_wrong_reply_is_asked_for_again(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from bristlenose.llm.structured import QuoteExtractionResult
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies += [_response(_quotes(3, bad=(0, 1))), _response(_quotes(3, bad=()))]
+    result = await _client(monkeypatch).analyze("sys", "usr", QuoteExtractionResult)
+    assert len(result.quotes) == 3
+    assert len(fake_anyllm.calls) == 2

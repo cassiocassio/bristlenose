@@ -1728,11 +1728,11 @@ class LLMClient:
                 record("error", response)
                 if attempt == _ANYLLM_SCHEMA_ATTEMPTS - 1:
                     raise
-                # A reply that doesn't fit the schema (a quote missing one field
-                # throws away the whole session's quotes) is asked for again
-                # once, as the Ollama route retries; with no temperature sent,
-                # a second reply usually differs. Found on Mistral Small, 23 Oct
-                # 2026: two of three sessions lost to one missing field each.
+                # A reply that doesn't fit the schema is asked for again once,
+                # as the Ollama route retries; with no temperature sent, a second
+                # reply usually differs. One bad quote doesn't get here: salvage
+                # keeps the rest. A reply whose items mostly fail, or that isn't
+                # the shape at all, does (Mistral Small, 23 Oct 2026).
                 logger.warning(
                     "anyllm_schema_retry | model=%s | schema=%s | error=%s",
                     model, response_model.__name__, type(exc).__name__,

@@ -289,7 +289,7 @@ struct ProjectDBReadersTests {
     /// `dmsLockIsHeld` asks whether *another* process holds `-shm` (a process
     /// never sees its own POSIX locks), and running these tests under the
     /// sandboxed test host is what shows `F_GETLK` works there.
-    private final class Holder {
+    final class Holder {
         private let process = Process()
         private let input = Pipe()
         private let errors = Pipe()

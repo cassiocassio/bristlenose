@@ -94,6 +94,53 @@ import Testing
         #expect(Self.count(root) == nil)
     }
 
+    // MARK: - A recode still in the WAL (decision #115)
+    //
+    // The count gates Analyse, so a recode the serve could not yet checkpoint
+    // must read as unknown, not zero: the immutable read sees only the main file.
+
+    private static func dbURL(_ root: URL) -> URL {
+        root.appendingPathComponent("bristlenose-output/.bristlenose/bristlenose.db")
+    }
+
+    @Test func aRecodeOnlyInTheWALIsUnknownNotZero() throws {
+        let root = try Self.project([[("m1", "researcher"), ("p1", "participant")]])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let holder = try ProjectDBReadersTests.Holder(Self.dbURL(root))
+        defer { holder.close() }
+        try holder.run("UPDATE session_speakers SET speaker_role = 'observer' WHERE speaker_code = 'p1';")
+        #expect(SourceFilesReader.readSnapshot(projectRoot: root).recodedSessionCount == nil)
+        try holder.run("PRAGMA wal_checkpoint(PASSIVE);")
+        #expect(SourceFilesReader.readSnapshot(projectRoot: root).recodedSessionCount == 1)
+    }
+
+    /// An index nobody maintains cannot vouch for the main file; the same
+    /// files, with the lock seen, can.
+    @Test func anIndexNobodyHoldsIsUnknown() throws {
+        let root = try Self.project([[("p1", "observer")]])
+        defer { try? FileManager.default.removeItem(at: root) }
+        let holder = try ProjectDBReadersTests.Holder(Self.dbURL(root))
+        try holder.run("UPDATE sessions SET duration_seconds = 61; PRAGMA wal_checkpoint(PASSIVE);")
+        #expect(SourceFilesReader.readSnapshot(projectRoot: root, shmIsMaintained: { _ in false })
+            .recodedSessionCount == nil)
+        #expect(SourceFilesReader.readSnapshot(projectRoot: root, shmIsMaintained: { _ in true })
+            .recodedSessionCount == 1)
+        holder.close()
+    }
+
+    /// Unknown keeps the last known count, so a later scan answers it; it is
+    /// never taken for "nothing owed".
+    @Test func anUnknownCountKeepsTheLastOne() {
+        func snap(sessions: Int?, recoded: Int?) -> ProjectDBSnapshot {
+            ProjectDBSnapshot(ingestedBasenames: [], ingestedPaths: [], sessionCount: sessions,
+                              totalDurationSeconds: nil, projectRowCount: 1,
+                              recodedSessionCount: recoded)
+        }
+        #expect(ProjectFolderWatcher.recodedSessionCount(snap(sessions: 3, recoded: nil), previous: 2) == 2)
+        #expect(ProjectFolderWatcher.recodedSessionCount(snap(sessions: 3, recoded: 0), previous: 2) == 0)
+        #expect(ProjectFolderWatcher.recodedSessionCount(snap(sessions: 0, recoded: nil), previous: 2) == 0)
+    }
+
     final class Box: @unchecked Sendable { var state: UnanalysedState? }
 
     /// The watcher carries the count to the sidebar: the whole path from the

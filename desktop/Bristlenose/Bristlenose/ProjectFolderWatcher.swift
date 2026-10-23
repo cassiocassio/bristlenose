@@ -374,13 +374,26 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             discussionWanted: (snapshot.sessionCount ?? 0) > 0
                 && Self.discussionWanted(projectRoot: projectURL),
             databaseForked: snapshot.isForked,
-            recodedSessionCount: (snapshot.sessionCount ?? 0) > 0
-                ? (snapshot.recodedSessionCount ?? 0) : 0
+            recodedSessionCount: Self.recodedSessionCount(
+                snapshot, previous: lastPublished?.recodedSessionCount ?? 0)
         )
         guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state
         let cb = onChange
         DispatchQueue.main.async { cb(state) }
+    }
+
+    /// What the sidebar should believe about owed sessions after this read.
+    /// An unknown count (nil: a recode still in the WAL, an unreadable table)
+    /// keeps what was last known rather than reading as zero, so a later scan
+    /// or folder event can answer it; zero sessions owe nothing.
+    nonisolated static func recodedSessionCount(_ snapshot: ProjectDBSnapshot, previous: Int) -> Int {
+        guard (snapshot.sessionCount ?? 0) > 0 else { return 0 }
+        guard let count = snapshot.recodedSessionCount else {
+            log.notice("scan: recoded-session count unknown; keeping \(previous, privacy: .public)")
+            return previous
+        }
+        return count
     }
 
     /// The record the Discussion stage writes, and the guide folder beside the

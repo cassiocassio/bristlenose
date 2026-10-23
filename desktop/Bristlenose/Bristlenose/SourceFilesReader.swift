@@ -58,8 +58,12 @@ struct ProjectDBSnapshot: Equatable {
     /// Sessions owed a re-analysis because a speaker was recoded into or out
     /// of participant (§J7 R3): their quotes are from the wrong speaker until
     /// the next Analyse, which honours the role pins the recode wrote. Nil
-    /// when unreadable (no `session_speakers` table, locked). Defaulted so the
-    /// many test constructions of this snapshot stay as they are.
+    /// when unreadable (no `session_speakers` table, locked) **or when the WAL
+    /// index cannot vouch that the main file is current** — this count gates
+    /// Analyse, and a recode the serve could not yet checkpoint is invisible to
+    /// `immutable=1` (decision #115; `CurationCountsReader.walVouch`). Nil is
+    /// "unknown", never zero. Defaulted so the many test constructions of this
+    /// snapshot stay as they are.
     var recodedSessionCount: Int? = nil
 
     /// More than one project row — the report and the sidebar are reading
@@ -94,6 +98,14 @@ enum SourceFilesReader {
     /// doesn't exist yet, the schema is missing, or any step returns
     /// a busy/locked/error code — conservative "show nothing" behaviour.
     static func readSnapshot(projectRoot: URL) -> ProjectDBSnapshot {
+        readSnapshot(projectRoot: projectRoot, shmIsMaintained: CurationCountsReader.dmsLockIsHeld)
+    }
+
+    /// `readSnapshot(projectRoot:)` with the DMS-lock probe exposed for tests,
+    /// as `CurationCountsReader.read` has it (a process never sees its own lock).
+    static func readSnapshot(
+        projectRoot: URL, shmIsMaintained: (Int32) -> Bool
+    ) -> ProjectDBSnapshot {
         let dbURL = projectRoot
             .appendingPathComponent("bristlenose-output", isDirectory: true)
             .appendingPathComponent(".bristlenose", isDirectory: true)
@@ -141,7 +153,17 @@ enum SourceFilesReader {
         let sessions = readSessionCount(db: db)
         let totalDuration = readTotalDuration(db: db)
         let projectRows = readProjectRowCount(db: db)
-        let recoded = readRecodedSessionCount(db: db)
+        // Vouched before and after, like a seqlock: the other counts here are
+        // cosmetic, this one decides whether Analyse is offered.
+        let vouched = CurationCountsReader.walVouch(dbURL, shmIsMaintained: shmIsMaintained)
+        var recoded = vouched == nil ? nil : readRecodedSessionCount(db: db)
+        if recoded != nil,
+           CurationCountsReader.walVouch(dbURL, shmIsMaintained: shmIsMaintained) != vouched {
+            recoded = nil
+        }
+        if vouched == nil || recoded == nil {
+            log.notice("readSnapshot: the recoded-session count is unknown (WAL not vouched, or unreadable)")
+        }
         if let projectRows, projectRows > 1 {
             // A second row is always a bug now (the serve creates one row per
             // project folder, at the folder's future output dir); say so where

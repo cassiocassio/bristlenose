@@ -729,9 +729,11 @@ def sync_role_pins(db: Session, project_id: int, session_id: str) -> None:
         return
     output_dir = Path(project.output_dir)
     if run_in_progress(output_dir):
-        # The run saves over the registry at its end; a write now is lost, and
-        # a recode that would have changed a pin was refused above.
-        logger.warning("A run owns %s; pins were not checked", output_dir)
+        # The run saves over the registry at its end; a write now is lost. A
+        # recode or swap, the writes that change a pin, was refused above, so
+        # what reaches here under a run is a rename or a pick: INFO, not a
+        # warning on every name typed while an analysis runs.
+        logger.info("A run owns %s; pins were not checked", output_dir)
         return
     try:
         registry = SessionRegistry.load(output_dir)

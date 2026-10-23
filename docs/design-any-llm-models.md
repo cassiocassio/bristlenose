@@ -68,17 +68,17 @@ A chart of these numbers is at
 
 ### 2.2 The UX session (screens exist; the shipped report has 8)
 
-| Model (OpenRouter) | Quotes | faith | Jaccard | Screens | Wall | Tokens in / out |
-|---|---|---|---|---|---|---|
-| Claude Sonnet 4.6 (A, reference) | 23 | 100% | — | 10 | 2m 18s | 22k / 7k |
-| Claude Sonnet 4.6 (B) | 23 | 100% | **85%** (noise floor) | 9 | 2m 27s | 22k / 8k |
-| Claude Sonnet 5.5 | 30 | 100% | 82% | 9 | 1m 20s | 28k / 14k |
-| Qwen 3.8 Flash, thinking | 34 | 100% | 79% | 9 | **16m 36s** | 21k / **67k** |
-| DeepSeek V4 Flash, thinking | 21 | 100% | 75% | 6 | 5m 18s | 19k / 36k |
-| Llama 3.3 70B | 22 | 100% | 68% | 7 | **13m 21s** | 20k / 9k |
-| GPT-5.4 mini | 15 | 93% | 55% | 5 | 23s | 15k / 5k |
-| Grok 4.3 | 9 | 100% | 54% | 3 | 1m 16s | 18k / 8k |
-| Mistral Large 2512 | — | | | | failed at 48s | shared-pool 429 |
+| Model (OpenRouter) | Quotes | faith | Jaccard | Screens | Wall | Tokens in / out | List $ |
+|---|---|---|---|---|---|---|---|
+| Claude Sonnet 4.6 (A, reference) | 23 | 100% | — | 10 | 2m 18s | 22k / 7k | 0.18 |
+| Claude Sonnet 4.6 (B) | 23 | 100% | **85%** (noise floor) | 9 | 2m 27s | 22k / 8k | 0.18 |
+| Claude Sonnet 5.5 | 30 | 100% | 82% | 9 | 1m 20s | 28k / 14k | 0.19 |
+| Qwen 3.8 Flash, thinking | 34 | 100% | 79% | 9 | **16m 36s** | 21k / **67k** | 0.03 |
+| DeepSeek V4 Flash, thinking | 21 | 100% | 75% | 6 | 5m 18s | 19k / 36k | 0.01 |
+| Llama 3.3 70B | 22 | 100% | 68% | 7 | **13m 21s** | 20k / 9k | 0.01 |
+| GPT-5.4 mini | 15 | 93% | 55% | 5 | 23s | 15k / 5k | 0.04 |
+| Grok 4.3 | 9 | 100% | 54% | 3 | 1m 16s | 18k / 8k | 0.04 |
+| Mistral Large 2512 | — | | | | failed at 48s | shared-pool 429 | 0 |
 
 Sonnet 4.6, Sonnet 5.5 and Qwen follow the flow from homepage to checkout at
 the shipped report's level of detail. GPT-5.4 mini and Grok collapse it to 3–5

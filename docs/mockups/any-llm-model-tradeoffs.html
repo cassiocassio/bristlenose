@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>any-llm Model Tradeoffs</title>
+<style>
+/* Layout: one reading column; a wide figure (scrolls sideways on a phone), a companion panel, then the table and failure list.
+   Colours: the dataviz reference chrome; two route hues validated all-pairs, light and dark (validate_palette.js, 23 Oct 2026). */
+:root {
+  --plane: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #76746e;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --band: #efeee9;
+  --gutter: #f3f2ee;
+  --border: rgba(11,11,11,0.10);
+  --or: #2a78d6;
+  --direct: #eb6834;
+  --critical: #d03b3b;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --plane: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a988f;
+    --grid: #2c2c2a; --axis: #383835; --band: #242422; --gutter: #141413; --border: rgba(255,255,255,0.10);
+    --or: #3987e5; --direct: #d95926; --critical: #e05555; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --plane: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #9a988f;
+  --grid: #2c2c2a; --axis: #383835; --band: #242422; --gutter: #141413; --border: rgba(255,255,255,0.10);
+  --or: #3987e5; --direct: #d95926; --critical: #e05555; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--plane); color: var(--ink);
+  font: 15px/1.5 var(--font); padding-inline: 16px; padding-block: 32px 64px;
+}
+.wrap { max-width: 1010px; margin: 0 auto; display: grid; gap: 28px; }
+.wrap > * { min-width: 0; }
+header { display: grid; gap: 10px; }
+.eyebrow { font: 12px/1.4 var(--mono); color: var(--ink-2); letter-spacing: 0.02em; margin: 0; }
+h1 { font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font-size: 18px; line-height: 1.3; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 68ch; color: var(--ink-2); font-size: 16px; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.finding { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.finding b { font-size: 15px; }
+.finding span { color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+
+.caveats { border-left: 3px solid var(--axis); padding: 4px 0 4px 14px; display: grid; gap: 6px; color: var(--ink-2); font-size: 13.5px; max-width: 76ch; }
+.caveats strong { color: var(--ink); font-weight: 600; }
+.caveats ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+
+figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 18px 14px; display: grid; gap: 12px; position: relative; }
+figcaption { display: grid; gap: 6px; }
+figcaption p { color: var(--ink-2); font-size: 13.5px; max-width: 78ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); align-items: center; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.legend .k-or { background: var(--or); }
+.legend .k-direct { background: var(--direct); }
+.legend .k-ref { background: transparent; box-shadow: inset 0 0 0 2px var(--or); }
+.legend .k-x { color: var(--critical); font-weight: 700; margin-right: 6px; }
+.legend .k-band { display: inline-block; width: 18px; height: 10px; background: var(--band); border-bottom: 1.5px solid var(--ink-2); margin-right: 6px; vertical-align: -1px; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll svg { display: block; width: 100%; min-width: 720px; height: auto; }
+svg text { font-family: var(--font); }
+.pt { cursor: default; outline: none; }
+.pt .hit { fill: transparent; }
+.pt .dot { stroke: var(--surface); stroke-width: 2; transition: opacity .12s; }
+.pt:focus-visible .dot, .pt.on .dot { stroke: var(--ink); stroke-width: 2; }
+svg.dim .pt:not(.on) .dot, svg.dim .pt:not(.on) .xg, svg.dim .pt:not(.on) text { opacity: 0.28; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 5; min-width: 220px; max-width: 290px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.14); padding: 10px 12px; font-size: 12.5px; display: grid; gap: 6px;
+}
+.tip .t-name { font-weight: 650; font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+.tip .t-name i { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.tip dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; }
+.tip dt { color: var(--ink-2); }
+.tip dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.tip .t-note { color: var(--ink-2); line-height: 1.4; }
+
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; }
+th, td { padding: 8px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--grid); }
+thead th { font-size: 11.5px; font-weight: 600; color: var(--ink-2); letter-spacing: 0.03em; text-transform: uppercase; border-bottom: 1px solid var(--axis); white-space: nowrap; }
+tbody tr.on { background: var(--band); }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+th.num { text-align: right; }
+td.model { font-weight: 600; white-space: nowrap; }
+td.model small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+td.route { white-space: nowrap; color: var(--ink-2); }
+td.route i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+tr.main td { border-bottom: 0; padding-bottom: 2px; }
+tr.note td { padding-top: 0; color: var(--ink-2); line-height: 1.4; font-size: 12.5px; }
+tbody tr.note:last-child td { border-bottom: 0; }
+td.bad { color: var(--critical); font-weight: 650; }
+.bar { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bar svg { flex: none; display: block; }
+.xmark { color: var(--critical); font-weight: 700; }
+
+.shapes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 24px; }
+.shape { display: grid; gap: 4px; align-content: start; }
+.shape h3 { font-size: 14.5px; margin: 0; }
+.shape p { color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+footer { color: var(--muted); font-size: 12.5px; display: grid; gap: 4px; }
+section { display: grid; gap: 12px; }
+@media (max-width: 520px) { h1 { font-size: 24px; } figure { padding: 14px 12px 10px; } }
+@media (prefers-reduced-motion: reduce) { .pt .dot { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">any-llm walks · 23 Oct 2026 · Bristlenose 0.42.0 · any-llm-sdk 1.27.0</p>
+  <h1>Which models through any-llm are good enough, cheap enough and fast enough?</h1>
+  <p class="lede">Thirteen runs on the same three oral-history interviews, each scored against Claude Sonnet 4.6. Agreement is how much of the transcript a model's quotes cover in common with Sonnet's. Sonnet run twice agrees with itself 90% of the time, so no model can be told apart from Sonnet above that line.</p>
+</header>
+
+<div class="findings" aria-label="What the chart says">
+  <div class="finding"><b>Nothing reached Sonnet's own 90%.</b><span>The best of the rest landed at 80–82%. Sonnet 5.5 is one of them, at the same price as 4.6.</span></div>
+  <div class="finding"><b>Cheap and close means a known flaw.</b><span>GPT-5.4 mini and DeepSeek V4 Pro reach 82% at about a fifth of Sonnet's price; DeepSeek Flash 77% at about a twelfth. Each one invents screens, over-splits themes or over-extracts.</span></div>
+  <div class="finding"><b>The route changes the model.</b><span>DeepSeek Flash native: 77% in 2m 20s. Through OpenRouter it thinks by default: 63% in 7m 19s. Qwen with thinking on never finished.</span></div>
+  <div class="finding"><b>No model made quotes up.</b><span>96–100% of every model's quotes are verbatim in the transcript. The failures are coverage and structure, not invention.</span></div>
+</div>
+
+<div class="caveats" role="note">
+  <strong>Read with care</strong>
+  <ul>
+    <li>One run per model (Sonnet 4.6 twice, for the noise floor). Gaps of a few points are indicative, not settled.</li>
+    <li>Three FOSSDA interviews (s1, s6, s10): public oral history, not usability testing. One IKEA usability session is shown separately below.</li>
+    <li>Agreement measures sameness to Sonnet 4.6 run A, not correctness.</li>
+    <li>Prices are list price × recorded tokens, not invoices. Cancelled calls record no tokens and aren't counted.</li>
+    <li>Runs span several commits on 23 Oct 2026; the Qwen "thinking off" row is after <code>8b16e797f</code>.</li>
+  </ul>
+</div>
+
+<figure id="fig-fossda">
+  <figcaption>
+    <h2>Agreement with Sonnet 4.6 against list price, FOSSDA interviews</h2>
+    <div class="legend" aria-hidden="true">
+      <span><i class="k-or"></i>Through OpenRouter</span>
+      <span><i class="k-direct"></i>Native, straight to the vendor's API</span>
+      <span><i class="k-ref"></i>The reference run</span>
+      <span><span class="k-band"></span>Sonnet's run-to-run noise</span>
+      <span><span class="k-x">✕</span>Didn't finish</span>
+    </div>
+  </figcaption>
+  <div class="scroll"><svg id="sc-fossda" role="img" aria-label="Scatter of agreement with Sonnet 4.6 against list price per run. Details in the table below."></svg></div>
+  <figcaption>
+    <p>Hover or tab to a point for its time, quote count and themes. The left column holds runs with no per-run price recorded; the Mistral walk's whole bill, both models and all 72 requests, was €0.13. Sentiment agreement isn't charted, because Sonnet agrees with itself on sentiment only 64% of the time.</p>
+  </figcaption>
+</figure>
+
+<figure id="fig-ikea">
+  <figcaption>
+    <h2>The same comparison on one usability session (IKEA, 18 minutes)</h2>
+    <p>The noise floor here is 85%. This session has real screens: Sonnet 4.6 found 10, and the shipped report, built with screen text from the video, has 8. Models that collapse the flow to 3–5 screens lose the journey. Mistral Large through OpenRouter failed at 48 s, rate-limited at the host's shared pool.</p>
+  </figcaption>
+  <div class="scroll"><svg id="sc-ikea" role="img" aria-label="Scatter of agreement with Sonnet 4.6 against list price for one IKEA usability session."></svg></div>
+</figure>
+
+<section aria-labelledby="t-head">
+  <h2 id="t-head">Every FOSSDA run, by agreement</h2>
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead><tr>
+        <th>Model</th><th>Route</th><th>Agreement</th><th class="num">List price</th><th>Wall time</th>
+        <th class="num">Quotes</th><th class="num">Themes</th><th class="num">Screens</th><th class="num">Verbatim</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p style="color:var(--ink-2);font-size:13px">Screens should be 0: these interviews have none. Wall time is on a log scale from 20 seconds to 40 minutes. Verbatim is the share of quotes whose words are at least 90% in the transcript.</p>
+</section>
+
+<section aria-labelledby="s-head">
+  <h2 id="s-head">How they fail</h2>
+  <div class="shapes">
+    <div class="shape"><h3>Invented structure</h3><p>On interviews with no product screens, GPT-5.4 mini made 7, Llama 3.3 70B and DeepSeek Flash 6 each, DeepSeek V4 Pro 1. A quick tell of a model that fills a schema slot whether or not the data supports it.</p></div>
+    <div class="shape"><h3>Too many or too few themes</h3><p>DeepSeek V4 Pro split the material into 23 themes, nine with 2 quotes; Sonnet made 12–15. GPT-5.4 mini made 3.</p></div>
+    <div class="shape"><h3>Thinking by default</h3><p>Hybrid models think unless told not to, and the thinking is billed as output. A short probe on Qwen 3.8 Flash took 41.6 s and 1,839 output tokens; with thinking off, 2.1 s and 91. Its whole run went from killed after 38 minutes to 2m 56s. GPT-5 mini and Gemini 2.5 Pro refuse to switch it off.</p></div>
+    <div class="shape"><h3>A dropped field</h3><p>Mistral Small left out a required field on one quote, and the whole session's quotes were discarded: it lost s1 in 3 of 3 attempts. Since <code>5939d6c89</code> the valid quotes are kept and the dropped ones are named.</p></div>
+    <div class="shape"><h3>The host, not the model</h3><p>Free models failed at the host: a 404, a 429, and a Nemotron run that gave up after 29m 47s. A shared-pool rate limit ended Mistral Large through OpenRouter at 48 s. Llama 3.3 70B took 13 minutes on an 18-minute session.</p></div>
+    <div class="shape"><h3>Confidence without fit</h3><p>Coverage hides calibration. In AutoCode with a usability codebook that doesn't fit oral history, Sonnet gave all 70 quotes 0.10–0.20 and excluded them. Mistral Large gave 0.3–0.7 to all 35, accepting 4.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p>Sources: the OpenRouter, Mistral and DeepSeek any-llm walks, and the reasoning-models and quote-salvage notes, 23 Oct 2026. Scorer: 5-gram fidelity, moderator share, timecode check and timeline overlap against Sonnet 4.6 run A.</p>
+  <p>Agreement is the Jaccard overlap of transcript-seconds covered by quotes.</p>
+</footer>
+
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+
+  // FOSSDA s1/s6/s10, scored against Sonnet 4.6 run A. Values copied from the walk notes; nothing derived but the time format.
+  var F = [
+    { id: "s46a", name: "Claude Sonnet 4.6", sub: "run A, the reference", route: "or", ref: true, jacc: 100, cost: 0.62, wall: 248, quotes: 70, themes: 12, screens: 0, faith: 99,
+      issue: "The run every other row is scored against.", lab: ["Sonnet 4.6, run A", "the reference"], lp: "r" },
+    { id: "s46b", name: "Claude Sonnet 4.6", sub: "run B", route: "or", jacc: 90, cost: 0.64, wall: 247, quotes: 76, themes: 15, screens: 0, faith: 100,
+      issue: "Same model, same data, a second run: the noise floor.", lab: ["Sonnet 4.6, run B", "the same model again"], lp: "r" },
+    { id: "gpt", name: "GPT-5.4 mini", route: "or", jacc: 82, cost: 0.13, wall: 43, quotes: 33, themes: 3, screens: 7, faith: 100,
+      issue: "Fastest run. Invented 7 screens; 3 themes; very long quotes (166 words on average).", lab: ["GPT-5.4 mini", "7 invented screens"], lp: "ur" },
+    { id: "dspro", name: "DeepSeek V4 Pro", route: "direct", jacc: 82, cost: 0.113, wall: 162, quotes: 75, themes: 23, screens: 1, faith: 96,
+      issue: "Closest quote set, but 23 themes (nine with 2 quotes), 1 invented screen, and 3 of 75 quotes not verbatim. Sentiment agrees 47%.", lab: ["DeepSeek V4 Pro", "23 themes"], lp: "ul" },
+    { id: "s55", name: "Claude Sonnet 5.5", route: "or", jacc: 81, cost: 0.67, wall: 130, quotes: 99, themes: 14, screens: 0, faith: 100,
+      issue: "No failures. More, shorter quotes (46 words on average).", lab: ["Sonnet 5.5", "99 shorter quotes"], lp: "r" },
+    { id: "mlarge", name: "Mistral Large", route: "direct", jacc: 81, cost: null, costLabel: "not recorded", wall: 142, quotes: 35, themes: 9, screens: 0, faith: 100,
+      issue: "Same ground in half the quotes, twice as long (194 words). 80% of timecodes right. Confident in AutoCode where the codebook doesn't fit.", lab: ["Mistral Large", "half the quotes"], gx: 82, lx: 64, ly: 92 },
+    { id: "qwenoff", name: "Qwen 3.8 Flash", sub: "thinking off, after 8b16e797f", route: "or", jacc: 80, cost: null, costLabel: "not recorded", wall: 176, quotes: 54, themes: 10, screens: 0, faith: 100,
+      issue: "Re-run with thinking switched off; scored the same way by the build session. 98% of timecodes right.", lab: ["Qwen 3.8 Flash", "with thinking off"], gx: 104, lx: 64, ly: 141 },
+    { id: "dsflash", name: "DeepSeek Flash", route: "direct", jacc: 77, cost: 0.049, wall: 140, quotes: 156, themes: 12, screens: 6, faith: 100,
+      issue: "Over-extracts (156 quotes, 2.2× Sonnet); invented 6 screens. Hit its 8,192-token output cap on s1; splitting recovered.", lab: ["DeepSeek Flash", "6 invented screens"], lp: "r" },
+    { id: "dsor", name: "DeepSeek V4 Flash", route: "or", jacc: 63, cost: 0.02, wall: 439, quotes: 37, themes: 5, screens: 0, faith: 100,
+      issue: "Thinks by default through OpenRouter: 72,056 output tokens against Sonnet's 25,641.", lab: ["DeepSeek V4 Flash", "thinking on by default"], lp: "l" },
+    { id: "grok", name: "Grok 4.3", route: "or", jacc: 62, cost: 0.12, wall: 113, quotes: 24, themes: 5, screens: 0, faith: 100,
+      issue: "Low coverage: 24 quotes.", lab: ["Grok 4.3", "24 quotes"], lp: "r" },
+    { id: "llama", name: "Llama 3.3 70B", route: "or", jacc: 50, cost: 0.009, wall: 301, quotes: 30, themes: 7, screens: 6, faith: 97,
+      issue: "Half the coverage; invented 6 screens; 83% of timecodes right (it stamps an answer with the question's start).", lab: ["Llama 3.3 70B", "6 invented screens"], lp: "r" },
+    { id: "msmall", name: "Mistral Small", route: "direct", jacc: 26, cost: null, costLabel: "not recorded", wall: 76, quotes: 15, themes: 5, screens: 0, faith: 100,
+      issue: "One missing field discarded whole sessions: s1 and s6 ended with no quotes (fixed since, not re-run). 73% of quoted words were the moderator's. 22% with a schema retry.", lab: ["Mistral Small", "lost 2 of 3 sessions"], gx: 82, lp: "r" },
+    { id: "qwenon", name: "Qwen 3.8 Flash", sub: "thinking on, before 8b16e797f", route: "or", dnf: true, jacc: null, cost: null, costLabel: "not recorded", wall: 2280, wallLabel: "killed after 38 min",
+      issue: "Every quote pass hit the 570 s deadline; the split halves were nearly as slow.", lab: ["Qwen 3.8 Flash, thinking on", "killed after 38 min"] },
+    { id: "nemo", name: "Nemotron 3.5 Super VL", sub: "free", route: "or", dnf: true, jacc: null, cost: 0, costLabel: "free", wall: 1787, wallLabel: "failed at 29m 47s",
+      issue: "Deadline splits, then replies Bristlenose couldn't read, then the run gave up with no next step.", lab: ["Nemotron (free)", "failed at 29m 47s"] }
+  ];
+
+  // IKEA usability session, scored against its own Sonnet 4.6 run A.
+  var K = [
+    { id: "k-s46a", name: "Claude Sonnet 4.6", sub: "run A, the reference", route: "or", ref: true, jacc: 100, cost: 0.18, wall: 138, quotes: 23, screens: 10, faith: 100, lab: ["Sonnet 4.6, run A · reference · 10 screens"] },
+    { id: "k-s46b", name: "Claude Sonnet 4.6", sub: "run B", route: "or", jacc: 85, cost: 0.18, wall: 147, quotes: 23, screens: 9, faith: 100, lab: ["Sonnet 4.6, run B · 9 screens"] },
+    { id: "k-s55", name: "Claude Sonnet 5.5", route: "or", jacc: 82, cost: 0.19, wall: 80, quotes: 30, screens: 9, faith: 100, lab: ["Sonnet 5.5 · 9 screens"], ldy: 6 },
+    { id: "k-qwen", name: "Qwen 3.8 Flash", sub: "thinking on", route: "or", jacc: 79, cost: 0.03, wall: 996, quotes: 34, screens: 9, faith: 100, lab: ["Qwen 3.8 Flash · 9 screens · 16m 36s"] },
+    { id: "k-dsor", name: "DeepSeek V4 Flash", route: "or", jacc: 75, cost: 0.01, wall: 318, quotes: 21, screens: 6, faith: 100, lab: ["DeepSeek V4 Flash · 6 screens · 5m 18s"] },
+    { id: "k-llama", name: "Llama 3.3 70B", route: "or", jacc: 68, cost: 0.01, wall: 801, quotes: 22, screens: 7, faith: 100, lab: ["Llama 3.3 70B · 7 screens · 13m 21s"] },
+    { id: "k-gpt", name: "GPT-5.4 mini", route: "or", jacc: 55, cost: 0.04, wall: 23, quotes: 15, screens: 5, faith: 93, lab: ["GPT-5.4 mini · 5 screens"], nx: -4, ldy: -8 },
+    { id: "k-grok", name: "Grok 4.3", route: "or", jacc: 54, cost: 0.04, wall: 76, quotes: 9, screens: 3, faith: 100, lab: ["Grok 4.3 · 3 screens"], nx: 4, ldy: 12 }
+  ];
+
+  function fmtWall(s) {
+    if (s < 60) return s + " s";
+    var m = Math.floor(s / 60), r = s % 60;
+    return m + "m " + (r < 10 ? "0" : "") + r + "s";
+  }
+  function fmtCost(p) {
+    if (p.cost === null || p.cost === undefined) return p.costLabel || "—";
+    if (p.cost === 0) return p.costLabel || "$0";
+    return p.cost < 0.1 ? "$" + p.cost.toFixed(3).replace(/0$/, "") : "$" + p.cost.toFixed(2);
+  }
+  function el(tag, attrs, parent) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function txt(parent, x, y, s, cls) {
+    var t = el("text", { x: x, y: y }, parent);
+    t.textContent = s;
+    if (cls) for (var k in cls) t.setAttribute(k, cls[k]);
+    return t;
+  }
+  function routeVar(r) { return r === "direct" ? "var(--direct)" : "var(--or)"; }
+
+  var tip = document.getElementById("tip");
+  function showTip(p, anchorEl) {
+    while (tip.firstChild) tip.removeChild(tip.firstChild);
+    var head = document.createElement("div"); head.className = "t-name";
+    var key = document.createElement("i"); key.style.background = routeVar(p.route); head.appendChild(key);
+    head.appendChild(document.createTextNode(p.name + (p.sub ? ", " + p.sub : "")));
+    tip.appendChild(head);
+    var dl = document.createElement("dl");
+    var rows = [
+      ["Agreement", p.jacc === null ? "no result" : p.jacc + "%"],
+      ["List price", fmtCost(p)],
+      ["Wall time", p.wallLabel || fmtWall(p.wall)],
+      ["Route", p.route === "direct" ? "native" : "OpenRouter"]
+    ];
+    if (p.quotes !== undefined) rows.push(["Quotes", String(p.quotes)]);
+    if (p.themes !== undefined) rows.push(["Themes", String(p.themes)]);
+    if (p.screens !== undefined) rows.push(["Screens", String(p.screens)]);
+    if (p.faith !== undefined) rows.push(["Verbatim", p.faith + "%"]);
+    rows.forEach(function (r) {
+      var dt = document.createElement("dt"); dt.textContent = r[0];
+      var dd = document.createElement("dd"); dd.textContent = r[1];
+      dl.appendChild(dt); dl.appendChild(dd);
+    });
+    tip.appendChild(dl);
+    if (p.issue) { var n = document.createElement("div"); n.className = "t-note"; n.textContent = p.issue; tip.appendChild(n); }
+    tip.hidden = false;
+    var r = anchorEl.getBoundingClientRect();
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    var x = r.left + window.scrollX + r.width / 2 + 14;
+    var y = r.top + window.scrollY - th / 2;
+    if (x + tw > window.scrollX + document.documentElement.clientWidth - 8) x = r.left + window.scrollX - tw - 14;
+    if (x < window.scrollX + 8) x = window.scrollX + 8;
+    if (y < window.scrollY + 8) y = window.scrollY + 8;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  function hideTip() { tip.hidden = true; }
+
+  var registry = {}; // id -> {g, svg, row}
+  function setOn(id, on) {
+    var e = registry[id]; if (!e) return;
+    if (e.g) { e.g.classList.toggle("on", on); e.svg.classList.toggle("dim", on); }
+    if (e.row) e.row.classList.toggle("on", on);
+    if (e.note) e.note.classList.toggle("on", on);
+  }
+
+  function scatter(svg, cfg, pts) {
+    svg.setAttribute("viewBox", "0 0 " + cfg.W + " " + cfg.H);
+    var lmin = Math.log10(cfg.xmin), lmax = Math.log10(cfg.xmax);
+    function X(c) { return cfg.left + (Math.log10(c) - lmin) / (lmax - lmin) * (cfg.right - cfg.left); }
+    function Y(j) { return cfg.bottom - (j - cfg.ymin) / (cfg.ymax - cfg.ymin) * (cfg.bottom - cfg.top); }
+    var segs = [[cfg.left, cfg.right]];
+    if (cfg.gutter) segs.unshift([cfg.gutter[0], cfg.gutter[1]]);
+
+    if (cfg.gutter) el("rect", { x: cfg.gutter[0], y: cfg.top - 10, width: cfg.gutter[1] - cfg.gutter[0], height: cfg.bottom - cfg.top + 20, fill: "var(--gutter)", rx: 4 }, svg);
+    // noise band
+    segs.forEach(function (s) {
+      el("rect", { x: s[0], y: Y(cfg.ymax), width: s[1] - s[0], height: Y(cfg.floor) - Y(cfg.ymax), fill: "var(--band)" }, svg);
+    });
+    // grid + y ticks
+    cfg.yticks.forEach(function (v) {
+      segs.forEach(function (s) { el("line", { x1: s[0], x2: s[1], y1: Y(v), y2: Y(v), stroke: "var(--grid)", "stroke-width": 1 }, svg); });
+      txt(svg, (cfg.gutter ? cfg.gutter[0] : cfg.left) - 8, Y(v) + 4, v + "%", { "text-anchor": "end", "font-size": 11, fill: "var(--ink-2)", "font-variant-numeric": "tabular-nums" });
+    });
+    // x ticks
+    cfg.xticks.forEach(function (v) {
+      el("line", { x1: X(v), x2: X(v), y1: cfg.top - 10, y2: cfg.bottom, stroke: "var(--grid)", "stroke-width": 1 }, svg);
+      txt(svg, X(v), cfg.bottom + 18, "$" + (v < 0.1 ? v.toFixed(v < 0.01 ? 3 : 2) : v.toFixed(2)), { "text-anchor": "middle", "font-size": 11, fill: "var(--ink-2)" });
+    });
+    el("line", { x1: cfg.left, x2: cfg.right, y1: cfg.bottom, y2: cfg.bottom, stroke: "var(--axis)", "stroke-width": 1 }, svg);
+    txt(svg, (cfg.left + cfg.right) / 2, cfg.bottom + 40, "List price of one run, USD, log scale", { "text-anchor": "middle", "font-size": 12, fill: "var(--ink-2)" });
+    var yl = txt(svg, 14, (cfg.top + cfg.bottom) / 2, "Agreement with Sonnet 4.6, run A", { "text-anchor": "middle", "font-size": 12, fill: "var(--ink-2)" });
+    yl.setAttribute("transform", "rotate(-90 14 " + (cfg.top + cfg.bottom) / 2 + ")");
+    // noise floor line + label
+    segs.forEach(function (s) { el("line", { x1: s[0], x2: s[1], y1: Y(cfg.floor), y2: Y(cfg.floor), stroke: "var(--ink-2)", "stroke-width": 1.5 }, svg); });
+    txt(svg, cfg.left + 8, Y(cfg.floor) - 7, cfg.floorLabel, { "font-size": 11.5, fill: "var(--ink-2)", "font-weight": 600 });
+
+    if (cfg.gutter) {
+      var gc = (cfg.gutter[0] + cfg.gutter[1]) / 2;
+      txt(svg, gc, cfg.bottom + 18, "no per-run", { "text-anchor": "middle", "font-size": 11, fill: "var(--ink-2)" });
+      txt(svg, gc, cfg.bottom + 31, "price recorded", { "text-anchor": "middle", "font-size": 11, fill: "var(--ink-2)" });
+    }
+
+    // connector for the same-vendor route comparison
+    (cfg.connectors || []).forEach(function (c) {
+      var a = pts.filter(function (p) { return p.id === c[0]; })[0], b = pts.filter(function (p) { return p.id === c[1]; })[0];
+      var x1 = X(a.cost), y1 = Y(a.jacc), x2 = X(b.cost), y2 = Y(b.jacc);
+      el("line", { x1: x1, y1: y1, x2: x2, y2: y2, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3 3" }, svg);
+      var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      txt(svg, mx - 8, my - 2, c[2], { "text-anchor": "end", "font-size": 11, fill: "var(--ink-2)", "font-style": "italic" });
+      if (c[3]) txt(svg, mx - 8, my + 11, c[3], { "text-anchor": "end", "font-size": 11, fill: "var(--ink-2)", "font-style": "italic" });
+    });
+
+    var dnfY = cfg.dnfTop;
+    var dnfIdx = 0;
+    if (cfg.gutter && pts.some(function (p) { return p.dnf; })) {
+      el("line", { x1: cfg.gutter[0], x2: cfg.gutter[1] + 40, y1: dnfY, y2: dnfY, stroke: "var(--axis)", "stroke-width": 1 }, svg);
+      txt(svg, cfg.gutter[0] + 8, dnfY + 17, "DIDN'T FINISH", { "font-size": 10.5, fill: "var(--ink-2)", "font-weight": 600, "letter-spacing": "0.06em" });
+    }
+
+    pts.forEach(function (p) {
+      var px, py;
+      var g = el("g", { "class": "pt", tabindex: 0, role: "img" }, svg);
+      g.setAttribute("aria-label", p.name + (p.sub ? ", " + p.sub : "") + ": agreement " + (p.jacc === null ? "none" : p.jacc + "%") + ", price " + fmtCost(p) + ", " + (p.wallLabel || fmtWall(p.wall)));
+      if (p.dnf) {
+        if (!cfg.gutter) return;
+        px = cfg.gutter[0] + 16; py = dnfY + 40 + dnfIdx * 32; dnfIdx++;
+        el("circle", { "class": "hit", cx: px, cy: py, r: 14 }, g);
+        var d = 5;
+        var xg = el("g", { "class": "xg", style: "stroke:var(--critical);stroke-width:2.2;stroke-linecap:round" }, g);
+        el("line", { x1: px - d, y1: py - d, x2: px + d, y2: py + d }, xg);
+        el("line", { x1: px - d, y1: py + d, x2: px + d, y2: py - d }, xg);
+        txt(g, px + 14, py - 2, p.lab[0], { "font-size": 11, fill: "var(--ink)", "font-weight": 600 });
+        txt(g, px + 14, py + 11, p.lab[1], { "font-size": 11, fill: "var(--ink-2)" });
+      } else {
+        px = (p.cost === null ? p.gx : X(p.cost)) + (p.nx || 0);
+        py = Y(p.jacc);
+        el("circle", { "class": "hit", cx: px, cy: py, r: 12 }, g);
+        if (p.ref) el("circle", { "class": "dot", cx: px, cy: py, r: 5, fill: "var(--surface)", style: "stroke:" + routeVar(p.route) + ";stroke-width:2.5" }, g);
+        else el("circle", { "class": "dot", cx: px, cy: py, r: 5, fill: routeVar(p.route) }, g);
+        // label
+        var lx, ly, anchor = "start";
+        if (p.lx !== undefined) { lx = p.lx; ly = p.ly; }
+        else if (p.lp === "l") { lx = px - 10; ly = py - 2; anchor = "end"; }
+        else if (p.lp === "ur") { lx = px + 6; ly = py - 22; }
+        else if (p.lp === "ul") { lx = px - 6; ly = py - 22; anchor = "end"; }
+        else { lx = px + 10; ly = p.lab.length > 1 ? py - 2 : py + 4 + (p.ldy || 0); }
+        txt(g, lx, ly, p.lab[0], { "font-size": 11, fill: "var(--ink)", "font-weight": 600, "text-anchor": anchor });
+        if (p.lab[1]) txt(g, lx, ly + 13, p.lab[1], { "font-size": 11, fill: "var(--ink-2)", "text-anchor": anchor });
+      }
+      registry[p.id] = registry[p.id] || {};
+      registry[p.id].g = g; registry[p.id].svg = svg;
+      var on = function () { setOn(p.id, true); showTip(p, g.querySelector(".hit")); };
+      var off = function () { setOn(p.id, false); hideTip(); };
+      g.addEventListener("pointerenter", on); g.addEventListener("pointerleave", off);
+      g.addEventListener("focus", on); g.addEventListener("blur", off);
+    });
+  }
+
+  scatter(document.getElementById("sc-fossda"), {
+    W: 860, H: 560, left: 230, right: 700, top: 24, bottom: 400, gutter: [56, 200],
+    xmin: 0.005, xmax: 1, ymin: 20, ymax: 100, floor: 90,
+    floorLabel: "Sonnet 4.6 against itself: 90%. Above this line is run-to-run noise.",
+    yticks: [20, 40, 60, 80, 100], xticks: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
+    dnfTop: 456,
+    connectors: [["dsflash", "dsor", "same vendor, other route:", "14 points lower, 3× slower"]]
+  }, F);
+
+  scatter(document.getElementById("sc-ikea"), {
+    W: 860, H: 330, left: 70, right: 600, top: 24, bottom: 264,
+    xmin: 0.005, xmax: 0.3, ymin: 40, ymax: 100, floor: 85,
+    floorLabel: "Sonnet 4.6 against itself: 85%",
+    yticks: [40, 60, 80, 100], xticks: [0.01, 0.02, 0.05, 0.1, 0.2]
+  }, K);
+
+  // table
+  var tb = document.querySelector("#tbl tbody");
+  var lmin = Math.log10(20), lmax = Math.log10(2400);
+  function bar(w, h, frac, fill, mark) {
+    var s = el("svg", { width: w, height: h, viewBox: "0 0 " + w + " " + h });
+    el("rect", { x: 0, y: h / 2 - 1, width: w, height: 2, fill: "var(--grid)", rx: 1 }, s);
+    if (frac > 0) el("rect", { x: 0, y: h / 2 - 4, width: Math.max(3, frac * w), height: 8, fill: fill, rx: 3 }, s);
+    if (mark !== undefined) el("rect", { x: mark * w - 0.75, y: 1, width: 1.5, height: h - 2, fill: "var(--ink-2)" }, s);
+    return s;
+  }
+  F.forEach(function (p) {
+    var tr = document.createElement("tr"); tr.className = "main";
+    function td(cls, content) {
+      var c = document.createElement("td"); if (cls) c.className = cls;
+      if (content instanceof Node) c.appendChild(content); else c.textContent = content;
+      tr.appendChild(c); return c;
+    }
+    var m = document.createElement("span"); m.textContent = p.name;
+    if (p.sub) { var sm = document.createElement("small"); sm.textContent = p.sub; m.appendChild(sm); }
+    td("model", m);
+    var rt = document.createElement("span"); var ri = document.createElement("i"); ri.style.background = routeVar(p.route);
+    rt.appendChild(ri); rt.appendChild(document.createTextNode(p.route === "direct" ? "native" : "OpenRouter"));
+    td("route", rt);
+    var ag = document.createElement("div"); ag.className = "bar";
+    ag.appendChild(bar(60, 14, p.jacc === null ? 0 : p.jacc / 100, routeVar(p.route), 0.9));
+    var agt = document.createElement("span"); agt.textContent = p.ref ? "ref" : (p.jacc === null ? "—" : p.jacc + "%"); ag.appendChild(agt);
+    td(null, ag);
+    td("num", fmtCost(p));
+    var wt = document.createElement("div"); wt.className = "bar";
+    var fr = (Math.log10(p.wall) - lmin) / (lmax - lmin);
+    wt.appendChild(bar(60, 14, fr, p.dnf ? "var(--critical)" : "var(--muted)"));
+    var wl = document.createElement("span");
+    if (p.dnf) { var xm = document.createElement("span"); xm.className = "xmark"; xm.textContent = "✕ "; wl.appendChild(xm); }
+    wl.appendChild(document.createTextNode(p.wallLabel || fmtWall(p.wall)));
+    wt.appendChild(wl);
+    td(null, wt);
+    td("num", p.quotes === undefined ? "—" : String(p.quotes));
+    td("num", p.themes === undefined ? "—" : String(p.themes));
+    td("num" + (p.screens > 0 ? " bad" : ""), p.screens === undefined ? "—" : String(p.screens));
+    td("num", p.faith === undefined ? "—" : p.faith + "%");
+    var nr = document.createElement("tr"); nr.className = "note";
+    var nt = document.createElement("td"); nt.colSpan = 9; nt.textContent = p.issue; nr.appendChild(nt);
+    tb.appendChild(tr); tb.appendChild(nr);
+    registry[p.id] = registry[p.id] || {};
+    registry[p.id].row = tr; registry[p.id].note = nr;
+    [tr, nr].forEach(function (r) {
+      r.addEventListener("pointerenter", function () { setOn(p.id, true); });
+      r.addEventListener("pointerleave", function () { setOn(p.id, false); });
+    });
+  });
+})();
+</script>
+</body>
+</html>

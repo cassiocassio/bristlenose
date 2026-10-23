@@ -852,3 +852,19 @@ def test_the_real_library_has_the_shape_the_fake_assumes() -> None:
     )
     done = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr[-500:]
+
+
+def test_recovery_copy_names_the_provider_and_keeps_its_words_short() -> None:
+    """Found with real fake-key calls (23 Oct 2026): a Mistral 401 read "If
+    this looks like a credit-balance issue, top up…", and a gateway pointed at
+    a web page printed the whole page."""
+    from bristlenose.llm.billing_hints import recovery_message
+
+    rejected = recovery_message(
+        "anyllm", "invalid_key", raw_message="Status 401 Invalid API Key",
+        provider_display="Mistral",
+    )
+    assert rejected.startswith("Mistral rejected the API key.")
+    assert "credit-balance" not in rejected
+    page = recovery_message("anyllm", "", raw_message="<html>" + "x" * 5000, provider_display="OpenRouter")
+    assert len(page) < 500 and page.startswith("OpenRouter refused the request.")

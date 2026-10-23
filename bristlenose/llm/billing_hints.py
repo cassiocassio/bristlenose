@@ -118,7 +118,9 @@ GENERIC_RECOVERY = (
 )
 
 
-def recovery_message(provider: str, error_class: str, raw_message: str = "") -> str:
+def recovery_message(
+    provider: str, error_class: str, raw_message: str = "", *, provider_display: str = "",
+) -> str:
     """Return the recovery copy for a (provider, error_class) tuple.
 
     Translatable prose comes from ``preflight.api_key.*`` via :mod:`bristlenose.i18n`;
@@ -139,6 +141,9 @@ def recovery_message(provider: str, error_class: str, raw_message: str = "") -> 
 
     # ``network`` errors are provider-agnostic except for local Ollama,
     # where "connect refused" is "ollama isn't running" with a specific fix.
+    if provider == "anyllm":
+        return _anyllm_message(error_class, raw_message, provider_display or "The provider")
+
     if error_class == "network":
         if provider == "local":
             return t(
@@ -191,6 +196,28 @@ def recovery_message(provider: str, error_class: str, raw_message: str = "") -> 
         console_url=facts.console_url,
         minimum_note=facts.minimum_note,
     )
+
+
+def _anyllm_message(error_class: str, raw_message: str, name: str) -> str:
+    """Recovery copy for a provider reached through any-llm.
+
+    ``name`` is that provider ("Mistral"), never the library. There is no
+    billing or keys URL to give (we hold none for the long tail), and the
+    provider's words are cut to a readable length: a gateway relays whatever its
+    upstream sends, a whole HTML error page included.
+    """
+    said = raw_message.strip()
+    if len(said) > 300:
+        said = said[:300].rstrip() + "…"
+    said = _rich_escape(said) if said else "no message"
+    key = {
+        "invalid_key": "preflight.api_key.anyllm_invalid_key",
+        "billing_empty": "preflight.api_key.anyllm_no_credit",
+        "model_unavailable": "preflight.api_key.anyllm_model_unavailable",
+        "rate_limit": "preflight.api_key.anyllm_rate_limit",
+        "network": "preflight.api_key.network",
+    }.get(error_class, "preflight.api_key.anyllm_generic")
+    return t(key, provider_display=name, message=said)
 
 
 # Legacy export kept for tests that asserted the literal default template.

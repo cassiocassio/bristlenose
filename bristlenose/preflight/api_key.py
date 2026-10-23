@@ -858,10 +858,17 @@ def preflight_api_key(
             logger.warning("Could not write preflight state: %s", exc)
         return
 
+    if provider == "anyllm":
+        from bristlenose.llm import anyllm as _anyllm
+
+        display = _anyllm.account_name(settings)
+    else:
+        display = ""
     raise ApiKeyPreflightAbortedError(
         recovery_message(
             provider,
             result.error_class or "",
             raw_message=result.raw_message,
+            provider_display=display,
         )
     )

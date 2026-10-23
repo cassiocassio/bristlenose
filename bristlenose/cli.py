@@ -2843,7 +2843,10 @@ def _configure_anyllm(key: str | None) -> None:
         _say(
             MessageKind.ERROR,
             "Not valid — "
-            + recovery_message("anyllm", result.error_class or "", raw_message=result.raw_message),
+            + recovery_message(
+                "anyllm", result.error_class or "",
+                raw_message=result.raw_message, provider_display=name,
+            ),
         )
         # A rejected key must be replaceable here: the run's failure banner
         # sends the user to this command. A stored key is asked for again; an

@@ -478,7 +478,7 @@ the ⊘ pointer, and the item springing back.
 
 | Outcome | Was | Is |
 |---|---|---|
-| Project is **running** | toast: "Finish or stop the current run…" | not a drop target — `validateDrop → []` |
+| Project is **running** | toast: "Finish or stop the current run…" | ~~not a drop target — `validateDrop → []`~~ Since decision #100 (22 Oct 2026, `8332d20c`): a drop target, as is a **queued** study. The files are copied in under a hidden staging name and renamed, start no run and are not seeded as known, so they wait as `+N unanalysed` for the next analysis (a queued study's own run reads them) |
 | Project **failed** | toast: "Use Retry on the toolbar…" | still not a drop target, and no message: Retry is the context menu's **Analyse**, which already accepts `.failed`. Only the *grammar* of the refusal changed here, not the set of things refused |
 | Folder **unreachable** | toast: "…isn't reachable right now" | not a drop target; the row's `cantFind` subtitle + glyph already say so, permanently, and outrank all activity |
 | **File-subset**, analysed | toast: "Files added. They won't be in the report…" | the row's `+N unanalysed` delta |

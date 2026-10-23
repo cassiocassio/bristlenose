@@ -1279,7 +1279,11 @@ def _short_reason(errors: list[str], provider: str = "") -> tuple[str, str]:
         msg = "API credit balance too low"
     if len(msg) > _MAX_WARN_LEN:
         msg = msg[:_MAX_WARN_LEN - 1] + "\u2026"
-    return msg, link
+    # Provider text, printed through Rich: any-llm's "[openrouter] …" prefix
+    # read as a style tag, a "[/b]" raised MarkupError after the paid calls,
+    # and "[link=…]" drew a live link. Escaped after the cut, so the cut can't
+    # split an escape.
+    return rich_escape(msg), link
 
 
 def _session_list(sids: Iterable[str]) -> str:

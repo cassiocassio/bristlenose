@@ -1444,3 +1444,51 @@ async def test_a_mostly_wrong_reply_is_asked_for_again(
     result = await _client(monkeypatch).analyze("sys", "usr", QuoteExtractionResult)
     assert len(result.quotes) == 3
     assert len(fake_anyllm.calls) == 2
+
+
+def test_configure_doesnt_tell_you_to_run_configure(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Inside `configure`, a rejected key is followed by its own prompt (or, with
+    --key, by the command already typed): "Store a new one: bristlenose
+    configure any-llm" was noise there (Mistral and OpenRouter walks). Every
+    other place that shows a rejected key still says it."""
+    from typer.testing import CliRunner
+
+    from bristlenose import credentials
+    from bristlenose.cli import app
+    from bristlenose.credentials import FileCredentialStore
+    from bristlenose.llm.billing_hints import recovery_message
+
+    monkeypatch.setattr(credentials, "get_credential_store", lambda: FileCredentialStore(
+        tmp_path / "keys.env"))
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", OPENROUTER_MODEL)
+    fake_anyllm.replies.append(_openrouter(401, _BAD_KEY))
+    result = CliRunner().invoke(app, ["configure", "any-llm", "--key", "sk-or-bad"])
+    assert result.exit_code == 1
+    assert "rejected the API key" in result.output
+    assert "Store a new one" not in result.output
+    assert "Store a new one: bristlenose configure any-llm" in recovery_message(
+        "anyllm", "invalid_key", raw_message="401", provider_display="OpenRouter",
+    )
+
+
+def test_a_providers_words_reach_the_terminal_as_text() -> None:
+    """Provider text printed through Rich: markup is escaped (any-llm's
+    "[openrouter]" prefix was eaten, "[/b]" raised after the paid calls) and
+    control characters are dropped (mistralai's SDKError appends the raw body)."""
+    from rich.console import Console
+
+    from bristlenose.llm.billing_hints import recovery_message
+    from bristlenose.pipeline import _short_reason
+
+    reason, _ = _short_reason(["[openrouter] Provider returned error [/b]"])
+    console = Console(record=True, width=200)
+    console.print(f"[dim yellow]{reason}[/dim yellow]")
+    assert "[openrouter] Provider returned error [/b]" in console.export_text()
+
+    said = recovery_message(
+        "anyllm", "", raw_message="Status 500 \x1b]8;;https://evil.example\x1b\\click\x1b]8;;\x1b\\",
+        provider_display="Mistral",
+    )
+    assert "\x1b" not in said and "click" in said

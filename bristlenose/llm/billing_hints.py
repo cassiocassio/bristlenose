@@ -125,8 +125,12 @@ def recovery_message(
     *,
     provider_display: str = "",
     host: str | None = None,
+    in_configure: bool = False,
 ) -> str:
     """Return the recovery copy for a (provider, error_class) tuple.
+
+    ``in_configure`` is True when the copy is shown inside ``configure`` itself,
+    which then asks for the key: telling the user to run that command is noise.
 
     Translatable prose comes from ``preflight.api_key.*`` via :mod:`bristlenose.i18n`;
     URLs and the ``minimum_note`` are code-owned in :data:`_BILLING` and
@@ -149,6 +153,7 @@ def recovery_message(
     if provider == "anyllm":
         return _anyllm_message(
             error_class, raw_message, provider_display or "The provider", host=host,
+            in_configure=in_configure,
         )
 
     if error_class == "network":
@@ -207,6 +212,7 @@ def recovery_message(
 
 def _anyllm_message(
     error_class: str, raw_message: str, name: str, *, host: str | None = None,
+    in_configure: bool = False,
 ) -> str:
     """Recovery copy for a provider reached through any-llm.
 
@@ -217,7 +223,10 @@ def _anyllm_message(
     provider's words are cut to a readable length: a gateway relays whatever its
     upstream sends, a whole HTML error page included.
     """
-    said = raw_message.strip()
+    # Printable characters only: a provider's SDK can append the raw response
+    # body (mistralai's SDKError does), and an escape sequence in it would reach
+    # the terminal. Markup is escaped below; this is the control-code half.
+    said = "".join(ch for ch in " ".join(raw_message.split()) if ch.isprintable())
     if len(said) > 300:
         said = said[:300].rstrip() + "…"
     said = _rich_escape(said) if said else "no message"
@@ -233,7 +242,10 @@ def _anyllm_message(
     host_name = (
         _rich_escape(host) if host else t("preflight.api_key.anyllm_unnamed_host")
     )
-    return t(key, provider_display=name, message=said, host=host_name)
+    copy = t(key, provider_display=name, message=said, host=host_name)
+    if error_class == "invalid_key" and not in_configure:
+        copy += "\n" + t("preflight.api_key.anyllm_store_new_key")
+    return copy
 
 
 # Legacy export kept for tests that asserted the literal default template.

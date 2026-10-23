@@ -2929,7 +2929,7 @@ def _configure_anyllm(key: str | None) -> None:
             "Not valid — "
             + recovery_message(
                 "anyllm", result.error_class or "",
-                raw_message=result.raw_message, provider_display=name,
+                raw_message=result.raw_message, provider_display=name, in_configure=True,
             ),
         )
         # A rejected key must be replaceable here: the run's failure banner

@@ -423,7 +423,9 @@
     "anonymous": "Anônimo – apenas sua avaliação, sua mensagem e a versão do Bristlenose são compartilhadas.",
     "sent": "Feedback enviado – obrigado!",
     "copiedToClipboard": "Copiado para a área de transferência – cole em um e-mail ou issue.",
-    "copyFailed": "Não foi possível copiar — envie o feedback manualmente."
+    "copyFailed": "Não foi possível copiar — envie o feedback manualmente.",
+    "sendFailed": "Não foi possível enviar seu feedback. Ele foi copiado para a área de transferência: cole-o em uma nova issue no GitHub.",
+    "sendFailedNotCopied": "Não foi possível enviar seu feedback nem copiá-lo para a área de transferência. Copie sua mensagem em uma nova issue no GitHub."
   },
 
   "signals": {

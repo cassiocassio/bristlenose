@@ -474,7 +474,9 @@
     "anonymous": "Anonimowo — udostępniane są tylko ocena, wiadomość i wersja Bristlenose.",
     "sent": "Opinia wysłana — dziękujemy!",
     "copiedToClipboard": "Skopiowano do schowka — wklej do wiadomości e-mail lub zgłoszenia.",
-    "copyFailed": "Nie udało się skopiować — prześlij opinię ręcznie."
+    "copyFailed": "Nie udało się skopiować — prześlij opinię ręcznie.",
+    "sendFailed": "Nie udało się wysłać opinii. Jest skopiowana do schowka: wklej ją do nowego zgłoszenia na GitHubie.",
+    "sendFailedNotCopied": "Nie udało się wysłać opinii ani skopiować jej do schowka. Skopiuj wiadomość do nowego zgłoszenia na GitHubie."
   },
 
   "signals": {

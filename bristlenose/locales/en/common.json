@@ -425,7 +425,9 @@
     "anonymous": "Anonymous — only your rating, your message and the Bristlenose version are shared.",
     "sent": "Feedback sent — thank you!",
     "copiedToClipboard": "Copied to clipboard — paste into an email or issue.",
-    "copyFailed": "Could not copy — please submit feedback manually."
+    "copyFailed": "Could not copy — please submit feedback manually.",
+    "sendFailed": "Couldn’t send your feedback. It’s copied to the clipboard: paste it into a new issue on GitHub.",
+    "sendFailedNotCopied": "Couldn’t send your feedback or copy it to the clipboard. Copy your message into a new issue on GitHub."
   },
 
   "signals": {

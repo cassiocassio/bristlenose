@@ -423,7 +423,9 @@
     "anonymous": "Anonimo – vengono condivisi solo la valutazione, il messaggio e la versione di Bristlenose.",
     "sent": "Feedback inviato – grazie!",
     "copiedToClipboard": "Copiato negli appunti – incollalo in un'email o in una segnalazione.",
-    "copyFailed": "Impossibile copiare — invia il feedback manualmente."
+    "copyFailed": "Impossibile copiare — invia il feedback manualmente.",
+    "sendFailed": "Impossibile inviare il feedback. È stato copiato negli appunti: incollalo in una nuova segnalazione su GitHub.",
+    "sendFailedNotCopied": "Impossibile inviare il feedback o copiarlo negli appunti. Copia il messaggio in una nuova segnalazione su GitHub."
   },
 
   "signals": {

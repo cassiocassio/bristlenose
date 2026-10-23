@@ -399,7 +399,9 @@
     "anonymous": "匿名——僅會分享你的評分、訊息與 Bristlenose 版本。",
     "sent": "已傳送意見回饋——謝謝你！",
     "copiedToClipboard": "已拷貝至剪貼板——貼至電子郵件或問題回報中。",
-    "copyFailed": "無法拷貝——請手動提交意見回饋。"
+    "copyFailed": "無法拷貝——請手動提交意見回饋。",
+    "sendFailed": "無法傳送意見回饋。已拷貝至剪貼板，請貼至 GitHub 上的新問題回報。",
+    "sendFailedNotCopied": "無法傳送意見回饋，也無法拷貝至剪貼板。請將訊息拷貝至 GitHub 上的新問題回報。"
   },
 
   "signals": {

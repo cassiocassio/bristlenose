@@ -865,6 +865,7 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
     if status is None:
         return None
     from bristlenose.server.routes.health import (
+        DEFAULT_GITHUB_ISSUES_URL,
         DEFAULT_HELP_URL,
         build_health_payload,
     )
@@ -881,6 +882,12 @@ def _maybe_status_response(app: FastAPI, output_dir: Path) -> HTMLResponse | Non
         status,
         feedback_url=str(feedback["url"]),  # type: ignore[index]
         feedback_enabled=bool(feedback["enabled"]),  # type: ignore[index]
+        # `or`: an empty BRISTLENOSE_GITHUB_ISSUES_URL still names somewhere to
+        # paste a failed send (the SPA footer and modal fall back the same way).
+        github_issues_url=str(
+            health["links"]["github_issues_url"]  # type: ignore[index]
+            or DEFAULT_GITHUB_ISSUES_URL
+        ),
         help_url=help_url,
         version=str(health["version"]),
         html_root_attrs=_html_root_attrs(),

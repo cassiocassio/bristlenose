@@ -128,8 +128,145 @@ import Testing
 
         #expect(!held.cancelledInside)
         #expect(copied.count == 1, "a failed send falls back to the clipboard")
-        #expect(delivered.first?.toast != nil)
+        #expect(model.failure != nil)
         #expect(delivered.first?.dismiss == false)
+    }
+
+    // MARK: - A send that fails says so (R80)
+
+    /// While the request is out the sheet is in `.sending`, which is what
+    /// draws the spinner and "Sending…" and disables Send.
+    @Test func aSendInFlightIsVisible() async throws {
+        let held = HeldSend()
+        let model = model(answering: .sent, held: held, copied: { _ in })
+        await model.load()
+
+        model.startSend { _ in }
+        try await held.untilEntered()
+        #expect(model.phase == .sending, "nothing shows that a send is out")
+        #expect(!model.canSend, "Send stayed live while a send was out")
+        held.open()
+        await model.sendTask?.value
+        #expect(model.phase == .ready)
+    }
+
+    /// The failure is said in the sheet, not by a toast behind it: what
+    /// failed, that the text is on the clipboard, and where to paste it. The
+    /// sheet stays open with the text. A bare `I18n()` answers the key, so
+    /// this asserts which sentence was chosen.
+    @Test func aFailedSendSaysSoInTheSheet() async throws {
+        let held = HeldSend()
+        var copied: [String] = []
+        var delivered: [(dismiss: Bool, toast: String?)] = []
+        let model = model(answering: .failed, held: held, copied: { copied.append($0) })
+        model.message = "Long careful feedback."
+        await model.load()
+
+        model.startSend { delivered.append($0) }
+        try await held.untilEntered()
+        held.open()
+        await model.sendTask?.value
+
+        #expect(model.failure == "common.feedback.sendFailed")
+        #expect(delivered.first?.toast == nil, "the failure went to a toast behind the sheet")
+        #expect(delivered.first?.dismiss == false)
+        #expect(model.message == "Long careful feedback.", "the text was not kept")
+        #expect(copied.first?.contains("Long careful feedback.") == true)
+    }
+
+    /// Neither the send nor the copy took: the sentence must not claim the
+    /// clipboard has it.
+    @Test func aFailedSendAndCopySaysTheTextIsNotOnTheClipboard() async throws {
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(),
+            sender: { _, _ in .failed },
+            copy: { _ in false }
+        )
+        model.rating = .like
+        await model.load()
+
+        let outcome = await model.send()
+
+        #expect(model.failure == "common.feedback.sendFailedNotCopied")
+        #expect(outcome.toast == nil)
+        #expect(outcome.dismiss == false)
+    }
+
+    /// No endpoint (health unreachable, feedback disabled): nothing is
+    /// posted, so no spinner, but the same sentence says where the text went.
+    @Test func noEndpointSaysSoInTheSheet() async {
+        var copied: [String] = []
+        let model = FeedbackSheetModel(
+            config: .unavailable, i18n: I18n(),
+            sender: { _, _ in Issue.record("no endpoint, so nothing is posted"); return .failed },
+            copy: { copied.append($0); return true }
+        )
+        model.rating = .like
+        await model.load()
+
+        let outcome = await model.send()
+
+        #expect(model.failure == "common.feedback.sendFailed")
+        #expect(outcome.toast == nil)
+        #expect(copied.count == 1)
+    }
+
+    /// Send again after a failure: the old sentence goes as the new send
+    /// starts, and a confirmed send leaves none behind.
+    @Test func aNewSendClearsTheFailure() async throws {
+        var answer = SubmissionResult.failed
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(),
+            sender: { _, _ in answer },
+            copy: { _ in true }
+        )
+        model.rating = .like
+        await model.load()
+        _ = await model.send()
+        try #require(model.failure != nil)
+
+        answer = .sent
+        let outcome = await model.send()
+
+        #expect(model.failure == nil, "a confirmed send kept the old failure")
+        #expect(outcome.dismiss == true)
+        #expect(outcome.toast == "common.feedback.sent")
+    }
+
+    /// An edit after a failure takes the line away: "it's copied to the
+    /// clipboard" describes the text as it was sent.
+    @Test func anEditAfterAFailureClearsTheLine() async {
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(),
+            sender: { _, _ in .failed },
+            copy: { _ in true }
+        )
+        model.rating = .like
+        await model.load()
+        _ = await model.send()
+        #expect(model.failure != nil)
+        model.message = "More."
+        #expect(model.failure == nil, "editing the message kept the line")
+
+        _ = await model.send()
+        #expect(model.failure != nil)
+        model.rating = .love
+        #expect(model.failure == nil, "changing the rating kept the line")
+    }
+
+    /// Cancelled while out: the person has gone, so no sentence either.
+    @Test func aCancelledSendLeavesNoFailure() async throws {
+        let held = HeldSend()
+        let model = model(answering: .failed, held: held, copied: { _ in })
+        await model.load()
+
+        model.startSend { _ in }
+        try await held.untilEntered()
+        model.cancelSend()
+        held.open()
+        await model.sendTask?.value
+
+        #expect(model.failure == nil)
     }
 
     /// No endpoint (disabled or unreachable serve): the send is the clipboard.

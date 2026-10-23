@@ -423,7 +423,9 @@
     "anonymous": "Anònim: només es comparteixen la teva valoració, el teu missatge i la versió de Bristlenose.",
     "sent": "Comentaris enviats. Gràcies!",
     "copiedToClipboard": "S'ha copiat al porta-retalls: enganxa-ho en un correu o en una incidència.",
-    "copyFailed": "No s'ha pogut copiar — envia els comentaris manualment."
+    "copyFailed": "No s'ha pogut copiar — envia els comentaris manualment.",
+    "sendFailed": "No s'han pogut enviar els comentaris. S'han copiat al porta-retalls: enganxa'ls en una incidència nova a GitHub.",
+    "sendFailedNotCopied": "No s'han pogut enviar els comentaris ni copiar-los al porta-retalls. Copia el missatge en una incidència nova a GitHub."
   },
 
   "signals": {

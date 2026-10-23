@@ -120,10 +120,9 @@ describe("FeedbackModal", () => {
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledOnce();
-      expect(vi.mocked(toast)).toHaveBeenCalledWith(
-        "Copied to clipboard — paste into an email or issue.",
-      );
+      expect(screen.getByRole("alert").textContent).toContain("Couldn’t send your feedback.");
     });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("falls back to clipboard when POST fails", async () => {
@@ -143,13 +142,53 @@ describe("FeedbackModal", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledOnce();
-      expect(onClose).toHaveBeenCalledOnce();
-      expect(vi.mocked(toast)).toHaveBeenCalledWith(
-        "Copied to clipboard — paste into an email or issue.",
-      );
+    // R80: the form says the send failed and where to paste the copy, and
+    // keeps the text; it does not close behind a "Copied to clipboard" toast.
+    const alert = await screen.findByRole("alert");
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(alert.textContent).toContain(
+      "Couldn’t send your feedback. It’s copied to the clipboard: paste it into a new issue on GitHub.",
+    );
+    const link = screen.getByRole("link", { name: "Report an issue" });
+    expect(link.getAttribute("href")).toBe("https://example.com/issues/new");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    expect((screen.getByLabelText("Help us improve") as HTMLTextAreaElement).value).toBe(
+      "Something failed.",
+    );
+    expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(false);
+    const saved = JSON.parse(localStorage.getItem("bristlenose-feedback-draft") || "{}");
+    expect(saved.message).toBe("Something failed.");
+  });
+
+  it("clears the failure when the form is sent again and when it is reopened", async () => {
+    const onClose = vi.fn();
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
     });
+
+    const { rerender } = render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByRole("alert");
+
+    // Sending again: the old sentence goes as the new send starts.
+    let release!: (r: Response) => void;
+    vi.mocked(globalThis.fetch).mockImplementationOnce(
+      () => new Promise<Response>((resolve) => { release = resolve; }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Sending…" })).toBeDefined();
+    release(new Response("{}", { status: 500 }));
+    await screen.findByRole("alert");
+
+    rerender(<FeedbackModal open={false} onClose={onClose} health={HEALTH} />);
+    rerender(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it.each([
@@ -172,11 +211,11 @@ describe("FeedbackModal", () => {
       const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
       fireEvent.click(send);
 
-      await waitFor(() => {
-        expect(vi.mocked(toast)).toHaveBeenCalledWith(
-          "Could not copy — please submit feedback manually.",
-        );
-      });
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toContain(
+        "Couldn’t send your feedback or copy it to the clipboard.",
+      );
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
       expect(fetchSpy).toHaveBeenCalledOnce();
       expect(onClose).not.toHaveBeenCalled();
       expect(textarea.value).toBe("Long careful feedback.");
@@ -186,6 +225,148 @@ describe("FeedbackModal", () => {
       expect(saved.message).toBe("Long careful feedback.");
     },
   );
+
+  it("with no endpoint, sends nothing and says so in the form", async () => {
+    // The no-endpoint branch (an empty feedback URL; a file:// page takes the
+    // same branch): no POST, the copy, and the failure line. Same as the Mac.
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const health = { ...HEALTH, feedback: { enabled: true, url: "" } };
+
+    render(<FeedbackModal open={true} onClose={vi.fn()} health={health} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Couldn\u2019t send your feedback.");
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(writeText).toHaveBeenCalledOnce();
+  });
+
+  it("an edit after a failure takes the failure line away", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+    render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByRole("alert");
+
+    fireEvent.change(screen.getByLabelText("Help us improve"), { target: { value: "More." } });
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: /Excellent/ }));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  /** A POST the test answers by hand, after the form has been closed. */
+  function heldFetch(): (r: Response | Error) => void {
+    let settle!: (r: Response | Error) => void;
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((resolve, reject) => {
+          settle = (r) => (r instanceof Error ? reject(r) : resolve(r));
+          // A real fetch rejects on abort; this one only does when answered,
+          // so the guard is tested against a request the server already had.
+          void init;
+        }),
+    );
+    return (r) => settle(r);
+  }
+
+  const closers: [string, () => void][] = [
+    ["Cancel", () => fireEvent.click(screen.getByRole("button", { name: "Cancel" }))],
+    ["Escape", () => fireEvent.keyDown(document, { key: "Escape" })],
+    ["the overlay", () => fireEvent.click(screen.getByTestId("bn-feedback-overlay"))],
+  ];
+  const failures: [string, () => Response | Error][] = [
+    ["a network error", () => new Error("network")],
+    ["a 500", () => new Response("{}", { status: 500 })],
+  ];
+
+  it.each(closers.flatMap(([c, closeIt]) => failures.map(([f, failure]) => [c, f, closeIt, failure] as const)))(
+    "closed with %s during a send that then ends in %s, writes nothing",
+    async (_c, _f, closeIt, failure) => {
+    const onClose = vi.fn();
+    const answer = heldFetch();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    closeIt();
+    answer(failure());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it("closed while the copy is being written, shows no failure line", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+    let copied!: () => void;
+    const writeText = vi.fn(() => new Promise<void>((r) => { copied = r; }));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    copied();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("closed during a send that then succeeds, does not close again or wipe the draft", async () => {
+    const onClose = vi.fn();
+    const answer = heldFetch();
+
+    render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.change(screen.getByLabelText("Help us improve"), { target: { value: "Keep me." } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    answer(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+    const saved = JSON.parse(localStorage.getItem("bristlenose-feedback-draft") || "{}");
+    expect(saved.message).toBe("Keep me.");
+  });
+
+  it("closed from outside during a send, writes nothing when it fails", async () => {
+    const answer = heldFetch();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const { rerender } = render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    rerender(<FeedbackModal open={false} onClose={vi.fn()} health={HEALTH} />);
+    answer(new Error("network"));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(writeText).not.toHaveBeenCalled();
+    // Reopened, Send is not left reading "Sending…".
+    rerender(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    const send = screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
+    expect(send.disabled).toBe(false);
+  });
 
   it("closes on Escape and overlay click", () => {
     const onClose = vi.fn();

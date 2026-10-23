@@ -58,6 +58,13 @@ enum FeedbackEndpoint {
     /// stays the single gate.
     static let defaultURL = URL(string: "https://bristlenose.app/feedback.php")!
 
+    /// Where a send that failed tells the researcher to paste the copy (R80):
+    /// mirrors `DEFAULT_GITHUB_ISSUES_URL` in `routes/health.py` and
+    /// `frontend/src/utils/health.ts`, the footer's "Report a bug". A
+    /// compile-time constant, not `/api/health`'s `links.github_issues_url`,
+    /// because that port is auth-exempt and this is a link the sheet offers.
+    static let issuesURL = URL(string: "https://github.com/cassiocassio/bristlenose/issues/new")!
+
     /// Accept only `https` on an allow-listed host. Rejects `http:`/`javascript:`/
     /// relative values and off-host redirection. Returns nil ⇒ cannot POST (the
     /// sheet falls back to the clipboard).

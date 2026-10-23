@@ -468,3 +468,41 @@ class TestRecodedSessionSqlContract:
         for column in ("session_id", "speaker_code", "speaker_role"):
             assert column in SessionSpeaker.__table__.columns, column
         assert "project_id" in Session.__table__.columns
+
+
+# ---------------------------------------------------------------------------
+# Feedback URLs: the Mac sheet's compile-time copies of health.py's defaults
+# ---------------------------------------------------------------------------
+
+_FEEDBACK_SUBMISSION_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "FeedbackSubmission.swift"
+)
+
+
+class TestFeedbackURLContract:
+    """`FeedbackEndpoint` mirrors the defaults in `routes/health.py`.
+
+    The sheet POSTs to `defaultURL` when it has no serve, and a failed send
+    tells the researcher to paste into `issuesURL` (R80). Neither reads
+    `/api/health` for these, so a change on one side alone would send
+    feedback, or the researcher, somewhere else with nothing to say so.
+    """
+
+    @pytest.mark.parametrize(
+        ("swift_name", "python_name"),
+        [
+            ("defaultURL", "DEFAULT_FEEDBACK_URL"),
+            ("issuesURL", "DEFAULT_GITHUB_ISSUES_URL"),
+        ],
+    )
+    def test_swift_constant_equals_python_default(
+        self, swift_name: str, python_name: str
+    ) -> None:
+        from bristlenose.server.routes import health
+
+        text = _FEEDBACK_SUBMISSION_SWIFT.read_text(encoding="utf-8")
+        match = re.search(
+            rf'static\s+let\s+{swift_name}\s*=\s*URL\(string:\s*"([^"]+)"\)!', text
+        )
+        assert match is not None, f"FeedbackSubmission.swift no longer declares {swift_name}"
+        assert match.group(1) == getattr(health, python_name)

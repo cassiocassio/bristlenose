@@ -423,7 +423,9 @@
     "anonymous": "Anonymt – bare vurderingen, meldingen og Bristlenose-versjonen deles.",
     "sent": "Tilbakemelding sendt – takk!",
     "copiedToClipboard": "Kopiert til utklippstavlen – lim inn i en e-post eller sak.",
-    "copyFailed": "Kunne ikke kopiere – send inn tilbakemeldingen manuelt."
+    "copyFailed": "Kunne ikke kopiere – send inn tilbakemeldingen manuelt.",
+    "sendFailed": "Tilbakemeldingen kunne ikke sendes. Den er kopiert til utklippstavlen: lim den inn i en ny sak på GitHub.",
+    "sendFailedNotCopied": "Tilbakemeldingen kunne verken sendes eller kopieres til utklippstavlen. Kopier meldingen til en ny sak på GitHub."
   },
 
   "signals": {

@@ -423,7 +423,9 @@
     "anonymous": "Anonymt – kun din vurdering, din besked og Bristlenose-versionen deles.",
     "sent": "Feedback sendt – tak!",
     "copiedToClipboard": "Kopieret til udklipsholder – indsæt i en e-mail eller et issue.",
-    "copyFailed": "Kunne ikke kopiere — send venligst feedback manuelt."
+    "copyFailed": "Kunne ikke kopiere — send venligst feedback manuelt.",
+    "sendFailed": "Din feedback kunne ikke sendes. Den er kopieret til udklipsholderen: indsæt den i et nyt issue på GitHub.",
+    "sendFailedNotCopied": "Din feedback kunne hverken sendes eller kopieres til udklipsholderen. Kopiér din besked til et nyt issue på GitHub."
   },
 
   "signals": {

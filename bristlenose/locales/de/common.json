@@ -423,7 +423,9 @@
     "anonymous": "Anonym – nur Ihre Bewertung, Ihre Nachricht und die Bristlenose-Version werden geteilt.",
     "sent": "Feedback gesendet – vielen Dank!",
     "copiedToClipboard": "In die Zwischenablage kopiert – in eine E-Mail oder ein Issue einfügen.",
-    "copyFailed": "Kopieren nicht möglich — bitte Feedback manuell einreichen."
+    "copyFailed": "Kopieren nicht möglich — bitte Feedback manuell einreichen.",
+    "sendFailed": "Ihr Feedback konnte nicht gesendet werden. Es liegt in der Zwischenablage: Fügen Sie es in ein neues Issue auf GitHub ein.",
+    "sendFailedNotCopied": "Ihr Feedback konnte weder gesendet noch in die Zwischenablage kopiert werden. Kopieren Sie Ihre Nachricht in ein neues Issue auf GitHub."
   },
 
   "signals": {

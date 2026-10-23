@@ -11,9 +11,11 @@ import SwiftUI
 /// A sheet, not a floating panel: it's a committed data-entry task with a text
 /// field that must take key focus and a default Send button — the native default
 /// for a menu-triggered modal task (HIG: Modality). All strings are the shared
-/// `common.feedback.*` set — already translated in every locale, identical to
-/// the web modal and the status-page form. Same `{version, rating, message}`
-/// payload, same strict `{ok:true}` success predicate, same clipboard fallback.
+/// `common.feedback.*` set, identical to the web modal and the status-page
+/// form. Same `{version, rating, message}` payload, same strict `{ok:true}`
+/// success predicate, same clipboard fallback. A send that fails says so in
+/// the sheet, with where to paste the copy (R80), as the web modal and the
+/// status-page form do.
 
 // MARK: - View model
 
@@ -22,9 +24,15 @@ final class FeedbackSheetModel: ObservableObject {
     enum Phase { case loading, ready, sending }
 
     @Published var phase: Phase = .loading
-    @Published var rating: FeedbackRating?
-    @Published var message: String = ""
+    // An edit after a failed send takes the failure line away: it describes
+    // the text as it was sent, so "it's on the clipboard" stops being true.
+    @Published var rating: FeedbackRating? { didSet { failure = nil } }
+    @Published var message: String = "" { didSet { failure = nil } }
     @Published private(set) var config: FeedbackConfig = .unavailable
+    /// The sentence a failed send leaves in the sheet: it wasn't sent, where
+    /// the copy is, and where to paste it (R80). Nil until a send fails;
+    /// cleared when the next one starts. A cancelled send sets nothing.
+    @Published private(set) var failure: String?
 
     /// Posts a payload and answers sent/failed. A seam so a test can hold a
     /// send in flight; the app always passes `FeedbackClient().submit`.
@@ -79,6 +87,7 @@ final class FeedbackSheetModel: ObservableObject {
     func t(_ key: String) -> String { i18n.t("common.feedback.\(key)") }
     func label(_ rating: FeedbackRating) -> String { i18n.t("common.feedback.\(rating.labelKey)") }
     var cancelLabel: String { i18n.t("common.buttons.cancel") }
+    var reportIssueLabel: String { i18n.t("common.footer.reportIssue") }
 
     /// Prefer the server's version (parity with the web payload, which sends
     /// `health.version`); fall back to the app bundle when health didn't answer.
@@ -102,18 +111,20 @@ final class FeedbackSheetModel: ObservableObject {
     }
 
     /// Returns whether the sheet should dismiss (only on confirmed send) plus a
-    /// toast. On any failure the sheet stays open, the typed message is kept
-    /// (draft retention), and the outcome is copied to the clipboard. A toast is
-    /// returned on BOTH outcomes — `t("sent")` on success, the clipboard-copy
-    /// message on failure — never from `onDismiss`.
+    /// toast, which only a confirmed send has (`t("sent")`). On any failure
+    /// the sheet stays open, the typed message is kept (draft retention), the
+    /// text is copied to the clipboard, and `failure` says so in the sheet
+    /// itself: a toast drawn behind a sheet is not where anyone is looking.
     func send() async -> (dismiss: Bool, toast: String?) {
         // Cancelled before it began: nothing at all, the clipboard included.
         if Task.isCancelled { return (false, nil) }
         guard let rating else { return (false, nil) }
+        failure = nil
         // No reachable/validated endpoint (disabled, unreachable, off-host) →
         // clipboard, honouring a disabled config without silently POSTing.
         guard let url = config.url else {
-            return (false, copyToClipboard(rating: rating))
+            copyToClipboard(rating: rating)
+            return (false, nil)
         }
         phase = .sending
         let payload = FeedbackPayload(
@@ -130,7 +141,8 @@ final class FeedbackSheetModel: ObservableObject {
         case .sent:
             return (true, t("sent"))
         case .failed:
-            return (false, copyToClipboard(rating: rating))
+            copyToClipboard(rating: rating)
+            return (false, nil)
         }
     }
 
@@ -155,10 +167,10 @@ final class FeedbackSheetModel: ObservableObject {
         sendTask?.cancel()
     }
 
-    private func copyToClipboard(rating: FeedbackRating) -> String {
+    private func copyToClipboard(rating: FeedbackRating) {
         var text = "Bristlenose feedback (v\(version))\nRating: \(label(rating))\n"
         if !trimmedMessage.isEmpty { text += "Message: \(trimmedMessage)\n" }
-        return copy(text) ? t("copiedToClipboard") : t("copyFailed")
+        failure = copy(text) ? t("sendFailed") : t("sendFailedNotCopied")
     }
 
     static func copyToPasteboard(_ text: String) -> Bool {
@@ -215,6 +227,19 @@ struct FeedbackSheet: View {
                     .padding(.vertical, 24)
             } else {
                 form
+                if let failure = model.failure {
+                    // Above the buttons, like MiroSheet's error line, and with
+                    // the place to paste the copy as a link (R80).
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(failure)
+                            .font(.callout)
+                            .foregroundStyle(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Link(model.reportIssueLabel, destination: FeedbackEndpoint.issuesURL)
+                            .font(.callout)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             // In every phase, so Cancel (and Esc, its shortcut) is there while
@@ -227,6 +252,11 @@ struct FeedbackSheet: View {
         .padding(20)
         .frame(width: sheetWidth)
         .task { await model.load() }
+        // VoiceOver does not read a line that appears on its own, and focus
+        // stays on Send, so say the failure (the web modal's role="alert").
+        .onChange(of: model.failure) { _, failure in
+            if let failure { AccessibilityNotification.Announcement(failure).post() }
+        }
         // However the sheet goes (Cancel, Esc, its window closing), a send
         // still out must not toast, copy or confirm after it.
         .onDisappear { model.cancelSend() }
@@ -268,6 +298,17 @@ struct FeedbackSheet: View {
 
     private var buttons: some View {
         HStack {
+            // The stock in-flight pattern: a small spinner and "Sending…"
+            // beside the disabled Send, for as long as the request is out.
+            // The wait is URLSession's default (up to 60 s): a shorter one
+            // waits on the owner (decisions #49, #59), so R80 only makes the
+            // waiting visible.
+            if model.phase == .sending {
+                ProgressView().controlSize(.small)
+                Text(model.t("sending"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             Button(model.cancelLabel) { model.cancelSend(); dismiss() }
                 .keyboardShortcut(.cancelAction)
@@ -280,8 +321,7 @@ struct FeedbackSheet: View {
     private func deliver(_ outcome: (dismiss: Bool, toast: String?)) {
         // Suppress the redundant "sent" toast when a caller owns the success
         // confirmation itself (onSent wired → the expiry flow's "Thanks" step).
-        // The clipboard-fallback toast on failure always fires — it's the only
-        // signal the sheet gives on a failed send.
+        // A failed send has no toast: the sheet says it (`model.failure`).
         if let toast = outcome.toast, !(outcome.dismiss && onSent != nil) {
             onToast(toast)
         }

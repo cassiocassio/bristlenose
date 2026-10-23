@@ -819,6 +819,186 @@ class TestIdentityScriptExecutes:
 
 
 # ---------------------------------------------------------------------------
+# Synthetic: the feedback form EXECUTES — a failed send says so (R80)
+# ---------------------------------------------------------------------------
+
+# A minimal DOM for the form's ids, a fetch the harness answers by hand, and a
+# clipboard that takes or refuses. Each scenario runs the real rendered scripts
+# in a fresh environment and prints what the form shows.
+_FEEDBACK_HARNESS = r"""
+const SCRIPTS = __SCRIPTS__;
+function el(id) {
+  const e = {
+    id, listeners: {}, textContent: '', hidden: false, disabled: false, value: '',
+    attrs: {}, classes: new Set(), wiped: false,
+    classList: {
+      add: (c) => e.classes.add(c), remove: (c) => e.classes.delete(c),
+      contains: (c) => e.classes.has(c),
+    },
+    addEventListener: (t, f) => { (e.listeners[t] = e.listeners[t] || []).push(f); },
+    setAttribute: (k, v) => { e.attrs[k] = v; },
+    getAttribute: (k) => e.attrs[k],
+    focus: () => {}, appendChild: (c) => { e.child = c; },
+    set innerHTML(v) { e.wiped = true; },
+  };
+  return e;
+}
+function fire(e, type, extra) {
+  for (const f of e.listeners[type] || []) {
+    f(Object.assign({ target: e, preventDefault() {} }, extra || {}));
+  }
+}
+const flush = () => new Promise((r) => setImmediate(r));
+
+async function scenario({ answer, copyOk, closeEarly, editAfter }) {
+  const ids = ['bn-fb-trigger', 'bn-fb-overlay', 'bn-fb-sentiments', 'bn-fb-message',
+               'bn-fb-send', 'bn-fb-cancel', 'bn-fb-error', 'bn-fb-error-text'];
+  const E = Object.fromEntries(ids.map((i) => [i, el(i)]));
+  const card = el('card');
+  const face = el('face');
+  face.attrs['data-value'] = 'like';
+  face.closest = () => face;
+  E['bn-fb-overlay'].querySelector = () => card;
+  E['bn-fb-sentiments'].querySelectorAll = () => [face];
+  E['bn-fb-error'].hidden = true;
+  E['bn-fb-send'].disabled = true;
+  const doc = el('document');
+  doc.getElementById = (i) => E[i] || null;
+  doc.createElement = () => el('h2');
+  let settle;
+  const copied = [];
+  global.window = {};
+  global.document = doc;
+  global.location = { protocol: 'http:' };
+  // Node has its own read-only `navigator`, which a plain assignment misses.
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {
+    clipboard: { writeText: (t) => {
+      copied.push(t);
+      return copyOk ? Promise.resolve() : Promise.reject(new Error('denied'));
+    } },
+  } });
+  global.fetch = () => new Promise((res, rej) => {
+    settle = (r) => (r === 'error' ? rej(new Error('network')) : res(r));
+  });
+  global.setTimeout = () => 0;
+  for (const s of SCRIPTS) (0, eval)(s);
+
+  fire(E['bn-fb-trigger'], 'click');
+  fire(E['bn-fb-sentiments'], 'click', { target: face });
+  E['bn-fb-message'].value = 'Long careful feedback.';
+  fire(E['bn-fb-send'], 'click');
+  const during = {
+    disabled: E['bn-fb-send'].disabled, label: E['bn-fb-send'].textContent,
+  };
+  if (closeEarly) fire(E['bn-fb-cancel'], 'click');
+  settle(answer === 'ok'
+    ? { status: 200, headers: { get: () => 'application/json' },
+        json: () => Promise.resolve({ ok: true }) }
+    : answer === 'error' ? 'error'
+    : { status: 500, headers: { get: () => 'text/html' }, json: () => Promise.reject() });
+  for (let i = 0; i < 5; i++) await flush();
+  const after = {
+    lineShown: !E['bn-fb-error'].hidden, line: E['bn-fb-error-text'].textContent,
+  };
+  if (editAfter) fire(E['bn-fb-message'], 'input');
+  return {
+    during, ...after,
+    lineShownAfterEdit: !E['bn-fb-error'].hidden,
+    copied: copied.length, text: E['bn-fb-message'].value, wiped: card.wiped,
+    sendDisabled: E['bn-fb-send'].disabled, sendLabel: E['bn-fb-send'].textContent,
+    closed: !E['bn-fb-overlay'].classes.has('visible'),
+  };
+}
+
+(async () => {
+  const out = {
+    failed: await scenario({ answer: 'error', copyOk: true, editAfter: true }),
+    rejected: await scenario({ answer: 500, copyOk: true }),
+    notCopied: await scenario({ answer: 'error', copyOk: false }),
+    cancelled: await scenario({ answer: 'error', copyOk: true, closeEarly: true }),
+    sent: await scenario({ answer: 'ok', copyOk: true }),
+  };
+  console.log(JSON.stringify(out));
+})();
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+class TestFeedbackFormExecutes:
+    """A failed send on the status-page form says so in the form (R80).
+
+    It used to show "Copied to clipboard", wipe the text and close, with no
+    "Sending…" and nowhere named to paste the copy.
+    """
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def outcomes(cls) -> dict[str, dict[str, object]]:
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.ERROR, short="x", long=None,
+                details=None, outcome="failed",
+            ),
+            feedback_url="https://example.com/feedback",
+            github_issues_url="https://example.com/issues/new",
+        )
+        scripts = [
+            s for s in re.findall(r"<script>(.*?)</script>", html, re.S)
+            if "__BN_FB__" in s
+        ]
+        assert len(scripts) == 2, "expected the feedback config and its script"
+        harness = _FEEDBACK_HARNESS.replace("__SCRIPTS__", json.dumps(scripts))
+        result = _run_node(harness)
+        outcomes: dict[str, dict[str, object]] = json.loads(result.stdout.strip())
+        return outcomes
+
+    def test_a_send_in_flight_shows_sending(self, outcomes) -> None:
+        during = outcomes["failed"]["during"]
+        assert during == {"disabled": True, "label": t("common.feedback.sending")}
+
+    @pytest.mark.parametrize("case", ["failed", "rejected"])
+    def test_a_failed_send_says_so_and_keeps_the_text(self, outcomes, case) -> None:
+        o = outcomes[case]
+        assert o["lineShown"] is True
+        assert o["line"] == t("common.feedback.sendFailed")
+        assert o["copied"] == 1
+        assert o["text"] == "Long careful feedback."
+        assert o["wiped"] is False
+        assert o["closed"] is False
+        assert (o["sendDisabled"], o["sendLabel"]) == (False, t("common.feedback.send"))
+
+    def test_a_failed_send_and_copy_does_not_claim_the_clipboard(self, outcomes) -> None:
+        o = outcomes["notCopied"]
+        assert o["line"] == t("common.feedback.sendFailedNotCopied")
+        assert o["lineShown"] is True
+
+    def test_an_edit_takes_the_line_away(self, outcomes) -> None:
+        assert outcomes["failed"]["lineShownAfterEdit"] is False
+
+    def test_closed_during_a_send_touches_nothing(self, outcomes) -> None:
+        o = outcomes["cancelled"]
+        assert o["copied"] == 0
+        assert o["lineShown"] is False
+
+    def test_a_confirmed_send_still_finishes(self, outcomes) -> None:
+        o = outcomes["sent"]
+        assert o["wiped"] is True
+        assert o["lineShown"] is False
+        assert o["copied"] == 0
+
+    def test_the_line_names_where_to_paste(self) -> None:
+        html = render_page(
+            StatusInfo(kind=MessageKind.ERROR, short="x", long=None,
+                       details=None, outcome="failed"),
+            github_issues_url="https://example.com/issues/new",
+        )
+        line = re.search(r'<p class="bn-export-error" id="bn-fb-error".*?</p>', html, re.S)
+        assert line is not None
+        assert 'href="https://example.com/issues/new"' in line.group(0)
+        assert t("common.footer.reportIssue") in line.group(0)
+
+
+# ---------------------------------------------------------------------------
 # Integration: intercept fires from /report/* in prod and dev mounts
 # ---------------------------------------------------------------------------
 

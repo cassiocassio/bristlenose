@@ -423,7 +423,9 @@
     "anonymous": "Anonyme – seuls votre évaluation, votre message et la version de Bristlenose sont partagés.",
     "sent": "Commentaires envoyés – merci !",
     "copiedToClipboard": "Copié dans le presse-papiers – collez dans un e-mail ou une issue.",
-    "copyFailed": "Impossible de copier — veuillez envoyer vos commentaires manuellement."
+    "copyFailed": "Impossible de copier — veuillez envoyer vos commentaires manuellement.",
+    "sendFailed": "Impossible d’envoyer vos commentaires. Ils sont copiés dans le presse-papiers : collez-les dans une nouvelle issue sur GitHub.",
+    "sendFailedNotCopied": "Impossible d’envoyer vos commentaires ou de les copier dans le presse-papiers. Copiez votre message dans une nouvelle issue sur GitHub."
   },
 
   "signals": {

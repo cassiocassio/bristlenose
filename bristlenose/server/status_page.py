@@ -443,6 +443,11 @@ _FEEDBACK_SENTIMENTS = [
 # native sheet — with the SAME strict success predicate (HTTP 200 + JSON
 # {"ok": true}); anything else falls back to the clipboard. Config (endpoint
 # URL, version, localised strings) arrives via window.__BN_FB__.
+# While the POST is out, Send is disabled and reads "Sending…". A send that
+# fails keeps the form and its text open and says so in it, with where to
+# paste the copy (the GitHub issues link), like the React modal and the Mac
+# sheet (R80). Closing the form drops a send still out (`gen`), so it never
+# writes the clipboard or shows a line after the person has gone.
 _FEEDBACK_SCRIPT = """<script>
 (function () {
   var cfg = window.__BN_FB__ || {};
@@ -454,7 +459,22 @@ _FEEDBACK_SCRIPT = """<script>
   var msg = document.getElementById('bn-fb-message');
   var sendBtn = document.getElementById('bn-fb-send');
   var cancelBtn = document.getElementById('bn-fb-cancel');
+  var errLine = document.getElementById('bn-fb-error');
+  var errText = document.getElementById('bn-fb-error-text');
   var rating = '';
+  var gen = 0;  // bumped on close: a send from an older generation is dropped
+
+  function setFailure(text) {
+    if (!errLine || !errText) return;
+    errText.textContent = text || '';
+    errLine.hidden = !text;
+  }
+  function idle() {
+    if (sendBtn) {
+      sendBtn.disabled = !rating;
+      sendBtn.textContent = cfg.send || 'Send';
+    }
+  }
 
   function embedded() {
     return !!(window.webkit && window.webkit.messageHandlers &&
@@ -468,11 +488,14 @@ _FEEDBACK_SCRIPT = """<script>
         return;
       } catch (e) { /* fall through to the web form */ }
     }
+    setFailure('');
     overlay.classList.add('visible');
     overlay.setAttribute('aria-hidden', 'false');
     setTimeout(function () { if (msg) msg.focus(); }, 50);
   }
   function close() {
+    gen++;
+    idle();
     overlay.classList.remove('visible');
     overlay.setAttribute('aria-hidden', 'true');
   }
@@ -485,16 +508,22 @@ _FEEDBACK_SCRIPT = """<script>
     }
     setTimeout(close, 1600);
   }
-  function clipboard() {
+  function failed(mine, copied) {
+    if (mine !== gen) return;
+    idle();
+    setFailure(copied ? cfg.sendFailed : cfg.sendFailedNotCopied);
+  }
+  function clipboard(mine) {
+    if (mine !== gen) return;
     var body = 'Bristlenose feedback (v' + (cfg.version || 'unknown') + ')\\n' +
                'Rating: ' + rating + '\\n' +
                (msg && msg.value.trim() ? 'Message: ' + msg.value.trim() + '\\n' : '');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(body).then(
-        function () { finish(cfg.copied || 'Copied to clipboard.'); },
-        function () { finish(cfg.copyFailed || 'Could not send feedback.'); });
+        function () { failed(mine, true); },
+        function () { failed(mine, false); });
     } else {
-      finish(cfg.copyFailed || 'Could not send feedback.');
+      failed(mine, false);
     }
   }
 
@@ -511,8 +540,10 @@ _FEEDBACK_SCRIPT = """<script>
       b.classList.add('selected');
       rating = b.getAttribute('data-value');
       if (sendBtn) sendBtn.disabled = false;
+      setFailure('');  // the line describes the text as it was sent
     });
   }
+  if (msg) msg.addEventListener('input', function () { setFailure(''); });
   if (cancelBtn) cancelBtn.addEventListener('click', close);
   overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
   document.addEventListener('keydown', function (e) {
@@ -521,7 +552,10 @@ _FEEDBACK_SCRIPT = """<script>
   if (sendBtn) {
     sendBtn.addEventListener('click', function () {
       if (!rating) return;
+      var mine = gen;
       sendBtn.disabled = true;
+      sendBtn.textContent = cfg.sending || 'Sending\\u2026';
+      setFailure('');
       var payload = { version: cfg.version || 'unknown', rating: rating,
                       message: msg ? msg.value.trim() : '' };
       var isHttp = location.protocol === 'http:' || location.protocol === 'https:';
@@ -534,13 +568,14 @@ _FEEDBACK_SCRIPT = """<script>
           var ct = (resp.headers.get('Content-Type') || '').toLowerCase();
           if (resp.status === 200 && ct.indexOf('application/json') !== -1) {
             resp.json().then(function (j) {
+              if (mine !== gen) return;
               if (j && j.ok === true) { finish(cfg.sent || 'Feedback sent \\u2014 thank you!'); }
-              else { clipboard(); }
-            }, function () { clipboard(); });
-          } else { clipboard(); }
-        }).catch(function () { clipboard(); });
+              else { clipboard(mine); }
+            }, function () { clipboard(mine); });
+          } else { clipboard(mine); }
+        }).catch(function () { clipboard(mine); });
       } else {
-        clipboard();
+        clipboard(mine);
       }
     });
   }
@@ -549,7 +584,7 @@ _FEEDBACK_SCRIPT = """<script>
 
 
 def _build_feedback_html(
-    feedback_url: str, feedback_enabled: bool, version: str
+    feedback_url: str, feedback_enabled: bool, version: str, github_issues_url: str
 ) -> tuple[str, str]:
     """Build the (footer trigger, hidden overlay + script) HTML for feedback.
 
@@ -577,9 +612,11 @@ def _build_feedback_html(
         {
             "url": feedback_url,
             "version": version,
+            "send": t("common.feedback.send"),
+            "sending": t("common.feedback.sending"),
             "sent": t("common.feedback.sent"),
-            "copied": t("common.feedback.copiedToClipboard"),
-            "copyFailed": t("common.feedback.copyFailed"),
+            "sendFailed": t("common.feedback.sendFailed"),
+            "sendFailedNotCopied": t("common.feedback.sendFailedNotCopied"),
         },
         ensure_ascii=True,
     ).replace("</", "<\\/")
@@ -600,6 +637,13 @@ def _build_feedback_html(
         '<button type="button" class="feedback-btn feedback-btn-send" id="bn-fb-send" disabled>'
         f'{html.escape(t("common.feedback.send"))}</button>'
         "</div>"
+        # The failure line (R80): filled and shown by the script on a failed
+        # send, with the place to paste the copy.
+        '<p class="bn-export-error" id="bn-fb-error" role="alert" hidden>'
+        '<span id="bn-fb-error-text"></span> '
+        f'<a href="{html.escape(github_issues_url, quote=True)}" target="_blank" '
+        'rel="noopener noreferrer">'
+        f'{html.escape(t("common.footer.reportIssue"))}</a></p>'
         f'<p class="bn-modal-footer">{html.escape(t("common.feedback.anonymous"))}</p>'
         "</div></div>"
         f"<script>window.__BN_FB__ = {config};</script>"
@@ -613,6 +657,7 @@ def render_page(
     *,
     feedback_url: str = "https://bristlenose.app/feedback.php",
     feedback_enabled: bool = True,
+    github_issues_url: str = "https://github.com/cassiocassio/bristlenose/issues/new",
     help_url: str = "https://bristlenose.app/docs/",
     version: str = "",
     html_root_attrs: str = "",
@@ -634,7 +679,7 @@ def render_page(
             '</details>'
         )
     feedback_trigger, feedback_overlay = _build_feedback_html(
-        feedback_url, feedback_enabled, version
+        feedback_url, feedback_enabled, version, github_issues_url
     )
     # json.dumps for quoting; `</`-escaped so a future outcome value can never
     # close the script element (same discipline as the feedback config above).

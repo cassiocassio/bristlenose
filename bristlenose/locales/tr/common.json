@@ -423,7 +423,9 @@
     "anonymous": "Anonim – yalnızca değerlendirmeniz, mesajınız ve Bristlenose sürümü paylaşılır.",
     "sent": "Geri bildirim gönderildi – teşekkürler!",
     "copiedToClipboard": "Panoya kopyalandı – bir e-postaya veya soruna yapıştırın.",
-    "copyFailed": "Kopyalanamadı — lütfen geri bildirimi elle gönderin."
+    "copyFailed": "Kopyalanamadı — lütfen geri bildirimi elle gönderin.",
+    "sendFailed": "Geri bildiriminiz gönderilemedi. Panoya kopyalandı: GitHub'da yeni bir soruna yapıştırın.",
+    "sendFailedNotCopied": "Geri bildiriminiz gönderilemedi ve panoya kopyalanamadı. Mesajınızı GitHub'da yeni bir soruna kopyalayın."
   },
 
   "signals": {

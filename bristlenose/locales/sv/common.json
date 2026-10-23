@@ -423,7 +423,9 @@
     "anonymous": "Anonymt – endast ditt betyg, ditt meddelande och Bristlenose-versionen delas.",
     "sent": "Feedback skickad – tack!",
     "copiedToClipboard": "Kopierat till urklipp – klistra in i ett mejl eller ärende.",
-    "copyFailed": "Kunde inte kopiera — skicka feedback manuellt."
+    "copyFailed": "Kunde inte kopiera — skicka feedback manuellt.",
+    "sendFailed": "Din feedback kunde inte skickas. Den är kopierad till urklipp: klistra in den i ett nytt ärende på GitHub.",
+    "sendFailedNotCopied": "Din feedback kunde varken skickas eller kopieras till urklipp. Kopiera ditt meddelande till ett nytt ärende på GitHub."
   },
 
   "signals": {

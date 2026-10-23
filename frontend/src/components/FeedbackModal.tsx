@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
-import type { HealthResponse } from "../utils/health";
+import { DEFAULT_GITHUB_ISSUES_URL, type HealthResponse } from "../utils/health";
 
 interface FeedbackModalProps {
   open: boolean;
@@ -55,12 +55,37 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // The locale key of the sentence a failed send leaves in the form (R80):
+  // it wasn't sent, where the copy is, and where to paste it.
+  const [failure, setFailure] = useState<string | null>(null);
+  // The send in flight. Closing the form aborts it, so a send that ends after
+  // the person has left touches nothing: no clipboard, no toast, no second
+  // onClose, no wiped draft (the Mac sheet's Task.isCancelled guards).
+  const inFlight = useRef<AbortController | null>(null);
+
+  const close = useCallback(() => {
+    inFlight.current?.abort();
+    inFlight.current = null;
+    onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    if (open) return;
+    // Closed from outside (or by `close` above): drop the send in flight.
+    // Its `sending` is reset when the form next opens.
+    inFlight.current?.abort();
+    inFlight.current = null;
+  }, [open]);
+
+  useEffect(() => () => inFlight.current?.abort(), []);
 
   useEffect(() => {
     if (!open) return;
     const draft = readDraft();
     setRating(draft.rating);
     setMessage(draft.message);
+    setFailure(null);
+    setSending(false);
   }, [open]);
 
   useEffect(() => {
@@ -74,12 +99,12 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        close();
       }
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
+  }, [open, close]);
 
   const feedbackLabelByValue = useMemo(
     () =>
@@ -101,32 +126,36 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     [onClose],
   );
 
-  const fallbackToClipboard = useCallback(async () => {
+  const fallbackToClipboard = useCallback(async (signal: AbortSignal) => {
+    if (signal.aborted) return;
     const ratingLabel = feedbackLabelByValue[rating] ?? rating;
     let text = `Bristlenose feedback (v${health.version || "unknown"})\nRating: ${ratingLabel}\n`;
     if (message.trim()) text += `Message: ${message.trim()}\n`;
-    // Neither the send nor the copy took the feedback, so it exists only in
-    // this form: keep it open with the draft intact rather than clearing it.
-    const keepForm = () => {
-      setSending(false);
-      toast(t("feedback.copyFailed"));
-    };
-    if (!navigator.clipboard?.writeText) {
-      keepForm();
-      return;
+    // The send failed, so the form stays open with the draft intact and says
+    // so itself (R80): a toast after closing read as success, and named
+    // nowhere to paste the copy. If the copy failed too, the text exists only
+    // in this form.
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      } catch (err) {
+        console.warn("Bristlenose feedback: clipboard write failed; keeping the form", err);
+      }
     }
-    try {
-      await navigator.clipboard.writeText(text);
-      clearAndClose(t("feedback.copiedToClipboard"));
-    } catch (err) {
-      console.warn("Bristlenose feedback: clipboard write failed; keeping the form", err);
-      keepForm();
-    }
-  }, [clearAndClose, feedbackLabelByValue, health.version, message, rating, t]);
+    if (signal.aborted) return;
+    setSending(false);
+    setFailure(copied ? "feedback.sendFailed" : "feedback.sendFailedNotCopied");
+  }, [feedbackLabelByValue, health.version, message, rating]);
 
   const submit = useCallback(async () => {
     if (!rating || sending) return;
     setSending(true);
+    setFailure(null);
+    const controller = new AbortController();
+    inFlight.current = controller;
+    const { signal } = controller;
     const payload = {
       version: health.version || "unknown",
       rating,
@@ -141,6 +170,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
+          signal,
         });
         // Strict success predicate: HTTP 200 + JSON body {ok: true}. A bare
         // resp.ok (any 2xx) reads a captive-portal / proxy interstitial 200
@@ -149,7 +179,9 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
         const contentType = (resp.headers.get("Content-Type") ?? "").toLowerCase();
         if (resp.status === 200 && contentType.includes("application/json")) {
           const body = (await resp.json().catch(() => null)) as { ok?: unknown } | null;
+          if (signal.aborted) return;
           if (body?.ok === true) {
+            inFlight.current = null;
             clearAndClose(t("feedback.sent"));
             return;
           }
@@ -158,20 +190,22 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
           `Bristlenose feedback: POST ${url} returned ${resp.status} without {ok:true}; falling back to clipboard`,
         );
       } catch (err) {
+        if (signal.aborted) return;
         console.warn(
           `Bristlenose feedback: POST ${url} failed; falling back to clipboard`,
           err,
         );
       }
     }
-    await fallbackToClipboard();
+    await fallbackToClipboard(signal);
+    if (inFlight.current === controller) inFlight.current = null;
   }, [clearAndClose, fallbackToClipboard, health.feedback.url, health.version, message, rating, sending]);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
+      if (e.target === e.currentTarget) close();
     },
-    [onClose],
+    [close],
   );
 
   return createPortal(
@@ -195,7 +229,12 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
                     type="button"
                     className={`feedback-sentiment${rating === item.value ? " selected" : ""}`}
                     data-value={item.value}
-                    onClick={() => setRating(item.value)}
+                    onClick={() => {
+                      setRating(item.value);
+                      // The failure line describes the text as it was sent;
+                      // an edit makes "it's on the clipboard" untrue.
+                      setFailure(null);
+                    }}
                   >
                     <span className="feedback-sentiment-face">{item.emoji}</span>
                     <span className="feedback-sentiment-label">{t(item.labelKey)}</span>
@@ -211,13 +250,16 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
                 placeholder={t("feedback.placeholder")}
                 rows={3}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setFailure(null);
+                }}
               />
               <div className="feedback-actions">
                 <button
                   type="button"
                   className="feedback-btn feedback-btn-cancel"
-                  onClick={onClose}
+                  onClick={close}
                 >
                   {t("buttons.cancel")}
                 </button>
@@ -232,6 +274,18 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
                   {sending ? t("feedback.sending") : t("feedback.send")}
                 </button>
               </div>
+              {failure && (
+                <p className="bn-export-error" role="alert">
+                  {t(failure)}{" "}
+                  <a
+                    href={health.links.github_issues_url || DEFAULT_GITHUB_ISSUES_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("footer.reportIssue")}
+                  </a>
+                </p>
+              )}
               <p className="bn-modal-footer">
                 {t("feedback.anonymous")}
               </p>

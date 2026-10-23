@@ -399,7 +399,9 @@
     "anonymous": "익명 - 평가, 메시지, Bristlenose 버전만 공유됩니다.",
     "sent": "피드백이 전송되었습니다 - 감사합니다!",
     "copiedToClipboard": "클립보드에 복사되었습니다 - 이메일이나 이슈에 붙여넣으세요.",
-    "copyFailed": "복사할 수 없습니다 — 수동으로 피드백을 제출해 주세요."
+    "copyFailed": "복사할 수 없습니다 — 수동으로 피드백을 제출해 주세요.",
+    "sendFailed": "피드백을 보낼 수 없습니다. 클립보드에 복사되었으니 GitHub의 새 이슈에 붙여넣으세요.",
+    "sendFailedNotCopied": "피드백을 보내거나 클립보드에 복사할 수 없습니다. 메시지를 GitHub의 새 이슈에 복사하세요."
   },
 
   "signals": {

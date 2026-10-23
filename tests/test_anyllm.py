@@ -911,3 +911,25 @@ async def test_a_reply_that_misses_the_schema_is_asked_for_again_once(
     with pytest.raises(ValidationError):
         await client.analyze("s", "u", Theme)
     assert len(fake_anyllm.calls) == 4
+
+
+@pytest.mark.asyncio
+async def test_a_schema_retry_is_its_own_telemetry_row(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Found by the Mistral walk: the retry's row said retry_count=0 and timed
+    both attempts together."""
+    from bristlenose.llm import telemetry
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies += [_response('{"label": "a"}'), _response('{"label": "b", "quotes": []}')]
+    client = _client(monkeypatch)
+    run_dir = tmp_path / ".bristlenose"
+    tokens = telemetry.set_run_context("run-retry", run_dir)
+    try:
+        with telemetry.stage("s09_quote_extraction"):
+            await client.analyze("s", "u", Theme)
+    finally:
+        telemetry.reset_run_context(tokens)
+    rows = list(telemetry.iter_rows(run_dir))
+    assert [(r["outcome"], r["retry_count"]) for r in rows] == [("error", 0), ("ok", 1)]

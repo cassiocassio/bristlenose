@@ -1516,13 +1516,19 @@ class LLMClient:
             {"role": "user", "content": user_prompt},
         ]
 
+        # One telemetry row per attempt, each with its own duration and
+        # retry_count, so a schema retry doesn't read as one long first call.
+        attempt_n = [0]
+        attempt_t0 = [t0]
+
         def record(outcome: Literal["ok", "truncated", "error"], response: Any = None) -> None:
             usage = getattr(response, "usage", None)
             self._record_call(
                 request_model=model,
                 response_model=getattr(response, "model", None),
                 input_chars=input_chars,
-                elapsed_ms=int((time.perf_counter() - t0) * 1000),
+                elapsed_ms=int((time.perf_counter() - attempt_t0[0]) * 1000),
+                retry_count=attempt_n[0],
                 outcome=outcome, prompt_template=prompt_template,
                 input_tokens=getattr(usage, "prompt_tokens", None) if usage else None,
                 output_tokens=getattr(usage, "completion_tokens", None) if usage else None,
@@ -1578,6 +1584,8 @@ class LLMClient:
             "json_schema": {"name": response_model.__name__, "schema": schema},
         }
         for attempt in range(_ANYLLM_SCHEMA_ATTEMPTS):
+            attempt_n[0] = attempt
+            attempt_t0[0] = time.perf_counter() if attempt else t0
             try:
                 if getattr(self, "_anyllm_json_object", False):
                     response = await call({"type": "json_object"})

@@ -88,7 +88,7 @@ Run it with:  <span style="font-weight: bold">bristlenose run &lt;</span><span s
 <section class="scene"><h2>4 · configure any-llm — no key yet, so it&#x27;s stored</h2><div class="term"><div class="bar"><i></i><i></i><i></i><span>configure any-llm — DeepSeek, key stored in Keychain</span></div><pre><span style="color: #62a0ea; text-decoration-color: #62a0ea; font-weight: bold">~/research</span> <span style="font-weight: bold">$</span> <span style="color: #c7c7c7; text-decoration-color: #c7c7c7; font-weight: bold">bristlenose configure any-llm</span>
 
 Which model? Write it as <span style="font-weight: bold">provider:model</span>, e.g. mistral:mistral-large-latest
-<span style="font-weight: bold">Model:</span> deepseek:deepseek-chat
+<span style="font-weight: bold">Model:</span> deepseek:deepseek-flash
 
 <span style="font-weight: bold">Enter your DeepSeek API key:</span> 
 Checking with DeepSeek <span style="font-weight: bold">(</span>~$<span style="color: #58c7d6; text-decoration-color: #58c7d6; font-weight: bold">0.0001</span>, no transcript content<span style="font-weight: bold">)</span><span style="color: #e7c45b; text-decoration-color: #e7c45b">...</span> <span style="color: #66cc7d; text-decoration-color: #66cc7d">✓</span> Valid
@@ -168,11 +168,11 @@ Bristlenose <span style="color: #818181; text-decoration-color: #818181">v0.</sp
 <section class="scene"><h2>9 · use — switching between stored keys</h2><div class="term"><div class="bar"><i></i><i></i><i></i><span>bristlenose use</span></div><pre><span style="color: #62a0ea; text-decoration-color: #62a0ea; font-weight: bold">~/research</span> <span style="font-weight: bold">$</span> <span style="color: #c7c7c7; text-decoration-color: #c7c7c7; font-weight: bold">bristlenose use mistral:mistral-large-latest</span>
 any-llm is now your provider for analysis <span style="font-weight: bold">(</span>was Claude<span style="font-weight: bold">)</span>.
 Switch back any time:  <span style="font-weight: bold">bristlenose use claude</span>
-Model: mistral:mistral-large-latest (was deepseek:deepseek-chat)
+Model: mistral:mistral-large-latest (was deepseek:deepseek-flash)
 
-<span style="color: #62a0ea; text-decoration-color: #62a0ea; font-weight: bold">~/research</span> <span style="font-weight: bold">$</span> <span style="color: #c7c7c7; text-decoration-color: #c7c7c7; font-weight: bold">bristlenose use deepseek:deepseek-chat</span>
+<span style="color: #62a0ea; text-decoration-color: #62a0ea; font-weight: bold">~/research</span> <span style="font-weight: bold">$</span> <span style="color: #c7c7c7; text-decoration-color: #c7c7c7; font-weight: bold">bristlenose use deepseek:deepseek-flash</span>
 any-llm is now your provider for analysis.
-Model: deepseek:deepseek-chat (was mistral:mistral-large-latest)
+Model: deepseek:deepseek-flash (was mistral:mistral-large-latest)
 
 <span style="color: #62a0ea; text-decoration-color: #62a0ea; font-weight: bold">~/research</span> <span style="font-weight: bold">$</span> <span style="color: #c7c7c7; text-decoration-color: #c7c7c7; font-weight: bold">bristlenose use openrouter:x-ai/grok-4</span>
 <span style="color: #e8625c; text-decoration-color: #e8625c">✗</span> No OpenRouter API key: OPENROUTER_API_KEY isn&#x27;t set and none is stored.

@@ -204,7 +204,7 @@ bristlenose configure any-llm
 | Claude, ChatGPT, Gemini, Azure OpenAI | Options A–D: `bristlenose configure claude` (or `chatgpt`, `gemini`, `azure`) |
 | A local model with Ollama | Option E: `bristlenose configure local` |
 | Mistral | `bristlenose configure any-llm`, model `mistral:mistral-large-latest` |
-| DeepSeek | `bristlenose configure any-llm`, model `deepseek:deepseek-chat` |
+| DeepSeek | `bristlenose configure any-llm`, model `deepseek:deepseek-flash` |
 | Hundreds of models with one key (Grok, Llama, Qwen, DeepSeek, Mistral…) | `bristlenose configure any-llm`, model `openrouter:<id>` with an id from [openrouter.ai/models](https://openrouter.ai/models) |
 | Another provider any-llm supports | Add its part first: `pipx inject bristlenose "any-llm-sdk[<provider>]"`, then `bristlenose configure any-llm` |
 | Claude or Gemini through your company's AWS, Google Cloud or Azure AI account | Not supported |

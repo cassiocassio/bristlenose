@@ -279,8 +279,11 @@ OpenRouter**. Mistral is the European provider a researcher's client is likelies
 to approve; OpenRouter reaches Grok, Llama, Qwen, DeepSeek and Groq-hosted models
 with one key. The extra adds `mistralai` only: OpenRouter rides on the `openai`
 SDK we ship, and so does DeepSeek, which therefore works directly at no extra
-cost (its 4096-token default output and possible `json_schema` refusal are met
-by the truncation path and the `json_object` fallback). Groq and Grok directly
+cost. Its current models are `deepseek-flash` and `deepseek-v4-pro`
+(`deepseek-chat` and `deepseek-reasoner` are gone, per the DeepSeek walk on 23
+Oct 2026); their documented response format is `json_object`, met by the
+fallback. The 4096-token default output this plan once cited belonged to the old
+model; the current ones list far larger caps, so truncation is unlikely there. Groq and Grok directly
 are one `pipx inject` away. Both default providers are in upstream's "Verified" tier.
 `mistralai` 3.x depends on `opentelemetry-api`, which does nothing unless an
 SDK and exporter are installed; CI asserts they aren't. Never `[all]`, which

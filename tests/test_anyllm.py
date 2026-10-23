@@ -1175,6 +1175,7 @@ _UNNAMED_HOST = {"message": "Provider returned error", "code": 502}
 _BAD_KEY = {"message": "User not found.", "code": 401}
 _OWN_LIMIT = {"message": "Rate limit exceeded: free-models-per-day. ", "code": 429}
 _UNKNOWN_MODEL = {"message": "No endpoints found for nvidia/not-a-model.", "code": 404}
+_BARE_404 = {"message": "Not Found", "code": 404}
 _HOST_MODEL_GONE = {  # the host itself no longer serves the id OpenRouter routed to it
     "message": "Provider returned error", "code": 404,
     "metadata": {"raw": "The model `mistral-large-2407` does not exist.",
@@ -1274,6 +1275,9 @@ def test_configure_keeps_a_key_the_gateway_accepted_when_the_host_is_busy(
         # (R102); the host's 404 above stays the host's.
         (404, _UNKNOWN_MODEL, "model_unavailable", None),
         (404, _HOST_MODEL_GONE, "model_unavailable", "Mistral"),
+        # A bare 404 any-llm itself calls ModelNotFoundError: the model, on the
+        # run path too, not "rejected the request" (review of c4e2aee97).
+        (404, _BARE_404, "model_unavailable", None),
     ],
 )
 def test_a_run_records_which_host_failed(

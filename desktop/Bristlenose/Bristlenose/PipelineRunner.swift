@@ -3149,10 +3149,13 @@ var args = ["run", project.path, "--no-serve"]
         // A model the provider doesn't serve first (R102): the raw 404 shapes,
         // and the preflight's own sentences for it (`preflight.api_key.*model*`
         // in en/preflight.json, English on every channel). Before "provider
-        // says", which the generic preflight sentence also carries.
+        // says", which the generic preflight sentence also carries. Not
+        // Gemini's "denied access" sentence alone: a 403 is the key's, as the
+        // run reads it; its 404 is told by the raw "404 NOT_FOUND" it carries.
+        // Not a bare "model not found": a Whisper warning says that.
         if matches(
             tail,
-            #"not_found_error|model_not_found|deploymentnotfound|no such model|model not found|requested model is not available|denied access to the requested model|deployment wasn't found|local model isn't pulled|doesn't offer (the|that) model"#
+            #"not_found_error|model_not_found|deploymentnotfound|404 not_found|requested model is not available|deployment wasn't found|local model isn't pulled|doesn't (offer|have) (the|that) model"#
         ) {
             return .modelUnavailable
         }

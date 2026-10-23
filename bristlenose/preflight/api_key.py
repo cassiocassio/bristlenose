@@ -267,6 +267,15 @@ def _classify_network_error(exc: BaseException) -> ValidationResult | None:
     return None
 
 
+def _model_unavailable(provider: str, exc: BaseException) -> bool:
+    """Whether the run's classifier reads ``exc`` as a model the provider
+    doesn't serve. The check and the run must agree on it (R102): a 404 the
+    run calls something else is said here in the provider's own words."""
+    from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
+
+    return classify_exception(provider, exc) is LLMFailureKind.MODEL_UNAVAILABLE
+
+
 def _validate_anthropic(
     api_key: str, model: str, *, params: dict[str, Any] | None = None
 ) -> ValidationResult:
@@ -309,11 +318,8 @@ def _validate_anthropic(
         )
     except anthropic.APIStatusError as exc:
         # A retired or unknown model is a 404 ``not_found_error`` naming the
-        # model. Read by the run's own classifier, so the check and the run
-        # agree on what it is (R102); it fell to "Provider says: …" before.
-        from bristlenose.llm.failure_classifier import LLMFailureKind, classify_exception
-
-        if classify_exception("anthropic", exc) is LLMFailureKind.MODEL_UNAVAILABLE:
+        # model; it fell to "Provider says: …" before (R102).
+        if _model_unavailable("anthropic", exc):
             return ValidationResult(
                 ok=False, error_class="model_unavailable", raw_message=str(exc)
             )
@@ -391,9 +397,11 @@ def _validate_openai(
             ok=False, error_class="rate_limit", raw_message=str(exc)
         )
     except openai.NotFoundError as exc:
-        return ValidationResult(
-            ok=False, error_class="model_unavailable", raw_message=str(exc)
-        )
+        if _model_unavailable("openai", exc):
+            return ValidationResult(
+                ok=False, error_class="model_unavailable", raw_message=str(exc)
+            )
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except openai.APIStatusError as exc:
         return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except Exception as exc:
@@ -450,6 +458,10 @@ def _validate_azure(
         # copy distinguishes it from generic model_unavailable.
         code = _openai_error_code(exc)
         raw = str(exc)
+        if not _model_unavailable("azure", exc):
+            # A 404 that isn't the deployment or the model (a wrong endpoint
+            # path) is said in Azure's words, as the run says it.
+            return ValidationResult(ok=False, error_class=None, raw_message=raw)
         if code == "DeploymentNotFound":
             return ValidationResult(
                 ok=False,
@@ -532,6 +544,10 @@ def _validate_google(
             return ValidationResult(
                 ok=False, error_class="invalid_key", raw_message=raw
             )
+        # Kept apart from the run's classifier on purpose: the run reads
+        # PERMISSION_DENIED as a key problem (a leaked or restricted key), and
+        # here, against one model, it is most often that model's tier or region
+        # gate, which `google_model_unavailable` explains.
         if status == "PERMISSION_DENIED" or code == 403:
             return ValidationResult(
                 ok=False, error_class="model_unavailable", raw_message=raw
@@ -540,7 +556,7 @@ def _validate_google(
             return ValidationResult(
                 ok=False, error_class="rate_limit", raw_message=raw
             )
-        if status == "NOT_FOUND" or code == 404:
+        if _model_unavailable("google", exc):
             return ValidationResult(
                 ok=False, error_class="model_unavailable", raw_message=raw
             )
@@ -598,12 +614,14 @@ def _validate_local(
         )
     except openai.NotFoundError as exc:
         # Ollama returns 404 with a "not found, try pulling" body when
-        # the model isn't downloaded. Both 404 shapes map to
-        # model_unavailable; recovery_message handles the per-provider
-        # "ollama pull" wording.
-        return ValidationResult(
-            ok=False, error_class="model_unavailable", raw_message=str(exc)
-        )
+        # the model isn't downloaded; recovery_message handles the
+        # "ollama pull" wording. Any other 404 (a URL without /v1) is said in
+        # the server's words, as the run says it.
+        if _model_unavailable("local", exc):
+            return ValidationResult(
+                ok=False, error_class="model_unavailable", raw_message=str(exc)
+            )
+        return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except openai.APIStatusError as exc:
         return ValidationResult(ok=False, error_class=None, raw_message=str(exc))
     except Exception as exc:
@@ -804,11 +822,9 @@ def preflight_api_key(
     # The request this run will send — the model on the wire, every parameter
     # the pipeline's calls carry, the key and the address it goes to — which the
     # cache below is keyed by.
-    _wire_model = settings.azure_deployment if provider == "azure" else (
-        settings.local_model if provider == "local" else (
-            settings.anyllm_model if provider == "anyllm" else settings.llm_model
-        )
-    )
+    from bristlenose.config import wire_model
+
+    _wire_model = wire_model(settings, provider)
     params = request_params(
         provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
     )

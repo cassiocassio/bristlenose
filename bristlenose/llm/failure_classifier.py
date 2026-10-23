@@ -161,9 +161,10 @@ _RULES: tuple[_Rule, ...] = (
     # Azure: the deployment name (the model, as Azure sees it) doesn't exist.
     _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_AZURE}),
           code=r"DeploymentNotFound"),
-    # Gemini: 404 NOT_FOUND, "models/<id> is not found for API version …".
+    # Gemini: 404 NOT_FOUND, "models/<id> is not found for API version …". The
+    # status word alone: generate_content has nothing else to not find.
     _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_GOOGLE}),
-          code=r"NOT_FOUND", message=r"\bmodels/\S+ is not found"),
+          code=r"\bNOT_FOUND\b"),
     # Ollama: "model 'x' not found" / 'model "x" not found, try pulling it first'.
     _Rule(LLMFailureKind.MODEL_UNAVAILABLE, providers=frozenset({_LOCAL}),
           message=r"\bmodel ['\"][^'\"]+['\"] not found"),

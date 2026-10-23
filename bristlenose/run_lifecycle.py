@@ -734,7 +734,7 @@ def _build_cause(
         message = (
             "Quote extraction exceeded the model's output limit even after "
             "splitting the session. Switch to a model with a larger output "
-            "capacity (see the --llm and --model options), or pre-segment the "
+            "capacity (BRISTLENOSE_LLM_MODEL, or `bristlenose use`), or pre-segment the "
             "session into shorter recordings."
         )
     elif category is CauseCategoryEnum.OUTPUT_TRUNCATED:
@@ -742,7 +742,7 @@ def _build_cause(
         # today). `stage` is a bristlenose-controlled slug, safe to interpolate.
         message = (
             f"{stage} exceeded the model's output limit. Switch to a model "
-            "with a larger output capacity (see the --llm and --model options)."
+            "with a larger output capacity (BRISTLENOSE_LLM_MODEL, or `bristlenose use`)."
         )
     else:
         parts = [f"{stage} failed: {exc.__class__.__name__}"]

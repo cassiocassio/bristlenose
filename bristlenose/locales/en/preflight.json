@@ -45,7 +45,7 @@
     "anyllm_upstream_failed": "{host}, reached through {provider_display}, couldn't serve that model. Your key works.\nTry again later, or pick another model.\nProvider says: {message}",
     "anyllm_unnamed_host": "The model's host",
     "network": "Couldn't reach the provider: {message}.\nCheck DNS / VPN / proxy settings, then re-run.",
-    "azure_deployment_unavailable": "Azure deployment wasn't found. This is your Azure portal **deployment name**, not a model id \u2014 check it in the Azure portal under Azure OpenAI \u2192 Deployments. Update BRISTLENOSE_AZURE_DEPLOYMENT (or azure_deployment in bristlenose.toml) and re-run. Underlying: {message}.",
+    "azure_deployment_unavailable": "Azure deployment wasn't found. This is your Azure portal **deployment name**, not a model id \u2014 check it in the Azure portal under Azure OpenAI \u2192 Deployments. Update BRISTLENOSE_AZURE_DEPLOYMENT and re-run. Underlying: {message}.",
     "google_model_unavailable": "Gemini denied access to the requested model. This is usually a tier gate, region restriction, or billing not enabled \u2014 check the Google Cloud Console at {console_url}. If billing is set up, try a different model via `BRISTLENOSE_LLM_MODEL`. Underlying: {message}.",
     "local_server_down": "Ollama doesn't appear to be running. Start it with \u0060ollama serve\u0060 (or open the Ollama app on macOS), then re-run. Underlying: {message}.",
     "local_model_not_pulled": "The requested local model isn't pulled. Run \u0060ollama pull <model>\u0060 to download it (check the model name in `BRISTLENOSE_LOCAL_MODEL`), then re-run. Underlying: {message}."

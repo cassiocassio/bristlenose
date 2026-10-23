@@ -156,9 +156,8 @@ def test_a_model_the_provider_does_not_serve_is_model_unavailable(
 def test_the_structured_field_alone_is_enough(provider: str, code: str) -> None:
     # Structured field before message (the classifier's precedence): a proxy or
     # a later SDK that rewords the sentence must not turn it back into a bad
-    # request. Gemini's NOT_FOUND also needs its "models/… is not found".
-    message = "models/x is not found" if provider == "google" else "something else"
-    kind = classify_llm_failure(provider, status=404, error_code=code, message=message)
+    # request.
+    kind = classify_llm_failure(provider, status=404, error_code=code, message="reworded")
     assert kind is LLMFailureKind.MODEL_UNAVAILABLE
 
 
@@ -257,7 +256,8 @@ def test_the_cli_names_the_model_and_where_to_change_it(
     provider: str, fields: dict[str, str], says: str,
 ) -> None:
     text = _banner(monkeypatch, tmp_path, provider, **fields)
-    assert f"doesn't offer the model {next(iter(fields.values()))}" in text
+    verb = "have" if provider == "local" else "offer"
+    assert f"doesn't {verb} the model {next(iter(fields.values()))}" in text
     assert says in text
     assert "bristlenose run interviews/" in text
     assert "rejected the request" not in text
@@ -315,6 +315,30 @@ def test_the_preflight_reads_it_as_the_run_does(
     assert result.error_class == "model_unavailable"
 
 
+@pytest.mark.parametrize(
+    ("provider", "make"),
+    [
+        pytest.param("azure", lambda: _openai_404(
+            {"code": "404", "message": "Resource not found"}, url=_AZURE_URL), id="azure-path"),
+        pytest.param("local", lambda: _openai_404(
+            {"message": "404 page not found", "type": "api_error", "param": None,
+             "code": None}, url=_OLLAMA_URL), id="ollama-no-v1"),
+        pytest.param("openai", lambda: _openai_404(
+            {"message": "Not Found", "type": "invalid_request_error", "param": None,
+             "code": None}), id="chatgpt-path"),
+    ],
+)
+def test_a_404_that_is_not_the_model_is_not_called_one(
+    monkeypatch: pytest.MonkeyPatch, provider: str, make: Callable[[], Any]
+) -> None:
+    # The check said "model unavailable" for every 404 and the run said "rejected
+    # the request". Now both say what the provider said.
+    exc = make()
+    assert classify_exception(provider, exc) is LLMFailureKind.BAD_REQUEST
+    result = _validate(monkeypatch, provider, exc)
+    assert (result.ok, result.error_class) == (False, None)
+
+
 def test_the_preflight_copy_names_a_setting_that_exists() -> None:
     # It said `--llm-model`, a flag Bristlenose has never had.
     from bristlenose.llm.billing_hints import recovery_message
@@ -364,25 +388,123 @@ def _swift_model_arm() -> str:
     return found.group(1)
 
 
-@pytest.mark.parametrize(
-    ("provider", "display"),
-    [("anthropic", ""), ("openai", ""), ("google", ""), ("azure", ""), ("local", ""),
-     ("anyllm", "Mistral")],
-)
-def test_the_mac_recognises_every_preflight_model_sentence(provider: str, display: str) -> None:
+@pytest.mark.parametrize(("provider", "make"), _MODEL_GONE)
+def test_the_mac_recognises_every_preflight_model_sentence(
+    monkeypatch: pytest.MonkeyPatch, provider: str, make: Callable[[], Any]
+) -> None:
     # A preflight abort writes no terminus; the Mac classifies the English it
     # printed. The `preflight` namespace is English on every channel for this.
+    # Built from the check's own result, so the raw text it quotes is real.
     import re
 
     from bristlenose.llm.billing_hints import recovery_message
 
-    text = recovery_message(
-        provider, "model_unavailable", raw_message="404", provider_display=display
-    )
+    result = _validate(monkeypatch, provider, make())
+    text = recovery_message(provider, result.error_class or "", raw_message=result.raw_message)
     assert re.search(_swift_model_arm(), text.lower()), text
 
 
-def test_the_mac_recognises_the_cli_banner() -> None:
+def test_the_mac_recognises_any_llms_model_sentence() -> None:
     import re
 
-    assert re.search(_swift_model_arm(), "claude doesn't offer the model claude-x.")
+    from bristlenose.llm.billing_hints import recovery_message
+
+    text = recovery_message("anyllm", "model_unavailable", raw_message="404",
+                            provider_display="Mistral")
+    assert re.search(_swift_model_arm(), text.lower()), text
+
+
+def test_a_gemini_403_is_not_read_as_the_model_on_the_mac(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The check words a 403 with the same sentence as a missing model; the run
+    # reads it as the key's. The Mac must not tell the researcher to change the
+    # model for it (review of c4e2aee97).
+    import re
+
+    from google.genai import errors
+
+    from bristlenose.llm.billing_hints import recovery_message
+
+    exc = errors.ClientError(403, {"error": {
+        "code": 403, "message": "Permission denied on resource project x.",
+        "status": "PERMISSION_DENIED"}})
+    result = _validate(monkeypatch, "google", exc)
+    text = recovery_message("google", result.error_class or "", raw_message=result.raw_message)
+    assert not re.search(_swift_model_arm(), text.lower()), text
+
+
+def test_a_whisper_warning_is_not_read_as_the_model() -> None:
+    import re
+
+    line = "whisper: BRISTLENOSE_WHISPER_MODEL set but model not found at /x; downloading"
+    assert not re.search(_swift_model_arm(), line.lower())
+
+
+@pytest.mark.parametrize(
+    ("provider", "fields"),
+    [
+        ("anthropic", {"llm_model": "claude-3-opus-20240229"}),
+        ("openai", {"llm_model": "gpt-4-32k"}),
+        ("google", {"llm_model": "gemini-1.5-pro"}),
+        ("azure", {"azure_deployment": "gpt4-prod"}),
+        ("local", {"local_model": "llama9:7b"}),
+        ("anyllm", {"anyllm_model": "openrouter:x/y"}),
+    ],
+)
+def test_the_mac_recognises_the_cli_banner(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any, provider: str, fields: dict[str, str]
+) -> None:
+    # The banner as printed, per provider, not a sentence typed here: a reword
+    # that leaves the Swift arm behind fails this.
+    import re
+
+    text = _banner(monkeypatch, tmp_path, provider, **fields)
+    assert re.search(_swift_model_arm(), text.lower()), text
+
+
+def test_the_mac_recognises_the_host_banner(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    import re
+
+    from bristlenose import cli
+
+    lines: list[str] = []
+    monkeypatch.setattr(cli.console, "print", lambda *a, **k: lines.append(" ".join(map(str, a))))
+    monkeypatch.setattr(cli, "_say", lambda kind, text: lines.append(text))
+    monkeypatch.setattr("bristlenose.llm.anyllm.account_name", lambda s: "OpenRouter")
+    cause = Cause(category=CauseCategoryEnum.MODEL_UNAVAILABLE, message="m",
+                  provider="anyllm", model_host="Mistral")
+    cli._print_pipeline_failure(
+        cause, tmp_path / "interviews", SimpleNamespace(llm_provider="anyllm")
+    )
+    text = "\n".join(lines)
+    assert "Mistral, reached through OpenRouter, doesn't offer the model." in text
+    # Not retryable: waiting won't bring the model back.
+    assert "again later" not in text
+    assert re.search(_swift_model_arm(), text.lower()), text
+
+
+@pytest.mark.parametrize("stage", ["quote_extraction", "thematic_grouping"])
+def test_the_truncation_advice_names_a_setting_that_exists(stage: str) -> None:
+    # It said "see the --llm and --model options"; there is no --model.
+    from bristlenose.llm.client import TruncatedResponseError
+    from bristlenose.run_lifecycle import _build_cause
+
+    exc = TruncatedResponseError(
+        "cut", provider="anthropic", model="m", requested_max_tokens=10, model_cap=10
+    )
+    cause = _build_cause(exc, stage=stage, provider="anthropic")
+    assert cause.category is CauseCategoryEnum.OUTPUT_TRUNCATED
+    assert "--model" not in cause.message
+    assert "BRISTLENOSE_LLM_MODEL" in cause.message
+
+
+def test_the_model_field_map_names_real_settings() -> None:
+    # `wire_model` reads by name with a fail-open getattr; a renamed field would
+    # blank the model in the banner and the check's cache key, silently.
+    from bristlenose.config import _MODEL_FIELD, BristlenoseSettings
+
+    for field in (*_MODEL_FIELD.values(), "llm_model"):
+        assert field in BristlenoseSettings.model_fields, field

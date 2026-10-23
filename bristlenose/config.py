@@ -734,6 +734,18 @@ def _fill_provider_default_model(
     return settings
 
 
+#: Providers that read their model from a field of their own; the rest read
+#: ``llm_model``. One map, so the preflight, the run and the CLI's failure
+#: banner name the same model.
+_MODEL_FIELD = {"azure": "azure_deployment", "local": "local_model", "anyllm": "anyllm_model"}
+
+
+def wire_model(settings: object, provider: str | None = None) -> str:
+    """The model id ``provider`` (default: the settings' own) is sent."""
+    provider = provider or getattr(settings, "llm_provider", None)
+    return str(getattr(settings, _MODEL_FIELD.get(provider or "", "llm_model"), "") or "")
+
+
 def _adopt_named_model(
     settings: BristlenoseSettings,
     overrides: dict[str, object],

@@ -1725,7 +1725,7 @@
  "enums.speakerRole.participant": "554f42",
  "enums.speakerRole.researcher": "918fcd",
  "enums.speakerRole.unknown": "b764cd",
- "preflight.api_key.azure_deployment_unavailable": "fcc318",
+ "preflight.api_key.azure_deployment_unavailable": "b28499",
  "preflight.api_key.generic": "cac7b7",
  "preflight.api_key.google_model_unavailable": "25b5df",
  "preflight.api_key.local_model_not_pulled": "459819",

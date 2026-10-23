@@ -406,11 +406,23 @@ def classify(exc: BaseException) -> Any:
     if is_network_error(exc):
         return LLMFailureKind.NETWORK
     original = getattr(exc, "original_exception", None)
+    kind = LLMFailureKind.UNKNOWN
     for candidate in (original, exc):
         if isinstance(candidate, BaseException):
             kind = classify_fields("anyllm", candidate)
             if kind is not LLMFailureKind.UNKNOWN:
-                return kind
+                break
+    if (
+        type(exc).__name__ == "ModelNotFoundError"
+        and kind in (LLMFailureKind.BAD_REQUEST, LLMFailureKind.UNKNOWN)
+        and upstream(exc) is None
+    ):
+        # any-llm's own reading of a 404 the wire leaves generic: the model
+        # (R102), as the preflight reads it. A gateway's 404 from the model's
+        # host keeps the host's reading, which names it.
+        return LLMFailureKind.MODEL_UNAVAILABLE
+    if kind is not LLMFailureKind.UNKNOWN:
+        return kind
     # Only what the status can't say: any-llm's errors carry the provider's
     # status_code, which the rules above already read.
     by_type = {

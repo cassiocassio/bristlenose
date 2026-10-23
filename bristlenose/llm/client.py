@@ -1546,7 +1546,7 @@ class LLMClient:
         raise RuntimeError(
             f"Local model failed to produce valid JSON after {max_retries} attempts. "
             f"Last error: {last_error}. "
-            f"Try a larger model (--model llama3.1:8b) or use a cloud API (--llm claude)."
+            f"Try a larger model (BRISTLENOSE_LOCAL_MODEL=llama3.1:8b) or use a cloud API (--llm claude)."
         )
 
     def _ensure_anyllm_provider(self) -> Any:

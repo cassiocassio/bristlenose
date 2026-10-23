@@ -15,16 +15,26 @@ struct ModelUnavailableTests {
           arguments: [
               "✗ The requested model is not available for your Claude account. Check available models at https://console.anthropic.com/ and either enable the model or set `BRISTLENOSE_LLM_MODEL` to one your account can use.",
               "✗ Azure deployment wasn't found. This is your Azure portal **deployment name**, not a model id.",
-              "✗ Gemini denied access to the requested model. This is usually a tier gate, region restriction, or billing not enabled.",
+              "✗ Gemini denied access to the requested model. Underlying: 404 NOT_FOUND. {'error': {'code': 404}}.",
               "✗ The requested local model isn't pulled. Run `ollama pull <model>` to download it.",
               "✗ Mistral doesn't offer that model to this key.",
               "✗ Claude doesn't offer the model claude-3-opus-20240229.",
+              "✗ Ollama doesn't have the model llama9:7b.",
               "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-opus-20240229'}}",
               "Error code: 404 - {'error': {'code': 'DeploymentNotFound', 'message': 'The API deployment for this resource does not exist.'}}",
           ])
     func preflightLineIsModelUnavailable(line: String) {
         let lines = ["Checking your setup", line]
         #expect(PipelineRunner.categoriseFailure(lines: lines, exitStatus: 2) == .modelUnavailable)
+    }
+
+    @Test("Gemini's 403 and a Whisper warning are not the model",
+          arguments: [
+              "✗ Gemini denied access to the requested model. Underlying: 403 PERMISSION_DENIED. {}.",
+              "whisper: BRISTLENOSE_WHISPER_MODEL set but model not found at /x; downloading",
+          ])
+    func notTheModel(line: String) {
+        #expect(PipelineRunner.categoriseFailure(lines: [line], exitStatus: 2) != .modelUnavailable)
     }
 
     @Test("The generic preflight sentence still reads as a rejected request")

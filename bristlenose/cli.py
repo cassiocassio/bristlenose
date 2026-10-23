@@ -1021,16 +1021,29 @@ def _print_pipeline_failure(
         host = escape(model_host) if model_host else "The model's host"
         if category == CauseCategoryEnum.QUOTA:
             _say(MessageKind.ERROR, f"{host}, reached through {provider_display}, is busy.")
+        elif category == CauseCategoryEnum.MODEL_UNAVAILABLE:
+            _say(
+                MessageKind.ERROR,
+                f"{host}, reached through {provider_display}, doesn't offer the model.",
+            )
         else:
             _say(
                 MessageKind.ERROR,
                 f"{host}, reached through {provider_display}, couldn't serve the model.",
             )
-        console.print(
-            f"  Run  [bold]{retry_cmd}[/bold]  again later, or pick another model:  "
-            "[bold]bristlenose use provider:model[/bold]",
-            highlight=False,
-        )
+        if category == CauseCategoryEnum.MODEL_UNAVAILABLE:
+            # The host no longer serves it: waiting won't help (R102).
+            console.print(
+                "  Pick another model:  [bold]bristlenose use provider:model[/bold],",
+                highlight=False,
+            )
+            console.print(f"  then run  [bold]{retry_cmd}[/bold]  again.")
+        else:
+            console.print(
+                f"  Run  [bold]{retry_cmd}[/bold]  again later, or pick another model:  "
+                "[bold]bristlenose use provider:model[/bold]",
+                highlight=False,
+            )
     elif category == CauseCategoryEnum.OUT_OF_CREDIT:
         _say(MessageKind.ERROR, f"Your {provider_display} account ran out of credit.")
         billing = billing_for(provider_key) if provider_key else None
@@ -1049,9 +1062,15 @@ def _print_pipeline_failure(
         # Retired, deprecated, unknown, or no such Azure deployment (R102). The
         # same model is refused on every attempt, so the remedy is another one,
         # named in the setting this provider reads it from.
-        model = _wire_model_for(settings, provider_key)
+        from bristlenose.config import wire_model
+
+        model = wire_model(settings, provider_key)
         named = f" {escape(model)}" if model else ""
-        _say(MessageKind.ERROR, f"{provider_display} doesn't offer the model{named}.")
+        if provider_key == "local":  # a model not pulled, not one Ollama withdrew
+            headline = f"Ollama doesn't have the model{named}."
+        else:
+            headline = f"{provider_display} doesn't offer the model{named}."
+        _say(MessageKind.ERROR, headline)
         console.print(f"  {_model_choice_hint(provider_key, model)}", highlight=False)
         console.print(f"  then run  [bold]{retry_cmd}[/bold]  again.")
     elif category == CauseCategoryEnum.API_SERVER:
@@ -1091,14 +1110,6 @@ def _print_pipeline_failure(
             )
 
 
-def _wire_model_for(settings: object, provider: str | None) -> str:
-    """The model id this provider is sent, from the setting it reads it from."""
-    field = {
-        "azure": "azure_deployment", "local": "local_model", "anyllm": "anyllm_model",
-    }.get(provider or "", "llm_model")
-    return str(getattr(settings, field, "") or "")
-
-
 def _model_choice_hint(provider: str | None, model: str) -> str:
     """How to choose another model on the CLI, for this provider (Rich markup)."""
     from rich.markup import escape
@@ -1108,7 +1119,7 @@ def _model_choice_hint(provider: str | None, model: str) -> str:
     if provider == "local":
         pull = f"ollama pull {escape(model)}" if model else "ollama pull <model>"
         return (
-            f"Pull it with  [bold]{pull}[/bold],  or set BRISTLENOSE_LOCAL_MODEL to one you have,"
+            f"Pull it with  [bold]{pull}[/bold],  or set BRISTLENOSE_LOCAL_MODEL,"
         )
     if provider == "anyllm":
         return "Choose another:  [bold]bristlenose use provider:model[/bold],"

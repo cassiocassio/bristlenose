@@ -490,9 +490,11 @@ them; they are domain terminology like "Build" or "Compile" in Xcode.
 
 The pill carries the *distinctive* failure label. Derived from the
 *dominant* `PipelineFailureCategory` among `summary.failed[]`. Tied
-counts prefer non-retryable (AUTH > OUT_OF_CREDIT > MISSING_BINARY >
-QUOTA > NETWORK > UNKNOWN). Cap at ~28 chars. Locale-keyed under
-`desktop.pipeline.diagnostic.pill.<category>`.
+counts prefer non-retryable (AUTH > OUT_OF_CREDIT > MODEL_UNAVAILABLE >
+MISSING_BINARY > QUOTA > NETWORK > UNKNOWN). Cap at ~28 chars. Locale-keyed under
+`desktop.pipeline.diagnostic.pill.<category>`; `model_unavailable` (R102) has
+no key there, because that namespace has no reader (see step 5 of the flowchart
+below).
 
 `OUT_OF_CREDIT` sits beside `AUTH` — both are account-level and terminal
 until the user acts out-of-band (top up / fix the key) — and above `QUOTA`,

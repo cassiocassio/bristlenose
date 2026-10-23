@@ -319,7 +319,7 @@
       "whisper": "\u8f49\u9304\u5931\u6557",
       "userSignal": "\u5df2\u505c\u6b62",
       "apiRequest": "\u8acb\u6c42\u906d\u62d2",
-      "modelUnavailable": "無法使用模型",
+      "modelUnavailable": "模型無法使用",
       "apiServer": "\u4f9b\u61c9\u5546\u7121\u6cd5\u4f7f\u7528",
       "missingDep": "\u9700\u8981\u8a2d\u5b9a",
       "missingInput": "\u7f3a\u5c11\u8f38\u5165",

@@ -868,3 +868,26 @@ def test_recovery_copy_names_the_provider_and_keeps_its_words_short() -> None:
     assert "credit-balance" not in rejected
     page = recovery_message("anyllm", "", raw_message="<html>" + "x" * 5000, provider_display="OpenRouter")
     assert len(page) < 500 and page.startswith("OpenRouter refused the request.")
+
+
+def test_a_dotenv_that_overrides_the_choice_is_named(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """`use` writes the user-level config; a project .env is read after it and
+    wins, so "now your provider" would be announced while runs from that folder
+    still used Claude (found by the any-llm walks, 23 Oct 2026)."""
+    from pathlib import Path
+
+    from typer.testing import CliRunner
+
+    from bristlenose import config
+    from bristlenose.cli import app
+
+    project_env = tmp_path / ".env"
+    project_env.write_text("BRISTLENOSE_LLM_PROVIDER=anthropic\n")
+    monkeypatch.setattr(config, "_find_env_files", lambda: [Path(project_env)])
+    monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
+    result = CliRunner().invoke(app, ["use", "local"])
+    assert result.exit_code == 0, result.output
+    assert "BRISTLENOSE_LLM_PROVIDER=anthropic" in result.output
+    assert "Remove the line" in result.output

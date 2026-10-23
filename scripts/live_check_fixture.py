@@ -122,8 +122,11 @@ STAGES: list[Stage] = [
         prompt_id="speaker-splitting",
         model=SpeakerSplitAssignment,
         fields={
+            # The first window of a transcript: no labelled lines before it.
+            "prior_context": "",
             "transcript_sample": wrap_untrusted("transcript", TRANSCRIPT),
             "segment_count": TRANSCRIPT.count("["),
+            "first_index": 0,
         },
         substantive=lambda r: r.speaker_count >= 1,
     ),
@@ -135,7 +138,7 @@ STAGES: list[Stage] = [
             "transcript_sample": wrap_untrusted("transcript", TRANSCRIPT),
             "speaker_list": ", ".join(SPEAKERS),
         },
-        substantive=lambda r: len(r.speakers) >= 1,
+        substantive=lambda r: len(r.assignments) >= 1,
     ),
     Stage(
         key="s08:topics",

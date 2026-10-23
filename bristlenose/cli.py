@@ -2661,6 +2661,44 @@ def _set_current_provider(canonical: str) -> None:
             f"BRISTLENOSE_LLM_PROVIDER={env_override} is set in your environment "
             "and overrides this choice — unset it to make this stick.",
         )
+    else:
+        _warn_dotenv_override("BRISTLENOSE_LLM_PROVIDER", canonical)
+
+
+def _warn_dotenv_override(var: str, chosen: str) -> None:
+    """Warn when a .env file Bristlenose reads sets ``var`` to something else.
+
+    The current-provider choice lives in the user-level config; a project
+    ``.env`` (or the repo's own, in a dev install) is read after it and wins, so
+    "any-llm is now your provider" would otherwise be announced while runs from
+    that folder still use Claude (found by the any-llm walks, 23 Oct 2026).
+    """
+    from dotenv import dotenv_values
+    from rich.markup import escape
+
+    from bristlenose.config import _find_env_files
+    from bristlenose.credentials import user_config_env_path
+    from bristlenose.providers import get_provider_aliases
+
+    user_cfg = user_config_env_path()
+    aliases = get_provider_aliases()
+    winner: tuple[str, str] | None = None
+    for path in _find_env_files():
+        if path == user_cfg:
+            continue
+        value = dotenv_values(path).get(var)
+        if value:
+            winner = (str(path), value)  # last file wins, as pydantic-settings reads them
+    if winner is None:
+        return
+    path, value = winner
+    normalised = aliases.get(value.lower(), value.lower()) if var.endswith("PROVIDER") else value
+    if normalised != chosen:
+        _say(
+            MessageKind.WARNING,
+            f"{escape(path)} sets {var}={escape(value)}, which overrides this choice "
+            "for runs that read that file. Remove the line to make this stick.",
+        )
 
 
 @app.command()
@@ -2757,6 +2795,8 @@ def _use_anyllm_model(model: str) -> None:
             f"BRISTLENOSE_ANYLLM_MODEL={escape(env_model)} is set in your environment "
             "and overrides this choice — unset it to make this stick.",
         )
+    else:
+        _warn_dotenv_override("BRISTLENOSE_ANYLLM_MODEL", model)
 
 
 def _configure_anyllm(key: str | None) -> None:

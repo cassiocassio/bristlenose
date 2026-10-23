@@ -12,7 +12,12 @@ from pydantic import ValidationError
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.llm.client import LLMClient, TruncatedResponseError, UnreadableReplyError
+from bristlenose.llm.client import (
+    LLMClient,
+    TruncatedResponseError,
+    UnreadableReplyError,
+    failure_summary,
+)
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import QuoteExtractionResult, dropped_items
 from bristlenose.models import (
@@ -219,7 +224,7 @@ async def extract_quotes(
                 logger.debug(
                     "%s: Quote extraction failed: %s",
                     transcript.session_id,
-                    exc,
+                    failure_summary(exc),
                 )
                 if dropped is not None:
                     # A chunk that was salvaged before another failed: the

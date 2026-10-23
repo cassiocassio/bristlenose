@@ -242,3 +242,89 @@ def test_a_failed_call_logs_field_paths_not_the_reply(caplog):
     assert "\n" not in line
     assert words not in line
     assert "quotes.0." in line and "(missing)" in line
+
+
+# What a provider's error body carries back must not reach the log either.
+# OpenRouter's moderation 403 puts up to 100 characters of the prompt in
+# `metadata.flagged_input` (documented; not yet captured live). Review round 2,
+# finding 41.
+_FLAGGED = "she said she had thought about ending it"
+
+
+class _StatusError(Exception):
+    """The openai/anthropic SDKs' shape: `str` is the whole body."""
+
+    def __init__(self, status: int, body: dict) -> None:
+        self.status_code = status
+        self.body = body
+        super().__init__(f"Error code: {status} - {body}")
+
+
+def _moderation_403() -> _StatusError:
+    return _StatusError(403, {
+        "message": "Input was flagged by moderation", "code": 403,
+        "metadata": {"reasons": ["self-harm"], "flagged_input": _FLAGGED,
+                     "provider_name": "OpenAI"},
+    })
+
+
+def test_a_provider_error_logs_its_status_and_message_not_its_body(caplog):
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.llm.client import LLMClient
+
+    client = LLMClient(BristlenoseSettings(  # type: ignore[arg-type]
+        llm_provider="anthropic", anthropic_api_key="sk-ant-test-key",
+        llm_model="claude-sonnet-4-6", llm_max_tokens=8192,
+    ))
+    client._anthropic_client = AsyncMock()
+    client._anthropic_client.messages.create = AsyncMock(side_effect=_moderation_403())
+    with caplog.at_level(logging.WARNING), pytest.raises(_StatusError):
+        asyncio.run(client.analyze("sys", "usr", QuoteExtractionResult))
+    [line] = [r.getMessage() for r in caplog.records if "llm_call_failed" in r.getMessage()]
+    assert _FLAGGED not in line
+    assert "status=403" in line and "flagged by moderation" in line
+
+
+def test_any_llms_wrapper_is_read_through_to_the_providers_body():
+    """any-llm's error has no `body`; the provider's error it wraps does, and
+    any-llm's own `str` repeats that error's text, body included."""
+    from bristlenose.llm.client import failure_summary
+
+    inner = _moderation_403()
+    outer = RuntimeError(f"[openrouter] {inner}")
+    outer.original_exception = inner  # type: ignore[attr-defined]
+    summary = failure_summary(outer)
+    assert _FLAGGED not in summary
+    assert summary.startswith("status=403")
+
+
+def test_a_stage_that_falls_back_logs_no_reply_text(caplog):
+    """Stages 5b, 8, 9, 10 and 11 log the error they caught; pydantic's text
+    quotes the reply. Stage 10 stands for the seven sites."""
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from bristlenose.models import ExtractedQuote, QuoteType
+    from bristlenose.stages.s10_quote_clustering import cluster_by_screen
+
+    words = "I cried"  # short: pydantic shortens a long value in its message
+    try:
+        ScreenClusteringResult.model_validate({"clusters": [{"screen_label": words}]})
+    except ValidationError as exc:
+        error = exc
+    client = AsyncMock()
+    client.provider = "anthropic"
+    client.analyze = AsyncMock(side_effect=error)
+    quote = ExtractedQuote(
+        session_id="s1", participant_id="p1", start_timecode=1.0, end_timecode=2.0,
+        text="the basket", topic_label="Basket", quote_type=QuoteType.SCREEN_SPECIFIC,
+    )
+    with caplog.at_level(logging.DEBUG):
+        asyncio.run(cluster_by_screen([quote], client))
+    logged = "\n".join(r.getMessage() for r in caplog.records)
+    assert "Screen clustering failed" in logged
+    assert words in str(error)  # the shape this test exists for
+    assert words not in logged

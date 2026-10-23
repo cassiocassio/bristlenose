@@ -187,13 +187,20 @@ def _validate_repairing(
         raise first_error
 
 
-def _failure_summary(exc: BaseException) -> str:
+def failure_summary(exc: BaseException) -> str:
     """One log line for a failed call, carrying none of the model's reply.
 
     A ValidationError's ``str`` runs to several lines and quotes each bad
     ``input_value`` -- a fragment of the reply, so of the participant's words.
-    Name the field paths and error types instead. Anything else is collapsed to
-    one line and capped, so an HTML error page can't flood the log.
+    Name the field paths and error types instead.
+
+    A provider's error ``str`` is its whole response body, and a body can carry
+    the request back: OpenRouter's moderation 403 puts up to 100 characters of
+    the prompt (the transcript) in ``metadata.flagged_input``, and a gateway's
+    ``metadata.raw`` is the host's own reply. So when the error (or, through
+    any-llm, the provider's error it wraps) has a body, log its status and its
+    ``message`` only. Anything else is collapsed to one line and capped, so an
+    HTML error page can't flood the log.
     """
     if isinstance(exc, ValidationError):
         errors = exc.errors(include_input=False, include_url=False)
@@ -202,7 +209,36 @@ def _failure_summary(exc: BaseException) -> str:
         )
         more = f" +{len(errors) - 5} more" if len(errors) > 5 else ""
         return f"{len(errors)} validation error(s): {fields}{more}"
+    found = _error_body(exc)
+    if found is not None:
+        status, body = found
+        err = body["error"] if isinstance(body.get("error"), dict) else body
+        message = " ".join(str(err.get("message") or "").split())[:200]
+        return f"status={status} | message={message}"
     return " ".join(str(exc).split())[:500]
+
+
+def _error_body(exc: BaseException) -> tuple[object, dict[str, Any]] | None:
+    """The provider's response body behind an error, with its status, if any.
+
+    ``body`` is the openai and anthropic SDKs' attribute, ``details`` Gemini's.
+    Followed through any-llm's ``original_exception`` and ``__cause__``, never
+    ``__context__``, which names whatever was being handled, not the cause.
+    """
+    seen: set[int] = set()
+    todo: list[BaseException | None] = [exc]
+    while todo:
+        cur = todo.pop()
+        if cur is None or id(cur) in seen:
+            continue
+        seen.add(id(cur))
+        for attr in ("body", "details"):
+            body = getattr(cur, attr, None)
+            if isinstance(body, dict):
+                status = getattr(cur, "status_code", None) or getattr(cur, "code", None)
+                return status, body
+        todo += [getattr(cur, "original_exception", None), cur.__cause__]
+    return None
 
 
 # Claude models that still accept sampling parameters. Anthropic removed
@@ -628,7 +664,7 @@ class LLMClient:
                     self._provider_request_model(),
                     response_model.__name__,
                     type(exc).__name__,
-                    _failure_summary(exc),
+                    failure_summary(exc),
                 )
                 raise
         finally:
@@ -1749,7 +1785,7 @@ _ANYLLM_SCHEMA_ATTEMPTS = 2
 
 
 def _unreadable_fields(exc: ValidationError) -> str:
-    """Which fields of any-llm's reply failed, for the log: ``_failure_summary``,
+    """Which fields of any-llm's reply failed, for the log: ``failure_summary``,
     plus a rejected ``finish_reason``'s value, which is a short provider enum
     (OpenRouter sends "error" when the host fails mid-reply), never reply text."""
     reasons = sorted({
@@ -1759,7 +1795,7 @@ def _unreadable_fields(exc: ValidationError) -> str:
         and err["input"].isprintable()
     })
     said = "".join(f", finish_reason={r!r}" for r in reasons)
-    return _failure_summary(exc) + said
+    return failure_summary(exc) + said
 
 
 def _retry_after_seconds(exc: BaseException) -> float | None:

@@ -8,7 +8,7 @@ import logging
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.i18n import get_locale, t_in
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.llm.client import LLMClient
+from bristlenose.llm.client import LLMClient, failure_summary
 from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ThematicGroupingResult
@@ -77,7 +77,7 @@ async def group_by_theme(
             prompt_template=_tmpl,
         )
     except Exception as exc:
-        logger.error("Thematic grouping failed: %s", exc)
+        logger.error("Thematic grouping failed: %s", failure_summary(exc))
         outcome.failed.append(StageFailure(
             session_id=None,
             cause=_build_cause(

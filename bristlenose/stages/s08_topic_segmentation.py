@@ -9,7 +9,7 @@ from collections.abc import Callable
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.llm.client import LLMClient
+from bristlenose.llm.client import LLMClient, failure_summary
 from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import TopicSegmentationResult
@@ -108,7 +108,7 @@ async def segment_topics(
                 logger.debug(
                     "%s: Topic segmentation failed: %s",
                     transcript.session_id,
-                    exc,
+                    failure_summary(exc),
                 )
                 if errors is not None:
                     errors.append(str(exc))

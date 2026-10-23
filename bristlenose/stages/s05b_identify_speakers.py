@@ -312,7 +312,7 @@ async def split_single_speaker_llm(
     if len(unique_labels) >= 2:
         return segments
 
-    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.client import LLMClient, failure_summary
     from bristlenose.llm.prompts import get_prompt_template
     from bristlenose.llm.structured import SpeakerSplitAssignment
 
@@ -353,7 +353,9 @@ async def split_single_speaker_llm(
             )
         except Exception as exc:
             if current is None:
-                logger.debug("LLM speaker splitting failed, keeping single speaker: %s", exc)
+                logger.debug(
+                    "LLM speaker splitting failed, keeping single speaker: %s", failure_summary(exc)
+                )
                 if errors is not None:
                     errors.append(f"speaker splitting: {exc}")
                 return segments
@@ -361,7 +363,7 @@ async def split_single_speaker_llm(
             logger.warning(
                 "Speaker splitting failed on part %d of %d; segments from %d on "
                 "keep the last detected speaker: %s",
-                chunk_no + 1, n_chunks, first, exc,
+                chunk_no + 1, n_chunks, first, failure_summary(exc),
             )
             if errors is not None:
                 errors.append(f"speaker splitting (part {chunk_no + 1} of {n_chunks}): {exc}")
@@ -423,7 +425,7 @@ async def identify_speaker_roles_llm(
         A :class:`SpeakerInfo` for each speaker the LLM identified, or
         an empty list if the LLM call fails.
     """
-    from bristlenose.llm.client import LLMClient
+    from bristlenose.llm.client import LLMClient, failure_summary
     from bristlenose.llm.prompts import get_prompt_template
 
     client: LLMClient = llm_client  # type: ignore[assignment]
@@ -482,7 +484,9 @@ async def identify_speaker_roles_llm(
         return infos
 
     except Exception as exc:
-        logger.debug("LLM speaker identification failed, using heuristics: %s", exc)
+        logger.debug(
+            "LLM speaker identification failed, using heuristics: %s", failure_summary(exc)
+        )
         if errors is not None:
             errors.append(str(exc))
         return []

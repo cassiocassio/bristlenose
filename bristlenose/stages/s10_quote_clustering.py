@@ -7,7 +7,7 @@ import logging
 
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.llm.client import LLMClient
+from bristlenose.llm.client import LLMClient, failure_summary
 from bristlenose.llm.output_language import output_language_steer
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import ScreenClusteringResult
@@ -76,7 +76,7 @@ async def cluster_by_screen(
             prompt_template=_tmpl,
         )
     except Exception as exc:
-        logger.error("Screen clustering failed: %s", exc)
+        logger.error("Screen clustering failed: %s", failure_summary(exc))
         outcome.failed.append(StageFailure(
             session_id=None,
             cause=_build_cause(

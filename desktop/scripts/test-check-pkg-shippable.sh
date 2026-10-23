@@ -222,6 +222,20 @@ sign_app "$A" "$ENTS"
 # keeps its text, which is how this case survived its own mutation.
 reject_case "cloud sign-in ID absent" "✗.*missing or placeholder: GoogleOAuthClientID" "$D"
 
+# --- 8. host may print — printing is post-v1 ---------------------------------
+# File ▸ Print is not in the menus for v1 (owner, 23 Oct 2026), so an artefact
+# carrying com.apple.security.print is a capability with no affordance. The
+# entitlement comes from a build setting, so an Xcode capability toggle brings it
+# back with no diff in any .entitlements file; this row is what notices.
+ENTS_PRINT="$WORK/ents-print.plist"
+cat > "$ENTS_PRINT" <<'E'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/><key>com.apple.security.print</key><true/></dict></plist>
+E
+D=$WORK/c8; mkdir -p "$D"; A=$(build_app "$D"); sign_app "$A" "$ENTS_PRINT"
+reject_case "host may print (post-v1)" "✗.*host print.*PRESENT" "$D"
+
 # --- positive controls: the intact fixture passes every row above ------------
 # Without these, a row that always fails passes its negative case. The output is
 # captured once and read with a herestring, not a pipe: under pipefail `grep -q`
@@ -239,8 +253,9 @@ expect_row_passes "bundle identifier right → row passes" "✓.*bundle identifi
 expect_row_passes "nested executables sandboxed → row passes" "✓.*nested app-sandbox"
 expect_row_passes "hardened runtime on → row passes" "✓.*hardened runtime"
 expect_row_passes "cloud sign-in IDs present → row passes" "✓.*Teams + Meet client IDs baked"
+expect_row_passes "no print entitlement → row passes" "✓.*host print.*absent"
 
-# --- 8. usage: not a pkg ------------------------------------------------------
+# --- 9. usage: not a pkg ------------------------------------------------------
 if "$GATE" "$WORK/nope.pkg" >/dev/null 2>&1; then
     fail "missing file — gate accepted a nonexistent path"
 else

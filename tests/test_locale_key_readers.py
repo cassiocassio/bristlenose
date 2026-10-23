@@ -62,7 +62,9 @@ below carries them in 17 blocks, each with a tag and the commit that did it:
   since decided against — and were **deleted on 22 Sep 2026**, all three files,
   in every locale. What remains under this tag is smaller and case by case.
 * `RESERVED` — a key waiting for a reader rather than one whose reader went
-  away (register item 6, pending Decision 4).
+  away for good: register item 6, pending Decision 4; and the print menu keys,
+  whose reader was withdrawn on purpose with a dated revival (printing is
+  post-v1, `docs/design-printing.md`).
 * `TRIAGED` — *retired 17 Oct 2026, when the last block carrying it went.*
   Decided, not yet executed. Its last two keys were the Zoom account sentences
   (`zoomCloudRecordingOff`, `zoomTranscriptOff`), which the import window now
@@ -275,7 +277,8 @@ def orphans(keys: dict[str, str] | None = None) -> list[str]:
 #: The reader was deleted and the key stayed behind.
 DEAD = "dead"
 #: A surface that never had a call site at all — failure class 2's residue.
-#: A key waiting for a reader, not one whose reader went away.
+#: A key waiting for a reader, not one whose reader went away for good —
+#: including a reader withdrawn on purpose and planned to return.
 RESERVED = "reserved"
 _TAGS = {DEAD, RESERVED}
 
@@ -301,6 +304,20 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
         leaves="""
             auth missing_binary network out_of_credit quota unknown
         """,  # 6
+    ),
+    "desktop.menu.file.": _Block(
+        tag=RESERVED,
+        why="Printing is post-v1 (owner, 23 Oct 2026): File ▸ Page Setup… and "
+            "File ▸ Print… came out of `MenuCommands` with the print entitlement, "
+            "and `PrintActions` is parked unreferenced for when printing is "
+            "designed (`docs/design-printing.md`). The keys wait for that reader. "
+            "`print` is not listed only because `I18n.swift`'s doc comment uses "
+            "it as its example, the one reader this scan sees; "
+            "`PrintEntitlementTests` reads both to check neither title is back "
+            "in the menu bar.",
+        leaves="""
+            pageSetup
+        """,  # 1
     ),
     "desktop.pipeline.diagnostic.tooltip.": _Block(
         tag=DEAD,

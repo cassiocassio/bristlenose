@@ -1,6 +1,16 @@
 import AppKit
 import WebKit
 
+/// **Parked: printing is post-v1, and nothing calls this.** File ▸ Page Setup…
+/// and File ▸ Print… were removed from the menus on 23 Oct 2026, and the app no
+/// longer carries `com.apple.security.print` — so a call here would raise the
+/// sandbox's "This application does not support printing" alert. It is kept
+/// because the native half below is right; what printed was not
+/// (`docs/design-printing.md`). Reviving it means designing the printed page,
+/// putting the menu items and the entitlement back, and inverting the pins that
+/// hold the entitlement out (`tests/test_entitlements_split.py`,
+/// `PrintEntitlementTests`, both artefact gates).
+///
 /// File ▸ Page Setup… and File ▸ Print… for the report web view.
 ///
 /// Both items previously dispatched over the web bridge as

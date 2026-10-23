@@ -221,14 +221,15 @@ else
     die "host app-sandbox" "MISSING — ITMS-90296 auto-reject"
 fi
 
-# Printing. Without it the sandbox refuses the print panel and File ▸ Print says
-# "This application does not support printing" (R69: it was off in every build
-# until 21 Oct 2026). Generated from ENABLE_RESOURCE_ACCESS_PRINTING, so the
-# pbxproj test cannot see a channel that drops it; this reads the artefact.
+# Printing is post-v1 (owner, 23 Oct 2026): File ▸ Print is not in the menus,
+# so the entitlement would be a capability with no affordance, and one App
+# Review asks about. Generated from ENABLE_RESOURCE_ACCESS_PRINTING, so an Xcode
+# capability toggle restores it with no change to any .entitlements file; this
+# reads the artefact. See docs/design-printing.md.
 if grep -q '<key>com.apple.security.print</key>' <<<"$ENTS"; then
-    ok "host print" "present"
+    die "host print" "PRESENT — printing is post-v1; set ENABLE_RESOURCE_ACCESS_PRINTING = NO"
 else
-    die "host print" "MISSING — File ▸ Print raises 'does not support printing'"
+    ok "host print" "absent (printing is post-v1)"
 fi
 
 # The app group Background Assets needs to hand the PII model pack to the

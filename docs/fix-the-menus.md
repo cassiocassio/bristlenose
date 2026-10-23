@@ -113,9 +113,19 @@ Items that look fully active (no dimming) but do nothing when clicked.
   own body documented four (the placement arm). Now says four.
 - [x] **`desktop/CLAUDE.md:448`** — "its sole command is `serve`" corrected; the sidecar
   passes through `doctor` and `run`.
-- [x] **File ▸ Page Setup…** (`pageSetup`) — **wired** 28 Jul 2026. Now calls
+- [x] **File ▸ Page Setup…** (`pageSetup`) — **withdrawn 23 Oct 2026, printing is
+  post-v1** (see Print below). Was wired 28 Jul 2026 to
   `NSApp.runPageLayout(nil)` (standard macOS panel, edits the shared `NSPrintInfo`).
-- [x] **File ▸ Print…** (`print`, ⌘P) — **wired** 28 Jul 2026. Native
+- [x] **File ▸ Print…** (`print`, ⌘P) — **withdrawn 23 Oct 2026, printing is
+  post-v1.** The owner ruled that what printed was not a deliverable
+  (`docs/design-printing.md` has the four measured defects), so both items came
+  out of `MenuCommands`, ⌘P is bound to nothing, and `com.apple.security.print`
+  is off again (`ENABLE_RESOURCE_ACCESS_PRINTING = NO`). `PrintActions` and the
+  locale keys are kept for when printing is designed. Pinned the other way round
+  now: `PrintEntitlementTests` (no entitlement, no ⌘P, no Print or Page Setup
+  item), `tests/test_entitlements_split.py::TestTheSandboxRefusesPrinting` and
+  both artefact gates. The history below is what to read before reviving it.
+  Was **wired** 28 Jul 2026. Native
   `NSPrintOperation` via `PrintActions.print(webView:window:)`; prints whichever
   lens is on screen, since the operation renders the web view's current document.
   The bridge was never the right target — `window.print()` inside a WKWebView
@@ -128,10 +138,11 @@ Items that look fully active (no dimming) but do nothing when clicked.
   *fidelity* is now a CSS concern (`@media print`), not a Swift one.
   **It still never printed in a sandboxed build until 21 Oct 2026 (R69):** the
   host had no `com.apple.security.print` (`ENABLE_RESOURCE_ACCESS_PRINTING = NO`),
-  so every press raised "This application does not support printing". The
-  setting is `YES` now. ⌘P with the item dimmed (Welcome, Settings, no report)
+  so every press raised "This application does not support printing". R69 set
+  it `YES`; the 23 Oct withdrawal set it back. ⌘P with the item dimmed (Welcome, Settings, no report)
   was never the cause: the menu bar takes a dimmed item's key equivalent, and no
-  `print:` reaches a responder (`PrintEntitlementTests`).
+  `print:` reaches a responder (measured for R69; that probe test went with the
+  withdrawal).
 - [x] **Codes ▸ Merge Codes** (`mergeCode`) — **withdrawn** 28 Jul 2026, not
   deleted. Merging needs a *source* and a *target*, and the codebook lens has no
   multi-select — so drag-one-code-onto-another in `CodebookPanel` is the only way

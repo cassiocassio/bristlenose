@@ -20,6 +20,7 @@ cannot use, and nothing fails until an archive refuses to sign.
 from __future__ import annotations
 
 import plistlib
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -318,21 +319,25 @@ class TestTheArtefactGatesCheckTheSplitToo:
 _PBXPROJ = _DESKTOP / "Bristlenose" / "Bristlenose.xcodeproj" / "project.pbxproj"
 
 
-class TestTheSandboxAllowsPrinting:
-    """File ▸ Print needs `com.apple.security.print` in every sandboxed build.
+class TestTheSandboxRefusesPrinting:
+    """No shipping build carries `com.apple.security.print`: printing is post-v1.
 
-    Without it the sandbox refuses the print panel and AppKit says "This
-    application does not support printing. Please contact the application's
-    developer." — on the one path that should print, a report in front. The
-    host's sandbox entitlements are generated from `ENABLE_*` build settings,
-    not from the `.entitlements` files above, and printing was `NO` in both
-    configurations until 21 Oct 2026 (R69). The Swift suite proves the Debug
-    host may print (`PrintEntitlementTests`); this pins Release, which ships.
+    R69 (21 Oct 2026) turned it on so File ▸ Print would open the print panel.
+    The owner withdrew printing for v1 on 23 Oct 2026, because what prints is
+    not a deliverable: Quotes cards below the fold print blank
+    (`content-visibility`), the app chrome prints, real names print whatever
+    the Anonymise setting says, and nothing on the page says what it is
+    (`docs/design-printing.md`). File ▸ Print and Page Setup are gone from the
+    menus, so the entitlement would be a capability with no affordance — and
+    one App Review asks about.
+
+    The host's sandbox entitlements are generated from `ENABLE_*` build
+    settings, not from the `.entitlements` files above, so a capability toggle
+    in Xcode puts it back with no diff in those files. These assertions are
+    what notices. When printing is designed, invert them in the same commit.
     """
 
-    def test_every_sandboxed_configuration_may_print(self) -> None:
-        import re
-
+    def test_no_sandboxed_configuration_may_print(self) -> None:
         text = _PBXPROJ.read_text(encoding="utf-8")
         blocks = re.findall(r"buildSettings = \{(.*?)\n\t\t\t\};", text, re.DOTALL)
         app = [b for b in blocks if "PRODUCT_BUNDLE_IDENTIFIER = app.bristlenose;" in b]
@@ -342,18 +347,39 @@ class TestTheSandboxAllowsPrinting:
         )
         for block in app:
             assert "ENABLE_APP_SANDBOX = YES;" in block
-            assert "ENABLE_RESOURCE_ACCESS_PRINTING = YES;" in block, (
-                "a sandboxed configuration has no printing entitlement, so "
-                "File ▸ Print raises 'This application does not support printing'"
+            # Pin the explicit NO rather than the absence of YES: a missing row
+            # is Xcode's default today, and a default is not a decision.
+            assert "ENABLE_RESOURCE_ACCESS_PRINTING = NO;" in block, (
+                "a configuration grants com.apple.security.print — printing is "
+                "post-v1, and File ▸ Print is not in the menus to use it"
             )
 
-    def test_both_artefact_gates_read_print_from_the_signed_app(self) -> None:
+    def test_no_entitlements_file_grants_print(self) -> None:
+        for path in (_MAS, _DEV_ID, _DEBUG):
+            assert "<key>com.apple.security.print</key>" not in path.read_text(
+                encoding="utf-8"
+            ), f"{path.name} grants com.apple.security.print — printing is post-v1"
+
+    def test_both_artefact_gates_refuse_print_on_the_signed_app(self) -> None:
         """The pbxproj is the setting; the gates read what was actually signed."""
-        for gate in (_PKG_GATE, _DMG_GATE):
+        for gate, verdict in ((_PKG_GATE, 'die "host print"'), (_DMG_GATE, 'fail "print"')):
             body = gate.read_text(encoding="utf-8")
             assert "<key>com.apple.security.print</key>" in body, (
                 f"{gate.name} does not check the print entitlement on the artefact"
             )
+            assert verdict in body, f"{gate.name} must refuse an artefact that may print"
+            assert '"print" "present"' not in body and '"host print" "present"' not in body, (
+                f"{gate.name} still passes an artefact because it may print"
+            )
+            # The refusal must be the branch the grep takes, not merely present:
+            # a swapped if/else keeps every string above and passes an artefact
+            # that may print. The pkg gate also has a fixture suite; the dmg gate
+            # has only this.
+            assert re.search(
+                r"if grep -q '<key>com\.apple\.security\.print</key>'[^\n]*\n\s*"
+                + re.escape(verdict),
+                body,
+            ), f"{gate.name}: the print grep's then-branch is not `{verdict}`"
 
 
 class TestTheSpeechHelperShipsAndIsGated:

@@ -674,35 +674,12 @@ private struct FileMenuContent: View {
         // the File menu carries the whole-report export; per-quote destinations
         // (Miro, clips, spreadsheets) live in the Quotes menu.
 
-        Divider()
-
-        // Page Setup / Print are NATIVE (`NSPrintOperation`), not bridge calls.
-        // They used to dispatch `menuAction("pageSetup"/"print")`, which no SPA
-        // handler consumed — silent no-ops. `window.print()` inside a WKWebView
-        // can't raise the macOS print panel, so the bridge was never the right
-        // target. Prints whatever lens is on screen; see `PrintActions`.
-        Button(i18n.t("desktop.menu.file.pageSetup")) {
-            PrintActions.pageSetup()
-        }
-
-        Button(i18n.t("desktop.menu.file.print"), systemImage: "printer") {
-            PrintActions.print(webView: bridgeHandler.webView, window: PanelHost.window)
-        }
-        .keyboardShortcut("p", modifiers: .command)
-        // `hasChannel`, not `canDispatch`: printing hands the web view to
-        // AppKit and never dispatches JS, so the guard it stands in for is
-        // `PrintActions.print`'s own `guard let webView` — not the presence of
-        // `window.__bristlenose`. A status page is a real document and prints.
-        //
-        // It was `isReady` until the channel got a published mirror, on the
-        // reasoning that `webView` was a plain weak var and couldn't drive
-        // SwiftUI. That stopped being true in the same change that added
-        // `hasChannel`, and `isReady` is not a substitute: it goes false only in
-        // `reset()`, i.e. on a selection change, while `webView` is cleared at
-        // `dismantleNSView`. A sidecar that dies mid-session swaps the detail
-        // pane to the error card without touching the selection — so ⌘P stayed
-        // lit over a nil web view and returned at that guard, silently.
-        .disabled(!bridgeHandler.hasChannel)
+        // File ▸ Page Setup… and File ▸ Print… (⌘P) were removed for v1 on
+        // 23 Oct 2026: printing is post-v1. What printed was not a deliverable —
+        // cards below the fold blank, the app chrome on the page, real names
+        // whatever Anonymise says — and `com.apple.security.print` is off with
+        // it. `PrintActions` is kept, unreferenced, for when printing is
+        // designed; the locale keys are kept too. See docs/design-printing.md.
     }
 
     /// Group 1 — the two commands that must work with **no project window

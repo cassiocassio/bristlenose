@@ -34,7 +34,7 @@ failure mode: a contributor finds the row, writes a `case` for it in
 
 | Action | Status | Why |
 |---|---|---|
-| `pageSetup`, `print` | **Now native, not bridge** | `PrintActions.pageSetup()` / `PrintActions.print(webView:window:)`. `window.print()` in a WKWebView can't raise the macOS print panel, so the bridge was never the right target. |
+| `pageSetup`, `print` | **Withdrawn 23 Oct 2026 — printing is post-v1** | Removed from the File menu with `com.apple.security.print` (`docs/design-printing.md`). They had been native since 28 Jul 2026, `PrintActions.pageSetup()` / `PrintActions.print(webView:window:)`, which is kept unreferenced: `window.print()` in a WKWebView can't raise the macOS print panel, so the bridge was never the right target. |
 | `checkSystemHealth` | **Now native** | Opens the Health window (`openWindow(id: "health")` → `DoctorReportView` → `GET /api/doctor`). |
 | `mergeCode` / `mergeCodes` | **Withdrawn 28 Jul 2026; deleted 12 Sep 2026** | Merging needs a source *and* a target and the codebook has no multi-select. Commented out in `CodesMenuContent` in July, removed outright with the other five Codes commands in September; locale keys pruned from all 21 full locales. _(The "Codes menu" section below listed this as **Shipped (bridge)** until 12 Sep 2026 — the two tables contradicted each other for six weeks. Code agrees with this one.)_ |
 | `find` | **Now native, not bridge** _(12 Sep 2026)_ | ⌘F never reaches the SPA. `requestSearchFocus()` bumps the published counter `BridgeHandler.focusSearchRequests`, which `QuotesSearchToolbarControl` observes to expand and focus. A counter, not a `Bool` — ⌘F must work twice in a row. The old `case "find"` is deleted; it had dispatched cleanly into `focusSearchInput()` and done nothing, in every project, on every lens, since it shipped. |
@@ -105,7 +105,7 @@ Three predicates, each answering a different question:
 
 | Predicate | Means | Use it for |
 |---|---|---|
-| `hasChannel` | A web view is registered. A published mirror of `webView`, driven by its `didSet`, so a menu gate can never disagree with the `guard let webView` it stands in for. | Commands that hand the web view to AppKit and never dispatch JS — **Print** is the only one today. A status page is a real document and prints. |
+| `hasChannel` | A web view is registered. A published mirror of `webView`, driven by its `didSet`, so a menu gate can never disagree with the `guard let webView` it stands in for. | Commands that hand the web view to AppKit or WebKit and never dispatch JS: **View ▸ Reload Report** (⌘R). A status page is a real document and reloads. **Print** gated on it too until it was withdrawn on 23 Oct 2026 (printing is post-v1). |
 | `canDispatch` | `hasChannel && documentState == .spa` — there is a channel *and* something on the far end that understands it. | Any command routed through `menuAction(...)`. **Export Report**, zoom. |
 | `canSearch` | `canDispatch && activeTab == .quotes` (`FindMenuContent`). | The Find family. Search exists on one lens; the other three carry `SearchComingSoonButton`. |
 | `commandTab` | `canDispatch ? activeTab : nil` (`BridgeHandler`). _Added 20 Oct 2026, R70._ | Every lens gate on a `menuAction` command: the Quotes menu, the View menu's panel, lens-step, quotes-filter and Focus rows. `activeTab` and the other report mirrors (`hasPlayer`, `canUndo`, `timelineAvailable`) keep their last value when the sidecar dies, so a gate on the mirror alone stayed lit over a dead channel. A mirror without a lens is gated `canDispatch && mirror` (Video, Undo/Redo, the timeline rows). A pending sidebar removal is native and its Undo needs no channel. |
@@ -146,7 +146,7 @@ with its blocking question and its restore path — not dimmed. `mergeCode` and
 
 **Not every menu command is a `menuAction`.** There are four routes, not one:
 the bridge (`menuAction`), a `Notification.Name` to `ContentView` (project ops),
-straight to AppKit (`PrintActions`), and — since 12 Sep 2026 — **native to
+straight to AppKit (`PrintActions`, parked since 23 Oct 2026), and — since 12 Sep 2026 — **native to
 native**, where the target is a native control and nothing crosses the bridge.
 ⌘F is the first: `requestSearchFocus()` bumps a published counter that
 `QuotesSearchToolbarControl` observes. Reach for that route whenever the thing
@@ -270,7 +270,7 @@ These are either native-only (Finder, print) or depend on features not yet built
 > | `archive` (project) | — | **Withdrawn 20 Oct 2026** | Unimplemented, not ungated — see Retired actions |
 > | `archiveFolder` | — | **Withdrawn 20 Oct 2026** | Same; it never had an action name, only an empty closure |
 > | `checkSystemHealth` | — | **Shipped** (native window — no bridge) | No longer a `menuAction()` dispatch. Diagnostics ▸ **Check Health** → `openWindow(id: "health")` (`MenuCommands.swift` `DiagnosticsMenuContent`), opening the native Health window `DoctorReportView`, which fetches `GET /api/doctor` (local doctor checks, bearer-authed). The old bridge action was dead (no frontend consumer); wired 28 Jul 2026. See `docs/fix-the-menus.md`. |
-> | `pageSetup` / `print` | ⌘P (print) | Bridge / future | NSPrintOperation on WKWebView snapshot |
+> | `pageSetup` / `print` | ~~⌘P (print)~~ | **Withdrawn 23 Oct 2026** | Printing is post-v1; see the table at the top |
 >
 > **Alpha gap (24 Apr 2026; partially closed 15 Jun 2026):** the Project menu and row context menu now
 > include **Stop Analysis** (Project menu ⌘., `MenuCommands.swift`, gated on

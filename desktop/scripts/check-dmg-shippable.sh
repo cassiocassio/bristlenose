@@ -248,13 +248,16 @@ else
     else
         pass "app group" "team group only (${TEAM_GROUP}), as Developer-ID requires"
     fi
-    # Printing (R69): the sandbox refuses the print panel without it, and File ▸
-    # Print says "This application does not support printing".
+    # Printing is post-v1 (owner, 23 Oct 2026): File ▸ Print is not in the
+    # menus, so the entitlement would be a capability with no affordance. It is
+    # generated from ENABLE_RESOURCE_ACCESS_PRINTING, so an Xcode capability
+    # toggle restores it with no change to any .entitlements file; this reads
+    # the artefact. See docs/design-printing.md.
     if [ -n "$DMG_ENTS" ]; then
         if grep -q '<key>com.apple.security.print</key>' <<<"$DMG_ENTS"; then
-            pass "print" "present"
+            fail "print" "PRESENT — printing is post-v1; set ENABLE_RESOURCE_ACCESS_PRINTING = NO"
         else
-            fail "print" "MISSING — File ▸ Print raises 'does not support printing'"
+            pass "print" "absent (printing is post-v1)"
         fi
     fi
 

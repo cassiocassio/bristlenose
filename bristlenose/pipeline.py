@@ -127,8 +127,16 @@ def _dominant_cause(
     if not failures:
         return Cause(category=default_category, message=message)
 
-    # Pull the underlying Cause out of each StageFailure.
+    # Pull the underlying Cause out of each StageFailure. An unknown cause
+    # never outvotes a known one: after three consecutive failures the rest of
+    # a stage's sessions are recorded as skipped (UNKNOWN), and on a project of
+    # eight or more they outnumbered the failures that said why, so an
+    # out-of-credit, bad-key or busy-host banner read "unknown" (decided
+    # 23 Oct 2026, review round 2, finding 46).
     causes = [f.cause for f in failures]
+    known = [c for c in causes if c.category != CauseCategoryEnum.UNKNOWN]
+    if known:
+        causes = known
     counter = Counter(c.category for c in causes)
     top_count = counter.most_common(1)[0][1]
     contenders = [cat for cat, n in counter.items() if n == top_count]

@@ -102,6 +102,37 @@ def test_dominant_cause_tie_prefers_non_retryable() -> None:
     assert cause.category == CauseCategoryEnum.AUTH
 
 
+def test_skipped_sessions_never_outvote_the_failures_that_said_why() -> None:
+    """Three sessions ran out of credit, then stage 9 stopped and recorded the
+    other seven as skipped (UNKNOWN). The banner must say out of credit, not
+    "unknown" (finding 46, 23 Oct 2026)."""
+    failures = [
+        StageFailure(session_id=f"s{i}", cause=Cause(
+            category=CauseCategoryEnum.OUT_OF_CREDIT, message="402",
+        ))
+        for i in range(1, 4)
+    ] + [
+        StageFailure(session_id=f"s{i}", cause=Cause(
+            category=CauseCategoryEnum.UNKNOWN, message="skipped",
+        ))
+        for i in range(4, 11)
+    ]
+    cause = _dominant_cause(
+        failures, default_category=CauseCategoryEnum.UNKNOWN, message="all failed",
+    )
+    assert cause.category == CauseCategoryEnum.OUT_OF_CREDIT
+
+
+def test_all_unknown_stays_unknown() -> None:
+    failures = [
+        StageFailure(session_id="s1", cause=Cause(category=CauseCategoryEnum.UNKNOWN, message="?")),
+    ]
+    cause = _dominant_cause(
+        failures, default_category=CauseCategoryEnum.WHISPER, message="all failed",
+    )
+    assert cause.category == CauseCategoryEnum.UNKNOWN
+
+
 # ---------------------------------------------------------------------------
 # run_lifecycle abandon path
 # ---------------------------------------------------------------------------

@@ -627,6 +627,18 @@ def _fix_auth_token_env_set(_method: str) -> str:
     )
 
 
+def _fix_anyllm_not_ready(_method: str) -> str:
+    """The fix for any-llm's current problem, in ``anyllm.explain``'s words."""
+    try:
+        from bristlenose.config import load_settings
+        from bristlenose.llm import anyllm
+
+        lines = anyllm.explain(anyllm.readiness(load_settings()))
+    except Exception:
+        lines = []
+    return "\n".join(lines[1:]) or "Set it up:  bristlenose configure any-llm"
+
+
 # ---------------------------------------------------------------------------
 # Lookup table
 # ---------------------------------------------------------------------------
@@ -655,4 +667,5 @@ _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "auth_token_env_set": _fix_auth_token_env_set,
     "serve_deps_missing": _fix_serve_deps_missing,
     "brew_tap_untrusted": _fix_brew_tap_untrusted,
+    "anyllm_not_ready": _fix_anyllm_not_ready,
 }

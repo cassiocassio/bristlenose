@@ -82,5 +82,7 @@ def test_all_python_packages_derives_from_catalogue() -> None:
     from bristlenose.pipeline_view.catalogue import all_python_packages
 
     pkgs = all_python_packages()
-    # The four packages declared in catalogue cells.
-    assert pkgs == {"mlx_whisper", "ctranslate2", "presidio_analyzer", "en_core_web_lg"}
+    # The five packages declared in catalogue cells.
+    assert pkgs == {
+        "mlx_whisper", "ctranslate2", "presidio_analyzer", "en_core_web_lg", "any_llm",
+    }

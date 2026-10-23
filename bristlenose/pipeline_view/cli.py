@@ -49,6 +49,9 @@ _REASON_TEXT: dict[str, str] = {
     "pipeline.reasons.presidio_not_installed": "presidio_analyzer not installed",
     "pipeline.reasons.spacy_model_missing": "spaCy en_core_web_lg not installed",
     "pipeline.reasons.pii_disabled": "PII redaction is off",
+    "pipeline.reasons.anyllm_not_installed": "any-llm not installed",
+    "pipeline.reasons.no_anyllm_model": "no any-llm model set",
+    "pipeline.reasons.no_anyllm_key": "no API key for the any-llm model",
 }
 
 # English fallback for the editorial quality notes (Why column). Mirrors the

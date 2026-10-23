@@ -97,7 +97,8 @@
         "azureDeployment": "Desplegament d'Azure",
         "azureApiVersion": "Versió de l'API d'Azure",
         "ollamaUrl": "URL de l'Ollama",
-        "ollamaModel": "Model de l'Ollama"
+        "ollamaModel": "Model de l'Ollama",
+        "anyllmModel": "Model d'any-llm (provider:model)"
       },
       "transcription": {
         "backend": "Motor",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (requereix Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii] per activar l'anonimitzador integrat",
-        "enable_pii_redaction": "executa-ho amb --redact-pii o defineix pii_enabled=true"
+        "enable_pii_redaction": "executa-ho amb --redact-pii o defineix pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "executa bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "no s'ha definit cap clau API del Claude",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 no està instal·lat",
         "presidio_not_installed": "L'anonimitzador integrat no està instal·lat",
         "spacy_model_missing": "el model lingüístic no està instal·lat",
-        "pii_disabled": "l'ocultació de dades personals està desactivada"
+        "pii_disabled": "l'ocultació de dades personals està desactivada",
+        "anyllm_not_installed": "any-llm no està instal·lat",
+        "no_anyllm_model": "no s'ha definit cap model d'any-llm",
+        "no_anyllm_key": "no hi ha cap clau d'API per al model d'any-llm"
       }
     }
 }

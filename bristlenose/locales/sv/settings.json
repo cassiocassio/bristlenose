@@ -97,7 +97,8 @@
         "azureDeployment": "Azure-distribution",
         "azureApiVersion": "Azure API-version",
         "ollamaUrl": "Ollama-URL",
-        "ollamaModel": "Ollama-modell"
+        "ollamaModel": "Ollama-modell",
+        "anyllmModel": "any-llm-modell (provider:model)"
       },
       "transcription": {
         "backend": "Backend",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (kräver Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii] för att aktivera den inbyggda anonymiseraren",
-        "enable_pii_redaction": "kör med --redact-pii eller ange pii_enabled=true"
+        "enable_pii_redaction": "kör med --redact-pii eller ange pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "kör bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "ingen Claude API-nyckel angiven",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 är inte installerad",
         "presidio_not_installed": "Inbyggd anonymiserare är inte installerad",
         "spacy_model_missing": "språkmodell inte installerad",
-        "pii_disabled": "Maskering av personuppgifter är avstängd"
+        "pii_disabled": "Maskering av personuppgifter är avstängd",
+        "anyllm_not_installed": "any-llm är inte installerad",
+        "no_anyllm_model": "ingen any-llm-modell angiven",
+        "no_anyllm_key": "ingen API-nyckel för any-llm-modellen"
       }
     }
 }

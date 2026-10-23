@@ -97,7 +97,8 @@
         "azureDeployment": "Azure dağıtımı",
         "azureApiVersion": "Azure API sürümü",
         "ollamaUrl": "Ollama URL'si",
-        "ollamaModel": "Ollama modeli"
+        "ollamaModel": "Ollama modeli",
+        "anyllmModel": "any-llm modeli (provider:model)"
       },
       "transcription": {
         "backend": "Arka uç",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (Apple Silicon gerektirir)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "yerleşik anonimleştiriciyi etkinleştirmek için pip install bristlenose[redact-pii]",
-        "enable_pii_redaction": "--redact-pii ile çalıştırın veya pii_enabled=true olarak ayarlayın"
+        "enable_pii_redaction": "--redact-pii ile çalıştırın veya pii_enabled=true olarak ayarlayın",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "bristlenose configure any-llm komutunu çalıştırın"
       },
       "reasons": {
         "no_anthropic_key": "Claude API anahtarı ayarlanmadı",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 yüklü değil",
         "presidio_not_installed": "Yerleşik anonimleştirici yüklü değil",
         "spacy_model_missing": "dil modeli yüklü değil",
-        "pii_disabled": "PII çıkarma kapalı"
+        "pii_disabled": "PII çıkarma kapalı",
+        "anyllm_not_installed": "any-llm yüklü değil",
+        "no_anyllm_model": "any-llm modeli ayarlanmadı",
+        "no_anyllm_key": "any-llm modeli için API anahtarı yok"
       }
     }
 }

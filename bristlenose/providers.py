@@ -159,6 +159,27 @@ PROVIDERS: dict[str, ProviderSpec] = {
         sdk_module="openai",  # Ollama is OpenAI-compatible
         pricing_url="",  # Free
     ),
+    # any-llm (mozilla-ai): one way in to the providers we don't build in —
+    # Mistral, OpenRouter, DeepSeek and the rest. An optional extra
+    # (`bristlenose[any-llm]`); everything specific to it is in
+    # `bristlenose/llm/anyllm.py`. Canonical id hyphen-free like the others,
+    # because preflight derives names from it. docs/design-any-llm.md.
+    "anyllm": ProviderSpec(
+        name="anyllm",
+        display_name="any-llm",
+        aliases=["any-llm", "any_llm"],
+        config_fields=[
+            ConfigField(
+                "model",
+                "BRISTLENOSE_ANYLLM_MODEL",
+                "Model, as provider:model",
+                secret=False,
+            ),
+        ],
+        default_model="",  # No default: the user names provider and model
+        sdk_module="any_llm",
+        pricing_url="",  # Each inner provider prices its own models
+    ),
 }
 
 
@@ -251,4 +272,13 @@ def credential_service_name(key: str) -> str:
     derived shape the stores have always used, so they still round-trip.
     """
     spec = CREDENTIALS.get(key)
-    return spec.keychain_service if spec else f"Bristlenose {key.title()} API Key"
+    if spec:
+        return spec.keychain_service
+    if key.startswith("anyllm_"):
+        # One entry per inner provider, named so Keychain Access says whose it
+        # is: "Bristlenose Mistral API Key (any-llm)". Not in CREDENTIALS (and
+        # so not in the Swift mirror): the CLI reads these, the app doesn't yet.
+        from bristlenose.llm.anyllm import display_name
+
+        return f"Bristlenose {display_name(key[len('anyllm_'):])} API Key (any-llm)"
+    return f"Bristlenose {key.title()} API Key"

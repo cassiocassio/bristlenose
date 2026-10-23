@@ -195,6 +195,20 @@ voice = [
     "kaldi-native-fbank>=1.22",
 ]
 
+# any-llm (mozilla-ai): Mistral, OpenRouter, DeepSeek and the rest as the sixth
+# provider, `--llm any-llm` (docs/design-any-llm.md). CLI and Homebrew only; NOT
+# in the desktop sidecar yet. An EXACT pin, widened in a reviewed commit:
+# any-llm ships about three releases a week and has broken things in minors.
+# 1.27.0 because from 1.27.1 it caps anthropic<1 and we need >=1.0 (their
+# migration: mozilla-ai/any-llm#1370). [mistral] adds mistralai; OpenRouter and
+# DeepSeek ride on the openai SDK we already ship. Never [all]: it pulls the
+# `platform` extra's telemetry client. Needs Python >=3.11 — on 3.10 the install
+# fails loudly, which beats an extra that silently installs nothing.
+any-llm = [
+    "any-llm-sdk[mistral]==1.27.0",
+    "mistralai>=3.3,<3.4",
+]
+
 # Release-time tooling. Run on the release machine when cutting a
 # version (THIRD-PARTY-BINARIES.md auto-generation, etc.). Not a
 # runtime dep, not in the sidecar bundle, not needed by contributors.

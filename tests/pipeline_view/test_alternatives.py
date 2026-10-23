@@ -245,7 +245,7 @@ def test_declaration_order_no_quality_sort() -> None:
     for row in quote.alternatives:
         if row.provider_id not in seen:
             seen.append(row.provider_id)
-    assert seen == ["claude", "openai", "azure", "google", "local", "apple_fm"]
+    assert seen == ["claude", "openai", "azure", "google", "local", "anyllm", "apple_fm"]
 
 
 def test_reason_key_is_none_when_available() -> None:

@@ -67,7 +67,7 @@ def scene(title: str, chrome: str, notes: list[str]):
     "bristlenose run — first run",
     [
         "Existing output (<code>_print_provider_guidance</code>). The only change is the last line.",
-        "Proposed copy: <em>For Mistral, Groq and others:</em> + the configure command. Kept short enough for the CLI's 80 columns.",
+        "New line: <em>For Mistral, OpenRouter and others:</em> + the configure command.",
     ],
 )
 def s1(c: Console) -> None:
@@ -88,7 +88,7 @@ def s1(c: Console) -> None:
     c.print()
     c.print("For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]")
     c.print(
-        "For Mistral, Groq and others:  "
+        "For Mistral, OpenRouter and others:  "
         "[bold cyan]bristlenose configure any-llm[/bold cyan]"
     )
     c.print()
@@ -134,7 +134,7 @@ def s3(c: Console) -> None:
     c.print()
     c.print("Which model? Write it as [bold]provider:model[/bold], e.g. mistral:mistral-large-latest", highlight=False)
     c.print("[bold]Model:[/bold] mistral:mistral-large-latest", highlight=False)
-    c.print("Using MISTRAL_API_KEY from your environment.", highlight=False)
+    c.print("Using the Mistral key from your environment.")
     c.print("Checking with Mistral (~$0.0001, no transcript content)...", end=" ")
     c.print(f"{OK} Valid")
     c.print("[dim]Transcripts will go to Mistral, through any-llm 1.27.0.[/dim]", highlight=False)
@@ -148,9 +148,9 @@ def s3(c: Console) -> None:
 # ── 4 ────────────────────────────────────────────────────────────────────
 @scene(
     "4 · configure any-llm — no key yet, so it's stored",
-    "configure any-llm — Groq, key stored in Keychain",
+    "configure any-llm — DeepSeek, key stored in Keychain",
     [
-        "No <code>GROQ_API_KEY</code> in the shell, so it asks (hidden input), checks, stores, reads back.",
+        "No <code>DEEPSEEK_API_KEY</code> in the shell, so it asks (hidden input), checks, stores, reads back. DeepSeek rides on the OpenAI SDK Bristlenose already ships, so it needs no add-on.",
         "Stored per inner provider, under a Bristlenose name (\"…(any-llm)\") so Keychain Access shows whose it is.",
         "<code>Stored in Keychain as …</code> is today's wording; on Linux it says Secret Service, elsewhere config file.",
     ],
@@ -159,13 +159,13 @@ def s4(c: Console) -> None:
     cmd(c, "bristlenose configure any-llm")
     c.print()
     c.print("Which model? Write it as [bold]provider:model[/bold], e.g. mistral:mistral-large-latest", highlight=False)
-    c.print("[bold]Model:[/bold] groq:llama-3.3-70b-versatile", highlight=False)
+    c.print("[bold]Model:[/bold] deepseek:deepseek-chat", highlight=False)
     c.print()
-    c.print("[bold]Enter your Groq API key:[/bold] ")
-    c.print("Checking with Groq (~$0.0001, no transcript content)...", end=" ")
+    c.print("[bold]Enter your DeepSeek API key:[/bold] ")
+    c.print("Checking with DeepSeek (~$0.0001, no transcript content)...", end=" ")
     c.print(f"{OK} Valid")
-    c.print(f'{OK} Stored in Keychain as "Bristlenose Groq API Key (any-llm)"')
-    c.print("[dim]Transcripts will go to Groq (api.groq.com) through any-llm 1.27.0.[/dim]", highlight=False)
+    c.print(f'{OK} Stored in Keychain as "Bristlenose DeepSeek API Key (any-llm)"')
+    c.print("[dim]Transcripts will go to DeepSeek (api.deepseek.com), through any-llm 1.27.0.[/dim]", highlight=False)
     c.print()
     c.print("any-llm is now your provider for analysis.")
     c.print("Run it with:  [bold]bristlenose run <folder>[/bold]")
@@ -288,21 +288,30 @@ def s8(c: Console) -> None:
 
 # ── 9 ────────────────────────────────────────────────────────────────────
 @scene(
-    "9 · use — switching back and forth",
+    "9 · use — switching between stored keys",
     "bristlenose use",
     [
-        "Today's <code>_set_current_provider</code> wording. <code>use any-llm</code> takes the Ollama-style branch: no key check, a hint if the model is unset.",
-        "Switching never forgets the any-llm model or keys.",
+        "<code>use provider:model</code> switches to a model whose key is already stored or exported: no network, nothing asked, like <code>use claude</code>. Keys are stored once per provider, so switching never asks for one again.",
+        "A provider with no key yet changes nothing and names the fix. The first two lines are today's <code>_set_current_provider</code> wording.",
     ],
 )
 def s9(c: Console) -> None:
+    cmd(c, "bristlenose use mistral:mistral-large-latest")
+    c.print("any-llm is now your provider for analysis (was Claude).")
+    c.print("Switch back any time:  [bold]bristlenose use claude[/bold]")
+    c.print("Model: mistral:mistral-large-latest (was deepseek:deepseek-chat)", highlight=False)
+    c.print()
+    cmd(c, "bristlenose use deepseek:deepseek-chat")
+    c.print("any-llm is now your provider for analysis.")
+    c.print("Model: deepseek:deepseek-chat (was mistral:mistral-large-latest)", highlight=False)
+    c.print()
+    cmd(c, "bristlenose use openrouter:x-ai/grok-4")
+    c.print(f"{ERR} No OpenRouter API key: OPENROUTER_API_KEY isn't set and none is stored.", highlight=False)
+    c.print("  Store one:  bristlenose configure any-llm", highlight=False)
+    c.print()
     cmd(c, "bristlenose use claude")
     c.print("Claude is now your provider for analysis (was any-llm).")
     c.print("Switch back any time:  [bold]bristlenose use any-llm[/bold]")
-    c.print()
-    cmd(c, "bristlenose use any-llm")
-    c.print("any-llm is now your provider for analysis (was Claude).")
-    c.print("Switch back any time:  [bold]bristlenose use claude[/bold]")
     c.print()
 
 
@@ -342,7 +351,7 @@ def s10(c: Console) -> None:
     "bristlenose doctor — key missing",
     [
         "No version-window warning (cut in Fable's review): the exact pin and the pipx advice are the fix.",
-        "Groq picked, key missing: the variable's name comes from any-llm's own error, never a map we keep.",
+        "DeepSeek picked, key missing: the variable's name comes from any-llm's own error, never a map we keep.",
         "Fix lines use the existing doctor-fix shape.",
     ],
 )
@@ -350,12 +359,11 @@ def s11(c: Console) -> None:
     cmd(c, "bristlenose doctor")
     c.print(f"\nbristlenose {VERSION}\n")
     c.print(f" {OK} FFmpeg          8.1.1 (/opt/homebrew/bin/ffmpeg)")
-    c.print(f" {ERR} API key         Groq: GROQ_API_KEY not set, nothing stored", highlight=False)
+    c.print(f" {ERR} API key         No DeepSeek API key: DEEPSEEK_API_KEY isn't set and none is stored.", highlight=False)
     c.print(f" {SKIP} Network         skipped (no key)")
     c.print()
     c.print("[bold]API key[/bold]")
     c.print("  Store one:  [bold]bristlenose configure any-llm[/bold]")
-    c.print("  or export GROQ_API_KEY in your shell.", highlight=False)
     c.print()
 
 
@@ -385,7 +393,7 @@ def s12(c: Console) -> None:
     c.print(f"    mistral:mistral-large-latest  (current)  {OK}  ?  untested", highlight=False)
     c.print(f"  Apple FM                                   {SKIP}     check in the desktop app")
     c.print()
-    c.print("[dim]OS: Darwin arm64 · RAM: 32.0 GB · keys: anthropic, openai, mistral · ollama: running[/dim]")
+    c.print("[dim]OS: Darwin arm64 · RAM: 32.0 GB · keys: anthropic, openai, anyllm · ollama: running[/dim]")
     c.print()
     cmd(c, "bristlenose pipeline   # on a machine without the add-on")
     c.print("  ...")
@@ -398,9 +406,9 @@ def s12(c: Console) -> None:
     "13 · run — the provider says no",
     "run — out of credit, bad key, rate limit",
     [
-        "Errors name the account the researcher has (\"Your OpenRouter account…\"), never \"your any-llm account\" (finding 11).",
+        "Today's failure banners, word for word, naming the account the researcher has (\"Your OpenRouter account…\"), never \"your any-llm account\" (finding 11), with <code>configure any-llm</code> as the key fix.",
         "Classified on the inner provider first, so an empty account isn't read as \"rate limited\" (finding 3). Provider's own words passed through.",
-        "Rate limits retry with the provider SDK's own defaults; one that persists is shown in the provider's words, never ours about their tiers (Fable 3, 7).",
+        "Rate limits retry with the provider SDK's own defaults first. OpenRouter's and DeepSeek's 402 reads as out of credit through the new provider-agnostic rule.",
     ],
 )
 def s13(c: Console) -> None:
@@ -412,20 +420,18 @@ def s13(c: Console) -> None:
     c.print(f" {OK} Transcribed 4 sessions (229 segments)                 [dim](cached)[/dim]")
     c.print(f" {ERR} Identifying speakers")
     c.print()
-    c.print(f"  {ERR} Your OpenRouter account is out of credit.")
-    c.print("    [dim]Provider says: Insufficient credits. Add more using https://openrouter.ai/credits[/dim]", highlight=False)
-    c.print("    Your transcripts are kept; run again once you've topped up.")
+    c.print(f"{ERR} Your OpenRouter account ran out of credit.")
+    c.print("  then run  [bold]bristlenose run interviews/[/bold]  again.")
     c.print()
     cmd(c, "bristlenose run interviews/")
     c.print("  ...")
-    c.print(f"  {ERR} Mistral rejected the API key (…x7f).")
-    c.print("    Store a new one:  [bold]bristlenose configure any-llm[/bold]")
+    c.print(f"{ERR} Mistral rejected your API key (…x7f).")
+    c.print("  Run  [bold]bristlenose configure any-llm[/bold]  to set a new key.")
     c.print()
     cmd(c, "bristlenose run interviews/")
     c.print("  ...")
-    c.print(f"  {WARN} Groq is limiting requests on this key.")
-    c.print("    [dim]Provider says: Rate limit reached for model llama-3.3-70b-versatile. Please try again in 7.2s.[/dim]", highlight=False)
-    c.print("    Your transcripts are kept; run again in a minute.")
+    c.print(f"{ERR} Rate-limited by DeepSeek.")
+    c.print("  Wait a minute and run  [bold]bristlenose run interviews/[/bold]  again.")
     c.print()
 
 
@@ -505,9 +511,9 @@ h1 { font-size: 26px; margin: 0 0 6px; }
 .note code { font-size: 12.5px; }
 </style></head><body><main>
 <h1>any-llm on the command line</h1>
-<p class="lede">Proposed v1 sessions for <code>docs/design-any-llm.md</code>, after the first review pass.
+<p class="lede">Built v1 sessions for <code>docs/design-any-llm.md</code>, after the first review pass.
 Every command, the flags it touches, and each response. Glyphs, colours and today's lines are the shipped CLI's;
-the new any-llm wording is proposed and noted under each frame. Generated by
+the any-llm wording is what the built code prints, noted under each frame. Generated by
 <code>docs/mockups/any-llm-cli-session.py</code>.</p>
 <div class="key"><span class="a">Terminal: what ships</span><span class="c">Commentary: why, not product</span></div>
 {{FRAMES}}

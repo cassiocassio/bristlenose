@@ -287,6 +287,35 @@ _LLM_BACKENDS: list[BackendOption] = [
         ],
     ),
     BackendOption(
+        # mozilla-ai/any-llm: Mistral, OpenRouter, DeepSeek and the rest
+        # through one library (docs/design-any-llm.md). The Azure shape: no
+        # catalogued models, the user's own model synthesised at render time,
+        # and a reason + action for each thing it needs.
+        id="anyllm",
+        display="any-llm",
+        requires=[
+            Requirement(
+                kind="python_package",
+                value="any_llm",
+                reason_key="pipeline.reasons.anyllm_not_installed",
+                action_key="pipeline.actions.install_anyllm",
+            ),
+            Requirement(
+                kind="setting_present",
+                value="anyllm_model",
+                reason_key="pipeline.reasons.no_anyllm_model",
+                action_key="pipeline.actions.configure_anyllm",
+            ),
+            Requirement(
+                kind="api_key",
+                value="anyllm",
+                reason_key="pipeline.reasons.no_anyllm_key",
+                action_key="pipeline.actions.configure_anyllm",
+            ),
+        ],
+        models=[],  # synthesised at render time from settings.anyllm_model
+    ),
+    BackendOption(
         id="apple_fm",
         display="Apple FM",
         requires=[

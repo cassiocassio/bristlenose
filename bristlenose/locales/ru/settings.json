@@ -97,7 +97,8 @@
         "azureDeployment": "Развёртывание Azure",
         "azureApiVersion": "Версия API Azure",
         "ollamaUrl": "URL-адрес Ollama",
-        "ollamaModel": "Модель Ollama"
+        "ollamaModel": "Модель Ollama",
+        "anyllmModel": "Модель any-llm (provider:model)"
       },
       "transcription": {
         "backend": "Движок",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (требуется Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii], чтобы включить встроенный анонимизатор",
-        "enable_pii_redaction": "запустите с --redact-pii или задайте pii_enabled=true"
+        "enable_pii_redaction": "запустите с --redact-pii или задайте pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "выполните bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "ключ API Claude не задан",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 не установлен",
         "presidio_not_installed": "Встроенный анонимизатор не установлен",
         "spacy_model_missing": "языковая модель не установлена",
-        "pii_disabled": "удаление персональных данных отключено"
+        "pii_disabled": "удаление персональных данных отключено",
+        "anyllm_not_installed": "библиотека any-llm не установлена",
+        "no_anyllm_model": "модель any-llm не задана",
+        "no_anyllm_key": "нет ключа API для модели any-llm"
       }
     }
 }

@@ -45,6 +45,7 @@ _PROVIDER_TO_OPTION_ID = {
     "azure": "azure",
     "google": "google",
     "local": "local",
+    "anyllm": "anyllm",
 }
 
 # Provider display labels, sourced from the catalogue (single source of truth).
@@ -209,6 +210,9 @@ def _resolve_llm_provider(
             option_id,
             settings.azure_deployment or None,
         )
+    if provider == "anyllm":
+        model = settings.anyllm_model or "(model unset)"
+        return f"{display} · {model}", option_id, settings.anyllm_model or None
     return f"{display} · {settings.llm_model}", option_id, settings.llm_model
 
 
@@ -357,20 +361,14 @@ def _stage_alternatives(
                     )
                 )
                 seen.add(chosen_model_id)
-        elif backend.id == "azure":
-            # Azure synthesises a deployment row when fully configured; else it
-            # collapses to a single failing row.
+        elif backend.id in ("azure", "anyllm"):
+            # Azure and any-llm synthesise the user's own row (deployment, or
+            # provider:model) when fully configured; else they collapse to a
+            # single failing row that says what is missing.
+            own = settings.azure_deployment if backend.id == "azure" else settings.anyllm_model
             available, _reason, _action = evaluate_backend(backend, None, host, settings)
-            if available and settings.azure_deployment:
-                rows.append(
-                    _synthesised_row(
-                        backend,
-                        settings.azure_deployment,
-                        settings.azure_deployment,
-                        host,
-                        settings,
-                    )
-                )
+            if available and own:
+                rows.append(_synthesised_row(backend, own, own, host, settings))
             else:
                 rows.append(_collapsed_provider_row(stage.id, backend, host, settings))
         else:

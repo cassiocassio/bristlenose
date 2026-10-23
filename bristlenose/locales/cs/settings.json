@@ -97,7 +97,8 @@
         "azureDeployment": "Nasazení Azure",
         "azureApiVersion": "Verze API Azure",
         "ollamaUrl": "URL Ollama",
-        "ollamaModel": "Model Ollama"
+        "ollamaModel": "Model Ollama",
+        "anyllmModel": "Model any-llm (provider:model)"
       },
       "transcription": {
         "backend": "Backend",
@@ -236,7 +237,9 @@
       "install_mlx_whisper": "pip install mlx-whisper (vyžaduje Apple Silicon)",
       "install_ctranslate2": "pip install ctranslate2",
       "install_presidio": "pip install bristlenose[redact-pii] pro zapnutí vestavěné anonymizace",
-      "enable_pii_redaction": "spusťte s --redact-pii nebo nastavte pii_enabled=true"
+      "enable_pii_redaction": "spusťte s --redact-pii nebo nastavte pii_enabled=true",
+      "install_anyllm": "pip install 'bristlenose[any-llm]'",
+      "configure_anyllm": "spusťte bristlenose configure any-llm"
     },
     "reasons": {
       "no_anthropic_key": "není nastaven API klíč Claude",
@@ -253,7 +256,10 @@
       "ctranslate2_not_installed": "ctranslate2 není nainstalován",
       "presidio_not_installed": "Vestavěná anonymizace není nainstalována",
       "spacy_model_missing": "jazykový model není nainstalován",
-      "pii_disabled": "Odstranění osobních údajů je vypnuto"
+      "pii_disabled": "Odstranění osobních údajů je vypnuto",
+      "anyllm_not_installed": "any-llm není nainstalován",
+      "no_anyllm_model": "model any-llm není nastaven",
+      "no_anyllm_key": "pro model any-llm chybí klíč API"
     }
   }
 }

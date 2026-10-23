@@ -97,7 +97,8 @@
         "azureDeployment": "Azure-käyttöönotto",
         "azureApiVersion": "Azure-API-versio",
         "ollamaUrl": "Ollama-URL",
-        "ollamaModel": "Ollama-malli"
+        "ollamaModel": "Ollama-malli",
+        "anyllmModel": "any-llm-malli (provider:model)"
       },
       "transcription": {
         "backend": "Taustajärjestelmä",
@@ -236,7 +237,9 @@
       "install_mlx_whisper": "pip install mlx-whisper (vaatii Apple Siliconin)",
       "install_ctranslate2": "pip install ctranslate2",
       "install_presidio": "pip install bristlenose[redact-pii] ottaaksesi käyttöön sisäänrakennetun anonymisoijan",
-      "enable_pii_redaction": "aja valitsimella --redact-pii tai aseta pii_enabled=true"
+      "enable_pii_redaction": "aja valitsimella --redact-pii tai aseta pii_enabled=true",
+      "install_anyllm": "pip install 'bristlenose[any-llm]'",
+      "configure_anyllm": "suorita bristlenose configure any-llm"
     },
     "reasons": {
       "no_anthropic_key": "Claude-API-avainta ei ole asetettu",
@@ -253,7 +256,10 @@
       "ctranslate2_not_installed": "ctranslate2 ei ole asennettu",
       "presidio_not_installed": "Sisäänrakennettua anonymisoijaa ei ole asennettu",
       "spacy_model_missing": "kielimallia ei ole asennettu",
-      "pii_disabled": "Henkilötietojen peittäminen on pois päältä"
+      "pii_disabled": "Henkilötietojen peittäminen on pois päältä",
+      "anyllm_not_installed": "any-llm ei ole asennettu",
+      "no_anyllm_model": "any-llm-mallia ei ole asetettu",
+      "no_anyllm_key": "any-llm-mallille ei ole API-avainta"
     }
   }
 }

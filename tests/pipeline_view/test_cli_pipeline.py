@@ -148,3 +148,38 @@ def test_cli_reason_note_mirror_matches_locale() -> None:
                     "If intentional (CLI-technical vs GUI-friendly), add it to "
                     "_INTENTIONAL_CLI_DRIFT; otherwise sync the two."
                 )
+
+
+def test_every_catalogue_key_resolves_in_english_and_the_cli() -> None:
+    """The reverse of the mirror test above. A catalogue `reason_key` or
+    `action_key` missing from `en/settings.json` renders as the raw key in the
+    SPA (`defaultValue: row.reason_key`); a `reason_key` missing from
+    `_REASON_TEXT` renders raw in `bristlenose pipeline`. Neither failed a test
+    until 23 Oct 2026, when the any-llm row added five."""
+    from bristlenose.pipeline_view.catalogue import STAGES, requirements_for
+
+    settings = json.loads(
+        (
+            Path(__file__).resolve().parents[2] / "bristlenose" / "locales" / "en" / "settings.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    def resolves(dotted: str) -> bool:
+        cur: object = settings
+        for part in dotted.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return False
+            cur = cur[part]
+        return isinstance(cur, str)
+
+    missing: list[str] = []
+    for stage in STAGES:
+        for option in stage.viable_backends:
+            for model in (None, *option.models):
+                for req in requirements_for(option, model):
+                    for key in (req.reason_key, req.action_key):
+                        if key and not resolves(key):
+                            missing.append(f"en: {key}")
+                    if req.reason_key not in _REASON_TEXT:
+                        missing.append(f"_REASON_TEXT: {req.reason_key}")
+    assert not sorted(set(missing)), sorted(set(missing))

@@ -24,7 +24,8 @@ between billing exhaustion (``insufficient_quota``) and ordinary rate limiting
 (``rate_limit_exceeded``). Status code alone conflates both.
 
 Honesty about coverage: ``OUT_OF_CREDIT`` is only emitted where the wire
-actually isolates billing death — **Anthropic and OpenAI**. Azure has no
+actually isolates billing death — **Anthropic and OpenAI**, and any provider
+answering **402 Payment Required** (OpenRouter and DeepSeek, through any-llm). Azure has no
 per-account credit (subscription quota only) and Gemini folds rate-limit,
 quota, and free-tier-cap all into one ``RESOURCE_EXHAUSTED`` signal, so their
 "you've hit a wall" case classifies as ``RATE_LIMITED`` — we don't fake a
@@ -120,6 +121,12 @@ _RULES: tuple[_Rule, ...] = (
     _Rule(LLMFailureKind.OUT_OF_CREDIT, providers=frozenset({_OPENAI}),
           message=r"exceeded your current quota"),
 
+    # 402 Payment Required is billing by definition, whoever sends it. OpenRouter
+    # and DeepSeek (reached through any-llm) use it for an empty balance; it is
+    # the status rule the precedence note above allows, because 402 means
+    # nothing else.
+    _Rule(LLMFailureKind.OUT_OF_CREDIT, status=402),
+
     # --- INVALID_KEY ---
     _Rule(LLMFailureKind.INVALID_KEY, providers=frozenset({_ANTHROPIC}),
           code=r"authentication_error"),
@@ -189,7 +196,20 @@ def classify_exception(provider: str | None, exc: BaseException) -> LLMFailureKi
     exception shapes — they all expose an HTTP status and a structured body,
     just under different attribute names. Falls back to ``str(exc)`` for the
     message so the substring rules still fire on a wrapped/stringified error.
+
+    any-llm (``provider="anyllm"``) wraps fifty providers' errors; it is read by
+    :func:`bristlenose.llm.anyllm.classify`, which unwraps the provider's own
+    exception first.
     """
+    if provider == "anyllm":
+        from bristlenose.llm.anyllm import classify
+
+        return classify(exc)  # type: ignore[no-any-return]
+    return classify_fields(provider, exc)
+
+
+def classify_fields(provider: str | None, exc: BaseException) -> LLMFailureKind:
+    """:func:`classify_exception`'s field extraction, without any routing."""
     status = _extract_status(exc)
     code = _extract_code(exc)
     message = str(exc) or exc.__class__.__name__

@@ -606,8 +606,66 @@ def _validate_local(
     return ValidationResult(ok=True)
 
 
+def _validate_anyllm(
+    api_key: str, model: str, *, params: dict[str, Any] | None = None
+) -> ValidationResult:
+    """Exercise a provider reached through any-llm with the run's own request.
+
+    The run's parameters (``request_params`` sends none unless the user set
+    them) and its response format, a ``json_schema`` dict, with the inert
+    prompt: a provider that refuses the format, the model or the key refuses it
+    here, not at the topic-segmentation stage (R104). ``api_key`` is "" when
+    any-llm finds the key in the environment itself.
+    """
+    from any_llm import AnyLLM
+
+    from bristlenose.llm import anyllm
+    from bristlenose.llm.failure_classifier import LLMFailureKind
+
+    anyllm.enable_unified_exceptions()
+    parts = anyllm.split_model(model)
+    if parts is None:
+        return ValidationResult(ok=False, raw_message=f"not a provider:model string: {model!r}")
+    inner, model_id = parts
+    params = _params_for("anyllm", model, params)
+    try:
+        provider = AnyLLM.create(inner, api_key=api_key or None)
+        provider.completion(
+            model=model_id,
+            messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "preflight",
+                    "schema": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
+                },
+            },
+            **params,
+        )
+    except Exception as exc:
+        network = _classify_network_error(exc)
+        if network is not None:
+            return network
+        original = getattr(exc, "original_exception", None)
+        if isinstance(original, BaseException):
+            network = _classify_network_error(original)
+            if network is not None:
+                return network
+        kind = anyllm.classify(exc)
+        bucket = {
+            LLMFailureKind.INVALID_KEY: "invalid_key",
+            LLMFailureKind.OUT_OF_CREDIT: "billing_empty",
+            LLMFailureKind.RATE_LIMITED: "rate_limit",
+            LLMFailureKind.NETWORK: "network",
+        }.get(kind)
+        if bucket is None and type(exc).__name__ == "ModelNotFoundError":
+            bucket = "model_unavailable"
+        return ValidationResult(ok=False, error_class=bucket, raw_message=str(exc))
+    return ValidationResult(ok=True)
+
+
 # Providers with rich validation. Local has no key; orchestrator handles that.
-_SUPPORTED_PROVIDERS = frozenset({"anthropic", "openai", "azure", "google", "local"})
+_SUPPORTED_PROVIDERS = frozenset({"anthropic", "openai", "azure", "google", "local", "anyllm"})
 
 
 # ---------------------------------------------------------------------------
@@ -671,6 +729,16 @@ def preflight_api_key(
     # Local has no API key but still validates (server-running, model-pulled).
     if provider == "local":
         api_key, source = "", "stored"
+    elif provider == "anyllm":
+        # The key is the inner provider's: the environment (any-llm reads it)
+        # or the one `configure any-llm` stored. Not ready → no request to
+        # check; LLMClient refuses with the reason before any call.
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if not ready.ready:
+            return
+        api_key, source = ready.api_key or "", ready.key_source
     else:
         api_key, source = _api_key_for(settings)
         if not api_key:
@@ -688,7 +756,9 @@ def preflight_api_key(
     # the pipeline's calls carry, the key and the address it goes to — which the
     # cache below is keyed by.
     _wire_model = settings.azure_deployment if provider == "azure" else (
-        settings.local_model if provider == "local" else settings.llm_model
+        settings.local_model if provider == "local" else (
+            settings.anyllm_model if provider == "anyllm" else settings.llm_model
+        )
     )
     params = request_params(
         provider, _wire_model, settings.llm_max_tokens, settings.llm_temperature
@@ -749,6 +819,8 @@ def preflight_api_key(
         )
     elif provider == "local":
         result = validator(settings.local_url, settings.local_model, params=params)
+    elif provider == "anyllm":
+        result = validator(api_key, settings.anyllm_model, params=params)
     else:
         result = validator(api_key, settings.llm_model, params=params)
     if result.ok:

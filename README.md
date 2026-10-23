@@ -62,7 +62,7 @@ The report includes:
 
 ## Install
 
-For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.com)) — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.com)), or reach **Mistral**, **OpenRouter** and others through [any-llm](https://github.com/mozilla-ai/any-llm) — see [Getting an API key](#getting-an-api-key) below.
 
 ### macOS (desktop app) — easiest
 
@@ -188,6 +188,31 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 **Trade-offs:** Local models are slower (~10 min vs ~2 min per study) and less accurate (~85% vs ~99% JSON reliability). Good for trying the tool; use cloud APIs for production quality.
 
+### Option F: Other providers, through any-llm
+
+Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It's an optional part of the command-line install:
+
+```bash
+pipx install "bristlenose[any-llm]"
+bristlenose configure any-llm
+```
+
+`configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already in your environment (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, …). It checks the key, stores it like the others, and makes it your provider. Switch between models you've set up with `bristlenose use mistral:mistral-large-latest`, and back with `bristlenose use claude`.
+
+| I want to use | How |
+|---|---|
+| Claude, ChatGPT, Gemini, Azure OpenAI | Options A–D: `bristlenose configure claude` (or `chatgpt`, `gemini`, `azure`) |
+| A local model with Ollama | Option E: `bristlenose configure local` |
+| Mistral | `bristlenose configure any-llm`, model `mistral:mistral-large-latest` |
+| DeepSeek | `bristlenose configure any-llm`, model `deepseek:deepseek-chat` |
+| Hundreds of models with one key (Grok, Llama, Qwen, DeepSeek, Mistral…) | `bristlenose configure any-llm`, model `openrouter:<id>` with an id from [openrouter.ai/models](https://openrouter.ai/models) |
+| Another provider any-llm supports | Add its part first: `pipx inject bristlenose "any-llm-sdk[<provider>]"`, then `bristlenose configure any-llm` |
+| Claude or Gemini through your company's AWS, Google Cloud or Azure AI account | Not supported |
+
+Through OpenRouter, your transcripts go to OpenRouter, which passes them to the model's host: check the data policy of the model you pick, and whether a free tier may use your inputs for training, before you send participant data. Bristlenose doesn't estimate costs for these providers; their own consoles show what you've spent.
+
+Coming to the Mac app.
+
 Use whichever provider you already have an API key for. The provider you configure becomes your current one and stays current until you switch (`bristlenose use <provider>`) — with a single configured provider, a bare `bristlenose run` just uses it. A typical 8-participant study costs roughly $1--3 with a cloud provider -- costs vary, check your provider's pricing page.
 
 > **Note:** A ChatGPT Plus/Pro or Claude Pro/Max subscription does **not** include API access. The API is billed separately — you need an API key from [console.anthropic.com](https://console.anthropic.com) or [platform.openai.com](https://platform.openai.com).
@@ -208,7 +233,7 @@ The key is loaded automatically on every run — no environment variables needed
 setx BRISTLENOSE_ANTHROPIC_API_KEY "sk-ant-..."
 ```
 
-For ChatGPT, use `BRISTLENOSE_OPENAI_API_KEY`; for Gemini, use `BRISTLENOSE_GOOGLE_API_KEY`. Close and reopen your terminal after running `setx` — the variable only takes effect in new windows.
+For ChatGPT, use `BRISTLENOSE_OPENAI_API_KEY`; for Gemini, use `BRISTLENOSE_GOOGLE_API_KEY`; through any-llm, the provider's own name, such as `MISTRAL_API_KEY`. Close and reopen your terminal after running `setx` — the variable only takes effect in new windows.
 
 **Alternative: shell profile (macOS/Linux).** If you prefer environment variables over the credential store, add the export to your shell startup file:
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-_KNOWN_PROVIDERS = frozenset({"anthropic", "openai", "azure", "google", "local"})
+_KNOWN_PROVIDERS = frozenset({"anthropic", "openai", "azure", "google", "local", "anyllm"})
 
 # Anthropic: claude-<family>-<major>[-<date>]
 # e.g. claude-sonnet-4-20250514 → ("claude-sonnet", "4")
@@ -62,7 +62,8 @@ def normalise_model(provider: str, response_model: str) -> tuple[str, str]:
 
     Args:
         provider: Canonical provider name — one of
-            ``anthropic``, ``openai``, ``azure``, ``google``, ``local``.
+            ``anthropic``, ``openai``, ``azure``, ``google``, ``local``,
+            ``anyllm``.
         response_model: The provider's response-side model string
             (post-aliasing, post-deployment-resolution).
 
@@ -98,6 +99,12 @@ def normalise_model(provider: str, response_model: str) -> tuple[str, str]:
     if provider == "azure":
         # Deployment names are user-defined opaque strings.
         # Treat the whole string as the family; major is "0".
+        return (model.lower(), "0")
+
+    if provider == "anyllm":
+        # provider:model through any-llm — fifty providers' naming schemes, none
+        # ours to parse. Opaque, like Azure; the inner provider stays in the key
+        # so Mistral and OpenRouter rows never share a cohort.
         return (model.lower(), "0")
 
     if provider == "google":

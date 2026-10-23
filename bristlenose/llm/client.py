@@ -236,6 +236,21 @@ def request_params(
     ``max_tokens`` is clamped to the model's known ceiling here. ``model`` is
     the request model: Azure's deployment, Ollama's local model.
     """
+    if provider == "anyllm":
+        # any-llm reaches fifty providers whose ceilings and sampling rules we
+        # do not know, and a per-model table would be a new picker
+        # (docs/design-pluggable-llm-routing.md §Interim model pickers). Our
+        # 64000 / 0.1 are refused outright by small-output and reasoning models,
+        # so neither is sent unless the user set it (still the field default
+        # means unset); the provider's own default applies, and truncation goes
+        # to the existing split-and-retry. docs/design-any-llm.md §4.
+        fields = BristlenoseSettings.model_fields
+        params: dict[str, Any] = {}
+        if max_tokens != fields["llm_max_tokens"].default:
+            params["max_tokens"] = max_tokens
+        if temperature != fields["llm_temperature"].default:
+            params["temperature"] = temperature
+        return params
     max_tokens = _clamp_max_tokens(model, max_tokens)
     if provider == "anthropic":
         return {
@@ -347,6 +362,7 @@ class LLMClient:
         self._azure_client: openai.AsyncAzureOpenAI | None = None
         self._google_client: genai.Client | None = None
         self._local_client: openai.AsyncOpenAI | None = None
+        self._anyllm_provider: Any = None
         self.tracker = LLMUsageTracker()
 
         # Log the resolved target BEFORE validation so we capture it even when
@@ -373,6 +389,13 @@ class LLMClient:
             "google": "generativelanguage.googleapis.com (SDK default)",
             "local": self.settings.local_url,
         }.get(self.provider, "(unknown)")
+        if self.provider == "anyllm":
+            from bristlenose.llm import anyllm
+
+            parts = anyllm.split_model(self.settings.anyllm_model)
+            endpoint = (
+                anyllm.destination(parts[0]) + " (via any-llm)" if parts else "(unset)"
+            )
         key_value = {
             "anthropic": self.settings.anthropic_api_key,
             "openai": self.settings.openai_api_key,
@@ -426,7 +449,17 @@ class LLMClient:
                 "Set BRISTLENOSE_GOOGLE_API_KEY in your .env file or environment. "
                 "Get a key from aistudio.google.com/apikey"
             )
+        if self.provider == "anyllm":
+            self._validate_anyllm()
         # Local provider doesn't need an API key
+
+    def _validate_anyllm(self) -> None:
+        """Refuse before any call when any-llm can't send one (offline check)."""
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(self.settings)
+        if not ready.ready:
+            raise ValueError(" ".join(anyllm.explain(ready)) or f"any-llm: {ready.status}")
 
     async def analyze(
         self,
@@ -500,6 +533,11 @@ class LLMClient:
                         system_prompt, user_prompt, response_model, max_tokens,
                         prompt_template, input_chars, t0,
                     )
+                elif self.provider == "anyllm":
+                    result = await self._analyze_anyllm(
+                        system_prompt, user_prompt, response_model, max_tokens,
+                        prompt_template, input_chars, t0,
+                    )
                 else:
                     raise ValueError(f"Unsupported LLM provider: {self.provider}")
             except asyncio.CancelledError:
@@ -548,6 +586,8 @@ class LLMClient:
             return self.settings.azure_deployment or ""
         if self.provider == "local":
             return self.settings.local_model
+        if self.provider == "anyllm":
+            return self.settings.anyllm_model
         return self.settings.llm_model
 
     # Lazy, cached client constructors. Each carries `max_retries` so the SDK's
@@ -1407,3 +1447,191 @@ class LLMClient:
             f"Last error: {last_error}. "
             f"Try a larger model (--model llama3.1:8b) or use a cloud API (--llm claude)."
         )
+
+    def _ensure_anyllm_provider(self) -> Any:
+        """One any-llm provider object per client, reused for every call.
+
+        any-llm's module-level ``acompletion`` builds a new SDK client per call;
+        its own docs point production code at ``AnyLLM.create`` instead. Typed
+        errors are switched on first (``anyllm.enable_unified_exceptions``).
+        """
+        if self._anyllm_provider is None:
+            from any_llm import AnyLLM
+
+            from bristlenose.llm import anyllm
+
+            anyllm.enable_unified_exceptions()
+            ready = anyllm.readiness(self.settings)
+            if not ready.ready:
+                self._validate_anyllm()  # raises with the reason
+            self._anyllm_provider = AnyLLM.create(ready.inner, api_key=ready.api_key)
+        return self._anyllm_provider
+
+    async def _analyze_anyllm(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: type[T],
+        max_tokens: int,
+        prompt_template: PromptTemplate | None,
+        input_chars: int,
+        t0: float,
+    ) -> T:
+        """Call a provider through any-llm (docs/design-any-llm.md §4, §5.3b).
+
+        The schema goes as a ``json_schema`` dict, never the Pydantic class:
+        given a class, any-llm parses the reply itself and raises on truncation
+        or bad JSON, discarding the content and the usage, so our repair and
+        s09's split-and-retry would never run. We read the raw reply, check the
+        finish reason, refusal and emptiness ourselves, and validate with
+        ``_validate_repairing`` — the long tail makes no shape guarantee. The
+        schema also goes in the system prompt, because repair can't mend a 400;
+        a provider that refuses ``json_schema`` is retried once with
+        ``json_object`` (as Ollama is called) and remembered for the session.
+        """
+        from bristlenose.llm import anyllm
+
+        provider = self._ensure_anyllm_provider()
+        model = self.settings.anyllm_model
+        parts = anyllm.split_model(model)
+        inner, model_id = parts if parts else ("", model)
+        name = anyllm.display_name(inner)
+
+        schema = response_model.model_json_schema()
+        system = (
+            system_prompt
+            + "\n\nYou must respond with valid JSON matching this schema:\n"
+            + f"```json\n{json.dumps(schema, indent=2)}\n```"
+        )
+        params = request_params(
+            "anyllm", model, max_tokens, self.settings.llm_temperature
+        )
+        sent_cap = params.get("max_tokens")
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        def record(outcome: Literal["ok", "truncated", "error"], response: Any = None) -> None:
+            usage = getattr(response, "usage", None)
+            self._record_call(
+                request_model=model,
+                response_model=getattr(response, "model", None),
+                input_chars=input_chars,
+                elapsed_ms=int((time.perf_counter() - t0) * 1000),
+                outcome=outcome, prompt_template=prompt_template,
+                input_tokens=getattr(usage, "prompt_tokens", None) if usage else None,
+                output_tokens=getattr(usage, "completion_tokens", None) if usage else None,
+                finish_reason=(
+                    response.choices[0].finish_reason
+                    if response is not None and getattr(response, "choices", None)
+                    else None
+                ),
+                usage_source="reported" if usage else "missing",
+            )
+
+        def truncated() -> TruncatedResponseError:
+            cap = f"max_tokens={sent_cap}" if sent_cap else "the provider's default output cap"
+            return TruncatedResponseError(
+                f"LLM response truncated at {cap} (provider=anyllm, model={model}). "
+                "Raise it with BRISTLENOSE_LLM_MAX_TOKENS.",
+                provider=self.provider,
+                model=model,
+                requested_max_tokens=sent_cap or 0,
+                model_cap=None,
+            )
+
+        async def call(fmt: dict[str, Any]) -> Any:
+            return await provider.acompletion(
+                model=model_id, messages=messages, response_format=fmt, **params,
+            )
+
+        schema_format = {
+            "type": "json_schema",
+            "json_schema": {"name": response_model.__name__, "schema": schema},
+        }
+        try:
+            if getattr(self, "_anyllm_json_object", False):
+                response = await call({"type": "json_object"})
+            else:
+                try:
+                    response = await call(schema_format)
+                except Exception as exc:
+                    if not _refuses_json_schema(exc):
+                        raise
+                    logger.warning(
+                        "anyllm_json_schema_refused | model=%s | falling back to json_object",
+                        model,
+                    )
+                    self._anyllm_json_object = True
+                    response = await call({"type": "json_object"})
+        except asyncio.CancelledError:
+            raise
+        except ValidationError as exc:
+            # any-llm 1.27 validates the provider's reply against OpenAI's shape
+            # and rejects, for one, a finish reason outside OpenAI's five
+            # (fixed in 1.38). The reply is gone before we see it. Never pass the
+            # pydantic text on: it quotes the reply, which quotes the transcript.
+            record("error")
+            raise RuntimeError(
+                f"{name} returned a response any-llm couldn't read "
+                f"(provider=anyllm, model={model}, {exc.error_count()} validation errors)."
+            ) from None
+        except Exception as exc:
+            if type(exc).__name__ == "LengthFinishReasonError":
+                record("truncated", getattr(exc, "completion", None))
+                raise truncated() from exc
+            record("error")
+            raise
+
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            self.tracker.record(usage.prompt_tokens or 0, usage.completion_tokens or 0)
+        choice = response.choices[0]
+        if choice.finish_reason == "length":
+            record("truncated", response)
+            raise truncated()
+        if choice.finish_reason == "content_filter" or getattr(choice.message, "refusal", None):
+            record("error", response)
+            raise RuntimeError(
+                f"{name} declined the request (provider=anyllm, model={model}, "
+                f"finish_reason={choice.finish_reason})."
+            )
+        content = choice.message.content
+        if not content:
+            record("error", response)
+            raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
+        try:
+            data = json.loads(_strip_code_fence(content))
+            result = _validate_repairing(data, response_model, provider="anyllm", model=model)
+        except (json.JSONDecodeError, ValidationError):
+            record("error", response)
+            raise
+        record("ok", response)
+        return result
+
+
+def _strip_code_fence(content: str) -> str:
+    """Drop a Markdown code fence around a JSON reply (```json … ```)."""
+    text = content.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
+    return text.strip()
+
+
+def _refuses_json_schema(exc: BaseException) -> bool:
+    """True when a provider refused the ``json_schema`` response format itself.
+
+    A 400 (or any-llm's unsupported-parameter error) that names the response
+    format: DeepSeek, for one, takes only ``json_object``. Anything else is a
+    real failure and propagates.
+    """
+    text = str(exc).lower()
+    names_format = "json_schema" in text or "response_format" in text
+    if type(exc).__name__ == "UnsupportedParameterError":
+        return names_format
+    status = getattr(exc, "status_code", None)
+    return names_format and status == 400
+

@@ -1,17 +1,25 @@
 ---
-status: proposal
+status: partial
 last-trued: 2026-10-23
 ---
 
 # any-llm: one way in to the other providers
 
-> **Status: proposal (23 Oct 2026), revised after the first review pass.** Not
-> built. v1 is the CLI (with Homebrew). v2 (the Mac app) is sketched so v1
+> **Status: v1 built (23 Oct 2026), not yet released.** The CLI, the server's
+> three key checks and the web edits are on `main`; Homebrew carries the extra
+> from the release that ships it. v1 is the CLI (with Homebrew). v2 (the Mac app) is sketched so v1
 > doesn't paint it into a corner, and is not scheduled before the 24 Nov App
 > Store submission. Review findings: the maintainer's private review log for
 > this doc. CLI sessions: [mockups/any-llm-cli-session.html](mockups/any-llm-cli-session.html).
 
 ## Changelog
+
+- _2026-10-23_ — built v1, and trued the plan to it: default set Mistral and
+  OpenRouter (owner; DeepSeek reachable directly at no cost, since it rides on
+  the OpenAI SDK; Groq and Grok through OpenRouter, the name confusion being a
+  cost of its own); `use provider:model` switches between stored models; no
+  Python 3.10 structural reason (the install fails loudly instead); the Groq
+  413 reading dropped with Groq; the live check gains an opt-in `--anyllm`.
 
 - _2026-10-23_ — revised after Fable's review: build on an exact pin of
   1.27.0 now, with #1370 as a parallel gesture, not a gate; the run preflight
@@ -127,7 +135,7 @@ the model (no default, its own field, no pricing, a synthesised pipeline row).
 | Call path | `AnyLLM.create(provider, api_key=…)` once per client, reused; `acompletion(response_format=<json_schema dict>)`; we check `finish_reason`, refusal and empty content, then `_validate_repairing` | `_ensure_*_client` (one client), `_validate_repairing` («ONLY FOR PROVIDERS THAT MAKE NO SHAPE GUARANTEE») | follows. A Pydantic type would make any-llm parse, raising on truncation and bad JSON and discarding the content and usage |
 | Sampling | Neither `temperature` nor `max_tokens` sent unless the user set them (detected by the same value gate: still the field default means unset); gated in `request_params`, which the preflight shares. Truncation reports the cap actually sent and names `BRISTLENOSE_LLM_MAX_TOKENS` | `request_params` («Gate a parameter there, never at a call site») | departs (why: our 64000/0.1 are rejected by small-output and reasoning models; a per-model table is a new picker the interim rule forbids) |
 | Retries | The inner SDK's defaults (2) on 1.27, whose `create` can't pass `max_retries` to every SDK (`Mistral(...)` rejects it). On 1.40, pass `max_retries` and catch `UnsupportedParameterError` | `_CLOUD_MAX_RETRIES=6` set on each native SDK client | departs (why: 1.27 has no uniform way to set it) |
-| Errors | Typed errors on. Classify `original_exception` first, the any-llm class second, the generic status rules last. One new provider-agnostic rule: **402 → OUT_OF_CREDIT** (OpenRouter and DeepSeek use it; the classifier has none today). Groq's 413 "request too large" (a free-tier token limit) reads as such, not as a rejected request | `classify_exception`; «Never classify billing on the HTTP status alone» (402 *is* the billing status) | follows |
+| Errors | Typed errors on. Classify `original_exception` first, the any-llm class second, the generic status rules last. One new provider-agnostic rule: **402 → OUT_OF_CREDIT** (OpenRouter and DeepSeek use it; the classifier had none) | `classify_exception`; «Never classify billing on the HTTP status alone» (402 *is* the billing status) | follows |
 | Copy | Name the inner provider ("Mistral rejected the API key"); no `billing_hints` entry, so out-of-credit falls through to the provider's own words | Product names, never the library's, for an account | follows |
 | Telemetry | `cohort_normalise` knows `anyllm`, model kept opaque; no cost computed for `anyllm` rows | azure | follows. Without it every row is lost silently |
 | Pricing | None. No pre-run estimate, no cost in the summary, tokens still shown | azure (once fixed) | follows |
@@ -177,8 +185,10 @@ bristlenose run interviews/
 8. Write `BRISTLENOSE_ANYLLM_MODEL` to the user config, then
    `_set_current_provider("anyllm")`, word for word as today.
 
-`use any-llm` takes the Ollama-style branch. `run --llm any-llm` with no model
-refuses (exit 2) and never prompts.
+`use any-llm` takes the Ollama-style branch. `use mistral:mistral-large-latest`
+switches to a model whose key is already stored or exported: no network, nothing
+asked, like `use claude`; a missing key changes nothing and names the fix.
+`run --llm any-llm` with no model refuses (exit 2) and never prompts.
 
 ### 5.3 The readiness probe
 
@@ -250,13 +260,14 @@ two privacy pages, terms.
 | Snap, Fedora Copr | not carried | Snap's confinement leaves only the file store; Copr would add wheels to track for CVEs. Revisit on request |
 | Mac app bundle | not carried | v2 |
 
-Default inner set (owner, 23 Oct): **Mistral, Groq, OpenRouter, DeepSeek**.
-DeepSeek stays in only if the manual walk passes: its output defaults to 4096
-tokens (max 8192), which truncates at stages with no split, and it may refuse
-`json_schema`. Groq's free tier allows 6–12k tokens a minute, below one long
-transcript, so the walk needs a paid Groq tier or a short fixture.
-OpenRouter and DeepSeek ride on the `openai` SDK we ship, so the extra adds
-`mistralai` and `groq` only. All four are in upstream's "Verified" tier.
+Default inner set (owner, 23 Oct, revised the same day): **Mistral and
+OpenRouter**. Mistral is the European provider a researcher's client is likeliest
+to approve; OpenRouter reaches Grok, Llama, Qwen, DeepSeek and Groq-hosted models
+with one key. The extra adds `mistralai` only: OpenRouter rides on the `openai`
+SDK we ship, and so does DeepSeek, which therefore works directly at no extra
+cost (its 4096-token default output and possible `json_schema` refusal are met
+by the truncation path and the `json_object` fallback). Groq and Grok directly
+are one `pipx inject` away. Both default providers are in upstream's "Verified" tier.
 `mistralai` 3.x depends on `opentelemetry-api`, which does nothing unless an
 SDK and exporter are installed; CI asserts they aren't. Never `[all]`, which
 pulls the `platform` extra's telemetry client.
@@ -285,7 +296,7 @@ model from the browser, and neither existing refusal fits). Locale keys, all 21 
 `pipeline.reasons.anyllm_not_installed`, `pipeline.reasons.no_anyllm_model`,
 `pipeline.reasons.no_anyllm_key`, `pipeline.actions.install_anyllm`,
 `pipeline.actions.configure_anyllm`, `configReference.settings.llm.anyllmModel`.
-Python 3.10 gets a structural reason, not "not installed". A reverse test pins
+A reverse test pins
 that every catalogue reason and action key resolves in `en` and in
 `_REASON_TEXT`.
 
@@ -364,9 +375,14 @@ a paid call. Fakes raise the way the real library does.
 10. **Install hint** forms per channel, and the 3.10 refusal.
 11. **Locale keys**: the reverse test (§7).
 
-**Against the real library:** `scripts/check-providers-live.py` gains the
-any-llm models (alive, exists, right shape, through the real `LLMClient`). Run
-before release and whenever the pin moves. Pence per run.
+**Against the real library:** `scripts/check-providers-live.py --anyllm
+provider:model` (repeatable; `--provider anyllm` for those alone) runs the
+preflight and the real stage templates through the real `LLMClient`. Opt-in,
+because any-llm ships no model of its own and each needs its provider's key.
+Run before release and whenever the pin moves. Pence per run, nothing through
+Ollama: on 23 Oct 2026 `--anyllm llamacpp:llama3.2:3b` with
+`LLAMACPP_API_BASE=http://localhost:11434/v1` passed preflight, clusters and
+themes.
 
 **CI job (free):** installs `.[any-llm]` at the pin, imports `any_llm` and the
 four providers' modules with sockets patched to fail (no import-time network),

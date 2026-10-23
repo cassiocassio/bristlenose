@@ -97,7 +97,8 @@
         "azureDeployment": "Implementación de Azure",
         "azureApiVersion": "Versión de API de Azure",
         "ollamaUrl": "URL de Ollama",
-        "ollamaModel": "Modelo de Ollama"
+        "ollamaModel": "Modelo de Ollama",
+        "anyllmModel": "Modelo de any-llm (provider:model)"
       },
       "transcription": {
         "backend": "Backend",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (requiere Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii] para activar el anonimizador integrado",
-        "enable_pii_redaction": "ejecuta con --redact-pii o configura pii_enabled=true"
+        "enable_pii_redaction": "ejecuta con --redact-pii o configura pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "ejecuta bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "no hay clave API de Claude",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 no instalado",
         "presidio_not_installed": "Anonimizador integrado no instalado",
         "spacy_model_missing": "modelo de lenguaje no instalado",
-        "pii_disabled": "La redacci\u00f3n de PII est\u00e1 desactivada"
+        "pii_disabled": "La redacci\u00f3n de PII est\u00e1 desactivada",
+        "anyllm_not_installed": "any-llm no instalado",
+        "no_anyllm_model": "no se ha configurado ningún modelo de any-llm",
+        "no_anyllm_key": "no hay clave de API para el modelo de any-llm"
       }
     }
 }

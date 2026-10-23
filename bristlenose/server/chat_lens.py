@@ -110,6 +110,13 @@ def has_usable_provider(settings: BristlenoseSettings) -> tuple[bool, str]:
     provider = settings.llm_provider
     if provider == "local":
         return True, ""
+    if provider == "anyllm":
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if ready.ready:
+            return True, ""
+        return False, " ".join(anyllm.explain(ready)[:1]) or "any-llm is not ready"
     key_by_provider = {
         "anthropic": settings.anthropic_api_key,
         "openai": settings.openai_api_key,

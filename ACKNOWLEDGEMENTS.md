@@ -45,6 +45,7 @@ Bristlenose is built with these open-source projects.
 - [OpenAI SDK](https://platform.openai.com/docs/) — ChatGPT integration
 - [Google GenAI SDK](https://ai.google.dev/) — Gemini integration
 - [Ollama](https://ollama.com/) — local model runner
+- [any-llm](https://github.com/mozilla-ai/any-llm) by Mozilla AI — Mistral, OpenRouter, DeepSeek and other providers, from the command line (`bristlenose[any-llm]`)
 
 ---
 

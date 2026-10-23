@@ -97,7 +97,8 @@
         "azureDeployment": "Déploiement Azure",
         "azureApiVersion": "Version d'API Azure",
         "ollamaUrl": "URL Ollama",
-        "ollamaModel": "Modèle Ollama"
+        "ollamaModel": "Modèle Ollama",
+        "anyllmModel": "Modèle any-llm (provider:model)"
       },
       "transcription": {
         "backend": "Backend",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (n\u00e9cessite Apple Silicon)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii] pour activer l'anonymiseur int\u00e9gr\u00e9",
-        "enable_pii_redaction": "lancez avec --redact-pii ou d\u00e9finissez pii_enabled=true"
+        "enable_pii_redaction": "lancez avec --redact-pii ou d\u00e9finissez pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "exécutez bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "aucune cl\u00e9 API Claude configur\u00e9e",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2 n'est pas install\u00e9",
         "presidio_not_installed": "Anonymiseur int\u00e9gr\u00e9 non install\u00e9",
         "spacy_model_missing": "mod\u00e8le de langue non install\u00e9",
-        "pii_disabled": "L'anonymisation PII est d\u00e9sactiv\u00e9e"
+        "pii_disabled": "L'anonymisation PII est d\u00e9sactiv\u00e9e",
+        "anyllm_not_installed": "any-llm n'est pas installé",
+        "no_anyllm_model": "aucun modèle any-llm configuré",
+        "no_anyllm_key": "aucune clé API pour le modèle any-llm"
       }
     }
 }

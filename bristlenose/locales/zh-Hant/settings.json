@@ -97,7 +97,8 @@
         "azureDeployment": "Azure 部署",
         "azureApiVersion": "Azure API 版本",
         "ollamaUrl": "Ollama URL",
-        "ollamaModel": "Ollama 模型"
+        "ollamaModel": "Ollama 模型",
+        "anyllmModel": "any-llm 模型（provider:model）"
       },
       "transcription": {
         "backend": "後端",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper（需要 Apple 晶片）",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "pip install bristlenose[redact-pii] 以啟用內建匿名工具",
-        "enable_pii_redaction": "以 --redact-pii 執行或設定 pii_enabled=true"
+        "enable_pii_redaction": "以 --redact-pii 執行或設定 pii_enabled=true",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "執行 bristlenose configure any-llm"
       },
       "reasons": {
         "no_anthropic_key": "未設定 Claude API 金鑰",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "未安裝 ctranslate2",
         "presidio_not_installed": "未安裝內建匿名工具",
         "spacy_model_missing": "未安裝語言模型",
-        "pii_disabled": "PII 遮蔽已關閉"
+        "pii_disabled": "PII 遮蔽已關閉",
+        "anyllm_not_installed": "未安裝 any-llm",
+        "no_anyllm_model": "未設定 any-llm 模型",
+        "no_anyllm_key": "沒有 any-llm 模型的 API 金鑰"
       }
     }
 }

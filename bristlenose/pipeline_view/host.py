@@ -112,7 +112,25 @@ def _probe_keys_present(settings: BristlenoseSettings) -> dict[str, bool]:
         "openai": bool(settings.openai_api_key),
         "azure": bool(settings.azure_api_key),
         "google": bool(settings.google_api_key),
+        "anyllm": _anyllm_key_present(settings),
     }
+
+
+def _anyllm_key_present(settings: BristlenoseSettings) -> bool:
+    """A key for the inner provider of ``anyllm_model`` (environment or stored).
+
+    Asks any-llm only when it is installed and a model is named, so a host
+    without the extra never imports it.
+    """
+    if not settings.anyllm_model:
+        return False
+    from bristlenose.llm import anyllm
+
+    if anyllm.install_state() is not None:
+        return False
+    # readiness, not a variable lookup: some providers need no key at all
+    # (llama.cpp's class names its variable "None").
+    return anyllm.readiness(settings).ready
 
 
 def _detect_os_version() -> str | None:

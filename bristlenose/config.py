@@ -120,7 +120,7 @@ class BristlenoseSettings(BaseSettings):
     project_name: str = "User Research"
 
     # LLM
-    llm_provider: str = "anthropic"  # "anthropic", "openai", "azure", "google", or "local"
+    llm_provider: str = "anthropic"  # "anthropic", "openai", "azure", "google", "local", "anyllm"
     # API keys accept both the BRISTLENOSE_-prefixed name and the plain,
     # industry-standard name every other tool uses (ANTHROPIC_API_KEY, …). The
     # prefixed form wins when both are set (first alias wins in pydantic-settings).
@@ -171,6 +171,12 @@ class BristlenoseSettings(BaseSettings):
     # interim model pickers: fix, don't grow (docs/design-pluggable-llm-routing.md §Interim model pickers).
     local_url: str = "http://localhost:11434/v1"
     local_model: str = "llama3.2:3b"
+
+    # any-llm: the model as provider:model (mistral:mistral-large-latest). No
+    # default — like Azure's deployment, the user names it. The key is the
+    # inner provider's own (MISTRAL_API_KEY, or the one `configure any-llm`
+    # stored), so there is no key field here. bristlenose/llm/anyllm.py.
+    anyllm_model: str = ""
 
     # Whisper
     whisper_backend: str = "auto"  # "auto", "mlx", "faster-whisper"
@@ -565,6 +571,21 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
 
     settings = BristlenoseSettings(**overrides)  # type: ignore[arg-type]
 
+    # The same aliases from the environment or a .env file (BRISTLENOSE_LLM_PROVIDER
+    # =any-llm, =ollama): until 23 Oct 2026 only --llm was normalised, and an
+    # alias anywhere else reached LLMClient raw and failed "Unsupported".
+    canonical = get_provider_aliases().get(
+        settings.llm_provider.lower(), settings.llm_provider.lower()
+    )
+    if canonical != settings.llm_provider:
+        trace.append(
+            "llm_resolve | step=1b-alias | "
+            "event=alias-normalise [config.py:load_settings] | "
+            f"provider {settings.llm_provider!r} -> {canonical!r} | "
+            "source=env-or-dotenv (get_provider_aliases)"
+        )
+        settings = settings.model_copy(update={"llm_provider": canonical})
+
     def _src(field: str, raw_env: str | None) -> str:
         if field in overrides:
             return "cli-override"
@@ -616,6 +637,16 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
         )
 
     before_model = settings.llm_model
+    settings = _adopt_named_model(settings, overrides, raw_env_model)
+    if settings.llm_model != before_model:
+        trace.append(
+            "llm_resolve | step=3-named-model | "
+            "event=_adopt_named_model [config.py] | "
+            f"model {before_model!r} -> {settings.llm_model!r} | "
+            f"cause={settings.llm_provider}-names-its-own-model"
+        )
+
+    before_model = settings.llm_model
     settings = _guard_orphan_desktop_model(settings, overrides)
     if settings.llm_model != before_model:
         trace.append(
@@ -632,6 +663,7 @@ def load_settings(**overrides: object) -> BristlenoseSettings:
         "azure": settings.azure_api_key,
         "google": settings.google_api_key,
         "local": "",
+        "anyllm": "",  # the inner provider's key; see llm/anyllm.readiness
     }.get(settings.llm_provider, "")
     trace.append(
         "llm_resolve | step=4-final | event=load_settings() return [config.py] | "
@@ -699,6 +731,44 @@ def _fill_provider_default_model(
     default = spec.default_model if spec else ""
     if default and default != settings.llm_model:
         settings = settings.model_copy(update={"llm_model": default})
+    return settings
+
+
+def _adopt_named_model(
+    settings: BristlenoseSettings,
+    overrides: dict[str, object],
+    raw_env_model: str | None,
+) -> BristlenoseSettings:
+    """Show the model that actually runs, for providers that name their own.
+
+    any-llm and Azure keep their model in a field of their own
+    (``anyllm_model``, ``azure_deployment``), and execution reads that field.
+    Everything that *reports* a model — the cost estimate, the run summary,
+    ``llm_request`` log lines, the manifest, AutoCode's job record — reads
+    ``llm_model``, which stayed at Claude's default: an Azure run printed
+    "Estimated LLM cost: ~$0.42 (claude-sonnet-4-6)" (verified 23 Oct 2026).
+    Copy the named model across so they report what runs.
+
+    - **any-llm**: always, when ``anyllm_model`` is set. It is the provider's
+      own field and the more specific one; a ``BRISTLENOSE_LLM_MODEL`` left
+      over from a Claude setup must not be shown for a Mistral run.
+    - **Azure**: CLI only and value-gated, like
+      ``_fill_provider_default_model`` — desktop Azure runs keep today's
+      behaviour, and an explicit ``BRISTLENOSE_LLM_MODEL`` still wins.
+    """
+    if settings.llm_provider == "anyllm":
+        if settings.anyllm_model and settings.anyllm_model != settings.llm_model:
+            settings = settings.model_copy(update={"llm_model": settings.anyllm_model})
+        return settings
+    if settings.llm_provider == "azure":
+        if hosted_by_desktop():
+            return settings
+        if "llm_model" in overrides or raw_env_model is not None:
+            return settings
+        if settings.llm_model != BristlenoseSettings.model_fields["llm_model"].default:
+            return settings
+        if settings.azure_deployment:
+            settings = settings.model_copy(update={"llm_model": settings.azure_deployment})
     return settings
 
 

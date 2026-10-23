@@ -97,7 +97,8 @@
         "azureDeployment": "Azure 배포",
         "azureApiVersion": "Azure API 버전",
         "ollamaUrl": "Ollama URL",
-        "ollamaModel": "Ollama 모델"
+        "ollamaModel": "Ollama 모델",
+        "anyllmModel": "any-llm 모델 (provider:model)"
       },
       "transcription": {
         "backend": "백엔드",
@@ -236,7 +237,9 @@
         "install_mlx_whisper": "pip install mlx-whisper (Apple Silicon \ud544\uc694)",
         "install_ctranslate2": "pip install ctranslate2",
         "install_presidio": "\ub0b4\uc7a5 \uc775\uba85\ud654 \ub3c4\uad6c\ub97c \uc0ac\uc6a9\ud558\ub824\uba74 pip install bristlenose[redact-pii]",
-        "enable_pii_redaction": "--redact-pii\ub85c \uc2e4\ud589\ud558\uac70\ub098 pii_enabled=true\ub85c \uc124\uc815\ud558\uc138\uc694"
+        "enable_pii_redaction": "--redact-pii\ub85c \uc2e4\ud589\ud558\uac70\ub098 pii_enabled=true\ub85c \uc124\uc815\ud558\uc138\uc694",
+        "install_anyllm": "pip install 'bristlenose[any-llm]'",
+        "configure_anyllm": "bristlenose configure any-llm을 실행하세요"
       },
       "reasons": {
         "no_anthropic_key": "Claude API \ud0a4\uac00 \uc124\uc815\ub418\uc9c0 \uc54a\uc74c",
@@ -253,7 +256,10 @@
         "ctranslate2_not_installed": "ctranslate2\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
         "presidio_not_installed": "\uae30\ubcf8 \uc775\uba85\ud654 \ub3c4\uad6c\uac00 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
         "spacy_model_missing": "\uc5b8\uc5b4 \ubaa8\ub378\uc774 \uc124\uce58\ub418\uc9c0 \uc54a\uc74c",
-        "pii_disabled": "PII \ud3b8\uc9d1\uc774 \uaebc\uc838 \uc788\uc74c"
+        "pii_disabled": "PII \ud3b8\uc9d1\uc774 \uaebc\uc838 \uc788\uc74c",
+        "anyllm_not_installed": "any-llm이 설치되지 않음",
+        "no_anyllm_model": "any-llm 모델이 설정되지 않음",
+        "no_anyllm_key": "any-llm 모델의 API 키가 없음"
       }
     }
 }

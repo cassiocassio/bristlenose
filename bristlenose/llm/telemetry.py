@@ -337,16 +337,23 @@ def record_call(
 
     sid = session_id_override if session_id_override is not None else _session_id.get()
 
-    family, major = normalise_model(provider, response_model or request_model)
-
-    if cost_usd_actual_estimate is None:
-        cost_usd_actual_estimate = _actual_cost(
-            request_model, response_model, input_tokens, output_tokens,
-        )
-    if cost_usd_predicted is None:
-        cost_usd_predicted = _predicted_cost(
-            request_model, response_model, family, major, stg,
-        )
+    if provider == "anyllm":
+        # Through any-llm the request model (provider:model) is the key: the
+        # response model drops the inner provider, so Mistral and OpenRouter
+        # rows would share a cohort. And no cost: we hold no prices for the
+        # long tail, and an inner model that happens to match a row we do hold
+        # (`anthropic/…` via OpenRouter) would be priced as if bought direct.
+        family, major = normalise_model(provider, request_model)
+    else:
+        family, major = normalise_model(provider, response_model or request_model)
+        if cost_usd_actual_estimate is None:
+            cost_usd_actual_estimate = _actual_cost(
+                request_model, response_model, input_tokens, output_tokens,
+            )
+        if cost_usd_predicted is None:
+            cost_usd_predicted = _predicted_cost(
+                request_model, response_model, family, major, stg,
+            )
 
     event = LLMCallEvent(
         ts=datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace(

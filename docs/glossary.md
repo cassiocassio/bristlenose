@@ -79,6 +79,7 @@ Fixed taxonomy. Do not add new categories without research justification.
 | **Azure OpenAI** | Azure, Microsoft AI | `"azure"` | The full product name. Researchers using it know it's Azure-specific. |
 | **Gemini** | Google, Google AI | `"gemini"` | Product name. |
 | **Ollama** | Local, local models (as a proper noun) | `"ollama"` / `"local"` | "Ollama" when referring to the tool. "Local models" or "local (Ollama)" when describing the mode. |
+| **any-llm** | AnyLLM, Any-LLM, any_llm, anyllm (in prose) | `"anyllm"` | Mozilla AI's library, lowercase as its makers write it, also at the start of a sentence. Name it only where the thing meant is the library (the provider option, install, credit). An account, a key or a bill belongs to the provider behind it: "Mistral rejected the key", never "any-llm rejected the key". |
 
 ---
 

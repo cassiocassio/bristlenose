@@ -454,6 +454,7 @@ _CANONICAL_TO_CLI = {
     "google": "gemini",
     "azure": "azure",
     "local": "local",
+    "anyllm": "any-llm",
 }
 
 
@@ -499,6 +500,11 @@ def _print_provider_guidance() -> None:
     console.print()
     console.print(
         "For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]",
+        highlight=False,
+    )
+    console.print(
+        "For Mistral, OpenRouter and others:  "
+        "[bold cyan]bristlenose configure any-llm[/bold cyan]",
         highlight=False,
     )
     console.print()
@@ -702,7 +708,7 @@ def _maybe_guide_provider_setup(settings: object) -> None:
             raise typer.Exit(0)
         _say(MessageKind.ERROR, "No AI provider configured.")
         console.print(
-            "Run bristlenose configure <claude|chatgpt|gemini|azure|local>, "
+            "Run bristlenose configure <claude|chatgpt|gemini|azure|local|any-llm>, "
             "or set BRISTLENOSE_LLM_PROVIDER and its key.",
         )
         raise typer.Exit(2)
@@ -729,9 +735,19 @@ def _maybe_guide_provider_setup(settings: object) -> None:
     canonical = aliases.get(res.provider, res.provider)
     if canonical == "local":
         return  # Ollama has no key; its own preflight covers readiness
+    if canonical == "anyllm":
+        # Model, add-on and key are any-llm's to check, offline; a run that
+        # can't send a call stops here, never prompts (docs/design-any-llm.md).
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if not ready.ready:
+            _say_anyllm_problem(ready)
+            raise typer.Exit(2)
+        return
     if canonical not in PROVIDERS:
         _say(MessageKind.ERROR, f"Unknown AI provider: {res.provider}")
-        console.print("Valid choices: claude, chatgpt, gemini, azure, local")
+        console.print("Valid choices: claude, chatgpt, gemini, azure, local, any-llm")
         raise typer.Exit(2)
     key_field = _CLOUD_KEY_FIELDS.get(canonical)
     if key_field and not getattr(settings, key_field):
@@ -743,6 +759,26 @@ def _maybe_guide_provider_setup(settings: object) -> None:
         )
         console.print(f"  Run:  [bold]bristlenose configure {cli_name}[/bold]")
         raise typer.Exit(2)
+
+
+def _say_anyllm_problem(ready: object) -> None:
+    """Print why any-llm can't run: an error line, then the fix, plain text.
+
+    The lines come from ``anyllm.explain`` (one wording everywhere) and carry
+    install commands with brackets and model strings with colons, so markup and
+    the highlighter are both off: Rich reads ``[any-llm]`` as a style tag and
+    ``anthropic:claude`` as an IPv6 address.
+    """
+    from bristlenose.llm import anyllm
+
+    assert isinstance(ready, anyllm.Readiness)
+    lines = anyllm.explain(ready)
+    if not lines:
+        return
+    console.print(f"{cli_prefix(MessageKind.ERROR)} ", end="")
+    console.print(lines[0], markup=False, highlight=False)
+    for line in lines[1:]:
+        console.print(f"  {line}", markup=False, highlight=False)
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +805,15 @@ def _print_header(settings: BristlenoseSettings, *, show_provider: bool = True, 
         hw = detect_hardware()
         parts.append(hw.label)
     console.print(f"\nBristlenose [dim]{' · '.join(parts)}[/dim]\n")
+    if show_provider and settings.llm_provider == "anyllm" and settings.anyllm_model:
+        from bristlenose.llm import anyllm
+
+        split = anyllm.split_model(settings.anyllm_model)
+        where = anyllm.destination(split[0]) if split else ""
+        console.print(
+            f"Analysis: {settings.anyllm_model} via any-llm → {where}",
+            style="dim", markup=False, highlight=False,
+        )
 
 
 def _named_participant_summary(people: object, n_participants: int) -> str:
@@ -947,6 +992,15 @@ def _print_pipeline_failure(
         if provider_key and provider_key in PROVIDERS
         else "the API"
     )
+    configure_hint = "bristlenose configure"
+    if provider_key == "anyllm":
+        # The account is the inner provider's (Mistral, OpenRouter), never the
+        # library's: "Your any-llm account ran out of credit" names nothing the
+        # researcher signed up for.
+        from bristlenose.llm import anyllm
+
+        provider_display = anyllm.account_name(settings) or "the API"
+        configure_hint = "bristlenose configure any-llm"
 
     console.print()
     if category == CauseCategoryEnum.OUT_OF_CREDIT:
@@ -973,7 +1027,7 @@ def _print_pipeline_failure(
         suffix = _active_api_key_suffix(settings, provider_key)
         suffix_part = f" (…{suffix})" if suffix else ""
         _say(MessageKind.ERROR, f"{provider_display} rejected your API key{suffix_part}.")
-        console.print("  Run  [bold]bristlenose configure[/bold]  to set a new key.")
+        console.print(f"  Run  [bold]{configure_hint}[/bold]  to set a new key.")
     elif category == CauseCategoryEnum.DISK:
         _say(MessageKind.ERROR, "Ran out of disk space.")
         if message:
@@ -1004,6 +1058,14 @@ def _active_api_key_suffix(settings: object, provider: str | None) -> str:
     """
     if not provider:
         return ""
+    if provider == "anyllm":
+        from bristlenose.config import BristlenoseSettings
+        from bristlenose.llm import anyllm
+
+        if not isinstance(settings, BristlenoseSettings):
+            return ""
+        key = anyllm.active_key(settings)
+        return key[-3:] if len(key) >= 3 else ""
     field_map = {
         "anthropic": "anthropic_api_key",
         "openai": "openai_api_key",
@@ -1154,7 +1216,9 @@ def run(
     ] = None,
     llm_provider: Annotated[
         str | None,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
+        typer.Option(
+            "--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local, any-llm."
+        ),
     ] = None,
     codebook: Annotated[
         str | None,
@@ -1783,7 +1847,9 @@ def analyze(
     ] = None,
     llm_provider: Annotated[
         str | None,
-        typer.Option("--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local."),
+        typer.Option(
+            "--llm", "-l", help="LLM provider: claude, chatgpt, azure, gemini, local, any-llm."
+        ),
     ] = None,
     codebook: Annotated[
         str | None,
@@ -2592,7 +2658,10 @@ def use(
     provider: Annotated[
         str,
         typer.Argument(
-            help="Provider to use for analysis: claude, chatgpt, gemini, azure, or local."
+            help=(
+                "Provider to use for analysis: claude, chatgpt, gemini, azure, local, "
+                "any-llm, or an any-llm model as provider:model."
+            )
         ),
     ],
 ) -> None:
@@ -2607,11 +2676,27 @@ def use(
 
     aliases = get_provider_aliases()
     name = provider.lower()
+    if ":" in name:
+        # `bristlenose use mistral:mistral-large-latest` — an any-llm model.
+        _use_anyllm_model(provider.strip())
+        return
     canonical = aliases.get(name, name)
     if canonical not in PROVIDERS:
         _say(MessageKind.ERROR, f"Unknown provider: {provider}")
-        console.print("Available: claude, chatgpt, gemini, azure, local")
+        console.print("Available: claude, chatgpt, gemini, azure, local, any-llm")
         raise typer.Exit(1)
+
+    if canonical == "anyllm":
+        settings = load_settings()
+        _set_current_provider("anyllm")
+        if settings.anyllm_model:
+            console.print(f"Model: {settings.anyllm_model}", markup=False, highlight=False)
+        else:
+            console.print(
+                "Choose a model:  [bold]bristlenose configure any-llm[/bold]  "
+                "or  [bold]bristlenose use provider:model[/bold]"
+            )
+        return
 
     if canonical == "local":
         _set_current_provider("local")
@@ -2633,12 +2718,165 @@ def use(
     _set_current_provider(canonical)
 
 
+def _use_anyllm_model(model: str) -> None:
+    """``bristlenose use mistral:mistral-large-latest``: switch to an any-llm model.
+
+    Like ``use claude``: no network call, nothing asked. The key must already be
+    there (the provider's environment variable, or stored by
+    ``configure any-llm``); if it isn't, say so and change nothing.
+    """
+    from rich.markup import escape
+
+    from bristlenose.config import BristlenoseSettings
+    from bristlenose.credentials import read_user_config_var, write_user_config_var
+    from bristlenose.llm import anyllm
+
+    ready = anyllm.readiness(BristlenoseSettings(anyllm_model=model))
+    if not ready.ready:
+        _say_anyllm_problem(ready)
+        raise typer.Exit(1)
+    previous = read_user_config_var("BRISTLENOSE_ANYLLM_MODEL")
+    write_user_config_var("BRISTLENOSE_ANYLLM_MODEL", model)
+    _set_current_provider("anyllm")
+    was = f" (was {previous})" if previous and previous != model else ""
+    console.print(f"Model: {model}{was}", markup=False, highlight=False)
+    env_model = os.environ.get("BRISTLENOSE_ANYLLM_MODEL")
+    if env_model and env_model != model:
+        _say(
+            MessageKind.WARNING,
+            f"BRISTLENOSE_ANYLLM_MODEL={escape(env_model)} is set in your environment "
+            "and overrides this choice — unset it to make this stick.",
+        )
+
+
+def _configure_anyllm(key: str | None) -> None:
+    """``bristlenose configure any-llm`` (docs/design-any-llm.md §5.2).
+
+    Asks for the model, finds or asks for that provider's key, checks it with
+    the run's own preflight request, stores a typed key per inner provider, and
+    makes any-llm the current provider. Every refusal comes from
+    ``anyllm.readiness`` / ``explain``, so it reads the same here as at run time.
+    """
+    from rich.markup import escape
+
+    from bristlenose.credentials import (
+        EnvCredentialStore,
+        FileCredentialStore,
+        get_credential_store,
+        get_credential_store_label,
+        read_user_config_var,
+        set_verified,
+        write_user_config_var,
+    )
+    from bristlenose.llm import anyllm
+    from bristlenose.preflight.api_key import _validate_anyllm
+    from bristlenose.providers import credential_service_name
+
+    state = anyllm.install_state()
+    if state is not None:
+        _say_anyllm_problem(
+            anyllm.Readiness("not-installed" if state == "not-installed" else "broken",
+                             detail=state)
+        )
+        raise typer.Exit(1)
+
+    console.print()
+    env_model = os.environ.get("BRISTLENOSE_ANYLLM_MODEL", "").strip()
+    if env_model:
+        model = env_model
+        console.print(
+            f"Model: {model}  (from BRISTLENOSE_ANYLLM_MODEL)", markup=False, highlight=False
+        )
+    else:
+        console.print(
+            "Which model? Write it as provider:model, e.g. mistral:mistral-large-latest",
+            markup=False, highlight=False,
+        )
+        current = read_user_config_var("BRISTLENOSE_ANYLLM_MODEL") or ""
+        model = typer.prompt("Model", default=current or None, show_default=bool(current)).strip()
+
+    ready = anyllm.readiness_for_model(model, api_key=key.strip() if key else None)
+    if ready.status == "no-key":
+        entered = typer.prompt(
+            f"Enter your {anyllm.display_name(ready.inner)} API key", hide_input=True
+        ).strip()
+        if not entered:
+            _say(MessageKind.ERROR, "No key entered")
+            raise typer.Exit(1)
+        key = entered
+        ready = anyllm.readiness_for_model(model, api_key=key)
+    if not ready.ready:
+        _say_anyllm_problem(ready)
+        raise typer.Exit(1)
+
+    name = anyllm.display_name(ready.inner)
+    if ready.key_source == "environment":
+        console.print(f"Using the {name} key from your environment.")
+    elif ready.key_source not in ("", "given"):
+        console.print(f"Using the stored {name} key ({ready.key_source}).")
+
+    console.print(f"Checking with {name} (~$0.0001, no transcript content)...", end=" ")
+    result = _validate_anyllm(ready.api_key or "", model)
+    if result.ok:
+        _say(MessageKind.SUCCESS, "Valid")
+    elif result.error_class == "network":
+        _say(MessageKind.WARNING, f"Couldn't reach {name} to check: {escape(result.raw_message)}")
+        console.print("Saving anyway...")
+    else:
+        from bristlenose.llm.billing_hints import recovery_message
+
+        _say(
+            MessageKind.ERROR,
+            f"Not valid — {recovery_message('anyllm', result.error_class or '', raw_message=result.raw_message)}",
+        )
+        raise typer.Exit(1)
+
+    if ready.key_source == "given" and ready.api_key:
+        store = get_credential_store()
+        cred_key = anyllm.credential_key(ready.inner)
+        try:
+            persisted = set_verified(store, cred_key, ready.api_key)
+        except NotImplementedError:
+            persisted = False
+        if not persisted:
+            _say(
+                MessageKind.ERROR,
+                f"Not saved — the key did not read back from {get_credential_store_label()}.",
+            )
+            raise typer.Exit(1)
+        if isinstance(store, FileCredentialStore):
+            _say(MessageKind.SUCCESS, f"Saved to {escape(_display_config_path(store.path))}")
+        elif not isinstance(store, EnvCredentialStore):
+            _say(
+                MessageKind.SUCCESS,
+                f'Stored in {get_credential_store_label()} as "{credential_service_name(cred_key)}"',
+            )
+
+    where = anyllm.destination(ready.inner)
+    if ready.inner in anyllm.GATEWAYS:
+        console.print(
+            f"Transcripts will go to {where}, which passes them to the model's host. "
+            "Check their data policy for the model you picked.",
+            style="dim", markup=False, highlight=False,
+        )
+    else:
+        console.print(
+            f"Transcripts will go to {where}, through any-llm {anyllm.installed_version()}.",
+            style="dim", markup=False, highlight=False,
+        )
+
+    write_user_config_var("BRISTLENOSE_ANYLLM_MODEL", model)
+    console.print()
+    _set_current_provider("anyllm")
+    console.print("Run it with:  [bold]bristlenose run <folder>[/bold]", highlight=False)
+
+
 @app.command()
 def configure(
     provider: Annotated[
         str,
         typer.Argument(
-            help="Provider to configure: claude, chatgpt, gemini, azure, local, or miro."
+            help="Provider to configure: claude, chatgpt, gemini, azure, local, any-llm, or miro."
         ),
     ],
     key: Annotated[
@@ -2677,7 +2915,7 @@ def configure(
     canonical = provider_map.get(provider)
     if canonical is None:
         _say(MessageKind.ERROR, f"Unknown provider: {provider}")
-        console.print("Available: claude, chatgpt, gemini, azure, local, miro")
+        console.print("Available: claude, chatgpt, gemini, azure, local, any-llm, miro")
         raise typer.Exit(1)
 
     # Local (Ollama) has no key to store — set up the runtime instead, so the
@@ -2687,6 +2925,12 @@ def configure(
             raise typer.Exit(1)
         _set_current_provider("local")
         console.print("Run it with:  [bold]bristlenose run <folder>[/bold]")
+        return
+
+    # any-llm: the key belongs to the inner provider the model names, so the
+    # model comes first (docs/design-any-llm.md §5.2).
+    if canonical == "anyllm":
+        _configure_anyllm(key)
         return
 
     display_name = PROVIDERS[canonical].display_name if canonical in PROVIDERS else "Miro"

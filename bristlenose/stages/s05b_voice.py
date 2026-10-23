@@ -32,7 +32,6 @@ import time
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -133,21 +132,16 @@ def voice_install_hint() -> str:
 
     kaldi-native-fbank, which the voice front end needs, publishes no Windows
     wheel for Python 3.14 (checked 5 Oct 2026), so on that pairing every
-    install command fails; the hint says so instead of offering one. Under
-    pipx or uv, ``pip install`` would reach the wrong environment; their tool
-    venvs are recognised by directory on every platform.
+    install command fails; the hint says so instead of offering one. The
+    command itself names this install's channel (``utils/install_channel.py``).
     """
     import sys
 
+    from bristlenose.utils.install_channel import add_extra_command
+
     if sys.platform == "win32" and sys.version_info >= (3, 14):
         return "not available on Windows with Python 3.14 yet; Python 3.13 or earlier has it"
-    parts = Path(sys.prefix).parts
-    if "pipx" in parts:
-        return 'pipx install --force "bristlenose[voice]"'
-    # uv tool venvs: ~/.local/share/uv/tools/<name>, or under %APPDATA% on Windows.
-    if any(a == "uv" and b == "tools" for a, b in pairwise(parts)):
-        return 'uv tool install --force "bristlenose[voice]"'
-    return 'pip install "bristlenose[voice]"'
+    return add_extra_command("voice")
 
 
 def voice_runtime_available() -> bool:

@@ -609,11 +609,72 @@ def check_api_key(settings: BristlenoseSettings) -> CheckResult:
         # Local provider doesn't need an API key, but needs Ollama running
         return check_local_provider(settings)
 
+    if provider == "anyllm":
+        return check_anyllm_key(settings)
+
     return CheckResult(
         status=CheckStatus.FAIL,
         label="API key",
         detail=f"Unknown LLM provider: {provider}",
         fix_key="api_key_missing_anthropic",
+    )
+
+
+def check_anyllm_key(settings: BristlenoseSettings) -> CheckResult:
+    """The API key row for a provider reached through any-llm.
+
+    Offline: ``anyllm.readiness`` checks the model, the add-on and that a key is
+    there. Whether the provider accepts it is the run's preflight's question,
+    which sends the run's own request (docs/design-any-llm.md §5.3a).
+    """
+    from bristlenose.llm import anyllm
+
+    ready = anyllm.readiness(settings)
+    if not ready.ready:
+        lines = anyllm.explain(ready)
+        return CheckResult(
+            status=CheckStatus.FAIL,
+            label="API key",
+            detail=lines[0] if lines else f"any-llm: {ready.status}",
+            fix_key="anyllm_not_ready",
+        )
+    key = anyllm.active_key(settings)
+    masked = f"…{key[-3:]}" if len(key) >= 3 else "set"
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="API key",
+        detail=f"{anyllm.display_name(ready.inner)} ({masked}) ({ready.key_source or 'environment'})",
+    )
+
+
+def check_anyllm() -> CheckResult:
+    """The any-llm row: installed or not, its version, and what it can reach.
+
+    Credit as much as check: it names the library every run through it uses.
+    """
+    from bristlenose.llm import anyllm
+
+    state = anyllm.install_state()
+    if state == "not-installed":
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="any-llm",
+            detail=f"optional, not installed: {anyllm.install_hint()}",
+        )
+    if state is not None:
+        return CheckResult(
+            status=CheckStatus.FAIL, label="any-llm",
+            detail=f"installed but won't load: {state}",
+        )
+    import importlib.util
+
+    reachable = ["openrouter", "deepseek"]  # ride on the openai SDK we ship
+    if importlib.util.find_spec("mistralai") is not None:
+        reachable.insert(0, "mistral")
+    return CheckResult(
+        status=CheckStatus.OK,
+        label="any-llm",
+        detail=f"{anyllm.installed_version()} · {', '.join(reachable)}",
     )
 
 
@@ -666,6 +727,14 @@ def check_network(settings: BristlenoseSettings) -> CheckResult:
             status=CheckStatus.SKIP,
             label="Network",
             detail="local provider (no cloud API needed)",
+        )
+    # any-llm's providers don't all name a host to probe (Mistral's class has
+    # none in 1.27); the run's preflight sends a real request instead.
+    if provider == "anyllm":
+        return CheckResult(
+            status=CheckStatus.SKIP,
+            label="Network",
+            detail="checked by the run's preflight",
         )
 
     if provider == "anthropic":
@@ -1784,6 +1853,7 @@ def run_all(settings: BristlenoseSettings) -> DoctorReport:
         check_network(settings),
         check_pii(settings),
         check_voice(settings),
+        check_anyllm(),
         check_disk_space(settings),
         check_serve_deps(),
         check_auth_token_env(),

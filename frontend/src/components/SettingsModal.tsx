@@ -133,7 +133,7 @@ const CONFIG_DATA: SettingCategory[] = [
     id: "llm",
     labelKey: "configReference.categories.llm",
     settings: [
-      { labelKey: "configReference.settings.llm.provider", envVar: "BRISTLENOSE_LLM_PROVIDER", default: "anthropic", file: ".env", filePath: "bristlenose/config.py", options: ["anthropic", "openai", "azure", "google", "local"] },
+      { labelKey: "configReference.settings.llm.provider", envVar: "BRISTLENOSE_LLM_PROVIDER", default: "anthropic", file: ".env", filePath: "bristlenose/config.py", options: ["anthropic", "openai", "azure", "google", "local", "anyllm"] },
       { labelKey: "configReference.settings.llm.model", envVar: "BRISTLENOSE_LLM_MODEL", default: "claude-sonnet-4-6", file: ".env", filePath: "bristlenose/config.py" },
       { labelKey: "configReference.settings.llm.temperature", envVar: "BRISTLENOSE_LLM_TEMPERATURE", default: "0.1", file: ".env", filePath: "bristlenose/config.py", options: ["0.0\u20131.0"] },
       { labelKey: "configReference.settings.llm.maxTokens", envVar: "BRISTLENOSE_LLM_MAX_TOKENS", default: "32768", file: ".env", filePath: "bristlenose/config.py" },
@@ -147,6 +147,7 @@ const CONFIG_DATA: SettingCategory[] = [
       { labelKey: "configReference.settings.llm.azureApiVersion", envVar: "BRISTLENOSE_AZURE_API_VERSION", default: "2024-10-21", file: ".env", filePath: "bristlenose/config.py" },
       { labelKey: "configReference.settings.llm.ollamaUrl", envVar: "BRISTLENOSE_LOCAL_URL", default: "http://localhost:11434/v1", file: ".env", filePath: "bristlenose/config.py" },
       { labelKey: "configReference.settings.llm.ollamaModel", envVar: "BRISTLENOSE_LOCAL_MODEL", default: "llama3.2:3b", file: ".env", filePath: "bristlenose/config.py" },
+      { labelKey: "configReference.settings.llm.anyllmModel", envVar: "BRISTLENOSE_ANYLLM_MODEL", default: "(not set)", file: ".env", filePath: "bristlenose/config.py" },
     ],
   },
   {

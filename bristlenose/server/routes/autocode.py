@@ -171,6 +171,12 @@ def _has_api_key(settings: object) -> bool:
         return bool(getattr(settings, "azure_api_key", ""))
     if provider == "google":
         return bool(getattr(settings, "google_api_key", ""))
+    if provider == "anyllm":
+        # The inner provider's key, the model and the add-on: any-llm's
+        # readiness answers all three, offline (docs/design-any-llm.md).
+        from bristlenose.llm import anyllm
+
+        return anyllm.readiness(settings).ready  # type: ignore[arg-type]
     return False
 
 

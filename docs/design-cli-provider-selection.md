@@ -59,6 +59,15 @@ Resolved on every `load_settings()` (first match wins):
 (`--llm local`, env, `use local`, `configure local`), because "no cloud key"
 must surface the choice between *get a key* and *go local*.
 
+`anyllm` (any-llm, since 23 Oct 2026, `docs/design-any-llm.md`) is never
+derived either: a `MISTRAL_API_KEY` in the shell says nothing about wanting
+Bristlenose to use it. It is chosen with `--llm any-llm`, the env var,
+`configure any-llm`, or `use <provider>:<model>` — `use` accepts a model string
+as well as a provider name, writing `BRISTLENOSE_ANYLLM_MODEL` beside the
+provider line, so switching between stored any-llm models is the same
+no-network, nothing-asked act as `use claude`. Provider aliases from the
+environment or a `.env` file are normalised too (until then only `--llm` was).
+
 **Storage.** The current provider is a plain `BRISTLENOSE_LLM_PROVIDER=` line
 upserted into the same user-level `.env` that `configure` already uses as its
 no-keyring key fallback (`bristlenose/credentials.py`:

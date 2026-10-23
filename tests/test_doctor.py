@@ -1305,7 +1305,7 @@ class TestCheckAuthTokenEnv:
 
 
 class TestRunAll:
-    def test_run_all_returns_ten_results(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_all_returns_every_check(self, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings()
         # check_auth_token_env reads os.environ directly; pin it OK for this test.
         monkeypatch.delenv("_BRISTLENOSE_AUTH_TOKEN", raising=False)
@@ -1322,14 +1322,15 @@ class TestRunAll:
             # real `brew` on CI's macOS runners.
             patch("bristlenose.doctor.check_brew_tap_trust") as m9,
             patch("bristlenose.doctor.check_voice") as m10,
+            patch("bristlenose.doctor.check_anyllm") as m11,
         ):
-            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10):
+            for m in (m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11):
                 m.return_value = CheckResult(status=CheckStatus.OK, label="test")
             report = run_all(settings)
 
-        # Eleven checks; Windows leaves out the Homebrew one, which has no
+        # Twelve checks; Windows leaves out the Homebrew one, which has no
         # meaning there.
-        assert len(report.results) == (10 if sys.platform == "win32" else 11)
+        assert len(report.results) == (11 if sys.platform == "win32" else 12)
         assert not report.has_failures
 
 

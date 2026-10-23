@@ -33,6 +33,7 @@ def test_keys_present_reflects_settings() -> None:
         "openai": False,
         "azure": False,
         "google": True,
+        "anyllm": False,  # no any-llm model named
     }
 
 

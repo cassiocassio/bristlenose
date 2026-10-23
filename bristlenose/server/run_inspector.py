@@ -37,6 +37,7 @@ PROVIDER_NAMES = {
     "gemini": "Gemini",
     "ollama": "Local",
     "local": "Local",
+    "anyllm": "any-llm",
 }
 
 # Pipeline stage id -> (display label, is_llm). Order matters for the gantt.

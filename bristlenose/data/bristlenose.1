@@ -157,7 +157,11 @@ Store API credentials securely in the system credential store (macOS Keychain
 or Linux Secret Service). Provider can be \fBclaude\fR (or \fBanthropic\fR),
 \fBchatgpt\fR (or \fBopenai\fR, \fBgpt\fR), \fBazure\fR (or
 \fBazure-openai\fR), \fBgemini\fR (or \fBgoogle\fR), \fBlocal\fR (or
-\fBollama\fR), or \fBmiro\fR.
+\fBollama\fR), \fBany-llm\fR, or \fBmiro\fR.
+\fBconfigure any-llm\fR asks for a model written \fIprovider\fR:\fImodel\fR
+(\fBmistral:mistral-large-latest\fR), uses that provider's key from the
+environment (\fBMISTRAL_API_KEY\fR) or asks for it and stores one per
+provider, and checks it with the same request a run sends.
 The key is validated with a test API call before storing (Azure validates
 via \fBbristlenose doctor\fR instead, since it also needs endpoint and
 deployment). Where no keyring is available \(em a headless server, for
@@ -169,7 +173,10 @@ the output, and reversible any time with \fBbristlenose use\fR.
 .TP
 .B use \fIprovider\fR
 Choose which AI provider runs the analysis: \fBclaude\fR, \fBchatgpt\fR,
-\fBgemini\fR, \fBazure\fR, or \fBlocal\fR. The choice persists in your
+\fBgemini\fR, \fBazure\fR, \fBlocal\fR, \fBany-llm\fR, or an any-llm model as
+\fIprovider\fR:\fImodel\fR (\fBbristlenose use mistral:mistral-large-latest\fR),
+whose key must already be stored or in the environment.
+The choice persists in your
 user-level config until you change it \(em keys stay stored, so switching
 never means re-entering one. \fB\-\-llm\fR and \fBBRISTLENOSE_LLM_PROVIDER\fR
 still override it per run.
@@ -236,14 +243,16 @@ which a fixed value cannot.
 .BR \-l ", " \-\-llm " " \fIPROVIDER\fR
 LLM provider: \fBclaude\fR (or \fBanthropic\fR), \fBchatgpt\fR (or \fBopenai\fR),
 \fBazure\fR (or \fBazure-openai\fR), \fBgemini\fR (or \fBgoogle\fR),
-\fBlocal\fR (or \fBollama\fR). If not given, the provider you last set with
+\fBlocal\fR (or \fBollama\fR), \fBany-llm\fR. If not given, the provider you last set with
 \fBconfigure\fR or \fBuse\fR is used; with a single configured provider, that
 one. With several keys and no choice recorded, bristlenose asks you to pick
 once (\fBbristlenose use\fR) rather than guessing.
 \fBazure\fR uses Azure OpenAI Service for
 enterprise environments. \fBlocal\fR runs the analysis through Ollama on your
 own hardware \(em no API key and no outbound call, but slower and it wants a
-capable machine.
+capable machine. \fBany-llm\fR reaches Mistral, OpenRouter, DeepSeek and the
+other providers of Mozilla AI's any-llm library; it needs the
+\fBbristlenose[any-llm]\fR install and \fBBRISTLENOSE_ANYLLM_MODEL\fR.
 .TP
 .BR \-\-codebook " " \fISLUG\fR
 Apply a codebook framework during analysis. Run \fBbristlenose codebooks\fR to
@@ -419,7 +428,7 @@ Azure OpenAI API version. Default: \fB2024-10-21\fR.
 .SS LLM settings
 .TP
 .B BRISTLENOSE_LLM_PROVIDER
-\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, \fBgoogle\fR, or \fBlocal\fR.
+\fBanthropic\fR, \fBopenai\fR, \fBazure\fR, \fBgoogle\fR, \fBlocal\fR, or \fBanyllm\fR.
 Overrides the current provider set with \fBbristlenose use\fR /
 \fBconfigure\fR; overridden in turn by \fB\-\-llm\fR.
 .TP
@@ -435,6 +444,13 @@ Sampling temperature. Default: \fB0.1\fR.
 .TP
 .B BRISTLENOSE_LLM_CONCURRENCY
 Parallel LLM calls. Default: \fB3\fR.
+.TP
+.B BRISTLENOSE_ANYLLM_MODEL
+The model for \fB\-\-llm any-llm\fR, written \fIprovider\fR:\fImodel\fR, such as
+\fBmistral:mistral-large-latest\fR or \fBopenrouter:\fR\fIid\fR. No default.
+The key is the provider's own (\fBMISTRAL_API_KEY\fR, \fBOPENROUTER_API_KEY\fR,
+\&...), or the one \fBbristlenose configure any-llm\fR stored. Costs are not
+estimated for these providers.
 .SS Local LLM settings (Ollama)
 When no API key is configured and you run bristlenose, it prints setup
 guidance \(em where to get a key for each cloud provider, and
@@ -632,6 +648,16 @@ Use local AI via Ollama (free, no API key):
 .nf
 bristlenose run interviews --llm local
 # Requires Ollama running: ollama serve
+.fi
+.RE
+.PP
+Use Mistral, or OpenRouter's models, through any-llm:
+.PP
+.RS
+.nf
+pipx install "bristlenose[any-llm]"
+bristlenose configure any-llm
+bristlenose use mistral:mistral-large-latest
 .fi
 .RE
 .PP

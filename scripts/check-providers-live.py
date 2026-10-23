@@ -145,8 +145,18 @@ async def run_preflight(
     Returns (verdict, detail, elapsed_ms); a FAIL detail carries ``preflight`` in
     the stage slot so the column contract below holds.
     """
-    api_key, _source = preflight._api_key_for(settings)
-    if not api_key:
+    if provider == "anyllm":
+        # The inner provider's key, from its own variable or the store; "" when
+        # any-llm finds it in the environment itself.
+        from bristlenose.llm import anyllm
+
+        ready = anyllm.readiness(settings)
+        if not ready.ready:
+            return ("FAIL", f"{'i.alive':<10} preflight {' '.join(anyllm.explain(ready))[:100]}", 0)
+        api_key = ready.api_key or ""
+    else:
+        api_key, _source = preflight._api_key_for(settings)
+    if not api_key and provider != "anyllm":
         return ("FAIL",
                 f"{'i.alive':<10} preflight no key configured for {provider} (keychain / env / .env)",
                 0)
@@ -170,7 +180,10 @@ async def check(provider: str, model: str, stage_keys: tuple[str, ...] = ()) -> 
     Column contract, relied on by check-release-ready.sh's awk: provider, model,
     verdict, question. Anything about WHICH stage goes after those four.
     """
-    settings = load_settings(llm_provider=provider, llm_model=model)
+    if provider == "anyllm":
+        settings = load_settings(llm_provider=provider, anyllm_model=model)
+    else:
+        settings = load_settings(llm_provider=provider, llm_model=model)
     verdict, detail, total_ms = await run_preflight(provider, model, settings)
     if verdict == "FAIL":
         return verdict, detail
@@ -202,13 +215,21 @@ async def check(provider: str, model: str, stage_keys: tuple[str, ...] = ()) -> 
 
 async def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--provider", choices=PROVIDER_ORDER, help="check one provider only")
+    ap.add_argument("--provider", choices=(*PROVIDER_ORDER, "anyllm"),
+                    help="check one provider only (anyllm: only the --anyllm models)")
+    ap.add_argument("--anyllm", action="append", default=[], metavar="PROVIDER:MODEL",
+                    help="also check an any-llm model; repeatable. Never in the default "
+                         "run: any-llm ships no model of its own, and each needs its "
+                         "provider's key")
     ap.add_argument("--stages", action="store_true",
                     help="all six pipeline stages, not just the two that broke (~4c/model)")
     ap.add_argument("--stage", action="append", choices=[st.key for st in STAGES],
                     help="one named stage; repeatable")
     args = ap.parse_args()
-    providers = [args.provider] if args.provider else list(PROVIDER_ORDER)
+    if args.provider == "anyllm":
+        providers = []
+    else:
+        providers = [args.provider] if args.provider else list(PROVIDER_ORDER)
     if args.stage:
         stage_keys = tuple(args.stage)
     elif args.stages:
@@ -223,6 +244,7 @@ async def main() -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"error: cannot enumerate {p}: {exc}", file=sys.stderr)
             return 2
+    plan += [("anyllm", m) for m in args.anyllm]
     if not plan:
         print("error: enumerated zero models — that is a tool failure, not a pass", file=sys.stderr)
         return 2

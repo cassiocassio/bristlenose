@@ -270,8 +270,10 @@ def plural_category(count: int, locale: str) -> str:
         if 2 <= mod10 <= 4 and not 12 <= mod100 <= 14:
             return "few"
         return "many"
-    if locale == "fr":
-        return "one" if n <= 1 else "other"  # French: 0 and 1 are both "one".
+    if locale in ("fr", "pt-BR"):
+        # French and Brazilian Portuguese: 0 and 1 are both "one" (CLDR `i = 0..1`).
+        # European Portuguese is not: pt-PT's one is 1 alone, the default below.
+        return "one" if n <= 1 else "other"
     if locale in ("ja", "ko", "zh-Hant", "zh-Hant-HK"):
         return "other"  # Single-form locales.
     return "one" if n == 1 else "other"  # en, es, de, and any unmapped locale.

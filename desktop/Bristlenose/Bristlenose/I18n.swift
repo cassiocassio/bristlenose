@@ -322,8 +322,10 @@ final class I18n: ObservableObject {
             if mod10 == 1 && mod100 != 11 { return "one" }
             if (2...4).contains(mod10) && !(12...14).contains(mod100) { return "few" }
             return "many"
-        case "fr":
-            // French: 0 and 1 are both "one".
+        case "fr", "pt-BR":
+            // French and Brazilian Portuguese: 0 and 1 are both "one" (CLDR
+            // `i = 0..1`). European Portuguese is not: pt-PT's one is 1 alone,
+            // the default below.
             return n <= 1 ? "one" : "other"
         case "ja", "ko", "zh-Hant", "zh-Hant-HK":
             // Single-form locales — always "other".

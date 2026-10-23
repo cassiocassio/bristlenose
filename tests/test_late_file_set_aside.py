@@ -643,6 +643,349 @@ def test_a_set_aside_video_is_not_what_the_session_shows(tmp_path: Path, monkeyp
     assert read == [], "no video to colour, so its turns are never read"
 
 
+# ── When the run cannot tell: every file is read, and the run says so ───────
+#
+# Fable review of 745c346c5 (finding 1): a session whose record cannot say which
+# files it was analysed from — written 12–15 Oct 2026 in the metadata form, or a
+# manifest with no per-session quote records — reads every file, a late one
+# included, and said so only in the log. The read is kept; the terminal now names
+# the session, on its own warning line. Never on the run summary as a failure:
+# nothing was left out (a second review: the Mac counted such a row as a failure
+# and the run read "Partial completion"). Said only where a file could have
+# joined (more than one file) and only where the transcription cache in fact
+# reads the session again, decided where the cache decides.
+
+
+def _rewrite_manifest(rig: Rig, edit) -> None:
+    from bristlenose.manifest import load_manifest, write_manifest
+
+    m = load_manifest(rig.out)
+    assert m is not None
+    edit(m)
+    write_manifest(m, rig.out)
+
+
+def _input_session(rig: Rig, sid: str, *names: str):
+    from bristlenose.models import InputFile
+    from bristlenose.stages.s01_ingest import classify_file
+
+    files = [InputFile(path=rig.folder / n, file_type=classify_file(rig.folder / n),
+                       created_at=_session("s1").session_date,
+                       size_bytes=(rig.folder / n).stat().st_size) for n in names]
+    s = _session("s1", *files)
+    s.session_id = sid
+    return s
+
+
+def _record(sid: str, value):
+    """Set the session's transcription record's fingerprint to *value*, or to
+    what *value(rig)* computes."""
+    from bristlenose.manifest import STAGE_TRANSCRIBE
+
+    def edit(m) -> None:
+        m.stages[STAGE_TRANSCRIBE].sessions[sid].input_hash = value
+
+    return edit
+
+
+def _as_written_12_to_15_oct(rig: Rig, sid: str, *names: str):
+    """The session's transcription record in the metadata form a run wrote
+    between 12 and 15 Oct 2026, for the files it holds now."""
+    from bristlenose.pipeline import _session_metadata_fingerprint
+
+    return _record(sid, _session_metadata_fingerprint(
+        _input_session(rig, sid, *names), rig.folder))
+
+
+def _said(rig: Rig) -> str:
+    from bristlenose.pipeline import READ_UNCONFIRMED
+
+    return re.sub(r"\s+", " ", READ_UNCONFIRMED)
+
+
+def _summary_states_no_failure(rig: Rig) -> None:
+    """The run summary — what the Mac reads — carries no row for it."""
+    from bristlenose.events import PipelineSummary
+    from bristlenose.run_condition import summary_is_degraded
+
+    summary = rig.last_summary()
+    ingest = summary["ingest"]
+    assert ingest["attempted"] == ingest["succeeded"] + len(ingest["failed"]), ingest
+    assert not summary_is_degraded(PipelineSummary.model_validate(summary)), summary
+
+
+def _said_unconfirmed(rig: Rig, name: str) -> None:
+    flat = re.sub(r"\s+", " ", rig.last_output)
+    assert f"{name} — {_said(rig)}" in flat, rig.last_output
+    assert "not analysed" not in flat, rig.last_output
+    _summary_states_no_failure(rig)
+
+
+def _not_said(rig: Rig) -> None:
+    assert _said(rig) not in re.sub(r"\s+", " ", rig.last_output), rig.last_output
+
+
+def test_a_late_transcript_on_a_record_from_before_content_keys_is_read_and_said(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    rig.run()
+    _rewrite_manifest(rig, _as_written_12_to_15_oct(rig, "s2", "Interview 2.mp4"))
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    assert "Mod Mia" in rig.registry_speakers("s2"), "every file is read, as built"
+    _said_unconfirmed(rig, "Interview 2.mp4")
+    assert rig.set_aside() == []
+
+
+def test_transcribe_says_it_too(tmp_path: Path, fast_watcher) -> None:
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    rig.run()
+    _rewrite_manifest(rig, _as_written_12_to_15_oct(rig, "s2", "Interview 2.mp4"))
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run(command="transcribe")
+    flat = re.sub(r"\s+", " ", rig.last_output)
+    assert f"Interview 2.mp4 — {_said(rig)}" in flat, rig.last_output
+
+
+def test_an_unchanged_session_on_a_record_from_before_content_keys_says_nothing(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    _rewrite_manifest(
+        rig, _as_written_12_to_15_oct(rig, "s2", "Interview 2.mp4", "Interview 2.vtt"))
+    rig.run()
+    assert rig.set_aside() == []
+    _not_said(rig)
+    assert rig.log[-1]["transcribed"] == [] and rig.log[-1]["quotes"] == []
+
+
+def test_a_record_that_vouches_for_nothing_says_nothing_when_the_stage_serves_it(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """Second review, finding 3: a per-session record that matches no spelling
+    of the files, on a stage whose inputs and cache are intact. The stage
+    serves the session whole, so "every file was read" would be false."""
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    _rewrite_manifest(rig, _record("s2", "0" * 64))
+    rig.run()
+    _not_said(rig)
+    assert rig.log[-1]["transcribed"] == [] and rig.log[-1]["quotes"] == []
+
+
+def _without_quote_records(m) -> None:
+    from bristlenose.manifest import STAGE_QUOTE_EXTRACTION, StageStatus
+
+    m.stages[STAGE_QUOTE_EXTRACTION].sessions = None
+    assert m.stages[STAGE_QUOTE_EXTRACTION].status == StageStatus.COMPLETE
+
+
+def _without_any_session_records(m) -> None:
+    from bristlenose.manifest import STAGE_TRANSCRIBE
+
+    _without_quote_records(m)
+    m.stages[STAGE_TRANSCRIBE].sessions = None
+
+
+@pytest.mark.parametrize("strip", [_without_quote_records, _without_any_session_records],
+                         ids=["no-quote-records", "no-session-records"])
+def test_a_late_transcript_with_no_quote_records_is_read_and_said(
+    tmp_path: Path, fast_watcher, strip,
+) -> None:
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    rig.run()
+    _rewrite_manifest(rig, strip)
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    assert "Mod Mia" in rig.registry_speakers("s2")
+    _said_unconfirmed(rig, "Interview 2.mp4")
+    assert "Interview 1.wav — " not in re.sub(r"\s+", " ", rig.last_output), (
+        "a session of one file could not have gained one")
+
+
+@pytest.mark.parametrize("strip", [_without_quote_records, _without_any_session_records],
+                         ids=["no-quote-records", "no-session-records"])
+def test_with_no_quote_records_an_unchanged_study_says_nothing(
+    tmp_path: Path, fast_watcher, strip,
+) -> None:
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    _rewrite_manifest(rig, strip)
+    rig.run()
+    assert rig.set_aside() == []
+    _not_said(rig)
+    assert rig.log[-1]["transcribed"] == [], rig.log[-1]
+
+
+def test_with_no_quote_records_a_new_session_does_not_name_the_served_ones(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """A new recording sends the stage down the per-session path; a session
+    its fingerprint still vouches for is served from the cache, so it is not
+    named, though nothing records which files it was analysed from."""
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    _rewrite_manifest(rig, _without_quote_records)
+    (rig.folder / "Interview 3.wav").write_bytes(b"RIFF a new interview" * 64)
+    rig.run()
+    assert rig.log[-1]["transcribed"] == ["Interview 3.wav"], rig.log[-1]
+    _not_said(rig)
+
+
+def test_with_no_session_records_and_no_cache_file_the_reread_is_said(
+    tmp_path: Path, fast_watcher,
+) -> None:
+    """Second review, finding 2: inputs unchanged, but the transcription cache
+    file is gone, so the stage is not served whole and a record with no
+    fingerprint is never trusted: every session is read again."""
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    _vtt(rig.folder / "Interview 2.vtt")
+    rig.run()
+    _rewrite_manifest(rig, _without_any_session_records)
+    (rig.out / ".bristlenose" / "intermediate" / "session_segments.json").unlink()
+    rig.run()
+    _said_unconfirmed(rig, "Interview 2.mp4")
+
+
+# ── A fresh start never freezes, whatever became of the stash ───────────────
+
+
+def test_a_clean_run_whose_stash_failed_still_reads_the_late_transcript(
+    tmp_path: Path, fast_watcher, monkeypatch,
+) -> None:
+    """Fable review of 745c346c5 (finding 2): ``--clean`` whose stash failed
+    wrote over the old output with its manifest in place, so the late file
+    was set aside, against the man page's "``--clean`` reads it"."""
+    from bristlenose.utils import output_backup
+
+    rig = new_rig(tmp_path, "Interview 1.wav", "Interview 2.mp4")
+    rig.run()
+    _vtt(rig.folder / "Interview 2.vtt")
+    monkeypatch.setattr(output_backup, "stash", lambda *_a, **_k: None)
+    rig.run(clean=True)
+    assert "Could not set" in re.sub(r"\s+", " ", rig.last_output), rig.last_output
+    assert ("Interview 2.vtt", LATE.value) not in rig.set_aside(), rig.set_aside()
+    assert "Mod Mia" in rig.registry_speakers("s2")
+
+
+def _unconfirmed(tmp_path: Path, session, manifest, **kw) -> list[str]:
+    from bristlenose.pipeline import _set_aside_late_files
+    from bristlenose.session_registry import SessionRegistry
+
+    said = _set_aside_late_files([session], manifest, tmp_path,
+                                 SessionRegistry(path=tmp_path / "sessions.json"), **kw)
+    return [s.session_id for s in said]
+
+
+def test_an_edit_beside_an_addition_is_a_candidate_and_logged(tmp_path: Path, caplog) -> None:
+    mp4 = _file(tmp_path / "a.mp4", b"RIFF a" * 64)
+    m = _analysed(tmp_path, _session("s1", mp4, _file(tmp_path / "a.vtt", b"WEBVTT\n\nold")))
+    s = _session("s1", mp4, _file(tmp_path / "a.vtt", b"WEBVTT\n\nnew"),
+                 _file(tmp_path / "a.srt", b"1\n"))
+    with caplog.at_level("WARNING", logger="bristlenose"):
+        assert _unconfirmed(tmp_path, s, m) == ["s1"]
+    assert "every file it holds is read" in caplog.text
+    assert [f for f in s.files if f.error] == [], "nothing set aside"
+
+
+def test_an_edited_session_of_one_file_is_logged_not_a_candidate(
+    tmp_path: Path, caplog,
+) -> None:
+    m = _analysed(tmp_path, _session("s1", _file(tmp_path / "a.vtt", b"WEBVTT\n\nold")))
+    s = _session("s1", _file(tmp_path / "a.vtt", b"WEBVTT\n\nnew"))
+    with caplog.at_level("WARNING", logger="bristlenose"):
+        assert _unconfirmed(tmp_path, s, m) == []
+    assert "every file it holds is read" in caplog.text
+
+
+def test_a_record_in_the_metadata_form_that_still_vouches_is_no_candidate(
+    tmp_path: Path, caplog,
+) -> None:
+    from bristlenose.manifest import STAGE_TRANSCRIBE
+    from bristlenose.pipeline import _session_metadata_fingerprint
+
+    s = _session("s1", _file(tmp_path / "a.mp4", b"RIFF a" * 64),
+                 _file(tmp_path / "a.vtt", b"WEBVTT\n\n"))
+    m = _analysed(tmp_path, s)
+    m.stages[STAGE_TRANSCRIBE].sessions["s1"].input_hash = (
+        _session_metadata_fingerprint(s, tmp_path))
+    with caplog.at_level("WARNING", logger="bristlenose"):
+        assert _unconfirmed(tmp_path, s, m) == []
+    assert "every file it holds is read" not in caplog.text
+
+
+def test_an_analysed_record_with_no_fingerprint_is_a_candidate(tmp_path: Path) -> None:
+    """Second review, finding 5: the same record the no-quote-records branch
+    hands to the cache is not skipped here."""
+    from bristlenose.manifest import STAGE_TRANSCRIBE
+
+    s = _session("s1", _file(tmp_path / "a.mp4", b"RIFF a" * 64),
+                 _file(tmp_path / "a.vtt", b"WEBVTT\n\n"))
+    m = _analysed(tmp_path, s)
+    m.stages[STAGE_TRANSCRIBE].sessions["s1"].input_hash = None
+    assert _unconfirmed(tmp_path, s, m) == ["s1"]
+    assert [f for f in s.files if f.error] == []
+    one = _session("s1", _file(tmp_path / "b.mp4", b"RIFF b" * 64))
+    assert _unconfirmed(tmp_path, one, m) == []
+
+
+def test_a_fresh_start_sets_nothing_aside(tmp_path: Path) -> None:
+    mp4 = _file(tmp_path / "a.mp4", b"RIFF a" * 64)
+    m = _analysed(tmp_path, _session("s1", mp4))
+    s = _session("s1", mp4, _file(tmp_path / "a.vtt", b"WEBVTT\n\n"))
+    assert _unconfirmed(tmp_path, s, m, fresh_start=True) == []
+    assert [f for f in s.files if f.error] == []
+    assert s.has_existing_transcript
+
+
+def _quote_stage_only(session, *, tx_records: bool, complete: bool = True,
+                      tx_failed: bool = False):
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        STAGE_TRANSCRIBE,
+        create_manifest,
+        mark_session_complete,
+        mark_session_failed,
+        mark_stage_complete,
+        mark_stage_running,
+    )
+
+    m = create_manifest("t", "0")
+    if tx_records:
+        mark = mark_session_failed if tx_failed else mark_session_complete
+        mark(m, STAGE_TRANSCRIBE, session.session_id)
+    mark_stage_complete(m, STAGE_TRANSCRIBE)
+    if complete:
+        mark_stage_complete(m, STAGE_QUOTE_EXTRACTION)
+    else:
+        mark_stage_running(m, STAGE_QUOTE_EXTRACTION)
+    return m
+
+
+def test_with_no_quote_records_the_candidate_rules(tmp_path: Path) -> None:
+    """Which sessions could hold a late file; whether each is read again is
+    the cache's call, made in ``run`` (the rig tests above)."""
+    mp4 = _file(tmp_path / "a.mp4", b"RIFF a" * 64)
+    s = _session("s1", mp4, _file(tmp_path / "a.vtt", b"WEBVTT\n\n"))
+
+    def said(m) -> list[str]:
+        return _unconfirmed(tmp_path, s, m)
+
+    assert said(_quote_stage_only(s, tx_records=True)) == ["s1"]
+    assert said(_quote_stage_only(s, tx_records=True, tx_failed=True)) == [], "a retry"
+    assert said(_quote_stage_only(s, tx_records=True, complete=False)) == [], "not analysed"
+    assert said(_quote_stage_only(_session("s9", mp4), tx_records=True)) == [], "new"
+    assert said(_quote_stage_only(s, tx_records=False)) == ["s1"], "no records at all"
+    assert _unconfirmed(tmp_path, _session("s1", mp4),
+                        _quote_stage_only(s, tx_records=True)) == [], "one file"
+
+
 # ── #130, a known v1 limit: a recode out and back ──────────────────────────
 #
 # Owner, 23 Oct 2026 (decision #130, option A): recoding a participant out to

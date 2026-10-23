@@ -117,7 +117,7 @@ class TestTheCommands:
         _corrupt(out)
         reached: list[Path] = []
 
-        async def _fake_run(self, input_dir, output_dir):
+        async def _fake_run(self, input_dir, output_dir, **_kw):
             reached.append(output_dir)
             raise RuntimeError("stop here")
 

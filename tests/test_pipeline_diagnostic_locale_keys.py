@@ -144,6 +144,18 @@ def test_the_cloud_fetch_reason_has_a_localised_string(locale: str) -> None:
     if locale == "en":
         assert reason[CLOUD_FETCH_KEY] == CLOUD_FETCH_MESSAGE
 
+
+def test_the_english_reason_keys_are_exactly_the_reasons() -> None:
+    """``en``'s reason block is the enum plus ``cloud_fetch``, nothing else.
+
+    The Swift suite (``IngestOutcomeTests.everyReasonTranslatesInEveryLocale``)
+    takes its list of reasons from these keys rather than a hand-kept copy that
+    a new reason would silently skip (Fable review of 745c346c5); this is what
+    makes that list the Python reason set.
+    """
+    english = set(_load_desktop("en")["pipeline"]["diagnostic"]["reason"])
+    assert english == {r.value for r in UnusableReason} | {CLOUD_FETCH_KEY}
+
 @pytest.mark.parametrize("locale", [loc for loc in _ALL_LOCALES if loc != "en"])
 def test_reason_strings_are_not_english_placeholders(locale: str) -> None:
     """A seeded locale must not silently carry the English through.

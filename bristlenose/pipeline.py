@@ -41,6 +41,7 @@ from bristlenose.manifest import (
     STAGE_QUOTE_EXTRACTION,
     STAGE_TOPIC_SEGMENTATION,
     PipelineManifest,
+    SessionRecord,
     StageStatus,
     carry_forward_sessions,
     create_manifest,
@@ -615,7 +616,9 @@ def _set_aside_late_files(
     prev_manifest: PipelineManifest | None,
     input_dir: Path,
     registry: SessionRegistry,
-) -> None:
+    *,
+    fresh_start: bool = False,
+) -> list[InputSession]:
     """Set aside each file that joined a session after it was analysed.
 
     Decision #129 (owner, 23 Oct 2026): for v1 an analysed session keeps
@@ -646,17 +649,47 @@ def _set_aside_late_files(
     nothing it was analysed from changes, and the session gains playback — a
     path the registry and the importer were built for (judgement call, RE#129,
     pending the owner).
+
+    ``fresh_start`` (``--clean``) never freezes, whatever became of the stash:
+    a stash that failed leaves the previous manifest in place, and the man page
+    promises that ``--clean`` reads every file.
+
+    **Returns the sessions whose files it could not attribute**: analysed (or,
+    with no per-session quote records, known to an analysed study), holding
+    more than one file, so one of them may have joined late, and with no
+    fingerprint that says which. Nothing is set aside in them. Whether they
+    are then read again is the transcription cache's call, not this
+    function's; the caller says so where that call is made
+    (``_say_read_unconfirmed``), so a session the cache serves is not named.
     """
+    if prev_manifest is None or fresh_start:
+        return []
     analysed = (
         get_completed_session_ids(prev_manifest, STAGE_QUOTE_EXTRACTION)
         & get_completed_session_ids(prev_manifest, _M_STAGE_TRANSCRIBE)
     )
-    if not analysed or prev_manifest is None:
-        return
-    records = prev_manifest.stages[_M_STAGE_TRANSCRIBE].sessions or {}
+    tx_stage = prev_manifest.stages.get(_M_STAGE_TRANSCRIBE)
+    records = (tx_stage.sessions if tx_stage is not None else None) or {}
+    if not analysed:
+        # No per-session quote records (a manifest from before 1 Oct 2026, or a
+        # full-cache run before then): nothing says which sessions were
+        # analysed, so nothing is set aside.
+        quote_stage = prev_manifest.stages.get(STAGE_QUOTE_EXTRACTION)
+        if quote_stage is None or quote_stage.status != StageStatus.COMPLETE:
+            return []
+        return [
+            s for s in sessions
+            if _may_hold_a_late_file(s, records.get(s.session_id), not records)
+        ]
+    unconfirmed: list[InputSession] = []
     for session in sessions:
         record = records.get(session.session_id)
-        if session.session_id not in analysed or record is None or not record.input_hash:
+        if session.session_id not in analysed or record is None:
+            continue
+        if not record.input_hash:
+            # A record that names no files: nothing to read back.
+            if len(_transcribed_files(session)) > 1:
+                unconfirmed.append(session)
             continue
         pairs = _file_fingerprints(
             session, lambda f: registry.last_known_fingerprint(f, input_dir),
@@ -685,10 +718,16 @@ def _set_aside_late_files(
         if late is None:
             # Not silent: on this path a file added beside an edit (or to a
             # session recorded before content keys) is read, as before #129.
+            # A record in an older spelling that still vouches for every file
+            # (12–15 Oct 2026) is no change: the cache serves the session.
+            if _record_vouches(session, record.input_hash, input_dir, registry):
+                continue
             logger.warning(
                 "%s has changed since it was analysed, not only by files added to it, "
                 "so every file it holds is read", session.session_id,
             )
+            if len(pairs) > 1:
+                unconfirmed.append(session)
             continue
         late = late + unknown
         kept_media = any(
@@ -724,6 +763,75 @@ def _set_aside_late_files(
         start = resolve_session_start(kept)
         session.session_date = start.instant
         session.session_start_source = start.source.value
+    return unconfirmed
+
+
+def _record_vouches(
+    session: InputSession, recorded: str, input_dir: Path, registry: SessionRegistry,
+) -> bool:
+    """Whether a transcription record still vouches for every file *session*
+    holds, in any spelling ``fresh_session_ids`` accepts: then the cache serves
+    the session and nothing in it is read again."""
+    current = _session_input_fingerprint(
+        session, input_dir, lambda f: registry.last_known_fingerprint(f, input_dir),
+    )
+    return recorded in {
+        current,
+        _session_metadata_fingerprint(session, input_dir),
+        _session_metadata_fingerprint(session, None),
+    }
+
+
+def _may_hold_a_late_file(
+    session: InputSession, record: SessionRecord | None, no_session_records: bool,
+) -> bool:
+    """For a manifest with no per-session quote records: whether *session* was
+    in the analysed study and could hold a file that joined it later.
+
+    It holds more than one file, and the previous run transcribed it: a COMPLETE
+    record of its own, or, when the manifest kept none for any session (a
+    full-cache run before 1 Oct 2026), nothing to tell it from a new one. A
+    session missing from a manifest that has records is new.
+    """
+    if len(_transcribed_files(session)) < 2:
+        return False
+    if record is not None:
+        return record.status == StageStatus.COMPLETE
+    return no_session_records
+
+
+#: What the CLI says of a session whose files could not be attributed and that
+#: is read again (#129's fallback). Terminal chrome, English by design.
+READ_UNCONFIRMED = (
+    "Couldn't tell which files this session was analysed from — every file in it "
+    "was read."
+)
+
+
+def _say_read_unconfirmed(
+    unconfirmed: Sequence[InputSession], read_again: set[str],
+) -> None:
+    """Name each session ``_set_aside_late_files`` could not attribute that the
+    transcription cache is about to read again, so a file added to it is not
+    read in silence. Its own warning line, never under "N files not analysed"
+    and never on the run summary as a failure: nothing was left out.
+
+    Called where the cache decides (``run``, ``transcribe``), so a session it
+    serves whole is not named.
+    """
+    from rich.markup import escape
+
+    for s in unconfirmed:
+        if s.session_id not in read_again or not s.files:
+            continue
+        logger.warning(
+            "%s: couldn't tell which files it was analysed from, so every file it "
+            "holds is read again", s.session_id,
+        )
+        console.print(
+            f"   {cli_prefix(MessageKind.WARNING)} "
+            f"[dim yellow]{escape(s.files[0].path.name)} — {READ_UNCONFIRMED}[/dim yellow]"
+        )
 
 
 def _late_files(
@@ -1992,12 +2100,16 @@ class Pipeline:
         self._emit_remaining(_T_STAGE_DISCUSSION, elapsed)
         return elapsed
 
-    async def run(self, input_dir: Path, output_dir: Path) -> PipelineResult:
+    async def run(
+        self, input_dir: Path, output_dir: Path, *, fresh_start: bool = False,
+    ) -> PipelineResult:
         """Run the full pipeline: ingest → transcribe → analyse → output.
 
         Args:
             input_dir: Directory containing input files.
             output_dir: Directory for all output.
+            fresh_start: ``--clean`` asked for: every file is read, whether or
+                not the previous output could be set aside (#129).
 
         Returns:
             PipelineResult with all data and paths.
@@ -2100,7 +2212,10 @@ class Pipeline:
         )
         # An analysed session keeps the files it was analysed from (#129):
         # before anything dates, counts, fingerprints or reads them.
-        _set_aside_late_files(sessions, _prev_manifest, input_dir, session_registry)
+        _unconfirmed = _set_aside_late_files(
+            sessions, _prev_manifest, input_dir, session_registry,
+            fresh_start=fresh_start,
+        )
         session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
         # What the Sessions lens shows from the first second of a first
@@ -2375,6 +2490,10 @@ class Pipeline:
                     s for s in sessions
                     if s.session_id not in _cached_tx_sids
                 ]
+                # #129's fallback, said where the read is decided.
+                _say_read_unconfirmed(
+                    _unconfirmed, {s.session_id for s in _remaining_sessions},
+                )
 
                 # A retry is not a new interview (_retried_transcription_sids).
                 _retried_tx_sids = _retried_transcription_sids(
@@ -4019,7 +4138,10 @@ class Pipeline:
         # A project `run` has analysed: what it read is what `transcribe`
         # reads too (#129), and the per-session cache check below relies on it.
         _prev = resume_manifest(output_dir) if output_dir.exists() else None
-        _set_aside_late_files(sessions, _prev, input_dir, session_registry)
+        # No stage-level cache here: a record that cannot vouch is read again.
+        _unconfirmed = _set_aside_late_files(
+            sessions, _prev, input_dir, session_registry,
+        )
         session_registry.settle_starts(sessions, input_dir)
         session_registry.save()
 
@@ -4061,6 +4183,8 @@ class Pipeline:
                     sid: segs for sid, segs in _ss_raw.items() if sid in _cached_sids
                 }
         _remaining = [s for s in sessions if s.session_id not in _cached_segments]
+        # #129's fallback, said where the read is decided.
+        _say_read_unconfirmed(_unconfirmed, {s.session_id for s in _remaining})
         # New as run() counts it: a retry, or a session the file lost, is not.
         _retried = _retried_transcription_sids(_prev, _cached_sids - set(_cached_segments))
         _n_new = sum(1 for s in _remaining if s.session_id not in _retried)
@@ -5277,6 +5401,10 @@ class Pipeline:
         # Read-only: the ids and starts the run gave these sessions.
         _registry = SessionRegistry.load(output_dir)
         sessions = _registry.apply(sessions, input_dir)
+        # No `_set_aside_late_files` here, deliberately (#129): this re-render
+        # reads no transcript and pays for nothing; the ingest only links
+        # media in the sealed static render, so a late file can at most change
+        # which video a session links to — presentation, not the analysis.
         _registry.settle_starts(sessions, input_dir)
 
         # --- Load existing people file for display names ---

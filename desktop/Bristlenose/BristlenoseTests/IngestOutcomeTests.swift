@@ -268,16 +268,37 @@ import Foundation
         #expect(text == "Die Datei ist leer — bei der Übertragung wurden keine Daten erzeugt.")
     }
 
-    @MainActor @Test func everyReasonTranslatesInEveryLocale() {
+    /// Every refusal reason, read from English's own reason block rather than a
+    /// hand-kept list, which misses the next reason unless someone remembers to
+    /// add it there too (Fable review of 745c346c5). Python's
+    /// `test_the_english_reason_keys_are_exactly_the_reasons` pins that block to
+    /// `UnusableReason` plus `cloud_fetch`, which keys off its category and has
+    /// its own test below.
+    private func englishReasons() throws -> [String] {
+        let url = localesURL().appendingPathComponent("en/desktop.json")
+        let root = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+        let pipeline = root?["pipeline"] as? [String: Any]
+        let diagnostic = pipeline?["diagnostic"] as? [String: Any]
+        let block = diagnostic?["reason"] as? [String: Any] ?? [:]
+        return block.keys.filter { $0 != "cloud_fetch" }.sorted()
+    }
+
+    @Test func theReasonListIsReadNotEmpty() throws {
+        // A path or a shape that stopped resolving must fail here, not leave
+        // the matrix below looping over nothing.
+        let reasons = try englishReasons()
+        #expect(reasons.count >= 12, "read \(reasons.count) reasons")
+        #expect(reasons.contains("empty"))
+        #expect(reasons.contains("added_after_analysis"))
+    }
+
+    @MainActor @Test func everyReasonTranslatesInEveryLocale() throws {
         // The whole matrix, because the defect was not one missing string — it
         // was eight strings in twenty-one languages, and nothing mechanical on
         // either side could see it. Python's
         // `test_every_unusable_reason_has_a_localised_string` pins that the keys
         // exist; this pins that this pane actually resolves them.
-        let reasons = ["unsupported_format", "empty", "incomplete", "not_a_recording",
-                       "no_audio", "no_speech", "unreadable_folder", "unreadable",
-                       "duplicate_recording", "duplicate_transcript", "no_lines",
-                       "added_after_analysis"]
+        let reasons = try englishReasons()
         let locales = ["en", "es", "ca", "fr", "de", "ko", "ja", "cs", "it", "pl", "ru",
                        "uk", "da", "sv", "nb", "tr", "nl", "fi", "pt-BR", "pt-PT", "zh-Hant"]
         for locale in locales {

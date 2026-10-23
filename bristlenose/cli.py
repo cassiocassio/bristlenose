@@ -1566,7 +1566,10 @@ def run(
     try:
         with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
             pipeline.set_progress_sink(_run_handle.progress)
-            result = asyncio.run(pipeline.run(input_dir, output_dir))
+            # `--clean` reads every file even when the stash above failed and
+            # the run writes over the previous output: the freeze on an
+            # analysed session's files (#129) is never applied to it.
+            result = asyncio.run(pipeline.run(input_dir, output_dir, fresh_start=clean))
             _run_handle.set_cost(compute_run_cost(
                 result.llm_model,
                 result.llm_input_tokens,

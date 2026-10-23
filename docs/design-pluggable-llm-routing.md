@@ -250,6 +250,11 @@ Matrix form: run N models × M stages, write a comparison table. This is the thi
 
 ### Prior art: unified-provider libraries (not adopted, 23 Oct 2026)
 
+> **Superseded the same day.** The owner chose to support any-llm as a
+> community gesture: an optional sixth provider for the long tail, not a
+> transport for the native five. The plan, with the open questions below
+> answered against the source, is [design-any-llm.md](design-any-llm.md).
+
 [mozilla-ai/any-llm](https://github.com/mozilla-ai/any-llm) (`any-llm-sdk`, Apache-2.0) gives one `completion(model="provider:model", …)` call over the official provider SDKs, with OpenAI-shaped responses, per-provider install extras, and no proxy. A sibling project, [Otari](https://github.com/mozilla-ai/otari), is a gateway for budgets, keys and usage. It was looked at and not adopted, for two reasons.
 
 - **It covers the part of the code that is already easy.** The four `_analyze_*` call paths in `llm/client.py` are short. Most of the module, and most of `llm/structured.py`, handles how the providers differ on structured output: `openai_strict_schema`, `_flatten_schema_for_gemini`, `_validate_repairing` and `repair_candidates`, `_clamp_max_tokens`, `TruncatedResponseError`, the `llm_request` telemetry record and `failure_classifier.py`, which reads each SDK's own exception types. A shared call signature leaves all of that where it is.

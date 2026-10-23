@@ -891,3 +891,23 @@ def test_a_dotenv_that_overrides_the_choice_is_named(
     assert result.exit_code == 0, result.output
     assert "BRISTLENOSE_LLM_PROVIDER=anthropic" in result.output
     assert "Remove the line" in result.output
+
+
+@pytest.mark.asyncio
+async def test_a_reply_that_misses_the_schema_is_asked_for_again_once(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Found on Mistral Small (23 Oct 2026): one quote missing one field threw
+    away that session's quotes. Asked again once, as the Ollama route retries;
+    a second miss still fails loudly."""
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    missing_field = _response('{"label": "a"}')  # no quotes
+    fake_anyllm.replies += [missing_field, _response('{"label": "b", "quotes": []}')]
+    client = _client(monkeypatch)
+    assert (await client.analyze("s", "u", Theme)).label == "b"
+    assert len(fake_anyllm.calls) == 2
+
+    fake_anyllm.replies += [missing_field, missing_field]
+    with pytest.raises(ValidationError):
+        await client.analyze("s", "u", Theme)
+    assert len(fake_anyllm.calls) == 4

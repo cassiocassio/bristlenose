@@ -1577,75 +1577,93 @@ class LLMClient:
             "type": "json_schema",
             "json_schema": {"name": response_model.__name__, "schema": schema},
         }
-        try:
-            if getattr(self, "_anyllm_json_object", False):
-                response = await call({"type": "json_object"})
-            else:
-                try:
-                    response = await call(schema_format)
-                except Exception as exc:
-                    if not _refuses_json_schema(exc):
-                        raise
-                    logger.warning(
-                        "anyllm_json_schema_refused | model=%s | falling back to json_object",
-                        model,
-                    )
-                    self._anyllm_json_object = True
+        for attempt in range(_ANYLLM_SCHEMA_ATTEMPTS):
+            try:
+                if getattr(self, "_anyllm_json_object", False):
                     response = await call({"type": "json_object"})
-        except asyncio.CancelledError:
-            raise
-        except ValidationError as exc:
-            # any-llm 1.27 validates the provider's reply against OpenAI's shape
-            # and rejects a finish reason outside OpenAI's five (fixed in 1.38).
-            # The reply is gone before we see it. Mistral's "model_length" (the
-            # context window, its only cap once we send no max_tokens) is a
-            # truncation, so it goes to split-and-retry; the input there is a
-            # short enum string, safe to read. Anything else: never pass the
-            # pydantic text on, which quotes the reply, which quotes the transcript.
-            if any(
-                tuple(err.get("loc", ()))[-1:] == ("finish_reason",)
-                and err.get("input") == "model_length"
-                for err in exc.errors()
-            ):
-                record("truncated")
-                raise truncated() from None
-            record("error")
-            raise RuntimeError(
-                f"{name} returned a response any-llm couldn't read "
-                f"(provider=anyllm, model={model}, {exc.error_count()} validation errors)."
-            ) from None
-        except Exception:
-            record("error")
-            raise
+                else:
+                    try:
+                        response = await call(schema_format)
+                    except Exception as exc:
+                        if not _refuses_json_schema(exc):
+                            raise
+                        logger.warning(
+                            "anyllm_json_schema_refused | model=%s | falling back to json_object",
+                            model,
+                        )
+                        self._anyllm_json_object = True
+                        response = await call({"type": "json_object"})
+            except asyncio.CancelledError:
+                raise
+            except ValidationError as exc:
+                # any-llm 1.27 validates the provider's reply against OpenAI's shape
+                # and rejects a finish reason outside OpenAI's five (fixed in 1.38).
+                # The reply is gone before we see it. Mistral's "model_length" (the
+                # context window, its only cap once we send no max_tokens) is a
+                # truncation, so it goes to split-and-retry; the input there is a
+                # short enum string, safe to read. Anything else: never pass the
+                # pydantic text on, which quotes the reply, which quotes the transcript.
+                if any(
+                    tuple(err.get("loc", ()))[-1:] == ("finish_reason",)
+                    and err.get("input") == "model_length"
+                    for err in exc.errors()
+                ):
+                    record("truncated")
+                    raise truncated() from None
+                record("error")
+                raise RuntimeError(
+                    f"{name} returned a response any-llm couldn't read "
+                    f"(provider=anyllm, model={model}, {exc.error_count()} validation errors)."
+                ) from None
+            except Exception:
+                record("error")
+                raise
 
-        usage = getattr(response, "usage", None)
-        if usage is not None:
-            self.tracker.record(usage.prompt_tokens or 0, usage.completion_tokens or 0)
-        if not getattr(response, "choices", None):
-            record("error", response)
-            raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
-        choice = response.choices[0]
-        if choice.finish_reason == "length":
-            record("truncated", response)
-            raise truncated()
-        if choice.finish_reason == "content_filter" or getattr(choice.message, "refusal", None):
-            record("error", response)
-            raise RuntimeError(
-                f"{name} declined the request (provider=anyllm, model={model}, "
-                f"finish_reason={choice.finish_reason})."
-            )
-        content = choice.message.content
-        if not content:
-            record("error", response)
-            raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
-        try:
-            data = json.loads(_strip_code_fence(content))
-            result = _validate_repairing(data, response_model, provider="anyllm", model=model)
-        except (json.JSONDecodeError, ValidationError):
-            record("error", response)
-            raise
-        record("ok", response)
-        return result
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                self.tracker.record(usage.prompt_tokens or 0, usage.completion_tokens or 0)
+            if not getattr(response, "choices", None):
+                record("error", response)
+                raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
+            choice = response.choices[0]
+            if choice.finish_reason == "length":
+                record("truncated", response)
+                raise truncated()
+            if choice.finish_reason == "content_filter" or getattr(choice.message, "refusal", None):
+                record("error", response)
+                raise RuntimeError(
+                    f"{name} declined the request (provider=anyllm, model={model}, "
+                    f"finish_reason={choice.finish_reason})."
+                )
+            content = choice.message.content
+            if not content:
+                record("error", response)
+                raise RuntimeError(f"Empty response from {name} (provider=anyllm, model={model}).")
+            try:
+                data = json.loads(_strip_code_fence(content))
+                result = _validate_repairing(data, response_model, provider="anyllm", model=model)
+            except (json.JSONDecodeError, ValidationError) as exc:
+                record("error", response)
+                if attempt == _ANYLLM_SCHEMA_ATTEMPTS - 1:
+                    raise
+                # A reply that doesn't fit the schema (a quote missing one field
+                # throws away the whole session's quotes) is asked for again
+                # once, as the Ollama route retries; with no temperature sent,
+                # a second reply usually differs. Found on Mistral Small, 23 Oct
+                # 2026: two of three sessions lost to one missing field each.
+                logger.warning(
+                    "anyllm_schema_retry | model=%s | schema=%s | error=%s",
+                    model, response_model.__name__, type(exc).__name__,
+                )
+                continue
+            record("ok", response)
+            return result
+        raise AssertionError("unreachable")  # pragma: no cover
+
+
+#: A reply that doesn't fit the schema is asked for again once (any-llm only;
+#: the Ollama route has its own three-attempt loop).
+_ANYLLM_SCHEMA_ATTEMPTS = 2
 
 
 def _retry_after_seconds(exc: BaseException) -> float | None:

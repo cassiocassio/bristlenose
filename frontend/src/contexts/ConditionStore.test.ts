@@ -12,9 +12,11 @@ import {
   useLenses,
 } from "./ConditionStore";
 import { resetLastRunStore, useLastRun } from "./LastRunStore";
+import { toast } from "../utils/toast";
 
 vi.mock("../utils/api", () => ({ authHeaders: () => ({}) }));
 vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
+vi.mock("../utils/toast", () => ({ toast: vi.fn() }));
 vi.mock("../i18n", () => ({ default: { t: (k: string) => k } }));
 
 const posted: unknown[] = [];
@@ -78,6 +80,8 @@ describe("ConditionStore — refresh key", () => {
     await tick(0);
     expect(result.current).toEqual(ALL_LENSES);
     expect(posted).toEqual([]);
+    // A page left open across a serve restart: its next write says to reload, the poll says nothing (R87).
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
   });
 });
 

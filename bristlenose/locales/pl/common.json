@@ -833,7 +833,8 @@
     "saveFailed": "Nie można zapisać zmiany. Sprawdź połączenie.",
     "saveRefused": "Nie można zapisać zmiany.",
     "quoteGone": "Tego cytatu nie ma już w raporcie, więc zmiana nie została zapisana.",
-    "runInProgress": "Trwa analiza. Spróbuj ponownie, gdy się zakończy."
+    "runInProgress": "Trwa analiza. Spróbuj ponownie, gdy się zakończy.",
+    "pageStale": "Nie można zapisać zmiany, ponieważ Bristlenose został uruchomiony ponownie. Odśwież stronę i wprowadź zmianę jeszcze raz."
   },
   "screens": {
     "title": "Ekrany",

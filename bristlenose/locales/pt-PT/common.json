@@ -753,7 +753,8 @@
     "saveFailed": "Não foi possível guardar a alteração. Verifique a ligação.",
     "saveRefused": "Não foi possível guardar a alteração.",
     "quoteGone": "Essa citação já não está no relatório, por isso a alteração não foi guardada.",
-    "runInProgress": "Está a decorrer uma análise. Tente novamente quando terminar."
+    "runInProgress": "Está a decorrer uma análise. Tente novamente quando terminar.",
+    "pageStale": "Não foi possível guardar a alteração. O Bristlenose foi reiniciado. Recarregue a página e faça a alteração novamente."
   },
   "screens": {
     "title": "Ecr\u00e3s",

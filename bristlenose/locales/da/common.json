@@ -753,7 +753,8 @@
     "saveFailed": "Kunne ikke gemme din ændring. Tjek din forbindelse.",
     "saveRefused": "Kunne ikke gemme din ændring.",
     "quoteGone": "Det citat er ikke længere i rapporten, så din ændring blev ikke gemt.",
-    "runInProgress": "En analyse kører. Prøv igen, når den er færdig."
+    "runInProgress": "En analyse kører. Prøv igen, når den er færdig.",
+    "pageStale": "Kunne ikke gemme din ændring. Bristlenose er genstartet. Genindlæs siden, og foretag ændringen igen."
   },
   "screens": {
     "title": "Sk\u00e6rme",

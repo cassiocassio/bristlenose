@@ -753,7 +753,8 @@
     "saveFailed": "Kunne ikke lagre endringen. Sjekk tilkoblingen din.",
     "saveRefused": "Kunne ikke lagre endringen.",
     "quoteGone": "Det sitatet er ikke lenger i rapporten, så endringen ble ikke lagret.",
-    "runInProgress": "En analyse kjører. Prøv igjen når den er ferdig."
+    "runInProgress": "En analyse kjører. Prøv igjen når den er ferdig.",
+    "pageStale": "Kunne ikke lagre endringen. Bristlenose har startet på nytt. Last inn siden på nytt, og gjør endringen igjen."
   },
   "screens": {
     "title": "Skjermer",

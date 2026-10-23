@@ -11,7 +11,11 @@
  *   - Pause polling when the document is hidden (visibilitychange).
  *   - Skip the next poll if a fetch from the previous tick is still
  *     in-flight (single boolean — not a debounce window).
- *   - 401 → silent back-off; the sidecar may be restarting. Don't toast.
+ *   - 401 → silent back-off. A 401 means this page's token belongs to a
+ *     serve that has gone (each start mints a new one, R87), so nothing
+ *     this page polls will answer until it is reloaded. Don't toast: the
+ *     researcher's next write says to reload (`toastSaveFailed`). In the
+ *     Mac app a serve restart remounts the web view with the new token.
  *   - The first answer for a project is the baseline: the lenses read
  *     beside it, so the run it names is the one they read, and it is
  *     recorded without bumping `refreshKey` (as ConditionStore records its
@@ -112,7 +116,7 @@ async function pollOnce(): Promise<void> {
       headers: authHeaders(),
     });
     if (resp.status === 401) {
-      // Silent back-off — sidecar may be restarting.
+      // Silent back-off: the page's token is from a serve that has gone (see the header).
       return;
     }
     if (!resp.ok) return;

@@ -753,7 +753,8 @@
     "saveFailed": "No s’ha pogut desar el canvi. Comprova la connexió.",
     "saveRefused": "No s’ha pogut desar el canvi.",
     "quoteGone": "Aquesta cita ja no és a l'informe, així que el canvi no s'ha desat.",
-    "runInProgress": "S’està fent una anàlisi. Torna-ho a provar quan acabi."
+    "runInProgress": "S’està fent una anàlisi. Torna-ho a provar quan acabi.",
+    "pageStale": "No s’ha pogut desar el canvi. Bristlenose s’ha reiniciat. Torna a carregar la pàgina i fes el canvi de nou."
   },
   "screens": {
     "title": "Pantalles",

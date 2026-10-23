@@ -619,6 +619,7 @@
  "common.signals.total": "c9b3c3",
  "common.signals.voice_one": "ce17f3",
  "common.signals.voice_other": "e2cdee",
+ "common.sync.pageStale": "970979",
  "common.sync.quoteGone": "44c0fa",
  "common.sync.runInProgress": "c667be",
  "common.sync.saveFailed": "5f5395",

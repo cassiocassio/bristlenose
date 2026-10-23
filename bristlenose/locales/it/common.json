@@ -753,7 +753,8 @@
     "saveFailed": "Impossibile salvare la modifica. Controlla la connessione.",
     "saveRefused": "Impossibile salvare la modifica.",
     "quoteGone": "Questa citazione non è più nel report, quindi la modifica non è stata salvata.",
-    "runInProgress": "È in corso un’analisi. Riprova quando è terminata."
+    "runInProgress": "È in corso un’analisi. Riprova quando è terminata.",
+    "pageStale": "Impossibile salvare la modifica. Bristlenose è stato riavviato. Ricarica la pagina e ripeti la modifica."
   },
   "screens": {
     "title": "Schermate",

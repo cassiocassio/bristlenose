@@ -753,7 +753,8 @@
     "saveFailed": "Não foi possível salvar a alteração. Verifique sua conexão.",
     "saveRefused": "Não foi possível salvar a alteração.",
     "quoteGone": "Essa citação não está mais no relatório, então a alteração não foi salva.",
-    "runInProgress": "Há uma análise em andamento. Tente de novo quando ela terminar."
+    "runInProgress": "Há uma análise em andamento. Tente de novo quando ela terminar.",
+    "pageStale": "Não foi possível salvar a alteração. O Bristlenose foi reiniciado. Recarregue a página e faça a alteração de novo."
   },
   "screens": {
     "title": "Telas",

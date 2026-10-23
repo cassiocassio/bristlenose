@@ -822,7 +822,8 @@
     "saveFailed": "Změnu se nepodařilo uložit. Zkontrolujte připojení.",
     "saveRefused": "Změnu se nepodařilo uložit.",
     "quoteGone": "Tento citát už ve zprávě není, takže se změna neuložila.",
-    "runInProgress": "Probíhá analýza. Zkuste to znovu, až skončí."
+    "runInProgress": "Probíhá analýza. Zkuste to znovu, až skončí.",
+    "pageStale": "Změnu se nepodařilo uložit, protože se Bristlenose restartoval. Načtěte stránku znovu a změnu proveďte ještě jednou."
   },
   "screens": {
     "title": "Obrazovky",

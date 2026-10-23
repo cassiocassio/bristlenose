@@ -74,6 +74,48 @@ describe("sendPut — what a failed write says", () => {
     expect(message).not.toMatch(/analysis/i);
   });
 
+  /**
+   * The serve mints a new bearer token every time it starts, so a tab left open
+   * across a restart sends the old one and every write is refused with a 401.
+   * Only reloading the page fetches the new token (R87).
+   */
+  describe("a page whose token belongs to a serve that has gone", () => {
+    const win = window as unknown as Record<string, unknown>;
+    beforeEach(() => {
+      win.__BRISTLENOSE_AUTH_TOKEN__ = "token-of-the-old-serve";
+    });
+    afterEach(() => {
+      delete win.__BRISTLENOSE_AUTH_TOKEN__;
+    });
+
+    it("says to reload the page", async () => {
+      fetchMock.mockResolvedValue(answer(401, { detail: "Unauthorized" }));
+      await expect(sendPut("/x", {})).rejects.toMatchObject({ status: 401 });
+      const message = said();
+      expect(message).toMatch(/reload the page/i);
+      expect(message).not.toMatch(/connection/i);
+    });
+
+    it("says it for a curation write too", async () => {
+      fetchMock.mockResolvedValue(answer(401, { detail: "Unauthorized" }));
+      await expect(patchStarred({ "q-1": true })).rejects.toThrow();
+      expect(said()).toMatch(/reload the page/i);
+    });
+
+    it("does not say it for a route's own 401, which names a reason", async () => {
+      fetchMock.mockResolvedValue(answer(401, { detail: "x", reason: "not_connected" }));
+      await expect(sendPut("/x", {})).rejects.toThrow();
+      expect(said()).not.toMatch(/reload/i);
+    });
+
+    it("does not say it for a page that never had a token", async () => {
+      delete win.__BRISTLENOSE_AUTH_TOKEN__;
+      fetchMock.mockResolvedValue(answer(401, { detail: "Unauthorized" }));
+      await expect(sendPut("/x", {})).rejects.toThrow();
+      expect(said()).not.toMatch(/reload/i);
+    });
+  });
+
   it("keeps the server's reason on the error it rejects with", async () => {
     fetchMock.mockResolvedValue(answer(409, { detail: "x", reason: "run_in_progress" }));
     await expect(sendPut("/x", {})).rejects.toMatchObject({ status: 409, reason: "run_in_progress" });

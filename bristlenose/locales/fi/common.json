@@ -753,7 +753,8 @@
     "saveFailed": "Muutosta ei voitu tallentaa. Tarkista verkkoyhteys.",
     "saveRefused": "Muutosta ei voitu tallentaa.",
     "quoteGone": "Sitaatti ei ole enää raportissa, joten muutostasi ei tallennettu.",
-    "runInProgress": "Analyysi on käynnissä. Yritä uudelleen, kun se on valmis."
+    "runInProgress": "Analyysi on käynnissä. Yritä uudelleen, kun se on valmis.",
+    "pageStale": "Muutosta ei voitu tallentaa, koska Bristlenose käynnistyi uudelleen. Lataa sivu uudelleen ja tee muutos uudestaan."
   },
   "screens": {
     "title": "N\u00e4yt\u00f6t",

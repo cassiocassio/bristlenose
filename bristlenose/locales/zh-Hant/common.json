@@ -721,7 +721,8 @@
     "saveFailed": "無法儲存變更。請檢查網路連線。",
     "saveRefused": "無法儲存變更。",
     "quoteGone": "這則引述已不在報告中，因此未儲存你的變更。",
-    "runInProgress": "分析正在執行。請在完成後再試一次。"
+    "runInProgress": "分析正在執行。請在完成後再試一次。",
+    "pageStale": "Bristlenose 已重新啟動，因此無法儲存變更。請重新載入頁面，然後再做一次變更。"
   },
   "screens": {
     "title": "\u756b\u9762",

@@ -274,12 +274,23 @@ function sendWrite(
  * What a write that did not land says. The connection only when the request
  * never reached the server, which is the one failure `fetch` rejects on;
  * anything the server answered is its refusal, named by `reason` when it sent
- * one (`bristlenose/server/refusal.py`). Every failure used to blame the
+ * one (`bristlenose/server/refusal.py`), or by its status for the auth
+ * middleware's 401, which says the page outlived its serve. Every failure used to blame the
  * connection, so a speaker pick refused during an analysis sent the researcher
  * to check their network (14 Oct 2026).
  */
 export function toastSaveFailed(err: unknown): void {
   const { reason, status, unresolved } = (err ?? {}) as ApiError;
+  // The auth middleware's 401 (it sends no reason) to a page that holds a
+  // token: the serve that issued it has gone. A serve mints a new token every
+  // time it starts, so a tab left open across a restart is refused every write,
+  // and only a reload fetches the new token (R87). A route's own 401 names a
+  // reason (Miro's `not_connected`) and is not this. Never reloaded for them:
+  // that would lose an edit still in a field.
+  if (status === 401 && !reason && authHeaders().Authorization) {
+    toast(i18n.t("sync.pageStale"), 6000);
+    return;
+  }
   const message =
     reason === "run_in_progress"
       ? i18n.t("sync.runInProgress")

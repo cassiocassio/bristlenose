@@ -756,7 +756,8 @@
     "saveFailed": "Couldn’t save your change — check your connection.",
     "saveRefused": "Couldn’t save your change.",
     "quoteGone": "That quote is no longer in the report, so your change wasn’t saved.",
-    "runInProgress": "An analysis is running. Try again when it finishes."
+    "runInProgress": "An analysis is running. Try again when it finishes.",
+    "pageStale": "Couldn’t save your change — Bristlenose has restarted. Reload the page, then make the change again."
   },
   "screens": {
     "title": "Screens",

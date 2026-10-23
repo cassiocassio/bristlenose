@@ -753,7 +753,8 @@
     "saveFailed": "Değişiklik kaydedilemedi. Bağlantınızı kontrol edin.",
     "saveRefused": "Değişiklik kaydedilemedi.",
     "quoteGone": "Bu alıntı artık raporda yok, bu yüzden değişiklik kaydedilmedi.",
-    "runInProgress": "Bir analiz çalışıyor. Bittiğinde yeniden deneyin."
+    "runInProgress": "Bir analiz çalışıyor. Bittiğinde yeniden deneyin.",
+    "pageStale": "Bristlenose yeniden başlatıldığı için değişiklik kaydedilemedi. Sayfayı yeniden yükleyin ve değişikliği tekrar yapın."
   },
   "screens": {
     "title": "Ekranlar",

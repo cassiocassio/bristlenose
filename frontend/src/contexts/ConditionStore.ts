@@ -16,7 +16,8 @@
  *     web view.
  *
  * Same discipline as LastRunStore: one timer per project, paused while the
- * document is hidden, an in-flight guard, silent on 401, a no-op in an exported
+ * document is hidden, an in-flight guard, silent on 401 (a page left open across
+ * a serve restart; its next write says to reload), a no-op in an exported
  * report. The first poll records the version without bumping: the lenses have
  * just loaded their data.
  *
@@ -80,7 +81,7 @@ async function pollOnce(): Promise<void> {
   inFlight = true;
   try {
     const resp = await fetch(`/api/projects/${projectId}/condition`, { headers: authHeaders() });
-    if (!resp.ok) return; // 401 while the sidecar restarts, 404 with no project: silent
+    if (!resp.ok) return; // 401 from a serve restarted under the page, 404 with no project: silent
     const body = (await resp.json()) as { data_version?: unknown; lenses?: unknown };
     if (activeProjectId !== projectId) return; // switched mid-flight
 

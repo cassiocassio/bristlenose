@@ -753,7 +753,8 @@
     "saveFailed": "Je wijziging kon niet worden bewaard. Controleer je verbinding.",
     "saveRefused": "Je wijziging kon niet worden bewaard.",
     "quoteGone": "Dat citaat staat niet meer in het rapport, dus je wijziging is niet bewaard.",
-    "runInProgress": "Er loopt een analyse. Probeer het opnieuw als die klaar is."
+    "runInProgress": "Er loopt een analyse. Probeer het opnieuw als die klaar is.",
+    "pageStale": "Je wijziging kon niet worden bewaard. Bristlenose is opnieuw gestart. Laad de pagina opnieuw en breng de wijziging nogmaals aan."
   },
   "screens": {
     "title": "Schermen",

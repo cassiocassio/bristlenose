@@ -753,7 +753,8 @@
     "saveFailed": "Ihre Änderung konnte nicht gesichert werden. Prüfen Sie Ihre Verbindung.",
     "saveRefused": "Ihre Änderung konnte nicht gesichert werden.",
     "quoteGone": "Dieses Zitat ist nicht mehr im Bericht, daher wurde Ihre Änderung nicht gesichert.",
-    "runInProgress": "Es läuft eine Analyse. Versuchen Sie es erneut, wenn sie fertig ist."
+    "runInProgress": "Es läuft eine Analyse. Versuchen Sie es erneut, wenn sie fertig ist.",
+    "pageStale": "Ihre Änderung konnte nicht gesichert werden. Bristlenose wurde neu gestartet. Laden Sie die Seite neu und nehmen Sie die Änderung noch einmal vor."
   },
   "screens": {
     "title": "Bildschirme",

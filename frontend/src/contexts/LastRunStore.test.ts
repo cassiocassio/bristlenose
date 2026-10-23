@@ -24,6 +24,11 @@ vi.mock("../utils/announce", () => ({
   announce: (msg: string) => announceMock(msg),
 }));
 
+const toastMock = vi.fn();
+vi.mock("../utils/toast", () => ({
+  toast: (msg: string) => toastMock(msg),
+}));
+
 // i18n.t passthrough — return the key for assertion clarity.
 vi.mock("../i18n", () => ({
   default: { t: (k: string) => k },
@@ -334,6 +339,9 @@ describe("LastRunStore — error handling", () => {
 
     expect(result.current.lastRun).toBeNull();
     expect(result.current.refreshKey).toBe(0);
+    // A page left open across a serve restart: its next write says to reload, the poll says nothing (R87).
+    expect(toastMock).not.toHaveBeenCalled();
+    expect(announceMock).not.toHaveBeenCalled();
   });
 
   it("swallows network errors silently", async () => {

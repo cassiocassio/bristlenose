@@ -753,7 +753,8 @@
     "saveFailed": "Impossible d\u2019enregistrer votre modification. V\u00e9rifiez votre connexion.",
     "saveRefused": "Impossible d\u2019enregistrer votre modification.",
     "quoteGone": "Ce verbatim n\u2019est plus dans le rapport, votre modification n\u2019a donc pas \u00e9t\u00e9 enregistr\u00e9e.",
-    "runInProgress": "Une analyse est en cours. R\u00e9essayez quand elle sera termin\u00e9e."
+    "runInProgress": "Une analyse est en cours. R\u00e9essayez quand elle sera termin\u00e9e.",
+    "pageStale": "Impossible d’enregistrer votre modification. Bristlenose a redémarré. Rechargez la page, puis refaites la modification."
   },
   "screens": {
     "title": "\u00c9crans",

@@ -753,7 +753,8 @@
     "saveFailed": "No se ha podido guardar el cambio. Comprueba tu conexión.",
     "saveRefused": "No se ha podido guardar el cambio.",
     "quoteGone": "Esa cita ya no está en el informe, así que el cambio no se ha guardado.",
-    "runInProgress": "Hay un análisis en curso. Vuelve a intentarlo cuando termine."
+    "runInProgress": "Hay un análisis en curso. Vuelve a intentarlo cuando termine.",
+    "pageStale": "No se ha podido guardar el cambio. Bristlenose se ha reiniciado. Vuelve a cargar la página y haz el cambio de nuevo."
   },
   "screens": {
     "title": "Pantallas",

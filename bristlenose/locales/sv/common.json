@@ -753,7 +753,8 @@
     "saveFailed": "Det gick inte att spara ändringen. Kontrollera din anslutning.",
     "saveRefused": "Det gick inte att spara ändringen.",
     "quoteGone": "Det citatet finns inte längre i rapporten, så ändringen sparades inte.",
-    "runInProgress": "En analys körs. Försök igen när den är klar."
+    "runInProgress": "En analys körs. Försök igen när den är klar.",
+    "pageStale": "Det gick inte att spara ändringen. Bristlenose har startats om. Läs in sidan igen och gör ändringen på nytt."
   },
   "screens": {
     "title": "Sk\u00e4rmar",

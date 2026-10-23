@@ -81,6 +81,11 @@ dependencies = [
     "sqladmin>=0.20",
     "openpyxl>=3.1",
     "alembic>=1.13",
+    # The trust store every HTTPS call uses. Floored 23 Oct 2026: eMudhra's
+    # emSign CA had keys compromised and 2026.10.19 drops its root. It arrives
+    # only through httpx, so without a floor `pipx upgrade` keeps the old bundle.
+    # A floor that only rises: raise it at the next trust-store incident.
+    "certifi>=2026.10.19",
 ]
 
 [project.optional-dependencies]

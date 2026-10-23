@@ -82,6 +82,9 @@ def main(argv: list[str] | None = None) -> int:
             "--no-header", "--no-annotate",
             "-o", str(compiled),
             *(["--upgrade"] if upgrade else []),
+            # Kept pins never apply to the trust store: holding an old CA bundle
+            # is itself the risk (the emSign root, 23 Oct 2026).
+            "--upgrade-package", "certifi",
         ]
         result = subprocess.run(cmd, cwd=ROOT)
         if result.returncode != 0:

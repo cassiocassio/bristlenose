@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCoder {{title}}",
-      "coded": "✦ AutoCodet {{title}}"
+      "coded": "✦ AutoCodet {{title}}",
+      "recoding": "Koder de gjenværende øktene",
+      "recoded": "De gjenværende øktene er kodet"
     }
   },
   "transcript": {

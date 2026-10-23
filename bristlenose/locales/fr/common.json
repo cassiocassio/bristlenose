@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCodage {{title}}",
-      "coded": "✦ AutoCodé {{title}}"
+      "coded": "✦ AutoCodé {{title}}",
+      "recoding": "Codage des entretiens restants",
+      "recoded": "Entretiens restants codés"
     }
   },
   "transcript": {

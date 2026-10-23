@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCode-merkitään {{title}}",
-      "coded": "✦ AutoCode-merkitty {{title}}"
+      "coded": "✦ AutoCode-merkitty {{title}}",
+      "recoding": "Koodataan jäljellä olevia istuntoja",
+      "recoded": "Jäljellä olevat istunnot koodattu"
     }
   },
   "transcript": {

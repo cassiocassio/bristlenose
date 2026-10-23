@@ -853,14 +853,10 @@ function AppShell() {
           // mislead (§4a). Spinner → ✓, then refresh so the new tags appear.
           return {
             id,
-            label: i18n.t("autocode.chip.recoding", {
-              title: j.frameworkTitle,
-              defaultValue: "Re-coding new sessions for {{title}}…",
-            }),
-            completedLabel: i18n.t("autocode.chip.recoded", {
-              title: j.frameworkTitle,
-              defaultValue: "Re-coded new sessions for {{title}}",
-            }),
+            // "Remaining", not "new": the catch-up also codes the sessions whose
+            // batches failed the first time (#53).
+            label: i18n.t("autocode.chip.recoding"),
+            completedLabel: i18n.t("autocode.chip.recoded"),
             frameworkId: j.frameworkId,
             outcome: j.outcome,
             onComplete: () => {

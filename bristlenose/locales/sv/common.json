@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCodar {{title}}",
-      "coded": "✦ AutoCodade {{title}}"
+      "coded": "✦ AutoCodade {{title}}",
+      "recoding": "Kodar återstående sessioner",
+      "recoded": "Återstående sessioner kodade"
     }
   },
   "transcript": {

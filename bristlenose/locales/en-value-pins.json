@@ -21,6 +21,8 @@
  "common.autocode.accept": "89713b",
  "common.autocode.chip.coded": "b3919d",
  "common.autocode.chip.coding": "db7db0",
+ "common.autocode.chip.recoded": "fed0e7",
+ "common.autocode.chip.recoding": "24b9d3",
  "common.autocode.close": "7d9eb7",
  "common.autocode.deny": "05a2d7",
  "common.autocode.empty": "9ad775",

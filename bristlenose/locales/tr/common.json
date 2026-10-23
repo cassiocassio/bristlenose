@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ {{title}} AutoCode ile kodlanıyor",
-      "coded": "✦ {{title}} AutoCode ile kodlandı"
+      "coded": "✦ {{title}} AutoCode ile kodlandı",
+      "recoding": "Kalan oturumlar kodlanıyor",
+      "recoded": "Kalan oturumlar kodlandı"
     }
   },
   "transcript": {

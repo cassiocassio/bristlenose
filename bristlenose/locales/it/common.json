@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCode di {{title}}",
-      "coded": "✦ AutoCode completato di {{title}}"
+      "coded": "✦ AutoCode completato di {{title}}",
+      "recoding": "Codifica delle sessioni rimanenti",
+      "recoded": "Sessioni rimanenti codificate"
     }
   },
   "transcript": {

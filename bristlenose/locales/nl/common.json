@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ {{title}} coderen",
-      "coded": "✦ {{title}} gecodeerd"
+      "coded": "✦ {{title}} gecodeerd",
+      "recoding": "Resterende sessies coderen",
+      "recoded": "Resterende sessies gecodeerd"
     }
   },
   "transcript": {

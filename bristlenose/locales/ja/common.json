@@ -584,7 +584,9 @@
     },
     "chip": {
       "coding": "✦ {{title}} をオートコード中",
-      "coded": "✦ {{title}} をオートコード完了"
+      "coded": "✦ {{title}} をオートコード完了",
+      "recoding": "残りのセッションをコーディング中",
+      "recoded": "残りのセッションのコーディングが完了"
     }
   },
   "transcript": {

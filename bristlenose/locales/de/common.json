@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCodierung {{title}}",
-      "coded": "✦ AutoCodiert {{title}}"
+      "coded": "✦ AutoCodiert {{title}}",
+      "recoding": "Verbleibende Interviews werden kodiert",
+      "recoded": "Verbleibende Interviews kodiert"
     }
   },
   "transcript": {

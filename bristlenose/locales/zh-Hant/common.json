@@ -565,7 +565,9 @@
     },
     "chip": {
       "coding": "✦ 正在 AutoCoding {{title}}",
-      "coded": "✦ 已 AutoCode {{title}}"
+      "coded": "✦ 已 AutoCode {{title}}",
+      "recoding": "正在為其餘工作階段編碼",
+      "recoded": "已為其餘工作階段編碼"
     }
   },
   "transcript": {

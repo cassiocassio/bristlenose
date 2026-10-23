@@ -656,7 +656,9 @@
     },
     "chip": {
       "coding": "✦ Automatické kódování {{title}}",
-      "coded": "✦ Automaticky okódováno {{title}}"
+      "coded": "✦ Automaticky okódováno {{title}}",
+      "recoding": "Kódování zbývajících sezení",
+      "recoded": "Zbývající sezení okódována"
     }
   },
   "transcript": {

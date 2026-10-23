@@ -7,6 +7,7 @@ import { closeToc, openTocPush, resetSidebarStore } from "./contexts/SidebarStor
 import { resetQuoteGroupingSlot } from "./contexts/QuoteGroupingSlot";
 import { activityStorageKey, addJob, resetActivityStore } from "./contexts/ActivityStore";
 import { act } from "@testing-library/react";
+import i18n, { ensureLocaleLoaded } from "./i18n";
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -280,9 +281,32 @@ describe("Catch-up chip", () => {
       addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
     });
     const chip = await screen.findByTestId("bn-activity-chip");
-    await waitFor(() => expect(chip).toHaveTextContent("Re-coding new sessions for Norman"));
+    await waitFor(() => expect(chip).toHaveTextContent("Coding the remaining sessions…"));
+    // The chip draws the ellipsis itself; a value that carried one doubled it.
+    expect(chip).not.toHaveTextContent("……");
     expect(chip).toHaveAttribute("data-status", "running");
     expect(chip).not.toHaveTextContent("40/40");
+  });
+
+  // #53: the keys were in no locale, so the chip said its English default in
+  // every language. Spanish stands for the 21: it reads its own value, not ours.
+  it("speaks the interface language", async () => {
+    await ensureLocaleLoaded("es");
+    await act(async () => { await i18n.changeLanguage("es"); });
+    try {
+      renderRoute("/report/sessions/");
+      act(() => {
+        addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
+      });
+      const chip = await screen.findByTestId("bn-activity-chip");
+      const spanish = i18n.t("autocode.chip.recoding");
+      expect(spanish).not.toBe("autocode.chip.recoding");
+      expect(spanish).not.toBe(i18n.t("autocode.chip.recoding", { lng: "en" }));
+      await waitFor(() => expect(chip).toHaveTextContent(spanish));
+      expect(chip).not.toHaveTextContent("Coding the remaining sessions");
+    } finally {
+      await act(async () => { await i18n.changeLanguage("en"); });
+    }
   });
 });
 

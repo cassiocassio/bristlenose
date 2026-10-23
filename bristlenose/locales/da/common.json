@@ -597,7 +597,9 @@
     },
     "chip": {
       "coding": "✦ AutoCoder {{title}}",
-      "coded": "✦ AutoCodede {{title}}"
+      "coded": "✦ AutoCodede {{title}}",
+      "recoding": "Koder de resterende sessioner",
+      "recoded": "De resterende sessioner er kodet"
     }
   },
   "transcript": {

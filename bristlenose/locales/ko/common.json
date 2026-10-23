@@ -565,7 +565,9 @@
     },
     "chip": {
       "coding": "✦ {{title}} AutoCode 진행 중",
-      "coded": "✦ {{title}} AutoCode 완료"
+      "coded": "✦ {{title}} AutoCode 완료",
+      "recoding": "남은 세션 코딩 중",
+      "recoded": "남은 세션 코딩 완료"
     }
   },
   "transcript": {

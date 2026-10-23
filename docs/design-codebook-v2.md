@@ -2727,7 +2727,9 @@ and naming it is the deliverable — not doing it inside a codebook mockup.
 > `check-locales.py` cannot see it (found 15 Oct, not fixed). Finding 5 is
 > still open. _20 Oct:_ the chip had no producer from v1's deletion until R12
 > gave it one in `CodebookV2Sidebar`, so the English-only strings are now on
-> screen in every language; the keys are still missing.
+> screen in every language; the keys are still missing. _23 Oct:_ seeded in all 21
+> locales and pinned (#53), with the owner's English "Coding the remaining
+> sessions…" / "Coded the remaining sessions".
 
 Built 30 Aug. Every message the install-and-autotag path can produce, drawn in
 both renderings that carry it: the SPA toast and the macOS project-sidebar row

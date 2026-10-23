@@ -224,6 +224,104 @@ struct ProjectIndexDropTests {
         #expect(index.projectsInFolder(folder.id).map(\.position) == [0])
     }
 
+    // MARK: - Deleting a folder (R54)
+
+    /// A root of A, folder F holding X Y Z, then B and C — F sits between A and B.
+    private static func seedFolderBetween(_ index: ProjectIndex, name: String = "F",
+                                          holding inner: [String] = ["X", "Y", "Z"]) -> Folder {
+        let folder = index.addFolder(name: name)
+        for title in inner.reversed() {
+            index.addProject(name: title, path: "/tmp/\(title)", intoFolder: folder.id)
+        }
+        return folder
+    }
+
+    /// Deleting a folder puts its studies at the folder's own place, in their in-folder
+    /// order, and renumbers the root. It used to keep their in-folder positions, which
+    /// collided with the root's (and the root sort has no tiebreak), so the studies
+    /// scattered among the root rows and could swap places later.
+    @Test func deleteFolder_studiesTakeTheFoldersPlaceInOrder() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        Self.seedRootProjects(index, ["A", "B", "C"])
+        let folder = Self.seedFolderBetween(index)
+        // `atIndex` is the insertion line in pre-move coordinates: [F, A | B, C].
+        index.apply(DropPlan(items: [.folder(folder.id)], toFolder: nil, atIndex: 2))
+        #expect(Self.rootNames(index) == ["A", "F", "B", "C"])
+
+        index.removeFolder(id: folder.id)
+
+        #expect(Self.rootNames(index) == ["A", "X", "Y", "Z", "B", "C"])
+        #expect(index.sidebarItems.map(\.position) == Array(0..<6))
+        #expect(index.projects.allSatisfy { $0.folderId == nil })
+    }
+
+    @Test func deleteFolder_atTheTopAndAtTheBottom() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        Self.seedRootProjects(index, ["A", "B"])
+        let top = Self.seedFolderBetween(index, name: "Top", holding: ["X", "Y"])
+        let bottom = Self.seedFolderBetween(index, name: "Bottom", holding: ["P", "Q"])
+        index.apply(DropPlan(items: [.folder(bottom.id)], toFolder: nil,
+                             atIndex: DropRouting.append))
+        #expect(Self.rootNames(index) == ["Top", "A", "B", "Bottom"])
+
+        index.removeFolder(id: top.id)
+        #expect(Self.rootNames(index) == ["X", "Y", "A", "B", "Bottom"])
+        index.removeFolder(id: bottom.id)
+        #expect(Self.rootNames(index) == ["X", "Y", "A", "B", "P", "Q"])
+        #expect(index.sidebarItems.map(\.position) == Array(0..<6))
+    }
+
+    /// Several selected folders are deleted one call at a time (ContentView loops).
+    @Test func deleteSeveralFolders_eachKeepsItsPlace() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        Self.seedRootProjects(index, ["A", "B", "C"])
+        let first = Self.seedFolderBetween(index, name: "F", holding: ["X", "Y"])
+        let second = Self.seedFolderBetween(index, name: "G", holding: ["P", "Q"])
+        index.apply(DropPlan(items: [.folder(first.id)], toFolder: nil, atIndex: 3))
+        index.apply(DropPlan(items: [.folder(second.id)], toFolder: nil,
+                             atIndex: DropRouting.append))
+        #expect(Self.rootNames(index) == ["A", "F", "B", "C", "G"])
+
+        for folderID in [first.id, second.id] { index.removeFolder(id: folderID) }
+
+        #expect(Self.rootNames(index) == ["A", "X", "Y", "B", "C", "P", "Q"])
+        #expect(index.sidebarItems.map(\.position) == Array(0..<7))
+    }
+
+    @Test func deleteEmptyFolder_closesTheGap() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        Self.seedRootProjects(index, ["A", "B"])
+        let folder = index.addFolder(name: "F")
+        index.apply(DropPlan(items: [.folder(folder.id)], toFolder: nil, atIndex: 2))
+        #expect(Self.rootNames(index) == ["A", "F", "B"])
+
+        index.removeFolder(id: folder.id)
+        #expect(Self.rootNames(index) == ["A", "B"])
+        #expect(index.sidebarItems.map(\.position) == [0, 1])
+    }
+
+    @Test func deleteFolder_orderSurvivesReload() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+        let fileURL = tempDir.appendingPathComponent("projects.json")
+
+        Self.seedRootProjects(index, ["A", "B"])
+        let folder = Self.seedFolderBetween(index, holding: ["X", "Y"])
+        index.apply(DropPlan(items: [.folder(folder.id)], toFolder: nil, atIndex: 2))
+        index.removeFolder(id: folder.id)
+
+        let reloaded = ProjectIndex(fileURL: fileURL)
+        #expect(Self.rootNames(reloaded) == ["A", "X", "Y", "B"])
+    }
+
     @Test func emptyPlan_isANoOp() {
         let (index, tempDir) = Self.makeTempIndex()
         defer { Self.cleanup(tempDir) }

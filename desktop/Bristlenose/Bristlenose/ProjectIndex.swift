@@ -896,12 +896,24 @@ final class ProjectIndex: ObservableObject {
         return folder
     }
 
-    /// Remove a folder. Projects inside move to root level (folderId = nil).
+    /// Remove a folder. Projects inside move to root level (folderId = nil), at the
+    /// folder's own place and in their in-folder order, and the root is renumbered
+    /// contiguously, as `apply(_:)` does for a drop (R54). They used to keep their
+    /// in-folder positions, which collided with the root's, so they scattered among
+    /// the root rows (the root sort has no tiebreak).
     func removeFolder(id: UUID) {
+        // Snapshot before re-parenting: once `folderId` is nil the members already
+        // sit at root with colliding positions.
+        let rootBefore = sidebarItems.map(\.id)
+        let members = projectsInFolder(id).map(\.id)
+        let rootAfter = rootBefore.contains(id)
+            ? rootBefore.flatMap { $0 == id ? members : [$0] }
+            : rootBefore + members
         for i in projects.indices where projects[i].folderId == id {
             projects[i].folderId = nil
         }
         folders.removeAll { $0.id == id }
+        renumber(rootAfter)
         save()
     }
 

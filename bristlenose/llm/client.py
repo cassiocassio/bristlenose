@@ -1656,7 +1656,13 @@ class LLMClient:
             # otherwise drop that participant's results. Honours Retry-After.
             from bristlenose.llm.failure_classifier import LLMFailureKind
 
-            for attempt in range(_CLOUD_MAX_RETRIES):
+            # A while, not a range: the reasoning refusal below resends at once
+            # and spends no transport attempt. On the last one it used to fall
+            # out of the loop as AssertionError("unreachable"), printed as the
+            # session's reason. It can fire once per call: the resend no longer
+            # carries reasoning_effort.
+            attempt = 0
+            while True:
                 sent = params
                 if getattr(self, "_anyllm_keeps_reasoning", False):
                     sent = {k: v for k, v in params.items() if k != "reasoning_effort"}
@@ -1687,7 +1693,7 @@ class LLMClient:
                         model, attempt + 1, kind.value, delay,
                     )
                     await asyncio.sleep(min(delay, 60.0))
-            raise AssertionError("unreachable")  # pragma: no cover
+                    attempt += 1
 
         schema_format = {
             "type": "json_schema",
@@ -1836,12 +1842,18 @@ def _refuses_json_schema(exc: BaseException) -> bool:
 def _refuses_reasoning_off(exc: BaseException) -> bool:
     """True when a provider refused ``reasoning_effort="none"`` itself.
 
-    A 400 (or any-llm's unsupported-parameter error) that names reasoning:
+    A 400 (or any-llm's unsupported-parameter error) in the refusal's own words:
     OpenRouter answers a model that always thinks with "Reasoning is mandatory
-    for this endpoint and cannot be disabled." Anything else propagates.
+    for this endpoint and cannot be disabled", any-llm with "'reasoning_effort'
+    is not supported". Not the bare word: ``str(exc)`` is the whole body, and a
+    model id (``deepseek-reasoner``) or a host's message about reasoning tokens
+    would turn thinking back on for the rest of the run. Anything else propagates.
     """
-    names_reasoning = "reasoning" in str(exc).lower()
+    text = str(exc).lower()
+    refuses = "reasoning_effort" in text or (
+        "reasoning" in text and ("mandatory" in text or "disabled" in text)
+    )
     if type(exc).__name__ == "UnsupportedParameterError":
-        return names_reasoning
-    return names_reasoning and getattr(exc, "status_code", None) == 400
+        return refuses
+    return refuses and getattr(exc, "status_code", None) == 400
 

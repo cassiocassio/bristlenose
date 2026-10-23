@@ -1512,3 +1512,47 @@ def test_a_later_failure_is_not_blamed_on_an_earlier_host() -> None:
         assert later.__context__ is host_refusal
         assert anyllm.upstream(later) is None
     assert anyllm.upstream(host_refusal) == ("Mistral", "")
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_on_the_last_retry_is_still_resent(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Five 429s, then the endpoint refuses thinking off: the resend without it
+    must still go out. It spent a retry slot and, on the last one, fell out of
+    the loop as AssertionError("unreachable"), printed as the session's reason
+    (review round 2, finding 39)."""
+    import bristlenose.llm.client as client_module
+    from bristlenose.llm.client import _CLOUD_MAX_RETRIES
+
+    async def no_wait(_: float) -> None:
+        return None
+
+    monkeypatch.setattr(client_module.asyncio, "sleep", no_wait)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env")
+    fake_anyllm.replies += [_openrouter(429, _OWN_LIMIT)] * (_CLOUD_MAX_RETRIES - 1)
+    fake_anyllm.replies += [
+        _StatusError(400, "Reasoning is mandatory for this endpoint and cannot be disabled."),
+        _response(json.dumps({"label": "Checkout", "quotes": []})),
+    ]
+    result = await _client(monkeypatch, OPENROUTER_MODEL).analyze("s", "u", Theme)
+    assert result.label == "Checkout"
+    assert "reasoning_effort" not in fake_anyllm.calls[-1]
+
+
+@pytest.mark.parametrize(("error", "refuses"), [
+    (_StatusError(400, "Reasoning is mandatory for this endpoint and cannot be disabled."), True),
+    (_StatusError(400, "'reasoning_effort' is not supported for this model"), True),
+    (_StatusError(400, "deepseek/deepseek-reasoner is not a valid model ID"), False),
+    (_StatusError(400, "context length exceeded, including reasoning tokens"), False),
+    (_StatusError(500, "Reasoning is mandatory for this endpoint"), False),
+])
+def test_only_the_refusals_own_words_switch_thinking_back_on(
+    error: BaseException, refuses: bool
+) -> None:
+    """`str(exc)` is the whole body: the bare word "reasoning" in a model id or
+    a host's message turned thinking back on for the rest of the run, the cost
+    and the deadline failure thinking-off exists to prevent (finding 40)."""
+    from bristlenose.llm.client import _refuses_reasoning_off
+
+    assert _refuses_reasoning_off(error) is refuses

@@ -16,6 +16,12 @@ last-trued: 2026-10-23
 
 ## Changelog
 
+- _2026-10-23_ — errors from behind a gateway (§5.3e), from the OpenRouter
+  walk: a failure at the model's host is worded about that host, not the key or
+  OpenRouter, in `configure`, the run preflight and the run's banner; a reply
+  any-llm can't read is its own error, logged by field path, and stage 9 words
+  it as a reply that didn't fit.
+
 - _2026-10-23_ — thinking switched off (§5.3d), after the OpenRouter walk:
   Qwen 3.8 Flash, Nemotron and DeepSeek V4 Flash thought by default, every s09
   pass on Qwen and Nemotron ran past its 570 s deadline, and the halves were
@@ -284,6 +290,41 @@ ran and `bristlenose use provider:model` beneath the banner, because the
 abandonment message ("All quote extraction calls failed.") overwrites the
 per-session cause. No new failure category: that is a five-site change across
 the Swift mirrors and 21 locales, and any-llm is not on the Mac in v1.
+
+### 5.3e Errors from behind a gateway
+
+OpenRouter passes the request to the model's host. When the host fails it
+answers `Provider returned error`, naming the host in `metadata.provider_name`
+and, for its own capacity there, `metadata.limit_source:
+upstream_provider_shared_pool`. The key passed and OpenRouter did its part, so
+"OpenRouter is rate-limiting this key", "doesn't offer that model to this key"
+and "Rate-limited by OpenRouter" all sent the researcher the wrong way (walk,
+23 Oct 2026: a host 404 on free Nemotron, a host 429 on free Gemma, Mistral's
+shared pool ending a run on Mistral Large). `anyllm.upstream(exc)` reads it.
+
+- **Configure and the run preflight** bucket it `upstream_busy` (a 429) or
+  `upstream_failed` (anything else but a key or credit failure), carrying the
+  host on `ValidationResult.host`: "Mistral, reached through OpenRouter, is
+  busy. Your key works." `configure` saves the key, as it does when the
+  provider can't be reached: the key is proven, only the model wasn't checked.
+- **The run** records the host on `Cause.model_host` (an additive slot like
+  `reason`; "" when the gateway didn't name it, None when it wasn't the host),
+  which survives the stage's give-up, and the banner says the same sentence
+  with `bristlenose use provider:model`. Same category: no new one, for the
+  reason above.
+- **No extra retries for a shared pool.** Measured: the run's 18 requests over
+  43 s all got 429 with no `Retry-After`; probes 33 minutes later still did,
+  once a minute, until it cleared about 38 minutes after the first. A budget
+  of minutes would not have saved that run and would hold every other session
+  waiting. The retry loop is unchanged; the wording says try later or pick
+  another model.
+
+A reply any-llm 1.27 can't read (pydantic rejects it before we see it) raises
+`UnreadableReplyError`, whose message names each failing field path and type
+and, for a rejected `finish_reason`, its short enum value (OpenRouter sends
+`"error"` when a host fails mid-reply), never pydantic's input. Stage 9 prints
+it as its existing "the model's reply didn't fit the expected format", and the
+banner's any-llm `unknown` line already names the model and how to change it.
 
 ### 5.4 Rich
 

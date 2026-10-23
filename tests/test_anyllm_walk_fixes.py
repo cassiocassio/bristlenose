@@ -32,9 +32,7 @@ def _openrouter_429(limit_source: str) -> BaseException:
 def test_the_host_behind_a_gateway_is_read_from_its_error() -> None:
     busy = _openrouter_429("upstream_provider_shared_pool")
     assert anyllm.upstream(busy) == ("Mistral", "upstream_provider_shared_pool")
-    assert anyllm.is_shared_pool_limit(busy)
     assert anyllm.upstream(_ProviderError("401 bad key")) is None
-    assert not anyllm.is_shared_pool_limit(_ProviderError("429"))
 
 
 def test_the_same_key_twice_is_not_a_shadow(monkeypatch: pytest.MonkeyPatch) -> None:

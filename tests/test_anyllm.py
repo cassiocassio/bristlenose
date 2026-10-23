@@ -1109,3 +1109,292 @@ def test_an_unexplained_give_up_names_the_model_and_how_to_change_it(
     assert "bristlenose use provider:model" in unexplained
     # A failure with its own remedy keeps it, and no model advice.
     assert "bristlenose use" not in banner(CauseCategoryEnum.NETWORK)
+
+
+# ---------------------------------------------------------------------------
+# The model's host behind a gateway (OpenRouter walk, 23 Oct 2026)
+# ---------------------------------------------------------------------------
+#
+# OpenRouter passes the request to the model's host and, when the host fails,
+# answers "Provider returned error" naming it in ``metadata``. The bodies below
+# are the walk's, verbatim but for the ids. The SDK exception is the real
+# openai one (the openai client unwraps ``{"error": …}`` into ``body``); the
+# any-llm error around it is a fake shaped like 1.27's ``convert_exception``.
+
+
+class _AnyLLMError(Exception):
+    """any-llm's unified error: its own message, the status, the SDK's error."""
+
+    def __init__(self, original: BaseException, status: int) -> None:
+        super().__init__(f"[openrouter] {original}")
+        self.original_exception = original
+        self.status_code = status
+        self.retry_after = None
+
+
+class ModelNotFoundError(_AnyLLMError):  # named as any-llm names it (preflight reads it)
+    pass
+
+
+def _openrouter(status: int, error: dict[str, Any]) -> BaseException:
+    import httpx
+    import openai
+
+    sdk_class = {
+        401: openai.AuthenticationError, 404: openai.NotFoundError,
+        429: openai.RateLimitError, 502: openai.InternalServerError,
+    }[status]
+    request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
+    response = httpx.Response(status, json={"error": error}, request=request)
+    sdk = sdk_class(f"Error code: {status} - {{'error': {error!r}}}", response=response, body=error)
+    return (ModelNotFoundError if status == 404 else _AnyLLMError)(sdk, status)
+
+
+_HOST_404 = {  # free Nemotron: the id is listed, NVIDIA's endpoint is not there
+    "message": "Provider returned error", "code": 404,
+    "metadata": {
+        "raw": '{"status":404,"title":"Not Found","detail":"Function f: Not found for account a"}',
+        "provider_name": "Nvidia",
+    },
+}
+_HOST_429 = {  # free Gemma: the host is limiting, not this key
+    "message": "Provider returned error", "code": 429,
+    "metadata": {"raw": "google/gemma-4-31b-it:free is temporarily rate-limited upstream.",
+                 "provider_name": "Google AI Studio"},
+}
+_SHARED_POOL_429 = {  # Mistral Large: OpenRouter's shared pool at Mistral is full
+    "message": "Provider returned error", "code": 429,
+    "metadata": {
+        "raw": "mistralai/mistral-large-2512 is temporarily rate-limited upstream. Please retry "
+               "shortly, or add your own key to accumulate your rate limits",
+        "provider_name": "Mistral", "is_byok": False,
+        "limit_source": "upstream_provider_shared_pool",
+    },
+}
+_UNNAMED_HOST = {"message": "Provider returned error", "code": 502}
+_BAD_KEY = {"message": "User not found.", "code": 401}
+_OWN_LIMIT = {"message": "Rate limit exceeded: free-models-per-day. ", "code": 429}
+_UNKNOWN_MODEL = {"message": "No endpoints found for nvidia/not-a-model.", "code": 404}
+
+_OPENROUTER_CASES = [
+    # (status, body, preflight bucket, host)
+    (404, _HOST_404, "upstream_failed", "Nvidia"),
+    (429, _HOST_429, "upstream_busy", "Google AI Studio"),
+    (429, _SHARED_POOL_429, "upstream_busy", "Mistral"),
+    (502, _UNNAMED_HOST, "upstream_failed", ""),
+    # OpenRouter's own answers keep their wording: the key, its limit, the id.
+    (401, _BAD_KEY, "invalid_key", None),
+    (429, _OWN_LIMIT, "rate_limit", None),
+    (404, _UNKNOWN_MODEL, "model_unavailable", None),
+]
+OPENROUTER_MODEL = "openrouter:mistralai/mistral-large-2512"
+
+
+@pytest.mark.parametrize(("status", "body", "bucket", "host"), _OPENROUTER_CASES)
+def test_the_preflight_tells_the_models_host_from_the_key(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch,
+    status: int, body: dict[str, Any], bucket: str, host: str | None,
+) -> None:
+    from bristlenose.preflight.api_key import _validate_anyllm
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env")
+    fake_anyllm.replies.append(_openrouter(status, body))
+    result = _validate_anyllm("", OPENROUTER_MODEL)
+    assert (result.ok, result.error_class, result.host) == (False, bucket, host)
+
+
+@pytest.mark.parametrize(
+    ("bucket", "host", "says"),
+    [
+        ("upstream_busy", "Mistral", "Mistral, reached through OpenRouter, is busy. Your key works."),
+        ("upstream_failed", "Nvidia",
+         "Nvidia, reached through OpenRouter, couldn't serve that model. Your key works."),
+        ("upstream_busy", "", "The model's host, reached through OpenRouter, is busy."),
+    ],
+)
+def test_a_host_failure_is_worded_about_the_host_not_the_key(
+    bucket: str, host: str, says: str
+) -> None:
+    from bristlenose.llm.billing_hints import recovery_message
+
+    text = recovery_message(
+        "anyllm", bucket, raw_message="Provider returned error",
+        provider_display="OpenRouter", host=host,
+    )
+    assert text.startswith(says)
+    assert "this key" not in text and "another model" in text
+
+
+def test_a_host_name_from_the_gateway_is_printable_and_escaped() -> None:
+    from bristlenose.llm.billing_hints import recovery_message
+
+    error = dict(_HOST_429, metadata={"provider_name": "[link=https://x.test]Evil[/link]\x1b[31m" + "x" * 80})
+    host = anyllm.upstream(_openrouter(429, error))
+    assert host is not None and "\x1b" not in host[0] and len(host[0]) <= 40
+    text = recovery_message("anyllm", "upstream_busy", provider_display="OpenRouter", host=host[0])
+    assert "\\[link=" in text  # Rich would otherwise render a hyperlink
+
+
+def test_configure_keeps_a_key_the_gateway_accepted_when_the_host_is_busy(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """The walk got "✗ Not valid — OpenRouter is rate-limiting this key" for a
+    good key, and nothing stored. The key passed; only the model's host refused."""
+    from typer.testing import CliRunner
+
+    from bristlenose import credentials
+    from bristlenose.cli import app
+    from bristlenose.credentials import FileCredentialStore
+
+    store = FileCredentialStore(tmp_path / "keys.env")
+    monkeypatch.setattr(credentials, "get_credential_store", lambda: store)
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", OPENROUTER_MODEL)
+    fake_anyllm.replies.append(_openrouter(429, _SHARED_POOL_429))
+    result = CliRunner().invoke(app, ["configure", "any-llm", "--key", "sk-or-new"])
+    assert result.exit_code == 0, result.output
+    assert "Mistral, reached through OpenRouter, is busy" in " ".join(result.output.split())
+    assert "Not valid" not in result.output and "this key" not in result.output
+    assert store.get(anyllm.credential_key("openrouter")) == "sk-or-new"
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "category", "host"),
+    [
+        (429, _SHARED_POOL_429, "quota", "Mistral"),
+        (404, _HOST_404, "api_request", "Nvidia"),
+        (502, _UNNAMED_HOST, "api_server", ""),
+        (401, _BAD_KEY, "auth", None),
+        (429, _OWN_LIMIT, "quota", None),
+    ],
+)
+def test_a_run_records_which_host_failed(
+    status: int, body: dict[str, Any], category: str, host: str | None
+) -> None:
+    from bristlenose.events import Cause
+    from bristlenose.pipeline import _dominant_cause
+    from bristlenose.run_lifecycle import _build_cause
+
+    cause = _build_cause(
+        _openrouter(status, body), stage="topic_segmentation", provider="anyllm",
+    )
+    assert (cause.category.value, cause.model_host) == (category, host)
+    # It survives the stage's give-up, which restamps the message, and the log.
+    from bristlenose.events import StageFailure
+
+    abandoned = _dominant_cause(
+        [StageFailure(session_id="s1", cause=cause)],
+        default_category=cause.category, message="Topic segmentation failed.",
+    )
+    assert Cause.model_validate_json(abandoned.model_dump_json()).model_host == host
+
+
+def test_a_built_in_provider_never_gets_a_model_host() -> None:
+    from bristlenose.run_lifecycle import _build_cause
+
+    cause = _build_cause(_openrouter(429, _SHARED_POOL_429), stage="s", provider="openai")
+    assert cause.model_host is None
+
+
+@pytest.mark.parametrize(
+    ("category", "host", "headline"),
+    [
+        ("quota", "Mistral", "Mistral, reached through OpenRouter, is busy."),
+        ("api_request", "Nvidia", "Nvidia, reached through OpenRouter, couldn't serve the model."),
+        ("quota", "", "The model's host, reached through OpenRouter, is busy."),
+        ("quota", None, "Rate-limited by OpenRouter."),  # OpenRouter's own limit: unchanged
+    ],
+)
+def test_the_run_banner_names_the_host_that_failed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
+    category: str, host: str | None, headline: str,
+) -> None:
+    from bristlenose import cli
+    from bristlenose.events import Cause, CauseCategoryEnum
+
+    monkeypatch.setenv("BRISTLENOSE_LLM_PROVIDER", "any-llm")
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", OPENROUTER_MODEL)
+    settings = load_settings()
+    lines: list[str] = []
+    monkeypatch.setattr(cli.console, "print", lambda *a, **k: lines.append(" ".join(map(str, a))))
+    monkeypatch.setattr(cli, "_say", lambda kind, text: lines.append(text))
+    cause = Cause(category=CauseCategoryEnum(category), provider="anyllm",
+                  stage="topic_segmentation", message="x", model_host=host)
+    cli._print_pipeline_failure(cause, tmp_path / "tx-ikea", settings, command="analyze")
+    assert headline in lines
+    if host is not None:
+        assert "bristlenose use provider:model" in "\n".join(lines)
+        assert "Rate-limited by" not in "\n".join(lines)
+
+
+def _unreadable_completion(finish_reason: str, content: str) -> ValidationError:
+    """The error any-llm 1.27 raises reading a reply whose finish reason is
+    outside OpenAI's five; pydantic's input is the reply, so the transcript."""
+    from typing import Literal
+
+    class Message(BaseModel):
+        content: str
+
+    class Choice(BaseModel):
+        finish_reason: Literal["stop", "length", "tool_calls", "content_filter", "function_call"]
+        message: Message
+
+    class ChatCompletion(BaseModel):
+        choices: list[Choice]
+
+    try:
+        ChatCompletion.model_validate(
+            {"choices": [{"finish_reason": finish_reason, "message": {"content": content}}]}
+        )
+    except ValidationError as exc:
+        return exc
+    raise AssertionError("expected a ValidationError")
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_reply_names_its_fields_never_its_text(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The walk's log read "1 validation errors" and nothing more, so a missing
+    choice, a null content and a host's error reply all looked alike."""
+    from bristlenose.llm.client import UnreadableReplyError
+
+    participant_words = "my GP said the wound was infected"
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env")
+    fake_anyllm.replies.append(_unreadable_completion("error", participant_words))
+    with pytest.raises(UnreadableReplyError) as raised:
+        await _client(monkeypatch, OPENROUTER_MODEL).analyze("sys", "usr", Theme)
+    said = str(raised.value)
+    assert "choices.0.finish_reason (literal_error)" in said
+    assert "finish_reason='error'" in said
+    assert "1 validation error(s)" in said and "validation errors" not in said
+    assert participant_words not in said
+
+
+def test_a_long_or_odd_finish_reason_is_not_repeated() -> None:
+    """Only a short printable enum is quoted; anything else could be reply text."""
+    from bristlenose.llm.client import _unreadable_fields
+
+    long_text = "the participant said a great deal here " * 3
+    assert long_text.strip() not in _unreadable_fields(_unreadable_completion(long_text, "x"))
+    assert "finish_reason=" not in _unreadable_fields(_unreadable_completion("a\nb", "x"))
+
+
+def test_the_run_preflight_names_the_host_too(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """``run`` checks before stage 8 with the same request; its refusal must
+    not fall back to blaming the key."""
+    import io
+
+    from rich.console import Console
+
+    from bristlenose.preflight import api_key as preflight
+
+    monkeypatch.setattr(preflight, "state_path", lambda: tmp_path / "state.json")
+    monkeypatch.delenv("BRISTLENOSE_SKIP_PREFLIGHT", raising=False)  # set suite-wide
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-env")
+    fake_anyllm.replies.append(_openrouter(429, _SHARED_POOL_429))
+    settings = BristlenoseSettings(llm_provider="anyllm", anyllm_model=OPENROUTER_MODEL)
+    with pytest.raises(preflight.ApiKeyPreflightAbortedError) as refused:
+        preflight.preflight_api_key(settings=settings, console=Console(file=io.StringIO()))
+    assert str(refused.value).startswith("Mistral, reached through OpenRouter, is busy.")

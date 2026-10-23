@@ -194,6 +194,22 @@ def test_a_failed_reply_says_so_in_plain_words():
     assert dropped == {}
 
 
+def test_a_reply_any_llm_could_not_read_says_so_in_the_same_words():
+    """Through any-llm the reply fails before we see it (free Nemotron on
+    OpenRouter, 23 Oct 2026); the researcher's line is the same, not the
+    library's text with its field paths."""
+    from bristlenose.llm.client import UnreadableReplyError
+
+    errors: list[str] = []
+    quotes, outcome = asyncio.run(extract_quotes(
+        [_transcript()], [_no_topics()],
+        _client(UnreadableReplyError("OpenRouter returned a response any-llm couldn't read")),
+        errors=errors,
+    ))
+    assert quotes == [] and [f.session_id for f in outcome.failed] == ["s1"]
+    assert errors == ["the model's reply didn't fit the expected format"]
+
+
 def test_a_session_that_fails_after_a_salvaged_chunk_reports_no_drop():
     """Smart-split: chunk one is salvaged, chunk two fails for good. The session
     has no quotes, so none were "left out" of it."""

@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry
 from bristlenose.llm.boundary import wrap_untrusted
-from bristlenose.llm.client import LLMClient, TruncatedResponseError
+from bristlenose.llm.client import LLMClient, TruncatedResponseError, UnreadableReplyError
 from bristlenose.llm.prompts import get_prompt_template
 from bristlenose.llm.structured import QuoteExtractionResult, dropped_items
 from bristlenose.models import (
@@ -229,7 +229,9 @@ async def extract_quotes(
                     # The CLI prints this. Pydantic's own text is multi-line
                     # and names schema paths, which says nothing to a researcher.
                     errors.append(
-                        _MALFORMED_REPLY if isinstance(exc, ValidationError) else str(exc)
+                        _MALFORMED_REPLY
+                        if isinstance(exc, (ValidationError, UnreadableReplyError))
+                        else str(exc)
                     )
                 outcome.failed.append(StageFailure(
                     session_id=transcript.session_id,

@@ -206,6 +206,9 @@ class ValidationResult:
     ok: bool
     error_class: str | None = None  # one of billing_hints' four buckets or None
     raw_message: str = ""
+    #: The model's host behind a gateway, when the host failed (any-llm only):
+    #: its name, "" when the gateway didn't name it, None when it wasn't the host.
+    host: str | None = None
 
 
 def _params_for(provider: str, model: str, params: dict[str, Any] | None) -> dict[str, Any]:
@@ -671,6 +674,17 @@ def _validate_anyllm(
         if network is not None:
             return network
         kind = anyllm.classify(exc)
+        up = anyllm.upstream(exc)
+        if up is not None and kind not in (
+            LLMFailureKind.INVALID_KEY, LLMFailureKind.OUT_OF_CREDIT,
+        ):
+            # The gateway took the key and passed the request on; the model's
+            # host refused it. Saying "this key" sends the researcher the wrong
+            # way (OpenRouter walk, 23 Oct 2026).
+            bucket = "upstream_busy" if kind is LLMFailureKind.RATE_LIMITED else "upstream_failed"
+            return ValidationResult(
+                ok=False, error_class=bucket, raw_message=str(exc), host=up[0],
+            )
         bucket = {
             LLMFailureKind.INVALID_KEY: "invalid_key",
             LLMFailureKind.OUT_OF_CREDIT: "billing_empty",
@@ -875,5 +889,6 @@ def preflight_api_key(
             result.error_class or "",
             raw_message=result.raw_message,
             provider_display=display,
+            host=result.host,
         )
     )

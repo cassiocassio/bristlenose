@@ -119,7 +119,12 @@ GENERIC_RECOVERY = (
 
 
 def recovery_message(
-    provider: str, error_class: str, raw_message: str = "", *, provider_display: str = "",
+    provider: str,
+    error_class: str,
+    raw_message: str = "",
+    *,
+    provider_display: str = "",
+    host: str | None = None,
 ) -> str:
     """Return the recovery copy for a (provider, error_class) tuple.
 
@@ -142,7 +147,9 @@ def recovery_message(
     # ``network`` errors are provider-agnostic except for local Ollama,
     # where "connect refused" is "ollama isn't running" with a specific fix.
     if provider == "anyllm":
-        return _anyllm_message(error_class, raw_message, provider_display or "The provider")
+        return _anyllm_message(
+            error_class, raw_message, provider_display or "The provider", host=host,
+        )
 
     if error_class == "network":
         if provider == "local":
@@ -198,10 +205,14 @@ def recovery_message(
     )
 
 
-def _anyllm_message(error_class: str, raw_message: str, name: str) -> str:
+def _anyllm_message(
+    error_class: str, raw_message: str, name: str, *, host: str | None = None,
+) -> str:
     """Recovery copy for a provider reached through any-llm.
 
-    ``name`` is that provider ("Mistral"), never the library. There is no
+    ``name`` is that provider ("Mistral"), never the library. ``host`` is the
+    model's host behind a gateway when that host failed (``upstream_busy`` /
+    ``upstream_failed``): its name, or "" when the gateway didn't give one. There is no
     billing or keys URL to give (we hold none for the long tail), and the
     provider's words are cut to a readable length: a gateway relays whatever its
     upstream sends, a whole HTML error page included.
@@ -216,8 +227,13 @@ def _anyllm_message(error_class: str, raw_message: str, name: str) -> str:
         "model_unavailable": "preflight.api_key.anyllm_model_unavailable",
         "rate_limit": "preflight.api_key.anyllm_rate_limit",
         "network": "preflight.api_key.network",
+        "upstream_busy": "preflight.api_key.anyllm_upstream_busy",
+        "upstream_failed": "preflight.api_key.anyllm_upstream_failed",
     }.get(error_class, "preflight.api_key.anyllm_generic")
-    return t(key, provider_display=name, message=said)
+    host_name = (
+        _rich_escape(host) if host else t("preflight.api_key.anyllm_unnamed_host")
+    )
+    return t(key, provider_display=name, message=said, host=host_name)
 
 
 # Legacy export kept for tests that asserted the literal default template.

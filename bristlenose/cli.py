@@ -1010,8 +1010,28 @@ def _print_pipeline_failure(
         provider_display = anyllm.account_name(settings) or "the API"
         configure_hint = "bristlenose configure any-llm"
 
+    model_host = getattr(cause, "model_host", None) if provider_key == "anyllm" else None
+
     console.print()
-    if category == CauseCategoryEnum.OUT_OF_CREDIT:
+    if model_host is not None:
+        # The gateway (OpenRouter) took the key and passed the request on; the
+        # model's host turned it away. "Rate-limited by OpenRouter" sent the
+        # researcher the wrong way: the 23 Oct 2026 walk saw Mistral's shared
+        # pool stay full for over half an hour.
+        host = escape(model_host) if model_host else "The model's host"
+        if category == CauseCategoryEnum.QUOTA:
+            _say(MessageKind.ERROR, f"{host}, reached through {provider_display}, is busy.")
+        else:
+            _say(
+                MessageKind.ERROR,
+                f"{host}, reached through {provider_display}, couldn't serve the model.",
+            )
+        console.print(
+            f"  Run  [bold]{retry_cmd}[/bold]  again later, or pick another model:  "
+            "[bold]bristlenose use provider:model[/bold]",
+            highlight=False,
+        )
+    elif category == CauseCategoryEnum.OUT_OF_CREDIT:
         _say(MessageKind.ERROR, f"Your {provider_display} account ran out of credit.")
         billing = billing_for(provider_key) if provider_key else None
         if billing:
@@ -2887,6 +2907,20 @@ def _configure_anyllm(key: str | None) -> None:
             _say(
                 MessageKind.WARNING,
                 f"Couldn't reach {name} to check: {escape(result.raw_message)}",
+            )
+            console.print("Saving anyway...")
+            break
+        if result.error_class in ("upstream_busy", "upstream_failed"):
+            # The gateway accepted the key and the model's host refused the
+            # request: the key is proven, only the model couldn't be checked,
+            # as when the provider can't be reached above.
+            _say(
+                MessageKind.WARNING,
+                recovery_message(
+                    "anyllm", result.error_class,
+                    raw_message=result.raw_message, provider_display=name,
+                    host=result.host,
+                ),
             )
             console.print("Saving anyway...")
             break

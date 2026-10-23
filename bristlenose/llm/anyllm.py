@@ -537,7 +537,12 @@ def upstream(exc: BaseException) -> tuple[str, str] | None:
     pool, ``metadata.limit_source`` ("upstream_provider_shared_pool"). The key
     and OpenRouter are fine then; saying "rate-limiting this key" sends the
     researcher the wrong way (found by the OpenRouter walk, 23 Oct 2026).
-    Returns ``(host, limit_source)``, either possibly "", or None.
+    Returns ``(host, limit_source)``, either possibly "", or None. The message
+    alone marks it as the host's failure when the metadata is missing; the host
+    is then "" and the caller says "the model's host".
+
+    The host is the gateway's text, printed and written to the events log, so
+    it is cut to a name's length and kept to printable characters.
     """
     seen: set[int] = set()
     todo: list[BaseException | None] = [exc]
@@ -548,17 +553,24 @@ def upstream(exc: BaseException) -> tuple[str, str] | None:
         seen.add(id(cur))
         body = getattr(cur, "body", None)
         if isinstance(body, dict):
-            meta = body.get("metadata")
-            if not isinstance(meta, dict) and isinstance(body.get("error"), dict):
-                meta = body["error"].get("metadata")
-            if isinstance(meta, dict) and (meta.get("provider_name") or meta.get("limit_source")):
-                return str(meta.get("provider_name") or ""), str(meta.get("limit_source") or "")
+            # The openai SDK unwraps OpenRouter's {"error": {...}}; others don't.
+            err = body["error"] if isinstance(body.get("error"), dict) else body
+            meta = err.get("metadata")
+            meta = meta if isinstance(meta, dict) else {}
+            if (
+                meta.get("provider_name")
+                or meta.get("limit_source")
+                or err.get("message") == _UPSTREAM_MESSAGE
+            ):
+                return _host_name(meta.get("provider_name")), str(meta.get("limit_source") or "")
         todo += [getattr(cur, "original_exception", None), cur.__cause__, cur.__context__]
     return None
 
 
-def is_shared_pool_limit(exc: BaseException) -> bool:
-    """A gateway's shared capacity at the host is exhausted: wait longer, not the key."""
-    up = upstream(exc)
-    return bool(up and "shared_pool" in up[1])
+#: OpenRouter's message when the model's host, not OpenRouter, failed.
+_UPSTREAM_MESSAGE = "Provider returned error"
 
+
+def _host_name(value: object) -> str:
+    text = "".join(ch for ch in str(value or "") if ch.isprintable()).strip()
+    return text[:40]

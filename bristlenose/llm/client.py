@@ -368,6 +368,20 @@ class TruncatedResponseError(RuntimeError):
         self.model_cap = model_cap
 
 
+class UnreadableReplyError(RuntimeError):
+    """A reply any-llm could not read as a chat completion.
+
+    any-llm 1.27 validates the provider's reply against OpenAI's shape and
+    raises pydantic's ``ValidationError`` before we see the content. Through a
+    free OpenRouter model, 23 Oct 2026, every quote pass ended this way: the
+    model, not the network or the key, so the remedy is another model. Stage 9
+    words it as a reply that didn't fit, like its own schema failures.
+
+    The message names field paths and error types, never pydantic's input,
+    which is the reply, which quotes the transcript.
+    """
+
+
 class LLMUsageTracker:
     """Accumulates token usage across multiple LLM calls.
 
@@ -1679,9 +1693,9 @@ class LLMClient:
                     record("truncated")
                     raise truncated() from None
                 record("error")
-                raise RuntimeError(
+                raise UnreadableReplyError(
                     f"{name} returned a response any-llm couldn't read "
-                    f"(provider=anyllm, model={model}, {exc.error_count()} validation errors)."
+                    f"(provider=anyllm, model={model}; {_unreadable_fields(exc)})."
                 ) from None
             except Exception:
                 record("error")
@@ -1732,6 +1746,20 @@ class LLMClient:
 #: A reply that doesn't fit the schema is asked for again once (any-llm only;
 #: the Ollama route has its own three-attempt loop).
 _ANYLLM_SCHEMA_ATTEMPTS = 2
+
+
+def _unreadable_fields(exc: ValidationError) -> str:
+    """Which fields of any-llm's reply failed, for the log: ``_failure_summary``,
+    plus a rejected ``finish_reason``'s value, which is a short provider enum
+    (OpenRouter sends "error" when the host fails mid-reply), never reply text."""
+    reasons = sorted({
+        err["input"] for err in exc.errors()
+        if tuple(err.get("loc", ()))[-1:] == ("finish_reason",)
+        and isinstance(err.get("input"), str) and len(err["input"]) <= 32
+        and err["input"].isprintable()
+    })
+    said = "".join(f", finish_reason={r!r}" for r in reasons)
+    return _failure_summary(exc) + said
 
 
 def _retry_after_seconds(exc: BaseException) -> float | None:

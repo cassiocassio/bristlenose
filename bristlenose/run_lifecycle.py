@@ -709,6 +709,20 @@ def _build_cause(
             # not the network, and "check your connection" would send the
             # researcher the wrong way. The built-in providers keep NETWORK.
             category = CauseCategoryEnum.UNKNOWN
+    model_host: str | None = None
+    if provider == "anyllm" and category in (
+        CauseCategoryEnum.QUOTA,
+        CauseCategoryEnum.API_REQUEST,
+        CauseCategoryEnum.API_SERVER,
+        CauseCategoryEnum.UNKNOWN,
+    ):
+        from bristlenose.llm import anyllm
+
+        # A gateway's report that the model's host failed: the banner names the
+        # host instead of blaming the gateway or the key. Never the key's own
+        # failures (AUTH, OUT_OF_CREDIT), which the gateway reports as its own.
+        up = anyllm.upstream(exc)
+        model_host = up[0] if up is not None else None
     if category is CauseCategoryEnum.OUTPUT_TRUNCATED and stage == "quote_extraction":
         # Actionable, bristlenose-authored, re-id-safe (constant string, no
         # provider body). Surfaces only after smart-split exhausts its depth
@@ -739,6 +753,7 @@ def _build_cause(
         code=str(http_status) if http_status is not None else None,
         message=message,
         session_id=session_id,
+        model_host=model_host,
     )
 
 

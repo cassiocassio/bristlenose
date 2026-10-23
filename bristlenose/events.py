@@ -261,6 +261,12 @@ class Cause(BaseModel):
     #: whole summary.
     reason: UnusableReason | None = None
     provider: str | None = None
+    #: The model's host behind a gateway, when that host failed rather than the
+    #: gateway or the key (any-llm through OpenRouter): its name ("Mistral"),
+    #: "" when the gateway didn't name it, None otherwise. Another
+    #: category-specific slot, additive like ``reason``: the Mac app doesn't run
+    #: any-llm and its decoder ignores the key.
+    model_host: str | None = None
     stage: str | None = None
     session_id: str | None = None
     exit_code: int | None = None

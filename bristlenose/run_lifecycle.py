@@ -696,6 +696,19 @@ def _build_cause(
     HTTP status independently of the message.
     """
     category = categorise_exception(exc, provider=provider).category
+    if (
+        category is CauseCategoryEnum.NETWORK
+        and provider == "anyllm"
+        and stage == "quote_extraction"
+    ):
+        from bristlenose.stages.s09_quote_extraction import PassDeadlineError
+
+        if isinstance(exc, PassDeadlineError):
+            # The provider answered and the model was still writing: through
+            # any-llm that is a slow model (usually one thinking at length),
+            # not the network, and "check your connection" would send the
+            # researcher the wrong way. The built-in providers keep NETWORK.
+            category = CauseCategoryEnum.UNKNOWN
     if category is CauseCategoryEnum.OUTPUT_TRUNCATED and stage == "quote_extraction":
         # Actionable, bristlenose-authored, re-id-safe (constant string, no
         # provider body). Surfaces only after smart-split exhausts its depth

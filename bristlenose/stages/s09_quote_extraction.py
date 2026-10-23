@@ -507,13 +507,22 @@ async def _extract_with_split(
     return _dedupe_overlapping_quotes(results, transcript.segments)
 
 
-def _pass_timeout(depth: int) -> TimeoutError:
+class PassDeadlineError(TimeoutError):
+    """A pass ran past ``_PASS_DEADLINE_S`` and could not be split further.
+
+    A ``TimeoutError``, so it categorises as an SDK timeout did before R33;
+    typed so ``_build_cause`` can tell, through any-llm, a model still writing
+    from a network that never answered.
+    """
+
+
+def _pass_timeout(depth: int) -> PassDeadlineError:
     """The session's failure when a pass overran and could not be split further.
 
     Bristlenose-authored, no provider text. The word "timeout" categorises it
     NETWORK, the category an SDK timeout carried before R33.
     """
-    return TimeoutError(
+    return PassDeadlineError(
         f"quote extraction timeout: a pass at split depth {depth} ran past "
         f"{_PASS_DEADLINE_S:.0f} s"
     )

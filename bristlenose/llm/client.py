@@ -250,6 +250,17 @@ def request_params(
             params["max_tokens"] = max_tokens
         if temperature != fields["llm_temperature"].default:
             params["temperature"] = temperature
+            params["temperature"] = temperature
+        # Ask every model to answer without thinking first, as Claude does on
+        # the built-in route. Through a gateway a hybrid model thinks by
+        # default, and the thinking is billed as output and takes the time:
+        # Qwen 3.8 Flash on OpenRouter wrote 20–37k tokens per half session and
+        # ran past s09's pass deadline; with "none", 1,839 → 91 tokens on the
+        # same probe (23 Oct 2026). any-llm maps the word per provider (and
+        # already defaults DeepSeek, Mistral and Claude to it). A model that
+        # cannot switch thinking off refuses it, and _analyze_anyllm resends
+        # without it. docs/design-any-llm.md §5.3d.
+        params["reasoning_effort"] = "none"
         return params
     max_tokens = _clamp_max_tokens(model, max_tokens)
     if provider == "anthropic":
@@ -1560,13 +1571,26 @@ class LLMClient:
             from bristlenose.llm.failure_classifier import LLMFailureKind
 
             for attempt in range(_CLOUD_MAX_RETRIES):
+                sent = params
+                if getattr(self, "_anyllm_keeps_reasoning", False):
+                    sent = {k: v for k, v in params.items() if k != "reasoning_effort"}
                 try:
                     return await provider.acompletion(
-                        model=model_id, messages=messages, response_format=fmt, **params,
+                        model=model_id, messages=messages, response_format=fmt, **sent,
                     )
                 except (asyncio.CancelledError, ValidationError):
                     raise
                 except Exception as exc:
+                    if "reasoning_effort" in sent and _refuses_reasoning_off(exc):
+                        # "Reasoning is mandatory for this endpoint" (OpenRouter,
+                        # Gemini 2.5 Pro, GPT-5 mini): the model thinks whatever
+                        # we ask, so ask with its own default, for the session.
+                        logger.warning(
+                            "anyllm_reasoning_off_refused | model=%s | sending the model's default",
+                            model,
+                        )
+                        self._anyllm_keeps_reasoning = True
+                        continue
                     kind = anyllm.classify(exc)
                     transient = kind in (LLMFailureKind.RATE_LIMITED, LLMFailureKind.SERVER_ERROR)
                     if not transient or attempt == _CLOUD_MAX_RETRIES - 1:
@@ -1707,4 +1731,17 @@ def _refuses_json_schema(exc: BaseException) -> bool:
         return names_format
     status = getattr(exc, "status_code", None)
     return names_format and status == 400
+
+
+def _refuses_reasoning_off(exc: BaseException) -> bool:
+    """True when a provider refused ``reasoning_effort="none"`` itself.
+
+    A 400 (or any-llm's unsupported-parameter error) that names reasoning:
+    OpenRouter answers a model that always thinks with "Reasoning is mandatory
+    for this endpoint and cannot be disabled." Anything else propagates.
+    """
+    names_reasoning = "reasoning" in str(exc).lower()
+    if type(exc).__name__ == "UnsupportedParameterError":
+        return names_reasoning
+    return names_reasoning and getattr(exc, "status_code", None) == 400
 

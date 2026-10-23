@@ -14,6 +14,15 @@ last-trued: 2026-10-23
 
 ## Changelog
 
+- _2026-10-23_ — thinking switched off (§5.3d), after the OpenRouter walk:
+  Qwen 3.8 Flash, Nemotron and DeepSeek V4 Flash thought by default, every s09
+  pass on Qwen and Nemotron ran past its 570 s deadline, and the halves were
+  nearly as slow. Every call now sends `reasoning_effort="none"`; a model that
+  always thinks refuses it and is asked again with its own default, as a
+  refused `json_schema` is. A pass that outruns the deadline through any-llm is
+  no longer called a network failure, and an unexplained give-up names the
+  model and `bristlenose use provider:model`.
+
 - _2026-10-23_ — review of the build (Fable plus five reviewers), folded in:
   the preflight falls back to `json_object` as the run does (DeepSeek could
   never start); a rejected stored key is asked for again and a rejected
@@ -240,6 +249,39 @@ through one helper, `anyllm_credential(inner) -> CredentialSpec`, in
 `providers.py`, giving the service name "Bristlenose Groq API Key (any-llm)";
 `configure` and `_analyze_anyllm` both use it, and the static `CREDENTIALS`
 table (mirrored in Swift) is untouched.
+
+### 5.3d Thinking
+
+Every call sends `reasoning_effort="none"`, any-llm's own word for "answer
+without thinking first", which it maps per provider: OpenRouter forwards it and
+reads it as thinking off; DeepSeek, Mistral and Claude already default to it
+(Mistral turns any other level into `"high"`, so "low" would switch thinking
+*on* there). This is how the built-in route asks Claude, and our prompts were
+tuned on a model that doesn't think first.
+
+Measured 23 Oct 2026 on OpenRouter, one short extraction prompt, default vs
+`"none"`: Qwen 3.8 Flash 41.6 s / 1,839 output tokens → 2.1 s / 91; DeepSeek V4
+Flash 891 → 107; Grok 4.3 858 → 70; Nemotron 3.5 746 → 87; Sonnet 4.6, Llama
+3.3 70B and GPT-5.4 mini unchanged. `"low"` barely helped Qwen (1,553). On the
+whole FOSSDA run Qwen's s09 halves had written 20–37k tokens each from ~5k in,
+and every full pass was cancelled at the deadline; the provider still bills the
+tokens a cancelled call generated, and no row records them.
+
+A model that always thinks refuses `"none"` with a 400 ("Reasoning is mandatory
+for this endpoint and cannot be disabled": Gemini 2.5 Pro, GPT-5 mini). The
+call is sent again without it and the client remembers, as with a refused
+`json_schema`; the preflight does the same, or `configure` would turn away a
+model that runs. No setting: if a researcher needs thinking on, that is a
+question for the owner, not a flag.
+
+Two consequences in the failure path. A pass still writing at s09's deadline
+through any-llm is categorised `unknown`, not `network` (the provider
+answered; "check your connection" was wrong); the built-in providers keep
+`network`. And an abandoned run whose cause is `unknown` names the model that
+ran and `bristlenose use provider:model` beneath the banner, because the
+abandonment message ("All quote extraction calls failed.") overwrites the
+per-session cause. No new failure category: that is a five-site change across
+the Swift mirrors and 21 locales, and any-llm is not on the Mac in v1.
 
 ### 5.4 Rich
 

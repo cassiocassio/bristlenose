@@ -10,6 +10,7 @@ library would. ``scripts/check-providers-live.py`` asks the real thing.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import sys
 import types
@@ -60,19 +61,31 @@ def _response(content: str | None, finish_reason: str = "stop", refusal: str | N
     )
 
 
+_STILL_THINKING = object()  # a reply that never comes before s09's deadline
+
+
 class _FakeProvider:
     def __init__(self, library: _FakeLibrary) -> None:
         self.library = library
 
     async def acompletion(self, **kwargs: Any) -> Any:
+        if self.library.replies and self.library.replies[0] is _STILL_THINKING:
+            self.library.calls.append(kwargs)
+            self.library.replies.pop(0)
+            await asyncio.sleep(10**6)  # answers only when cancelled, as a slow model does
         return self.completion(**kwargs)
 
     def completion(self, **kwargs: Any) -> Any:  # the preflight's sync call
         unexpected = set(kwargs) - {
             "model", "messages", "response_format", "max_tokens", "temperature",
+            "reasoning_effort",
         }
         assert not unexpected, f"a parameter the call should not send: {unexpected}"
         self.library.calls.append(kwargs)
+        if self.library.always_thinks and kwargs.get("reasoning_effort") == "none":
+            # OpenRouter's answer for Gemini 2.5 Pro and GPT-5 mini (23 Oct 2026),
+            # raised as any-llm's InvalidRequestError, which carries the status.
+            raise _StatusError(400, "Reasoning is mandatory for this endpoint and cannot be disabled.")
         reply = self.library.replies.pop(0)
         if isinstance(reply, BaseException):
             raise reply
@@ -85,6 +98,7 @@ class _FakeLibrary:
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
         self.replies: list[Any] = []
+        self.always_thinks = False  # a model that cannot switch thinking off
         self.created: list[tuple[str, str | None]] = []
         self.classes = {
             # Mistral's class names no API_BASE in 1.27.
@@ -198,6 +212,7 @@ async def test_a_run_sends_the_named_model_as_a_schema_dict_with_no_sampling(
     assert sent["response_format"]["type"] == "json_schema"
     assert "max_tokens" not in sent
     assert "temperature" not in sent
+    assert sent["reasoning_effort"] == "none"
     assert client.tracker.input_tokens == 120
 
 
@@ -625,6 +640,27 @@ def test_the_preflight_sends_the_runs_request_and_falls_back_like_the_run(
     assert any("JSON" in m["content"] for m in second["messages"])
 
 
+def test_the_preflight_drops_reasoning_off_where_the_model_always_thinks(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Gemini 2.5 Pro and GPT-5 mini through OpenRouter refuse "none"; the run
+    then asks with the model's default, so the check must too, or `configure`
+    turns away a model that would run. Both fallbacks compose."""
+    from bristlenose.preflight.api_key import _validate_anyllm
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.always_thinks = True
+    fake_anyllm.replies += [
+        _StatusError(400, "response_format json_schema is not supported"),
+        _response("{}"),
+    ]
+    assert _validate_anyllm("", MODEL).ok
+    sent = [(c["response_format"]["type"], c.get("reasoning_effort")) for c in fake_anyllm.calls]
+    assert sent == [
+        ("json_schema", "none"), ("json_schema", None), ("json_object", None),
+    ]
+
+
 class APIConnectionError(Exception):  # named as openai's is
     pass
 
@@ -933,3 +969,143 @@ async def test_a_schema_retry_is_its_own_telemetry_row(
         telemetry.reset_run_context(tokens)
     rows = list(telemetry.iter_rows(run_dir))
     assert [(r["outcome"], r["retry_count"]) for r in rows] == [("error", 0), ("ok", 1)]
+
+
+# ---------------------------------------------------------------------------
+# Thinking (23 Oct 2026, the OpenRouter walk): a hybrid model reached through a
+# gateway thinks by default, billed as output; Qwen 3.8 Flash ran every s09 pass
+# past its deadline. Each call asks for none; a model that refuses is asked again
+# with its own default, once per client.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_model_that_always_thinks_is_asked_again_with_its_default_and_remembered(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.always_thinks = True
+    fake_anyllm.replies += [
+        _response('{"label": "a", "quotes": []}'),
+        _response('{"label": "b", "quotes": []}'),
+    ]
+    client = _client(monkeypatch)
+    assert (await client.analyze("s", "u", Theme)).label == "a"
+    assert (await client.analyze("s", "u", Theme)).label == "b"
+    assert [c.get("reasoning_effort") for c in fake_anyllm.calls] == ["none", None, None]
+
+
+@pytest.mark.asyncio
+async def test_a_400_that_does_not_name_reasoning_is_not_a_reason_to_think(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A bad model id must surface, not be resent with thinking switched on."""
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    fake_anyllm.replies += [_StatusError(400, "unknown model mistral-larg"), _response("{}")]
+    with pytest.raises(_StatusError):
+        await _client(monkeypatch).analyze("s", "u", Theme)
+    assert [c.get("reasoning_effort") for c in fake_anyllm.calls] == ["none"]
+
+
+def test_the_real_library_maps_none_to_thinking_off_where_we_measured_it() -> None:
+    """What the fix rests on, asked of the installed library (skipped in CI):
+    OpenRouter forwards "none" as a top-level ``reasoning_effort``, which its
+    API reads as thinking off (measured 23 Oct 2026); DeepSeek and Mistral read
+    it as their own off, never as the "high" Mistral makes of "low"."""
+    real = pytest.importorskip("any_llm")
+    if not hasattr(real, "__file__"):
+        pytest.skip("a fake any_llm is installed in this process")
+    from any_llm.providers.deepseek.deepseek import DeepseekProvider
+    from any_llm.providers.mistral.mistral import MistralProvider
+    from any_llm.providers.openrouter.openrouter import OpenrouterProvider
+    from any_llm.types.completion import CompletionParams
+
+    def params(model: str) -> CompletionParams:
+        return CompletionParams(
+            model_id=model, messages=[{"role": "user", "content": "."}],
+            reasoning_effort="none",
+        )
+
+    openrouter = OpenrouterProvider._convert_completion_params(params("qwen/qwen3.8-flash"))
+    assert openrouter.get("reasoning_effort") == "none"
+    assert "reasoning" not in openrouter.get("extra_body", {})
+    deepseek = DeepseekProvider._convert_completion_params(params("deepseek-flash"))
+    assert deepseek["extra_body"]["thinking"] == {"type": "disabled"}
+    mistral = MistralProvider._convert_completion_params(params("mistral-large-latest"))
+    assert "reasoning_effort" not in mistral
+
+
+def _one_turn_session() -> Any:
+    from datetime import datetime, timezone
+
+    from bristlenose.models import PiiCleanTranscript, SpeakerRole, TranscriptSegment
+
+    segment = TranscriptSegment(
+        start_time=0.0, end_time=30.0, text="I kept going back to it", segment_index=0,
+        speaker_role=SpeakerRole.PARTICIPANT, speaker_code="p1", source="whisper",
+    )
+    return PiiCleanTranscript(
+        participant_id="p1", session_id="s1", source_file="s1.mp4",
+        session_date=datetime(2026, 1, 10, tzinfo=timezone.utc),
+        duration_seconds=30, segments=[segment],
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_model_still_writing_at_the_deadline_is_not_called_the_network(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The provider answered and the model was still thinking: "check your
+    connection" would send the researcher the wrong way. The built-in
+    providers keep NETWORK (tests/test_quote_extraction_timeout.py)."""
+    from bristlenose.events import CauseCategoryEnum
+    from bristlenose.models import SessionTopicMap
+    from bristlenose.stages import s09_quote_extraction as s09
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-env")
+    monkeypatch.setattr(s09, "_PASS_DEADLINE_S", 0.05)
+    fake_anyllm.replies.append(_STILL_THINKING)
+    topic_map = SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[])
+
+    quotes, outcome = await s09.extract_quotes(
+        [_one_turn_session()], [topic_map], _client(monkeypatch)
+    )
+
+    assert quotes == [] and len(fake_anyllm.calls) == 1
+    (failure,) = outcome.failed
+    assert failure.cause.category == CauseCategoryEnum.UNKNOWN
+    # A real network failure through any-llm is still one.
+    from bristlenose.run_lifecycle import _build_cause
+
+    network = _build_cause(TimeoutError("read timeout"), stage="quote_extraction", provider="anyllm")
+    assert network.category == CauseCategoryEnum.NETWORK
+
+
+def test_an_unexplained_give_up_names_the_model_and_how_to_change_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """Measured on Nemotron through OpenRouter: "All quote extraction calls
+    failed." and nothing else, after half an hour."""
+    from bristlenose import cli
+    from bristlenose.events import Cause, CauseCategoryEnum
+
+    monkeypatch.setenv("BRISTLENOSE_LLM_PROVIDER", "any-llm")
+    monkeypatch.setenv("BRISTLENOSE_ANYLLM_MODEL", "openrouter:nvidia/nemotron-3.5-super-vl:free")
+    settings = load_settings()
+    lines: list[str] = []
+    monkeypatch.setattr(cli.console, "print", lambda *a, **k: lines.append(" ".join(map(str, a))))
+    monkeypatch.setattr(cli, "_say", lambda kind, text: lines.append(text))
+
+    def banner(category: CauseCategoryEnum) -> str:
+        lines.clear()
+        cause = Cause(category=category, message="All quote extraction calls failed.",
+                      provider="anyllm", stage="quote_extraction")
+        cli._print_pipeline_failure(cause, tmp_path / "interviews", settings)
+        return "\n".join(lines)
+
+    unexplained = banner(CauseCategoryEnum.UNKNOWN)
+    assert "All quote extraction calls failed." in unexplained
+    assert "openrouter:nvidia/nemotron-3.5-super-vl:free" in unexplained
+    assert "bristlenose use provider:model" in unexplained
+    # A failure with its own remedy keeps it, and no model advice.
+    assert "bristlenose use" not in banner(CauseCategoryEnum.NETWORK)

@@ -627,8 +627,8 @@ def _validate_anyllm(
     if parts is None:
         return ValidationResult(ok=False, raw_message=f"not a provider:model string: {model!r}")
     inner, model_id = parts
-    params = _params_for("anyllm", model, params)
-    from bristlenose.llm.client import _refuses_json_schema
+    params = dict(_params_for("anyllm", model, params))  # the fallback below pops from it
+    from bristlenose.llm.client import _refuses_json_schema, _refuses_reasoning_off
 
     schema_format = {
         "type": "json_schema",
@@ -637,29 +637,34 @@ def _validate_anyllm(
             "schema": {"type": "object", "properties": {"ok": {"type": "boolean"}}},
         },
     }
+    def ask(provider: Any, messages: list[dict[str, str]], fmt: dict[str, Any]) -> None:
+        try:
+            provider.completion(model=model_id, messages=messages, response_format=fmt, **params)
+        except Exception as exc:
+            if "reasoning_effort" not in params or not _refuses_reasoning_off(exc):
+                raise
+            # A model that always thinks refuses "none"; the run then sends
+            # the model's default, and so does its check.
+            params.pop("reasoning_effort")
+            provider.completion(model=model_id, messages=messages, response_format=fmt, **params)
+
     try:
         provider = AnyLLM.create(inner, api_key=api_key or None)
         try:
-            provider.completion(
-                model=model_id,
-                messages=[{"role": "user", "content": _VALIDATION_PROMPT}],
-                response_format=schema_format,
-                **params,
-            )
+            ask(provider, [{"role": "user", "content": _VALIDATION_PROMPT}], schema_format)
         except Exception as exc:
             if not _refuses_json_schema(exc):
                 raise
             # The run falls back to json_object for a provider that refuses the
             # schema (DeepSeek, for one); so does its check, or the run could
             # never start. json_object mode wants the word JSON in the messages.
-            provider.completion(
-                model=model_id,
-                messages=[
+            ask(
+                provider,
+                [
                     {"role": "system", "content": "Reply in JSON."},
                     {"role": "user", "content": _VALIDATION_PROMPT},
                 ],
-                response_format={"type": "json_object"},
-                **params,
+                {"type": "json_object"},
             )
     except Exception as exc:
         network = _classify_network_error(exc)

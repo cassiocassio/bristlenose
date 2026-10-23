@@ -1050,6 +1050,16 @@ def _print_pipeline_failure(
         # Provider error text can land here; through a gateway any model host
         # writes it, and Rich would render its [link=…] markup.
         _say(MessageKind.ERROR, escape(message) or "Pipeline failed.")
+        model = getattr(settings, "anyllm_model", "") if provider_key == "anyllm" else ""
+        if model and category == CauseCategoryEnum.UNKNOWN:
+            # Through any-llm an unexplained failure is most often the model
+            # (too slow, or replies we can't read), and the remedy is another
+            # one; name the one that ran, since the user may not remember.
+            console.print(
+                f"  The model was {escape(model)}. To try another:  "
+                "[bold]bristlenose use provider:model[/bold]",
+                highlight=False,
+            )
 
 
 def _active_api_key_suffix(settings: object, provider: str | None) -> str:

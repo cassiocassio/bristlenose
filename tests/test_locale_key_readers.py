@@ -45,7 +45,7 @@ before the register is consulted, so they never reach it:
 * **pseudo-keys.** `_comment_*` and `_divergent_*` are notes to maintainers, as
   `flatten()` in `check-locales.py` already has it.
 
-What is left is 67 keys, and they are not one thing either. `_KNOWN_ORPHANS`
+What is left is 66 keys, and they are not one thing either. `_KNOWN_ORPHANS`
 below carries them in 17 blocks, each with a tag and the commit that did it:
 
 * `DEAD` — the reader was deleted and the key stayed. `common.help.` was 129
@@ -428,11 +428,13 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
     "common.footer.": _Block(
         tag=DEAD,
         why="Superseded within the same block: the React footer reads `reportBug`, "
-            "`feedback` and `version`, while `builtWith`, `reportIssue` and "
-            "`giveFeedback` are the wording they replaced and nothing reads them.",
+            "`feedback` and `version`, while `builtWith` and `giveFeedback` are the "
+            "wording they replaced and nothing reads them. `reportIssue` left this "
+            "set on 24 Oct 2026: it labels the link to the GitHub new-issue page "
+            "after a failed feedback send (R80).",
         leaves="""
-            builtWith giveFeedback reportIssue
-        """,  # 3
+            builtWith giveFeedback
+        """,  # 2
     ),
     "common.labels.": _Block(
         tag=DEAD,

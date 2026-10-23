@@ -11,6 +11,8 @@ last-trued: 2026-10-23
 > doesn't paint it into a corner, and is not scheduled before the 24 Nov App
 > Store submission. Review findings: the maintainer's private review log for
 > this doc. CLI sessions: [mockups/any-llm-cli-session.html](mockups/any-llm-cli-session.html).
+> What the real-account walks measured, per model and per route:
+> [design-any-llm-models.md](design-any-llm-models.md).
 
 ## Changelog
 

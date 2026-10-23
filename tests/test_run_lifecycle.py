@@ -219,6 +219,44 @@ def test_categorise_network():
     assert cause.category == CauseCategoryEnum.NETWORK
 
 
+def _transport_failures() -> list[tuple[str, str, BaseException]]:
+    """Transport failures as each provider's call raises them (R30).
+
+    What a call meets after sleep or a network change: a read that never
+    answers, a reset, a name that won't resolve. ChatGPT's SDK wraps the
+    httpx error after its retries; Gemini's raises it bare.
+    """
+    import httpx
+    import httpx2
+    import openai
+
+    req = httpx2.Request("POST", "https://api.openai.com/v1/chat/completions")
+    wrapped = openai.APITimeoutError(request=req)
+    wrapped.__cause__ = httpx2.ReadTimeout("")
+    return [
+        ("openai", "APITimeoutError", wrapped),
+        ("google", "ReadTimeout", httpx.ReadTimeout("")),
+        ("google", "ConnectError (DNS)", httpx.ConnectError(
+            "[Errno 8] nodename nor servname provided, or not known")),
+        ("google", "ReadError (reset)", httpx.ReadError("[Errno 60] Operation timed out")),
+        ("google", "RemoteProtocolError", httpx.RemoteProtocolError(
+            "Server disconnected without sending a response.")),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("provider", "label", "exc"), _transport_failures(), ids=lambda v: v if isinstance(v, str) else ""
+)
+def test_build_cause_transport_failure_is_network(
+    provider: str, label: str, exc: BaseException,
+) -> None:
+    """A call that lost its connection says "check your connection", on every
+    provider. Claude's timeout already did (its message says "network"); the
+    same failure on ChatGPT or Gemini read as unknown."""
+    cause = _build_cause(exc, stage="topic_segmentation", provider=provider)
+    assert cause.category == CauseCategoryEnum.NETWORK, label
+
+
 def test_categorise_api_server():
     cause = categorise_exception(RuntimeError("503 Service Unavailable"))
     assert cause.category == CauseCategoryEnum.API_SERVER

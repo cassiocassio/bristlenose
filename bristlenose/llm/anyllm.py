@@ -517,6 +517,7 @@ def active_key(settings: BristlenoseSettings) -> str:
 #: httpx's) and openai's own. Names, because the classes are not related.
 _NETWORK_NAMES = frozenset({
     "ConnectError", "ConnectTimeout", "ReadTimeout", "WriteTimeout", "PoolTimeout",
+    "ReadError", "WriteError",
     "APIConnectionError", "APITimeoutError", "RemoteProtocolError",
 })
 

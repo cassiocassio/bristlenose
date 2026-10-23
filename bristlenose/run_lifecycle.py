@@ -654,6 +654,17 @@ def categorise_exception(exc: BaseException, *, provider: str | None = None) -> 
         if (mapped := _LLM_KIND_TO_CAUSE.get(kind)) is not None:
             return Cause(category=mapped, message=msg)
 
+        # A call that lost its connection (sleep, a network change, a name
+        # that won't resolve) is NETWORK on every provider, by the transport
+        # class down the chain, not by the words: ChatGPT's "Request timed
+        # out." and Gemini's bare httpx errors carry none the text rule knows
+        # (R30). Only at an LLM call site, where these names can only be the
+        # SDKs' own.
+        from bristlenose.llm.anyllm import is_network_error
+
+        if is_network_error(exc):
+            return Cause(category=CauseCategoryEnum.NETWORK, message=msg)
+
     # Text fallbacks — LLM errors that bubbled up as bare strings with no HTTP
     # status for the classifier to read. Credit before rate-limit.
     if _CREDIT_RE.search(haystack):

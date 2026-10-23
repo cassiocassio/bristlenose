@@ -138,7 +138,14 @@ Reflection").
     with `metadata.provider_name`, `metadata.raw`, and for a shared-pool limit
     `limit_source: upstream_provider_shared_pool`. The status code alone (404,
     429) blames the user's key, but the host is what failed. `anyllm.upstream()`
-    reads the host (`a2b733457`). The wording is being fixed (§5).
+    reads the host (`a2b733457`), and since `ac1e84486` the preflight and the
+    run say so: "Mistral, reached through OpenRouter, is busy. Your key
+    works." Key and credit failures are never relabelled as the host's.
+- **A shared-pool 429 is not worth waiting out.** Mistral Large's pool stayed
+  full for about 38 minutes, sending no `Retry-After`. The run gives up after
+  about 44 seconds of backoff, and that's kept: a budget of minutes wouldn't
+  have saved it and would hold up the other sessions. The remedy offered is
+  "later, or another model".
 - **Thinking.** Hybrid models think by default through OpenRouter, and it's
   billed as output. Bristlenose now turns it off (§4.2).
 - **Not captured:** the out-of-credit 402.
@@ -268,9 +275,12 @@ their working directory had the same problem. Walks in a dev checkout pass
 | `25b24d90d` | AutoCode progress writes land (every batch's write was being skipped) |
 | `d8f30b46b` | The live-check fixture is tested against the real prompts and schemas |
 | `0e3d4122f` | A failed call's log line is one line of field paths and never quotes the reply |
+| `ac1e84486` | A failure at the model's host is worded as the host's, not the key's; an unreadable reply names its field paths and says "didn't fit the expected format" |
 
-**In progress:** naming the host, not the key, for a failure behind
-OpenRouter, and retrying a shared-pool 429 for longer than 44 seconds.
+**A product call left open:** on a host failure, `configure` now saves the
+key and model (the key is proven), as it does when the provider can't be
+reached. For a host that stays broken, the run's preflight then says the same
+sentence again.
 
 **Open**
 

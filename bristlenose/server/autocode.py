@@ -359,7 +359,13 @@ async def run_autocode_job(
         # Load prompt template
         prompt_tmpl = get_prompt_template("autocode")
         # Record the prompt version so a later re-apply can reproduce this run.
+        # Committed now, not with the proposals: left pending, the next read of
+        # ``job`` autoflushed it, and this session then held SQLite's one write
+        # lock across every batch. Each progress UPDATE below waited out
+        # busy_timeout and was skipped, so the counter never moved, and a Stop or
+        # a star in the same minutes would have hit the same lock (23 Oct 2026).
         job.prompt_version = prompt_tmpl.version
+        db.commit()
 
         # Chunk into batches
         batches: list[list[QuoteBatchItem]] = []
@@ -473,6 +479,7 @@ async def run_autocode_job(
                             "AutoCode progress update skipped (non-fatal): %d/%d",
                             processed_count,
                             total_quotes,
+                            exc_info=True,
                         )
                     finally:
                         progress_db.close()

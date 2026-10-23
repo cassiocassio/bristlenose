@@ -811,6 +811,96 @@ class TestRunAutoCodeJob:
         assert len(progress_snapshots) == 1
         assert progress_snapshots[0] == 25
 
+    def test_no_write_lock_is_held_while_batches_run(self, tmp_path, caplog) -> None:
+        """Against a real file database, as serve runs it, the job holds no write
+        lock while its batches are out, so each progress write lands.
+
+        The in-memory fixture above shares one connection between every session,
+        so it cannot see a lock. Until 23 Oct 2026 the job's own session flushed
+        ``prompt_version`` before the batches and committed it with the
+        proposals: every progress UPDATE waited out busy_timeout and was skipped
+        (7 of 7 on a DeepSeek walk), and the counter sat still.
+        """
+        import logging
+        import re
+        import sqlite3
+
+        from bristlenose.server.db import create_session_factory, get_engine
+
+        db_path = tmp_path / "bristlenose.db"
+        engine = get_engine(f"sqlite:///{db_path}")
+        Base.metadata.create_all(engine)
+        session_cls = create_session_factory(engine)
+
+        db = session_cls()
+        project = Project(name="Lock", slug="lock", input_dir="/tmp", output_dir="/tmp")
+        db.add(project)
+        db.flush()
+        template = get_template("garrett")
+        assert template is not None
+        for group_tmpl in template.groups:
+            group = CodebookGroup(
+                name=group_tmpl.name, subtitle=group_tmpl.subtitle,
+                colour_set=group_tmpl.colour_set, framework_id="garrett",
+            )
+            db.add(group)
+            db.flush()
+            for tag_tmpl in group_tmpl.tags:
+                db.add(TagDefinition(name=tag_tmpl.name, codebook_group_id=group.id))
+        for i in range(50):  # 2 batches of 25
+            db.add(Quote(
+                project_id=project.id, session_id="s1", participant_id="p1",
+                start_timecode=float(i * 10), end_timecode=float(i * 10 + 5),
+                text=f"Quote {i}", quote_type="screen_specific",
+            ))
+        db.add(AutoCodeJob(project_id=project.id, framework_id="garrett", status="pending"))
+        db.commit()
+        project_id = project.id
+        db.close()
+
+        lock_free: list[bool] = []
+        progress_seen: list[int] = []
+
+        async def analyze(system_prompt, user_prompt, response_model, **kw):
+            # Another writer (a Stop, a star, the progress write) with a short
+            # wait: it gets the lock only if the job is not holding it.
+            probe = sqlite3.connect(db_path, timeout=0.2)
+            try:
+                probe.execute("BEGIN IMMEDIATE")
+                probe.rollback()
+                lock_free.append(True)
+            except sqlite3.OperationalError:
+                lock_free.append(False)
+            finally:
+                probe.close()
+            poll = session_cls()
+            try:
+                job = poll.query(AutoCodeJob).filter_by(project_id=project_id).one()
+                progress_seen.append(job.processed_quotes)
+            finally:
+                poll.close()
+            n = len(re.findall(r"^\d+\. \[", user_prompt, re.MULTILINE))
+            return _make_batch_result(n, "user need", 0.8)
+
+        settings = _mock_settings()
+        settings.llm_concurrency = 1
+        with caplog.at_level(logging.WARNING, logger="bristlenose.server.autocode"):
+            with _patch_llm(AsyncMock(side_effect=analyze)):
+                asyncio.run(run_autocode_job(session_cls, project_id, "garrett", settings))
+
+        assert lock_free == [True, True]
+        assert progress_seen == [0, 25]
+        assert "progress update skipped" not in caplog.text
+        check = session_cls()
+        try:
+            job = check.query(AutoCodeJob).filter_by(project_id=project_id).one()
+            assert job.status == "completed"
+            assert job.processed_quotes == 50
+            assert job.proposed_count == 50
+        finally:
+            check.close()
+            engine.dispose()
+
 
 class TestBatching:
     """Tests for the batching behaviour within the job runner."""

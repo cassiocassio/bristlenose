@@ -400,8 +400,10 @@ class TestTruncationCauseMessage:
         msg = cause.message or ""
         # Not the misleading old hint (clamp caps gpt-4o back to 16384).
         assert "BRISTLENOSE_LLM_MAX_TOKENS" not in msg
-        # Constant actionable copy — no provider response body / prompt fragment.
-        assert "--llm" in msg and "--model" in msg
+        # Constant actionable copy — no provider response body / prompt fragment —
+        # naming settings that exist (there is no --model flag; R102).
+        assert "BRISTLENOSE_LLM_MODEL" in msg and "bristlenose use" in msg
+        assert "--model" not in msg
 
     def test_non_s09_truncation_not_mislabelled_quote_extraction(self) -> None:
         """A truncation from another stage isn't labelled 'Quote extraction'."""

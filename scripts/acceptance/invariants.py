@@ -209,9 +209,11 @@ def assert_transcripts_present(output_dir: Path, *, floor: int = 1) -> None:
         raise InvariantError(
             f"no transcripts-raw/ in {output_dir} — transcribe produced no deliverable"
         )
-    written = [p for p in raw.iterdir() if p.is_file() and p.stat().st_size > 0]
+    # The `.txt` files, which are the transcripts: the folder also holds a README.md
+    # (#120) that is never empty, so counting every file passed a run that wrote none.
+    written = [p for p in raw.glob("*.txt") if p.is_file() and p.stat().st_size > 0]
     if len(written) < floor:
-        empties = [p.name for p in raw.iterdir() if p.is_file()]
+        empties = [p.name for p in raw.glob("*.txt") if p.is_file()]
         raise InvariantError(
             f"transcripts-raw/ holds {len(written)} non-empty file(s), floor is {floor}"
             + (f" (present but empty: {empties})" if empties else " (directory is empty)")

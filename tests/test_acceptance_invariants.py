@@ -313,6 +313,15 @@ def test_transcripts_empty_directory_is_caught(tmp_path: Path) -> None:
         assert_transcripts_present(tmp_path)
 
 
+def test_transcripts_folder_holding_only_its_readme_is_caught(tmp_path: Path) -> None:
+    # A transcribe whose every session was silent leaves only the readme (#120).
+    raw = tmp_path / "transcripts-raw"
+    raw.mkdir()
+    (raw / "README.md").write_text("# Please don't edit these files\n", encoding="utf-8")
+    with pytest.raises(InvariantError, match="floor is 1"):
+        assert_transcripts_present(tmp_path)
+
+
 def test_transcripts_present_but_empty_is_caught(tmp_path: Path) -> None:
     # The fake-success shape: the files exist, so a bare existence check would pass.
     raw = tmp_path / "transcripts-raw"

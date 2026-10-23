@@ -178,13 +178,34 @@ def merge_transcripts(
     return transcripts
 
 
+#: The readme beside the raw transcripts. Never a ``.txt``: every reader of this
+#: folder (``analyze``, the serve importer, the transcript pages) takes each
+#: ``*.txt`` for a transcript, and a ``README.txt`` would be one (#120).
+RAW_README_NAME = "README.md"
+
+
+def write_raw_readme(output_dir: Path) -> None:
+    """Write the folder's readme: these files are RAW, and rewritten every run.
+
+    Advisory, never a deliverable: a readme the researcher locked in Finder (told
+    not to edit these files, they protect one) is logged and left, and the run goes on.
+    """
+    from bristlenose.utils.markdown import RAW_TRANSCRIPTS_README
+
+    path = output_dir / RAW_README_NAME
+    try:
+        path.write_text(RAW_TRANSCRIPTS_README, encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Could not write %s (%s); the transcripts are unaffected", path, exc)
+
+
 def write_raw_transcripts(
     transcripts: list[FullTranscript],
     output_dir: Path,
     *,
     sentence_paragraphs: set[str] | None = None,
 ) -> list[Path]:
-    """Write raw transcript text files.
+    """Write raw transcript text files, and the folder's readme.
 
     Format uses the markdown style template from
     :mod:`bristlenose.utils.markdown`.
@@ -194,7 +215,7 @@ def write_raw_transcripts(
         output_dir: Directory to write to.
 
     Returns:
-        List of written file paths.
+        List of written transcript paths (not the readme).
     """
     from bristlenose.utils.markdown import (
         format_raw_segment_txt,
@@ -231,6 +252,7 @@ def write_raw_transcripts(
         paths.append(path)
         logger.info("Wrote raw transcript: %s", path)
 
+    write_raw_readme(output_dir)
     return paths
 
 

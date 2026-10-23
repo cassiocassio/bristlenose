@@ -51,6 +51,7 @@ import pytest
 from bristlenose.config import BristlenoseSettings
 from bristlenose.output_paths import OutputPaths
 from bristlenose.pipeline import Pipeline
+from bristlenose.stages.s06_merge_transcript import RAW_README_NAME
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TRIAL_RUNS = REPO_ROOT / "trial-runs"
@@ -176,7 +177,9 @@ def _assert_no_fake_success(result, out: OutputPaths) -> None:
     # 9. On-disk transcript files exist and are non-empty (no silent-skip).
     raw_dir = out.transcripts_raw_dir
     assert raw_dir.exists(), "transcripts-raw/ missing"
-    raw_files = list(raw_dir.glob("*.txt")) + list(raw_dir.glob("*.md"))
+    # Not the folder's readme (#120): it is never empty, so it would vouch for nothing.
+    raw_files = [f for f in [*raw_dir.glob("*.txt"), *raw_dir.glob("*.md")]
+                 if f.name != RAW_README_NAME]
     assert raw_files, "no raw transcript files written"
     assert any(f.stat().st_size > 100 for f in raw_files), "raw transcript files are empty"
 

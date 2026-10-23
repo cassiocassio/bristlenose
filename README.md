@@ -289,7 +289,7 @@ interviews/                              # your input folder
     ├── sessions/                            # per-session transcript pages
     │   ├── transcript_s1.html
     │   └── transcript_s2.html
-    ├── transcripts-raw/                     # one .txt + .md per session
+    ├── transcripts-raw/                     # one .txt + .md per session, as first transcribed; rewritten every run
     ├── transcripts-cooked/                  # PII-redacted (only with --redact-pii)
     └── .bristlenose/                        # internal files
         └── intermediate/                    # JSON snapshots (re-readable by `bristlenose serve`)

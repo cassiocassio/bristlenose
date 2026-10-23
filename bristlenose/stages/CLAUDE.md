@@ -10,6 +10,7 @@ Stages that shell out to FFmpeg/ffprobe (`s02_extract_audio.py`, `utils/video.py
 - **Speaker labels**: Original Whisper labels (`Speaker A`, `Speaker B`) kept in parentheses in raw transcripts only
 - **Timecodes**: `MM:SS` for segments under 1 hour, `HH:MM:SS` at or above 1 hour. Mixed formats in the same file is correct
 - **Timecodes are floats internally**: All data structures store seconds as `float`. String formatting happens only at output. Never parse formatted timecodes back within the same session
+- **`transcripts-raw/` is RAW, never the researcher's to edit (#120, owner 23 Oct 2026).** The transcripts as first transcribed, written again by every `run`; the edited transcripts are the ones in the report. `write_raw_transcripts` drops a `README.md` there saying so (`RAW_README_NAME`, text `utils.markdown.RAW_TRANSCRIPTS_README`). **Never make it a `.txt`:** `analyze`, the serve importer and the transcript pages read every `*.txt` in the folder as a transcript: as a `README.txt` the importer made it a session called "README" and `analyze` refused it by name as `unsupported_format` (both measured by mutation). Anything new that globs `*.md` here must skip it. Tests: `tests/test_transcripts_raw_readme.py`
 - **`.txt` is canonical**: The parser (`load_transcripts_from_dir`) reads only `.txt` files. `.md` files are human-readable companions, not parsed back. A `.txt` with no timecoded line yields nothing; `analyze` names it in the files bucket as `unsupported_format` rather than dropping it (R119, 20 Oct 2026), or as `no_lines` when it holds nothing past its `#` header, as does a VTT with no cues (decision #80, 22 Oct 2026). Reading untimed text would be a feature
 - **Legacy format support**: Parser also accepts old-format files with `[PARTICIPANT]`/`[RESEARCHER]` role labels, and old files where all segments use `[p1]` (role will be UNKNOWN)
 - **Speaker code inference**: Parser derives role from prefix: `m` → RESEARCHER, `o` → OBSERVER, `p` → UNKNOWN (backward compat). Code validation checks first char + remaining digits (e.g. `m1` valid, `misc` not)
@@ -28,6 +29,7 @@ interviews/bristlenose-output/          # default output location
 │   ├── transcript_s1.html
 │   └── transcript_s2.html
 ├── transcripts-raw/                    # Stage 6 output (merge_transcript.py)
+│   ├── README.md                       # "don't edit": RAW, rewritten every run (#120)
 │   ├── s1.txt                          # each file has all speakers: [m1], [p1], [p2]
 │   └── s1.md
 ├── transcripts-cooked/                 # Stage 7 output (pii_removal.py, only with --redact-pii)

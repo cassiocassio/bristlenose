@@ -150,6 +150,23 @@ MD_TRANSCRIPT_SEGMENT_COOKED = "**`[{timecode}]` {participant_id}** {text}"
 the timecode a code span.
 Example: **`[00:16]` p1** [NAME] has been using this..."""
 
+# --- The readme beside the raw transcripts --------------------------------
+
+RAW_TRANSCRIPTS_README = """\
+# Please don't edit these files
+
+These are the interview transcripts as Bristlenose first transcribed them,
+like a camera's RAW files. Bristlenose writes them again on every run, so a
+change made here won't last.
+
+The transcripts in the report are the edited versions. Make your corrections
+there.
+"""
+"""``transcripts-raw/README.md`` (#120): nothing in the output folder is the
+researcher's to edit. Markdown, never ``.txt``: ``analyze`` and the serve
+importer read every ``*.txt`` in this folder as a transcript. English, like the
+transcript headers beside it. DRAFT wording, awaiting the owner's approval."""
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 4. Formatter functions

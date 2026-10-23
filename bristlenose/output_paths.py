@@ -20,7 +20,8 @@ Layout (v2):
     ├── sessions/                          # Per-session transcript pages
     │   ├── transcript_s1.html
     │   └── ...
-    ├── transcripts-raw/                   # Raw transcript files
+    ├── transcripts-raw/                   # Raw transcript files (rewritten every run)
+    │   ├── README.md                      # "don't edit these files" (#120)
     │   ├── s1.txt
     │   ├── s1.md
     │   └── ...

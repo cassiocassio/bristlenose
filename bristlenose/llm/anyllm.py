@@ -234,7 +234,9 @@ def readiness_for_model(model: str, *, api_key: str | None = None) -> Readiness:
             AnyLLM.create(inner, api_key=api_key)
         except Exception as exc:  # noqa: BLE001 — shown verbatim
             return _broken(model, inner, exc)
-        env_name = env_var_name(inner) if env_value else ""
+        # Only a different key is shadowed: the walk re-entered the key it had
+        # exported and was warned about two identical keys.
+        env_name = env_var_name(inner) if env_value and env_value != api_key else ""
         return _check_key_is_not_model(Readiness(
             "ready", model=model, inner=inner, api_key=api_key,
             key_source="given", shadowed_by=env_name,
@@ -525,4 +527,38 @@ def is_network_error(exc: BaseException) -> bool:
             return True
         todo += [getattr(cur, "original_exception", None), cur.__cause__, cur.__context__]
     return False
+
+
+def upstream(exc: BaseException) -> tuple[str, str] | None:
+    """For a gateway's error, the host that actually failed and why, if it says.
+
+    OpenRouter wraps a failure at the model's host as ``Provider returned
+    error`` with ``metadata.provider_name`` ("Mistral") and, for a busy shared
+    pool, ``metadata.limit_source`` ("upstream_provider_shared_pool"). The key
+    and OpenRouter are fine then; saying "rate-limiting this key" sends the
+    researcher the wrong way (found by the OpenRouter walk, 23 Oct 2026).
+    Returns ``(host, limit_source)``, either possibly "", or None.
+    """
+    seen: set[int] = set()
+    todo: list[BaseException | None] = [exc]
+    while todo:
+        cur = todo.pop()
+        if cur is None or id(cur) in seen:
+            continue
+        seen.add(id(cur))
+        body = getattr(cur, "body", None)
+        if isinstance(body, dict):
+            meta = body.get("metadata")
+            if not isinstance(meta, dict) and isinstance(body.get("error"), dict):
+                meta = body["error"].get("metadata")
+            if isinstance(meta, dict) and (meta.get("provider_name") or meta.get("limit_source")):
+                return str(meta.get("provider_name") or ""), str(meta.get("limit_source") or "")
+        todo += [getattr(cur, "original_exception", None), cur.__cause__, cur.__context__]
+    return None
+
+
+def is_shared_pool_limit(exc: BaseException) -> bool:
+    """A gateway's shared capacity at the host is exhausted: wait longer, not the key."""
+    up = upstream(exc)
+    return bool(up and "shared_pool" in up[1])
 

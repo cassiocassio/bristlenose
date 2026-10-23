@@ -189,6 +189,10 @@ def _why_text(row: ModelAvailability) -> str:
     return ""
 
 
+#: Past this many characters a model name and its badge don't share a line.
+_LONG_NAME = 26
+
+
 def _badges(row: ModelAvailability, is_current: bool) -> str:
     parts: list[str] = []
     if row.default:
@@ -255,7 +259,14 @@ def _provider_block(
         is_current = (
             row.provider_id == sel.chosen_id and row.model_id == sel.chosen_model_id
         )
-        name = f"    {row.display}{_badges(row, is_current)}"
+        badges = _badges(row, is_current)
+        if badges and len(row.display) > _LONG_NAME:
+            # A provider:model id (any-llm) is long enough that Rich wraps the
+            # cell at the space before the badge and drops the indent, leaving
+            # "(current)" at column 0. Put it on its own indented line instead.
+            name = f"    {row.display}\n      {badges.strip()}"
+        else:
+            name = f"    {row.display}{badges}"
         out.append((name, _avail_glyph(row), _quality_glyph(row), _why_text(row)))
     return out
 

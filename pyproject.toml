@@ -82,9 +82,10 @@ dependencies = [
     "openpyxl>=3.1",
     "alembic>=1.13",
     # The trust store every HTTPS call uses. Floored 23 Oct 2026: eMudhra's
-    # emSign CA had keys compromised and 2026.10.19 drops its root. It arrives
-    # only through httpx, so without a floor `pipx upgrade` keeps the old bundle.
-    # A floor that only rises: raise it at the next trust-store incident.
+    # emSign CA had keys compromised and 2026.10.19 drops its root. httpx brings
+    # it in too, but pip leaves a satisfied transitive dependency alone, so only
+    # this floor makes `pipx upgrade` replace an old bundle. Not an odd pin to
+    # tidy away: it only rises, at the next trust-store incident.
     "certifi>=2026.10.19",
 ]
 

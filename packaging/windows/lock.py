@@ -12,7 +12,8 @@ when pyproject.toml's dependencies change and this was not re-run.
 
 Without ``--upgrade`` the current pins are kept wherever they still satisfy pyproject.toml, so
 adding a dependency adds it and nothing else moves (uv prefers the versions already in its
-output file). Until 18 Oct 2026 every run re-resolved from nothing, and adding one package
+output file). The exception is certifi, which every run refreshes to its latest: the trust
+store is the one pin where an old version is itself the risk (23 Oct 2026, eMudhra). Until 18 Oct 2026 every run re-resolved from nothing, and adding one package
 moved twenty-five others.
 """
 

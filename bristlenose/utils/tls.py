@@ -23,7 +23,7 @@ def https_context() -> ssl.SSLContext:
     """A default-verifying context with certifi's roots added to the system's."""
     context = ssl.create_default_context()
     try:
-        import certifi  # installed with httpx, which every provider SDK requires
+        import certifi  # a declared dependency (floored in pyproject.toml)
     except ImportError:
         return context
     try:

@@ -176,13 +176,17 @@ def _settling(output_dir: Path) -> Iterator[None]:
         return
     try:
         fd = os.open(key, os.O_RDONLY)
-    except OSError:
+    except OSError as exc:
+        # SMB, AFP or FUSE (ENOTSUP), or no permission: the race guard is gone,
+        # so say so rather than lose it untraced.
+        logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
         yield
         return
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-    except OSError:
+    except OSError as exc:
         os.close(fd)
+        logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
         yield
         return
     _settle_holds[key] = [fd, 1]
@@ -216,12 +220,15 @@ def _discarding_path(backup: Path) -> Path:
     return backup.with_name(f"{backup.name}-discarding-{os.getpid()}")
 
 
-def _clear_discarding(backup: Path) -> None:
-    """Delete what earlier cut-short discards left. Said when something stays."""
+def _clear_discarding(backup: Path, output_dir: Path) -> None:
+    """Delete what earlier cut-short discards left. Said when something stays.
+
+    Through `_drop_tree`: this build carries a replaced report's exports before
+    it discards it, but a build before 23 Oct 2026 did not, so its leftover can
+    still hold `clips/`, and an export is never deleted.
+    """
     for leftover in backup.parent.glob(f"{glob.escape(backup.name)}-discarding*"):
-        shutil.rmtree(leftover, ignore_errors=True)
-        if leftover.exists():
-            logger.warning("output_backup: could not clear %s, a spent backup", leftover)
+        _drop_tree(leftover, exports_to=output_dir)
 
 
 def leftovers_for(output_dir: Path) -> list[Path]:
@@ -291,7 +298,7 @@ def _stash(output_dir: Path, *, previous_backup_is_spent: bool) -> Path | None:
     backup = backup_path_for(output_dir)
     # Spent backups whose delete was cut short (`discard`): already proven
     # spent, never restorable, so cleared here.
-    _clear_discarding(backup)
+    _clear_discarding(backup, output_dir)
     if backup.exists():
         if not previous_backup_is_spent:
             logger.warning(
@@ -438,8 +445,7 @@ def _drop_tree(tree: Path, *, exports_to: Path) -> None:
         return
     shutil.rmtree(tree, ignore_errors=True)
     if tree.exists():
-        logger.warning("output_backup: could not fully delete %s; the next run removes it",
-                       tree)
+        logger.warning("output_backup: could not clear %s; the next run removes it", tree)
 
 
 def _append_onto(src: Path, dest: Path) -> bool:
@@ -715,7 +721,7 @@ def reclaim_stale(output_dir: Path) -> RestoreOutcome:
 def _reclaim_stale(output_dir: Path) -> RestoreOutcome:
     backup = backup_path_for(output_dir)
     # Spent backups whose delete was cut short: proven spent, never restorable.
-    _clear_discarding(backup)
+    _clear_discarding(backup, output_dir)
     if not backup.exists():
         _clear_leftover_attempt(output_dir)
         return RestoreOutcome.NOTHING_TO_DO
@@ -724,10 +730,9 @@ def _reclaim_stale(output_dir: Path) -> RestoreOutcome:
         # A run produced its report and `discard` could not move this out of
         # the way: it is spent, and restoring it would put the old report over
         # the new one (R110).
+        # A build before 23 Oct 2026 spent it with its exports still inside.
         logger.warning("output_backup: deleting %s, a spent backup", backup)
-        shutil.rmtree(backup, ignore_errors=True)
-        if backup.exists():
-            logger.warning("output_backup: could not delete %s", backup)
+        _drop_tree(backup, exports_to=output_dir)
         return RestoreOutcome.NOTHING_TO_DO
 
     if project_is_locked(output_dir):

@@ -571,3 +571,54 @@ class TestTheFreshEyesFindings:
         t.join(5)
         assert results == [RestoreOutcome.RESTORED]
         assert (out / _MARKER).read_text(encoding="utf-8") == "report"
+
+
+class TestTheVerificationFollowUps:
+    """The coordinator's verification of 050a6491c, 23 Oct 2026."""
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="flock")
+    def test_a_folder_that_will_not_lock_is_said(self, tmp_path: Path, monkeypatch, caplog) -> None:
+        """SMB, AFP or FUSE refuse flock (ENOTSUP): the race guard is gone, so
+        the settle runs unlocked and the log says why."""
+        import errno
+        import fcntl
+        import logging
+
+        def _refuse(_fd, _op):
+            raise OSError(errno.ENOTSUP, "Operation not supported")
+
+        monkeypatch.setattr(fcntl, "flock", _refuse)
+        out = _make_report(tmp_path / "bristlenose-output", marker="r", events="r\n")
+        with caplog.at_level(logging.WARNING, logger="bristlenose.utils.output_backup"):
+            assert output_backup.reclaim_stale(out) is RestoreOutcome.NOTHING_TO_DO
+        said = [r.getMessage() for r in caplog.records if "no settle lock" in r.getMessage()]
+        assert len(said) == 1 and "Operation not supported" in said[0], said
+
+    def _old_report_with_clips(self, root: Path, *, marker: str) -> Path:
+        tree = _make_report(root, marker=marker, events='{"started_at": "2026-09-01T10:00:00Z"}\n')
+        (tree / "clips").mkdir()
+        (tree / "clips" / "c.mp4").write_text("clip", encoding="utf-8")
+        return tree
+
+    def test_a_pre_upgrade_spent_backup_keeps_its_exports(self, tmp_path: Path) -> None:
+        """A build before 23 Oct spent a backup with its clips still in it."""
+        out = _make_report(tmp_path / "bristlenose-output", marker="fresh", events="f\n")
+        spent = self._old_report_with_clips(output_backup.backup_path_for(out), marker="old")
+        (spent / ".bristlenose-backup-spent").touch()
+
+        output_backup.reclaim_stale(out)
+
+        assert not spent.exists()
+        carried = out / "clips (from the analysis of 1 Sep 2026)" / "c.mp4"
+        assert carried.read_text(encoding="utf-8") == "clip"
+
+    def test_a_pre_upgrade_delete_cut_short_keeps_its_exports(self, tmp_path: Path) -> None:
+        out = _make_report(tmp_path / "bristlenose-output", marker="fresh", events="f\n")
+        cut = self._old_report_with_clips(
+            tmp_path / ".bristlenose-output-previous-discarding-7", marker="old")
+
+        output_backup.reclaim_stale(out)
+
+        assert not cut.exists()
+        carried = out / "clips (from the analysis of 1 Sep 2026)" / "c.mp4"
+        assert carried.read_text(encoding="utf-8") == "clip"

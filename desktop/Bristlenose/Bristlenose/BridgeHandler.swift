@@ -189,11 +189,12 @@ final class BridgeHandler: ObservableObject {
     /// observes, as `focusSearchRequests` is: this handler is per window, so the
     /// open panel belongs to the window whose lens asked.
     @Published private(set) var chooseGuideRequests = 0
-    /// Bumped when the report asks to re-analyse a session after a speaker
-    /// recode (design-people.md §J7 R3). The SPA has already written the role
-    /// pins through serve; ContentView starts the ordinary resume run, which
-    /// honours them and re-extracts only that session.
-    @Published private(set) var reanalyseSessionRequests = 0
+    /// Bumped when the report has recoded a speaker into or out of participant
+    /// (design-people.md §J7 R3). Serve wrote the role pins with the recode;
+    /// the session is now owed a re-analysis, which the ordinary Analyse does.
+    /// The sidebar learns of it from the database, which the folder watcher
+    /// does not see change, so ContentView rescans the project.
+    @Published private(set) var speakersRecodedRequests = 0
     /// This window's page asked for the native feedback sheet: the status
     /// page's "Send feedback", or Help ▸ Send Feedback with this report's popout
     /// player in front. A counter the window observes, as `chooseGuideRequests`
@@ -1588,8 +1589,8 @@ final class BridgeHandler: ObservableObject {
             // gate: the toolbar capsule searches on Quotes only.
             if activeTab == .quotes { requestSearchFocus() }
 
-        case "reanalyse-session":
-            reanalyseSessionRequests += 1
+        case "speakers-recoded":
+            speakersRecodedRequests += 1
 
         case "reveal-in-finder":
             // Reveal a folder (highlighted in its parent) in Finder. Sandbox-safe:

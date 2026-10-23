@@ -55,6 +55,12 @@ struct ProjectDBSnapshot: Equatable {
     /// reader, summing across both rows, told the sidebar the right count.
     /// Nil when unreadable (no table, locked), same vocabulary as the others.
     let projectRowCount: Int?
+    /// Sessions owed a re-analysis because a speaker was recoded into or out
+    /// of participant (§J7 R3): their quotes are from the wrong speaker until
+    /// the next Analyse, which honours the role pins the recode wrote. Nil
+    /// when unreadable (no `session_speakers` table, locked). Defaulted so the
+    /// many test constructions of this snapshot stay as they are.
+    var recodedSessionCount: Int? = nil
 
     /// More than one project row — the report and the sidebar are reading
     /// different projects. Nil (unreadable) is not a claim either way.
@@ -135,6 +141,7 @@ enum SourceFilesReader {
         let sessions = readSessionCount(db: db)
         let totalDuration = readTotalDuration(db: db)
         let projectRows = readProjectRowCount(db: db)
+        let recoded = readRecodedSessionCount(db: db)
         if let projectRows, projectRows > 1 {
             // A second row is always a bug now (the serve creates one row per
             // project folder, at the folder's future output dir); say so where
@@ -148,7 +155,8 @@ enum SourceFilesReader {
             ingestedPaths: sources.paths,
             sessionCount: sessions,
             totalDurationSeconds: totalDuration,
-            projectRowCount: projectRows
+            projectRowCount: projectRows,
+            recodedSessionCount: recoded
         )
     }
 
@@ -221,6 +229,38 @@ enum SourceFilesReader {
             return Int(sqlite3_column_int64(stmt, 0))
         }
         return nil
+    }
+
+    /// `routes/reanalyse.py` `needs_reanalysis`, in SQL: a slot whose tag says
+    /// participant and whose role does not, or the reverse. The role's letter
+    /// is `speaker_slots.kind_prefix`'s (researcher m, observer o, participant
+    /// p, else the tag's own). `substr`, not `LIKE`, because `LIKE` ignores
+    /// case and the Python comparison does not. Held to the Python predicate by
+    /// `tests/test_swift_python_contract.py`, which runs the text between the
+    /// markers against the real `needs_reanalysis` — change both together.
+    // BEGIN recoded-session-sql
+    static let recodedSessionSQL = """
+        SELECT COUNT(DISTINCT s.id) FROM sessions s
+        JOIN session_speakers ss ON ss.session_id = s.id
+        WHERE s.project_id = \(reportProjectID)
+          AND (substr(ss.speaker_code, 1, 1) = 'p')
+            != ((CASE ss.speaker_role
+                   WHEN 'researcher' THEN 'm'
+                   WHEN 'observer' THEN 'o'
+                   WHEN 'participant' THEN 'p'
+                   ELSE substr(ss.speaker_code, 1, 1)
+                 END) = 'p')
+        """
+    // END recoded-session-sql
+
+    private static func readRecodedSessionCount(db: OpaquePointer?) -> Int? {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, recodedSessionSQL, -1, &stmt, nil) == SQLITE_OK else {
+            // An older schema without `session_speakers`: nothing to count.
+            return nil
+        }
+        defer { sqlite3_finalize(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int64(stmt, 0)) : nil
     }
 
     private static func readProjectRowCount(db: OpaquePointer?) -> Int? {

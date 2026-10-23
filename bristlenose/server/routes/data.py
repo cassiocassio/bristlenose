@@ -549,7 +549,7 @@ def put_session_speaker(
             raise analysis_running()
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
-            drop_withdrawn_pins(db, project_id, session_id)
+            sync_role_pins(db, project_id, session_id)
             return {"status": "ok"}
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
@@ -697,24 +697,32 @@ def put_session_speaker(
         speaker_slots.release(db, left)
         speaker_slots.renumber(db, project_id)
         db.commit()
-        drop_withdrawn_pins(db, project_id, session_id)
+        sync_role_pins(db, project_id, session_id)
         return {"status": "ok"}
     finally:
         db.close()
 
 
-def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
-    """Take away a re-analysis pin whose recode the researcher has undone.
+def sync_role_pins(db: Session, project_id: int, session_id: str) -> None:
+    """Make the session's re-analysis pins say what its speakers now are (§J7 R3).
 
-    A pin waits in the registry for the next run (§J7 R3); without this, one
-    set and then undone would still be applied by any later run — after a new
-    session is added, say. A pin the run has honoured agrees with its slot's
-    role, so it stays.
+    A recode into or out of participant leaves the session's quotes from the
+    wrong speaker until it is analysed again, and that is now the ordinary
+    Analyse, not a per-session act (owner, 23 Oct 2026). So the recode writes
+    the pin as it lands: the next run, from the Mac or ``bristlenose run``,
+    honours it. A pin whose recode the researcher has undone is taken away, or
+    any later run would still apply it; one the run has honoured agrees with
+    its slot's role, so it stays.
+
+    The database already holds the recode, so nothing here fails the write: a
+    registry that cannot be read or saved is said in the log, and the session
+    reads as owed until a later recode writes its pin.
     """
     from bristlenose.run_lifecycle import run_in_progress
     from bristlenose.server import speaker_slots
+    from bristlenose.server.importer import turn_starts
     from bristlenose.server.routes.reanalyse import needs_reanalysis
-    from bristlenose.session_registry import SessionRegistry
+    from bristlenose.session_registry import RolePin, SessionRegistry, pin_starts
 
     project = db.get(Project, project_id)
     if project is None:
@@ -722,7 +730,7 @@ def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
     output_dir = Path(project.output_dir)
     if run_in_progress(output_dir):
         # The run saves over the registry at its end; a write now is lost, and
-        # the recode that would have withdrawn a pin was refused above.
+        # a recode that would have changed a pin was refused above.
         logger.warning("A run owns %s; pins were not checked", output_dir)
         return
     try:
@@ -731,21 +739,60 @@ def drop_withdrawn_pins(db: Session, project_id: int, session_id: str) -> None:
         logger.warning("Could not read the session registry; pins were not checked",
                        exc_info=True)
         return
-    held = registry.pins.get(session_id)
-    if not held:
-        return
+    held = registry.pins.get(session_id, {})
     changed = False
     for slot in speaker_slots.session_slots(db, project_id, session_id):
         label = registry.label_for(session_id, slot.slot_code)
-        if label is None or label not in held:
+        if label is None:
+            if needs_reanalysis(slot):
+                # A slot the run never named (a speaker split off in serve, a
+                # study from before the registry): no label to pin, so the run
+                # cannot re-read it, and the session stays owed.
+                logger.warning("%s: %s has no speaker label in the registry; its role "
+                               "was not pinned", session_id, slot.slot_code)
             continue
-        if not needs_reanalysis(slot) and held[label].role != slot.row.speaker_role:
+        pin = held.get(label)
+        person = slot.person.uuid if slot.person is not None else ""
+        if needs_reanalysis(slot):
+            if pin is not None and pin.role == slot.row.speaker_role:
+                # Already pinned for this role. Its evidence stays the turns the
+                # label had when the recode was made, which is what lets the run
+                # refuse a label that has since moved; the person follows the
+                # researcher's latest pick, which the importer carries.
+                if pin.person != person:
+                    pin.person = person
+                    changed = True
+                continue
+            try:
+                starts = turn_starts(project, session_id, slot.slot_code)
+            except (OSError, ValueError):
+                # An unreadable transcript (a gone volume, a refusal, bytes that
+                # are not UTF-8): the recode is already in the database, so the
+                # write must not fail on it.
+                logger.warning("%s: the transcript could not be read for %s; its role "
+                               "was not pinned", session_id, slot.slot_code, exc_info=True)
+                continue
+            if not starts:
+                logger.warning("%s: no transcript turns for %s; its role was not pinned",
+                               session_id, slot.slot_code)
+                continue
+            registry.pin(session_id, label, RolePin(
+                role=slot.row.speaker_role, starts=pin_starts(starts),
+                from_code=slot.slot_code, person=person,
+            ))
+            changed = True
+        elif pin is not None and pin.role != slot.row.speaker_role:
             del held[label]
             changed = True
-    if changed:
-        if not held:
-            del registry.pins[session_id]
+    if not changed:
+        return
+    if not registry.pins.get(session_id):
+        registry.pins.pop(session_id, None)
+    try:
         registry.save()
+    except OSError:
+        logger.warning("%s: the session registry could not be written; pins were not saved",
+                       session_id, exc_info=True)
 
 
 def _swap(

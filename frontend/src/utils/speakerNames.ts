@@ -22,6 +22,7 @@
 import { getPeople, isSessionScopedCode, sendPut, toastSaveFailed } from "./api";
 import { isExportMode } from "./exportData";
 import { dropUndo, pushUndo } from "../contexts/UndoStore";
+import { postProjectAction } from "../shims/bridge";
 import {
   PEOPLE_CHANGED_EVENT,
   type PeopleChangedDetail,
@@ -104,6 +105,7 @@ async function writeSlot(
           ? { kind: "participant", full_name: state.full_name, short_name: state.short_name, confirmed: state.confirmed }
           : { clear: true, ...kind },
     );
+    if (state.kind !== other.kind) recoded(sessionId);
     return;
   }
   // Fresh, not the caller's copy: by the time an undo runs, other
@@ -221,7 +223,10 @@ export function nameSpeaker({ sessionId, code, before, after }: NameSpeakerArgs)
 export function swapSpeakers(sessionId: string, code: string, other: string): Promise<void> {
   if (isExportMode()) return Promise.resolve();
   const write = () =>
-    enqueue(() => sendPut(slotPath(sessionId, code), { swap_with: other })).then(written);
+    enqueue(() => sendPut(slotPath(sessionId, code), { swap_with: other })).then(() => {
+      written();
+      recoded(sessionId);
+    });
   // Recorded once the swap has landed: its undo is the same write, so an
   // entry for a refused swap would perform it on ⌘Z.
   return write().then(() => pushUndo({ action: "swapRoles", undo: write, redo: write }));
@@ -229,6 +234,16 @@ export function swapSpeakers(sessionId: string, code: string, other: string): Pr
 
 function written(): void {
   window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+}
+
+/** A role changed. One into or out of participant leaves the session owed a
+ *  re-analysis, which the Mac offers as Analyse (§J7 R3); serve wrote the pins
+ *  with the recode. This only tells the Mac to read the database again, which
+ *  its folder watcher cannot see change, so it is sent for any role change
+ *  (moderator ↔ observer reads nothing new, and costs one read). A no-op in a
+ *  browser. */
+function recoded(sessionId: string): void {
+  postProjectAction("speakers-recoded", { sessionId });
 }
 
 /** Resolves when every queued write has landed (or failed), so a view can

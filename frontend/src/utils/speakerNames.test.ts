@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getUndoState, redo, resetUndoStore, undo } from "../contexts/UndoStore";
+import { postProjectAction } from "../shims/bridge";
 import { getPeople, sendPut, toastSaveFailed } from "./api";
 import { nameStateOf } from "./speakerPicking";
 import type { SpeakerResponse } from "./types";
@@ -14,6 +15,8 @@ import {
   type SpeakerNameState,
 } from "./speakerNames";
 
+vi.mock("../shims/bridge", () => ({ postProjectAction: vi.fn() }));
+
 vi.mock("./api", async (importOriginal) => {
   const real = await importOriginal<typeof import("./api")>();
   return { ...real, getPeople: vi.fn(), sendPut: vi.fn(), toastSaveFailed: vi.fn() };
@@ -22,6 +25,7 @@ vi.mock("./api", async (importOriginal) => {
 const putMock = vi.mocked(sendPut);
 const peopleMock = vi.mocked(getPeople);
 const toastMock = vi.mocked(toastSaveFailed);
+const nudgeMock = vi.mocked(postProjectAction);
 
 // A moderator slot names the person it points at (design-people.md §J8).
 const proposed: SpeakerNameState = {
@@ -36,6 +40,7 @@ beforeEach(() => {
   putMock.mockReset().mockResolvedValue(undefined);
   peopleMock.mockReset();
   toastMock.mockReset();
+  nudgeMock.mockReset();
 });
 
 afterEach(() => {
@@ -474,5 +479,39 @@ describe("swapSpeakers — a refused swap", () => {
     putMock.mockRejectedValueOnce(new Error("PUT 409"));
     await expect(swapSpeakers("s1", "p1", "m1")).rejects.toThrow();
     expect(getUndoState().canUndo).toBe(false);
+  });
+});
+
+// A recode into or out of participant leaves the session owed a re-analysis,
+// which the Mac offers as Analyse (§J7 R3, owner 23 Oct 2026). The Mac counts
+// owed sessions from the database, which its folder watcher never sees change,
+// so the report says when a role changed.
+describe("a role change tells the Mac to read the database again", () => {
+  const mary: SpeakerNameState = { full_name: "Mary Adeyemi", short_name: "Mary", confirmed: true, kind: "participant" };
+  const asMartin: SpeakerNameState = {
+    full_name: "Martin Storey", short_name: "Martin", confirmed: true, person: "id-martin", kind: "moderator",
+  };
+
+  it("after the recode lands, and again after its undo", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: mary, after: asMartin });
+    expect(nudgeMock).toHaveBeenCalledWith("speakers-recoded", { sessionId: "s1" });
+    await undo();
+    expect(nudgeMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("after a swap", async () => {
+    await swapSpeakers("s2", "p1", "m1");
+    expect(nudgeMock).toHaveBeenCalledWith("speakers-recoded", { sessionId: "s2" });
+  });
+
+  it("not for a rename", async () => {
+    await nameSpeaker({ sessionId: "s1", code: "m1", before: proposed, after: picked });
+    expect(nudgeMock).not.toHaveBeenCalled();
+  });
+
+  it("not for a recode the server refused", async () => {
+    putMock.mockRejectedValueOnce(new Error("PUT 409"));
+    await nameSpeaker({ sessionId: "s1", code: "p1", before: mary, after: asMartin }).catch(() => undefined);
+    expect(nudgeMock).not.toHaveBeenCalled();
   });
 });

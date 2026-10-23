@@ -1661,24 +1661,23 @@ describe("SessionsTable — session tapestry", () => {
   });
 });
 
-describe("SessionsTable — re-analyse after a recode (§J7 R3)", () => {
-  it("offers Re-analyse only on a session that needs it, and opens the sheet", async () => {
+describe("SessionsTable — a recoded session (§J7 R3)", () => {
+  it("offers no per-session act: the next Analyse re-reads it", async () => {
+    // Owner, 23 Oct 2026: the per-session Re-analyse folds into Analyse, so a
+    // session that needs it carries no button and no sheet.
     const needs = {
       ...sessionsResponse,
       sessions: [{ ...sessionsResponse.sessions[0], needs_reanalysis: true }, sessionsResponse.sessions[1]],
     };
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      if (url.includes("/reanalyse")) {
-        return Promise.resolve({ ok: true, json: async () => ({ needed: true, cost_usd: null, running: false, command: "bristlenose run x" }) });
-      }
       if (url.includes("/sessions")) return Promise.resolve({ ok: true, json: async () => needs });
       if (url.includes("/people")) return Promise.resolve({ ok: true, json: async () => peopleResponse });
       return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
     });
     render(<SessionsTable projectId="1" />);
-    const button = await screen.findByTestId("bn-reanalyse-s1");
-    expect(screen.queryByTestId("bn-reanalyse-s2")).toBeNull();
-    fireEvent.click(button);
-    expect(await screen.findByTestId("bn-reanalyse-sheet")).toBeInTheDocument();
+    expect(await screen.findByText("#1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Re-analyse/ })).toBeNull();
+    const asked = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(([url]) => String(url));
+    expect(asked.some((url) => url.includes("/reanalyse"))).toBe(false);
   });
 });

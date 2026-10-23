@@ -1,20 +1,21 @@
-"""Re-analyse one session after a recode into or out of participant (§J7 R3).
+"""Whether a session is owed a re-analysis after a recode (§J7 R3).
 
 A recode is held on the slot and re-analyses nothing (R1, R2). When it moves a
 speaker into or out of participant, the session's evidence is wrong: its quotes
 were extracted from the wrong speaker, and only the pipeline can extract the
-right ones. That is paid, so it is the researcher's act, behind a confirm.
-
-``POST`` writes **role pins** into the session registry (``SessionRegistry.pins``):
-per speaker label, the role the researcher set, the turns it was set on, and the
-person their pick pointed at. The next run — the Mac's Analyse, or
-``bristlenose run`` — honours them before codes are assigned, so only this
+right ones. Since 23 Oct 2026 that is the ordinary Analyse, not a per-session
+act: the recode itself writes **role pins** into the session registry
+(``routes/data.py`` ``sync_role_pins``), and the next run — the Mac's Analyse,
+or ``bristlenose run`` — honours them before codes are assigned, so only this
 session's topics and quotes are extracted again (the transcript changed, so its
 caches miss) while sections, themes and the Discussion guide are rebuilt for
 the whole study, since the evidence they group changed. The importer then
 carries each pick to the speaker's new code.
 
-``GET`` says whether a session needs it, and what it would cost.
+``GET`` says whether a session is owed one, and what the run is likely to cost.
+``needs_reanalysis`` is the predicate; the Mac counts owed sessions with the
+same rule in SQL (``SourceFilesReader.swift``, held to this one by
+``tests/test_swift_python_contract.py``).
 """
 
 from __future__ import annotations
@@ -29,7 +30,6 @@ from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
 from bristlenose.server.models import Project
-from bristlenose.server.models import Session as SessionModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -42,14 +42,10 @@ class ReanalyseInfo(BaseModel):
     #: What the run is likely to cost in US dollars, from this machine's own
     #: history or the shipped baselines; null when nothing can say.
     cost_usd: float | None = None
-    #: A pipeline run owns the project now; pins cannot be written until it ends.
+    #: A pipeline run owns the project now; a recode (which writes the pins) is
+    #: refused until it ends.
     running: bool = False
     #: The command that runs it, for a researcher outside the Mac app.
-    command: str
-
-
-class ReanalyseResult(BaseModel):
-    pinned: int
     command: str
 
 
@@ -98,62 +94,5 @@ def get_reanalyse(project_id: int, session_id: str, request: Request) -> Reanaly
             running=run_in_progress(Path(project.output_dir)),
             command=_command(project),
         )
-    finally:
-        db.close()
-
-
-@router.post("/projects/{project_id}/sessions/{session_id}/reanalyse",
-             response_model=ReanalyseResult)
-def post_reanalyse(project_id: int, session_id: str, request: Request) -> ReanalyseResult:
-    """Pin this session's speakers as the researcher has them, for the next run.
-
-    Every slot recoded into or out of participant is pinned; a pin whose
-    speaker has since been recoded back is taken away, so a run never applies
-    a role the researcher no longer holds. 409 while a run owns the project.
-    """
-    from bristlenose.run_lifecycle import run_in_progress
-    from bristlenose.server.importer import turn_starts
-    from bristlenose.server.refusal import analysis_running
-    from bristlenose.session_registry import RolePin, SessionRegistry, pin_starts
-
-    db: Session = request.app.state.db_factory()
-    try:
-        project = _project(db, project_id)
-        output_dir = Path(project.output_dir)
-        if run_in_progress(output_dir):
-            raise analysis_running()
-        session = (
-            db.query(SessionModel).filter_by(project_id=project_id, session_id=session_id).first()
-        )
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-        try:
-            registry = SessionRegistry.load(output_dir)
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-        pinned = 0
-        for slot in speaker_slots.session_slots(db, project_id, session_id):
-            label = registry.label_for(session_id, slot.slot_code)
-            if label is None:
-                continue
-            held = registry.pins.get(session_id, {}).get(label)
-            if needs_reanalysis(slot):
-                starts = turn_starts(project, session_id, slot.slot_code)
-                if not starts:
-                    logger.warning("%s: no transcript turns for %s; its role was not pinned",
-                                   session_id, slot.slot_code)
-                    continue
-                registry.pin(session_id, label, RolePin(
-                    role=slot.row.speaker_role, starts=pin_starts(starts),
-                    from_code=slot.slot_code,
-                    person=slot.person.uuid if slot.person is not None else "",
-                ))
-                pinned += 1
-            elif held is not None and held.role != slot.row.speaker_role:
-                del registry.pins[session_id][label]
-        if pinned == 0:
-            raise HTTPException(status_code=409, detail="Nothing here needs re-analysing")
-        registry.save()
-        return ReanalyseResult(pinned=pinned, command=_command(project))
     finally:
         db.close()

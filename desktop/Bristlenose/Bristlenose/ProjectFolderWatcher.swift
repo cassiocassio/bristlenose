@@ -71,6 +71,14 @@ struct UnanalysedState: Equatable {
     /// say so. Defaulted for the same reason as `discussionWanted`.
     var databaseForked: Bool = false
 
+    /// Sessions a speaker recode into or out of participant has left owed a
+    /// re-analysis (§J7 R3). Counted like unanalysed files (owner, 23 Oct
+    /// 2026): it offers **Analyse**, which honours the role pins the recode
+    /// wrote, together with any new files. Zero before a first analysis, since
+    /// there are no sessions to owe. Defaulted for the same reason as
+    /// `discussionWanted`.
+    var recodedSessionCount: Int = 0
+
     /// Whether the folder holds anything the pipeline would ingest. Derived, so
     /// the gate and the promised count cannot drift apart.
     var hasIngestableFiles: Bool { ingestableFileCount > 0 }
@@ -365,7 +373,9 @@ final class ProjectFolderWatcher: NSObject, NSFilePresenter, @unchecked Sendable
             ingestableFileCount: ingestableCount,
             discussionWanted: (snapshot.sessionCount ?? 0) > 0
                 && Self.discussionWanted(projectRoot: projectURL),
-            databaseForked: snapshot.isForked
+            databaseForked: snapshot.isForked,
+            recodedSessionCount: (snapshot.sessionCount ?? 0) > 0
+                ? (snapshot.recodedSessionCount ?? 0) : 0
         )
         guard Self.shouldPublish(state, lastPublished: lastPublished) else { return }
         lastPublished = state

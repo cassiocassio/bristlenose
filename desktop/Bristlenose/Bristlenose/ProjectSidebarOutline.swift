@@ -2565,6 +2565,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // (R19 follow-up, 20 Oct 2026).
         switch state {
         case .stopped, .failed, .failedWithDiagnostic: return true
+        // A run that finished with sessions failed: the next Analyse retries
+        // them (the manifest records each as failed), which is how a partial
+        // fresh start continues (decision 1b, 23 Oct 2026). Not for refusals
+        // (`unusableInput`: a format declined, a recording with no speech, a
+        // duplicate): every run refuses them again, so Analyse would change
+        // nothing, for ever. A recording not fetched in time is not a refusal.
+        case .completedPartial(let summary):
+            if summary.allFailures.contains(where: { $0.cause.category != .unusableInput }) {
+                return true
+            }
+            return hasWorkToDo(data)
         default: return hasWorkToDo(data)
         }
     }
@@ -2583,6 +2594,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // sit in a subfolder has no top-level files, and still has a discussion
         // to build. The run resumes, so nothing else is redone.
         if alreadyAnalysed && data.discussionWanted { return true }
+        // A recoded session is owed its quotes again (§J7 R3), whatever the
+        // folder holds — the recordings may all sit in subfolders.
+        if alreadyAnalysed && data.recodedSessionCount > 0 { return true }
         guard data.hasIngestableFiles else { return false }
         return !alreadyAnalysed || !data.newFiles.isEmpty
     }

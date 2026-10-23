@@ -397,3 +397,74 @@ class TestStageBudgetContract:
             assert re.search(rf"{prop}\s*:\s*Double\?", m.group(1)), (
                 f"RunProgressMath.apply has no `{prop}: Double?` parameter"
             )
+
+
+# ---------------------------------------------------------------------------
+# The Mac's count of sessions owed a re-analysis after a recode (§J7 R3)
+# ---------------------------------------------------------------------------
+
+_SOURCE_FILES_READER = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "SourceFilesReader.swift"
+)
+
+
+def _swift_recoded_session_sql() -> str:
+    text = _SOURCE_FILES_READER.read_text(encoding="utf-8")
+    match = re.search(
+        r"// BEGIN recoded-session-sql\n\s*static let recodedSessionSQL = \"\"\"\n(.*?)\n\s*\"\"\"\n"
+        r"\s*// END recoded-session-sql",
+        text, re.S,
+    )
+    assert match is not None, (
+        "SourceFilesReader.swift no longer carries the marked recodedSessionSQL; "
+        "the Mac's owed-session count must stay held to needs_reanalysis"
+    )
+    return match.group(1).replace("\\(reportProjectID)", "1")
+
+
+class TestRecodedSessionSqlContract:
+    """The sidebar offers Analyse for a session a recode left owed (owner, 23 Oct
+    2026). It counts them in SQL, from an immutable read of the database; serve
+    decides the same thing with ``needs_reanalysis``. If the two drift, the Mac
+    offers an Analyse that changes nothing, or hides one that is owed."""
+
+    @staticmethod
+    def _cases() -> list[tuple[str, str]]:
+        """Every role ``kind_prefix`` knows (read from it, so a new role is a new
+        case), one it never maps, the empty role, and every tag letter."""
+        from bristlenose.server.speaker_slots import _ROLE_PREFIX
+
+        roles = [*_ROLE_PREFIX, "unknown", ""]
+        return [(code, role) for code in ("p1", "m1", "o1", "P1") for role in roles]
+
+    @pytest.mark.skipif(not _SOURCE_FILES_READER.exists(), reason="desktop/ not in this checkout")
+    def test_the_swift_count_is_needs_reanalysis(self) -> None:
+        import sqlite3
+        from types import SimpleNamespace
+
+        from bristlenose.server.routes.reanalyse import needs_reanalysis
+
+        sql = _swift_recoded_session_sql()
+        for code, role in self._cases():
+            db = sqlite3.connect(":memory:")
+            db.executescript(
+                "CREATE TABLE sessions (id INTEGER PRIMARY KEY, project_id INTEGER);"
+                "CREATE TABLE session_speakers (id INTEGER PRIMARY KEY, session_id INTEGER,"
+                " speaker_code TEXT, speaker_role TEXT);"
+                "INSERT INTO sessions VALUES (1, 1);"
+            )
+            db.execute("INSERT INTO session_speakers VALUES (1, 1, ?, ?)", (code, role))
+            (swift,) = db.execute(sql).fetchone()
+            row = SimpleNamespace(speaker_code=code, speaker_role=role)
+            python = needs_reanalysis(SimpleNamespace(slot_code=code, row=row))
+            assert swift == int(python), f"{code}/{role!r}: Swift {swift}, Python {python}"
+
+    @pytest.mark.skipif(not _SOURCE_FILES_READER.exists(), reason="desktop/ not in this checkout")
+    def test_the_swift_count_names_real_columns(self) -> None:
+        from bristlenose.server.models import Session, SessionSpeaker
+
+        sql = _swift_recoded_session_sql()
+        assert Session.__tablename__ in sql and SessionSpeaker.__tablename__ in sql
+        for column in ("session_id", "speaker_code", "speaker_role"):
+            assert column in SessionSpeaker.__table__.columns, column
+        assert "project_id" in Session.__table__.columns

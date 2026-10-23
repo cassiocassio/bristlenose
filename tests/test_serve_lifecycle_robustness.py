@@ -292,15 +292,6 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
         assert _slots(client)[("s1", "p1")]["speaker_code"] == "p1"
 
-    def test_a_reanalyse_is_refused_by_name(self, tmp_path: Path) -> None:
-        """Its pins are registry writes the run would save over."""
-        project = _with_quotes(tmp_path)
-        client = _client(project)
-        _lock(project / "bristlenose-output")
-        resp = client.post("/api/projects/1/sessions/s1/reanalyse")
-        assert resp.status_code == 409, resp.text
-        assert resp.json() == {"detail": "An analysis is running", "reason": "run_in_progress"}
-
     def test_a_rename_is_still_allowed(self, tmp_path: Path) -> None:
         """Only the writes a run would overwrite are refused; a name lives in
         the database, which the run never touches."""
@@ -349,7 +340,7 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
         client = _client(project)
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 200
+        assert json.loads(reg.read_text())["pins"]["s1"], "the swap pins as it lands"
         # What the run does: honours the pins; Wylie is p3 now and Me is m1.
         data = json.loads(reg.read_text())
         data["speakers"]["s1"] = {"Wylie": "m1", "Me": "p3"}
@@ -374,7 +365,7 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         )
 
     def test_a_withdrawn_pin_is_not_dropped_under_a_live_run(self, tmp_path: Path) -> None:
-        """``drop_withdrawn_pins`` saves the registry, so it too must wait for
+        """``sync_role_pins`` saves the registry, so it too must wait for
         the run to let go. A person pick reaches it under a live run (only
         recodes and swaps are refused), so the guard inside it is the only
         thing stopping that write. A re-check mutation found it untested on
@@ -383,14 +374,13 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         The setup builds a pin that WOULD be dropped — the recode undone in the
         database, the pin still in the registry — so the unlocked call at the
         end proves the test is not degenerate."""
-        from bristlenose.server.routes.data import drop_withdrawn_pins
+        from bristlenose.server.routes.data import sync_role_pins
 
         project = _with_quotes(tmp_path)
         out = project / "bristlenose-output"
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
         client = _client(project)
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 200
         pinned = reg.read_text()
         assert json.loads(pinned)["pins"]["s1"]
         # Undo the recode (which drops the pin), then put the pin back by hand:
@@ -401,7 +391,7 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         def drop() -> None:
             db = client.app.state.db_factory()
             try:
-                drop_withdrawn_pins(db, 1, "s1")
+                sync_role_pins(db, 1, "s1")
             finally:
                 db.close()
 

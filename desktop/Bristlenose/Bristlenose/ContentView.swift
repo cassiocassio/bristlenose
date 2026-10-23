@@ -1209,7 +1209,7 @@ struct ContentView: View {
             bridgeHandler.activateLens(tab)
         }
         .onChange(of: bridgeHandler.chooseGuideRequests) { _, _ in chooseDiscussionGuide() }
-        .onChange(of: bridgeHandler.reanalyseSessionRequests) { _, _ in reanalyseSession() }
+        .onChange(of: bridgeHandler.speakersRecodedRequests) { _, _ in rescanAfterRecode() }
         // Remember where they leave it. Gated on having restored first — see
         // `lensRestoredFor`.
         .onChange(of: bridgeHandler.activeTab) { _, tab in
@@ -1447,29 +1447,32 @@ struct ContentView: View {
         }
     }
 
+    /// A speaker recode into or out of participant landed (§J7 R3): the session
+    /// is owed a re-analysis, which offers Analyse. The count comes from the
+    /// database, and the folder watcher never sees the database change, so read
+    /// it again: now, and twice more in case the serve's write was still in the
+    /// WAL behind another reader (the immutable read cannot see it there).
+    private func rescanAfterRecode() {
+        guard let project = selectedProject else {
+            Logger(subsystem: "app.bristlenose", category: "recode").notice(
+                "A recode landed with no project selected; the sidebar reads it at the next scan")
+            return
+        }
+        let id = project.id
+        projectIndex.rescan(projectID: id)
+        Task { @MainActor in
+            for delay in [1.5, 4.0] {
+                try? await Task.sleep(for: .seconds(delay))
+                projectIndex.rescan(projectID: id)
+            }
+        }
+    }
+
     /// The Discussion lens's "Add your guide…" on the Mac (plan §4): a native
     /// open panel, the file copied into the project's guide folder, then
     /// **Analyse** — which resumes, so only the discussion stage runs and
     /// nothing the researcher edited is lost. Busy pipeline: the copy still
     /// lands, and the sidebar offers Analyse once the run is free.
-    /// The report re-analyses a session after a speaker recode (§J7 R3): the
-    /// role pins are written, so the ordinary resume run is the whole act — only
-    /// that session's quotes are extracted again. Refused while a run owns the
-    /// project; the SPA asked serve first, which says the same.
-    private func reanalyseSession() {
-        // The pins are already written; a run that cannot start now applies
-        // them on the next one, so a refusal here loses nothing — but say so.
-        guard let project = selectedProject, !project.path.isEmpty,
-              SidebarOutlineController.pipelineIsFree(pipelineRunner.state[project.id])
-        else {
-            Logger(subsystem: "app.bristlenose", category: "reanalyse").notice(
-                "Re-analyse not started: no project, or its pipeline is busy; the next run applies the pins"
-            )
-            return
-        }
-        pipelineRunner.start(project: project)
-    }
-
     private func chooseDiscussionGuide() {
         guard let project = selectedProject, !project.path.isEmpty else { return }
         let panel = NSOpenPanel()

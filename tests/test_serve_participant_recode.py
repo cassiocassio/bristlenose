@@ -391,9 +391,9 @@ def _registry(project: Path, speakers: dict) -> Path:
 
 
 class TestReanalyse:
-    """§J7 R3: after a recode into or out of participant, the researcher can
-    re-analyse the session. Serve pins the roles; the next run honours them;
-    the importer carries the researcher's picks to the new codes."""
+    """§J7 R3, folded into Analyse (owner, 23 Oct 2026): a recode into or out
+    of participant pins the roles as it lands; the next ordinary run honours
+    them; the importer carries the researcher's picks to the new codes."""
 
     def _swapped(self, tmp_path: Path) -> tuple[TestClient, Path, Path]:
         project = _with_quotes(tmp_path)
@@ -412,37 +412,133 @@ class TestReanalyse:
         assert info["needed"] is True and info["running"] is False
         assert info["command"].startswith("bristlenose run ")
 
-    def test_post_pins_both_speakers_with_their_turns_and_picks(self, tmp_path: Path) -> None:
+    def test_the_swap_pins_both_speakers_with_their_turns_and_picks(self, tmp_path: Path) -> None:
         client, _, reg = self._swapped(tmp_path)
         martin = _slots(client)[("s1", "p1")]["person"]
-        resp = client.post("/api/projects/1/sessions/s1/reanalyse")
-        assert resp.status_code == 200, resp.text
-        assert resp.json()["pinned"] == 2
         pins = json.loads(reg.read_text())["pins"]["s1"]
         assert pins["Wylie"] == {"role": "researcher", "starts": [10.0], "from_code": "p1",
                                  "person": martin}
         assert pins["Me"]["role"] == "participant"
         assert pins["Me"]["starts"] == [2.0, 20.0]
 
+    def test_a_recode_out_of_participant_pins_the_speaker(self, tmp_path: Path) -> None:
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        client = _client(project)
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
+                          json={"kind": "observer", "clear": True})
+        assert resp.status_code == 200, resp.text
+        pins = json.loads(reg.read_text())["pins"]["s1"]
+        assert pins == {"Wylie": {"role": "observer", "starts": [10.0], "from_code": "p1",
+                                  "person": ""}}
+
+    def test_a_rename_writes_no_pin(self, tmp_path: Path) -> None:
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        client = _client(project)
+        client.put("/api/projects/1/sessions/s1/speakers/m1", json={"full_name": "Kerri"})
+        assert not json.loads(reg.read_text()).get("pins")
+
+    def test_a_later_write_keeps_the_evidence_the_pin_was_set_on(self, tmp_path: Path) -> None:
+        """A pin records the turns its label had when the researcher set it, so
+        the run can refuse it if the label has since moved to another voice.
+        Another write in the session must not refresh that evidence."""
+        client, project, reg = self._swapped(tmp_path)
+        before = json.loads(reg.read_text())["pins"]["s1"]
+        (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").write_text(
+            "# Transcript: s1\n# Date: 2026-09-20\n# Duration: 00:01:00\n\n"
+            "[00:05] [m1] Welcome, thanks for coming in today.\n"
+            "[00:30] [p1] Thanks for having me, it is good to be here.\n"
+        )
+        client.put("/api/projects/1/sessions/s1/speakers/p1", json={"full_name": "Wylie Coyote"})
+        assert json.loads(reg.read_text())["pins"]["s1"] == before
+
+    def test_a_pick_after_the_recode_is_what_the_pin_carries(self, tmp_path: Path) -> None:
+        """Recoded as the moderator and named, then the researcher picks someone
+        else: the next run carries the later pick, not the first."""
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        client = _client(project)
+        martin = "8f0c2a1e-0000-4000-8000-0000000000a1"
+        kerri = "8f0c2a1e-0000-4000-8000-0000000000a2"
+        client.put("/api/projects/1/sessions/s1/speakers/p1",
+                   json={"kind": "moderator", "person": martin, "create": True,
+                         "full_name": "Ahmed Khan", "short_name": "Ahmed", "confirmed": True})
+        assert json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["person"] == martin
+        starts = json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["starts"]
+        resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
+                          json={"kind": "moderator", "person": kerri, "create": True,
+                                "full_name": "Bea Lund", "short_name": "Bea", "confirmed": True})
+        assert resp.status_code == 200, resp.text
+        pin = json.loads(reg.read_text())["pins"]["s1"]["Wylie"]
+        assert (pin["person"], pin["starts"]) == (kerri, starts)
+
     def test_undoing_the_recode_takes_the_pin_away(self, tmp_path: Path) -> None:
         """A pin waits for the next run; one whose recode was undone must not
         be applied by it (a later run after adding a session, say)."""
         client, _, reg = self._swapped(tmp_path)
-        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 200
         assert json.loads(reg.read_text())["pins"]["s1"]
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
         assert "s1" not in json.loads(reg.read_text())["pins"]
 
-    def test_nothing_to_pin_is_refused(self, tmp_path: Path) -> None:
+    def test_the_per_session_act_is_gone(self, tmp_path: Path) -> None:
+        """Analyse is the act now; there is no second verb to re-analyse one session."""
+        client, _, _ = self._swapped(tmp_path)
+        assert client.post("/api/projects/1/sessions/s1/reanalyse").status_code == 405
+
+    def test_a_recode_whose_pin_cannot_be_saved_still_lands(self, tmp_path: Path, monkeypatch,
+                                                            caplog) -> None:
+        """The database holds the recode; a registry that will not save is said in
+        the log, never a 500 on a write that has already landed."""
+        from bristlenose.session_registry import SessionRegistry
+
         project = _with_quotes(tmp_path)
         _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
-        resp = _client(project).post("/api/projects/1/sessions/s1/reanalyse")
-        assert resp.status_code == 409
+        client = _client(project)
+
+        def refuse(self) -> None:
+            raise OSError("read-only volume")
+
+        monkeypatch.setattr(SessionRegistry, "save", refuse)
+        with caplog.at_level("WARNING"):
+            resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
+                              json={"kind": "observer", "clear": True})
+        assert resp.status_code == 200, resp.text
+        assert "pins were not saved" in caplog.text
+        sessions = {s["session_id"]: s for s in client.get("/api/projects/1/sessions").json()["sessions"]}
+        assert sessions["s1"]["needs_reanalysis"] is True
+
+    def test_an_unreadable_transcript_does_not_fail_the_recode(self, tmp_path: Path, caplog) -> None:
+        """The recode is committed before the pins are worked out; a transcript
+        that will not decode must not turn that into a 500 the grid then undoes."""
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        client = _client(project)
+        (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").write_bytes(b"\xff\xfe\x00garbage")
+        with caplog.at_level("WARNING"):
+            resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
+                              json={"kind": "observer", "clear": True})
+        assert resp.status_code == 200, resp.text
+        assert "the transcript could not be read" in caplog.text
+        assert not json.loads(reg.read_text()).get("pins")
+
+    def test_a_speaker_with_no_turns_is_owed_but_not_pinned(self, tmp_path: Path, caplog) -> None:
+        project = _with_quotes(tmp_path)
+        reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
+        client = _client(project)
+        # Imported, then the transcript goes (moved, renamed): the pin has no
+        # turns to record as its evidence.
+        (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").unlink()
+        with caplog.at_level("WARNING"):
+            resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
+                              json={"kind": "observer", "clear": True})
+        assert resp.status_code == 200, resp.text
+        assert "its role was not pinned" in caplog.text
+        assert not json.loads(reg.read_text()).get("pins")
 
     def test_after_the_run_the_picks_move_to_the_new_codes(self, tmp_path: Path) -> None:
         client, project, reg = self._swapped(tmp_path)
         martin = _slots(client)[("s1", "p1")]["person"]
-        client.post("/api/projects/1/sessions/s1/reanalyse")
         # What the run does: honours the pins, so Wylie is the participant (a
         # new number, p3) and "Me" is the moderator (m1); the session's quotes
         # are extracted again, from Wylie.

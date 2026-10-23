@@ -2910,9 +2910,12 @@ Three consequences for the build:
 
 #### Re-analysis, and the registry pin (R3)
 
-- *Re-analyse this session* writes the pin, and starts the run. The pin is not
+- ~~*Re-analyse this session* writes the pin, and starts the run. The pin is not
   written at recode time: serve and a running pipeline would both rewrite
-  `sessions.json`, and the registry is load–mutate–save.
+  `sessions.json`, and the registry is load–mutate–save.~~ *Superseded 23 Oct 2026:
+  the recode writes the pin as it lands, and the next ordinary Analyse honours it
+  (§J8.22's last paragraph). The race is closed by refusing the recode under a
+  live run, which the speaker PUT already did.*
 - **The pin is keyed by label and carries the evidence it was set on** — the start
   times of that label's segments at pin time. On a bare recording the labels are
   *Speaker A/B* from an LLM text split that a voice pass may re-label
@@ -3364,7 +3367,9 @@ people as unique and roles as per-session is the People lens's long-term goal.
     undo if the write carried the roles it expects; (c) the server accepts any participant ↔
     moderator-or-observer pair in a session, looser than the picker's offer.
 
-22. **Built 6 Oct 2026 — §J7 R3, re-analyse this session.** The owner's calls, 6 Oct: pins in
+22. **Built 6 Oct 2026 — §J7 R3, re-analyse this session.** *(The Sessions-row button, its sheet,
+    `POST …/reanalyse` and the `reanalyse-session` bridge action described in this paragraph were
+    removed on 23 Oct 2026; the last paragraph of this point says what replaced them.)* The owner's calls, 6 Oct: pins in
     the registry (no backward compatibility owed — the reference studies are re-run); the
     study-wide regroup accepted and said in the confirm; the Mac runs it and a browser shows
     the command; curation follows the existing importer rules, said in the confirm. **What a
@@ -3403,9 +3408,32 @@ people as unique and roles as per-session is the People lens's long-term goal.
     (`pipeline._paragraph_starts`), pinned by a test that writes the file through stage 6.
     (2) A carried pin re-applied on every import, reverting a later pick on the new slot; the
     importer now records the code it landed on. (3) A pin outlived an undone recode — the next
-    run would have applied it; the speaker PUT now takes it away (`drop_withdrawn_pins`).
+    run would have applied it; the speaker PUT now takes it away (`drop_withdrawn_pins`; since 23 Oct, `sync_role_pins`).
     (4) The Mac's "pipeline busy" refusal, the missing cost estimate and an unreadable registry
     now log instead of returning silently.
+    **Folded into Analyse, 23 Oct 2026** (owner: the per-session *Re-analyse session N?* goes,
+    and a recode into or out of participant is outstanding work, counted like unanalysed files).
+    The Sessions row's **Re-analyse…** button, its sheet and `POST …/reanalyse` are removed; the
+    GET stays as the "owed, and what it costs" read. **The recode itself writes the pins**:
+    `sync_role_pins` (`routes/data.py`, which replaced `drop_withdrawn_pins`) runs after every
+    recode and swap, pins each slot `needs_reanalysis` names, keeps a pin already set for the
+    same role (its evidence is the turns *when the researcher set it*, which is what lets the
+    run refuse a moved label), and takes away a withdrawn one. It writes nothing under a live
+    run, which already refuses the recode, so the reason this section once gave for not
+    writing at recode time — serve and a run would both rewrite `sessions.json` — no longer
+    holds. A registry that will not save is logged, never a 500 on a write the database already
+    holds; the session then reads as owed until a later recode writes its pin. So the ordinary
+    run — the Mac's **Analyse** or `bristlenose run` — re-reads the session together with any
+    new files. The Mac counts owed sessions from the database (`SourceFilesReader`
+    `recodedSessionSQL`, held to `needs_reanalysis` by `tests/test_swift_python_contract.py`),
+    carries the count on `UnanalysedState.recodedSessionCount`, and offers Analyse on it; the
+    report posts `project-action` `speakers-recoded` after a role change so the sidebar reads
+    the database again, since the folder watcher never sees it change. **Not built, waiting on
+    the owner:** the row's "quotes out of date" line and how the sidebar shows the count
+    (`docs/mockups/owed-work-rows.html`). **Consequence to know:** a recode now reaches the
+    next Analyse without a confirm, including one started only for new files, so the curated
+    quotes of a recoded speaker are hidden at that run (the importer's rule above) without a
+    sheet having said so first.
 
 23. **Built 6 Oct 2026 — the picker opens on the name, ready to overtype** (owner, the same
     day; web and Mac). A click on the current name always edits it, proposed or confirmed —

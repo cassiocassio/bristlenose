@@ -14,6 +14,7 @@ trued-against: HEAD@main (6562c7be) on 2026-10-14
 
 ## Changelog
 
+- _2026-10-23_ — RE#R3 (owner): the per-session *Re-analyse session N?* folds into **Analyse**. A speaker recode into or out of participant is outstanding work: the recode writes the role pins (`routes/data.py` `sync_role_pins`), the Mac counts owed sessions from the database (`UnanalysedState.recodedSessionCount`, `SourceFilesReader.recodedSessionSQL`) and `hasWorkToDo` offers Analyse on it; the Sessions row's button, sheet and `POST …/reanalyse` are gone. A partial completion (`.completedPartial`) now offers Analyse unless every failure is a refusal (`unusable_input`), which the survey found hidden. §4 and §4.1 updated, and corrected: there is no Project ▸ Analyse menu-bar item (both rows said there was; a proposal is in `docs/mockups/owed-work-rows.html` §4). Anchors: `analyseIsOffered`, `hasWorkToDo` (`ProjectSidebarOutline.swift`), `RecodedSessionWorkTests`, `tests/test_swift_python_contract.py` `TestRecodedSessionSqlContract`.
 - _2026-10-23_ — decision 1b (owner): Re-analyse is a deliberate fresh start. A `--clean` run replaces the report once it holds an analysed session, other sessions failed or not, and **Analyse** finishes the rest as for any partial run; a run that produced nothing puts the report back, and its tree is deleted, not kept. The 22 Oct hold-back is removed: nothing is kept for a later run to swap in, so no plain run replaces a report. Exported `clips/` and `screens/` move into the new output under the old analysis's date. §3's Re-analyse note and the row-42 caveat updated. Anchors: `settle`, `holds_an_analysed_session`, `carry_exports` (`utils/output_backup.py`), `tests/test_cli_reanalyse_fresh_start.py`.
 - _2026-10-22_ — _(superseded 23 Oct 2026, above)_ decision #13 (R108, R109): a Re-analyse replaces the report only when every session was analysed. One that comes back with sessions failed puts the previous report back as a failed run does; the attempt is kept, and the next **Analyse** finishes it instead of re-running the finished report. §3's Re-analyse note and the row-42 caveat updated. Anchors: `resume_attempt` (`utils/output_backup.py`), `summary_left_sessions_unanalysed` (`run_condition.py`), `tests/test_cli_degraded_reanalyse.py`.
 - _2026-10-21_ — decision #1: **Re-analyse…** asks when the curation count can't be read. `CurationCountsReader.read` returns nil for a database it could not read — unopenable, not a database, a torn page, an I/O error — where it used to return zero, so `--clean` ran unasked; the sheet then shows one sentence in place of the counted list. No database file, or an older schema missing a table, is still a real zero and runs unasked. §3.3 and §4 updated. Anchors: `ReAnalyseDecision` (`ReAnalyseConfirmSheet.swift`), `desktop.chrome.reAnalyseLossUnknown`, `ReAnalyseDecisionTests`, `ProjectDBReadersTests` (`curationCountsAreNil…`).
@@ -380,15 +381,16 @@ Where each verb can be reached, and what gates it.
 
 | Affordance | Surface | Enabled when | State today |
 |---|---|---|---|
-| **Analyse** | sidebar context menu, Project menu | folder-shaped, has path, not running, **and there is work to do** | Shipped (`8975254a`, `1c5bebfa`) |
+| **Analyse** | sidebar context menu (there is no Project ▸ Analyse in the menu bar; proposed, `docs/mockups/owed-work-rows.html` §4) | folder-shaped, has path, not running, **and there is work to do**: new files, a recoded session, a discussion owed, or a run that did not finish | Shipped (`8975254a`, `1c5bebfa`) |
 | **Analyse** (auto) | after a cloud-import batch lands | folder-shaped project | Shipped (`1490dcde`) |
-| **Analyse** (discussion) | sidebar context menu, Project menu | analysed, and the discussion record is missing or older than the guide folder | Shipped 4 Oct 2026 — resumes; only the discussion stage runs |
+| **Analyse** (discussion) | sidebar context menu | analysed, and the discussion record is missing or older than the guide folder | Shipped 4 Oct 2026 — resumes; only the discussion stage runs |
 | **Add your guide…** / the guide's file name (Discussion lens, Mac) | the lens's guide tab | always; starts Analyse only when the pipeline is free | Shipped 4 Oct 2026 — native open panel, copies the guide into the project, then Analyse (resumes); the tab says "Reading your guide…" until the run ends |
 | **Analyse** | the project detail pane | never run **and** files present | Shipped (§6.3) |
 | **Analyse** | the files popover | the popover is open **and** `analyseIsOffered` | Shipped 27 Aug (§6.2 amendment) — was the sheet |
 | **File ▸ Add Files…** | File menu | a project is selected | Shipped |
 | **+N unanalysed** ⓘ → files popover | row subtitle — glyph **and** text | `newFiles` non-empty | Shipped 27 Aug on the AppKit sidebar; the fix was a popover, not the sheet |
 | **Analyse** (folder-shaped) | context menu | `newFiles` non-empty | Shipped — **already incremental**, but unlabelled as such |
+| **Analyse** (recoded session) | context menu | analysed, and a speaker was recoded into or out of participant (`recodedSessionCount > 0`) | Shipped 23 Oct 2026 (RE#R3) — replaces the Sessions row's per-session **Re-analyse…**; the run honours the role pins the recode wrote. How the row says it is unbuilt (mockup) |
 | Primary action on the files popover | popover header | `newFiles` non-empty | Shipped (§6.2 amendment) |
 | **Stop Analysis** ⌘. | Project menu, row hover-× | running | Shipped |
 | **Re-analyse…** | Project menu | `sessionCount > 0`, **pipeline free**, not running | Shipped — dims (§6.1); state gate fixed 21 Aug (`06b57843`); confirms when curation can't be counted (21 Oct, decision #1) |
@@ -421,7 +423,8 @@ Both verbs need the same input: *does this project have work to do?*
 | Analysed, nothing new | 0 | >0 | **hide** ✅ — measured: 0.1s, all cached, no visible change | **Re-analyse…** ✅ — shipped 19 Aug but **did not work until 21 Aug**: the predicate's state allowlist excluded `.ready`, the exact state this row describes (see §6.1a) | hide |
 | Analysed, new files present | >0 | >0 | **Analyse** — *not* "Analyse *N* New Files": the count-bearing label is still unbuilt, the shipped key is `desktop.menu.project.analyse` and the sheet reuses it (`NewFilesSheet.swift:141`) | Re-analyse… | hide |
 | Running | — | — | hide | hide | **Stop Analysis** ⌘. |
-| Failed / partial | any | any | Analyse (retry) | Re-analyse… | hide |
+| Analysed, a speaker recoded into or out of participant | any | >0 | **Analyse** — re-reads that session with any new files (RE#R3) | Re-analyse… | hide |
+| Failed / partial | any | any | Analyse (retry) — a partial completion only when a failure is not a refusal; a declined file or a silent recording is refused by every run | Re-analyse… | hide |
 | File-subset, analysed | >0 | >0 | hide *(correct today)* | **Re-analyse…** — the only route | hide |
 | `cantFind` (a gone folder, cloud or not; this row said "evicted" until 22 Oct 2026, but an evicted folder still exists and reads `.ready` — `design-cloud-files.md`) | — | — | hide | hide | hide |
 

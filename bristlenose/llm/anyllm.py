@@ -563,7 +563,10 @@ def upstream(exc: BaseException) -> tuple[str, str] | None:
                 or err.get("message") == _UPSTREAM_MESSAGE
             ):
                 return _host_name(meta.get("provider_name")), str(meta.get("limit_source") or "")
-        todo += [getattr(cur, "original_exception", None), cur.__cause__, cur.__context__]
+        # Not __context__: that is whatever was being handled when this was
+        # raised. The json_object fallback runs inside the except that caught a
+        # host's refusal, so a later key-level 429 would be blamed on the host.
+        todo += [getattr(cur, "original_exception", None), cur.__cause__]
     return None
 
 

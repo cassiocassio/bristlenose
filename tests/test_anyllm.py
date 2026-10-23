@@ -1492,3 +1492,23 @@ def test_a_providers_words_reach_the_terminal_as_text() -> None:
         provider_display="Mistral",
     )
     assert "\x1b" not in said and "click" in said
+
+
+def test_a_later_failure_is_not_blamed_on_an_earlier_host() -> None:
+    """The json_object fallback runs inside the `except` that caught a host's
+    refusal, so anything it raises carries that refusal as `__context__`.
+    OpenRouter's own key-level 429 there was worded "Mistral, reached through
+    OpenRouter, is busy. Your key works." (review round 2, finding 38)."""
+    host_refusal = _openrouter(502, {
+        "message": "Provider returned error", "code": 502,
+        "metadata": {"provider_name": "Mistral"},
+    })
+    try:
+        try:
+            raise host_refusal
+        except Exception:
+            raise _openrouter(429, _OWN_LIMIT)  # noqa: B904 -- the shape under test
+    except Exception as later:
+        assert later.__context__ is host_refusal
+        assert anyllm.upstream(later) is None
+    assert anyllm.upstream(host_refusal) == ("Mistral", "")

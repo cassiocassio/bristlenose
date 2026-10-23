@@ -814,8 +814,8 @@ def _load_contract() -> dict:
 def test_contract_fixture_present_and_versioned():
     """The fixture exists and declares its schema version. Lock-step bump."""
     contract = _load_contract()
-    assert contract["version"] == 7, (
-        "Contract schema version drifted. If the fixture moved to v8, audit "
+    assert contract["version"] == 8, (
+        "Contract schema version drifted. If the fixture moved to v9, audit "
         "every consumer (Python events.py, Swift PipelineSummary.swift) and "
         "update tests on both sides."
     )

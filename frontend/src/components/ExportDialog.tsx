@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { Icon } from "./Icon";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { useProjectId } from "../hooks/useProjectId";
 import { isExportMode } from "../utils/exportData";
@@ -51,13 +52,6 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
     }
   }, [open]);
 
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
   // Close on Escape
   useEffect(() => {
     if (!open) return;
@@ -97,15 +91,17 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   if (isExportMode()) return null;
 
   return createPortal(
-    // Backdrop click-outside-to-close; Escape handled by the document keydown listener above.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
     <div
       className={`bn-overlay${open ? " visible" : ""}`}
-      onClick={handleOverlayClick}
       aria-hidden={!open}
       data-testid="bn-export-overlay"
     >
       <div className="bn-modal" data-testid="bn-export-modal" style={{ maxWidth: 420 }}>
+        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
+        <button className="bn-modal-close" onClick={onClose} aria-label={t("buttons.close")}>
+          <Icon name="close" decorative />
+        </button>
         <PanelErrorBoundary part>
           {() => (
             <>

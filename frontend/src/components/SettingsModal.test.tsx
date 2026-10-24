@@ -65,11 +65,11 @@ describe("SettingsModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("calls onClose when clicking overlay background", () => {
+  it("does not close on a click on the backdrop", () => {
     const onClose = vi.fn();
     render(<SettingsModal open={true} onClose={onClose} />);
     fireEvent.click(screen.getByTestId("bn-settings-overlay"));
-    expect(onClose).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("does not call onClose when clicking inside modal", () => {

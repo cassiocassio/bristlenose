@@ -145,13 +145,6 @@ export function ModalNav({
     return () => document.removeEventListener("keydown", handler);
   }, [open, resolvedTestId]);
 
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose],
-  );
-
   const toggleGroup = useCallback((id: string) => {
     setExpandedGroups((prev) => {
       const next = new Set(prev);
@@ -190,11 +183,9 @@ export function ModalNav({
       ?.label ?? "";
 
   return createPortal(
-    // Modal backdrop; click-outside-to-close. Escape handled by the modal's keydown elsewhere.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
     <div
       className={`bn-overlay modal-nav-overlay${open ? " visible" : ""}`}
-      onClick={handleOverlayClick}
       aria-hidden={!open}
       data-testid={resolvedTestId}
     >

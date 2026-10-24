@@ -202,6 +202,27 @@ describe("ThresholdReviewModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("does not close on a click on the backdrop", async () => {
+    // A press on a threshold handle released past the card is a click on the
+    // backdrop; it used to close the review and drop the unapplied thresholds.
+    mockGetProposals.mockResolvedValue({ proposals: [], total: 0 });
+    const onClose = vi.fn();
+
+    render(
+      <ThresholdReviewModal
+        open={true}
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={onClose}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+
+    fireEvent.click(document.querySelector(".codebook-modal-overlay")!);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("apply button calls accept-all and deny-all with thresholds", async () => {
     const proposals = [
       makeProposal({ id: 1, confidence: 0.8 }),

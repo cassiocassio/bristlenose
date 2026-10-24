@@ -14,6 +14,7 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { Icon } from "./Icon";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
@@ -483,13 +484,9 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   if (isExportMode()) return null;
 
   return createPortal(
-    // Modal backdrop; click-outside-to-close. Escape handled by the modal's keydown elsewhere.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
     <div
       className={`bn-overlay${open ? " visible" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       aria-hidden={!open}
       data-testid="bn-miro-overlay"
     >
@@ -501,6 +498,10 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
         aria-modal="true"
         aria-labelledby="bn-miro-title"
       >
+        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
+        <button className="bn-modal-close" onClick={onClose} aria-label={t("buttons.close")}>
+          <Icon name="close" decorative />
+        </button>
         {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
         <PanelErrorBoundary part labelId="bn-miro-title">
           {() => (

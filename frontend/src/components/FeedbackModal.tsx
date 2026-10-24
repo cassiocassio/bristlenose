@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useInert } from "../hooks/useInert";
+import { Icon } from "./Icon";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
 import { DEFAULT_GITHUB_ISSUES_URL, type HealthResponse } from "../utils/health";
@@ -201,23 +202,18 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     if (inFlight.current === controller) inFlight.current = null;
   }, [clearAndClose, fallbackToClipboard, health.feedback.url, health.version, message, rating, sending]);
 
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) close();
-    },
-    [close],
-  );
-
   return createPortal(
-    // Backdrop click-outside-to-close; Escape handled by the document keydown listener above.
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
     <div
       className={`bn-overlay feedback-overlay${open ? " visible" : ""}`}
-      onClick={handleOverlayClick}
       aria-hidden={!open}
       data-testid="bn-feedback-overlay"
     >
       <div className="bn-modal feedback-modal" data-testid="bn-feedback-modal">
+        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
+        <button className="bn-modal-close" onClick={close} aria-label={t("buttons.close")}>
+          <Icon name="close" decorative />
+        </button>
         <PanelErrorBoundary part>
           {() => (
             <>

@@ -282,7 +282,7 @@ describe("FeedbackModal", () => {
   const closers: [string, () => void][] = [
     ["Cancel", () => fireEvent.click(screen.getByRole("button", { name: "Cancel" }))],
     ["Escape", () => fireEvent.keyDown(document, { key: "Escape" })],
-    ["the overlay", () => fireEvent.click(screen.getByTestId("bn-feedback-overlay"))],
+    ["the close button", () => fireEvent.click(screen.getByRole("button", { name: "Close" }))],
   ];
   const failures: [string, () => Response | Error][] = [
     ["a network error", () => new Error("network")],
@@ -368,14 +368,16 @@ describe("FeedbackModal", () => {
     expect(send.disabled).toBe(false);
   });
 
-  it("closes on Escape and overlay click", () => {
+  it("closes on Escape and the close button, never on a click on the backdrop", () => {
     const onClose = vi.fn();
     render(<FeedbackModal open={true} onClose={onClose} health={HEALTH} />);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    const overlay = screen.getByTestId("bn-feedback-overlay");
-    fireEvent.click(overlay);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByTestId("bn-feedback-overlay"));
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 });

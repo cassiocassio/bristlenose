@@ -228,17 +228,14 @@ export function ThresholdReviewModal({
   const hasProposals = pendingCount > 0 || acceptedCount > 0 || deniedCount > 0;
 
   const modal = (
-    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
     <div
       className={`codebook-modal-overlay${open ? " visible" : ""}`}
-      onClick={onClose}
       aria-hidden={!open}
     >
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="codebook-modal"
         style={{ maxWidth: "56rem" }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="codebook-modal-header">

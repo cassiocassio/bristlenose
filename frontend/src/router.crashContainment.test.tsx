@@ -614,10 +614,14 @@ describe("a crash inside an open modal", () => {
       expectReportStands(document.body);
     });
 
-    it(`${c.name}: contained in the modal, and a click outside still closes it`, async () => {
+    // A click on the backdrop closes no dialog (24 Oct 2026), so the shell's ×,
+    // outside the boundary, is the mouse's way out of a dialog whose content crashed.
+    it(`${c.name}: contained in the modal, and its × still closes it`, async () => {
       if (c.flag) featureFlags.figjamExport = true;
       const { overlay } = await openBroken(c.key, c.open, c.testId);
       fireEvent.click(overlay);
+      expect(overlay).toHaveClass("visible");
+      fireEvent.click(within(overlay).getByRole("button", { name: "Close" }));
       await waitFor(() => expect(overlay).not.toHaveClass("visible"));
     });
   }

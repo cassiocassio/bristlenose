@@ -16,22 +16,17 @@ private final class MiroFakeServe: @unchecked Sendable {
     private let listener: NWListener
     /// The JSON body for each request path. Main queue only, where the listener runs.
     var answer: (String) -> String = { _ in "{}" }
-    /// Set once the listener has a port, or never will; main queue only.
-    private var settled = false
-    private var readyWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Fires once the listener is ready, or has failed (which leaves `port` at 0).
+    let listening = MainSignal()
 
     init() throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
-        listener.stateUpdateHandler = { [weak self] state in
-            guard let self else { return }
+        let listening = self.listening
+        listener.stateUpdateHandler = { state in
             switch state {
-            case .ready, .failed, .cancelled:
-                self.settled = true
-                let all = self.readyWaiters
-                self.readyWaiters = []
-                all.forEach { $0.resume() }
+            case .ready, .failed, .cancelled: MainActor.assumeIsolated { listening.fire() }
             default: break
             }
         }
@@ -54,12 +49,8 @@ private final class MiroFakeServe: @unchecked Sendable {
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
 
-    /// Returns once the listener is ready (or has failed, which leaves `port` at 0). A signal,
-    /// not a poll: the listener runs on the main queue, which a full suite keeps busy.
-    @MainActor func ready() async {
-        if settled { return }
-        await withCheckedContinuation { readyWaiters.append($0) }
-    }
+    /// A signal, not a poll: the listener runs on the main queue, which a full suite keeps busy.
+    @MainActor func ready() async { await listening.wait() }
 
     func stop() { listener.cancel() }
 }
@@ -102,7 +93,8 @@ struct MiroSheetContractTests {
         // Wait on the step leaving .creating, not on a clock: under a full suite the main queue
         // (the fake serve's and the model's) is shared with every main-actor test, and a 10 s
         // poll ran out before the build had ended (24 Oct 2026). The bound is `.timeLimit`.
-        _ = await m.$step.values.first { $0 != .creating }
+        let ended = await m.$step.values.first { $0 != .creating }
+        try #require(ended != nil, "the build never ended")
 
         #expect(m.step == .configure, "a board with no link read as ready")
         #expect(m.error != nil)

@@ -15,20 +15,19 @@ private final class SilentServe: @unchecked Sendable {
     private var connections: [NWConnection] = []
     /// Set once a request has arrived; main queue only.
     private(set) var requestArrived = false
-    /// Set once the listener has a port, or never will; main queue only.
-    private var settled = false
-    /// Set by `giveUp()`: what the test was waiting alongside has ended; main queue only.
-    private var gaveUp = false
-    private var readyWaiters: [CheckedContinuation<Void, Never>] = []
-    private var requestWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Fires once the listener is ready, or has failed (which leaves `port` at 0).
+    let listening = MainSignal()
+    /// Fires once a request has arrived, or `giveUp()` was called first.
+    let requested = MainSignal()
 
     init() throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
-        listener.stateUpdateHandler = { [weak self] state in
+        let listening = self.listening
+        listener.stateUpdateHandler = { state in
             switch state {
-            case .ready, .failed, .cancelled: self?.settle()
+            case .ready, .failed, .cancelled: MainActor.assumeIsolated { listening.fire() }
             default: break
             }
         }
@@ -39,7 +38,7 @@ private final class SilentServe: @unchecked Sendable {
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in
                 guard data != nil else { return }
                 self.requestArrived = true
-                Self.resume(&self.requestWaiters)
+                MainActor.assumeIsolated { self.requested.fire() }
             }
         }
         listener.start(queue: .main)
@@ -47,38 +46,16 @@ private final class SilentServe: @unchecked Sendable {
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
 
-    /// Returns once the listener is ready (or has failed, which leaves `port` at 0).
-    @MainActor func ready() async {
-        if settled { return }
-        await withCheckedContinuation { readyWaiters.append($0) }
-    }
+    @MainActor func ready() async { await listening.wait() }
 
-    /// Returns once a request has arrived, or `giveUp()` was called first.
-    @MainActor func request() async {
-        if requestArrived || gaveUp { return }
-        await withCheckedContinuation { requestWaiters.append($0) }
-    }
+    @MainActor func request() async { await requested.wait() }
 
     /// Stop `request()` waiting: what it was waiting alongside ended without a request.
-    @MainActor func giveUp() {
-        gaveUp = true
-        Self.resume(&requestWaiters)
-    }
+    @MainActor func giveUp() { requested.fire() }
 
     func stop() {
         connections.forEach { $0.cancel() }
         listener.cancel()
-    }
-
-    private func settle() {
-        settled = true
-        Self.resume(&readyWaiters)
-    }
-
-    private static func resume(_ waiters: inout [CheckedContinuation<Void, Never>]) {
-        let all = waiters
-        waiters = []
-        all.forEach { $0.resume() }
     }
 }
 

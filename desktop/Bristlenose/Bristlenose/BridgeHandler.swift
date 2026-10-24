@@ -201,6 +201,10 @@ final class BridgeHandler: ObservableObject {
     /// is, so the sheet opens in the window that asked. It was an app-wide
     /// `.showFeedbackSheet` broadcast, and every open window answered it (R82).
     @Published private(set) var feedbackRequests = 0
+    /// The journey the latest `feedbackRequests` asked for: a problem report
+    /// from the whole-report crash pane, otherwise feedback. Written before the
+    /// counter moves, so the window reads it as the sheet opens.
+    @Published private(set) var requestedFeedbackMode: FeedbackSheetMode = .feedback
 
     /// Whether the web layer has an undo action available.
     @Published var canUndo = false
@@ -1686,7 +1690,10 @@ final class BridgeHandler: ObservableObject {
     /// broadcasts, and the staged `FeedbackFallback` one-shot makes exactly one
     /// window take it. Returns whether a window did, so the menu can open one
     /// when none is open (R82).
-    func requestFeedback() { feedbackRequests += 1 }
+    func requestFeedback(mode: FeedbackSheetMode = .feedback) {
+        requestedFeedbackMode = mode
+        feedbackRequests += 1
+    }
 
     @discardableResult
     func openFeedback() -> Bool {
@@ -1703,9 +1710,14 @@ final class BridgeHandler: ObservableObject {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
 
         case "open-feedback":
-            // Status page (SPA absent) asked for the native feedback sheet — in
-            // this window, the one whose page asked, not in every window.
-            requestFeedback()
+            // Status page (SPA absent) or the report's crash pane asked for the
+            // native feedback sheet — in this window, the one whose page asked,
+            // not in every window. The crash pane asks for a problem report.
+            let mode = FeedbackSheetMode.fromBridge(data)
+            if data?["kind"] as? String == "problem", mode == .feedback {
+                Self.log.notice("open-feedback: a problem report with no message; opening feedback")
+            }
+            requestFeedback(mode: mode)
 
         case "choose-discussion-guide":
             chooseGuideRequests += 1

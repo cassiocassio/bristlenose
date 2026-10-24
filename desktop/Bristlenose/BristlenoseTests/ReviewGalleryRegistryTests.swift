@@ -180,12 +180,14 @@ import Testing
         for row in ReviewGalleryRegistry.bootStates {
             let fixture = ReviewGalleryRegistry.bootFixture(row)
             #expect(fixture.fleet.manager(for: fixture.project) === fixture.manager)
-            let key: String
-            switch BootView.failureAction(startedByRetry: fixture.manager.startedByRetry) {
-            case .retry: key = "desktop.boot.retry"
-            case .sendFeedback: key = "desktop.menu.help.sendFeedback"
-            }
-            #expect(key == expected[row.name], "\(row.name): primary button is \(key)")
+            // The button that tells this state apart: Retry (the default) on a
+            // first failure, Send Feedback… (no default) once a retry failed.
+            let set = BootView.failureButtons(startedByRetry: fixture.manager.startedByRetry)
+            let key = set.buttons.contains(.retry)
+                ? "desktop.boot.retry" : "desktop.menu.help.sendFeedback"
+            #expect(key == expected[row.name], "\(row.name): offers \(key)")
+            #expect((set.defaultButton == .retry) == set.buttons.contains(.retry),
+                    "\(row.name): Return presses Retry or nothing")
             #expect(i18n.t(key) != key)
             #expect(!fixture.manager.outputLines.isEmpty, "\(row.name): Show details has nothing")
         }

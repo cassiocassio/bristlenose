@@ -155,4 +155,17 @@ struct FeedbackPayloadTests {
             #expect(obj[forbidden] == nil)
         }
     }
+
+    /// A problem report adds one fixed word and nothing else; feedback (above)
+    /// sends no `kind` at all, which the endpoint reads as feedback.
+    @Test
+    func aProblemReportAddsOnlyItsKind() throws {
+        let payload = FeedbackPayload(
+            version: "1.0.0", rating: "hate", message: "it stopped", kind: "problem")
+        let json = try JSONEncoder().encode(payload)
+        let obj = try #require(
+            try JSONSerialization.jsonObject(with: json) as? [String: Any])
+        #expect(Set(obj.keys) == ["version", "rating", "message", "kind"])
+        #expect(obj["kind"] as? String == "problem")
+    }
 }

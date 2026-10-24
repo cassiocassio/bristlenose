@@ -22,9 +22,9 @@ struct BootView: View {
         /// The sidecar could not start. The message is a `FailureMessage` so
         /// the line under the localised title is localised too — it was the
         /// English half of a half-translated view. `retry` reattempts;
-        /// `sendFeedback` opens this window's feedback sheet, offered in Retry's
-        /// place once a retry has itself failed (`failureAction`). Show details
-        /// reveals the raw output either way.
+        /// `sendFeedback` opens this window's feedback sheet as a problem
+        /// report, offered once a retry has itself failed (`failureButtons`).
+        /// Show details reveals the raw output either way.
         case failed(message: FailureMessage, retry: () -> Void, sendFeedback: () -> Void)
         /// Lazy start: this window has a study but deliberately has not begun
         /// serving it, because nobody is looking. Renders **at rest** — no verb,
@@ -153,21 +153,12 @@ struct BootView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
                 HStack(spacing: 12) {
-                    // One primary button, and Return follows it.
-                    switch Self.failureAction(
+                    let set = Self.failureButtons(
                         startedByRetry: serveManagerForPane?.startedByRetry ?? false
-                    ) {
-                    case .retry:
-                        Button(i18n.t("desktop.boot.retry"), action: retry)
-                            .keyboardShortcut(.defaultAction)
-                    case .sendFeedback:
-                        Button(i18n.t("desktop.menu.help.sendFeedback"), action: sendFeedback)
-                            .keyboardShortcut(.defaultAction)
-                    }
-                    Button(i18n.t(detailsExpanded
-                                  ? "desktop.boot.hideDetails"
-                                  : "desktop.boot.showDetails")) {
-                        detailsExpanded.toggle()
+                    )
+                    ForEach(set.buttons, id: \.self) { which in
+                        failureButton(which, retry: retry, sendFeedback: sendFeedback)
+                            .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
                     }
                 }
                 if detailsExpanded {
@@ -189,17 +180,63 @@ struct BootView: View {
 }
 
 extension BootView {
-    /// The failure pane's primary button.
-    enum FailureAction: Equatable {
+    @ViewBuilder
+    private func failureButton(
+        _ which: FailureButton, retry: @escaping () -> Void, sendFeedback: @escaping () -> Void
+    ) -> some View {
+        switch which {
+        case .retry:
+            Button(i18n.t("desktop.boot.retry"), action: retry)
+        case .showDetails:
+            Button(i18n.t(detailsExpanded
+                          ? "desktop.boot.hideDetails"
+                          : "desktop.boot.showDetails")) {
+                detailsExpanded.toggle()
+            }
+        case .sendFeedback:
+            Button(i18n.t("desktop.menu.help.sendFeedback"), action: sendFeedback)
+        }
+    }
+
+    /// The failure pane's buttons.
+    enum FailureButton: Equatable, Hashable {
         case retry
+        case showDetails
         case sendFeedback
     }
 
-    /// Retry on a first failure; Send Feedback… once a start the researcher
-    /// asked for with Retry has failed too. Owner decision, 22 Oct 2026: they
-    /// don't want to hit retry 10 times. A failure that survives a retry is
-    /// worth telling us about, and the sheet is the way to do that from here.
-    static func failureAction(startedByRetry: Bool) -> FailureAction {
-        startedByRetry ? .sendFeedback : .retry
+    /// The buttons in order, and which one Return presses, if any.
+    struct FailureButtonSet: Equatable {
+        let buttons: [FailureButton]
+        let defaultButton: FailureButton?
+    }
+
+    /// A first failure offers Retry, the default, then Show details. Once a
+    /// start the researcher asked for with Retry has failed too, Retry goes:
+    /// Show details, then Send Feedback…, and neither takes Return, because
+    /// neither is the fix. Owner decisions, 22 and 24 Oct 2026: they don't
+    /// want to hit Retry ten times, and a failure that survives a retry is
+    /// worth telling us about.
+    static func failureButtons(startedByRetry: Bool) -> FailureButtonSet {
+        startedByRetry
+            ? FailureButtonSet(buttons: [.showDetails, .sendFeedback], defaultButton: nil)
+            : FailureButtonSet(buttons: [.retry, .showDetails], defaultButton: .retry)
+    }
+
+    /// What a problem report from this pane starts with: the pane's title,
+    /// then the sentence under it without the engine output that ends it
+    /// (`details`, the last lines the engine printed, which can name a study
+    /// folder). A path the sentence names is the app's own; a home folder in it
+    /// becomes `~`, so it doesn't carry the user's name. By the path's shape,
+    /// not `NSHomeDirectory()`, which under App Sandbox is the container.
+    @MainActor
+    static func problemReportMessage(for failure: FailureMessage, i18n: I18n) -> String {
+        var overrides = ["details": ""]
+        if let path = failure.vars["path"] {
+            overrides["path"] = path.replacingOccurrences(
+                of: #"^/Users/[^/]+(?=/|$)"#, with: "~", options: .regularExpression)
+        }
+        return i18n.t("desktop.boot.failedTitle") + "\n"
+            + failure.resolved(i18n, replacing: overrides)
     }
 }

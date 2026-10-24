@@ -5,14 +5,21 @@ import Foundation
 
 /// The payload POSTed to the feedback endpoint — identical shape to the React
 /// modal (`FeedbackModal.tsx`) and the status-page form. **Exactly**
-/// `{version, rating, message}`: no project id, session, path, timestamp, or any
-/// identifier ever rides along. This minimisation is a governance contract, not
-/// an accident (docs/methodology/consent-gradient.md) — asserted by
-/// `FeedbackSubmissionTests.payloadCarriesNoIdentifiers`.
+/// `{version, rating, message}`, plus `kind: "problem"` when the sheet was
+/// opened as a problem report (`FeedbackSheetMode.problem`); feedback omits the
+/// key. `kind` is a fixed word we chose, so it identifies no one. No project id,
+/// session, path, timestamp, or any identifier ever rides along. This
+/// minimisation is a governance contract, not an accident
+/// (docs/methodology/consent-gradient.md) — asserted by
+/// `FeedbackSubmissionTests.payloadCarriesNoIdentifiers` and
+/// `aProblemReportAddsOnlyItsKind`.
 struct FeedbackPayload: Codable, Equatable {
     let version: String
     let rating: String
     let message: String
+    /// `"problem"` for a problem report, nil (and absent on the wire) for
+    /// feedback. The endpoint files anything but exactly `"problem"` as feedback.
+    var kind: String? = nil
 }
 
 /// The five affective points. Shared taxonomy with the web surfaces — the

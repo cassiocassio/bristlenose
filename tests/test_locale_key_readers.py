@@ -428,13 +428,15 @@ _KNOWN_ORPHANS: dict[str, _Block] = {
     "common.footer.": _Block(
         tag=DEAD,
         why="Superseded within the same block: the React footer reads `reportBug`, "
-            "`feedback` and `version`, while `builtWith` and `giveFeedback` are the "
-            "wording they replaced and nothing reads them. `reportIssue` left this "
-            "set on 24 Oct 2026: it labels the link to the GitHub new-issue page "
-            "after a failed feedback send (R80).",
+            "`feedback` and `version`, while `builtWith` is the wording they "
+            "replaced and nothing reads it. `reportIssue` left this set on 24 Oct "
+            "2026: it labels the link to the GitHub new-issue page after a failed "
+            "feedback send (R80). `giveFeedback` left it the same day: it labels "
+            "the browser's whole-report crash pane once its Retry has crashed too "
+            "(`RouteError.tsx`).",
         leaves="""
-            builtWith giveFeedback
-        """,  # 2
+            builtWith
+        """,  # 1
     ),
     "common.labels.": _Block(
         tag=DEAD,

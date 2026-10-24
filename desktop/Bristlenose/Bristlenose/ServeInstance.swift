@@ -43,7 +43,8 @@ final class ServeInstance: ObservableObject {
     /// with the boot pane's Retry. Set by `ServeManager.start(projectPath:isRetry:)`,
     /// cleared by every other start and on reaching `.running`. A `.failed`
     /// state with this set is a retry that failed, and the boot pane then offers
-    /// Send Feedback… instead of another Retry (`BootView.failureAction`).
+    /// Show details and Send Feedback… instead of another Retry
+    /// (`BootView.failureButtons`).
     @Published var startedByRetry = false
 
     /// Captured stdout/stderr, for the diagnostics pane and failure summaries.

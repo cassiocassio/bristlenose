@@ -113,7 +113,12 @@ struct CopyDiskSpaceAlertState: Identifiable {
 /// itself stays in `body`, beside the doors that set the flag directly.
 private struct FeedbackDoors: ViewModifier {
     @Binding var isShowing: Bool
+    /// The sheet's journey. Only the page's door sets it, copying what the page
+    /// asked for (`BridgeHandler.requestedFeedbackMode`); the menu's doors leave
+    /// it at feedback.
+    @Binding var mode: FeedbackSheetMode
     let feedbackRequests: Int
+    let requestedMode: FeedbackSheetMode
 
     func body(content: Content) -> some View {
         content
@@ -126,6 +131,7 @@ private struct FeedbackDoors: ViewModifier {
             // This window's page asked: the status page, or Help ▸ Send
             // Feedback with this report's popout player in front.
             .onChange(of: feedbackRequests) { _, _ in
+                mode = requestedMode
                 isShowing = true
             }
             // The menu opened this window because no project window was open to
@@ -316,6 +322,9 @@ struct ContentView: View {
     @State private var showingMiroSheet = false
     @State private var showingFigJamSheet = false
     @State private var showingFeedbackSheet = false
+    /// Which journey the sheet opens in. A problem door sets it just before
+    /// opening; dismissal puts it back, so the next door gets feedback.
+    @State private var feedbackSheetMode: FeedbackSheetMode = .feedback
 
     /// The ID of the project currently in inline rename mode, or nil.
     @State private var renamingProjectID: UUID?
@@ -465,6 +474,11 @@ struct ContentView: View {
         // independent, so a stale one can arrive either side of a lens switch.
         guard bridgeHandler.currentAnchorLens == tab.rawValue else { return nil }
         return bridgeHandler.currentAnchor
+    }
+
+    /// The sheet's journey lasts one opening (`feedbackSheetMode`).
+    private func resetFeedbackSheetMode() {
+        feedbackSheetMode = .feedback
     }
 
     /// Put the window back where it was within the restored lens.
@@ -1331,15 +1345,19 @@ struct ContentView: View {
         // the boot pane's Send Feedback… after a failed retry, this window's
         // page asking, and the menu's no-project-window fallback,
         // the only broadcast, which one window takes by claiming
-        // `FeedbackFallback`. The last two are `FeedbackDoors`.
+        // `FeedbackFallback`. The last two are `FeedbackDoors`. The boot pane's
+        // door, and the page's when the report's crash pane asks, open it as a
+        // problem report (`FeedbackSheetMode`); the others open feedback.
         .modifier(FeedbackDoors(
             isShowing: $showingFeedbackSheet,
-            feedbackRequests: bridgeHandler.feedbackRequests
+            mode: $feedbackSheetMode,
+            feedbackRequests: bridgeHandler.feedbackRequests,
+            requestedMode: bridgeHandler.requestedFeedbackMode
         ))
-        .sheet(isPresented: $showingFeedbackSheet) {
+        .sheet(isPresented: $showingFeedbackSheet, onDismiss: resetFeedbackSheetMode) {
             // One view whatever the serve does while it is up: see
             // `FeedbackSheet.init(port:)`.
-            FeedbackSheet(port: serveManager?.runningPort, i18n: i18n, onToast: { toast.show($0) })
+            FeedbackSheet(port: serveManager?.runningPort, i18n: i18n, mode: feedbackSheetMode, onToast: { toast.show($0) })
         }
         // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
         // `columnVisibility` binding as a scene focused value and let the menu
@@ -3840,7 +3858,8 @@ struct ContentView: View {
                         }
 
                         // A status page describes the LAST run; once a new one
-                        // is queued or under way it is stale. See
+                        // is queued or under way it is stale, and one that
+                        // ended unfinished the Mac says better. See
                         // `DetailPaneKind.runCover`.
                         if let cover = DetailPaneKind.runCover(
                             pipelineState: pipelineRunner.state[project.id],
@@ -3848,7 +3867,12 @@ struct ContentView: View {
                         ) {
                             ZStack {
                                 Color(nsColor: .windowBackgroundColor)
-                                runCoverView(cover)
+                                RunCoverPane(
+                                    cover: cover,
+                                    projectID: project.id,
+                                    liveData: pipelineRunner.liveData,
+                                    onAnalyse: { pipelineRunner.start(project: project) }
+                                )
                             }
                         }
 
@@ -3857,7 +3881,11 @@ struct ContentView: View {
                             serveFleet.manager(for: project.id)
                                 .start(projectPath: project.path, isRetry: true)
                         }, sendFeedback: {
-                            // THIS window's sheet (R82), the ladybug's door, not a broadcast.
+                            // THIS window's sheet (R82), not a broadcast, opened as a
+                            // problem report with the pane's own sentence and no engine
+                            // output (`BootView.problemReportMessage`).
+                            feedbackSheetMode = .problem(initialMessage:
+                                BootView.problemReportMessage(for: error, i18n: i18n))
                             showingFeedbackSheet = true
                         }), project: project.id)
                     }
@@ -3896,24 +3924,6 @@ struct ContentView: View {
                 handleDrop(urls: urls)
                 return true
             } isTargeted: { noSelectionDropTargeted = $0 }
-        }
-    }
-
-    /// The native pane over a stale status page. Reuses the sidebar row's own
-    /// strings, so the row and the pane say the same thing.
-    @ViewBuilder
-    private func runCoverView(_ cover: DetailPaneKind.RunCover) -> some View {
-        switch cover {
-        case .queued(let position):
-            ContentUnavailableView(
-                i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)]),
-                systemImage: "clock"
-            )
-        case .analysing:
-            ContentUnavailableView(
-                i18n.t("desktop.chrome.pipeline.analysing"),
-                systemImage: "waveform"
-            )
         }
     }
 

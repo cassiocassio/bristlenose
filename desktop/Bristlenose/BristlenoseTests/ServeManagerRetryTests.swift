@@ -3,7 +3,7 @@ import Testing
 @testable import Bristlenose
 
 /// `ServeInstance.startedByRetry`, the bit that turns the boot pane's Retry into
-/// Send Feedback… once a retry has failed (`BootView.failureAction`).
+/// Send Feedback… once a retry has failed (`BootView.failureButtons`).
 ///
 /// Set only by `start(projectPath:isRetry: true)`; cleared by every other start
 /// and by reaching `.running`. A manager resolved to `.failure` stands in for a
@@ -101,6 +101,6 @@ struct ServeManagerRetryTests {
         #expect(!instance.startedByRetry)
         instance.state = .failed(error: .passthrough("exit 1"))
         #expect(!instance.startedByRetry)
-        #expect(BootView.failureAction(startedByRetry: instance.startedByRetry) == .retry)
+        #expect(BootView.failureButtons(startedByRetry: instance.startedByRetry).defaultButton == .retry)
     }
 }

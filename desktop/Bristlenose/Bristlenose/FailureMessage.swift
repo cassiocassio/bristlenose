@@ -57,6 +57,23 @@ struct FailureMessage: Equatable, Sendable {
         let value = vars.isEmpty ? i18n.t(key) : i18n.t(key, vars)
         return value == key ? english : value
     }
+
+    /// Resolve with some substitutions replaced, for a copy of the sentence
+    /// that leaves the machine (a problem report's prefill): the caller drops
+    /// what must not travel, such as engine output in `details`. A missing key
+    /// falls back to the first line of `english`, since `english` was composed
+    /// with the original values. Passthroughs are someone else's words and
+    /// come back whole. Trimmed, so an emptied trailing slot leaves no blank.
+    @MainActor
+    func resolved(_ i18n: I18n, replacing overrides: [String: String]) -> String {
+        guard let key else { return english }
+        let merged = vars.merging(overrides) { _, new in new }
+        let value = merged.isEmpty ? i18n.t(key) : i18n.t(key, merged)
+        let sentence = value == key
+            ? String(english.split(separator: "\n", omittingEmptySubsequences: false).first ?? "")
+            : value
+        return sentence.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 // MARK: - The sentences

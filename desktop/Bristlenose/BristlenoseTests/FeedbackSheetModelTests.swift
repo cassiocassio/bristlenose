@@ -22,6 +22,80 @@ import Testing
         #expect(model.config.enabled)
     }
 
+    // MARK: - Problem reports
+
+    /// The sheet Bristlenose suggests after a failure: what went wrong is
+    /// already in the message, with a blank line under it to type on.
+    @Test func aProblemReportStartsWithWhatWentWrong() {
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(), mode: .problem(initialMessage: "It broke."))
+        #expect(model.message == "It broke.\n\n")
+        #expect(FeedbackSheetModel(config: .serverless, i18n: I18n()).message.isEmpty)
+    }
+
+    /// Only the heading and the field's label change. A bare `I18n()` answers
+    /// the key, so these assert which words were chosen.
+    @Test func aProblemReportHasItsOwnHeadingAndLabel() {
+        let problem = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(), mode: .problem(initialMessage: "x"))
+        #expect(problem.t(problem.headingKey) == "common.feedback.problemHeading")
+        #expect(problem.t(problem.fieldLabelKey) == "common.feedback.problemLabel")
+
+        let feedback = FeedbackSheetModel(config: .serverless, i18n: I18n())
+        #expect(feedback.t(feedback.headingKey) == "common.feedback.heading")
+        #expect(feedback.t(feedback.fieldLabelKey) == "common.feedback.helpUsImprove")
+    }
+
+    /// `kind: "problem"` goes only with a problem report, and the message goes
+    /// as the person left it, without the blank lines the prefill added.
+    @Test(arguments: [true, false])
+    func onlyAProblemReportSendsAKind(problem: Bool) async {
+        var sent: [FeedbackPayload] = []
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(),
+            mode: problem ? .problem(initialMessage: "It broke.") : .feedback,
+            sender: { payload, _ in sent.append(payload); return .sent }
+        )
+        model.rating = .hate
+        if !problem { model.message = "It broke." }
+        await model.load()
+
+        _ = await model.send()
+
+        #expect(sent.count == 1)
+        #expect(sent.first?.kind == (problem ? "problem" : nil))
+        #expect(sent.first?.message == "It broke.")
+    }
+
+    /// The rating is still asked for: a prefilled message is not a rating.
+    @Test func aProblemReportStillNeedsARating() async {
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(), mode: .problem(initialMessage: "It broke."))
+        await model.load()
+        #expect(!model.canSend)
+        model.rating = .hate
+        #expect(model.canSend)
+    }
+
+    /// When the send fails, the copy on the clipboard says what it is.
+    @Test(arguments: [true, false])
+    func theClipboardCopySaysWhichItIs(problem: Bool) async {
+        var copied: [String] = []
+        let model = FeedbackSheetModel(
+            config: .serverless, i18n: I18n(),
+            mode: problem ? .problem(initialMessage: "It broke.") : .feedback,
+            sender: { _, _ in .failed },
+            copy: { copied.append($0); return true }
+        )
+        model.rating = .hate
+        await model.load()
+
+        _ = await model.send()
+
+        let prefix = problem ? "Bristlenose problem report (v" : "Bristlenose feedback (v"
+        #expect(copied.first?.hasPrefix(prefix) == true)
+    }
+
     // MARK: - Cancel during a send
 
     /// A send that the server holds: `hold()` parks until `open()`, and does not

@@ -17,6 +17,42 @@ import SwiftUI
 /// the sheet, with where to paste the copy (R80), as the web modal and the
 /// status-page form do.
 
+// MARK: - Mode
+
+/// Which journey brought the person to the sheet
+/// (`docs/design-feedback-native.md` § Feedback and problem reports).
+/// Feedback is the person's own idea: Help ▸ Send Feedback…, the ladybug, a
+/// footer link. A problem report is Bristlenose suggesting it after something
+/// failed: the boot pane once a Retry has failed too, the report-crash pane
+/// once its Retry has crashed too. Same sheet, same rating, same anonymity line;
+/// a problem report has its own heading and field label, starts with what went
+/// wrong already in the message, and is sent with `kind: "problem"`.
+enum FeedbackSheetMode: Equatable {
+    case feedback
+    /// `initialMessage` is built by the door from strings the person can read
+    /// on the failure pane. It must carry no path, folder name or engine output,
+    /// because it is sent as their message.
+    case problem(initialMessage: String)
+}
+
+extension FeedbackSheetMode {
+    /// The longest prefill a page may hand the sheet; longer is cut, never
+    /// refused. The same number as `PROBLEM_REPORT_MESSAGE_LIMIT` in
+    /// `frontend/src/shims/bridge.ts`.
+    static let problemMessageLimit = 1200
+
+    /// `open-feedback`'s `data` as a journey. A problem report only for exactly
+    /// `kind: "problem"` with a message that isn't blank; anything else, and no
+    /// data at all (the status page's footer link), is feedback.
+    static func fromBridge(_ data: [String: Any]?) -> FeedbackSheetMode {
+        guard data?["kind"] as? String == "problem",
+              let message = data?["message"] as? String,
+              !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return .feedback }
+        return .problem(initialMessage: String(message.prefix(problemMessageLimit)))
+    }
+}
+
 // MARK: - View model
 
 @MainActor
@@ -48,10 +84,12 @@ final class FeedbackSheetModel: ObservableObject {
     /// True when `config` was supplied directly (no `/api/health` probe) — the
     /// serve-free path used by the expired-alpha `.dmg` flow.
     private let preresolved: Bool
+    let mode: FeedbackSheetMode
 
     init(
         port: Int,
         i18n: I18n,
+        mode: FeedbackSheetMode = .feedback,
         sender: @escaping Sender = { await FeedbackClient().submit($0, to: $1) },
         copy: @escaping @MainActor (String) -> Bool = FeedbackSheetModel.copyToPasteboard,
         bundleVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
@@ -59,10 +97,12 @@ final class FeedbackSheetModel: ObservableObject {
     ) {
         self.port = port
         self.i18n = i18n
+        self.mode = mode
         self.sender = sender
         self.copy = copy
         self.bundleVersion = bundleVersion
         self.preresolved = false
+        prefill()
     }
 
     /// Serve-free init: `config` supplied directly, no `/api/health` probe. For
@@ -70,6 +110,7 @@ final class FeedbackSheetModel: ObservableObject {
     init(
         config: FeedbackConfig,
         i18n: I18n,
+        mode: FeedbackSheetMode = .feedback,
         sender: @escaping Sender = { await FeedbackClient().submit($0, to: $1) },
         copy: @escaping @MainActor (String) -> Bool = FeedbackSheetModel.copyToPasteboard,
         bundleVersion: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"]
@@ -77,12 +118,32 @@ final class FeedbackSheetModel: ObservableObject {
     ) {
         self.port = 0
         self.i18n = i18n
+        self.mode = mode
         self.sender = sender
         self.copy = copy
         self.bundleVersion = bundleVersion
         self.config = config
         self.preresolved = true
+        prefill()
     }
+
+    /// A problem report opens with what went wrong already in the message, a
+    /// blank line under it, and the cursor there; the person can read, edit or
+    /// delete it before sending. The trailing lines are trimmed on send.
+    private func prefill() {
+        if case .problem(let initial) = mode { message = initial + "\n\n" }
+    }
+
+    var isProblem: Bool {
+        if case .problem = mode { return true }
+        return false
+    }
+
+    /// The heading and field label are the only words that change.
+    var headingKey: String { isProblem ? "problemHeading" : "heading" }
+    var fieldLabelKey: String { isProblem ? "problemLabel" : "helpUsImprove" }
+    /// On the wire only for a problem report; feedback sends no `kind`.
+    var payloadKind: String? { isProblem ? "problem" : nil }
 
     func t(_ key: String) -> String { i18n.t("common.feedback.\(key)") }
     func label(_ rating: FeedbackRating) -> String { i18n.t("common.feedback.\(rating.labelKey)") }
@@ -128,7 +189,8 @@ final class FeedbackSheetModel: ObservableObject {
         }
         phase = .sending
         let payload = FeedbackPayload(
-            version: version, rating: rating.rawValue, message: trimmedMessage
+            version: version, rating: rating.rawValue, message: trimmedMessage,
+            kind: payloadKind
         )
         let result = await sender(payload, url)
         phase = .ready
@@ -168,7 +230,8 @@ final class FeedbackSheetModel: ObservableObject {
     }
 
     private func copyToClipboard(rating: FeedbackRating) {
-        var text = "Bristlenose feedback (v\(version))\nRating: \(label(rating))\n"
+        let title = isProblem ? "Bristlenose problem report" : "Bristlenose feedback"
+        var text = "\(title) (v\(version))\nRating: \(label(rating))\n"
         if !trimmedMessage.isEmpty { text += "Message: \(trimmedMessage)\n" }
         failure = copy(text) ? t("sendFailed") : t("sendFailedNotCopied")
     }
@@ -197,9 +260,12 @@ struct FeedbackSheet: View {
     /// sheet is up never swaps it for a different view, whose `onDisappear`
     /// would cancel a send nobody cancelled. The model is made once, from the
     /// port at opening.
-    init(port: Int?, i18n: I18n, onToast: @escaping (String) -> Void, onSent: (() -> Void)? = nil) {
-        _model = StateObject(wrappedValue: port.map { FeedbackSheetModel(port: $0, i18n: i18n) }
-            ?? FeedbackSheetModel(config: .serverless, i18n: i18n))
+    /// `mode` is the journey (`FeedbackSheetMode`), fixed for the sheet's life
+    /// like the port.
+    init(port: Int?, i18n: I18n, mode: FeedbackSheetMode = .feedback,
+         onToast: @escaping (String) -> Void, onSent: (() -> Void)? = nil) {
+        _model = StateObject(wrappedValue: port.map { FeedbackSheetModel(port: $0, i18n: i18n, mode: mode) }
+            ?? FeedbackSheetModel(config: .serverless, i18n: i18n, mode: mode))
         self.onToast = onToast
         self.onSent = onSent
     }
@@ -214,10 +280,15 @@ struct FeedbackSheet: View {
     }
 
     private let sheetWidth: CGFloat = 520
+    /// A problem report puts the caret under its prefill, so typing adds to it
+    /// rather than replacing it (a focused field otherwise selects all).
+    @FocusState private var messageFocused: Bool
+    @State private var messageSelection: TextSelection?
+    @State private var caretPlaced = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(model.t("heading"))
+            Text(model.t(model.headingKey))
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .center)
 
@@ -252,6 +323,20 @@ struct FeedbackSheet: View {
         .padding(20)
         .frame(width: sheetWidth)
         .task { await model.load() }
+        // The form is drawn once the health probe answers, so focus waits for it.
+        .onChange(of: model.phase) { _, phase in
+            // Once: a failed send returns to `.ready` too, and must leave the
+            // caret where the person put it.
+            guard phase == .ready, model.isProblem, !caretPlaced else { return }
+            caretPlaced = true
+            // One turn later: this change also inserts the field, and a focus
+            // or selection written in the pass that creates it can be dropped,
+            // or overridden by the field selecting all as it takes focus.
+            Task { @MainActor in
+                messageFocused = true
+                messageSelection = TextSelection(insertionPoint: model.message.endIndex)
+            }
+        }
         // VoiceOver does not read a line that appears on its own, and focus
         // stays on Send, so say the failure (the web modal's role="alert").
         .onChange(of: model.failure) { _, failure in
@@ -275,16 +360,18 @@ struct FeedbackSheet: View {
                 label: model.label
             )
 
-            Text(model.t("helpUsImprove"))
+            Text(model.t(model.fieldLabelKey))
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
             TextField(
                 "",
                 text: $model.message,
+                selection: $messageSelection,
                 prompt: Text(model.t("placeholder")),
                 axis: .vertical
             )
+            .focused($messageFocused)
             .textFieldStyle(.roundedBorder)
             .lineLimit(5...14)
             .disabled(model.phase == .sending)

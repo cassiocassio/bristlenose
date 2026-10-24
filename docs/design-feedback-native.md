@@ -118,6 +118,88 @@ Friction-marker as the longitudinal primitive, not repeated surveys.
 
 ---
 
+## Feedback and problem reports
+
+_Decided 24 Oct 2026 (owner). Mockups:
+[`mockups/n08-button-set.html`](mockups/n08-button-set.html),
+[`mockups/n08-problem-report.html`](mockups/n08-problem-report.html),
+[`mockups/report-crash-repeat.html`](mockups/report-crash-repeat.html)._
+
+People reach the form by two journeys. **Feedback** is their own idea: they
+went looking for the door. A **problem report** is Bristlenose suggesting it,
+because something failed and a retry didn't fix it. The sheet's heading says
+which journey they took, and the two arrive in separate piles in the inbox.
+
+| | Feedback | Problem report |
+|---|---|---|
+| Doors | Help ▸ Send Feedback…, the sidebar ladybug, the report's footer, the status page's footer link | The boot pane (N08) once a Retry has failed too; the whole-report crash pane once its Retry has crashed too |
+| Heading | `common.feedback.heading` "How is Bristlenose working for you?" | `common.feedback.problemHeading` "Bristlenose had a problem" |
+| Field label | `common.feedback.helpUsImprove` "Help us improve" | `common.feedback.problemLabel` "Tell us what happened" |
+| Message | empty | prefilled with what the failure pane said, a blank line under it, the caret there; editable |
+| Wire | `{version, rating, message}` | the same plus `"kind": "problem"` |
+| Inbox | "Bristlenose feedback: …" | "Bristlenose problem report: …", a `Kind: problem` line, `kind` column = `problem` |
+
+Unchanged in both: the five-point rating (still required), the anonymity line
+word for word, Send and Cancel, the failed-send sentence, and the clipboard
+fallback, which starts "Bristlenose problem report (v…)" for a problem report.
+
+**The prefill is built from strings the person can already read on the failure
+pane, and never from engine output, paths or stack frames.** It is sent as
+their message, so the anonymity line stays true only if nothing in it came from
+their study. The boot pane's sentence ends with the engine's last five output
+lines (`{{details}}`), which can name a study folder; the prefill drops them
+(`BootView.problemReportMessage`). The crash pane's is `labels.reportError`, then
+the error's name and message and the route (`describeError`), the line its
+popover caption already shows.
+
+**The buttons follow the same rule on both panes.** A first failure offers
+Retry, the default. Once the Retry has failed too, Retry goes and the pane
+offers Send Feedback… (Mac) or Give feedback (browser) as a secondary button
+with no default, beside Show details where the pane has one. A retry often fixes
+a passing cause; a failure that survives one is worth telling us about, and
+pressing Retry again would not help.
+
+**`kind` is a fixed word we chose, never the sender's text.** The endpoint
+(`content/feedback.php` in the website repo) files a POST as a problem report
+only when `kind` is exactly `"problem"`; anything else, including no `kind` at
+all, is feedback, so apps before the change are unaffected. Feedback omits the
+key; it never sends `"feedback"`. Every surface that sends a problem report
+sends that exact pair: the native sheet (`FeedbackSheetMode.problem`,
+`FeedbackPayload.kind`) and the web modal. **The website change deploys before
+any release that sends `kind`.**
+
+**Mechanism on the Mac:** one sheet per window (R82) with a mode
+(`FeedbackSheetMode`), set by the door that opens it and reset on dismissal, so
+a feedback door can never open a problem report. A new problem door builds its
+own message and sets `.problem(initialMessage:)`; it adds no second sheet.
+
+**The crash pane's door.** The report's own form crashed with the layout, so in
+the Mac app the pane posts `project-action` `open-feedback` with
+`data: {kind: "problem", message}` (`postOpenProblemReport`, cut at
+`PROBLEM_REPORT_MESSAGE_LIMIT`, 1,200 characters, the same number as
+`FeedbackSheetMode.problemMessageLimit`). `FeedbackSheetMode.fromBridge` reads it:
+exactly `"problem"` with a message that isn't blank, anything else is feedback,
+and the status page's footer link sends no data. `BridgeHandler` records the mode
+before it moves `feedbackRequests`, and the window's `FeedbackDoors` copies it
+into the sheet. In a browser the pane mounts the web `FeedbackModal` itself with
+`mode={{kind: "problem", initialMessage}}`; a problem report there neither reads
+nor writes the feedback draft. In a browser the pane offers the form only once
+`/api/health` says feedback is on; until it answers, if it can't, or where
+feedback is switched off, the pane keeps Retry. (The Mac sheet copies to the
+clipboard when feedback is off, so the Mac pane always offers it.) An exported report offers it too, and the form's `file:` path copies the
+report to the clipboard, as the export's footer link does.
+
+**"Has the Retry crashed too?"** Retry is a page reload, so the crash pane's
+Retry leaves one flag, `sessionStorage["bn-report-retry"]`, before reloading
+(`utils/reportRetry.ts`); a report that mounts and stays mounted clears it (an
+`AppLayout` effect that waits a turn and is cancelled on unmount, so a throw in
+any of the layout's effects keeps it), and a crash that finds it standing
+is a repeat. A lens's Retry never sets it. It lasts for the tab or web view, so a
+new window, a project switch or a restarted serve starts with Retry again. The
+boot pane's equivalent is `ServeInstance.startedByRetry`.
+
+---
+
 ## The capture menu — optional context, each with its consent treatment
 
 Everything below the rating is **additive and opt-in**, never pre-checked, and

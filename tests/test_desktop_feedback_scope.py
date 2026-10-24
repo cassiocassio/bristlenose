@@ -70,7 +70,7 @@ def _case_body(text: str, label: str) -> str:
 def test_the_status_page_asks_its_own_window_not_every_window() -> None:
     arm = _case_body(_sources()["BridgeHandler.swift"], "open-feedback")
     assert "NotificationCenter" not in arm, "the status page's request must not broadcast"
-    assert "requestFeedback()" in arm
+    assert "requestFeedback(mode: mode)" in arm
 
 
 def _doors() -> str:
@@ -95,11 +95,45 @@ def test_the_boot_pane_opens_its_own_windows_sheet() -> None:
     assert "showingFeedbackSheet = true" in call
     assert "NotificationCenter" not in call
     assert "isRetry: true" in call
+    # ...as a problem report, set before the sheet opens, from the pane's own
+    # sentence and never the engine output (`BootView.problemReportMessage`).
+    assert ".problem(initialMessage:" in call
+    assert call.index(".problem(initialMessage:") < call.index("showingFeedbackSheet = true")
+    assert "BootView.problemReportMessage(" in call
+    assert "outputLines" not in call
+
+
+def test_a_problem_sheet_does_not_outlive_its_door() -> None:
+    # The journey lasts one opening: dismissal puts it back to feedback, and the
+    # feedback doors never set it, so the ladybug can't open a problem report.
+    view = _sources()["ContentView.swift"]
+    assert ".sheet(isPresented: $showingFeedbackSheet, onDismiss: resetFeedbackSheetMode)" in view
+    reset = _block_after(view, "private func resetFeedbackSheetMode()")
+    assert "feedbackSheetMode = .feedback" in reset
+    assert view.count("feedbackSheetMode = .problem(") == 1
 
 
 def test_the_window_whose_page_asked_presents_the_sheet() -> None:
     handler = _block_after(_doors(), ".onChange(of: feedbackRequests)")
     assert "isShowing = true" in handler
+    # ...in the journey the page asked for, set before it opens.
+    assert "mode = requestedMode" in handler
+    assert handler.index("mode = requestedMode") < handler.index("isShowing = true")
+
+
+def test_the_report_crash_door_asks_for_a_problem_report() -> None:
+    # The crash pane posts `open-feedback` with `{kind: "problem", message}`;
+    # the bridge turns that into a mode and records it before the counter moves,
+    # and the window passes it to its doors. The status page posts no data.
+    bridge = _sources()["BridgeHandler.swift"]
+    arm = _case_body(bridge, "open-feedback")
+    assert "FeedbackSheetMode.fromBridge(data)" in arm
+    assert "requestFeedback(mode: mode)" in arm
+    request = _block_after(bridge, "func requestFeedback(mode:")
+    assert request.index("requestedFeedbackMode = mode") < request.index("feedbackRequests += 1")
+    view = _sources()["ContentView.swift"]
+    assert "requestedMode: bridgeHandler.requestedFeedbackMode" in view
+    assert "mode: $feedbackSheetMode" in view
 
 
 def test_the_only_broadcast_is_the_menu_fallback_and_it_stages_one_shot() -> None:
@@ -183,9 +217,12 @@ def test_the_sheet_is_one_view_whatever_the_serve_does() -> None:
     # so a serve starting or stopping mid-send swapped the view, and the old one's
     # `.onDisappear` cancelled a send the person never cancelled.
     view = _sources()["ContentView.swift"]
-    sheet = _block_after(view, ".sheet(isPresented: $showingFeedbackSheet)")
+    sheet = _block_after(
+        view, ".sheet(isPresented: $showingFeedbackSheet, onDismiss: resetFeedbackSheetMode)"
+    )
     assert sheet.count("FeedbackSheet(") == 1, sheet
     assert "FeedbackSheet(port: serveManager?.runningPort" in sheet
+    assert "mode: feedbackSheetMode" in sheet
     assert not re.search(r"\bif\b|\?\s*FeedbackSheet|\bswitch\b", sheet), sheet
 
 

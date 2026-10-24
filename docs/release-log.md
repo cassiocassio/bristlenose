@@ -67,6 +67,62 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.43.0 — 24 Oct 2026 · Tier 1 (minor — problem reports, right-click menus, Apple speech while Whisper downloads, any-llm in the CLI; the reliability burn-down)
+
+**What shipped.** The week's reliability burn-down (about 150 Fixed lines, untrimmed by the
+owner's choice; see `CHANGELOG.md`), plus New: problem reports after a failed retry, the Mac's
+right-click menus, a window opened at a place, View ▸ Reload Report, Apple's speech model for a
+first analysis while Whisper downloads in the background, any-llm as a sixth CLI provider, and
+`run --clean` asking before it discards curation. Detail panes and dialogs were redrawn. Print is
+removed. 462 commits since 0.42.0. **Run by a coordinating session ("Release readiness
+checklist") that asked every live session what it owed, chased the blockers, drafted the notes
+and drove `release.sh` on the owner's "release".** The owner chose: ship any-llm, #150 and the
+draft wording as they stand; the dialog look; the skip ceiling 60 → 77 after a fold.
+
+**Before the run.** Engineering blockers closed by sessions on request: the bundle budget
+(`b6597d517`, Export lazy; 188 B under 222 kB), HEAD's red locale keys (`e1665d02c`), the Miro
+tests' 10 s clock (`c5dcf5e5f`, `7bfdeb405`), the detail panes in the owner's wording
+(`46c17ad30`, `ea6aa1cbd`, `229db9887`). R105 local-model work was moved off `main` to
+`after-pypi/0.43.0-r105-local-json`. The website `feedback.php` (`582b322`) was deployed and the
+live CSV header given `,kind` (backup on the server) before any build that files problem reports.
+
+**Preflight 1 failed six ways, all fixed before any act:** Windows CI (`HOME`-only fake home,
+cp1252 reads; `acfd71cd2`), 3.10 CI (an any-llm test pinned to the interpreter; `5712638ef`),
+logging hygiene (six false positives; `3aef56756`), mac-build (`ContentView.body` too complex for
+Xcode 26.3, three runner-only Swift reds; `eb683a127`, `dac87c1df`), the skip ratchet 86 > 60
+(three dead guards asserted, seven folded; `4bb16d42d`, `7d32124aa`), and **dependency majors:
+anthropic 2.2.0 would have 400'd every default Claude call** (API version 2026-10-21 refuses
+`temperature`; every test mocks the transport). Capped `<2`, websockets `<17` (`471bf30a5`,
+Cassandra ledger entry 8).
+
+**Stops during the run, nothing irreversible done before any of them.**
+
+| stop | cause | fix |
+|---|---|---|
+| build the app | `680ea0d93` moved the voice pass's `import onnxruntime` behind `importlib`; PyInstaller dropped the package, and the spec's C-library trim matched 0 entries. Without that gate the app ships with no speaker identification | `4aec3096c`: `onnxruntime` in `hiddenimports` |
+| strict CI, Windows | two of the week's tests: a `Study?v2` folder (illegal on Windows) and `os.kill(pid, 0)` raising WinError 87, not `ProcessLookupError` | `3de0c92ca`, no new skip sites; builds rerun from that commit |
+| strict CI, macOS 3.13 | `test_the_serve_log_follows_the_output_folder` timed out in `_wait` (3/3 locally; shipped since 14 Oct) | `gh run rerun --failed`, green |
+| tag | the tree was dirty with another session's two uncommitted mockups (HEAD was the CI sha) | that session cleared them (byte-identical to a commit in its clone) |
+
+Run times (measured, UTC): first start 16:32; build-all 503 s / 520 s · build-dmg 724 s / 948 s ·
+strict-CI gate 1481 s (with the rerun) · TestFlight 591 s · `.dmg` upload 701 s · tag 2 s at
+20:57. PyPI 200 at 21:18 (21 min after the tag). Website deployed after PyPI from a worktree of
+its HEAD with the changelog read from `v0.43.0`, landing holds `after-pypi/0.42.1-clean-consent`
+and `after-pypi/0.43.0` (privacy wording for Whisper-at-launch and Apple speech; `terms.html`
+not edited — owner to confirm it needs nothing). TestFlight build **5742**.
+
+**Verified 9 of 9** (`release.sh verify 0.43.0`): Copr's build followed the release workflow's
+`trigger-copr` job. winget, a follower, has no PR.
+
+**Owed.** The two `after-pypi/0.43.0-*` holds in this repo (R105,
+the export-test starvation fix) are the reliability session's to land. The websockets `<17` cap
+lifts now the tag is out (register row). Windows-test guards (encoding lint, one home fixture,
+the cp1252 simulator) are a spawned task. On Python 3.10, `doctor` and `configure any-llm` offer
+an install command that can't work there. The owner reads the notes, and the stray `the`, `with`,
+`uv.lock` at the repo root remain.
+
+---
+
 ## 0.42.0 — 20 Oct 2026 · Tier 1 (minor — Discussion lens quotes are full quote cards; Re-analyse keeps same-sitting curation; a stopped run no longer redoes every session)
 
 **What shipped.** Quotes in the Discussion lens are the report's own cards (play, star, hide, tag,

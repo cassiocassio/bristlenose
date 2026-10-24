@@ -459,7 +459,7 @@
 </div>
 <div class="note"><span class="tag">Commentary — group 1</span>
 <ul>
-  <li><b>N00’s two keys are shared.</b> <code>welcome.dropFolderTitle</code> and <code>dropFolderHint</code> are also the drop card in the Welcome window (<code>WelcomeHomeView.swift:189–190</code>). Rewording them changes that card too. The alternative is two new keys for the pane, which costs 21 locales.</li>
+  <li><b>N00’s keys belong to this pane alone.</b> <code>welcome.dropFolderTitle</code> and <code>dropFolderHint</code> are read only by the no-selection pane (<code>ContentView.swift:3903</code>). Since Model 2 (3 Oct 2026) the Welcome window has no drop card — “the Drop-a-folder card lives in the main window” (<code>WelcomeHomeView.swift:11</code>) — so rewording them changes nothing else. The Welcome window’s nearest line is the Ingest cell: “Drop a folder of recordings or transcripts — Bristlenose transcribes, analyses and reports back.” (<code>welcome.home.tools.ingest.text</code>). Checked 24 Oct 2026.</li>
   <li><b>One icon for “empty”.</b> N04 uses <code>square.and.arrow.down</code> today and N00 uses <code>tray.and.arrow.down</code>. The proposal puts the tray on both, since they are one concept.</li>
   <li><b>N04b stays as it is.</b> The row says “6 files not analysed” and the pane says “6 files to analyse”. Both are existing keys. <b>Decided (Q5):</b> the wording may differ, the fact may not.</li>
 </ul></div>

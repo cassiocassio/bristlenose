@@ -752,7 +752,10 @@ struct PipelineRunnerQueueTests {
         private var waiting: [CheckedContinuation<Void, Never>] = []
         private var released = false
         private var n = 0
+        private var done = 0
         var reads: Int { lock.withLock { n } }
+        /// Reads that have come back from the disk.
+        var landed: Int { lock.withLock { done } }
         var read: @Sendable (URL) async -> PipelineState {
             { [self] url in
                 await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
@@ -764,7 +767,9 @@ struct PipelineRunnerQueueTests {
                     }
                     if go { c.resume() }
                 }
-                return await PipelineRunner.parseManifest(at: url)
+                let state = await PipelineRunner.parseManifest(at: url)
+                lock.withLock { done += 1 }
+                return state
             }
         }
         func release() {
@@ -932,9 +937,19 @@ struct PipelineRunnerQueueTests {
         recorder.leaderAlive = false
         await until { runner.state[p.id] == .unreachable(reason: .timedOut) }
         try #require(runner.state[p.id] == .unreachable(reason: .timedOut))
-        // Past the re-read's tries (12 of 50 ms waits each way, 1.2 s).
-        try? await Task.sleep(for: .milliseconds(2500))
+        // The time-out and the start of the re-reads are one main-actor turn
+        // (`settleOrphanEndRead`), so they are under way by now. Wait for them
+        // to give up rather than for a guess at how long their 12 tries take:
+        // a loaded suite holds the main actor for seconds, and the mount woke
+        // mid-try, where the read is still wanted (#141).
+        try #require(runner.isRereadingSlowEnd(p.id), "the re-reads never started")
+        await until { !runner.isRereadingSlowEnd(p.id) }
+        try #require(!runner.isRereadingSlowEnd(p.id), "the re-reads never gave up")
         disk.release()
+        // The held read is back, so the end read it was holding is now free to
+        // go ahead or not. Give a stray read the time the old test gave it.
+        await until { disk.landed >= 1 }
+        try #require(disk.landed >= 1, "the held read never came back")
         try? await Task.sleep(for: .milliseconds(300))
 
         #expect(disk.reads == 1, "a read nobody waits on any more went ahead")

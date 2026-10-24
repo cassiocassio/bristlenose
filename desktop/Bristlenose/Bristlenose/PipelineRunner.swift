@@ -1091,6 +1091,15 @@ final class PipelineRunner: ObservableObject {
         attachedOrphanPIDs[projectID] != nil || isForeignRunning(projectID)
     }
 
+    /// Whether a run's end state is still being read again after its end read
+    /// timed out (`rereadAfterSlowEnd`, R29). Nothing else says the re-reads
+    /// have given up, since the row reads "Not responding" throughout, so
+    /// `PipelineRunnerQueueTests` waits on this rather than on a guess at how
+    /// long the tries take on a loaded machine.
+    func isRereadingSlowEnd(_ projectID: UUID) -> Bool {
+        slowEndRereads[projectID] != nil
+    }
+
     private func isForeignRunning(_ projectID: UUID) -> Bool {
         if case .running = state[projectID] { return !ownsRun(projectID) }
         return false

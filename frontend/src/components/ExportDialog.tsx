@@ -7,11 +7,9 @@
  * @module ExportDialog
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useInert } from "../hooks/useInert";
-import { Icon } from "./Icon";
+import { Dialog } from "./Dialog";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { useProjectId } from "../hooks/useProjectId";
 import { isExportMode } from "../utils/exportData";
@@ -28,7 +26,6 @@ interface ExportDialogProps {
 
 export function ExportDialog({ open, onClose, initialAnonymise = false }: ExportDialogProps) {
   const { t, i18n } = useTranslation();
-  useInert(open);
   const projectId = useProjectId();
   const [anonymise, setAnonymise] = useState(false);
   // Defaults to the researcher's own language, which is what the export has
@@ -37,34 +34,15 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
   // a machine-seeded locale pending native review would otherwise never know.
   const [exportLocale, setExportLocale] = useState<Locale>("en");
   const [error, setError] = useState<string | null>(null);
-  const triggerRef = useRef<Element | null>(null);
 
-  // Reset state and track trigger element when opening.
+  // Reset state when opening. Escape, focus and the page behind are Dialog's.
   useEffect(() => {
     if (open) {
       setAnonymise(initialAnonymise);
       setExportLocale(resolveBrowserLang(i18n.language) ?? "en");
       setError(null);
-      triggerRef.current = document.activeElement;
-    } else if (triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
     }
   }, [open]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
 
   const handleExport = useCallback(() => {
     // Direct anchor navigation — no fetch, no blob.  The auth cookie set on
@@ -90,22 +68,20 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
 
   if (isExportMode()) return null;
 
-  return createPortal(
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`bn-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
-      data-testid="bn-export-overlay"
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="bn-export-modal"
+      testId="bn-export-overlay"
+      modalTestId="bn-export-modal"
+      labelledBy="bn-export-title"
     >
-      <div className="bn-modal" data-testid="bn-export-modal" style={{ maxWidth: 420 }}>
-        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
-        <button className="bn-modal-close" onClick={onClose} aria-label={t("buttons.close")}>
-          <Icon name="close" decorative />
-        </button>
-        <PanelErrorBoundary part>
+        {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
+        <PanelErrorBoundary part labelId="bn-export-title">
           {() => (
             <>
-              <h2>{t("export.heading")}</h2>
+              <h2 id="bn-export-title">{t("export.heading")}</h2>
               <p className="bn-modal-subtitle">
                 {t("export.subtitle")}
               </p>
@@ -159,8 +135,6 @@ export function ExportDialog({ open, onClose, initialAnonymise = false }: Export
             </>
           )}
         </PanelErrorBoundary>
-      </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

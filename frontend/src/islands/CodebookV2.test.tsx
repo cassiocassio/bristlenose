@@ -715,7 +715,7 @@ describe("CodebookV2 — the Review door (Q15)", () => {
     // not an absent node; asserting absence passes for the wrong reason and
     // would keep passing if the door were re-broken.
     const overlay = () =>
-      screen.getByTestId("bn-threshold-subtitle").closest(".codebook-modal-overlay");
+      screen.getByTestId("bn-threshold-subtitle").closest(".bn-overlay");
     expect(overlay()?.getAttribute("aria-hidden")).toBe("true");
 
     fireEvent.click(screen.getByTestId("bn-v2-review"));

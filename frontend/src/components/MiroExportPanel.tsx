@@ -11,10 +11,8 @@
  */
 
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useInert } from "../hooks/useInert";
-import { Icon } from "./Icon";
+import { Dialog } from "./Dialog";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
@@ -154,7 +152,6 @@ function accountLine(s: MiroStatusResponse): string | null {
 
 export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPanelProps) {
   const { t, i18n } = useTranslation();
-  useInert(open);
   const [view, setView] = useState<View>("loading");
   const [token, setToken] = useState("");
   const [boardName, setBoardName] = useState("");
@@ -182,7 +179,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   const build = useRef(0);
   const [account, setAccount] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string | null>(null);
-  const triggerRef = useRef<Element | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   /**
@@ -262,7 +258,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
   // On open: remember trigger, fetch connection status.
   useEffect(() => {
     if (!open) return;
-    triggerRef.current = document.activeElement;
     setError(null);
     setPersistWarning(null);
     setBoardUrl(null);
@@ -318,14 +313,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     build.current += 1;
   }, []);
 
-  // Restore focus on close.
-  useEffect(() => {
-    if (!open && triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
-  }, [open]);
-
   // Move focus into the dialog on open — the trigger is now inert (useInert),
   // so without this the keyboard/SR user is stranded on document.body behind
   // the inert wall.
@@ -341,20 +328,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
     else if (view === "done")
       announce(t(screens ? "export.screens.done" : "miro.boardReady", { count: stickies }));
   }, [open, view, stickies, screens, t]);
-
-  // Escape closes.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
 
   // Normalise through resolveBrowserLang for the same reason the HTML export
   // does: `i18n.language` can be a raw region tag (`en-GB`, `zh-TW`) that the
@@ -483,25 +456,15 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
 
   if (isExportMode()) return null;
 
-  return createPortal(
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`bn-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
-      data-testid="bn-miro-overlay"
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="bn-board-modal"
+      testId="bn-miro-overlay"
+      modalTestId="bn-miro-modal"
+      labelledBy="bn-miro-title"
     >
-      <div
-        className="bn-modal"
-        data-testid="bn-miro-modal"
-        style={{ maxWidth: 460 }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bn-miro-title"
-      >
-        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
-        <button className="bn-modal-close" onClick={onClose} aria-label={t("buttons.close")}>
-          <Icon name="close" decorative />
-        </button>
         {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
         <PanelErrorBoundary part labelId="bn-miro-title">
           {() => (
@@ -735,8 +698,6 @@ export function MiroExportPanel({ open, onClose, screens = false }: MiroExportPa
             </>
           )}
         </PanelErrorBoundary>
-      </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

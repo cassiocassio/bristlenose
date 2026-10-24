@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useInert } from "../hooks/useInert";
-import { Icon } from "./Icon";
+import { Dialog } from "./Dialog";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
 import { DEFAULT_GITHUB_ISSUES_URL, type HealthResponse } from "../utils/health";
@@ -67,7 +65,6 @@ function writeDraft(draft: DraftData): void {
 
 export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: FeedbackModalProps) {
   const { t, i18n } = useTranslation();
-  useInert(open);
   const isProblem = mode.kind === "problem";
   const initialMessage = mode.kind === "problem" ? mode.initialMessage : "";
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -134,19 +131,6 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
     if (!open || isProblem) return;
     writeDraft({ rating, message });
   }, [open, isProblem, rating, message]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, close]);
 
   const feedbackLabelByValue = useMemo(
     () =>
@@ -246,22 +230,22 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
     if (inFlight.current === controller) inFlight.current = null;
   }, [clearAndClose, fallbackToClipboard, health.feedback.url, health.version, isProblem, message, rating, sending]);
 
-  return createPortal(
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`bn-overlay feedback-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
-      data-testid="bn-feedback-overlay"
+  return (
+    // Escape and the × call `close`, which drops a send in flight.
+    <Dialog
+      open={open}
+      onClose={close}
+      className="feedback-modal"
+      overlayClassName="feedback-overlay"
+      testId="bn-feedback-overlay"
+      modalTestId="bn-feedback-modal"
+      labelledBy="bn-feedback-title"
     >
-      <div className="bn-modal feedback-modal" data-testid="bn-feedback-modal">
-        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
-        <button className="bn-modal-close" onClick={close} aria-label={t("buttons.close")}>
-          <Icon name="close" decorative />
-        </button>
-        <PanelErrorBoundary part>
+        {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
+        <PanelErrorBoundary part labelId="bn-feedback-title">
           {() => (
             <>
-              <h2>{t(isProblem ? "feedback.problemHeading" : "feedback.heading")}</h2>
+              <h2 id="bn-feedback-title">{t(isProblem ? "feedback.problemHeading" : "feedback.heading")}</h2>
               <div className="feedback-sentiments">
                 {FEEDBACK_SENTIMENT_KEYS.map((item) => (
                   <button
@@ -333,8 +317,6 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
             </>
           )}
         </PanelErrorBoundary>
-      </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

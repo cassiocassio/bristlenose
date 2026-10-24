@@ -9,9 +9,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useInert } from "../hooks/useInert";
+import { Dialog } from "./Dialog";
 import {
   getAutoCodeStatus,
   getAutoCodeProposals,
@@ -48,7 +47,6 @@ export function ThresholdReviewModal({
   onClose,
   onApply,
 }: ThresholdReviewModalProps) {
-  useInert(open);
   const { t } = useTranslation();
   const [allProposals, setAllProposals] = useState<ProposedTagResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,20 +110,6 @@ export function ThresholdReviewModal({
       })
       .catch(() => {});
   }, [open, frameworkId]);
-
-  // Escape key closes modal.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
 
   // Proposals that are still pending (not individually removed)
   const pendingProposals = useMemo(
@@ -227,20 +211,21 @@ export function ThresholdReviewModal({
   const pendingCount = pendingProposals.length;
   const hasProposals = pendingCount > 0 || acceptedCount > 0 || deniedCount > 0;
 
-  const modal = (
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`codebook-modal-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
+  return (
+    // The header draws its own × in the shell (no crash boundary here), so the
+    // shared one is off.
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="codebook-modal"
+      testId="bn-threshold-overlay"
+      labelledBy="bn-threshold-title"
+      closeButton={false}
     >
-      <div
-        className="codebook-modal"
-        style={{ maxWidth: "56rem" }}
-      >
         {/* Header */}
         <div className="codebook-modal-header">
           <div>
-            <div className="codebook-modal-title">
+            <div className="codebook-modal-title" id="bn-threshold-title">
               <Icon name="ai" decorative />{" "}{t("autocode.review.title")} &mdash; {frameworkTitle}
             </div>
             <div className="codebook-modal-subtitle" data-testid="bn-threshold-subtitle">
@@ -358,9 +343,6 @@ export function ThresholdReviewModal({
             {applying ? t("autocode.review.applying") : t("autocode.review.apply")}
           </button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
-
-  return createPortal(modal, document.body);
 }

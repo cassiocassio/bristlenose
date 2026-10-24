@@ -1,55 +1,97 @@
 /* Atom: modal — shared overlay backdrop, card, and close button.
-   Used by help-overlay.css and feedback.css. Each adds its own
-   content-specific styles on top. */
+   The React dialogs all draw this through one component, Dialog.tsx; the
+   frozen static report's modal.js uses the same classes. The look is the macOS
+   sheet, measured (tokens.css § Dialogs). A click on the backdrop never closes
+   a dialog (24 Oct 2026): Escape and the dialog's own buttons do. */
 
-/* Overlay backdrop — fullscreen, centred, fade transition */
+/* Backdrop — fullscreen, centred. It fades in with the sheet's drop and out
+   with its rise. */
 .bn-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--bn-overlay-scrim);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: var(--bn-overlay-z);
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
+    transition: opacity var(--bn-modal-exit) linear, visibility var(--bn-modal-exit) linear;
 }
 
 .bn-overlay.visible {
     opacity: 1;
     visibility: visible;
+    transition: opacity var(--bn-modal-enter) linear, visibility 0s;
 }
 
-/* Card scale+fade — matches modal-nav-shell transition */
+/* The sheet's motion. A transition takes the timing of the state it is going
+   TO, so the resting rule carries the exit and `.visible` the entrance:
+   in, it drops 32 pt and is solid early; out, it rises, fading with the
+   backdrop, all at one pace. */
 .bn-overlay .bn-modal {
-    transform: scale(0.97);
+    transform: translateY(calc(-1 * var(--bn-modal-offset)));
     opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    transition: transform var(--bn-modal-exit) linear, opacity var(--bn-modal-exit) linear;
 }
 
 .bn-overlay.visible .bn-modal {
-    transform: scale(1);
+    transform: none;
     opacity: 1;
+    transition: transform var(--bn-modal-enter) var(--bn-modal-enter-ease),
+        opacity var(--bn-modal-enter-fade) linear;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .bn-overlay .bn-modal {
-        transition: none;
+/* A dialog that mounts already open has no previous style to transition from,
+   so it starts from here: the same resting state, for its first frame. */
+@starting-style {
+    .bn-overlay.visible {
+        opacity: 0;
+    }
+    .bn-overlay.visible .bn-modal {
+        transform: translateY(calc(-1 * var(--bn-modal-offset)));
+        opacity: 0;
     }
 }
 
-/* Modal card — centred white box with shadow.
-   Default max-width suits confirmation dialogs; override per-modal for
-   wider content (help-modal 600px, feedback-modal 420px). */
+@media (prefers-reduced-motion: reduce) {
+    .bn-overlay .bn-modal,
+    .bn-overlay.visible .bn-modal {
+        transform: none;
+    }
+    @starting-style {
+        .bn-overlay.visible .bn-modal {
+            transform: none;
+        }
+    }
+}
+
+/* Modal card — centred, raised, with the sheet's radius and shadow.
+   Default max-width suits confirmation dialogs; a dialog's own class sets
+   its width (.feedback-modal 420px, .settings-modal 42rem). */
 .bn-modal {
     position: relative;
-    background: var(--bn-colour-bg);
-    border-radius: var(--bn-radius-lg);
+    background: var(--bn-modal-bg);
+    border-radius: var(--bn-modal-radius);
     padding: var(--bn-space-xl);
     width: 90%;
     max-width: 24rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--bn-modal-shadow);
+}
+
+/* The card takes focus when nothing in it asks for it: a focus sink, not a
+   control, so no ring (theme CLAUDE.md, focus sinks). */
+.bn-modal:focus-visible {
+    outline: none;
+}
+
+/* Widths for dialogs that had them inline. */
+.bn-modal.bn-export-modal {
+    max-width: 420px;
+}
+
+.bn-modal.bn-board-modal {
+    max-width: 460px;
 }
 
 /* Modal heading */

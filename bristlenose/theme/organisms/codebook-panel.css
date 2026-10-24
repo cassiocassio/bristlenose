@@ -637,27 +637,20 @@
     filter: brightness(0.9);
 }
 
-/* ── Merge overlay ────────────────────────────────────────────────────── */
-
-.merge-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 150;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: color-mix(in srgb, var(--bn-colour-bg) 60%, transparent);
-    backdrop-filter: blur(2px);
-}
-.merge-overlay .confirm-dialog {
-    position: static;
+/* ── Confirm dialog as a modal ─────────────────────────────────────────── */
+/* The merge and name-taken confirms are drawn by Dialog.tsx (the shared
+   .bn-overlay + .bn-modal); ConfirmDialog's own card steps aside inside it,
+   so there is one card, the sheet's. */
+.bn-modal.confirm-dialog-modal {
     max-width: 360px;
-    width: 90%;
-    background: var(--bn-colour-bg);
-    border: 1px solid var(--bn-colour-border);
-    border-radius: var(--bn-radius-lg);
-    padding: var(--bn-space-lg);
-    box-shadow: 0 8px 32px var(--bn-colour-shadow);
+}
+.bn-modal .confirm-dialog {
+    position: static;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
 }
 
 /* ── Codebook header ─────────────────────────────────────────────────── */
@@ -808,56 +801,18 @@
     white-space: nowrap;
 }
 
-/* ── Codebook picker modal ───────────────────────────────────────────── */
+/* ── AutoCode Review modal ───────────────────────────────────────────── */
+/* The backdrop, card surface, radius, shadow and motion are the shared dialog's
+   (atoms/modal.css); this is only the review's own layout. */
 
-.codebook-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    overflow: hidden;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity var(--bn-transition-normal), visibility var(--bn-transition-normal);
-}
-
-.codebook-modal-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.codebook-modal {
-    background: var(--bn-colour-bg);
-    border-radius: var(--bn-radius-lg);
-    box-shadow: 0 20px 60px var(--bn-colour-shadow);
+.bn-modal.codebook-modal {
     width: 100%;
     max-width: 56rem;
     max-height: 85vh;
+    padding: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--bn-colour-border);
-    transform: scale(0.97);
-    opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-}
-
-.codebook-modal-overlay.visible .codebook-modal {
-    transform: scale(1);
-    opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .codebook-modal-overlay,
-    .codebook-modal-overlay .codebook-modal {
-        transition: none;
-    }
 }
 
 .codebook-modal-header {

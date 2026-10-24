@@ -313,7 +313,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     await userEvent.click(screen.getByLabelText("Delete confusion"));
     const card = groupCard("Friction");
     expect(within(card).getByText(/Delete “confusion”/)).toBeInTheDocument();
-    expect(document.querySelector(".merge-overlay")).toBeNull();
+    expect(screen.queryByTestId("bn-merge-confirm")).toBeNull();
   });
 
   it("deletes an empty group with no confirmation at all", async () => {
@@ -519,7 +519,7 @@ describe.each(LENSES)("codebook authoring — $name", (lens) => {
     expect(screen.getByText(/cannot be undone/)).toBeInTheDocument();
     // The merge alone is centred over the lens: it names two tags that may sit
     // in different cards, so there is no one card to cover.
-    expect(document.querySelector(".merge-overlay")).not.toBeNull();
+    expect(screen.getByTestId("bn-merge-confirm")).toHaveClass("visible");
     await userEvent.click(screen.getByRole("button", { name: "Merge" }));
     await waitFor(() => {
       const post = sent(calls, "/codebook/merge-tags", "POST");

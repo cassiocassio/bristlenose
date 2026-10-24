@@ -219,7 +219,7 @@ describe("ThresholdReviewModal", () => {
     );
     await act(async () => {});
 
-    fireEvent.click(document.querySelector(".codebook-modal-overlay")!);
+    fireEvent.click(screen.getByTestId("bn-threshold-overlay"));
     expect(onClose).not.toHaveBeenCalled();
   });
 

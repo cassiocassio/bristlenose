@@ -16,9 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { createPortal } from "react-dom";
-import { useInert } from "../hooks/useInert";
+import { Dialog } from "./Dialog";
 import { Icon } from "./Icon";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -74,8 +72,6 @@ export function ModalNav({
   testId,
   titleId,
 }: ModalNavProps) {
-  const { t } = useTranslation();
-  useInert(open);
   const resolvedTestId = testId ?? "modal-nav";
   const resolvedTitleId = titleId ?? `${resolvedTestId}-title`;
 
@@ -91,59 +87,13 @@ export function ModalNav({
   });
 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const triggerRef = useRef<Element | null>(null);
   const contentHeadingRef = useRef<HTMLHeadingElement>(null);
 
-  // Track the element that had focus when the modal opened.
+  // Focus the × on open. Escape, the Tab loop, the page behind and giving focus
+  // back to the opener are Dialog's.
   useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement;
-      // Focus the close button on open.
-      requestAnimationFrame(() => closeButtonRef.current?.focus());
-    } else if (triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
+    if (open) requestAnimationFrame(() => closeButtonRef.current?.focus());
   }, [open]);
-
-  // Close on Escape.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
-
-  // Focus trap.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const modal = document.querySelector(`[data-testid="${resolvedTestId}"] .bn-modal`);
-      if (!modal) return;
-      const focusable = modal.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, resolvedTestId]);
 
   const toggleGroup = useCallback((id: string) => {
     setExpandedGroups((prev) => {
@@ -182,27 +132,16 @@ export function ModalNav({
     items.flatMap((item) => [item, ...(item.children ?? [])]).find((i) => i.id === activeId)
       ?.label ?? "";
 
-  return createPortal(
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`bn-overlay modal-nav-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
-      data-testid={resolvedTestId}
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className={`modal-nav-shell ${className ?? ""}`.trim()}
+      overlayClassName="modal-nav-overlay"
+      testId={resolvedTestId}
+      labelledBy={resolvedTitleId}
+      closeButtonRef={closeButtonRef}
     >
-      <div
-        className={`bn-modal modal-nav-shell ${className ?? ""}`.trim()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={resolvedTitleId}
-      >
-        <button
-          ref={closeButtonRef}
-          className="bn-modal-close"
-          onClick={onClose}
-          aria-label={t("buttons.close")}
-        >
-          <Icon name="close" decorative />
-        </button>
         <h2 id={resolvedTitleId} className="modal-nav-title">
           {title}
         </h2>
@@ -298,8 +237,6 @@ export function ModalNav({
             {children}
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

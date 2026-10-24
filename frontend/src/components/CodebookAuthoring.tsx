@@ -36,6 +36,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "./Badge";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { Dialog } from "./Dialog";
 import { EditableText } from "./EditableText";
 import { MicroBar } from "./MicroBar";
 import { TagInput } from "./TagInput";
@@ -788,10 +789,11 @@ export function MergeConfirm({
 }) {
   const { t } = useTranslation();
   if (!pending) return null;
+  const title = t("codebook.mergeTitle", { source: pending.source.name, target: pending.target.name });
   return (
-    <div className="merge-overlay">
+    <Dialog open onClose={onCancel} className="confirm-dialog-modal" testId="bn-merge-confirm" label={title}>
       <ConfirmDialog
-        title={t("codebook.mergeTitle", { source: pending.source.name, target: pending.target.name })}
+        title={title}
         body={
           <span
             dangerouslySetInnerHTML={{
@@ -804,7 +806,7 @@ export function MergeConfirm({
         onConfirm={onConfirm}
         onCancel={onCancel}
       />
-    </div>
+    </Dialog>
   );
 }
 
@@ -824,16 +826,17 @@ export function NameClashDialog({
 }) {
   const { t } = useTranslation();
   if (name === null) return null;
+  const title = t("codebook.nameTaken", { name });
   return (
-    <div className="merge-overlay">
+    <Dialog open onClose={onDismiss} className="confirm-dialog-modal" testId="bn-name-clash" label={title}>
       <ConfirmDialog
-        title={t("codebook.nameTaken", { name })}
+        title={title}
         confirmLabel={t("buttons.ok")}
         variant="primary"
         hideCancel
         onConfirm={onDismiss}
         onCancel={onDismiss}
       />
-    </div>
+    </Dialog>
   );
 }

@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–405 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–434 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -167,6 +167,26 @@ enum WelcomeTimelineCSS {
     --bn-rail-width: 36px;       /* collapsed icon rail width */
     --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
     --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+
+    /* Dialogs (atoms/modal.css, components/Dialog.tsx) — the macOS sheet, measured
+       24 Oct 2026 from a stock Save sheet in light mode on macOS 27: the window
+       behind is pulled towards a light grey rather than covered in black (no
+       blur), the sheet has a ~20 pt radius and a shadow offset downward, and it
+       slides 32 pt down into place while it fades in. Dark values below are
+       a judgement, not a measurement. */
+    --bn-overlay-scrim: rgb(170 170 170 / 0.59);
+    --bn-overlay-z: 1000;
+    --bn-toast-z: 1100;                     /* a notification stays above a dialog */
+    --bn-modal-bg: var(--bn-colour-bg);
+    --bn-modal-radius: 20px;
+    --bn-modal-hairline: rgb(0 0 0 / 0.1);
+    --bn-modal-shadow-colour: rgb(0 0 0 / 0.3);
+    --bn-modal-shadow: 0 0 0 1px var(--bn-modal-hairline), 0 10px 40px var(--bn-modal-shadow-colour);
+    --bn-modal-offset: 32px;                /* the sheet drops this far into place */
+    --bn-modal-enter: 230ms;                /* the drop, and the backdrop dimming */
+    --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
+    --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
+    --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
     --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
     --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
 
@@ -408,6 +428,15 @@ enum WelcomeTimelineCSS {
         --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
         --bn-colour-delight:          var(--bn-sentiment-delight);
         --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+
+        /* Dialogs in dark: the page dims towards black, and the sheet is a raised
+           surface, lighter than the page, with a light hairline, the way a dark
+           macOS sheet reads. Without the lift a dark card vanished into the dimmed
+           dark report (docs/mockups/modal-crash-way-out.html, dark frame). */
+        --bn-overlay-scrim:        light-dark(rgb(170 170 170 / 0.59), rgb(0 0 0 / 0.5));
+        --bn-modal-bg:             light-dark(var(--bn-colour-bg), color-mix(in srgb, var(--bn-colour-bg), white 9%));
+        --bn-modal-hairline:       light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.14));
+        --bn-modal-shadow-colour:  light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.6));
     }
 
     /* Explicit overrides — lock theme regardless of OS preference */

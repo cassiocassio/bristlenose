@@ -66,8 +66,9 @@ describe("a terse modal measures", () => {
 
 describe("the buttons follow the HIG", () => {
   it("puts Cancel leading and the confirm trailing", () => {
-    const { container } = renderSheet(impact());
-    const buttons = [...container.querySelectorAll(".bn-modal-actions button")];
+    // The sheet is portalled to document.body, outside the render container.
+    renderSheet(impact());
+    const buttons = [...document.body.querySelectorAll(".bn-modal-actions button")];
     expect(buttons[0]).toHaveTextContent("Cancel");
     expect(buttons[1]).toHaveTextContent("Uninstall");
   });

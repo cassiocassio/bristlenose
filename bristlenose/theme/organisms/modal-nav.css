@@ -171,21 +171,4 @@
     }
 }
 
-/* ── Overlay transition (shared by all ModalNav modals) ── */
-
-.modal-nav-overlay .modal-nav-shell {
-    transform: scale(0.97);
-    opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-}
-
-.modal-nav-overlay.visible .modal-nav-shell {
-    transform: scale(1);
-    opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .modal-nav-overlay .modal-nav-shell {
-        transition: none;
-    }
-}
+/* The overlay transition is the shared dialog's (atoms/modal.css). */

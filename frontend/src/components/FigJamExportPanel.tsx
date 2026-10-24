@@ -18,10 +18,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { useInert } from "../hooks/useInert";
-import { Icon } from "./Icon";
+import { Dialog } from "./Dialog";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
@@ -45,7 +43,6 @@ const ERROR_KEYS: Record<string, string> = {
 
 export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
   const { t, i18n } = useTranslation();
-  useInert(open);
   const [view, setView] = useState<View>("configure");
   const [boardName, setBoardName] = useState("");
   const [splitLong, setSplitLong] = useState(true);
@@ -55,14 +52,12 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
   const [quotes, setQuotes] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const named = useRef(false); // the researcher has typed a name: don't overwrite it
-  const triggerRef = useRef<Element | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   // On open: start over, and fill the name with the project's, so nothing
   // arrives on a board untitled.
   useEffect(() => {
     if (!open) return;
-    triggerRef.current = document.activeElement;
     setView("configure");
     setError(null);
     if (!named.current) {
@@ -74,28 +69,6 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
     }
     requestAnimationFrame(() => (headingRef.current ?? document.getElementById("bn-figjam-title"))?.focus());
   }, [open]);
-
-  // Restore focus on close.
-  useEffect(() => {
-    if (!open && triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus();
-      triggerRef.current = null;
-    }
-  }, [open]);
-
-  // Escape closes.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [open, onClose]);
 
   const request = useCallback(
     (): FigJamBoardRequest => ({
@@ -135,25 +108,14 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
 
   if (isExportMode()) return null;
 
-  return createPortal(
-    // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
-    <div
-      className={`bn-overlay${open ? " visible" : ""}`}
-      aria-hidden={!open}
-      data-testid="bn-figjam-overlay"
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      className="bn-board-modal"
+      testId="bn-figjam-overlay"
+      labelledBy="bn-figjam-title"
     >
-      <div
-        className="bn-modal"
-        data-testid="bn-figjam-modal"
-        style={{ maxWidth: 460 }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bn-figjam-title"
-      >
-        {/* Outside the boundary, so a dialog whose content crashed still has a way out with the mouse. */}
-        <button className="bn-modal-close" onClick={onClose} aria-label={t("buttons.close")}>
-          <Icon name="close" decorative />
-        </button>
         {/* If the content crashes, the mark takes the heading's id and so names the dialog. */}
         <PanelErrorBoundary part labelId="bn-figjam-title">
           {() => (
@@ -270,8 +232,6 @@ export function FigJamExportPanel({ open, onClose }: FigJamExportPanelProps) {
             </>
           )}
         </PanelErrorBoundary>
-      </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

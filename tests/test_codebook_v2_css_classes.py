@@ -86,18 +86,20 @@ def test_every_v2_class_resolves_to_real_css() -> None:
 def test_the_uninstall_sheet_uses_the_house_overlay() -> None:
     """The specific regression, named.
 
-    `.bn-overlay` is `opacity: 0; visibility: hidden` at rest and the shipped
-    modals reveal it by adding `.visible`. This sheet mounts conditionally
-    rather than toggling, so it has to arrive already visible — without that
-    class it resolves to real CSS and is still invisible, which the general
-    check above cannot see.
+    `.bn-overlay` is `opacity: 0; visibility: hidden` at rest and is revealed
+    by `.visible`. This sheet mounts conditionally rather than toggling, so it
+    has to arrive already visible; once it rendered inline with an invented
+    backdrop class, and once it would have been invisible without `.visible`.
+    Since 24 Oct 2026 it draws through the shared Dialog, opened, and Dialog
+    adds `visible` while open; `Dialog.test.tsx` pins that half.
     """
     sheet = (_SRC / "components/CodebookV2UninstallSheet.tsx").read_text(encoding="utf-8")
-    assert 'className="bn-overlay visible"' in sheet, (
-        "the uninstall sheet must use the house `.bn-overlay` backdrop, with "
-        "`visible` — it mounts conditionally instead of toggling the class"
+    assert re.search(r"<Dialog\s+open\b", sheet), (
+        "the uninstall sheet must draw through Dialog, opened: it mounts "
+        "conditionally instead of toggling `open`"
     )
-    # On the JSX, not anywhere in the file: the comment above that element
-    # names the retired class in order to explain it, and a bare substring
-    # search would fail on the documentation of the fix.
+    dialog = (_SRC / "components/Dialog.tsx").read_text(encoding="utf-8")
+    assert 'open ? "visible" : ""' in dialog, "Dialog must add `visible` while open"
+    # On the JSX, not anywhere in the file: a comment may name the retired
+    # class to explain it, and a bare substring search would fail on that.
     assert 'className="bn-modal-overlay"' not in sheet, "that class is defined nowhere"

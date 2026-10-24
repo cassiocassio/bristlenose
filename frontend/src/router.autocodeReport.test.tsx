@@ -95,7 +95,7 @@ describe("View Report on a restored AutoCode chip (R15)", () => {
     });
 
     await waitFor(() => {
-      const overlay = document.querySelector(".codebook-modal-overlay.visible");
+      const overlay = document.querySelector('[data-testid="bn-threshold-overlay"].visible');
       expect(overlay).not.toBeNull();
       expect(overlay!.textContent).toContain("Norman");
     });

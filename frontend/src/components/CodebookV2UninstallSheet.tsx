@@ -30,6 +30,7 @@
 import { useEffect, useRef } from "react";
 import type { RemoveFrameworkInfo } from "../utils/types";
 import { useTranslation } from "react-i18next";
+import { Dialog } from "./Dialog";
 
 interface Props {
   title: string;
@@ -89,21 +90,16 @@ export function CodebookV2UninstallSheet({
   }
 
   return (
-    // `.bn-overlay` + `.bn-modal` is the house pair from `atoms/modal.css`, and
-    // the class this used to carry — `.bn-modal-overlay` — is defined nowhere.
-    // A class that does not exist does not error: the backdrop simply had no
-    // `position: fixed`, no z-index, no dimming and no centring, so a
-    // destructive confirmation rendered INLINE at the bottom of the page. It
-    // looked like a card because `.bn-modal` is real; only the overlay was
-    // invented. Found by opening it and getting a blank screen.
-    //
-    // `.visible` is required, not decorative: `.bn-overlay` is
-    // `opacity: 0; visibility: hidden` at rest, and the shipped modals toggle
-    // the class rather than unmounting. This one mounts conditionally, so it
-    // must arrive already visible.
-    <div className="bn-overlay visible" data-testid="bn-v2-uninstall-sheet">
-      <div className="bn-modal v2-uninstall-sheet" role="dialog" aria-modal="true">
-        <h2 className="v2-uninstall-title">{t("codebook.uninstallTitle", { name: title })}</h2>
+    // The shared dialog: it mounts open, plays the sheet's entrance, and gives
+    // Escape to Cancel. The page behind is inert while it is up.
+    <Dialog
+      open
+      onClose={onCancel}
+      className="v2-uninstall-sheet"
+      testId="bn-v2-uninstall-sheet"
+      labelledBy="bn-v2-uninstall-title"
+    >
+        <h2 className="v2-uninstall-title" id="bn-v2-uninstall-title">{t("codebook.uninstallTitle", { name: title })}</h2>
         {losses.length > 0 ? (
           <>
             <p className="v2-uninstall-lead">{t("codebook.uninstallDiscards")}</p>
@@ -143,7 +139,6 @@ export function CodebookV2UninstallSheet({
             {t("codebook.removeFromCodebook")}
           </button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

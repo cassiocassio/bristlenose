@@ -417,6 +417,17 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
+            // Only the report's own web view speaks for this window. A popout
+            // is built from the report's configuration, so it inherits this
+            // handler; anything it posted would write the report's bridge state.
+            let fromReport = MainActor.assumeIsolated {
+                message.webView != nil && message.webView === webView
+            }
+            guard fromReport else {
+                log.notice("dropping a bridge message from a web view that is not the report's")
+                return
+            }
+
             guard let body = message.body as? [String: Any] else {
                 return
             }
@@ -985,13 +996,20 @@ struct WebView: NSViewRepresentable {
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
             // SECURITY #8: only allow popouts to the project's assigned serve
-            // port (not any 127.0.0.1 port). isAllowedServeURL reads the port
-            // from the parent's lastLoadedURL.
-            guard let url = navigationAction.request.url,
-                  isAllowedServeURL(url) else {
-                if let url = navigationAction.request.url {
-                    openExternal(url)
+            // port (not any 127.0.0.1 port). The port is the parent's
+            // lastLoadedURL's.
+            guard let url = navigationAction.request.url else { return nil }
+            switch PopoutPolicy.decide(url: url, allowedPort: lastLoadedURL?.port) {
+            case .player:
+                break
+            case .external:
+                if url.host == "127.0.0.1" {
+                    log.warning("rejecting 127.0.0.1 popout with port=\(url.port ?? -1, privacy: .public) (allowed=\(self.lastLoadedURL?.port ?? -1, privacy: .public))")
                 }
+                openExternal(url)
+                return nil
+            case .refuse:
+                log.notice("refusing a new window for \(url.path, privacy: .public): only the player opens one")
                 return nil
             }
 
@@ -1075,6 +1093,36 @@ struct WebView: NSViewRepresentable {
                 popoutTitleObservation = nil
             }
         }
+    }
+}
+
+/// What a `window.open` (or WebKit's own "Open … in New Window") may open.
+///
+/// Only the player page gets the popout window. Before this, any page on the
+/// serve did: a threshold-review timecode (`target=_blank`) or a right-click's
+/// Open Link in New Window loaded a report page into the player's window, and
+/// closed the player that was there. Pure, so it is tested without WebKit.
+enum PopoutPolicy {
+    /// The player page, as the serve names it in `/video-map`'s `player_url`
+    /// (`bristlenose/server/routes/sessions.py`, pinned by
+    /// `tests/test_swift_python_contract.py`).
+    static let playerPath = "/report/assets/bristlenose-player.html"
+
+    enum Decision: Equatable {
+        /// The player page on this serve: the popout window.
+        case player
+        /// Anything else on this serve: no window. A report page belongs in a
+        /// report window, never in the player's.
+        case refuse
+        /// Not this serve: the default browser decides (`openExternal`
+        /// still refuses everything but http, https and mailto).
+        case external
+    }
+
+    static func decide(url: URL, allowedPort: Int?) -> Decision {
+        guard let allowedPort, url.scheme == "http", url.host == "127.0.0.1",
+              url.port == allowedPort else { return .external }
+        return url.path == playerPath ? .player : .refuse
     }
 }
 

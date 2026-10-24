@@ -506,3 +506,24 @@ class TestFeedbackURLContract:
         )
         assert match is not None, f"FeedbackSubmission.swift no longer declares {swift_name}"
         assert match.group(1) == getattr(health, python_name)
+
+
+class TestPlayerPathContract:
+    """`PopoutPolicy.playerPath` is the serve's `player_url`.
+
+    The Mac opens the popout player window only for that page and refuses a
+    new window for every other report page. A change to `player_url` alone
+    would leave the app refusing the player itself: timecodes would stop
+    playing, with nothing to say why.
+    """
+
+    def test_swift_player_path_equals_serve_player_url(self) -> None:
+        webview = _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "WebView.swift"
+        swift = re.search(
+            r'static\s+let\s+playerPath\s*=\s*"([^"]+)"', webview.read_text(encoding="utf-8")
+        )
+        assert swift is not None, "WebView.swift no longer declares PopoutPolicy.playerPath"
+        sessions = _REPO_ROOT / "bristlenose" / "server" / "routes" / "sessions.py"
+        served = re.search(r'player_url="([^"]+)"', sessions.read_text(encoding="utf-8"))
+        assert served is not None, "routes/sessions.py no longer sets player_url as a literal"
+        assert swift.group(1) == served.group(1)

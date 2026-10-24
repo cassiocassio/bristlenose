@@ -22,6 +22,16 @@ from bristlenose.stages.s01_ingest import discover_files, group_into_sessions, s
 _VTT = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n"
 
 
+@pytest.fixture
+def symlinks() -> None:
+    """Every test that makes a link asks for this: one skip, not one per test.
+
+    Windows needs a privilege to create a symlink, so these skip there and run
+    on every Linux and macOS cell, as the seven per-test decorators did."""
+    if sys.platform == "win32":
+        pytest.skip("symlinks need privileges on Windows")
+
+
 def _write(path: Path, data: bytes = b"\0" * 64) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
@@ -49,7 +59,7 @@ def test_the_session_key_does_not_depend_on_the_normal_form(tmp_path: Path) -> N
     assert len(keys) == 1, keys
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_symlinked_folder_is_not_scanned_twice(tmp_path: Path) -> None:
     _write(tmp_path / "round-1" / "alice.mp4")
     _write(tmp_path / "round-1" / "bob.mp4")
@@ -58,7 +68,7 @@ def test_a_symlinked_folder_is_not_scanned_twice(tmp_path: Path) -> None:
     assert sorted(f.path.name for f in files) == ["alice.mp4", "bob.mp4"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_symlinked_recording_beside_its_original_is_not_a_second_session(
     tmp_path: Path,
 ) -> None:
@@ -67,7 +77,7 @@ def test_a_symlinked_recording_beside_its_original_is_not_a_second_session(
     assert [f.path.name for f in discover_files(tmp_path)] == ["alice.mp4"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_symlinked_interview_folder_is_still_scanned(tmp_path: Path) -> None:
     """Resolving once must not refuse a folder that is itself a link."""
     _write(tmp_path / "real" / "alice.mp4")
@@ -75,14 +85,14 @@ def test_a_symlinked_interview_folder_is_still_scanned(tmp_path: Path) -> None:
     assert [f.path.name for f in discover_files(tmp_path / "link")] == ["alice.mp4"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_link_back_to_the_interview_folder_adds_nothing(tmp_path: Path) -> None:
     _write(tmp_path / "alice.mp4")
     os.symlink(tmp_path, tmp_path / "zz-everything")
     assert [f.path.name for f in discover_files(tmp_path)] == ["alice.mp4"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_symlink_loop_is_stepped_over(tmp_path: Path) -> None:
     """Python 3.12's resolve() raises RuntimeError for a loop; one bad link must
     not end the scan."""
@@ -92,7 +102,7 @@ def test_a_symlink_loop_is_stepped_over(tmp_path: Path) -> None:
     assert [f.path.name for f in discover_files(tmp_path)] == ["alice.mp4"]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_link_that_sorts_first_still_leaves_the_target_its_own_path(tmp_path: Path) -> None:
     """`aaa/link` is reached before `zzz/real` in a sorted walk; the session
     must still carry the real path, not the link's."""
@@ -103,7 +113,7 @@ def test_a_link_that_sorts_first_still_leaves_the_target_its_own_path(tmp_path: 
     assert f.path == tmp_path / "zzz" / "real" / "alice.mp4"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges on Windows")
+@pytest.mark.usefixtures("symlinks")
 def test_a_folder_too_deep_to_walk_is_still_reached_through_a_shallower_link(
     tmp_path: Path,
 ) -> None:

@@ -74,6 +74,7 @@ state is still evidenced, the day is not.
 | `codebook-audit.html` | 17 Feb 2026 | PROPOSED 17 Feb 2026 · IMPLEMENTED — the vanilla-JS→React migration audit; that migration is complete, so this is a historical record, not a plan |
 | `codebook-disable-old-vs-new.html` | 26 Jul 2026 | IMPLEMENTED — the switch-off treatment ships |
 | `codebook-header-library-button.html` | 21 Aug 2026 | IMPLEMENTED — the Browse Library button ships in the header |
+| `codebook-catalogue-install-on-page.html` | 24 Oct 2026 | PROPOSED 24 Oct 2026 — an idea: catalogue cards lose Install/Uninstall (installed marker A/B/C instead), Install lives only on the codebook page with a line saying what it starts |
 | `codebook-browse-card-author.html` | 24 Oct 2026 | IMPLEMENTED 24 Oct 2026 — option B: author at the sidebar/page weight, title at 700, Install/Uninstall back to the system button size |
 | `codebook-library-states.html` | 1 Aug 2026 | IMPLEMENTED — enabled/disabled library states ship |
 | `codebook-llm-state-matrix.html` | 3 Sep 2026 | PROPOSED 3 Sep 2026 — the codebook × LLM state audit and the decisions taken against it |

@@ -17,17 +17,20 @@ struct FailureCategoryStatusWordTests {
               "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-haiku-20240401'}}",
           ])
     func aDatedIdIsNotAStatus(line: String) {
-        withKnownIssue("N120: the 401 / 429 inside the id wins over the model-not-found arm") {
-            #expect(PipelineRunner.categoriseFailure(lines: [line], exitStatus: 2)
-                    == .modelUnavailable)
-        }
+        #expect(PipelineRunner.categoriseFailure(lines: [line], exitStatus: 2)
+                == .modelUnavailable)
     }
 
-    @Test("A real 401 and a real 429 still read as auth and quota")
-    func realStatusesStillMatch() {
-        #expect(PipelineRunner.categoriseFailure(
-            lines: ["Error code: 401 - {'error': 'invalid x-api-key'}"], exitStatus: 2) == .auth)
-        #expect(PipelineRunner.categoriseFailure(
-            lines: ["Error code: 429 - too many requests"], exitStatus: 2) == .quota)
+    @Test("A real 401 and a real 429 still read as auth and quota, however they are written",
+          arguments: [
+              ("Error code: 401 - {'error': 'invalid x-api-key'}", PipelineFailureCategory.auth),
+              ("httpx.HTTPStatusError: status_code=401", .auth),
+              ("HTTP/1.1 401 Unauthorized", .auth),
+              ("Error code: 429 - too many requests", .quota),
+              ("anthropic.RateLimitError: (429)", .quota),
+              ("status=429.", .quota),
+          ])
+    func realStatusesStillMatch(line: String, expected: PipelineFailureCategory) {
+        #expect(PipelineRunner.categoriseFailure(lines: [line], exitStatus: 2) == expected)
     }
 }

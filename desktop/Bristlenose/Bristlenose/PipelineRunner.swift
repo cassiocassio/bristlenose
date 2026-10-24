@@ -3159,7 +3159,11 @@ var args = ["run", project.path, "--no-serve"]
         ) {
             return .providerNotSetUp
         }
-        if matches(tail, #"401|invalid api key|authentication"#) { return .auth }
+        // A status number is a whole word: a retired model's compact date
+        // (`…-20250401`, `…-20240429`) holds a 401 or a 429 and was read as a key
+        // or a quota problem before the model-not-found arm below was reached
+        // (N120). The Python classifier (`run_lifecycle.py`) bounds them the same way.
+        if matches(tail, #"\b401\b|invalid api key|authentication"#) { return .auth }
         // Out of credit (billing) BEFORE the transient rate-limit bucket —
         // Anthropic serves it as a 400 + "credit balance is too low", OpenAI as
         // a 429 with code `insufficient_quota`. Provider-scoped to Claude/ChatGPT
@@ -3171,7 +3175,7 @@ var args = ["run", project.path, "--no-serve"]
                 return .outOfCredit
             }
         }
-        if matches(tail, #"rate limit|quota|429"#) { return .quota }
+        if matches(tail, #"rate limit|quota|\b429\b"#) { return .quota }
         if matches(tail, #"connection refused|timed out|dns|could not resolve"#) {
             return .network
         }

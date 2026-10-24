@@ -72,6 +72,33 @@ struct APIKeyQuitSaveTests {
         #expect(replies == [true])
     }
 
+    /// N44: a second quit request while the first save is out (a second ⌘Q, the
+    /// Dock's Quit, the keychain dialog taking focus) queues a second write of
+    /// the same key, which on a login copy `bristlenose configure` made is a
+    /// second "wants to use your confidential information" dialog, and a second
+    /// reply to AppKit. Whether AppKit re-enters `applicationShouldTerminate`
+    /// while a `.terminateLater` is pending is not reachable from a unit test;
+    /// this pins what `shouldTerminate` does if it is. Known issue until then
+    /// (`docs/private/reliability/re-prove-1-scenarios.md`, N44).
+    @Test func aSecondQuitWhileTheFirstSaveIsOut_writesNothingMore() {
+        withKnownIssue("N44: a second shouldTerminate queues a second write and a second reply") {
+            let store = Spy()
+            var drafts = APIKeyDrafts()
+            drafts.load(.claude, stored: nil)
+            drafts.edit(.claude, "sk-pasted")
+            let hop = HeldHop()
+            var replies: [Bool] = []
+            let quit = quitSave(store, drafts, offMain: hop)
+
+            #expect(quit.shouldTerminate { replies.append($0) } == .terminateLater)
+            #expect(quit.shouldTerminate { replies.append($0) } == .terminateLater)
+            hop.runAll()
+
+            #expect(store.writes == 1, "one key, one write")
+            #expect(replies.count == 1, "AppKit takes one reply")
+        }
+    }
+
     @Test func anUneditedField_quitsNow_andWritesNothing() {
         let store = Spy()
         store.inner.set(provider: "anthropic", value: "sk-stored")

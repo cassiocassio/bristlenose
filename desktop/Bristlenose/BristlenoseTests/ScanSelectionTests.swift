@@ -210,6 +210,18 @@ struct ProjectFolderWatcherNewFilesTests {
         #expect(new(["a.mp4", "b.mp4"], ingested: [], known: ["b.mp4"]) == ["a.mp4"])
     }
 
+    /// N57: `source_files` is matched by basename, so a recording that shares its
+    /// name with an analysed one in another folder is read as already analysed.
+    /// Zoom's local recordings are the likeliest case (every meeting folder holds
+    /// the same `zoom_0.mp4`). Known issue until the owner picks the rule
+    /// (`docs/private/reliability/re-prove-1-scenarios.md`, N57).
+    @Test func aSameNamedRecordingInANewFolderIsStillUnanalysed() {
+        withKnownIssue("N57: matched by basename, the new folder's file is hidden") {
+            #expect(new(["p1/zoom_0.mp4", "p3/zoom_0.mp4"], ingested: ["zoom_0.mp4"])
+                    == ["p3/zoom_0.mp4"])
+        }
+    }
+
     @Test func aNeverAnalysedStudyListsEverything() {
         #expect(new(["p1/a.mp4", "p2/b.m4a"], ingested: []) == ["p1/a.mp4", "p2/b.m4a"])
     }

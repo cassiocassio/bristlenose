@@ -6,6 +6,8 @@ trued-against: HEAD@main on 2026-10-15
 
 ## Changelog
 
+- _2026-10-24_ — a plain-terms summary under the status line: the problems designed out, the mechanism for each, and what might still bite, ranked. The owner marked everything from item 3 down low priority, for one day.
+
 - _2026-10-23_ — §5: a session keeps the recording it was keyed by as its primary while it is in the group, so a later video cannot make it "new"; and an analysed session keeps the files it was analysed from, a file joining it later set aside as `added_after_analysis` (decision #129). Anchors: register row 57; `tests/test_late_file_set_aside.py`.
 
 - _2026-10-21_ — §11a: identical *transcript* files with no recording fold too (decision #97), the copy set aside as `duplicate_transcript`. Anchors: register row 55; `TestDuplicateTranscript` in `tests/test_pipeline_duplicate_recording.py`.
@@ -22,6 +24,114 @@ trued-against: HEAD@main on 2026-10-15
 phase 3 obviated (§13a).** Rows 29, 30 and 31 of
 [design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) are the
 failures this closes.
+
+## In plain terms (24 Oct 2026)
+
+A summary for anyone arriving cold. The numbered sections below are the
+design; §11a and §12 are the detail behind every line here.
+
+The aim: a researcher can move, rename, copy or tidy their files, and
+Bristlenose follows along, keeping their stars, tags and participant numbers.
+
+### Problems designed out, and what does it
+
+1. **Moving or renaming a study folder lost the study.** A study used to be
+   its folder path, so a moved folder vanished from the sidebar or came back
+   as a second, empty study, with the curation stranded on the old one (the
+   12 Oct empty-report incident).
+   *Mechanism:* each study carries its own ID inside `bristlenose-output/`, a
+   hidden marker (`.bristlenose/study.json`) and a visible
+   `bristlenose-study.txt` that Spotlight can find. The path is only a hint:
+   tried first, checked, searched for when wrong. **Locate…** finds a moved
+   study by its ID, not its name.
+2. **Copying a study folder made two folders share one identity.** The copy
+   could go on receiving the original's writes, or its agent access.
+   *Mechanism:* the marker records where the study was created, so a folder
+   found somewhere else is a copy and is given a new ID of its own. Its row's
+   tooltip says "copied from…", and agent access stays with the original.
+3. **Renaming or moving an interview file cost its curation**, renumbered
+   participants and paid for transcription again.
+   *Mechanism:* a recording is identified by its contents, a fingerprint of
+   its size plus hashes of its first and last megabyte (§5). A file is matched
+   to a session by content first, then its last known place, then its name,
+   and a weaker match never takes a session a stronger one holds (§6).
+4. **iCloud and Dropbox online-only files.** A file could not be recognised
+   without downloading it, and one renamed while online-only was downloaded
+   twice and treated as a new interview.
+   *Mechanism:* each file's last known fingerprint is remembered, so an
+   online-only file is not fetched when another interview is added. It is
+   fetched early only when a session is missing and nothing else can identify
+   it, and a download that times out stops the run with that reason rather
+   than guessing.
+5. **A file re-exported under the same name** would have played the new
+   video against quotes timed to the old one.
+   *Mechanism:* on import, the file's contents are checked against the
+   session's fingerprint. Different contents are a different recording; the
+   old session shows as missing and keeps its curation.
+6. **Smaller problems, each fixed:**
+   - The same recording or transcript dropped twice is one session, the copy
+     set aside and named (§11a, first bullet).
+   - A study analysed from Teams transcripts alone was renumbered once its
+     recordings arrived.
+   - Re-analyse lost stars and the "copied from" note; both carry over,
+     matched by content (§8).
+   - An old database holding two project entries is merged onto the curated
+     entry at every import (§10).
+   - On the Mac, a Spotlight result always goes through the open panel, which
+     grants the sandbox permission; an ejected disk is not a move; one folder
+     reached by two paths is not a copy.
+   - On Windows, a file replace retries while another process holds the file
+     open, and the server releases its database and logs when it stops.
+
+### What might still bite, worst and likeliest first
+
+The first two are the ones a typical Mac researcher may meet. **Everything
+from 3 down is low priority, for one day** (owner, 24 Oct 2026): each needs an
+unusual sequence, a small population, or is presentational.
+
+1. **Trimming or re-exporting an interview after it has been analysed.** By
+   design this is a new session, and the stars and tags stay on the old one,
+   now shown as missing. Researchers do sometimes trim, so it is the likeliest
+   to come up. There is no "this is the same interview, re-exported"
+   affordance yet (§12).
+2. **Two things were never tried by hand.** Locate-by-ID has not been run in
+   the real sandboxed app (its tests drive the flow through a stand-in for the
+   search), and OneDrive on the Mac has not been measured, only Dropbox (§12).
+   Either could simply fail to work.
+3. *Low priority.* **A cloud folder whose provider is signed out, or a network
+   share, reads as a moved folder.** The "is the disk there?" check
+   understands only `/Volumes/…`. The likely result is a confusing "can't
+   find" or a second sidebar row, not lost data.
+4. *Low priority.* **The app and the command line open on one study at
+   once.** There is no lock; database writes queue safely, but two imports can
+   race (§12, row 32).
+5. *Low priority.* **Windows OneDrive online-only recordings are downloaded on
+   every run.** Windows' kind of online-only file is not detected (§12). Slow
+   and costly in bandwidth, command line only, a small population.
+6. *Low priority.* **A different interview saved at the same path from another
+   device** while the original was online-only inherits the old session and
+   transcript, with no log line. The most severe of these, since it attaches
+   the wrong participant, but it needs an unusual sequence; the import check
+   refuses the new video once it downloads, though the old transcript stays.
+7. *Low priority.* **A command-line fetch timeout ends in a Python
+   traceback**, and the wait of up to 30 minutes prints nothing. It looks
+   broken and is not; the Mac app shows a proper failed run.
+8. *Low priority.* **Rare cases, each needing an odd sequence** (§11a):
+   - A drop onto an ejected disk's row that was really a move leaves the old
+     row behind; there is no merge on relocate.
+   - A command-line copy opened while the original's disk is ejected keeps the
+     original's ID.
+   - A transcript-only session renamed and given its recording in the same
+     run becomes a new session.
+   - A duplicate copy, when both copies are online-only, is downloaded and
+     transcribed once more.
+   - A marker written by a future version that this one cannot read is
+     treated as no marker.
+   - A session from before content fingerprints still trusts a file
+     re-exported over its recording.
+9. *Low priority.* **On Windows, a stopped in-process report server still
+   holds the database.** Seen only in the test rig so far; that test is
+   skipped on Windows until the cause is found (`TODO.md`, 16 Oct 2026 entry).
 
 ## 1. The principle
 

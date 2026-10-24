@@ -375,6 +375,7 @@ def create_app(
         from bristlenose.output_paths import project_output_dir
         from bristlenose.server.event_watcher import completed_run_ids
 
+        assert attached_at_connect is not None  # read above, for this same project_dir
         already_imported = completed_run_ids(events_path(project_output_dir(project_dir)))
         _import_on_startup(session_factory, project_dir)
         _reconcile_orphaned_autocode_jobs(session_factory)
@@ -1383,7 +1384,8 @@ def _install_event_watcher(
     project_dir: Path,
     engine: Engine | None = None,
     already_imported: set[str] | None = None,
-    attached_at_connect: tuple[tuple[int, int] | None, ...] | None = None,
+    *,
+    attached_at_connect: tuple[tuple[int, int] | None, ...],
 ) -> None:
     """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
 
@@ -1402,7 +1404,8 @@ def _install_event_watcher(
     connected (``create_app``, straight after ``init_db``) and not here, after the
     startup import. A restore landing during the import moved the tree the pool
     holds aside, and a read here named the restored one, so nothing was seen to
-    have moved (register row 53). None reads them now, as before.
+    have moved (register row 53). Required: a caller that did not read it where the
+    pool connected would bring the race back.
     """
     from contextlib import asynccontextmanager
 
@@ -1431,12 +1434,7 @@ def _install_event_watcher(
     if engine is not None and engine.url.database not in (None, "", ":memory:"):
         db_file = Path(engine.url.database)
 
-    attached = {
-        "files": (
-            attached_at_connect if attached_at_connect is not None
-            else _attached_files(project_dir, engine)
-        ),
-    }
+    attached = {"files": attached_at_connect}
 
     async def _reattach_if_moved() -> None:
         # The log first, and on every change: the moved copy is deleted when the

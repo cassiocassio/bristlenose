@@ -161,15 +161,15 @@ class TestTheStashCycle:
 
         monkeypatch.setattr(app_mod, "_import_on_startup", restore_during_import)
         with _polling_client(_app(proj, tmp_path)) as client:
-            assert _wait(lambda: _sessions(client))
             # What the researcher does next is written wherever the pool points:
             # the file on disk, the one the next serve and the sidebar read, must
-            # be the one that gets it.
-            assert client.put("/api/projects/1/starred", json={"q-p1-10": True}).status_code == 200
+            # be the one that gets it. Sent until the heal has moved the pool, as a
+            # star sent a moment too early lands on the copy the heal then drops.
             db_file = out / ".bristlenose" / "bristlenose.db"
-            assert _wait(lambda: _starred_on_disk(db_file)), (
-                "the star went into the database the restore set aside, not the one on disk"
-            )
+            assert _wait(lambda: (
+                client.put("/api/projects/1/starred", json={"q-p1-10": True}).status_code == 200
+                and _starred_on_disk(db_file)
+            )), "the star went into the database the restore set aside, not the one on disk"
         assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
 
     def test_a_restore_that_lands_during_the_reattach_is_followed(

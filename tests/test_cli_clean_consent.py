@@ -10,6 +10,7 @@ by the Mac is not asked again, since the app's own sheet already asked.
 from __future__ import annotations
 
 import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
@@ -230,7 +231,9 @@ class TestTheCounts:
         assert {"quotes", "quote_edits", "quote_tags", "quote_states", "persons",
                 "heading_edits", "sessions"} <= set(Base.metadata.tables)
 
-    @pytest.mark.parametrize("folder", ["Round #2", "Study?v2", "100%25 done"])
+    # Windows forbids "?" in a file name, so that folder cannot exist there.
+    @pytest.mark.parametrize("folder", ["Round #2", "100%25 done"]
+                             + ([] if sys.platform == "win32" else ["Study?v2"]))
     def test_a_folder_name_with_uri_characters_is_counted(self, tmp_path, folder) -> None:
         """A raw `file:` URI cut the path at `#` or `?`, created an empty
         database there and counted zero: --clean discarded curation unasked."""

@@ -77,6 +77,8 @@ def _dead_pid() -> int:
             return pid
         except PermissionError:
             pass
+        except OSError:  # Windows says "no such process" as WinError 87
+            return pid
         pid += 1
 
 

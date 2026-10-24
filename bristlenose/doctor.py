@@ -680,7 +680,8 @@ def check_anyllm() -> CheckResult:
     return CheckResult(
         status=CheckStatus.OK,
         label="any-llm",
-        detail=f"{anyllm.installed_version()} · {', '.join(reachable)}",
+        detail=f"{anyllm.installed_version()} · "
+        + ", ".join(anyllm.display_name(p) for p in reachable),
     )
 
 

@@ -1569,3 +1569,47 @@ def test_only_the_refusals_own_words_switch_thinking_back_on(
     from bristlenose.llm.client import _refuses_reasoning_off
 
     assert _refuses_reasoning_off(error) is refuses
+
+
+def test_use_any_llm_with_no_model_refuses_rather_than_switching(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """It announced "any-llm is now your provider" and the next run failed at
+    its preflight (docs review, 24 Oct 2026)."""
+    from typer.testing import CliRunner
+
+    from bristlenose import cli
+    from bristlenose.cli import app
+
+    switched: list[str] = []
+    monkeypatch.setattr(cli, "_set_current_provider", switched.append)
+    monkeypatch.delenv("BRISTLENOSE_ANYLLM_MODEL", raising=False)
+    result = CliRunner().invoke(app, ["use", "any-llm"])
+    assert result.exit_code == 1
+    assert switched == []
+    assert "needs a model" in result.output
+
+
+def test_the_snap_and_fedora_packages_say_any_llm_isnt_in_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Their Python has no usable pip, so the pip command was a dead end."""
+    from bristlenose import doctor_fixes
+
+    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: "snap")
+    lines = anyllm.explain(anyllm.Readiness("not-installed", model=MODEL))
+    assert "isn't part of this package" in lines[0]
+    assert not any("pip install" in line for line in lines)
+    monkeypatch.setattr(doctor_fixes, "detect_install_method", lambda: "pip")
+    assert "pip install" in " ".join(anyllm.explain(anyllm.Readiness("not-installed", model=MODEL)))
+
+
+def test_the_newer_python_hint_keeps_what_is_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It suggested `pipx install --python python3.12 "bristlenose[any-llm]"`:
+    refused by pipx without --force, and dropping [voice] with it."""
+    from bristlenose.utils import install_channel
+
+    monkeypatch.setattr(install_channel, "install_channel", lambda: "pipx")
+    monkeypatch.setattr(install_channel, "installed_extras", lambda: ["voice"])
+    hint = " ".join(anyllm.explain(anyllm.Readiness("old-python", model=MODEL)))
+    assert 'pipx install --force --python python3.12 "bristlenose[any-llm,voice]"' in hint

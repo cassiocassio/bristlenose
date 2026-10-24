@@ -377,6 +377,17 @@ def insecure_base(inner: str) -> bool:
     return parsed.scheme == "http" and (parsed.hostname or "") not in local
 
 
+def packaged() -> bool:
+    """True in the Snap or the Fedora package, which don't carry any-llm.
+
+    Their Python is read-only (the snap) or has no pip (the RPM's venv), so the
+    pip command ``install_hint`` would print can't work there.
+    """
+    from bristlenose.doctor_fixes import detect_install_method
+
+    return detect_install_method() in ("snap", "rpm")
+
+
 def install_hint() -> str:
     """How to add any-llm to this copy of Bristlenose, for its install channel."""
     from bristlenose.utils.install_channel import add_extra_command
@@ -440,6 +451,11 @@ def explain(ready: Readiness) -> list[str]:
     inner = ready.inner
     name = display_name(inner) if inner else ""
     if ready.status == "not-installed":
+        if packaged():
+            return [
+                "any-llm isn't part of this package.",
+                "To use it, install Bristlenose with pipx, uv or pip instead.",
+            ]
         return [
             "any-llm isn't installed in this copy of Bristlenose.",
             f"Add it:  {install_hint()}",
@@ -448,8 +464,8 @@ def explain(ready: Readiness) -> list[str]:
         return [
             "any-llm needs Python 3.11 or newer; this Bristlenose runs on "
             f"Python {sys.version_info.major}.{sys.version_info.minor}.",
-            "Reinstall Bristlenose with a newer Python, e.g. "
-            "pipx install --python python3.12 \"bristlenose[any-llm]\"",
+            "Reinstall Bristlenose on a newer Python, keeping what you have:  "
+            + _reinstall_on_newer_python(),
         ]
     if ready.status == "broken":
         if ready.inner:
@@ -458,8 +474,9 @@ def explain(ready: Readiness) -> list[str]:
     if ready.status == "no-model":
         return [
             "any-llm needs a model, written as provider:model.",
-            "Set it once:  bristlenose configure any-llm",
-            "Or per run:   BRISTLENOSE_ANYLLM_MODEL=mistral:mistral-large-latest",
+            "Set it once:     bristlenose configure any-llm",
+            "Or for one run:  BRISTLENOSE_ANYLLM_MODEL=mistral:mistral-large-latest "
+            "bristlenose run <folder>",
         ]
     if ready.status == "bad-model":
         return ["Write the model as provider:model, e.g. mistral:mistral-large-latest"]
@@ -488,6 +505,19 @@ def explain(ready: Readiness) -> list[str]:
             f"(A .env file isn't read for {ready.env_var}; set it in your shell.)",
         ]
     return []
+
+
+def _reinstall_on_newer_python() -> str:
+    """The reinstall command for this install's channel, extras kept."""
+    from bristlenose.utils.install_channel import _spec, install_channel
+
+    spec = _spec("any-llm")
+    channel = install_channel()
+    if channel == "pipx":
+        return f'pipx install --force --python python3.12 "{spec}"'
+    if channel == "uv":
+        return f'uv tool install --force --python 3.12 "{spec}"'
+    return f'python3.12 -m pip install "{spec}"'
 
 
 def account_name(settings: BristlenoseSettings) -> str:

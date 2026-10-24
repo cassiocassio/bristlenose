@@ -547,11 +547,14 @@ def _print_provider_guidance() -> None:
         "For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]",
         highlight=False,
     )
-    console.print(
-        "For Mistral, OpenRouter and others:  "
-        "[bold cyan]bristlenose configure any-llm[/bold cyan]",
-        highlight=False,
-    )
+    from bristlenose.llm import anyllm
+
+    if not anyllm.packaged():  # the Snap and the RPM don't carry it
+        console.print(
+            "For Mistral, OpenRouter and others:  "
+            "[bold cyan]bristlenose configure any-llm[/bold cyan]",
+            highlight=False,
+        )
     console.print()
 
 
@@ -2851,14 +2854,17 @@ def use(
 
     if canonical == "anyllm":
         settings = load_settings()
-        _set_current_provider("anyllm")
-        if settings.anyllm_model:
-            console.print(f"Model: {settings.anyllm_model}", markup=False, highlight=False)
-        else:
+        if not settings.anyllm_model:
+            # Switching with no model would announce a provider the next run
+            # can't use. Name the model instead.
+            _say(MessageKind.ERROR, "any-llm needs a model first")
             console.print(
-                "Choose a model:  [bold]bristlenose configure any-llm[/bold]  "
+                "Choose one:  [bold]bristlenose configure any-llm[/bold]  "
                 "or  [bold]bristlenose use provider:model[/bold]"
             )
+            raise typer.Exit(1)
+        _set_current_provider("anyllm")
+        console.print(f"Model: {settings.anyllm_model}", markup=False, highlight=False)
         return
 
     if canonical == "local":
@@ -3068,12 +3074,12 @@ def _configure_anyllm(key: str | None) -> None:
     if ready.inner in anyllm.GATEWAYS:
         console.print(
             f"Transcripts will go to {where}, which passes them to the model's host. "
-            "Check their data policy for the model you picked.",
+            "Check the data policy of the host behind the model you picked.",
             style="dim", markup=False, highlight=False,
         )
     else:
         console.print(
-            f"Transcripts will go to {where}, through any-llm {anyllm.installed_version()}.",
+            f"Transcripts will go to {where}.",
             style="dim", markup=False, highlight=False,
         )
 
@@ -3502,7 +3508,7 @@ def _help_commands() -> None:
     console.print("  -p, --project NAME       Project name for the report header")
     console.print("  -b, --whisper-backend    auto | mlx | faster-whisper")
     console.print("  -w, --whisper-model      tiny | base | small | medium | large-v3 | large-v3-turbo")
-    console.print("  -l, --llm               claude | chatgpt | azure | gemini | local")
+    console.print("  -l, --llm               claude | chatgpt | azure | gemini | local | any-llm")
     console.print("  --redact-pii            Redact personally identifying information")
     console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Start afresh. The previous report is replaced once")
@@ -3527,11 +3533,11 @@ def _help_commands() -> None:
     console.print()
     console.print("[bold]bristlenose configure[/bold] <provider>")
     console.print("  Store an API key and make that provider current.")
-    console.print("  claude | chatgpt | gemini | azure | local | miro")
+    console.print("  claude | chatgpt | gemini | azure | local | any-llm | miro")
     console.print()
     console.print("[bold]bristlenose use[/bold] <provider>")
     console.print("  Switch the current analysis provider. Keys stay stored.")
-    console.print("  claude | chatgpt | gemini | azure | local")
+    console.print("  claude | chatgpt | gemini | azure | local | any-llm | provider:model")
     console.print()
     console.print("[bold]bristlenose doctor[/bold]")
     console.print("  Check dependencies, API keys, and system configuration.")
@@ -3557,9 +3563,10 @@ def _help_config() -> None:
     console.print("  BRISTLENOSE_GOOGLE_API_KEY       Gemini API key (from aistudio.google.com)")
     console.print()
     console.print("  [bold]LLM[/bold]")
-    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | gemini | local")
+    console.print("  BRISTLENOSE_LLM_PROVIDER         claude | chatgpt | azure | gemini | local | any-llm")
+    console.print("  BRISTLENOSE_ANYLLM_MODEL         any-llm's model, as provider:model", markup=False)
     console.print("  BRISTLENOSE_LLM_MODEL            Model name (default: the provider's recommended model)")
-    console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 8192)")
+    console.print("  BRISTLENOSE_LLM_MAX_TOKENS       Max response tokens (default: 64000)")
     console.print("  BRISTLENOSE_LLM_TEMPERATURE      Temperature (default: 0.1)")
     console.print("  BRISTLENOSE_LLM_CONCURRENCY      Parallel LLM calls (default: 3)")
     console.print()

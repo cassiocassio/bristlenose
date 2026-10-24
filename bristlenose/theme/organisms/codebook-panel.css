@@ -1002,11 +1002,13 @@
     display: flex;
     justify-content: flex-end;
 }
+/* No font-size: the label stays at .bn-btn's --bn-text-label like every other
+   button. This set --bn-text-caption, a step smaller than the codebook page's
+   own Install button beside it (24 Oct 2026). */
 .picker-card-toggle {
     min-width: 96px;
     justify-content: center;
     text-align: center;
-    font-size: var(--bn-text-caption);
 }
 .picker-card-toggle-uninstall:hover,
 .picker-card-toggle-uninstall:focus-visible {

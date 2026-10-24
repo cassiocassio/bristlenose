@@ -1832,8 +1832,14 @@ _As built, 15 Oct 2026: two of the three._ The rail (`.v2-nav-provenance`) and
 the page (`.pg-author`) carry it (`codebook-v2.css`). The browse card's
 `.picker-card-author` is still muted at normal weight, from v1's
 `codebook-panel.css`, with no v2 override for a person.
-**Open, for the owner:** is the muted author on the browse card intended, or a
-missed D19 site?
+~~**Open, for the owner:** is the muted author on the browse card intended, or a
+missed D19 site?~~ _Decided 24 Oct 2026 (owner): a missed site._ The card now
+draws a person's name at emphasis weight in body ink, and its title steps up to
+`--bn-weight-strong` so the two lines stay ranked; "Available by default" and
+"On by default" keep the D23 system treatment. The card's Install / Uninstall
+label also went back to `.bn-btn`'s `--bn-text-label` (a v1 rule had it at
+caption size). Chosen from `docs/mockups/codebook-browse-card-author.html`
+(option B).
 
 **This is not a new treatment — it is the one already in the codebase.** Three
 shipped rules render a person exactly this way:

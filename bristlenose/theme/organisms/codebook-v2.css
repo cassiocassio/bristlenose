@@ -418,7 +418,20 @@
     color: var(--bn-colour-muted);
 }
 
-/* A system fact does not borrow the author's weight (D23). */
+/* The card names a codebook the way the page and the sidebar do (D19): the
+   author at emphasis weight in body ink, and the title one clear step above it
+   at the page title's weight, since 490 over 490 reads as two equal lines.
+   v1's muted author in codebook-panel.css was the one site D19 missed. Chosen
+   from docs/mockups/codebook-browse-card-author.html, 24 Oct 2026. */
+.v2-card-grid .picker-card-title { font-weight: var(--bn-weight-strong); }
+.v2-card-grid .picker-card-author {
+    font-weight: var(--bn-weight-emphasis);
+    color: var(--bn-colour-text);
+}
+
+/* A system fact does not borrow the author's weight (D23). Same specificity as
+   the author rule above, and after it, so it wins. */
+.v2-card-grid .picker-card-author.prov-system,
 .picker-card-author.prov-system {
     font-weight: var(--bn-weight-normal);
     color: var(--bn-colour-muted);

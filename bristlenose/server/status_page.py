@@ -154,6 +154,11 @@ def page_for(
         return _OUTCOME_FOR_STATE[latest.state]
     if report is not None and policy == ReportPolicy.LAST_GOOD_REPORT:
         return None
+    if report is not None and latest.state == RunStateEnum.CANCELLED:
+        # A Stop leaves the earlier report as it was, so that report is what
+        # shows; the row says Stopped (owner, 24 Oct 2026,
+        # docs/mockups/detail-pane-states.html Q4: D4-B for cancelled runs only).
+        return None
     return _OUTCOME_FOR_STATE[latest.state]
 
 
@@ -196,6 +201,51 @@ def _format_cause(cause: Cause | None) -> str:
 
 def _build_details(cause: Cause | None) -> str | None:
     return _format_cause(cause) or None
+
+
+# Cause category → its sentence under `desktop.pipeline.failure`, the keys the
+# Mac's diagnostic popover reads (`PipelineFailureCategory.localeLeaf`), so the
+# page and the popover say one thing. `model_unavailable` is left out on
+# purpose: its sentence sends the researcher to Settings ▸ LLM Provider, a Mac
+# place, and the page also serves the CLI; it keeps the provider's own words.
+_FAILURE_LEAF: dict[str, str] = {
+    "auth": "auth",
+    "out_of_credit": "outOfCredit",
+    "network": "network",
+    "quota": "quota",
+    "api_request": "apiRequest",
+    "api_server": "apiServer",
+    "output_truncated": "outputTruncated",
+    "disk": "disk",
+    "whisper": "whisper",
+    "missing_dep": "missingDep",
+    "missing_input": "missingInput",
+    "missing_binary": "missingBinary",
+    "unknown": "unknown",
+}
+
+# The leaves whose sentence names the provider, as `PipelineFailureCategory.
+# namesProvider` lists them; the rest have no `{{provider}}`.
+_NAMES_PROVIDER = frozenset(
+    {"auth", "outOfCredit", "network", "quota", "apiRequest", "apiServer", "outputTruncated"}
+)
+
+
+def _failure_sentence(cause: Cause | None) -> str | None:
+    """The popover's sentence for a failed run's cause, or None for no match."""
+    if cause is None:
+        return None
+    leaf = _FAILURE_LEAF.get(cause.category.value)
+    if leaf is None:
+        return None
+    if leaf in _NAMES_PROVIDER:
+        from bristlenose.providers import PROVIDERS
+
+        spec = PROVIDERS.get(cause.provider or "")
+        if spec is None:
+            return t(f"desktop.pipeline.failure.{leaf}Generic")
+        return t(f"desktop.pipeline.failure.{leaf}", provider=spec.display_name)
+    return t(f"desktop.pipeline.failure.{leaf}")
 
 
 def _holds_interviews(project_dir: Path) -> bool:
@@ -304,10 +354,12 @@ def detect_status(
             outcome="in-progress",
         )
     if outcome == "stranded":
+        # The Mac pane adds why (the app quit, or the Mac lost power); the page
+        # can't know which, so it says what happened and stops.
         return StatusInfo(
             kind=MessageKind.WARNING,
             short=t("server.statusPage.strandedShort"),
-            long=t("server.statusPage.strandedLong"),
+            long=None,
             details=None,
             outcome="stranded",
         )
@@ -326,8 +378,12 @@ def detect_status(
             outcome="cancelled",
             footer=False,
         )
-    # failed
-    long_msg = cause.message if (cause and cause.message) else None
+    # failed — the row popover's sentence for the cause, the one vocabulary
+    # (docs/mockups/detail-pane-states.html §2.3); the provider's raw text stays
+    # behind Show details, in the forensic record.
+    long_msg = _failure_sentence(cause)
+    if long_msg is None and cause is not None and cause.message:
+        long_msg = cause.message
     if cause is not None and cause.exit_code is not None:
         # The record says "CLI exited with code N" in English, as a forensic
         # record does; the page says it in its own language. The CLI-exit

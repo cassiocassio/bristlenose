@@ -97,16 +97,62 @@ struct DetailPaneRunCoverTests {
         #expect(DetailPaneKind.runCover(pipelineState: .running, documentState: .loading) == nil)
     }
 
-    /// With no run pending, a failure's status page is the truth — leave it.
-    @Test func settledStatesLeaveThePage() {
-        #expect(DetailPaneKind.runCover(
-            pipelineState: .failed(.passthrough("x"), category: .network), documentState: failedPage) == nil)
+    /// With nothing known about the project, the page stays.
+    @Test func noStateLeavesThePage() {
         #expect(DetailPaneKind.runCover(pipelineState: nil, documentState: failedPage) == nil)
+        #expect(DetailPaneKind.runCover(pipelineState: .idle, documentState: .statusPage(.noRun)) == nil)
+    }
+
+    // MARK: - The Mac draws the failed and refused panes (owner, 24 Oct 2026, Q1)
+
+    /// A failure reads the row popover's sentence, not the page's raw cause.
+    @Test func aFailureIsCoveredWithThePopoversSentence() {
+        let message = FailureMessage.passthrough("x")
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(message, category: .network), documentState: failedPage)
+                == .failed(message: message, category: .network, summary: nil))
+    }
+
+    /// A refusal names its one door, not the page's "Not analysed yet."
+    @Test func aRunRefusedForAProviderIsCoveredAsNeedingOne() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(.keyed("desktop.pipeline.failure.providerNotSetUpGeneric"),
+                                   category: .providerNotSetUp),
+            documentState: .statusPage(.noRun)) == .needsProvider)
+    }
+
+    /// A stop the classifier filed as a failure is still the researcher's stop.
+    @Test func aUserSignalFailureReadsAsStopped() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(.passthrough("x"), category: .userSignal),
+            documentState: failedPage) == .stopped)
+    }
+
+    /// A failure over a report the serve still shows is left showing.
+    @Test func aFailureOverAReportIsNotCovered() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(.passthrough("x"), category: .auth), documentState: .spa) == nil)
+    }
+
+    /// The button follows the remedy (error-patterns-and-chrome-crash.html):
+    /// the door to the fix, Retry where trying again is the act, else none.
+    @Test func theRemedyDecidesTheButton() {
+        typealias R = DetailPaneKind.FailureRemedy
+        #expect(R.of(.auth) == .setUpProvider)
+        #expect(R.of(.modelUnavailable) == .setUpProvider)
+        #expect(R.of(.quota) == .retry)
+        #expect(R.of(.apiServer) == .retry)
+        #expect(R.of(.unknown) == .retry)
+        #expect(R.of(.apiRequest) == .retry)
+        #expect(R.of(.outOfCredit) == .none)
+        #expect(R.of(.network) == .none)
+        #expect(R.of(.unusableInput) == .none)
+        #expect(R.of(.outputTruncated) == .none)
     }
 
     // MARK: - A run that ended unfinished (owner, 24 Oct 2026)
 
-    /// The researcher pressed Stop: "Analysis stopped", words only.
+    /// The researcher pressed Stop: "Analysis stopped" and Resume Analysis.
     @Test func aStopIsCoveredAsStopped() {
         let page = DocumentState.statusPage(.cancelled)
         #expect(DetailPaneKind.runCover(pipelineState: .stopped(stagesComplete: []), documentState: page)
@@ -114,7 +160,7 @@ struct DetailPaneRunCoverTests {
     }
 
     /// The app left under the run — Quit, a crash — or the run lost its
-    /// process: "Analysis interrupted", with Analyse.
+    /// process: "The analysis stopped before it finished", Resume Analysis.
     @Test func aRunTheAppLeftIsCoveredAsInterrupted() {
         #expect(DetailPaneKind.runCover(
             pipelineState: .stopped(stagesComplete: [], interrupted: true),

@@ -94,19 +94,28 @@ enum DetailPaneKind: Equatable {
     /// legitimate. `.running` needs this too: with the shoal off (preference or
     /// Reduce Motion) it reaches the same stale page.
     ///
-    /// A run that ended without finishing is covered too (owner, 24 Oct 2026,
-    /// `docs/mockups/interrupted-run-pane.html`): the status page's words and
-    /// footer are for the unexpected, and the Mac knows more than the page.
-    /// One the app's leaving cut short — Quit, a crash, a lost process — reads
-    /// "Analysis interrupted" with Analyse; one the researcher stopped reads
-    /// "Analysis stopped" and nothing else.
+    /// A run that ended without finishing, or could not start, is covered too:
+    /// the Mac draws the failed, stopped, stranded and refused panes natively,
+    /// because it knows more than the page — why a run was refused, which
+    /// sentence the row's popover gives (owner, 24 Oct 2026,
+    /// `docs/mockups/detail-pane-states.html` Q1). A stop over an earlier
+    /// report reaches none of this: the serve shows that report (Q4).
     enum RunCover: Equatable {
         case queued(position: Int)
-        /// Its verb follows the run's progress, which the view observes:
-        /// "Resuming…" for a run picked up again (`RunProgressSubtitle.coverKey`).
+        /// Its line is the row's own (`RunProgressSubtitle.compose`), under the
+        /// row's ring.
         case analysing
+        /// The app's leaving cut the run short (Quit, a crash, a power cut), or
+        /// it lost its process.
         case interrupted
+        /// The researcher pressed Stop.
         case stopped
+        /// The run was refused for want of an AI provider.
+        case needsProvider
+        /// The run failed. `message` is the row popover's sentence, absent for
+        /// a run whose summary carries the breakdown instead.
+        case failed(message: FailureMessage?, category: PipelineFailureCategory,
+                    summary: PipelineSummary?)
     }
 
     static func runCover(pipelineState: PipelineState?, documentState: DocumentState) -> RunCover? {
@@ -116,7 +125,40 @@ enum DetailPaneKind: Equatable {
         case .running: return .analysing
         case .stopped(_, let interrupted): return interrupted ? .interrupted : .stopped
         case let state? where state.isStranded: return .interrupted
+        case let state? where state.needsProvider: return .needsProvider
+        // A stop the classifier filed as a failure is still the researcher's.
+        case .failed(_, .userSignal): return .stopped
+        case .failed(let message, let category):
+            return .failed(message: message, category: category, summary: nil)
+        case .failedWithDiagnostic(let summary):
+            return .failed(message: nil, category: .unknown, summary: summary)
         default: return nil
+        }
+    }
+
+    /// What a failed run's pane offers, by remedy
+    /// (`docs/mockups/error-patterns-and-chrome-crash.html`): the button that
+    /// goes to the fix where one exists, Retry where trying again is the act,
+    /// and nothing otherwise — a default must never invent a chore.
+    enum FailureRemedy: Equatable {
+        case setUpProvider
+        case retry
+        case none
+
+        static func of(_ category: PipelineFailureCategory) -> FailureRemedy {
+            switch category {
+            // Yours to fix, and the fix is in Settings ▸ LLM Provider.
+            case .auth, .modelUnavailable, .providerNotSetUp: return .setUpProvider
+            // Nothing wrong at your end (quota, api_server), or ours (unknown,
+            // api_request): trying again is the act.
+            case .quota, .apiServer, .unknown, .apiRequest: return .retry
+            // Yours to fix with no door here, a limit rather than a fault, or
+            // the researcher's own stop.
+            case .outOfCredit, .network, .disk, .whisper, .missingDep, .missingInput,
+                 .missingBinary, .outputExists, .outputTruncated, .unusableInput,
+                 .userSignal:
+                return .none
+            }
         }
     }
 }

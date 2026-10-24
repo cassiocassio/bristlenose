@@ -42,16 +42,6 @@ enum RunProgressSubtitle {
         return "desktop.chrome.pipeline.stage.\(stage)"
     }
 
-    /// The detail pane's cover over a stale status page while a run goes
-    /// (`DetailPaneKind.RunCover.analysing`): "Resuming…" for a run picked up
-    /// again until a stage reports, as the row's generic verb reads, and
-    /// "Analysing…" otherwise.
-    static func coverKey(stage: String?, resuming: Bool) -> String {
-        resuming && stageVerbKey(stage) == nil
-            ? "desktop.chrome.pipeline.resuming"
-            : "desktop.chrome.pipeline.analysing"
-    }
-
     /// Stages that carry no per-session fraction: theming/cluster (s10/s11),
     /// the Discussion stage (its per-session calls emit no count) and render
     /// (s12).

@@ -441,6 +441,11 @@ class TestProdServeReport:
         assert "Build incomplete" in resp.text or "bundle" in resp.text.lower()
         # Must NOT have served the static-rendered content
         assert "vanilla report" not in resp.text
+        # Drawn with the status-page template, and its stylesheet served
+        # (docs/mockups/detail-pane-states.html, W05).
+        assert 'class="bn-status-page"' in resp.text
+        css = client.get("/report/assets/bristlenose-theme.css")
+        assert css.status_code == 200 and ".bn-status" in css.text
 
 
 class TestProdServeTranscript:

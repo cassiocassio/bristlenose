@@ -995,33 +995,43 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
             _STATIC_DIR,
         )
 
+        # Drawn with the status-page template like every other page the serve
+        # shows in place of the report (docs/mockups/detail-pane-states.html,
+        # W05). English, because only a developer or a broken build sees it.
+        # The theme's stylesheet route is registered below, after this return,
+        # so this branch serves its own.
+        @app.get("/report/assets/bristlenose-theme.css")
+        def serve_bundle_error_css() -> Response:
+            from bristlenose.stages.s12_render.theme_assets import get_default_css
+
+            return Response(get_default_css(), media_type="text/css")
+
         @app.get("/report")
         @app.get("/report/{path:path}", response_model=None)
         def serve_bundle_error(path: str = "") -> Response:
-            html = (
-                "<!doctype html><html><head>"
-                "<meta charset=\"utf-8\"><title>Bristlenose — build incomplete</title>"
-                "<style>body{font-family:ui-sans-serif,system-ui,sans-serif;"
-                "max-width:640px;margin:4rem auto;padding:0 1rem;color:#ddd;"
-                "background:#1a1a1a;line-height:1.5}code{background:#333;"
-                "padding:.1em .3em;border-radius:.2em}h1{color:#fff}"
-                ".detail{color:#999;font-size:.9em;margin-top:2rem}</style>"
-                "</head><body>"
-                "<h1>Build incomplete</h1>"
-                "<p>The Bristlenose React bundle is missing from this build. "
-                "Serve mode refuses to start without it.</p>"
-                "<p>If you are running the desktop app, this build is broken — "
-                "reinstall or report a bug.</p>"
-                "<p>If you are a developer: run <code>npm run build</code> in "
-                "<code>frontend/</code> and restart <code>bristlenose serve</code>. "
-                "If running from the PyInstaller sidecar, check that "
-                "<code>bristlenose/server/static/</code> is in the spec's "
-                "<code>datas</code>.</p>"
-                "<p class=\"detail\">BUG-3 class — see the C3 smoke test "
-                "post-mortem for context.</p>"
-                "</body></html>"
+            from bristlenose.server.status_page import StatusInfo, render_page
+            from bristlenose.ui_kinds import MessageKind
+
+            status = StatusInfo(
+                kind=MessageKind.ERROR,
+                short="Build incomplete",
+                long=(
+                    "The Bristlenose React bundle is missing from this build. "
+                    "Serve mode refuses to start without it."
+                ),
+                details=(
+                    "If you are running the desktop app, this build is broken — "
+                    "reinstall or report a bug.\n"
+                    "If you are a developer: run npm run build in frontend/ and "
+                    "restart bristlenose serve. If running from the PyInstaller "
+                    "sidecar, check that bristlenose/server/static/ is in the "
+                    "spec's datas.\n"
+                    "BUG-3 class — see the C3 smoke test post-mortem for context."
+                ),
+                outcome="unknown",
+                footer=False,
             )
-            return HTMLResponse(html, status_code=500)
+            return HTMLResponse(render_page(status), status_code=500)
 
         return
 

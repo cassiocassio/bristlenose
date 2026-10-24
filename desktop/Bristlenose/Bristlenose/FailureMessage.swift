@@ -125,7 +125,7 @@ extension FailureMessage {
     /// prefix and asserts each group equals its `en` block, so the copy cannot
     /// drift silently — and a new prefix is enrolled by adding it there.
     static let englishSentences: [String: String] = [
-        "desktop.pipeline.failure.stranded": "Analysis stopped unexpectedly.",
+        "desktop.pipeline.failure.stranded": "The analysis stopped before it finished.",
         "desktop.pipeline.failure.launchFailed": "Couldn't start the analysis. {{reason}}",
         "desktop.pipeline.failure.cliExited": "CLI exited with code {{code}}",
         "desktop.pipeline.failure.auth": "Your {{provider}} key was rejected.",

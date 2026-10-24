@@ -2,51 +2,155 @@ import SwiftUI
 
 /// The native pane over a stale status page (`DetailPaneKind.runCover`). The
 /// stock `ContentUnavailableView`, as the other detail panes draw it, and the
-/// row's own strings where the row has one, so the row and the pane say the
-/// same thing.
+/// row's own strings where the row has one, so the row and the pane state the
+/// same fact (`docs/mockups/detail-pane-states.html`, owner, 24 Oct 2026).
 ///
-/// Its own view because the "Analysing…"/"Resuming…" verb follows the run's
-/// per-second progress, which `ContentView` deliberately does not observe.
+/// Its own view because the analysing line follows the run's per-second
+/// progress, which `ContentView` deliberately does not observe.
 ///
-/// An outcome the researcher chose gets its words and nothing else: "Analysis
-/// stopped" after Stop. One they didn't, the app leaving under the run, gets
-/// "Analysis interrupted" and the Analyse that carries on (owner, 24 Oct 2026,
-/// `docs/mockups/interrupted-run-pane.html`).
+/// A stop gets its words and the way on: "Analysis stopped" and Resume
+/// Analysis. A run the app's leaving cut short says so in one line. A failure
+/// gets the row popover's sentence, the button its remedy allows, and Show
+/// details for the forensic record.
 struct RunCoverPane: View {
     let cover: DetailPaneKind.RunCover
-    let projectID: UUID
+    let project: Project
     @ObservedObject var liveData: PipelineLiveData
     let onAnalyse: () -> Void
     @EnvironmentObject private var i18n: I18n
+    @State private var detailsExpanded = false
 
     var body: some View {
         switch cover {
         case .queued(let position):
             ContentUnavailableView(
                 i18n.t("desktop.chrome.pipeline.queuedPosition", ["position": String(position)]),
-                systemImage: "clock"
+                systemImage: "clock",
+                description: Text(i18n.t("desktop.chrome.pipeline.queuedHint"))
             )
         case .analysing:
-            let progress = liveData.progress[projectID]
-            ContentUnavailableView(
-                i18n.t(RunProgressSubtitle.coverKey(
-                    stage: progress?.stage, resuming: progress?.readsAsResuming ?? false
-                )),
-                systemImage: "waveform"
-            )
+            analysing
         case .interrupted:
             ContentUnavailableView {
-                Label(i18n.t("desktop.chrome.analysisInterrupted"), systemImage: "stop.circle")
+                Label(i18n.t("desktop.chrome.analysisInterrupted"),
+                      systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(i18n.t("desktop.chrome.analysisInterruptedHint"))
+            } actions: {
+                Button(i18n.t("desktop.chrome.resumeAnalysis"), action: onAnalyse)
+            }
+        case .stopped:
+            ContentUnavailableView {
+                Label(i18n.t("desktop.chrome.analysisStopped"), systemImage: "stop.circle")
             } description: {
                 EmptyView()
             } actions: {
-                Button(i18n.t("desktop.menu.project.analyse"), action: onAnalyse)
+                Button(i18n.t("desktop.chrome.resumeAnalysis"), action: onAnalyse)
             }
-        case .stopped:
-            ContentUnavailableView(
-                i18n.t("desktop.chrome.analysisStopped"),
-                systemImage: "stop.circle"
+        case .needsProvider:
+            ContentUnavailableView {
+                Label(i18n.t("desktop.chrome.providerNeeded"), systemImage: "key")
+            } description: {
+                Text(i18n.t("desktop.chrome.providerNeededHint"))
+            } actions: {
+                setUpProviderButton
+            }
+        case .failed(let message, let category, let summary):
+            failed(message: message, category: category, summary: summary)
+        }
+    }
+
+    /// The row's ring in the icon slot and the row's own line as the headline,
+    /// so the pane and the row cannot disagree.
+    private var analysing: some View {
+        let p = liveData.progress[project.id]
+        let line = RunProgressSubtitle.compose(
+            stage: p?.stage,
+            sessionsComplete: p?.sessionsComplete,
+            sessionsTotal: p?.sessionsTotal,
+            etaRemainingSeconds: p?.etaRemainingSeconds,
+            resuming: p?.readsAsResuming ?? false,
+            sessionsReadable: p?.sessionsReadable,
+            separator: " · ",
+            localize: { i18n.t($0, $1) },
+            pluralize: { i18n.plural($0, count: $1) }
+        )
+        return ContentUnavailableView {
+            Label {
+                Text(line)
+            } icon: {
+                if let fraction = p?.ringFraction {
+                    ProgressView(value: fraction)
+                        .progressViewStyle(.circular)
+                        .controlSize(.large)
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                }
+            }
+        } description: {
+            Text(i18n.t("desktop.chrome.pipeline.analysingHint"))
+        }
+    }
+
+    private var setUpProviderButton: some View {
+        Button(i18n.t("desktop.pipeline.diagnostic.action.setUpProvider")) {
+            SettingsWindow.shared.show(pane: .llm)
+        }
+    }
+
+    private func failed(
+        message: FailureMessage?, category: PipelineFailureCategory, summary: PipelineSummary?
+    ) -> some View {
+        ContentUnavailableView {
+            Label(i18n.t("desktop.chrome.failedTitle"), systemImage: "exclamationmark.triangle")
+        } description: {
+            if let sentence = message?.resolved(i18n), !sentence.isEmpty {
+                Text(sentence).lineLimit(3)
+            }
+        } actions: {
+            HStack(spacing: 12) {
+                switch DetailPaneKind.FailureRemedy.of(category) {
+                case .setUpProvider: setUpProviderButton
+                case .retry: Button(i18n.t("desktop.boot.retry"), action: onAnalyse)
+                case .none: EmptyView()
+                }
+                Button(i18n.t(detailsExpanded
+                              ? "desktop.boot.hideDetails"
+                              : "desktop.boot.showDetails")) {
+                    detailsExpanded.toggle()
+                }
+            }
+            if detailsExpanded {
+                ScrollView {
+                    Text(forensicRecord(message: message, category: category, summary: summary))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                        .padding(8)
+                }
+                .frame(maxWidth: 480, maxHeight: 140)
+                .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+        }
+    }
+
+    /// The row popover's Copy details text: English, as forensic records are.
+    private func forensicRecord(
+        message: FailureMessage?, category: PipelineFailureCategory, summary: PipelineSummary?
+    ) -> String {
+        if let summary {
+            return ProjectDiagnosticPopover.formatDiagnosticPlaintext(
+                summary: summary, projectName: project.name,
+                projectPath: project.path, abandoned: true
             )
         }
+        return ProjectDiagnosticPopover.formatDiagnosticPlaintextDegraded(
+            cause: message?.english ?? "", category: category, projectName: project.name,
+            projectPath: project.path,
+            stdoutTail: Array((liveData.outputLines[project.id] ?? []).suffix(20))
+        )
     }
 }

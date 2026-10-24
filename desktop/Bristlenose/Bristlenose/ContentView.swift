@@ -3859,8 +3859,8 @@ struct ContentView: View {
 
                         // A status page describes the LAST run; once a new one
                         // is queued or under way it is stale, and one that
-                        // ended unfinished the Mac says better. See
-                        // `DetailPaneKind.runCover`.
+                        // ended unfinished, failed or was refused the Mac says
+                        // better. See `DetailPaneKind.runCover`.
                         if let cover = DetailPaneKind.runCover(
                             pipelineState: pipelineRunner.state[project.id],
                             documentState: bridgeHandler.documentState
@@ -3869,7 +3869,7 @@ struct ContentView: View {
                                 Color(nsColor: .windowBackgroundColor)
                                 RunCoverPane(
                                     cover: cover,
-                                    projectID: project.id,
+                                    project: project,
                                     liveData: pipelineRunner.liveData,
                                     onAnalyse: { pipelineRunner.start(project: project) }
                                 )

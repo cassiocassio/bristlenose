@@ -107,7 +107,7 @@ def test_failure_while_serve_is_up_reaches_the_page(tmp_path: Path, fast_watcher
         _failed(out, "B")
         assert _wait(lambda: (_latest(client) or {}).get("state") == "failed")
         page = client.get("/report/").text
-        assert "Last run failed." in page
+        assert "The analysis didn’t finish" in page
         assert "no credit" in page
         # /last-run is the data version: still the report that is on disk.
         assert client.get("/api/projects/1/last-run").json()["run_id"] == "A"
@@ -154,7 +154,7 @@ def test_serve_started_before_first_run_follows_the_output(
     with patch("bristlenose.server.importer.import_project", side_effect=real_import):
         app = _app(interviews, tmp_path)
         with AuthTestClient(app) as client:
-            assert "Nothing to see here" in client.get("/report/").text
+            assert "This folder hasn’t been analysed yet" in client.get("/report/").text
             out = interviews / "bristlenose-output"
             _started(out, "A")
             _completed(out, "A")
@@ -237,7 +237,7 @@ def test_owner_dying_without_a_terminus_is_noticed(tmp_path: Path, fast_watcher)
         assert "Analysing" in client.get("/report/").text
         _pid_file(out, "A", alive=False)  # the process is gone; the log is unchanged
         assert _latest(client)["state"] == "stranded"
-        assert "stopped unexpectedly" in client.get("/report/").text
+        assert "stopped before it finished" in client.get("/report/").text
 
 
 def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> None:

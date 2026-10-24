@@ -246,7 +246,8 @@ enum PipelineState: Equatable {
     /// `stagesComplete` derived from the manifest at display time.
     /// `interrupted` when the researcher did not ask for it: the app quit or
     /// went away under the run (`EventLogReader.endedByLeaving`). The detail
-    /// pane says "Analysis interrupted" with Analyse, not "Analysis stopped".
+    /// pane says "The analysis stopped before it finished" and why, not
+    /// "Analysis stopped" (`DetailPaneKind.RunCover.interrupted`).
     case stopped(stagesComplete: [String], interrupted: Bool = false)
     /// `run_completed` terminus AND ≥1 session failed in some stage. A
     /// report was written but at reduced fidelity. Pill + popover surface
@@ -2245,7 +2246,7 @@ final class PipelineRunner: ObservableObject {
     /// from the cache, even with the pipe closing a moment later (measured
     /// with SIGINT against the real CLI, mid-transcription included; Python's
     /// handler takes SIGTERM the same way). Quit sends SIGTERM since 24 Oct
-    /// 2026 (`quitSignal`), so the record reads "Analysis interrupted".
+    /// 2026 (`quitSignal`), so the record reads as interrupted.
     ///
     /// No escalation: the app is gone before a timer could fire, and a run
     /// wedged in a C call takes the signal when the call returns. The queue,
@@ -2258,7 +2259,7 @@ final class PipelineRunner: ObservableObject {
         // Each run's group, as Stop does, so a run's own children hear it too.
         // SIGTERM, not Stop's SIGINT: the run records the first signal it took
         // (`run_cancelled`'s `cause.signal_name`), and that is how the next
-        // launch tells "Analysis interrupted" from "Analysis stopped"
+        // launch tells an interrupted run from a stopped one
         // (`EventLogReader.endedByLeaving`). Python handles the two alike.
         for pid in targets {
             let target = signalTarget(pid)

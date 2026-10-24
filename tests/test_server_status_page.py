@@ -127,7 +127,7 @@ class TestDetectStatus:
         info = detect_status(tmp_path, _cond(tmp_path), platform="")
         assert info is not None
         assert info.kind == MessageKind.INFO
-        assert "Nothing to see here" in info.short
+        assert info.short == "This folder hasn’t been analysed yet"
         assert info.long is not None
         assert info.long.startswith("$ bristlenose run")
         assert info.long_is_mono
@@ -285,9 +285,12 @@ class TestDetectStatus:
         info = detect_status(out, _cond(out))
         assert info is not None
         assert info.kind == MessageKind.ERROR
-        assert info.short == "Last run failed."
-        assert info.long == "Quota exceeded — top up the account"
+        assert info.short == "The analysis didn’t finish"
+        # The row popover's sentence for the cause, naming the provider; the
+        # provider's own words go behind Show details, in the record.
+        assert info.long == "Claude is unavailable. Try again shortly."
         assert info.details is not None
+        assert "Quota exceeded — top up the account" in info.details
         assert "category: api_server" in info.details
         assert "code: 503" in info.details
         assert info.outcome == "failed"
@@ -476,6 +479,60 @@ class TestDetectStatus:
         _seed_failed(tmp_path)
         info = detect_status(tmp_path, _cond(tmp_path), policy=policy)
         assert (info.outcome if info else None) == expect
+
+    # -- docs/mockups/detail-pane-states.html (owner, 24 Oct 2026) -----------
+
+    @pytest.mark.parametrize("policy", list(ReportPolicy))
+    def test_a_stop_over_a_report_shows_the_report(
+        self, tmp_path: Path, policy: ReportPolicy,
+    ) -> None:
+        """Q4: a Stop leaves the earlier report as it was, so that report is
+        what shows, whatever the failed-run policy (D4-B, cancelled only)."""
+        _completed(tmp_path, "A")
+        _seed_cancelled(tmp_path)
+        assert detect_status(tmp_path, _cond(tmp_path), policy=policy) is None
+
+    def test_a_stop_with_no_report_still_says_so(self, tmp_path: Path) -> None:
+        _seed_cancelled(tmp_path)
+        info = detect_status(tmp_path, _cond(tmp_path))
+        assert info is not None and info.outcome == "cancelled"
+
+    def test_a_stranded_run_says_what_happened_and_stops(self, tmp_path: Path) -> None:
+        """The page can't know why the run lost its process; the Mac pane says."""
+        _started(tmp_path, "A")
+        info = detect_status(tmp_path, _cond(tmp_path, alive=False))
+        assert info is not None and info.outcome == "stranded"
+        assert info.short == "The analysis stopped before it finished"
+        assert info.long is None
+
+    def _failed_with(self, out: Path, category: CauseCategoryEnum, provider: str | None,
+                     message: str = "raw provider text") -> StatusInfo:
+        append_event(events_path(out), RunFailedEvent(
+            ts="t", run_id=new_run_id(), kind=KindEnum.RUN, started_at="t", ended_at="t",
+            cause=Cause(category=category, provider=provider, message=message),
+        ))
+        info = detect_status(out, _cond(out))
+        assert info is not None and info.outcome == "failed"
+        return info
+
+    def test_a_failure_reads_the_popovers_sentence(self, tmp_path: Path) -> None:
+        """One vocabulary: the page and the row's popover read the same key."""
+        info = self._failed_with(tmp_path, CauseCategoryEnum.AUTH, "anthropic")
+        assert info.long == "Your Claude key was rejected."
+        assert info.details is not None and "raw provider text" in info.details
+
+    def test_an_unknown_provider_gets_the_generic_sentence(self, tmp_path: Path) -> None:
+        info = self._failed_with(tmp_path, CauseCategoryEnum.NETWORK, None)
+        assert info.long == "Couldn't reach the AI provider. Check your connection."
+
+    def test_a_cause_with_no_page_sentence_keeps_the_providers_words(
+        self, tmp_path: Path,
+    ) -> None:
+        """model_unavailable's sentence sends the researcher to a Mac Settings
+        pane, which the CLI's browser doesn't have."""
+        info = self._failed_with(tmp_path, CauseCategoryEnum.MODEL_UNAVAILABLE, "openai",
+                                 message="model gpt-x not found")
+        assert info.long == "model gpt-x not found"
 
 
 # ---------------------------------------------------------------------------
@@ -1060,7 +1117,7 @@ class TestProdIntercept:
         client, _ = prod_app_factory()
         resp = client.get("/report/")
         assert resp.status_code == 200
-        assert "Nothing to see here" in resp.text
+        assert "This folder hasn’t been analysed yet" in resp.text
         # SPA root must NOT mount
         assert 'id="bn-app-root"' not in resp.text
 
@@ -1085,7 +1142,7 @@ class TestProdIntercept:
         client, _ = prod_app_factory()
         resp = client.get("/report/")
         assert resp.status_code == 200
-        assert "Last run failed" in resp.text
+        assert "The analysis didn’t finish" in resp.text
         assert "Provider 503 mid-stage" in resp.text
         assert 'id="bn-app-root"' not in resp.text
         # Document identity rides the intercept end to end.
@@ -1144,7 +1201,7 @@ class TestProdIntercept:
         for path in ["/report/quotes", "/report/sessions/s1"]:
             resp = client.get(path)
             assert resp.status_code == 200
-            assert "Nothing to see here" in resp.text
+            assert "This folder hasn’t been analysed yet" in resp.text
 
     def test_desktop_platform_text(
         self,
@@ -1209,5 +1266,5 @@ class TestSmokeFixtureMountsSPA:
             "tests/fixtures/smoke-test/input/bristlenose-output/.bristlenose/"
             "pipeline-events.jsonl contains a RunCompletedEvent for project 1."
         )
-        assert "Nothing to see here" not in resp.text
+        assert "This folder hasn’t been analysed yet" not in resp.text
         assert "bn-status-page" not in resp.text

@@ -69,7 +69,7 @@ class TestTranslation:
 
     def test_nested_key(self):
         result = t("server.statusPage.noRunCliShort")
-        assert result == "Nothing to see here, yet."
+        assert result == "This folder hasn’t been analysed yet"
 
     def test_missing_key_returns_raw_key(self):
         result = t("server.nonexistent.key")

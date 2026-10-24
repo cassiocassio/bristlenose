@@ -17,13 +17,9 @@ from bristlenose import cli
 
 
 @pytest.fixture()
-def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    home = tmp_path / "home"
-    home.mkdir()
-    (home / "interview.mp3").write_bytes(b"\x00")
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
-    return home
+def home(fake_home: Path) -> Path:
+    (fake_home / "interview.mp3").write_bytes(b"\x00")
+    return fake_home
 
 
 @pytest.mark.parametrize("command", ["run", "transcribe"])

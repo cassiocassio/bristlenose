@@ -163,8 +163,7 @@ def test_rates_kept_from_earlier_builds_earn_the_estimate_at_once(tmp_path: Path
     assert second.eta_seconds() == pytest.approx((8 + 212 + 1) * 0.4)
 
 
-def test_no_folder_means_nothing_is_read_or_written(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HOME", str(tmp_path))
+def test_no_folder_means_nothing_is_read_or_written(tmp_path: Path, fake_home: Path) -> None:
     p = BoardProgress("quotes")
     p.plan({"bulk": 5})
     p.enter("quotes", 5)

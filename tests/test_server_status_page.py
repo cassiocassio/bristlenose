@@ -244,16 +244,14 @@ class TestDetectStatus:
         assert info.short == "Not analysed yet."
 
     def test_never_run_page_on_a_folder_run_refuses_neither_walks_nor_fails(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, fake_home: Path
     ) -> None:
         """`run` refuses the home folder before walking it; so does the page."""
-        project = tmp_path / "home"
+        project = fake_home
         out = project / "bristlenose-output"
-        out.mkdir(parents=True)
+        out.mkdir()
         (project / "p1").mkdir()
         (project / "p1" / "a.mp4").write_bytes(b"\x00")
-        monkeypatch.setenv("HOME", str(project))
-        monkeypatch.setenv("USERPROFILE", str(project))  # Path.home() on Windows
         info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
         assert info is not None
         # Says why, as `run` does: "No interviews… Drop a folder…" sent the
@@ -263,14 +261,12 @@ class TestDetectStatus:
         assert info.kind is MessageKind.WARNING
 
     def test_never_run_page_names_a_refused_folder_outside_the_app_too(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, fake_home: Path
     ) -> None:
         """`serve ~` in a browser: not "$ bristlenose run interviews/" (#110)."""
-        project = tmp_path / "home"
+        project = fake_home
         out = project / "bristlenose-output"
-        out.mkdir(parents=True)
-        monkeypatch.setenv("HOME", str(project))
-        monkeypatch.setenv("USERPROFILE", str(project))  # Path.home() on Windows
+        out.mkdir()
         info = detect_status(out, _cond(out), platform="", project_dir=project)
         assert info is not None
         assert info.short == t("desktop.chrome.unsuitableFolder")

@@ -1171,6 +1171,149 @@ struct ContentView: View {
     }
 
     var body: some View {
+        observedSplitView
+        .sheet(isPresented: $showingMiroSheet) {
+            if let port = serveManager?.runningPort {
+                MiroSheet(
+                    port: port,
+                    token: serveManager?.authToken,
+                    projectName: selectedProject?.name ?? "",
+                    i18n: i18n,
+                    screens: bridgeHandler.activeTab == .screens
+                )
+            }
+        }
+        // Send to FigJam (native) — a board file for the plugin; needs a live
+        // serve like the Miro sheet. Parked: `BristlenoseFlags.figjamExport`.
+        .sheet(isPresented: $showingFigJamSheet) {
+            if let port = serveManager?.runningPort {
+                FigJamSheet(
+                    port: port,
+                    token: serveManager?.authToken,
+                    projectName: selectedProject?.name ?? "",
+                    i18n: i18n
+                )
+            }
+        }
+        // Send Feedback (native). Present in EVERY state: with a live serve the
+        // sheet reads its config from `/api/health`; with no serve (the welcome
+        // screen, before any project is selected) it falls back to the serve-free
+        // `.serverless` config (canonical endpoint, enabled — same path the alpha
+        // expiry flow uses), so the menu item is never a dead click.
+        //
+        // Five doors, each opening ONE sheet (R82): Help ▸ Send Feedback with
+        // this window in front (`perform(.showFeedback)`), the sidebar ladybug,
+        // the boot pane's Send Feedback… after a failed retry, this window's
+        // page asking, and the menu's no-project-window fallback,
+        // the only broadcast, which one window takes by claiming
+        // `FeedbackFallback`. The last two are `FeedbackDoors`. The boot pane's
+        // door, and the page's when the report's crash pane asks, open it as a
+        // problem report (`FeedbackSheetMode`); the others open feedback.
+        .modifier(FeedbackDoors(
+            isShowing: $showingFeedbackSheet,
+            mode: $feedbackSheetMode,
+            feedbackRequests: bridgeHandler.feedbackRequests,
+            requestedMode: bridgeHandler.requestedFeedbackMode
+        ))
+        .sheet(isPresented: $showingFeedbackSheet, onDismiss: resetFeedbackSheetMode) {
+            // One view whatever the serve does while it is up: see
+            // `FeedbackSheet.init(port:)`.
+            FeedbackSheet(port: serveManager?.runningPort, i18n: i18n, mode: feedbackSheetMode, onToast: { toast.show($0) })
+        }
+        // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
+        // `columnVisibility` binding as a scene focused value and let the menu
+        // drive it directly. Replaces a `.toggleProjectsSidebar` broadcast that
+        // every open window received (so two windows toggled in lockstep) plus a
+        // mirror into the app-global `bridgeHandler.sidebarVisible` that the menu
+        // label read (so the label could describe a different window). The
+        // binding is the single source of truth the auto toolbar button already
+        // drives. See `SidebarVisibilityFocus.swift`.
+        .focusedSceneValue(\.sidebarVisibility, $columnVisibility)
+        // Undo restored a removal batch — re-apply the prior selection.
+        .onReceive(NotificationCenter.default.publisher(for: .undoableRemovalRestoredSelection)) { note in
+            if let restored = note.userInfo?["selection"] as? Set<SidebarSelection> {
+                selection = restored
+            }
+        }
+        .sheet(isPresented: $showingAIConsent) {
+            AIConsentView(
+                isReviewMode: aiConsentReviewMode,
+                onDismiss: { showingAIConsent = false }
+            )
+            .environmentObject(i18n)
+            .environmentObject(ollamaDownload)
+            .interactiveDismissDisabled(!aiConsentReviewMode)
+        }
+        .modifier(CopyDropPresentation(
+            newFilesSheet: $newFilesSheet,
+            copyDiskSpaceAlert: $copyDiskSpaceAlert,
+            i18n: i18n,
+            diskSpaceMessage: diskSpaceMessage(for:),
+            analyseAction: analyseActionForSheet(_:)
+        ))
+        .modifier(ProjectListSetAsideAlert(projectIndex: projectIndex, i18n: i18n))
+        .sheet(item: $reAnalyseConfirm) { pending in
+            ReAnalyseConfirmSheet(
+                projectName: pending.project.name,
+                sessionCount: pending.sessionCount,
+                counts: pending.counts,
+                onCancel: { reAnalyseConfirm = nil },
+                onConfirm: {
+                    let project = pending.project
+                    reAnalyseConfirm = nil
+                    pipelineRunner.start(project: project, clean: true)
+                }
+            )
+            .environmentObject(i18n)
+        }
+        .sheet(item: $spotlightConfirm) { state in
+            SpotlightConfirmSheet(
+                project: state.project,
+                candidate: state.candidate,
+                onChoose: { choice in
+                    state.resume(choice)
+                    spotlightConfirm = nil
+                }
+            )
+            .environmentObject(i18n)
+        }
+        .alert(
+            i18n.t("desktop.chrome.locateError.title"),
+            isPresented: Binding(
+                get: { locateError != nil },
+                set: { if !$0 { locateError = nil } }
+            ),
+            presenting: locateError
+        ) { err in
+            Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) {
+                let project = err.project
+                locateError = nil
+                // Re-enter the flow at the NSOpenPanel step. Skip Spotlight
+                // since the user has already rejected its suggestion (if any).
+                Task { @MainActor in
+                    chooseDifferentFolder(for: project)
+                }
+            }
+            .keyboardShortcut(.defaultAction)
+            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
+        } message: { err in
+            // One honest message for a folder that is not an analysed project
+            // — the prior split (noOutputFolder / wrongFolder) leaned on a
+            // heuristic that misclassified researchers who keep recordings in
+            // subdirs. A second, exact one for an analysed folder whose study
+            // marker names another study: no heuristic, the ids disagree.
+            Text(i18n.t(err.differentStudy
+                ? "desktop.chrome.locateError.differentStudy"
+                : "desktop.chrome.locateError.message"))
+        }
+    }
+
+    /// The split view with this window's overlay, focused scene values and
+    /// observers; `body` adds the sheets and alerts. Two expressions rather
+    /// than one because the whole chain passed the type-checker's budget under
+    /// Xcode 26.3 ("unable to type-check this expression in reasonable time",
+    /// mac-build on macos-15, 24 Oct 2026). The view tree is the same.
+    private var observedSplitView: some View {
         splitViewCore
         .overlay { ToastOverlay().environmentObject(toast) }
         // Every window-scoped menu command arrives through here, routed to
@@ -1311,140 +1454,6 @@ struct ContentView: View {
         // covers a window that was already up. Both drain the same one-shot.
         .onAppear { consumePendingSelection() }
         .onChange(of: projectIndex.pendingSelection) { _, _ in consumePendingSelection() }
-        .sheet(isPresented: $showingMiroSheet) {
-            if let port = serveManager?.runningPort {
-                MiroSheet(
-                    port: port,
-                    token: serveManager?.authToken,
-                    projectName: selectedProject?.name ?? "",
-                    i18n: i18n,
-                    screens: bridgeHandler.activeTab == .screens
-                )
-            }
-        }
-        // Send to FigJam (native) — a board file for the plugin; needs a live
-        // serve like the Miro sheet. Parked: `BristlenoseFlags.figjamExport`.
-        .sheet(isPresented: $showingFigJamSheet) {
-            if let port = serveManager?.runningPort {
-                FigJamSheet(
-                    port: port,
-                    token: serveManager?.authToken,
-                    projectName: selectedProject?.name ?? "",
-                    i18n: i18n
-                )
-            }
-        }
-        // Send Feedback (native). Present in EVERY state: with a live serve the
-        // sheet reads its config from `/api/health`; with no serve (the welcome
-        // screen, before any project is selected) it falls back to the serve-free
-        // `.serverless` config (canonical endpoint, enabled — same path the alpha
-        // expiry flow uses), so the menu item is never a dead click.
-        //
-        // Five doors, each opening ONE sheet (R82): Help ▸ Send Feedback with
-        // this window in front (`perform(.showFeedback)`), the sidebar ladybug,
-        // the boot pane's Send Feedback… after a failed retry, this window's
-        // page asking, and the menu's no-project-window fallback,
-        // the only broadcast, which one window takes by claiming
-        // `FeedbackFallback`. The last two are `FeedbackDoors`. The boot pane's
-        // door, and the page's when the report's crash pane asks, open it as a
-        // problem report (`FeedbackSheetMode`); the others open feedback.
-        .modifier(FeedbackDoors(
-            isShowing: $showingFeedbackSheet,
-            mode: $feedbackSheetMode,
-            feedbackRequests: bridgeHandler.feedbackRequests,
-            requestedMode: bridgeHandler.requestedFeedbackMode
-        ))
-        .sheet(isPresented: $showingFeedbackSheet, onDismiss: resetFeedbackSheetMode) {
-            // One view whatever the serve does while it is up: see
-            // `FeedbackSheet.init(port:)`.
-            FeedbackSheet(port: serveManager?.runningPort, i18n: i18n, mode: feedbackSheetMode, onToast: { toast.show($0) })
-        }
-        // View ▸ Hide/Show Projects (⌘⌥S) acts on THIS window: publish our
-        // `columnVisibility` binding as a scene focused value and let the menu
-        // drive it directly. Replaces a `.toggleProjectsSidebar` broadcast that
-        // every open window received (so two windows toggled in lockstep) plus a
-        // mirror into the app-global `bridgeHandler.sidebarVisible` that the menu
-        // label read (so the label could describe a different window). The
-        // binding is the single source of truth the auto toolbar button already
-        // drives. See `SidebarVisibilityFocus.swift`.
-        .focusedSceneValue(\.sidebarVisibility, $columnVisibility)
-        // Undo restored a removal batch — re-apply the prior selection.
-        .onReceive(NotificationCenter.default.publisher(for: .undoableRemovalRestoredSelection)) { note in
-            if let restored = note.userInfo?["selection"] as? Set<SidebarSelection> {
-                selection = restored
-            }
-        }
-        .sheet(isPresented: $showingAIConsent) {
-            AIConsentView(
-                isReviewMode: aiConsentReviewMode,
-                onDismiss: { showingAIConsent = false }
-            )
-            .environmentObject(i18n)
-            .environmentObject(ollamaDownload)
-            .interactiveDismissDisabled(!aiConsentReviewMode)
-        }
-        .modifier(CopyDropPresentation(
-            newFilesSheet: $newFilesSheet,
-            copyDiskSpaceAlert: $copyDiskSpaceAlert,
-            i18n: i18n,
-            diskSpaceMessage: diskSpaceMessage(for:),
-            analyseAction: analyseActionForSheet(_:)
-        ))
-        .modifier(ProjectListSetAsideAlert(projectIndex: projectIndex, i18n: i18n))
-        .sheet(item: $reAnalyseConfirm) { pending in
-            ReAnalyseConfirmSheet(
-                projectName: pending.project.name,
-                sessionCount: pending.sessionCount,
-                counts: pending.counts,
-                onCancel: { reAnalyseConfirm = nil },
-                onConfirm: {
-                    let project = pending.project
-                    reAnalyseConfirm = nil
-                    pipelineRunner.start(project: project, clean: true)
-                }
-            )
-            .environmentObject(i18n)
-        }
-        .sheet(item: $spotlightConfirm) { state in
-            SpotlightConfirmSheet(
-                project: state.project,
-                candidate: state.candidate,
-                onChoose: { choice in
-                    state.resume(choice)
-                    spotlightConfirm = nil
-                }
-            )
-            .environmentObject(i18n)
-        }
-        .alert(
-            i18n.t("desktop.chrome.locateError.title"),
-            isPresented: Binding(
-                get: { locateError != nil },
-                set: { if !$0 { locateError = nil } }
-            ),
-            presenting: locateError
-        ) { err in
-            Button(i18n.t("desktop.chrome.spotlight.chooseDifferent")) {
-                let project = err.project
-                locateError = nil
-                // Re-enter the flow at the NSOpenPanel step. Skip Spotlight
-                // since the user has already rejected its suggestion (if any).
-                Task { @MainActor in
-                    chooseDifferentFolder(for: project)
-                }
-            }
-            .keyboardShortcut(.defaultAction)
-            Button(i18n.t("common.buttons.cancel"), role: .cancel) {}
-        } message: { err in
-            // One honest message for a folder that is not an analysed project
-            // — the prior split (noOutputFolder / wrongFolder) leaned on a
-            // heuristic that misclassified researchers who keep recordings in
-            // subdirs. A second, exact one for an analysed folder whose study
-            // marker names another study: no heuristic, the ids disagree.
-            Text(i18n.t(err.differentStudy
-                ? "desktop.chrome.locateError.differentStudy"
-                : "desktop.chrome.locateError.message"))
-        }
     }
 
     /// Re-enter the Locate flow at the NSOpenPanel step (skips Spotlight,

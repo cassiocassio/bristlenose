@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript edits: what they set moving</title>
+<!--
+  Quick/loose mockup (bn-mockup skill), 24 Oct 2026. Planning aid for
+  docs/design-transcript-editing.md "Where this stands". Not a UX proposal for
+  HOW an edit is made: the left two columns only show the words before and
+  after. The point is column three — what each kind of edit reaches downstream.
+  Every verdict cites the file that decides it (traced at HEAD 24 Oct 2026).
+  Counts in the study-wide scenario are illustrative.
+-->
+<style>
+:root{
+  color-scheme: light dark;
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bg: light-dark(#ffffff, #1c1c1e);
+  --paper: light-dark(#f7f6f2, #232325);
+  --card: light-dark(#ffffff, #2c2c2e);
+  --text: light-dark(#1d1d1f, #f2f2f4);
+  --muted: light-dark(#6e6e73, #a1a1a6);
+  --border: light-dark(#e3e3e6, #3a3a3c);
+  --accent: light-dark(#2f6fd6, #5b9bff);
+  --ins: light-dark(#e6f4ea, #1f3a28);
+  --ins-ink: light-dark(#17663a, #8fdcaa);
+  --del-ink: light-dark(#a33a2c, #ff9a8a);
+  --strike-bg: light-dark(#f1f1f1, #303033);
+  --note-bg: light-dark(#fff5d6, #3a321a);
+  --hatch: light-dark(#f4f4f6, #202022);
+  --badge-bg: light-dark(#eeeef0, #3a3a3c);
+  --emo: light-dark(#fde2e1, #4a2826);
+  --emo2: light-dark(#dff3e4, #20392a);
+  --w-norm: 420; --w-em: 490; --w-strong: 700;
+
+  --v-now: light-dark(#dcefdf, #1f3a26);      --v-now-i: light-dark(#1b6b35, #9be0b0);
+  --v-must: light-dark(#dce8fb, #1e2e4a);     --v-must-i: light-dark(#1e4f9e, #9fc2ff);
+  --v-llm: light-dark(#efe3fb, #33244a);      --v-llm-i: light-dark(#6a2fa0, #d1aaf5);
+  --v-owed: light-dark(#e3eef6, #1f3240);     --v-owed-i: light-dark(#235a80, #9ccbe9);
+  --v-stale: light-dark(#fbefd6, #40331a);    --v-stale-i: light-dark(#8a5a00, #f2c773);
+  --v-flag: light-dark(#fde7cf, #47301a);     --v-flag-i: light-dark(#9a4d00, #ffb978);
+  --v-unknown: light-dark(#ececef, #343438);  --v-unknown-i: light-dark(#4a4a52, #c8c8d0);
+  --v-check: light-dark(#e8f3f3, #1d3536);    --v-check-i: light-dark(#21686b, #93d6d9);
+  --v-horror: light-dark(#fbdcd8, #4d201c);   --v-horror-i: light-dark(#a3241a, #ff958a);
+  --v-gone: light-dark(#e6e6e9, #2e2e31);     --v-gone-i: light-dark(#3a3a40, #d0d0d6);
+  --v-none: transparent;                       --v-none-i: light-dark(#9a9aa0, #6e6e75);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:var(--w-norm) 14px/1.5 var(--font)}
+header{padding:20px 24px 8px;max-width:1500px;margin:0 auto}
+h1{font-size:20px;font-weight:var(--w-em);margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 12px;max-width:80ch}
+.key{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:8px 0}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin:14px 0 0;border-bottom:1px solid var(--border)}
+.tab{font:inherit;font-size:12.5px;border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);
+  padding:6px 10px;border-radius:6px 6px 0 0;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--text);background:var(--hatch);border-color:var(--border);font-weight:var(--w-em)}
+.tab .n{font-family:var(--mono);font-size:11px;margin-right:4px;opacity:.7}
+main{max-width:1500px;margin:0 auto;padding:16px 24px 48px}
+
+.scen-head{margin:0 0 12px}
+.scen-head h2{font-size:17px;font-weight:var(--w-em);margin:0}
+.scen-head p{margin:2px 0 0;color:var(--muted);max-width:90ch}
+.kind{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:4px;background:var(--badge-bg);margin-left:6px;vertical-align:2px}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.45fr);gap:16px;align-items:start}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}}
+.col-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+
+/* artefact frames: product-like, no prose */
+.frame{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.chrome{font-family:var(--mono);font-size:10.5px;color:var(--muted);padding:5px 10px;border-bottom:1px solid var(--border);background:var(--hatch)}
+.state{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin:10px 12px 4px}
+.tx{background:var(--paper);padding:4px 0 10px}
+.para{display:grid;grid-template-columns:58px 1fr;gap:8px;padding:4px 12px;font-size:14px;line-height:1.6}
+.tc{font-family:var(--mono);font-size:12px;color:var(--accent);padding-top:2px}
+.tc i{color:var(--muted);font-style:normal}
+.spk{font-weight:var(--w-em);margin-right:4px}
+.q{background:var(--card);padding:10px 12px;border-top:1px solid var(--border)}
+.q:first-of-type{border-top:none}
+.qtext{font-size:14.5px;line-height:1.55}
+.qmeta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:12px;color:var(--muted)}
+.qmeta .tc{padding:0}
+.badge{font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:4px;background:var(--badge-bg);font-weight:460}
+.star{color:#d89a00}
+.edited{font-family:var(--mono);font-size:10.5px;border:1px solid var(--border);border-radius:4px;padding:0 4px}
+.ins{background:var(--ins);color:var(--ins-ink);border-radius:3px;padding:0 2px}
+.del{color:var(--del-ink);text-decoration:line-through;text-decoration-thickness:1px;opacity:.75}
+.struck{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted);background:var(--strike-bg)}
+.note{background:var(--note-bg);font-size:13px;border-radius:3px;padding:0 3px;font-style:italic}
+.redact{font-family:var(--mono);font-size:12px;background:var(--badge-bg);border-radius:3px;padding:0 3px}
+.crop{color:var(--muted)}
+.flagdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--v-flag-i);margin-right:4px;vertical-align:1px}
+.binrow{opacity:.55}
+.empty{color:var(--muted);font-style:italic;font-size:13px}
+
+/* commentary: hatched, mono label, left rule */
+.ledger{border-left:3px solid var(--muted);background:
+  repeating-linear-gradient(135deg, var(--hatch) 0 8px, transparent 8px 16px), var(--bg);
+  border-radius:0 10px 10px 0;padding:10px 12px}
+.ledger table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--bg);border-radius:6px;overflow:hidden}
+.ledger td{padding:5px 8px;border-top:1px solid var(--border);vertical-align:top}
+.ledger tr:first-child td{border-top:none}
+.ledger td.s{width:118px;color:var(--muted);white-space:nowrap}
+.ledger td.v{width:112px}
+.ledger tr.none td{color:var(--v-none-i)}
+.ledger tr.none td.s{color:var(--v-none-i)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:1px 6px;border-radius:999px;white-space:nowrap;
+  border:1px solid color-mix(in srgb, currentColor 25%, transparent)}
+.showall{font:inherit;font-size:12px;background:none;border:none;color:var(--accent);cursor:pointer;padding:6px 0 0}
+.com-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 6px}
+.takeaway{margin:10px 0 0;font-size:13px;background:var(--bg);border-radius:6px;padding:8px 10px;border:1px solid var(--border)}
+.takeaway b{font-weight:var(--w-em)}
+
+/* matrix */
+.matrix-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+table.matrix{border-collapse:collapse;font-size:12px;min-width:1100px}
+.matrix th,.matrix td{border-bottom:1px solid var(--border);padding:4px 5px;text-align:center}
+.matrix th{font-weight:var(--w-em);font-size:11px;color:var(--muted);vertical-align:bottom;position:sticky;top:0;background:var(--bg)}
+.matrix th.rot{white-space:nowrap;padding-bottom:8px}
+.matrix th.rot span{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg)}
+.matrix td.sc{text-align:left;white-space:nowrap;padding-right:12px}
+.matrix td.sc button{font:inherit;background:none;border:none;color:var(--accent);cursor:pointer;padding:0;text-align:left}
+.cell{display:inline-block;width:20px;height:20px;border-radius:5px;line-height:20px;font-family:var(--mono);font-size:10px}
+
+.findings{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.finding{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--v-horror-i);border-radius:0 8px 8px 0;padding:10px 12px}
+.finding h3{font-size:14px;font-weight:var(--w-em);margin:0 0 4px}
+.finding p{margin:0 0 6px;font-size:13px}
+.finding .src{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.finding .goes{font-size:12.5px;color:var(--muted)}
+.finding.plan{border-left-color:var(--v-must-i)}
+.sources{font-size:12.5px;columns:2 420px;margin:0;padding-left:18px}
+.sources li{margin:0 0 4px;break-inside:avoid}
+.sources code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Transcript edits: what they set moving</h1>
+  <p class="sub">One edit per tab. The <b>transcript</b> and <b>Quotes lens</b> columns only show the words before and after, not how the edit is made. The <b>consequences</b> column (hatched, commentary) lists every surface the edit reaches, as Bristlenose stands on 24 Oct 2026, with the decisions taken that day. Start at <b>Findings</b> for what changes the plan.</p>
+  <div class="key" id="key"></div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</header>
+<main id="main"></main>
+
+<script>
+const V = {
+  now:     ["Changes at once",  "now"],
+  must:    ["Must be written too","must"],
+  llm:     ["Pays an LLM call", "llm"],
+  owed:    ["Next Analyse",     "owed"],
+  stale:   ["Keeps old words",  "stale"],
+  flag:    ["Quiet flag",       "flag"],
+  unknown: ["2b decides",       "2b"],
+  check:   ["Check in code",    "check"],
+  horror:  ["Unsolved",         "horror"],
+  gone:    ["Discarded",        "gone"],
+  none:    ["Unaffected",       "—"],
+};
+const S = [
+  ["tx",   "Transcript page"],
+  ["qc",   "Quote card"],
+  ["gut",  "Gutter match"],
+  ["id",   "Curation identity"],
+  ["sent", "Sentiment & tags"],
+  ["ac",   "AutoCode"],
+  ["th",   "Sections & themes"],
+  ["sig",  "Signals cards"],
+  ["disc", "Discussion lens"],
+  ["dash", "Dashboard"],
+  ["srch", "Search"],
+  ["clip", "Clips"],
+  ["exp",  "Exports (new)"],
+  ["out",  "Already sent"],
+  ["chat", "Chat lens & MCP"],
+  ["next", "Next Analyse"],
+  ["pii",  "Privacy"],
+];
+const SOURCES = {
+  tx:   "proposed; today <code>routes/transcript.py</code> serves <code>TranscriptSegment.text</code> + <code>words_json</code>",
+  qc:   "decision 6; quote edits are <code>QuoteEdit</code> rows (<code>routes/data.py</code>)",
+  gut:  "client match of <code>verbatim_excerpt</code> against drawn words, <code>frontend/src/utils/quoteExtents.ts</code>; server pairs by time + speaker, <code>routes/transcript.py:360</code>",
+  id:   "pin = starred ∨ edited ∨ human-tagged ∨ placed, <code>importer.py:2667</code>; <code>_mint_pin</code> writes <code>durable_id</code> + <code>frozen_form</code>, <code>routes/data.py:222</code> (frozen_form has no reader)",
+  sent: "set by the LLM in stage 9 only, <code>s09_quote_extraction.py:385</code>; no serve-side re-scoring exists",
+  ac:   "<code>ProposedTag</code> keyed by quote id, keeps a free-text rationale, <code>models.py:902</code>; prompts read <code>Quote.text</code>, <code>autocode.py:123</code>; loads every quote, <code>autocode.py:244</code>",
+  th:   "placement and names by the LLM in stages 10–11; serve only renames via <code>HeadingEdit</code>, <code>heading_names.py</code>",
+  sig:  "elaboration cache keyed on a hash of <code>Quote.text</code> (not the edit), <code>elaboration.py:86</code>, <code>signals.py:609</code>",
+  disc: "guide classification of moderator turns is pipeline-only, <code>discussion/stage.py:123</code>; join back by key with a <code>Quote.text</code> tie-break, <code>routes/discussion.py:124</code>; moderator question on a card is live, <code>routes/quotes.py:646</code>",
+  dash: "word coverage counts <code>seg.text</code> live, <code>routes/dashboard.py:310</code>; featured picks by <code>Quote.text</code> length, <code>export_core.py:432</code>",
+  srch: "client-side over quote display text, <code>frontend/src/utils/searchSuggest.ts:56</code>; transcript text is not searched",
+  clip: "subtitles from <code>TranscriptSegment.text</code> + word timings, then each <code>QuoteEdit</code> applied as a diff, <code>clips_export.py:231–291</code>, <code>clip_subtitles.py:405</code>",
+  exp:  "CSV, XLSX, Miro, FigJam read the DB at export time, edited text, <code>export_core.py:191–322</code>; HTML export bakes <code>/quotes</code> and transcripts, <code>routes/export.py:479</code>",
+  out:  "a board, a CSV, an HTML leave-behind or a clip already made: outside Bristlenose",
+  chat: "live, edited text, <code>grounding.py:275</code>, <code>mcp_server.py:385</code>; no transcript text goes to the model",
+  next: "stage 6 rebuilds transcripts from the transcription cache and rewrites <code>transcripts-raw/</code>, <code>pipeline.py:2375, 3157</code>; it never reads the DB",
+  pii:  "a redacted study imports <code>transcripts-cooked/</code>, <code>importer.py:133</code>; quotes are cut from redacted text, <code>pipeline.py:3336</code>",
+};
+
+/* ---------- scenarios ---------- */
+const P = (tc, spk, html) => `<div class="para"><span class="tc"><i>[</i>${tc}<i>]</i></span><span><span class="spk">${spk}</span>${html}</span></div>`;
+const Q = (html, tc, spk, extra="") => `<div class="q"><div class="qtext">“${html}”</div><div class="qmeta"><span class="tc"><i>[</i>${tc}<i>]</i></span><span class="spk">${spk}</span>${extra}</div></div>`;
+const ins = t => `<span class="ins">${t}</span>`, del = t => `<span class="del">${t}</span>`;
+
+const SC = [
+{ id:"drug", title:"A drug name, fixed in the transcript", kind:"correction · transcript side",
+  what:"Whisper heard “met formin”. The researcher corrects it in the transcript. One quote, untouched by the researcher, holds the words.",
+  tx:[P("12:04","p3",`I was on ${del("met formin")} ${ins("metformin")} for about two years and it never really agreed with me.`)],
+  qBefore:Q("I was on met formin for about two years and it never really agreed with me.","12:04","p3",`<span class="badge" style="background:var(--emo)">frustration</span>`),
+  qAfter:Q(`I was on ${ins("metformin")} for about two years and it never really agreed with me.`,"12:04","p3",`<span class="badge" style="background:var(--emo)">frustration</span>`),
+  rows:{
+    tx:["now","Drawn corrected; the original stays underneath (decision 1)."],
+    qc:["now","Flows in (decision 6)."],
+    gut:["must","The quote's <code>verbatim_excerpt</code> must be corrected in the same write, or the gutter falls back to an approximate match."],
+    id:["horror","If the correction is stored as a <code>QuoteEdit</code>, this untouched quote becomes “edited”, so it is pinned and gets a durable id. A correction is not curation: it needs its own layer under quote edits."],
+    sent:["none","Factual: sentiment and tags stand (decision 13)."],
+    ac:["stale","Proposals stay (keyed by id). A rationale may quote “met formin”."],
+    th:["stale","Placement stands. A section or theme name the LLM wrote with “met formin” keeps it until renamed or re-run."],
+    sig:["llm","If the correction changes <code>Quote.text</code>, every card holding this quote re-elaborates once (a paid call). If not, the card's headline keeps the old words."],
+    dash:["now","Word coverage counts live (one word fewer)."],
+    srch:["now","“metformin” finds the quote. Transcript text is not searched at all."],
+    clip:["now","Subtitles are built from the segment text, so they read corrected."],
+    exp:["now","Read live at export."],
+    out:["stale","A board or CSV sent yesterday says “met formin”."],
+    chat:["now","Live, corrected text."],
+    next:["must","Analyse never reads the DB, and a re-import rebuilds the paragraph. The correction must sit in the edit record the pipeline reads (step 1), or the next re-extraction brings “met formin” back."],
+  },
+  take:"Factual, so the analysis should not move. But three mechanisms move anyway: pinning, the paid re-elaboration, and the excerpt match. Each fires because a correction would be stored in the wrong place."
+},
+{ id:"edited", title:"The same fix, under a quote the researcher already edited", kind:"correction · transcript side",
+  what:"The quote was cropped and an “um” removed, but it still holds the misheard words.",
+  tx:[P("12:04","p3",`Um, I was on ${del("met formin")} ${ins("metformin")} for about two years and it never really agreed with me, you know.`)],
+  qBefore:Q(`<span class="crop">…</span>I was on met formin for about two years and it never really agreed with me.`,"12:04","p3",`<span class="star">★</span><span class="edited">edited</span>`),
+  qAfter:Q(`<span class="crop">…</span>I was on ${ins("metformin")} for about two years and it never really agreed with me.`,"12:04","p3",`<span class="star">★</span><span class="edited">edited</span>`),
+  rows:{
+    tx:["now","Corrected."],
+    qc:["now","The words are still in the edited text, so the correction flows in (decision 6). The crop and the removed “um” stay."],
+    gut:["must","Excerpt corrected with it."],
+    id:["stale","Already pinned. <code>frozen_form</code> (the words at pin time, a re-identification key) still says “met formin”. Nothing reads it today."],
+    sig:["stale","Cards hash <code>Quote.text</code>, not the edit. Today a quote edit never reaches a card, and this correction wouldn't either unless it rewrites the base text too."],
+    clip:["check","Subtitles apply the quote edit as a diff over the segment's words. With the segment corrected and the edit rewritten, check that the diff doesn't mark “metformin” as an editorial change."],
+    exp:["now","Edited text, live."],
+    chat:["now","Edited text, live."],
+    next:["must","Same as the first tab: the correction must be in the record the pipeline reads."],
+  },
+  take:"Decision 6 holds, but it means one correction is written into up to three places on a quote: the base text, the excerpt and the researcher's edit. Clip subtitles diff two of them against each other."
+},
+{ id:"brand", title:"A brand, fixed in a quote card", kind:"correction · quote side",
+  what:"In the Quotes lens the researcher changes “Alesi” to “Alessi” (the kettle). It flows back into the transcript.",
+  tx:[P("31:40","p5",`The one I actually use every day is the ${del("Alesi")} ${ins("Alessi")} kettle, the one with the bird.`)],
+  qBefore:Q("The one I actually use every day is the Alesi kettle, the one with the bird.","31:40","p5",`<span class="badge" style="background:var(--emo2)">delight</span>`),
+  qAfter:Q(`The one I actually use every day is the ${ins("Alessi")} kettle, the one with the bird.`,"31:40","p5",`<span class="badge" style="background:var(--emo2)">delight</span><span class="edited">edited</span>`),
+  rows:{
+    qc:["unknown","Is this a correction (flows back) or tidying (stays)? Step 2b judges it; “wanna” → “want” must not reach the transcript."],
+    tx:["now","Once judged a correction, the transcript changes. Any other quote holding “Alesi” in this paragraph changes with it."],
+    id:["now","The researcher edited the quote, so pinning it is right here."],
+    gut:["must","Excerpt and the transcript word change together."],
+    srch:["stale","“Alesi” in other sessions stays until find and replace (step 3). Offer it from here (decision 7)."],
+    sig:["llm","Same as the first tab, if the base text changes."],
+    next:["must","Written to the edit record."],
+    exp:["now","Live."], chat:["now","Live."],
+  },
+  take:"The quote side needs the 2b judgement before it can flow at all. Until 2b exists, a quote-side correction can only be offered, not automatic."
+},
+{ id:"negation", title:"A restored “not”, under a tidied quote", kind:"correction · meaning",
+  what:"Whisper dropped a “not”. The researcher restores it in the transcript. The quote was tidied earlier and no longer holds the exact words.",
+  tx:[P("08:12","p2",`My pharmacist said it's ${ins("not")} fine to take it with food, so I'd been doing that.`)],
+  qBefore:Q("Fine to take with food, apparently.","08:12","p2",`<span class="edited">edited</span><span class="badge" style="background:var(--emo2)">confidence</span>`),
+  qAfter:Q("Fine to take with food, apparently.","08:12","p2",`<span class="edited">edited</span><span class="badge" style="background:var(--emo2)">confidence</span><span><span class="flagdot"></span>transcript corrected</span>`),
+  rows:{
+    tx:["now","Corrected: this is the duty case (decision 1)."],
+    qc:["flag","The correction can't find “it's fine” in the tidied quote, so the quote keeps saying the opposite and shows a quiet flag (decision 6). The researcher must look."],
+    sent:["horror","Tagged “confidence”, scored positive. Nothing re-scores on the server; the meaning has flipped (decision 13, a meaning change)."],
+    sig:["horror","The quote still counts toward a positive signal. Its card's headline may say the opposite of what was said."],
+    th:["unknown","May belong in another theme. Whether the session becomes owed is step 2b."],
+    exp:["horror","Exports read the quote, so they ship “Fine to take with food” until the researcher acts on the flag."],
+    chat:["horror","An agent cites the quote, positive sentiment and all."],
+    out:["stale","Already-sent material is wrong and can't be reached."],
+    next:["owed","A re-extraction would read the corrected words. The researcher's tidied quote wins (decision 6), so it would still say the opposite."],
+  },
+  take:"The worst case is a correction that can't land. A quiet flag may be too quiet when the meaning is inverted: the quote goes on feeding sentiment, signals, exports and agents with the opposite fact."
+},
+{ id:"meaning", title:"A meaning change: hate → love", kind:"correction · meaning",
+  what:"The researcher corrects a mishearing that changes the sentiment. The quote is unedited and tagged.",
+  tx:[P("22:51","p4",`Honestly I really ${del("hate")} ${ins("love")} that it remembers where I left off.`)],
+  qBefore:Q("Honestly I really hate that it remembers where I left off.","22:51","p4",`<span class="badge" style="background:var(--emo)">frustration</span><span class="badge">memory</span>`),
+  qAfter:Q(`Honestly I really ${ins("love")} that it remembers where I left off.`,"22:51","p4",`<span class="badge" style="background:var(--emo)">frustration</span><span class="badge">memory</span>`),
+  rows:{
+    tx:["now","Corrected."], qc:["now","Flows in."],
+    sent:["unknown","Still “frustration”. No serve path re-scores sentiment; 2b has to decide whether this is re-scored, made owed, or left for the researcher."],
+    ac:["unknown","AutoCode's proposal for this quote was made on “hate”."],
+    sig:["horror","Counted under Frustration × Memory until something re-scores it. The card re-elaborates (paid) with a quote that now contradicts it."],
+    th:["unknown","May move theme at the next Analyse (the ripple the owner expects)."],
+    dash:["stale","Sentiment bars count it as frustration."],
+    chat:["horror","An agent sees “love” with sentiment “frustration”."],
+    next:["owed","Probably owed (decision 13); 2b measures it."],
+  },
+  take:"A one-word correction can contradict the quote's own tags. Step 2b needs a serve-side path that doesn't exist yet: re-score one quote, or mark its session owed and say so."
+},
+{ id:"strike", title:"Strike a whole quote", kind:"strike",
+  what:"The chat about the weather became a quote. The researcher selects it and presses Delete.",
+  tx:[P("00:42","p1",`<span class="struck">Lovely morning, I cycled in along the canal, it was gorgeous.</span>`), P("00:51","m1","Great. So, tell me about the last time you…")],
+  qBefore:Q("Lovely morning, I cycled in along the canal, it was gorgeous.","00:42","p1",`<span class="badge" style="background:var(--emo2)">delight</span>`),
+  qAfter:`<div class="q binrow">${'<div class="qtext">“Lovely morning, I cycled in along the canal, it was gorgeous.”</div>'}<div class="qmeta">in the Bin</div></div>`,
+  rows:{
+    tx:["now","Struck through, timecodes intact."],
+    qc:["now","Goes to the Bin; counts nowhere, like a hidden quote (decision 13)."],
+    sig:["llm","Leaves its card's quote set, so the card re-elaborates once."],
+    th:["now","Its section loses a quote. A section left empty still shows until the next Analyse."],
+    dash:["now","Out of the featured picks and counts."],
+    ac:["horror","AutoCode loads every quote and would pay to tag the Bin, until the read audit (<code>design-delete-and-bin.md</code>)."],
+    clip:["horror","A neighbouring quote's clip can carry the struck audio. v1: trim or refuse."],
+    exp:["now","Left out of the data, not hidden by CSS."],
+    out:["stale","Already sent."],
+    chat:["now","Not citable."],
+    next:["must","Struck lines dropped from the prompt, so they must be in the edit record the pipeline reads."],
+  },
+  take:"Mostly planned already. The two unsolved items, AutoCode and clips, are the ones on the Bin plan's audit list."
+},
+{ id:"partial", title:"Strike part of a starred quote", kind:"strike · partial",
+  what:"Half the quote is the weather; half is real. The researcher strikes the weather half.",
+  tx:[P("03:10","p6",`<span class="struck">Sorry, the rain, I'm soaked.</span> But yes, the booking screen lost my seats twice.`)],
+  qBefore:Q("Sorry, the rain, I'm soaked. But yes, the booking screen lost my seats twice.","03:10","p6",`<span class="star">★</span><span class="badge" style="background:var(--emo)">frustration</span>`),
+  qAfter:`<div class="q binrow"><div class="qtext">“Sorry, the rain, I'm soaked. But yes, the booking screen lost my seats twice.”</div><div class="qmeta"><span class="star">★</span>excluded whole until the next Analyse</div></div>`,
+  rows:{
+    qc:["now","Excluded whole (Bin plan v1), so struck words can't leak. Proposed: until the next Analyse re-reads the rest."],
+    th:["owed","The next Analyse may cut a new quote from the second half and place it elsewhere: the expected ripple."],
+    id:["horror","The star is on the old quote. The re-cut quote covers half its span, under the ≥70% overlap rule that carries a star, so the star may be orphaned."],
+    sig:["llm","Leaves its card now; may return in a different card after Analyse."],
+    clip:["horror","The quote's own clip contains the struck audio."],
+    next:["owed","Session owed."],
+  },
+  take:"A partial strike on curated material breaks the overlap rule that keeps stars across re-runs. Either the strike re-cuts the quote at once, keeping its star, or the star's carry needs to know about strikes."
+},
+{ id:"replace", title:"Find and replace across the study", kind:"correction · batch",
+  what:"“bee bee sea” → BBC. Illustrative counts: 212 places in 9 sessions, inside 37 quotes, 6 of them edited.",
+  tx:[P("05:33","p2",`I mostly watch the ${del("bee bee sea")} ${ins("BBC")} news app in the mornings.`), P("19:02","p7",`The ${del("BB see")} one is fine, I suppose.`)],
+  qBefore:Q("I mostly watch the bee bee sea news app in the mornings.","05:33","p2") + Q("The BB see one is fine, I suppose.","19:02","p7"),
+  qAfter:Q(`I mostly watch the ${ins("BBC")} news app in the mornings.`,"05:33","p2") + Q("The BB see one is fine, I suppose.","19:02","p7"),
+  rows:{
+    tx:["now","Every accepted candidate is a correction, as in the first tab."],
+    srch:["stale","v1 finds text variants of what you type (case, spacing, punctuation; decision 20). “BB see” is a sound-alike, so it is missed until post-v1."],
+    id:["horror","Stored as quote edits, this would pin 37 quotes and mint 37 durable ids in one gesture."],
+    sig:["llm","Every card holding one of the 37 re-elaborates, one paid call each, at once or as each card is opened."],
+    th:["stale","LLM-written names keep the old spelling."],
+    qc:["flag","Each quote where an edit swallowed the words gets a flag."],
+    out:["stale","Already sent."],
+    next:["must","212 rows in the edit record, replayed on every import."],
+  },
+  take:"Batch size turns small costs into big ones: pinning becomes noise, re-elaboration becomes a bill, and replay becomes the hot path. The correction layer and lazy re-elaboration are the prerequisites."
+},
+{ id:"moderator", title:"The moderator's words, corrected", kind:"correction · moderator",
+  what:"The question was misheard. The discussion lens classified it against the guide using the wrong words.",
+  tx:[P("14:20","m1",`How did you find the ${del("met formin")} ${ins("metformin")} dosing at first?`), P("14:26","p3","Confusing, honestly.")],
+  qBefore:Q("Confusing, honestly.","14:26","p3",`<span>asked: How did you find the met formin dosing at first?</span>`),
+  qAfter:Q("Confusing, honestly.","14:26","p3",`<span>asked: How did you find the ${ins("metformin")} dosing at first?</span>`),
+  rows:{
+    tx:["now","Corrected."],
+    qc:["now","The question shown on the card is read live from the segment."],
+    disc:["stale","Which guide question this turn answers was decided on the old words, in the pipeline. It changes only when the session is re-analysed."],
+    next:["owed","Only if 2b says the change matters to the guide."],
+  },
+  take:"Mostly harmless, but it shows the general shape: anything an LLM decided on the old words stays decided until a run."
+},
+{ id:"pii", title:"A name typed into a redacted transcript", kind:"correction · privacy",
+  what:"The study is redacted. The researcher “fixes” a [NAME] by typing it in.",
+  tx:[P("27:15","p8",`<span class="redact">[NAME]</span> ${ins("Dr Patel")} told me to stop taking it.`)],
+  qBefore:Q(`<span class="redact">[NAME]</span> told me to stop taking it.`,"27:15","p8"),
+  qAfter:Q(`${ins("Dr Patel")} told me to stop taking it.`,"27:15","p8"),
+  rows:{
+    tx:["horror","The page shows redacted text, so a correction lands on the redacted copy and puts a name back into a study marked redacted."],
+    qc:["horror","Flows into the quote."],
+    exp:["horror","Every export, the clip subtitles and the agent endpoint get the name."],
+    chat:["horror","As exports."],
+    pii:["horror","Decision 7 says people and places go through the people layer. Typing in the transcript has no such route yet: the edit has to be refused, or turned into a people-layer action."],
+  },
+  take:"Not an edge case for medical studies. The mechanism must recognise a redaction token and refuse to type over it."
+},
+{ id:"note", title:"An editorial note inside a quote", kind:"note",
+  what:"The researcher adds [editor: …] inside a quoted span to explain a dose.",
+  tx:[P("09:48","p2",`I take the small one <span class="note">[editor: the 500 mg tablet]</span> twice a day.`)],
+  qBefore:Q("I take the small one twice a day.","09:48","p2"),
+  qAfter:Q(`I take the small one <span class="note">[editor: the 500 mg tablet]</span> twice a day.`,"09:48","p2"),
+  rows:{
+    tx:["now","Drawn as a note, with who and when."],
+    qc:["unknown","Does a note inside the span appear in the quote? Not decided. If it does, it must look like a note there too."],
+    sig:["horror","If the note enters <code>Quote.text</code>, the card's model reads it as speech unless it's marked."],
+    clip:["must","Must never appear as a spoken subtitle."],
+    chat:["must","Must reach the model as non-speech (an addition to <code>INVARIANTS</code>)."],
+    exp:["unknown","How a note looks in CSV, Miro and the HTML export."],
+    next:["none","Extraction never sees it: it lives only in the edit record."],
+  },
+  take:"Cheap for the pipeline, not for the surfaces: every surface that prints quote text has to know what a note is."
+},
+{ id:"reanalyse", title:"Re-analyse", kind:"begin again",
+  what:"The researcher chooses Re-analyse. Every transcript edit above is discarded with the report, by design (decision 12).",
+  tx:[P("12:04","p3","I was on met formin for about two years and it never really agreed with me.")],
+  qBefore:Q(`I was on ${ins("metformin")} for about two years…`,"12:04","p3"),
+  qAfter:`<div class="q"><div class="empty">A fresh report, from the transcription cache.</div></div>`,
+  rows:{
+    tx:["gone","Corrections, strikes, notes, splits and joins: all gone."],
+    qc:["gone","As every star, tag and edit."],
+    next:["gone","The edit record lives in the output folder and goes with it."],
+    out:["stale","Untouched, as ever."],
+    id:["flag","Proposed: the Re-analyse sheet and <code>run --clean</code> count transcript edits and strikes among what's lost (they count neither today)."],
+  },
+  take:"The cheapest tab: the feature is that nothing survives. The one gap is that the confirmation doesn't yet say so for transcript edits."
+},
+];
+
+const FINDINGS = [
+  {t:"A correction must not be a quote edit", plan:true,
+   p:"Stored as a <code>QuoteEdit</code>, a correction pins the quote and mints a durable id. A study-wide replace would freeze dozens of quotes nobody chose. Corrections need their own layer between the pipeline's text and the researcher's edit.",
+   src:"importer.py:2667 (pin arms) · routes/data.py:222", s:["drug","replace"], goes:"Step 1: the edit record carries corrections; quotes read them through."},
+  {t:"One correction, three copies on a quote", plan:true,
+   p:"<code>Quote.text</code> (signals, AutoCode, featured, discussion tie-break), <code>verbatim_excerpt</code> (gutter) and <code>QuoteEdit</code> (Quotes lens, exports, chat, MCP) each hold the words. A correction that misses one leaves a surface on the old words.",
+   src:"signals.py:609 · quoteExtents.ts · export_core.py:191", s:["drug","edited"], goes:"Step 2a: one write path, pinned by a test that reads every surface."},
+  {t:"Signal cards re-pay per correction",
+   p:"The elaboration cache hashes <code>Quote.text</code>. Change it and the card is rewritten by the LLM. A batch replace means many calls. Today's quote edits don't reach cards at all, which is an existing inconsistency.",
+   src:"elaboration.py:86–115", s:["drug","replace","strike"], goes:"Re-elaborate lazily (when a card is opened), and decide whether quote edits should count too."},
+  {t:"A correction that can't land inverts the record",
+   p:"When a tidied quote no longer holds the words, a restored “not” sits in the transcript while the quote, its sentiment, its card, the exports and the agents carry the opposite. A quiet flag may be too quiet.",
+   src:"decision 6", s:["negation"], goes:"Owner call: how loud the flag is when the correction is a meaning change (2b)."},
+  {t:"Nothing re-scores one quote",
+   p:"Sentiment and tags are set only in the pipeline. A meaning change leaves the quote contradicting its own tags until something re-runs, and no serve path re-scores a single quote.",
+   src:"s09_quote_extraction.py:385", s:["meaning","negation"], goes:"Step 2b: re-score one quote, or mark the session owed, per edit kind."},
+  {t:"A partial strike orphans a star",
+   p:"The re-cut quote covers only part of the starred span, under the ≥70% overlap rule that carries curation across re-runs.",
+   src:"design-incremental-analysis.md, union rule", s:["partial"], goes:"Re-cut at once keeping the star, or teach the carry about strikes."},
+  {t:"Typing over a redaction re-identifies",
+   p:"A redacted study's transcript page shows redacted text. A correction typed there puts a name into the redacted copy and everything downstream.",
+   src:"importer.py:133 · pipeline.py:3336", s:["pii"], goes:"Step 2a: refuse typing over a redaction token; route names through the people layer (decision 7)."},
+  {t:"LLM-written words keep the mishearing",
+   p:"Section and theme names, signal headlines, AutoCode rationales and the guide classification were written by a model from the old words, and stay until a rename or a run.",
+   src:"heading_names.py · elaboration.py · discussion/stage.py", s:["drug","replace","moderator"], goes:"Find and replace could offer renames for names that contain the find string."},
+  {t:"Notes have to be known everywhere",
+   p:"Every surface that prints quote text (cards, signals prompts, subtitles, exports, agents) must recognise a note as non-speech.",
+   src:"grounding.py INVARIANTS · clip_subtitles.py", s:["note"], goes:"Step 5: a note is a typed span, never plain text."},
+  {t:"Already sent is already sent",
+   p:"Boards, CSVs, HTML leave-behinds and clips made before a correction keep the old words. Nothing in Bristlenose can reach them.",
+   src:"—", s:["drug","negation","replace"], goes:"Accepted; the docs must not imply otherwise."},
+];
+
+/* ---------- render ---------- */
+const chip = v => `<span class="chip" style="background:var(--v-${v});color:var(--v-${v}-i)">${V[v][0]}</span>`;
+const cell = v => `<span class="cell" title="${V[v][0]}" style="background:var(--v-${v});color:var(--v-${v}-i)">${v==="none"?"":V[v][1].slice(0,2)}</span>`;
+document.getElementById("key").innerHTML = Object.keys(V).map(chip).join(" ");
+
+const tabs = [{id:"findings",title:"Findings"}, ...SC, {id:"matrix",title:"Matrix"}, {id:"sources",title:"Where each verdict comes from"}];
+const tabEl = document.getElementById("tabs");
+tabEl.innerHTML = tabs.map((t,i)=>`<button class="tab" role="tab" data-id="${t.id}">${(i>0&&i<=SC.length)?`<span class="n">${i}</span>`:""}${t.title}</button>`).join("");
+tabEl.addEventListener("click", e=>{const b=e.target.closest(".tab"); if(b) show(b.dataset.id)});
+document.addEventListener("keydown", e=>{
+  if(e.target.closest("input,textarea")) return;
+  const i = tabs.findIndex(t=>t.id===current);
+  if(e.key==="ArrowRight") show(tabs[Math.min(tabs.length-1,i+1)].id);
+  if(e.key==="ArrowLeft") show(tabs[Math.max(0,i-1)].id);
+});
+let current = "findings";
+
+function scenario(sc){
+  const rows = S.map(([k,label])=>{const r=sc.rows[k]||["none","—"]; return {k,label,v:r[0],t:r[1]}});
+  const shown = rows.filter(r=>r.v!=="none"), hidden = rows.filter(r=>r.v==="none");
+  const tr = r=>`<tr class="${r.v==="none"?"none":""}"><td class="s">${r.label}</td><td class="v">${chip(r.v)}</td><td>${r.t}</td></tr>`;
+  return `<div class="scen-head"><h2>${sc.title}<span class="kind">${sc.kind}</span></h2><p>${sc.what}</p></div>
+  <div class="cols">
+    <div><p class="col-label">Transcript · proposed</p>
+      <div class="frame"><div class="chrome">transcript — after the edit</div><div class="tx">${sc.tx.join("")}</div></div></div>
+    <div><p class="col-label">Quotes lens · shipped</p>
+      <div class="frame"><div class="chrome">quote card</div>
+        <div class="state">before</div>${sc.qBefore}
+        <div class="state">after</div>${sc.qAfter}</div></div>
+    <div class="ledger"><p class="com-label">Commentary · consequences</p>
+      <table>${shown.map(tr).join("")}</table>
+      <table class="hid" hidden style="margin-top:6px">${hidden.map(tr).join("")}</table>
+      ${hidden.length?`<button class="showall">Show the ${hidden.length} unaffected surfaces</button>`:""}
+      <div class="takeaway"><b>So:</b> ${sc.take}</div></div>
+  </div>`;
+}
+function matrix(){
+  const head = `<tr><th></th>${S.map(([,l])=>`<th class="rot"><span>${l}</span></th>`).join("")}</tr>`;
+  const body = SC.map((sc,i)=>`<tr><td class="sc"><button data-go="${sc.id}">${i+1}. ${sc.title}</button></td>${S.map(([k])=>`<td>${cell((sc.rows[k]||["none"])[0])}</td>`).join("")}</tr>`).join("");
+  return `<div class="scen-head"><h2>Every edit × every surface</h2><p>Hover a cell for its verdict; click a row to open it.</p></div>
+  <div class="matrix-wrap"><table class="matrix">${head}${body}</table></div>`;
+}
+function findings(){
+  const name = id => { const i=SC.findIndex(s=>s.id===id); return `<button class="showall" data-go="${id}" style="padding:0">${i+1}</button>`; };
+  return `<div class="scen-head"><h2>Findings</h2><p>What the tabs show that the plan of 24 Oct didn't already say. Blue edge: changes a planned step. Red edge: an unsolved problem to settle before building.</p></div>
+  <div class="findings">${FINDINGS.map(f=>`<div class="finding ${f.plan?"plan":""}"><h3>${f.t}</h3><p>${f.p}</p>
+    <p class="goes">→ ${f.goes}</p><div class="src">${f.src} · tabs ${f.s.map(name).join(" ")}</div></div>`).join("")}</div>`;
+}
+function sources(){
+  return `<div class="scen-head"><h2>Where each verdict comes from</h2><p>Traced at HEAD on 24 Oct 2026. A verdict that disagrees with the code is a bug in this page.</p></div>
+  <ul class="sources">${S.map(([k,l])=>`<li><b>${l}</b>: ${SOURCES[k]}</li>`).join("")}</ul>`;
+}
+function show(id){
+  current = id;
+  for(const b of tabEl.children) b.setAttribute("aria-selected", b.dataset.id===id ? "true":"false");
+  const m = document.getElementById("main");
+  const sc = SC.find(s=>s.id===id);
+  m.innerHTML = sc ? scenario(sc) : id==="matrix" ? matrix() : id==="sources" ? sources() : findings();
+  m.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go)));
+  const sa = m.querySelector(".showall:not([data-go])");
+  if(sa) sa.addEventListener("click",()=>{const h=m.querySelector("table.hid"); h.hidden=!h.hidden; sa.textContent = h.hidden?sa.textContent.replace("Hide","Show"):sa.textContent.replace("Show","Hide");});
+  try{ history.replaceState(null,"","#"+id) }catch(e){}
+}
+show(tabs.some(t=>t.id===location.hash.slice(1)) ? location.hash.slice(1) : "findings");
+</script>
+</body>
+</html>

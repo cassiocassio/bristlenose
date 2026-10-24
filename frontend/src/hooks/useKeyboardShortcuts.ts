@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useFocus } from "../contexts/FocusContext";
 import { isExportMode } from "../utils/exportData";
-import { usePlayer } from "../contexts/PlayerContext";
+import { hasRecording, usePlayer, whenVideoMapLoaded } from "../contexts/PlayerContext";
 import {
   useQuotesStore,
   clearSearch as clearStoreSearch,
@@ -38,7 +38,14 @@ import { toggleFocusMode } from "../contexts/FocusModeStore";
 import { toggleSubtitlePref } from "../utils/subtitlePrefs";
 import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
-import { postEditingStarted, postEditingEnded, postProjectAction } from "../shims/bridge";
+import {
+  postContextTarget,
+  postEditingStarted,
+  postEditingEnded,
+  postProjectAction,
+} from "../shims/bridge";
+import { readContextTarget } from "../utils/contextPlace";
+import { scrollToLand } from "../utils/scrollToLand";
 import { type Direction } from "../utils/spatialNav";
 import { toggleDiscussionGuide } from "../islands/discussion/guidePanel";
 import { toggleScreensNav } from "../islands/screens/navPanel";
@@ -93,6 +100,9 @@ const QUOTE_SCOPED_MENU_ACTIONS = new Set([
   "clearSelection",
   "revealInTranscript",
 ]);
+
+/** Numbers each right-click, so the Mac app never builds a menu from an earlier one's target. */
+let contextSeq = 0;
 
 // ── Hook ─────────────────────────────────────────────────────────────────
 
@@ -847,6 +857,19 @@ export function useKeyboardShortcuts({
         case "clearSelection":
           clearSelection();
           break;
+        // A context-menu item, or a new window arriving at its place (utils/contextPlace): go to
+        // the path, or scroll to the heading already showing, then play there when asked.
+        case "goToPlace": {
+          const p = (e as CustomEvent).detail.payload as
+            | { path?: string; anchor?: string; play?: { key: string; seconds: number } | null }
+            | undefined;
+          const here = p?.anchor ? document.getElementById(p.anchor) : null;
+          if (here) scrollToLand(here, "start");
+          else if (p?.path) navigate(p.path);
+          const play = p?.play;
+          if (play) void whenVideoMapLoaded().then(() => seekTo(play.key, play.seconds));
+          break;
+        }
         case "revealInTranscript": {
           // Where the card's own speaker link lands (QuoteCard `transcriptHref`): the quote's
           // session, at its timecode. Read from the store, which every quote lens fills — not the
@@ -859,9 +882,29 @@ export function useKeyboardShortcuts({
       }
     };
 
+    // ── Right-click → tell the Mac app what is under the pointer ──────
+    // Capture phase, and never cancelled: WebKit builds the menu, the app edits it. A quote card
+    // under the pointer becomes the one its Star, Hide and Add Tag… act on, as Finder's
+    // right-click selects the item it lands on and keeps a selection it lands inside.
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      const read = readContextTarget(
+        target, ++contextSeq, locationRef.current.pathname, hasRecording,
+      );
+      if (read.card) {
+        if (!selectedIdsRef.current.has(read.card.domId) && selectedIdsRef.current.size > 0) {
+          clearSelection();
+        }
+        setFocus(read.card.domId, { scroll: false });
+      }
+      postContextTarget(read);
+    };
+    const contextMenuListens = isEmbedded();
+
     document.addEventListener("keydown", handleKeydown);
     document.addEventListener("click", handleBackgroundClick);
     window.addEventListener("bn:menu-action", handleMenuAction);
+    if (contextMenuListens) document.addEventListener("contextmenu", handleContextMenu, true);
 
     // Track editing state transitions for the native bridge.
     // focusin/focusout bubble (unlike focus/blur), so a single document
@@ -904,6 +947,7 @@ export function useKeyboardShortcuts({
       document.removeEventListener("keydown", handleKeydown);
       document.removeEventListener("click", handleBackgroundClick);
       window.removeEventListener("bn:menu-action", handleMenuAction);
+      if (contextMenuListens) document.removeEventListener("contextmenu", handleContextMenu, true);
       editingObserver?.disconnect();
       if (embedded) {
         document.removeEventListener("focusin", handleFocusChange);
@@ -934,5 +978,6 @@ export function useKeyboardShortcuts({
     handleQuickApply,
     handlePlay,
     sendCommand,
+    seekTo,
   ]);
 }

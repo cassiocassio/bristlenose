@@ -19,6 +19,7 @@ import type { WireSuggestionRow, WireSuggestions, WireToken } from "../utils/sea
 import type { BadgeStyles } from "../utils/badgeStyle";
 import { getUndoState } from "../contexts/UndoStore";
 import type { WirePersonPicker } from "../utils/personPickerBridge";
+import type { ContextPlace, ContextTarget } from "../utils/contextPlace";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,7 +96,9 @@ export type BridgeMessage =
   | { type: "timeline-state"; available: boolean; on: boolean; lanes: number }
   | ({ type: "timeline-menu" } & WireTimelineMenu)
   | { type: "llm-failure"; kind: string; provider: string }
-  | { type: "report-error"; route: string; message: string; frames: string[] };
+  | { type: "report-error"; route: string; message: string; frames: string[] }
+  | ({ type: "context-target" } & ContextTarget)
+  | { type: "open-in-new-window"; place: ContextPlace; play: boolean };
 
 // ---------------------------------------------------------------------------
 // Native message posting
@@ -335,6 +338,23 @@ export function postQuotesFilter(
   tokens: WireToken[] = [],
 ): void {
   postNativeMessage({ type: "quotes-filter", searchQuery, viewMode, tokens });
+}
+
+/**
+ * Tell the Mac app what a right-click landed on, so its context menu can offer
+ * exactly what the place allows (utils/contextPlace). One per right-click,
+ * posted before WebKit asks for the menu. No-ops outside WKWebView.
+ */
+export function postContextTarget(target: ContextTarget): void {
+  postNativeMessage({ type: "context-target", ...target });
+}
+
+/**
+ * Ask the Mac app for a new window on this study, at `place`, playing there
+ * when `play`. No-ops outside WKWebView.
+ */
+export function postOpenInNewWindow(place: ContextPlace, play: boolean): void {
+  postNativeMessage({ type: "open-in-new-window", place, play });
 }
 
 /**

@@ -67,6 +67,7 @@ import { screenInk } from "../utils/sceneInk";
 import { TapestryPreview } from "../components/TapestryPreview";
 import { mergeTapestry } from "../utils/tapestryMerge";
 import { diagnosticsEnabled } from "../utils/diagnostics";
+import { momentPlace, placeProps, sessionPlace } from "../utils/contextPlace";
 import type { TranscriptionQuality } from "../components/TranscriptionDiagnostics";
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
 
@@ -976,6 +977,7 @@ function SessionRow({
           data-seconds={0}
           data-end-seconds={0}
           title={titleAttr}
+          {...placeProps(sessionPlace("play", session_id, true))}
           onClick={(e) => {
             if (!playerCtx) return;
             if (e.metaKey || e.ctrlKey || e.shiftKey) return;
@@ -1036,7 +1038,10 @@ function SessionRow({
           </button>
         )}
         {readable ? (
-          <a href={isExportMode() ? `#${sessionPath}` : sessionPath}>
+          <a
+            href={isExportMode() ? `#${sessionPath}` : sessionPath}
+            {...placeProps(sessionPlace("navigate", session_id, has_media))}
+          >
             #{session_number}
           </a>
         ) : (
@@ -1051,6 +1056,7 @@ function SessionRow({
             thumbnailUrl={thumbnail_url ?? undefined}
             onActivate={openPlayer}
             title={videoTitle}
+            place={openPlayer ? sessionPlace("play", session_id, true) : null}
           />
         )}
       </div>
@@ -1205,6 +1211,11 @@ function SessionRow({
           <JourneyChain
             labels={journey_labels}
             hrefForIndex={journeyHref}
+            placeForIndex={(i) =>
+              journey[i]
+                ? momentPlace("navigate", session_id, journey[i].start_seconds, has_media ? session_id : null)
+                : null
+            }
             onIndexClick={(i) => navigate({ pathname: sessionPath, hash: journeyAnchor(i) })}
           />
         )}

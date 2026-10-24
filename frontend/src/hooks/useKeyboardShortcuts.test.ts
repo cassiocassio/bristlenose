@@ -1544,3 +1544,96 @@ describe("the Mac app hears when an edit ends", () => {
     unmount();
   });
 });
+
+describe("a right-click tells the Mac app what it landed on", () => {
+  type Posted = { type: string; seq?: number; card?: { domId: string } | null; place?: unknown };
+  let posted: Posted[];
+
+  beforeEach(() => {
+    resetStore();
+    mockEmbedded = true;
+    posted = [];
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage: (m: Posted) => posted.push(m) } },
+    };
+  });
+
+  afterEach(() => {
+    mockEmbedded = false;
+    delete (window as unknown as Record<string, unknown>).webkit;
+    document.body.innerHTML = "";
+  });
+
+  const targets = () => posted.filter((m) => m.type === "context-target");
+
+  function card(id: string): HTMLElement {
+    const el = document.createElement("blockquote");
+    el.id = id;
+    el.className = "quote-card";
+    el.innerHTML = `<span class="quote-text">words</span>`;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it("posts once per right-click, numbered, and never cancels the menu", () => {
+    const { unmount } = renderWithProviders();
+    const a = document.createElement("a");
+    a.setAttribute("data-bn-place", JSON.stringify({
+      click: "navigate", verb: "show", dest: "quotes", path: "/report/quotes/#section-1", media: null,
+    }));
+    document.body.appendChild(a);
+    const e1 = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    const e2 = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    act(() => { a.dispatchEvent(e1); a.dispatchEvent(e2); });
+    expect(targets()).toHaveLength(2);
+    expect(targets()[1].seq).toBe((targets()[0].seq ?? 0) + 1);
+    expect(targets()[0].place).toMatchObject({ dest: "quotes" });
+    expect(e1.defaultPrevented).toBe(false);
+    unmount();
+  });
+
+  it("focuses the quote card under the pointer, so its Star acts on it", () => {
+    const { getCtx, unmount } = renderWithProviders();
+    card("q-a");
+    const b = card("q-b");
+    act(() => getCtx().setFocus("q-a"));
+    act(() => { b.querySelector(".quote-text")!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    expect(getCtx().focusedId).toBe("q-b");
+    expect(targets()[0].card).toMatchObject({ domId: "q-b" });
+    unmount();
+  });
+
+  it("keeps a selection the right-click lands inside, and drops one it lands outside", () => {
+    const { getCtx, unmount } = renderWithProviders();
+    card("q-a");
+    const b = card("q-b");
+    const c = card("q-c");
+    act(() => { getCtx().toggleSelection("q-a"); getCtx().toggleSelection("q-b"); });
+    act(() => { b.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    expect([...getCtx().selectedIds].sort()).toEqual(["q-a", "q-b"]);
+    act(() => { c.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    expect(getCtx().selectedIds.size).toBe(0);
+    expect(getCtx().focusedId).toBe("q-c");
+    unmount();
+  });
+
+  it("is not listening in a browser", () => {
+    mockEmbedded = false;
+    const { unmount } = renderWithProviders();
+    act(() => { card("q-a").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    expect(targets()).toHaveLength(0);
+    unmount();
+  });
+
+  it("goToPlace navigates to the place's path", () => {
+    const { router, unmount } = renderWithProviders();
+    act(() => {
+      window.dispatchEvent(new CustomEvent("bn:menu-action", {
+        detail: { action: "goToPlace", payload: { path: "/report/sessions/s3#t-754", play: null } },
+      }));
+    });
+    expect(router.state.location.pathname).toBe("/report/sessions/s3");
+    expect(router.state.location.hash).toBe("#t-754");
+    unmount();
+  });
+});

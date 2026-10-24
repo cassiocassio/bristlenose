@@ -26,6 +26,8 @@ import { useProjectId } from "../hooks/useProjectId";
 import { filterQuotes } from "../utils/filter";
 import { groupAnchor, groupQuotesBySession, keepsGroup } from "../utils/quoteGroups";
 import { scrollToLand } from "../utils/scrollToLand";
+import { quotesPath } from "../utils/quotesLink";
+import { placeProps, sectionPlace } from "../utils/contextPlace";
 import { SessionEntryRow, useSessionRowLayout } from "./SessionEntry";
 
 // ── TOC entry type ────────────────────────────────────────────────────────
@@ -270,6 +272,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
               aria-current={activeId === entry.id ? "location" : undefined}
               ref={activeId === entry.id ? activeRef : undefined}
               onClick={(e) => handleClick(e, entry.id)}
+              {...placeProps(sectionPlace(entry.id, quotesPath(entry.id)))}
             >
               {entry.label}
             </a>
@@ -287,6 +290,7 @@ export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
               aria-current={activeId === entry.id ? "location" : undefined}
               ref={activeId === entry.id ? activeRef : undefined}
               onClick={(e) => handleClick(e, entry.id)}
+              {...placeProps(sectionPlace(entry.id, quotesPath(entry.id)))}
             >
               {entry.label}
             </a>

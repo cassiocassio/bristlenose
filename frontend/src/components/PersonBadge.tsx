@@ -1,3 +1,5 @@
+import { placeProps, type ContextPlace } from "../utils/contextPlace";
+
 interface PersonBadgeProps {
   code: string;
   role: "participant" | "moderator" | "observer";
@@ -9,6 +11,8 @@ interface PersonBadgeProps {
   /** Not present here (not asked, did not speak): the outline, muted, no fill. */
   absent?: boolean;
   href?: string;
+  /** Where the link goes, for the Mac's right-click menu (utils/contextPlace). With `href` only. */
+  place?: ContextPlace | null;
   "data-testid"?: string;
 }
 
@@ -19,6 +23,7 @@ export function PersonBadge({
   compact,
   absent,
   href,
+  place,
   "data-testid": testId,
 }: PersonBadgeProps) {
   const content = (
@@ -35,7 +40,7 @@ export function PersonBadge({
   );
 
   if (href) {
-    return <a href={href} className="speaker-link">{content}</a>;
+    return <a href={href} className="speaker-link" {...placeProps(place ?? null)}>{content}</a>;
   }
 
   return content;

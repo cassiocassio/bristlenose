@@ -19,6 +19,14 @@ import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { navigateTo } from "../shims/navigation";
+import {
+  lensPlace,
+  momentPlace,
+  placeProps,
+  quotesPlace,
+  sessionPlace,
+  type ContextPlace,
+} from "../utils/contextPlace";
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
 import { SpeakerPickerTrigger } from "../components/SpeakerPickerTrigger";
@@ -80,6 +88,15 @@ function statTargetToHref(target: string): string {
   return reportHref(anchor ? `${route}#${anchor}` : route);
 }
 
+/** A stat card's place for the Mac's right-click: Quotes at a heading, or a whole lens. A card
+ *  naming a heading in another lens has none, since `handleStatLink` reaches it by scrolling. */
+function statPlace(target: string): ContextPlace | null {
+  const [tab, anchor] = target.split(":");
+  if (tab === "quotes" && anchor) return quotesPlace(quotesPath(anchor));
+  if (anchor || !TAB_ROUTES[tab]) return null;
+  return lensPlace(TAB_ROUTES[tab]);
+}
+
 function handleStatLink(target: string) {
   // target format: "tab" or "tab:anchor"
   const [tab, anchor] = target.split(":");
@@ -113,6 +130,7 @@ function StatCard({
       className="bn-project-stat"
       href={statTargetToHref(target)}
       data-stat-link={target}
+      {...placeProps(statPlace(target))}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey) return;
         e.preventDefault();
@@ -140,6 +158,7 @@ function PairStatCard({
           className="bn-project-stat--pair-half"
           href={statTargetToHref(left.target)}
           data-stat-link={left.target}
+          {...placeProps(statPlace(left.target))}
           onClick={(e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey) return;
             e.preventDefault();
@@ -155,6 +174,7 @@ function PairStatCard({
           className="bn-project-stat--pair-half"
           href={statTargetToHref(right.target)}
           data-stat-link={right.target}
+          {...placeProps(statPlace(right.target))}
           onClick={(e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey) return;
             e.preventDefault();
@@ -299,6 +319,7 @@ function CompactSessionRow({
           data-seconds={0}
           data-end-seconds={0}
           title={fileTitle}
+          {...placeProps(sessionPlace("play", session_id, true))}
           onClick={(e) => {
             if (!playerCtx) return;
             if (e.metaKey || e.ctrlKey || e.shiftKey) return;
@@ -329,7 +350,10 @@ function CompactSessionRow({
     // The row click is a pointer convenience; the keyboard route is the #N link.
     <tr data-session={session_id} onClick={onRowClick}>
       <td className="bn-session-id">
-        <a href={reportHref(`/report/sessions/${session_id}`)}>
+        <a
+          href={reportHref(`/report/sessions/${session_id}`)}
+          {...placeProps(sessionPlace("navigate", session_id, has_media))}
+        >
           #{session_number}
         </a>
       </td>
@@ -452,6 +476,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
             seconds={quote.start_timecode}
             endSeconds={quote.end_timecode}
             participantId={quote.participant_id}
+            sessionId={quote.session_id}
           />
         ) : (
           <span className="timecode">[{timecodeStr}]</span>
@@ -462,6 +487,7 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
             `/report/sessions/${quote.session_id}#${anchor}`,
           )}
           className="speaker-link"
+          {...placeProps(momentPlace("navigate", quote.session_id, quote.start_timecode, null))}
         >
           <PersonBadge
             code={quote.participant_id}
@@ -539,6 +565,7 @@ function NavList({
             <li key={item.anchor}>
               <a
                 href={tabTarget === "quotes" ? quotesHref(item.anchor) : `#${item.anchor}`}
+                {...placeProps(tabTarget === "quotes" ? quotesPlace(quotesPath(item.anchor)) : null)}
                 onClick={(e) => {
                   if (tabTarget === "quotes") {
                     followInApp(e, quotesPath(item.anchor));
@@ -576,6 +603,7 @@ function OmittedSession({
           <TimecodeLink
             seconds={seg.start_time}
             participantId={seg.speaker_code}
+            sessionId={session.session_id}
           />
           <PersonBadge
             code={seg.speaker_code}

@@ -9,8 +9,11 @@ interface ThumbnailProps {
   onActivate?: () => void;
   /** Native tooltip (the source filename). */
   title?: string;
+  /** Where it goes, for the Mac's right-click menu (utils/contextPlace). */
+  place?: ContextPlace | null;
 }
 
+import { placeProps, type ContextPlace } from "../utils/contextPlace";
 import { isExportMode } from "../utils/exportData";
 import { Icon } from "./Icon";
 
@@ -21,6 +24,7 @@ export function Thumbnail({
   "data-testid": testId,
   onActivate,
   title,
+  place,
 }: ThumbnailProps) {
   if (!hasMedia) return null;
   // v1 leave-behind: no video. The thumbnail URL is a /report/... path that
@@ -44,6 +48,7 @@ export function Thumbnail({
       data-testid={testId}
       onClick={onActivate}
       title={title}
+      {...placeProps(place ?? null)}
     >
       {inner}
     </div>

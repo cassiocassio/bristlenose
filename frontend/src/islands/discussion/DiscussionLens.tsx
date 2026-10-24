@@ -77,6 +77,7 @@ import { discussionArrival } from "./discussionLinks";
 import { appQuery } from "../../utils/appQuery";
 import { markArrived } from "../../utils/arrival";
 import { scrollToLand } from "../../utils/scrollToLand";
+import { momentPlace } from "../../utils/contextPlace";
 
 // The lens's strings, from `common.discussion.*`. Getters read the active
 // language when called. RULE: every component that reads `S` must call
@@ -913,7 +914,7 @@ function DiscussionBody({ data: record, host, handingOver }: { data: DiscussionD
     <blockquote key={t.id} className={`quote-card dl-ask${lit.has(t.id) ? " hot" : ""}`}
       data-item={t.item ?? ""} data-turn={t.id}>
       <div className="quote-row">
-        <TimecodeLink seconds={t.sec} participantId={t.session} />
+        <TimecodeLink seconds={t.sec} participantId={t.session} sessionId={t.session} />
         <div className="quote-body">
           <button type="button" className="dl-ask-btn" aria-pressed={!!focus && focus.turn === t.id}
             onClick={() => focusAsk(t)}>
@@ -921,7 +922,8 @@ function DiscussionBody({ data: record, host, handingOver }: { data: DiscussionD
           </button>
           <span className="speaker">
             <PersonBadge code={t.speaker ?? "m1"} role="moderator"
-              href={reportHref(`/report/sessions/${t.session}#t-${Math.floor(t.sec)}`)} />
+              href={reportHref(`/report/sessions/${t.session}#t-${Math.floor(t.sec)}`)}
+              place={momentPlace("navigate", t.session, t.sec, null)} />
           </span>
           {t.kind === "unclassified" && <Badge text={S.unclassified} variant="readonly" />}
         </div>

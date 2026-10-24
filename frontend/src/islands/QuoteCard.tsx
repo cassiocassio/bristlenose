@@ -37,6 +37,7 @@ import type { SearchTerm } from "../utils/searchMatch";
 import { useCropEdit } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
 import { Icon } from "../components/Icon";
+import { momentPlace } from "../utils/contextPlace";
 
 // ── SVG icon for the hide button (eye-slash) ────────────────────────────
 
@@ -702,6 +703,7 @@ export function QuoteCard({
               seconds={quote.start_timecode}
               endSeconds={quote.end_timecode}
               participantId={quote.participant_id}
+              sessionId={sessionId}
               data-testid={`bn-quote-${domId}-timecode`}
             />
           ) : (
@@ -762,6 +764,7 @@ export function QuoteCard({
                   : undefined
               }
               href={transcriptHref}
+              place={momentPlace("navigate", sessionId, quote.start_timecode, null)}
               data-testid={`bn-quote-${domId}-speaker`}
             />
           </span>

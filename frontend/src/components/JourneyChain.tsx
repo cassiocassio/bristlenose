@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { placeProps, type ContextPlace } from "../utils/contextPlace";
 
 interface JourneyChainProps {
   labels: string[];
@@ -20,6 +21,8 @@ interface JourneyChainProps {
    *  buttons, so modifier-click opens the target in a new tab. The click
    *  handler (onIndexClick/onLabelClick) still runs for plain clicks. */
   hrefForIndex?: (index: number) => string;
+  /** Where each linked label goes, for the Mac's right-click menu (utils/contextPlace). */
+  placeForIndex?: (index: number) => ContextPlace | null;
 }
 
 export function JourneyChain({
@@ -33,6 +36,7 @@ export function JourneyChain({
   activeIndex,
   onIndexClick,
   hrefForIndex,
+  placeForIndex,
 }: JourneyChainProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const labelRefs = useRef<Map<number, HTMLElement>>(new Map());
@@ -133,6 +137,7 @@ export function JourneyChain({
               <a
                 href={hrefForIndex(i)}
                 className={labelClasses}
+                {...placeProps(placeForIndex?.(i) ?? null)}
                 onClick={(e) => {
                   // Let modifier-clicks fall through to open a new tab.
                   if (e.metaKey || e.ctrlKey || e.shiftKey) return;

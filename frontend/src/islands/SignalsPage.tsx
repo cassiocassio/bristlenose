@@ -41,6 +41,7 @@ import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import { selectQuotes } from "../utils/quoteSelection";
 import { renderLead } from "../utils/leadSentence";
 import { Icon } from "../components/Icon";
+import { momentPlace, placeProps, quotesPlace } from "../utils/contextPlace";
 import type {
   SignalMatrix,
   CodebookSignalsListResponse,
@@ -742,7 +743,11 @@ function QuoteBlock({
   return (
     <blockquote className={cls || undefined} data-dissenting={isDissenting || undefined}>
       <div className="quote-row">
-        <a className="timecode" href={tcHref}>
+        <a
+          className="timecode"
+          href={tcHref}
+          {...placeProps(momentPlace("navigate", quote.sessionId, quote.startSeconds, quote.sessionId))}
+        >
           <span className="timecode-bracket">[</span>
           {tc}
           <span className="timecode-bracket">]</span>
@@ -1025,6 +1030,7 @@ function LocationHeading({ location, anchor }: { location: string; anchor: strin
         href={quotesHref(anchor)}
         className="signal-card-location-link"
         onClick={(e) => followInApp(e, quotesPath(anchor))}
+        {...placeProps(quotesPlace(quotesPath(anchor)))}
       >
         {location}
       </a>

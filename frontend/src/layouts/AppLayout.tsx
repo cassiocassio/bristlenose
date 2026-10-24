@@ -605,6 +605,15 @@ function AppShell() {
           void copyQuotesToClipboard(snap, ids, i18n.t, anon);
           break;
         }
+        // The card menu's Copy Quote: the right-clicked card, or the selection it sits in.
+        case "copyQuote": {
+          const domId = (payload as { domId?: string } | undefined)?.domId;
+          if (!domId) break;
+          const sel = selectedIdsBridgeRef.current;
+          const ids = sel.has(domId) ? Array.from(sel) : [domId];
+          void copyQuotesToClipboard(getQuotesSnapshot(), ids, i18n.t, false);
+          break;
+        }
         case "saveSpreadsheet": {
           // Spreadsheet exports everything on screen (all visible quotes), not
           // the current selection — the rich sheet is the full-dataset export.

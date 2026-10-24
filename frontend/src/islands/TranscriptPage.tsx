@@ -1139,6 +1139,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
                   seconds={seg.start_time}
                   endSeconds={seg.end_time}
                   participantId={data.session_id}
+                  sessionId={data.session_id}
                 />
               ) : (
                 <span className="timecode">

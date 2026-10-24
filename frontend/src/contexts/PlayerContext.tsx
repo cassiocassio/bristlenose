@@ -78,6 +78,32 @@ export function getPlayerPlaying(): boolean {
   return _playerPlaying;
 }
 
+// The video map as last loaded, for code outside the provider: the Mac's
+// right-click offers Play only for a recording the player can find.
+let _videoMap: VideoMap = {};
+let _videoMapLoaded: () => void = () => {};
+let _videoMapReady = new Promise<void>((resolve) => {
+  _videoMapLoaded = resolve;
+});
+
+/** Whether `seekTo(key, …)` would find a recording. */
+export function hasRecording(key: string): boolean {
+  return !!_videoMap[key];
+}
+
+/** Settles once the video map has been read (or failed to be), so a caller can seek at load. */
+export function whenVideoMapLoaded(): Promise<void> {
+  return _videoMapReady;
+}
+
+/** Test helper. */
+export function resetVideoMapForTests(map: VideoMap = {}): void {
+  _videoMap = map;
+  _videoMapReady = new Promise<void>((resolve) => {
+    _videoMapLoaded = resolve;
+  });
+}
+
 // ── Player time (for the transcript's timeline mark) ─────────────────
 // The popout's last reported moment, per session. Module state with its own
 // subscribers, so only the timeline that draws it re-renders ~4x/sec — never
@@ -133,23 +159,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const win = window as unknown as Record<string, unknown>;
 
     // Export mode: no media available — leave videoMap empty
-    if (win.BRISTLENOSE_EXPORT) return;
+    if (win.BRISTLENOSE_EXPORT) {
+      _videoMapLoaded();
+      return;
+    }
 
     // Legacy fallback: use window globals if present (static render path)
     if (win.BRISTLENOSE_VIDEO_MAP) {
       videoMapRef.current = win.BRISTLENOSE_VIDEO_MAP as VideoMap;
+      _videoMap = videoMapRef.current;
       if (typeof win.BRISTLENOSE_PLAYER_URL === "string") {
         playerUrlRef.current = win.BRISTLENOSE_PLAYER_URL;
       }
+      _videoMapLoaded();
       return;
     }
     // SPA mode: fetch from API (must include auth token)
     apiGet<{ video_map: VideoMap; player_url?: string }>("/video-map")
       .then((data) => {
         videoMapRef.current = data.video_map ?? {};
+        _videoMap = videoMapRef.current;
         if (data.player_url) playerUrlRef.current = data.player_url;
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => _videoMapLoaded());
   }, []);
 
   // ── Glow helpers ─────────────────────────────────────────────────────

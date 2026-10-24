@@ -1754,6 +1754,7 @@ def check_bundle_voice() -> CheckResult:
     import sys
 
     from bristlenose.stages.s05b_voice import voice_runtime_available
+    from bristlenose.utils.onnxruntime_import import import_onnxruntime
 
     label = "Bundle: voice"
     # Presence by find_spec, loadability by import: a package that is there
@@ -1778,7 +1779,7 @@ def check_bundle_voice() -> CheckResult:
                            detail="voice extra not installed (legal outside the app bundle)")
     try:
         import kaldi_native_fbank as knf
-        import onnxruntime
+        onnxruntime = import_onnxruntime()
     except Exception as exc:  # ImportError, or OSError from a missing dylib
         return CheckResult(
             status=CheckStatus.FAIL, label=label,

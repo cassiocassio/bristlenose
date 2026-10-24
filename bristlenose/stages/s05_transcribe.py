@@ -1665,6 +1665,12 @@ def _init_faster_whisper_backend(
                 candidate,
             )
 
+    # faster-whisper's Silero VAD imports onnxruntime lazily, on the first
+    # vad_filter=True call, mid-run. Importing it here, quietly, puts its
+    # device-discovery warnings in the log rather than on the terminal.
+    from bristlenose.utils.onnxruntime_import import import_onnxruntime
+
+    import_onnxruntime()
     model = WhisperModel(
         model_id,
         device=device,

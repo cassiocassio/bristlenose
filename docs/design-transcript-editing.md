@@ -15,7 +15,7 @@ trued-against: HEAD@main on 2026-10-24
 ## Where this stands (24 Oct 2026, planned)
 
 Start planning here. This section lists what is built, what is decided, the order of work and what
-is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 24 and
+is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 25 and
 the revision of 6 were made with the owner on 24 Oct 2026, in a planning session that wrote no
 product code. Decisions 21 to 24, and the plan's corrections layer, came from playing edits through
 every surface: `docs/mockups/transcript-edit-consequences.html` (Findings, and the "Play-out: 1 + 20"
@@ -152,6 +152,13 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
 24. **Find and replace corrects inside struck and hidden text too.** It is still the record, so Put
     Back or unhide brings the passage back already right. The review list shows each candidate's
     state ("struck", "hidden").
+25. **A quote has one current wording, everywhere, changed at once**: the pipeline's text with its
+    corrections and the researcher's edit applied, the "latest, fixed" version (owner, 24 Oct 2026).
+    Every surface shows it: the Quotes lens, signal cards (which today read `Quote.text` and never
+    see a quote edit), the Dashboard's featured picks (a fix that moves a quote across the 12–33-word
+    band moves it in or out; that is right), exports, chat and MCP. Section and theme names are the
+    same: just more text, so a correction changes a name the model wrote and never one the
+    researcher renamed (a heading edit). A correction to a name is a correction, not a heading edit.
 
 **Order of work.** Each step names what it needs from the steps before it.
 
@@ -216,17 +223,37 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
 - For editorial notes: what "who" says in a one-researcher app, and the word cap's level.
 - `design-delete-and-bin.md`'s own calls: the words, glyph or row, Empty Bin, the empty-again rule.
 - From the consequences mockup (24 Oct 2026):
-  - A restored "not" under a reworded quote: is a quiet flag loud enough when the correction
-    inverts the meaning? The quote goes on feeding sentiment, signals, exports and agents.
+  - **Parked, 24 Oct 2026: mock up the flag of decision 6** — how loud it is, which surfaces show
+    it, and how it meets the earlier analysis. A restored "not" under a reworded quote: the quote
+    goes on feeding sentiment, signals, exports and agents. Brief for the mockup (`bn-mockup`,
+    bn-accurate; generate the CSS from `stages/s12_render/theme_assets.get_default_css()` so the
+    quote cards are the real ones, and wrap cards in `.quote-group` with `content-visibility:
+    visible`):
+    - **Nothing on a quote card warns today.** Siblings to reuse: the `warning` kind of
+      `bristlenose/ui_kinds.py` (⚠, `--bn-colour-warning`, "recoverable / partial", today only
+      whole-run states; `docs/design-pipeline-diagnostic-popover.md`), the dashed AutoCode
+      suggestion badge with accept/deny (`atoms/badge.css` `.badge-proposed`, the one "needs your
+      decision" state on a card), the gutter mark's `data-hidden` state
+      (`frontend/src/islands/transcript/GutterEntry.tsx`, `transcript-gutter.css`), and a new
+      `viewMode` beside All and Starred (`frontend/src/utils/filter.ts`, `ViewSwitcher.tsx`).
+      Signal cards draw quotes with the same `blockquote .quote-row` markup
+      (`SignalsPage.tsx` `QuoteBlock`, `organisms/signals.css`). The Dashboard has no to-review
+      tile today.
+    - **Loudness, three variants:** a glyph on the card; an inline "the transcript now says …"
+      line with the two wordings; or the quote held out of the counts, like a hidden quote, until
+      the researcher acts.
+    - **Surfaces to draw:** quote card and Quotes lens filter; transcript gutter mark; the quote in
+      a signal card; Dashboard; exports (does an export carry or stop on it?); chat and MCP (does
+      the model get told the transcript disagrees?); the Mac sidebar (probably not: it is per
+      quote, not per run).
+    - **Meeting the earlier analysis:** while flagged, the quote's sentiment and tags were made on
+      the old words (count it or not?); "use the transcript's words" rewrites the quote's edit and
+      is then a meaning change (2b: re-score, card rewrite under decision 21, session owed);
+      "keep my wording" records that the researcher looked, and the flag goes; a re-read session
+      keeps the researcher's wording (decision 6), so the flag survives it; Re-analyse clears it.
   - A partial strike on a starred quote: the re-cut quote may cover too little of the starred span
     for the ≥70% overlap rule to carry the star. Re-cut at once keeping the star, or teach the carry
     about strikes.
-  - Should find and replace offer renames for section and theme names that hold the find string
-    ("Trust in bee bee sea news")? A rename is a heading edit, the researcher's own act.
-  - Signal cards read `Quote.text`, never the researcher's quote edit, so today a quote edit never
-    reaches a card. Decide whether it should, alongside decision 21.
-  - A correction that shortens a quote can move it out of the 12–33-word band the Dashboard's
-    featured picks prefer (`export_core.py:432`). Accept, or count words on the pipeline's text.
 - Small, recorded with the 8 Oct review: the Backspace join guard compares displayed codes where the
   server compares slots; Return cannot split a paragraph with no spaces (CJK).
 

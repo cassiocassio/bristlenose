@@ -12,11 +12,13 @@ import {
   commitEdit,
   commitHeadingEdit,
   addTagToQuotes,
+  deleteBadge,
   getQuotesSnapshot,
   hideQuotes,
   initFromQuotes,
   removeTag,
   resetStore,
+  restoreBadges,
   setStarred,
   toggleStar,
   unhideQuotes,
@@ -35,12 +37,13 @@ vi.mock("../utils/api", () => ({
   denyProposal: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { patchEdits, patchHidden, patchStarred, patchTags } from "../utils/api";
+import { patchDeletedBadges, patchEdits, patchHidden, patchStarred, patchTags } from "../utils/api";
 
 const patchStarredMock = vi.mocked(patchStarred);
 const patchHiddenMock = vi.mocked(patchHidden);
 const patchTagsMock = vi.mocked(patchTags);
 const patchEditsMock = vi.mocked(patchEdits);
+const patchBadgesMock = vi.mocked(patchDeletedBadges);
 
 function quote(dom_id: string, tags: TagResponse[] = []): QuoteResponse {
   return {
@@ -219,6 +222,55 @@ describe("tags", () => {
   });
 });
 
+// A sentiment badge is a tag on the card ("Restore tags" undeletes them), so
+// deleting one is Edit ▸ Undo Remove Tag (R10).
+describe("sentiment badges", () => {
+  const deleted = () => getQuotesSnapshot().deletedBadges.q1;
+
+  it("deleting one is Remove Tag; undo puts it back in one write, redo deletes it again", async () => {
+    deleteBadge("q1", "negative");
+    expect(getUndoState().undoAction).toBe("removeTag");
+    await undo();
+    expect(deleted()).toBeUndefined();
+    expect(patchBadgesMock).toHaveBeenLastCalledWith({ q1: { remove: ["negative"] } });
+    await redo();
+    expect(deleted()).toEqual(["negative"]);
+    expect(patchBadgesMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("an undo does not record itself", async () => {
+    deleteBadge("q1", "negative");
+    await undo();
+    expect(getUndoState()).toMatchObject({ canUndo: false, canRedo: true, redoAction: "removeTag" });
+  });
+
+  it("undo is a delta: a badge deleted since by another path stays deleted", async () => {
+    deleteBadge("q1", "negative");
+    deleteBadge("q1", "positive", false);
+    await undo();
+    expect(deleted()).toEqual(["positive"]);
+  });
+
+  it("deleting a badge already deleted records and writes nothing", () => {
+    resetStore();
+    initFromQuotes([{ ...quote("q1"), deleted_badges: ["negative"] }]);
+    deleteBadge("q1", "negative");
+    expect(patchBadgesMock).not.toHaveBeenCalled();
+    expect(getUndoState().canUndo).toBe(false);
+    expect(deleted()).toEqual(["negative"]);
+  });
+
+  it("Restore tags is not an act on the stack, and an undo after it writes nothing", async () => {
+    deleteBadge("q1", "negative");
+    restoreBadges("q1");
+    expect(getUndoState().undoAction).toBe("removeTag");
+    patchBadgesMock.mockClear();
+    expect(await undo()).toBe(true);
+    expect(patchBadgesMock).not.toHaveBeenCalled();
+    expect(deleted()).toBeUndefined();
+  });
+});
+
 describe("text edits", () => {
   const edits = () => getQuotesSnapshot().edits;
 
@@ -278,6 +330,7 @@ describe("an exported report", () => {
     (window as unknown as Record<string, unknown>).BRISTLENOSE_EXPORT = { project: {} };
     _resetExportCache();
     toggleStar("q1", true);
+    deleteBadge("q1", "negative");
     expect(getUndoState().canUndo).toBe(false);
   });
 });

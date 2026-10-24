@@ -19,6 +19,7 @@ trued-against: HEAD@main on 2026-10-04
 
 ## Changelog
 
+- _2026-10-24_ — a deleted sentiment badge is on the stack (R10): Edit ▸ Undo Remove Tag, since the card calls these badges tags (its Restore tags button undeletes them). Its undo puts back that one badge; Restore tags stays off the stack, as the card's own reversal. Still not on it: proposal accept and deny (no route returns a proposal to pending), accept-all and deny-all, codebook changes, and a badge or tag deleted in the transcript page, which writes outside the quotes store.
 - _2026-10-22_ — four owner rulings on undo after a failed save (decisions #14, #15, #30–#32). A gesture whose write fails is withdrawn from the stack (`dropUndo`), so Edit ▸ Undo names the act before it rather than a no-op; a write that partly landed keeps its entry. A failed undo or redo of a star, hide, tag or edit now stays where it was, as split and join have since R9 (their undo used to return before its write answered). A speaker rename is still recorded at once, so an undo pressed in flight waits for it, and is withdrawn if the rename failed outright. Undoing the removal of an accepted suggestion puts the tag back as AutoCode, not as a human tag that pinned the quote. A change only in spacing is never a quote edit, in either direction, and the same holds for section and theme headings and descriptions (`EditableText`'s `spacingIsNoEdit`; codebook names keep spacing, since they are matched as typed). Eye toggles stay off the stack: view state. Review follow-ups the same day: an act whose undo was running when its own write failed leaves if that undo fails too and stays if it lands; and two failed acts in flight give back the redo branch the first one ended.
 - _2026-10-20_ — three follow-ups to the delta writes. The eye toggle's `/hidden-tag-groups` takes a `PATCH` of the groups it changed (the SPA no longer sends the whole set, which erased groups hidden on the server when an eye was clicked before the first read landed). A failed undo or redo of a speaker name says so (a failed `/people` read used to be silent) and puts the name back on screen. A quote edit opened and left unchanged records nothing, by blur, click outside or Enter as well as by unmount. Later the same day: a failed rename on the Sessions grid puts the name back too, as its undo does (the grid drew the new name and kept it); and "unchanged" means unchanged from before the edit, since a bracket drag re-bases the edit's words on what was typed and a typed edit with its bracket put back was being dropped.
 - _2026-10-04_ — trued against the build: status `partial`; the 28 Jul "what exists" table kept beside a 4 Oct one; the substrate section records that deltas shipped instead of snapshots; the divide's points 1–4 and the open questions annotated with what was decided. New finding recorded under point 2: a pending sidebar removal shadowed the whole report stack, indefinitely — fixed the same day (a new report act settles it).
@@ -128,8 +129,9 @@ Ten groups. "Inverse available?" is the question that decides how hard each is.
 _On the stack as of 4 Oct 2026:_ group 7 (speaker names, from the Sessions grid
 and the person picker); group 2's star, hide, text edit and revert; group 3's
 add and remove (bulk add is now one write, `addTagToQuotes`); group 6's section
-and theme titles and descriptions. _Not on it:_ badge delete, proposal
-accept/deny and accept-all/deny-all, reassign to section/theme, and groups 1
+and theme titles and descriptions. _Not on it:_ proposal
+accept/deny and accept-all/deny-all (badge delete joined 24 Oct 2026, as
+Remove Tag), reassign to section/theme, and groups 1
 (the Swift removal store excepted), 4, 5 and 8.
 
 ### The accidental substrate

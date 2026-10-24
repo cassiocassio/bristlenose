@@ -979,32 +979,50 @@ function restoreTag(domId: string, tag: TagResponse, index: number): Promise<Lan
   return written;
 }
 
-export function deleteBadge(domId: string, sentiment: string): void {
-  // Read-only in an exported report — mutations have no server to persist to,
-  // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
-  setState((prev) => {
-    const deletedBadges = { ...prev.deletedBadges };
-    deletedBadges[domId] = [...(deletedBadges[domId] || []), sentiment];
-    return { ...prev, deletedBadges };
-  });
-  send(patchDeletedBadges({ [domId]: { add: [sentiment] } }), [
-    badgeChange(domId, sentiment, true),
-  ]);
+/** Delete a sentiment badge from a quote. The card calls these tags (its
+ *  Restore tags button undeletes them), so Edit ▸ Undo names it Remove Tag. */
+export function deleteBadge(domId: string, sentiment: string, record = true): void {
+  void writeBadgeDelete(domId, sentiment, record);
 }
 
-export function restoreBadges(domId: string): void {
+/** `deleteBadge`, resolving with what landed. */
+function writeBadgeDelete(domId: string, sentiment: string, record = true): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
-  if (isExportMode()) return;
-  const restored = state.deletedBadges[domId] ?? [];
-  if (restored.length === 0) return;
-  setState((prev) => {
-    const deletedBadges = { ...prev.deletedBadges };
-    delete deletedBadges[domId];
-    return { ...prev, deletedBadges };
-  });
-  send(
+  if (isExportMode()) return LANDED;
+  if ((state.deletedBadges[domId] || []).includes(sentiment)) return LANDED;
+  setState(withBadge(domId, sentiment, true));
+  const written = send(patchDeletedBadges({ [domId]: { add: [sentiment] } }), [
+    badgeChange(domId, sentiment, true),
+  ]);
+  if (record) {
+    recordGesture(
+      "removeTag",
+      written,
+      () => writeBadgeRestore(domId, [sentiment]),
+      () => writeBadgeDelete(domId, sentiment, false),
+    );
+  }
+  return written;
+}
+
+/** The card's Restore tags: every deleted badge on the quote back. Itself the
+ *  reversal of deletes, so not an act on the undo stack. */
+export function restoreBadges(domId: string): void {
+  void writeBadgeRestore(domId, state.deletedBadges[domId] ?? []);
+}
+
+/** Put these deleted badges back, those still deleted. Undo's inverse of
+ *  `deleteBadge`, and `restoreBadges`; records nothing. */
+function writeBadgeRestore(domId: string, sentiments: string[]): Promise<Landed> {
+  // Read-only in an exported report — mutations have no server to persist to,
+  // and a control that responds then silently discards on reload is a lie.
+  if (isExportMode()) return LANDED;
+  const deleted = state.deletedBadges[domId] ?? [];
+  const restored = sentiments.filter((b) => deleted.includes(b));
+  if (restored.length === 0) return LANDED;
+  setState((prev) => restored.reduce((s, b) => withBadge(domId, b, false)(s), prev));
+  return send(
     patchDeletedBadges({ [domId]: { remove: restored } }),
     restored.map((b) => badgeChange(domId, b, false)),
   );

@@ -157,6 +157,7 @@ describe("a failed write takes the screen back", () => {
     deleteBadge("q1", "negative");
     await settle();
     expect(getQuotesSnapshot().deletedBadges.q1).toBeUndefined();
+    expect(getUndoState().canUndo).toBe(false);
 
     initFromQuotes([quote({ deleted_badges: ["negative"] })], true);
     failNext(patchDeletedBadges);
@@ -283,6 +284,37 @@ describe("the undo stack after a failed save", () => {
     expect(await undo()).toBe(true);
     await settle();
     expect(getUndoState()).toMatchObject({ undoAction: "addTag", redoAction: "star" });
+  });
+
+  it("a badge deleted that did not save leaves nothing to undo (R10)", async () => {
+    initFromQuotes([quote()]);
+    addTag("q1", tag("Trust"));
+    failNext(patchDeletedBadges);
+    deleteBadge("q1", "negative");
+    expect(getUndoState().undoAction).toBe("removeTag");
+    await settle();
+    expect(getUndoState()).toMatchObject({ undoAction: "addTag", canRedo: false });
+  });
+
+  it("an undo of a badge delete that did not save is still the act to undo (R10)", async () => {
+    initFromQuotes([quote()]);
+    deleteBadge("q1", "negative");
+    await settle();
+    failNext(patchDeletedBadges);
+    expect(await undo()).toBe(false);
+    await settle();
+    expect(getQuotesSnapshot().deletedBadges.q1).toEqual(["negative"]);
+    expect(getUndoState()).toMatchObject({ undoAction: "removeTag", canRedo: false });
+  });
+
+  it("a badge deleted on a quote a re-run removed is withdrawn (R10)", async () => {
+    initFromQuotes([quote()]);
+    vi.mocked(patchDeletedBadges).mockImplementationOnce(() =>
+      Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q1"] })),
+    );
+    deleteBadge("q1", "negative");
+    await settle();
+    expect(getUndoState().canUndo).toBe(false);
   });
 
   it("a write the server could only partly place keeps its entry", async () => {

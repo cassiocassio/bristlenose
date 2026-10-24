@@ -4,6 +4,18 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
+## Problem reports — N08 and the whole-report crash pane
+
+**Date:** 24 Oct 2026
+**Branch:** main (`ac841e11b`, `400ad510e`)
+**Context:** a failure that survives its Retry offers the feedback form as a problem report (`docs/design-feedback-native.md` § Feedback and problem reports). The caret placement can't be proved in a unit test.
+
+- [ ] **N08 caret.** Make the engine fail to start twice (e.g. a broken sidecar), press Send Feedback…: the sheet reads "Bristlenose had a problem" / "Tell us what happened", the prefill is the pane's title and status line with no engine output, and typing straight away lands on the blank line below it without replacing it. Return on the pane before that does nothing. On macOS 15 and 26.
+- [ ] **Crash pane, Mac.** Force a whole-report crash, Retry, crash again: one secondary Send Feedback… replaces Retry; it opens the problem sheet prefilled with "This report couldn't be shown." and the error · page. Cancel, then Help ▸ Send Feedback…: the ordinary heading, empty message.
+- [ ] **Crash pane, browser.** Same in a CLI serve: Give feedback opens the web form as a problem report; with `BRISTLENOSE_FEEDBACK_ENABLED=0` the pane keeps Retry. A clean reload then a fresh crash offers Retry again.
+
+---
+
 ## Discussion lens — quotes are the report's own cards; empty questions are quiet
 
 **Date:** 19 Oct 2026

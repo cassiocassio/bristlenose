@@ -214,6 +214,8 @@
     "dragInterviews": "Arrossega-hi les entrevistes",
     "dragInterviewsDescription": "Afegeix enregistraments o transcripcions d'entrevistes per començar.",
     "unsuitableFolder": "Bristlenose no pot analitzar la carpeta d'inici ni una carpeta del sistema. Tria la carpeta que conté les entrevistes.",
+    "analysisInterrupted": "Anàlisi interrompuda",
+    "analysisStopped": "Anàlisi aturada",
     "projectUnavailable": "Projecte no disponible",
     "projectUnavailableHint": "Connecta la unitat per accedir a aquest projecte.",
     "projectMoved": "El projecte s'ha mogut o s'ha eliminat",

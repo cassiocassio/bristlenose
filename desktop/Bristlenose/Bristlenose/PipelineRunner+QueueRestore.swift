@@ -84,10 +84,15 @@ extension PipelineRunner {
                 log.notice("run queue: not restored project=\(project.id.uuidString, privacy: .public) reason=earlierRunStillLive")
                 continue
             }
+            // The run Quit interrupted reads "Resuming…" as it starts again.
+            // Only for a spawn inside this call: one that waits behind another
+            // run, or is turned away, starts as any other Analyse would.
+            if entry.inFlight { resumingAfterQuit.insert(project.id) }
             start(
                 project: project, clean: entry.clean,
                 requested: .init(at: entry.enqueuedAt, studyID: entry.studyID ?? project.studyID)
             )
+            resumingAfterQuit.remove(project.id)
         }
         // What actually started: `start` can still turn a study away (no AI
         // consent, no API key, folder gone), each with its own log line.

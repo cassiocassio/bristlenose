@@ -215,6 +215,8 @@
     "dragInterviews": "Drag Interviews Here",
     "dragInterviewsDescription": "Add interview recordings or transcripts to get started.",
     "unsuitableFolder": "Bristlenose can’t analyse your home folder or a system folder. Choose the folder that holds your interviews.",
+    "analysisInterrupted": "Analysis interrupted",
+    "analysisStopped": "Analysis stopped",
     "projectUnavailable": "Project Unavailable",
     "projectUnavailableHint": "Connect the drive to access this project.",
     "projectMoved": "Project Moved or Deleted",

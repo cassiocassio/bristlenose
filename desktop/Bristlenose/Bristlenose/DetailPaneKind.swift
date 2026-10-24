@@ -93,9 +93,20 @@ enum DetailPaneKind: Equatable {
     /// left alone — reading the previous analysis while the new one waits is
     /// legitimate. `.running` needs this too: with the shoal off (preference or
     /// Reduce Motion) it reaches the same stale page.
+    ///
+    /// A run that ended without finishing is covered too (owner, 24 Oct 2026,
+    /// `docs/mockups/interrupted-run-pane.html`): the status page's words and
+    /// footer are for the unexpected, and the Mac knows more than the page.
+    /// One the app's leaving cut short — Quit, a crash, a lost process — reads
+    /// "Analysis interrupted" with Analyse; one the researcher stopped reads
+    /// "Analysis stopped" and nothing else.
     enum RunCover: Equatable {
         case queued(position: Int)
+        /// Its verb follows the run's progress, which the view observes:
+        /// "Resuming…" for a run picked up again (`RunProgressSubtitle.coverKey`).
         case analysing
+        case interrupted
+        case stopped
     }
 
     static func runCover(pipelineState: PipelineState?, documentState: DocumentState) -> RunCover? {
@@ -103,6 +114,8 @@ enum DetailPaneKind: Equatable {
         switch pipelineState {
         case .queued(let position): return .queued(position: position)
         case .running: return .analysing
+        case .stopped(_, let interrupted): return interrupted ? .interrupted : .stopped
+        case let state? where state.isStranded: return .interrupted
         default: return nil
         }
     }

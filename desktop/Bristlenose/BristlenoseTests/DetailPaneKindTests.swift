@@ -97,12 +97,39 @@ struct DetailPaneRunCoverTests {
         #expect(DetailPaneKind.runCover(pipelineState: .running, documentState: .loading) == nil)
     }
 
-    /// With no run pending, the status page is the truth — leave it.
+    /// With no run pending, a failure's status page is the truth — leave it.
     @Test func settledStatesLeaveThePage() {
         #expect(DetailPaneKind.runCover(
             pipelineState: .failed(.passthrough("x"), category: .network), documentState: failedPage) == nil)
-        #expect(DetailPaneKind.runCover(pipelineState: .stopped(stagesComplete: []), documentState: failedPage) == nil)
         #expect(DetailPaneKind.runCover(pipelineState: nil, documentState: failedPage) == nil)
+    }
+
+    // MARK: - A run that ended unfinished (owner, 24 Oct 2026)
+
+    /// The researcher pressed Stop: "Analysis stopped", words only.
+    @Test func aStopIsCoveredAsStopped() {
+        let page = DocumentState.statusPage(.cancelled)
+        #expect(DetailPaneKind.runCover(pipelineState: .stopped(stagesComplete: []), documentState: page)
+                == .stopped)
+    }
+
+    /// The app left under the run — Quit, a crash — or the run lost its
+    /// process: "Analysis interrupted", with Analyse.
+    @Test func aRunTheAppLeftIsCoveredAsInterrupted() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .stopped(stagesComplete: [], interrupted: true),
+            documentState: .statusPage(.cancelled)) == .interrupted)
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(EventLogReader.stranded, category: .unknown),
+            documentState: .statusPage(.stranded)) == .interrupted)
+    }
+
+    /// An earlier report the serve still shows is left showing.
+    @Test func anUnfinishedRunOverAReportIsNotCovered() {
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .stopped(stagesComplete: [], interrupted: true), documentState: .spa) == nil)
+        #expect(DetailPaneKind.runCover(
+            pipelineState: .failed(EventLogReader.stranded, category: .unknown), documentState: .spa) == nil)
     }
 
     // MARK: - Progressive lenses (docs/design-progressive-lenses.md, Phase 1)

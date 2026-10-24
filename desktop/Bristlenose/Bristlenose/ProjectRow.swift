@@ -551,7 +551,7 @@ struct ProjectRow: View {
             sessionsComplete: p?.sessionsComplete,
             sessionsTotal: p?.sessionsTotal,
             etaRemainingSeconds: p?.etaRemainingSeconds,
-            resuming: p?.attachedFromOrphan ?? false,
+            resuming: p?.readsAsResuming ?? false,
             sessionsReadable: p?.sessionsReadable,
             separator: separator,
             localize: { i18n.t($0, $1) },
@@ -726,8 +726,11 @@ struct ProjectRow: View {
             switch availability {
             case .cantFind(let reason):
                 switch reason {
-                case .unmountedVolume(let name), .networkUnreachable(let name):
-                    label += ", \(i18n.t("desktop.chrome.projectUnavailable")), \(name)"
+                // The pane's own headline, which names the drive or the share.
+                case .unmountedVolume(let name):
+                    label += ", \(i18n.t("desktop.chrome.projectUnavailable", ["name": name]))"
+                case .networkUnreachable(let host):
+                    label += ", \(i18n.t("desktop.chrome.shareUnreachable", ["host": host]))"
                 case .moved, .missingBookmark:
                     label += ", \(i18n.t("desktop.chrome.projectMoved"))"
                 }

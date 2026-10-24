@@ -294,7 +294,7 @@ enum EventLogReader {
         case "run_completed":
             return mapCompleted(event: event, stagesComplete: stagesComplete)
         case "run_cancelled":
-            return .stopped(stagesComplete: stagesComplete)
+            return .stopped(stagesComplete: stagesComplete, interrupted: endedByLeaving(event.cause))
         case "run_failed":
             // v5 path: a populated `summary` carries per-stage / per-session
             // diagnostics — route to `.failedWithDiagnostic` which renders
@@ -360,6 +360,19 @@ enum EventLogReader {
 
     /// What a `run_started` whose process is gone reads as.
     static let stranded = FailureMessage.keyed("desktop.pipeline.failure.stranded")
+
+    /// Whether a `run_cancelled` ended because the app went, not because the
+    /// researcher asked. Stop sends SIGINT, as Ctrl-C does at a terminal, and
+    /// Python records the first signal it took. Anything else on a signal cause
+    /// is the app leaving: Quit's SIGTERM (`PipelineRunner.quitSignal`), the
+    /// run's own parent-death watcher (SIGTERM), a closed terminal (SIGHUP), or
+    /// no signal at all when the app had gone (`run_lifecycle._failure_terminus`).
+    /// A record with no cause, or one from before 24 Oct 2026 when Quit sent
+    /// SIGINT, reads as stopped.
+    static func endedByLeaving(_ cause: Cause?) -> Bool {
+        guard let cause, cause.category == .userSignal else { return false }
+        return cause.signalName != "SIGINT"
+    }
 
     /// Returns `true` iff `<output>/.bristlenose/run.pid` exists, parses,
     /// and its `(pid, start_time)` matches a live process.

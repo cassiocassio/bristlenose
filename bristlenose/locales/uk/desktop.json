@@ -218,6 +218,8 @@
     "dragInterviews": "Перетягніть інтерв’ю сюди",
     "dragInterviewsDescription": "Додайте записи інтерв’ю або транскрипти, щоб почати.",
     "unsuitableFolder": "Bristlenose не може аналізувати вашу домашню теку або системну теку. Виберіть теку з інтерв’ю.",
+    "analysisInterrupted": "Аналіз перервано",
+    "analysisStopped": "Аналіз зупинено",
     "projectUnavailable": "Проєкт недоступний",
     "projectUnavailableHint": "Під’єднайте диск, щоб отримати доступ до цього проєкту.",
     "projectMoved": "Проєкт переміщено або видалено",

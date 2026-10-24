@@ -212,6 +212,8 @@
     "dragInterviews": "여기에 인터뷰를 드래그하세요",
     "dragInterviewsDescription": "인터뷰 녹음 또는 대본을 추가하여 시작하세요.",
     "unsuitableFolder": "Bristlenose는 홈 폴더나 시스템 폴더를 분석할 수 없습니다. 인터뷰가 들어 있는 폴더를 선택하세요.",
+    "analysisInterrupted": "분석이 중단되었습니다",
+    "analysisStopped": "분석이 중지되었습니다",
     "projectUnavailable": "프로젝트를 사용할 수 없음",
     "projectUnavailableHint": "이 프로젝트에 접근하려면 드라이브를 연결하세요.",
     "projectMoved": "프로젝트가 이동 또는 삭제됨",

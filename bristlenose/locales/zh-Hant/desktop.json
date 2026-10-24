@@ -212,6 +212,8 @@
     "dragInterviews": "將訪談拖移至此",
     "dragInterviewsDescription": "加入訪談錄音或逐字稿即可開始。",
     "unsuitableFolder": "Bristlenose 無法分析你的個人專屬檔案夾或系統檔案夾。請選擇存放訪談的檔案夾。",
+    "analysisInterrupted": "分析已中斷",
+    "analysisStopped": "分析已停止",
     "projectUnavailable": "專案無法使用",
     "projectUnavailableHint": "連接磁碟機以存取此專案。",
     "projectMoved": "專案已移動或刪除",

@@ -56,6 +56,10 @@ class StatusInfo:
     # tests/test_status_page_identity_parity.py.
     outcome: str
     long_is_mono: bool = False
+    # Show details, Send feedback and Help are for the unexpected, where the
+    # page owes an explanation. An outcome the researcher chose (Stop) gets its
+    # words and nothing else (owner, 24 Oct 2026).
+    footer: bool = True
 
 
 class ReportPolicy(str, Enum):
@@ -312,12 +316,15 @@ def detect_status(
     cause = _terminus_cause(output_dir, latest.run_id)
     details = _build_details(cause)
     if outcome == "cancelled":
+        # The researcher stopped it: "Analysis stopped", and nothing to
+        # explain, report or look up. Not a warning either; it is what they did.
         return StatusInfo(
-            kind=MessageKind.WARNING,
+            kind=MessageKind.INFO,
             short=t("server.statusPage.cancelledShort"),
-            long=t("server.statusPage.cancelledLong"),
-            details=details,
+            long=None,
+            details=None,
             outcome="cancelled",
+            footer=False,
         )
     # failed
     long_msg = cause.message if (cause and cause.message) else None
@@ -350,10 +357,7 @@ _PAGE_TEMPLATE = """<!doctype html>
     <h1 class="bn-status-short">{short}</h1>
     {long_block}
     {details_block}
-    <nav class="bn-status-footer">
-      {feedback_trigger}
-      <a href="{help_url}" target="_blank" rel="noopener noreferrer">{help}</a>
-    </nav>
+    {footer_block}
   </main>
   {feedback_overlay}
   {refresh_script}
@@ -679,8 +683,17 @@ def render_page(
             '</details>'
         )
     feedback_trigger, feedback_overlay = _build_feedback_html(
-        feedback_url, feedback_enabled, version, github_issues_url
+        feedback_url, feedback_enabled and status.footer, version, github_issues_url
     )
+    footer_block = ""
+    if status.footer:
+        footer_block = (
+            '<nav class="bn-status-footer">'
+            f"{feedback_trigger}"
+            f'<a href="{html.escape(help_url, quote=True)}" target="_blank" '
+            f'rel="noopener noreferrer">{html.escape(t("server.statusPage.help"))}</a>'
+            "</nav>"
+        )
     # json.dumps for quoting; `</`-escaped so a future outcome value can never
     # close the script element (same discipline as the feedback config above).
     outcome_json = json.dumps(status.outcome, ensure_ascii=True).replace("</", "<\\/")
@@ -697,8 +710,6 @@ def render_page(
         details_block=details_block,
         kind=status.kind.value,
         glyph=html.escape(CLI_GLYPH[status.kind]),
-        feedback_trigger=feedback_trigger,
+        footer_block=footer_block,
         feedback_overlay=feedback_overlay,
-        help_url=html.escape(help_url, quote=True),
-        help=html.escape(t("server.statusPage.help")),
     )

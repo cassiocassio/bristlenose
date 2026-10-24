@@ -155,7 +155,7 @@ struct WindowSubtitleModifier: ViewModifier {
                 sessionsComplete: progress?.sessionsComplete,
                 sessionsTotal: progress?.sessionsTotal,
                 etaRemainingSeconds: progress?.etaRemainingSeconds,
-                resuming: progress?.attachedFromOrphan ?? false,
+                resuming: progress?.readsAsResuming ?? false,
                 sessionsReadable: progress?.sessionsReadable,
                 separator: WindowSubtitle.separator,
                 localize: { i18n.t($0, $1) },

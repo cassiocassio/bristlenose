@@ -214,6 +214,8 @@
     "dragInterviews": "Glissez les entretiens ici",
     "dragInterviewsDescription": "Ajoutez des enregistrements ou des transcriptions d’entretiens pour commencer.",
     "unsuitableFolder": "Bristlenose ne peut pas analyser votre dossier de départ ni un dossier système. Choisissez le dossier qui contient vos entretiens.",
+    "analysisInterrupted": "Analyse interrompue",
+    "analysisStopped": "Analyse arrêtée",
     "projectUnavailable": "Projet non disponible",
     "projectUnavailableHint": "Connectez le disque pour accéder à ce projet.",
     "projectMoved": "Projet déplacé ou supprimé",

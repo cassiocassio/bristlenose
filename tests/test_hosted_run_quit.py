@@ -2,10 +2,11 @@
 
 A hosted run's stdout is a pipe to the app. A run that outlived the app failed
 at its next print — EPIPE, ``run_failed`` "CLI exited with code 1" — after a
-relaunch had attached and read "Resuming…". ⌘Q now SIGINTs the run
-(`PipelineRunner.stopAllForQuit`), and a force-quit or crash reaches it through
-the parent-death watcher, so both record ``run_cancelled``: "Stopped",
-resumable. The second signal that combination sends must not lose the cancel;
+relaunch had attached and read "Resuming…". ⌘Q now signals the run
+(`PipelineRunner.stopAllForQuit`, SIGTERM since 24 Oct 2026 so the record says
+it was not the researcher's Stop), and a force-quit or crash reaches it through
+the parent-death watcher, so both record ``run_cancelled``: "Analysis
+interrupted", resumable. The second signal that combination sends must not lose the cancel;
 the subprocess form of that is in ``test_run_lifecycle.py``.
 """
 

@@ -214,6 +214,8 @@
     "dragInterviews": "Vedä haastattelut tähän",
     "dragInterviewsDescription": "Aloita lisäämällä haastattelutallenteita tai litterointeja.",
     "unsuitableFolder": "Bristlenose ei voi analysoida kotikansiotasi tai järjestelmäkansiota. Valitse kansio, jossa haastattelusi ovat.",
+    "analysisInterrupted": "Analyysi keskeytyi",
+    "analysisStopped": "Analyysi pysäytetty",
     "projectUnavailable": "Projekti ei ole käytettävissä",
     "projectUnavailableHint": "Yhdistä asema käyttääksesi tätä projektia.",
     "projectMoved": "Projekti siirretty tai poistettu",

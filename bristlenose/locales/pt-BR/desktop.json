@@ -214,6 +214,8 @@
     "dragInterviews": "Arraste entrevistas aqui",
     "dragInterviewsDescription": "Adicione gravações de entrevistas ou transcrições para começar.",
     "unsuitableFolder": "O Bristlenose não pode analisar sua pasta pessoal nem uma pasta do sistema. Escolha a pasta que contém suas entrevistas.",
+    "analysisInterrupted": "Análise interrompida",
+    "analysisStopped": "Análise parada",
     "projectUnavailable": "Projeto indisponível",
     "projectUnavailableHint": "Conecte o disco para acessar este projeto.",
     "projectMoved": "Projeto movido ou excluído",

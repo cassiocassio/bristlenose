@@ -267,4 +267,17 @@ import Testing
         #expect(composeReadable(stage: "topics", readable: 8)
             == "Finding topics · 4 of 8 · ~12 min left")
     }
+
+    // MARK: - The detail pane's cover (24 Oct 2026)
+
+    @Test func theCoverResumesOnlyUntilAStageReports() {
+        #expect(RunProgressSubtitle.coverKey(stage: nil, resuming: true)
+                == "desktop.chrome.pipeline.resuming")
+        #expect(RunProgressSubtitle.coverKey(stage: "unknown-stage", resuming: true)
+                == "desktop.chrome.pipeline.resuming")
+        #expect(RunProgressSubtitle.coverKey(stage: "transcribe", resuming: true)
+                == "desktop.chrome.pipeline.analysing")
+        #expect(RunProgressSubtitle.coverKey(stage: nil, resuming: false)
+                == "desktop.chrome.pipeline.analysing")
+    }
 }

@@ -214,6 +214,8 @@
     "dragInterviews": "Træk interviews hertil",
     "dragInterviewsDescription": "Tilføj interviewoptagelser eller transskriptioner for at komme i gang.",
     "unsuitableFolder": "Bristlenose kan ikke analysere din hjemmemappe eller en systemmappe. Vælg den mappe, der indeholder dine interviews.",
+    "analysisInterrupted": "Analysen blev afbrudt",
+    "analysisStopped": "Analysen blev stoppet",
     "projectUnavailable": "Projekt utilgængeligt",
     "projectUnavailableHint": "Tilslut disken for at få adgang til dette projekt.",
     "projectMoved": "Projekt flyttet eller slettet",

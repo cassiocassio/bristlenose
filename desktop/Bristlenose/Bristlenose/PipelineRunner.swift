@@ -180,6 +180,13 @@ struct PipelineProgress: Equatable {
     /// the orphan poll task tail the log file off disk for the
     /// technical-details surface.
     var attachedFromOrphan: Bool = false
+    /// True for the run Quit interrupted, started again by the restored queue
+    /// at launch (`restoreQueue`, the entry that was `inFlight`). The row says
+    /// "Resuming…" until a stage reports, as for a reattached run.
+    var resumedFromQueue: Bool = false
+    /// What the subtitle's generic verb reads: "Resuming…" for a run picked up
+    /// again, either way, "Analysing…" otherwise (`RunProgressSubtitle`).
+    var readsAsResuming: Bool { attachedFromOrphan || resumedFromQueue }
     /// True between the user clicking Stop and the subprocess
     /// actually exiting. Lets the pill / popover acknowledge the
     /// click immediately ("Stopping…", disabled button) so the user
@@ -235,9 +242,12 @@ enum PipelineState: Equatable {
     /// no analysis. Phase 1f Slice 4 — surface "Continue (analyse)".
     /// `stagesComplete` derived from the manifest at display time.
     case partial(kind: String, stagesComplete: [String])
-    /// User cancelled the prior run via SIGINT/SIGTERM. Resume / Re-analyse…
+    /// The prior run ended on a signal. Resume / Re-analyse…
     /// `stagesComplete` derived from the manifest at display time.
-    case stopped(stagesComplete: [String])
+    /// `interrupted` when the researcher did not ask for it: the app quit or
+    /// went away under the run (`EventLogReader.endedByLeaving`). The detail
+    /// pane says "Analysis interrupted" with Analyse, not "Analysis stopped".
+    case stopped(stagesComplete: [String], interrupted: Bool = false)
     /// `run_completed` terminus AND ≥1 session failed in some stage. A
     /// report was written but at reduced fidelity. Pill + popover surface
     /// the per-stage breakdown via `PipelineSummary`.
@@ -417,6 +427,10 @@ final class PipelineRunner: ObservableObject {
     /// (`EventLogReader.currentRunProgress`). Absent for an attached orphan,
     /// whose own `run_started` is already the newest.
     private var priorRunIds: [UUID: String] = [:]
+
+    /// The study whose run Quit interrupted, held only while `restoreQueue`
+    /// starts it again: the spawn reads it as "Resuming…" (`beginSpawnedRun`).
+    var resumingAfterQuit: Set<UUID> = []
 
     /// Show the "Adding N interviews…" ack for `projectID` and clear it no sooner
     /// than `floor` seconds from now (the visibility floor — the timer only bounds
@@ -1250,7 +1264,9 @@ final class PipelineRunner: ObservableObject {
         state[project.id] = .running
         sessionsReadable[project.id] = nil
         priorRunIds[project.id] = EventLogReader.tailEvent(at: Self.eventsURL(for: project))?.runId
-        liveData.setProgress(PipelineProgress(startedAt: Date()), for: project.id)
+        var initial = PipelineProgress(startedAt: Date())
+        initial.resumedFromQueue = resumingAfterQuit.remove(project.id) != nil
+        liveData.setProgress(initial, for: project.id)
         liveData.clearOutput(for: project.id)
     }
 
@@ -2225,10 +2241,11 @@ final class PipelineRunner: ObservableObject {
     /// outlived the app until its next print — its stdout is a pipe to us, the
     /// write failed with EPIPE, and Python recorded `run_failed` — so a
     /// relaunch read "Resuming…" and then "CLI exited with code 1" (R19,
-    /// 20 Oct 2026). SIGINT records `run_cancelled` instead, which reads
-    /// "Stopped" and resumes from the cache, even with the pipe closing a
-    /// moment later (measured against the real CLI, mid-transcription
-    /// included).
+    /// 20 Oct 2026). A signal records `run_cancelled` instead, which resumes
+    /// from the cache, even with the pipe closing a moment later (measured
+    /// with SIGINT against the real CLI, mid-transcription included; Python's
+    /// handler takes SIGTERM the same way). Quit sends SIGTERM since 24 Oct
+    /// 2026 (`quitSignal`), so the record reads "Analysis interrupted".
     ///
     /// No escalation: the app is gone before a timer could fire, and a run
     /// wedged in a C call takes the signal when the call returns. The queue,
@@ -2239,16 +2256,20 @@ final class PipelineRunner: ObservableObject {
             owned: owned, orphans: Array(attachedOrphanPIDs.values)
         )
         // Each run's group, as Stop does, so a run's own children hear it too.
+        // SIGTERM, not Stop's SIGINT: the run records the first signal it took
+        // (`run_cancelled`'s `cause.signal_name`), and that is how the next
+        // launch tells "Analysis interrupted" from "Analysis stopped"
+        // (`EventLogReader.endedByLeaving`). Python handles the two alike.
         for pid in targets {
             let target = signalTarget(pid)
-            let err = sendSignal(target, SIGINT)
+            let err = sendSignal(target, Self.quitSignal)
             if err == 0 {
-                Self.logger.info("quit: SIGINT to run pid=\(pid, privacy: .public) target=\(target, privacy: .public)")
+                Self.logger.info("quit: SIGTERM to run pid=\(pid, privacy: .public) target=\(target, privacy: .public)")
             } else if err == ESRCH {
                 // Already gone between polls — the outcome Quit wanted.
                 Self.logger.info("quit: run pid=\(pid, privacy: .public) already exited")
             } else {
-                Self.logger.error("quit: SIGINT to run pid=\(pid, privacy: .public) target=\(target, privacy: .public) failed errno=\(err, privacy: .public)")
+                Self.logger.error("quit: SIGTERM to run pid=\(pid, privacy: .public) target=\(target, privacy: .public) failed errno=\(err, privacy: .public)")
             }
         }
         // Quitting is not the researcher taking anything out of the queue: the
@@ -2261,6 +2282,10 @@ final class PipelineRunner: ObservableObject {
             Self.logger.info("quit: \(waiting, privacy: .public) queued run(s) \(fate, privacy: .public)")
         }
     }
+
+    /// What Quit sends a run. Never SIGINT, which is Stop's (and a terminal's
+    /// Ctrl-C): the run's record must say the researcher did not stop it.
+    nonisolated static let quitSignal: Int32 = SIGTERM
 
     /// Each live run once, in a stable order.
     nonisolated static func quitSignalTargets(owned: pid_t?, orphans: [pid_t]) -> [pid_t] {

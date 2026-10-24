@@ -318,14 +318,20 @@ class TestDetectStatus:
         assert info.long == german
         assert info.details is not None and "CLI exited with code 2" in info.details
 
-    def test_cancelled_surfaces_warning(self, tmp_path: Path) -> None:
+    def test_a_stop_says_what_the_researcher_did_and_nothing_else(self, tmp_path: Path) -> None:
+        """The researcher pressed Stop: "Analysis stopped", no "Re-run" line, no
+        cause to show, and no footer, which is for the unexpected (owner,
+        24 Oct 2026). Not a warning: it is what they did."""
         out = tmp_path / "bristlenose-output"
         out.mkdir()
         _seed_cancelled(out)
         info = detect_status(out, _cond(out))
         assert info is not None
-        assert info.kind == MessageKind.WARNING
-        assert "cancelled" in info.short.lower()
+        assert info.kind == MessageKind.INFO
+        assert info.short == "Analysis stopped"
+        assert info.long is None
+        assert info.details is None
+        assert info.footer is False
         assert info.outcome == "cancelled"
 
     @pytest.mark.parametrize("seed,outcome", [
@@ -360,7 +366,7 @@ class TestDetectStatus:
         info = detect_status(out, _cond(out))
         assert info is not None
         assert info.outcome == "cancelled"
-        assert "category: user_signal" in (info.details or "")
+        assert info.short == "Analysis stopped"
         assert "out of credit" not in (info.details or "")
 
     def test_undecodable_log_does_not_intercept(self, tmp_path: Path) -> None:
@@ -599,6 +605,23 @@ class TestRenderPage:
         assert "j.ok === true" in html
         # Desktop hands off to the native sheet via the navigation bridge.
         assert "open-feedback" in html
+
+    def test_a_footerless_page_draws_no_footer_and_no_feedback(self) -> None:
+        """`footer=False` (a Stop) takes the nav away whole: no Help, no
+        trigger, no overlay, no script, with feedback otherwise on."""
+        html = render_page(
+            StatusInfo(
+                kind=MessageKind.INFO, short="Analysis stopped", long=None,
+                details=None, outcome="cancelled", footer=False,
+            ),
+            feedback_enabled=True,
+            help_url="https://example.com/help",
+        )
+        assert "bn-status-footer" not in html
+        assert "https://example.com/help" not in html
+        assert "bn-fb-trigger" not in html
+        assert "feedback-overlay" not in html
+        assert "window.__BN_FB__" not in html
 
     def test_feedback_absent_when_disabled(self) -> None:
         html = render_page(
@@ -1093,8 +1116,12 @@ class TestProdIntercept:
         client, _ = prod_app_factory()
         resp = client.get("/report/")
         assert resp.status_code == 200
-        assert "cancelled" in resp.text.lower()
+        assert "Analysis stopped" in resp.text
         assert 'id="bn-app-root"' not in resp.text
+        # No footer after a Stop: nothing to report, nothing to look up.
+        assert "bn-status-footer" not in resp.text
+        assert "bn-fb-trigger" not in resp.text
+        assert "bn-fb-overlay" not in resp.text
 
     def test_completed_run_falls_through_to_spa(
         self, prod_app_factory, tmp_path: Path,

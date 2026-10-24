@@ -48,6 +48,15 @@ struct EventLogReaderTests {
         """
     }
 
+    /// A `run_cancelled` with the cause's signal part as given (`nil` omits it,
+    /// as `run_lifecycle._failure_terminus` writes a run whose app had gone).
+    private func runCancelledLine(signalName: String?) -> String {
+        let signal = signalName.map { ",\"signal_name\":\"\($0)\"" } ?? ""
+        return """
+        {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_cancelled","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"cancelled","cause":{"category":"user_signal"\(signal),"message":"x"}}
+        """
+    }
+
     private func runFailedLine(category: String, message: String) -> String {
         """
         {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_failed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"failed","cause":{"category":"\(category)","message":"\(message)"}}
@@ -255,11 +264,38 @@ struct EventLogReaderTests {
             pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
             stagesComplete: ["ingest", "extract_audio"],
         )
-        guard case .stopped(let stages) = result else {
+        guard case .stopped(let stages, let interrupted) = result else {
             Issue.record("expected .stopped, got \(String(describing: result))")
             return
         }
         #expect(stages == ["ingest", "extract_audio"])
+        #expect(!interrupted, "a SIGINT cancel is the researcher's Stop")
+    }
+
+    /// Stop sends SIGINT; Quit SIGTERM; the run's own parent-death watcher
+    /// SIGTERM; a closed terminal SIGHUP; a run whose app had gone records no
+    /// signal at all. Only the first is the researcher's (24 Oct 2026).
+    @Test(arguments: [
+        ("SIGINT" as String?, false),
+        ("SIGTERM", true),
+        ("SIGHUP", true),
+        (nil, true),
+    ])
+    func aCancelSaysWhetherTheAppLeft(signalName: String?, interrupted: Bool) {
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [runStartedLine(), runCancelledLine(signalName: signalName)])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        #expect(result == .stopped(stagesComplete: [], interrupted: interrupted))
+    }
+
+    /// A cancel with no cause at all reads as a Stop: nothing says otherwise.
+    @Test func aCancelWithNoCauseIsAStop() {
+        #expect(!EventLogReader.endedByLeaving(nil))
     }
 
     @Test(arguments: [

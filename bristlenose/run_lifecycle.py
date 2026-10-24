@@ -188,11 +188,14 @@ def _signal_handler(signum: int, frame: object) -> None:  # noqa: ARG001
     global _caught_signal
     if _caught_signal is not None and os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
         # Already stopping. Quitting the Mac app sends two signals, its own
-        # SIGINT and then the parent-death watcher's SIGTERM, and a second
+        # SIGTERM and then the parent-death watcher's SIGTERM, and a second
         # interrupt raised mid-unwind escaped the cancel write or was wrapped
         # by pydantic as an ordinary error: a cancel recorded as a failure
         # (R19). The CLI keeps a second Ctrl-C as the user's force. Quit sends
-        # SIGINT only. The app's Stop, on its own run or an attached one,
+        # SIGTERM only, never Stop's SIGINT: the first signal is the record's
+        # `signal_name`, and the Mac reads a SIGINT cancel as the researcher's
+        # Stop and anything else as interrupted (24 Oct 2026,
+        # `EventLogReader.endedByLeaving`). The app's Stop, on its own run or an attached one,
         # escalates: SIGINT, SIGTERM at +5 s (ignored here), SIGKILL at +30 s.
         # `_arm_hosted_backstop` ends a stuck unwind first, after Stop and
         # Quit alike, and records it; SIGKILL, which writes nothing, is the

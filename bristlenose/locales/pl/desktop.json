@@ -218,6 +218,8 @@
     "dragInterviews": "Przeciągnij wywiady tutaj",
     "dragInterviewsDescription": "Dodaj nagrania wywiadów lub transkrypcje, aby rozpocząć.",
     "unsuitableFolder": "Bristlenose nie może analizować folderu domowego ani folderu systemowego. Wybierz folder, w którym są wywiady.",
+    "analysisInterrupted": "Analiza przerwana",
+    "analysisStopped": "Analiza zatrzymana",
     "projectUnavailable": "Projekt niedostępny",
     "projectUnavailableHint": "Podłącz dysk, aby uzyskać dostęp do tego projektu.",
     "projectMoved": "Projekt przeniesiony lub usunięty",

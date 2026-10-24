@@ -218,6 +218,8 @@
     "dragInterviews": "Přetáhněte rozhovory sem",
     "dragInterviewsDescription": "Začněte přidáním nahrávek rozhovorů nebo přepisů.",
     "unsuitableFolder": "Bristlenose nemůže analyzovat vaši domovskou složku ani systémovou složku. Vyberte složku, ve které máte rozhovory.",
+    "analysisInterrupted": "Analýza přerušena",
+    "analysisStopped": "Analýza zastavena",
     "projectUnavailable": "Projekt není dostupný",
     "projectUnavailableHint": "Pro přístup k tomuto projektu připojte disk.",
     "projectMoved": "Projekt přesunut nebo smazán",

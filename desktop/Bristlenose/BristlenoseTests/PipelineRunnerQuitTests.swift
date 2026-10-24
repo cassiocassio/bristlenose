@@ -29,7 +29,8 @@ struct PipelineRunnerQuitTests {
     }
 
     /// The relaunch R19 describes, then a second Quit: the attached orphan —
-    /// this test process, recorded the way a spawn records it — gets SIGINT.
+    /// this test process, recorded the way a spawn records it — gets SIGTERM
+    /// (SIGINT until 24 Oct 2026; SIGINT is Stop's, `PipelineRunner.quitSignal`).
     @Test func quitInterruptsAnAttachedOrphan() async throws {
         let center = NotificationCenter()
         let log = SignalLog()
@@ -52,7 +53,7 @@ struct PipelineRunnerQuitTests {
 
         #expect(log.sent.count == 1, "Quit sent \(log.sent.count) signals, wanted one")
         #expect(log.sent.first?.pid == getpid())
-        #expect(log.sent.first?.sig == SIGINT)
+        #expect(log.sent.first?.sig == SIGTERM, "Quit's signal must not read as the researcher's Stop")
     }
 
     /// The run this process spawned is in the set as well as the orphans.

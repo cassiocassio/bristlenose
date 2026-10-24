@@ -436,7 +436,8 @@ struct PipelineRunnerQueueTests {
         rig.center.post(name: NSApplication.willTerminateNotification, object: nil)
 
         #expect(rig.signals.map(\.pid) == [-rig.launches[0].pid])
-        #expect(rig.signals.map(\.sig) == [SIGINT])
+        // SIGTERM, not Stop's SIGINT: the record must say "interrupted".
+        #expect(rig.signals.map(\.sig) == [SIGTERM])
     }
 
     /// An orphan attached the way a relaunch attaches one — this test process,
@@ -536,7 +537,7 @@ struct PipelineRunnerQueueTests {
         runner.stopAllForQuit()
 
         #expect(recorder.sent.map(\.pid) == [-getpid()])
-        #expect(recorder.sent.map(\.sig) == [SIGINT])
+        #expect(recorder.sent.map(\.sig) == [SIGTERM])
     }
 
     // MARK: - R40: a finished run clears its own provider's credit verdict

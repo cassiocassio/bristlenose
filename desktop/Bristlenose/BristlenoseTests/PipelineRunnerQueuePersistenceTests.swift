@@ -126,12 +126,12 @@ struct PipelineRunnerQueuePersistenceTests {
         let before = store.saved
 
         rig.runner.stopAllForQuit()
-        // The run takes the SIGINT and ends; the app is still finishing its
+        // The run takes the SIGTERM and ends; the app is still finishing its
         // quit, and nothing that follows is the researcher's doing.
-        rig.launches[0].exit(.exited(code: 130))
+        rig.launches[0].exit(.exited(code: 143))
         try? await Task.sleep(for: .milliseconds(300))
 
-        #expect(rig.signals.contains { $0.sig == SIGINT })
+        #expect(rig.signals.contains { $0.sig == SIGTERM })
         #expect(store.saved == before)
         #expect(store.saved?.entries.first?.inFlight == true)
         #expect(store.saved?.entries.first?.clean == true)
@@ -159,6 +159,34 @@ struct PipelineRunnerQueuePersistenceTests {
         // few days still lapses 92 hours after Friday.
         #expect(store.saved?.entries.map(\.enqueuedAt) == [friday, friday, friday])
         #expect(Self.ids(store) == [x.id, y.id, z.id])
+    }
+
+    /// The run Quit interrupted reads "Resuming…" as the restored queue starts
+    /// it again (owner, 24 Oct 2026); a study that was only waiting, and any
+    /// later Analyse, starts as "Analysing…".
+    @Test func theRunQuitInterruptedResumesAndTheRestAnalyse() async {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let x = Self.study(rig, "X"), y = Self.study(rig, "Y")
+        let store = InMemoryRunQueueStore(PersistedRunQueue(entries: [
+            .init(projectID: x.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: true),
+            .init(projectID: y.id, clean: false, enqueuedAt: Self.now, studyID: nil, inFlight: false),
+        ]))
+        rig.runner.queueJournal.now = { Self.now }
+        await rig.runner.restoreQueue(from: store, index: rig.index)
+
+        #expect(rig.runner.liveData.progress[x.id]?.readsAsResuming == true)
+        #expect(rig.runner.resumingAfterQuit.isEmpty, "the mark outlived the restore")
+
+        rig.launches[0].exit()
+        await until { rig.launches.count == 2 }
+        #expect(rig.launches.last?.project.id == y.id)
+        #expect(rig.runner.liveData.progress[y.id]?.readsAsResuming == false)
+
+        rig.launches[1].exit()
+        await until { rig.runner.state[y.id] != .running }
+        rig.runner.start(project: x)
+        await until { rig.launches.count == 3 }
+        #expect(rig.runner.liveData.progress[x.id]?.readsAsResuming == false)
     }
 
     @Test func lapsedGoneAndEmptyStudiesAreDroppedAndTheRestRun() async throws {

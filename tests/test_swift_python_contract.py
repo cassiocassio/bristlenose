@@ -337,6 +337,33 @@ class TestStopLadderContract:
         )
 
 
+_EVENT_LOG_READER_SWIFT = _PIPELINE_RUNNER_SWIFT.with_name("EventLogReader.swift")
+
+
+class TestQuitAndStopLeaveDifferentRecords:
+    """The Mac tells "Analysis interrupted" from "Analysis stopped" by the first
+    signal a run took (24 Oct 2026). Python records it as
+    ``run_cancelled.cause.signal_name``; Stop sends SIGINT, Quit must not, and
+    the reader must call only SIGINT the researcher's Stop."""
+
+    def test_quit_does_not_send_stops_signal(self) -> None:
+        text = _PIPELINE_RUNNER_SWIFT.read_text(encoding="utf-8")
+        match = re.search(r"static\s+let\s+quitSignal\s*:\s*Int32\s*=\s*(SIG[A-Z]+)", text)
+        assert match is not None, "PipelineRunner.swift no longer declares `quitSignal`"
+        assert match.group(1) == "SIGTERM", (
+            f"Quit sends {match.group(1)}; a SIGINT cancel reads as the researcher's Stop"
+        )
+        assert "sendSignal(target, Self.quitSignal)" in text, "stopAllForQuit no longer sends quitSignal"
+
+    def test_the_reader_names_sigint_as_the_stop(self) -> None:
+        import signal
+
+        text = _EVENT_LOG_READER_SWIFT.read_text(encoding="utf-8")
+        match = re.search(r"func\s+endedByLeaving\b.*?\n    \}", text, re.S)
+        assert match is not None, "EventLogReader.swift no longer declares `endedByLeaving`"
+        assert f'"{signal.Signals(signal.SIGINT).name}"' in match.group(0)
+
+
 # ---------------------------------------------------------------------------
 # The stage budget on run_progress — the ring slice (R27)
 # ---------------------------------------------------------------------------

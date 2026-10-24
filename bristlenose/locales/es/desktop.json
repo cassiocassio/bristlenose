@@ -214,6 +214,8 @@
     "dragInterviews": "Arrastra entrevistas aquí",
     "dragInterviewsDescription": "Añade grabaciones de entrevistas o transcripciones para comenzar.",
     "unsuitableFolder": "Bristlenose no puede analizar tu carpeta de inicio ni una carpeta del sistema. Elige la carpeta que contiene tus entrevistas.",
+    "analysisInterrupted": "Análisis interrumpido",
+    "analysisStopped": "Análisis detenido",
     "projectUnavailable": "Proyecto no disponible",
     "projectUnavailableHint": "Conecta la unidad para acceder a este proyecto.",
     "projectMoved": "Proyecto movido o eliminado",

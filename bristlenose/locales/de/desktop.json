@@ -214,6 +214,8 @@
     "dragInterviews": "Interviews hierher ziehen",
     "dragInterviewsDescription": "Fügen Sie Interviewaufnahmen oder Transkripte hinzu, um zu beginnen.",
     "unsuitableFolder": "Bristlenose kann Ihren Benutzerordner oder einen Systemordner nicht analysieren. Wählen Sie den Ordner mit Ihren Interviews.",
+    "analysisInterrupted": "Analyse unterbrochen",
+    "analysisStopped": "Analyse angehalten",
     "projectUnavailable": "Projekt nicht verfügbar",
     "projectUnavailableHint": "Verbinden Sie das Laufwerk, um auf dieses Projekt zuzugreifen.",
     "projectMoved": "Projekt verschoben oder gelöscht",

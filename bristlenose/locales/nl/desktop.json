@@ -214,6 +214,8 @@
     "dragInterviews": "Sleep interviews hierheen",
     "dragInterviewsDescription": "Voeg interviewopnamen of transcripten toe om te beginnen.",
     "unsuitableFolder": "Bristlenose kan je thuismap of een systeemmap niet analyseren. Kies de map met je interviews.",
+    "analysisInterrupted": "Analyse onderbroken",
+    "analysisStopped": "Analyse gestopt",
     "projectUnavailable": "Project niet beschikbaar",
     "projectUnavailableHint": "Sluit de schijf aan om toegang te krijgen tot dit project.",
     "projectMoved": "Project verplaatst of verwijderd",

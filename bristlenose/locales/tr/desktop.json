@@ -214,6 +214,8 @@
     "dragInterviews": "Görüşmeleri Buraya Sürükleyin",
     "dragInterviewsDescription": "Başlamak için görüşme kayıtları veya dökümler ekleyin.",
     "unsuitableFolder": "Bristlenose ana klasörünüzü veya bir sistem klasörünü analiz edemez. Görüşmelerinizin bulunduğu klasörü seçin.",
+    "analysisInterrupted": "Analiz kesintiye uğradı",
+    "analysisStopped": "Analiz durduruldu",
     "projectUnavailable": "Proje Kullanılamıyor",
     "projectUnavailableHint": "Bu projeye erişmek için sürücüyü bağlayın.",
     "projectMoved": "Proje Taşındı veya Silindi",

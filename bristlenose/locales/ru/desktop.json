@@ -218,6 +218,8 @@
     "dragInterviews": "Перетащите интервью сюда",
     "dragInterviewsDescription": "Добавьте записи или транскрипты интервью, чтобы начать.",
     "unsuitableFolder": "Bristlenose не может анализировать вашу домашнюю папку или системную папку. Выберите папку с интервью.",
+    "analysisInterrupted": "Анализ прерван",
+    "analysisStopped": "Анализ остановлен",
     "projectUnavailable": "Проект недоступен",
     "projectUnavailableHint": "Подключите диск, чтобы получить доступ к этому проекту.",
     "projectMoved": "Проект перемещён или удалён",

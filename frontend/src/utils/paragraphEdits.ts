@@ -20,9 +20,9 @@ import {
   postParagraphSplit,
   toastSaveFailed,
 } from "./api";
+import { transcriptWritten } from "./transcriptWritten";
 
-/** Fired when a split, a join or its undo has landed, so the transcript re-reads. */
-export const TRANSCRIPT_WRITTEN_EVENT = "bn:transcript-written";
+export { TRANSCRIPT_WRITTEN_EVENT } from "./transcriptWritten";
 
 /** How many words an edit sends to check it lands where it was made — the
  *  server's ``VERIFY_WORDS``. */
@@ -73,9 +73,8 @@ export function caretAtStart(body: HTMLElement): boolean {
   return before.toString().trim().length === 0;
 }
 
-function written(): void {
-  window.dispatchEvent(new CustomEvent(TRANSCRIPT_WRITTEN_EVENT));
-}
+/** A split, a join or its undo has landed: the transcript re-reads. */
+const written = transcriptWritten;
 
 /** An edit's write, saying why when it does not land: a move to a new
  *  moderator is refused while an analysis runs, and the callers' `.catch`

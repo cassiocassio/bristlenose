@@ -49,6 +49,7 @@ import type { ApiError } from "../utils/api";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { isExportMode } from "../utils/exportData";
+import { transcriptWritten } from "../utils/transcriptWritten";
 import { dropUndo, pushUndo } from "./UndoStore";
 
 // ── State shape ──────────────────────────────────────────────────────────
@@ -454,7 +455,15 @@ function recordGesture(
   undo: () => Promise<Landed>,
   redo: () => Promise<Landed>,
 ): void {
-  const entry = { action, undo: () => mustLand(undo()), redo: () => mustLand(redo()) };
+  // An undo or redo can run on the transcript page, which draws its own copy
+  // of the tags, deleted badges and hidden quotes: once a step lands, it reads
+  // again, as after a paragraph edit. The gesture itself is made on a quote
+  // lens, with no transcript open to tell.
+  const entry = {
+    action,
+    undo: () => mustLand(undo()).then(transcriptWritten),
+    redo: () => mustLand(redo()).then(transcriptWritten),
+  };
   pushUndo(entry);
   void written.then((landed) => {
     if (landed === "none") dropUndo(entry);

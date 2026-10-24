@@ -25,6 +25,7 @@ import {
 } from "./QuotesContext";
 import { getUndoState, redo, resetUndoStore, undo } from "./UndoStore";
 import { _resetExportCache } from "../utils/exportData";
+import { TRANSCRIPT_WRITTEN_EVENT } from "../utils/transcriptWritten";
 
 vi.mock("../utils/api", () => ({
   toastSaveFailed: vi.fn(),
@@ -317,6 +318,46 @@ describe("text edits", () => {
     expect(getUndoState().undoAction).toBe(action);
     await undo();
     expect(edits()).toEqual({ q1: "Kept" });
+  });
+});
+
+// A transcript open while ⌘Z undoes a quote act made in another lens keeps its
+// own copy of the tags, badges and hidden grey: the undo tells it to read again,
+// once per step that landed, and an act itself does not (R10 follow-up).
+describe("an open transcript", () => {
+  let reads = 0;
+  const count = () => { reads += 1; };
+  beforeEach(() => {
+    reads = 0;
+    window.addEventListener(TRANSCRIPT_WRITTEN_EVENT, count);
+  });
+  afterEach(() => window.removeEventListener(TRANSCRIPT_WRITTEN_EVENT, count));
+
+  it("re-reads once after an undo and once after a redo, not after the act", async () => {
+    toggleStar("q1", true);
+    await Promise.resolve();
+    expect(reads).toBe(0);
+    await undo();
+    expect(reads).toBe(1);
+    await redo();
+    expect(reads).toBe(2);
+  });
+
+  it("re-reads after the undo of a tag removal and of a badge delete", async () => {
+    resetStore();
+    initFromQuotes([quote("q1", [tag("A")])]);
+    removeTag("q1", "A");
+    deleteBadge("q1", "negative");
+    await undo();
+    await undo();
+    expect(reads).toBe(2);
+  });
+
+  it("does not re-read after an undo whose write failed", async () => {
+    toggleStar("q1", true);
+    patchStarredMock.mockImplementationOnce(() => Promise.reject(new Error("refused")));
+    expect(await undo()).toBe(false);
+    expect(reads).toBe(0);
   });
 });
 

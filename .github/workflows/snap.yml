@@ -44,7 +44,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -86,6 +86,34 @@ jobs:
         with:
           name: snap-amd64
           path: ${{ steps.snapcraft.outputs.snap }}
+
+      - name: Run the installed snap under strict confinement
+        # After the upload, so a red run still leaves the .snap to reproduce with.
+        # The build above runs unconfined inside LXD and cannot see what a user
+        # sees. Under strict AppArmor `import onnxruntime` probes /sys/class/drm
+        # and /sys/bus/pci for a GPU, is refused, and printed "Permission denied"
+        # warnings into every transcription; a tester read them as breakage. The
+        # runner is a Hyper-V guest, which adds its own "Skipping pci_bus_id".
+        # `doctor --self-test` opens an onnxruntime session through the helper the
+        # transcription and voice paths import through
+        # (bristlenose/utils/onnxruntime_import.py), with no recording, API key or
+        # model download. It proves the import is quiet on stderr inside a real
+        # strict install, and that the bundle self-test passes there. It does not
+        # prove faster-whisper's VAD reaches the helper first: that caller is
+        # pinned by tests/test_onnxruntime_import.py.
+        run: |
+          sudo snap install --dangerous "${{ steps.snapcraft.outputs.snap }}"
+          /snap/bin/bristlenose --version
+          rc=0
+          /snap/bin/bristlenose doctor --self-test >stdout.txt 2>stderr.txt || rc=$?
+          echo "--- stdout"; cat stdout.txt
+          echo "--- stderr"; cat stderr.txt
+          [ "$rc" -eq 0 ] || { echo "::error::doctor --self-test exited $rc inside the strict snap"; exit 1; }
+          if grep -E 'onnxruntime:Default|device_discovery' stderr.txt; then
+            echo "::error::onnxruntime printed to stderr inside the strict snap: an import is not going through import_onnxruntime()"
+            exit 1
+          fi
+          echo "stderr carries no onnxruntime line"
 
   publish-edge:
     # Dispatch ONLY. The `(main && push)` arm was removed 8 Aug 2026 when the

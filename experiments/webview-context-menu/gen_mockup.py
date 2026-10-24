@@ -75,10 +75,10 @@ def tc(label, hot=False):
             f'<span class="timecode-bracket">[</span>{label}<span class="timecode-bracket">]</span></a>')
 
 
-def quote_card(hot_badge=False, hot_tc=False):
+def quote_card(hot_badge=False, hot_tc=False, hot_body=False):
     return f'''<div class="lens-pad"><h3 class="ctx-h3">Delivery costs</h3>
 <blockquote class="quote-card" id="q-p3-754"><div class="quote-row">{tc("12:34", hot_tc)}
-<div class="quote-body"><span class="quote-text-wrapper"><span class="smart-quote">“</span><span class="quote-text">I wanted to see the delivery cost before I typed my card number, not after.</span><span class="smart-quote">”</span></span>
+<div class="quote-body"><span class="quote-text-wrapper"><span class="smart-quote">“</span><span class="quote-text{" hot" if hot_body else ""}">I wanted to see the delivery cost before I typed my card number, not after.</span><span class="smart-quote">”</span></span>
 <span class="speaker">{badge("p3", "Dana", "/report/sessions/s3#t-754", hot_badge)}</span>
 <div class="badges"><span class="badge badge-ai" data-sentiment="frustration">frustration</span></div></div></div></blockquote>
 <blockquote class="quote-card" id="q-p5-301"><div class="quote-row">{tc("05:01")}
@@ -152,37 +152,62 @@ def player(hot=False):
 
 
 # ── Scenarios ──
+# Today: WebKit's items, plus the app's own Reload Report, appended after a separator to every
+# report menu since 21 Oct 2026 (ReportContextMenu.apply). The popout player is a plain WKWebView,
+# so it has no Reload Report. Proposed: docs/design-webview-context-menu.md §9.
+RR = ["-", "Reload Report"]
+PAGE = ["Back", "Reload Report"]
+T_LINK, T_IMAGE = LINK + RR, IMAGE + RR
+VIDEO_TODAY = ["Open Video in New Window", "Download Video", "Copy Video Address", "-",
+               "Hide Controls", "Enter Full Screen", "Enter Picture in Picture", "-", "Pause", "Mute", "Loop"]
+TC = ["Play", "-", "Show in Transcript", "Open Transcript in New Window"]
+TO_TRANSCRIPT = ["Show in Transcript", "Open Transcript in New Window"]
+
+
+def signal_quote(hot=False):
+    return f'''<div class="lens-pad"><div class="signals-codebook-heading"><a href="#section-delivery-costs" class="signal-card-location-link">Delivery costs</a></div>
+<div class="ctx-card"><div class="ctx-card-h">frustration · 4 quotes</div>
+<blockquote class="ctx-sq"><div class="quote-row"><a class="timecode{" hot" if hot else ""}" href="/report/sessions/s3#t-754"><span class="timecode-bracket">[</span>12:34<span class="timecode-bracket">]</span></a>
+<span class="quote-body"><span class="quote-text">I wanted to see the delivery cost before I typed my card number.</span> <span class="speaker">{badge("p3", "Dana")}</span></span></div></blockquote></div></div>'''
+
+
 S = [
-    dict(h="Quotes — speaker badge", w="<code>&lt;a href=&quot;/report/sessions/s3#t-754&quot;&gt;</code>. A click goes to the transcript at 12:34.",
-         ctx=quote_card(hot_badge=True), today=LINK, prop=["Open Link in New Window"],
-         note="<b>Today</b> Open Link in New Window loads the transcript into the <i>Video Player</i> window, with no toolbar or sidebar, and closes any playing clip. <b>Proposed</b> WebKit's own item, title and position kept, retargeted to a new Bristlenose window: this project, Sessions, transcript s3 at 12:34. Open Link (a full reload), Download (does nothing), Copy Link and Share (a 127.0.0.1 address that dies on restart) are removed."),
-    dict(h="Quotes — timecode", w="<code>&lt;a href=&quot;#t=754&quot;&gt;</code>. A click plays the clip; the href carries no session.",
-         ctx=quote_card(hot_tc=True), today=LINK, prop=["Open Link in New Window"],
-         note="<span class=flag>Decision.</span> Today the new window opens the Quotes lens at the top, since nothing reads <code>#t=</code>. Proposed: the transcript at this moment, which the card knows (session and seconds), not the href. The alternative is to offer nothing here, because a left click <i>plays</i> rather than navigates."),
-    dict(h="Sessions — <code>#N</code>", w="<code>&lt;a href=&quot;/report/sessions/s3&quot;&gt;</code>", ctx=sessions_row(hot_id=True),
-         today=LINK, prop=["Open Link in New Window"],
-         note="Proposed: a new window on transcript s3 at the top. WindowSeed can express the lens today, not the session (doc §4.3)."),
-    dict(h="Sessions — thumbnail", w="<code>&lt;img src=&quot;/report/assets/thumbnails/s3.jpg&quot;&gt;</code>; a click opens the player.",
-         ctx=sessions_row(hot_thumb=True), today=IMAGE, prop=["Copy Image", "Copy Subject", "Look Up", "-", "Share…"],
-         note="<b>Today</b> Open Image in New Window replaces the playing clip with the bare JPEG; Download Image does nothing. <b>Proposed</b> both removed; Copy Image and Share stay. <span class=flag>Decision.</span> Copy Subject and Look Up run Visual Look Up on a participant's recording; whether that reaches Apple's servers was not measured."),
-    dict(h="Transcript — timecode", w="<code>&lt;a href=&quot;#t=754&quot;&gt;</code> on <code>/report/sessions/s3</code>.",
-         ctx=transcript(hot=True), today=LINK, prop=["Open Link in New Window"],
-         note="Proposed: a second window on this transcript at 12:34. Both are known on the page, so this one is exact. Words and paragraphs keep the Mac's text services; this is only the timecode."),
-    dict(h="Signals — location heading", w="<code>&lt;a href=&quot;#section-delivery-costs&quot;&gt;</code>, relative to Signals. A click goes to <b>Quotes</b>.",
-         ctx=signals(hot=True), today=LINK, prop=["Open Link in New Window"],
-         note="<b>Today</b> the player window opens on Signals: the href names the wrong lens. <b>Proposed</b> a new window on Quotes at Delivery costs, where the left click goes. The place comes from the component, not the href (doc §4.2)."),
+    dict(h="Quotes — card timecode", w="Blue <code>[12:34]</code>. A click plays the recording at that moment.",
+         ctx=quote_card(hot_tc=True), today=T_LINK, prop=TC,
+         note="<b>Today</b> Open Link in New Window opens the Quotes lens at the top, in the <i>Video Player</i> window, and closes any playing clip. <b>Proposed</b> the click first (D10: a blue timecode plays), then the transcript at the moment, here or parked in a new window; that window starts playing in its own player (D1). Same menu on every blue timecode that plays: Discussion and Screens cards, the dashboard, the Screens version time."),
+    dict(h="Quotes — speaker badge", w="<code>&lt;a href=&quot;/report/sessions/s3#t-754&quot;&gt;</code>. A click shows Dana's transcript at 12:34.",
+         ctx=quote_card(hot_badge=True), today=T_LINK, prop=TO_TRANSCRIPT,
+         note="<b>Proposed</b> the badge is that person and their whole conversation, at the moment (D10, D11). No Play on a person: the timecode beside it plays. Same on the Discussion moderator badge."),
+    dict(h="Quotes — the card itself", w="Right-click the quote text, not a link (D12).",
+         ctx=quote_card(hot_body=True), today=PAGE, prop=["Star", "Hide", "Add Tag…", "-", "Show in Transcript", "Open Transcript in New Window", "-", "Copy Quote"],
+         note="<b>Today</b> the page menu. <b>Proposed</b> the card's own commands, the ones the Quotes menu already holds, as Mail's message menu does. A card click selects rather than acts, so there is no lead item. Star reads Unstar on a starred card; with several cards selected the menu acts on the selection, as the Quotes menu does (<i>Star 3 Quotes</i>)."),
+    dict(h="Transcript — paragraph timecode", w="Blue <code>[12:34]</code> on Dana's transcript. A click plays.",
+         ctx=transcript(hot=True), today=T_LINK, prop=["Play", "-", "Open Transcript in New Window"],
+         note="Show in Transcript is left out: you are in it. The new window is a second view of this transcript at 12:34, playing in its own player."),
+    dict(h="Sessions — <code>#N</code>", w="<code>&lt;a href=&quot;/report/sessions/s3&quot;&gt;</code>. A click opens the session's transcript.",
+         ctx=sessions_row(hot_id=True), today=T_LINK, prop=["Open Transcript", "Open Transcript in New Window", "-", "Play"],
+         note="<b>Open</b>, not Show: the click opens the session's transcript itself, at the top (D4). Play is the recording from the start."),
+    dict(h="Sessions — thumbnail", w="<code>&lt;img src=&quot;/report/assets/thumbnails/s3.jpg&quot;&gt;</code>. A click plays from 0:00.",
+         ctx=sessions_row(hot_thumb=True), today=T_IMAGE, prop=["Play", "-", "Open Transcript", "Open Transcript in New Window", "-", "Copy Image", "Copy Subject", "Look Up", "Share…"],
+         note="<b>Today</b> Open Image in New Window replaces the playing clip with the bare JPEG; Download Image does nothing. <b>Proposed</b> the filename's menu, then the image items. Copy Subject and Look Up stay for now (D2); the review would drop them here, where they are WebKit's leftovers, which leaves Copy Image · Share…."),
+    dict(h="Signals — expanded-quote timecode", w="Blue <code>[12:34]</code>. Today a click shows the transcript (the report reloads).",
+         ctx=signal_quote(hot=True), today=T_LINK, prop=TC,
+         note="<span class=flag>Recommended, awaiting the owner.</span> The timecode plays, as every blue timecode does (D10), and the card's badge becomes the transcript link it is on a quote card (§9.3). Same for the Codebooks threshold-review timecode, which also drops its <code>target=_blank</code>."),
+    dict(h="Signals — location heading", w="<code>&lt;a href=&quot;#section-delivery-costs&quot;&gt;</code>. A click shows the section in Quotes.",
+         ctx=signals(hot=True), today=T_LINK, prop=["Show in Quotes", "Open Quotes in New Window"],
+         note="<b>Today</b> the player window opens on Signals, since the href names the wrong lens. <b>Proposed</b> the place comes from the component, not the href (§4.2). Same on the dashboard's section links and the stat cards that name a section."),
     dict(h="Codebooks — author link", w="External <code>https://</code> from the codebook's YAML.",
-         ctx=codebook_author(hot=True), today=LINK, prop=["Open Link", "Open Link in New Window", "Copy Link", "-", "Share…"],
-         note="External links behave as in Safari and open the default browser. Only Download Linked File goes, since it does nothing."),
+         ctx=codebook_author(hot=True), today=T_LINK, prop=["Open Link", "Copy Link", "-", "Share…"],
+         note="As Safari, minus two: no Open Link in New Window (the click already goes to the browser; the item would open the page inside a Bristlenose window) and no Download Linked File (it does nothing). No Reload Report on a link (D6)."),
     dict(h="Codebooks — navigator row", w="<code>&lt;a href=&quot;#&quot;&gt;</code>, a JS action, not a place.",
-         ctx=codebook_nav(hot=True), today=LINK, prop=None,
-         note="<b>Today</b> the player window opens on this lens. <b>Proposed</b> every link item removed; with nothing left, AppKit shows no menu. <span class=flag>Decision.</span> Offer nothing, or fall back to the page items (Back, Reload) so a right-click always answers. Same for the hidden-quotes counter and the Sessions header's Reveal link."),
+         ctx=codebook_nav(hot=True), today=T_LINK, prop=PAGE,
+         note="Not a link to anything, so the page menu (D3, D6). Same for the hidden-quotes counter and the Sessions header's Reveal link."),
     dict(h="Screens — screengrab", w="<code>&lt;img src=&quot;data:image/jpeg…&quot;&gt;</code>", ctx=screengrab(hot=True),
-         today=IMAGE, prop=["Copy Image", "Copy Subject", "Look Up", "-", "Share…"],
-         note="Today Open Image in New Window does nothing (the <code>data:</code> scheme is refused) and Download does nothing. On a custom board the Screens session puts <i>Tidy</i> and a separator above these items; drawn here on an automatic board."),
-    dict(h="Popout player — video", w="<code>&lt;video src=&quot;/media/…&quot;&gt;</code> in <code>player.html</code>.",
-         ctx=player(hot=True), today=VIDEO, prop=["Hide Controls", "Enter Full Screen", "Enter Picture in Picture"],
-         note="WebKit's media items are its usual set, <b>not measured</b> in the probe. Open Video in New Window does nothing (the popout has no UI delegate), Download goes the silent way, Copy Video Address is a loopback URL: all removed. The viewing controls stay."),
+         today=T_IMAGE, prop=["Copy Image", "Copy Subject", "Look Up", "-", "Share…"],
+         note="<b>Today</b> Open Image in New Window does nothing (the <code>data:</code> scheme is refused) and Download does nothing. A screengrab has no click action, so no lead item. On a custom board the Screens lens puts <i>Tidy</i> above these."),
+    dict(h="Popout player — video", w="<code>&lt;video&gt;</code> in the player window, playing.",
+         ctx=player(hot=True), today=VIDEO_TODAY, prop=["Pause", "Mute", "-", "Enter Full Screen", "Enter Picture in Picture", "-", "Hide Controls"],
+         note="WebKit's media items here are its usual set, <b>not measured</b> in the probe. <b>Proposed</b> the click action first (Pause while playing, Play while paused), as QuickTime; Open, Download and Copy Video go (they do nothing or hand out a loopback address). Video ▸ Fullscreen in the menu bar becomes Enter Full Screen to match (D9)."),
 ]
 
 
@@ -190,7 +215,7 @@ def menu_html(items, extra=""):
     if items is None:
         return '<div class="none" data-menu>No menu</div>'
     out = []
-    focus = next((it for it in items if "in New Window" in it), items[0])
+    focus = items[0]
     for it in items:
         if it == "-":
             out.append("<hr>")
@@ -223,7 +248,7 @@ def win(title, body, kind):
 outcome_today = win("Video Player", f'<div class="win-body bare">{REPORT_PANE}</div>', "small")
 outcome_prop = win("Checkout study — Sessions", f'''<div class="win-body full"><div class="win-side">
 <div class="ws-proj">Checkout study</div><div class="ws-lens">Project</div><div class="ws-lens on">Sessions</div><div class="ws-lens">Quotes</div><div class="ws-lens">Codebooks</div><div class="ws-lens">Signals</div></div>
-<div class="win-main"><div class="win-tool"><span>&#x25C0;&#xFE0E; &#x25B6;&#xFE0E;</span><b>Session 3 · Dana</b></div>{REPORT_PANE.replace('id="t-754"', 'id="t-754" data-anchor')}</div></div>''', "large")
+<div class="win-main"><div class="win-tool"><span>&#x25C0;&#xFE0E; &#x25B6;&#xFE0E;</span><b>Session 3 · Dana</b></div>{REPORT_PANE.replace('id="t-754"', 'id="t-754" data-anchor')}</div></div>''', "large") + win("Video Player", '<div class="win-body"><div class="ctx-player"><div class="ctx-video"><div class="ctx-video-pic" style="inset:10px 14px 34px"></div><div class="ctx-controls" style="width:84%;bottom:6px"><span>&#10074;&#10074;</span><i></i><span class="t">12:34</span></div></div></div></div>', "player")
 
 PAGE_CSS = r"""
 /* ── mockup page chrome (not the product) ── */
@@ -298,6 +323,8 @@ main.pg { max-width: 1260px; margin: 0 auto; padding: 24px 16px 64px; }
 .win { position: absolute; background: var(--bn-colour-bg); border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 .5px rgba(0,0,0,.25), 0 14px 40px rgba(0,0,0,.28); }
 .win.small { left: 40px; top: 40px; width: 360px; height: 240px; }
 .win.large { left: 16px; top: 16px; right: 16px; bottom: 16px; }
+.win.player { right: 10px; bottom: 10px; width: 230px; height: 150px; }
+.ctx-sq { margin: 0; padding: 4px 0; font-size: var(--bn-text-caption); }
 .win-bar { height: 28px; display: flex; align-items: center; gap: 7px; padding: 0 10px; background: light-dark(#f3f3f3, #2c2c2e); border-bottom: 1px solid var(--bn-colour-border); font: 600 12px var(--pg-font); }
 .win-bar span { margin-left: 8px; }
 .win-bar i { width: 11px; height: 11px; border-radius: 50%; display: block; }
@@ -373,7 +400,7 @@ HTML = f"""<!doctype html>
   27.0, except the video menu (not measured). The proposal adds NO new strings:
   every item kept is WebKit's, retargeted or left alone.
 
-  The highlighted row is the item under discussion (the new-window item where there is one), not a recommendation.
+  The highlighted row is the first item, the single-click action where there is one.
 -->
 <style>
 {SHIPPED_CSS}
@@ -384,20 +411,31 @@ HTML = f"""<!doctype html>
 <body>
 <main class="pg">
   <h1>The report's right-click menu: today and proposed</h1>
-  <p class="lede">Each row is something you can right-click in the Mac app. Today every report link offers WebKit's full link menu, and its <i>Open Link in New Window</i> lands in the video player's window. The proposal keeps that item only where the page knows the place (project, lens and position), opening a real Bristlenose window there, and removes what does nothing or hands out a dead address.</p>
+  <p class="lede">Each row is something you can right-click in the Mac app. Today every report link offers WebKit's generic link menu, and its <i>Open Link in New Window</i> lands in the video player's window. Proposed (<code>docs/design-webview-context-menu.md</code> §9, 24 Oct 2026): the first item is what a single click does, then the same in a new window, then the other useful action. A blue timecode plays and a speaker badge shows the transcript, so every moment offers both the recording and the transcript. Labels say exactly what happens. Reload Report stays on page menus only, as Safari does.</p>
   <div class="key"><span class="k-art">Artefact: shipped CSS and markup, synthetic content; menus approximate macOS 26</span><span class="k-com">Commentary</span><button id="pal" type="button">Palette: default</button><button id="scheme" type="button">Appearance: system</button></div>
   <div class="grid">
     
     {"".join(rows)}
   </div>
 
-  <h2 style="font-size:16px;margin:28px 0 4px">What <i>Open Link in New Window</i> opens</h2>
-  <p class="lede">From row 1: right-click Dana's badge on a quote.</p>
+  <h2 style="font-size:16px;margin:28px 0 4px">What the new window opens</h2>
+  <p class="lede">From row 1: right-click the timecode on Dana's quote, then today's <i>Open Link in New Window</i> against the proposed <i>Open Transcript in New Window</i>.</p>
   <div class="outcome">
     <div><div class="frame"><div class="chrome"><i></i><i></i><i></i><span>Today</span></div><div class="ostage"><div class="mainwin-ghost"></div>{outcome_today}</div></div></div>
     <div><div class="frame"><div class="chrome"><i></i><i></i><i></i><span>Proposed</span></div><div class="ostage">{outcome_prop}</div></div></div>
-    <div class="note" style="grid-column: 1 / -1"><span class="lbl">Commentary</span><b>Today</b> the player's own 720×480 window, titled <i>Video Player</i>, holds the report with no toolbar, sidebar or lens rail; any playing clip closes; and, from reading the code, its route changes reach the main window's bridge (doc §2, a hand check owed). <b>Proposed</b> <code>WindowSeed.fresh(project:, lens: sessions, place: .session("s3", 754))</code>: a full window on the same project, the transcript scrolled to 12:34 and the paragraph highlighted as a deep link already does. The window chrome here is an approximation; the transcript inside it is the shipped CSS.</div>
+    <div class="note" style="grid-column: 1 / -1"><span class="lbl">Commentary</span><b>Today</b> the player's own 720×480 window, titled <i>Video Player</i>, holds the report with no toolbar, sidebar or lens rail; any playing clip closes; and, from reading the code, its route changes reach the main window's bridge (doc §2, a hand check owed). <b>Proposed</b> <code>WindowSeed.fresh(project:, lens: sessions, place: .session("s3", 754))</code>: a full window on the same project, the transcript scrolled to 12:34 and the paragraph highlighted as a deep link already does, playing in that window's own player (D1; one player per window, measured from code). The window chrome here is an approximation; the transcript inside it is the shipped CSS.</div>
   </div>
+
+  <h2 style="font-size:16px;margin:28px 0 4px">String plan</h2>
+  <table class="sumtab"><tr><th>Label</th><th>Source</th></tr>
+  <tr><td>Play · Pause · Mute</td><td>existing, <code>menu.video.*</code></td></tr>
+  <tr><td>Star · Hide · Add Tag…</td><td>existing, <code>menu.quotes.*</code></td></tr>
+  <tr><td>Reload Report</td><td>existing, <code>menu.view.reloadReport</code></td></tr>
+  <tr><td>Show in Transcript</td><td>value change of <code>menu.quotes.revealInTranscript</code> ("Reveal in Transcript"), 21 locales; the menu bar takes it too (D9)</td></tr>
+  <tr><td>Enter Full Screen / Exit Full Screen</td><td>value change of <code>menu.video.fullscreen</code> ("Fullscreen") plus one new key, menu bar (D9)</td></tr>
+  <tr><td>Open Transcript · Open Transcript in New Window · Show in Quotes · Open Quotes in New Window · Copy Quote</td><td><b>new</b>, owner-written, 21 locales; Open Transcript in New Window is also the menu bar's Option-alternate of Show in Transcript (D9)</td></tr>
+  <tr><td>Open Link · Copy Link · Share… · Copy Image · Copy Subject · Look Up · Back · Hide Controls · Enter Picture in Picture</td><td>WebKit's own items, kept as WebKit localises them</td></tr>
+  </table>
 </main>
 <script>
 {SCRIPT}

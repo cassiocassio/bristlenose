@@ -330,6 +330,8 @@ struct ExportSaveFlowTests {
         // The server must be asked and refuse: a download that never reached
         // it fails with an alert too, which passed for this until 24 Oct 2026.
         await rig.untilTimeLimit { !rig.alerts.isEmpty || rig.panels > 0 }
+        // Give a second alert or a late panel time to land.
+        try? await Task.sleep(for: .milliseconds(300))
         #expect(rig.serve.requested.count == 1, "the server was never asked")
         #expect(rig.alerts.count == 1, "the refusal was not said")
         #expect(rig.alerts.first?.informativeText == HTTPURLResponse.localizedString(forStatusCode: 500),
@@ -384,13 +386,16 @@ struct ExportSaveFlowTests {
         #expect(!bridge.isExportingReport, "precondition: the panel has been and gone")
 
         #expect(bridge.reportExportPressed())
+        #expect(bridge.isExportingReport, "the second press said nothing, so its going proves nothing")
         try await rig.export()
         await rig.until({ !bridge.isExportingReport }, seconds: 5)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
         // The dropped press leaves the first export alone: its anonymised copy
         // lands where the one panel chose, and nothing asks again or alerts.
         rig.serve.release()
-        await rig.untilTimeLimit { rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 }
+        await rig.untilTimeLimit {
+            rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.coordinator.hasPendingReportExport
+        }
         try? await Task.sleep(for: .milliseconds(300))
         #expect(rig.saved == "<html>ANONYMISED</html>", "the export in flight never landed")
         #expect(rig.panels == 1, "the dropped press put up a save panel")

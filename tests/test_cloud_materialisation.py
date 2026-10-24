@@ -278,3 +278,165 @@ class TestReadSitesAreGuarded:
                 src, tmp_path / "clip.mp4", start=1.0, end=2.0
             ) is None
         assert "fetched" in caplog.text
+
+
+class TestRunBudget:
+    """One stalled provider must not cost a run 30 minutes per file.
+
+    The bound is per file, and a run reads many: stage 2 four at a time, stage
+    5 one at a time. With a provider stalled on 20 recordings, sessions failed
+    only after 2.5 h (videos) or 10 h (audio). Inside a run, after the first
+    timeout for a provider, its later placeholders get the short bound; other
+    providers keep the full one, and serve, which sets no budget, is unchanged
+    (docs/design-cloud-files.md, pattern A).
+    """
+
+    LONG = 1.0
+    SHORT = 0.1
+
+    @pytest.fixture
+    def stalled(self, tmp_path: Path, monkeypatch):
+        """Every placeholder's read blocks until the test ends; returns a
+        factory for placeholder paths under a provider's folder, and the list of
+        paths whose read was started."""
+        import threading
+
+        import bristlenose.utils.fs as fs_mod
+
+        release = threading.Event()
+        started: list[str] = []
+
+        class Blocks:
+            def __init__(self, path, *a, **kw) -> None:
+                started.append(Path(path).name)
+                release.wait()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self, n):
+                return b""
+
+        _fake_stat(monkeypatch, SF_DATALESS)
+        monkeypatch.setattr(fs_mod, "open", Blocks, raising=False)
+        monkeypatch.setattr(fs_mod, "MATERIALISE_TIMEOUT_SECONDS", self.LONG)
+        monkeypatch.setattr(fs_mod, "MATERIALISE_TRIPPED_TIMEOUT_SECONDS", self.SHORT)
+
+        def placeholder(folder: str, name: str) -> Path:
+            f = tmp_path / "Library" / folder / name
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(b"x")
+            return f
+
+        yield placeholder, started
+        release.set()
+
+    @staticmethod
+    def _timed_out_after(path: Path) -> float:
+        import time
+
+        t0 = time.monotonic()
+        with pytest.raises(CloudFetchTimeoutError):
+            ensure_materialised(path)
+        return time.monotonic() - t0
+
+    def test_a_tripped_provider_gets_the_short_bound(self, stalled) -> None:
+        from bristlenose.utils.fs import cloud_fetch_budget
+
+        placeholder, started = stalled
+        a = placeholder("CloudStorage/Dropbox", "a.mp4")
+        b = placeholder("CloudStorage/Dropbox", "b.mp4")
+        with cloud_fetch_budget():
+            assert self._timed_out_after(a) >= self.LONG * 0.9
+            assert self._timed_out_after(b) < self.LONG * 0.5
+        # The short wait still starts the read, so the provider keeps fetching.
+        # Polled: the reader thread may not have run its first line by the time
+        # the short join returns on a loaded machine.
+        import time
+
+        deadline = time.monotonic() + 2.0
+        while len(started) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert started == ["a.mp4", "b.mp4"]
+
+    def test_another_provider_keeps_the_long_bound(self, stalled) -> None:
+        from bristlenose.utils.fs import cloud_fetch_budget
+
+        placeholder, _started = stalled
+        a = placeholder("CloudStorage/Dropbox", "a.mp4")
+        c = placeholder("Mobile Documents/com~apple~CloudDocs", "c.mp4")
+        with cloud_fetch_budget():
+            self._timed_out_after(a)
+            assert self._timed_out_after(c) >= self.LONG * 0.9
+
+    def test_without_a_run_budget_every_file_gets_the_long_bound(self, stalled) -> None:
+        # Serve's reads (clips, stills, screens) set no budget.
+        placeholder, _started = stalled
+        a = placeholder("CloudStorage/Dropbox", "a.mp4")
+        b = placeholder("CloudStorage/Dropbox", "b.mp4")
+        assert self._timed_out_after(a) >= self.LONG * 0.9
+        assert self._timed_out_after(b) >= self.LONG * 0.9
+
+    def test_the_budget_does_not_outlive_its_run(self, stalled) -> None:
+        from bristlenose.utils.fs import RUN_CLOUD_BUDGET, cloud_fetch_budget
+
+        placeholder, _started = stalled
+        a = placeholder("CloudStorage/Dropbox", "a.mp4")
+        b = placeholder("CloudStorage/Dropbox", "b.mp4")
+        with cloud_fetch_budget():
+            self._timed_out_after(a)
+        assert RUN_CLOUD_BUDGET.get() is None
+        with cloud_fetch_budget():
+            assert self._timed_out_after(b) >= self.LONG * 0.9
+
+    def test_the_trip_is_logged_once_per_provider(self, stalled, caplog) -> None:
+        import logging
+
+        from bristlenose.utils.fs import cloud_fetch_budget
+
+        placeholder, _started = stalled
+        a = placeholder("CloudStorage/Dropbox", "a.mp4")
+        b = placeholder("CloudStorage/Dropbox", "b.mp4")
+        with caplog.at_level(logging.WARNING, logger="bristlenose.utils.fs"):
+            with cloud_fetch_budget():
+                self._timed_out_after(a)
+                self._timed_out_after(b)
+        trips = [r for r in caplog.records if "cloud_fetch_budget_tripped" in r.getMessage()]
+        assert len(trips) == 1
+        assert "Dropbox" in trips[0].getMessage()
+
+
+class TestRunEntryPointsSetTheBudget:
+    """`run` and `transcribe` each read the study's recordings under one budget."""
+
+    @pytest.mark.parametrize("method", ["run", "run_transcription_only"])
+    def test_ingest_runs_inside_a_budget(self, method: str, tmp_path: Path) -> None:
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        from bristlenose.pipeline import Pipeline
+        from bristlenose.utils.fs import RUN_CLOUD_BUDGET, CloudFetchBudget
+
+        seen: list[object] = []
+
+        class StopRunError(Exception):
+            pass
+
+        def _ingest(*_a, **_kw):
+            seen.append(RUN_CLOUD_BUDGET.get())
+            raise StopRunError
+
+        settings = MagicMock()
+        settings.project_name = "budget"
+        settings.write_intermediate = False
+        input_dir = tmp_path / "in"
+        input_dir.mkdir()
+        pipeline = Pipeline(settings)
+        with patch("bristlenose.stages.s01_ingest.ingest", _ingest):
+            with pytest.raises(StopRunError):
+                asyncio.run(getattr(pipeline, method)(input_dir, tmp_path / "out"))
+        assert len(seen) == 1 and isinstance(seen[0], CloudFetchBudget)
+        assert RUN_CLOUD_BUDGET.get() is None

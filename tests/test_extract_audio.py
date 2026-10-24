@@ -259,3 +259,73 @@ async def test_a_file_set_aside_at_ingest_is_neither_used_nor_stated_twice(
     assert session.audio_path == extracted, "the set-aside copy was used for transcription"
     record.assert_not_called()
     assert [f.error for f in session.files] == [None, UnusableReason.DUPLICATE_RECORDING.value]
+
+
+@pytest.mark.asyncio
+async def test_a_tripped_provider_shortens_the_remaining_lanes(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """Five videos on a stalled provider: the first waits the full bound, the
+    other four the short one, and all five are recorded ``cloud_fetch`` while
+    the run goes on. Also proves the run's budget reaches the stage's worker
+    threads (``asyncio.to_thread`` copies the context)."""
+    import threading
+    import time
+
+    import bristlenose.utils.fs as fs_mod
+    from bristlenose.utils.fs import SF_DATALESS, cloud_fetch_budget
+
+    release = threading.Event()
+
+    class Blocks:
+        def __init__(self, *a, **kw) -> None:
+            release.wait()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self, n):
+            return b""
+
+    real_stat = fs_mod.os.stat
+
+    class _Stat:
+        def __init__(self, st) -> None:
+            self._st = st
+            self.st_flags = SF_DATALESS
+            self.st_size = 1
+
+        def __getattr__(self, name):
+            return getattr(self._st, name)
+
+    monkeypatch.setattr(fs_mod.os, "stat", lambda p, *a, **k: _Stat(real_stat(p, *a, **k)))
+    monkeypatch.setattr(fs_mod, "open", Blocks, raising=False)
+    monkeypatch.setattr(fs_mod, "MATERIALISE_TIMEOUT_SECONDS", 1.0)
+    monkeypatch.setattr(fs_mod, "MATERIALISE_TRIPPED_TIMEOUT_SECONDS", 0.1)
+
+    folder = tmp_path / "Library" / "CloudStorage" / "Dropbox"
+    folder.mkdir(parents=True)
+    sessions = []
+    for i in range(1, 6):
+        video = folder / f"interview{i}.mp4"
+        video.write_bytes(b"x")
+        s = _session()
+        s.session_id = f"s{i}"
+        s.files[0].path = video
+        sessions.append(s)
+
+    try:
+        t0 = time.monotonic()
+        with cloud_fetch_budget():
+            await extract_audio_for_sessions(sessions, tmp_path / "audio", concurrency=1)
+        elapsed = time.monotonic() - t0
+    finally:
+        release.set()
+
+    assert [s.files[0].error for s in sessions] == ["cloud_fetch"] * 5
+    assert all(s.audio_path is None for s in sessions)
+    # 1 s + 4 × 0.1 s with the budget; 5 s without it.
+    assert elapsed < 3.0, elapsed

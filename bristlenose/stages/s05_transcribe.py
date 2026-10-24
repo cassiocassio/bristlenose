@@ -32,6 +32,7 @@ from bristlenose.events import (
 )
 from bristlenose.models import InputSession, TranscriptSegment, Word
 from bristlenose.run_lifecycle import categorise_exception
+from bristlenose.utils.fs import ensure_materialised
 from bristlenose.utils.hardware import AcceleratorType, HardwareInfo, detect_hardware
 
 logger = logging.getLogger(__name__)
@@ -1345,7 +1346,10 @@ def _init_mlx_backend(
 
         # Decode once, here, so the signal gate and Whisper read the same
         # samples. `transcribe` would otherwise run this same ffmpeg call on
-        # the path itself.
+        # the path itself. An audio-only session points at the researcher's
+        # file, which stage 2 never opened: fetch a cloud placeholder with the
+        # bound first, since mlx's ffmpeg call has no timeout of its own.
+        ensure_materialised(audio_path)
         audio = mlx_whisper.audio.load_audio(str(audio_path))
         levels = window_levels_dbfs(audio)
         if not has_signal(levels):
@@ -1687,6 +1691,8 @@ def _init_faster_whisper_backend(
 
         # Decode once: the language has to be known before the style prompt
         # can be chosen, and transcribe would otherwise decode the file again.
+        # Fetch a cloud placeholder with the bound first, as the mlx path does.
+        ensure_materialised(audio_path)
         audio = decode_audio(str(audio_path))
         language = settings.whisper_language if settings.whisper_language != "auto" else None
         detected_prob: float | None = None

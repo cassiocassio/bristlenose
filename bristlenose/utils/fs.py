@@ -6,7 +6,9 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from bristlenose.utils.text import count_noun
@@ -25,6 +27,18 @@ SF_DATALESS = 0x40000000
 # interview on a domestic uplink is minutes, and measured behaviour is that a
 # fetch can sit at zero bytes for 90s+ before it starts moving.
 MATERIALISE_TIMEOUT_SECONDS = 30 * 60
+
+# The bound for a provider that has already timed out once in this run. The
+# 30 minutes above is per file, and a run reads many: stage 2 four at a time,
+# stage 5 one at a time, so a stalled provider holding 20 recordings kept a run
+# waiting 2.5 h (videos) or 10 h (audio) before those sessions failed. After
+# the first timeout, later placeholders from the same provider wait this long
+# instead. It must clear the measured 90 s+ a healthy fetch can sit at zero
+# bytes; at 2 min, 20 stalled videos fail in ~38 min and 20 audio files in
+# ~68 min. The read still starts, so the provider keeps fetching for the next
+# run. Other providers keep the full bound. Only a run sets the budget
+# (`cloud_fetch_budget`); serve's reads always get the full bound.
+MATERIALISE_TRIPPED_TIMEOUT_SECONDS = 2 * 60
 
 
 def open_private(path: Path, flags: int) -> int:
@@ -49,6 +63,49 @@ class CloudFetchTimeoutError(RuntimeError):
     arrived", not "the file is corrupt". The two want opposite remedies from
     the researcher, so they must never share a message.
     """
+
+
+class CloudFetchBudget:
+    """One run's record of which providers have already timed out.
+
+    Shared by every lane of a run (stage 2's ``asyncio.to_thread`` workers copy
+    the context, so they hold the same object), hence the lock. Keyed by
+    `cloud_provider_for`; a path no provider claims is its own key (``None``).
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._tripped: set[str | None] = set()
+
+    def bound_for(self, provider: str | None, timeout: float) -> float:
+        with self._lock:
+            tripped = provider in self._tripped
+        return min(timeout, MATERIALISE_TRIPPED_TIMEOUT_SECONDS) if tripped else timeout
+
+    def trip(self, provider: str | None) -> bool:
+        """Record a timeout for *provider*; True only the first time."""
+        with self._lock:
+            if provider in self._tripped:
+                return False
+            self._tripped.add(provider)
+            return True
+
+
+#: The running pipeline's budget, or None outside a run (serve, exports).
+RUN_CLOUD_BUDGET: ContextVar[CloudFetchBudget | None] = ContextVar(
+    "bristlenose_cloud_fetch_budget", default=None,
+)
+
+
+@contextmanager
+def cloud_fetch_budget() -> Iterator[CloudFetchBudget]:
+    """Give the reads inside this block one shared per-provider budget."""
+    budget = CloudFetchBudget()
+    token = RUN_CLOUD_BUDGET.set(budget)
+    try:
+        yield budget
+    finally:
+        RUN_CLOUD_BUDGET.reset(token)
 
 
 def is_os_metadata(path: Path) -> bool:
@@ -171,7 +228,7 @@ def cloud_provider_for(path: Path) -> str | None:
 
 def ensure_materialised(
     path: Path,
-    timeout: float = MATERIALISE_TIMEOUT_SECONDS,
+    timeout: float | None = None,
     on_wait: Callable[[Path, str | None], None] | None = None,
 ) -> bool:
     """Fault a cloud placeholder into local storage before anything reads it.
@@ -193,14 +250,23 @@ def ensure_materialised(
     Raises `CloudFetchTimeoutError` if the bytes never arrive — deliberately NOT a
     probe error, because "still downloading" and "corrupt file" want opposite
     remedies from the researcher.
+
+    *timeout* defaults to `MATERIALISE_TIMEOUT_SECONDS`, shortened to
+    `MATERIALISE_TRIPPED_TIMEOUT_SECONDS` inside a run whose budget has already
+    seen this provider time out.
     """
     if not is_dataless(path):
         return False
 
     provider = cloud_provider_for(path)
+    budget = RUN_CLOUD_BUDGET.get()
+    if timeout is None:
+        timeout = MATERIALISE_TIMEOUT_SECONDS
+    if budget is not None:
+        timeout = budget.bound_for(provider, timeout)
     logger.info(
-        "cloud_fetch_start | file=%s | provider=%s | size_bytes=%s",
-        path.name, provider or "unknown", path.stat().st_size,
+        "cloud_fetch_start | file=%s | provider=%s | size_bytes=%s | bound_s=%d",
+        path.name, provider or "unknown", path.stat().st_size, timeout,
     )
     if on_wait is not None:
         on_wait(path, provider)
@@ -216,6 +282,12 @@ def ensure_materialised(
     if worker.is_alive():
         # Daemon thread is abandoned deliberately — it's parked in a kernel
         # read we can't interrupt, and the process will exit around it.
+        if budget is not None and budget.trip(provider):
+            logger.warning(
+                "cloud_fetch_budget_tripped | provider=%s | later files from it "
+                "wait %d s in this run",
+                provider or "unknown", MATERIALISE_TRIPPED_TIMEOUT_SECONDS,
+            )
         minutes = int(timeout // 60)
         waited = (
             count_noun(minutes, "minute") if minutes else count_noun(int(timeout), "second")

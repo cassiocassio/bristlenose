@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import logging
 import re
@@ -78,7 +79,7 @@ from bristlenose.refusals import UnusableReason, cloud_fetch_failure
 from bristlenose.refusals import stage_failure as refusal_stage_failure
 from bristlenose.session_registry import SessionRegistry
 from bristlenose.ui_kinds import MessageKind, cli_prefix
-from bristlenose.utils.fs import is_os_metadata
+from bristlenose.utils.fs import cloud_fetch_budget, is_os_metadata
 from bristlenose.utils.text import count_noun
 
 if TYPE_CHECKING:  # annotation only — s01 stays a lazy import
@@ -1662,6 +1663,21 @@ def _compute_analysis(
     )
 
 
+def _with_cloud_budget(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """Run an entry point with one cloud-fetch budget for the whole run.
+
+    Once a provider's placeholder times out, its later files wait the short
+    bound instead of the full 30 minutes (`fs.CloudFetchBudget`). Tasks and
+    threads the run starts copy the context, so they share the budget.
+    """
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        with cloud_fetch_budget():
+            return await fn(*args, **kwargs)
+
+    return wrapper
+
+
 class Pipeline:
     """Orchestrates the full Bristlenose processing pipeline."""
 
@@ -2107,6 +2123,7 @@ class Pipeline:
         self._emit_remaining(_T_STAGE_DISCUSSION, elapsed)
         return elapsed
 
+    @_with_cloud_budget
     async def run(
         self, input_dir: Path, output_dir: Path, *, fresh_start: bool = False,
     ) -> PipelineResult:
@@ -4100,6 +4117,7 @@ class Pipeline:
             summary=self._summary,
         )
 
+    @_with_cloud_budget
     async def run_transcription_only(
         self, input_dir: Path, output_dir: Path, *, reuse_transcription: bool = True,
     ) -> PipelineResult:

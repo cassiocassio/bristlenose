@@ -1344,3 +1344,108 @@ class TestMlxBackendRecoversSkippedSpeech:
 
         assert calls == [40 * 16000, 20 * 16000]
         assert [s.text.split()[0] for s in segments] == ["a0", "c0", "b0"]
+
+
+class TestWhisperDecodesFetchFirst:
+    """An audio-only session points at the researcher's own file, which stage 2
+    never opens. mlx's ffmpeg call and faster-whisper's decoder have no timeout,
+    so a cloud placeholder there used to hold the run for as long as the
+    provider stalled. Both now fetch it with the bound first, and a timeout
+    leaves the decoder untouched (docs/design-cloud-files.md, pattern A)."""
+
+    def _stalled(self, monkeypatch, s05, events: list[str]) -> None:
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        def _fetch(path):
+            events.append("fetch")
+            raise CloudFetchTimeoutError(f"{path.name} was still being fetched")
+
+        monkeypatch.setattr(s05, "ensure_materialised", _fetch)
+
+    def test_faster_whisper_fetches_before_it_decodes(self, monkeypatch, tmp_path) -> None:
+        import pytest
+
+        pytest.importorskip("faster_whisper")
+        import faster_whisper.audio
+
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        helper = TestFasterWhisperGetsTheStylePrompt()
+        s05, hw, _calls = helper._backend(monkeypatch, detected="en")
+        events: list[str] = []
+        monkeypatch.setattr(
+            faster_whisper.audio, "decode_audio", lambda _p: events.append("decode"),
+        )
+        self._stalled(monkeypatch, s05, events)
+        fn = s05._init_faster_whisper_backend(helper._settings("auto"), hw)
+
+        with pytest.raises(CloudFetchTimeoutError):
+            fn(tmp_path / "p1.m4a", helper._settings("auto"))
+        assert events == ["fetch"]
+
+    def test_mlx_fetches_before_it_decodes(self, monkeypatch, tmp_path) -> None:
+        import pytest
+
+        pytest.importorskip("mlx_whisper")
+        import mlx_whisper.audio
+
+        from bristlenose.stages import s05_transcribe
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        events: list[str] = []
+        monkeypatch.setattr(
+            mlx_whisper.audio, "load_audio", lambda _p: events.append("decode"),
+        )
+        self._stalled(monkeypatch, s05_transcribe, events)
+        settings = type("S", (), {"whisper_model": "tiny", "whisper_language": "auto"})()
+        fn = s05_transcribe._init_mlx_backend(settings)
+
+        with pytest.raises(CloudFetchTimeoutError):
+            fn(tmp_path / "p1.m4a", settings)
+        assert events == ["fetch"]
+
+    def test_the_other_sessions_are_transcribed(self, monkeypatch, tmp_path) -> None:
+        """One session's timeout is that session's ``cloud_fetch`` failure; the
+        next session is still transcribed."""
+        from datetime import datetime
+
+        from bristlenose.events import CauseCategoryEnum
+        from bristlenose.models import FileType, InputFile, InputSession, TranscriptSegment
+        from bristlenose.stages import s05_transcribe
+        from bristlenose.utils.fs import CloudFetchTimeoutError
+
+        def _fake_init(_settings):
+            def _t(path, _settings, **_kw):
+                if path.name == "s1.m4a":
+                    raise CloudFetchTimeoutError(f"{path.name} was still being fetched")
+                seg = TranscriptSegment(
+                    start_time=0.0, end_time=1.0, text="hello", speaker_label="A",
+                )
+                return [seg], None
+            return _t
+
+        monkeypatch.setattr(s05_transcribe, "_init_mlx_backend", _fake_init)
+        monkeypatch.setattr(s05_transcribe, "_resolve_backend", lambda _c, _h: "mlx")  # noqa: ARG005
+        sessions = []
+        for i in (1, 2):
+            audio = tmp_path / f"s{i}.m4a"
+            audio.write_bytes(b"\0")
+            sessions.append(InputSession(
+                session_id=f"s{i}", session_number=i,
+                participant_id=f"p{i}", participant_number=i,
+                files=[InputFile(
+                    path=audio, file_type=FileType.AUDIO,
+                    created_at=datetime(2026, 10, 24), size_bytes=1,
+                )],
+                audio_path=audio,
+                session_date=datetime(2026, 10, 24),
+            ))
+        settings = type("S", (), {
+            "whisper_backend": "mlx", "whisper_model": "tiny", "whisper_language": "auto",
+        })()
+
+        _results, _languages, outcome = s05_transcribe.transcribe_sessions(sessions, settings)
+
+        assert outcome.succeeded == 1
+        assert [f.cause.session_id for f in outcome.failed] == ["s1"]
+        assert outcome.failed[0].cause.category == CauseCategoryEnum.CLOUD_FETCH

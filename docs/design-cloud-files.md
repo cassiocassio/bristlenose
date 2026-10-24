@@ -1,7 +1,7 @@
 ---
 status: decided
 last-trued: 2026-10-24
-trued-against: HEAD@main on 2026-10-24 (ProjectAvailability.swift, CopyMachinery.swift, utils/fs.py, utils/audio.py, events.py, locales/*/desktop.json, locales/*/common.json, tests/test_cloud_files_policy.py)
+trued-against: HEAD@main on 2026-10-24 (ProjectAvailability.swift, CopyMachinery.swift, utils/fs.py, utils/audio.py, stages/s05_transcribe.py, pipeline.py, events.py, locales/*/desktop.json, locales/*/common.json, tests/test_cloud_files_policy.py)
 ---
 
 # Files in the cloud — what we can know, and what we show
@@ -102,7 +102,7 @@ the owner.
 
 | | Situation | What we know | What Bristlenose does |
 |---|---|---|---|
-| **A** | A file we need is a placeholder (a run, a clip, a still, a drag-in copy) | It's a placeholder | **Invisible correctness.** Read it with the bound (`fs.ensure_materialised`, 30 min). A drag-in copy refuses up front rather than `copyItem` a placeholder, because that copy can't be bounded or cancelled (`CopyMachinery`, `c9176819`). The row keeps saying what work is happening; nothing about the cloud |
+| **A** | A file we need is a placeholder (a run, a clip, a still, a drag-in copy) | It's a placeholder | **Invisible correctness.** Read it with the bound (`fs.ensure_materialised`, 30 min per file; within one run, 2 min for a provider that has already timed out, `fs.CloudFetchBudget`). A drag-in copy refuses up front rather than `copyItem` a placeholder, because that copy can't be bounded or cancelled (`CopyMachinery`, `c9176819`). The row keeps saying what work is happening; nothing about the cloud |
 | **B** | That read times out | Our bound fired | **An ordinary per-file failure**, retryable (`CauseCategoryEnum.CLOUD_FETCH`), worded as a fact ("wasn't downloaded to this Mac in time") with no provider and no advice. One slow file never sinks the other sessions |
 | **C** | The study folder isn't at its path | Only that it's absent | **The existing "can't find the folder" pane with Locate…**, whichever store it used to live on. Never an iCloud-flavoured state |
 | **D** | The folder was on a drive we recorded, and that drive isn't mounted | The absence is observable | The existing "drive not connected" state. The only case where a cause is shown, because it is the only one we can see |
@@ -138,6 +138,14 @@ a precedent to copy:
   session registry, to identify it (`session_registry._fingerprint_after_download`). If that times out
   the run still stops, now labelled `cloud_fetch` (retryable) rather than "unknown". Guessing its
   identity instead would risk analysing, and paying for, the same session twice.
+- **The bound per run** (24 Oct 2026, owner): 30 min is per file, and a run reads many (stage 2
+  four at a time, stage 5 one at a time), so a stalled provider with 20 recordings held a run 2.5 h
+  (videos) or 10 h (audio) before those sessions failed. `run` and `transcribe` now share one
+  per-provider budget: after a provider's first timeout, its later placeholders wait 2 min (more
+  than the measured 90 s zero-byte stall), so 20 stalled files fail in about 38 min (videos) or 68 min
+  (audio). The read still starts, so the provider can go on fetching for the next run. Other
+  providers keep 30 min; serve sets no budget. The same change bounds the mlx and faster-whisper
+  decodes, which never fetched first and so waited without limit on an audio-only placeholder.
 - **The advice and the unknowable claims are gone** (24 Oct 2026, owner: settled by the rule). In
   all 21 locales the two refusals now say only "…isn’t downloaded to this Mac." (no "Download it in
   Finder", no "yet"); the Screens lens says "the recording wasn’t downloaded to this Mac in time.",

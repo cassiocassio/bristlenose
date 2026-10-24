@@ -135,6 +135,29 @@ table.matrix{border-collapse:collapse;font-size:12px;min-width:1100px}
 .sources{font-size:12.5px;columns:2 420px;margin:0;padding-left:18px}
 .sources li{margin:0 0 4px;break-inside:avoid}
 .sources code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* play-out */
+.po-intro{max-width:92ch;color:var(--muted);margin:0 0 14px}
+.moment{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1.3fr);gap:16px;padding:14px 0;border-top:1px solid var(--border)}
+@media (max-width:1100px){.moment{grid-template-columns:1fr}}
+.when{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.when b{display:block;font-family:var(--font);font-size:14px;text-transform:none;letter-spacing:0;color:var(--text);font-weight:var(--w-em);margin-top:2px}
+.moment.noart .ledger{grid-column:2 / span 2}
+@media (max-width:1100px){.moment.noart .ledger{grid-column:auto}}
+.moment ul{margin:0;padding-left:18px;font-size:13px}
+.moment li{margin:0 0 5px}
+.moment li .chip{margin-right:4px}
+.tally{width:100%;border-collapse:collapse;font-size:12.5px}
+.tally td{padding:3px 6px;border-top:1px solid var(--border)}
+.tally td.n{font-family:var(--mono);text-align:right;width:36px}
+.cand{font-size:13px;padding:4px 12px;border-top:1px solid var(--border);display:grid;grid-template-columns:70px 1fr 18px;gap:6px}
+.cand .where{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.cand .ok{color:var(--v-now-i)}
+.offer{margin:8px 12px;font-size:13px;color:var(--accent)}
+.asks{background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--v-flag-i);border-radius:0 8px 8px 0;padding:10px 12px;margin-top:18px}
+.asks h3{font-size:14px;font-weight:var(--w-em);margin:0 0 6px}
+.asks ol{margin:0;padding-left:20px;font-size:13px}
+.asks li{margin:0 0 6px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
@@ -414,7 +437,7 @@ const SC = [
 const FINDINGS = [
   {t:"A correction must not be a quote edit", plan:true,
    p:"Stored as a <code>QuoteEdit</code>, a correction pins the quote and mints a durable id. A study-wide replace would freeze dozens of quotes nobody chose. Corrections need their own layer between the pipeline's text and the researcher's edit.",
-   src:"importer.py:2667 (pin arms) · routes/data.py:222", s:["drug","replace"], goes:"Step 1: the edit record carries corrections; quotes read them through."},
+   src:"importer.py:2667 (pin arms) · routes/data.py:222", s:["drug","replace"], goes:"Step 1: the edit record carries corrections; quotes read them through. Played out on the Play-out tab."},
   {t:"One correction, three copies on a quote", plan:true,
    p:"<code>Quote.text</code> (signals, AutoCode, featured, discussion tie-break), <code>verbatim_excerpt</code> (gutter) and <code>QuoteEdit</code> (Quotes lens, exports, chat, MCP) each hold the words. A correction that misses one leaves a surface on the old words.",
    src:"signals.py:609 · quoteExtents.ts · export_core.py:191", s:["drug","edited"], goes:"Step 2a: one write path, pinned by a test that reads every surface."},
@@ -444,14 +467,116 @@ const FINDINGS = [
    src:"—", s:["drug","negation","replace"], goes:"Accepted; the docs must not imply otherwise."},
 ];
 
+
 /* ---------- render ---------- */
 const chip = v => `<span class="chip" style="background:var(--v-${v});color:var(--v-${v}-i)">${V[v][0]}</span>`;
 const cell = v => `<span class="cell" title="${V[v][0]}" style="background:var(--v-${v});color:var(--v-${v}-i)">${v==="none"?"":V[v][1].slice(0,2)}</span>`;
+/* ---------- play-out: one correction, then twenty ---------- */
+const li = (v,t)=>`<li>${chip(v)}${t}</li>`;
+const MOMENTS = [
+ {when:"Monday 10:02", title:"One correction",
+  art:`<div class="frame"><div class="chrome">session 2 — transcript</div><div class="tx">${P("05:33","p2",`I mostly watch the ${del("bee bee sea")} ${ins("BBC")} news app in the mornings.`)}</div></div>`,
+  notes:[
+   li("must","One row in the edit record: session 2, 05:33.4–05:34.6, the words “bee bee sea”, now “BBC”. In the database and in the file the pipeline reads."),
+   li("now","The quote that holds it reads “BBC” at once. It is <b>not</b> pinned and gets no durable id: a correction is its own layer, not a quote edit (Finding 1)."),
+   li("none","Its id (<code>q-p2-333</code>) is built from speaker and start second, so nothing that points at it moves: stars, boards, URLs."),
+   li("must","BBC takes the time span of the three words it replaced (decision 18), so playback and clips stay honest."),
+  ]},
+ {when:"10:02, a moment later", title:"The offer",
+  art:`<div class="frame"><div class="chrome">find and replace — study</div>
+   <div class="offer">“bee bee sea” → “BBC”: 20 more in 5 sessions</div>
+   ${[["s1 · 02:10","…switched off the <b>bee bee sea</b> app because…"],["s1 · 14:48","m1 Do you trust the <b>Bee Bee Sea</b> more than…"],["s3 · 07:02","…the <b>bee bee sea</b> weather, mainly…"],["s4 · 19:30","…the <b>bee-bee-sea</b> one, I suppose…"],["s5 · 31:12","…unlike the <b>bee bee sea</b>, which…"]].map(([w,t])=>`<div class="cand"><span class="where">${w}</span><span>${t}</span><span class="ok">✓</span></div>`).join("")}
+   <div class="cand"><span class="where">+15</span><span class="empty">…</span><span></span></div></div>`,
+  notes:[
+   li("now","v1 finds the text variants of what was typed: case, spacing, hyphens (decision 20). Each is shown in its sentence."),
+   li("stale","“BB see” (twice, in session 4) is a sound-alike, so v1 doesn't find it. It stays wrong until the researcher corrects it, or post-v1 finds it."),
+   li("unknown","A section name the model wrote, “Trust in bee bee sea news”, holds the words too. Offering it as a rename in the same list would close Finding 8."),
+  ]},
+ {when:"10:03", title:"Where the twenty sit",
+  art:`<table class="tally">
+   <tr><td class="n">11</td><td>participant speech no quote holds</td></tr>
+   <tr><td class="n">2</td><td>the moderator's questions</td></tr>
+   <tr><td class="n">1</td><td>inside a struck passage (the weather chat)</td></tr>
+   <tr><td class="n">3</td><td>inside quotes nobody has touched (one of them hidden)</td></tr>
+   <tr><td class="n">2</td><td>inside quotes the researcher edited, words still there</td></tr>
+   <tr><td class="n">1</td><td>inside an edited quote whose crop removed them</td></tr>
+   <tr><td class="n">+1</td><td>the section name above</td></tr></table>`,
+  notes:[
+   li("now","Speech, moderator turns, struck and hidden text are all the record, so all are corrected. Struck text stays struck; a hidden quote stays hidden."),
+   li("now","Untouched quotes read “BBC” and stay unpinned. Edited quotes have the words rewritten inside the researcher's edit, as decision 6 says; they were already pinned."),
+   li("flag","The cropped quote no longer contains the words, so there is nothing to contradict. Decision 6 as written would still flag it. That flag is noise here (question 1)."),
+  ]},
+ {when:"10:03, Accept All", title:"What is written",
+  art:``,
+  notes:[
+   li("must","20 correction rows, one gesture, <b>one</b> Undo entry (“Undo Replace”). The first correction stays its own entry."),
+   li("must","“BBC” goes into the study's word list, with its wrong forms. Nothing feeds Whisper yet (3b)."),
+   li("now","If the section rename is accepted, it is a heading edit: the researcher's own act, so pinning that section is right."),
+   li("none","No quote edits, no pins, no durable ids, no LLM call."),
+  ]},
+ {when:"10:03, on every screen", title:"What changes at once",
+  art:``,
+  notes:[
+   li("now","Transcript pages of all five sessions; the six quote cards; search finds “BBC” (it never searched transcripts)."),
+   li("now","Chat lens and MCP read the corrected words on the next question."),
+   li("now","Clip subtitles read “BBC” the next time a clip is cut."),
+   li("now","Exports made from now on: CSV, XLSX, Miro, FigJam, the HTML leave-behind."),
+   li("now","Dashboard word coverage loses 40 words (60 → 20). A 13-word quote becomes 11 and leaves the 12–33-word band featured quotes prefer, so the Dashboard's featured picks can change after a spelling fix (<code>export_core.py:432</code>)."),
+   li("none","Sentiment and tags: a proper noun for a sound-alike is factual (decision 13). Discussion lens: the guide classification stands, and is still right."),
+  ]},
+ {when:"Monday afternoon", title:"What waits, or is paid for",
+  art:``,
+  notes:[
+   li("llm","The six quotes sit in four signal cards. Their cache is keyed on the quote text, so each card re-elaborates when next opened: four paid calls for a spelling fix, unless a factual correction is left out of the key (question 2)."),
+   li("stale","AutoCode rationales written last week say “bee bee sea”. Proposals stand; nothing is recomputed."),
+   li("stale","The Miro board pushed last Tuesday, the CSV in the client's SharePoint and the clips already cut all say “bee bee sea”. Out of reach, as ever."),
+  ]},
+ {when:"Wednesday", title:"A sixth interview is added",
+  art:``,
+  notes:[
+   li("stale","Whisper hears “bee bee sea” again: nothing feeds its prompt until 3b."),
+   li("unknown","The word list already knows the wrong forms. It could offer “4 in the new session” as soon as Analyse finishes, before 3b: a standing find and replace (question 3)."),
+  ]},
+ {when:"Thursday", title:"Session 3 is re-read",
+  art:``,
+  notes:[
+   li("owed","Session 3 is owed for another reason (a speaker recode). Analyse reads the edit record, so the model sees “BBC”."),
+   li("check","Re-cut quotes rejoin their rows one-to-one by start second, so curation survives. Where two quotes share a second, the words decide at a 0.6 match: “the bee bee sea” against “the BBC” scores 0.36. The comparison must use the row's corrected text (<code>importer.py:1839</code>)."),
+  ]},
+ {when:"Some month", title:"A re-transcription",
+  art:``,
+  notes:[
+   li("stale","A different Whisper model hears “B B C”. The corrections were keyed on “bee bee sea”, so they no longer match and are refused (where that is shown is open)."),
+   li("now","“B B C” is a spacing variant of “BBC”, so the word list finds it at once in v1."),
+  ]},
+ {when:"Any time", title:"Undo, and Re-analyse",
+  art:``,
+  notes:[
+   li("now","Undo Replace takes back the twenty as one act. Reverting one occurrence later, from its own transcript, is fine: nothing depends on it (decision 17)."),
+   li("gone","Re-analyse: all twenty-one corrections and the rename go, by design (decision 12). The word list too? (question 4)."),
+  ]},
+];
+const ASKS = [
+  "<b>The cropped quote.</b> When a correction can't land because the researcher's crop removed the words, there's nothing to contradict. Flag it only when the words were <i>reworded</i>, or only when the correction changes meaning (2b)?",
+  "<b>Signal cards and factual corrections.</b> Should a factual correction change a card's cache key (four paid re-elaborations here), or only a meaning change?",
+  "<b>The word list as a standing offer.</b> When a new interview is analysed, should the list offer its known wrong forms at once, before it ever feeds Whisper?",
+  "<b>The word list and Re-analyse.</b> Is the word list part of the analysis (discarded with it) or knowledge about the study, like the guide (kept)?",
+  "<b>Struck and hidden text.</b> Corrected with the rest (proposed: yes, they are still the record)?",
+];
+function playout(){
+  return `<div class="scen-head"><h2>Play-out: “bee bee sea” → BBC, then twenty more</h2>
+   <p class="po-intro">One correction in session 2, then find and replace offers the rest across five sessions. Drawn with corrections as their own layer (Finding 1), which is not how the code would store them today. Counts are illustrative; every verdict cites the code on the Sources tab.</p></div>
+   ${MOMENTS.map(m=>`<div class="moment${m.art?"":" noart"}"><div class="when">${m.when}<b>${m.title}</b></div>
+     ${m.art?`<div>${m.art}</div>`:""}
+     <div class="ledger"><p class="com-label">Commentary</p><ul>${m.notes.join("")}</ul></div></div>`).join("")}
+   <div class="asks"><h3>Questions this play-out raises</h3><ol>${ASKS.map(a=>`<li>${a}</li>`).join("")}</ol></div>`;
+}
+
 document.getElementById("key").innerHTML = Object.keys(V).map(chip).join(" ");
 
-const tabs = [{id:"findings",title:"Findings"}, ...SC, {id:"matrix",title:"Matrix"}, {id:"sources",title:"Where each verdict comes from"}];
+const tabs = [{id:"findings",title:"Findings"}, {id:"playout",title:"Play-out: 1 + 20"}, ...SC, {id:"matrix",title:"Matrix"}, {id:"sources",title:"Where each verdict comes from"}];
 const tabEl = document.getElementById("tabs");
-tabEl.innerHTML = tabs.map((t,i)=>`<button class="tab" role="tab" data-id="${t.id}">${(i>0&&i<=SC.length)?`<span class="n">${i}</span>`:""}${t.title}</button>`).join("");
+tabEl.innerHTML = tabs.map((t,i)=>`<button class="tab" role="tab" data-id="${t.id}">${(i>1&&i<=SC.length+1)?`<span class="n">${i-1}</span>`:""}${t.title}</button>`).join("");
 tabEl.addEventListener("click", e=>{const b=e.target.closest(".tab"); if(b) show(b.dataset.id)});
 document.addEventListener("keydown", e=>{
   if(e.target.closest("input,textarea")) return;
@@ -501,7 +626,7 @@ function show(id){
   for(const b of tabEl.children) b.setAttribute("aria-selected", b.dataset.id===id ? "true":"false");
   const m = document.getElementById("main");
   const sc = SC.find(s=>s.id===id);
-  m.innerHTML = sc ? scenario(sc) : id==="matrix" ? matrix() : id==="sources" ? sources() : findings();
+  m.innerHTML = sc ? scenario(sc) : id==="playout" ? playout() : id==="matrix" ? matrix() : id==="sources" ? sources() : findings();
   m.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.go)));
   const sa = m.querySelector(".showall:not([data-go])");
   if(sa) sa.addEventListener("click",()=>{const h=m.querySelector("table.hid"); h.hidden=!h.hidden; sa.textContent = h.hidden?sa.textContent.replace("Hide","Show"):sa.textContent.replace("Show","Hide");});

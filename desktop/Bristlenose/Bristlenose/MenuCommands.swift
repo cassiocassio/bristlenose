@@ -1656,6 +1656,14 @@ private struct QuotesMenuContent: View {
         }
         .disabled(!hasFocus)
 
+        // The quote card's right-click offers the same (docs/design-webview-
+        // context-menu.md D9). A plain item: SwiftUI menus have no Option
+        // alternates, so it cannot hide under Show in Transcript.
+        Button(i18n.t("desktop.menu.context.openTranscriptInNewWindow"), systemImage: "macwindow.badge.plus") {
+            bridgeHandler.menuAction("openTranscriptInNewWindow")
+        }
+        .disabled(!hasFocus)
+
         Button(i18n.t("desktop.menu.quotes.playPause"), systemImage: "play") {
             bridgeHandler.menuAction("playPause")
         }

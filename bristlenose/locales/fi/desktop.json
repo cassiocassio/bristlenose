@@ -153,6 +153,15 @@
       "revealTranscripts": "Näytä litteroinnit Finderissa",
       "revealTranscriptsHint": "Litterointitiedostot levyllä"
     },
+    "context": {
+      "open": "Avaa",
+      "openTranscript": "Avaa litterointi",
+      "openTranscriptInNewWindow": "Avaa litterointi uudessa ikkunassa",
+      "showInQuotes": "Näytä Sitaateissa",
+      "openQuotesInNewWindow": "Avaa Sitaatit uudessa ikkunassa",
+      "goToSection": "Siirry osioon",
+      "copyQuote": "Kopioi sitaatti"
+    },
     "video": {
       "title": "Video",
       "play": "Toista",

@@ -40,11 +40,12 @@ import { isEditing } from "../utils/editing";
 import { isEmbedded } from "../utils/embedded";
 import {
   postContextTarget,
+  postOpenInNewWindow,
   postEditingStarted,
   postEditingEnded,
   postProjectAction,
 } from "../shims/bridge";
-import { readContextTarget } from "../utils/contextPlace";
+import { momentPlace, readContextTarget } from "../utils/contextPlace";
 import { scrollToLand } from "../utils/scrollToLand";
 import { type Direction } from "../utils/spatialNav";
 import { toggleDiscussionGuide } from "../islands/discussion/guidePanel";
@@ -99,6 +100,7 @@ const QUOTE_SCOPED_MENU_ACTIONS = new Set([
   "selectAllQuotes",
   "clearSelection",
   "revealInTranscript",
+  "openTranscriptInNewWindow",
 ]);
 
 /** Numbers each right-click, so the Mac app never builds a menu from an earlier one's target. */
@@ -877,6 +879,14 @@ export function useKeyboardShortcuts({
           const fid = scopedFocus();
           const q = fid ? storeRef.current.quotes.find((x) => x.dom_id === fid) : undefined;
           if (q) navigate(`/report/sessions/${q.session_id}#t-${Math.floor(q.start_timecode)}`);
+          break;
+        }
+        case "openTranscriptInNewWindow": {
+          // The same place, in a new window of this study, as the card's right-click offers.
+          const fid = scopedFocus();
+          const q = fid ? storeRef.current.quotes.find((x) => x.dom_id === fid) : undefined;
+          const place = q ? momentPlace("navigate", q.session_id, q.start_timecode, null) : null;
+          if (place) postOpenInNewWindow(place, false);
           break;
         }
       }

@@ -153,6 +153,15 @@
       "revealTranscripts": "Afficher les transcriptions dans le Finder",
       "revealTranscriptsHint": "Les fichiers de transcription sur le disque"
     },
+    "context": {
+      "open": "Ouvrir",
+      "openTranscript": "Ouvrir la transcription",
+      "openTranscriptInNewWindow": "Ouvrir la transcription dans une nouvelle fenêtre",
+      "showInQuotes": "Afficher dans Verbatim",
+      "openQuotesInNewWindow": "Ouvrir Verbatim dans une nouvelle fenêtre",
+      "goToSection": "Aller à la section",
+      "copyQuote": "Copier le verbatim"
+    },
     "video": {
       "title": "Vid\u00e9o",
       "play": "Lecture",

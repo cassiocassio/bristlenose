@@ -153,6 +153,15 @@
       "revealTranscripts": "Transkripte im Finder zeigen",
       "revealTranscriptsHint": "Die Transkriptdateien auf der Festplatte"
     },
+    "context": {
+      "open": "Öffnen",
+      "openTranscript": "Transkript öffnen",
+      "openTranscriptInNewWindow": "Transkript in neuem Fenster öffnen",
+      "showInQuotes": "In Zitaten zeigen",
+      "openQuotesInNewWindow": "Zitate in neuem Fenster öffnen",
+      "goToSection": "Zum Abschnitt",
+      "copyQuote": "Zitat kopieren"
+    },
     "video": {
       "title": "Video",
       "play": "Wiedergabe",

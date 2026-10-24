@@ -153,6 +153,15 @@
       "revealTranscripts": "Mostra les transcripcions al Finder",
       "revealTranscriptsHint": "Els fitxers de transcripció al disc"
     },
+    "context": {
+      "open": "Obre",
+      "openTranscript": "Obre la transcripció",
+      "openTranscriptInNewWindow": "Obre la transcripció en una finestra nova",
+      "showInQuotes": "Mostra-ho a Cites",
+      "openQuotesInNewWindow": "Obre Cites en una finestra nova",
+      "goToSection": "Ves a la secció",
+      "copyQuote": "Copia la cita"
+    },
     "video": {
       "title": "V\u00eddeo",
       "play": "Reprodueix",

@@ -157,6 +157,15 @@
       "revealTranscripts": "Zobrazit p\u0159episy ve Finderu",
       "revealTranscriptsHint": "Soubory p\u0159epis\u016f na disku"
     },
+    "context": {
+      "open": "Otevřít",
+      "openTranscript": "Otevřít přepis",
+      "openTranscriptInNewWindow": "Otevřít přepis v novém okně",
+      "showInQuotes": "Zobrazit v Citátech",
+      "openQuotesInNewWindow": "Otevřít Citáty v novém okně",
+      "goToSection": "Přejít na sekci",
+      "copyQuote": "Kopírovat citát"
+    },
     "video": {
       "title": "Video",
       "play": "Přehrát",

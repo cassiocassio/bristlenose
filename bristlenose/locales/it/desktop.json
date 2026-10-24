@@ -153,6 +153,15 @@
       "revealTranscripts": "Mostra le trascrizioni nel Finder",
       "revealTranscriptsHint": "I file delle trascrizioni sul disco"
     },
+    "context": {
+      "open": "Apri",
+      "openTranscript": "Apri la trascrizione",
+      "openTranscriptInNewWindow": "Apri la trascrizione in una nuova finestra",
+      "showInQuotes": "Mostra in Citazioni",
+      "openQuotesInNewWindow": "Apri Citazioni in una nuova finestra",
+      "goToSection": "Vai alla sezione",
+      "copyQuote": "Copia la citazione"
+    },
     "video": {
       "title": "Video",
       "play": "Riproduci",

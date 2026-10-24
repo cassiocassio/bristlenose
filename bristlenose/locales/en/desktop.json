@@ -126,7 +126,7 @@
       "addTag": "Add Tag…",
       "applyLastTag": "Apply Last Tag",
       "applyTagNamed": "Apply “{{name}}”",
-      "revealInTranscript": "Reveal in Transcript",
+      "revealInTranscript": "Show in Transcript",
       "playPause": "Play/Pause",
       "nextQuote": "Next Quote",
       "previousQuote": "Previous Quote",
@@ -152,6 +152,15 @@
       "copyScopeStarred": "Starred ({{count}})",
       "revealTranscripts": "Reveal Transcripts in Finder",
       "revealTranscriptsHint": "The transcript files on disk"
+    },
+    "context": {
+      "open": "Open",
+      "openTranscript": "Open Transcript",
+      "openTranscriptInNewWindow": "Open Transcript in New Window",
+      "showInQuotes": "Show in Quotes",
+      "openQuotesInNewWindow": "Open Quotes in New Window",
+      "goToSection": "Go to Section",
+      "copyQuote": "Copy Quote"
     },
     "video": {
       "title": "Video",

@@ -153,6 +153,15 @@
       "revealTranscripts": "Vis transskriptioner i Finder",
       "revealTranscriptsHint": "Transskriptionsfilerne på disken"
     },
+    "context": {
+      "open": "Åbn",
+      "openTranscript": "Åbn transskription",
+      "openTranscriptInNewWindow": "Åbn transskription i nyt vindue",
+      "showInQuotes": "Vis i Citater",
+      "openQuotesInNewWindow": "Åbn Citater i nyt vindue",
+      "goToSection": "Gå til afsnit",
+      "copyQuote": "Kopiér citat"
+    },
     "video": {
       "title": "Video",
       "play": "Afspil",

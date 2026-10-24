@@ -151,6 +151,15 @@
       "revealTranscripts": "Finder\uc5d0\uc11c \uc804\uc0ac\ubcf8 \ubcf4\uae30",
       "revealTranscriptsHint": "\ub514\uc2a4\ud06c\uc758 \uc804\uc0ac\ubcf8 \ud30c\uc77c"
     },
+    "context": {
+      "open": "열기",
+      "openTranscript": "전사본 열기",
+      "openTranscriptInNewWindow": "새 윈도우에서 전사본 열기",
+      "showInQuotes": "인용문에서 보기",
+      "openQuotesInNewWindow": "새 윈도우에서 인용문 열기",
+      "goToSection": "섹션으로 이동",
+      "copyQuote": "인용 복사"
+    },
     "video": {
       "title": "\ube44\ub514\uc624",
       "play": "재생",

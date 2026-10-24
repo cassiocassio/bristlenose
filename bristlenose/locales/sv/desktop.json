@@ -153,6 +153,15 @@
       "revealTranscripts": "Visa transkriptioner i Finder",
       "revealTranscriptsHint": "Transkriptionsfilerna på disken"
     },
+    "context": {
+      "open": "Öppna",
+      "openTranscript": "Öppna transkription",
+      "openTranscriptInNewWindow": "Öppna transkription i nytt fönster",
+      "showInQuotes": "Visa i Citat",
+      "openQuotesInNewWindow": "Öppna Citat i nytt fönster",
+      "goToSection": "Gå till avsnitt",
+      "copyQuote": "Kopiera citat"
+    },
     "video": {
       "title": "Video",
       "play": "Spela",
@@ -271,7 +280,7 @@
     "copyDiskSpaceTitle": "Inte tillräckligt med diskutrymme",
     "copyNoImportableItems": "Inget av de sl\u00e4ppta objekten \u00e4r en fil som Bristlenose kan importera.",
     "copyAlreadyInFlight": "En annan kopiering p\u00e5g\u00e5r redan.",
-    "copySourceNotDownloaded": "Inget kopierades: En del av det du sl\u00e4ppte \u00e4r inte h\u00e4mtat till den h\u00e4r Macen.",
+    "copySourceNotDownloaded": "Inget kopierades: En del av det du sl\u00e4ppte \u00e4r inte h\u00e4mtat till den h\u00e4r Macen \u00e4n. H\u00e4mta det i Finder och sl\u00e4pp det igen.",
     "copyDiskSpaceMessage": "Den här kopieringen behöver %@ ledigt, men bara %@ är tillgängligt på målvolymen.",
     "projectListDamagedTitle": "Projektlistan kunde inte läsas",
     "projectListDamagedMessage": "Den har lagts åt sidan och en ny lista har påbörjats. Dina projekt är orörda i sina mappar, med rapporter och redigeringar – dra varje mapp till sidofältet för att lägga till den igen.",
@@ -1177,7 +1186,7 @@
     "importButtonIdle": "Importera",
     "cancelRow": "Stoppa h\u00e4mtningen av {{title}}",
     "heldImported": "Finns redan i det h\u00e4r projektet.",
-    "heldNotDownloaded": "Redan importerad \u2014 filen finns p\u00e5 {{provider}}.",
+    "heldNotDownloaded": "Redan importerad \u2014 filen finns p\u00e5 {{provider}} och m\u00e5ste h\u00e4mtas d\u00e4r.",
     "heldDriveNotConnected": "Redan importerad \u2014 \u201d{{volume}}\u201d \u00e4r inte ansluten.",
     "notApplicable": "Ingen",
     "downloading": "H\u00e4mtar {{title}}",
@@ -1250,7 +1259,7 @@
     "notBuilt": "Det gick inte att skapa diskussionen f\u00f6r det h\u00e4r projektet. Det g\u00f6rs ett nytt f\u00f6rs\u00f6k n\u00e4sta g\u00e5ng projektet analyseras.",
     "choosePanelMessage": "V\u00e4lj din intervjuguide \u2013 Word, Markdown eller vanlig text.",
     "copyFailed": "Det gick inte att kopiera din guide till projektmappen.",
-    "guideNotDownloaded": "Den \u00e4r inte h\u00e4mtad till den h\u00e4r Macen.",
+    "guideNotDownloaded": "Den \u00e4r inte h\u00e4mtad till den h\u00e4r Macen \u00e4n. H\u00e4mta den i Finder och v\u00e4lj den igen.",
     "guideHowTo": "L\u00e4gg din guide (Word, Markdown eller vanlig text) i en mapp som heter \u201dDiscussion guide\u201d bredvid dina inspelningar och v\u00e4lj Analysera i projektets meny i sidof\u00e4ltet.",
     "guideProblem": {
       "unreadable": "Det gick inte att l\u00e4sa din guide. Kontrollera att den g\u00e5r att \u00f6ppna och v\u00e4lj Analysera i projektets meny i sidof\u00e4ltet."

@@ -116,16 +116,24 @@ updates:
       # floated its cap to `wtforms>=3.1,<3.3`. Pair (sqladmin 0.27.2 +
       # WTForms 3.2.2) taken; ignore dropped. See
       # docs/dependency-premortem-log.md § `--watch` 2026-06-09.
-      # The two pyproject ceilings, as the rule above requires. Without these,
+      # The pyproject ceilings, as the rule above requires. Without these,
       # Dependabot opens a PR widening each cap. Each rule goes when its cap
       # lifts; the lift conditions are in the pinning register in
       # docs/design-platform-policy.md. av<19 since 29 Sep 2026 (faster-whisper's
       # decoder breaks on 19); huggingface-hub<2 since 12 Oct 2026 (an untested
-      # major that arrived through tokenizers 0.23.3).
+      # major that arrived through tokenizers 0.23.3); anthropic<2 and
+      # websockets<17 since 24 Oct 2026 (2.x speaks API version 2026-10-21,
+      # which 400s our temperature; websockets 17 arrived through google-genai
+      # 2.33.0). The anthropic widening PR would go GREEN, because every
+      # anthropic test mocks the transport: never merge it on CI alone.
       - dependency-name: "av"
         versions: [">=19"]
       - dependency-name: "huggingface-hub"
         versions: [">=2"]
+      - dependency-name: "anthropic"
+        versions: [">=2"]
+      - dependency-name: "websockets"
+        versions: [">=17"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"

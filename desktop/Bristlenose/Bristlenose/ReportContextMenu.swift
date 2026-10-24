@@ -59,8 +59,6 @@ enum ReportContextMenu {
         static let imageItems: Set<NSUserInterfaceItemIdentifier> = [copyImage, copySubject, revealImage]
     }
 
-    /// Kept for the sibling that wraps the player's video menu.
-    static let webKitReload = WebKit.reload
     static let reloadReport = NSUserInterfaceItemIdentifier("app.bristlenose.reloadReport")
 
     /// What one of our items does when chosen.

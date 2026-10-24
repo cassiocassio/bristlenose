@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import contract from "../../../tests/fixtures/context-target-contract.json";
+
+// Places are written in the Mac app only (placeProps); these tests are about that app.
+let mockEmbedded = true;
+vi.mock("./embedded", () => ({ isEmbedded: () => mockEmbedded }));
 import {
   lensPlace,
   windowPlace,
@@ -57,6 +61,15 @@ describe("context places", () => {
 
   it("no place writes no attribute", () => {
     expect(placeProps(null)).toEqual({});
+  });
+
+  it("outside the Mac app nothing is written, since nothing reads it", () => {
+    mockEmbedded = false;
+    try {
+      expect(placeProps(momentPlace("play", "s1", 3, "p1"))).toEqual({});
+    } finally {
+      mockEmbedded = true;
+    }
   });
 });
 

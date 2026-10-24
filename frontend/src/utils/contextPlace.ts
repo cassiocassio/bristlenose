@@ -7,11 +7,13 @@
  * out of the `href`: two hrefs in the report point at the wrong lens (§4.2),
  * and a href is only what a browser would do, not what the click does.
  *
- * The listener (`installContextTargetListener`) runs in the Mac app only. It
- * posts one `context-target` message per right-click, before WebKit asks the
+ * The listener (`handleContextMenu` in hooks/useKeyboardShortcuts.ts) runs in the Mac app only.
+ * It posts one `context-target` message per right-click, before WebKit asks the
  * app for its menu (measured 30 of 30, 8–71 ms ahead). It never cancels the
  * event: the menu is WebKit's, and the app edits it.
  */
+
+import { isEmbedded } from "./embedded";
 
 /** Where a link goes and what clicking it does. */
 export interface ContextPlace {
@@ -43,9 +45,11 @@ export interface ContextCard {
   place: ContextPlace | null;
 }
 
-/** Spread onto the element that carries the click: `<a {...placeProps(p)}>`. */
+/** Spread onto the element that carries the click: `<a {...placeProps(p)}>`. Written in the Mac
+ *  app only: nothing else reads it, and a long column carries thousands (about 0.5 MB of attribute
+ *  text on an 1,800-quote Discussion column, and in every HTML export). */
 export function placeProps(place: ContextPlace | null): { "data-bn-place"?: string } {
-  return place ? { "data-bn-place": JSON.stringify(place) } : {};
+  return place && isEmbedded() ? { "data-bn-place": JSON.stringify(place) } : {};
 }
 
 /** A moment in a session: a timecode, a speaker badge, a journey label. */

@@ -4228,23 +4228,6 @@ class Pipeline:
         with console.status("", spinner="dots") as status:
             status.renderable.frames = [" " + f for f in status.renderable.frames]
 
-            # ── ffmpeg preflight ──
-            # As in run(): a video that still has to be transcribed needs ffmpeg
-            # to extract its audio. Offered here, with its install table, rather
-            # than failing late inside "Extracting audio..." on a machine without
-            # it. A session served from the cache extracts nothing.
-            _needs_ffmpeg = any(
-                f.file_type == FileType.VIDEO and not s.has_existing_transcript
-                for s in _remaining for f in _transcribed_files(s)
-            )
-            if _needs_ffmpeg:
-                from bristlenose.preflight.ffmpeg import preflight_ffmpeg
-                preflight_ffmpeg(
-                    console=console,
-                    status=status,
-                    allow_install=not self.settings.no_fetch,
-                )
-
             # ── Whisper preflight ──
             # As in run(): fetch the model here, with its banner and HF's own
             # progress bars, so a first `transcribe` does not download ~1.6 GB

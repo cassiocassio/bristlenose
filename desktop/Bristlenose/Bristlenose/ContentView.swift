@@ -1045,6 +1045,13 @@ struct ContentView: View {
             // A new act on this window's report settles a pending sidebar
             // removal, so ⌘Z reaches the report again (BridgeHandler).
             bridgeHandler.removalStore = removalStore
+            // The report's Open … in New Window: this study, at that place.
+            // Fresh token, so it opens even beside a window already on it.
+            bridgeHandler.openInNewWindow = { place in
+                guard let project = selectedProjectID else { return }
+                openWindow(id: "main", value: WindowSeed.fresh(
+                    project: project, lens: LensMemory.remember(place.lens), place: place))
+            }
             // This window's own study first; the last-used one only as a
             // fallback. Under Stage 3b the scene value is per window, so five
             // restored windows come back on five studies rather than five
@@ -1171,6 +1178,14 @@ struct ContentView: View {
             // explicit choice. The restore slot is still consumed above, so
             // a later `isReady` flip can't restore either.
             guard !bridgeHandler.lensIntentReplayed else { return }
+            // A window opened at a place (the report's right-click) goes there,
+            // once: the seed forgets it, so a restored window comes back where
+            // the researcher left it rather than at the link.
+            if let place = seed?.place, seed?.project == id {
+                seed = seed?.withoutPlace
+                bridgeHandler.goToPlace(place)
+                return
+            }
             guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
             // The seed's lens wins over the study's remembered one: it is a
             // deliberate "open THIS lens over there", and it is what makes the

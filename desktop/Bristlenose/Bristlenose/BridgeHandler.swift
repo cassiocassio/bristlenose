@@ -1110,6 +1110,19 @@ final class BridgeHandler: ObservableObject {
         }
     }
 
+    // MARK: - Places and new windows (the report's right-click)
+
+    /// Opens a new window on this window's study, at a place. Set by
+    /// `ContentView`, which owns `openWindow` and knows the study, so nothing
+    /// routed through here can open another study.
+    var openInNewWindow: ((WindowPlace) -> Void)?
+
+    /// Go to a place in this window's report, as the link's own click would,
+    /// and play there when the place asks (docs/design-webview-context-menu.md §9).
+    func goToPlace(_ place: WindowPlace) {
+        menuAction("goToPlace", payload: place.payload)
+    }
+
     // MARK: - Menu action dispatch
 
     /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.
@@ -1336,6 +1349,15 @@ final class BridgeHandler: ObservableObject {
             if burn != burnSubtitlesInClips { burnSubtitlesInClips = burn }
             UserDefaults.standard.set(player, forKey: Self.playerSubtitlesKey)
             UserDefaults.standard.set(burn, forKey: Self.burnSubtitlesKey)
+
+        case "open-in-new-window":
+            // A click that means "over there": threshold review's timecode, in
+            // a dialog a same-window visit would close.
+            guard let place = WindowPlace.from(message: body) else {
+                Self.log.notice("open-in-new-window without a place this build can read")
+                return
+            }
+            openInNewWindow?(place)
 
         case "report-pref":
             // The saved copy of a report preference (R89). Nothing published:

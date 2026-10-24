@@ -34,17 +34,29 @@ struct WindowSeed: Codable, Hashable {
     /// a lens row a single gesture rather than open-then-navigate.
     let lens: String?
 
+    /// A place in the study to arrive at: the transcript at a moment, a section
+    /// of Quotes (the report's right-click, Open … in New Window). Applied once
+    /// when the report is up and then cleared from the seed, so a restored
+    /// window comes back where the researcher left it, not at the link.
+    let place: WindowPlace?
+
     /// Always opens a new window.
-    static func fresh(project: UUID? = nil, lens: String? = nil) -> WindowSeed {
-        WindowSeed(token: UUID(), project: project, lens: lens)
+    static func fresh(project: UUID? = nil, lens: String? = nil, place: WindowPlace? = nil) -> WindowSeed {
+        WindowSeed(token: UUID(), project: project, lens: lens, place: place)
     }
 
     /// Explicit, because the custom `init(from:)` below suppresses the
     /// synthesised memberwise one.
-    init(token: UUID, project: UUID?, lens: String?) {
+    init(token: UUID, project: UUID?, lens: String?, place: WindowPlace? = nil) {
         self.token = token
         self.project = project
         self.lens = lens
+        self.place = place
+    }
+
+    /// This seed with its place consumed.
+    var withoutPlace: WindowSeed {
+        WindowSeed(token: token, project: project, lens: lens)
     }
 
     // MARK: - Decoding
@@ -66,12 +78,14 @@ struct WindowSeed: Codable, Hashable {
             self.token = legacy
             self.project = legacy
             self.lens = nil
+            self.place = nil
             return
         }
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.token = (try? c.decode(UUID.self, forKey: .token)) ?? UUID()
         self.project = try? c.decode(UUID.self, forKey: .project)
         self.lens = try? c.decode(String.self, forKey: .lens)
+        self.place = try? c.decode(WindowPlace.self, forKey: .place)
     }
 
     /// Opens this study, or reveals the window that already has it.

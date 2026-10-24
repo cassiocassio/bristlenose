@@ -1,6 +1,6 @@
 ---
-status: audit (no product change); proposal awaiting the owner's call
-last-trued: 2026-10-15
+status: audit (no product change); menus revised 24 Oct 2026 (§9), one owner call open
+last-trued: 2026-10-24
 trued-against: HEAD@main 3725a938, macOS 27.0 (26A428), Swift 6.4
 ---
 
@@ -15,6 +15,9 @@ what the app should offer instead.
 
 **Mockup:** [`docs/mockups/webview-context-menu-proposal.html`](mockups/webview-context-menu-proposal.html)
 shows today against proposed in each context, plus the window each one opens.
+
+**§9 supersedes §4.1's menus** (24 Oct 2026: the owner's rules, a Gruber/HIG review, and the
+owner's decisions). §§1–8 stay as the measured record.
 
 **The owner's position, which the proposal follows.** People coming from Safari expect *Open Link
 in New Window* to open a new window. Bristlenose offers it only where it can open the right
@@ -319,3 +322,84 @@ code. It does three things:
 Build with `swiftc -O probe.swift -o probe`. It runs for about 20 s with a small window on screen.
 The ordering figures in §5 come from a variant that adds the app's `Task { @MainActor }` hop in
 the message handler and loops twenty right-clicks over the link, both images and the text.
+
+## 9. Revised menus (24 Oct 2026)
+
+### 9.1 The owner's rules
+
+1. **The first item is the single-click action**, as Finder's first item on a folder is Open. Then
+   extensions: the same in a new window, then other useful actions.
+2. **Labels say exactly what happens** ("Open Transcript in New Window", not WebKit's "Open Link in
+   New Window").
+3. **A fragment offers both the transcript and the recording.** From a fragment seen elsewhere the
+   most useful click is the transcript in context (read before and after); the second is the
+   transcript parked in a new window while the analysis goes on; the third is the recording,
+   from anywhere.
+4. **The dashboard's featured quotes play on a click** (three high-value quotes, likely bound for a
+   deck). On the transcript page the timecode plays and the timeline scrolls the page.
+5. **v1 is one player per window** (it syncs to that window's scrolling transcript); several
+   windows can each have their own. Measured from code 24 Oct 2026; not yet tried by hand.
+
+### 9.2 Decisions
+
+| # | Decision | By |
+|---|---|---|
+| D1 | A new window opens where the click goes; from a target whose click plays, it opens the transcript at the moment **and starts playing** in that window's player | owner |
+| D2 | Copy Subject and Look Up stay on participants' images for now | owner |
+| D3 | An emptied link menu falls back to Reload Report (it is never empty, since 21 Oct) | owner |
+| D4 | Verbs: **Show in X** locates the clicked thing inside X; **Open X** opens X itself; the new-window item names its destination only when it isn't the clicked thing (Notes: "Show in Note" / "Open Note in New Window"; Music: "Open in New Window" / "Open Now Playing in New Window") | review, accepted |
+| D5 | Plain **Play**, not "Play from 12:34" (Music, Photos, QuickTime; the moment is under the pointer, and a recording may be audio only) | review, accepted |
+| D6 | **Reload Report only on page, text and `href="#"` menus**, not on link, image or video menus (Safari puts Reload only on the page background; View ▸ Reload Report covers the rest). Changes `ReportContextMenu.apply`, which today appends it everywhere | review, accepted pending the owner |
+| D7 | External links: **Open Link · Copy Link — Share…**. No "in New Window" (the click already goes to the browser; the item would open the page in a Bristlenose window) and no Download | review, accepted |
+| D8 | Player video: **Play/Pause · Mute — Enter Full Screen · Enter Picture in Picture — Hide Controls**, matching WebKit's and QuickTime's names | review, accepted |
+| D9 | Menu bar agrees with the context menus (HIG: every context item is in the menu bar): Quotes ▸ **Show in Transcript** (was "Reveal in Transcript", a fossil by the glossary), with an Option-alternate **Open Transcript in New Window**; Video ▸ **Enter Full Screen / Exit Full Screen** (was "Fullscreen"). Values change, keys stay, 21 locales | review, accepted |
+| — | The review recommended making every bracketed timecode play, Signals and Codebooks included. **Rejected**: rule 3 makes the transcript the default for a fragment | owner |
+
+### 9.3 Open: the quote card's timecode
+
+On quote cards (Quotes, Discussion, Screens) and the dashboard coverage box, **clicking `[12:34]`
+plays** today (`TimecodeLink`); only the speaker badge beside it opens the transcript. Rule 3
+says a fragment's click goes to the transcript. Either:
+
+- **(a)** the card timecode's click becomes Show in Transcript, so every fragment's timecode goes to
+  the transcript and Play is the menu's third item everywhere except the featured quotes and the
+  transcript page; or
+- **(b)** it keeps playing, and its menu leads with Play (rule 1), which then differs from the
+  badge a few pixels away.
+
+The Screens version timecode beside the screengrab asks the same question. The table below
+assumes (a) and marks the affected rows.
+
+### 9.4 Menus per target
+
+"—" is a separator. The first item is the single-click action.
+
+| Target | Click | Menu |
+|---|---|---|
+| Quote-card timecode (Quotes, Discussion, Screens); dashboard coverage timecode; Screens version time | Show in Transcript **(if 9.3 (a); today plays)** | **Show in Transcript** · Open Transcript in New Window — Play |
+| Speaker badge on a quote card; Discussion moderator badge | Show in Transcript | **Show in Transcript** · Open Transcript in New Window (no Play on a person; the card's timecode is beside it) |
+| Signals expanded-quote timecode; Sessions journey label | Show in Transcript | **Show in Transcript** · Open Transcript in New Window — Play |
+| Codebooks threshold-review timecode | Show in Transcript (drop `target=_blank`) | **Show in Transcript** · Open Transcript in New Window — Play |
+| Dashboard featured-quote timecode | Play | **Play** — Show in Transcript · Open Transcript in New Window (the new window plays, D1) |
+| Paragraph timecode on the transcript page | Play | **Play** — Open Transcript in New Window (plays, D1) |
+| Sessions `#N` | Open Transcript | **Open Transcript** · Open Transcript in New Window — Play |
+| Sessions filename; dashboard session filename | Play | **Play** — Open Transcript · Open Transcript in New Window |
+| Sessions thumbnail | Play | **Play** — Open Transcript · Open Transcript in New Window — Copy Image · Share… (D2 keeps Copy Subject and Look Up on images generally; the review would drop them here, where they are WebKit's leftovers) |
+| Signals location heading; dashboard section nav; stat card naming a section | Show in Quotes | **Show in Quotes** · Open Quotes in New Window |
+| Stat card naming a lens | Open | **Open** · Open in New Window (`menu.file.openInNewWindow`) |
+| Quotes contents entry | Go to Section | **Go to Section** · Open Quotes in New Window |
+| Screens screengrab | — | Copy Image · Copy Subject · Look Up — Share… |
+| External link | Open Link | **Open Link** · Copy Link — Share… (D7) |
+| `href="#"` actions; non-links; text; background | — | WebKit's page or text menu — Reload Report |
+| Player video | Play/Pause | D8 |
+
+### 9.5 Raised, not in scope
+
+- **A menu on the quote card itself** (right-click the body, not a link): Star, Hide, Add Tag…, Copy
+  Quote, Show in Transcript, the commands the Quotes menu already holds. The review's biggest gap
+  (Mail's message menu); a new target, so the owner's call.
+- **Copy Link stays out** until there is a link that survives a restart; a bare "12:34" on the
+  clipboard names no session, so no Copy Timecode either.
+- **Two players opened from two windows land on top of each other** (one saved frame,
+  `"BristlenosePlayer"`), and the report listens on one shared BroadcastChannel name, which would
+  cross-talk between windows if the player's fallback ever fired.

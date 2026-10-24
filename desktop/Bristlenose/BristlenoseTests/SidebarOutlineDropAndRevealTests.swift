@@ -285,9 +285,12 @@ struct SidebarOutlineDropAndRevealTests {
 
     // MARK: - R58: ⌘N's icon stays visible while the name is typed
 
-    @Test func theNewStudysIconIsVisibleWhileItsNameIsTyped() async throws {
-        try #require(!NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
-                     "Reduce Motion skips the reveal, so there is nothing to test")
+    // A disabled trait, not a `#require`: a failed precondition records a
+    // failure, and the GitHub macOS runners have Reduce Motion on, so the
+    // suite went red there on a test with nothing to test.
+    @Test(.disabled(if: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+                    "Reduce Motion skips the reveal, so there is nothing to test"))
+    func theNewStudysIconIsVisibleWhileItsNameIsTyped() async throws {
         let rig = OutlineRig(); defer { rig.cleanup() }
         // The rename needs a window to hold its field editor.
         let window = NSWindow(contentRect: NSRect(x: -20_000, y: -20_000, width: 240, height: 600),

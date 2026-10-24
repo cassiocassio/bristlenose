@@ -38,6 +38,14 @@ struct BookmarkMintTests {
 
     private struct Refused: Error {}
 
+    /// The same folder, allowing for `/private`. An unsandboxed host (CI builds
+    /// the tests unsigned) has its temporary folder under `/var`, a bookmark
+    /// resolves that to `/private/var`, and `resolvingSymlinksInPath` writes it
+    /// without the prefix. A link's spelling is still told from the folder's.
+    private func samePlace(_ a: String, _ b: String) -> Bool {
+        a == b || a == "/private" + b || "/private" + a == b
+    }
+
     /// The measured fact the fix stands on, in this sandboxed host: the link
     /// spelling mints nothing and the folder it names mints a bookmark.
     @Test func aLinkMintsNothingAndItsFolderMints() throws {
@@ -77,7 +85,7 @@ struct BookmarkMintTests {
         #expect(row.availability == .ready)
         #expect(row.bookmarkData != nil, "next launch has nothing to reopen the folder with")
         #expect(nextLaunch.leaseURL(projectID: row.id) != nil, "next launch holds no lease")
-        #expect(row.path == study.path, "the row does not name the folder")
+        #expect(samePlace(row.path, study.path), "the row does not name the folder")
     }
 
     /// The same at a Locate or a drop onto an existing row: the row names the
@@ -207,7 +215,7 @@ struct BookmarkMintTests {
         defer { try? FileManager.default.removeItem(at: root) }
         index.refreshAvailability()
         let row = try #require(index.projects.first { $0.id == id })
-        #expect(row.path == moved.path, "precondition: the bookmark followed the rename")
+        #expect(samePlace(row.path, moved.path), "precondition: the bookmark followed the rename")
         #expect(row.bookmarkData == old, "a refused re-mint dropped a working bookmark")
     }
 

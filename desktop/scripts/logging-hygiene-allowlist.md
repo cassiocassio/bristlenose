@@ -20,7 +20,7 @@ Format:
 The script runs each candidate line through these patterns and skips any
 that match.
 
-Current entries: HYG-1, HYG-2.
+Current entries: HYG-1, HYG-2, HYG-3, HYG-4, HYG-5.
 
 <!-- Add new entries below this line. Renumber contiguously. -->
 
@@ -58,3 +58,49 @@ leak in the same sentence. Any allowlist entry here must pin the thing that make
 the line safe; if the interpolation changes, the entry must stop matching.
 
 <!-- ci-allowlist: HYG-2 --> agent-scope .*readable \? "open" : "CLOSE", privacy: \.public.*no auth token
+
+## HYG-3 — a Keychain service name, not a credential
+
+`KeychainHelper.swift` (`SharedKeychainItem.store`, the guard that refuses to
+overwrite the login copy when the synced copy holds a different key) logs
+`service`, the Keychain *service name* — `Bristlenose OpenAI API Key` and its
+siblings from `KeychainHelper.serviceNames` — at `privacy: .public`. That is the
+label the item is filed under, the same string `security find-generic-password
+-s` takes, and never the key itself (`value` is not interpolated). The two
+sibling lines just above it log the same `service` the same way and pass only
+because their message text happens not to say "key" after the interpolation;
+this one trips on the words "kept another key".
+
+The pattern pins the whole call through its closing parenthesis, so the entry
+stops matching if anything else is interpolated into the line.
+
+<!-- ci-allowlist: HYG-3 --> log\.error\("synced copy of \\\(service, privacy: \.public\) kept another key — login copy left as it was"\)[[:space:]]*$
+
+## HYG-4 — a report preference name, not a credential
+
+`BridgeHandler.swift` (`storeReportPref`, the `report-pref` bridge message, R89)
+logs `key`, the name of a report preference the SPA asked to save (a
+localStorage key such as the zoom level or `bristlenose-quote-grouping-1`), at
+`privacy: .public` when it refuses one. The variable is named for the
+localStorage API, not because it holds a secret: what is saved under it is a
+number or a word like `sections`, capped at 32 characters, and the refused
+*value* is never logged (the over-long branch logs only its length,
+`s.count`). The unlisted-key branch is the useful diagnostic, so `.public` is
+right.
+
+One entry covers the three refusal lines; each alternative pins the full call,
+so logging the value, or anything else, in any of them stops the match.
+
+<!-- ci-allowlist: HYG-4 --> log\.error\("report-pref refused: (key \\\(key, privacy: \.public\) is not listed|\\\(key, privacy: \.public\) value of \\\(s\.count\) characters|\\\(key, privacy: \.public\) value is not a string)"\)[[:space:]]*$
+
+## HYG-5 — `fingerprint(`, not `print(`
+
+The env-dump pattern (`print[[:space:]]*\(.*env\b`) has no word boundary, so
+it matches the tail of `fingerprint(`. `ServeEnvStaleness.fingerprint(_:)` (R35)
+takes the sidecar env and returns its SHA-256 digest, with the `_`-prefixed
+per-spawn variables left out, precisely so that no API key is kept in the
+clear; `ServeManager` stores that digest. Neither line prints or logs anything.
+
+The pattern pins the declaration and the one call site exactly.
+
+<!-- ci-allowlist: HYG-5 --> (static func fingerprint\(_ env: \[String: String\]\) -> String \{|instance\.spawnedEnvFingerprint = ServeEnvStaleness\.fingerprint\(env\))[[:space:]]*$

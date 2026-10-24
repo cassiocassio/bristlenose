@@ -21,7 +21,7 @@ from bristlenose.models import (
 )
 from bristlenose.run_lifecycle import _build_cause
 from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
-from bristlenose.utils.timecodes import parse_timecode
+from bristlenose.utils.timecodes import parse_model_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ async def _segment_single(
     boundaries: list[TopicBoundary] = []
     for item in result.boundaries:
         try:
-            timecode_seconds = parse_timecode(item.timecode)
+            timecode_seconds = parse_model_timecode(item.timecode)
         except ValueError:
             logger.warning(
                 "boundary_timecode_unparseable | session=%s | raw=%r",

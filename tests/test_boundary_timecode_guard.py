@@ -167,3 +167,17 @@ class TestRepairIsAnnounced:
 
         assert "boundary_timecode_repair" in caplog.text
         assert "quote_timecode_repair" not in caplog.text
+
+
+class TestBracketedTimecode:
+    @pytest.mark.asyncio
+    async def test_a_bracketed_boundary_keeps_its_place(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """A small model copies the prompt transcript's `[00:05:00]` brackets
+        into the field (RE#R105); the boundary used to be skipped."""
+        with caplog.at_level(logging.WARNING):
+            bounds = await _run(_transcript(), [_item("[00:05:00]")])
+
+        assert [b.timecode_seconds for b in bounds] == [300.0]
+        assert "boundary_timecode_unparseable" not in caplog.text

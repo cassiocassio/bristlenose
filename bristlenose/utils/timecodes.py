@@ -254,6 +254,22 @@ def parse_timecode(tc: str) -> float:
     raise ValueError(f"Cannot parse timecode: {tc!r}")
 
 
+def parse_model_timecode(tc: str) -> float:
+    """Parse a timecode an LLM wrote into a schema field (s08, s09).
+
+    ``parse_timecode``, tolerating one pair of square brackets around the
+    value. The transcript in the prompt writes each position as ``[00:02:10]``
+    (``format_timecode_prompt``), and a small model copies the brackets into the
+    field: llama3.2:3b did in 9 of 10 runs (RE#R105, 24 Oct 2026), and each
+    such quote was placed at 0:00. Read-only tolerance: nothing writes this
+    form, and anything else ``parse_timecode`` refuses is still refused.
+    """
+    tc = tc.strip()
+    if len(tc) > 2 and tc[0] == "[" and tc[-1] == "]":
+        tc = tc[1:-1]
+    return parse_timecode(tc)
+
+
 def seconds_between(start: float, end: float) -> float:
     """Return the duration between two timecodes in seconds."""
     return max(0.0, end - start)

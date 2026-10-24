@@ -36,7 +36,7 @@ from bristlenose.models import (
 from bristlenose.run_lifecycle import _build_cause
 from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
 from bristlenose.utils.text import apply_smart_quotes
-from bristlenose.utils.timecodes import format_timecode_prompt, parse_timecode
+from bristlenose.utils.timecodes import format_timecode_prompt, parse_model_timecode
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +334,7 @@ async def _extract_one_pass(
         # Parse timecodes, then range-check them against the session's own
         # duration (see the timecode range guard above).
         try:
-            start_tc = parse_timecode(item.start_timecode)
+            start_tc = parse_model_timecode(item.start_timecode)
         except ValueError:
             logger.warning(
                 "quote_timecode_unparseable | session=%s | field=start | raw=%r",
@@ -343,7 +343,7 @@ async def _extract_one_pass(
             repairs["unparseable"] += 1
             start_tc = 0.0
         try:
-            end_tc = parse_timecode(item.end_timecode)
+            end_tc = parse_model_timecode(item.end_timecode)
         except ValueError:
             logger.warning(
                 "quote_timecode_unparseable | session=%s | field=end | raw=%r",

@@ -196,7 +196,7 @@ Inspired by Trint's Strike feature. Select one or more segments → mark as excl
 
 **Why strikethrough, not delete**: Original text remains visible (audit trail). Timestamps stay intact. Playback skips gracefully. Researcher can restore any time. Re-run pipeline knows to skip these sections.
 
-**Owner, 16 Oct 2026: still wanted, still future.** The user-facing verb is **Delete**: select a passage and delete it, and it shows struck through. Struck text is left out of the analysis *and* out of every export, not only out of re-analysis. The case is the chat about the weather, or "looking forward to seeing you at the party!". Its sibling in the Quotes lens is Delete next to Hide and Star, the Trash tier of `docs/design-quote-triage.md` §5 (see that section's 16 Oct 2026 note). Both need one read-side exclusion shared by every analysis surface, the same exclusion Signals is missing for hidden quotes today. The plan, with the Bin and Put Back, is `docs/design-delete-and-bin.md`.
+**Owner, 16 Oct 2026: still wanted, still future.** The user-facing verb is **Delete**: select a passage and delete it, and it shows struck through. Struck text is left out of the analysis *and* out of every export, not only out of re-analysis. The case is the chat about the weather, or "looking forward to seeing you at the party!". Its sibling in the Quotes lens is Delete next to Hide and Star, the Trash tier of `docs/design-quote-triage.md` §5 (see that section's 16 Oct 2026 note). Both need one read-side exclusion shared by every analysis surface, the same exclusion hidden quotes use since 22 Oct 2026 (`speaker_slots.analysis_quotes`). The plan, with the Bin and Put Back, is `docs/design-delete-and-bin.md`.
 
 #### Operation 2: Text correction
 

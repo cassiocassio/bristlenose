@@ -34,7 +34,15 @@ final class BristlenoseWebView: WKWebView {
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
         let target = contextTargets.take(now: Date())
-        guard let i18n, let handler = bridgeHandler else { return }
+        if let rejection = contextTargets.lastRejection {
+            log.notice("right-click target not used for this menu: \(String(describing: rejection), privacy: .public)")
+        }
+        guard let i18n, let handler = bridgeHandler else {
+            // Mid-teardown: the hijack and the dead downloads still go.
+            ReportContextMenu.removeNeverKept(from: menu)
+            log.notice("context menu opened with no bridge; only WebKit's risky items removed")
+            return
+        }
         ReportContextMenu.apply(
             to: menu, target: target, isEditing: handler.isEditing,
             t: { i18n.t($0) }, plural: { i18n.plural($0, count: $1) },
@@ -42,11 +50,14 @@ final class BristlenoseWebView: WKWebView {
     }
 
     @objc private func contextMenuItem(_ sender: Any?) {
-        guard let handler = bridgeHandler, let command = ReportContextMenu.command(of: sender) else { return }
+        guard let handler = bridgeHandler, let command = ReportContextMenu.command(of: sender) else {
+            log.notice("context menu item dropped: no bridge or no command")
+            return
+        }
         switch command {
         case .play(let media): handler.goToPlace(WindowPlace(path: "", anchor: nil, play: media))
         case .goTo(let place): handler.goToPlace(place)
-        case .newWindow(let place): handler.openInNewWindow?(place)
+        case .newWindow(let place): handler.openPlaceInNewWindow(place)
         case .star: handler.menuAction("star")
         case .hide: handler.menuAction("hide")
         case .addTag: handler.menuAction("addTag")

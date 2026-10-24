@@ -306,6 +306,21 @@ struct ReportContextMenuTests {
         #expect(slot.take(now: now)?.seq == 1)
     }
 
+    /// A menu that silently lacks its items is undiagnosable; the slot says why.
+    @Test func aRejectedTargetSaysWhy() {
+        let now = Date()
+        var slot = ContextTargetSlot()
+        slot.receive(ContextTarget(seq: 3, place: nil), at: now.addingTimeInterval(-0.4))
+        _ = slot.take(now: now)
+        #expect(slot.lastRejection == .tooOld(ageMs: 400))
+        slot.receive(ContextTarget(seq: 3, place: nil), at: now)
+        _ = slot.take(now: now)
+        #expect(slot.lastRejection == .alreadyUsed(seq: 3, lastSeq: 3))
+        slot.receive(ContextTarget(seq: 4, place: nil), at: now)
+        _ = slot.take(now: now)
+        #expect(slot.lastRejection == nil)
+    }
+
     @Test func anUnreadableMessageLeavesNoTarget() {
         let now = Date()
         var slot = ContextTargetSlot()

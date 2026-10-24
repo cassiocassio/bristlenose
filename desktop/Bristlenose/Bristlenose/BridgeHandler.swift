@@ -1123,6 +1123,15 @@ final class BridgeHandler: ObservableObject {
         menuAction("goToPlace", payload: place.payload)
     }
 
+    /// `openInNewWindow`, saying so when no window has set it.
+    func openPlaceInNewWindow(_ place: WindowPlace) {
+        guard let openInNewWindow else {
+            Self.log.notice("open in new window dropped: no window has registered to open one")
+            return
+        }
+        openInNewWindow(place)
+    }
+
     // MARK: - Menu action dispatch
 
     /// Send a menu action to the web layer via `window.__bristlenose.menuAction()`.
@@ -1357,7 +1366,7 @@ final class BridgeHandler: ObservableObject {
                 Self.log.notice("open-in-new-window without a place this build can read")
                 return
             }
-            openInNewWindow?(place)
+            openPlaceInNewWindow(place)
 
         case "report-pref":
             // The saved copy of a report preference (R89). Nothing published:

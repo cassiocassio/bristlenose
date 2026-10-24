@@ -108,6 +108,14 @@ struct ContextTargetSlot {
     private var pending: (target: ContextTarget, at: Date)?
     private var lastSeq = 0
 
+    /// Why the last `take` found no target although one was pending, for the
+    /// log: a menu that silently lacks its items is otherwise undiagnosable.
+    enum Rejection: Equatable {
+        case alreadyUsed(seq: Int, lastSeq: Int)
+        case tooOld(ageMs: Int)
+    }
+    private(set) var lastRejection: Rejection?
+
     mutating func receive(_ target: ContextTarget, at: Date) {
         pending = (target, at)
     }
@@ -125,11 +133,19 @@ struct ContextTargetSlot {
     /// The target for a menu opening now, or nil: none, already used, or too old.
     mutating func take(now: Date) -> ContextTarget? {
         defer { pending = nil }
+        lastRejection = nil
         guard let pending else { return nil }
         let seq = pending.target.seq
-        guard seq > lastSeq else { return nil }
+        guard seq > lastSeq else {
+            lastRejection = .alreadyUsed(seq: seq, lastSeq: lastSeq)
+            return nil
+        }
         lastSeq = seq
-        guard now.timeIntervalSince(pending.at) <= Self.lifetime else { return nil }
+        let age = now.timeIntervalSince(pending.at)
+        guard age <= Self.lifetime else {
+            lastRejection = .tooOld(ageMs: Int((age * 1000).rounded()))
+            return nil
+        }
         return pending.target
     }
 }

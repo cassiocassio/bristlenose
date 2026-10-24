@@ -181,7 +181,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         _videoMap = videoMapRef.current;
         if (data.player_url) playerUrlRef.current = data.player_url;
       })
-      .catch(() => {})
+      .catch((err) => {
+        // Without the map nothing plays, and the Mac's right-click offers no Play.
+        console.warn("[player] video map not read:", err);
+      })
       .finally(() => _videoMapLoaded());
   }, []);
 

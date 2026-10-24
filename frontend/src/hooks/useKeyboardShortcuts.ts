@@ -869,7 +869,12 @@ export function useKeyboardShortcuts({
           if (here) scrollToLand(here, "start");
           else if (p?.path) navigate(p.path);
           const play = p?.play;
-          if (play) void whenVideoMapLoaded().then(() => seekTo(play.key, play.seconds));
+          if (play) {
+            void whenVideoMapLoaded().then(() => {
+              if (!hasRecording(play.key)) console.warn("[goToPlace] no recording to play for", play.key);
+              else seekTo(play.key, play.seconds);
+            });
+          }
           break;
         }
         case "revealInTranscript": {

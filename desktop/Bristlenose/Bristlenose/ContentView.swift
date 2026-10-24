@@ -1073,7 +1073,10 @@ struct ContentView: View {
             // The report's Open … in New Window: this study, at that place.
             // Fresh token, so it opens even beside a window already on it.
             bridgeHandler.openInNewWindow = { place in
-                guard let project = selectedProjectID else { return }
+                guard let project = selectedProjectID else {
+                    Logger(subsystem: "app.bristlenose", category: "windows").notice("open in new window dropped: this window shows no study")
+                    return
+                }
                 openWindow(id: "main", value: WindowSeed.fresh(
                     project: project, lens: LensMemory.remember(place.lens), place: place))
             }

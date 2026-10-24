@@ -102,9 +102,7 @@ enum ReportContextMenu {
         t: (String) -> String, plural: (String, Int) -> String = { key, _ in key },
         receiver: AnyObject, action: Selector
     ) {
-        for item in menu.items where item.identifier.map(WebKit.neverKept.contains) == true {
-            menu.removeItem(item)
-        }
+        removeNeverKept(from: menu)
         if target?.link == .inReport {
             let image = menu.items.contains { $0.identifier.map(WebKit.imageItems.contains) == true }
             for item in menu.items {
@@ -150,6 +148,14 @@ enum ReportContextMenu {
             }
         }
         if !ours.isEmpty { menu.insertItem(.separator(), at: at) }
+        tidySeparators(menu)
+    }
+
+    /// WebKit's new-window and download items, gone whatever else happens.
+    static func removeNeverKept(from menu: NSMenu) {
+        for item in menu.items where item.identifier.map(WebKit.neverKept.contains) == true {
+            menu.removeItem(item)
+        }
         tidySeparators(menu)
     }
 

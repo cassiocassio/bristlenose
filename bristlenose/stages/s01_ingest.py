@@ -156,8 +156,10 @@ def refuse_unsuitable_input_dir(input_dir: Path) -> None:
     """
     reason = _refuse_reason(input_dir)
     if reason is not None:
+        # Absolute, so a relative argument is named by the folder it means:
+        # `cd ~ && analyze transcripts` refuses `.`, and said so (#160 review).
         raise UnsuitableInputDirError(
-            f"{input_dir} can't be analysed because {reason}. "
+            f"{os.path.abspath(input_dir)} can't be analysed because {reason}. "
             "Point Bristlenose at the folder holding your recordings."
         )
 

@@ -108,3 +108,17 @@ def test_analyze_lets_an_ordinary_transcripts_folder_through(
 
     assert isinstance(result.exception, _PastTheRefusalError), result.output
     assert "can't be analysed" not in " ".join(result.output.split())
+
+
+def test_a_relative_argument_is_refused_by_the_folder_it_names(
+    home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`cd ~ && analyze transcripts` refuses `Path("transcripts").parent`, which is
+    `.`: the sentence names the home folder, not a bare "." the user never typed."""
+    (home / "transcripts").mkdir()
+    monkeypatch.chdir(home)
+
+    result = CliRunner().invoke(cli.app, ["analyze", "transcripts"])
+
+    assert result.exit_code == 2, result.output
+    assert f"{home.resolve()}can't" in "".join(result.output.split())

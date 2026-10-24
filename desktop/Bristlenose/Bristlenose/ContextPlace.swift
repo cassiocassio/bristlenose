@@ -34,8 +34,31 @@ struct ContextPlace: Codable, Hashable {
 struct ContextCard: Codable, Hashable {
     let domId: String
     let starred: Bool
+    /// What Star will do, by the rule every surface uses: Unstar only when all
+    /// it acts on are starred.
+    let unstar: Bool
+    /// How many quotes the card's commands act on: the selection it sits in, or
+    /// 0 for the card alone.
+    let count: Int
     /// The card's own transcript place, its speaker link's.
     let place: ContextPlace?
+
+    init(domId: String, starred: Bool, unstar: Bool? = nil, count: Int = 0, place: ContextPlace?) {
+        self.domId = domId
+        self.starred = starred
+        self.unstar = unstar ?? starred
+        self.count = count
+        self.place = place
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let starred = try c.decode(Bool.self, forKey: .starred)
+        self.init(domId: try c.decode(String.self, forKey: .domId), starred: starred,
+                  unstar: try c.decodeIfPresent(Bool.self, forKey: .unstar),
+                  count: try c.decodeIfPresent(Int.self, forKey: .count) ?? 0,
+                  place: try c.decodeIfPresent(ContextPlace.self, forKey: .place))
+    }
 }
 
 /// One right-click's `context-target` message.

@@ -96,10 +96,11 @@ enum ReportContextMenu {
     ///   - target: what the page said the right-click landed on, or nil when it
     ///     said nothing this build can read in time (`BristlenoseWebView`
     ///     decides freshness).
-    ///   - t: the string table, `I18n.t`.
+    ///   - t: the string table, `I18n.t`; `plural`, `I18n.plural`.
     static func apply(
         to menu: NSMenu, target: ContextTarget?, isEditing: Bool,
-        t: (String) -> String, receiver: AnyObject, action: Selector
+        t: (String) -> String, plural: (String, Int) -> String = { key, _ in key },
+        receiver: AnyObject, action: Selector
     ) {
         for item in menu.items where item.identifier.map(WebKit.neverKept.contains) == true {
             menu.removeItem(item)
@@ -114,7 +115,7 @@ enum ReportContextMenu {
             }
         }
 
-        let ours = isEditing ? [] : groups(for: target, t: t)
+        let ours = isEditing ? [] : groups(for: target, t: t, plural: plural)
         let place = target?.place != nil
 
         // Reload Report: in WebKit's Reload's place on a page or text menu,
@@ -168,10 +169,13 @@ enum ReportContextMenu {
 
     typealias Group = [(String, Command)]
 
-    static func groups(for target: ContextTarget?, t: (String) -> String) -> [Group] {
+    static func groups(
+        for target: ContextTarget?, t: (String) -> String,
+        plural: (String, Int) -> String = { key, _ in key }
+    ) -> [Group] {
         guard let target else { return [] }
         if let place = target.place { return placeGroups(place, here: target.here, t: t) }
-        if let card = target.card { return cardGroups(card, t: t) }
+        if let card = target.card { return cardGroups(card, t: t, plural: plural) }
         return []
     }
 
@@ -202,15 +206,24 @@ enum ReportContextMenu {
     }
 
     /// The quote card's own menu (D12): the Quotes menu's commands for this card,
-    /// or for the selection it sits in.
-    static func cardGroups(_ card: ContextCard, t: (String) -> String) -> [Group] {
+    /// or for the selection it sits in, labelled as the Quotes menu labels them
+    /// ("Star 3 Quotes"), so the item says what choosing it does.
+    static func cardGroups(
+        _ card: ContextCard, t: (String) -> String,
+        plural: (String, Int) -> String = { key, _ in key }
+    ) -> [Group] {
+        let base = card.unstar ? "unstar" : "star"
+        let star = card.count > 0
+            ? plural("desktop.menu.quotes.\(base)Count", card.count)
+            : t("desktop.menu.quotes.\(base)")
+        let copy = t(card.count > 1 ? "desktop.menu.quotes.copyQuotes" : "desktop.menu.context.copyQuote")
         var groups: [Group] = [
             [
-                (t(card.starred ? "desktop.menu.quotes.unstar" : "desktop.menu.quotes.star"), .star),
+                (star, .star),
                 (t("desktop.menu.quotes.hide"), .hide),
                 (t("desktop.menu.quotes.addTag"), .addTag),
             ],
-            [(t("desktop.menu.context.copyQuote"), .copyQuote(card.domId))],
+            [(copy, .copyQuote(card.domId))],
         ]
         if let place = card.place, !place.path.isEmpty {
             groups.append([

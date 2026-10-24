@@ -37,7 +37,8 @@ final class BristlenoseWebView: WKWebView {
         guard let i18n, let handler = bridgeHandler else { return }
         ReportContextMenu.apply(
             to: menu, target: target, isEditing: handler.isEditing,
-            t: { i18n.t($0) }, receiver: self, action: #selector(contextMenuItem(_:)))
+            t: { i18n.t($0) }, plural: { i18n.plural($0, count: $1) },
+            receiver: self, action: #selector(contextMenuItem(_:)))
     }
 
     @objc private func contextMenuItem(_ sender: Any?) {

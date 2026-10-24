@@ -903,10 +903,15 @@ export function useKeyboardShortcuts({
         target, ++contextSeq, locationRef.current.pathname, hasRecording,
       );
       if (read.card && !read.place) {
-        if (!selectedIdsRef.current.has(read.card.domId) && selectedIdsRef.current.size > 0) {
-          clearSelection();
-        }
-        setFocus(read.card.domId, { scroll: false });
+        const domId = read.card.domId;
+        const inSelection = selectedIdsRef.current.has(domId);
+        if (!inSelection && selectedIdsRef.current.size > 0) clearSelection();
+        setFocus(domId, { scroll: false });
+        // The selection as Star will see it: the refs still hold the old one until React
+        // re-renders, so it is settled here rather than read back.
+        const selection = inSelection ? scopedSelection() : new Set<string>();
+        read.card.unstar = starActionIsUnstar(selection, domId, storeRef.current.starred);
+        read.card.count = selection.size;
       }
       postContextTarget(read);
     };

@@ -116,7 +116,18 @@ describe("readContextTarget", () => {
     );
     const read = readContextTarget(host.querySelector("#text"), 3, "/report/quotes/", always);
     expect(read.place).toBeNull();
-    expect(read.card).toEqual({ domId: "q-s2-30", starred: true, place: badge });
+    expect(read.card).toEqual({ domId: "q-s2-30", starred: true, unstar: true, count: 0, place: badge });
+  });
+
+  it("a right-click on text selected in a card is about the text, not the card", () => {
+    const host = el(`<blockquote id="q1" class="quote-card"><span id="text">some words</span></blockquote>`);
+    const range = document.createRange();
+    range.selectNodeContents(host.querySelector("#text")!);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    expect(readContextTarget(host.querySelector("#text"), 1, "/", always).card).toBeNull();
+    window.getSelection()!.removeAllRanges();
+    expect(readContextTarget(host.querySelector("#text"), 1, "/", always).card?.domId).toBe("q1");
   });
 
   it("a blockquote with no id is not a quote card (the Discussion lens's moderator turns)", () => {

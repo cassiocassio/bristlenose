@@ -1617,6 +1617,26 @@ describe("a right-click tells the Mac app what it landed on", () => {
     unmount();
   });
 
+  it("says what Star will do to the selection the card sits in, and how many", () => {
+    const { getCtx, unmount } = renderWithProviders();
+    act(() => {
+      const q = (dom_id: string, is_starred: boolean) => ({
+        dom_id, is_starred, text: "words", participant_id: "p1", session_id: "s1",
+        speaker_name: "p1", start_timecode: 1, end_timecode: 2, tags: [], deleted_badges: [],
+        proposed_tags: [],
+      });
+      initFromQuotes([q("q-a", true), q("q-b", false)] as unknown as Parameters<typeof initFromQuotes>[0]);
+    });
+    const a = card("q-a");
+    a.classList.add("starred");
+    card("q-b");
+    act(() => { getCtx().toggleSelection("q-a"); getCtx().toggleSelection("q-b"); });
+    act(() => { a.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    // q-a is starred, but Star stars the mixed selection: the menu must say Star, for 2.
+    expect(targets()[0].card).toMatchObject({ domId: "q-a", unstar: false, count: 2 });
+    unmount();
+  });
+
   it("leaves focus and selection alone for a link inside a card, whose menu is the link's", () => {
     const { getCtx, unmount } = renderWithProviders();
     card("q-a");

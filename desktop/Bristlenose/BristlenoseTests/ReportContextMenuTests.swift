@@ -44,6 +44,7 @@ struct ReportContextMenuTests {
 
     private func apply(_ m: NSMenu, _ target: ContextTarget?, editing: Bool = false) {
         ReportContextMenu.apply(to: m, target: target, isEditing: editing, t: t,
+                                plural: { "\(t($0)):\($1)" },
                                 receiver: Receiver(), action: #selector(Receiver.pick(_:)))
     }
 
@@ -207,6 +208,20 @@ struct ReportContextMenuTests {
         apply(m, ContextTarget(seq: 1, place: nil,
                                card: ContextCard(domId: "q", starred: true, place: nil)))
         #expect(titles(m).first == "unstar")
+    }
+
+    /// Inside a mixed selection the right-clicked card may be starred while Star
+    /// stars them all: the label follows what the action does, and counts.
+    @Test func inASelectionTheCardMenuSaysWhatItDoesToAllOfThem() {
+        let m = pageMenu
+        apply(m, ContextTarget(seq: 1, place: nil,
+                               card: ContextCard(domId: "q", starred: true, unstar: false, count: 3, place: nil)))
+        #expect(titles(m).prefix(3) == ["starCount:3", "hide", "addTag"])
+        #expect(titles(m).contains("copyQuotes"))
+        let all = pageMenu
+        apply(all, ContextTarget(seq: 1, place: nil,
+                                 card: ContextCard(domId: "q", starred: true, unstar: true, count: 2, place: nil)))
+        #expect(titles(all).first == "unstarCount:2")
     }
 
     /// A link inside a card (its timecode, its badge) gets the link's menu.

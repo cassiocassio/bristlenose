@@ -34,6 +34,11 @@ export interface ContextPlace {
 export interface ContextCard {
   domId: string;
   starred: boolean;
+  /** What its Star will do, by the one rule every surface uses (`starActionIsUnstar`), and how
+   *  many quotes the card's commands act on: the selection it sits in, else 0 for itself alone.
+   *  Filled in by the listener once it has settled the selection. */
+  unstar: boolean;
+  count: number;
   /** The card's own transcript place (its speaker link's), for Show in Transcript. */
   place: ContextPlace | null;
 }
@@ -111,6 +116,17 @@ export interface ContextTarget {
   link: "internal" | "external" | null;
 }
 
+/** Whether a non-empty text selection reaches into `el`. */
+function selectsTextIn(el: Element): boolean {
+  const sel = typeof window.getSelection === "function" ? window.getSelection() : null;
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !sel.toString().trim()) return false;
+  try {
+    return sel.getRangeAt(0).intersectsNode(el);
+  } catch {
+    return false;
+  }
+}
+
 function linkKind(target: Element | null): ContextTarget["link"] {
   const a = target?.closest("a[href]");
   const href = a?.getAttribute("href");
@@ -143,11 +159,14 @@ export function readContextTarget(
   const place = playable(readPlace(placed));
   const here = place?.dest === "transcript" && !!place.path && place.path.split("#")[0] === pathname;
   const cardEl = target?.closest("blockquote.quote-card") ?? null;
+  // A right-click on selected text is about the text: WebKit's Look Up, Copy and Share.
   const card: ContextCard | null =
-    cardEl && cardEl.id
+    cardEl && cardEl.id && !selectsTextIn(cardEl)
       ? {
           domId: cardEl.id,
           starred: cardEl.classList.contains("starred"),
+          unstar: cardEl.classList.contains("starred"),
+          count: 0,
           place: playable(readPlace(cardEl.querySelector(".speaker [data-bn-place]"))),
         }
       : null;

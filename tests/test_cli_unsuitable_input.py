@@ -1,4 +1,4 @@
-"""`run` and `transcribe` refuse a home folder or system root by name, before anything.
+"""`run`, `transcribe` and `analyze` refuse a home folder or system root by name, first.
 
 Until 22 Oct 2026 the refusal was raised from inside the scan, past the output
 folder's creation, a `--clean` stash and the setup checks, and nothing caught
@@ -41,3 +41,70 @@ def test_home_folder_is_refused_by_name_without_a_traceback(
     assert "AI provider" not in flat
     assert sorted(p.name for p in home.iterdir()) == ["interview.mp3"]
 
+
+
+# `analyze` takes a transcripts folder and, unless --output says otherwise, puts
+# the report beside it (`<parent>/bristlenose-output`) or, for a project's own
+# `transcripts-raw`, in its parent. So the parent is the study: `analyze ~` ended
+# in a traceback writing /Users/bristlenose-output, and `analyze ~/transcripts`
+# made the home folder a study (decision #160).
+@pytest.mark.parametrize(
+    "argument",
+    [
+        ".",  # the home folder itself
+        "transcripts",  # the report would land in the home folder
+        "transcripts-raw",  # the report would BE the home folder
+    ],
+)
+def test_analyze_refuses_a_home_folder_by_name_without_a_traceback(
+    home: Path, tmp_path: Path, argument: str
+) -> None:
+    folder = (home / argument).resolve()
+    folder.mkdir(exist_ok=True)
+    (folder / "s1.txt").write_text("[00:00] p1: hello\n")
+    before = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
+
+    result = CliRunner().invoke(cli.app, ["analyze", str(folder)])
+
+    assert result.exit_code == 2, result.output
+    assert "Traceback" not in result.output
+    assert not isinstance(result.exception, ValueError), "the refusal escaped as a crash"
+    flat = " ".join(result.output.split())
+    assert "can't be analysed because it is your home folder" in flat
+    # The home folder is named, whichever folder was typed (Rich may wrap the path).
+    assert f"{home}can't" in "".join(result.output.split())
+    assert "Point Bristlenose at the folder holding your recordings." in flat
+    assert "AI provider" not in flat
+    assert sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*")) == before
+
+
+class _PastTheRefusalError(Exception):
+    pass
+
+
+@pytest.mark.parametrize(
+    ("argument", "explicit_output"),
+    [
+        ("study/transcripts", False),  # an ordinary study: the report lands in ~/study
+        ("transcripts", True),  # an explicit --output: only the argument is checked
+    ],
+)
+def test_analyze_lets_an_ordinary_transcripts_folder_through(
+    home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    argument: str,
+    explicit_output: bool,
+) -> None:
+    transcripts = home / argument
+    transcripts.mkdir(parents=True)
+    extra = ["--output", str(tmp_path / "out")] if explicit_output else []
+
+    def stop(**_kwargs: object) -> None:
+        raise _PastTheRefusalError
+
+    monkeypatch.setattr(cli, "load_settings", stop)
+    result = CliRunner().invoke(cli.app, ["analyze", str(transcripts), *extra])
+
+    assert isinstance(result.exception, _PastTheRefusalError), result.output
+    assert "can't be analysed" not in " ".join(result.output.split())

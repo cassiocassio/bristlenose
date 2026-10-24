@@ -2015,6 +2015,12 @@ def analyze(
     ] = False,
 ) -> None:
     """Run LLM analysis on existing transcripts (skip ingestion and transcription)."""
+    _refuse_unsuitable_input(transcripts_dir)
+    if output_dir is None:
+        # The default report lands in the parent (beside the transcripts, or as
+        # the parent itself for a `transcripts-raw`), which makes the parent the
+        # study: `analyze ~` wrote /Users/bristlenose-output (decision #160).
+        _refuse_unsuitable_input(transcripts_dir.parent)
     # Default output location: if transcripts_dir is transcripts-raw/ inside a bristlenose-output,
     # use the parent; otherwise create bristlenose-output/ alongside transcripts_dir
     if output_dir is None:

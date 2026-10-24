@@ -40,11 +40,27 @@ struct ContextCard: Codable, Hashable {
 
 /// One right-click's `context-target` message.
 struct ContextTarget: Codable, Equatable {
+    /// A link into this report (its href is a loopback address that dies with
+    /// the serve) or out of it.
+    enum Link: String, Codable {
+        case inReport = "internal"
+        case outside = "external"
+    }
+
     let seq: Int
     let place: ContextPlace?
     /// The place's transcript is the page showing (Show in Transcript would go nowhere).
     let here: Bool
     let card: ContextCard?
+    let link: Link?
+
+    init(seq: Int, place: ContextPlace?, here: Bool = false, card: ContextCard? = nil, link: Link? = nil) {
+        self.seq = seq
+        self.place = place
+        self.here = here
+        self.card = card
+        self.link = link
+    }
 
     /// Nil for a body this build cannot read in full.
     static func from(_ body: [String: Any]) -> ContextTarget? {

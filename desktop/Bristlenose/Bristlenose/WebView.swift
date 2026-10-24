@@ -22,23 +22,54 @@ final class BristlenoseWebView: WKWebView {
     /// Set in `WebView.makeNSView`, for the right-click menu's Reload Report.
     weak var i18n: I18n?
 
-    /// Right-click ▸ Reload Report, where a browser user looks for Reload. It is
-    /// the remedy the broken mark asks for (a part of the report that couldn't be
-    /// shown, `PanelErrorBoundary` `part`); View ▸ Reload Report (⌘R) is its twin.
-    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
-        super.willOpenMenu(menu, with: event)
-        guard let i18n, let handler = bridgeHandler else { return }
-        ReportContextMenu.apply(
-            to: menu,
-            isEditing: handler.isEditing,
-            title: i18n.t("desktop.menu.view.reloadReport"),
-            target: self,
-            action: #selector(reloadReportFromMenu(_:))
-        )
+    /// What the page said the latest right-click landed on, and when it said
+    /// so. Written by the Coordinator as the message arrives, which is before
+    /// WebKit asks for the menu (measured 30 of 30, 8–71 ms ahead).
+    var pendingContextTarget: (target: ContextTarget, at: Date)?
+    /// The last right-click a menu was built from, so a later menu never reuses it.
+    private var lastMenuSeq = 0
+
+    /// How old a target may be and still describe the menu being opened.
+    static let contextTargetLifetime: TimeInterval = 0.25
+
+    /// The target for a menu opening now: one newer than the last menu's and
+    /// young enough to be this right-click's. Anything else is no target, and
+    /// the menu then takes WebKit's risky items out and adds nothing.
+    static func freshTarget(
+        _ pending: (target: ContextTarget, at: Date)?, lastSeq: Int, now: Date
+    ) -> ContextTarget? {
+        guard let pending, pending.target.seq > lastSeq,
+              now.timeIntervalSince(pending.at) <= contextTargetLifetime else { return nil }
+        return pending.target
     }
 
-    @objc private func reloadReportFromMenu(_ sender: Any?) {
-        bridgeHandler?.reloadWebView()
+    /// The report's right-click menu (`ReportContextMenu`, §9.4 of
+    /// docs/design-webview-context-menu.md). Reload Report is the remedy the
+    /// broken mark asks for (`PanelErrorBoundary` `part`); View ▸ Reload Report
+    /// (⌘R) is its twin.
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        super.willOpenMenu(menu, with: event)
+        let target = Self.freshTarget(pendingContextTarget, lastSeq: lastMenuSeq, now: Date())
+        if let seq = pendingContextTarget?.target.seq { lastMenuSeq = max(lastMenuSeq, seq) }
+        pendingContextTarget = nil
+        guard let i18n, let handler = bridgeHandler else { return }
+        ReportContextMenu.apply(
+            to: menu, target: target, isEditing: handler.isEditing,
+            t: { i18n.t($0) }, receiver: self, action: #selector(contextMenuItem(_:)))
+    }
+
+    @objc private func contextMenuItem(_ sender: Any?) {
+        guard let handler = bridgeHandler, let command = ReportContextMenu.command(of: sender) else { return }
+        switch command {
+        case .play(let media): handler.goToPlace(WindowPlace(path: "", anchor: nil, play: media))
+        case .goTo(let place): handler.goToPlace(place)
+        case .newWindow(let place): handler.openInNewWindow?(place)
+        case .star: handler.menuAction("star")
+        case .hide: handler.menuAction("hide")
+        case .addTag: handler.menuAction("addTag")
+        case .copyQuote(let domId): handler.menuAction("copyQuote", payload: ["domId": domId])
+        case .reload: handler.reloadWebView()
+        }
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -98,47 +129,6 @@ final class BristlenoseWebView: WKWebView {
 /// while editing text inline, ⌘A stays native text select-all. ⌘C stays
 /// Quotes-only: copying "the selection" elsewhere could include quotes the lens
 /// does not show.
-/// The report's right-click menu gains Reload Report (owner, 20 Oct 2026).
-/// Pure, so the menu edit is tested without WebKit building a menu.
-enum ReportContextMenu {
-    /// WebKit's own Reload item, which the page menu may carry. The identifier is
-    /// WebKit's (not public API): when it is there, ours takes its place so the
-    /// menu offers one reload, the one that refetches from the serve; when it is
-    /// not, nothing is matched and ours is appended.
-    static let webKitReload = NSUserInterfaceItemIdentifier("WKMenuItemIdentifierReload")
-    static let reloadReport = NSUserInterfaceItemIdentifier("app.bristlenose.reloadReport")
-
-    /// Not while a field has the keyboard (`isEditing`: any focused input,
-    /// textarea or editable text, the search box included): what is typed there
-    /// is saved only when the edit is committed, and a reload would drop it. A
-    /// deliberate over-approximation; clicking out of the field brings it back.
-    static func offersReload(isEditing: Bool) -> Bool { !isEditing }
-
-    /// The whole edit WebView makes: ours in, or, while editing, WebKit's own
-    /// Reload out too, since it would drop the typed words just the same.
-    static func apply(to menu: NSMenu, isEditing: Bool, title: String, target: AnyObject, action: Selector) {
-        guard offersReload(isEditing: isEditing) else {
-            menu.items.filter { $0.identifier == webKitReload }.forEach(menu.removeItem)
-            return
-        }
-        addReload(to: menu, title: title, target: target, action: action)
-    }
-
-    static func addReload(to menu: NSMenu, title: String, target: AnyObject, action: Selector) {
-        guard !menu.items.contains(where: { $0.identifier == reloadReport }) else { return }
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = target
-        item.identifier = reloadReport
-        if let at = menu.items.firstIndex(where: { $0.identifier == webKitReload }) {
-            menu.removeItem(at: at)
-            menu.insertItem(item, at: at)
-            return
-        }
-        if let last = menu.items.last, !last.isSeparatorItem { menu.addItem(.separator()) }
-        menu.addItem(item)
-    }
-}
-
 enum CardLensKeys {
     static func claimsSelectAll(tab: Tab?, isEditing: Bool) -> Bool {
         !isEditing && (tab == .quotes || tab == .screens || tab == .discussion)
@@ -429,6 +419,21 @@ struct WebView: NSViewRepresentable {
             }
 
             guard let body = message.body as? [String: Any] else {
+                return
+            }
+
+            // Kept on the web view now, not after a hop: the menu it describes
+            // is about to open.
+            if body["type"] as? String == "context-target" {
+                MainActor.assumeIsolated {
+                    guard let view = webView as? BristlenoseWebView else { return }
+                    if let target = ContextTarget.from(body) {
+                        view.pendingContextTarget = (target, Date())
+                    } else {
+                        view.pendingContextTarget = nil
+                        log.notice("a context-target this build cannot read; the menu adds nothing")
+                    }
+                }
                 return
             }
 
@@ -1024,7 +1029,7 @@ struct WebView: NSViewRepresentable {
             // Allow media autoplay without user gesture (player.html calls
             // video.play() programmatically after loadAndSeek).
             configuration.mediaTypesRequiringUserActionForPlayback = []
-            let popoutWebView = WKWebView(frame: .zero, configuration: configuration)
+            let popoutWebView = PlayerWebView(frame: .zero, configuration: configuration)
             popoutWebView.navigationDelegate = self
 
             // Same Diagnostics-preference gate as the report webview above.
@@ -1093,6 +1098,15 @@ struct WebView: NSViewRepresentable {
                 popoutTitleObservation = nil
             }
         }
+    }
+}
+
+/// The player window's web view: WebKit's video menu, less the items that open,
+/// download or copy the recording's loopback address (D8).
+final class PlayerWebView: WKWebView {
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        super.willOpenMenu(menu, with: event)
+        ReportContextMenu.applyToPlayer(menu)
     }
 }
 

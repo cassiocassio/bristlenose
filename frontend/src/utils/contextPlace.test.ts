@@ -62,7 +62,7 @@ describe("readContextTarget", () => {
     const place = momentPlace("play", "s3", 754, "p2");
     const host = el(`<a${attr(place)}><span id="inner">[12:34]</span></a>`);
     const read = readContextTarget(host.querySelector("#inner"), 7, "/report/quotes/", always);
-    expect(read).toEqual({ seq: 7, place, here: false, card: null });
+    expect(read).toEqual({ seq: 7, place, here: false, card: null, link: null });
   });
 
   it("says when the moment's transcript is the page showing", () => {
@@ -86,6 +86,19 @@ describe("readContextTarget", () => {
   it("a link with no place reads as none", () => {
     const host = el(`<a id="t" href="https://bristlenose.app/">x</a>`);
     expect(readContextTarget(host.querySelector("#t"), 1, "/", always).place).toBeNull();
+  });
+
+  it("tells a link into the report from one out of it", () => {
+    const host = el(
+      `<a id="in" href="/report/sessions/s1">a</a><a id="hash" href="#">b</a>` +
+        `<a id="out" href="https://bristlenose.app/docs/">c</a><span id="none">d</span>`,
+    );
+    const kind = (id: string) =>
+      readContextTarget(host.querySelector(`#${id}`), 1, "/", always).link;
+    expect(kind("in")).toBe("internal");
+    expect(kind("hash")).toBe("internal");
+    expect(kind("out")).toBe("external");
+    expect(kind("none")).toBeNull();
   });
 
   it("an unreadable place reads as none rather than throwing", () => {

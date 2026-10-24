@@ -1,91 +1,301 @@
 import AppKit
+import Darwin
 import Testing
 @testable import Bristlenose
 
-/// Right-click ▸ Reload Report in the report (owner, 20 Oct 2026): the remedy the
-/// broken mark asks for. WebKit builds the real menu in another process, so the
-/// edit is tested on menus built here.
+/// The report's right-click menus (docs/design-webview-context-menu.md §9.4).
+/// WebKit builds the real menu in another process, so the edit is tested on
+/// menus built here from WebKit's identifiers. Each row of §9.4 has a test.
 @MainActor
 @Suite("Report context menu")
 struct ReportContextMenuTests {
-    private final class Target: NSObject {
-        @objc func reload(_ sender: Any?) {}
+    private final class Receiver: NSObject {
+        @objc func pick(_ sender: Any?) {}
     }
 
-    private func item(_ title: String, _ id: String? = nil) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        if let id { i.identifier = NSUserInterfaceItemIdentifier(id) }
-        return i
+    private typealias W = ReportContextMenu.WebKit
+
+    /// Titles are the keys' last segment, so a test reads which string it got.
+    private let t: (String) -> String = { String($0.split(separator: ".").last ?? "") }
+
+    private func menu(_ ids: [NSUserInterfaceItemIdentifier?]) -> NSMenu {
+        let m = NSMenu()
+        for id in ids {
+            guard let id else { m.addItem(.separator()); continue }
+            let i = NSMenuItem(title: id.rawValue.replacingOccurrences(of: "WKMenuItemIdentifier", with: ""),
+                               action: nil, keyEquivalent: "")
+            i.identifier = id
+            m.addItem(i)
+        }
+        return m
     }
 
-    private func add(to menu: NSMenu, _ target: Target) {
-        ReportContextMenu.addReload(
-            to: menu, title: "Reload Report", target: target, action: #selector(Target.reload(_:)))
+    private var linkMenu: NSMenu {
+        menu([W.openLink, W.openLinkInNewWindow, W.downloadLinkedFile, W.copyLink, nil, W.shareMenu])
+    }
+    private var imageMenu: NSMenu {
+        menu([W.openImageInNewWindow, W.downloadImage, W.copyImage, W.copySubject, W.revealImage, nil, W.shareMenu])
+    }
+    private var pageMenu: NSMenu { menu([W.goBack, W.reload, nil]) }
+
+    private func titles(_ m: NSMenu) -> [String] {
+        m.items.map { $0.isSeparatorItem ? "—" : $0.title }
     }
 
-    @Test func takesThePlaceOfWebKitsOwnReload() {
-        let menu = NSMenu()
-        menu.addItem(item("Back", "WKMenuItemIdentifierGoBack"))
-        menu.addItem(item("Reload", "WKMenuItemIdentifierReload"))
-        menu.addItem(item("Inspect Element"))
-        let target = Target()
-        add(to: menu, target)
-
-        #expect(menu.items.map(\.title) == ["Back", "Reload Report", "Inspect Element"])
-        let ours = menu.items[1]
-        #expect(ours.identifier == ReportContextMenu.reloadReport)
-        #expect(ours.target === target)
-        #expect(ours.action == #selector(Target.reload(_:)))
+    private func apply(_ m: NSMenu, _ target: ContextTarget?, editing: Bool = false) {
+        ReportContextMenu.apply(to: m, target: target, isEditing: editing, t: t,
+                                receiver: Receiver(), action: #selector(Receiver.pick(_:)))
     }
 
-    @Test func isAppendedAfterASeparatorWhenWebKitOffersNone() {
-        let menu = NSMenu()
-        menu.addItem(item("Copy"))
-        add(to: menu, Target())
+    private static let media = ContextPlace.Media(key: "p2", seconds: 754.5)
 
-        #expect(menu.items.count == 3)
-        #expect(menu.items[1].isSeparatorItem)
-        #expect(menu.items[2].title == "Reload Report")
+    private func place(_ click: ContextPlace.Click, _ verb: ContextPlace.Verb = .show,
+                       _ dest: ContextPlace.Dest = .transcript,
+                       path: String = "/report/sessions/s3#t-754",
+                       media: ContextPlace.Media? = media, anchor: String? = nil) -> ContextPlace {
+        ContextPlace(click: click, verb: verb, dest: dest, path: path, media: media, anchor: anchor)
     }
 
-    @Test func anEmptyMenuGetsNoLeadingSeparator() {
-        let menu = NSMenu()
-        add(to: menu, Target())
-        #expect(menu.items.map(\.title) == ["Reload Report"])
+    private func linkTarget(_ p: ContextPlace, here: Bool = false) -> ContextTarget {
+        ContextTarget(seq: 1, place: p, here: here, link: .inReport)
     }
 
-    @Test func isAddedOnce() {
-        let menu = NSMenu()
-        menu.addItem(item("Copy"))
-        let target = Target()
-        add(to: menu, target)
-        add(to: menu, target)
-        #expect(menu.items.filter { $0.identifier == ReportContextMenu.reloadReport }.count == 1)
+    private func commands(_ m: NSMenu) -> [ReportContextMenu.Command] {
+        m.items.compactMap { ReportContextMenu.command(of: $0) }
     }
 
-    @Test func isWithheldWhileTextIsBeingEdited() {
-        #expect(ReportContextMenu.offersReload(isEditing: false))
+    // MARK: - §9.4, row by row
+
+    @Test func aTimecodeThatPlaysLeadsWithPlay() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.play)))
+        #expect(titles(m) == ["play", "—", "revealInTranscript", "openTranscriptInNewWindow"])
+        // D1: the new window plays too.
+        #expect(commands(m)[2] == .newWindow(WindowPlace(path: "/report/sessions/s3#t-754",
+                                                         anchor: nil, play: Self.media)))
+        #expect(commands(m)[0] == .play(Self.media))
+    }
+
+    @Test func onItsOwnTranscriptATimecodeOffersNoShowInTranscript() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.play), here: true))
+        #expect(titles(m) == ["play", "—", "openTranscriptInNewWindow"])
+    }
+
+    @Test func aSpeakerBadgeShowsTheTranscriptAndOffersNoPlay() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate, media: nil)))
+        #expect(titles(m) == ["revealInTranscript", "openTranscriptInNewWindow"])
+        // A new window from a click that doesn't play doesn't play.
+        #expect(commands(m)[1] == .newWindow(WindowPlace(path: "/report/sessions/s3#t-754",
+                                                         anchor: nil, play: nil)))
+    }
+
+    @Test func aTimecodeThatShowsTheTranscriptOffersPlayLast() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate)))
+        #expect(titles(m) == ["revealInTranscript", "openTranscriptInNewWindow", "—", "play"])
+    }
+
+    @Test func thresholdReviewsTimecodeLeadsWithTheNewWindowItsClickOpens() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.window)))
+        #expect(titles(m) == ["openTranscriptInNewWindow", "revealInTranscript", "—", "play"])
+    }
+
+    @Test func aSessionNumberOpensItsTranscript() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate, .open, path: "/report/sessions/s3",
+                                  media: .init(key: "s3", seconds: 0))))
+        #expect(titles(m) == ["openTranscript", "openTranscriptInNewWindow", "—", "play"])
+    }
+
+    @Test func aSessionFilenamePlaysFirst() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.play, .open, path: "/report/sessions/s3",
+                                  media: .init(key: "s3", seconds: 0))))
+        #expect(titles(m) == ["play", "—", "openTranscript", "openTranscriptInNewWindow"])
+    }
+
+    /// A thumbnail is an image, not a link: its Copy Image, Copy Subject, Look Up
+    /// and Share stay (D2), after ours.
+    @Test func aSessionThumbnailKeepsTheImageItems() {
+        let m = imageMenu
+        apply(m, ContextTarget(seq: 1, place: place(.play, .open, path: "/report/sessions/s3",
+                                                    media: .init(key: "s3", seconds: 0))))
+        #expect(titles(m) == ["play", "—", "openTranscript", "openTranscriptInNewWindow", "—",
+                              "CopyImage", "CopySubject", "RevealImage", "—", "ShareMenu"])
+    }
+
+    @Test func aHeadingElsewhereShowsItInQuotes() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate, .show, .quotes, path: "/report/quotes/#section-4", media: nil)))
+        #expect(titles(m) == ["showInQuotes", "openQuotesInNewWindow"])
+    }
+
+    @Test func aStatCardNamingALensOpensIt() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate, .open, .lens, path: "/report/sessions/", media: nil)))
+        #expect(titles(m) == ["open", "openInNewWindow"])
+    }
+
+    @Test func aContentsEntryGoesToItsSection() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.navigate, .go, .quotes, path: "/report/quotes/#section-4",
+                                  media: nil, anchor: "section-4")))
+        #expect(titles(m) == ["goToSection", "openQuotesInNewWindow"])
+        #expect(commands(m)[0] == .goTo(WindowPlace(path: "/report/quotes/#section-4",
+                                                    anchor: "section-4", play: nil)))
+    }
+
+    @Test func aScreensVersionTimeWithNoSessionCanOnlyPlay() {
+        let m = linkMenu
+        apply(m, linkTarget(place(.play, path: "")))
+        #expect(titles(m) == ["play"])
+    }
+
+    @Test func aScreengrabKeepsWebKitsImageItemsAndNoReload() {
+        let m = imageMenu
+        apply(m, ContextTarget(seq: 1, place: nil))
+        #expect(titles(m) == ["CopyImage", "CopySubject", "RevealImage", "—", "ShareMenu"])
+    }
+
+    @Test func anOutsideLinkKeepsOpenCopyAndShare() {
+        let m = linkMenu
+        apply(m, ContextTarget(seq: 1, place: nil, link: .outside))
+        #expect(titles(m) == ["OpenLink", "CopyLink", "—", "ShareMenu"])
+    }
+
+    /// An `href="#"` action (codebook rows, the hidden-quotes counter): its link
+    /// items go, and the emptied menu falls back to Reload Report (D3).
+    @Test func anInPageActionGetsReloadReportAlone() {
+        let m = linkMenu
+        apply(m, ContextTarget(seq: 1, place: nil, link: .inReport))
+        #expect(titles(m) == ["reloadReport"])
+    }
+
+    @Test func thePageMenuGetsReloadReportInPlaceOfWebKitsReload() {
+        let m = pageMenu
+        apply(m, ContextTarget(seq: 1, place: nil))
+        #expect(titles(m) == ["GoBack", "reloadReport"])
+        #expect(m.items.last?.identifier == ReportContextMenu.reloadReport)
+    }
+
+    @Test func thePlayerVideoMenuLosesOpenDownloadAndCopyVideo() {
+        let m = menu([W.openMediaInNewWindow, W.downloadMedia, W.copyMediaLink, nil,
+                      W.id("ToggleFullScreen"), W.id("TogglePictureInPicture"), nil,
+                      W.id("ShowHideMediaControls")])
+        ReportContextMenu.applyToPlayer(m)
+        #expect(titles(m) == ["ToggleFullScreen", "TogglePictureInPicture", "—", "ShowHideMediaControls"])
+    }
+
+    // MARK: - The quote card (D12)
+
+    @Test func aQuoteCardOffersItsQuoteCommands() {
+        let m = pageMenu
+        let card = ContextCard(domId: "q-s3-754", starred: false, place: place(.navigate, media: nil))
+        apply(m, ContextTarget(seq: 1, place: nil, card: card))
+        #expect(titles(m) == ["star", "hide", "addTag", "—", "copyQuote", "—",
+                              "revealInTranscript", "openTranscriptInNewWindow", "—",
+                              "GoBack", "reloadReport"])
+        #expect(commands(m)[3] == .copyQuote("q-s3-754"))
+    }
+
+    @Test func aStarredCardOffersUnstar() {
+        let m = pageMenu
+        apply(m, ContextTarget(seq: 1, place: nil,
+                               card: ContextCard(domId: "q", starred: true, place: nil)))
+        #expect(titles(m).first == "unstar")
+    }
+
+    /// A link inside a card (its timecode, its badge) gets the link's menu.
+    @Test func aLinkInsideACardWinsOverTheCard() {
+        let m = linkMenu
+        apply(m, ContextTarget(seq: 1, place: place(.play), card: ContextCard(domId: "q", starred: false, place: nil),
+                               link: .inReport))
+        #expect(titles(m).first == "play")
+        #expect(!titles(m).contains("star"))
+    }
+
+    // MARK: - Whatever the page said, or didn't
+
+    /// The race lost, or a target this build can't read: the risky items go and
+    /// nothing is added. The failure is a missing item, never the hijack.
+    @Test func withNoTargetTheRiskyItemsGoAndNothingIsAdded() {
+        let m = linkMenu
+        apply(m, nil)
+        #expect(titles(m) == ["OpenLink", "CopyLink", "—", "ShareMenu"])
+        let img = imageMenu
+        apply(img, nil)
+        #expect(titles(img) == ["CopyImage", "CopySubject", "RevealImage", "—", "ShareMenu"])
+    }
+
+    @Test func withNoTargetThePageMenuStillReloads() {
+        let m = pageMenu
+        apply(m, nil)
+        #expect(titles(m) == ["GoBack", "reloadReport"])
+    }
+
+    /// While a field has the keyboard nothing of ours is added and WebKit's own
+    /// Reload goes too, since it would drop the typed words just the same.
+    @Test func whileEditingNothingOfOursAndNoReload() {
+        let m = menu([W.id("Cut"), W.reload])
+        let card = ContextCard(domId: "q", starred: false, place: nil)
+        apply(m, ContextTarget(seq: 1, place: nil, card: card), editing: true)
+        #expect(titles(m) == ["Cut"])
         #expect(!ReportContextMenu.offersReload(isEditing: true))
     }
 
-    /// WebKit's own Reload would drop the typed words just as ours would, so
-    /// while editing it goes too, and nothing takes its place.
-    @Test func whileEditingWebKitsReloadGoesAndOursIsNotAdded() {
-        let menu = NSMenu()
-        menu.addItem(item("Cut"))
-        menu.addItem(item("Reload", "WKMenuItemIdentifierReload"))
-        ReportContextMenu.apply(
-            to: menu, isEditing: true, title: "Reload Report", target: Target(),
-            action: #selector(Target.reload(_:)))
-        #expect(menu.items.map(\.title) == ["Cut"])
+    @Test func aPlaceMenuGetsNoReload() {
+        let m = menu([W.reload, nil, W.openLink, W.copyLink])
+        apply(m, linkTarget(place(.navigate, media: nil)))
+        #expect(!titles(m).contains("reloadReport"))
+        #expect(!titles(m).contains("Reload"))
     }
 
-    @Test func whenNotEditingApplyAddsOurs() {
-        let menu = NSMenu()
-        menu.addItem(item("Reload", "WKMenuItemIdentifierReload"))
-        ReportContextMenu.apply(
-            to: menu, isEditing: false, title: "Reload Report", target: Target(),
-            action: #selector(Target.reload(_:)))
-        #expect(menu.items.map(\.title) == ["Reload Report"])
+    // MARK: - Freshness
+
+    @Test func aTargetIsFreshOnlyForItsOwnMenu() {
+        let now = Date()
+        let target = ContextTarget(seq: 5, place: nil)
+        #expect(BristlenoseWebView.freshTarget((target, now), lastSeq: 4, now: now) == target)
+        // Already used by an earlier menu.
+        #expect(BristlenoseWebView.freshTarget((target, now), lastSeq: 5, now: now) == nil)
+        // From a right-click too long ago to be this one's.
+        #expect(BristlenoseWebView.freshTarget((target, now.addingTimeInterval(-0.5)),
+                                               lastSeq: 4, now: now) == nil)
+        #expect(BristlenoseWebView.freshTarget(nil, lastSeq: 0, now: now) == nil)
     }
+
+    // MARK: - WebKit's identifiers
+
+    /// The identifiers are SPI: exported by WebKit, declared in no public header.
+    /// Each constant we match on must equal its symbol's value, or an OS rename
+    /// would quietly bring the default menu, hijack included, back.
+    @Test func everyWebKitIdentifierWeMatchIsWebKitsOwn() throws {
+        let pinned: [(NSUserInterfaceItemIdentifier, String)] = [
+            (W.openLink, "OpenLink"), (W.openLinkInNewWindow, "OpenLinkInNewWindow"),
+            (W.downloadLinkedFile, "DownloadLinkedFile"), (W.copyLink, "CopyLink"),
+            (W.openImageInNewWindow, "OpenImageInNewWindow"), (W.downloadImage, "DownloadImage"),
+            (W.copyImage, "CopyImage"), (W.copySubject, "CopySubject"), (W.revealImage, "RevealImage"),
+            (W.openFrameInNewWindow, "OpenFrameInNewWindow"),
+            (W.openMediaInNewWindow, "OpenMediaInNewWindow"), (W.downloadMedia, "DownloadMedia"),
+            (W.copyMediaLink, "CopyMediaLink"), (W.shareMenu, "ShareMenu"),
+            (W.reload, "Reload"), (W.goBack, "GoBack"),
+        ]
+        for (ours, name) in pinned {
+            // The C name is `_WKMenuItemIdentifier…` (WebKit's SPI underscore); its
+            // value is the identifier WebKit sets on the item.
+            let symbol = "_WKMenuItemIdentifier" + name
+            let raw = try #require(dlsym(WebKitHandle.handle, symbol), "WebKit no longer exports \(symbol)")
+            let value = raw.assumingMemoryBound(to: NSString?.self).pointee as String?
+            #expect(value == ours.rawValue, "\(symbol)")
+        }
+    }
+}
+
+/// WebKit, opened by path so the lookup doesn't depend on whether anything has
+/// loaded it yet.
+private enum WebKitHandle {
+    static let handle = dlopen("/System/Library/Frameworks/WebKit.framework/WebKit", RTLD_NOW)
 }

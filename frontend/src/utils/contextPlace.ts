@@ -106,6 +106,23 @@ export interface ContextTarget {
   place: ContextPlace | null;
   here: boolean;
   card: ContextCard | null;
+  /** The link under the pointer, if any: one into this report (its href is a loopback address
+   *  that dies with the serve, so the app takes out Copy Link and Share) or one out of it. */
+  link: "internal" | "external" | null;
+}
+
+function linkKind(target: Element | null): ContextTarget["link"] {
+  const a = target?.closest("a[href]");
+  const href = a?.getAttribute("href");
+  if (href == null) return null;
+  if (href.startsWith("#")) return "internal";
+  try {
+    return new URL(href, window.location.href).origin === window.location.origin
+      ? "internal"
+      : "external";
+  } catch {
+    return null;
+  }
 }
 
 /** Read what a right-click at `target` landed on. Pure over the DOM, so it is tested without a
@@ -134,5 +151,5 @@ export function readContextTarget(
           place: playable(readPlace(cardEl.querySelector(".speaker [data-bn-place]"))),
         }
       : null;
-  return { seq, place, here, card };
+  return { seq, place, here, card, link: linkKind(target) };
 }

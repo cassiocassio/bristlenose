@@ -525,6 +525,23 @@ class TestDetectStatus:
         info = self._failed_with(tmp_path, CauseCategoryEnum.NETWORK, None)
         assert info.long == "Couldn't reach the AI provider. Check your connection."
 
+    def test_the_provider_naming_set_matches_the_sentences(self) -> None:
+        """_NAMES_PROVIDER is a hand copy; the en values are the truth."""
+        import json
+
+        from bristlenose.server.status_page import _FAILURE_LEAF, _NAMES_PROVIDER
+
+        en = json.loads(
+            (Path(__file__).parent.parent / "bristlenose/locales/en/desktop.json")
+            .read_text(encoding="utf-8")
+        )["pipeline"]["failure"]
+        derived = {leaf for leaf in _FAILURE_LEAF.values() if "{{provider}}" in en[leaf]}
+        assert derived == set(_NAMES_PROVIDER)
+
+    def test_ollama_is_named_as_the_mac_names_it(self, tmp_path: Path) -> None:
+        info = self._failed_with(tmp_path, CauseCategoryEnum.NETWORK, "local")
+        assert info.long == "Couldn't reach Ollama. Check your connection."
+
     def test_a_cause_with_no_page_sentence_keeps_the_providers_words(
         self, tmp_path: Path,
     ) -> None:

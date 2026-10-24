@@ -112,10 +112,12 @@ enum DetailPaneKind: Equatable {
         case stopped
         /// The run was refused for want of an AI provider.
         case needsProvider
-        /// The run failed. `message` is the row popover's sentence, absent for
-        /// a run whose summary carries the breakdown instead.
-        case failed(message: FailureMessage?, category: PipelineFailureCategory,
-                    summary: PipelineSummary?)
+        /// The run failed. `sentence` is the category's own localised sentence
+        /// (`FailureMessage.failure(for:)`), never the provider's raw words,
+        /// which `rawCause` keeps for Show details; `summary` is the breakdown
+        /// a run that failed part-way carries.
+        case failed(sentence: FailureMessage, rawCause: String?,
+                    category: PipelineFailureCategory, summary: PipelineSummary?)
     }
 
     static func runCover(pipelineState: PipelineState?, documentState: DocumentState) -> RunCover? {
@@ -129,9 +131,17 @@ enum DetailPaneKind: Equatable {
         // A stop the classifier filed as a failure is still the researcher's.
         case .failed(_, .userSignal): return .stopped
         case .failed(let message, let category):
-            return .failed(message: message, category: category, summary: nil)
+            // A keyed message is already ours (the classifier names the
+            // provider it saw); a passthrough is the record's English, so the
+            // pane says the category's sentence and keeps the words for details.
+            let sentence = message.key == nil ? FailureMessage.failure(for: category) : message
+            return .failed(sentence: sentence, rawCause: message.english,
+                           category: category, summary: nil)
         case .failedWithDiagnostic(let summary):
-            return .failed(message: nil, category: .unknown, summary: summary)
+            let category = PipelineFailureCategory(
+                rawValue: summary.dominantCategory().rawValue) ?? .unknown
+            return .failed(sentence: FailureMessage.failure(for: category), rawCause: nil,
+                           category: category, summary: summary)
         default: return nil
         }
     }

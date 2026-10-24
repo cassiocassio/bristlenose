@@ -204,8 +204,8 @@ def _build_details(cause: Cause | None) -> str | None:
 
 
 # Cause category → its sentence under `desktop.pipeline.failure`, the keys the
-# Mac's diagnostic popover reads (`PipelineFailureCategory.localeLeaf`), so the
-# page and the popover say one thing. `model_unavailable` is left out on
+# Mac reads (`PipelineFailureCategory.localeLeaf`), so the page and the Mac's
+# failed pane say one thing. `model_unavailable` is left out on
 # purpose: its sentence sends the researcher to Settings ▸ LLM Provider, a Mac
 # place, and the page also serves the CLI; it keeps the provider's own words.
 _FAILURE_LEAF: dict[str, str] = {
@@ -225,10 +225,23 @@ _FAILURE_LEAF: dict[str, str] = {
 }
 
 # The leaves whose sentence names the provider, as `PipelineFailureCategory.
-# namesProvider` lists them; the rest have no `{{provider}}`.
+# namesProvider` lists them; the rest have no `{{provider}}`. Pinned against the
+# en values by tests/test_server_status_page.py.
 _NAMES_PROVIDER = frozenset(
     {"auth", "outOfCredit", "network", "quota", "apiRequest", "apiServer", "outputTruncated"}
 )
+
+
+# The provider as the Mac names it (`LLMProvider.displayName`). any-llm is
+# absent: its account is the inner provider's, which the cause does not carry,
+# so its sentence is the generic one.
+_PROVIDER_NAME: dict[str, str] = {
+    "anthropic": "Claude",
+    "openai": "ChatGPT",
+    "azure": "Azure OpenAI",
+    "google": "Gemini",
+    "local": "Ollama",
+}
 
 
 def _failure_sentence(cause: Cause | None) -> str | None:
@@ -239,12 +252,10 @@ def _failure_sentence(cause: Cause | None) -> str | None:
     if leaf is None:
         return None
     if leaf in _NAMES_PROVIDER:
-        from bristlenose.providers import PROVIDERS
-
-        spec = PROVIDERS.get(cause.provider or "")
-        if spec is None:
+        name = _PROVIDER_NAME.get(cause.provider or "")
+        if name is None:
             return t(f"desktop.pipeline.failure.{leaf}Generic")
-        return t(f"desktop.pipeline.failure.{leaf}", provider=spec.display_name)
+        return t(f"desktop.pipeline.failure.{leaf}", provider=name)
     return t(f"desktop.pipeline.failure.{leaf}")
 
 

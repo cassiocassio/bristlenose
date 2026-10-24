@@ -55,8 +55,8 @@ struct RunCoverPane: View {
             } actions: {
                 setUpProviderButton
             }
-        case .failed(let message, let category, let summary):
-            failed(message: message, category: category, summary: summary)
+        case .failed(let sentence, let rawCause, let category, let summary):
+            failed(sentence: sentence, rawCause: rawCause, category: category, summary: summary)
         }
     }
 
@@ -64,7 +64,9 @@ struct RunCoverPane: View {
     /// so the pane and the row cannot disagree.
     private var analysing: some View {
         let p = liveData.progress[project.id]
-        let line = RunProgressSubtitle.compose(
+        let stopping = p?.isStopping ?? false
+        // Stopping outranks progress, as on the row (`ProjectRow`).
+        let line = stopping ? i18n.t("desktop.chrome.pipeline.stopping") : RunProgressSubtitle.compose(
             stage: p?.stage,
             sessionsComplete: p?.sessionsComplete,
             sessionsTotal: p?.sessionsTotal,
@@ -89,7 +91,9 @@ struct RunCoverPane: View {
                 }
             }
         } description: {
-            Text(i18n.t("desktop.chrome.pipeline.analysingHint"))
+            if !stopping {
+                Text(i18n.t("desktop.chrome.pipeline.analysingHint"))
+            }
         }
     }
 
@@ -100,14 +104,13 @@ struct RunCoverPane: View {
     }
 
     private func failed(
-        message: FailureMessage?, category: PipelineFailureCategory, summary: PipelineSummary?
+        sentence: FailureMessage, rawCause: String?, category: PipelineFailureCategory,
+        summary: PipelineSummary?
     ) -> some View {
         ContentUnavailableView {
             Label(i18n.t("desktop.chrome.failedTitle"), systemImage: "exclamationmark.triangle")
         } description: {
-            if let sentence = message?.resolved(i18n), !sentence.isEmpty {
-                Text(sentence).lineLimit(3)
-            }
+            Text(sentence.resolved(i18n)).lineLimit(3)
         } actions: {
             HStack(spacing: 12) {
                 switch DetailPaneKind.FailureRemedy.of(category) {
@@ -123,7 +126,7 @@ struct RunCoverPane: View {
             }
             if detailsExpanded {
                 ScrollView {
-                    Text(forensicRecord(message: message, category: category, summary: summary))
+                    Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -139,7 +142,7 @@ struct RunCoverPane: View {
 
     /// The row popover's Copy details text: English, as forensic records are.
     private func forensicRecord(
-        message: FailureMessage?, category: PipelineFailureCategory, summary: PipelineSummary?
+        rawCause: String?, category: PipelineFailureCategory, summary: PipelineSummary?
     ) -> String {
         if let summary {
             return ProjectDiagnosticPopover.formatDiagnosticPlaintext(
@@ -148,7 +151,7 @@ struct RunCoverPane: View {
             )
         }
         return ProjectDiagnosticPopover.formatDiagnosticPlaintextDegraded(
-            cause: message?.english ?? "", category: category, projectName: project.name,
+            cause: rawCause ?? "", category: category, projectName: project.name,
             projectPath: project.path,
             stdoutTail: Array((liveData.outputLines[project.id] ?? []).suffix(20))
         )

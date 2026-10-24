@@ -3873,6 +3873,8 @@ struct ContentView: View {
                                     liveData: pipelineRunner.liveData,
                                     onAnalyse: { pipelineRunner.start(project: project) }
                                 )
+                                // A Show details opened on one study stays there.
+                                .id(project.id)
                             }
                         }
 

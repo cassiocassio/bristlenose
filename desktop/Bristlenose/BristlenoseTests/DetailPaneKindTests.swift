@@ -105,12 +105,24 @@ struct DetailPaneRunCoverTests {
 
     // MARK: - The Mac draws the failed and refused panes (owner, 24 Oct 2026, Q1)
 
-    /// A failure reads the row popover's sentence, not the page's raw cause.
-    @Test func aFailureIsCoveredWithThePopoversSentence() {
-        let message = FailureMessage.passthrough("x")
+    /// A failure reads its category's sentence; the record's raw English, which
+    /// the event log usually carries, is kept for Show details.
+    @Test func aFailureIsCoveredWithItsCategorysSentence() {
         #expect(DetailPaneKind.runCover(
-            pipelineState: .failed(message, category: .network), documentState: failedPage)
-                == .failed(message: message, category: .network, summary: nil))
+            pipelineState: .failed(.passthrough("Error code: 401 - {...}"), category: .auth),
+            documentState: failedPage)
+                == .failed(sentence: FailureMessage.failure(for: .auth),
+                           rawCause: "Error code: 401 - {...}", category: .auth, summary: nil))
+    }
+
+    /// The classifier's own keyed sentence, which names the provider it saw,
+    /// is kept as it is.
+    @Test func aKeyedFailureKeepsItsSentence() {
+        let keyed = FailureMessage.failure(for: .auth, provider: .claude)
+        guard case .failed(let sentence, _, _, _)? = DetailPaneKind.runCover(
+            pipelineState: .failed(keyed, category: .auth), documentState: failedPage)
+        else { Issue.record("not covered as failed"); return }
+        #expect(sentence == keyed)
     }
 
     /// A refusal names its one door, not the page's "Not analysed yet."

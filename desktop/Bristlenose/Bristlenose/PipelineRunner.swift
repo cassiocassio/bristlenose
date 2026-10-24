@@ -278,7 +278,7 @@ extension PipelineState {
         return false
     }
 
-    /// "Analysis stopped unexpectedly": a `run_started` whose process is gone,
+    /// A stranded run ("The analysis stopped before it finished"): a `run_started` whose process is gone,
     /// read off disk (`EventLogReader.deriveState`), never a run's own verdict.
     var isStranded: Bool {
         if case .failed(let message, _) = self { return message == EventLogReader.stranded }

@@ -22,7 +22,7 @@ def _info(out: Path, sid: str, infos: list[str], segment_labels: list[str]) -> N
     (d / f"{sid}.json").write_text(json.dumps({
         "speaker_infos": [{"speaker_label": x} for x in infos],
         "segments_with_roles": [{"speaker_label": x} for x in segment_labels],
-    }))
+    }), encoding="utf-8")
 
 
 def test_a_split_recordings_labels_and_a_platform_transcripts_names(tmp_path: Path) -> None:

@@ -150,11 +150,11 @@ class TestPeopleFile:
         _drive(tmp_path, "run", 2, {})
         people = load_people_file(tmp_path / "output")
         assert people is not None
-        _people(tmp_path).write_text("# hand-trimmed\n" + _people(tmp_path).read_text())
+        _people(tmp_path).write_text("# hand-trimmed\n" + _people(tmp_path).read_text(encoding="utf-8"), encoding="utf-8")
 
         _drive(tmp_path, "run", 2, {})
 
-        assert not _people(tmp_path).read_text().startswith("# hand-trimmed")
+        assert not _people(tmp_path).read_text(encoding="utf-8").startswith("# hand-trimmed")
 
     @pytest.mark.parametrize(("text", "where"), [
         # An unclosed quote is noticed at the end of the file; the line to fix

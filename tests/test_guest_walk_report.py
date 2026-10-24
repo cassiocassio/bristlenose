@@ -63,7 +63,7 @@ def test_a_menu_mask_hides_only_its_own_item() -> None:
 
 def _walk_steps() -> set[str]:
     """Every screen name walk.sh can capture, from its `shot` calls."""
-    src = (WALK_DIR / "walk.sh").read_text()
+    src = (WALK_DIR / "walk.sh").read_text(encoding="utf-8")
     names = set(re.findall(r'^\s*shot ([a-z][a-z0-9-]*)', src, re.MULTILINE))
     # The loops build names from a list: settings-<tab> and lens-<lens>.
     for tab in re.findall(r'for tab in ([^;]+);', src)[0].replace('"', "").split():
@@ -104,8 +104,8 @@ def test_a_night_with_new_and_missing_screens_still_writes_its_page(tmp_path: Pa
     tonight.mkdir()
     (base / "01-about.png").write_bytes(png)
     (tonight / "02-lens-quotes.png").write_bytes(png)
-    (base / "verdict.txt").write_text("COMPLETED 1 screens\n")
-    (tonight / "verdict.txt").write_text("COMPLETED 1 screens\n")
+    (base / "verdict.txt").write_text("COMPLETED 1 screens\n", encoding="utf-8")
+    (tonight / "verdict.txt").write_text("COMPLETED 1 screens\n", encoding="utf-8")
     import sys
 
     argv = sys.argv
@@ -114,7 +114,7 @@ def test_a_night_with_new_and_missing_screens_still_writes_its_page(tmp_path: Pa
         assert report.main() == 0
     finally:
         sys.argv = argv
-    page = (out / "index.html").read_text()
+    page = (out / "index.html").read_text(encoding="utf-8")
     assert "NEW" in page and "missing tonight" in page
 
 
@@ -137,4 +137,4 @@ def test_a_step_only_tonight_has_adds_no_menu_changes(tmp_path: Path) -> None:
         assert report.main() == 0
     finally:
         sys.argv = argv
-    assert "0 menu changes" in (out / "index.html").read_text()
+    assert "0 menu changes" in (out / "index.html").read_text(encoding="utf-8")

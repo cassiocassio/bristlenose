@@ -85,7 +85,7 @@ def _write_index(project: Path, video: Path, engine, sid: str = "s1", episodes: 
     path.write_text(json.dumps(
         {"version": INDEX_VERSION, "engine": "fake", "engine_version": "1", "every": 4.0, "size": [320, 180],
          "samples": 3, "raw_lines": len(episodes or []), "moments": [], "episodes": episodes or [],
-         "key": cache_key(video, engine)}))
+         "key": cache_key(video, engine)}), encoding="utf-8")
     return path
 
 

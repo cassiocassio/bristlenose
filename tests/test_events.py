@@ -1036,7 +1036,7 @@ def test_sessions_analysed_over_the_shared_fixture() -> None:
     from bristlenose.events import PipelineSummary, sessions_analysed
 
     fixture = json.loads(
-        (Path(__file__).parent / "fixtures" / "pipeline-summary-contract.json").read_text()
+        (Path(__file__).parent / "fixtures" / "pipeline-summary-contract.json").read_text(encoding="utf-8")
     )
     got = {
         name: sessions_analysed(PipelineSummary.model_validate(sc["summary"]))

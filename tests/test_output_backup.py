@@ -188,7 +188,7 @@ class TestFullCycle:
         output_backup.restore(backup, out)
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "v1", "the report is back"
-        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text() == "a\nb\n"
+        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text(encoding="utf-8") == "a\nb\n"
         assert not output_backup.failed_path_for(out).exists()
         assert not output_backup.backup_path_for(out).exists()
 
@@ -390,7 +390,7 @@ class TestTheAnalysedSessionRule:
     def test_an_unreadable_quotes_file_does_not(self, tmp_path: Path) -> None:
         out = _make_report(tmp_path / "out", marker="a", events="x\n")
         _land_a_session(out)
-        (out / ".bristlenose" / "intermediate" / "extracted_quotes.json").write_text("[{")
+        (out / ".bristlenose" / "intermediate" / "extracted_quotes.json").write_text("[{", encoding="utf-8")
         assert not output_backup.holds_an_analysed_session(out)
 
     def test_no_output_does_not(self, tmp_path: Path) -> None:
@@ -412,7 +412,7 @@ class TestSettle:
         assert output_backup.reclaim_stale(out) is RestoreOutcome.RESTORED
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "report"
-        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text() == "r1\na1\n"
+        assert (out / ".bristlenose" / "pipeline-events.jsonl").read_text(encoding="utf-8") == "r1\na1\n"
         assert not output_backup.failed_path_for(out).exists()
 
     def test_an_export_that_will_not_move_keeps_the_report_until_it_does(
@@ -443,7 +443,7 @@ class TestSettle:
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "fresh"
         carried = [p for p in out.iterdir() if p.name.startswith("clips (")]
-        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text() == "clip"
+        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text(encoding="utf-8") == "clip"
         assert not backup.exists()
 
     def test_a_leftover_tree_is_swept_by_the_next_run(self, tmp_path: Path) -> None:
@@ -490,7 +490,7 @@ class TestTheFreshEyesFindings:
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "report"
         carried = [p for p in out.iterdir() if p.name.startswith("clips (")]
-        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text() == "clip"
+        assert len(carried) == 1 and (carried[0] / "c.mp4").read_text(encoding="utf-8") == "clip"
         assert output_backup.leftovers_for(out) == []
 
     @pytest.mark.skipif(not _CAN_CHMOD, reason="needs a folder this user cannot write")
@@ -511,7 +511,7 @@ class TestTheFreshEyesFindings:
             old.chmod(0o700)
 
         assert (out / _MARKER).read_text(encoding="utf-8") == "report"
-        assert (old / "clips" / "c.mp4").read_text() == "clip"
+        assert (old / "clips" / "c.mp4").read_text(encoding="utf-8") == "clip"
         # This run's own tree took another name and went.
         assert output_backup.leftovers_for(out) == [old]
 

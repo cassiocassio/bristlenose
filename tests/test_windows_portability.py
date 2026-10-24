@@ -254,34 +254,63 @@ def test_llm_log_trims_without_fchmod(tmp_path: Path, monkeypatch: pytest.Monkey
     assert [p.name for p in tmp_path.iterdir()] == ["llm-calls.jsonl"]
 
 
+def _text_io_without_encoding(source: str) -> list[int]:
+    """Lines of ``open``/``read_text``/``write_text`` calls that leave the encoding to the locale.
+
+    Ruff's PLW1514 is preview-only, and even with preview on it flags only a
+    receiver it can type as a ``Path``: none of the 174 in ``tests/`` on 24 Oct
+    2026, which are mostly ``tmp_path / "x"``.
+    """
+    import ast
+
+    lines = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call) or any(k.arg == "encoding" for k in node.keywords):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+        if name in ("read_text", "write_text"):
+            # The encoding is also the first positional of read_text, the second of write_text.
+            if len(node.args) <= (name == "write_text"):
+                lines.append(node.lineno)
+        elif name == "open" and not (
+            isinstance(func, ast.Attribute) and getattr(func.value, "id", "") in ("os", "webbrowser")
+        ):
+            mode_at = 0 if isinstance(func, ast.Attribute) else 1
+            mode = next((k.value for k in node.keywords if k.arg == "mode"), None)
+            if mode is None and len(node.args) > mode_at:
+                mode = node.args[mode_at]
+            text = mode is None or (isinstance(mode, ast.Constant) and "b" not in str(mode.value))
+            if text and (node.args or isinstance(func, ast.Attribute)):
+                lines.append(node.lineno)
+    return lines
+
+
 def test_every_text_file_read_and_write_names_its_encoding() -> None:
     """``open``/``read_text``/``write_text`` default to the locale codepage too.
 
     On Windows that is cp1252: a transcript, a quote or a participant name
     outside it raises on write and mis-reads on load. Binary modes are exempt.
+    The tests are gated too: written on a Mac, five of them reddened the
+    windows-latest job at 0.43.0 on a ``▸`` or an arrow (24 Oct 2026).
     """
-    import ast
-
-    offenders = []
-    for path in _PKG.rglob("*.py"):
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if not isinstance(node, ast.Call) or any(k.arg == "encoding" for k in node.keywords):
-                continue
-            func = node.func
-            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
-            if name in ("read_text", "write_text"):
-                offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
-            elif name == "open" and not (
-                isinstance(func, ast.Attribute) and getattr(func.value, "id", "") in ("os", "webbrowser")
-            ):
-                mode_at = 0 if isinstance(func, ast.Attribute) else 1
-                mode = next((k.value for k in node.keywords if k.arg == "mode"), None)
-                if mode is None and len(node.args) > mode_at:
-                    mode = node.args[mode_at]
-                text = mode is None or (isinstance(mode, ast.Constant) and "b" not in str(mode.value))
-                if text and (node.args or isinstance(func, ast.Attribute)):
-                    offenders.append(f"{path.relative_to(_PKG)}:{node.lineno}")
+    offenders = [
+        f"{path.relative_to(root.parent).as_posix()}:{n}"
+        for root in (_PKG, Path(__file__).parent)
+        for path in root.rglob("*.py")
+        for n in _text_io_without_encoding(path.read_text(encoding="utf-8"))
+    ]
     assert offenders == [], f"add encoding='utf-8' to: {offenders}"
+
+
+def test_the_encoding_gate_can_fail() -> None:
+    flagged = 'p.read_text()\np.write_text(s)\nopen(f)\nopen(f, "w")\np.open()\np.open("a")\n'
+    assert _text_io_without_encoding(flagged) == [1, 2, 3, 4, 5, 6]
+    clean = (
+        'p.read_text(encoding="utf-8")\np.read_text("utf-8")\np.write_text(s, "utf-8")\n'
+        'open(f, "rb")\np.open("wb")\nos.open(f, 0)\nwebbrowser.open(u)\n'
+    )
+    assert _text_io_without_encoding(clean) == []
 
 
 def test_redirected_output_in_a_codepage_prints_rather_than_crashes(tmp_path: Path) -> None:

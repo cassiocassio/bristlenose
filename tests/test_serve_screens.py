@@ -73,7 +73,7 @@ def _write_index(app, project: Path, lines: list[dict], t0: float, t1: float, ra
     d.joinpath("s1.json").write_text(json.dumps(
         {"version": INDEX_VERSION, "engine": "fake", "engine_version": "1", "every": 4.0, "size": [320, 180],
          "samples": 3, "raw_lines": raw_lines, "moments": [t0], "episodes": eps,
-         "key": cache_key(project / "s1.mp4", app.state.screen_text.engine)}))
+         "key": cache_key(project / "s1.mp4", app.state.screen_text.engine)}), encoding="utf-8")
 
 
 def test_screens_are_off_unless_asked_for(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -167,7 +167,7 @@ def test_the_job_indexes_each_recording_with_the_engine(project: Path, monkeypat
     deadline = time.time() + 30
     while job.running and time.time() < deadline:
         time.sleep(0.05)
-    rec = json.loads((index_dir(_out(project)) / "s1.json").read_text())
+    rec = json.loads((index_dir(_out(project)) / "s1.json").read_text(encoding="utf-8"))
     # ffmpeg's fps filter gives 0 and 4 for 9 s: exactly two.
     assert rec["engine"] == "fake" and rec["samples"] == len(seen) == 2
     assert job.failed == {}

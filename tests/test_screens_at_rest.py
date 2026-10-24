@@ -34,7 +34,7 @@ def _read(project: Path) -> Path:
     """Something the job and the still route would have left: an index and a cached still."""
     d = sti.index_dir(project / "bristlenose-output")
     (d / "stills").mkdir(parents=True)
-    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION}))
+    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION}), encoding="utf-8")
     (d / "stills" / "s1_0123456789abcdef.jpg").write_bytes(b"\xff\xd8")
     return d
 
@@ -92,7 +92,7 @@ def test_explicitly_off_outranks_dev(project: Path, monkeypatch: pytest.MonkeyPa
 def test_a_symlink_in_its_place_is_not_followed(tmp_path: Path) -> None:
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
-    (elsewhere / "keep.txt").write_text("not ours")
+    (elsewhere / "keep.txt").write_text("not ours", encoding="utf-8")
     out = tmp_path / "out"
     link = sti.index_dir(out)
     link.parent.mkdir(parents=True)
@@ -202,8 +202,8 @@ def test_the_same_screens_derive_from_the_minimised_index() -> None:
 def test_an_index_from_an_older_version_is_deleted_with_its_stills(tmp_path: Path) -> None:
     d = sti.index_dir(tmp_path)
     (d / "stills").mkdir(parents=True)
-    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION - 1}))
-    (d / "s2.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION}))
+    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION - 1}), encoding="utf-8")
+    (d / "s2.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION}), encoding="utf-8")
     (d / "stills" / "s1_12.jpg").write_bytes(b"x")
     (d / "stills" / "s2_12.jpg").write_bytes(b"x")
     assert sti.purge_stale(tmp_path) == 1
@@ -222,7 +222,7 @@ def test_a_still_from_before_stills_were_named_by_session_is_deleted(tmp_path: P
 def test_an_index_from_a_newer_version_is_kept(tmp_path: Path) -> None:
     d = sti.index_dir(tmp_path)
     d.mkdir(parents=True)
-    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION + 1}))
+    (d / "s1.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION + 1}), encoding="utf-8")
     assert sti.purge_stale(tmp_path) == 0
     assert (d / "s1.json").exists()
 
@@ -231,6 +231,6 @@ def test_serve_start_purges_an_older_index(project: Path, monkeypatch: pytest.Mo
     monkeypatch.delenv("BRISTLENOSE_SCREEN_TEXT", raising=False)
     d = sti.index_dir(project / "bristlenose-output")
     d.mkdir(parents=True, exist_ok=True)
-    (d / "old.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION - 1}))
+    (d / "old.json").write_text(json.dumps({"version": screen_text.INDEX_VERSION - 1}), encoding="utf-8")
     create_app(project_dir=project, dev=False, db_url="sqlite://")
     assert not (d / "old.json").exists()

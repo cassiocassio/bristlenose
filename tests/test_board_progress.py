@@ -481,7 +481,7 @@ def test_a_token_refused_after_the_screens_board_exists_keeps_its_link(
 @pytest.mark.parametrize("content", ['{"profiles": []}', '{"profiles": {"miro": []}}',
                                      '{"profiles": {"miro": {"group": {"mean": "x"}}}}', "not json"])
 def test_a_malformed_rates_file_costs_the_estimate_not_the_export(tmp_path: Path, content: str) -> None:
-    (tmp_path / "board-timing.json").write_text(content)
+    (tmp_path / "board-timing.json").write_text(content, encoding="utf-8")
     p = BoardProgress("quotes", history_dir=tmp_path)  # raised inside every board's start
     p.plan({"group": 5})
     p.enter("groups", 5)

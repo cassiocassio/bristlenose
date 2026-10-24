@@ -84,7 +84,7 @@ class _Extractor:
         out_dir.mkdir(parents=True, exist_ok=True)
         for sid in videos:
             (out_dir / f"{sid}.json").write_text(
-                '{"version": 1, "key": "k", "fps": 4, "n": 2, "png": "AA==", "edges": [1.0]}')
+                '{"version": 1, "key": "k", "fps": 4, "n": 2, "png": "AA==", "edges": [1.0]}', encoding="utf-8")
         self.done.set()
         return {sid: out_dir / f"{sid}.json" for sid in videos}
 

@@ -43,7 +43,7 @@ def _intermediate(out: Path) -> Path:
 
 
 def _write_quotes(out: Path, quotes: list[dict]) -> None:
-    (_intermediate(out) / "extracted_quotes.json").write_text(json.dumps(quotes))
+    (_intermediate(out) / "extracted_quotes.json").write_text(json.dumps(quotes), encoding="utf-8")
 
 
 def _record_quoted(out: Path, *sids: str) -> None:
@@ -123,8 +123,8 @@ class TestQuotesDuringTheRun:
         inter = _intermediate(out)
         (inter / "screen_clusters.json").write_text(json.dumps([{
             "screen_label": "Welcome", "description": "", "display_order": 1, "quotes": [QUOTE],
-        }]))
-        (inter / "theme_groups.json").write_text("[]")
+        }]), encoding="utf-8")
+        (inter / "theme_groups.json").write_text("[]", encoding="utf-8")
         client.app.state.progress = None
         db = client.app.state.db_factory()
         try:
@@ -185,8 +185,8 @@ def test_sessions_of_one_first_analysis_are_not_new_to_each_other(first_analysis
     assert client.get("/api/projects/1/quotes").json()["new_since"] is None
 
     inter = _intermediate(out)
-    (inter / "screen_clusters.json").write_text("[]")
-    (inter / "theme_groups.json").write_text("[]")
+    (inter / "screen_clusters.json").write_text("[]", encoding="utf-8")
+    (inter / "theme_groups.json").write_text("[]", encoding="utf-8")
     client.app.state.progress = None
     db = client.app.state.db_factory()
     try:
@@ -229,8 +229,8 @@ def test_a_serve_restarted_mid_run_does_not_make_the_run_new_to_itself(
     time.sleep(0.01)
     _add_session(project, "s3", "p3", "22")  # never delivered during the run
     inter = _intermediate(out)
-    (inter / "screen_clusters.json").write_text("[]")
-    (inter / "theme_groups.json").write_text("[]")
+    (inter / "screen_clusters.json").write_text("[]", encoding="utf-8")
+    (inter / "theme_groups.json").write_text("[]", encoding="utf-8")
     now = datetime.now(timezone.utc).isoformat()
     done = RunCompletedEvent(ts=now, run_id="RUN1", kind=KindEnum.RUN, started_at=now,
                              ended_at=now, outcome=OutcomeEnum.COMPLETED)
@@ -306,5 +306,5 @@ def test_an_intermediate_write_survives_a_replace_windows_refuses(tmp_path: Path
     with patch("pathlib.Path.replace", side_effect=PermissionError("in use")), \
             patch("bristlenose.stages.s12_render_output.time.sleep"):
         path = write_intermediate_json([{"a": 1}], "extracted_quotes.json", tmp_path)
-    assert json.loads(path.read_text()) == [{"a": 1}]
+    assert json.loads(path.read_text(encoding="utf-8")) == [{"a": 1}]
     assert list(path.parent.glob("*.tmp")) == []

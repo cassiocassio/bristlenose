@@ -33,7 +33,7 @@ def _with_quotes(tmp_path: Path) -> Path:
     ]
     (inter / "screen_clusters.json").write_text(json.dumps([{
         "screen_label": "Start", "description": "", "display_order": 1, "quotes": quotes,
-    }]))
+    }]), encoding="utf-8")
     return project
 
 
@@ -386,7 +386,7 @@ class TestSwap:
 def _registry(project: Path, speakers: dict) -> Path:
     path = project / "bristlenose-output" / ".bristlenose" / "sessions.json"
     path.write_text(json.dumps({"version": 2, "sessions": {}, "speakers": speakers,
-                                "participants_issued": 2}))
+                                "participants_issued": 2}), encoding="utf-8")
     return path
 
 
@@ -415,7 +415,7 @@ class TestReanalyse:
     def test_the_swap_pins_both_speakers_with_their_turns_and_picks(self, tmp_path: Path) -> None:
         client, _, reg = self._swapped(tmp_path)
         martin = _slots(client)[("s1", "p1")]["person"]
-        pins = json.loads(reg.read_text())["pins"]["s1"]
+        pins = json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]
         assert pins["Wylie"] == {"role": "researcher", "starts": [10.0], "from_code": "p1",
                                  "person": martin}
         assert pins["Me"]["role"] == "participant"
@@ -428,7 +428,7 @@ class TestReanalyse:
         resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
                           json={"kind": "observer", "clear": True})
         assert resp.status_code == 200, resp.text
-        pins = json.loads(reg.read_text())["pins"]["s1"]
+        pins = json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]
         assert pins == {"Wylie": {"role": "observer", "starts": [10.0], "from_code": "p1",
                                   "person": ""}}
 
@@ -437,21 +437,21 @@ class TestReanalyse:
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
         client = _client(project)
         client.put("/api/projects/1/sessions/s1/speakers/m1", json={"full_name": "Kerri"})
-        assert not json.loads(reg.read_text()).get("pins")
+        assert not json.loads(reg.read_text(encoding="utf-8")).get("pins")
 
     def test_a_later_write_keeps_the_evidence_the_pin_was_set_on(self, tmp_path: Path) -> None:
         """A pin records the turns its label had when the researcher set it, so
         the run can refuse it if the label has since moved to another voice.
         Another write in the session must not refresh that evidence."""
         client, project, reg = self._swapped(tmp_path)
-        before = json.loads(reg.read_text())["pins"]["s1"]
+        before = json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]
         (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").write_text(
             "# Transcript: s1\n# Date: 2026-09-20\n# Duration: 00:01:00\n\n"
             "[00:05] [m1] Welcome, thanks for coming in today.\n"
-            "[00:30] [p1] Thanks for having me, it is good to be here.\n"
+            "[00:30] [p1] Thanks for having me, it is good to be here.\n", encoding="utf-8"
         )
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"full_name": "Wylie Coyote"})
-        assert json.loads(reg.read_text())["pins"]["s1"] == before
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"] == before
 
     def test_a_pick_after_the_recode_is_what_the_pin_carries(self, tmp_path: Path) -> None:
         """Recoded as the moderator and named, then the researcher picks someone
@@ -464,22 +464,22 @@ class TestReanalyse:
         client.put("/api/projects/1/sessions/s1/speakers/p1",
                    json={"kind": "moderator", "person": martin, "create": True,
                          "full_name": "Ahmed Khan", "short_name": "Ahmed", "confirmed": True})
-        assert json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["person"] == martin
-        starts = json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["starts"]
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]["Wylie"]["person"] == martin
+        starts = json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]["Wylie"]["starts"]
         resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
                           json={"kind": "moderator", "person": kerri, "create": True,
                                 "full_name": "Bea Lund", "short_name": "Bea", "confirmed": True})
         assert resp.status_code == 200, resp.text
-        pin = json.loads(reg.read_text())["pins"]["s1"]["Wylie"]
+        pin = json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]["Wylie"]
         assert (pin["person"], pin["starts"]) == (kerri, starts)
 
     def test_undoing_the_recode_takes_the_pin_away(self, tmp_path: Path) -> None:
         """A pin waits for the next run; one whose recode was undone must not
         be applied by it (a later run after adding a session, say)."""
         client, _, reg = self._swapped(tmp_path)
-        assert json.loads(reg.read_text())["pins"]["s1"]
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        assert "s1" not in json.loads(reg.read_text())["pins"]
+        assert "s1" not in json.loads(reg.read_text(encoding="utf-8"))["pins"]
 
     def test_the_per_session_act_is_gone(self, tmp_path: Path) -> None:
         """Analyse is the act now; there is no second verb to re-analyse one session."""
@@ -520,7 +520,7 @@ class TestReanalyse:
                               json={"kind": "observer", "clear": True})
         assert resp.status_code == 200, resp.text
         assert "the transcript could not be read" in caplog.text
-        assert not json.loads(reg.read_text()).get("pins")
+        assert not json.loads(reg.read_text(encoding="utf-8")).get("pins")
 
     def test_a_speaker_with_no_turns_is_owed_but_not_pinned(self, tmp_path: Path, caplog) -> None:
         project = _with_quotes(tmp_path)
@@ -534,7 +534,7 @@ class TestReanalyse:
                               json={"kind": "observer", "clear": True})
         assert resp.status_code == 200, resp.text
         assert "its role was not pinned" in caplog.text
-        assert not json.loads(reg.read_text()).get("pins")
+        assert not json.loads(reg.read_text(encoding="utf-8")).get("pins")
 
     def test_after_the_run_the_picks_move_to_the_new_codes(self, tmp_path: Path) -> None:
         client, project, reg = self._swapped(tmp_path)
@@ -542,21 +542,21 @@ class TestReanalyse:
         # What the run does: honours the pins, so Wylie is the participant (a
         # new number, p3) and "Me" is the moderator (m1); the session's quotes
         # are extracted again, from Wylie.
-        data = json.loads(reg.read_text())
+        data = json.loads(reg.read_text(encoding="utf-8"))
         data["speakers"]["s1"] = {"Wylie": "m1", "Me": "p3"}
-        reg.write_text(json.dumps(data))
+        reg.write_text(json.dumps(data), encoding="utf-8")
         out = project / "bristlenose-output"
         (out / "transcripts-raw" / "s1.txt").write_text(
             "# Transcript: s1\n# Date: 2026-09-20\n# Duration: 00:01:00\n\n"
             "[00:02] [p3] Welcome, thanks for coming in today.\n"
             "[00:10] [m1] Thanks for having me, it is good to be here.\n"
-            "[00:20] [p3] Shall we start?\n"
+            "[00:20] [p3] Shall we start?\n", encoding="utf-8"
         )
-        clusters = json.loads((out / ".bristlenose" / "intermediate" / "screen_clusters.json").read_text())
+        clusters = json.loads((out / ".bristlenose" / "intermediate" / "screen_clusters.json").read_text(encoding="utf-8"))
         for q in clusters[0]["quotes"]:
             if q["session_id"] == "s1":
                 q.update(participant_id="p3", start_timecode=2.0, text="Quote from p3")
-        (out / ".bristlenose" / "intermediate" / "screen_clusters.json").write_text(json.dumps(clusters))
+        (out / ".bristlenose" / "intermediate" / "screen_clusters.json").write_text(json.dumps(clusters), encoding="utf-8")
         _reimport(client, project)
 
         slots = _slots(client)
@@ -572,7 +572,7 @@ class TestReanalyse:
 
         # Carried once: the pin now names its new code, so a later pick on that
         # slot survives the next import instead of being put back.
-        assert json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["from_code"] == "m1"
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]["Wylie"]["from_code"] == "m1"
         client.put("/api/projects/1/sessions/s1/speakers/m1", json={"clear": True})
         _reimport(client, project)
         assert _slots(client)[("s1", "m1")]["person"] != martin

@@ -174,7 +174,7 @@ def test_a_backstop_leaves_a_newer_runs_pid_file(tmp_path: Path) -> None:
             time.sleep(0.01)
         assert not pid_file.exists() and _termini(f), "the stop never unwound"
         assert proc.poll() is None, "the run exited before its backstop could fire"
-        pid_file.write_text(json.dumps(newer))
+        pid_file.write_text(json.dumps(newer), encoding="utf-8")
         code = _wait_exit(proc, 30.0)
     finally:
         if proc.poll() is None:
@@ -182,7 +182,7 @@ def test_a_backstop_leaves_a_newer_runs_pid_file(tmp_path: Path) -> None:
         proc.wait(timeout=10)
     assert code == 128 + signal.SIGINT, f"ended by {code}, not the backstop"
     assert pid_file.exists(), "the backstop deleted a newer run's run.pid"
-    assert json.loads(pid_file.read_text())["run_id"] == "a-newer-run"
+    assert json.loads(pid_file.read_text(encoding="utf-8"))["run_id"] == "a-newer-run"
 
 
 def test_a_cli_run_is_not_cut_short(tmp_path: Path) -> None:

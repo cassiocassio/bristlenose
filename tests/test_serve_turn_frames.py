@@ -41,7 +41,7 @@ def _write_strip(project: Path, changes: list[float]) -> None:
     d = _out(project) / ".bristlenose" / "intermediate" / "scene-strips"
     d.mkdir(parents=True, exist_ok=True)
     d.joinpath("s1.json").write_text(json.dumps(
-        {"version": 2, "key": "k", "fps": 4, "n": 2, "t0": 0.0, "png": "AA==", "edges": [], "changes": changes}))
+        {"version": 2, "key": "k", "fps": 4, "n": 2, "t0": 0.0, "png": "AA==", "edges": [], "changes": changes}), encoding="utf-8")
 
 
 def _turns(app) -> list[tuple[float, float]]:
@@ -123,7 +123,7 @@ def test_current_frames_are_keyed_and_served(project: Path) -> None:
     app.state.scene_strips = job = _FakeJob()
     client = AuthTestClient(app)
     data = client.get("/api/projects/1/tapestry").json()
-    key = json.loads(path.read_text())["key"]
+    key = json.loads(path.read_text(encoding="utf-8"))["key"]
     assert data["sessions"][0]["frames_key"] == key
     assert job.starts == 0 and data["strips_pending"] is False
     body = client.get("/api/projects/1/sessions/s1/turn-frames").json()

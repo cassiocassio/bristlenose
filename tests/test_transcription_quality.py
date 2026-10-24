@@ -126,7 +126,7 @@ class TestRecordFile:
 
     def test_an_unwritable_folder_is_logged_not_raised(self, tmp_path: Path) -> None:
         blocker = tmp_path / "out"
-        blocker.write_text("a file where the folder should be")
+        blocker.write_text("a file where the folder should be", encoding="utf-8")
         tq.write_record(blocker, "s1", {"version": 1})  # must not raise
 
 

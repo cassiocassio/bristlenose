@@ -203,18 +203,18 @@ class TestTheStashCycle:
             # stash), its events log, no database yet.
             log = out / ".bristlenose" / "bristlenose.log"
             log.parent.mkdir(parents=True)
-            log.write_text("the run's first line\n")
+            log.write_text("the run's first line\n", encoding="utf-8")
             _started(out, "NEW")
-            assert _wait(lambda: log.exists() and "reattaching" in log.read_text()), (
+            assert _wait(lambda: log.exists() and "reattaching" in log.read_text(encoding="utf-8")), (
                 "the serve's reattach was not written to the output folder now on disk"
             )
             logging.getLogger("bristlenose.server.app").warning("a line after the stash")
             for handler in logging.getLogger().handlers:
                 handler.flush()
-            assert "a line after the stash" in log.read_text()
+            assert "a line after the stash" in log.read_text(encoding="utf-8")
             assert "a line after the stash" not in (
                 backup / ".bristlenose" / "bristlenose.log"
-            ).read_text()
+            ).read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -340,27 +340,27 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
         client = _client(project)
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        assert json.loads(reg.read_text())["pins"]["s1"], "the swap pins as it lands"
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"], "the swap pins as it lands"
         # What the run does: honours the pins; Wylie is p3 now and Me is m1.
-        data = json.loads(reg.read_text())
+        data = json.loads(reg.read_text(encoding="utf-8"))
         data["speakers"]["s1"] = {"Wylie": "m1", "Me": "p3"}
-        reg.write_text(json.dumps(data))
+        reg.write_text(json.dumps(data), encoding="utf-8")
         out = project / "bristlenose-output"
         (out / "transcripts-raw" / "s1.txt").write_text(
             "# Transcript: s1\n# Date: 2026-09-20\n# Duration: 00:01:00\n\n"
             "[00:02] [p3] Welcome, thanks for coming in today.\n"
             "[00:10] [m1] Thanks for having me, it is good to be here.\n"
-            "[00:20] [p3] Shall we start?\n"
+            "[00:20] [p3] Shall we start?\n", encoding="utf-8"
         )
-        before = reg.read_text()
+        before = reg.read_text(encoding="utf-8")
 
         _lock(out)
         _reimport(client, project)
-        assert reg.read_text() == before, "the registry was written under a live run"
+        assert reg.read_text(encoding="utf-8") == before, "the registry was written under a live run"
 
         _unlock(out)
         _reimport(client, project)
-        assert json.loads(reg.read_text())["pins"]["s1"]["Wylie"]["from_code"] == "m1", (
+        assert json.loads(reg.read_text(encoding="utf-8"))["pins"]["s1"]["Wylie"]["from_code"] == "m1", (
             "the carry happens once the run has let go"
         )
 
@@ -381,12 +381,12 @@ class TestWritesRefusedWhileARunOwnsTheProject:
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}, "s2": {"Kerri": "m1", "Ann": "p2"}})
         client = _client(project)
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        pinned = reg.read_text()
+        pinned = reg.read_text(encoding="utf-8")
         assert json.loads(pinned)["pins"]["s1"]
         # Undo the recode (which drops the pin), then put the pin back by hand:
         # a withdrawn pin waiting to be dropped.
         client.put("/api/projects/1/sessions/s1/speakers/p1", json={"swap_with": "m1"})
-        reg.write_text(pinned)
+        reg.write_text(pinned, encoding="utf-8")
 
         def drop() -> None:
             db = client.app.state.db_factory()
@@ -397,11 +397,11 @@ class TestWritesRefusedWhileARunOwnsTheProject:
 
         _lock(out)
         drop()
-        assert reg.read_text() == pinned, "the registry was written under a live run"
+        assert reg.read_text(encoding="utf-8") == pinned, "the registry was written under a live run"
 
         _unlock(out)
         drop()
-        assert "s1" not in json.loads(reg.read_text())["pins"], (
+        assert "s1" not in json.loads(reg.read_text(encoding="utf-8"))["pins"], (
             "with no run, the withdrawn pin is dropped — so the locked call above was a real refusal"
         )
 

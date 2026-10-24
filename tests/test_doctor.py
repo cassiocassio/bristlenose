@@ -1036,8 +1036,8 @@ class TestCheckPii:
         monkeypatch.delenv("BRISTLENOSE_PII_MODEL_DIR", raising=False)
         cached = tmp_path / "bristlenose" / "models" / "en_core_web_lg-3.8.0"
         cached.mkdir(parents=True)
-        (cached / "meta.json").write_text("{}")
-        (cached / "config.cfg").write_text("")
+        (cached / "meta.json").write_text("{}", encoding="utf-8")
+        (cached / "config.cfg").write_text("", encoding="utf-8")
         settings = _settings(pii_enabled=True)
         mock_spacy = MagicMock()
         mock_spacy.load.side_effect = OSError("[E050] damaged")

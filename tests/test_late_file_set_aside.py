@@ -209,7 +209,7 @@ class Rig(Study):
         return self.folder / "bristlenose-output"
 
     def registry_speakers(self, sid: str) -> dict[str, str]:
-        reg = json.loads((self.out / ".bristlenose" / "sessions.json").read_text())
+        reg = json.loads((self.out / ".bristlenose" / "sessions.json").read_text(encoding="utf-8"))
         return reg.get("speakers", {}).get(sid, {})
 
     def raw(self, sid: str) -> str:
@@ -351,7 +351,7 @@ def test_a_video_beside_an_analysed_audio_file_is_set_aside(
     _said_set_aside(rig, "Interview 2.mp4")
     _nothing_paid(rig)
     assert rig.log[-1]["ffmpeg"] == 0, "no video is used, so ffmpeg is not needed"
-    reg = json.loads((rig.out / ".bristlenose" / "sessions.json").read_text())
+    reg = json.loads((rig.out / ".bristlenose" / "sessions.json").read_text(encoding="utf-8"))
     assert sorted(set(reg["sessions"].values())) == ["s1", "s2"], reg["sessions"]
     assert rig.registry_speakers("s2") == speakers
 

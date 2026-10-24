@@ -125,7 +125,7 @@ class TestCache:
         sc.extract_scene_colours([_session(video)], [t1], out)
         sc.extract_scene_colours([_session(video)], [t1], out)
         assert len(calls) == 1
-        data = json.loads((out / "s1.json").read_text())
+        data = json.loads((out / "s1.json").read_text(encoding="utf-8"))
         assert [t["speaker"] for t in data["turns"]] == ["m1", "p1"]
 
         t2 = _transcript([(0, 10, "m1"), (10, 15, "p1"), (15, 20, "m1")])

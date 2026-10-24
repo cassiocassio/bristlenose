@@ -487,9 +487,9 @@ class TestFetchIntoUserCache:
     def test_a_concurrent_fetch_that_finished_first_is_kept(self, cache, monkeypatch):
         _serve(monkeypatch, _fake_wheel())
         first = s07.fetch_spacy_model()
-        (first / "marker").write_text("theirs")
+        (first / "marker").write_text("theirs", encoding="utf-8")
         assert s07.fetch_spacy_model() == first
-        assert (first / "marker").read_text() == "theirs"
+        assert (first / "marker").read_text(encoding="utf-8") == "theirs"
         assert sorted(p.name for p in cache.iterdir()) == [first.name]
 
 

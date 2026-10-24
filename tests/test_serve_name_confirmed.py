@@ -116,7 +116,7 @@ class TestReimportKeepsAConfirmedName:
         other = {sid: {"m1": {"full_name": "Kerri Ng", "short_name": "Kerri", "role": "",
                               "evidence": "platform-name"}} for sid in ("s1", "s2")}
         (inter / "session-speakers.json").write_text(
-            json.dumps({"version": 2, "sessions": other})
+            json.dumps({"version": 2, "sessions": other}), encoding="utf-8"
         )
         db = client.app.state.db_factory()
         try:

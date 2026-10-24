@@ -62,7 +62,7 @@ def test_analyze_refuses_a_home_folder_by_name_without_a_traceback(
 ) -> None:
     folder = (home / argument).resolve()
     folder.mkdir(exist_ok=True)
-    (folder / "s1.txt").write_text("[00:00] p1: hello\n")
+    (folder / "s1.txt").write_text("[00:00] p1: hello\n", encoding="utf-8")
     before = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
 
     result = CliRunner().invoke(cli.app, ["analyze", str(folder)])

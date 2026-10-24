@@ -108,7 +108,7 @@ def _slots(client) -> dict[tuple[str, str], tuple[str, str, str]]:
 
 def _add_session(project: Path, sid: str, pid: str, day: str) -> None:
     raw = project / "bristlenose-output" / "transcripts-raw"
-    (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day))
+    (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day), encoding="utf-8")
 
 
 class TestPerSessionImport:
@@ -199,7 +199,7 @@ def _bundled_client(project: Path, tmp_path: Path):
     static = tmp_path / "static"
     (static / "assets").mkdir(parents=True, exist_ok=True)
     (static / "index.html").write_text(
-        '<!doctype html><html><head></head><body><div id="bn-app-root"></div></body></html>',
+        '<!doctype html><html><head></head><body><div id="bn-app-root"></div></body></html>', encoding="utf-8",
     )
     with patch("bristlenose.server.app._STATIC_DIR", static):
         return _client(project)
@@ -221,10 +221,10 @@ def first_analysis(tmp_path: Path):
         (out / ".bristlenose" / "intermediate" / name).unlink()
     # The client's startup import must not be what puts s1 in the database.
     s1 = out / "transcripts-raw" / "s1.txt"
-    held = s1.read_text()
+    held = s1.read_text(encoding="utf-8")
     s1.unlink()
     client = _bundled_client(project, tmp_path)
-    s1.write_text(held)
+    s1.write_text(held, encoding="utf-8")
     _start_run(out)
     return project, out, client
 
@@ -556,7 +556,7 @@ def test_each_sessions_quotes_are_extracted_while_the_next_is_transcribed(
     assert sorted(quote_calls) == [["s1"], ["s2"]], "stage 9 took the chain's quotes"
     # …and kept them: stage 9's file, which clustering reads, holds every session's.
     written = json.loads(
-        (_out / ".bristlenose" / "intermediate" / "extracted_quotes.json").read_text(),
+        (_out / ".bristlenose" / "intermediate" / "extracted_quotes.json").read_text(encoding="utf-8"),
     )
     assert sorted(q["session_id"] for q in written) == ["s1", "s2"]
     # The stages say what the chain finished, or the Mac's row keeps the previous
@@ -648,8 +648,8 @@ def test_a_failed_delivery_stops_the_chain_and_codes_stay_in_session_order(
 
     assert not [f for f in progress if f.get("sessions_readable")], "nothing was delivered early"
     raw = out / "transcripts-raw"
-    assert "[p1]" in (raw / "s1.txt").read_text()
-    assert "[p2]" in (raw / "s2.txt").read_text()
+    assert "[p1]" in (raw / "s1.txt").read_text(encoding="utf-8")
+    assert "[p2]" in (raw / "s2.txt").read_text(encoding="utf-8")
     assert len(calls) == 3, "s1 tried once by the chain, then both by stage 5b"
 
 
@@ -914,7 +914,7 @@ def test_each_session_s_quotes_are_on_disk_before_the_manifest_says_so(tmp_path:
         done("s1", [q])
         seen["quoted"] = quoted_in_manifest(load_manifest(out_dir))
         seen["file"] = json.loads((out_dir / ".bristlenose" / "intermediate"
-                                   / "extracted_quotes.json").read_text())
+                                   / "extracted_quotes.json").read_text(encoding="utf-8"))
         raise RuntimeError("stop after the first session's quotes")
 
     out_dir = tmp_path / "in" / "bristlenose-output"
@@ -1014,8 +1014,8 @@ class TestRedactionDuringTheRun:
         _start_run(out)
         cooked = out / "transcripts-cooked"
         cooked.mkdir()
-        raw = (out / "transcripts-raw" / "s1.txt").read_text()
-        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"))
+        raw = (out / "transcripts-raw" / "s1.txt").read_text(encoding="utf-8")
+        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"), encoding="utf-8")
         _record_redacted(out, "s1")
         _follow(client, project)
 
@@ -1055,8 +1055,8 @@ class TestRedactionDuringTheRun:
         project, out, client = first_analysis
         cooked = out / "transcripts-cooked"
         cooked.mkdir()
-        raw = (out / "transcripts-raw" / "s1.txt").read_text()
-        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"))
+        raw = (out / "transcripts-raw" / "s1.txt").read_text(encoding="utf-8")
+        (cooked / "s1.txt").write_text(raw.replace("it is good to be here", "I am [NAME]"), encoding="utf-8")
         _add_session(project, "s2", "p2", "21")
         _record_readable(out, "s1", "s2")
         _follow(client, project)

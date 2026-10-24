@@ -52,7 +52,7 @@ class TestTranscriptFiles:
         write_raw_transcripts([_transcript([
             _seg(0, 2, "We bought the sofa."), _seg(2, 5, inaudible=True),
         ])], tmp_path)
-        assert INAUDIBLE_TOKEN in (tmp_path / "s1.txt").read_text()
+        assert INAUDIBLE_TOKEN in (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
         [loaded] = load_transcripts_from_dir(tmp_path)
         assert [(s.inaudible, s.text) for s in loaded.segments] == [
@@ -61,7 +61,7 @@ class TestTranscriptFiles:
 
     def test_markdown_carries_the_token_unescaped(self, tmp_path) -> None:
         write_raw_transcripts_md([_transcript([_seg(2, 5, inaudible=True)])], tmp_path)
-        assert f" {INAUDIBLE_TOKEN}" in (tmp_path / "s1.md").read_text()
+        assert f" {INAUDIBLE_TOKEN}" in (tmp_path / "s1.md").read_text(encoding="utf-8")
 
 
 class TestServe:
@@ -146,7 +146,7 @@ def test_the_redacted_files_carry_the_gap_and_the_importer_reads_it(tmp_path) ->
     after = TranscriptSegment(start_time=20, end_time=22, text="Shall we start?", speaker_code="m1")
     t = PiiCleanTranscript(**_transcript([_seg(10, 15, "Hi."), gap, after]).model_dump())
     write_cooked_transcripts([t], tmp_path)
-    text = (tmp_path / "s1.txt").read_text()
+    text = (tmp_path / "s1.txt").read_text(encoding="utf-8")
 
     assert [s.inaudible for s in load_transcripts_from_dir(tmp_path)[0].segments] == [
         False, True, False,
@@ -169,11 +169,11 @@ def test_a_transcribers_aside_beside_the_token_stays_words(tmp_path) -> None:
     project = _project(tmp_path, _TWO)
     out = project / "bristlenose-output"
     raw = out / "transcripts-raw" / "s1.txt"
-    raw.write_text(raw.read_text().replace(
+    raw.write_text(raw.read_text(encoding="utf-8").replace(
         "[00:20] [m1]",
         "[00:14] [p1] (Speaker B) (laughs) [inaudible]\n"
         "[00:15] [p1] (Speaker B) [inaudible]\n[00:20] [m1]",
-    ))
+    ), encoding="utf-8")
     _info(out, "s1", ["Speaker A", "Speaker B"], [])
     segs = _client(project).get("/api/projects/1/transcripts/s1").json()["segments"]
     assert [(s["text"], s["inaudible"]) for s in segs][2:4] == [

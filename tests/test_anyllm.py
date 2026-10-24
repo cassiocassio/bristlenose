@@ -927,7 +927,7 @@ def test_a_dotenv_that_overrides_the_choice_is_named(
     from bristlenose.cli import app
 
     project_env = tmp_path / ".env"
-    project_env.write_text("BRISTLENOSE_LLM_PROVIDER=anthropic\n")
+    project_env.write_text("BRISTLENOSE_LLM_PROVIDER=anthropic\n", encoding="utf-8")
     monkeypatch.setattr(config, "_find_env_files", lambda: [Path(project_env)])
     monkeypatch.delenv("BRISTLENOSE_LLM_PROVIDER", raising=False)
     result = CliRunner().invoke(app, ["use", "local"])

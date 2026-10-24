@@ -1160,7 +1160,7 @@ def _run_whose_parent_leaves(tmp_path: Path, host_env: dict[str, str]):
             check=True, timeout=90,
         )
     finally:
-        go.write_text("app gone")
+        go.write_text("app gone", encoding="utf-8")
     landed = _wait_for_event(
         f, lambda e: isinstance(e, (RunCancelledEvent, RunFailedEvent)), timeout=60.0,
     )

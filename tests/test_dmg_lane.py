@@ -34,7 +34,7 @@ def _line(prefix: str) -> str:
 def test_the_dmg_lane_reuses_the_release_resolve(tmp_path: Path) -> None:
     """build-dmg's ensure-sidecar call carries --keep-venv, as build-all's does."""
     stub = tmp_path / "ensure-sidecar.sh"
-    stub.write_text('#!/bin/sh\nfor a in "$@"; do printf "%s\\n" "$a"; done\n')
+    stub.write_text('#!/bin/sh\nfor a in "$@"; do printf "%s\\n" "$a"; done\n', encoding="utf-8")
     stub.chmod(0o755)
     line = _line('_BRISTLENOSE_RELEASE=1 "$SCRIPT_DIR/ensure-sidecar.sh"')
     out = subprocess.run([_BASH, "-c", f'SCRIPT_DIR="{tmp_path}"\n{line}'], capture_output=True, text=True,

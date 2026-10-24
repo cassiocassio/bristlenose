@@ -131,7 +131,7 @@ def test_a_real_recording_is_sampled_and_indexed(tmp_path: Path) -> None:
     out = tmp_path / "s1.json"
     eng = FakeEngine(lines)
     assert sti.build_index(video, eng, out)
-    rec = json.loads(out.read_text())
+    rec = json.loads(out.read_text(encoding="utf-8"))
     # ffmpeg's fps filter gives 0, 4, 8 for 13 s (it drops the last part-interval): exactly three,
     # so a decode that stopped early cannot pass.
     assert rec["size"] == [320, 180] and rec["samples"] == len(times) == 3
@@ -191,7 +191,7 @@ def test_a_video_track_that_starts_late_keeps_frames_and_times_in_step(tmp_path:
     times: list[float] = []
     out = tmp_path / "s1.json"
     assert sti.build_index(video, FakeEngine(lambda t: times.append(t) or []), out)
-    assert times == sorted(times) and len(times) == json.loads(out.read_text())["samples"] >= 2
+    assert times == sorted(times) and len(times) == json.loads(out.read_text(encoding="utf-8"))["samples"] >= 2
     # The first frame is where the picture starts, not a duplicate at 0. Where the picture starts
     # is asked of the file: ffmpeg 8 writes the offset track at 2.3 s, and an older ffmpeg (the
     # Linux runners' apt build) may write it differently, which is the fixture, not the code.
@@ -204,7 +204,7 @@ def test_a_video_track_that_starts_late_keeps_frames_and_times_in_step(tmp_path:
 
 def test_an_index_missing_its_parts_is_not_read(tmp_path: Path) -> None:
     path = tmp_path / "s1.json"
-    path.write_text(json.dumps({"version": sti.INDEX_VERSION, "key": "k", "samples": 1, "moments": []}))
+    path.write_text(json.dumps({"version": sti.INDEX_VERSION, "key": "k", "samples": 1, "moments": []}), encoding="utf-8")
     assert sti.read_index(path) is None
 
 

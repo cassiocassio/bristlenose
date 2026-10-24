@@ -111,7 +111,7 @@ class TestExtract:
         out = tmp_path / "strips"
         first = ss.extract_scene_strips({"s1": video}, out)
         assert first == {"s1": out / "s1.json"}
-        rec = json.loads((out / "s1.json").read_text())
+        rec = json.loads((out / "s1.json").read_text(encoding="utf-8"))
         assert rec["n"] == 80 and rec["t0"] == 2.0 and rec["edges"] == [12.0] and rec["key"]
         assert not (out / "s1.json.tmp").exists()
         ss.extract_scene_strips({"s1": video}, out)
@@ -141,9 +141,9 @@ class TestExtract:
         monkeypatch.setattr(ss, "sample_dense", lambda v, fps=4: (0.0, [GREY] * 40))
         out = tmp_path / "strips"
         out.mkdir()
-        (out / "s1.json").write_text("{not json")
+        (out / "s1.json").write_text("{not json", encoding="utf-8")
         ss.extract_scene_strips({"s1": video}, out)
-        assert json.loads((out / "s1.json").read_text())["n"] == 40
+        assert json.loads((out / "s1.json").read_text(encoding="utf-8"))["n"] == 40
 
     def test_a_failed_sample_leaves_no_file_and_does_not_stop_the_rest(self, tmp_path, monkeypatch):
         v1, v2 = tmp_path / "s1.mp4", tmp_path / "s2.mp4"

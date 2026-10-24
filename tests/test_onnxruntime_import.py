@@ -27,7 +27,7 @@ _LOGGER = "bristlenose.utils.onnxruntime_import"
 
 
 def _fake_module(tmp_path: Path, monkeypatch, name: str, body: str) -> str:
-    (tmp_path / f"{name}.py").write_text(body)
+    (tmp_path / f"{name}.py").write_text(body, encoding="utf-8")
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.delitem(sys.modules, name, raising=False)
     return name

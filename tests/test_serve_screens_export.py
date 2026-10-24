@@ -75,8 +75,8 @@ def test_each_still_is_written_full_size_and_replaces_the_last_export(
     folder = _out(project) / "screens"
     folder.mkdir(parents=True)
     (folder / "p1-07.jpg").write_bytes(b"from an earlier export")
-    (folder / ".screens_manifest.json").write_text(json.dumps({"files": ["p1-07.jpg"]}))
-    (folder / "notes.txt").write_text("the researcher's own")
+    (folder / ".screens_manifest.json").write_text(json.dumps({"files": ["p1-07.jpg"]}), encoding="utf-8")
+    (folder / "notes.txt").write_text("the researcher's own", encoding="utf-8")
     with AuthTestClient(app) as client:
         x0, _, x1, _ = client.get("/api/projects/1/screens").json()["screens"][0]["tabs"][0]["crop"]
         started = client.post(_BASE).json()
@@ -89,7 +89,7 @@ def test_each_still_is_written_full_size_and_replaces_the_last_export(
     assert abs(_width(jpg) - (x1 - x0) * 320) <= 2
     assert not (folder / "p1-07.jpg").exists()  # named by the last manifest: removed
     assert (folder / "notes.txt").exists()  # not named: left alone
-    assert json.loads((folder / ".screens_manifest.json").read_text())["files"] == ["p1-01.jpg"]
+    assert json.loads((folder / ".screens_manifest.json").read_text(encoding="utf-8"))["files"] == ["p1-01.jpg"]
 
 
 def test_nothing_is_exported_while_screens_are_off(project: Path,  # noqa: F811
@@ -110,12 +110,12 @@ def test_a_name_is_written_in_the_folder_and_a_link_there_is_replaced_not_follow
     from bristlenose.server.routes.screens_export import _write_inside
 
     target = tmp_path / "elsewhere.txt"
-    target.write_text("keep me")
+    target.write_text("keep me", encoding="utf-8")
     folder = tmp_path / "screens"
     folder.mkdir()
     (folder / "p1-01.jpg").symlink_to(target)
     _write_inside(folder, "p1-01.jpg", b"jpeg")
-    assert target.read_text() == "keep me"
+    assert target.read_text(encoding="utf-8") == "keep me"
     assert not (folder / "p1-01.jpg").is_symlink() and (folder / "p1-01.jpg").read_bytes() == b"jpeg"
     for bad in ("../x.jpg", "/tmp/x.jpg", ".hidden.jpg"):
         with pytest.raises(OSError):

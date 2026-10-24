@@ -262,6 +262,13 @@ def create_app(
 
     engine = get_engine(db_url)
     init_db(engine)
+    # What the pool is attached to is what is on disk NOW, before anything else
+    # runs: read after the startup import, a restore landing during it was
+    # recorded as attached while the pool held the tree the restore set aside
+    # (lifecycle register row 53).
+    attached_at_connect = (
+        _attached_files(project_dir, engine) if project_dir is not None else None
+    )
     session_factory = create_session_factory(engine)
 
     # Store session factory, DB URL, and project dir in app state for dependency injection
@@ -373,6 +380,7 @@ def create_app(
         _reconcile_orphaned_autocode_jobs(session_factory)
         _install_event_watcher(
             app, session_factory, project_dir, engine=engine, already_imported=already_imported,
+            attached_at_connect=attached_at_connect,
         )
 
     # Serve the React islands bundle (built by Vite).
@@ -1338,12 +1346,44 @@ def _let_go_of_the_project(engine: Engine | None, output_dir: Path) -> None:
 _REATTACH_ROUNDS = 3
 
 
+def _identity(path: Path | None) -> tuple[int, int] | None:
+    if path is None:
+        return None
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (st.st_dev, st.st_ino)
+
+
+def _attached_files(
+    project_dir: Path, engine: Engine | None,
+) -> tuple[tuple[int, int] | None, ...]:
+    """The identities of the folder, database and events log the pool is attached to.
+
+    The folder too: a swap moves the whole tree, so the folder's identity is what
+    tells a heal that landed where it looked from one that did not.
+    """
+    from bristlenose.events import events_path
+    from bristlenose.output_paths import project_output_dir
+
+    db_file: Path | None = None
+    if engine is not None and engine.url.database not in (None, "", ":memory:"):
+        db_file = Path(engine.url.database)
+    folder = db_file.parent if db_file is not None else None
+    return (
+        _identity(folder), _identity(db_file),
+        _identity(events_path(project_output_dir(project_dir))),
+    )
+
+
 def _install_event_watcher(
     app: FastAPI,
     session_factory: Callable[[], Session],
     project_dir: Path,
     engine: Engine | None = None,
     already_imported: set[str] | None = None,
+    attached_at_connect: tuple[tuple[int, int] | None, ...] | None = None,
 ) -> None:
     """Tail ``pipeline-events.jsonl`` and re-import on ``run_completed``.
 
@@ -1357,6 +1397,12 @@ def _install_event_watcher(
     read the disk. Read there, not when the watcher's task first runs, which
     is later: a restore landing in between put back a ``run_completed`` the
     watcher then counted as imported (CI, 17 Oct 2026).
+
+    ``attached_at_connect``: the identities the pool attached to, read where it
+    connected (``create_app``, straight after ``init_db``) and not here, after the
+    startup import. A restore landing during the import moved the tree the pool
+    holds aside, and a read here named the restored one, so nothing was seen to
+    have moved (register row 53). None reads them now, as before.
     """
     from contextlib import asynccontextmanager
 
@@ -1385,22 +1431,12 @@ def _install_event_watcher(
     if engine is not None and engine.url.database not in (None, "", ":memory:"):
         db_file = Path(engine.url.database)
 
-    def _identity(path: Path | None) -> tuple[int, int] | None:
-        if path is None:
-            return None
-        try:
-            st = path.stat()
-        except OSError:
-            return None
-        return (st.st_dev, st.st_ino)
-
-    def _attached_files() -> tuple[tuple[int, int] | None, ...]:
-        # The folder too: a swap moves the whole tree, so the folder's identity is
-        # what tells a heal that landed where it looked from one that did not.
-        folder = db_file.parent if db_file is not None else None
-        return (_identity(folder), _identity(db_file), _identity(_events_file()))
-
-    attached = {"files": _attached_files()}
+    attached = {
+        "files": (
+            attached_at_connect if attached_at_connect is not None
+            else _attached_files(project_dir, engine)
+        ),
+    }
 
     async def _reattach_if_moved() -> None:
         # The log first, and on every change: the moved copy is deleted when the
@@ -1420,7 +1456,7 @@ def _install_event_watcher(
         # 2026). What is recorded is what the heal attached to: the folder it
         # looked at, still in place after it.
         for _ in range(_REATTACH_ROUNDS):
-            now = _attached_files()
+            now = _attached_files(project_dir, engine)
             if now == attached["files"]:
                 return
             if engine is None or db_file is None or not db_file.parent.is_dir():
@@ -1439,7 +1475,7 @@ def _install_event_watcher(
                 # Left unrecorded, so the next change to the log tries again.
                 logger.exception("could not reattach the database after the output folder moved")
                 return
-            healed = _attached_files()
+            healed = _attached_files(project_dir, engine)
             if healed[0] == now[0]:
                 attached["files"] = healed
                 return

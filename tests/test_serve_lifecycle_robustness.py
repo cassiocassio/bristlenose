@@ -54,6 +54,22 @@ def _unlock(out: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _starred_on_disk(db_file: Path) -> bool:
+    """Whether the file at ``db_file`` holds a starred quote, read by a fresh
+    connection (never the serve's pool)."""
+    import sqlite3
+
+    con = sqlite3.connect(db_file)
+    try:
+        return con.execute(
+            "SELECT COUNT(*) FROM quote_states WHERE is_starred = 1"
+        ).fetchone()[0] > 0
+    except sqlite3.OperationalError:
+        return False
+    finally:
+        con.close()
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="Windows will not move a folder whose database serve holds open, so neither the stash nor the restore can happen there")
 class TestTheStashCycle:
     """A serve that straddles ``--clean``'s stash and a failed run's restore
@@ -113,6 +129,46 @@ class TestTheStashCycle:
             assert output_backup.restore(backup, out).report_is_back
             assert _wait(lambda: _sessions(client)), (
                 "the serve kept answering from the database the restore set aside"
+            )
+        assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
+
+    def test_a_restore_that_lands_during_the_startup_import_is_followed(
+        self, tmp_path: Path, fast_watcher, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Register row 53. The serve recorded the files its pool was attached to
+        after ``init_db`` and the startup import, so a restore landing during that
+        import was recorded as attached while the pool held the tree the restore
+        had moved aside; the report stayed empty (CI, 19 and 20 Oct 2026, about one
+        run in twelve). The restore is injected inside the import so the window is
+        hit every time, and the restored log carries no completion for the watcher
+        to import: only an identity heal can show the report."""
+        from bristlenose.server import app as app_mod
+
+        proj = _project(tmp_path)
+        out = proj / "bristlenose-output"
+        with AuthTestClient(_app(proj, tmp_path)) as client:
+            assert client.get("/api/projects/1/sessions").json()["sessions"]
+        events_path(out).unlink()
+        _started(out, "X")
+        _failed(out, "X")
+        backup = output_backup.stash(out)
+        assert backup is not None
+        real_import = app_mod._import_on_startup
+
+        def restore_during_import(*args, **kwargs) -> None:
+            assert output_backup.restore(backup, out).report_is_back
+            real_import(*args, **kwargs)
+
+        monkeypatch.setattr(app_mod, "_import_on_startup", restore_during_import)
+        with _polling_client(_app(proj, tmp_path)) as client:
+            assert _wait(lambda: _sessions(client))
+            # What the researcher does next is written wherever the pool points:
+            # the file on disk, the one the next serve and the sidebar read, must
+            # be the one that gets it.
+            assert client.put("/api/projects/1/starred", json={"q-p1-10": True}).status_code == 200
+            db_file = out / ".bristlenose" / "bristlenose.db"
+            assert _wait(lambda: _starred_on_disk(db_file)), (
+                "the star went into the database the restore set aside, not the one on disk"
             )
         assert len(_rows(out / ".bristlenose" / "bristlenose.db")) == 1
 

@@ -443,7 +443,7 @@ const FINDINGS = [
    src:"signals.py:609 · quoteExtents.ts · export_core.py:191", s:["drug","edited"], goes:"Step 2a: one write path, pinned by a test that reads every surface."},
   {t:"Signal cards re-pay per correction",
    p:"The elaboration cache hashes <code>Quote.text</code>. Change it and the card is rewritten by the LLM. A batch replace means many calls. Today's quote edits don't reach cards at all, which is an existing inconsistency.",
-   src:"elaboration.py:86–115", s:["drug","replace","strike"], goes:"Re-elaborate lazily (when a card is opened), and decide whether quote edits should count too."},
+   src:"elaboration.py:86–115", s:["drug","replace","strike"], goes:"Decided 24 Oct (decision 21): a factual correction rewrites a card only when the card's own text holds the old words. Still open: whether quote edits should reach cards at all."},
   {t:"A correction that can't land inverts the record",
    p:"When a tidied quote no longer holds the words, a restored “not” sits in the transcript while the quote, its sentiment, its card, the exports and the agents carry the opposite. A quiet flag may be too quiet.",
    src:"decision 6", s:["negation"], goes:"Owner call: how loud the flag is when the correction is a meaning change (2b)."},
@@ -504,7 +504,7 @@ const MOMENTS = [
   notes:[
    li("now","Speech, moderator turns, struck and hidden text are all the record, so all are corrected. Struck text stays struck; a hidden quote stays hidden."),
    li("now","Untouched quotes read “BBC” and stay unpinned. Edited quotes have the words rewritten inside the researcher's edit, as decision 6 says; they were already pinned."),
-   li("flag","The cropped quote no longer contains the words, so there is nothing to contradict. Decision 6 as written would still flag it. That flag is noise here (question 1)."),
+   li("none","The cropped quote no longer contains the words, so there is nothing to contradict and no flag. Only words reworded inside the kept span flag (decision 6, revised 24 Oct)."),
   ]},
  {when:"10:03, Accept All", title:"What is written",
   art:``,
@@ -527,7 +527,7 @@ const MOMENTS = [
  {when:"Monday afternoon", title:"What waits, or is paid for",
   art:``,
   notes:[
-   li("llm","The six quotes sit in four signal cards. Their cache is keyed on the quote text, so each card re-elaborates when next opened: four paid calls for a spelling fix, unless a factual correction is left out of the key (question 2)."),
+   li("none","The six quotes sit in four signal cards. Their cache is keyed on the quote text, but a factual correction rewrites a card only if the card's own text holds “bee bee sea” (decision 21): one card here, one paid call, not four."),
    li("stale","AutoCode rationales written last week say “bee bee sea”. Proposals stand; nothing is recomputed."),
    li("stale","The Miro board pushed last Tuesday, the CSV in the client's SharePoint and the clips already cut all say “bee bee sea”. Out of reach, as ever."),
   ]},
@@ -535,7 +535,7 @@ const MOMENTS = [
   art:``,
   notes:[
    li("stale","Whisper hears “bee bee sea” again: nothing feeds its prompt until 3b."),
-   li("unknown","The word list already knows the wrong forms. It could offer “4 in the new session” as soon as Analyse finishes, before 3b: a standing find and replace (question 3)."),
+   li("now","The word list already knows the wrong forms, so it offers “BBC: 4 to review in this session” as soon as Analyse finishes, through the same review (decision 22)."),
   ]},
  {when:"Thursday", title:"Session 3 is re-read",
   art:``,
@@ -553,9 +553,11 @@ const MOMENTS = [
   art:``,
   notes:[
    li("now","Undo Replace takes back the twenty as one act. Reverting one occurrence later, from its own transcript, is fine: nothing depends on it (decision 17)."),
-   li("gone","Re-analyse: all twenty-one corrections and the rename go, by design (decision 12). The word list too? (question 4)."),
+   li("gone","Re-analyse: all twenty-one corrections and the rename go, by design (decision 12)."),
+   li("now","The word list stays: it is study knowledge, a Dashboard widget, later shared across the folder's studies (decision 23). Each fresh session re-offers its BBCs."),
   ]},
 ];
+const ANSWERS = ["Flag only words reworded inside the kept span; a crop never flags (decision 6, revised).", "Only when the card's own text holds the old words; a meaning change rewrites it after 2b (decision 21).", "Yes, at once, through the same review (decision 22).", "Kept: study knowledge, a Dashboard widget, later shared across studies in a folder (decision 23).", "Yes; the review list shows their state (decision 24)."];
 const ASKS = [
   "<b>The cropped quote.</b> When a correction can't land because the researcher's crop removed the words, there's nothing to contradict. Flag it only when the words were <i>reworded</i>, or only when the correction changes meaning (2b)?",
   "<b>Signal cards and factual corrections.</b> Should a factual correction change a card's cache key (four paid re-elaborations here), or only a meaning change?",
@@ -569,7 +571,7 @@ function playout(){
    ${MOMENTS.map(m=>`<div class="moment${m.art?"":" noart"}"><div class="when">${m.when}<b>${m.title}</b></div>
      ${m.art?`<div>${m.art}</div>`:""}
      <div class="ledger"><p class="com-label">Commentary</p><ul>${m.notes.join("")}</ul></div></div>`).join("")}
-   <div class="asks"><h3>Questions this play-out raises</h3><ol>${ASKS.map(a=>`<li>${a}</li>`).join("")}</ol></div>`;
+   <div class="asks"><h3>Questions this play-out raised — answered 24 Oct 2026</h3><ol>${ASKS.map((a,k)=>`<li>${a}<br><span class="chip" style="background:var(--v-now);color:var(--v-now-i)">Answered</span> ${ANSWERS[k]}</li>`).join("")}</ol></div>`;
 }
 
 document.getElementById("key").innerHTML = Object.keys(V).map(chip).join(" ");

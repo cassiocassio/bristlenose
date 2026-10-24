@@ -15,9 +15,11 @@ trued-against: HEAD@main on 2026-10-24
 ## Where this stands (24 Oct 2026, planned)
 
 Start planning here. This section lists what is built, what is decided, the order of work and what
-is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 20 and
+is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 24 and
 the revision of 6 were made with the owner on 24 Oct 2026, in a planning session that wrote no
-product code. Building waits: the beta is a reliability phase with almost no new features (owner,
+product code. Decisions 21 to 24, and the plan's corrections layer, came from playing edits through
+every surface: `docs/mockups/transcript-edit-consequences.html` (Findings, and the "Play-out: 1 + 20"
+tab, one correction then a study-wide replace). Building waits: the beta is a reliability phase with almost no new features (owner,
 19 Oct 2026), and transcript editing is GA-gating (~2027).
 
 **Built**
@@ -27,7 +29,7 @@ product code. Building waits: the beta is a reliability phase with almost no new
 - A refused undo of a split or join says so and stays undoable (`f25456ff`).
 - Copying from the transcript in the house format (8 Oct 2026). See [Copying from the transcript](#copying-from-the-transcript--built-8-oct-2026).
 - The gutter finds each quote's words in the drawn text when the page is viewed
-  (`frontend/src/islands/transcript/quoteExtents.ts`, `docs/design-transcript-gutter.md`). Nothing
+  (`frontend/src/utils/quoteExtents.ts`, `docs/design-transcript-gutter.md`). Nothing
   is persisted, so this is **not** the keystone anchor. It shows the join can work, and where it
   fails:
   - CJK without word timings;
@@ -67,7 +69,10 @@ product code. Building waits: the beta is a reliability phase with almost no new
    "BBC") made in the transcript changes every quote that still holds those words, edited or not.
    Made in a quote, it changes the transcript. *Editorial* quote edits (crops, removed ums, ellipses,
    tidied grammar) stay in the quote. A quiet flag in the Quotes lens appears only where a correction
-   cannot find its words, because the quote's edit removed or reworded them. Telling a correction
+   falls inside the span the quote kept but cannot find its words there, because the edit reworded
+   them ("it's not fine to take with food" under "Fine to take with food, apparently"). Words the
+   quote's crop left out never flag: there is nothing to contradict (owner, 24 Oct 2026; the word
+   range of step 1 tells the two apart without a model). Telling a correction
    from tidying in a quote edit is step 2b's judgement. This replaces the open single-word
    carry-back question ([Quote edits win, one way](#quote-edits-win-one-way-owner-17-oct-2026)).
 7. **Names, brands, places and technical terms are corrected study-wide.** The tool finds every
@@ -127,6 +132,26 @@ product code. Building waits: the beta is a reliability phase with almost no new
     - suggestions from the LLM (paid, and the text goes to the provider again).
 
     The word list feeds Whisper's prompt only after the prompt-echo measurement (step 3b).
+21. **A factual correction rewrites a signal card only when the card's own text holds the old
+    words.** A card's headline and pattern are cached on a hash of its quotes' text
+    (`elaboration.py:86`), so any change would otherwise re-pay the model: four calls for one
+    spelling fix in the play-out. A meaning change rewrites the card, once step 2b can tell the two
+    apart; until then only the old-words check applies.
+22. **When a new interview is analysed, the word list offers its known wrong forms at once**
+    ("BBC: 4 to review in this session"), through the same review as find and replace, before it
+    ever feeds Whisper. Never applied without review (decision 7). The same mishearings recur, and
+    correcting them again by hand is the boring part this removes (owner). Quotes are extracted
+    before the researcher accepts, so they arrive with the wrong form and are then corrected like
+    any quote.
+23. **The word list is study knowledge, not analysis.** It survives Re-analyse (the corrections do
+    not; the list re-offers them, decision 22), so it is stored beside the study, carried across the
+    way the study marker is, not in the output folder's database. It is a Dashboard widget, where
+    the researcher sees and edits it. Later it is shared between studies in the same folder, because
+    a client's or a product's vocabulary repeats from study to study; it then moves to the app-wide
+    level, like codebook tags and people (instance-scoped tables, `bristlenose/server/CLAUDE.md`).
+24. **Find and replace corrects inside struck and hidden text too.** It is still the record, so Put
+    Back or unhide brings the passage back already right. The review list shows each candidate's
+    state ("struck", "hidden").
 
 **Order of work.** Each step names what it needs from the steps before it.
 
@@ -141,13 +166,25 @@ product code. Building waits: the beta is a reliability phase with almost no new
      recode, a re-transcription (an edit whose words changed is refused), a late file set aside, a
      crash and restore, a serve restart, a study moved or copied. Each becomes a row in
      `docs/design-lifecycle-failure-modes.md` with its proving test.
+   - **Corrections are their own layer**, between the pipeline's text and the researcher's quote
+     edit. Never a `QuoteEdit`: an edited quote is pinned and minted a durable id
+     (`importer.py:2667`), so a study-wide replace would freeze dozens of quotes nobody chose.
+   - **One correction reaches three copies on a quote** and must change them together: `Quote.text`
+     (signal cards, AutoCode, the Dashboard's featured picks, the discussion lens's tie-break),
+     `verbatim_excerpt` (the gutter's match) and the researcher's edit if it still holds the words
+     (Quotes lens, exports, chat, MCP). One write path, pinned by a test that reads every surface.
+   - **A re-read session rejoins its quotes against the corrected text.** The importer matches
+     re-cut quotes to rows one to one by start second, and where two share a second, by words at
+     0.6 (`importer.py:1839`); "the bee bee sea" against "the BBC" scores 0.36.
    - Needs: decisions 11, 12 and 17.
 2. **(2a) Word correction.** Typing is let into the transcript; the `beforeinput` guard keeps
    refusing pasted or dropped markup. A correction lands on a word range, flows both ways
    (decision 6), takes the replaced words' time (decision 18), and reverts by deleting its row.
    An edit that changes only spacing is no edit (`design-undo-catalog.md`, decision #30). The
    analysis does not move yet. Acceptance includes decisions 14, 15 and 16 and input-method
-   composition. Needs from 1: a place to land, and each quote's range.
+   composition. Typing over a redaction token (`[NAME]`) is refused: a name typed there would
+   re-identify a redacted study through every export and agent; names go through the people layer
+   (decision 7). Needs from 1: a place to land, each quote's range, and the corrections layer.
 3. **(2b) What an edit sets moving.** Research first, then build (decision 13): the corpus of
    plausible edits, both transcript and quote side; how to tell a factual correction from a meaning
    change, and a correction from tidying; and per kind, whether the session becomes owed work for
@@ -155,7 +192,8 @@ product code. Building waits: the beta is a reliability phase with almost no new
    from 2a: real corrections to classify.
 4. **(3) Find and replace across the study.** Each accepted candidate is a 2a correction, so it
    flows to quotes and its consequences follow 2b. v1 finds text variants (decision 20). People and
-   places go through the people layer. Needs: 2a; 2b for the consequences of a batch.
+   places go through the people layer. The batch is one act, one Undo entry. The word list and its
+   Dashboard widget (decisions 22, 23) land here. Needs: 2a; 2b for the consequences of a batch.
    **(3b)** The word list feeds Whisper's prompt, after the prompt-echo measurement.
 5. **(4) Strike (Delete) and the Bin.** Needs only step 1 and the shared filter (built), so it can
    move earlier or run beside 2a if the Bin's Mac sidebar work is scheduled separately. Plan:
@@ -163,7 +201,8 @@ product code. Building waits: the beta is a reliability phase with almost no new
 6. **(5) Editorial notes.** Need 2a's typing. Cheaper than they look: a note lives only in the edit
    record, so extraction never sees it and leaving it out of the analysis costs nothing. The work is
    the who-and-when attribution, the drawing, the soft word cap, and how a note appears in exports
-   and copies.
+   and copies. Every surface that prints quote text (cards, signal prompts, subtitles, exports,
+   agents) must know a note as non-speech, so a note is a typed span, never plain text.
 
 **Open**
 - Should the Re-analyse sheet and `run --clean` list transcript edits and strikes among what is
@@ -176,6 +215,18 @@ product code. Building waits: the beta is a reliability phase with almost no new
 - Step 2b's corpus, kinds and rules.
 - For editorial notes: what "who" says in a one-researcher app, and the word cap's level.
 - `design-delete-and-bin.md`'s own calls: the words, glyph or row, Empty Bin, the empty-again rule.
+- From the consequences mockup (24 Oct 2026):
+  - A restored "not" under a reworded quote: is a quiet flag loud enough when the correction
+    inverts the meaning? The quote goes on feeding sentiment, signals, exports and agents.
+  - A partial strike on a starred quote: the re-cut quote may cover too little of the starred span
+    for the ≥70% overlap rule to carry the star. Re-cut at once keeping the star, or teach the carry
+    about strikes.
+  - Should find and replace offer renames for section and theme names that hold the find string
+    ("Trust in bee bee sea news")? A rename is a heading edit, the researcher's own act.
+  - Signal cards read `Quote.text`, never the researcher's quote edit, so today a quote edit never
+    reaches a card. Decide whether it should, alongside decision 21.
+  - A correction that shortens a quote can move it out of the 12–33-word band the Dashboard's
+    featured picks prefer (`export_core.py:432`). Accept, or count words on the pipeline's text.
 - Small, recorded with the 8 Oct review: the Backspace join guard compares displayed codes where the
   server compares slots; Return cannot split a paragraph with no spaces (CJK).
 
@@ -188,7 +239,9 @@ product code. Building waits: the beta is a reliability phase with almost no new
 - `docs/design-curation-persistence.md`: `durable_id`, `frozen_form`.
 - `docs/design-quote-editing.md`.
 - `docs/design-transcript-readability.md`: display-only tidying, which is not editing.
-- Mockups: `docs/mockups/transcript-quote-gutter.html`, `docs/mockups/edit-affordance-states.html`.
+- Mockups: `docs/mockups/transcript-edit-consequences.html` (what each edit reaches, surface by
+  surface, with the code that decides it), `docs/mockups/transcript-quote-gutter.html`,
+  `docs/mockups/edit-affordance-states.html`.
 
 ---
 

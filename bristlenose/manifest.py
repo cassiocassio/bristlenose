@@ -31,7 +31,7 @@ class StageStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETE = "complete"
-    PARTIAL = "partial"  # some sessions done, some not
+    PARTIAL = "partial"  # some sessions (or calls) done, some not
     FAILED = "failed"
 
 
@@ -354,8 +354,15 @@ def mark_stage_complete(
     content_hash: str | None = None,
     input_hashes: dict[str, str] | None = None,
     output_path: Path | None = None,
+    partial: bool = False,
 ) -> None:
     """Mark a stage as complete and update the manifest timestamp.
+
+    ``partial=True`` records a stage that finished with some of its work
+    failed — one of cluster and group's two calls, whose fallback is on
+    disk — as PARTIAL, with no ``completed_at``: the output stays for the
+    report, and the next run does the stage again rather than serve the
+    fallback from cache.
 
     When ``output_path`` is provided and the file is empty (zero-length OR
     content-equivalent-to-empty for JSON: ``[]`` / ``{}`` / ``null``), the
@@ -389,9 +396,13 @@ def mark_stage_complete(
     #
     # Non-per-session stages (`sessions is None`) keep the old behaviour
     # unchanged — there is nothing to derive from.
-    derived = (
-        _derive_stage_status(record) if record.sessions else StageStatus.COMPLETE
-    )
+    if partial:
+        derived = StageStatus.PARTIAL
+        record.completed_at = None  # even over an earlier COMPLETE record
+    else:
+        derived = (
+            _derive_stage_status(record) if record.sessions else StageStatus.COMPLETE
+        )
     record.status = derived
     if derived == StageStatus.COMPLETE:
         record.completed_at = _now_iso()

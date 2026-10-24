@@ -83,6 +83,7 @@ def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
     beside: str | None = None, topics_fail: bool = False, quotes_fail: bool = False,
+    cluster_fail: str | None = None,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -164,9 +165,17 @@ def _drive(
                 for t in transcripts])
         return quotes, StageOutcome(attempted=len(transcripts), succeeded=len(transcripts))
 
-    async def _one(_quotes, *_a, **_kw):
-        log.setdefault("clustered", []).append(1)
-        return [], StageOutcome(attempted=1, succeeded=1)
+    def _half(name: str):
+        # ``cluster_fail`` names the half ("cluster" or "group") whose call
+        # fails: it returns its fallback (here ``[]``) and says so, as s10/s11 do.
+        async def _call(_quotes, *_a, **_kw):
+            log.setdefault("clustered", []).append(name)
+            if name == cluster_fail:
+                return [], StageOutcome(attempted=1, succeeded=0, failed=[StageFailure(
+                    session_id=None, cause=Cause(
+                        category=CauseCategoryEnum.UNKNOWN, message="stub failure"))])
+            return [], StageOutcome(attempted=1, succeeded=1)
+        return _call
 
     async def _discuss(transcripts, *_a, **_kw):
         # Stubbed like every other LLM stage here: the pipeline's own record
@@ -188,8 +197,8 @@ def _drive(
         patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm", new=_roles),
         patch("bristlenose.stages.s08_topic_segmentation.segment_topics", new=_topics),
         patch("bristlenose.stages.s09_quote_extraction.extract_quotes", new=_quotes),
-        patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=_one),
-        patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=_one),
+        patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=_half("cluster")),
+        patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=_half("group")),
         patch("bristlenose.discussion.stage.run_discussion", new=_discuss),
         patch("bristlenose.llm.client.LLMClient", MagicMock()),
     ):

@@ -1167,9 +1167,13 @@ def _record_analyzed_stage(
     input_hashes: dict[str, str],
     provider: str | None = None,
     model: str | None = None,
+    partial: bool = False,
 ) -> None:
     """Record over the run's record what ``analyze`` has just written for
     *stage*, so the next ``run`` does not read it as changed on disk.
+
+    ``partial`` records a stage that kept a fallback for a failed call as
+    PARTIAL, so the next ``run`` does it again (``mark_stage_complete``).
 
     A per-session stage gets one record per session keyed by its transcript
     file (``_transcript_file_fingerprint``), and stage-level inputs the run
@@ -1190,6 +1194,7 @@ def _record_analyzed_stage(
         content_hash=hash_bytes(b"".join(present)) if present else None,
         input_hashes=input_hashes,
         output_path=paths[0] if len(paths) == 1 else None,
+        partial=partial,
     )
     write_manifest(manifest, output_dir)
 
@@ -3823,7 +3828,11 @@ class Pipeline:
                 mark_stage_running(manifest, STAGE_CLUSTER_AND_GROUP)
                 status.update("[dim]Clustering and grouping...[/dim]")
                 t0 = time.perf_counter()
-                assert llm_client is not None  # narrowed by upstream lazy-init guards
+                # Lazily, as topics and quotes do: when both were served from
+                # cache, no client exists yet (a stage retried after a call
+                # failed, or a cluster file that no longer matches its hash).
+                if llm_client is None:
+                    llm_client = LLMClient(self.settings)
                 _client_cg = llm_client
 
                 async def _run_clustering() -> tuple[list[ScreenCluster], StageOutcome]:
@@ -3895,10 +3904,14 @@ class Pipeline:
             if _tg_path.exists():
                 _cg_parts.append(_tg_path.read_bytes())
             _cg_hash = hash_bytes(b"".join(_cg_parts)) if _cg_parts else None
+            # One call of the two failed: its fallback is on disk for the
+            # report, and the record is PARTIAL so the next run makes both
+            # calls again rather than serve the fallback from cache (R30 Q3).
             mark_stage_complete(
                 manifest, STAGE_CLUSTER_AND_GROUP,
                 content_hash=_cg_hash,
                 input_hashes=_cg_input_hashes,
+                partial=bool(self._summary.themes.failed),
             )
             write_manifest(manifest, output_dir)
 
@@ -4742,6 +4755,7 @@ class Pipeline:
                     input_hashes={"upstream": (
                         hash_bytes(_eq_file.read_bytes()) if _eq_file.exists() else _MISSING_HASH
                     )},
+                    partial=bool(self._summary.themes.failed),
                 )
             _print_step(
                 f"Clustered {count_noun(len(screen_clusters), 'screen')}"

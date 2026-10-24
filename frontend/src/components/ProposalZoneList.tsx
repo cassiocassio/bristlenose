@@ -13,7 +13,7 @@ import { getTagBg } from "../utils/colours";
 import { featureFlags } from "../utils/featureFlags";
 import { reportHref } from "../utils/reportHref";
 import { formatTimecode } from "../utils/format";
-import { momentPlace, placeProps, type ContextPlace } from "../utils/contextPlace";
+import { placeProps, windowPlace } from "../utils/contextPlace";
 import { isEmbedded } from "../utils/embedded";
 import { postOpenInNewWindow } from "../shims/bridge";
 import { Icon } from "./Icon";
@@ -106,14 +106,6 @@ interface SessionRowsProps {
   onDeny?: (proposalId: number) => void;
 }
 
-/** The timecode opens the transcript at its moment in a new window, so the review stays open: a
- *  browser tab here, a window of the study in the Mac app (which never opens a report page in a
- *  browser-style popup). */
-function windowPlace(p: ProposedTagResponse): ContextPlace | null {
-  const place = momentPlace("navigate", p.session_id, p.start_timecode, p.session_id);
-  return place && { ...place, click: "window" };
-}
-
 function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: SessionRowsProps) {
   const { t } = useTranslation();
   // Filter out removed items for display but keep them in DOM briefly for animation
@@ -138,9 +130,11 @@ function SessionRows({ sessionId, items, zone, removing, onAccept, onDeny }: Ses
               href={reportHref(`/report/sessions/${p.session_id}#t-${Math.floor(p.start_timecode)}`)}
               target="_blank"
               rel="noreferrer"
-              {...placeProps(windowPlace(p))}
+              {...placeProps(windowPlace(p.session_id, p.start_timecode))}
               onClick={(e) => {
-                const place = windowPlace(p);
+                // A new tab in a browser; a window of the study in the Mac app, which never
+                // opens a report page in a browser-style popup.
+                const place = windowPlace(p.session_id, p.start_timecode);
                 if (!isEmbedded() || !place || e.button !== 0) return;
                 e.preventDefault();
                 postOpenInNewWindow(place, false);

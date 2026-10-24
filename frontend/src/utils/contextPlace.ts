@@ -65,6 +65,13 @@ export function momentPlace(
   };
 }
 
+/** A moment whose click opens its transcript in a new window, so the dialog it sits in stays
+ *  open (threshold review). */
+export function windowPlace(sessionId: string, seconds: number): ContextPlace | null {
+  const place = momentPlace("navigate", sessionId, seconds, sessionId);
+  return place && { ...place, click: "window" };
+}
+
 /** A whole session: its number or filename on the Sessions grid and the dashboard. */
 export function sessionPlace(
   click: ContextPlace["click"],

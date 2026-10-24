@@ -124,3 +124,48 @@ struct WindowSeedPlaceTests {
         #expect(used.lens == seed.lens)
     }
 }
+
+/// The page's right-click wire, decoded as the app receives it, against the
+/// shared fixture `tests/fixtures/context-target-contract.json`. The SPA's
+/// `contextPlace.test.ts` builds every `wire` from its builder; the decode here
+/// is strict, so a value only one side knows would turn every target into none.
+@Suite("Context target contract")
+struct ContextPlaceContractTests {
+    private static let fixtureURL = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // BristlenoseTests
+        .deletingLastPathComponent()   // Bristlenose
+        .deletingLastPathComponent()   // desktop
+        .deletingLastPathComponent()   // repo root
+        .appendingPathComponent("tests/fixtures/context-target-contract.json")
+
+    private func contract() throws -> [String: Any] {
+        let data = try Data(contentsOf: Self.fixtureURL)
+        return try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    @Test func everyPlaceThePageBuildsDecodes() throws {
+        let cases = try #require(try contract()["places"] as? [[String: Any]])
+        #expect(cases.count >= 7)
+        for c in cases {
+            let wire = try #require(c["wire"] as? [String: Any])
+            let data = try JSONSerialization.data(withJSONObject: wire)
+            let place = try JSONDecoder().decode(ContextPlace.self, from: data)
+            #expect(place.path == wire["path"] as? String, "\(c["build"] ?? "?")")
+            #expect(place.click.rawValue == wire["click"] as? String)
+            #expect(place.verb.rawValue == wire["verb"] as? String)
+            #expect(place.dest.rawValue == wire["dest"] as? String)
+            #expect(place.anchor == wire["anchor"] as? String)
+        }
+    }
+
+    @Test func everyTargetThePageReadsDecodes() throws {
+        let cases = try #require(try contract()["targets"] as? [[String: Any]])
+        for c in cases {
+            let wire = try #require(c["wire"] as? [String: Any])
+            let target = try #require(ContextTarget.from(wire), "\(c["what"] ?? "?")")
+            #expect(target.seq == wire["seq"] as? Int)
+            #expect((target.place != nil) == !(wire["place"] is NSNull))
+            #expect((target.card != nil) == !(wire["card"] is NSNull))
+        }
+    }
+}

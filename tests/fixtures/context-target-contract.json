@@ -1,0 +1,30 @@
+{
+  "_doc": "The report's right-click wire: what the page posts (frontend/src/utils/contextPlace.ts) and the Mac app decodes (desktop/Bristlenose/Bristlenose/ContextPlace.swift). contextPlace.test.ts builds every `wire` from its `build`; ContextPlaceContractTests decodes every one. The Swift decode is strict, so a value one side adds and the other doesn't know turns every target into none: change both sides and this file together.",
+  "places": [
+    {"build": "momentPlace", "args": ["play", "s3", 754.5, "p2"],
+     "wire": {"click": "play", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": {"key": "p2", "seconds": 754.5}}},
+    {"build": "momentPlace", "args": ["navigate", "s3", 30, null],
+     "wire": {"click": "navigate", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-30", "media": null}},
+    {"build": "sessionPlace", "args": ["play", "s1", true],
+     "wire": {"click": "play", "verb": "open", "dest": "transcript", "path": "/report/sessions/s1", "media": {"key": "s1", "seconds": 0}}},
+    {"build": "quotesPlace", "args": ["/report/quotes/#section-4"],
+     "wire": {"click": "navigate", "verb": "show", "dest": "quotes", "path": "/report/quotes/#section-4", "media": null}},
+    {"build": "sectionPlace", "args": ["section-4", "/report/quotes/#section-4"],
+     "wire": {"click": "navigate", "verb": "go", "dest": "quotes", "path": "/report/quotes/#section-4", "media": null, "anchor": "section-4"}},
+    {"build": "lensPlace", "args": ["/report/sessions/"],
+     "wire": {"click": "navigate", "verb": "open", "dest": "lens", "path": "/report/sessions/", "media": null}},
+    {"build": "windowPlace", "args": ["s3", 754.5],
+     "wire": {"click": "window", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": {"key": "s3", "seconds": 754.5}}}
+  ],
+  "targets": [
+    {"what": "a timecode link", "pathname": "/report/quotes/",
+     "html": "<a id=\"t\" href=\"#t=754\" data-bn-place='{\"click\":\"play\",\"verb\":\"show\",\"dest\":\"transcript\",\"path\":\"/report/sessions/s3#t-754\",\"media\":{\"key\":\"p2\",\"seconds\":754.5}}'>[12:34]</a>",
+     "wire": {"seq": 1, "here": false, "card": null, "link": "internal",
+              "place": {"click": "play", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": {"key": "p2", "seconds": 754.5}}}},
+    {"what": "a quote card's body", "pathname": "/report/quotes/",
+     "html": "<blockquote id=\"q-s3-754\" class=\"quote-card starred\"><span id=\"t\">words</span><span class=\"speaker\"><a href=\"/report/sessions/s3#t-754\" data-bn-place='{\"click\":\"navigate\",\"verb\":\"show\",\"dest\":\"transcript\",\"path\":\"/report/sessions/s3#t-754\",\"media\":null}'>p2</a></span></blockquote>",
+     "wire": {"seq": 2, "here": false, "link": null, "place": null,
+              "card": {"domId": "q-s3-754", "starred": true, "unstar": true, "count": 0,
+                       "place": {"click": "navigate", "verb": "show", "dest": "transcript", "path": "/report/sessions/s3#t-754", "media": null}}}}
+  ]
+}

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import contract from "../../../tests/fixtures/context-target-contract.json";
 import {
+  lensPlace,
+  windowPlace,
   momentPlace,
   placeProps,
   quotesPlace,
@@ -141,5 +144,23 @@ describe("readContextTarget", () => {
       verb: "go",
       anchor: "section-4",
     });
+  });
+});
+
+// The wire, as the Mac app decodes it (tests/fixtures/context-target-contract.json; Swift's
+// ContextPlaceContractTests decodes the same file). A value only one side knows empties every menu.
+describe("context-target contract", () => {
+  const builders: Record<string, (...args: never[]) => ContextPlace | null> = {
+    momentPlace, sessionPlace, quotesPlace, sectionPlace, lensPlace, windowPlace,
+  };
+
+  it.each(contract.places.map((c) => [c.build, c] as const))("%s builds the wire", (_name, c) => {
+    const build = builders[c.build] as (...args: unknown[]) => ContextPlace | null;
+    expect(build(...c.args)).toEqual(c.wire);
+  });
+
+  it.each(contract.targets.map((c) => [c.what, c] as const))("%s reads as the wire", (_what, c) => {
+    const host = el(c.html);
+    expect(readContextTarget(host.querySelector("#t"), c.wire.seq, c.pathname, always)).toEqual(c.wire);
   });
 });

@@ -271,7 +271,7 @@
     "copyDiskSpaceTitle": "Ikke nok diskplass",
     "copyNoImportableItems": "Ingen av de slupne elementene er en fil som Bristlenose kan importere.",
     "copyAlreadyInFlight": "En annen kopiering p\u00e5g\u00e5r allerede.",
-    "copySourceNotDownloaded": "Ingenting ble kopiert: En del av det du slapp, er ikke lastet ned til denne Macen enn\u00e5. Last det ned i Finder, og slipp det p\u00e5 nytt.",
+    "copySourceNotDownloaded": "Ingenting ble kopiert: En del av det du slapp, er ikke lastet ned til denne Macen.",
     "copyDiskSpaceMessage": "Denne kopieringen trenger %@ ledig, men bare %@ er tilgjengelig på målvolumet.",
     "projectListDamagedTitle": "Prosjektlisten kunne ikke leses",
     "projectListDamagedMessage": "Den ble lagt til side, og en ny liste ble startet. Prosjektene dine er urørt i mappene sine, med rapporter og redigeringer – dra hver mappe inn i sidepanelet for å legge den til igjen.",
@@ -1177,7 +1177,7 @@
     "importButtonIdle": "Importer",
     "cancelRow": "Stopp nedlastingen av {{title}}",
     "heldImported": "Allerede i dette prosjektet.",
-    "heldNotDownloaded": "Allerede importert \u2014 filen ligger p\u00e5 {{provider}} og m\u00e5 lastes ned der.",
+    "heldNotDownloaded": "Allerede importert \u2014 filen ligger p\u00e5 {{provider}}.",
     "heldDriveNotConnected": "Allerede importert \u2014 \u00ab{{volume}}\u00bb er ikke tilkoblet.",
     "notApplicable": "Ingen",
     "downloading": "Laster ned {{title}}",
@@ -1250,7 +1250,7 @@
     "notBuilt": "Kunne ikke lage diskusjonen for dette prosjektet. Det pr\u00f8ves igjen neste gang prosjektet analyseres.",
     "choosePanelMessage": "Velg intervjuguiden din \u2013 Word, Markdown eller ren tekst.",
     "copyFailed": "Kunne ikke kopiere guiden din til prosjektmappen.",
-    "guideNotDownloaded": "Den er ikke lastet ned til denne Macen enn\u00e5. Last den ned i Finder, og velg den p\u00e5 nytt.",
+    "guideNotDownloaded": "Den er ikke lastet ned til denne Macen.",
     "guideHowTo": "Legg guiden din (Word, Markdown eller ren tekst) i en mappe som heter \u00abDiscussion guide\u00bb ved siden av opptakene, og velg Analyser i prosjektets meny i sidepanelet.",
     "guideProblem": {
       "unreadable": "Kunne ikke lese guiden din. Sjekk at den kan \u00e5pnes, og velg Analyser i prosjektets meny i sidepanelet."

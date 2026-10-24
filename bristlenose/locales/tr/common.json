@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "{{session}} okunamad\u0131: Kay\u0131t a\u00e7\u0131lamad\u0131.",
-      "cloudDownloading": "{{session}} okunamad\u0131: Kay\u0131t h\u00e2l\u00e2 bulut depolamadan indiriliyor.",
+      "cloudDownloading": "{{session}} okunamad\u0131: Kay\u0131t zaman\u0131nda bu Mac\u2019e indirilmedi.",
       "ffprobeFailed": "{{session}} okunamad\u0131: Videosu incelenemedi.",
       "readFailed": "{{session}} okunamad\u0131: Ekran\u0131 okunamad\u0131.",
       "notRead": "{{session}} okunamad\u0131: Hen\u00fcz okunmad\u0131; rapor bir sonraki g\u00fcncellendi\u011finde okunacak.",

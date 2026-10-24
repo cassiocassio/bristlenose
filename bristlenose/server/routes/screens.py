@@ -310,7 +310,7 @@ def render_still(out_dir: Path, session_id: str, video: Path, t: float,
              "-frames:v", "1", "-vf", vf, "-q:v", "3" if w is not None else "2", "-f", "mjpeg", "-"],
             capture_output=True, check=True, timeout=60).stdout
     except CloudFetchTimeoutError as exc:
-        raise StillError("The recording is still downloading") from exc
+        raise StillError("The recording wasn't downloaded in time") from exc
     except subprocess.CalledProcessError as exc:
         err = exc.stderr.decode("utf-8", "replace")[-300:] if isinstance(exc.stderr, bytes) else ""
         logger.warning("No still for %s at %.1f: ffmpeg exit %s %s", session_id, t, exc.returncode, err)

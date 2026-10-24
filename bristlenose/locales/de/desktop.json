@@ -271,7 +271,7 @@
     "copyDiskSpaceTitle": "Nicht genug Speicherplatz",
     "copyNoImportableItems": "Keines der abgelegten Objekte ist eine Datei, die Bristlenose importieren kann.",
     "copyAlreadyInFlight": "Es l\u00e4uft bereits ein anderer Kopiervorgang.",
-    "copySourceNotDownloaded": "Es wurde nichts kopiert: Ein Teil der abgelegten Objekte ist noch nicht auf diesen Mac geladen. Laden Sie ihn im Finder und legen Sie ihn dann erneut ab.",
+    "copySourceNotDownloaded": "Es wurde nichts kopiert: Ein Teil der abgelegten Objekte ist nicht auf diesen Mac geladen.",
     "copyDiskSpaceMessage": "Dieser Kopiervorgang ben\u00f6tigt %@ frei, aber nur %@ sind auf dem Zielvolume verf\u00fcgbar.",
     "projectListDamagedTitle": "Die Projektliste konnte nicht gelesen werden",
     "projectListDamagedMessage": "Sie wurde beiseitegelegt und eine neue Liste angelegt. Ihre Projekte sind in ihren Ordnern unver\u00e4ndert, mit ihren Berichten und Bearbeitungen \u2013 ziehen Sie jeden Ordner in die Seitenleiste, um ihn wieder hinzuzuf\u00fcgen.",
@@ -1177,7 +1177,7 @@
     "importButtonIdle": "Importieren",
     "cancelRow": "Download von {{title}} stoppen",
     "heldImported": "Bereits in diesem Projekt.",
-    "heldNotDownloaded": "Bereits importiert \u2014 die Datei liegt auf {{provider}} und muss dort geladen werden.",
+    "heldNotDownloaded": "Bereits importiert \u2014 die Datei liegt auf {{provider}}.",
     "heldDriveNotConnected": "Bereits importiert \u2014 \u201e{{volume}}\u201c ist nicht verbunden.",
     "notApplicable": "Keine",
     "downloading": "{{title}} wird geladen",
@@ -1250,7 +1250,7 @@
     "notBuilt": "Die Diskussion f\u00fcr dieses Projekt konnte nicht erstellt werden. Bei der n\u00e4chsten Analyse des Projekts wird es erneut versucht.",
     "choosePanelMessage": "W\u00e4hlen Sie Ihren Gespr\u00e4chsleitfaden: Word, Markdown oder reiner Text.",
     "copyFailed": "Ihr Leitfaden konnte nicht in den Projektordner kopiert werden.",
-    "guideNotDownloaded": "Er ist noch nicht auf diesen Mac geladen. Laden Sie ihn im Finder und w\u00e4hlen Sie ihn dann erneut aus.",
+    "guideNotDownloaded": "Er ist nicht auf diesen Mac geladen.",
     "guideHowTo": "Legen Sie Ihren Leitfaden (Word, Markdown oder reiner Text) in einen Ordner namens \u201eDiscussion guide\u201c neben Ihren Aufnahmen und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste.",
     "guideProblem": {
       "unreadable": "Ihr Leitfaden konnte nicht gelesen werden. Pr\u00fcfen Sie, ob er sich \u00f6ffnen l\u00e4sst, und w\u00e4hlen Sie dann \u201eAnalysieren\u201c im Men\u00fc des Projekts in der Seitenleiste."

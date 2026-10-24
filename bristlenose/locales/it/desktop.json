@@ -271,7 +271,7 @@
     "copyDiskSpaceTitle": "Spazio su disco insufficiente",
     "copyNoImportableItems": "Nessuno degli elementi trascinati \u00e8 un file che Bristlenose pu\u00f2 importare.",
     "copyAlreadyInFlight": "\u00c8 gi\u00e0 in corso un\u2019altra copia.",
-    "copySourceNotDownloaded": "Non \u00e8 stato copiato nulla: parte degli elementi trascinati non \u00e8 ancora scaricata su questo Mac. Scaricala nel Finder, poi trascinala di nuovo.",
+    "copySourceNotDownloaded": "Non \u00e8 stato copiato nulla: parte degli elementi trascinati non \u00e8 scaricata su questo Mac.",
     "copyDiskSpaceMessage": "Questa copia richiede %@ liberi, ma sul volume di destinazione sono disponibili solo %@.",
     "projectListDamagedTitle": "Non \u00e8 stato possibile leggere l\u2019elenco dei progetti",
     "projectListDamagedMessage": "\u00c8 stato messo da parte ed \u00e8 stato avviato un nuovo elenco. I tuoi progetti sono intatti nelle loro cartelle, con i loro report e le modifiche: trascina ogni cartella nella barra laterale per aggiungerla di nuovo.",
@@ -1177,7 +1177,7 @@
     "importButtonIdle": "Importa",
     "cancelRow": "Interrompi il download di {{title}}",
     "heldImported": "Gi\u00e0 in questo progetto.",
-    "heldNotDownloaded": "Gi\u00e0 importata: il file \u00e8 su {{provider}} e va scaricato l\u00ec.",
+    "heldNotDownloaded": "Gi\u00e0 importata: il file \u00e8 su {{provider}}.",
     "heldDriveNotConnected": "Gi\u00e0 importata: \u00ab{{volume}}\u00bb non \u00e8 collegato.",
     "notApplicable": "Nessuno",
     "downloading": "Download di {{title}}",
@@ -1250,7 +1250,7 @@
     "notBuilt": "Impossibile creare la discussione per questo progetto. Si riprover\u00e0 alla prossima analisi del progetto.",
     "choosePanelMessage": "Scegli la tua traccia di intervista: Word, Markdown o testo semplice.",
     "copyFailed": "Impossibile copiare la tua traccia nella cartella del progetto.",
-    "guideNotDownloaded": "Non \u00e8 ancora scaricata su questo Mac. Scaricala nel Finder, poi sceglila di nuovo.",
+    "guideNotDownloaded": "Non \u00e8 scaricata su questo Mac.",
     "guideHowTo": "Metti la tua traccia (Word, Markdown o testo semplice) in una cartella chiamata \u201cDiscussion guide\u201d accanto alle registrazioni, poi scegli Analizza dal menu del progetto nella barra laterale.",
     "guideProblem": {
       "unreadable": "Impossibile leggere la tua traccia. Controlla che si apra, poi scegli Analizza dal menu del progetto nella barra laterale."

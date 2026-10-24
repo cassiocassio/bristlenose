@@ -271,7 +271,7 @@
     "copyDiskSpaceTitle": "Levytila ei riitä",
     "copyNoImportableItems": "Mik\u00e4\u00e4n pudotetuista kohteista ei ole tiedosto, jonka Bristlenose voi tuoda.",
     "copyAlreadyInFlight": "Toinen kopiointi on jo k\u00e4ynniss\u00e4.",
-    "copySourceNotDownloaded": "Mit\u00e4\u00e4n ei kopioitu: Osaa pudotetuista kohteista ei ole viel\u00e4 ladattu t\u00e4h\u00e4n Maciin. Lataa ne Finderissa ja pudota ne uudelleen.",
+    "copySourceNotDownloaded": "Mit\u00e4\u00e4n ei kopioitu: Osaa pudotetuista kohteista ei ole ladattu t\u00e4h\u00e4n Maciin.",
     "copyDiskSpaceMessage": "Tämä kopiointi tarvitsee %@ vapaata, mutta kohdetaltiolla on käytettävissä vain %@.",
     "projectListDamagedTitle": "Projektiluetteloa ei voitu lukea",
     "projectListDamagedMessage": "Se siirrettiin sivuun ja uusi luettelo aloitettiin. Projektisi ovat koskemattomina kansioissaan raportteineen ja muokkauksineen – lisää kukin takaisin vetämällä sen kansio sivupalkkiin.",
@@ -1177,7 +1177,7 @@
     "importButtonIdle": "Tuo",
     "cancelRow": "Lopeta kohteen {{title}} lataus",
     "heldImported": "Jo t\u00e4ss\u00e4 projektissa.",
-    "heldNotDownloaded": "Jo tuotu \u2014 tiedosto on palvelussa {{provider}}, ja se on ladattava sielt\u00e4.",
+    "heldNotDownloaded": "Jo tuotu \u2014 tiedosto on palvelussa {{provider}}.",
     "heldDriveNotConnected": "Jo tuotu \u2014 \u201d{{volume}}\u201d ei ole liitettyn\u00e4.",
     "notApplicable": "Ei mit\u00e4\u00e4n",
     "downloading": "Ladataan {{title}}",
@@ -1250,7 +1250,7 @@
     "notBuilt": "T\u00e4m\u00e4n projektin keskustelua ei voitu luoda. Sit\u00e4 yritet\u00e4\u00e4n uudelleen, kun projekti analysoidaan seuraavan kerran.",
     "choosePanelMessage": "Valitse haastattelurunko \u2013 Word, Markdown tai pelkk\u00e4 teksti.",
     "copyFailed": "Runkoa ei voitu kopioida projektikansioon.",
-    "guideNotDownloaded": "Sit\u00e4 ei ole viel\u00e4 ladattu t\u00e4h\u00e4n Maciin. Lataa se Finderissa ja valitse se uudelleen.",
+    "guideNotDownloaded": "Sit\u00e4 ei ole ladattu t\u00e4h\u00e4n Maciin.",
     "guideHowTo": "Tallenna runko (Word, Markdown tai pelkk\u00e4 teksti) tallenteiden viereen kansioon nimelt\u00e4 \u201dDiscussion guide\u201d ja valitse sitten Analysoi projektin valikosta sivupalkissa.",
     "guideProblem": {
       "unreadable": "Runkoa ei voitu lukea. Varmista, ett\u00e4 se aukeaa, ja valitse sitten Analysoi projektin valikosta sivupalkissa."

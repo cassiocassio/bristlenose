@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Istunnon {{session}} tallennetta ei voitu lukea: tallennetta ei voitu avata.",
-      "cloudDownloading": "Istunnon {{session}} tallennetta ei voitu lukea: tallennetta ladataan viel\u00e4 pilvitallennustilasta.",
+      "cloudDownloading": "Istunnon {{session}} tallennetta ei voitu lukea: tallennetta ei ladattu t\u00e4h\u00e4n Maciin ajoissa.",
       "ffprobeFailed": "Istunnon {{session}} tallennetta ei voitu lukea: sen videota ei voitu tutkia.",
       "readFailed": "Istunnon {{session}} tallennetta ei voitu lukea: n\u00e4yt\u00f6n lukeminen ep\u00e4onnistui.",
       "notRead": "Istunnon {{session}} tallennetta ei voitu lukea: sit\u00e4 ei ole viel\u00e4 luettu; se luetaan, kun raportti seuraavan kerran p\u00e4ivittyy.",

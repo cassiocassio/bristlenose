@@ -92,8 +92,8 @@ struct LocalScan: Equatable, Sendable {
     ///
     /// Attribution, never a warning — a project inside the client's synced tree
     /// is the intended configuration. Naming the provider is settled (owner,
-    /// 22 Oct 2026); the "fetch it from there" advice above is still open:
-    /// `docs/design-cloud-files.md` § The rule and § As built.
+    /// 22 Oct 2026), and nothing goes past the name: the row says where the
+    /// file is, never to go and fetch it (`docs/design-cloud-files.md` § The rule).
     var syncProvider: String?
 
     /// Leftover `.part` files: a download that was interrupted, almost always

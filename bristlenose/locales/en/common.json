@@ -779,7 +779,7 @@
     },
     "couldNotRead": {
       "unreadable": "Couldn\u2019t read {{session}}: the recording couldn\u2019t be opened.",
-      "cloudDownloading": "Couldn\u2019t read {{session}}: the recording is still downloading from cloud storage.",
+      "cloudDownloading": "Couldn\u2019t read {{session}}: the recording wasn\u2019t downloaded to this Mac in time.",
       "ffprobeFailed": "Couldn\u2019t read {{session}}: its video couldn\u2019t be inspected.",
       "readFailed": "Couldn\u2019t read {{session}}: reading its screen failed.",
       "notRead": "Couldn\u2019t read {{session}}: it hasn\u2019t been read yet; it will be when the report next updates.",

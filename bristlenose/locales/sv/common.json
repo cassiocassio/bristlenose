@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Det gick inte att l\u00e4sa {{session}}: Inspelningen kunde inte \u00f6ppnas.",
-      "cloudDownloading": "Det gick inte att l\u00e4sa {{session}}: Inspelningen h\u00e4mtas fortfarande fr\u00e5n molnlagringen.",
+      "cloudDownloading": "Det gick inte att l\u00e4sa {{session}}: Inspelningen h\u00e4mtades inte till den h\u00e4r Macen i tid.",
       "ffprobeFailed": "Det gick inte att l\u00e4sa {{session}}: Videon kunde inte unders\u00f6kas.",
       "readFailed": "Det gick inte att l\u00e4sa {{session}}: L\u00e4sningen av sk\u00e4rmen misslyckades.",
       "notRead": "Det gick inte att l\u00e4sa {{session}}: Den har inte l\u00e4sts \u00e4n; det g\u00f6rs n\u00e4r rapporten uppdateras n\u00e4sta g\u00e5ng.",

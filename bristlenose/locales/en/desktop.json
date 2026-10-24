@@ -272,7 +272,7 @@
     "copyDiskSpaceTitle": "Not enough disk space",
     "copyNoImportableItems": "None of the dropped items is a file Bristlenose can import.",
     "copyAlreadyInFlight": "Another copy is already in flight.",
-    "copySourceNotDownloaded": "Nothing was copied: part of this drop isn\u2019t downloaded to this Mac yet. Download it in Finder, then drop it again.",
+    "copySourceNotDownloaded": "Nothing was copied: part of this drop isn\u2019t downloaded to this Mac.",
     "copyDiskSpaceMessage": "This copy needs %@ free, but only %@ is available on the destination volume.",
     "projectListDamagedTitle": "Your project list couldn't be read",
     "projectListDamagedMessage": "It was set aside and a new list started. Your projects are untouched in their folders, with their reports and edits \u2014 drag each folder into the sidebar to add it back.",
@@ -1182,7 +1182,7 @@
     "importButtonIdle": "Import",
     "cancelRow": "Stop downloading {{title}}",
     "heldImported": "Already in this project.",
-    "heldNotDownloaded": "Already imported \u2014 the file is on {{provider}} and needs downloading there.",
+    "heldNotDownloaded": "Already imported \u2014 the file is on {{provider}}.",
     "heldDriveNotConnected": "Already imported \u2014 \u201c{{volume}}\u201d isn't connected.",
     "notApplicable": "None",
     "downloading": "Downloading {{title}}",
@@ -1255,7 +1255,7 @@
     "notBuilt": "The discussion could not be built for this project. It is tried again the next time the project is analysed.",
     "choosePanelMessage": "Choose your discussion guide \u2014 Word, Markdown or plain text.",
     "copyFailed": "Your guide could not be copied into the project folder.",
-    "guideNotDownloaded": "It isn\u2019t downloaded to this Mac yet. Download it in Finder, then choose it again.",
+    "guideNotDownloaded": "It isn\u2019t downloaded to this Mac.",
     "guideHowTo": "Put your guide \u2014 Word, Markdown or plain text \u2014 in a folder named \u201cDiscussion guide\u201d beside your recordings, then choose Analyse from the project\u2019s menu in the sidebar.",
     "guideProblem": {
       "unreadable": "Your guide could not be read. Check that it opens, then choose Analyse from the project\u2019s menu in the sidebar."

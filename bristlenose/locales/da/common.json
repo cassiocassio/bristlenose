@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "{{session}} kunne ikke l\u00e6ses: Optagelsen kunne ikke \u00e5bnes.",
-      "cloudDownloading": "{{session}} kunne ikke l\u00e6ses: Optagelsen hentes stadig fra skylageret.",
+      "cloudDownloading": "{{session}} kunne ikke l\u00e6ses: Optagelsen blev ikke hentet til denne Mac i tide.",
       "ffprobeFailed": "{{session}} kunne ikke l\u00e6ses: Videoen kunne ikke unders\u00f8ges.",
       "readFailed": "{{session}} kunne ikke l\u00e6ses: L\u00e6sningen af sk\u00e6rmen mislykkedes.",
       "notRead": "{{session}} kunne ikke l\u00e6ses: Den er ikke l\u00e6st endnu; det sker, n\u00e6ste gang rapporten opdateres.",

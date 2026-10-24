@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "No s\u2019ha pogut llegir {{session}}: no s\u2019ha pogut obrir l\u2019enregistrament.",
-      "cloudDownloading": "No s\u2019ha pogut llegir {{session}}: l\u2019enregistrament encara s\u2019est\u00e0 baixant de l\u2019emmagatzematge al n\u00favol.",
+      "cloudDownloading": "No s\u2019ha pogut llegir {{session}}: l\u2019enregistrament no s\u2019ha baixat a aquest Mac a temps.",
       "ffprobeFailed": "No s\u2019ha pogut llegir {{session}}: no s\u2019ha pogut examinar el v\u00eddeo.",
       "readFailed": "No s\u2019ha pogut llegir {{session}}: la lectura de la pantalla ha fallat.",
       "notRead": "No s\u2019ha pogut llegir {{session}}: encara no s\u2019ha llegit; es llegir\u00e0 quan l\u2019informe s\u2019actualitzi.",

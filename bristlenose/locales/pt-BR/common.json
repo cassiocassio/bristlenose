@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "N\u00e3o foi poss\u00edvel ler {{session}}: n\u00e3o foi poss\u00edvel abrir a grava\u00e7\u00e3o.",
-      "cloudDownloading": "N\u00e3o foi poss\u00edvel ler {{session}}: a grava\u00e7\u00e3o ainda est\u00e1 sendo baixada do armazenamento na nuvem.",
+      "cloudDownloading": "N\u00e3o foi poss\u00edvel ler {{session}}: a grava\u00e7\u00e3o n\u00e3o foi baixada para este Mac a tempo.",
       "ffprobeFailed": "N\u00e3o foi poss\u00edvel ler {{session}}: n\u00e3o foi poss\u00edvel examinar o v\u00eddeo.",
       "readFailed": "N\u00e3o foi poss\u00edvel ler {{session}}: a leitura da tela falhou.",
       "notRead": "N\u00e3o foi poss\u00edvel ler {{session}}: ela ainda n\u00e3o foi lida; ser\u00e1 quando o relat\u00f3rio for atualizado.",

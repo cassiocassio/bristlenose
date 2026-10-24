@@ -856,7 +856,7 @@
     },
     "couldNotRead": {
       "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: nie mo\u017cna otworzy\u0107 nagrania.",
-      "cloudDownloading": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: nagranie wci\u0105\u017c jest pobierane z chmury.",
+      "cloudDownloading": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: nagranie nie zosta\u0142o pobrane na tego Maca na czas.",
       "ffprobeFailed": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: nie mo\u017cna sprawdzi\u0107 wideo.",
       "readFailed": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: odczyt ekranu si\u0119 nie powi\u00f3d\u0142.",
       "notRead": "Nie uda\u0142o si\u0119 odczyta\u0107 {{session}}: nagranie nie zosta\u0142o jeszcze odczytane; zostanie odczytane przy nast\u0119pnej aktualizacji raportu.",

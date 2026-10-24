@@ -65,8 +65,8 @@ final class CopyMachinery: ObservableObject {
                 return "Another copy is already in flight."
             case .sourceNotDownloaded(let count):
                 return count == 1
-                    ? "Nothing was copied: 1 dropped item is in the cloud and not downloaded to this Mac yet."
-                    : "Nothing was copied: \(count) dropped items are in the cloud and not downloaded to this Mac yet."
+                    ? "Nothing was copied: 1 dropped item is in the cloud and not downloaded to this Mac."
+                    : "Nothing was copied: \(count) dropped items are in the cloud and not downloaded to this Mac."
             case .underlying(let error):
                 return error.localizedDescription
             }

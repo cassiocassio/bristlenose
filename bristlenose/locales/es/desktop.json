@@ -271,7 +271,7 @@
     "copyDiskSpaceTitle": "Espacio en disco insuficiente",
     "copyNoImportableItems": "Ninguno de los elementos soltados es un archivo que Bristlenose pueda importar.",
     "copyAlreadyInFlight": "Ya hay otra copia en curso.",
-    "copySourceNotDownloaded": "No se ha copiado nada: parte de lo que has soltado a\u00fan no est\u00e1 descargado en este Mac. Desc\u00e1rgalo en el Finder y vuelve a soltarlo.",
+    "copySourceNotDownloaded": "No se ha copiado nada: parte de lo que has soltado no est\u00e1 descargado en este Mac.",
     "copyDiskSpaceMessage": "Esta copia necesita %@ libres, pero solo hay %@ disponibles en el volumen de destino.",
     "projectListDamagedTitle": "No se ha podido leer la lista de proyectos",
     "projectListDamagedMessage": "Se ha apartado y se ha empezado una lista nueva. Tus proyectos siguen intactos en sus carpetas, con sus informes y ediciones: arrastra cada carpeta a la barra lateral para volver a a\u00f1adirla.",
@@ -1177,7 +1177,7 @@
     "importButtonIdle": "Importar",
     "cancelRow": "Detener la descarga de {{title}}",
     "heldImported": "Ya est\u00e1 en este proyecto.",
-    "heldNotDownloaded": "Ya importada: el archivo est\u00e1 en {{provider}} y hay que descargarlo all\u00ed.",
+    "heldNotDownloaded": "Ya importada: el archivo est\u00e1 en {{provider}}.",
     "heldDriveNotConnected": "Ya importada: \u00ab{{volume}}\u00bb no est\u00e1 conectado.",
     "notApplicable": "Ninguno",
     "downloading": "Descargando {{title}}",
@@ -1250,7 +1250,7 @@
     "notBuilt": "No se pudo crear la discusi\u00f3n de este proyecto. Se volver\u00e1 a intentar la pr\u00f3xima vez que se analice el proyecto.",
     "choosePanelMessage": "Elige tu gu\u00eda de discusi\u00f3n: Word, Markdown o texto sin formato.",
     "copyFailed": "No se pudo copiar tu gu\u00eda en la carpeta del proyecto.",
-    "guideNotDownloaded": "A\u00fan no est\u00e1 descargada en este Mac. Desc\u00e1rgala en el Finder y vuelve a elegirla.",
+    "guideNotDownloaded": "No est\u00e1 descargada en este Mac.",
     "guideHowTo": "Pon tu gu\u00eda (Word, Markdown o texto sin formato) en una carpeta llamada \u201cDiscussion guide\u201d junto a tus grabaciones y elige Analizar en el men\u00fa del proyecto en la barra lateral.",
     "guideProblem": {
       "unreadable": "No se pudo leer tu gu\u00eda. Comprueba que se abre y elige Analizar en el men\u00fa del proyecto en la barra lateral."

@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "No se pudo leer {{session}}: no se pudo abrir la grabaci\u00f3n.",
-      "cloudDownloading": "No se pudo leer {{session}}: la grabaci\u00f3n a\u00fan se est\u00e1 descargando del almacenamiento en la nube.",
+      "cloudDownloading": "No se pudo leer {{session}}: la grabaci\u00f3n no se ha descargado en este Mac a tiempo.",
       "ffprobeFailed": "No se pudo leer {{session}}: no se pudo examinar su v\u00eddeo.",
       "readFailed": "No se pudo leer {{session}}: fall\u00f3 la lectura de su pantalla.",
       "notRead": "No se pudo leer {{session}}: a\u00fan no se ha le\u00eddo; se leer\u00e1 cuando el informe se actualice.",

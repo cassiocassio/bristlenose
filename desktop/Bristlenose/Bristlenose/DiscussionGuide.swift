@@ -32,7 +32,7 @@ enum DiscussionGuide {
 
         /// English, for logs and bug reports; the alert reads `localeKey`.
         nonisolated var errorDescription: String? {
-            "Your guide isn’t downloaded to this Mac yet."
+            "Your guide isn’t downloaded to this Mac."
         }
 
         nonisolated var localeKey: String { "desktop.discussion.guideNotDownloaded" }

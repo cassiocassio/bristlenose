@@ -968,8 +968,8 @@ extension CloudImportOutlineView {
                 enabled: enabled,
                 label: accessibilityName(for: node),
                 // Restored. The SwiftUI cell explained a held row on hover
-                // ("Already imported — the file is on Dropbox and needs
-                // downloading there") and the port dropped it — leaving a
+                // ("Already imported — the file is on Dropbox") and the port
+                // dropped it — leaving a
                 // ticked, greyed checkbox beside an empty Status cell with the
                 // reason stated nowhere at all, since `.imported` has no status
                 // label by design. A waiting row's reason is the wait itself,

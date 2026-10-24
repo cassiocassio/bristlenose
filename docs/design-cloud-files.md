@@ -1,7 +1,7 @@
 ---
 status: decided
-last-trued: 2026-10-22
-trued-against: HEAD@main on 2026-10-22 (ProjectAvailability.swift, CopyMachinery.swift, utils/fs.py, utils/audio.py, events.py)
+last-trued: 2026-10-24
+trued-against: HEAD@main on 2026-10-24 (ProjectAvailability.swift, CopyMachinery.swift, utils/fs.py, utils/audio.py, events.py, locales/*/desktop.json, locales/*/common.json, tests/test_cloud_files_policy.py)
 ---
 
 # Files in the cloud — what we can know, and what we show
@@ -138,13 +138,12 @@ a precedent to copy:
   session registry, to identify it (`session_registry._fingerprint_after_download`). If that times out
   the run still stops, now labelled `cloud_fetch` (retryable) rather than "unknown". Guessing its
   identity instead would risk analysing, and paying for, the same session twice.
-- **Two refusals still advise** "Download it in Finder, then drop/choose it again"
-  (`desktop.chrome.copySourceNotDownloaded`, `desktop.discussion.guideNotDownloaded`). The refusal
-  is pattern A; the advice is the open question.
-- **The Screens lens says** "the recording is still downloading from cloud storage"
-  (`common.screens.couldNotRead.cloudDownloading`). We only know our bound fired.
-- **Cloud import's held row** says "Already imported — the file is on {provider} and needs
-  downloading there". The name is settled (allowed); "needs downloading there" is advice, and open.
+- **The advice and the unknowable claims are gone** (24 Oct 2026, owner: settled by the rule). In
+  all 21 locales the two refusals now say only "…isn’t downloaded to this Mac." (no "Download it in
+  Finder", no "yet"); the Screens lens says "the recording wasn’t downloaded to this Mac in time.",
+  matching pattern B; and cloud import's held row says "Already imported — the file is on
+  {provider}." (the name stays, "needs downloading there" goes). A refusal therefore leaves the
+  researcher to infer "so download it" — that is the rule working, not a gap.
 - **`Location.LocationType.cloud`** is still stored on each study (old `projects.json` files decode
   it) and has no reader. It never changes availability, copy or wording.
 
@@ -155,6 +154,7 @@ a precedent to copy:
 - `design-cloud-wait-label.md` — the label's history; status won't-build, superseded by this page.
 - `desktop/CLAUDE.md` — the `copyItem` hang gotcha.
 - `tests/test_cloud_files_policy.py` — the guard: fails if an English UI string or a hard-coded
-  Swift literal narrates cloud storage. Its `ALLOWED` list is exactly the open items above.
+  Swift literal narrates cloud storage. Its `ALLOWED` list is empty; a new entry needs this page to
+  say why.
 - The public measured record above — re-measure there before asserting anything new about
   dataless files.

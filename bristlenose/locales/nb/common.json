@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Kunne ikke lese {{session}}: Opptaket kunne ikke \u00e5pnes.",
-      "cloudDownloading": "Kunne ikke lese {{session}}: Opptaket lastes fortsatt ned fra skylagring.",
+      "cloudDownloading": "Kunne ikke lese {{session}}: Opptaket ble ikke lastet ned til denne Macen i tide.",
       "ffprobeFailed": "Kunne ikke lese {{session}}: Videoen kunne ikke unders\u00f8kes.",
       "readFailed": "Kunne ikke lese {{session}}: Lesingen av skjermen mislyktes.",
       "notRead": "Kunne ikke lese {{session}}: Det er ikke lest enn\u00e5; det skjer neste gang rapporten oppdateres.",

@@ -304,7 +304,7 @@
     "copyDiskSpaceTitle": "Nedostatek místa na disku",
     "copyNoImportableItems": "\u017d\u00e1dn\u00e1 z p\u0159eta\u017een\u00fdch polo\u017eek nen\u00ed soubor, kter\u00fd by Bristlenose mohl importovat.",
     "copyAlreadyInFlight": "U\u017e prob\u00edh\u00e1 jin\u00e9 kop\u00edrov\u00e1n\u00ed.",
-    "copySourceNotDownloaded": "Nic nebylo zkop\u00edrov\u00e1no: \u010d\u00e1st p\u0159eta\u017een\u00fdch polo\u017eek je\u0161t\u011b nen\u00ed sta\u017een\u00e1 do tohoto Macu. St\u00e1hn\u011bte ji ve Finderu a pak ji p\u0159et\u00e1hn\u011bte znovu.",
+    "copySourceNotDownloaded": "Nic nebylo zkop\u00edrov\u00e1no: \u010d\u00e1st p\u0159eta\u017een\u00fdch polo\u017eek nen\u00ed sta\u017een\u00e1 do tohoto Macu.",
     "copyDiskSpaceMessage": "Tato kopie potřebuje %@ volného místa, ale na cílovém svazku je k dispozici pouze %@.",
     "projectListDamagedTitle": "Seznam projektů se nepodařilo přečíst",
     "projectListDamagedMessage": "Byl odložen stranou a začal nový seznam. Vaše projekty zůstaly nedotčené ve svých složkách, včetně zpráv a úprav – každou složku přetáhněte do postranního panelu, abyste ji znovu přidali.",
@@ -1243,7 +1243,7 @@
     "importButtonIdle": "Importovat",
     "cancelRow": "Zastavit stahov\u00e1n\u00ed {{title}}",
     "heldImported": "U\u017e je v tomto projektu.",
-    "heldNotDownloaded": "U\u017e importov\u00e1no \u2014 soubor je na {{provider}} a je pot\u0159eba ho st\u00e1hnout tam.",
+    "heldNotDownloaded": "U\u017e importov\u00e1no \u2014 soubor je na {{provider}}.",
     "heldDriveNotConnected": "U\u017e importov\u00e1no \u2014 \u201e{{volume}}\u201c nen\u00ed p\u0159ipojeno.",
     "notApplicable": "\u017d\u00e1dn\u00e9",
     "downloading": "Stahov\u00e1n\u00ed {{title}}",
@@ -1317,7 +1317,7 @@
     "notBuilt": "Diskuzi pro tento projekt se nepoda\u0159ilo vytvo\u0159it. P\u0159i p\u0159\u00ed\u0161t\u00ed anal\u00fdze projektu se to zkus\u00ed znovu.",
     "choosePanelMessage": "Vyberte sv\u016fj sc\u00e9n\u00e1\u0159 rozhovoru \u2013 Word, Markdown nebo prost\u00fd text.",
     "copyFailed": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo zkop\u00edrovat do slo\u017eky projektu.",
-    "guideNotDownloaded": "Je\u0161t\u011b nen\u00ed sta\u017een\u00fd do tohoto Macu. St\u00e1hn\u011bte ho ve Finderu a pak ho vyberte znovu.",
+    "guideNotDownloaded": "Nen\u00ed sta\u017een\u00fd do tohoto Macu.",
     "guideHowTo": "Ulo\u017ete sc\u00e9n\u00e1\u0159 (Word, Markdown nebo prost\u00fd text) do slo\u017eky s n\u00e1zvem \u201eDiscussion guide\u201c vedle nahr\u00e1vek a v nab\u00eddce projektu na bo\u010dn\u00edm panelu zvolte Analyzovat.",
     "guideProblem": {
       "unreadable": "V\u00e1\u0161 sc\u00e9n\u00e1\u0159 se nepoda\u0159ilo p\u0159e\u010d\u00edst. Ov\u011b\u0159te, \u017ee se otev\u0159e, a v nab\u00eddce projektu na bo\u010dn\u00edm panelu zvolte Analyzovat."

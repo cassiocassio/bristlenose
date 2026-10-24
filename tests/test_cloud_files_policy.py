@@ -10,9 +10,8 @@ i18n gate.
 Only ``en`` is scanned: the other 20 locales translate it, and
 ``scripts/check-locales.py`` already pins them to it.
 
-``ALLOWED`` holds the strings the policy page lists as open owner questions
-("As built on 22 Oct 2026"). Removing an entry once its string is reworded is
-the point; adding one needs that page to say why.
+``ALLOWED`` is empty: the three strings it held were reworded on 24 Oct 2026.
+Adding an entry needs the policy page to say why.
 """
 
 from __future__ import annotations
@@ -35,12 +34,8 @@ NARRATION = re.compile(
     re.IGNORECASE,
 )
 
-# key -> reason. Each is an open question in docs/design-cloud-files.md.
-ALLOWED: dict[str, str] = {
-    "desktop.chrome.copySourceNotDownloaded": "refusal is pattern A; the Finder advice is open",
-    "desktop.discussion.guideNotDownloaded": "refusal is pattern A; the Finder advice is open",
-    "common.screens.couldNotRead.cloudDownloading": "says 'still downloading'; only the bound fired",
-}
+# key -> reason. Empty since 24 Oct 2026; a new entry needs docs/design-cloud-files.md to say why.
+ALLOWED: dict[str, str] = {}
 
 # Swift literals that name a provider, by file. `cloudProviderLabel`'s return
 # values feed Settings ▸ General and cloud import: naming is allowed, and these

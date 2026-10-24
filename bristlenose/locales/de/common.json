@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "{{session}} konnte nicht gelesen werden: Die Aufnahme lie\u00df sich nicht \u00f6ffnen.",
-      "cloudDownloading": "{{session}} konnte nicht gelesen werden: Die Aufnahme wird noch aus dem Cloud-Speicher geladen.",
+      "cloudDownloading": "{{session}} konnte nicht gelesen werden: Die Aufnahme wurde nicht rechtzeitig auf diesen Mac geladen.",
       "ffprobeFailed": "{{session}} konnte nicht gelesen werden: Das Video lie\u00df sich nicht untersuchen.",
       "readFailed": "{{session}} konnte nicht gelesen werden: Das Lesen des Bildschirms ist fehlgeschlagen.",
       "notRead": "{{session}} konnte nicht gelesen werden: Die Aufnahme wurde noch nicht gelesen; das geschieht bei der n\u00e4chsten Aktualisierung des Berichts.",

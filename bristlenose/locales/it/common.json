@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Impossibile leggere {{session}}: non \u00e8 stato possibile aprire la registrazione.",
-      "cloudDownloading": "Impossibile leggere {{session}}: la registrazione \u00e8 ancora in download dallo spazio di archiviazione cloud.",
+      "cloudDownloading": "Impossibile leggere {{session}}: la registrazione non \u00e8 stata scaricata su questo Mac in tempo.",
       "ffprobeFailed": "Impossibile leggere {{session}}: non \u00e8 stato possibile esaminare il video.",
       "readFailed": "Impossibile leggere {{session}}: la lettura dello schermo non \u00e8 riuscita.",
       "notRead": "Impossibile leggere {{session}}: non \u00e8 ancora stata letta; lo sar\u00e0 al prossimo aggiornamento del report.",

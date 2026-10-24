@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Impossible de lire {{session}}\u00a0: l\u2019enregistrement n\u2019a pas pu \u00eatre ouvert.",
-      "cloudDownloading": "Impossible de lire {{session}}\u00a0: l\u2019enregistrement est encore en cours de t\u00e9l\u00e9chargement depuis le stockage cloud.",
+      "cloudDownloading": "Impossible de lire {{session}}\u00a0: l\u2019enregistrement n\u2019a pas \u00e9t\u00e9 t\u00e9l\u00e9charg\u00e9 sur ce Mac \u00e0 temps.",
       "ffprobeFailed": "Impossible de lire {{session}}\u00a0: sa vid\u00e9o n\u2019a pas pu \u00eatre examin\u00e9e.",
       "readFailed": "Impossible de lire {{session}}\u00a0: la lecture de son \u00e9cran a \u00e9chou\u00e9.",
       "notRead": "Impossible de lire {{session}}\u00a0: il n\u2019a pas encore \u00e9t\u00e9 lu\u00a0; il le sera \u00e0 la prochaine mise \u00e0 jour du rapport.",

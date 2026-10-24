@@ -776,7 +776,7 @@
     },
     "couldNotRead": {
       "unreadable": "Kan {{session}} niet lezen: de opname kon niet worden geopend.",
-      "cloudDownloading": "Kan {{session}} niet lezen: de opname wordt nog gedownload uit cloudopslag.",
+      "cloudDownloading": "Kan {{session}} niet lezen: de opname is niet op tijd naar deze Mac gedownload.",
       "ffprobeFailed": "Kan {{session}} niet lezen: de video kon niet worden onderzocht.",
       "readFailed": "Kan {{session}} niet lezen: het lezen van het scherm is mislukt.",
       "notRead": "Kan {{session}} niet lezen: de opname is nog niet gelezen; dat gebeurt bij de volgende update van het rapport.",

@@ -334,7 +334,7 @@ describe("ScreensLens", () => {
     mockApi(screensResponse({ screens: [], indexed: 0, videos: 2,
                               failed: { s1: "cloud_downloading", s2: "ValueError: no video stream" } }));
     const { container } = render(<ScreensLens />);
-    await waitFor(() => expect(screen.getByText(/Couldn’t read s1: the recording is still downloading/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Couldn’t read s1: the recording wasn’t downloaded to this Mac in time/)).toBeInTheDocument());
     expect(screen.getByText("Couldn’t read s2: something went wrong reading it.")).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/ValueError|cloud_downloading/);
   });

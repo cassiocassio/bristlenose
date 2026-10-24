@@ -24,9 +24,12 @@ enum SubtitleVariant: Equatable {
     /// view shows the localised "Run failed" header behind the error glyph; the
     /// detail lives in the popover.
     case failedDiagnostic
-    /// `run_completed` at reduced fidelity (≥1 session failed). Localised
-    /// "Partial completion" header behind the warning glyph.
-    case completedPartial
+    /// `run_completed` at reduced fidelity (≥1 session failed), behind the
+    /// warning glyph. Reads "6 of 8 sessions analysed" when the run analysed
+    /// fewer sessions than it tried (decision #139); `analysed` is nil when
+    /// that can't be said (only files were refused, or only themes failed), and
+    /// the row keeps the "Partial completion" header.
+    case completedPartial(analysed: SessionsAnalysed?)
     /// The user clicked Stop and the kill is still propagating — outranks the
     /// live progress so the click is acknowledged immediately.
     case stopping
@@ -375,7 +378,8 @@ enum ProjectSubtitle {
             if !failures.isEmpty, failures.allSatisfy({ $0.cause.category == .deferred }) {
                 return .waitingForWhisper
             }
-            return .completedPartial
+            let analysed = summary.sessionsAnalysed
+            return .completedPartial(analysed: analysed.flatMap { $0.done < $0.total ? $0 : nil })
         case .running:
             // Stopping outranks progress — acknowledge the Stop click.
             return isStopping ? .stopping : .running

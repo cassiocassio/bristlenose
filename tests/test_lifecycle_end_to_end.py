@@ -239,3 +239,15 @@ def test_a_partial_re_analyse_replaces_the_report_and_analyse_finishes_it(
         study.assert_healthy()
     assert not output_backup.failed_path_for(out).exists()
     assert not output_backup.backup_path_for(out).exists()
+
+
+def test_an_unchanged_re_run_counts_sessions_not_quotes(tmp_path: Path) -> None:
+    """A full cache hit filled the quotes bucket with a count of QUOTES, so a
+    study with fewer quotes than sessions read "2 of 3 sessions analysed" on an
+    unchanged re-run (decision #134 review). The bucket's unit is the session."""
+    study = new_study(tmp_path, "Interview 1.wav", "Interview 2.wav", "Interview 3.wav")
+    study.run()
+    study.run()
+    quotes = study.last_summary()["quotes"]
+    assert quotes["attempted"] == 3 and quotes["succeeded"] == 3, quotes
+    assert "warnings" not in study.last_output

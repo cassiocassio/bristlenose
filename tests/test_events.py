@@ -965,3 +965,79 @@ def test_contract_clean_scenario_has_empty_failed_lists():
         assert stage is not None
         assert stage.failed == []
         assert stage.duration_ms is not None  # All four populated for the clean run.
+
+
+class TestSessionsAnalysed:
+    """How much of a run's report there is (decisions #134, #139). The Mac's
+    PipelineSummary.sessionsAnalysed mirrors this; PipelineSummaryTests pins the
+    same pairs from the shared fixture."""
+
+    @staticmethod
+    def _outcome(attempted: int, succeeded: int):
+        from bristlenose.events import StageOutcome
+
+        return StageOutcome(attempted=attempted, succeeded=succeeded)
+
+    def test_quotes_succeeded_over_transcripts_attempted(self) -> None:
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        s = PipelineSummary(transcripts=self._outcome(5, 4), quotes=self._outcome(4, 3))
+        assert sessions_analysed(s) == (3, 5)
+
+    def test_analyze_has_no_transcripts_bucket(self) -> None:
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        assert sessions_analysed(PipelineSummary(quotes=self._outcome(4, 3))) == (3, 4)
+
+    def test_no_quotes_stage_counts_nothing(self) -> None:
+        """A transcribe-only run analysed nothing, whatever its transcripts say."""
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        assert sessions_analysed(PipelineSummary(transcripts=self._outcome(4, 2))) is None
+
+    def test_refusals_are_not_sessions(self) -> None:
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        s = PipelineSummary(ingest=self._outcome(8, 5), transcripts=self._outcome(5, 5),
+                            quotes=self._outcome(5, 5))
+        assert sessions_analysed(s) == (5, 5)
+
+    def test_nothing_to_count(self) -> None:
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        assert sessions_analysed(None) is None
+        assert sessions_analysed(PipelineSummary()) is None
+        assert sessions_analysed(PipelineSummary(transcripts=self._outcome(0, 0))) is None
+
+    def test_done_never_exceeds_total(self) -> None:
+        from bristlenose.events import PipelineSummary, sessions_analysed
+
+        s = PipelineSummary(transcripts=self._outcome(3, 3), quotes=self._outcome(5, 5))
+        assert sessions_analysed(s) == (3, 3)
+
+
+#: The same pairs PipelineSummaryTests.sessionsAnalysedMatchesPython pins in
+#: Swift, so the CLI's end line and the Mac row can't drift apart.
+SESSIONS_ANALYSED_BY_SCENARIO = {
+        "run_completed_partial": (3, 5),
+        "run_failed_abandoned": (0, 3),
+        "run_failed_abandoned_at_topics": None,
+        "run_completed_partial_truncated": (4, 18),
+        "run_completed_clean": (3, 3),
+        "run_completed_partial_cloud_fetch": None,
+        "run_completed_cached_stage": None,
+        "run_completed_partial_refusals": None,
+}
+
+
+def test_sessions_analysed_over_the_shared_fixture() -> None:
+    from bristlenose.events import PipelineSummary, sessions_analysed
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures" / "pipeline-summary-contract.json").read_text()
+    )
+    got = {
+        name: sessions_analysed(PipelineSummary.model_validate(sc["summary"]))
+        for name, sc in fixture["scenarios"].items() if sc.get("summary")
+    }
+    assert got == SESSIONS_ANALYSED_BY_SCENARIO

@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "Analysen ble fullført med feil for {{project}}"
       },
+      "partialSessions_one": "{{done}} av {{total}} økt analysert",
+      "partialSessions_other": "{{done}} av {{total}} økter analysert",
       "noStructuredCause": "Detaljert årsak ble ikke registrert.",
       "reportError": "Analysen din er trygg – bare visningen feilet. Prøv igjen laster rapporten på nytt. Skjer det igjen, kopier detaljene og send dem via Hjelp ▸ Send tilbakemelding.",
       "overflow_one": "… og {{count}} feil til ble avkortet",

@@ -461,6 +461,7 @@
       "tooltip": {
         "completed_partial": "{{project}} \u306e\u5206\u6790\u306f\u5931\u6557\u3092\u542b\u3093\u3067\u7d42\u4e86\u3057\u307e\u3057\u305f"
       },
+      "partialSessions_other": "{{total}} 件中 {{done}} 件のセッションを分析済み",
       "noStructuredCause": "\u8a73\u7d30\u306a\u539f\u56e0\u306f\u8a18\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002",
       "reportError": "分析結果は無事です。表示だけが失敗しました。「再試行」でレポートを再読み込みします。再び起きる場合は、詳細をコピーして「ヘルプ ▸ フィードバックを送信」からお送りください。",
       "overflow_other": "\u2026\u307b\u304b {{count}} \u4ef6\u306e\u5931\u6557\u3092\u7701\u7565\u3057\u307e\u3057\u305f",

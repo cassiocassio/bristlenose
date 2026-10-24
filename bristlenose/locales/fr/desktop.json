@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "Analyse termin\u00e9e avec des erreurs pour {{project}}"
       },
+      "partialSessions_one": "Entretiens analysés : {{done}} sur {{total}}",
+      "partialSessions_other": "Entretiens analysés : {{done}} sur {{total}}",
       "noStructuredCause": "Cause d\u00e9taill\u00e9e non enregistr\u00e9e.",
       "reportError": "Votre analyse est intacte : seul l’affichage a échoué. Réessayer recharge le rapport. Si cela se reproduit, copiez les détails et envoyez-les via Aide ▸ Envoyer des commentaires.",
       "overflow_one": "\u2026 et {{count}} autre \u00e9chec tronqu\u00e9",

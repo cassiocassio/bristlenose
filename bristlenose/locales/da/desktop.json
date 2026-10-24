@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "Analysen blev færdig med fejl for {{project}}"
       },
+      "partialSessions_one": "{{done}} af {{total}} session analyseret",
+      "partialSessions_other": "{{done}} af {{total}} sessioner analyseret",
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
       "reportError": "Din analyse er i sikkerhed – kun visningen fejlede. Prøv igen genindlæser rapporten. Sker det igen, så kopiér detaljerne og send dem via Hjælp ▸ Send feedback.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",

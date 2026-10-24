@@ -454,6 +454,10 @@
       "tooltip": {
         "completed_partial": "Analýza projektu {{project}} skončila s chybami"
       },
+      "partialSessions_one": "Analyzováno {{done}} z {{total}} sezení",
+      "partialSessions_few": "Analyzováno {{done}} z {{total}} sezení",
+      "partialSessions_many": "Analyzováno {{done}} z {{total}} sezení",
+      "partialSessions_other": "Analyzováno {{done}} z {{total}} sezení",
       "noStructuredCause": "Podrobná příčina nebyla zaznamenána.",
       "reportError": "Vaše analýza je v bezpečí – selhalo jen zobrazení. Zkusit znovu zprávu znovu načte. Pokud se to bude opakovat, zkopírujte podrobnosti a odešlete je přes Nápověda ▸ Odeslat zpětnou vazbu.",
       "overflow_one": "… a {{count}} další chyba skryta",

@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "L'analisi è terminata con errori per {{project}}"
       },
+      "partialSessions_one": "{{done}} di {{total}} sessione analizzata",
+      "partialSessions_other": "{{done}} di {{total}} sessioni analizzate",
       "noStructuredCause": "Causa dettagliata non rilevata.",
       "reportError": "La tua analisi è al sicuro: è fallita solo la visualizzazione. Riprova ricarica il report. Se succede di nuovo, copia i dettagli e inviali con Aiuto ▸ Invia un feedback.",
       "overflow_one": "… e {{count}} altro errore troncato",

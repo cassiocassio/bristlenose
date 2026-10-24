@@ -903,13 +903,44 @@ def _named_participant_summary(people: object, n_participants: int) -> str:
     return f"{len(named)} of {total} named"
 
 
+def _partial_sessions(summary: object) -> str:
+    """"8 of 10 sessions analysed" when a run analysed fewer than it tried.
+
+    Empty when nothing failed, when every session was analysed, when there is
+    nothing to count, and when every failure is a recording waiting for
+    Whisper: that is not a warning. The same test, over every bucket, as the
+    Mac row's (`ProjectSubtitle.resolve`), so one run reads alike on both
+    (decision #134).
+    """
+    from bristlenose.events import PipelineSummary, sessions_analysed
+
+    if not isinstance(summary, PipelineSummary):
+        return ""
+    failures = [f for bucket in (summary.ingest, summary.transcripts, summary.topics,
+                                 summary.quotes, summary.themes)
+                if bucket is not None for f in bucket.failed]
+    if not failures or all(f.cause.category == CauseCategoryEnum.DEFERRED for f in failures):
+        return ""
+    counted = sessions_analysed(summary)
+    if counted is None or counted[0] >= counted[1]:
+        return ""
+    done, total = counted
+    return f"{done} of {count_noun(total, 'session')} analysed"
+
+
 def _print_pipeline_summary(
     result: object,
     *,
     serve_url: str | None = None,
     quiet_errors: bool = False,
+    sessions_line: bool = True,
 ) -> None:
     """Print a clean summary after any pipeline command.
+
+    A run that analysed fewer sessions than it set out to ends "Done with
+    warnings — 8 of 10 sessions analysed" when nothing more specific was said
+    (decision #134). *sessions_line* is False for ``transcribe``, which
+    analyses nothing.
 
     Adapts to the fields available on the result (LLM usage, timing, etc.).
     When *serve_url* is given, prints the serve URL instead of a file:// link.
@@ -962,6 +993,11 @@ def _print_pipeline_summary(
 
     # Done / error line
     elapsed = getattr(result, "elapsed_seconds", 0.0)
+    # The pipeline's own warning ("no quotes from s2, s3") is the more specific
+    # one and wins; this fills the gap a run that lost only recordings left.
+    p_warning = getattr(result, "pipeline_warning", "") or (
+        _partial_sessions(getattr(result, "summary", None)) if sessions_line else ""
+    )
     llm_ran = getattr(result, "llm_calls", 0) > 0
     no_quotes = getattr(result, "total_quotes", 0) == 0
     has_errors = llm_ran and no_quotes
@@ -991,8 +1027,7 @@ def _print_pipeline_summary(
         if elapsed:
             console.print()
             _say(MessageKind.WARNING, f"Finished in {_format_duration(elapsed)}", indent="  ")
-    elif getattr(result, "pipeline_warning", ""):
-        p_warning = getattr(result, "pipeline_warning", "")
+    elif p_warning:
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
         console.print()
         _say(MessageKind.WARNING, f"Done with warnings{time_str} — {p_warning}", indent="  ")
@@ -1927,7 +1962,7 @@ def transcribe(
         _print_pipeline_failure(exc.cause, input_dir, settings, command="transcribe")
         raise typer.Exit(1) from exc
 
-    _print_pipeline_summary(result)
+    _print_pipeline_summary(result, sessions_line=False)
     # Transcript-specific: point to the transcripts dir, not the report
     raw_dir = result.output_dir / "transcripts-raw"
     if raw_dir.exists():

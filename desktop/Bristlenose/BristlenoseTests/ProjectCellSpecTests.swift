@@ -24,7 +24,7 @@ import Testing
             .copyCancelling,
             .failed(message: .passthrough("boom")),
             .failedDiagnostic,
-            .completedPartial,
+            .completedPartial(analysed: SessionsAnalysed(done: 6, total: 8)),
             .unreachable(reason: .timedOut),
         ]
         for variant in twoLineCases {

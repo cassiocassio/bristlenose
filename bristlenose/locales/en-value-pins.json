@@ -1965,5 +1965,7 @@
  "settings.settingsNav.projectStub": "bff02c",
  "settings.typography.legend": "cab94a",
  "settings.video.legend": "d534be",
- "settings.video.subtitles": "a5feb0"
+ "settings.video.subtitles": "a5feb0",
+ "desktop.pipeline.diagnostic.partialSessions_one": "d1037f",
+ "desktop.pipeline.diagnostic.partialSessions_other": "e5975e"
 }

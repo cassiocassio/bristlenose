@@ -43,8 +43,8 @@ enum SidebarSubtitleText {
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .failedDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")       // :250-251
-        case .completedPartial:
-            return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")  // :252-254
+        case .completedPartial(let analysed):
+            return Self.completedPartialText(analysed, i18n: i18n)
         case .reportError:
             // One key for the row and the popover headline, as "Run failed"
             // is. 24 characters in English against the ~22 budget: it fits the
@@ -132,6 +132,17 @@ enum SidebarSubtitleText {
     /// `.ready` rendering: bare date, then `· <delta>` when a delta rides along
     /// (`ProjectRow.swift:260-267` — the visible string; the delta's *button-ness*
     /// for `.unanalysed` is the cell's job, Phase 4).
+    /// A partial completion's row line: "6 of 8 sessions analysed", or the
+    /// "Partial completion" header when the count can't be said (decision
+    /// #139). One home, so the AppKit cell and the SwiftUI row can't disagree.
+    static func completedPartialText(_ analysed: SessionsAnalysed?, i18n: I18n) -> String {
+        guard let analysed else {
+            return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
+        }
+        return i18n.plural("desktop.pipeline.diagnostic.partialSessions", count: analysed.total,
+                           ["done": String(analysed.done), "total": String(analysed.total)])
+    }
+
     static func readyText(date: Date, delta: SubtitleDelta?, i18n: I18n) -> String {
         let dateText = formatBareDate(date, i18n: i18n)
         guard let delta else { return dateText }

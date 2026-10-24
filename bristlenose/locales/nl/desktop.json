@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "Analyse voltooid met fouten voor {{project}}"
       },
+      "partialSessions_one": "{{done}} van {{total}} sessie geanalyseerd",
+      "partialSessions_other": "{{done}} van {{total}} sessies geanalyseerd",
       "noStructuredCause": "Gedetailleerde oorzaak niet vastgelegd.",
       "reportError": "Je analyse is veilig — alleen de weergave is mislukt. Probeer opnieuw laadt het rapport opnieuw. Gebeurt het nog eens, kopieer dan de details en stuur ze via Help ▸ Stuur feedback.",
       "overflow_one": "… en {{count}} andere fout afgekapt",

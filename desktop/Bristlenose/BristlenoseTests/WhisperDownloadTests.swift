@@ -196,7 +196,7 @@ import Testing
 
     @Test func aRealFailureBesideADeferralKeepsTheWarning() throws {
         let state = PipelineState.completedPartial(summary: try summary(["deferred", "whisper"]))
-        #expect(resolve(state) == .completedPartial)
+        #expect(resolve(state) == .completedPartial(analysed: nil))
         // The re-run is still owed for the deferred one.
         #expect(PipelineRunner.isWaitingForWhisper(state))
     }

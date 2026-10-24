@@ -47,6 +47,32 @@ struct PipelineSummaryTests {
         return try JSONSerialization.data(withJSONObject: summary)
     }
 
+    // MARK: - Sessions analysed (decisions #134, #139)
+
+    /// The same pairs `tests/test_events.py` pins for `events.sessions_analysed`:
+    /// the Mac row and the CLI's end line say the same numbers for a run. A
+    /// scenario with no quotes stage counts nothing, so it is absent here and
+    /// None there.
+    @Test func sessionsAnalysedMatchesPython() throws {
+        let expected: [String: SessionsAnalysed] = [
+            "run_completed_partial": SessionsAnalysed(done: 3, total: 5),
+            "run_failed_abandoned": SessionsAnalysed(done: 0, total: 3),
+            "run_completed_partial_truncated": SessionsAnalysed(done: 4, total: 18),
+            "run_completed_clean": SessionsAnalysed(done: 3, total: 3),
+        ]
+        var got: [String: SessionsAnalysed] = [:]
+        for (name, scenario) in try loadScenarios() {
+            guard let data = try summaryData(from: scenario) else { continue }
+            got[name] = try JSONDecoder().decode(PipelineSummary.self, from: data).sessionsAnalysed
+        }
+        #expect(got == expected)
+    }
+
+    @Test func anEmptySummaryHasNothingToCount() {
+        #expect(PipelineSummary(transcripts: nil, topics: nil, quotes: nil, themes: nil)
+            .sessionsAnalysed == nil)
+    }
+
     // MARK: - Round-trip
 
     @Test func roundTripAllFixtureScenarios() throws {

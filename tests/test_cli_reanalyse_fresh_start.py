@@ -168,19 +168,16 @@ class TestAFreshStartReplacesTheReport:
         assert _read(out_dir / ".bristlenose" / "bristlenose.db") == "db:new"
         _no_litter(out_dir)
 
-    @pytest.mark.xfail(strict=True, reason=(
-        "Open judgement call (RE#13, 23 Oct 2026): a run whose only failures are "
-        "recordings that did not transcribe still ends on \"✓ Done\"; quote and "
-        "topic failures already end on \"Done with warnings — no quotes from …\". "
-        "No existing words say it; the options wait on the owner."))
     def test_a_partial_run_does_not_say_done(self, runner, tmp_path: Path, monkeypatch) -> None:
-        """Over a partly analysed report the summary is not a bare "✓ Done"."""
+        """Over a partly analysed report the summary is not a bare "✓ Done": a run
+        that lost only recordings says how much it analysed (decision #134)."""
         input_dir, out_dir = _paths(tmp_path)
         _seed_report(out_dir, "old")
         failures = [StageFailure(session_id="s2", cause=Cause(
             category=CauseCategoryEnum.CLOUD_FETCH, message="failed"))]
-        summary = PipelineSummary(transcripts=StageOutcome(
-            attempted=2, succeeded=1, failed=failures))
+        summary = PipelineSummary(
+            transcripts=StageOutcome(attempted=2, succeeded=1, failed=failures),
+            quotes=StageOutcome(attempted=1, succeeded=1))
 
         async def _run(_self, _in, out, *a, **k):
             _seed_report(Path(out), "new")
@@ -192,6 +189,8 @@ class TestAFreshStartReplacesTheReport:
 
         assert _read(out_dir / _MARKER) == "new"
         assert "✓ Done" not in result.output, result.output
+        said = " ".join(result.output.split())
+        assert "Done with warnings — 1 of 2 sessions analysed" in said, result.output
 
     def test_a_run_that_fails_after_a_session_landed_replaces_it(
         self, runner, tmp_path: Path, monkeypatch

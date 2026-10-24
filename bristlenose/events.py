@@ -376,6 +376,31 @@ class PipelineSummary(BaseModel):
     reflow_scope: ReflowScopeEnum | None = None
 
 
+def sessions_analysed(summary: PipelineSummary | None) -> tuple[int, int] | None:
+    """How much of a run's report there is: (sessions with quotes, sessions tried).
+
+    ``total`` is every session the run set out to analyse: the transcripts
+    bucket's ``attempted`` (cached and fresh), or the quotes bucket's for
+    ``analyze``, which has no transcripts bucket. ``done`` is the sessions that
+    reached the report with quotes: the quotes bucket's ``succeeded``, which
+    already leaves out a session lost at transcription. Files refused at ingest
+    are not sessions and count in neither; topic and theme failures degrade a
+    session, they do not remove it. None when there is nothing to count, and
+    when no quotes stage ran: a transcribe-only run analysed nothing.
+
+    The run's end line says "8 of 10 sessions analysed" from this, and the Mac
+    row says the same from its mirror, ``PipelineSummary.sessionsAnalysed``
+    (decisions #134 and #139, 24 Oct 2026).
+    """
+    if summary is None or summary.quotes is None:
+        return None
+    total = (summary.transcripts.attempted if summary.transcripts is not None
+             else summary.quotes.attempted)
+    if total <= 0:
+        return None
+    return max(0, min(summary.quotes.succeeded, total)), total
+
+
 class PipelineAbandonedError(Exception):
     """Pipeline produced no usable data; report MUST NOT be written.
 

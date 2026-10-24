@@ -455,6 +455,10 @@
       "tooltip": {
         "completed_partial": "Analiza zakończona z niepowodzeniami dla {{project}}"
       },
+      "partialSessions_one": "Przeanalizowano {{done}} z {{total}} sesji",
+      "partialSessions_few": "Przeanalizowano {{done}} z {{total}} sesji",
+      "partialSessions_many": "Przeanalizowano {{done}} z {{total}} sesji",
+      "partialSessions_other": "Przeanalizowano {{done}} z {{total}} sesji",
       "noStructuredCause": "Nie zarejestrowano szczegółowej przyczyny.",
       "reportError": "Twoja analiza jest bezpieczna — nie powiodło się tylko wyświetlanie. Spróbuj ponownie wczytuje raport od nowa. Jeśli to się powtórzy, skopiuj szczegóły i wyślij je przez Pomoc ▸ Wyślij opinię.",
       "overflow_one": "… oraz {{count}} kolejne niepowodzenie pominięto",

@@ -469,3 +469,113 @@ class TestDoneWithWarnings:
         assert "Done" in output
         assert "warnings" not in output
         assert "errors" not in output
+
+
+class TestSessionsAnalysedEndLine:
+    """A run that lost only recordings says how much it analysed (decision #134)."""
+
+    @staticmethod
+    def _end(summary, *, warning: str = "", sessions_line: bool = True) -> str:
+        from io import StringIO
+
+        from rich.console import Console
+
+        buf = StringIO()
+        c = Console(file=buf, force_terminal=False, width=200)
+        result = _make_result(total_quotes=40, pipeline_warning=warning)
+        result.summary = summary
+        with patch("bristlenose.cli.console", c):
+            _print_pipeline_summary(result, sessions_line=sessions_line)
+        return " ".join(buf.getvalue().split())
+
+    @staticmethod
+    def _summary(*categories, attempted: int = 10, quotes: tuple[int, int] | None = None):
+        from bristlenose.events import (
+            Cause,
+            PipelineSummary,
+            StageFailure,
+            StageOutcome,
+        )
+
+        failed = [StageFailure(session_id=f"s{i}", cause=Cause(category=c, message="x"))
+                  for i, c in enumerate(categories, start=1)]
+        kw = {"transcripts": StageOutcome(
+            attempted=attempted, succeeded=attempted - len(failed), failed=failed)}
+        if quotes is not None:
+            kw["quotes"] = StageOutcome(attempted=quotes[0], succeeded=quotes[1])
+        return PipelineSummary(**kw)
+
+    def test_lost_recordings_end_with_the_count(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.CLOUD_FETCH, C.UNUSABLE_INPUT, quotes=(8, 8)))
+        assert "Done with warnings in 18.6s — 8 of 10 sessions analysed" in out
+
+    def test_the_pipelines_own_warning_wins(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.CLOUD_FETCH, quotes=(9, 7)),
+                        warning="no quotes from s4, s5")
+        assert "no quotes from s4, s5" in out
+        assert "sessions analysed" not in out
+
+    def test_waiting_for_whisper_is_not_a_warning(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.DEFERRED, C.DEFERRED, quotes=(8, 8)))
+        assert "warnings" not in out
+        assert "Done" in out
+
+    def test_whisper_beside_a_real_loss_still_counts(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.DEFERRED, C.CLOUD_FETCH, quotes=(8, 8)))
+        assert "8 of 10 sessions analysed" in out
+
+    def test_a_full_run_is_plain_done(self) -> None:
+        out = self._end(self._summary(quotes=(10, 10)))
+        assert "warnings" not in out
+
+    def test_transcribe_says_nothing_about_analysis(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.CLOUD_FETCH), sessions_line=False)
+        assert "sessions analysed" not in out
+        assert "warnings" not in out
+
+    def test_one_session_is_singular(self) -> None:
+        from bristlenose.events import CauseCategoryEnum as C
+
+        out = self._end(self._summary(C.CLOUD_FETCH, attempted=1, quotes=(0, 0)))
+        assert "0 of 1 session analysed" in out
+
+    def test_no_failure_is_plain_done_whatever_the_arithmetic(self) -> None:
+        """An unchanged re-run with fewer quotes than sessions once read
+        "2 of 3 sessions analysed": the line needs a failure to report."""
+        out = self._end(self._summary(attempted=3, quotes=(3, 2)))
+        assert "warnings" not in out
+
+    def test_whisper_beside_a_refused_file_counts_as_the_mac_does(self) -> None:
+        """One denominator on both surfaces: every bucket's failures."""
+        from bristlenose.events import (
+            Cause,
+            CauseCategoryEnum,
+            PipelineSummary,
+            StageFailure,
+            StageOutcome,
+        )
+
+        deferred = StageFailure(session_id="s3", cause=Cause(
+            category=CauseCategoryEnum.DEFERRED, message="x"))
+        refused = StageFailure(source_file="notes.pdf", cause=Cause(
+            category=CauseCategoryEnum.UNUSABLE_INPUT, message="x"))
+        summary = PipelineSummary(
+            ingest=StageOutcome(attempted=11, succeeded=10, failed=[refused]),
+            transcripts=StageOutcome(attempted=10, succeeded=9, failed=[deferred]),
+            quotes=StageOutcome(attempted=9, succeeded=9))
+        out = self._end(summary)
+        assert "9 of 10 sessions analysed" in out
+
+    def test_no_summary_is_plain_done(self) -> None:
+        out = self._end(None)
+        assert "warnings" not in out

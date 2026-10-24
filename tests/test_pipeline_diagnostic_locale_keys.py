@@ -387,3 +387,21 @@ def test_recurring_one_locales_interpolate_count(prefix: str, locale: str) -> No
             "{{count}} — in ru/uk the `one` form recurs at 21/31/101, so a "
             "hardcoded number renders wrong (e.g. '1 …' for count 21)."
         )
+
+
+@pytest.mark.parametrize("locale", _ALL_LOCALES)
+def test_partial_sessions_says_both_numbers_in_every_form(locale: str) -> None:
+    """The partial-run row, "6 of 8 sessions analysed" (decision #139): every
+    form carries both numbers, since the plural is chosen on the total and a
+    form that dropped one would read wrong for some count."""
+    diagnostic = _load_desktop(locale)["pipeline"]["diagnostic"]
+    forms = {k: v for k, v in diagnostic.items() if k.startswith("partialSessions_")}
+    assert "partialSessions_other" in forms, f"locale={locale} missing partialSessions_other"
+    if locale in _PLURAL_LOCALES:
+        assert "partialSessions_one" in forms, f"locale={locale} missing partialSessions_one"
+    else:
+        assert "partialSessions_one" not in forms, f"locale={locale} carries partialSessions_one"
+    if "partialSessions_few" in forms or "partialSessions_many" in forms:
+        assert {"partialSessions_few", "partialSessions_many"} <= set(forms), locale
+    for key, text in forms.items():
+        assert "{{done}}" in text and "{{total}}" in text, f"{locale}.{key}: {text!r}"

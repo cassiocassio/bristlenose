@@ -365,8 +365,10 @@ the Mac does nothing further (same item). _Since 23 Oct 2026_ (decision 1b) that
 is only for a run that produced nothing, meaning refused, failed, stopped or
 crashed before any session's quotes were in (`output_backup.settle`). A run that
 analysed one session replaces the report even with other sessions failed. Its
-row reads as that run ended (**Partial completion** on a `run_completed` with
-failures, **Run failed** or **Stopped** otherwise), and **Analyse** finishes the
+row reads as that run ended (**6 of 8 sessions analysed** on a `run_completed` with
+failures, since 24 Oct 2026, decision #139, or **Partial completion** when only
+files were refused; **Run failed** or **Stopped** otherwise; the CLI ends "Done
+with warnings — 8 of 10 sessions analysed", #134), and **Analyse** finishes the
 rest from its manifest, paying only for what is missing. The Mac half of offering
 Analyse on such a row is RE#R3's. A crash is settled by the same rule at the next
 run or server start. The researcher's exported `clips/` and `screens/` move into

@@ -400,6 +400,7 @@ deferred appendix) extends *where* the settled vocabulary is used — never
 |---|---|---|---|---|---|---|
 | Distinctive failure label ("Whisper timeouts") | ✓ | — | — | — | — | ✓ |
 | Status verb ("Partial completion" / "Run failed") | — | ✓ | — | — | — | ✓ |
+| Sessions analysed ("6 of 8 sessions analysed", the sidebar row on a partial completion since 24 Oct 2026, decision #139; "Partial completion" when it can't be said) | — | — | — | row subtitle | — | — |
 | Project name | — | — | — | — | — | ✓ |
 | Run timestamp range | — | — | — | — | — | ✓ |
 | Per-stage outcome (verbatim CLI string) | — | — | — | — | — | ✓ |

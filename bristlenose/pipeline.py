@@ -3557,10 +3557,13 @@ class Pipeline:
                 ),
             }
             # Outer-scope defaults — both branches below populate these.
-            # `_cached_q_count` carries the number of quotes that came from
-            # cache (full-cache-hit branch loads all; per-session branch
-            # may load some). The rollup below treats cached items as
-            # successes so cache-hit runs report attempted == succeeded.
+            # `_cached_q_count` carries the number of SESSIONS whose quotes came
+            # from cache (full-cache-hit branch: all of them; per-session branch:
+            # some). The rollup below treats them as successes so cache-hit runs
+            # report attempted == succeeded. Sessions, not quotes: the bucket's
+            # unit is the session, and a full cache hit counted quotes, so a
+            # study with fewer quotes than sessions read "2 of 3 sessions
+            # analysed" on an unchanged re-run (decision #134 review).
             _fresh_quote_outcome = StageOutcome()
             _cached_q_count = 0
             _quotes_elapsed: float | None = None
@@ -3575,10 +3578,10 @@ class Pipeline:
                     ExtractedQuote.model_validate(obj)
                     for obj in _json.loads(_eq_path.read_text(encoding="utf-8"))
                 ]
-                # Full cache hit: every quote was loaded from disk. Count
-                # them as both attempted and succeeded so the rollup tells
-                # the truth ("all cached, all good") instead of "0/0".
-                _cached_q_count = len(all_quotes)
+                # Full cache hit: every session's quotes were loaded from
+                # disk. Count the sessions as both attempted and succeeded so
+                # the rollup tells the truth ("all cached, all good").
+                _cached_q_count = len(clean_transcripts)
                 _print_cached_step(f"Extracted {count_noun(len(all_quotes), 'quote')}")
                 carry_forward_sessions(
                     manifest, _prev_manifest, STAGE_QUOTE_EXTRACTION,

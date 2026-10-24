@@ -56,7 +56,7 @@ import Testing
                 == .unreachable(reason: .timedOut))
         // A partial run is a plausible cause, and its bucket breakdown must
         // stay reachable (right-click ▸ Show Diagnostics opens the state's popover).
-        #expect(resolve(.completedPartial(summary: summary), crash: crash) == .completedPartial)
+        #expect(resolve(.completedPartial(summary: summary), crash: crash) == .completedPartial(analysed: nil))
     }
 
     @Test("It outranks ready, idle, a queued run, a stopped run, a partial run and a project never run")
@@ -102,7 +102,7 @@ import Testing
     @Test("No crash, no change: the resting chain is untouched")
     func noCrashIsNoop() {
         #expect(resolve(.ready(Date()), crash: nil) == .placeholder)
-        #expect(resolve(.completedPartial(summary: summary), crash: nil) == .completedPartial)
+        #expect(resolve(.completedPartial(summary: summary), crash: nil) == .completedPartial(analysed: nil))
     }
 
     // MARK: - The bridge payload

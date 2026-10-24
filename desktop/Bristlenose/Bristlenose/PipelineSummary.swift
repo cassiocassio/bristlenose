@@ -102,6 +102,29 @@ struct PipelineSummary: Codable, Equatable {
     }
 }
 
+/// How much of a run's report there is: sessions with quotes, of sessions tried.
+struct SessionsAnalysed: Equatable {
+    let done: Int
+    let total: Int
+}
+
+extension PipelineSummary {
+    /// Mirrors `events.sessions_analysed` in Python, so the row and the CLI's
+    /// end line say the same numbers for the same run (decisions #134, #139,
+    /// 24 Oct 2026). `total` is the transcripts bucket's `attempted` (the
+    /// quotes bucket's for `analyze`); `done` is the quotes bucket's
+    /// `succeeded`. Nil with no quotes stage (a transcribe-only run analysed
+    /// nothing). Files refused at ingest are not sessions and count in
+    /// neither. Reads only `attempted`/`succeeded`, so a truncated failure
+    /// list cannot skew it.
+    var sessionsAnalysed: SessionsAnalysed? {
+        guard let quotes else { return nil }
+        let total = transcripts?.attempted ?? quotes.attempted
+        guard total > 0 else { return nil }
+        return SessionsAnalysed(done: max(0, min(quotes.succeeded, total)), total: total)
+    }
+}
+
 /// One stage's outcome for one run, as emitted in `PipelineSummary`.
 struct StageOutcome: Codable, Equatable {
     var attempted: Int

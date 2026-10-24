@@ -267,9 +267,9 @@ struct ProjectRow: View {
             // `feedback_sidebar_is_attention_not_affordance`.
             diagnosticSubtitle(kind: .error,
                                text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
-        case .completedPartial:
+        case .completedPartial(let analysed):
             diagnosticSubtitle(kind: .warning,
-                               text: i18n.t("desktop.pipeline.diagnostic.header.completed_partial"))
+                               text: SidebarSubtitleText.completedPartialText(analysed, i18n: i18n))
         case .reportError:
             // Unreachable on this row: it passes no `reportCrash` (the
             // window's crash is published to the AppKit sidebar, the shipped
@@ -706,8 +706,8 @@ struct ProjectRow: View {
             return message.resolved(i18n)
         case .failedDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
-        case .completedPartial:
-            return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
+        case .completedPartial(let analysed):
+            return SidebarSubtitleText.completedPartialText(analysed, i18n: i18n)
         case .reportError:
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,

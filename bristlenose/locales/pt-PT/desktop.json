@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "A análise terminou com falhas para {{project}}"
       },
+      "partialSessions_one": "{{done}} de {{total}} sessão analisada",
+      "partialSessions_other": "{{done}} de {{total}} sessões analisadas",
       "noStructuredCause": "Causa detalhada não registada.",
       "reportError": "A sua análise está segura — só a apresentação falhou. Tentar novamente recarrega o relatório. Se voltar a acontecer, copie os detalhes e envie-os com Ajuda ▸ Enviar comentários.",
       "overflow_one": "… e mais {{count}} falha truncada",

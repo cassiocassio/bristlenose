@@ -417,6 +417,8 @@
       "tooltip": {
         "completed_partial": "{{project}} için analiz hatalarla tamamlandı"
       },
+      "partialSessions_one": "{{total}} oturumdan {{done}} tanesi analiz edildi",
+      "partialSessions_other": "{{total}} oturumdan {{done}} tanesi analiz edildi",
       "noStructuredCause": "Ayrıntılı neden yakalanmadı.",
       "reportError": "Çözümlemeniz güvende; yalnızca görüntüleme başarısız oldu. Yeniden Dene raporu yeniden yükler. Yine olursa ayrıntıları kopyalayıp Yardım ▸ Geri Bildirim Gönder ile gönderin.",
       "overflow_one": "… ve {{count}} hata daha kesildi",

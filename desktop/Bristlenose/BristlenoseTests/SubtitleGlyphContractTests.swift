@@ -45,7 +45,7 @@ import Testing
         .cantFind(reason: .moved),
         .failed(message: .passthrough("All topic segmentation calls failed.")),
         .failedDiagnostic,
-        .completedPartial,
+        .completedPartial(analysed: SessionsAnalysed(done: 6, total: 8)),
         .stopping,
         .running,
         .queued(position: 2),

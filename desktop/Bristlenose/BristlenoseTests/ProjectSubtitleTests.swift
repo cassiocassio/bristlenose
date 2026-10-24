@@ -94,7 +94,7 @@ import Testing
     }
 
     @Test func completedPartialMapsToOwnCase() {
-        #expect(resolve(pipelineState: .completedPartial(summary: summary)) == .completedPartial)
+        #expect(resolve(pipelineState: .completedPartial(summary: summary)) == .completedPartial(analysed: nil))
     }
 
     @Test func runningWhenNotStopping() {
@@ -254,7 +254,7 @@ import Testing
     @Test func isDiagnostic_trueForFailureAndPartial() {
         #expect(SubtitleVariant.failed(message: .passthrough("boom")).isDiagnostic)
         #expect(SubtitleVariant.failedDiagnostic.isDiagnostic)
-        #expect(SubtitleVariant.completedPartial.isDiagnostic)
+        #expect(SubtitleVariant.completedPartial(analysed: nil).isDiagnostic)
     }
 
     @Test func isDiagnostic_falseForNonDistressStates() {

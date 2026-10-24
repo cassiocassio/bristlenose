@@ -335,4 +335,24 @@ describe("UndoStore", () => {
     release();
     await pending;
   });
+
+  // N86: a gesture is on the stack, and `pushes` has risen, before its write is
+  // answered. The Mac settles a pending sidebar removal on that rise, so a gesture
+  // whose save then fails has already cost the removal its Undo, and `dropUndo`
+  // says outright that `pushes` does not go back. Expected-fail until the owner
+  // picks the fix (re-read the "Fix options" in
+  // docs/private/reliability/re-prove-1-scenarios.md, N86).
+  it.fails("a gesture withdrawn after a failed save takes its rise in pushes back", () => {
+    const seen: number[] = [];
+    const stop = subscribe(() => seen.push(getUndoState().pushes));
+    const entry = { action: "star", undo: () => {}, redo: () => {} };
+    pushUndo(entry);
+    dropUndo(entry);
+    stop();
+    // What the Mac was told: the rise came with the push, ahead of any answer.
+    expect(seen[0]).toBe(1);
+    // After the withdrawal the stack is as it was: nothing new has happened.
+    expect(getUndoState().canUndo).toBe(false);
+    expect(getUndoState().pushes).toBe(0);
+  });
 });

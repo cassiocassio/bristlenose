@@ -252,7 +252,8 @@ enterprise environments. \fBlocal\fR runs the analysis through Ollama on your
 own hardware \(em no API key and no outbound call, but slower and it wants a
 capable machine. \fBany-llm\fR reaches Mistral, OpenRouter, DeepSeek and the
 other providers of Mozilla AI's any-llm library; it needs the
-\fBbristlenose[any-llm]\fR install and \fBBRISTLENOSE_ANYLLM_MODEL\fR.
+\fBbristlenose[any-llm]\fR install (Python 3.11 or newer; not in the Snap or
+Fedora packages) and a model, set by \fBbristlenose configure any-llm\fR.
 .TP
 .BR \-\-codebook " " \fISLUG\fR
 Apply a codebook framework during analysis. Run \fBbristlenose codebooks\fR to
@@ -449,10 +450,13 @@ Model name. Defaults to the selected provider's recommended model.
 .TP
 .B BRISTLENOSE_LLM_MAX_TOKENS
 Maximum response tokens. Default: \fB64000\fR. Clamped down per model when
-the model's own output ceiling is lower.
+the model's own output ceiling is lower. Through any-llm it is sent only when
+set to another value, and the provider's own limit applies otherwise
+(DeepSeek's is 8192; a long interview is split and asked again).
 .TP
 .B BRISTLENOSE_LLM_TEMPERATURE
-Sampling temperature. Default: \fB0.1\fR.
+Sampling temperature. Default: \fB0.1\fR. Through any-llm, sent only when set
+to another value.
 .TP
 .B BRISTLENOSE_LLM_CONCURRENCY
 Parallel LLM calls. Default: \fB3\fR.
@@ -465,8 +469,9 @@ The key is the provider's own (\fBMISTRAL_API_KEY\fR, \fBOPENROUTER_API_KEY\fR,
 estimated for these providers.
 .SS Local LLM settings (Ollama)
 When no API key is configured and you run bristlenose, it prints setup
-guidance \(em where to get a key for each cloud provider, and
-\fBbristlenose configure local\fR for local models \(em and exits. If you
+guidance \(em where to get a key for each cloud provider,
+\fBbristlenose configure local\fR for local models, and
+\fBbristlenose configure any-llm\fR for other providers \(em and exits. If you
 choose Local and Ollama isn't installed, bristlenose offers to install it
 automatically (Homebrew on macOS, snap on Linux, curl script fallback). If
 Ollama is installed but not running, bristlenose will start it for you.
@@ -663,13 +668,15 @@ bristlenose run interviews --llm local
 .fi
 .RE
 .PP
-Use Mistral, or OpenRouter's models, through any-llm:
+Use Mistral, or OpenRouter's models, through any-llm. Homebrew includes it;
+with pipx, add it first (keep \fB[voice]\fR in the brackets if you have it):
 .PP
 .RS
 .nf
-pipx install "bristlenose[any-llm]"
-bristlenose configure any-llm
-bristlenose use mistral:mistral-large-latest
+pipx install \-\-force "bristlenose[any\-llm]"
+bristlenose configure any\-llm
+# Then switch between models you have set up:
+bristlenose use deepseek:deepseek\-v4\-pro
 .fi
 .RE
 .PP

@@ -62,7 +62,7 @@ The report includes:
 
 ## Install
 
-For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.com)), or reach **Mistral**, **OpenRouter** and others through [any-llm](https://github.com/mozilla-ai/any-llm) — see [Getting an API key](#getting-an-api-key) below.
+For LLM analysis, you can use **Claude**, **ChatGPT**, **Azure OpenAI**, **Gemini**, or **Local AI** (free, via [Ollama](https://ollama.com)), or, on the command line, reach **Mistral**, **OpenRouter** and others through [any-llm](https://github.com/mozilla-ai/any-llm) — see [Getting an API key](#getting-an-api-key) below.
 
 ### macOS (desktop app) — easiest
 
@@ -74,7 +74,7 @@ Requires macOS 15 Sequoia, Apple Silicon (M1+).
 
 ### macOS (Homebrew), Linux, Windows
 
-Requires Python 3.10 or newer.
+Requires Python 3.10 or newer (3.11 or newer for [any-llm](#option-f-other-providers-through-any-llm)).
 
 ```bash
 # macOS (Homebrew) -- handles ffmpeg + Python for you
@@ -190,30 +190,32 @@ If Ollama isn't installed, bristlenose will offer to install it for you (via Hom
 
 ### Option F: Other providers, through any-llm
 
-Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It's an optional part of the command-line install:
+On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew includes it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
 
 ```bash
-pipx install "bristlenose[any-llm]"
+pipx install --force "bristlenose[any-llm]"    # or: uv tool install --force "bristlenose[any-llm]"
 bristlenose configure any-llm
 ```
 
-`configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already in your environment (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, …). It checks the key, stores it like the others, and makes it your provider. Switch between models you've set up with `bristlenose use mistral:mistral-large-latest`, and back with `bristlenose use claude`.
+If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages don't include it.
+
+`configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key, stores it like the others, and makes it your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
 
 | I want to use | How |
 |---|---|
 | Claude, ChatGPT, Gemini, Azure OpenAI | Options A–D: `bristlenose configure claude` (or `chatgpt`, `gemini`, `azure`) |
 | A local model with Ollama | Option E: `bristlenose configure local` |
-| Mistral | `bristlenose configure any-llm`, model `mistral:mistral-large-latest` |
-| DeepSeek | `bristlenose configure any-llm`, model `deepseek:deepseek-flash` |
-| Hundreds of models with one key (Grok, Llama, Qwen, DeepSeek, Mistral…) | `bristlenose configure any-llm`, model `openrouter:<id>` with an id from [openrouter.ai/models](https://openrouter.ai/models) |
-| Another provider any-llm supports | Add its part first: `pipx inject bristlenose "any-llm-sdk[<provider>]"`, then `bristlenose configure any-llm` |
+| Mistral | Model `mistral:mistral-large-latest`; key from [console.mistral.ai](https://console.mistral.ai). Mistral's free plan allows no API requests: add credit first (a €10 prepay was enough) |
+| DeepSeek | Model `deepseek:deepseek-v4-pro` or the cheaper `deepseek:deepseek-flash`; key from [platform.deepseek.com](https://platform.deepseek.com), after a top-up ($2 minimum) |
+| Hundreds of models with one key (Grok, Qwen, DeepSeek, Mistral, Claude…) | Model `openrouter:` plus the id from [openrouter.ai/models](https://openrouter.ai/models), vendor included: `openrouter:x-ai/grok-4.3`. Key and credit from [openrouter.ai](https://openrouter.ai/settings/keys). Pick a model whose page lists structured outputs |
+| Another provider any-llm supports ([list](https://mozilla-ai.github.io/any-llm/providers/)) | Model `<provider>:<model>`. The first `configure` names the add-on that provider needs and prints the command for your install |
 | Claude or Gemini through your company's AWS, Google Cloud or Azure AI account | Not supported |
 
-Choose a provider's larger models. Small ones often leave out a field Bristlenose needs on a long interview, and that session then comes back with no quotes: on the same interviews, Mistral Large ran clean and Mistral Small lost one session in three.
+Choose a provider's larger models. On the same three interviews, Mistral Large covered nearly the same ground as Claude Sonnet, while Mistral Small found about a quarter of it and dropped fields Bristlenose needs; DeepSeek V4 Pro came closer than Flash, which also over-extracts.
 
-Through OpenRouter, your transcripts go to OpenRouter, which passes them to the model's host: check the data policy of the model you pick, and whether a free tier may use your inputs for training, before you send participant data. Bristlenose doesn't estimate costs for these providers; their own consoles show what you've spent.
+The transcript text goes to the provider you named, under your account and its terms; through OpenRouter, to OpenRouter, which passes it to the model's host. Before you send participant data, check the data policy of the provider and model, whether a free tier may use your inputs for training, and where the provider is based (DeepSeek is in China). Bristlenose doesn't estimate costs for these providers; their own consoles show what you've spent. Measured quality, speed and quirks per model: [docs/design-any-llm-models.md](docs/design-any-llm-models.md).
 
-Coming to the Mac app.
+any-llm isn't in the Mac app yet.
 
 Use whichever provider you already have an API key for. The provider you configure becomes your current one and stays current until you switch (`bristlenose use <provider>`) — with a single configured provider, a bare `bristlenose run` just uses it. A typical 8-participant study costs roughly $1--3 with a cloud provider -- costs vary, check your provider's pricing page.
 

@@ -333,6 +333,10 @@ Or install [Ollama](https://ollama.com/download) yourself and run with `--llm lo
 
 Local models run on your own processor. They are slower than the cloud providers, often much slower on a laptop without a capable GPU.
 
+### Mistral, OpenRouter, DeepSeek and others (any-llm)
+
+On the command line, `bristlenose configure any-llm` reaches providers Bristlenose doesn't build in, through Mozilla AI's [any-llm](https://github.com/mozilla-ai/any-llm). Homebrew includes it; with pipx, add it with `pipx install --force "bristlenose[any-llm]"` (Python 3.11 or newer). The Snap and Fedora packages don't include it. Models, keys and caveats: [README, Option F](README.md#option-f-other-providers-through-any-llm).
+
 ---
 
 ## Verify your setup

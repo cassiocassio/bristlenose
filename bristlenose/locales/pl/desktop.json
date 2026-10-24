@@ -314,7 +314,7 @@
     "copyDiskSpaceTitle": "Za mało miejsca na dysku",
     "copyNoImportableItems": "\u017baden z upuszczonych element\u00f3w nie jest plikiem, kt\u00f3ry Bristlenose mo\u017ce zaimportowa\u0107.",
     "copyAlreadyInFlight": "Inne kopiowanie jest ju\u017c w toku.",
-    "copySourceNotDownloaded": "Niczego nie skopiowano: cz\u0119\u015b\u0107 upuszczonych element\u00f3w nie zosta\u0142a jeszcze pobrana na tego Maca. Pobierz j\u0105 w Finderze, a potem upu\u015b\u0107 ponownie.",
+    "copySourceNotDownloaded": "Niczego nie skopiowano: cz\u0119\u015b\u0107 upuszczonych element\u00f3w nie zosta\u0142a pobrana na tego Maca.",
     "copyDiskSpaceMessage": "To kopiowanie wymaga %@ wolnego miejsca, ale na woluminie docelowym dostępne jest tylko %@.",
     "projectListDamagedTitle": "Nie udało się odczytać listy projektów",
     "projectListDamagedMessage": "Została odłożona na bok i rozpoczęto nową listę. Twoje projekty są nienaruszone w swoich folderach, razem z raportami i zmianami — przeciągnij każdy folder na pasek boczny, aby dodać go ponownie.",
@@ -1270,7 +1270,7 @@
     "importButtonIdle": "Importuj",
     "cancelRow": "Zatrzymaj pobieranie {{title}}",
     "heldImported": "Ju\u017c w tym projekcie.",
-    "heldNotDownloaded": "Ju\u017c zaimportowano \u2014 plik jest na {{provider}} i trzeba go tam pobra\u0107.",
+    "heldNotDownloaded": "Ju\u017c zaimportowano \u2014 plik jest na {{provider}}.",
     "heldDriveNotConnected": "Ju\u017c zaimportowano \u2014 \u201e{{volume}}\u201d nie jest pod\u0142\u0105czony.",
     "notApplicable": "Brak",
     "downloading": "Pobieranie {{title}}",
@@ -1345,7 +1345,7 @@
     "notBuilt": "Nie uda\u0142o si\u0119 utworzy\u0107 dyskusji dla tego projektu. Przy nast\u0119pnej analizie projektu nast\u0105pi kolejna pr\u00f3ba.",
     "choosePanelMessage": "Wybierz sw\u00f3j scenariusz wywiadu \u2013 Word, Markdown lub zwyk\u0142y tekst.",
     "copyFailed": "Nie uda\u0142o si\u0119 skopiowa\u0107 Twojego scenariusza do folderu projektu.",
-    "guideNotDownloaded": "Nie zosta\u0142 jeszcze pobrany na tego Maca. Pobierz go w Finderze, a potem wybierz ponownie.",
+    "guideNotDownloaded": "Nie zosta\u0142 pobrany na tego Maca.",
     "guideHowTo": "Umie\u015b\u0107 sw\u00f3j scenariusz (Word, Markdown lub zwyk\u0142y tekst) w folderze o nazwie \u201eDiscussion guide\u201d obok nagra\u0144, a potem wybierz Analizuj w menu projektu na pasku bocznym.",
     "guideProblem": {
       "unreadable": "Nie uda\u0142o si\u0119 odczyta\u0107 Twojego scenariusza. Sprawd\u017a, czy si\u0119 otwiera, a potem wybierz Analizuj w menu projektu na pasku bocznym."

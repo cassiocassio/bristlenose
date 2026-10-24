@@ -22,7 +22,6 @@ import { SessionsSidebar } from "../components/SessionsSidebar";
 // always-loaded chunk, and this is only reachable from one route.
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { SignalsSidebar } from "../components/SignalsSidebar";
-import { ExportDialog } from "../components/ExportDialog";
 import { featureFlags } from "../utils/featureFlags";
 import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
@@ -157,6 +156,11 @@ const FigJamExportPanel = lazy(() =>
 );
 // Opened from a menu, never shown on arrival, so they load after first paint
 // rather than with it: together ~8 kB gzip of the first-paint budget (24 Oct 2026).
+// Lazy like Miro, FigJam and Settings: it mounts closed with the layout and
+// loads just after first paint, which keeps it out of the first-paint budget.
+const ExportDialog = lazy(() =>
+  import("../components/ExportDialog").then((m) => ({ default: m.ExportDialog })),
+);
 const MiroExportPanel = lazy(() =>
   import("../components/MiroExportPanel").then((m) => ({ default: m.MiroExportPanel })),
 );
@@ -1002,7 +1006,9 @@ function AppShell() {
         </PanelErrorBoundary>
       )}
       <FeedbackModal open={feedbackOpen} onClose={closeFeedback} health={health} />
-      <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
+      <Suspense fallback={null}>
+        <ExportDialog open={exportOpen} onClose={toggleExport} initialAnonymise={exportAnonymise} />
+      </Suspense>
       {featureFlags.figjamExport && (
         <Suspense fallback={null}>
           <FigJamExportPanel open={figjamOpen} onClose={toggleFigJam} />

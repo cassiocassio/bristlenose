@@ -3894,7 +3894,7 @@ struct ContentView: View {
             }
         } else if selectionCount > 1 {
             ContentUnavailableView(
-                String(format: i18n.t("desktop.chrome.multipleSelected"), selectionCount),
+                i18n.plural("desktop.chrome.multipleSelected", count: selectionCount),
                 systemImage: "square.stack",
                 description: Text(i18n.t("desktop.chrome.multipleSelectedHint"))
             )
@@ -3966,7 +3966,7 @@ struct ContentView: View {
             if waiting > 0 {
                 ContentUnavailableView {
                     Label(i18n.plural("desktop.chrome.filesToAnalyse", count: waiting),
-                          systemImage: "square.and.arrow.down")
+                          systemImage: "tray.and.arrow.down")
                 } description: {
                     EmptyView()
                 } actions: {
@@ -3977,7 +3977,7 @@ struct ContentView: View {
             } else {
                 ContentUnavailableView(
                     i18n.t("desktop.chrome.dragInterviews"),
-                    systemImage: "square.and.arrow.down",
+                    systemImage: "tray.and.arrow.down",
                     description: Text(i18n.t("desktop.chrome.dragInterviewsDescription"))
                 )
             }
@@ -4007,12 +4007,20 @@ struct ContentView: View {
         switch project.availability {
         case .cantFind(let reason):
             switch reason {
-            case .unmountedVolume(let name), .networkUnreachable(let name):
+            // One body for both: reconnect and the project comes back by itself
+            // (`ProjectAvailability`), so there is no button to offer.
+            case .unmountedVolume(let name):
                 ContentUnavailableView {
-                    Label(i18n.t("desktop.chrome.projectUnavailable"),
-                          systemImage: "externaldrive.trianglebadge.exclamationmark")
+                    Label(i18n.t("desktop.chrome.projectUnavailable", ["name": name]),
+                          systemImage: "externaldrive.badge.xmark")
                 } description: {
-                    Text(name)
+                    Text(i18n.t("desktop.chrome.projectUnavailableHint"))
+                }
+            case .networkUnreachable(let host):
+                ContentUnavailableView {
+                    Label(i18n.t("desktop.chrome.shareUnreachable", ["host": host]),
+                          systemImage: "network.slash")
+                } description: {
                     Text(i18n.t("desktop.chrome.projectUnavailableHint"))
                 }
             case .moved, .missingBookmark:

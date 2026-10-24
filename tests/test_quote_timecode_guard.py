@@ -313,3 +313,46 @@ class TestPromptRendering:
         found = set(re.findall(r"\[(\d{1,2}:\d{2}(?::\d{2})?)\]", captured["user"]))
         assert found, "no timecodes in the prompt"
         assert all(re.fullmatch(r"\d{2}:\d{2}:\d{2}", tc) for tc in found), sorted(found)
+
+
+class TestBracketedTimecode:
+    """The transcript in the prompt writes positions as `[00:02:10]`, and a small
+    model copies the brackets into the field: llama3.2:3b did in 9 of 10 smoke
+    runs (RE#R105, 24 Oct 2026), and every such quote was placed at 0:00."""
+
+    @pytest.mark.asyncio
+    async def test_a_bracketed_timecode_keeps_its_place(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level(logging.WARNING):
+            quotes = await _run(_transcript(), [_item("[00:02:10]", " [00:02:30] ")])
+
+        assert (quotes[0].start_timecode, quotes[0].end_timecode) == (130.0, 150.0)
+        assert "quote_timecode_unparseable" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_words_in_brackets_are_still_unparseable(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        with caplog.at_level(logging.WARNING):
+            await _run(_transcript(), [_item("[later on]", "[00:02:30")])
+
+        assert caplog.text.count("quote_timecode_unparseable") == 2
+
+
+@pytest.mark.parametrize(
+    ("raw", "seconds"),
+    [("[00:02:10]", 130.0), (" [1:05:30] ", 3930.0), ("00:02:10", 130.0), ("[05:30]", 330.0)],
+)
+def test_a_model_timecode_may_carry_one_pair_of_brackets(raw: str, seconds: float) -> None:
+    from bristlenose.utils.timecodes import parse_model_timecode
+
+    assert parse_model_timecode(raw) == seconds
+
+
+@pytest.mark.parametrize("raw", ["[[00:02:10]]", "[00:02:10", "00:02:10]", "[]", "[00:02:10] extra"])
+def test_a_model_timecode_is_otherwise_as_strict_as_parse_timecode(raw: str) -> None:
+    from bristlenose.utils.timecodes import parse_model_timecode
+
+    with pytest.raises(ValueError):
+        parse_model_timecode(raw)

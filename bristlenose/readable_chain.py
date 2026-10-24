@@ -52,6 +52,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bristlenose.config import reported_model
 from bristlenose.manifest import (
     STAGE_IDENTIFY_SPEAKERS,
     STAGE_MERGE_TRANSCRIPT,
@@ -225,7 +226,7 @@ class ChainAnalysis:
         )
         mark_session_complete(
             self._manifest, STAGE_QUOTE_EXTRACTION, sid,
-            provider=self.settings.llm_provider, model=self.settings.llm_model,
+            provider=self.settings.llm_provider, model=reported_model(self.settings),
             input_hash=quote_fp,
         )
         write_manifest(self._manifest, self._output_dir)
@@ -371,12 +372,12 @@ class ReadableChain:
             # next run asks again (R97).
             mark_session_failed(
                 self._manifest, STAGE_IDENTIFY_SPEAKERS, sid,
-                provider=self.settings.llm_provider, model=self.settings.llm_model,
+                provider=self.settings.llm_provider, model=reported_model(self.settings),
             )
         else:
             mark_session_complete(
                 self._manifest, STAGE_IDENTIFY_SPEAKERS, sid,
-                provider=self.settings.llm_provider, model=self.settings.llm_model,
+                provider=self.settings.llm_provider, model=reported_model(self.settings),
                 content_hash=hash_bytes(data), input_hash=fp,
             )
         self.identified[sid] = fp

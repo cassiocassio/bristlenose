@@ -265,6 +265,12 @@ screen and Class W on disk. Two things follow, and both are pinned in
    round-trip assertion in an existing test that caught it, not the check.
 2. That tolerance is permanent backward compatibility. Transcripts already on a
    researcher's disk carry the old `[01:00:00]` form and must keep loading.
+3. A third reader takes what a model wrote into a schema field (s08 boundaries,
+   s09 quotes): `parse_model_timecode`, which is `parse_timecode` plus one pair
+   of surrounding square brackets. The prompt's transcript writes `[00:02:10]`
+   and llama3.2:3b copied the brackets in 9 of 10 runs, putting every such quote
+   at 0:00 (RE#R105, 24 Oct 2026). Read-only tolerance: nothing writes the form,
+   the rendered format is unchanged, and the contract fixture is untouched.
 
 **A prompt-only sibling exists, deliberately outside this register.**
 `format_timecode_prompt` (11 Sep 2026) renders zero-padded `HH:MM:SS` and is

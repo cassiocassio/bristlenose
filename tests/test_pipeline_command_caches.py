@@ -83,7 +83,7 @@ def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
     beside: str | None = None, topics_fail: bool = False, quotes_fail: bool = False,
-    cluster_fail: str | None = None,
+    cluster_fail: str | None = None, settings_kw: dict | None = None,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -91,6 +91,7 @@ def _drive(
     settings = BristlenoseSettings(
         project_name="caches", skip_transcription=skip, write_intermediate=True,
         llm_concurrency=1, no_fetch=True, pii_enabled=False, whisper_language="auto",
+        **(settings_kw or {}),
     )
 
     def _ingest(_d, _declined=None, **_kw):
@@ -210,7 +211,9 @@ def _drive(
                 input_dir, output_dir, reuse_transcription=reuse,
             ))
         elif mode == "analyze":
-            asyncio.run(pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir))
+            return asyncio.run(
+                pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir),
+            )
         else:
             raise AssertionError(mode)
     return None
@@ -1147,3 +1150,65 @@ def test_a_malformed_session_the_cache_would_not_serve_still_discards_the_file(
     _drive(tmp_path, mode, 3, log)
 
     assert log.get("transcribed") == [["s1", "s2", "s3"]], log
+
+
+@pytest.mark.parametrize("mode", ["run", "analyze"])
+def test_the_summary_names_the_local_model_that_ran(tmp_path: Path, mode: str) -> None:
+    # The summary line ("LLM: … (model)") read llm_model, which a local run
+    # snaps to the provider default; Ollama is sent local_model. Every gemma run
+    # in the RE#R105 measurement was reported as llama3.2:3b.
+    local = {"llm_provider": "local", "llm_model": "llama3.2:3b", "local_model": "gemma4:e4b"}
+    _drive(tmp_path, "run", 1, {}, settings_kw=local)
+    result = _drive(tmp_path, mode, 1, {}, settings_kw=local)
+    assert result is not None and result.llm_model == "gemma4:e4b", result
+
+
+def test_the_summary_names_a_cloud_model_as_before(tmp_path: Path) -> None:
+    cloud = {"llm_provider": "anthropic", "llm_model": "claude-sonnet-4-6",
+             "local_model": "gemma4:e4b"}
+    result = _drive(tmp_path, "run", 1, {}, settings_kw=cloud)
+    assert result is not None and result.llm_model == "claude-sonnet-4-6", result
+
+
+@pytest.mark.parametrize("mode", ["run", "analyze"])
+def test_the_manifest_records_the_local_model_that_ran(tmp_path: Path, mode: str) -> None:
+    # Each session's record named llm_model, so `bristlenose status -v` showed
+    # every gemma session as llama3.2:3b. Nothing decides reuse from it
+    # (fresh_session_ids keys on input fingerprints): this is the record only.
+    from bristlenose.manifest import load_manifest
+
+    local = {"llm_provider": "local", "llm_model": "llama3.2:3b", "local_model": "gemma4:e4b"}
+    _drive(tmp_path, "run", 1, {}, settings_kw=local)
+    if mode == "analyze":
+        _drive(tmp_path, mode, 1, {}, settings_kw=local)
+    manifest = load_manifest(tmp_path / "output")
+    assert manifest is not None
+    models = {
+        (stage, sid): rec.model
+        for stage, record in manifest.stages.items()
+        for sid, rec in (record.sessions or {}).items()
+        if rec.provider == "local"
+    }
+    assert models, manifest.stages.keys()
+    assert set(models.values()) == {"gemma4:e4b"}, models
+
+
+def test_every_manifest_write_records_the_reported_model() -> None:
+    # The run above reaches some of the fourteen mark_session_* sites, not all
+    # (the readable chain, a failed session). Read the rest off the source, as
+    # tests/test_prompt_boundary.py does for its call sites.
+    # Every `model=` keyword in these two modules is a manifest write or the
+    # helper passing its own parameter on; a new site written any other way
+    # (llm_model, local_model, wire_model) fails here.
+    import inspect
+    import re
+
+    import bristlenose.pipeline
+    import bristlenose.readable_chain
+
+    for module in (bristlenose.pipeline, bristlenose.readable_chain):
+        source = inspect.getsource(module)
+        values = re.findall(r"(?<![\w.])model=\s*([^,\n]+)", source)
+        assert values, module.__name__
+        wrong = [v for v in values if v.strip() not in ("reported_model(self.settings)", "model")]
+        assert wrong == [], (module.__name__, wrong)

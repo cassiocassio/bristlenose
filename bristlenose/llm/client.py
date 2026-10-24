@@ -147,9 +147,9 @@ def _validate_repairing(
     Deliberately NOT used on OpenAI or Azure. Those go through strict Structured
     Outputs, where the API itself guarantees the shape, so a validation failure
     there is a real break in the contract and repairing it would hide exactly the
-    regression we would need to see. Ollama is also left alone: it is on
-    ``json_object`` with no schema at all, and its path already retries the whole
-    call, which is a different remedy.
+    regression we would need to see. Ollama is also left alone: it is asked for
+    the schema (``json_schema``, falling back to ``json_object``), and its path
+    retries with a turn naming what was wrong, which is a different remedy.
 
     A repair is a WARNING, never silent. A provider quietly degrading its output
     shape is a thing to notice, not a thing to absorb -- the repair buys the
@@ -468,6 +468,8 @@ class LLMClient:
         self._azure_client: openai.AsyncAzureOpenAI | None = None
         self._google_client: genai.Client | None = None
         self._local_client: openai.AsyncOpenAI | None = None
+        # True once the local server has refused a json_schema response format.
+        self._local_json_object = False
         self._anyllm_provider: Any = None
         self.tracker = LLMUsageTracker()
 
@@ -1005,10 +1007,10 @@ class LLMClient:
                 # the shape is guaranteed. See openai_strict_schema for the rewrites
                 # Pydantic's schema needs before strict mode will accept it.
                 #
-                # Deliberately NOT applied to _analyze_local: Ollama serves an
-                # OpenAI-compatible surface but is a different implementation
-                # with its own schema support, so it stays on json_object until
-                # someone tests it against real local models.
+                # _analyze_local sends Ollama a json_schema too, but the plain
+                # schema and not strict: Ollama is a different implementation
+                # with its own schema support, and takes Pydantic's schema as
+                # it is (measured against real local models, RE#R105, 24 Oct 2026).
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
@@ -1148,10 +1150,10 @@ class LLMClient:
                 # the shape is guaranteed. See openai_strict_schema for the rewrites
                 # Pydantic's schema needs before strict mode will accept it.
                 #
-                # Deliberately NOT applied to _analyze_local: Ollama serves an
-                # OpenAI-compatible surface but is a different implementation
-                # with its own schema support, so it stays on json_object until
-                # someone tests it against real local models.
+                # _analyze_local sends Ollama a json_schema too, but the plain
+                # schema and not strict: Ollama is a different implementation
+                # with its own schema support, and takes Pydantic's schema as
+                # it is (measured against real local models, RE#R105, 24 Oct 2026).
                 response_format={
                     "type": "json_schema",
                     "json_schema": {
@@ -1378,11 +1380,19 @@ class LLMClient:
         input_chars: int,
         t0: float,
     ) -> T:
-        """Call local Ollama-compatible API with JSON mode.
+        """Call a local Ollama-compatible API, asking for the response schema.
 
-        Uses the OpenAI SDK pointed at a local endpoint. Includes retry logic
-        for JSON parsing failures since local models are less reliable (~85%
-        schema compliance vs ~99% for cloud models).
+        Uses the OpenAI SDK pointed at a local endpoint. The schema goes as
+        ``response_format`` ``json_schema`` (Ollama's structured outputs), and in
+        the system prompt. A server that refuses it is asked again with
+        ``json_object``, remembered for the client, as ``_analyze_anyllm`` does.
+
+        A reply that doesn't parse or validate is retried as a follow-up turn
+        naming what was wrong (``failure_summary``: field paths and error types,
+        never the reply). Measured 24 Oct 2026 (RE#R105): under plain JSON mode
+        llama3.2:3b answered with the schema itself, and resending the identical
+        request got the identical echo; schema mode and a corrective turn each
+        fixed the replayed failures.
         """
 
         import openai
@@ -1407,6 +1417,24 @@ class LLMClient:
         params = request_params(
             "local", model, max_tokens, self.settings.llm_temperature
         )
+        schema_format = {
+            "type": "json_schema",
+            "json_schema": {"name": response_model.__name__, "schema": schema},
+        }
+        base_messages = [
+            {"role": "system", "content": system_prompt + schema_instruction},
+            {"role": "user", "content": user_prompt},
+        ]
+        messages = base_messages
+
+        async def call(fmt: dict[str, Any]) -> Any:
+            return await client.chat.completions.create(
+                model=model,
+                max_tokens=params["max_tokens"],
+                temperature=params["temperature"],
+                response_format=fmt,
+                messages=messages,
+            )
 
         # Retry logic for JSON parsing failures.
         # Token / elapsed accumulators sum across retries; one terminal
@@ -1425,16 +1453,23 @@ class LLMClient:
             attempts_used = attempt + 1
             try:
                 try:
-                    response = await client.chat.completions.create(
-                        model=model,
-                        max_tokens=params["max_tokens"],
-                        temperature=params["temperature"],
-                        response_format={"type": "json_object"},
-                        messages=[
-                            {"role": "system", "content": system_prompt + schema_instruction},
-                            {"role": "user", "content": user_prompt},
-                        ],
-                    )
+                    if self._local_json_object:
+                        response = await call({"type": "json_object"})
+                    else:
+                        try:
+                            response = await call(schema_format)
+                        except Exception as exc:
+                            if not _refuses_json_schema(exc):
+                                raise
+                            # Within the same attempt, as _analyze_anyllm does: a
+                            # refused format is not a bad reply.
+                            logger.warning(
+                                "local_json_schema_refused | model=%s | error=%s | "
+                                "falling back to json_object",
+                                model, failure_summary(exc),
+                            )
+                            self._local_json_object = True
+                            response = await call({"type": "json_object"})
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -1519,30 +1554,40 @@ class LLMClient:
             except TruncatedResponseError:
                 # Output-cap truncation is not a JSON/validation failure — let
                 # it propagate so s09 smart-split can catch and re-chunk.
-                # Without this the generic `except Exception` below would
-                # mis-handle it (RuntimeError subclass).
+                # Without this it would reach the retry below as if it were a
+                # bad reply.
                 raise
             except json.JSONDecodeError as e:
                 last_error = e
                 logger.debug(
-                    "JSON parse failed (attempt %d/%d): %s", attempt + 1, max_retries, e
+                    "JSON parse failed (attempt %d/%d): %s",
+                    attempt + 1, max_retries, failure_summary(e),
                 )
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
-            except Exception as e:
-                # Catch Pydantic ValidationError and other parsing issues
-                if "ValidationError" in type(e).__name__ or "validation" in str(e).lower():
-                    last_error = e
-                    logger.debug(
-                        "Schema validation failed (attempt %d/%d): %s",
-                        attempt + 1,
-                        max_retries,
-                        e,
-                    )
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
-                else:
-                    raise  # Re-raise non-validation errors
+            except ValidationError as e:
+                # The reply, not the request: a server that rejects the request
+                # with "validation" in its message (pydantic-backed ones do) has
+                # already been recorded above and propagates as itself.
+                last_error = e
+                logger.debug(
+                    "Schema validation failed (attempt %d/%d): %s",
+                    attempt + 1, max_retries, failure_summary(e),
+                )
+            if attempt < max_retries - 1 and last_error is not None:
+                # Ask again with what was wrong, not the identical request: a
+                # small model echoed the schema the same way every time. The
+                # turn carries field paths and error types only, never the reply
+                # (the participant's words), and is built from the first request
+                # each time so a retry never grows the context.
+                messages = [*base_messages, {
+                    "role": "user",
+                    "content": (
+                        "Your previous reply did not match the schema: "
+                        f"{failure_summary(last_error)}. Reply again with one JSON "
+                        "object that fills in the schema with your answer. Do not "
+                        "repeat the schema itself."
+                    ),
+                }]
+                await asyncio.sleep(0.5 * (attempt + 1))  # Backoff
 
         # All retries exhausted on parse/validation failures.
         self._record_call(
@@ -1559,7 +1604,7 @@ class LLMClient:
         )
         raise RuntimeError(
             f"Local model failed to produce valid JSON after {max_retries} attempts. "
-            f"Last error: {last_error}. "
+            f"Last error: {failure_summary(last_error) if last_error is not None else None}. "
             f"Try a larger model (BRISTLENOSE_LOCAL_MODEL=llama3.1:8b) or use a cloud API (--llm claude)."
         )
 

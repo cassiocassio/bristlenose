@@ -4,6 +4,7 @@ import { bumpRefreshKey, resetLastRunStore } from "../contexts/LastRunStore";
 import { TranscriptPage } from "./TranscriptPage";
 import { _resetExportCache } from "../utils/exportData";
 import type { TranscriptPageResponse } from "../utils/types";
+import { TRANSCRIPT_WRITTEN_EVENT } from "../utils/transcriptWritten";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -1219,6 +1220,34 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
     act(() => bumpRefreshKey());
     fireEvent.click(badge); // deleted while the re-read is out
     expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+    await act(async () => {
+      releaseReread(mockData); // from before the delete: the badge is in it
+    });
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(3), { timeout: 2000 });
+    expect(screen.queryByTestId("annotation-q-p1-10-sentiment")).toBeNull();
+  });
+
+  // ⌘Z of a quote act made in a quote lens re-reads the open transcript
+  // (R10); a badge deleted here while that read is out must not come back.
+  it("an undo's re-read does not bring back a badge deleted while it was in flight", async () => {
+    let releaseReread: (r: TranscriptPageResponse) => void = () => {};
+    mockedGetTranscript
+      .mockResolvedValueOnce(mockData)
+      .mockReturnValueOnce(new Promise((r) => { releaseReread = r; }))
+      .mockResolvedValue({
+        ...mockData,
+        annotations: {
+          ...mockData.annotations,
+          "q-p1-10": { ...mockData.annotations["q-p1-10"], deleted_badges: ["confusion"] },
+        },
+      });
+    render(<TranscriptPage projectId="1" sessionId="s1" />);
+    const badge = await screen.findByTestId("annotation-q-p1-10-sentiment");
+    act(() => {
+      window.dispatchEvent(new CustomEvent(TRANSCRIPT_WRITTEN_EVENT));
+    });
+    fireEvent.click(badge); // deleted while the undo's re-read is out
     await act(async () => {
       releaseReread(mockData); // from before the delete: the badge is in it
     });

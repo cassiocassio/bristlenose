@@ -335,7 +335,8 @@ describe("an open transcript", () => {
 
   it("re-reads once after an undo and once after a redo, not after the act", async () => {
     toggleStar("q1", true);
-    await Promise.resolve();
+    // Past every answer the act's write chains (send's, recordGesture's).
+    await new Promise((r) => setTimeout(r, 0));
     expect(reads).toBe(0);
     await undo();
     expect(reads).toBe(1);

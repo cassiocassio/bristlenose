@@ -445,12 +445,23 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   // Re-read after a speaker is named, picked or cleared — here or by undo.
   const reloadTranscript = useCallback(() => {
-    const ticket = ++readTicket.current;
-    getTranscript(sessionId)
-      .then((resp) => {
-        if (ticket === readTicket.current) applyReread(resp);
-      })
-      .catch(() => undefined);
+    const read = () => {
+      const ticket = ++readTicket.current;
+      const writesBefore = localWrites.current;
+      getTranscript(sessionId)
+        .then((resp) => {
+          if (ticket !== readTicket.current) return;
+          // A badge or tag deleted here meanwhile may postdate the response,
+          // as in `rereadNow`: read again once its write has gone.
+          if (localWrites.current !== writesBefore) {
+            setTimeout(read, 500);
+            return;
+          }
+          applyReread(resp);
+        })
+        .catch(() => undefined);
+    };
+    read();
   }, [sessionId, applyReread]);
   useSpeakersChanged(reloadTranscript);
   // …and after a paragraph split or join, or its undo.

@@ -83,7 +83,7 @@ def _drive(
     tmp_path: Path, mode: str, n_sessions: int, log: dict, *, reuse: bool = True,
     llm_researcher: str | None = None, skip: bool = False, broken_docx: bool = False,
     beside: str | None = None, topics_fail: bool = False, quotes_fail: bool = False,
-    cluster_fail: str | None = None,
+    cluster_fail: str | None = None, settings_kw: dict | None = None,
 ) -> PipelineResult | None:
     input_dir = tmp_path / "input"
     input_dir.mkdir(exist_ok=True)
@@ -91,6 +91,7 @@ def _drive(
     settings = BristlenoseSettings(
         project_name="caches", skip_transcription=skip, write_intermediate=True,
         llm_concurrency=1, no_fetch=True, pii_enabled=False, whisper_language="auto",
+        **(settings_kw or {}),
     )
 
     def _ingest(_d, _declined=None, **_kw):
@@ -210,7 +211,9 @@ def _drive(
                 input_dir, output_dir, reuse_transcription=reuse,
             ))
         elif mode == "analyze":
-            asyncio.run(pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir))
+            return asyncio.run(
+                pipeline.run_analysis_only(output_dir / "transcripts-raw", output_dir),
+            )
         else:
             raise AssertionError(mode)
     return None
@@ -1147,3 +1150,21 @@ def test_a_malformed_session_the_cache_would_not_serve_still_discards_the_file(
     _drive(tmp_path, mode, 3, log)
 
     assert log.get("transcribed") == [["s1", "s2", "s3"]], log
+
+
+@pytest.mark.parametrize("mode", ["run", "analyze"])
+def test_the_summary_names_the_local_model_that_ran(tmp_path: Path, mode: str) -> None:
+    # The summary line ("LLM: … (model)") read llm_model, which a local run
+    # snaps to the provider default; Ollama is sent local_model. Every gemma run
+    # in the RE#R105 measurement was reported as llama3.2:3b.
+    local = {"llm_provider": "local", "llm_model": "llama3.2:3b", "local_model": "gemma4:e4b"}
+    _drive(tmp_path, "run", 1, {}, settings_kw=local)
+    result = _drive(tmp_path, mode, 1, {}, settings_kw=local)
+    assert result is not None and result.llm_model == "gemma4:e4b", result
+
+
+def test_the_summary_names_a_cloud_model_as_before(tmp_path: Path) -> None:
+    cloud = {"llm_provider": "anthropic", "llm_model": "claude-sonnet-4-6",
+             "local_model": "gemma4:e4b"}
+    result = _drive(tmp_path, "run", 1, {}, settings_kw=cloud)
+    assert result is not None and result.llm_model == "claude-sonnet-4-6", result

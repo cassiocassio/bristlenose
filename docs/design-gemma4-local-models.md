@@ -64,7 +64,7 @@ Still below Claude and GPT-4o on reasoning, but dramatically better than any pri
 
 Gemma 4 has **native structured JSON output** — not bolted on via system prompt hacks. The 26B MoE scores 85.5% on agentic tool-use benchmarks, the 31B hits 86.4%. This is a significant improvement over llama3.2:3b (~85% JSON schema compliance in Bristlenose testing).
 
-Bristlenose uses `response_format={"type": "json_object"}` via Ollama's OpenAI-compatible API — **not** tool/function calling. This matters because:
+Bristlenose uses `response_format={"type": "json_object"}` via Ollama's OpenAI-compatible API — **not** tool/function calling. (Since 24 Oct 2026 it sends `json_schema`, falling back to `json_object`; RE#R105.) This matters because:
 
 ### Known Ollama issues (as of Apr 2026)
 

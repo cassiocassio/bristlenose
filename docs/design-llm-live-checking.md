@@ -303,9 +303,12 @@ needs `max_completion_tokens` and a newer `azure_api_version`. The Swift
 default and picker still list model names in a field that wants a deployment
 name; the parity test excludes Azure for that reason.
 
-**Ollama is still on `json_object`.** An assertion caught that `_analyze_local`
-shares the OpenAI shape; it was left alone because Ollama's schema support is
-its own implementation. Untested.
+**Ollama was on `json_object`** until 24 Oct 2026. An assertion caught that
+`_analyze_local` shares the OpenAI shape; it was left alone because Ollama's
+schema support is its own implementation. RE#R105 then tested it: llama3.2:3b
+echoed the schema back under `json_object`, and Ollama's `json_schema` fixed
+every replayed failure, so the local path now sends the plain schema (not
+strict) and falls back to `json_object` if the server refuses it.
 
 **The OpenAI schema is sent twice** — once enforced in `response_format`, once
 pasted into the system prompt as text. The prompt copy is now redundant and

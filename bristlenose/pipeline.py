@@ -19,7 +19,7 @@ from rich.markup import escape as rich_escape
 # `bristlenose/__init__.py` (must be set before any HF import, including
 # the doctor preflight that runs before pipeline.py is reached).
 from bristlenose import __version__, shoal_feed
-from bristlenose.config import BristlenoseSettings
+from bristlenose.config import BristlenoseSettings, wire_model
 from bristlenose.events import (
     Cause,
     CauseCategoryEnum,
@@ -170,6 +170,17 @@ def _dominant_cause(
 # ---------------------------------------------------------------------------
 # CLI output helpers
 # ---------------------------------------------------------------------------
+
+
+def _reported_model(settings: BristlenoseSettings) -> str:
+    """The model the run summary names and prices: on a local run, the one
+    Ollama is sent (``local_model``), not ``llm_model``, which a local run
+    snaps to the provider default (every gemma run read as llama3.2:3b,
+    RE#R105). Other providers keep ``llm_model``, which already names theirs
+    (``config._adopt_named_model``). The manifest still records ``llm_model``."""
+    if settings.llm_provider == "local":
+        return wire_model(settings)
+    return settings.llm_model
 
 
 def _format_duration(seconds: float) -> str:
@@ -4108,7 +4119,7 @@ class Pipeline:
             llm_input_tokens=llm_client.tracker.input_tokens if llm_client else 0,
             llm_output_tokens=llm_client.tracker.output_tokens if llm_client else 0,
             llm_calls=llm_client.tracker.calls if llm_client else 0,
-            llm_model=self.settings.llm_model,
+            llm_model=_reported_model(self.settings),
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
             pipeline_error=_p_error,
@@ -4860,7 +4871,7 @@ class Pipeline:
             llm_input_tokens=llm_client.tracker.input_tokens,
             llm_output_tokens=llm_client.tracker.output_tokens,
             llm_calls=llm_client.tracker.calls,
-            llm_model=self.settings.llm_model,
+            llm_model=_reported_model(self.settings),
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
             pipeline_error=_p_error_a,

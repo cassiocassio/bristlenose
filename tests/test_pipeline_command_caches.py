@@ -1197,12 +1197,18 @@ def test_every_manifest_write_records_the_reported_model() -> None:
     # The run above reaches some of the fourteen mark_session_* sites, not all
     # (the readable chain, a failed session). Read the rest off the source, as
     # tests/test_prompt_boundary.py does for its call sites.
+    # Every `model=` keyword in these two modules is a manifest write or the
+    # helper passing its own parameter on; a new site written any other way
+    # (llm_model, local_model, wire_model) fails here.
     import inspect
+    import re
 
     import bristlenose.pipeline
     import bristlenose.readable_chain
 
     for module in (bristlenose.pipeline, bristlenose.readable_chain):
         source = inspect.getsource(module)
-        assert "model=self.settings.llm_model" not in source, module.__name__
-        assert "model=reported_model(self.settings)" in source, module.__name__
+        values = re.findall(r"(?<![\w.])model=\s*([^,\n]+)", source)
+        assert values, module.__name__
+        wrong = [v for v in values if v.strip() not in ("reported_model(self.settings)", "model")]
+        assert wrong == [], (module.__name__, wrong)

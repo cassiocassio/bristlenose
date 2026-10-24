@@ -1,5 +1,5 @@
 ---
-status: slices 0–1 built 20 Oct 2026; slices 2–6 proposed
+status: slices 0–1 built 20 Oct 2026; slices 2–5 proposed; the QA journey (slices 6–14) proposed 24 Oct 2026
 last-trued: 2026-10-20
 trued-against: experiments/guest-walk @ 892baba1, desktop/scripts/guest-matrix.sh and build-dmg.sh @ 714e5348
 ---
@@ -371,11 +371,249 @@ running and Iona attached.
 
 ### Slice 6 onwards — coverage, a stage at a time
 
-`experiments/guest-walk/COVERAGE.md` stages 2, 3, 5 and 6, in that order, one stage
-every few nights; a stage is kept only after two nights at 0 changed on an unchanged
-build. Stage 4 (video, Screens) runs on the frozen project's host-read screen text,
-since Vision fails in the 27 guest. The page gains the mockup's timing section
-(per-step durations, tonight vs baseline) when the step count passes 50.
+_Superseded 24 Oct 2026 by [§ The QA journey](#the-qa-journey-proposed-24-oct-2026):
+the coverage stages become rows in its inventory, walked in rail order, and the slices
+are renumbered there._ As first written: `experiments/guest-walk/COVERAGE.md` stages 2,
+3, 5 and 6, in that order, one stage every few nights; a stage is kept only after two
+nights at 0 changed on an unchanged build. Stage 4 (video, Screens) runs on the frozen
+project's host-read screen text, since Vision fails in the 27 guest. The page gains the
+mockup's timing section (per-step durations, tonight vs baseline) when the step count
+passes 50.
+
+## The QA journey (proposed 24 Oct 2026)
+
+_A proposal, agreed in outline with the owner on 24 Oct 2026; nothing below is built.
+Slices 2–5 above come first._
+
+### Why
+
+By-hand QA had become debt. On 24 Oct 2026 a sweep of one week's sessions found about
+180 owed checks. Most had been written as "check by hand: …" at the end of a session,
+some copied into one of six trackers and some not, so a set of five report-chip checks
+from 20 Oct was found only by accident. Sorted by what they need, 86 of the 106 the
+first walk-through had missed are **mechanical** (a state, a count, a menu item, a log
+line, a file), 16 are **judgement** (it looks or reads right) and 4 are **physical** (a
+lid, a battery, VoiceOver listened to, a Keychain dialog). By driver: 51 can be read
+from the Mac app's accessibility tree, 25 driven by Playwright against a serve, 3 by
+calling the pipeline or the server directly, 5 belong to the walk as it is, and 22 need
+a person. 96 make no real model call.
+
+The machine already exists for the mechanical part: the walker drives the app by
+accessibility name, dumps the menus and shoots every window, and the page diffs it in
+pink. What is missing is the list it should walk, the order, and a walk that keeps
+going.
+
+### What it is, and what it is not
+
+**Parallel and non-blocking.** The journey assumes working software. It is a more
+human set of tests, run beside the dev and release cycle, never inside it: no verdict
+feeds `check-release-ready.sh`, the release board or a CI job, and no changelog line
+waits on it. The gate policy does not apply because nothing blocks. Its output is
+triage, not a pass: an urgent patch (lost work, a crash, a fake success), a tweak or an
+idea for the forward plan, or a screen that changed on purpose and becomes the new
+baseline. Most findings are expected to be the second kind.
+
+**One journey, atomic checks.** A check is atomic: it names what it needs, does one
+thing, and gets one result. The run is one journey through one guest boot, in the
+order a researcher works: open the app, drop the recordings, analyse, go down the
+lenses, export, Settings, quit and relaunch, then the destructive checks. The setup is
+paid once; a failure points at one thing.
+
+### The inventory
+
+One file per stop of the journey, under `desktop/scripts/guest-walk/checks/`, tracked.
+Each row:
+
+| field | meaning |
+|---|---|
+| `id` | a stable slug; tests, Playwright specs and the page key on it |
+| `stop` | where in the journey it is performed: `launch`, `drop`, `sidebar`, a lens, `export`, `dialogs`, `settings`, `lifecycle`, `destructive`, or a host track (`cli`, `providers`) |
+| `checkpoint` | the checkpoint it hangs under (below) |
+| `kind` | `mechanical`, `judgement` or `physical` |
+| `driver` | `walker`, `playwright`, `python`, `providers-live` or `human` |
+| `areas` | the code it covers, as folders, not files (see Selection) |
+| `steps`, `expect` | what to do and what should be seen, in plain words |
+| `also_look` | a later stop where its effect must be checked (hide a quote on Quotes → Signals) |
+| `budget_s` | its time budget, calibrated in the guest |
+| `tier` | `baseline` or `feature` |
+| `status` | `new`, `passing`, `retired`, `promoted` |
+| `source` | the commit, issue or design-doc section it came from |
+
+The coverage states in `experiments/guest-walk/COVERAGE.md` become rows of kind
+`judgement` (a capture), so there is one list, not two. Rows are tracked, so each is
+screened before it lands: no participant data, no study content, nothing commercial —
+functional checks only. The 24 Oct sweep is the seed; its private working copy is
+migrated row by row.
+
+**A session adds a row instead of writing prose.** `/end-session`'s "human QA" step
+writes inventory rows for the checks a session leaves, so a check can no longer live
+only in a closing message.
+
+**Two structural tests keep it honest**, because a gate that matches on a name drifts
+when the name moves: every `areas` path exists, and every lens `stop` is a lens on the
+rail. The rail order is read from `LensItem.lenses` in
+`desktop/Bristlenose/Bristlenose/LensItem.swift`, never restated, so a lens that joins
+the rail joins the journey the way it gets its ⌘ number.
+
+### The journey and its checkpoints
+
+The order is the rail's: Project ⌘1, Sessions ⌘2 (transcripts are reached from here),
+Quotes ⌘3, Codebook ⌘4, Signals ⌘5, Discussion ⌘6, Screens ⌘7. Inside each lens:
+**capture first, then act** — the lens's judgement screens are shot untouched, on the
+frozen project, before anything is starred, hidden or edited, so they diff cleanly
+night to night; then every action owed in that lens. An effect that shows further
+down the rail is checked there; the one that points back up (the Dashboard's quote
+count after a hide) is a short return to ⌘1 after the lens pass. Exports follow the
+lenses, so they carry the edits just made.
+
+Most checks are leaves. Four are checkpoints, which later checks need:
+
+| checkpoint | its leaves | if it fails |
+|---|---|---|
+| The app launches and its serve starts | boot, Welcome, the menus on an empty window | no fallback: the journey stops |
+| A study is in the sidebar | drops, Add Files, row states | open a ready-made study folder; the drop checks still fail on their own |
+| Analysis finishes | every lens, editing, Undo, exports, dialogs | the next provider, then local, then the frozen project |
+| Quit and relaunch | state kept (zoom, widths), the queue, a stopped run, a key kept on ⌘Q | a cold launch, marked as such |
+
+So the runner needs no dependency graph: a short list of checkpoints, each with a
+fallback, and every check naming its checkpoint.
+
+**Analysis is a set of checks as well as a checkpoint.** Each provider is its own
+check — Claude, ChatGPT, Gemini, local — on a small public fixture, so a run costs
+pennies. Local runs every walk: it is free, a supported provider, and the walk already
+reaches the host's Ollama through `tunnel.sh`. The cloud legs run on the host through
+`scripts/check-providers-live.py`, one provider a night in rotation, so no paid key
+ever enters a guest. A live run's lens screens stay *informational*, as § The frozen
+project already says: models differ, so the live run is checked on the report's shape
+(quotes exist, sections are named, every timecode falls inside its session), and the
+diffed screens come from the frozen project.
+
+### Results
+
+Five, and the page and the morning line keep them apart:
+
+- **passed**
+- **failed**, with its evidence (the screenshot, the tree dump, the log line)
+- **passed on a fallback**, naming the fallback ("export: passed, on the frozen
+  project, because tonight's analysis failed"). It proves the step works on tonight's
+  build, not on tonight's analysis, so it never reads as plain green
+- **not reached**, because its checkpoint failed with no fallback
+- **timed out** or **not reached (out of time)**, when a budget ran out
+
+A failed assertion no longer halts the walk: `walk.sh`'s `halt()` (`walk.sh:23-29`)
+stays for the cases where the screen can no longer be trusted — a foreign window
+(slice 3), a dead app, a stale build — and every other step records its result and the
+journey carries on. The morning line's vocabulary rule holds: none of these words is
+`✓`, `✗`, `skipped:` or `error:`, and a test pins it.
+
+### Selection: baseline, focus, exhaustive
+
+A walk has a time budget (the window `guest-matrix.sh` already owns, with a release
+always winning), and fills it in this order:
+
+1. **Baseline** — the standard journey, every walk, never skipped. Kept deliberately
+   small: launch, a drop, analysis on local, each lens's core actions, one export,
+   Settings, quit and relaunch.
+2. **Focus** — every check whose `areas` changed in `git diff` since the last walk on
+   this OS, plus every `feature` row not yet passing. A change to a wide area (the
+   theme, the locales, a shared store) marks every check that reads it; a dependency
+   or Python bump marks everything.
+3. **Exhaustive** — everything else, stalest first, until the budget runs out.
+
+**A maximum age is the backstop.** Every check runs at least once every 14 days
+whatever changed, because selecting tests by changed code misses what the map cannot
+see. The page says why each check ran ("focus: `MiroExportPanel` changed", "stalest:
+13 days") so a skipped check is a visible decision, never a gap.
+
+**A feature check has a lifecycle.** New, it runs every walk until it passes (a
+judgement one goes on the page once, for the owner's mark). Passed, it either
+**retires** — a one-off confirmation such as "Print is gone" — or is **promoted** into
+the baseline, when it is worth guarding against regression; a marked judgement screen
+becomes a baseline screen. Failing, it stays on the page until fixed or waived.
+
+**Budgets are calibrated, not copied.** A threshold measured on the host ("ready within
+15 s", "Stopped within 30 s") flakes in a slower guest. Each time-bound check's
+threshold is set from its first walks' measured durations, with headroom, and the page
+gains its timing section.
+
+The slow legs do not run every night: a 23-minute dense interview, the paid providers
+beyond tonight's one, anything over its own budget — weekly, or on demand.
+
+### Three operating systems, in rotation
+
+The walk runs **27, 26, 27, 15, 27, 26, 27, 15…** (owner, 24 Oct 2026): the latest
+every other walk, and the two older systems taking turns between. The rotation counts
+walks, not calendar nights, so a skipped night does not skip an OS.
+
+- **macOS 27** (`walk27-base`), half the walks: what most researchers will run.
+- **macOS 26** (a `walk26-base`), a quarter: Vision reads shared screens in a 26.6
+  guest but not in a 27 one, so this is where the Screens lens gets a live read.
+- **macOS 15** (a `walk15-base`), a quarter: the floor, where a 27-only API or layout
+  assumption breaks unnoticed. `docs/design-test-environments.md` records three
+  sidebar geometries across 15, 26 and 27.
+
+The two new bases are siblings of the 15.7.3 and 26.6.2 images the suite already
+runs, made by hand once with the same three grants as `walk27-base`; nothing scripted
+may delete them. Each OS has its own baseline, diffed against its own last walk, and
+the page names the OS. At about 100 walks a year — release nights and nights without
+Iona excepted — that is about 50 on 27 and 25 each on 26 and 15.
+
+**Iona.** The morning line already reports "Iona absent" as an ordinary skip. After two
+nights in a row without it, the line says so once, so 100 walks do not quietly become
+40.
+
+### Release nights
+
+A release produces exactly the artefact people will install, so on a release night the
+walk starts as soon as the `.dmg` exists and walks the `.app` inside it. Today
+`guest-matrix.sh` skips a night with a release running; this changes that, on two
+conditions: the release always wins (the walk yields CPU, holds no lock, and stops if
+the release needs the machine), and it takes a guest only if the release is not using
+one, under § The two-guest limit.
+
+### The host tracks
+
+Two tracks run beside the guest, because nothing in the journey depends on them, and
+their results land on the same page under the same ids:
+
+- **Playwright**, against a serve on a scratch copy and a spare port: the report's
+  web-side checks (chips that fail when the server goes away, Undo offline, hide
+  counts, lenses after a run). Specs carry the inventory `id` in their title.
+- **Python**, against the pipeline and the server directly, with the model mocked the
+  way the 23 Oct measurement of joining files did it: the CLI's `--clean` prompt, a
+  fresh start interrupted, `analyze` then `run`, a home-folder refusal, the serve's
+  token line. Most of what was filed as "paid, by hand" is free this way.
+
+### Slices
+
+Each slice ships alone and is kept only after two walks at no unexplained change on an
+unchanged build.
+
+- **Spike first, daytime, measuring only.** Can the walker drag and drop (it has no
+  drag command today: `walker.swift` offers `press`, `action`, `select`, `menu`, `type`,
+  `key`, `shot` and the rest)? Can tart checkpoint a guest mid-journey? Does cutting
+  the guest's network leave the host alone (if so, the network-change checks become
+  walk leaves)? How long does a full journey with analysis take?
+- **Slice 6 — the inventory.** The format, the two structural tests, the seed migrated
+  and screened, `COVERAGE.md` folded in.
+- **Slice 7 — keep going.** Results per check, the five states, `halt()` kept for
+  untrustworthy screens only, `report.py` and the morning line.
+- **Slice 8 — checkpoints and fallbacks.** The ready-made study, the provider chain, the
+  frozen project as the analysis fallback, the cold relaunch.
+- **Slice 9 — the journey in rail order.** Capture-then-act per lens, the return to ⌘1,
+  exports after the lenses.
+- **Slice 10 — selection.** Tiers, budgets, the maximum age, the reasons on the page.
+- **Slice 11 — the host tracks.** Playwright and Python results under inventory ids;
+  the provider rotation through `check-providers-live.py`.
+- **Slice 12 — the other systems.** `walk26-base` and `walk15-base`, the 27/26/27/15 rotation, per-OS baselines, the
+  Iona line.
+- **Slice 13 — release nights.** Start from the `.dmg`, yield to the release.
+- **Slice 14 — the page as triage.** Each finding goes to a patch, to a forward-plan
+  row in one step, or to the baseline; `/end-session` writes inventory rows.
+
+**Still for a person,** whatever is built: closing a lid, running on battery, listening
+to VoiceOver, answering a Keychain dialog, signing in to real accounts, and the owner's
+mark on every judgement screen.
 
 ## Risks and failure modes
 
@@ -430,11 +668,14 @@ was built. The raw findings are in the maintainer's private notes; what they cha
 ## Not in this plan
 
 An Accept button or accepted-baseline UI (v1 diffs against the last completed walk).
-The ~£0.05 per cloud provider call (medium term; `scripts/check-providers-live.py` is
-the thing to extend). Sign-in integrations: Zoom, Teams, Meet, Miro, the MCP installs.
-A 26.6 walk guest (would need a second vanilla base). A release-preflight row for the
-walk. Peekaboo, Appium or an XCUITest target. An accessibility audit from the tree
-dump. Anything on CI runners.
+Sign-in integrations: Zoom, Teams, Meet, Miro, the MCP installs. A release-preflight
+row for the walk — and, since 24 Oct 2026, any verdict that blocks anything: the QA
+journey is non-blocking by design. Peekaboo, Appium or an XCUITest target. An
+accessibility audit from the tree dump. Anything on CI runners.
+
+_Moved into the plan on 24 Oct 2026, by § The QA journey:_ the cloud provider calls
+(one provider a walk, on the host, through `scripts/check-providers-live.py`), and the
+26.6 walk guest (now one of two further bases, 26 and 15).
 
 ## Open
 

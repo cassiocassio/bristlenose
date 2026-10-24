@@ -98,6 +98,23 @@ struct WindowSeedPlaceTests {
         #expect(seed.project == id)
     }
 
+    /// A ready the boot nets fabricate (didFinish's, the uncover ceiling's, a
+    /// status page's) has no report to go to: the place waits for the real one
+    /// instead of being spent on nothing.
+    @Test func aPlaceWaitsForTheReportItself() {
+        #expect(WindowSeed.placeArrival(hasPlace: true, document: .loading, lensIntentReplayed: false) == .wait)
+        #expect(WindowSeed.placeArrival(hasPlace: true, document: .statusPage(.inProgress),
+                                        lensIntentReplayed: false) == .wait)
+        #expect(WindowSeed.placeArrival(hasPlace: true, document: .spa, lensIntentReplayed: false) == .go)
+    }
+
+    /// A lens clicked during boot wins, and the place is forgotten rather than
+    /// left to send a restored window to the link later.
+    @Test func aLensClickedDuringBootForgetsThePlace() {
+        #expect(WindowSeed.placeArrival(hasPlace: true, document: .spa, lensIntentReplayed: true) == .forget)
+        #expect(WindowSeed.placeArrival(hasPlace: false, document: .spa, lensIntentReplayed: true) == .none)
+    }
+
     @Test func consumingThePlaceKeepsTheWindowsIdentity() {
         let seed = WindowSeed.fresh(project: UUID(), lens: "sessions", place: place)
         let used = seed.withoutPlace

@@ -468,6 +468,31 @@ struct ContentView: View {
     }
 
     /// Put the window back where it was within the restored lens.
+    /// The place this window was opened at (the report's right-click, Open …
+    /// in New Window), while it is still to be gone to.
+    private func seedPlace(for project: UUID) -> WindowPlace? {
+        seed?.project == project ? seed?.place : nil
+    }
+
+    private func placeArrival(for project: UUID) -> WindowSeed.PlaceArrival {
+        WindowSeed.placeArrival(hasPlace: seedPlace(for: project) != nil,
+                                document: bridgeHandler.documentState,
+                                lensIntentReplayed: bridgeHandler.lensIntentReplayed)
+    }
+
+    /// Go to the seed's place, once: the seed forgets it, so a restored window
+    /// comes back where the researcher left it rather than at the link.
+    private func arriveAtSeedPlace(for project: UUID) -> Bool {
+        guard let place = seedPlace(for: project) else { return false }
+        forgetSeedPlace()
+        bridgeHandler.goToPlace(place)
+        return true
+    }
+
+    private func forgetSeedPlace() {
+        if seed?.place != nil { seed = seed?.withoutPlace }
+    }
+
     private func restoreAnchor(_ anchor: String?, on tab: Tab) {
         switch LensAnchor.action(lens: tab, anchor: anchor) {
         case .scroll(let id):
@@ -1170,6 +1195,12 @@ struct ContentView: View {
         // switch, so this transition marks each fresh open. See `LensMemory`.
         .onChange(of: bridgeHandler.isReady) { _, ready in
             guard ready, let id = selectedProjectID, lensRestoredFor != id else { return }
+            // A window opened at a place waits for the report itself: a ready
+            // the boot nets fabricate (`didFinish`'s, the uncover ceiling's, a
+            // status page's) has no report to go to, and would spend the place.
+            // The real `ready` follows as `documentState` → `.spa` (below).
+            let arrival = placeArrival(for: id)
+            if arrival == .wait { return }
             lensRestoredFor = id
             pendingScreensRestore = nil
             // A lens the user clicked during boot outranks the remembered
@@ -1177,15 +1208,11 @@ struct ContentView: View {
             // restoring on top of it would navigate away from the user's
             // explicit choice. The restore slot is still consumed above, so
             // a later `isReady` flip can't restore either.
-            guard !bridgeHandler.lensIntentReplayed else { return }
-            // A window opened at a place (the report's right-click) goes there,
-            // once: the seed forgets it, so a restored window comes back where
-            // the researcher left it rather than at the link.
-            if let place = seed?.place, seed?.project == id {
-                seed = seed?.withoutPlace
-                bridgeHandler.goToPlace(place)
+            guard !bridgeHandler.lensIntentReplayed else {
+                forgetSeedPlace()
                 return
             }
+            if arrival == .go, arriveAtSeedPlace(for: id) { return }
             guard let project = projectIndex.projects.first(where: { $0.id == id }) else { return }
             // The seed's lens wins over the study's remembered one: it is a
             // deliberate "open THIS lens over there", and it is what makes the
@@ -1202,6 +1229,16 @@ struct ContentView: View {
             }
             bridgeHandler.activateLens(tab)
             restoreAnchor(project.lastAnchor, on: tab)
+        }
+        // The real `ready` after a fabricated one: a window opened at a place
+        // goes there now (see the `isReady` restore above).
+        .onChange(of: bridgeHandler.documentState) { _, state in
+            guard bridgeHandler.isReady, let id = selectedProjectID, lensRestoredFor != id else { return }
+            let arrival = placeArrival(for: id)
+            guard arrival == .go || arrival == .forget else { return }
+            lensRestoredFor = id
+            pendingScreensRestore = nil
+            if arrival == .forget { forgetSeedPlace() } else { _ = arriveAtSeedPlace(for: id) }
         }
         .onReceive(serveFleet.screenReading.$available) { screensAvailableProjects = $0 }
         // The Screens row follows this project's availability. Mirrored onto

@@ -54,6 +54,25 @@ struct WindowSeed: Codable, Hashable {
         self.place = place
     }
 
+    /// What a window opened at a place does when its report says it is ready.
+    enum PlaceArrival: Equatable {
+        /// No place: the usual lens restore.
+        case none
+        /// The report isn't really up yet (a ready the boot nets fabricated, a
+        /// status page): keep the place and wait for the real `ready`.
+        case wait
+        /// A lens the researcher clicked during boot outranks it: forget it.
+        case forget
+        /// Go there now, and forget it.
+        case go
+    }
+
+    static func placeArrival(hasPlace: Bool, document: DocumentState, lensIntentReplayed: Bool) -> PlaceArrival {
+        guard hasPlace else { return .none }
+        guard document == .spa else { return .wait }
+        return lensIntentReplayed ? .forget : .go
+    }
+
     /// This seed with its place consumed.
     var withoutPlace: WindowSeed {
         WindowSeed(token: token, project: project, lens: lens)

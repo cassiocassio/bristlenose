@@ -63,6 +63,11 @@ def main(out: Path) -> None:
     print(f"wrote {out / 'index.html'}")
 
 
+INTRO_FIRST = """<b>Before</b> is the app as it is. <b>After</b> is the same
+place with the proposed Lucide icon swapped in live, stroke by the stem rule: the stem of the icon's own text, at its weight and size (shown per row), never under 1 px."""
+INTRO_COMPARE = """<b>Before</b> is the first capture, before the migration; <b>now</b> is the
+same control captured again from the migrated app. Matched by page and control name."""
+
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Icon catalogue — in place, before and after</title>
@@ -164,13 +169,31 @@ def compare(out: Path, final: Path) -> None:
         .replace("<th>after · Lucide</th><th>before · zoom</th>\n<th>after · zoom</th>",
                  "<th>before · zoom</th><th>now · in place</th>\n<th>now · zoom</th>") \
         .replace("Icon catalogue — every icon in place, before and after", "Icon catalogue — before tonight, and now") \
+        .replace("<title>Icon catalogue — in place, before and after</title>", "<title>Icon catalogue — before and now</title>") \
+        .replace(INTRO_FIRST, INTRO_COMPARE) \
         .replace("bn-icon-catalogue-v1", "bn-icon-compare-v1")
     (out / "compare.html").write_text(page)
     print(f"wrote {out / 'compare.html'}")
 
 
+def inline(page: Path) -> None:
+    """A copy with every image embedded: the app's preview pane opens a local file as a
+    data: URL, from which relative image paths cannot load."""
+    import base64
+    import re
+
+    h = page.read_text()
+    h = re.sub(r'src="([^"]+\.png)"', lambda m: 'src="data:image/png;base64,'
+               + base64.b64encode((page.parent / m.group(1)).read_bytes()).decode() + '"', h)
+    out = page.with_name(page.stem + "-inlined.html")
+    out.write_text(h)
+    print(f"wrote {out}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         compare(Path(sys.argv[1]), Path(sys.argv[2]))
+        inline(Path(sys.argv[1]) / "compare.html")
     else:
         main(Path(sys.argv[1]))
+        inline(Path(sys.argv[1]) / "index.html")

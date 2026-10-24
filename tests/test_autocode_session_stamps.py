@@ -789,3 +789,47 @@ class TestApplyWaitsForAStoppedRunner:
             _apply(factory, _answer_all())
         job = _job(factory)
         assert (job.status, job.completed_at) == ("cancelled", None)
+
+
+class TestQuoteAddedToACodedSession:
+    """N89: the stamp says a session was coded, not which quotes it held. A quote
+    added to it afterwards (a re-run cut a new one) is in no batch and has no
+    proposal, and the session reads as done, so neither a re-apply nor the
+    catch-up on switching the codebook back on ever sends it."""
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason="N89: owed_sessions() asks only whether a session has a stamp; the stamp "
+        "records no quote ids, so a quote added to a stamped session is never owed",
+    )
+    def test_a_quote_added_to_a_coded_session_is_coded_by_the_next_re_apply(
+        self, factory
+    ) -> None:
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        assert _stamped(factory) == {"s1"}
+
+        db = factory()
+        db.add(Quote(
+            project_id=1, session_id="s1", participant_id="p1",
+            start_timecode=1500.0, end_timecode=1505.0,
+            text="NEWQ a quote the second run cut", quote_type="screen_specific",
+            topic_label="Dashboard",
+        ))
+        db.commit()
+        db.close()
+
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert any("NEWQ" in p for p in llm.prompts()), (
+            f"the new quote was never sent; prompts: {len(llm.prompts())}"
+        )
+
+    def test_the_cost_gate_this_row_must_not_break(self, factory) -> None:
+        """A quote the model answered no tag for stays unsent in a coded session:
+        the stamp is what stops it being paid for twice."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, AsyncMock(side_effect=lambda **_kw: _result(1)))  # tags q0 only
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert llm.prompts() == []

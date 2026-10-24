@@ -524,13 +524,15 @@ class _TitaNet:
     """
 
     def __init__(self, model_path: str, threads: int) -> None:
-        import onnxruntime as ort
+        from bristlenose.utils.onnxruntime_import import import_onnxruntime
 
+        ort = import_onnxruntime()
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = threads
         opts.inter_op_num_threads = 1
         # sherpa ran its session at ERROR; a WARNING from a future onnxruntime
         # would otherwise land on stderr in the middle of Rich's live display.
+        # That is the session's; the import's own warnings are the helper's.
         opts.log_severity_level = 3
         self.session = ort.InferenceSession(
             model_path, opts, providers=["CPUExecutionProvider"])

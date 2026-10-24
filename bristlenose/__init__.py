@@ -58,6 +58,13 @@ _os.environ.setdefault("HF_HUB_VERBOSITY", "error")
 # `disable_telemetry_events()` is NOT enough — measured, it still queued
 # ProcessInfo and RegisterEpLibrary events, and the uploader still starts.
 _os.environ.setdefault("ORT_DISABLE_TELEMETRY", "1")
+
+# Upstream PR microsoft/onnxruntime#27645 (open, Oct 2026) would read
+# ORT_LOGGING_LEVEL at the first import, an integer from 0 Verbose to 4 Fatal,
+# in place of the hard-coded WARNING that prints GPU-discovery failures to
+# stderr under the strict snap. 1.30 and 1.31 ignore it, so until a release
+# honours it `utils/onnxruntime_import.py` captures those lines for the log.
+_os.environ.setdefault("ORT_LOGGING_LEVEL", "3")
 del _os
 
 # Drop mimetypes.knownfiles before any submodule loads. CPython's mimetypes

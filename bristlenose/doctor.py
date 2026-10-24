@@ -1753,6 +1753,7 @@ def check_bundle_voice() -> CheckResult:
     import sys
 
     from bristlenose.stages.s05b_voice import voice_runtime_available
+    from bristlenose.utils.onnxruntime_import import import_onnxruntime
 
     label = "Bundle: voice"
     # Presence by find_spec, loadability by import: a package that is there
@@ -1777,7 +1778,7 @@ def check_bundle_voice() -> CheckResult:
                            detail="voice extra not installed (legal outside the app bundle)")
     try:
         import kaldi_native_fbank as knf
-        import onnxruntime
+        onnxruntime = import_onnxruntime()
     except Exception as exc:  # ImportError, or OSError from a missing dylib
         return CheckResult(
             status=CheckStatus.FAIL, label=label,
@@ -1791,8 +1792,14 @@ def check_bundle_voice() -> CheckResult:
 
         from bristlenose.stages.s05b_voice import fbank_options
 
+        # Thread counts set, as the voice pass and Silero set theirs: a default
+        # pool pins its threads, and the strict snap refuses that with three
+        # "pthread_setaffinity_np failed" errors on stderr.
+        opts = onnxruntime.SessionOptions()
+        opts.intra_op_num_threads = 1
+        opts.inter_op_num_threads = 1
         session = onnxruntime.InferenceSession(
-            base64.b64decode(_ORT_IDENTITY_MODEL), providers=["CPUExecutionProvider"])
+            base64.b64decode(_ORT_IDENTITY_MODEL), opts, providers=["CPUExecutionProvider"])
         (out,) = session.run(["y"], {"x": np.array([2.5], dtype=np.float32)})
         if float(out[0]) != 2.5:
             raise RuntimeError(f"onnxruntime session returned {out!r} for an identity graph")

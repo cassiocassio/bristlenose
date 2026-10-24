@@ -238,7 +238,7 @@ class TestPatchTags:
         allowed = set(typing.get_args(TagDelta.model_fields["source"].annotation))
         written: dict[str, str] = {}
         for path in (Path(__file__).parent.parent / "bristlenose").rglob("*.py"):
-            for node in ast.walk(ast.parse(path.read_text(), str(path))):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"), str(path))):
                 if (
                     isinstance(node, ast.Call)
                     and getattr(node.func, "id", getattr(node.func, "attr", None)) == "QuoteTag"

@@ -125,9 +125,10 @@ def test_a_step_only_tonight_has_adds_no_menu_changes(tmp_path: Path) -> None:
     base.mkdir()
     tonight.mkdir()
     line = '{"path": "File ▸ New Project", "enabled": true, "shortcut": "⌘N", "checked": false}\n'
-    (base / "01-about.menus.jsonl").write_text(line)
-    (tonight / "01-about.menus.jsonl").write_text(line)
-    (tonight / "02-lens-quotes.menus.jsonl").write_text(line)
+    # UTF-8 as the walk writes them; Windows' default codepage has no ▸ or ⌘.
+    (base / "01-about.menus.jsonl").write_text(line, encoding="utf-8")
+    (tonight / "01-about.menus.jsonl").write_text(line, encoding="utf-8")
+    (tonight / "02-lens-quotes.menus.jsonl").write_text(line, encoding="utf-8")
     import sys
 
     argv = sys.argv

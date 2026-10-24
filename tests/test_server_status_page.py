@@ -253,6 +253,7 @@ class TestDetectStatus:
         (project / "p1").mkdir()
         (project / "p1" / "a.mp4").write_bytes(b"\x00")
         monkeypatch.setenv("HOME", str(project))
+        monkeypatch.setenv("USERPROFILE", str(project))  # Path.home() on Windows
         info = detect_status(out, _cond(out), platform="desktop", project_dir=project)
         assert info is not None
         # Says why, as `run` does: "No interviews… Drop a folder…" sent the
@@ -269,6 +270,7 @@ class TestDetectStatus:
         out = project / "bristlenose-output"
         out.mkdir(parents=True)
         monkeypatch.setenv("HOME", str(project))
+        monkeypatch.setenv("USERPROFILE", str(project))  # Path.home() on Windows
         info = detect_status(out, _cond(out), platform="", project_dir=project)
         assert info is not None
         assert info.short == t("desktop.chrome.unsuitableFolder")

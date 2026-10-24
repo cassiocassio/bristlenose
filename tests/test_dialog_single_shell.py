@@ -32,7 +32,7 @@ def test_only_the_shell_draws_a_modal_backdrop_or_marks_a_dialog_modal() -> None
     for path in _components():
         if path == SHELL:
             continue
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         for needle in ('"bn-overlay', "`bn-overlay"):
             if needle in text:
                 offenders.append(f"{path.relative_to(ROOT)}: {needle}")
@@ -48,7 +48,7 @@ def test_only_the_shell_draws_a_modal_backdrop_or_marks_a_dialog_modal() -> None
 def test_the_shell_is_what_it_claims() -> None:
     # The gate above passes vacuously if the shell itself stops drawing the
     # backdrop, so pin that it does.
-    text = SHELL.read_text()
+    text = SHELL.read_text(encoding="utf-8")
     assert '"bn-overlay"' in text
     assert 'aria-modal="true"' in text
     assert "createPortal" in text
@@ -60,13 +60,13 @@ def test_only_the_modal_atom_styles_the_backdrop() -> None:
     defining = [
         p.relative_to(ROOT).as_posix()
         for p in THEME.rglob("*.css")
-        if re.search(r"^\.bn-overlay\s*\{", p.read_text(), re.M)
+        if re.search(r"^\.bn-overlay\s*\{", p.read_text(encoding="utf-8"), re.M)
     ]
     assert defining == ["bristlenose/theme/atoms/modal.css"]
     for retired in (".merge-overlay", ".codebook-modal-overlay"):
         hits = [
             p.relative_to(ROOT).as_posix()
             for p in list(THEME.rglob("*.css")) + _components()
-            if retired in p.read_text()
+            if retired in p.read_text(encoding="utf-8")
         ]
         assert not hits, f"{retired} is retired; still named in {hits}"

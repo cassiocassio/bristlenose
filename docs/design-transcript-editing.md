@@ -6,18 +6,19 @@ last-trued: 2026-10-24
 trued-against: HEAD@main on 2026-10-24
 ---
 
-**Status:** Partly built — split, join, moving one paragraph to another speaker (0.35.0) and copying (8 Oct 2026); see the two "built" sections near the end. Direct editing of the words is still research. Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
+**Status:** Partly built — split, join, moving one paragraph to another speaker (0.35.0) and copying (8 Oct 2026); see the two "built" sections near the end. Direct editing of the words is planned, not started: the order of work and the decisions are in [Where this stands](#where-this-stands-24-oct-2026-planned) (24 Oct 2026). Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
 
 **Created:** 1 Mar 2026 · **Spec section added:** 26 Jul 2026
 
 ---
 
-## Where this stands (24 Oct 2026)
+## Where this stands (24 Oct 2026, planned)
 
-Start planning here. This section lists what is built, what is decided and what is still open. Each
-item points to the section or doc that holds the detail. Nothing new is decided here. Building
-waits: the beta is a reliability phase with almost no new features (owner, 19 Oct 2026), and
-transcript editing is GA-gating (~2027).
+Start planning here. This section lists what is built, what is decided, the order of work and what
+is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 20 and
+the revision of 6 were made with the owner on 24 Oct 2026, in a planning session that wrote no
+product code. Building waits: the beta is a reliability phase with almost no new features (owner,
+19 Oct 2026), and transcript editing is GA-gating (~2027).
 
 **Built**
 - Split and join a paragraph (6 Oct 2026), and moving one paragraph to another speaker (0.35.0).
@@ -49,60 +50,138 @@ transcript editing is GA-gating (~2027).
    - The only thing prevented is *unmarked* inserted text that looks like speech.
 
    See [The edit vocabulary](#the-edit-vocabulary) to [The one thing to prevent](#the-one-thing-to-prevent).
-3. **The keystone is a persisted word-range anchor.** It is the same anchor the incremental-analysis
-   work needs, so it is built once ([The keystone](#the-keystone-a-persisted-word-range-anchor),
-   `docs/design-incremental-analysis.md`).
+   Decision 13 refines what a correction does to the analysis.
+3. **The keystone is a persisted word-range anchor.** It was to be shared with incremental analysis
+   ([The keystone](#the-keystone-a-persisted-word-range-anchor), `docs/design-incremental-analysis.md`).
+   _24 Oct 2026:_ incremental analysis shipped by freezing curated quotes instead (v0.20.0), so the
+   anchor's payoff there is now only the ~9% of quotes the model sometimes omits. The anchor is
+   justified by editing.
 4. **One saved edit over an immutable original, not a history stack.** Revert deletes the edit row,
    as quote editing does ([What Bristlenose needs](#what-bristlenose-needs-recommendation),
    `docs/design-undo-catalog.md`).
 5. **"Inaudible" is a segment flag, not bracketed text.** Brackets are kept for the researcher's own
    insertions (13 Oct 2026).
-6. **Quote edits win, one way.** A transcript correction flows into a quote only when that quote has
-   no edit of its own. A quote's own edit never flows back into the transcript. When a correction
-   lands under an edited quote, the Quotes lens shows a quiet flag (17 Oct 2026, [Quote edits win,
-   one way](#quote-edits-win-one-way-owner-17-oct-2026)).
+6. **Corrections flow both ways; editorial edits stay with the quote** (revised 24 Oct 2026; was
+   "quote edits win, one way", 17 Oct). The researcher thinks they are editing the same words, one
+   view with the ums left in. A *correction* (words swapped in place, any length: "bee bee sea" →
+   "BBC") made in the transcript changes every quote that still holds those words, edited or not.
+   Made in a quote, it changes the transcript. *Editorial* quote edits (crops, removed ums, ellipses,
+   tidied grammar) stay in the quote. A quiet flag in the Quotes lens appears only where a correction
+   cannot find its words, because the quote's edit removed or reworded them. Telling a correction
+   from tidying in a quote edit is step 2b's judgement. This replaces the open single-word
+   carry-back question ([Quote edits win, one way](#quote-edits-win-one-way-owner-17-oct-2026)).
 7. **Names, brands, places and technical terms are corrected study-wide.** The tool finds every
-   candidate (variants, sound-alikes, low-confidence words) and shows each in context. The
-   researcher accepts them all or goes one by one; there is no blind replace-all. Accepted words
-   become the study's word list, which can later feed Whisper's prompt. Corrections to people and
-   places go through the people layer (17 Oct 2026, same section).
+   candidate and shows each in context. The researcher accepts them all or goes one by one; there is
+   no blind replace-all. Accepted words become the study's word list, which can later feed Whisper's
+   prompt. Corrections to people and places go through the people layer (17 Oct 2026, same section).
+   Decision 20 says which candidates v1 finds.
 8. **The transcript is a document, not a form.** A click puts the caret in the text, with no field
    fill. Links into the lenses live on the gutter marks, the margin titles and the right-click menu
    (17 Oct 2026, [The transcript is a document](#the-transcript-is-a-document-not-a-form-owner-17-oct-2026)).
 9. **Strike: the verb is Delete.** The researcher selects a passage and presses Delete; the passage
    stays on the page, struck through. It is kept out of the analysis and every export.
    - A strike is keyed on session, time range and words, and replayed like a layout edit.
-   - The pipeline reads strikes from a file. This answers open questions 1, 3 and 4 below for
-     strikes (16 Oct 2026, [Operation 1](#operation-1-section-strike--exclude),
-     `docs/design-delete-and-bin.md`).
+   - The pipeline reads strikes from a file (16 Oct 2026, [Operation 1](#operation-1-section-strike--exclude),
+     `docs/design-delete-and-bin.md`). Decision 12 changes what Re-analyse does with them.
 10. **Direct editing of a paragraph's words comes next.** It connects to quote editing and its
     revert, but should be simpler (6 Oct 2026).
+11. **Every transcript edit is keyed on time plus words**, the strike's key. Split, join and move
+    move off position plus six words, which a re-run that adds or drops an earlier paragraph breaks
+    for every later edit. Time plus words survives that shift and refuses an ambiguous match.
+12. **Re-analyse keeps nothing, transcript edits and strikes included.** It is the begin-again
+    action, used rarely, and not keeping things is the feature. Analyse and incremental analysis
+    always respect earlier work, so "strike, then Analyse" is how struck text leaves the themes.
+    This supersedes `design-delete-and-bin.md`'s "Strikes must survive" (`docs/design-analysis-lifecycle.md`;
+    commits `33a6e01c`, `e8aa29ff`).
+13. **What an edit sets moving depends on what kind of edit it is.**
+    - Striking a whole quote works like hiding it.
+    - A partial strike leaves part of the text. At the next Analyse that part may move to another
+      theme or change the quote; the researcher expects that ripple.
+    - A factual correction (spelling, punctuation, a brand: "bee bee sea" → "BBC") changes nothing
+      in the analysis.
+    - A meaning change ("I really hate that" → "I really love that") should be tagged again and may
+      leave a signal card.
+
+    Which is which, and what each one re-runs, is measured before it is built: a corpus of plausible
+    edits, a way to tell their kinds apart, and a rule per kind (step 2b).
+14. **A caret in the words owns the keyboard.** Single keys are text there, as in any document.
+    Clicks on margins, timecodes and badges stop placing the caret, so the page's shortcuts
+    (`[` `]` `/` `?` `m`) keep working from them.
+15. **VoiceOver hears one editable document.** Paragraphs are read with speaker and time;
+    timecodes, badges and the margin are non-text islands. Checked by hand with VoiceOver at step 2a.
+16. **The sentence-start capital (`::first-letter`) is checked by hand at step 2a**, for caret bugs
+    in WebKit (the Mac app) and Chromium. If the caret misbehaves, the capital becomes a real span
+    the editor treats as one character. The stored text never changes either way.
+17. **Any edit can be removed, in any order**, which the Bin's Put Back needs. A removal that would
+    strand a later edit (a split of a half) is refused and says so.
+18. **A correction's new words share the replaced words' time span**, divided by length. Nothing
+    touches the audio; a clip still cuts at real word times outside the correction.
+19. **A strike covers any selection**, across paragraphs and speakers, widened to whole words at each
+    end. One strike is one row in the Bin.
+20. **Find and replace v1 finds text variants only**: case, spacing and punctuation ("B B C", "bbc",
+    "B.B.C."). Post-v1 enhancements, each measured first:
+    - sound-alikes (phonetic, local; check for English-only bias);
+    - low-confidence words, which needs Whisper's per-word confidence kept at import (it is dropped
+      today: `importer.py` keeps only word, start and end in `words_json`), and has nothing to offer
+      on Apple or platform transcripts;
+    - suggestions from the LLM (paid, and the text goes to the provider again).
+
+    The word list feeds Whisper's prompt only after the prompt-echo measurement (step 3b).
+
+**Order of work.** Each step names what it needs from the steps before it.
+
+1. **One word-range type, and one edit record.** A word range is a span of the unedited transcript:
+   session, start and end time, and the words, resolved to word positions at import. Quotes carry
+   one (the keystone, decision 3) and so does every edit. Split, join and move migrate onto it
+   (decision 11).
+   - The record lives in the database and in a file in the output folder's `.bristlenose/`, which
+     the pipeline reads, so re-extracting a session uses the corrected words and skips struck ones.
+     Role pins are the sibling. It is discarded with everything else by Re-analyse (decision 12).
+   - It must survive every other path: Analyse of new files, a session's re-extraction, a speaker
+     recode, a re-transcription (an edit whose words changed is refused), a late file set aside, a
+     crash and restore, a serve restart, a study moved or copied. Each becomes a row in
+     `docs/design-lifecycle-failure-modes.md` with its proving test.
+   - Needs: decisions 11, 12 and 17.
+2. **(2a) Word correction.** Typing is let into the transcript; the `beforeinput` guard keeps
+   refusing pasted or dropped markup. A correction lands on a word range, flows both ways
+   (decision 6), takes the replaced words' time (decision 18), and reverts by deleting its row.
+   An edit that changes only spacing is no edit (`design-undo-catalog.md`, decision #30). The
+   analysis does not move yet. Acceptance includes decisions 14, 15 and 16 and input-method
+   composition. Needs from 1: a place to land, and each quote's range.
+3. **(2b) What an edit sets moving.** Research first, then build (decision 13): the corpus of
+   plausible edits, both transcript and quote side; how to tell a factual correction from a meaning
+   change, and a correction from tidying; and per kind, whether the session becomes owed work for
+   the next Analyse (the sibling is a speaker recode, `10af9e8f`), re-tagged, or left alone. Needs
+   from 2a: real corrections to classify.
+4. **(3) Find and replace across the study.** Each accepted candidate is a 2a correction, so it
+   flows to quotes and its consequences follow 2b. v1 finds text variants (decision 20). People and
+   places go through the people layer. Needs: 2a; 2b for the consequences of a batch.
+   **(3b)** The word list feeds Whisper's prompt, after the prompt-echo measurement.
+5. **(4) Strike (Delete) and the Bin.** Needs only step 1 and the shared filter (built), so it can
+   move earlier or run beside 2a if the Bin's Mac sidebar work is scheduled separately. Plan:
+   `docs/design-delete-and-bin.md`.
+6. **(5) Editorial notes.** Need 2a's typing. Cheaper than they look: a note lives only in the edit
+   record, so extraction never sees it and leaving it out of the analysis costs nothing. The work is
+   the who-and-when attribution, the drawing, the soft word cap, and how a note appears in exports
+   and copies.
 
 **Open**
-- When a quote edit replaces exactly one word, should the correction carry back into the transcript
-  automatically, or be offered ("Also correct the transcript?")?
-- Calls left from the 8 Oct 2026 review ([Open after the 8 Oct 2026 review](#open-after-the-8-oct-2026-review--owners-calls)):
-  - Is a focused transcript "editing"?
-  - What a screen reader hears.
-  - `::first-letter` caret bugs.
-  - Position plus six words, or time plus words, as an edit's anchor.
-  - Deleting an undo that isn't the newest.
-- For find and replace:
-  - How candidates are generated.
-  - Measure Whisper prompt echoes before the word list feeds transcription.
-- The older open questions below:
-  - Re-analysis after edits: manual, or for the affected sessions only?
-  - Re-alignment versus drift after a correction.
-  - Range selection.
-- Plan the order of work:
-  1. The anchor.
-  2. Word correction.
-  3. Find and replace.
-  4. Strike.
-  5. Editorial notes.
+- Should the Re-analyse sheet and `run --clean` list transcript edits and strikes among what is
+  lost? Proposed yes: it follows from decision #135 (`e8aa29ff`) and decision 12, and today they
+  list neither splits, joins nor moves (`curation_counts.py`).
+- A quote that a strike covers in part: `design-delete-and-bin.md` (v1) excludes it whole until the
+  researcher crops it clear; decision 13 expects the next Analyse to re-read the rest. Proposed:
+  excluded whole until the next Analyse, which re-reads what is left.
+- Where a refused replay is shown. Edits that no longer match are logged and shown nowhere.
+- Step 2b's corpus, kinds and rules.
+- For editorial notes: what "who" says in a one-researcher app, and the word cap's level.
+- `design-delete-and-bin.md`'s own calls: the words, glyph or row, Empty Bin, the empty-again rule.
+- Small, recorded with the 8 Oct review: the Backspace join guard compares displayed codes where the
+  server compares slots; Return cannot split a paragraph with no spaces (CJK).
 
 **Related:**
 - `docs/design-delete-and-bin.md`: strike, the Bin, Put Back.
+- `docs/design-analysis-lifecycle.md`: Analyse, Re-analyse, owed sessions.
 - `docs/design-speaker-editing.md` and `docs/design-transcript-speaker-editing-roadmap.md`: merge,
   split and reassign.
 - `docs/design-people.md` §K: speaker scope.
@@ -309,7 +388,7 @@ Simple contenteditable on individual segment text. Click to edit, type correctio
 
 > **Treatment, corrected 2026-09-20.** This said "yellow background (same as quote editing)". Do not build that. The yellow (`--bn-colour-crop-bg`, named `--bn-colour-editing-bg` until that date) belongs to quote *cropping* only — it pairs with the bracket handles and signals "move this boundary", not "retype this string". A segment edit is an ordinary inline edit field and takes the `--bn-field-edit-*` set: segment text sits on page background, so the field tints up (`--bn-field-edit-fill-on-page`) with a 1px `--bn-field-edit-edge`. The rule and its one exemption are documented in `bristlenose/theme/tokens.css`; `docs/mockups/edit-field-idioms.html` renders every case. Borrowing the crop yellow for a text edit is precisely the drift the rename was done to stop.
 
-**Timing**: Word-level timestamps (`words_json`) are not updated. Playback cursor position degrades for edited segments but remains correct for surrounding segments. This matches Dovetail's approach (accept drift, it's fine for research).
+**Timing** _(superseded 24 Oct 2026 by decision 18: the new words share the replaced words' time span, divided by length)_: Word-level timestamps (`words_json`) are not updated. Playback cursor position degrades for edited segments but remains correct for surrounding segments. This matches Dovetail's approach (accept drift, it's fine for research).
 
 ### What about playback sync?
 
@@ -424,6 +503,8 @@ This implicit provenance is sufficient. No need to track per-word edit history.
 
 ## Open questions
 
+> _24 Oct 2026:_ 1, 3 and 4 were answered for strikes on 16 Oct (`design-delete-and-bin.md`). 2 is decision 13 at the top (it depends on the kind of edit; measured first, step 2b). 5 is decision 18 (new words share the replaced words' span). 6 is decision 19 (any selection, widened to whole words).
+
 1. **Pipeline integration**: How does the CLI pipeline (which reads files, not a database) access segment edits for re-analysis? Options: (a) export edits to a JSON file that the pipeline reads, (b) pipeline queries the SQLite DB directly, (c) edits only apply in serve mode and re-analysis is a serve-mode-only operation.
 
 2. **Re-analysis trigger**: After editing transcripts, should the researcher manually trigger re-analysis? Or should it happen automatically? Automatic is complex (incremental re-run of stages 8-11 for affected sessions only).
@@ -517,6 +598,8 @@ In this domain a paragraph break *is* a quote boundary, so "break this big parag
 Not insertion — *unmarked* insertion of speech-looking text that a reader or the extractor would take as the participant's words. **Fabrication is a formatting failure, not an editing capability to withhold:** inserted non-speech must always wear the editorial bracket/styling, and then it is fine. That single rule is what lets the whole vocabulary stay honest while giving the user the document they're right to expect.
 
 ### Quote edits win, one way (owner, 17 Oct 2026)
+
+> _Revised 24 Oct 2026 (owner), decision 6 at the top:_ a **correction** (words swapped in place, any length) flows both ways automatically, into every quote that still holds the words and from a quote back into the transcript; **editorial** quote edits stay with the quote. The researcher thinks they are editing the same words. The single-word question below is answered by that. Kept as written for the reasoning.
 
 An edit made in the Quotes lens is more definitive than a correction to the transcript, and it does not go back. A quote edit is editorial (crops, tidied wording, ellipses), so there is no faithful way to write it into what was said. So: a transcript correction flows into a derived quote only when that quote has no edit of its own; a quote with its own edit keeps it; nothing flows from a quote edit into the transcript. When a correction lands under a quote that has its own edit, the Quotes lens should say so quietly, so the researcher can look (a restored "no" must not sit in the transcript while the quote still says the opposite). That is a flag, not an automatic change.
 
@@ -615,6 +698,8 @@ moves one paragraph to another speaker — `design-people.md` §K6, `POST …/tr
 ---
 
 ### Open after the 8 Oct 2026 review — owner's calls
+
+> _Answered 24 Oct 2026 (owner), decisions 11 and 14–17 at the top:_ the caret in the words owns the keyboard, and clicks on margins, timecodes and badges stop placing it; VoiceOver hears one editable document, checked by hand at 2a; `::first-letter` is checked by hand at 2a; every edit is keyed on time plus words; any edit can be removed in any order, and a removal that would strand a later edit is refused. The small items at the end stay open.
 
 - **Is a focused transcript "editing"?** One editable region means a click on a margin or a
   timecode's text focuses it, and the page's bare-key shortcuts (`[` `]` `/` `?` `m`) stand

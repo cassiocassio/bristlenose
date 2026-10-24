@@ -59,7 +59,7 @@ Nothing is ever actually removed. The source text, its timecodes and the recordi
 - **The pipeline does not read the database.** For struck text to stay out of the LLM's input, the strike has to live in a file the pipeline reads. Role pins are the precedent: they live in the session registry and the next run honours them (`server/routes/reanalyse.py`). The transcript keeps its text and timecodes; only the prompt drops the struck lines, or marks them `[removed]` so the context stays honest.
 - **A clean Re-analyse wipes the database by design**, and the confirmation sheet counts what's lost. So:
   - **Deleted quotes are lost**, and the sheet must count them.
-  - **Strikes must survive.** They're carried across `--clean` the way the study marker is. This is the property that makes the strike worth having: it acts on the input, so it is the only curation that survives a re-analysis. Strike, then Re-analyse, gives clean themes.
+  - **Strikes are lost too** (owner, 24 Oct 2026; `design-transcript-editing.md` decision 12). Re-analyse is the begin-again action and keeps nothing, strikes and every other transcript edit included; that is the feature. Analyse and incremental analysis always respect earlier work, so strike, then Analyse, is how struck text leaves the themes. _Until then this line said strikes must survive, carried across `--clean` like the study marker._ The sheet should count struck passages among what is lost (proposed, same doc's Open list).
 
 ### Exports and every outward path
 

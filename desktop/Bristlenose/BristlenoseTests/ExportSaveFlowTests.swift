@@ -37,6 +37,8 @@ private final class FakeServe: @unchecked Sendable {
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
         let listening = self.listening
+        // The listener runs on `.main` (`start(queue:)` below), which is what
+        // makes `assumeIsolated` hold; another queue would trap here.
         listener.stateUpdateHandler = { state in
             switch state {
             case .ready, .failed, .cancelled: MainActor.assumeIsolated { listening.fire() }
@@ -124,8 +126,12 @@ private final class ExportRig {
     var destination: URL { dir.appendingPathComponent("report.html") }
 
     /// Start the export download as the SPA's link does, minus the click.
-    func export(query: String = "locale=en") async {
+    func export(query: String = "locale=en") async throws {
         await serve.ready()
+        // A listener that failed, or a wait the limit cancelled, leaves port 0,
+        // and a download to it fails as an alert some tests would take for
+        // the one they expect.
+        try #require(serve.port != 0, "precondition: the loopback server is listening")
         // As the app's report view is wired: the coordinator decides its
         // navigations, and the serve it loaded is this one.
         webView.navigationDelegate = coordinator
@@ -152,7 +158,7 @@ private final class ExportRig {
     }
 
     /// Wait for what only WebKit's download brings about, with no clock of
-    /// its own: the bound is the test's `.timeLimit`. Each step of an export
+    /// its own: the bound is the suite's `.timeLimit`. Each step of an export
     /// is a main-actor hop in the app (the server's answer, the destination,
     /// the refetch) or WebKit's own write of the file out of process, and no
     /// signal the test can hold reports the file landing, so this polls. A
@@ -177,13 +183,15 @@ private final class ExportRig {
 }
 
 @MainActor
-@Suite("Export save flow", .serialized)
+// The limit bounds every wait on a signal or `untilTimeLimit`, so it is on the
+// suite: a listener that never settled would otherwise hang the run.
+@Suite("Export save flow", .serialized, .timeLimit(.minutes(2)))
 struct ExportSaveFlowTests {
 
     /// The control: a 200 is offered to the panel and written where chosen.
     @Test func aGoodExportIsSavedWhereChosen() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.saved == "<html>NAMED</html>" }
 
         #expect(rig.panels == 1)
@@ -196,7 +204,7 @@ struct ExportSaveFlowTests {
     @Test func aServerErrorIsNeverSavedAsTheReport() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.serve.status = { _ in 500 }
-        await rig.export()
+        try await rig.export()
         await rig.until { !rig.alerts.isEmpty || rig.saved != nil || rig.panels > 0 }
         // Give a wrongly-offered save time to land, so a pass is not a race.
         try? await Task.sleep(for: .milliseconds(300))
@@ -211,11 +219,10 @@ struct ExportSaveFlowTests {
 
     // MARK: - R74
 
-    @Test(.timeLimit(.minutes(2)))
-    func tickingAnonymiseSavesOnceToTheChosenPlace() async throws {
+    @Test func tickingAnonymiseSavesOnceToTheChosenPlace() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.atPanel = { $0?.anonymise = true }
-        await rig.export()
+        try await rig.export()
         await rig.untilTimeLimit { rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 }
         try? await Task.sleep(for: .milliseconds(300))
 
@@ -227,12 +234,11 @@ struct ExportSaveFlowTests {
         #expect(rig.alerts.isEmpty)
     }
 
-    @Test(.timeLimit(.minutes(2)))
-    func anAnonymisedCopyTheServerRefusesIsSaidAndNotSaved() async throws {
+    @Test func anAnonymisedCopyTheServerRefusesIsSaidAndNotSaved() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.serve.status = { $0.query?.contains("anonymise=true") == true ? 500 : 200 }
         rig.atPanel = { $0?.anonymise = true }
-        await rig.export()
+        try await rig.export()
         await rig.untilTimeLimit { !rig.alerts.isEmpty || rig.saved != nil || rig.panels > 1 }
         try? await Task.sleep(for: .milliseconds(300))
 
@@ -250,8 +256,8 @@ struct ExportSaveFlowTests {
         // The export is still building when the second press lands: its
         // answer is held until both presses are in.
         rig.serve.hold = { _ in true }
-        await rig.export()
-        await rig.export()
+        try await rig.export()
+        try await rig.export()
         rig.serve.release()
         await rig.until { rig.saved == "<html>NAMED</html>" }
         await rig.until { !rig.coordinator.hasPendingReportExport }
@@ -267,20 +273,20 @@ struct ExportSaveFlowTests {
     /// taken for a second press.
     @Test func eachExportAfterTheLastHasEndedAsksAgain() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.saved != nil && !rig.coordinator.hasPendingReportExport }
 
         var cancelled = false
         rig.coordinator.chooseSaveDestination = { _, _ in rig.panels += 1; cancelled = true; return nil }
-        await rig.export()
+        try await rig.export()
         await rig.until { cancelled }
 
         rig.serve.status = { _ in 500 }
-        await rig.export()
+        try await rig.export()
         await rig.until { !rig.alerts.isEmpty }
 
         rig.serve.status = { _ in 200 }
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.panels == 3 }
 
         #expect(rig.panels == 3, "an export after one had ended was dropped")
@@ -300,7 +306,7 @@ struct ExportSaveFlowTests {
 
         bridge.reportExportPressed()          // as `menuAction("exportReport")` does
         #expect(bridge.isExportingReport, "the press was not answered")
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.serve.requested.count == 1 }
         // The server is still building it.
         try? await Task.sleep(for: .milliseconds(200))
@@ -318,7 +324,7 @@ struct ExportSaveFlowTests {
         let bridge = rig.coordinator.bridgeHandler
         rig.serve.status = { _ in 500 }
         bridge.reportExportPressed()
-        await rig.export()
+        try await rig.export()
         await rig.until { !rig.alerts.isEmpty }
         #expect(!rig.alerts.isEmpty)
         #expect(!bridge.isExportingReport, "a refused export still said Exporting…")
@@ -346,7 +352,7 @@ struct ExportSaveFlowTests {
         bridge.reportExportStartPatience = .milliseconds(100)
         rig.serve.hold = { _ in true }
         bridge.reportExportPressed()
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.serve.requested.count == 1 }
         try? await Task.sleep(for: .milliseconds(400))
         #expect(bridge.isExportingReport, "the fallback cleared a download still building")
@@ -365,12 +371,12 @@ struct ExportSaveFlowTests {
         rig.atPanel = { $0?.anonymise = true }
         rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
         bridge.reportExportPressed()
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.serve.requested.count == 2 }
         #expect(!bridge.isExportingReport, "precondition: the panel has been and gone")
 
         #expect(bridge.reportExportPressed())
-        await rig.export()
+        try await rig.export()
         await rig.until({ !bridge.isExportingReport }, seconds: 5)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
         rig.serve.release()
@@ -385,10 +391,10 @@ struct ExportSaveFlowTests {
         bridge.reportExportStartPatience = .seconds(60)
         rig.serve.hold = { _ in true }
         bridge.reportExportPressed()
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.serve.requested.count == 1 }
         #expect(!bridge.reportExportPressed(), "a press while pending changes nothing")
-        await rig.export()
+        try await rig.export()
         try? await Task.sleep(for: .milliseconds(300))
         #expect(bridge.isExportingReport, "the dropped press cleared the first export's line")
         rig.serve.release()
@@ -420,9 +426,9 @@ struct ExportSaveFlowTests {
         rig.atPanel = { $0?.anonymise = true }
         // Hold the anonymised copy up until the second press is in.
         rig.serve.hold = { $0.query?.contains("anonymise=true") == true }
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.serve.requested.count == 2 }
-        await rig.export()
+        try await rig.export()
         rig.serve.release()
         await rig.until { rig.saved == "<html>ANONYMISED</html>" }
         try? await Task.sleep(for: .milliseconds(500))
@@ -433,7 +439,7 @@ struct ExportSaveFlowTests {
         // Saved: the export is over, and the next press asks again.
         await rig.until { !rig.coordinator.hasPendingReportExport }
         rig.atPanel = { _ in }
-        await rig.export()
+        try await rig.export()
         await rig.until { rig.panels == 2 }
         #expect(rig.panels == 2, "the anonymised export never let go")
     }

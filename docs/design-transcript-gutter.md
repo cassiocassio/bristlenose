@@ -91,7 +91,8 @@ transcript they can jump to each, landing on the thing itself.
   fewest filters that keep it from showing (`filter.ts relaxFor`, the same checks as
   `isQuoteVisible`, pinned equal: starred-only → all; re-tick one of its tags, leaving tag solo
   first; drop the tokens it fails; clear typed text), keeps what it changed (`lastQuotesArrival`,
-  for the toast question), and scrolls to the anchor once. Each island fetches `/quotes` as it
+  for the toast question), and scrolls once: to the revealed quote's card, centred and flashed, or to
+  the group heading when there is no card (`docs/design-arrival-flash.md`, 17 Oct 2026). Each island fetches `/quotes` as it
   mounts, and one answered before the un-hide reached the server brings the hide back, so for ten
   seconds after the first load a later load that says hidden is un-hidden again (that only); if the
   quotes take five seconds to come, the lens scrolls anyway and reveals when they do. Once the quote
@@ -142,19 +143,25 @@ space-separated runs, which are rarely words, so its quotes fall back to the ser
 WebKit reaches links with Tab only when "Press Tab to highlight each item" is on (Option-Tab
 otherwise), as everywhere in the report.
 
-Owner calls still open: whether a hidden quote's mark needs a spoken "(hidden)" (a new key in all
-21 locales); the blue hover title at 3.75:1 on default light paper; the pale mark at rest; the mark
-and label being two tab stops for one quote; the playback glow's contrast on paper; the toast that
-says which filters arrival changed (`lastQuotesArrival` holds them).
+Owner calls still open: the blue hover title at 3.75:1 on default light paper; the pale mark at
+rest; the mark and label being two tab stops for one quote; the playback glow's contrast on paper.
+Moved to the accessibility backlog (owner, 24 Oct 2026): a spoken "(hidden)" on a hidden quote's
+mark (a new key in all 21 locales), and the toast that says which filters arrival changed
+(`lastQuotesArrival` holds them).
+
+Owner QA passed 17 Oct 2026: quote mark and section label into Quotes, screen mark into Screens,
+Back to the paragraph, palettes in light and dark. Not yet walked: hover keylines, a new tab, a
+hidden quote, the discussion link, keyboard, narrow width, playback.
 
 ## Where the CSS lives
 
 New transcript rules live in `frontend/src/islands/transcript/`, imported by the page, as the
-Screens and Discussion lenses do. A project serves its baked copy of the theme CSS
-(`server/app.py`, `serve_theme_css_with_fallback`), so rules added under `bristlenose/theme/`
-would reach no project analysed before the release; the new markup would render unstyled. The
-paper and sheet tokens go in the palettes and `_contract.css` too, and the frontend reads them with
-a fallback.
+Screens and Discussion lenses do. When this was built, a project served its baked copy of the
+theme CSS, so rules under `bristlenose/theme/` would have reached no project analysed before the
+release. Since 17 Oct 2026 serve always sends the running version's theme CSS (`server/app.py`,
+`serve_theme_css`), so that reason has gone; the lens-local home stays because it keeps the
+transcript's rules with its components. The paper and sheet tokens are in the palettes and
+`_contract.css`, and the frontend reads them with a fallback.
 
 ## Stages
 
@@ -183,5 +190,7 @@ a fallback.
 
 ## Not in this work
 
-The Mac right-click menu and menu-bar items (need the Swift side), editing, Signals marks, and the
-tag outdent (the tag-hang catalogue's job, awaiting the owner).
+The Mac right-click menu and menu-bar items (need the Swift side; the proposal is
+`docs/design-webview-context-menu.md`), editing (`docs/design-transcript-editing.md` § Where this
+stands), Signals marks, and the tag outdent (decided 17 Oct 2026 against the tag-hang catalogue:
+only sentiment tags hang, in this margin; custom and framework tags do not; not built).

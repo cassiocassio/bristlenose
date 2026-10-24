@@ -2,13 +2,114 @@
 
 ---
 status: partial
-last-trued: 2026-10-08
-trued-against: HEAD@main on 2026-10-08
+last-trued: 2026-10-24
+trued-against: HEAD@main on 2026-10-24
 ---
 
 **Status:** Partly built — split, join, moving one paragraph to another speaker (0.35.0) and copying (8 Oct 2026); see the two "built" sections near the end. Direct editing of the words is still research. Now GA-gating (not beta) — target the GA cycle, ~2027. See [Bidirectional editing — the converged spec (26 Jul 2026)](#bidirectional-editing--the-converged-spec-26-jul-2026), which supersedes the two-operation framing below where they conflict.
 
 **Created:** 1 Mar 2026 · **Spec section added:** 26 Jul 2026
+
+---
+
+## Where this stands (24 Oct 2026)
+
+Start planning here. This section lists what is built, what is decided and what is still open. Each
+item points to the section or doc that holds the detail. Nothing new is decided here. Building
+waits: the beta is a reliability phase with almost no new features (owner, 19 Oct 2026), and
+transcript editing is GA-gating (~2027).
+
+**Built**
+- Split and join a paragraph (6 Oct 2026), and moving one paragraph to another speaker (0.35.0).
+  These are recorded as layout edits with the words they named, then replayed on every import and
+  refused when the words no longer match. See [Split and join, stage 1](#split-and-join-stage-1--built-6-oct-2026).
+- A refused undo of a split or join says so and stays undoable (`f25456ff`).
+- Copying from the transcript in the house format (8 Oct 2026). See [Copying from the transcript](#copying-from-the-transcript--built-8-oct-2026).
+- The gutter finds each quote's words in the drawn text when the page is viewed
+  (`frontend/src/islands/transcript/quoteExtents.ts`, `docs/design-transcript-gutter.md`). Nothing
+  is persisted, so this is **not** the keystone anchor. It shows the join can work, and where it
+  fails:
+  - CJK without word timings;
+  - words tidied between the anchors, which gives an approximate match;
+  - repeated phrases, settled by time.
+- Hidden quotes are kept out of the analysis, through one shared read-side filter
+  (`speaker_slots.analysis_quotes`, 22 Oct 2026). Struck text is meant to use the same filter.
+
+**Decided**
+1. **Correcting the transcript is a duty, not a nicety.** In medical work a dropped "no" inverts a
+   fact. Correction must be frictionless, and the original must stay recoverable underneath
+   (26 Jul 2026, [Why this is GA-gating](#why-this-is-ga-gating-not-optional)).
+2. **The edit vocabulary.** Each edit is judged on two axes: time and the analysis graph.
+   - Word correction is the common case.
+   - Merge and split are safe on time.
+   - A split forks the quote it backs. Sentiment is scored again for each half; tags and themes are
+     copied to both; the `durable_id` stays with one half.
+   - A bracketed `[editor: …]` note is excluded from extraction and sentiment, and says who added
+     it and when.
+   - The only thing prevented is *unmarked* inserted text that looks like speech.
+
+   See [The edit vocabulary](#the-edit-vocabulary) to [The one thing to prevent](#the-one-thing-to-prevent).
+3. **The keystone is a persisted word-range anchor.** It is the same anchor the incremental-analysis
+   work needs, so it is built once ([The keystone](#the-keystone-a-persisted-word-range-anchor),
+   `docs/design-incremental-analysis.md`).
+4. **One saved edit over an immutable original, not a history stack.** Revert deletes the edit row,
+   as quote editing does ([What Bristlenose needs](#what-bristlenose-needs-recommendation),
+   `docs/design-undo-catalog.md`).
+5. **"Inaudible" is a segment flag, not bracketed text.** Brackets are kept for the researcher's own
+   insertions (13 Oct 2026).
+6. **Quote edits win, one way.** A transcript correction flows into a quote only when that quote has
+   no edit of its own. A quote's own edit never flows back into the transcript. When a correction
+   lands under an edited quote, the Quotes lens shows a quiet flag (17 Oct 2026, [Quote edits win,
+   one way](#quote-edits-win-one-way-owner-17-oct-2026)).
+7. **Names, brands, places and technical terms are corrected study-wide.** The tool finds every
+   candidate (variants, sound-alikes, low-confidence words) and shows each in context. The
+   researcher accepts them all or goes one by one; there is no blind replace-all. Accepted words
+   become the study's word list, which can later feed Whisper's prompt. Corrections to people and
+   places go through the people layer (17 Oct 2026, same section).
+8. **The transcript is a document, not a form.** A click puts the caret in the text, with no field
+   fill. Links into the lenses live on the gutter marks, the margin titles and the right-click menu
+   (17 Oct 2026, [The transcript is a document](#the-transcript-is-a-document-not-a-form-owner-17-oct-2026)).
+9. **Strike: the verb is Delete.** The researcher selects a passage and presses Delete; the passage
+   stays on the page, struck through. It is kept out of the analysis and every export.
+   - A strike is keyed on session, time range and words, and replayed like a layout edit.
+   - The pipeline reads strikes from a file. This answers open questions 1, 3 and 4 below for
+     strikes (16 Oct 2026, [Operation 1](#operation-1-section-strike--exclude),
+     `docs/design-delete-and-bin.md`).
+10. **Direct editing of a paragraph's words comes next.** It connects to quote editing and its
+    revert, but should be simpler (6 Oct 2026).
+
+**Open**
+- When a quote edit replaces exactly one word, should the correction carry back into the transcript
+  automatically, or be offered ("Also correct the transcript?")?
+- Calls left from the 8 Oct 2026 review ([Open after the 8 Oct 2026 review](#open-after-the-8-oct-2026-review--owners-calls)):
+  - Is a focused transcript "editing"?
+  - What a screen reader hears.
+  - `::first-letter` caret bugs.
+  - Position plus six words, or time plus words, as an edit's anchor.
+  - Deleting an undo that isn't the newest.
+- For find and replace:
+  - How candidates are generated.
+  - Measure Whisper prompt echoes before the word list feeds transcription.
+- The older open questions below:
+  - Re-analysis after edits: manual, or for the affected sessions only?
+  - Re-alignment versus drift after a correction.
+  - Range selection.
+- Plan the order of work:
+  1. The anchor.
+  2. Word correction.
+  3. Find and replace.
+  4. Strike.
+  5. Editorial notes.
+
+**Related:**
+- `docs/design-delete-and-bin.md`: strike, the Bin, Put Back.
+- `docs/design-speaker-editing.md` and `docs/design-transcript-speaker-editing-roadmap.md`: merge,
+  split and reassign.
+- `docs/design-people.md` §K: speaker scope.
+- `docs/design-curation-persistence.md`: `durable_id`, `frozen_form`.
+- `docs/design-quote-editing.md`.
+- `docs/design-transcript-readability.md`: display-only tidying, which is not editing.
+- Mockups: `docs/mockups/transcript-quote-gutter.html`, `docs/mockups/edit-affordance-states.html`.
 
 ---
 

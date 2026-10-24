@@ -178,6 +178,28 @@ def test_the_self_test_imports_through_the_helper(monkeypatch) -> None:
     assert spy.calls == 1
 
 
+def test_the_self_tests_session_sets_its_thread_counts(monkeypatch) -> None:
+    """A default pool pins its threads; the strict snap refuses, on stderr."""
+    onnxruntime = pytest.importorskip("onnxruntime")
+    pytest.importorskip("kaldi_native_fbank")
+    from bristlenose.doctor import CheckStatus, check_bundle_voice
+    from bristlenose.stages import s05b_voice as voice
+
+    monkeypatch.setattr(voice, "voice_runtime_available", lambda: True)
+    seen = []
+    real = onnxruntime.InferenceSession
+
+    def _session(model, sess_options=None, **kw):
+        seen.append(sess_options)
+        return real(model, sess_options, **kw)
+
+    monkeypatch.setattr(onnxruntime, "InferenceSession", _session)
+
+    assert check_bundle_voice().status == CheckStatus.OK
+    (opts,) = seen
+    assert (opts.intra_op_num_threads, opts.inter_op_num_threads) == (1, 1)
+
+
 def test_faster_whisper_is_set_up_after_the_helper_runs(monkeypatch) -> None:
     from bristlenose.stages import s05_transcribe
 

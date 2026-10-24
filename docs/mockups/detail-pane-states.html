@@ -560,7 +560,7 @@
     <div class="win" data-spec='{"s":{"st":"Run failed","g":"err"}}'><div class="detail">
       <div class="cuv"><span class="sf sf-exclamationmark-triangle cuv-ic"></span>
         <p class="cuv-t new">The analysis stopped before it finished</p>
-        <p class="cuv-d new">The Mac may have slept, or the app quit.</p>
+        <p class="cuv-d new">The app quit, or the Mac lost power.</p>
         <div class="cuv-a"><span class="nbtn new">Resume Analysis</span></div></div>
     </div></div></div>
   <div class="case"><div class="cap"><b>W-stranded</b> · browser</div>
@@ -587,7 +587,7 @@
   <li><b>The drive and the share get separate headlines.</b> Today both say “Connect the drive to access this project.” Each proposed headline names the thing by its own name; the body is one shared line, “Reconnect to continue.” (owner, 24 Oct 2026), so both read the drive’s key. The row lines are kept as they are.</li>
   <li><b>N05 (loose-file project) is removed, 22 Oct 2026.</b> Every study is a folder study: <code>UnsupportedSubsetView</code> and its <code>unsupportedSubset.*</code> keys were deleted (<code>d94edf6d1</code>), and nothing has created a loose-file study since 10 Jul 2026 (<code>0ac2136d</code>).</li>
   <li><b>N03 (iCloud) is removed, 22 Oct 2026.</b> The in-iCloud state, its pane and the row’s cloud glyph were deleted (<code>bbf75243</code>). A cloud folder that has gone is N02 (Project Moved or Deleted, Locate…); an evicted one still exists and is simply ready. No cloud pane, glyph or provider advice — <code>docs/design-cloud-files.md</code>.</li>
-  <li><b>Stranded’s body is Mac-only.</b> “The Mac may have slept, or the app quit.” is true only on the Mac, so the browser twin has no body (a <code>dt()</code>/<code>ct()</code> fork, <code>docs/platform-text-map.md</code>). The button is <b>Resume Analysis</b> (owner, 24 Oct 2026): Analyse already resumes from the partial output, so the button names what it does.</li>
+  <li><b>Stranded’s body is Mac-only.</b> “The app quit, or the Mac lost power.” names the Mac and its app, so the browser twin has no body (a <code>dt()</code>/<code>ct()</code> fork, <code>docs/platform-text-map.md</code>). The button is <b>Resume Analysis</b> (owner, 24 Oct 2026): Analyse already resumes from the partial output, so the button names what it does.</li>
   <li><b>N08 carries two buttons in both versions.</b> Retry is the action. Show details is <code>BootView</code>’s existing disclosure, not a second action.</li>
 </ul></div>
 
@@ -811,7 +811,7 @@ BUG-3 class — see the C3 smoke test post-mortem for context.</pre></details></
   <tr><td>N01n network share</td><td>headline</td><td class="k"><i>desktop.chrome.shareUnreachable</i></td><td>(the drive’s: Project Unavailable / server.local)</td><td>“{{host}}” can’t be reached</td><td><span class="mk N">N</span></td></tr>
   <tr><td></td><td>body</td><td class="k">desktop.chrome.projectUnavailableHint</td><td>Connect the drive to access this project.</td><td>Reconnect to continue. <small>(the drive’s key: one body for both)</small></td><td><span class="mk K">K</span></td></tr>
   <tr><td>Stranded</td><td>headline</td><td class="k">server.statusPage.strandedShort · desktop.pipeline.failure.stranded</td><td>Analysis stopped unexpectedly.</td><td>The analysis stopped before it finished</td><td><span class="mk E">E</span></td></tr>
-  <tr><td></td><td>body</td><td class="k">server.statusPage.strandedLong (+ <i>desktop.chrome.strandedHint</i>, the Mac form)</td><td>Re-run when ready.</td><td>Mac: The Mac may have slept, or the app quit.<br>Browser: — no body; <code>strandedLong</code> is retired</td><td><span class="mk E">E</span></td></tr>
+  <tr><td></td><td>body</td><td class="k">server.statusPage.strandedLong (+ <i>desktop.chrome.strandedHint</i>, the Mac form)</td><td>Re-run when ready.</td><td>Mac: The app quit, or the Mac lost power.<br>Browser: — no body; <code>strandedLong</code> is retired</td><td><span class="mk E">E</span></td></tr>
   <tr><td></td><td>action</td><td class="k"><i>desktop.chrome.resumeAnalysis</i></td><td>—</td><td>Resume Analysis <small>(Analyse after a stranded run resumes from the partial output, <code>adaa97e5</code>; the menu item for the same command stays Analyse)</small></td><td><span class="mk N">N</span></td></tr>
   <tr><td>N08 engine failed</td><td>headline · reason · buttons</td><td class="k">desktop.boot.failedTitle · boot.failure.* · boot.retry · boot.showDetails</td><td>Couldn’t start Bristlenose · e.g. Bristlenose stopped before it finished starting (code 1). · Retry · Show details</td><td>—</td><td><span class="mk K">K</span></td></tr>
   <tr><td></td><td>tagline</td><td class="k">desktop.boot.tagline</td><td>Sensemaking for User Research</td><td>no longer drawn here (option B, decided Q2)</td><td><span class="mk K">K</span></td></tr>
@@ -847,7 +847,7 @@ BUG-3 class — see the C3 smoke test post-mortem for context.</pre></details></
 </ol></div>
 <div class="note"><span class="tag">Commentary — owned elsewhere, linked not duplicated</span>
 <ul>
-  <li><b>N08’s buttons and the whole-report crash pane’s</b> (Retry first; after a failed Retry, Show details · Send Feedback…): <code>docs/design-feedback-native.md</code> § “Feedback and problem reports” (mockup <code>n08-button-set.html</code>). <b>Stranded-run copy</b> was being worded in another session; the owner set it here on 24 Oct 2026 (body “The Mac may have slept, or the app quit.”, button Resume Analysis), so that session should take these words.</li>
+  <li><b>N08’s buttons and the whole-report crash pane’s</b> (Retry first; after a failed Retry, Show details · Send Feedback…): <code>docs/design-feedback-native.md</code> § “Feedback and problem reports” (mockup <code>n08-button-set.html</code>). <b>Stranded-run copy</b> was being worded in another session; the owner set it here on 24 Oct 2026 (body “The app quit, or the Mac lost power.”, button Resume Analysis; sleep never strands a run, so “the Mac may have slept” was dropped), so that session should take these words.</li>
 </ul></div>
 
 <script>

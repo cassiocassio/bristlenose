@@ -229,7 +229,8 @@ is `should_intercept(condition, overlay, policy)`:
 | latest in progress, report exists | SPA (+ banner) — *revised by the POC: a re-run never hides the report it will replace, in either policy* | SPA (+ banner) |
 | latest stranded, report exists | SPA — *revised after review: a stranded run did not touch the report, and liveness can be wrong in the "can't tell" direction* | SPA |
 | latest completed, import in flight, no data version yet | intercept: in-progress — *added after review* | intercept: in-progress |
-| latest failed / cancelled / stranded, report exists | intercept: failed / cancelled | **SPA** (+ banner) |
+| latest failed / stranded, report exists | intercept: failed | **SPA** (+ banner) |
+| latest cancelled, report exists | SPA — *revised 24 Oct 2026: a Stop leaves the report as it was, so it shows and the row says Stopped (D4-B for cancelled only, owner, `docs/mockups/detail-pane-states.html` Q4)* | SPA |
 | latest completed (`run`/`analyze`) | SPA | SPA |
 | latest `transcribe-only` completed, no report | SPA — *revised after review: a "transcribed" page hid the Sessions and transcript routes that were reachable before* | SPA |
 | import failed | SPA of the previous data version; the failure is in the condition endpoint's overlay (a status page for it needs new copy — phase E) | same |
@@ -510,6 +511,9 @@ native cover (`runCover` needs `.statusPage`). Keying the cover on the overlay
 ## 6. Open questions
 
 1. **D4 — after a failed re-run, show the last good report or the failure?**
+   **Settled for cancelled runs, 24 Oct 2026:** a Stop over a report shows the
+   report (`page_for`, owner's answer to Q4 in `docs/mockups/detail-pane-states.html`).
+   Failed runs are still open, below.
    Proposed as D4-B in `design-pipeline-diagnostic-popover.md` §"Proposed — the
    three-part body", not decided. The POC makes it one environment switch
    (`_BRISTLENOSE_REPORT_POLICY=last-good-report`) and the mockup shows both.

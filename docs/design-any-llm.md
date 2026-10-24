@@ -367,8 +367,10 @@ SDK we ship, and so does DeepSeek, which therefore works directly at no extra
 cost. Its current models are `deepseek-flash` and `deepseek-v4-pro`
 (`deepseek-chat` and `deepseek-reasoner` are gone, per the DeepSeek walk on 23
 Oct 2026); their documented response format is `json_object`, met by the
-fallback. The 4096-token default output this plan once cited belonged to the old
-model; the current ones list far larger caps, so truncation is unlikely there. Groq and Grok directly
+fallback. With no `max_tokens` sent, DeepSeek stops at **8192** output tokens
+(measured; not the old model's 4096, nor the 384K its docs list as a maximum),
+and Flash reaches that on a 25 KB transcript: s09's split-and-retry recovers,
+at the cost of extra calls (`design-any-llm-models.md` §3.3). Groq and Grok directly
 are one `pipx inject` away. Both default providers are in upstream's "Verified" tier.
 `mistralai` 3.x depends on `opentelemetry-api`, which does nothing unless an
 SDK and exporter are installed; CI asserts they aren't. Never `[all]`, which

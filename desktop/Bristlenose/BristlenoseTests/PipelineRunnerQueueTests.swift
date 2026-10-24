@@ -947,10 +947,12 @@ struct PipelineRunnerQueueTests {
         try #require(!runner.isRereadingSlowEnd(p.id), "the re-reads never gave up")
         disk.release()
         // The held read is back, so the end read it was holding is now free to
-        // go ahead or not. Give a stray read the time the old test gave it.
+        // go ahead or not. Nothing marks "did not read", so this last wait is
+        // still time: it can only let a stray read slip past on a starved pool
+        // (a false pass), never fail a correct runner, and it runs once.
         await until { disk.landed >= 1 }
         try #require(disk.landed >= 1, "the held read never came back")
-        try? await Task.sleep(for: .milliseconds(300))
+        try? await Task.sleep(for: .seconds(1))
 
         #expect(disk.reads == 1, "a read nobody waits on any more went ahead")
         #expect(runner.state[p.id] == .unreachable(reason: .timedOut))

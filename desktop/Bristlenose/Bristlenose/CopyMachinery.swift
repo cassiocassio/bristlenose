@@ -187,6 +187,9 @@ final class CopyMachinery: ObservableObject {
         let machineryLogger = self.logger
         let task = Task.detached { [weak self] () throws -> [URL] in
             var written: [URL] = []
+            // Folders this copy made (a dropped folder's own tree). A rollback
+            // that removed only the files left them behind, empty, in the study.
+            var createdDirectories: [URL] = []
             let totalBytesD = max(Double(totalBytes), 1.0)
             var copiedBytes: Int64 = 0
             var skipped = 0
@@ -210,8 +213,14 @@ final class CopyMachinery: ObservableObject {
                         if isDataless(item.source) {
                             throw CopyError.sourceNotDownloaded(count: 1)
                         }
+                        let destinationFolder = item.destination.deletingLastPathComponent()
+                        // Noted before it is made: a folder that was already
+                        // there is the researcher's, never this copy's to remove.
+                        createdDirectories.append(contentsOf: Self.missingDirectories(
+                            of: destinationFolder, below: projectFolder
+                        ))
                         try FileManager.default.createDirectory(
-                            at: item.destination.deletingLastPathComponent(),
+                            at: destinationFolder,
                             withIntermediateDirectories: true
                         )
                         // copyItem on APFS same-volume uses clonefile(2): O(1).
@@ -254,15 +263,21 @@ final class CopyMachinery: ObservableObject {
                 }
                 return written
             } catch is CancellationError {
-                await CopyMachinery.rollback(written: written, logger: machineryLogger)
+                await CopyMachinery.rollback(
+                    written: written, createdDirectories: createdDirectories, logger: machineryLogger
+                )
                 throw CancellationError()
             } catch let error as CopyError {
                 // Our own refusal, thrown as itself rather than wrapped in
                 // `.underlying`, so the row reads its key and not a system sentence.
-                await CopyMachinery.rollback(written: written, logger: machineryLogger)
+                await CopyMachinery.rollback(
+                    written: written, createdDirectories: createdDirectories, logger: machineryLogger
+                )
                 throw error
             } catch {
-                await CopyMachinery.rollback(written: written, logger: machineryLogger)
+                await CopyMachinery.rollback(
+                    written: written, createdDirectories: createdDirectories, logger: machineryLogger
+                )
                 throw CopyError.underlying(error)
             }
         }
@@ -603,7 +618,9 @@ final class CopyMachinery: ObservableObject {
 
     /// Delete every successfully-written destination, best-effort. Logs
     /// failures but never throws — the caller is already in an error path.
-    nonisolated static func rollback(written: [URL], logger: Logger) async {
+    nonisolated static func rollback(
+        written: [URL], createdDirectories: [URL] = [], logger: Logger
+    ) async {
         for url in written {
             do {
                 try FileManager.default.removeItem(at: url)
@@ -612,5 +629,35 @@ final class CopyMachinery: ObservableObject {
                 logger.error("rollback: failed to remove \(url.path, privacy: .private): \(error.localizedDescription, privacy: .public)")
             }
         }
+        // The folders this copy made, deepest first, and only while empty: a
+        // folder something else has since written into stays.
+        let deepestFirst = createdDirectories.sorted {
+            $0.pathComponents.count > $1.pathComponents.count
+        }
+        for dir in deepestFirst {
+            guard let entries = try? FileManager.default.contentsOfDirectory(atPath: dir.path),
+                  entries.isEmpty
+            else { continue }
+            do {
+                try FileManager.default.removeItem(at: dir)
+            } catch {
+                logger.error("rollback: failed to remove a folder: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+
+    /// The folders from `dir` up to (not including) `root` that do not exist yet,
+    /// shallowest first: what `createDirectory(withIntermediateDirectories:)` is
+    /// about to make. Stops at the first one that exists.
+    nonisolated static func missingDirectories(of dir: URL, below root: URL) -> [URL] {
+        let fm = FileManager.default
+        let stop = root.standardizedFileURL.path
+        var missing: [URL] = []
+        var current = dir.standardizedFileURL
+        while current.path != stop, current.path != "/", !fm.fileExists(atPath: current.path) {
+            missing.append(current)
+            current = current.deletingLastPathComponent()
+        }
+        return missing.reversed()
     }
 }

@@ -133,4 +133,111 @@ struct CopyMachineryStagingTests {
                 == Data("a whole recording".utf8))
         #expect(everything(in: study) == ["Session 6.mp4"])
     }
+
+    // MARK: - A failed drop leaves no empty folders (N46, 24 Oct 2026)
+
+    /// A dropped folder is copied with its own shape, so a failure part-way
+    /// rolled the files back and left `Batch/a/b/…` behind, empty, in the study.
+    private func makeBatch(in src: URL) throws -> URL {
+        let batch = src.appendingPathComponent("Batch", isDirectory: true)
+        for (folder, name) in [("a/b", "one.mp4"), ("a/c", "two.mp4"), ("d", "three.mp4")] {
+            let dir = batch.appendingPathComponent(folder, isDirectory: true)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try Data(name.utf8).write(to: dir.appendingPathComponent(name))
+        }
+        return batch
+    }
+
+    /// A fake byte copy that fails on the file named `failing`.
+    nonisolated static func failing(on failing: String) -> @Sendable (URL, URL) throws -> Void {
+        { from, to in
+            struct DiskGone: Error {}
+            try Self.refuseExisting(to)
+            if from.lastPathComponent == failing { throw DiskGone() }
+            try Data(contentsOf: from).write(to: to)
+        }
+    }
+
+    @Test("a dropped folder whose copy fails part-way leaves no empty folders in the study")
+    func aFailedFolderDropLeavesNoEmptyFolders() async throws {
+        let src = makeTempDir()
+        let study = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: src)
+            try? FileManager.default.removeItem(at: study)
+        }
+        let batch = try makeBatch(in: src)
+
+        await #expect(throws: CopyMachinery.CopyError.self) {
+            _ = try await CopyMachinery().copy(
+                urls: [batch], into: study,
+                projectID: UUID(), projectName: "Probe",
+                acceptedExtensions: ["mp4"],
+                isDataless: { _ in false },
+                copyFile: Self.failing(on: "three.mp4")
+            )
+        }
+        #expect(everything(in: study).isEmpty, "empty folders were left in the study")
+    }
+
+    @Test("a rollback keeps the folders the study already had, and removes only the new ones")
+    func aRollbackKeepsTheResearchersOwnFolders() async throws {
+        let src = makeTempDir()
+        let study = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: src)
+            try? FileManager.default.removeItem(at: study)
+        }
+        let batch = try makeBatch(in: src)
+        // An earlier drop of the same folder name left `Batch/a` (with a file in it).
+        let existing = study.appendingPathComponent("Batch/a", isDirectory: true)
+        try FileManager.default.createDirectory(at: existing, withIntermediateDirectories: true)
+        try Data("mine".utf8).write(to: existing.appendingPathComponent("kept.mp4"))
+
+        await #expect(throws: CopyMachinery.CopyError.self) {
+            _ = try await CopyMachinery().copy(
+                urls: [batch], into: study,
+                projectID: UUID(), projectName: "Probe",
+                acceptedExtensions: ["mp4"],
+                isDataless: { _ in false },
+                copyFile: Self.failing(on: "three.mp4")
+            )
+        }
+        #expect(everything(in: study) == ["Batch"])
+        #expect(everything(in: study.appendingPathComponent("Batch")) == ["a"])
+        #expect(everything(in: existing) == ["kept.mp4"], "a folder that was already there was touched")
+    }
+
+    @Test("a folder something else has since written into is kept by a rollback")
+    func aRollbackKeepsAFolderThatIsNoLongerEmpty() async throws {
+        let src = makeTempDir()
+        let study = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: src)
+            try? FileManager.default.removeItem(at: study)
+        }
+        let batch = try makeBatch(in: src)
+        let late = study.appendingPathComponent("Batch/d/late.txt")
+
+        await #expect(throws: CopyMachinery.CopyError.self) {
+            _ = try await CopyMachinery().copy(
+                urls: [batch], into: study,
+                projectID: UUID(), projectName: "Probe",
+                acceptedExtensions: ["mp4"],
+                isDataless: { _ in false },
+                copyFile: { from, to in
+                    try Self.refuseExisting(to)
+                    if from.lastPathComponent == "three.mp4" {
+                        // A run, or the researcher, writes into the new folder
+                        // before the failure lands.
+                        try Data("x".utf8).write(to: late)
+                        struct DiskGone: Error {}
+                        throw DiskGone()
+                    }
+                    try Data(contentsOf: from).write(to: to)
+                }
+            )
+        }
+        #expect(FileManager.default.fileExists(atPath: late.path))
+    }
 }

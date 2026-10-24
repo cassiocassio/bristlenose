@@ -907,7 +907,8 @@ def test_contract_truncated_marker_shape():
 
     Locks the STAGE_FAILED_MAX overflow placeholder shape:
     session_id=null, cause.category=unknown, cause.message="... and N more
-    failures truncated". The Swift popover renders this as a single muted
+    failures truncated". (Since 24 Oct 2026 a tail of deferrals only carries
+    category deferred instead: run_completed_deferred_overflow.) The Swift popover renders this as a single muted
     summary row, not as an N+1th session.
     """
     contract = _load_contract()
@@ -1027,6 +1028,7 @@ SESSIONS_ANALYSED_BY_SCENARIO = {
         "run_completed_partial_cloud_fetch": None,
         "run_completed_cached_stage": None,
         "run_completed_partial_refusals": None,
+        "run_completed_deferred_overflow": (3, 15),
 }
 
 
@@ -1041,3 +1043,58 @@ def test_sessions_analysed_over_the_shared_fixture() -> None:
         for name, sc in fixture["scenarios"].items() if sc.get("summary")
     }
     assert got == SESSIONS_ANALYSED_BY_SCENARIO
+
+
+def test_a_deferral_overflow_keeps_its_kind_on_the_wire() -> None:
+    """More than STAGE_FAILED_MAX recordings waiting for Whisper: the overflow
+    placeholder carried category unknown, so the Mac read a failure among the
+    deferrals and the row said "N of M sessions analysed" instead of "Waiting
+    for Whisper". The writer must produce the contract's deferral-overflow list
+    exactly (decision #139 follow-up, 24 Oct 2026)."""
+    from bristlenose.events import StageFailure, StageOutcome, _truncate_failed
+
+    deferred = [
+        StageFailure(session_id=f"s{i}", cause=Cause(
+            category=CauseCategoryEnum.DEFERRED, message="Waiting for Whisper",
+            stage="s05_transcribe", session_id=f"s{i}"))
+        for i in range(4, 16)
+    ]
+    capped = _truncate_failed(StageOutcome(
+        attempted=15, succeeded=3, duration_ms=41000, failed=deferred))
+    expected = RunCompletedEvent.model_validate(
+        _load_contract()["scenarios"]["run_completed_deferred_overflow"]
+    ).summary.transcripts
+    assert capped == expected
+    assert all(f.cause.category == CauseCategoryEnum.DEFERRED for f in capped.failed)
+
+
+def _failure(sid: str, category):
+    from bristlenose.events import StageFailure
+
+    return StageFailure(session_id=sid, cause=Cause(category=category, message="m"))
+
+
+def test_a_real_failure_is_kept_and_the_deferrals_overflow() -> None:
+    """A real failure that came last is kept, ahead of the deferrals, and the
+    tail is deferrals only, so it keeps its kind: the Mac still owes the
+    Whisper re-run, and the row shows the real failure."""
+    from bristlenose.events import StageOutcome, _truncate_failed
+
+    failures = [_failure(f"s{i}", CauseCategoryEnum.DEFERRED) for i in range(1, 12)]
+    failures.append(_failure("s12", CauseCategoryEnum.WHISPER))
+    capped = _truncate_failed(StageOutcome(attempted=12, succeeded=0, failed=failures))
+    kept = capped.failed[:-1]
+    assert kept[0].session_id == "s12"
+    assert [f.session_id for f in kept[1:]] == [f"s{i}" for i in range(1, 10)]
+    assert capped.failed[-1].cause.category == CauseCategoryEnum.DEFERRED
+
+
+def test_more_real_failures_than_the_cap_still_read_unknown() -> None:
+    """Only an all-deferral tail keeps its kind; real failures in the dropped
+    tail leave the placeholder unknown, as the v3 contract pins."""
+    from bristlenose.events import StageOutcome, _truncate_failed
+
+    failures = [_failure(f"s{i}", CauseCategoryEnum.WHISPER) for i in range(1, 13)]
+    failures.append(_failure("s13", CauseCategoryEnum.DEFERRED))
+    capped = _truncate_failed(StageOutcome(attempted=13, succeeded=0, failed=failures))
+    assert capped.failed[-1].cause.category == CauseCategoryEnum.UNKNOWN

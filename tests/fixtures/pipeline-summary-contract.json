@@ -1,5 +1,5 @@
 {
-  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort. Schema version 6: added optional source_file on StageFailure (basename of the input file a failure is about — session_id cannot identify a file that failed before a session existed) and the cloud_fetch cause category (a placeholder that never materialised, which must never be reported as a damaged file). Scenario run_completed_partial_cloud_fetch locks both. Schema version 6 also adds run_completed_cached_stage, which locks duration_ms: null for a stage that was present but didn't run. Every prior scenario carried a real duration, so the Swift side's non-optional Int decoded fine in tests while failing on real cached runs — the fixture flattered the code. Schema version 7: added optional `reason` on Cause — the `UnusableReason` discriminator for `unusable_input`, which the desktop popover localises from. Additive: entries in every earlier scenario omit it and must keep decoding. Added run_completed_partial_refusals, the first scenario to cover a refusal at all — the ingest bucket and its Cause shape had shipped unpinned by this contract. Schema version 8: added optional `model_host` on Cause — the model's host behind a gateway (\"Mistral\" reached through OpenRouter) when that host, not the key, failed; any-llm only, so null on every Mac run. Additive and written as null (exclude_none=False); Swift does not decode it and ignores the key. No scenario: the Mac app has no any-llm path.",
+  "_doc": "Cross-language schema contract between Python (bristlenose/events.py) and Swift (desktop/Bristlenose/Bristlenose/PipelineSummary.swift). Both sides round-trip these scenarios in tests. If you change this file, both sides' tests must continue to pass. Established 7 May 2026 for branches pipeline-summary-events (Python) and pipeline-diagnostic-pill (Swift). Schema version 2: added duration_ms on StageOutcome. Schema version 3: added run_completed_partial_truncated scenario locking STAGE_FAILED_MAX=10 overflow marker shape. Schema version 4: realigned session_id values to ordinal format (s1, s2, ...) matching what bristlenose actually emits at runtime — earlier versions used illustrative descriptive ids that didn't reflect production shape. Schema version 5: added topics bucket to PipelineSummary (between transcripts and quotes) to carry s08 topic-segmentation StageOutcome. Schema-additive — Swift readers that don't yet decode the field still parse fine. Added run_failed_abandoned_at_topics scenario locking the topics-populated shape for the A4-stage-cache-honesty cohort. Schema version 6: added optional source_file on StageFailure (basename of the input file a failure is about — session_id cannot identify a file that failed before a session existed) and the cloud_fetch cause category (a placeholder that never materialised, which must never be reported as a damaged file). Scenario run_completed_partial_cloud_fetch locks both. Schema version 6 also adds run_completed_cached_stage, which locks duration_ms: null for a stage that was present but didn't run. Every prior scenario carried a real duration, so the Swift side's non-optional Int decoded fine in tests while failing on real cached runs — the fixture flattered the code. Schema version 7: added optional `reason` on Cause — the `UnusableReason` discriminator for `unusable_input`, which the desktop popover localises from. Additive: entries in every earlier scenario omit it and must keep decoding. Added run_completed_partial_refusals, the first scenario to cover a refusal at all — the ingest bucket and its Cause shape had shipped unpinned by this contract. Schema version 8: added optional `model_host` on Cause — the model's host behind a gateway (\"Mistral\" reached through OpenRouter) when that host, not the key, failed; any-llm only, so null on every Mac run. Additive and written as null (exclude_none=False); Swift does not decode it and ignores the key. No scenario: the Mac app has no any-llm path. Scenario run_completed_deferred_overflow (24 Oct 2026, version unchanged): the overflow placeholder carries category deferred when every dropped entry was a deferral, so a run waiting on Whisper for more than STAGE_FAILED_MAX recordings still reads as waiting; every other overflow placeholder stays unknown.",
   "version": 8,
   "scenarios": {
     "run_completed_partial": {
@@ -622,6 +622,204 @@
           "attempted": 5,
           "succeeded": 5,
           "duration_ms": 812000,
+          "failed": []
+        }
+      }
+    },
+    "run_completed_deferred_overflow": {
+      "_doc": "Deferral overflow (added 24 Oct 2026, schema unchanged): 15 recordings, 3 transcribed by Apple's model, 12 sent on to Whisper (deferred). Truncation keeps 10 + 1 placeholder, and the placeholder carries category deferred because every dropped entry was a deferral, so the Mac still reads every failure as a deferral and the row says Waiting for Whisper, not 'N of M sessions analysed'. Any other overflow keeps category unknown (run_completed_partial_truncated). bristlenose/events.py:_truncate_failed writes it; tests/test_events.py asserts the writer reproduces this list.",
+      "schema_version": 1,
+      "ts": "2026-10-24T10:30:00Z",
+      "event": "run_completed",
+      "run_id": "01HXYZ00000000000000DEFERX",
+      "kind": "run",
+      "started_at": "2026-10-24T10:00:00Z",
+      "ended_at": "2026-10-24T10:30:00Z",
+      "outcome": "completed",
+      "cause": null,
+      "input_tokens": 3100,
+      "output_tokens": 900,
+      "cost_usd_estimate": 0.04,
+      "price_table_version": "2026-04-01",
+      "summary": {
+        "ingest": null,
+        "transcripts": {
+          "attempted": 15,
+          "succeeded": 3,
+          "duration_ms": 41000,
+          "failed": [
+            {
+              "session_id": "s4",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s4",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s5",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s5",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s6",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s6",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s7",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s7",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s8",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s8",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s9",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s9",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s10",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s10",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s11",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s11",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s12",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s12",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": "s13",
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "Waiting for Whisper",
+                "provider": null,
+                "stage": "s05_transcribe",
+                "session_id": "s13",
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            },
+            {
+              "session_id": null,
+              "cause": {
+                "category": "deferred",
+                "code": null,
+                "message": "... and 2 more failures truncated",
+                "provider": null,
+                "stage": null,
+                "session_id": null,
+                "exit_code": null,
+                "signal": null,
+                "signal_name": null
+              }
+            }
+          ]
+        },
+        "topics": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 9000,
+          "failed": []
+        },
+        "quotes": {
+          "attempted": 3,
+          "succeeded": 3,
+          "duration_ms": 12000,
+          "failed": []
+        },
+        "themes": {
+          "attempted": 1,
+          "succeeded": 1,
+          "duration_ms": 5000,
           "failed": []
         }
       }

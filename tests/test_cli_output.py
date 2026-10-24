@@ -579,3 +579,20 @@ class TestSessionsAnalysedEndLine:
     def test_no_summary_is_plain_done(self) -> None:
         out = self._end(None)
         assert "warnings" not in out
+
+
+def test_a_deferral_overflow_on_the_wire_still_ends_plain_done() -> None:
+    """The count rule holds on the truncated terminus too: more than ten
+    recordings waiting for Whisper is not a warning (24 Oct 2026). The CLI's own
+    end line reads the untruncated in-memory summary; this pins the rule over
+    the wire shape the Mac reads, so the two cannot disagree."""
+    import json
+
+    from bristlenose.cli import _partial_sessions
+    from bristlenose.events import RunCompletedEvent
+
+    contract = json.loads((Path(__file__).parent / "fixtures"
+                           / "pipeline-summary-contract.json").read_text(encoding="utf-8"))
+    summary = RunCompletedEvent.model_validate(
+        contract["scenarios"]["run_completed_deferred_overflow"]).summary
+    assert _partial_sessions(summary) == ""

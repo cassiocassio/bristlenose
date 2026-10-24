@@ -613,16 +613,27 @@ def _truncate_failed(outcome: StageOutcome | None) -> StageOutcome | None:
     """
     if outcome is None or len(outcome.failed) <= STAGE_FAILED_MAX:
         return outcome
-    dropped = len(outcome.failed) - STAGE_FAILED_MAX
+    # Real failures first (a stable sort), so the ones the researcher must act
+    # on are the ones kept, and the dropped tail is deferrals wherever it can
+    # be. The tail keeps its kind when it is all deferrals: read as unknown, it
+    # put a failure among recordings only waiting for Whisper, so the Mac row
+    # said "N of M sessions analysed" instead of "Waiting for Whisper", and a
+    # deferral that fell in the tail beside real failures lost the Mac's
+    # re-run when Whisper lands (24 Oct 2026). Any other tail stays unknown,
+    # as the v3 contract pins.
+    ordered = sorted(outcome.failed, key=lambda f: f.cause.category == CauseCategoryEnum.DEFERRED)
+    tail = ordered[STAGE_FAILED_MAX:]
+    dropped = len(tail)
+    every_deferred = all(f.cause.category == CauseCategoryEnum.DEFERRED for f in tail)
     placeholder = StageFailure(
         session_id=None,
         cause=Cause(
-            category=CauseCategoryEnum.UNKNOWN,
+            category=CauseCategoryEnum.DEFERRED if every_deferred else CauseCategoryEnum.UNKNOWN,
             message=f"... and {dropped} more failures truncated",
         ),
     )
     return outcome.model_copy(update={
-        "failed": [*outcome.failed[:STAGE_FAILED_MAX], placeholder],
+        "failed": [*ordered[:STAGE_FAILED_MAX], placeholder],
     })
 
 

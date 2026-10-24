@@ -515,7 +515,9 @@ enum DiagnosticFixture {
     }
 
     private static func overflowPlaceholder(count: Int) -> SessionFailure {
-        // Matches the wire shape Python's `_truncate_failed` emits.
+        // Matches the wire shape Python's `_truncate_failed` emits for a tail
+        // that holds a real failure (a tail of deferrals only carries
+        // `.deferred` instead; contract scenario run_completed_deferred_overflow).
         // `session_id == nil && message.hasPrefix("... and ")` is what
         // `SessionFailure.isOverflowPlaceholder` detects.
         SessionFailure(

@@ -59,6 +59,7 @@ struct PipelineSummaryTests {
             "run_failed_abandoned": SessionsAnalysed(done: 0, total: 3),
             "run_completed_partial_truncated": SessionsAnalysed(done: 4, total: 18),
             "run_completed_clean": SessionsAnalysed(done: 3, total: 3),
+            "run_completed_deferred_overflow": SessionsAnalysed(done: 3, total: 15),
         ]
         var got: [String: SessionsAnalysed] = [:]
         for (name, scenario) in try loadScenarios() {

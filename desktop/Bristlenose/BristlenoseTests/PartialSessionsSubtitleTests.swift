@@ -62,6 +62,25 @@ import Testing
         #expect(text(variant) == "Partial completion")
     }
 
+    /// More than ten recordings waiting for Whisper: the truncated terminus's
+    /// overflow placeholder keeps the deferral kind, so the row still says
+    /// Waiting for Whisper (contract scenario run_completed_deferred_overflow).
+    @Test func aDeferralOverflowStillReadsAsWaitingForWhisper() throws {
+        let fixture = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("tests/fixtures/pipeline-summary-contract.json")
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as? [String: Any]
+        let scenarios = json?["scenarios"] as? [String: [String: Any]]
+        let raw = try #require(scenarios?["run_completed_deferred_overflow"]?["summary"])
+        let s = try JSONDecoder().decode(
+            PipelineSummary.self, from: JSONSerialization.data(withJSONObject: raw))
+        let overflow = try #require(s.transcripts?.failed.first { $0.isOverflowPlaceholder })
+        #expect(overflow.cause.category == .deferred)
+        #expect(resolve(s) == .waitingForWhisper)
+        #expect(PipelineRunner.isWaitingForWhisper(.completedPartial(summary: s)))
+    }
+
     @Test func oneSessionIsSingular() {
         #expect(text(.completedPartial(analysed: SessionsAnalysed(done: 0, total: 1)))
                 == "0 of 1 session analysed")

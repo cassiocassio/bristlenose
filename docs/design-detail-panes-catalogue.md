@@ -6,6 +6,7 @@ trued-against: HEAD@main 27647fbf on 2026-07-15
 
 ## Changelog
 
+- _2026-10-24_ — **The coherent-set proposal's seven questions answered.** [`mockups/detail-pane-states.html`](mockups/detail-pane-states.html) (generated blocks: `detail-pane-states.gen.py`) redraws every pane as one `ContentUnavailableView` family in five groups; the owner answered its §6 on 24 Oct 2026. Recorded below in [Decisions — the coherent set](#decisions--the-coherent-set-24-oct-2026). Nothing is built yet; implementation is a follow-up.
 - _2026-08-19_ — **N04 gained a second state.** The pane no longer tells a researcher holding six recordings to add some: with files present it counts them and offers **Analyse**. Summary row, pane note and locale-key block updated; the pane note's claim that the drop target was the sidebar was false before this change too and is corrected. Two new keys (`chrome.filesToAnalyse_one`/`_other`, 21 locales). Everything else in this doc is **unre-verified** — the 15 Jul "assume the whole gallery wants a mechanical re-anchor pass" caveat stands, and the N04 anchor (`ContentView.swift:1831`) was not re-checked. Anchors: `ProjectFolderWatcher.swift`, `ContentView.dragInterviewsPane`; rationale [design-analysis-lifecycle.md](design-analysis-lifecycle.md) §6.3.
 - _2026-07-15_ — **N11/N12 merge completed** (the 15 Jul banner asked for this pass; it is now discharged). The `#### N12` section was deleted from family A · StatePane — the merged pane cannot live in two families, and `WelcomeHomeView` takes no mode parameter. Its two unique facts were rescued into N11: the mount anchor (`ContentView.swift:2340`) and the single-folder-selected fallthrough. Its screenshot went with the section; the `~~N12~~` tombstone row and the struck locale-key rows remain as history. N11's own screenshot still depicts the retired `WelcomeView` — **re-cut still outstanding**, now flagged at the pane rather than as a work order. Locale-key block re-framed: the keys are *retained on purpose*, not tombstoned (canonical rationale in [design-welcome-screen.md](design-welcome-screen.md) § Copy & i18n); three are marked ✅ verbatim-live. `chrome.emptyStateHint` re-filed out of the N12 block — it is sidebar chrome, not a detail pane. Two `ContentView.swift` anchors re-anchored: N10 `1881 → 2334`, collapse-map `1862 → 2315`. Collapse map ten → nine panes. Anchors: `WelcomeHomeView.swift:157,189,190`; commit `a310bca6` (deleted `WelcomeView.swift`).
   - **Known-stale, not fixed this pass:** the `1881`/`1862` misses were ~450 lines off, far worse than the "~8–13 lines off" the 21 Jun caveat below admits. The other `ContentView.swift` refs in the gallery were **not** re-verified — assume the whole gallery wants a mechanical re-anchor pass.
@@ -433,6 +434,22 @@ W01/W03/W04 in favour of native ownership of post-terminal states.** Plus the
 unbuilt **Get Info** pane (planned, not started) if/when project metadata is wanted.
 
 ---
+
+## Decisions — the coherent set (24 Oct 2026)
+
+The owner's answers to the seven questions in [`mockups/detail-pane-states.html`](mockups/detail-pane-states.html) §6. The mockup is the spec; these are its settled calls.
+
+1. **Native ownership of the post-terminal panes.** The Mac draws failed, stopped, stranded and refused (no provider) natively with `ContentUnavailableView`; the browser keeps the status page with the same words. This is the synthesis's "retire W03/W04 in favour of native ownership", decided — on the Mac only.
+2. **N08 joins the plain family** (option B): `exclamationmark.triangle` in the icon slot, no app icon, wordmark or tagline. Its buttons are decided in [design-feedback-native.md](design-feedback-native.md) § "Feedback and problem reports" (mockup `mockups/n08-button-set.html`).
+3. **Casing: sentence case, no full stop, for every Mac pane headline; Title Case for buttons.** HIG Writing: one style per element type, used consistently. The HIG's alert rule (fragment → Title Case, sentence → sentence case with a stop) was considered and not taken.
+4. **Stopped shows the previous report when one exists**, the row saying Stopped; the neutral "Analysis stopped" pane, no body, with **Resume Analysis** (the stranded pane's key) only when there is no report. D4-B for cancelled runs only — D4 for failed runs ([design-project-condition.md](design-project-condition.md) §6.1) is still open.
+5. **Pane and row may word a state differently, never state a different fact.** The row is the status, the pane the instruction; queued and analysing keep the row's own line.
+6. **The no-provider sentence gives two examples, not the list:** "Bristlenose sends the transcripts to an AI provider such as Claude or ChatGPT. Pick one in Settings." It stays true as providers are added, and with Local.
+7. **Multi-select stays a dead end:** "{{count}} projects selected" / "Choose one to see its report.", no button; actions on several projects stay in the sidebar context menu and the Project menu.
+
+**Copy edit after the questions (owner, 24 Oct 2026):** the browser's in-progress page reads just **"Analysing interviews"**, with no body line — `server.statusPage.inProgressShort` reworded, no `inProgressLong` key. The stopped pane's headline is **"Analysis stopped"** with no body (`cancelledLong` retired). The stranded pane's body is **"The Mac may have slept, or the app quit."** (Mac only; the browser twin has no body, `strandedLong` retired) and its button is **Resume Analysis** (new key; Analyse already resumes after a stranded run, `adaa97e5`). N05 is gone from the mockup too: retired in `d94edf6d1`, as its section above records.
+
+Owned elsewhere, linked not duplicated: N08's buttons (above), the stranded-run copy (another session — but the owner set its body and button here, above, so that session takes these words), and the whole-report crash pane's buttons (same § as N08's).
 
 ## Provenance
 

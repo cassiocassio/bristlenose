@@ -313,6 +313,7 @@ describe("the undo stack after a failed save", () => {
       Promise.reject(Object.assign(new Error("no such quote"), { status: 200, unresolved: ["q1"] })),
     );
     deleteBadge("q1", "negative");
+    expect(getUndoState().undoAction).toBe("removeTag");
     await settle();
     expect(getUndoState().canUndo).toBe(false);
   });

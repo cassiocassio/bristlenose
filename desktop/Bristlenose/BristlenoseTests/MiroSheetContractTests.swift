@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import Network
 import Testing
@@ -15,11 +16,25 @@ private final class MiroFakeServe: @unchecked Sendable {
     private let listener: NWListener
     /// The JSON body for each request path. Main queue only, where the listener runs.
     var answer: (String) -> String = { _ in "{}" }
+    /// Set once the listener has a port, or never will; main queue only.
+    private var settled = false
+    private var readyWaiters: [CheckedContinuation<Void, Never>] = []
 
     init() throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
+        listener.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .ready, .failed, .cancelled:
+                self.settled = true
+                let all = self.readyWaiters
+                self.readyWaiters = []
+                all.forEach { $0.resume() }
+            default: break
+            }
+        }
         listener.newConnectionHandler = { [weak self] connection in
             connection.start(queue: .main)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in
@@ -39,9 +54,11 @@ private final class MiroFakeServe: @unchecked Sendable {
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
 
-    func ready() async {
-        let deadline = Date().addingTimeInterval(10)
-        while port == 0, Date() < deadline { try? await Task.sleep(for: .milliseconds(10)) }
+    /// Returns once the listener is ready (or has failed, which leaves `port` at 0). A signal,
+    /// not a poll: the listener runs on the main queue, which a full suite keeps busy.
+    @MainActor func ready() async {
+        if settled { return }
+        await withCheckedContinuation { readyWaiters.append($0) }
     }
 
     func stop() { listener.cancel() }
@@ -67,7 +84,7 @@ struct MiroSheetContractTests {
 
     // MARK: R79
 
-    @Test("a board that completes without a link is a failure, not Board ready")
+    @Test("a board that completes without a link is a failure, not Board ready", .timeLimit(.minutes(1)))
     func completedWithoutALinkIsAnError() async throws {
         let serve = try MiroFakeServe()
         defer { serve.stop() }
@@ -77,13 +94,15 @@ struct MiroSheetContractTests {
                 : #"{"status":"started"}"#
         }
         await serve.ready()
-        #expect(serve.port != 0, "precondition: the loopback server is listening")
+        try #require(serve.port != 0, "precondition: the loopback server is listening")
 
         let i18n = english()
         let m = MiroSheetModel(port: Int(serve.port), token: nil, projectName: "p", i18n: i18n)
         m.createBoard()
-        let deadline = Date().addingTimeInterval(10)
-        while m.step == .creating, Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
+        // Wait on the step leaving .creating, not on a clock: under a full suite the main queue
+        // (the fake serve's and the model's) is shared with every main-actor test, and a 10 s
+        // poll ran out before the build had ended (24 Oct 2026). The bound is `.timeLimit`.
+        _ = await m.$step.values.first { $0 != .creating }
 
         #expect(m.step == .configure, "a board with no link read as ready")
         #expect(m.error != nil)

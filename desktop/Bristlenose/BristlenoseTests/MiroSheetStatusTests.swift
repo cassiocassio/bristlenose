@@ -5,23 +5,41 @@ import Testing
 
 /// A loopback server that accepts a connection, reads the request and never answers, so a
 /// status check against it is still in flight when the test cancels it.
+///
+/// The tests wait on its signals, not on a clock: under a full suite the main queue, where the
+/// listener runs, is shared with every other main-actor test, and a 10 s poll ran out there
+/// before the request had been read (24 Oct 2026). The bound is the test's `.timeLimit`.
 private final class SilentServe: @unchecked Sendable {
     private let listener: NWListener
     /// Held so the accepted connections stay open; main queue only, where the listener runs.
     private var connections: [NWConnection] = []
     /// Set once a request has arrived; main queue only.
     private(set) var requestArrived = false
+    /// Set once the listener has a port, or never will; main queue only.
+    private var settled = false
+    /// Set by `giveUp()`: what the test was waiting alongside has ended; main queue only.
+    private var gaveUp = false
+    private var readyWaiters: [CheckedContinuation<Void, Never>] = []
+    private var requestWaiters: [CheckedContinuation<Void, Never>] = []
 
     init() throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
+        listener.stateUpdateHandler = { [weak self] state in
+            switch state {
+            case .ready, .failed, .cancelled: self?.settle()
+            default: break
+            }
+        }
         listener.newConnectionHandler = { [weak self] connection in
             guard let self else { connection.cancel(); return }
             self.connections.append(connection)
             connection.start(queue: .main)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in
-                if data != nil { self.requestArrived = true }
+                guard data != nil else { return }
+                self.requestArrived = true
+                Self.resume(&self.requestWaiters)
             }
         }
         listener.start(queue: .main)
@@ -29,14 +47,38 @@ private final class SilentServe: @unchecked Sendable {
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
 
-    func ready() async {
-        let deadline = Date().addingTimeInterval(10)
-        while port == 0, Date() < deadline { try? await Task.sleep(for: .milliseconds(10)) }
+    /// Returns once the listener is ready (or has failed, which leaves `port` at 0).
+    @MainActor func ready() async {
+        if settled { return }
+        await withCheckedContinuation { readyWaiters.append($0) }
+    }
+
+    /// Returns once a request has arrived, or `giveUp()` was called first.
+    @MainActor func request() async {
+        if requestArrived || gaveUp { return }
+        await withCheckedContinuation { requestWaiters.append($0) }
+    }
+
+    /// Stop `request()` waiting: what it was waiting alongside ended without a request.
+    @MainActor func giveUp() {
+        gaveUp = true
+        Self.resume(&requestWaiters)
     }
 
     func stop() {
         connections.forEach { $0.cancel() }
         listener.cancel()
+    }
+
+    private func settle() {
+        settled = true
+        Self.resume(&readyWaiters)
+    }
+
+    private static func resume(_ waiters: inout [CheckedContinuation<Void, Never>]) {
+        let all = waiters
+        waiters = []
+        all.forEach { $0.resume() }
     }
 }
 
@@ -72,19 +114,20 @@ struct MiroSheetStatusTests {
         #expect(m.error == i18n.t(key))
     }
 
-    @Test("closing the sheet mid-load is a cancel, not an unreachable server")
+    @Test("closing the sheet mid-load is a cancel, not an unreachable server", .timeLimit(.minutes(1)))
     func cancelledLoadLeavesNoError() async throws {
         let serve = try SilentServe()
         defer { serve.stop() }
         await serve.ready()
-        #expect(serve.port != 0, "precondition: the loopback server is listening")
+        try #require(serve.port != 0, "precondition: the loopback server is listening")
 
         let m = MiroSheetModel(port: Int(serve.port), token: nil, projectName: "p", i18n: english())
         let load = Task { await m.load() }
+        // A load that ends without asking the server wakes the wait, and fails the check below.
+        Task { await load.value; serve.giveUp() }
         // Wait on the request reaching the server, so the cancel lands on a check in flight.
-        let deadline = Date().addingTimeInterval(10)
-        while !serve.requestArrived, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        #expect(serve.requestArrived, "precondition: the status check is in flight")
+        await serve.request()
+        try #require(serve.requestArrived, "precondition: the status check is in flight")
 
         load.cancel()
         await load.value
@@ -107,23 +150,25 @@ struct MiroSheetStatusTests {
         #expect(m.busy == false)
     }
 
-    @Test("cancelling a board build mid-request is a cancel, not an error")
+    @Test("cancelling a board build mid-request is a cancel, not an error", .timeLimit(.minutes(1)))
     func cancelledBuildLeavesNoError() async throws {
         let serve = try SilentServe()
         defer { serve.stop() }
         await serve.ready()
-        #expect(serve.port != 0, "precondition: the loopback server is listening")
+        try #require(serve.port != 0, "precondition: the loopback server is listening")
 
         let m = MiroSheetModel(port: Int(serve.port), token: nil, projectName: "p", i18n: english())
         m.createBoard()
         #expect(m.step == .creating)
+        // A build that ends without asking the server wakes the wait, and fails the check below.
+        let build = try #require(m.exportTask, "precondition: the build started")
+        Task { await build.value; serve.giveUp() }
         // Wait on the start request reaching the server, so the cancel lands on a call in flight.
-        let deadline = Date().addingTimeInterval(10)
-        while !serve.requestArrived, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        #expect(serve.requestArrived, "precondition: the start request is in flight")
+        await serve.request()
+        try #require(serve.requestArrived, "precondition: the start request is in flight")
 
         m.cancelExport()
-        await m.exportTask?.value
+        await build.value
 
         #expect(m.error == nil, "a cancelled build wrote an error nobody sees")
         #expect(m.step == .creating, "a cancelled build moved the dismissed sheet back to its form")

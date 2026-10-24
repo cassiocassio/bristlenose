@@ -40,6 +40,11 @@ The **defining split** (the whole reason this set exists): the top two tiers are
 - `tests/test_no_fake_success_acceptance.py` — ⚠️ **written, never run.** Measured 4 Sep 2026: 6 tests, **6 skipped**, exit 0 (needs `-m slow`; the bare command now deselects them) — and a skip is indistinguishable from a pass in a summary line, a badge, or a close-out report, so the fake-success auditor currently produces a fake success ([gaps.md](gaps.md) G2). Executable fake-success audit: full pipeline on real data × providers × formats, asserts every success signal has a real artifact. `@pytest.mark.slow`, each leg **skips if its input is absent** — currently waiting on the format-parity fixtures.
 - `e2e/` — Playwright tier 2 (Chromium + WebKit; layers 1–3: console, links, network). `e2e/ALLOWLIST.md` governs suppressions.
 - `tests/fixtures/smoke-test/` — the committed synthetic single-session fixture both CI and Playwright trust.
+- `tests/winsim.py` — **opt-in Windows simulator** for a Mac or Linux box. It is a pytest plugin that gives the run three Windows defaults: `read_text()`/`write_text()` with no `encoding=` use cp1252, `Path.home()` and `expanduser("~")` read `USERPROFILE` and never `HOME`, and `os.kill` on a dead pid raises a plain `OSError` (WinError 87) rather than `ProcessLookupError`. Each of these is something a test written on a Mac took for granted, and together they caused the ten windows-latest reds at 0.43.0 (24 Oct 2026). Run a file under it before pushing a test that touches files, the home folder or pids:
+  ```
+  .venv/bin/python -m pytest -p tests.winsim tests/test_cli_unsuitable_input.py
+  ```
+  It is not Windows. Path separators, forbidden file-name characters (`?`), file locking and line endings are untouched, so CI's `test (3.12, windows-latest)` remains the authority.
 
 ## What's next (iterated plan, 7 Jul 2026 — **audited 3 Sep 2026**)
 

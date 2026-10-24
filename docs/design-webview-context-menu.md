@@ -1,7 +1,7 @@
 ---
-status: audit (no product change); menus revised 24 Oct 2026 (§9), §9.3 under discussion
+status: built 24 Oct 2026 on main, unreleased (§10 as built); §9.3 still the owner's call
 last-trued: 2026-10-24
-trued-against: HEAD@main 3725a938, macOS 27.0 (26A428), Swift 6.4
+trued-against: HEAD@main 002b6ee1d, macOS 27.0 (26A428), Swift 6.4
 ---
 
 # The report's right-click menu: what WebKit offers, where it goes, what to offer instead
@@ -401,3 +401,39 @@ as playing and open the transcript; same question, lower stakes.
 - **Two players opened from two windows land on top of each other** (one saved frame,
   `"BristlenosePlayer"`), and the report listens on one shared BroadcastChannel name, which would
   cross-talk between windows if the player's fallback ever fired.
+
+## 10. As built (24 Oct 2026)
+
+On `main`, unreleased: `cdfd0b596` (only the player page opens the player window; the bridge drops
+posts from any web view but the report's), `6e800f460` (the page declares each link's place,
+`frontend/src/utils/contextPlace.ts`), `9325894ae` (`WindowSeed.place`), `05c40c315`
+(`ReportContextMenu.swift`, the §9.4 menus), `08c7da805` (strings, Quotes ▸ Show in Transcript
+and Open Transcript in New Window), then review fixes `699284ad8`…`002b6ee1d`. Where the build
+departs from §9:
+
+- **Threshold review's timecode opens the transcript in a new window** on a left click, in the
+  app (a new tab in a browser), because a same-window visit would unmount the review dialog. Its
+  menu leads with Open Transcript in New Window and offers no Show in Transcript (rule 9.1.1). §9.3
+  (whether it should play instead) is still open.
+- **The quote card's menu** is Star/Unstar · Hide · Add Tag… — Copy Quote — Show in Transcript ·
+  Open Transcript in New Window, then WebKit's Back and Reload Report. Star's label follows the one
+  rule Star acts by (`starActionIsUnstar` over the selection the card sits in) and counts ("Star 3
+  Quotes"). Only a right-click on the card body moves focus; a link in the card gets the link's
+  menu and leaves the selection alone. Selected text gets WebKit's text menu, no card items.
+- **The place is never read from the href.** Each component declares it beside its click handler
+  (`data-bn-place`, written in the Mac app only). The wire is pinned on both sides by
+  `tests/fixtures/context-target-contract.json`.
+- **The page numbers right-clicks per document**; the app resets its count when a new document
+  loads (`ContextTargetSlot.newDocument`). Without that, every menu after ⌘R or a run's reload
+  lacked our items.
+- **A new window's place waits for the report itself** (`documentState == .spa`), not the first
+  `isReady` the boot nets can fabricate (`WindowSeed.placeArrival`).
+- **Not built:** Video ▸ Enter/Exit Full Screen (D9's second half; the player window's full-screen
+  state is readable, so it can be done); the Screens version time offers Play only (its files were
+  another session's); Copy Link stays out (§9.5).
+- **Hand checks owed** (no test reaches WebKit's real menu): each §9.4 row; a new window from a
+  playing timecode actually opens its player (it plays after an await, outside the gesture); two
+  windows, two players; modifier-clicks on journey labels and stat cards (refused popouts); a
+  right-click just after load on a busy page (250 ms window; the log says why when a target is not
+  used); each macOS beta (the removal list is a denylist).
+

@@ -1,7 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouteError, isRouteErrorResponse, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { postReportError, REPORT_ERROR_FRAME_LIMIT } from "../shims/bridge";
+import type { TFunction } from "i18next";
+import i18n from "../i18n";
+import {
+  postOpenProblemReport,
+  postReportError,
+  REPORT_ERROR_FRAME_LIMIT,
+} from "../shims/bridge";
+import { isEmbedded } from "../utils/embedded";
+import { getExportData } from "../utils/exportData";
+import type { HealthResponse } from "../utils/health";
+import { reportWasRetried, retryReport } from "../utils/reportRetry";
+import { FeedbackModal } from "./FeedbackModal";
 
 /**
  * Route-level error fallback. React Router renders this via the route's
@@ -52,7 +63,91 @@ export function RouteError({ scope = "report" }: { scope?: "report" | "lens" }) 
     postReportError(pathname, message, frames);
   }, [scope, error, pathname]);
 
+  if (scope === "report") return <ReportCrashNotice error={error} pathname={pathname} />;
   return <ErrorNotice scope={scope} />;
+}
+
+/**
+ * What a problem report from the crash pane starts with: the pane's sentence,
+ * then the error and the page, the line the Mac popover's caption shows. No
+ * project, path or stack frames: it is sent as the person's message.
+ */
+export function problemReportMessage(t: TFunction, error: unknown, pathname: string): string {
+  return `${t("labels.reportError")}\n${describeError(error).message} · ${pathname}`;
+}
+
+/**
+ * The whole report's crash pane (spec `docs/mockups/report-crash-repeat.html`).
+ * A first crash offers Retry. Once the reload Retry asked for has crashed too
+ * (`reportWasRetried`), Retry gives way to one secondary button with no
+ * default, which opens the feedback form as a problem report: in the Mac app,
+ * this window's native sheet (the report's own form crashed with it); in a
+ * browser, the web form mounted here. Where feedback is switched off, Retry
+ * stays: there is no form to offer.
+ */
+function ReportCrashNotice({ error, pathname }: { error: unknown; pathname: string }) {
+  const { t } = useTranslation();
+  // Read once per crash: the mark is cleared only by a report that mounts.
+  const [retried] = useState(reportWasRetried);
+  const embedded = isEmbedded();
+  const health = useCrashHealth(retried && !embedded);
+  const [formOpen, setFormOpen] = useState(false);
+  // In a browser, only once health says feedback is on: until it answers, or
+  // if it can't (no serve), Retry is the honest button.
+  const offerFeedback = retried && (embedded || health?.feedback.enabled === true);
+
+  if (!offerFeedback) return <ErrorNotice scope="report" onRetry={retryReport} />;
+
+  const message = problemReportMessage(t, error, pathname);
+  const label =
+    embedded && i18n.exists("desktop:menu.help.sendFeedback")
+      ? t("desktop:menu.help.sendFeedback")
+      : t("footer.giveFeedback");
+  return (
+    <div className="bn-empty-state bn-route-error" role="alert">
+      <p>{t("labels.reportError")}</p>
+      <button
+        type="button"
+        className="bn-btn bn-btn-secondary"
+        onClick={() => (embedded ? postOpenProblemReport(message) : setFormOpen(true))}
+      >
+        {label}
+      </button>
+      {!embedded && health && (
+        <FeedbackModal
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          health={health}
+          mode={{ kind: "problem", initialMessage: message }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * The health answer the crashed layout would have read (whether feedback is
+ * on, its URL, the version), for the browser's form. The export carries its
+ * own; a served report asks once. Null until known.
+ */
+function useCrashHealth(wanted: boolean): HealthResponse | null {
+  const [health, setHealth] = useState<HealthResponse | null>(
+    () => getExportData()?.health ?? null,
+  );
+  useEffect(() => {
+    if (!wanted || getExportData()) return;
+    let live = true;
+    fetch("/api/health")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (live && data?.version) setHealth(data as HealthResponse);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [wanted]);
+  return health;
 }
 
 /**
@@ -100,7 +195,14 @@ export const NO_MESSAGE = "(no message)";
  * shown."), the lens sentence's sibling; it was the bare `labels.error`
  * ("Error") until 21 Oct 2026.
  */
-export function ErrorNotice({ scope = "report" }: { scope?: "report" | "lens" }) {
+export function ErrorNotice({
+  scope = "report",
+  onRetry = () => window.location.reload(),
+}: {
+  scope?: "report" | "lens";
+  /** The report's crash pane marks its Retry (`retryReport`); a lens's does not. */
+  onRetry?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="bn-empty-state bn-route-error" role="alert">
@@ -108,7 +210,7 @@ export function ErrorNotice({ scope = "report" }: { scope?: "report" | "lens" })
       <button
         type="button"
         className="bn-btn bn-btn-primary"
-        onClick={() => window.location.reload()}
+        onClick={onRetry}
       >
         {t("buttons.retry")}
       </button>

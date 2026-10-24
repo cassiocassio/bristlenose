@@ -109,6 +109,7 @@ import { getExportData } from "../utils/exportData";
 import { DEFAULT_HEALTH_RESPONSE, type HealthResponse } from "../utils/health";
 import { asPhrase } from "../utils/searchMatch";
 import { ZOOM_STEP, applyZoom, getZoom } from "../utils/zoom";
+import { clearReportRetry } from "../utils/reportRetry";
 
 // ── CSV helpers (shared with Toolbar — duplicated to avoid coupling) ─────
 
@@ -398,6 +399,15 @@ function AppShell() {
     if (!embedded) return;
     postTimelineState(transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes);
   }, [embedded, transcriptTimeline.available, transcriptTimeline.on, transcriptTimeline.lanes]);
+
+  // The report mounted, so a crash pane's Retry worked: the next crash is a
+  // first crash again and offers Retry (`utils/reportRetry.ts`). A turn later,
+  // and cancelled on unmount, so a layout that throws in render or in any of
+  // its effects keeps the mark.
+  useEffect(() => {
+    const id = setTimeout(clearReportRetry, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     const exportData = getExportData();

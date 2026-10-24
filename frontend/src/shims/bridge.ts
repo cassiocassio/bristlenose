@@ -193,6 +193,25 @@ export function postLLMFailure(kind: string, provider: string): void {
  * the same three numbers, so what the SPA sends is what the shell keeps.
  */
 export const REPORT_ERROR_MESSAGE_LIMIT = 500;
+/** The longest problem-report prefill the shell accepts; it cuts, never refuses.
+ * The same number as `FeedbackSheetMode.problemMessageLimit` in Swift. */
+export const PROBLEM_REPORT_MESSAGE_LIMIT = 1200;
+
+/**
+ * Ask the Mac app for this window's feedback sheet as a problem report, with
+ * `message` already in it (`docs/design-feedback-native.md` § Feedback and
+ * problem reports). The whole-report crash pane's door once its Retry has
+ * crashed too: the report's own feedback form lives inside the layout that
+ * crashed. Posts to the message handler directly, so it works even when the
+ * crash came before the bridge namespace was installed. The status page's
+ * footer link posts `open-feedback` with no data, which stays feedback.
+ */
+export function postOpenProblemReport(message: string): void {
+  postProjectAction("open-feedback", {
+    kind: "problem",
+    message: message.slice(0, PROBLEM_REPORT_MESSAGE_LIMIT),
+  });
+}
 export const REPORT_ERROR_FRAME_LIMIT = 8;
 export const REPORT_ERROR_FRAME_LENGTH = 300;
 

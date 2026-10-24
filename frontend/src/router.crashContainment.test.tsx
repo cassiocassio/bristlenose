@@ -5,9 +5,14 @@ import { createHashRouter, createMemoryRouter, RouterProvider } from "react-rout
 import { routes } from "./router";
 import { _resetEmbeddedCache } from "./utils/embedded";
 import { featureFlags } from "./utils/featureFlags";
-import { postReportError } from "./shims/bridge";
+import { postOpenProblemReport, postReportError } from "./shims/bridge";
+import i18n from "./i18n";
+import desktopEn from "@locales/en/desktop.json";
+import { REPORT_RETRY_KEY, retryReport } from "./utils/reportRetry";
 
 const mockPostReportError = vi.mocked(postReportError);
+const mockPostOpenProblemReport = vi.mocked(postOpenProblemReport);
+const mockRetryReport = vi.mocked(retryReport);
 
 // R85: a crash in one lens must stay in that lens, a crash in a sidebar must
 // stay in that sidebar, and a crash in the chrome (header, nav, footer, the
@@ -69,7 +74,14 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("./shims/bridge", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./shims/bridge")>()),
   postReportError: vi.fn(),
+  postOpenProblemReport: vi.fn(),
 }));
+
+// jsdom cannot reload, so the crash pane's Retry marks without reloading.
+vi.mock("./utils/reportRetry", async (importOriginal) => {
+  const real = await importOriginal<typeof import("./utils/reportRetry")>();
+  return { ...real, retryReport: vi.fn(() => real.markReportRetry()) };
+});
 
 vi.mock("./layouts/AppLayout", async (importOriginal) => {
   const real = await importOriginal<typeof import("./layouts/AppLayout")>();
@@ -167,6 +179,9 @@ beforeEach(() => {
   boom.minimap = false;
   boom.layout = false;
   mockPostReportError.mockClear();
+  mockPostOpenProblemReport.mockClear();
+  mockRetryReport.mockClear();
+  sessionStorage.clear();
   boom.header = false;
   boom.navBar = false;
   boom.footer = false;
@@ -692,5 +707,178 @@ describe("a crash inside an open modal", () => {
     }, "bn-feedback-overlay");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(overlay).not.toHaveClass("visible"));
+  });
+});
+
+describe("a whole-report crash that survives its Retry", () => {
+  // Owner, 24 Oct 2026 (spec docs/mockups/report-crash-repeat.html;
+  // docs/design-feedback-native.md § Feedback and problem reports): a first
+  // crash offers Retry; once the reload Retry asked for crashes too, one
+  // secondary button opens the feedback form as a problem report.
+
+  const sentence = "This report couldn’t be shown.";
+  const prefill = `${sentence}\nError: kaboom-secret-stack-detail · /report/quotes/`;
+
+  /** `/api/health` says feedback is on (or off); everything else as before. */
+  function serveHealth(enabled: boolean) {
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const body = String(input).endsWith("/api/health")
+        ? {
+            status: "ok",
+            version: "9.9.9",
+            links: { github_issues_url: "" },
+            feedback: { enabled, url: enabled ? "https://example.test/feedback.php" : "" },
+            telemetry: { enabled: false, url: "" },
+          }
+        : { quotes: [], sessions: [], tags: [] };
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  }
+
+  it("offers Retry on the first crash, and its Retry leaves the mark before reloading", () => {
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    const alert = screen.getByRole("alert");
+    const retry = within(alert).getByRole("button", { name: "Retry" });
+    expect(retry).toHaveClass("bn-btn-primary");
+    fireEvent.click(retry);
+    expect(mockRetryReport).toHaveBeenCalledOnce();
+    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBe("1");
+  });
+
+  it("in a browser, offers one secondary Give feedback in Retry's place", async () => {
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    boom.layout = true;
+    serveHealth(true);
+    renderAt("/report/quotes/");
+    await screen.findByRole("button", { name: "Give feedback" });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(sentence);
+    const buttons = within(alert).getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent("Give feedback");
+    expect(buttons[0]).toHaveClass("bn-btn-secondary");
+    expect(buttons[0]).not.toHaveClass("bn-btn-primary");
+  });
+
+  it("in a browser, opens the feedback form as a problem report, which sends kind: problem", async () => {
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    boom.layout = true;
+    const posted: unknown[] = [];
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/health")) {
+        return new Response(
+          JSON.stringify({
+            status: "ok",
+            version: "9.9.9",
+            links: { github_issues_url: "https://example.test/issues" },
+            feedback: { enabled: true, url: "https://example.test/feedback.php" },
+            telemetry: { enabled: false, url: "" },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "https://example.test/feedback.php") {
+        posted.push(JSON.parse(String(init?.body)));
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    renderAt("/report/quotes/");
+    fireEvent.click(await screen.findByRole("button", { name: "Give feedback" }));
+    const dialog = await screen.findByTestId("bn-feedback-modal");
+    expect(within(dialog).getByRole("heading")).toHaveTextContent("Bristlenose had a problem");
+    expect(within(dialog).getByText("Tell us what happened")).toBeInTheDocument();
+    expect(within(dialog).getByRole("textbox")).toHaveValue(`${prefill}\n\n`);
+    // Not before the health answer: the version comes from it.
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
+    fireEvent.click(within(dialog).getByText("Frustrating"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toEqual({
+      version: "9.9.9",
+      rating: "hate",
+      message: prefill,
+      kind: "problem",
+    });
+    expect(mockPostOpenProblemReport).not.toHaveBeenCalled();
+  });
+
+  it("in the Mac app, offers Send Feedback… and asks for this window's sheet as a problem report", () => {
+    i18n.addResourceBundle("en", "desktop", desktopEn, true, true);
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    try {
+      sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+      boom.layout = true;
+      renderAt("/report/quotes/");
+      const buttons = within(screen.getByRole("alert")).getAllByRole("button");
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]).toHaveTextContent("Send Feedback…");
+      expect(buttons[0]).toHaveClass("bn-btn-secondary");
+      fireEvent.click(buttons[0]);
+      expect(mockPostOpenProblemReport).toHaveBeenCalledWith(prefill);
+      expect(screen.queryByTestId("bn-feedback-modal")).toBeNull();
+    } finally {
+      i18n.removeResourceBundle("en", "desktop");
+    }
+  });
+
+  it("re-arms Retry once a report mounts", async () => {
+    // Retry's reload worked: the report mounted.
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    const { unmount } = renderAt("/report/quotes/");
+    expect(screen.getByTestId("quotes-lens")).toBeInTheDocument();
+    await waitFor(() => expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBeNull());
+    unmount();
+    // A later crash, in a fresh load, is a first crash again.
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(sentence);
+    expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("in a browser, keeps Retry where feedback is switched off", async () => {
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    boom.layout = true;
+    serveHealth(false);
+    renderAt("/report/quotes/");
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
+  });
+
+  it("in a browser, keeps Retry while health has not said feedback is on", async () => {
+    // No serve to answer: the default stub has no version, so health stays unknown.
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
+  });
+
+  it("a layout that crashes keeps the mark", async () => {
+    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+    boom.layout = true;
+    renderAt("/report/quotes/");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBe("1");
+  });
+
+  it("a lens crash's Retry leaves no mark", () => {
+    boom.mode = "first-render";
+    const { container } = renderAt("/report/signals/");
+    expectContainedFallback(container);
+    expect(mockRetryReport).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBeNull();
   });
 });

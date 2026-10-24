@@ -12,6 +12,8 @@ import {
   postStoreMiroToken,
   postFocusChange,
   postReportError,
+  postOpenProblemReport,
+  PROBLEM_REPORT_MESSAGE_LIMIT,
   REPORT_ERROR_MESSAGE_LIMIT,
   REPORT_ERROR_FRAME_LIMIT,
   REPORT_ERROR_FRAME_LENGTH,
@@ -78,6 +80,22 @@ describe("postRouteChange", () => {
 
   it("no-ops gracefully when webkit is absent", () => {
     expect(() => postRouteChange("/report/")).not.toThrow();
+  });
+});
+
+describe("postOpenProblemReport", () => {
+  it("asks for this window's feedback sheet as a problem report, cut at the shell's limit", () => {
+    // The same number as FeedbackSheetMode.problemMessageLimit in Swift.
+    expect(PROBLEM_REPORT_MESSAGE_LIMIT).toBe(1200);
+    const post = installMockWebkit();
+    postOpenProblemReport("x".repeat(5_000));
+    const [msg] = post.mock.calls[0] as [
+      { type: string; action: string; data: { kind: string; message: string } },
+    ];
+    expect(msg.type).toBe("project-action");
+    expect(msg.action).toBe("open-feedback");
+    expect(msg.data.kind).toBe("problem");
+    expect(msg.data.message).toHaveLength(PROBLEM_REPORT_MESSAGE_LIMIT);
   });
 });
 

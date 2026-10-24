@@ -7,10 +7,25 @@ import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
 import { DEFAULT_GITHUB_ISSUES_URL, type HealthResponse } from "../utils/health";
 
+/**
+ * Which journey brought the person to the form (`docs/design-feedback-native.md`
+ * § Feedback and problem reports). Feedback is their own idea; a problem report
+ * is Bristlenose suggesting it after something failed: its own heading and
+ * label, what went wrong already in the message, and `kind: "problem"` on the
+ * wire. The Mac twin is `FeedbackSheetMode`.
+ */
+export type FeedbackMode =
+  | { kind: "feedback" }
+  | { kind: "problem"; initialMessage: string };
+
+const FEEDBACK: FeedbackMode = { kind: "feedback" };
+
 interface FeedbackModalProps {
   open: boolean;
   onClose: () => void;
   health: HealthResponse;
+  /** Feedback unless a failure pane opens it. */
+  mode?: FeedbackMode;
 }
 
 const FEEDBACK_DRAFT_KEY = "bristlenose-feedback-draft";
@@ -50,9 +65,12 @@ function writeDraft(draft: DraftData): void {
   }
 }
 
-export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
+export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: FeedbackModalProps) {
   const { t, i18n } = useTranslation();
   useInert(open);
+  const isProblem = mode.kind === "problem";
+  const initialMessage = mode.kind === "problem" ? mode.initialMessage : "";
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [rating, setRating] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -82,17 +100,40 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    const draft = readDraft();
-    setRating(draft.rating);
-    setMessage(draft.message);
+    // A problem report starts from what went wrong, with a blank line under it
+    // and the caret there, and leaves the feedback draft alone: it neither
+    // inherits a half-written note nor overwrites it.
+    if (isProblem) {
+      setRating("");
+      setMessage(initialMessage + "\n\n");
+    } else {
+      const draft = readDraft();
+      setRating(draft.rating);
+      setMessage(draft.message);
+    }
     setFailure(null);
     setSending(false);
+  }, [open, isProblem, initialMessage]);
+
+  // The caret goes under the prefill once per opening, after the prefill has
+  // rendered, so typing adds to it rather than landing before it.
+  const caretPlaced = useRef(false);
+  useEffect(() => {
+    if (!open) caretPlaced.current = false;
   }, [open]);
+  useEffect(() => {
+    if (!open || !isProblem || caretPlaced.current) return;
+    const el = textareaRef.current;
+    if (!el || message !== initialMessage + "\n\n") return;
+    caretPlaced.current = true;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, [open, isProblem, initialMessage, message]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isProblem) return;
     writeDraft({ rating, message });
-  }, [open, rating, message]);
+  }, [open, isProblem, rating, message]);
 
   useEffect(() => {
     if (!open) return;
@@ -119,18 +160,19 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     (toastMessage: string) => {
       setRating("");
       setMessage("");
-      writeDraft({ rating: "", message: "" });
+      if (!isProblem) writeDraft({ rating: "", message: "" });
       setSending(false);
       onClose();
       toast(toastMessage);
     },
-    [onClose],
+    [onClose, isProblem],
   );
 
   const fallbackToClipboard = useCallback(async (signal: AbortSignal) => {
     if (signal.aborted) return;
     const ratingLabel = feedbackLabelByValue[rating] ?? rating;
-    let text = `Bristlenose feedback (v${health.version || "unknown"})\nRating: ${ratingLabel}\n`;
+    const title = isProblem ? "Bristlenose problem report" : "Bristlenose feedback";
+    let text = `${title} (v${health.version || "unknown"})\nRating: ${ratingLabel}\n`;
     if (message.trim()) text += `Message: ${message.trim()}\n`;
     // The send failed, so the form stays open with the draft intact and says
     // so itself (R80): a toast after closing read as success, and named
@@ -148,7 +190,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     if (signal.aborted) return;
     setSending(false);
     setFailure(copied ? "feedback.sendFailed" : "feedback.sendFailedNotCopied");
-  }, [feedbackLabelByValue, health.version, message, rating]);
+  }, [feedbackLabelByValue, health.version, isProblem, message, rating]);
 
   const submit = useCallback(async () => {
     if (!rating || sending) return;
@@ -157,10 +199,12 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     const controller = new AbortController();
     inFlight.current = controller;
     const { signal } = controller;
+    // `kind` only on a problem report; feedback sends no such key.
     const payload = {
       version: health.version || "unknown",
       rating,
       message: message.trim(),
+      ...(isProblem ? { kind: "problem" } : {}),
     };
     const isHttp =
       window.location.protocol === "http:" || window.location.protocol === "https:";
@@ -200,7 +244,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
     }
     await fallbackToClipboard(signal);
     if (inFlight.current === controller) inFlight.current = null;
-  }, [clearAndClose, fallbackToClipboard, health.feedback.url, health.version, message, rating, sending]);
+  }, [clearAndClose, fallbackToClipboard, health.feedback.url, health.version, isProblem, message, rating, sending]);
 
   return createPortal(
     // Modal backdrop. It never closes the dialog: Escape and the dialog's own buttons do (decided 24 Oct 2026).
@@ -217,7 +261,7 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
         <PanelErrorBoundary part>
           {() => (
             <>
-              <h2>{t("feedback.heading")}</h2>
+              <h2>{t(isProblem ? "feedback.problemHeading" : "feedback.heading")}</h2>
               <div className="feedback-sentiments">
                 {FEEDBACK_SENTIMENT_KEYS.map((item) => (
                   <button
@@ -238,9 +282,10 @@ export function FeedbackModal({ open, onClose, health }: FeedbackModalProps) {
                 ))}
               </div>
               <label className="feedback-label" htmlFor="bn-feedback-message">
-                {t("feedback.helpUsImprove")}
+                {t(isProblem ? "feedback.problemLabel" : "feedback.helpUsImprove")}
               </label>
               <textarea
+                ref={textareaRef}
                 id="bn-feedback-message"
                 className="feedback-textarea"
                 placeholder={t("feedback.placeholder")}

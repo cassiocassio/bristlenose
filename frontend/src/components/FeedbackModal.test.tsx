@@ -97,6 +97,75 @@ describe("FeedbackModal", () => {
     });
   });
 
+  it("as feedback, the payload carries no kind", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Good/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+    const body = JSON.parse(String(fetchSpy.mock.calls[0][1]?.body));
+    expect(Object.keys(body).sort()).toEqual(["message", "rating", "version"]);
+  });
+
+  describe("as a problem report", () => {
+    const mode = { kind: "problem" as const, initialMessage: "It broke.\nError: x · /report/" };
+
+    it("has its own heading and label, starts from what went wrong, and still asks for a rating", () => {
+      render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} mode={mode} />);
+      expect(screen.getByRole("heading")).toHaveTextContent("Bristlenose had a problem");
+      const field = screen.getByLabelText("Tell us what happened") as HTMLTextAreaElement;
+      expect(field.value).toBe(`${mode.initialMessage}\n\n`);
+      expect(document.activeElement).toBe(field);
+      expect(field.selectionStart).toBe(field.value.length);
+      expect((screen.getByRole("button", { name: "Send" }) as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("sends kind: problem with the message as left", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} mode={mode} />);
+      fireEvent.click(screen.getByRole("button", { name: /Frustrating/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+      expect(JSON.parse(String(fetchSpy.mock.calls[0][1]?.body))).toEqual({
+        version: "9.9.9",
+        rating: "hate",
+        message: mode.initialMessage,
+        kind: "problem",
+      });
+    });
+
+    it("neither reads nor writes the feedback draft", () => {
+      const draft = JSON.stringify({ rating: "love", message: "A half-written note." });
+      localStorage.setItem("bristlenose-feedback-draft", draft);
+      render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} mode={mode} />);
+      const field = screen.getByLabelText("Tell us what happened") as HTMLTextAreaElement;
+      expect(field.value).toBe(`${mode.initialMessage}\n\n`);
+      fireEvent.change(field, { target: { value: "edited" } });
+      expect(localStorage.getItem("bristlenose-feedback-draft")).toBe(draft);
+    });
+
+    it("is copied as a problem report when it cannot be sent", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+      render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} mode={mode} />);
+      fireEvent.click(screen.getByRole("button", { name: /Frustrating/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Send" }));
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toMatch(/^Bristlenose problem report \(v9\.9\.9\)/);
+    });
+  });
+
   it("falls back to clipboard on a 200 without {ok:true} (captive-portal / proxy interstitial)", async () => {
     // A hotel/proxy interstitial returns HTTP 200 with an HTML body; feedback.php
     // never saw the payload. A bare resp.ok would toast "sent" and drop it — the

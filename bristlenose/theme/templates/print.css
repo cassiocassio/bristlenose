@@ -18,7 +18,7 @@
     .tag-input-wrap { display: none; }
     .tag-suggest { display: none; }
     .badge-delete { display: none; }
-    .badge-ai::after { display: none; }
+    .badge-ai::after, .badge-ai-delete { display: none; }
     .transcript-back { display: none; }
     .view-switcher { display: none; }
     .report-footer a { color: var(--bn-colour-muted); text-decoration: none; }

@@ -23,6 +23,7 @@
    .badge-accept / .badge-deny for a while and so matched nothing; hide the
    container, which covers both compartments however they are named inside. */
 .bn-export-mode .badge-delete,
+.bn-export-mode .badge-ai-delete,
 .bn-export-mode .badge-action-pill {
   display: none !important;
 }

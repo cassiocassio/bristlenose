@@ -154,6 +154,7 @@
 .bn-coverage-box details summary {
     cursor: pointer;
     font-weight: var(--bn-weight-emphasis);
+    --bn-icon-stem: var(--bn-icon-stem-emphasis);
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
     list-style: none;
@@ -161,14 +162,17 @@
 
 .bn-coverage-box details summary::-webkit-details-marker { display: none; }
 
-.bn-coverage-box details summary::before {
-    content: "\25B6\00a0";  /* ▶ + nbsp */
-    font-size: 0.65em;
-    vertical-align: middle;
+.bn-coverage-box details summary .bn-icon {
+    margin-inline-end: 0.25em;
+    transition: transform var(--bn-transition-fast);
 }
 
-.bn-coverage-box details[open] summary::before {
-    content: "\25BC\00a0";  /* ▼ + nbsp */
+.bn-coverage-box details[open] summary .bn-icon {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bn-coverage-box details summary .bn-icon { transition: none; }
 }
 
 .bn-coverage-session-title {

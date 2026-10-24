@@ -1,6 +1,6 @@
 ---
 status: partial
-updated: 16 Oct 2026
+updated: 24 Oct 2026
 ---
 
 # Icon system: Lucide on the web, SF Symbols on the Mac
@@ -12,7 +12,9 @@ and `tests/test_no_improvised_icons.py` holds it there. What is deferred, and wh
 § What's left. The review artefacts: `docs/mockups/icon-system-side-by-side.html` (built
 by `experiments/icon-system/build_mockup.py`, which lifts icons from source) and a local,
 gitignored before/now catalogue of every icon in the running app
-(`experiments/icon-system/capture_icons.mjs`, `build_catalogue.py`).
+(`experiments/icon-system/capture_icons.mjs`, `build_catalogue.py`). The owner looked at
+the catalogue on 24 Oct 2026 and approved it; the three glyphs theme CSS still drew went
+the same day (§ Phases, 3b).
 
 ## The decision, and where it came from
 
@@ -317,6 +319,13 @@ why it needs a gate at all.
    `font-weight` of the strong and emphasis controls (badge delete, accept/deny pill,
    activity chips, moderator dismiss, AutoCode title). The play triangle is filled; the
    modal nav's chevron got room a solid ▶ did not need; the starred view shows ★.
+3b. **The three glyphs theme CSS drew — 24 Oct 2026.** Waited on the baked-CSS decision
+   (§ What's left, 1). The AI badge's delete × is an icon in `.badge-ai-delete`, sharing the
+   `::after`'s box; `.badge-ai:has(> .badge-ai-delete)::after { content: none }` keeps the
+   character for the frozen static report, and the export hides the element, so an exported
+   report no longer shows a × it cannot act on. Settings' "copied" ✓ and the Dashboard
+   coverage ▶/▼ were React-only and lost their pseudo-elements: a `check` icon while copied,
+   a `disclose` chevron that turns 90° when open. Verified in Chromium and WebKit.
 
 **The gate** (`tests/test_no_improvised_icons.py`, each rule mutation-checked): no `<svg`
 in a component outside six named charts; the chart allowlist cannot go stale; no
@@ -364,29 +373,22 @@ In the order worth doing.
    Decided and built 17 Oct 2026 (`2f6127663`): serve and export use the running
    version's theme CSS, never a project's baked copy, so a theme change reaches every
    project.
-2. **Three glyphs drawn by theme CSS, now unblocked and not yet migrated**: the AI badge's
-   delete × (`badge.css` `.badge-ai::after`), Settings' "copied" ✓ (`settings.css`), the
-   Dashboard coverage ▶/▼ (`coverage.css`). Migrating each means rendering an element and
-   removing the pseudo-element. A reviewed implementation existed and was reverted on
-   16 Oct only because of 1 (Badge `.badge-ai-delete`, with a `:has()` guard that keeps
-   the static report's ×); it can be redone now.
-3. **Look at the result.** The owner has not yet seen the migrated app. The local
-   catalogue's `compare.html` shows every icon before and now, in place; the stroke at
-   very small sizes and the three grown boxes are the judgement calls.
-4. **The Mac app** shows none of this until the sidecar is rebuilt (`build-sidecar.sh`),
-   and an existing project then still serves its baked CSS (1). Not verified in the
-   WKWebView.
-5. **Small leftovers**: the Discussion lens's ▾ is part of a badge's text
-   (`DiscussionLens.tsx`, `code={`#${{n}} ▾`}`) and wants a real element; the dev
-   playground's ◆ has no Lucide match; the signal-card caret and the hidden-quotes
-   chevron read fainter than the old glyphs (opacity 0.4 and 0.7em).
+2. ~~**Three glyphs drawn by theme CSS.**~~ Done 24 Oct 2026 (§ Phases, 3b).
+3. ~~**Look at the result.**~~ The owner approved the before/now catalogue on 24 Oct 2026
+   ("so much better").
+4. **The Mac app** shows none of this until the sidecar is rebuilt (`build-sidecar.sh`).
+   Not yet seen in the WKWebView.
+5. **Small leftovers**: the signal-card caret and the hidden-quotes chevron read fainter
+   than the old glyphs (opacity 0.4 and 0.7em). The dev playground's ◆ stays, by the
+   owner's call (24 Oct 2026: dev-only). The Discussion lens's `#N ▾` went with its
+   18 Oct redesign.
 6. **Phase 4**, the welcome illustrations.
 7. **Mac consistency** (§ below), its own TODO item, plus the cheap test that every SF
    Symbol name resolves.
 8. **Not built from § Weight:** the Mac colour nativisation (icons on
    `-apple-system-secondary-label` / `-apple-system-control-accent` under
    `[data-platform="desktop"]`) and the baseline token (`.bn-icon` still uses a fixed
-   `vertical-align: -0.125em`). Both are tuning passes for after the owner has looked.
+   `vertical-align: -0.125em`). Both are tuning passes, open now that the owner has looked.
 9. **Type, found on the way:** `--bn-weight-light: 370` never renders in a browser (Inter
    is served `wght@400..700`); and the frozen static report's `quote_card.html:4` writes
    `class=”speaker”` with curly quotes, so `.speaker` never matches.

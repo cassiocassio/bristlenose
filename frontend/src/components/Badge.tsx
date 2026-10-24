@@ -198,6 +198,13 @@ export function Badge({
         data-testid={testId}
       >
         {displayText}
+        {/* The badge itself is the delete control, so the × is decorative. The
+            frozen static report draws it with `.badge-ai::after` instead (badge.css). */}
+        {onDelete && (
+          <span className="badge-ai-delete" aria-hidden="true">
+            <Icon name="close" decorative />
+          </span>
+        )}
       </span>
     );
   }

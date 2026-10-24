@@ -1601,7 +1601,7 @@ enum WelcomeTimelineCSS {
     }
 }
 
-/* ════ bristlenose/theme/atoms/badge.css — lines 1–326 ════ */
+/* ════ bristlenose/theme/atoms/badge.css — lines 1–337 ════ */
 /* Atom: badge — base badge, sentiment variants, AI and user variants */
 
 /* Every tag is one weight, separated from its kind by colour, not weight:
@@ -1651,11 +1651,12 @@ enum WelcomeTimelineCSS {
     opacity: 0.8;
 }
 
-/* Delete circle — white floating chip with grey ×.
-   Pure flexbox centering (10c-fix2 approach).
-   TODO: replace × character with SVG icon for cross-platform consistency. */
-.badge-ai::after {
-    content: "\00d7";
+/* Delete circle — white floating chip with a red ×. The React badge draws the ×
+   as an icon (.badge-ai-delete, Badge.tsx); the ::after draws it as a character
+   for the frozen static report, and steps aside when the element is present.
+   Both share one box. */
+.badge-ai::after,
+.badge-ai-delete {
     position: absolute;
     top: calc(-0.3rem - 1px);
     right: calc(-0.3rem - 1px);
@@ -1670,6 +1671,7 @@ enum WelcomeTimelineCSS {
     border-radius: 50%;
     font-size: var(--bn-text-micro);
     font-weight: var(--bn-weight-strong);
+    --bn-icon-stem: var(--bn-icon-stem-strong);  /* its icon follows the text weight */
     line-height: 1;
     opacity: 0;
     transition: opacity var(--bn-transition-fast);
@@ -1677,7 +1679,16 @@ enum WelcomeTimelineCSS {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
-.badge-ai:hover::after {
+.badge-ai::after {
+    content: "\00d7";
+}
+
+.badge-ai:has(> .badge-ai-delete)::after {
+    content: none;
+}
+
+.badge-ai:hover::after,
+.badge-ai:hover .badge-ai-delete {
     opacity: 1;
 }
 

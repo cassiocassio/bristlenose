@@ -26,6 +26,17 @@ describe("Badge", () => {
     expect(onDelete).toHaveBeenCalledOnce();
   });
 
+  it("ai badge: draws its delete × as an icon only when it can be deleted", () => {
+    const { container, rerender } = render(<Badge text="delight" variant="ai" onDelete={() => {}} />);
+    // The badge is the button, so the × is hidden from assistive technology and adds nothing to its name.
+    const x = container.querySelector(".badge-ai > .badge-ai-delete");
+    expect(x?.getAttribute("aria-hidden")).toBe("true");
+    expect(x?.querySelector("svg.bn-icon-close")).not.toBeNull();
+    expect(screen.getByRole("button").textContent).toBe("delight");
+    rerender(<Badge text="delight" variant="ai" />);
+    expect(container.querySelector(".badge-ai-delete")).toBeNull();
+  });
+
   it("user badge: x button appears and click fires onDelete", async () => {
     const onDelete = vi.fn();
     render(<Badge text="my-tag" variant="user" onDelete={onDelete} />);

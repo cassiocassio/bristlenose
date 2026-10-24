@@ -10,9 +10,9 @@
  * that width in screen pixels at any icon size. A context set in a heavier
  * weight sets `--bn-icon-stem` beside its `font-weight`.
  *
- * The attribute is a fallback, not the design: serve and the HTML export use a
- * project's baked copy of the theme CSS when it has one, and a project rendered
- * before the stem rule existed would otherwise draw Lucide's default 2 px.
+ * The attribute is a fallback, not the design: it holds the house weight on any
+ * page that loads the bundle without the theme CSS. (Serve and export once used a
+ * project's baked copy of that CSS; since 17 Oct 2026 they use the running version's.)
  *
  * The web can't use SF Symbols; the Mac app draws its own native controls with
  * them (PersonPickerPopover.swift draws the SF Symbol `checkmark`).
@@ -133,8 +133,8 @@ export function Icon({ name, size, px, className, label, decorative }: IconProps
       className={classes}
       nonScalingStroke
       strokeWidth={FALLBACK_STROKE}
-      // 1em as an attribute too, so a page whose theme CSS predates atoms/icon.css
-      // (serve and export prefer a project's baked copy) still draws a text-sized icon.
+      // 1em as an attribute too, so a page without atoms/icon.css still draws a
+      // text-sized icon.
       size={px ?? "1em"}
       focusable="false"
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}

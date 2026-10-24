@@ -13,7 +13,7 @@
 import { useContext, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorNotice } from "../components/RouteError";
-import { Badge, PersonBadge, TimecodeLink } from "../components";
+import { Badge, Icon, PersonBadge, TimecodeLink } from "../components";
 import { PlayerContext } from "../contexts/PlayerContext";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
@@ -653,7 +653,7 @@ function CoverageBox({
         </p>
       ) : omitted_by_session.length > 0 ? (
         <details>
-          <summary>{t("dashboard.showOmitted")}</summary>
+          <summary><Icon name="disclose" decorative />{t("dashboard.showOmitted")}</summary>
           <div>
             {omitted_by_session.map((sess) => (
               <OmittedSession key={sess.session_id} session={sess} />

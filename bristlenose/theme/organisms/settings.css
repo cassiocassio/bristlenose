@@ -185,8 +185,8 @@
     color: var(--bn-colour-accent);
 }
 
-.bn-config-ref-envvar.copied::after {
-    content: " \2713";
+.bn-config-ref-envvar .bn-icon {
+    margin-inline-start: 0.25em;
 }
 
 .bn-config-ref-options {

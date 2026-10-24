@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { SUPPORTED_LOCALES, type Locale } from "../i18n";
 import { setLocale, useLocaleStore } from "../i18n/LocaleStore";
 import { ModalNav, type NavItem } from "./ModalNav";
+import { Icon } from "./Icon";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { isEmbedded } from "../utils/embedded";
 import { dt } from "../utils/platformTranslation";
@@ -484,6 +485,7 @@ function ConfigSection({ categoryId }: { categoryId: string }) {
               title={t("configReference.clickToCopy")}
             >
               {s.envVar}
+              {copied === s.envVar && <Icon name="check" decorative />}
             </code>
             {s.options && (
               <span className="bn-config-ref-options">

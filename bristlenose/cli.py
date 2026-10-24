@@ -120,6 +120,51 @@ app = typer.Typer(
 console = Console(width=min(80, Console().width))
 
 
+def _stdin_is_a_terminal() -> bool:
+    """Whether a question can be asked and answered. A seam for tests."""
+    # A closed stdin (`<&-`) is None, not a stream.
+    return bool(getattr(sys.stdin, "isatty", lambda: False)() and sys.stdout.isatty())
+
+
+def _confirm_clean_discards(output_dir: Path, project: str) -> None:
+    """Ask before `--clean` discards the researcher's work on a report.
+
+    Typing --clean is a deliberate act, but a terminal is easy to skim and the
+    loss can't be undone (owner, 24 Oct 2026). Mirrors the Mac's Re-analyse
+    sheet: nothing to lose, no question; a count that couldn't be taken asks
+    anyway. Where nobody can answer, it refuses rather than guess; --yes skips.
+    """
+    from bristlenose import curation_counts
+
+    counts = curation_counts.read(output_dir)
+    if counts is not None and counts.total == 0:
+        return
+    if not _stdin_is_a_terminal():
+        if counts is None:
+            reason = ("--clean may discard your stars, tags and edits on this study "
+                      "(Bristlenose couldn't count them).")
+        else:
+            reason = (f"--clean would discard your work on this study: "
+                      f"{', '.join(counts.lines())}.")
+        _say(MessageKind.ERROR, f"{reason} Add --yes to re-analyse anyway.")
+        raise typer.Exit(2)
+    console.print(f"Re-analyse \u201c{project}\u201d?", markup=False)
+    if counts is not None and counts.sessions:
+        interviews = ("1 interview" if counts.sessions == 1
+                      else f"all {count_noun(counts.sessions, 'interview')}")
+        console.print(f"Bristlenose will transcribe and analyse {interviews} again from scratch.")
+    if counts is None:
+        console.print("Bristlenose couldn't count your stars, tags and edits \u2014 "
+                      "re-analysing may discard them.")
+    else:
+        console.print("Your work on this study will be discarded:")
+        for line in counts.lines():
+            console.print(f"  {line}")
+    if not typer.confirm("Discard it and re-analyse?", default=False):
+        console.print("Nothing changed.")
+        raise typer.Exit(0)
+
+
 def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:
     """Print a status line prefixed with the canonical glyph for ``kind``.
 
@@ -1343,6 +1388,13 @@ def run(
         bool,
         typer.Option("--clean", help="Start afresh. The previous report is replaced once the fresh analysis has produced a session."),
     ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "--yes", "-y",
+            help="With --clean, don't ask before discarding the previous report's stars, tags and edits.",
+        ),
+    ] = False,
     dev: Annotated[
         bool,
         typer.Option("--dev", help="Development mode: enable responsive playground in served report."),
@@ -1428,11 +1480,22 @@ def run(
             # way to pass --clean at all.
             output_exists = False
         else:
+            from rich.markup import escape
+
             console.print(
-                f"[red]Output directory already exists: {output_dir}[/red]\n"
-                f"Use [bold]--clean[/bold] to delete it and re-run."
+                f"[red]{escape(str(output_dir))} holds a report Bristlenose can't resume.[/red]\n"
+                f"To start afresh, use [bold]--clean[/bold] (it discards that report's "
+                f"stars, tags and edits)."
             )
             raise typer.Exit(1)
+
+    # The Mac asks before it starts a Re-analyse (its counted sheet) and runs
+    # us hosted, so only a terminal run is asked here (R113, decision #135).
+    if output_exists and clean and not yes:
+        from bristlenose.config import hosted_by_desktop
+
+        if not hosted_by_desktop():
+            _confirm_clean_discards(output_dir, project_name or input_dir.resolve().name)
 
     if redact_pii and retain_pii:
         _say(MessageKind.ERROR, "Cannot use both --redact-pii and --retain-pii.")
@@ -3444,6 +3507,8 @@ def _help_commands() -> None:
     console.print("  --retain-pii            Retain PII in transcripts (default)")
     console.print("  --clean                 Start afresh. The previous report is replaced once")
     console.print("                          the fresh analysis has produced a session.")
+    console.print("  -y, --yes               With --clean, don't ask before discarding stars,")
+    console.print("                          tags and edits.")
     console.print("  -v, --verbose           Verbose logging")
     console.print()
     console.print("[bold]bristlenose transcribe[/bold] <input-dir> \\[options]")

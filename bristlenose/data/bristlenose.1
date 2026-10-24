@@ -284,6 +284,13 @@ folders move into the new output, named with the previous analysis's date.
 A file added beside an interview after it was analysed (a transcript beside its
 recording, a recording in its meeting folder) is set aside by a run without
 \fB\-\-clean\fR, and named in the run's summary; \fB\-\-clean\fR reads it.
+When the previous report holds stars, tags or edits, \fB\-\-clean\fR lists
+them and asks before discarding them; without a terminal to ask on, it
+refuses.
+.TP
+.BR \-y ", " \-\-yes
+With \fB\-\-clean\fR, don't ask before discarding the previous report's
+stars, tags and edits.
 .TP
 .BR \-\-no\-serve
 Suppress the auto-serve step at the end of the pipeline. By default, \fBrun\fR

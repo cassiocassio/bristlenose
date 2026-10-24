@@ -352,7 +352,7 @@ def test_the_cli_holds_the_exit_until_it_has_said_how_the_restore_went(
         return real_say(kind, text, **kw)
 
     monkeypatch.setattr(cli, "_say", _spy)
-    CliRunner().invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    CliRunner().invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
     assert said_while_held == [True]
 
 
@@ -517,7 +517,7 @@ def test_the_cli_gives_the_backstop_its_settle_while_the_report_is_aside(
         raise RuntimeError("never reached in a real stuck stop")
 
     monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _stuck_then_backstop)
-    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
 
     assert seen == ["old"]
     assert rl._backstop_settle is None
@@ -552,7 +552,7 @@ def test_a_stuck_stop_after_a_session_landed_keeps_the_fresh_analysis(
         raise RuntimeError("never reached in a real stuck stop")
 
     monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _landed_then_stuck)
-    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
 
     assert seen == [("fresh", False)]
 
@@ -589,6 +589,6 @@ def test_a_backstop_after_the_report_was_replaced_settles_nothing(
 
     monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", _run)
     monkeypatch.setattr(output_backup, "discard", _backstop_fires_as_the_discard_starts)
-    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    _cli_runner(monkeypatch).invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
 
     assert (out / "bristlenose-report.html").read_text(encoding="utf-8") == "new"

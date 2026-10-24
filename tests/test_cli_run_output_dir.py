@@ -64,7 +64,7 @@ class TestZeroConfigTwoRunSequence:
 
         assert first.exit_code == 0
         assert second.exit_code == 0
-        assert "already exists" not in second.output
+        assert "can't resume" not in " ".join(second.output.split())
 
     def test_leftover_log_only_output_does_not_block(self, hermetic_cli, tmp_path: Path) -> None:
         """A failed preflight / api-key abort leaves only .bristlenose/bristlenose.log."""
@@ -77,7 +77,7 @@ class TestZeroConfigTwoRunSequence:
 
         # Reaches the (stubbed) provider gate instead of the exists-check wall
         assert result.exit_code == 0
-        assert "already exists" not in result.output
+        assert "can't resume" not in " ".join(result.output.split())
 
     def test_real_stale_output_still_demands_clean(self, hermetic_cli, tmp_path: Path) -> None:
         input_dir = tmp_path / "interviews"
@@ -88,7 +88,7 @@ class TestZeroConfigTwoRunSequence:
         result = hermetic_cli.invoke(app, ["run", str(input_dir)])
 
         assert result.exit_code == 1
-        assert "already exists" in result.output
+        assert "can't resume" in " ".join(result.output.split())
 
     def test_analyze_gated_run_creates_nothing(self, hermetic_cli, tmp_path: Path) -> None:
         transcripts = tmp_path / "transcripts"

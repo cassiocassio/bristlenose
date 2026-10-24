@@ -210,7 +210,7 @@ class Study:
         )
         args = ["run", str(self.folder), "--no-serve", "--llm", "claude"]
         if clean:
-            args.append("--clean")
+            args += ["--clean", "--yes"]
         with _quiet_cli():
             stack = [patch(target, new=fake) for target, fake in zip(STAGE_PATCHES, fakes,
                                                                       strict=True)]

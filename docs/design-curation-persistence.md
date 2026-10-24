@@ -266,7 +266,11 @@ survives. It doesn't, in three distinct ways._
    `pipelineRunner.start(project:, clean: true)` (`ContentView.swift:1120` after
    the counted confirmation sheet, and `:1618` directly when the curation count
    is zero), so every app re-analysis takes this path — by design, with the loss
-   counted and confirmed (`docs/design-analysis-lifecycle.md` §6).
+   counted and confirmed (`docs/design-analysis-lifecycle.md` §6). _Since
+   24 Oct 2026 the CLI asks too_ (R113, decision #135): `run --clean` counts the
+   same five things (`bristlenose/curation_counts.py`) and asks on a terminal;
+   `--yes` skips it; with no terminal it refuses. A run the Mac hosts is not
+   asked twice.
 2. **Whole-session removal drops that session's pins — by governance, not
    accident.** Pins protect a quote only while its session survives
    (`importer.py:1528`); the carve-out exists so consent withdrawal genuinely

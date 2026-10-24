@@ -123,6 +123,8 @@ transcribe = app.command(name="transcribe", hidden=True)(transcribe_only)
 
 ### 3. Output directory exists → error (no merge, no prompt)
 
+_Since 24 Oct 2026 (R113, decision #135):_ the refusal reads "`<dir>` holds a report Bristlenose can't resume. To start afresh, use --clean (it discards that report's stars, tags and edits)." — it fires only for a report with no manifest, since a manifest is resumed. And `--clean` itself now lists the curation it would discard and asks on a terminal (`--yes` to skip; it refuses with no terminal). The proposal below predates both.
+
 Running `bristlenose run ./input/ -o ./output/` fails if `./output/` exists and isn't empty:
 
 ```

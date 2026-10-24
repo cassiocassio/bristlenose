@@ -69,7 +69,7 @@ def cli_to_pipeline(monkeypatch):
 
 def _run(runner: CliRunner, input_dir: Path):
     # --no-serve: the pipeline runs, the summary prints, and nothing binds a port.
-    return runner.invoke(app, ["run", str(input_dir), "--clean", "--no-serve"])
+    return runner.invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
 
 
 class TestTheReportSurvivesAFailedRun:

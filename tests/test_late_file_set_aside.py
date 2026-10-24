@@ -186,7 +186,7 @@ class Rig(Study):
         args = (["run", str(self.folder), "--no-serve", "--llm", "claude"]
                 if command == "run" else [command, str(self.folder)])
         if clean:
-            args.append("--clean")
+            args += ["--clean", "--yes"]
         with _quiet_cli():
             stack = [patch(t, new=f) for t, f in targets.items()]
             stack.append(patch("bristlenose.llm.client.LLMClient", MagicMock()))

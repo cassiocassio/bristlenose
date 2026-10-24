@@ -134,7 +134,7 @@ def _pipeline_raises(monkeypatch, marker: str, *, landed: list[str] | None = Non
 
 
 def _invoke(runner: CliRunner, input_dir: Path, *, clean: bool):
-    args = ["run", str(input_dir), "--no-serve"] + (["--clean"] if clean else [])
+    args = ["run", str(input_dir), "--no-serve"] + (["--clean", "--yes"] if clean else [])
     return runner.invoke(app, args)
 
 

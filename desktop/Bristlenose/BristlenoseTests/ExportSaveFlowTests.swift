@@ -29,11 +29,20 @@ private final class FakeServe: @unchecked Sendable {
     private var held: [() -> Void] = []
     private var released = false
     private(set) var requested: [URL] = []
+    /// Fires once the listener is ready, or has failed (which leaves `port` at 0).
+    let listening = MainSignal()
 
     init() throws {
         let params = NWParameters.tcp
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: 0)
         listener = try NWListener(using: params)
+        let listening = self.listening
+        listener.stateUpdateHandler = { state in
+            switch state {
+            case .ready, .failed, .cancelled: MainActor.assumeIsolated { listening.fire() }
+            default: break
+            }
+        }
         listener.newConnectionHandler = { [weak self] connection in
             connection.start(queue: .main)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in
@@ -75,10 +84,9 @@ private final class FakeServe: @unchecked Sendable {
         answers.forEach { $0() }
     }
 
-    func ready() async {
-        let deadline = Date().addingTimeInterval(ExportRig.patience)
-        while port == 0, Date() < deadline { try? await Task.sleep(for: .milliseconds(10)) }
-    }
+    /// A signal, not a poll: the listener runs on the main queue, which a
+    /// full suite keeps busy, and a 30 s clock ran out there first (24 Oct 2026).
+    @MainActor func ready() async { await listening.wait() }
 
     func stop() { listener.cancel() }
 }
@@ -101,12 +109,16 @@ private final class ExportRig {
         dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("BristlenoseTests-export-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        coordinator.chooseSaveDestination = { [unowned self] _, accessory in
+        // Weak, not unowned: a test that gave up leaves its download in
+        // WebKit's hands, and the panel it reaches late must not take the
+        // test host down with it (an unowned rig did, 24 Oct 2026).
+        coordinator.chooseSaveDestination = { [weak self] _, accessory in
+            guard let self else { return nil }
             self.panels += 1
             self.atPanel(accessory)
             return self.destination
         }
-        coordinator.showAlert = { [unowned self] in self.alerts.append($0) }
+        coordinator.showAlert = { [weak self] in self?.alerts.append($0) }
     }
 
     var destination: URL { dir.appendingPathComponent("report.html") }
@@ -135,6 +147,23 @@ private final class ExportRig {
     func until(_ condition: () -> Bool, seconds: Double = patience) async {
         let deadline = Date().addingTimeInterval(seconds)
         while !condition(), Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    /// Wait for what only WebKit's download brings about, with no clock of
+    /// its own: the bound is the test's `.timeLimit`. Each step of an export
+    /// is a main-actor hop in the app (the server's answer, the destination,
+    /// the refetch) or WebKit's own write of the file out of process, and no
+    /// signal the test can hold reports the file landing, so this polls. A
+    /// busy main actor delays those hops past any fixed clock: the 30 s one
+    /// ran out with the panel not yet reached (24 Oct 2026, reproduced with
+    /// twelve tests holding the main actor in 1 s stretches for 45 s). The
+    /// limit is two minutes, not the one the Miro tests take: an export
+    /// crosses about ten main-actor hops, and under that repro the test
+    /// ended at 57 s, when the main actor came free.
+    func untilTimeLimit(_ condition: () -> Bool) async {
+        while !condition(), !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(20))
         }
     }
@@ -182,11 +211,12 @@ struct ExportSaveFlowTests {
 
     // MARK: - R74
 
-    @Test func tickingAnonymiseSavesOnceToTheChosenPlace() async throws {
+    @Test(.timeLimit(.minutes(2)))
+    func tickingAnonymiseSavesOnceToTheChosenPlace() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.atPanel = { $0?.anonymise = true }
         await rig.export()
-        await rig.until { rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 }
+        await rig.untilTimeLimit { rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 }
         try? await Task.sleep(for: .milliseconds(300))
 
         #expect(rig.panels == 1, "a second save panel asked again")
@@ -197,12 +227,13 @@ struct ExportSaveFlowTests {
         #expect(rig.alerts.isEmpty)
     }
 
-    @Test func anAnonymisedCopyTheServerRefusesIsSaidAndNotSaved() async throws {
+    @Test(.timeLimit(.minutes(2)))
+    func anAnonymisedCopyTheServerRefusesIsSaidAndNotSaved() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         rig.serve.status = { $0.query?.contains("anonymise=true") == true ? 500 : 200 }
         rig.atPanel = { $0?.anonymise = true }
         await rig.export()
-        await rig.until { !rig.alerts.isEmpty || rig.saved != nil || rig.panels > 1 }
+        await rig.untilTimeLimit { !rig.alerts.isEmpty || rig.saved != nil || rig.panels > 1 }
         try? await Task.sleep(for: .milliseconds(300))
 
         #expect(rig.serve.requested.count == 2, "the anonymised copy was never asked for")

@@ -6,9 +6,11 @@ trued-against: HEAD@main 3725a938, macOS 27.0 (26A428), Swift 6.4
 
 # The report's right-click menu: what WebKit offers, where it goes, what to offer instead
 
-The report runs in `BristlenoseWebView` (`desktop/Bristlenose/Bristlenose/WebView.swift`), which
-overrides only `performKeyEquivalent`. Nothing edits WebKit's context menu, so every right-click
-gets WebKit's default menu. This audit maps that menu across every lens and page, and proposes
+The report runs in `BristlenoseWebView` (`desktop/Bristlenose/Bristlenose/WebView.swift`). At
+the time of this audit it overrode only `performKeyEquivalent`, so every right-click got WebKit's
+default menu. _Since 21 Oct 2026 (`576f7287`) `willOpenMenu` exists and swaps WebKit's Reload for
+Reload Report through a pure helper, `ReportContextMenu.apply`; the link and image items below are
+unchanged, and that helper is where this proposal's edits would go._ This audit maps that menu across every lens and page, and proposes
 what the app should offer instead.
 
 **Mockup:** [`docs/mockups/webview-context-menu-proposal.html`](mockups/webview-context-menu-proposal.html)
@@ -273,7 +275,7 @@ researcher's own explicit act, as it is in Mail. Noted, not changed.
 2. **Native side.** `BristlenoseWebView.willOpenMenu(_:with:)`. It takes the pending target if it arrived for this right-click (`seq` newer than the last menu and received within a short bound, say 250 ms). Then it edits the menu by identifier per §4.1. For SEED it keeps WebKit's *Open Link in New Window* item (its position and its WebKit-localised title) and sets its `target`/`action` to ours. Our action calls `openWindow(id: "main", value: .fresh(project:, lens:, place:))`, through a closure the window's `ContentView` hands the web view, since `openWindow` is a scene affordance.
 3. **No target → the safe answer.** If no current target is pending, remove *Open Link in New Window* rather than leave WebKit's. The safe failure is a missing item, never the player hijack.
 
-**This is the same hook the Screens session is building.** The Screens lens is adding
+**This is the hook Reload Report already uses** (`ReportContextMenu.apply`, 21 Oct 2026), and the one the Screens session planned for Tidy. The Screens lens is adding
 `postContextItems` (`frontend/src/shims/bridge.ts:356-366`, uncommitted at the time of this
 audit), and `docs/design-screens.md` names `BristlenoseWebView.willOpenMenu` for Tidy. There must
 be **one** `willOpenMenu` and preferably **one** message per right-click, carrying both the

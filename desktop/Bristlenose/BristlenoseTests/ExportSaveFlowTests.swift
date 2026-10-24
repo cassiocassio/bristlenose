@@ -322,11 +322,19 @@ struct ExportSaveFlowTests {
     @Test func aServerErrorEndsExporting() async throws {
         let rig = try ExportRig(); defer { rig.cleanup() }
         let bridge = rig.coordinator.bridgeHandler
+        // Out of reach, so only the server's answer can end the line.
+        bridge.reportExportStartPatience = .seconds(60)
         rig.serve.status = { _ in 500 }
         bridge.reportExportPressed()
         try await rig.export()
-        await rig.until { !rig.alerts.isEmpty }
-        #expect(!rig.alerts.isEmpty)
+        // The server must be asked and refuse: a download that never reached
+        // it fails with an alert too, which passed for this until 24 Oct 2026.
+        await rig.untilTimeLimit { !rig.alerts.isEmpty || rig.panels > 0 }
+        #expect(rig.serve.requested.count == 1, "the server was never asked")
+        #expect(rig.alerts.count == 1, "the refusal was not said")
+        #expect(rig.alerts.first?.informativeText == HTTPURLResponse.localizedString(forStatusCode: 500),
+                "the alert came from somewhere other than the server's refusal")
+        #expect(rig.panels == 0, "the save panel was offered the refusal")
         #expect(!bridge.isExportingReport, "a refused export still said Exporting…")
     }
 
@@ -379,8 +387,14 @@ struct ExportSaveFlowTests {
         try await rig.export()
         await rig.until({ !bridge.isExportingReport }, seconds: 5)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
+        // The dropped press leaves the first export alone: its anonymised copy
+        // lands where the one panel chose, and nothing asks again or alerts.
         rig.serve.release()
-        await rig.until { rig.saved == "<html>ANONYMISED</html>" }
+        await rig.untilTimeLimit { rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 }
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(rig.saved == "<html>ANONYMISED</html>", "the export in flight never landed")
+        #expect(rig.panels == 1, "the dropped press put up a save panel")
+        #expect(rig.alerts.isEmpty, "a dropped press is not a failure")
     }
 
     /// A second press before the panel is dropped too, but the first export

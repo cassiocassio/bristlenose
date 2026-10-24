@@ -2,6 +2,287 @@
 
 All notable changes to Bristlenose are documented here. See also the [README](README.md) for the latest releases.
 
+**0.43.0** — _24 Oct 2026_
+
+The reliability burn-down: in five days well over a hundred ways for Bristlenose to fail, lose work or stay quiet were found and closed. Analyses stop, resume and fail honestly; changes that don't save say so and take themselves back; a crash in one part of the report leaves the rest working; and a failure that survives its retry offers to send a problem report.
+
+**New**
+
+- **Problem reports.** When something fails and still fails after Retry, Bristlenose offers to send a problem report. This covers the Mac app failing to start (Show details, Send Feedback) and the report crashing as a whole. The feedback form opens as a problem report with the details filled in, in the Mac app and the browser.
+- **Right-click menus in the Mac app say exactly what each item does.** A blue timecode plays. A badge opens the transcript. A quote card offers Star or Unstar, Hide, Add Tag…, Copy Quote and its transcript. Each item has a "…in New Window" twin: Quotes ▸ Show in Transcript, Open Transcript in New Window. The menus are in all 21 languages, and they keep their items after the report reloads. WebKit's own Download, Share and new-window items are gone.
+- **A new window can open at a place in the study**, such as a transcript at a moment or a Quotes section. It waits for the report before going there. ⌘-click on a Dashboard featured quote opens its transcript in a new window again.
+- **View ▸ Reload Report (⌘R)** in the Mac app, also on the report's right-click menu.
+- **A first analysis on a new Mac starts at once.** On macOS 26 and later, in Apple's nine languages, it transcribes with Apple's on-device speech model while Whisper downloads. Whisper now downloads in the background from launch, once the AI disclosure is accepted and only with 20 GB free, with progress in the toolbar. A session in another language waits for Whisper and runs on its own when it arrives. To turn Apple's model off, run `defaults write app.bristlenose BristlenoseAppleSpeech -bool NO`.
+- **A sixth provider in the CLI, any-llm: Mistral, OpenRouter and others.** `bristlenose configure any-llm` stores the model and key and checks them with the run's own request. `bristlenose use mistral:mistral-large-latest` switches between stored models. It's an optional extra, `bristlenose[any-llm]`.
+- **A report that can't be shown says so.** "This report couldn't be shown." comes with Retry instead of a bare "Error". In the Mac app the project's row shows a warning, and its popover offers Copy details. The row clears when the report renders again.
+- **`run --clean` asks before it discards your stars, tags and edits.** It lists them and asks, as the Mac's Re-analyse does. `--yes` skips the question, and a script with no terminal is refused rather than left to guess.
+
+**Improved**
+
+- **Every detail pane in the Mac app says what happened, in plain words, and offers the one thing that helps.**
+  - No selection: "Drop a folder of recordings or transcripts".
+  - An empty project: "Drag interviews here".
+  - Several projects selected: "3 projects selected".
+  - Folder moved: "Can't find this project's folder".
+  - A drive and a network share each have their own pane, named by their own name: "“Samsung T7” isn't connected", "“server.local” can't be reached", then "Reconnect to continue."
+  - A run that ended with the app: "The analysis stopped before it finished", with Resume Analysis.
+  - A Stop: "Analysis stopped", with Resume Analysis. A Stop over an earlier report shows that report.
+  - No provider: "Choose an AI provider to analyse this project", with Set Up Provider….
+  - A failure: "The analysis didn't finish", the reason in a sentence, the button that remedy allows, and Show details.
+  - The analysing pane shows the row's ring, and "Stopping…" while a Stop plays out.
+  - The engine-failed pane is the standard macOS one.
+  - The browser's status pages say the same things.
+- **Dialogs look and behave like macOS sheets.** All nine report dialogs draw through one shared component: Export, Feedback, Miro, FigJam, Settings, AutoCode Review, Uninstall codebook and the two merge confirms.
+  - They drop into place and rise out.
+  - The page behind is greyed, not blacked out.
+  - Escape closes only the topmost dialog.
+  - Focus goes in on open and back where it was on close.
+  - Tab stays inside the dialog.
+  - Every one has a close button.
+  - A click outside never closes a dialog.
+- **Re-analyse is a clean fresh start that keeps what it should.** Your exported clips and screens move into the new output under the old analysis's date. A Re-analyse that fails, stops or crashes after finishing a session keeps that session for Analyse to finish. Only a confirmed Re-analyse replaces a report.
+- **A partial run says how much it analysed.** The sidebar reads "6 of 8 sessions analysed" instead of "Partial completion". A CLI run that lost recordings ends "Done with warnings — 8 of 10 sessions analysed", not "✓ Done".
+- **After an analysis, lenses update quietly.** Nothing dims while a lens reads the new results, a failed read is tried once more and leaves the lens as it was, and new data fades in as it arrives.
+- **A speaker you recode into or out of participant is picked up by the next Analyse.** That session's quotes are found again from the right speaker, together with any new files. The separate Re-analyse button on the Sessions row is gone. Analyse is also offered after a run that finished with some sessions failed.
+- **The Mac app remembers the report's zoom, quote grouping and panel sizes across a relaunch**, and zoom also survives a reload.
+- **A first analysis shows the speech-model download** on the progress ring and the row, then starts again for the analysis, instead of looking stuck.
+- **The progress ring fills stage by stage.** "Grouping themes" moves within its own share of the ring instead of racing to the end the moment it starts. A new stage no longer shows the previous stage's "8 of 8".
+- **The raw transcripts folder says not to edit it.** `transcripts-raw/` holds a README: these are the transcripts as first transcribed, written again on every run, and corrections belong in the report.
+- **Toasts are spoken** by VoiceOver and screen readers, in the report and the Mac app. VoiceOver also announces an API key that couldn't be saved, and the verdict on a key you pasted.
+- **Files added while a study is being analysed are copied in**, and wait as "+N unanalysed" for the next analysis.
+- **The codebook library cards name their authors** the way the codebook page and sidebar do, with the title bolder above. Their Install and Uninstall buttons are back to the system size.
+- **The FigJam plugin shows progress and Stop for a board file dropped on the canvas**, as it does for one it builds.
+- **A reply that breaks one quote keeps the others.** If a model returns one incomplete quote, the session keeps the rest and the CLI says "1 incomplete quote left out (s10)". If more are broken than kept, the session fails and is retried rather than kept lopsided.
+- **The certificate bundle drops the compromised emSign root.** `certifi` is floored at 2026.10.19, which upgrades through pipx and Homebrew now pick up.
+- **`bristlenose serve` prints its access token only for the Mac app**, not into terminal scrollback or a piped log.
+- **onnxruntime's startup GPU warnings go to the log**, not the terminal.
+
+**Fixed**
+
+_Stopping, quitting and resuming_
+
+- **Quitting during an analysis left it to fail.** On relaunch the row read "Resuming…" and then "CLI exited with code 1". Quitting or force-quitting now stops the run cleanly, and Resume Analysis picks up where it left off.
+- **Quitting dropped the studies waiting to be analysed.** Reopening Bristlenose within four days now starts them again in order, the one in progress first, unless a study's folder has gone or holds nothing to analyse. A restored queue waits for the AI disclosure.
+- **Stop could take minutes during transcription.** It now ends the run within 30 seconds whatever it is doing, and almost always at once.
+- **Stopping a run that took a while to wind down read "Analysis stopped unexpectedly".** It now reads Stopped, and the run's history records a stop rather than a failure.
+- **Stopping an analysis left the row blank.** It now says Stopped, as a reconnected run already did.
+- **Stopping a re-run made the next run redo every recording.** Work a stopped run had already finished is now kept, so the next run does only what is left.
+- **Stopping or quitting could leave a run's helper processes going.** Stop and Quit now reach everything the analysis started.
+- **Quitting the Mac app during a stalled first download ends the run within 20 seconds.**
+- **Quitting the Mac app while it was putting a previous report back could leave the report missing.**
+- **Stopping a re-analysis while it cleaned up could bring back the old report over the new one.**
+- **Stopping a run that was slow to stop could leave the report hidden until the next run.** It is now put back before the run exits.
+- **A run that ended after the Mac app had gone was recorded as failed.** It is recorded as stopped.
+- **Closing the terminal mid-run was recorded as a crash.** It is recorded as stopped.
+- **A stopped or failed analysis could only be restarted from scratch.** If it ended after transcription, the only choice was Re-analyse, which discards your work. Analyse is now offered too and carries on where the run left off.
+- **A Re-analyse that had to wait for another study ended on the old report.** It now starts afresh when its turn comes.
+- **A study could stay on "Analysing" for good** if it finished just as another was started. It now settles, and the other starts after it.
+- **A Mac run could read "stopped unexpectedly" in its first moments.**
+- **A run started from Terminal on a study in the sidebar read "Analysis stopped unexpectedly" while it ran.** It now reads Analysing and settles to its real end a few seconds after it finishes.
+- **An analysis started in Terminal while the app was open went unnoticed.** Switching back to Bristlenose now shows it as Analysing until it ends. Stop isn't offered on it; stop it in Terminal.
+- **Quitting a second copy of the app could stop the first copy's analysis.**
+- **"Analysis stopped unexpectedly" could outlive a fresh report.** It now clears when a later run finishes.
+- **A run that failed with an explanation sometimes said only "Failed".** The reason is now read before the failure is named.
+- **A run that finished on a slow or sleeping drive read "Not responding" until relaunch.** The app now reads the project again until the drive answers, including for a run it reconnected to.
+- **A reconnected analysis on an unresponsive drive could read "Analysing" until you quit.** The app now notices when it ends, and the Mac can sleep again.
+- **An unresponsive network drive stopped the analyses queued behind it.** The study on it says "Not responding" and the next one starts.
+
+_Your curation: stars, tags, hides, edits, undo_
+
+- **Tags, stars, hides and edits could vanish from quotes you hadn't touched.** Each change now saves only the quotes it was made on. Before, it could erase the tags AutoCode added after a run, the curation of quotes a speaker recode had set aside, and, from a transcript's margin, every other quote's tags. A deleted tag no longer comes back under Uncategorised.
+- **"Couldn't save" left the change on screen anyway.** A star, hide, tag or edit that doesn't save is now taken back.
+- **A refresh in the middle of curating could undo changes still being saved.** Changes in flight, and AutoCode accepts and denies, are kept.
+- **Undo offered steps that never saved.** If a star, hide, tag, edit or speaker name fails to save, Edit ▸ Undo names the step before it.
+- **Undoing the removal of an AutoCode tag brought it back as your own.** It now comes back as AutoCode.
+- **Deleting a sentiment badge couldn't be undone.** Edit ▸ Undo Remove Tag (⌘Z) now brings it back.
+- **An open transcript didn't show an undo made elsewhere.** Undoing a star, hide, tag or badge change in Quotes while that session's transcript was open left the transcript showing the old state. It now reads again after the undo, without bringing back a badge or tag deleted meanwhile.
+- **A refused undo or redo of a paragraph split, join or speaker move said nothing.** It now says so, and Edit offers the same Undo again, not a Redo.
+- **A failed undo of a speaker name said nothing.** The name goes back to what it was, and you can try the undo again.
+- **A rename on the Sessions grid that didn't save kept showing the new name.** The grid puts the old name back.
+- **Clicking into a quote or heading and out again recorded an edit.** Nothing is written now unless you changed something, spacing included.
+- **A quote edit in progress was lost when you switched lens** with ⌘1–5 or the sidebar. It is now kept.
+- **Re-analyse could skip its "you'll lose N edits" warning.** Stars and tags made in the current session were invisible to the check; they now count.
+- **Re-analyse could discard your work without asking.** When Bristlenose couldn't read a study's stars, tags and edits, it treated them as none and rebuilt straight away. It now asks first, and says it couldn't count them.
+- **Re-analyse could discard a star made moments before without asking.** If the report was busy reading at the instant you starred a quote, the count could miss it. The app now asks whenever it can't be sure the count is complete.
+- **Two quotes that started at the same moment could collapse into one.** The second now keeps its own row and its own id. A star, hide, tag or edit on it stays on it across re-analyses, and existing projects keep every id they had.
+- **A change to a quote that a re-analysis had removed said only "Couldn't save".** It now says the quote is no longer in the report, and the quote leaves the screen.
+- **A tag name another tag already used was refused with only "Couldn't save your change."** It now opens the "already taken" dialog that renaming a group uses.
+- **Showing or hiding a tag group could un-hide your other groups.** Each eye now saves only its own groups, and a failed save puts the eye back.
+- **A tag group's eye could flip back** if it was clicked while the sidebar was loading.
+- **A tab left open across a serve restart couldn't save, and didn't say why.** It now says Bristlenose has restarted and to reload the page. The Mac app never shows this, because its report reconnects by itself.
+
+_Hidden quotes_
+
+- **A hidden quote still counted.** Signals, the session sentiment bars and the Dashboard's featured quotes now leave out quotes you've hidden, matching the chat lens. A starred quote you then hid is no longer cut as a video clip. The Quotes lens still lists hidden quotes so you can unhide them.
+- **The Dashboard's quote and tag counts included hidden quotes.** They now match the Quotes lens.
+- **An export of selected quotes included ones you'd hidden.** Exporting a selection to CSV, Excel, Miro or FigJam now leaves out hidden quotes, as the whole-project export always has.
+- **Codebook counts included other projects' quotes.** A tag's count in the Codebook lens could include quotes from other projects using the same codebook. It now counts this project's quotes only, and leaves out hidden ones.
+
+_AutoCode and codebooks_
+
+- **AutoCode left some sessions uncoded for good.** If some of a codebook's batches failed, the sessions in them were never coded by that codebook again. Bristlenose now remembers which sessions each codebook has finished, so the next analysis, or switching the codebook back on, codes the rest. A stopped re-code keeps what it had already tagged, and a codebook's suggested tags no longer disappear from Quotes while it re-codes.
+- **Applying a codebook again after stopping it re-coded everything.** It paid again for quotes already coded and brought back tags you had rejected. It now sends only the quotes the stopped run never reached. Apply while a stopped run's batch is still out is refused with "Already tagging with this codebook."
+- **A finished AutoCode run didn't show its proposals until a reload.** Quotes, its tag sidebar, Discussion and Screens now update when it finishes.
+- **Switching a codebook back on re-coded its new sessions without a word.** It now shows a progress chip, a reload brings it back, and a catch-up that fails says so instead of reporting done.
+- **Turning a codebook off and on during re-coding started a second re-coding.** The first one is left to finish.
+- **Re-coding chips said "some batches failed" when nothing had.** Each re-code reports its own result.
+- **A failed re-coding said only "Tagging failed."** It now says why, for example that the account is out of credit.
+- **Stopping a re-code didn't stop it.** A Stop ends it, and the sessions it hadn't reached are coded next time.
+- **A run finishing during a re-code could undo it.** The two no longer run together.
+- **A reinstalled codebook's run showed the previous run's "Done".** It now gets its own chip.
+- **The AutoCode catch-up chip was in English in every language.** It now reads "Coding the remaining sessions…" in all 21.
+- **Accepting or rejecting an AutoCode suggestion could look done when it hadn't saved.** It now says so, and the suggestion comes back, or follows whatever was decided elsewhere.
+- **Codebook edits and on/off switches could fail without a word.** A rename, move, merge, delete or switch that doesn't save now says so, and the codebook shows what was saved.
+
+_Files, folders and recordings_
+
+- **The same interview under two names was transcribed twice and counted as two participants.** A Finder copy or a renamed download beside its original is now one session. The copy is listed in the Files bucket as a second recording, Whisper runs once, and Signals count the interview once. A re-exported or trimmed recording is still a different recording. On a study analysed before this fix, the next run folds the duplicate away, and any stars, tags or edits on the duplicate's quotes go with it. That's rare: it needs both a duplicate and curation on it.
+- **The same transcript downloaded twice counted as two participants.** `transcript.vtt` beside `transcript (1).vtt`, or a Teams `.vtt` and `.docx` pair taken twice, is now one session. The copy is listed under Files and never read.
+- **A meeting recorded with Zoom's desktop app came out as several interviews.** Today's Zoom names the folder without a meeting ID, so the video, the audio and each person's separate track were analysed apart. Each meeting folder is now one session, and the combined audio is the one transcribed.
+- **A transcript or recording added beside an interview you'd already analysed changed it.** The next Analyse paid for that interview again, renumbered its speakers and gave starred quotes uncurated twins. The new file is now set aside and named in the run's summary, and Re-analyse reads it.
+- **A study with its interviews in participant folders looked empty in the Mac app.** It now counts files the way analysis finds them, up to three folders deep, shows how many there are to analyse and offers Analyse. The never-run status page finds them too.
+- **An empty folder, or one with nothing Bristlenose reads, ended "Done" on an empty report.** The run stops with "No analysable interviews found.", and a Re-analyse of an emptied folder keeps the previous report.
+- **`analyze` on a folder with no transcripts finished as if it had worked.** It now stops with an error.
+- **`analyze` skipped plain-text transcripts with no timecodes without saying so.** It names each one under "files not analysed" as a format it doesn't read.
+- **A folder Bristlenose couldn't read didn't list the files it had passed over.** `run` and `transcribe` record each one with its reason, so the Mac app can show them too.
+- **`bristlenose run` or `analyze` on your home folder or a system folder crashed with a traceback.** It now refuses the folder by its full path and writes nothing, including when the report would have landed in your home folder. In the Mac app such a study says why and refuses dropped or added files.
+- **A recording and its transcript whose names differed only in how an accent was stored were treated as two sessions.** They are now one, and a linked folder no longer doubles sessions or loops.
+- **Subtitles and transcripts saved as Windows-1252 or UTF-16 weren't read.** They are now; a legacy non-Western encoding is refused rather than misread.
+- **A subtitle cue with a malformed time was moved to 0:00.** It is now skipped and logged.
+- **An empty or unreadable subtitle file was reported as a recording in which nothing was said.** It is now reported as empty or unreadable.
+- **A transcript emptied to its header was called "Not a format Bristlenose reads."** It now says the transcript has no lines.
+- **A Word lock file (`~$…`) was analysed as an extra session.**
+- **In a Teams `.docx`, a line ending in a time such as "10:30" could be read as a speaker heading.** Only the real heading is a speaker now.
+- **The help and man page listed `.txt` as an accepted transcript.** Bristlenose doesn't read plain-text files, and the lists now match what it accepts.
+- **A typo in `people.yaml`, or one damaged file, stopped the report opening.** The report opens without the damaged file, and the log names it. A run with a damaged `people.yaml` finishes without the names in it, leaves your file exactly as it is, and the terminal names the line to fix. An unreadable quote file imports nothing rather than half its quotes.
+- **A damaged progress record stopped `run` and `status`.** `run` keeps a copy, says every stage runs again, and starts afresh. `status` no longer says there's no record.
+- **On the Mac, a damaged project file read "Can't be read".** It now reads "Project file damaged" and offers Analyse to rebuild it.
+- **An unreadable project list emptied the sidebar without a word.** The Mac app says why, and that your projects and their edits are safe in their folders.
+- **A damaged word-timing cache cost the whole session.** It now costs only the word timings.
+
+_Cloud folders, drives and network shares_
+
+- **Dropping a recording still in iCloud froze the copy until you force-quit.** The drop is now refused straight away.
+- **Choosing a discussion guide still in iCloud froze the app.** Bristlenose says the guide isn't downloaded yet and leaves the project as it was.
+- **A recording not downloaded in time failed the whole run.** It is now that session's own failure, "Wasn't downloaded to this Mac in time.", which the next run retries. The other sessions go on.
+- **A stalled cloud provider could hold a run for hours.** After a provider's first timeout, its other files wait two minutes, not thirty, so twenty stalled files cost about 40–70 minutes, not 2½–10 hours. Audio-only placeholders, which had no limit at all, now have one.
+- **Analyse ran a study whose drive had been ejected.** The row now says "Folder not found", and the next study in the queue goes ahead.
+- **A study whose iCloud, Dropbox or OneDrive folder had been deleted or moved was still analysed, and failed.** It now shows as a missing folder with Locate…, like an ejected drive. A folder whose files are only stored online still analyses, downloading each file as it goes.
+- **A vanished cloud folder was labelled "In iCloud",** with advice to connect a drive and no Locate…. It is now the Can't Find pane with Locate….
+- **A study stayed on "Folder not found" after its drive or folder came back.** It updates on its own, without relaunching.
+- **A study added through a linked folder opened once, then read "Can't be read".** The app keeps access to the folder the link points to, so the study opens after a relaunch.
+- **Cloud messages promised more than Bristlenose can know.** They say what is known and stop: no "download it in Finder", no "still downloading", no "yet".
+
+_Providers, keys and the LLM_
+
+- **Setup could say your API key was fine, then the run failed on it.** The key check now sends the same model and settings the analysis uses, so a refused setting fails at setup, in the provider's own words. `bristlenose doctor` does the same for an Azure OpenAI deployment.
+- **A new key, endpoint, model or output limit wasn't checked the same day.** Changing any of them within 24 hours skipped the check before a run, so a bad one failed at the first stage. It's checked again now.
+- **A model the provider has retired showed as "the provider rejected the request".** Bristlenose now says the model is unavailable and where to choose another.
+- **A Gemini run could hang for good after the Mac slept or changed network.** Gemini calls now time out after ten minutes and retry, as Claude's and ChatGPT's do.
+- **A lost connection on ChatGPT or Gemini showed a generic failure.** It now says the provider couldn't be reached, as Claude's always did.
+- **With no AI provider set up, adding interviews started an analysis that could only fail**, then said "Something went wrong" and "No interviews to analyse yet". The study now says no AI provider is set up, with Set Up Provider…, and Analyse runs once a key is saved.
+- **A long, dense interview could run for over an hour and then fail.** Quote extraction splits such a session rather than waiting on one oversized request.
+- **A failed speaker-identification call wasn't retried.** The next run retries it.
+- **A grouping that fell back after a failed call kept its fallback.** If one of the two grouping calls failed, every later analysis reused the fallback grouping. The next Analyse tries both calls again.
+- **The "Out of credit" notice stayed lit after a top-up and a successful run, or could go out after a run that never contacted the provider.** It now clears only after a run that actually used that provider.
+- **The run summary could name the wrong model.** An Azure run printed Claude's price. The reported model is now the one that ran.
+- **Provider errors and failed replies could be logged in full.** The log now keeps a status, a message and field names, never the reply or the provider's body.
+
+_API keys and Settings (Mac)_
+
+- **An API key that failed to save looked saved.** Settings ▸ LLM Provider now says so under the field and keeps your pasted key, so you can press Return to try again. If you move to another provider, that provider's row reads "Key not saved".
+- **A pasted API key could be lost.** Closing Settings, switching back to your report, picking another provider or quitting before pressing Return now saves it.
+- **Showing a half-typed API key saved it.** The show/hide button no longer saves the key or reloads the report.
+- **A key the Keychain refused could still be used in Terminal.** When Settings couldn't save a new key over the old one, `bristlenose run` still switched to the new key while the app kept the old one. Now neither changes until the save works.
+- **A key first set up with `bristlenose configure` couldn't be removed in the Mac app: it came straight back.** Remove now keeps it out of the app until the CLI writes it afresh, and the CLI keeps its copy. Clear in Settings also reads back, so a key the Keychain kept is shown rather than an empty field.
+- **Changing LLM settings reloaded the report over and over.** Tabbing through the key field, dragging the concurrency slider or typing an Azure address reloads it once, when you've finished, and only if something changed.
+- **A setting changed while a study was opening never reached it.** A new key, a provider switch or Anonymise now applies to the study that is still opening. A setting changed then no longer briefly says it stopped.
+- **The first launch on a new Mac could fail with "Bristlenose didn't finish starting".** A slow first start is now given time, and a start that crashes still says so at once.
+- **Install for Claude Desktop or ChatGPT could fail without a word.** It now says the installation couldn't start, under the button. When it falls back to the older extension, the tab shows how to let Claude read Bristlenose.
+- **A stored sign-in this build couldn't read couldn't be removed.** It is now listed as needing sign-in.
+
+_The report: crashes, lenses and chips_
+
+- **A crash in one lens, sidebar, the header, tab bar, footer or a dialog blanked the whole report.** The broken part now shows a quiet broken mark, or a short message with Retry in a lens, and the rest keeps working. A crashed dialog can still be closed.
+- **A lens that couldn't load showed a raw error such as "GET /transcripts/s3 404".** It now says the lens couldn't be shown, with Retry, and clears once a later load works. The Sessions tab does the same.
+- **A failed refresh could replace what was on screen with an error.** Quotes, Dashboard, Codebook, Discussion, Sessions and the Screens board keep what they show.
+- **The Screens lens could keep retrying a failed read for hours.** It tries once more, then stops.
+- **An activity chip spun for ever when the server restarted or stopped answering.** After a few seconds, or about half a minute if the server hangs, the chip says the task failed and can be dismissed. A finished export stays finished.
+- **A reload during AutoCode, a clip export or a screens export lost its progress chip.** The chip comes back with its progress, and an export that finishes during the reload still ends with Show in Finder or reaches the clipboard. Cancel names its export.
+- **View Report on a chip that came back after a reload opened nothing** on a first visit to the Codebook lens. It now opens the review.
+- **A screenshot that failed to load stayed "unavailable".** It's tried again the next time you show it.
+- **A transcript's Timeline button could disappear after one failed read.**
+- **The transcript of a session a re-analysis removed offered a Retry that could never work.** It now says the session is no longer in the report, and links back to All sessions.
+- **Clicking a session row on the Project tab did nothing**; only the #N link did. The whole row now opens its transcript.
+- **Quotes ▸ Reveal in Transcript did nothing.** It opens the quote's session at the moment the quote starts.
+- **A quote edit could be lost if you dragged a crop bracket and put it back.**
+- **⌘R on a focused quote applied the last tag instead of reloading, and ⌘T opened the tag box.** Both are left to the browser and the app.
+- **An unmeasured session's length read "0m".** It reads "—" everywhere.
+- **Two quotes starting in the same second could produce a clip that stopped before the second one ended.** Both are clipped.
+- **Report feedback disappeared when it could neither be sent nor copied.** The form stays open with your text.
+- **A feedback send that failed looked like it had worked.** All three forms (Mac sheet, report, status page) now say it wasn't sent, keep your text and say where to paste the copy. The Mac shows "Sending…" while it waits.
+- **A timecode in threshold review, or Open Link in New Window, replaced the video player** with a report page. Only the player opens the player window now.
+
+_Mac app: sidebar, menus, export and windows_
+
+- **Commands that couldn't run stayed lit and did nothing.** After the report process stopped, the Quotes, Video and Undo menus now dim. Export Report dims until the whole report is there. Send to Miro and Send to FigJam dim when the report server isn't running, and follow the window you're in. Re-analyse is no longer dimmed after a first analysis until you reselected the study.
+- **File ▸ Add Files… opened on a study that couldn't take files**, then took them and did nothing. It now dims while a study is analysing, queued, failed, or its folder can't be reached. Markdown files are greyed out.
+- **Dropping files on a study that was running, queued, failed or couldn't be reached was accepted and ignored.** The files spring back on both sidebars.
+- **Dragging files Bristlenose can't use onto the sidebar looked accepted.** The pointer refuses them.
+- **Dropping a folder on the empty window could add a second copy of a study.** It now does what the same drop on the sidebar does.
+- **Dropping a folder already in the sidebar showed nothing.** Its row flashes.
+- **A new or re-dropped study wasn't scrolled into view.**
+- **A new study lost its icon while you typed its name**, and other studies' progress froze until you pressed Return.
+- **Deleting a sidebar folder scattered its studies.** They stay together where the folder was.
+- **Pressing Export Report twice opened two save panels.** The second press is ignored.
+- **Export Report showed nothing until the save panel opened.** The row reads "Exporting…" meanwhile.
+- **A failed export was saved as though it were the report.** You see "The export could not be saved." instead.
+- **Ticking Anonymise in the save panel asked you to save twice.**
+- **Show in folder on a finished clips or screens export did nothing in the Mac app.** It opens Finder at the clips folder, or with the first screenshot selected.
+- **A failed Show in folder said nothing,** and one whose file manager never returned could hang the report server. It now says the folder couldn't be shown, and gives up after 10 seconds.
+- **A toast appeared in every open window**, not just the one you were working in.
+- **Send Feedback opened a sheet in every open window, or none.** It opens one, in the window that asked.
+- **The feedback sheet couldn't be closed while it was loading.** Cancel and Esc work from the moment it appears.
+- **Cancelling Send Feedback while it was sending could still copy to the clipboard or say "Thanks".** Cancel and Esc stop the send, and nothing appears afterwards.
+- **"~1 min left" read as plural in French, Spanish, Italian, Portuguese and Catalan.** It now agrees in the singular, matching the browser report.
+- **Brazilian Portuguese counted zero as plural**, against CLDR. It now counts zero as "one".
+
+_Miro, FigJam and cloud import_
+
+- **A failed Miro status check showed Connect as if you were signed out.** It now says the check failed.
+- **Connecting to Miro while the server was down said "check the token".** It now says the server isn't running.
+- **Starting a Miro board while not connected was said in English.** It's in the app's language.
+- **A Miro board that completed without a link was reported as ready.** It's reported as failed.
+- **Closing the Miro sheet mid-load, or cancelling a board build mid-request, was reported as an error.** Both are a cancel.
+- **A Miro token that connected but wasn't saved said nothing in the browser.** It now says where it couldn't be saved.
+- **A screens board that Miro refused said nothing useful.** It now says so, as the quotes board does.
+- **Cloud import:** a declined grant cleared nothing on the sidebar's batch ring, a stopped batch settling late could end the next one, closing Google's Picker marked the rows failed instead of leaving them ticked, a declined Teams sign-in was said in English, and a Zoom name found after sign-in wasn't saved. All five now behave.
+
+_CLI_
+
+- **`transcribe` and `analyze` gave up with a traceback.** They stop with one line, as `run` does.
+- **`bristlenose transcribe` transcribed every recording again on a project that had already been run.** It reuses the earlier transcription and transcribes only new or changed recordings. `--whisper-model` or `--whisper-language` still transcribe everything.
+- **`transcribe` replaced the speakers a full run had identified.** On a project you had already analysed, it rewrote the transcripts with one guessed speaker and gave participants new numbers. Unchanged recordings now keep the speakers the run found.
+- **`transcribe` counted retried sessions as new.** Its "Transcribed … new sessions" line counts only new recordings, as `run`'s does.
+- **`bristlenose analyze` on a project you had already run made the next `run` pay again for every session's analysis.** The next `run` keeps what `analyze` produced, and analyses again only a transcript you edited by hand.
+- **A project from an older `--skip-transcription` run said "No speech found" for every recording, on every run.** The next run transcribes them, and `--skip-transcription` now prints one line saying how many recordings it didn't transcribe.
+- **A recording could be reported as having no speech after an interrupted or damaged cache.** It is transcribed again on the next run.
+- **A transcript file that couldn't be read was reported as a recording with no speech from the second run on**, and the recording beside it was transcribed again on every run. It's reported as unreadable on every run, and transcribed once.
+- **A damaged speaker or transcription cache could stop a run with an error.** The run redoes that session's speakers or transcription instead.
+- **A run with more than ten problems could miss the re-run when Whisper arrived.** It now picks those recordings up, and a run with more than ten waiting says "Waiting for Whisper".
+- **`serve` said it rendered a report it couldn't**, printing "Rendered report 0 quotes" after the error.
+- **`bristlenose help` listed the removed `render` command.** The help pages also give the right default output and transcripts folders.
+- **`bristlenose configure` pointed at itself, and `use`/`configure` didn't say when a `.env` file overrode them.** They now do.
+- **`live check --stages` works again.**
+
+**Removed**
+
+- **File ▸ Print and Page Setup are gone for now.** What printed wasn't a usable deliverable: cards below the fold came out blank, the app's controls printed, and real names printed whatever the Anonymise setting said. Printing comes back once it has been designed properly.
+- **Archive, which was always dimmed, is gone from the Project and Folder menus.** It returns when it does something.
+- **The "In iCloud" state and its cloud glyphs.** A folder that has gone is a folder that has gone.
+- **Loose-file studies.** Every study has been a folder since July. A study record older than that loads as a study of its folder.
+- **The per-session Re-analyse button on the Sessions row.** A speaker recode is picked up by the next Analyse.
+
 **0.42.0** — _20 Oct 2026_
 
 Quotes in the Discussion lens work like quotes everywhere else, and Re-analyse no longer loses curation made in the same sitting.

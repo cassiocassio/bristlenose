@@ -1464,8 +1464,9 @@ class LLMClient:
                             # Within the same attempt, as _analyze_anyllm does: a
                             # refused format is not a bad reply.
                             logger.warning(
-                                "local_json_schema_refused | model=%s | falling back to json_object",
-                                model,
+                                "local_json_schema_refused | model=%s | error=%s | "
+                                "falling back to json_object",
+                                model, failure_summary(exc),
                             )
                             self._local_json_object = True
                             response = await call({"type": "json_object"})
@@ -1553,8 +1554,8 @@ class LLMClient:
             except TruncatedResponseError:
                 # Output-cap truncation is not a JSON/validation failure — let
                 # it propagate so s09 smart-split can catch and re-chunk.
-                # Without this the generic `except Exception` below would
-                # mis-handle it (RuntimeError subclass).
+                # Without this it would reach the retry below as if it were a
+                # bad reply.
                 raise
             except json.JSONDecodeError as e:
                 last_error = e
@@ -1562,16 +1563,15 @@ class LLMClient:
                     "JSON parse failed (attempt %d/%d): %s",
                     attempt + 1, max_retries, failure_summary(e),
                 )
-            except Exception as e:
-                # Catch Pydantic ValidationError and other parsing issues
-                if "ValidationError" in type(e).__name__ or "validation" in str(e).lower():
-                    last_error = e
-                    logger.debug(
-                        "Schema validation failed (attempt %d/%d): %s",
-                        attempt + 1, max_retries, failure_summary(e),
-                    )
-                else:
-                    raise  # Re-raise non-validation errors
+            except ValidationError as e:
+                # The reply, not the request: a server that rejects the request
+                # with "validation" in its message (pydantic-backed ones do) has
+                # already been recorded above and propagates as itself.
+                last_error = e
+                logger.debug(
+                    "Schema validation failed (attempt %d/%d): %s",
+                    attempt + 1, max_retries, failure_summary(e),
+                )
             if attempt < max_retries - 1 and last_error is not None:
                 # Ask again with what was wrong, not the identical request: a
                 # small model echoed the schema the same way every time. The

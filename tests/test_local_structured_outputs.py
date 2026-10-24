@@ -108,6 +108,9 @@ async def test_a_refused_schema_falls_back_to_plain_json_once_and_remembers(
     # The refusal is resent at once as plain JSON, and the next call starts there.
     assert formats == ["json_schema", "json_object", "json_object"]
     assert "local_json_schema_refused" in caplog.text
+    # The refusal says why, so a server rejecting a schema we built wrong is
+    # visible rather than a quiet switch to plain JSON for the run.
+    assert "json_schema is not supported" in caplog.text
     rows = list(telemetry.iter_rows(run_dir))
     assert [(r["outcome"], r["retry_count"]) for r in rows] == [("ok", 0), ("ok", 0)]
 
@@ -176,3 +179,39 @@ async def test_the_failure_names_fields_never_the_reply(caplog) -> None:
     assert NEEDLE not in caplog.text
     for call in create.await_args_list[1:]:
         assert NEEDLE not in call.kwargs["messages"][-1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_a_server_error_that_mentions_validation_is_not_a_bad_reply(tmp_path) -> None:
+    # A pydantic-backed server (vLLM, LM Studio) rejects a request with "1
+    # validation error for ChatCompletionRequest". That is the server refusing
+    # the request, not the model's reply: it must not be retried as a bad reply,
+    # sent to the model as a correction, or blamed on the model's size.
+    client, create = _client(_bad_request("1 validation error for ChatCompletionRequest"))
+    run_dir = tmp_path / ".bristlenose"
+    tokens = telemetry.set_run_context("run-local-validation-400", run_dir)
+    try:
+        with telemetry.stage("s09_quote_extraction"), pytest.raises(openai.BadRequestError):
+            await _analyze(client)
+    finally:
+        telemetry.reset_run_context(tokens)
+    assert create.await_count == 1
+    rows = list(telemetry.iter_rows(run_dir))
+    assert [(r["outcome"], r["retry_count"]) for r in rows] == [("error", 0)]
+
+
+@pytest.mark.asyncio
+async def test_a_connection_error_on_the_schema_request_is_not_a_refusal(tmp_path) -> None:
+    lost = openai.APIConnectionError(request=httpx.Request("POST", "http://localhost:11434/v1"))
+    client, create = _client(lost)
+    run_dir = tmp_path / ".bristlenose"
+    tokens = telemetry.set_run_context("run-local-connection", run_dir)
+    try:
+        with telemetry.stage("s09_quote_extraction"), pytest.raises(openai.APIConnectionError):
+            await _analyze(client)
+    finally:
+        telemetry.reset_run_context(tokens)
+    assert create.await_count == 1
+    assert client._local_json_object is False
+    rows = list(telemetry.iter_rows(run_dir))
+    assert [(r["outcome"], r["retry_count"]) for r in rows] == [("error", 0)]

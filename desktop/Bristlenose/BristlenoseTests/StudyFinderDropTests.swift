@@ -30,13 +30,13 @@ struct StudyFinderDropTests {
     func aBusyStudyDoesNotLightUp(state: PipelineState) {
         let study = UUID()
         #expect(StudyFinderDrop.highlight(isOver: true, study: study, current: nil,
-                                          state: state) == nil,
+                                          state: state, folder: "") == nil,
                 "a study that won't take the files lit up under the drag")
     }
 
     @Test(arguments: busy)
     func aBusyStudySpringsTheDropBack(state: PipelineState) {
-        #expect(!StudyFinderDrop.accepts(state: state),
+        #expect(!StudyFinderDrop.accepts(state: state, folder: ""),
                 "the drop was accepted and then nothing happened")
     }
 
@@ -44,8 +44,8 @@ struct StudyFinderDropTests {
     func aStudyThatCanTakeFilesLightsAndAccepts(state: PipelineState?) {
         let study = UUID()
         #expect(StudyFinderDrop.highlight(isOver: true, study: study, current: nil,
-                                          state: state) == study)
-        #expect(StudyFinderDrop.accepts(state: state))
+                                          state: state, folder: "") == study)
+        #expect(StudyFinderDrop.accepts(state: state, folder: ""))
     }
 
     // MARK: - The drop itself, as the SwiftUI closures ask it
@@ -55,19 +55,19 @@ struct StudyFinderDropTests {
 
     @MainActor @Test(arguments: busy)
     func aBusyStudyRefusesARecording(state: PipelineState) {
-        #expect(!StudyFinderDrop.takesDrop(state: state, urls: [Self.video]))
+        #expect(!StudyFinderDrop.takesDrop(state: state, folder: "", urls: [Self.video]))
     }
 
     /// R48 on this path: a drag of nothing a study ingests is sprung back,
     /// not accepted and then thrown away.
     @MainActor @Test(arguments: free)
     func aDragOfNothingIngestibleIsRefused(state: PipelineState?) {
-        #expect(!StudyFinderDrop.takesDrop(state: state, urls: [Self.pdf]))
+        #expect(!StudyFinderDrop.takesDrop(state: state, folder: "", urls: [Self.pdf]))
     }
 
     @MainActor @Test(arguments: free)
     func aFreeStudyTakesARecording(state: PipelineState?) {
-        #expect(StudyFinderDrop.takesDrop(state: state, urls: [Self.pdf, Self.video]))
+        #expect(StudyFinderDrop.takesDrop(state: state, folder: "", urls: [Self.pdf, Self.video]))
     }
 
     // MARK: - Decision #100: a study being analysed takes files
@@ -76,8 +76,8 @@ struct StudyFinderDropTests {
     func aStudyBeingAnalysedTakesARecording(state: PipelineState) {
         let study = UUID()
         #expect(StudyFinderDrop.highlight(isOver: true, study: study, current: nil,
-                                          state: state) == study)
-        #expect(StudyFinderDrop.takesDrop(state: state, urls: [Self.video]),
+                                          state: state, folder: "") == study)
+        #expect(StudyFinderDrop.takesDrop(state: state, folder: "", urls: [Self.video]),
                 "files added while the study was being analysed were dropped")
     }
 
@@ -108,15 +108,38 @@ struct StudyFinderDropTests {
     @Test func leavingAStudyClearsOnlyItsOwnHighlight() {
         let study = UUID(), other = UUID()
         #expect(StudyFinderDrop.highlight(isOver: false, study: study, current: study,
-                                          state: .idle) == nil)
+                                          state: .idle, folder: "") == nil)
         // The 0.4 s acknowledgement on another row is not this row's to clear.
         #expect(StudyFinderDrop.highlight(isOver: false, study: study, current: other,
-                                          state: .idle) == other)
+                                          state: .idle, folder: "") == other)
     }
 
     @Test func aStudyThatTurnsBusyUnderTheDragStopsLighting() {
         let study = UUID()
         #expect(StudyFinderDrop.highlight(isOver: true, study: study, current: study,
-                                          state: .unreachable(reason: .timedOut)) == nil)
+                                          state: .unreachable(reason: .timedOut), folder: "") == nil)
+    }
+
+    // MARK: - RE#20 #110 follow-up: a folder `run` refuses by name
+
+    /// The home folder and the system roots (`ScanSelection.refusal`). The
+    /// pane says the folder can't be analysed; a drop used to copy the files
+    /// in anyway, for a run that then refused the folder.
+    static let refusedFolders = [UserHome.path, "/Applications", "/"]
+
+    @MainActor @Test(arguments: refusedFolders)
+    func aStudyInAFolderRunRefusesTakesNothing(folder: String) {
+        let study = UUID()
+        #expect(!StudyFinderDrop.accepts(state: .idle, folder: folder))
+        #expect(StudyFinderDrop.highlight(isOver: true, study: study, current: nil,
+                                          state: .idle, folder: folder) == nil,
+                "a study whose folder can't be analysed lit up under the drag")
+        #expect(!StudyFinderDrop.takesDrop(state: .idle, folder: folder, urls: [Self.video]))
+    }
+
+    /// Only the roots themselves: ~/Documents is an ordinary place for a study.
+    @Test func aFolderInsideTheHomeFolderStillTakesFiles() {
+        #expect(StudyFinderDrop.accepts(state: .idle, folder: UserHome.path + "/Documents"))
+        #expect(StudyFinderDrop.accepts(state: .idle, folder: NSTemporaryDirectory()))
     }
 }

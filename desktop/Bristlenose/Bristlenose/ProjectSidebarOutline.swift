@@ -1360,7 +1360,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             // answer with a toast three seconds after the researcher had
             // already let go. `docs/design-analysis-lifecycle.md` §4.2.
             if case .project(let id) = target,
-               !Self.acceptsFinderDrop(state: pipelineRunner?.state[id]) {
+               !Self.acceptsFinderDrop(
+                   state: pipelineRunner?.state[id],
+                   folder: projectIndex?.projects.first(where: { $0.id == id })?.path ?? "") {
                 return []
             }
             // Retarget the highlight to match where the drop will actually land:
@@ -1545,7 +1547,14 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// ends (`startsRunAfterCopy`). The copy lands each file under a name the
     /// run's scan skips and renames it into place (`CopyMachinery`), so a run
     /// reading the folder never sees half a file.
-    nonisolated static func acceptsFinderDrop(state: PipelineState?) -> Bool {
+    ///
+    /// **Nor does a study whose folder `run` refuses by name** — the home
+    /// folder or a system root (`StudyFinderDrop.folderIsRefused`, RE#20
+    /// #110 follow-up). Its pane says it can't be analysed; taking files
+    /// would copy participants' recordings into that folder for a run that
+    /// refuses it.
+    nonisolated static func acceptsFinderDrop(state: PipelineState?, folder: String) -> Bool {
+        if StudyFinderDrop.folderIsRefused(folder) { return false }
         guard let state else { return true }
         // Exhaustive on purpose: a new state is decided here, not defaulted in.
         switch state {

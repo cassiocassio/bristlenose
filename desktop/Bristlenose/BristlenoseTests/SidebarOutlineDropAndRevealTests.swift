@@ -359,6 +359,21 @@ struct SidebarOutlineDropAndRevealTests {
         }
     }
 
+    /// RE#20 #110 follow-up: a study whose folder `run` refuses by name (the
+    /// home folder) refuses the drag, as a failed one does.
+    @Test func aStudyInTheHomeFolderRefusesTheDrag() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let runner = PipelineRunner()
+        rig.controller.pipelineRunner = runner
+        let study = rig.index.addProject(name: "Home", path: UserHome.path)
+        rig.publish()
+        let item = rig.outlineView.item(atRow: try #require(rig.row(of: study.id)))
+        let video = rig.tempDir.appendingPathComponent("Session 1.MOV")
+
+        runner._debugSetState(.idle, for: study.id)
+        #expect(validate(rig, [video], onto: item) == [], "the home folder took the drag")
+    }
+
     // MARK: - R56: the other rows keep updating while a name is typed
 
     private func cell(_ rig: OutlineRig, _ id: UUID) -> NSTableCellView? {

@@ -2564,7 +2564,9 @@ struct ContentView: View {
         // drop-time what the drag now says, and one of them ("Use Retry on the
         // toolbar") signposted a control that is one right-click away.
         // `docs/design-analysis-lifecycle.md` §4.2.
-        guard SidebarOutlineController.acceptsFinderDrop(state: pipelineRunner.state[id])
+        guard SidebarOutlineController.acceptsFinderDrop(
+            state: pipelineRunner.state[id],
+            folder: projectIndex.projects.first(where: { $0.id == id })?.path ?? "")
         else {
             // Reachable from Add Files… when the study fails or its folder
             // stops answering while the panel is open: the menu item was lit
@@ -3561,14 +3563,15 @@ struct ContentView: View {
         // AppKit outline (`StudyFinderDrop`, R47, R48). The destination stays:
         // without it the List's own would take the drop and make a new study.
         .dropDestination(for: URL.self) { urls, _ in
-            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id], urls: urls)
+            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id],
+                                            folder: project.path, urls: urls)
             else { return false }
             handleDropOnProject(id: project.id, urls: urls)
             return true
         } isTargeted: { isOver in
             dropTargetProjectID = StudyFinderDrop.highlight(
                 isOver: isOver, study: project.id, current: dropTargetProjectID,
-                state: pipelineRunner.state[project.id])
+                state: pipelineRunner.state[project.id], folder: project.path)
         }
         .tag(SidebarSelection.project(project.id))
         .draggable(ProjectDragID(id: project.id))
@@ -3925,7 +3928,8 @@ struct ContentView: View {
         .dropDestination(for: URL.self) { urls, _ in
             // The pane shows only for an idle study (`DetailPaneKind`), but the
             // study can start under the drag; refuse as the sidebar does (R47).
-            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id], urls: urls)
+            guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id],
+                                            folder: project.path, urls: urls)
             else { return false }
             handleDropOnProject(id: project.id, urls: urls)
             return true

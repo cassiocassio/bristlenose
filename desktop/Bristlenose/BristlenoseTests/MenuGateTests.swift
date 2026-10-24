@@ -58,6 +58,17 @@ struct MenuGateTests {
 
     // MARK: R47 follow-up — Add Files… dims on a study that can't take files
 
+    /// RE#20 #110 follow-up: a study whose folder `run` refuses by name (the
+    /// home folder here) dims Add Files…, as its drop is refused.
+    @Test func addFilesDimsForAFolderRunRefuses() {
+        let bridge = BridgeHandler()
+        let home = Project(id: UUID(), name: "Home", path: UserHome.path)
+        #expect(home.isAvailable, "precondition: the folder is there, so only the refusal dims")
+
+        bridge.mirrorSelectedProjectRun(project: home, state: .idle, data: data(sessions: nil))
+        #expect(!bridge.selectedProjectTakesFiles, "Add Files… stayed lit on the home folder")
+    }
+
     /// The panel opened on a study that could not take files, took the pick
     /// and did nothing. (A running study takes them since decision #100.)
     @Test func addFilesDimsWhileTheStudyCannotTakeFiles() {

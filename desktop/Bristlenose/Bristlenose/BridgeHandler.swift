@@ -560,7 +560,8 @@ final class BridgeHandler: ObservableObject {
         selectedProjectCanStop = selectedProjectIsRunning && !runIsOwnedElsewhere
         // An unreachable folder can keep `.ready` (an ejected drive), so the
         // folder's own availability is asked too: files would copy into nothing.
-        selectedProjectTakesFiles = project.isAvailable && StudyFinderDrop.accepts(state: state)
+        selectedProjectTakesFiles = project.isAvailable
+            && StudyFinderDrop.accepts(state: state, folder: project.path)
         selectedProjectNeedsFolderAccess = state?.needsFolderAccess == true
         selectedProjectIsAnalysed = SidebarOutlineController.reAnalyseIsOffered(
             hasPath: !project.path.isEmpty,

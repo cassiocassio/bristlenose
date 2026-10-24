@@ -82,6 +82,7 @@ API keys are stored securely in the system keychain. Uses native CLI tools — n
 - **Retries:** our own loop in `_analyze_anyllm` on rate limits and 5xx (`_CLOUD_MAX_RETRIES`, honouring `Retry-After`, which any-llm keeps as a string): 1.27 can't set retries uniformly, and Mistral's SDK tries once
 - **Keys:** a key the user just gave is checked first (and `shadowed_by` names a variable that will win at run time); otherwise the provider's environment variable (any-llm reads it), then the store, one entry per inner provider (`anyllm_<inner>`, "Bristlenose Mistral API Key (any-llm)", not in `CREDENTIALS`, so not in the Swift mirror). Passed as `api_key=`
 - **Telemetry:** rows keyed on the request model (`provider:model`), never priced
+- **Log a caught LLM error as `failure_summary(exc)`, never `%s` of it** (all providers): pydantic's text quotes the reply, and a provider's error string is its whole body (OpenRouter's moderation 403 carries `metadata.flagged_input`, the transcript). It reads the body through `original_exception`, never `__context__`. A no-leak test needs a short value: pydantic abbreviates a long `input_value`, so a long one passes with the leak in place
 - **Rich:** lines that print a model string turn the highlighter off (`anthropic:claude` reads as IPv6) and escape install commands (`[any-llm]` reads as a style tag)
 - **Tests:** `tests/test_anyllm.py` uses a fake `any_llm` shaped like 1.27; CI never installs the real one. The real library is asked by the manual walk and `scripts/check-providers-live.py`
 

@@ -15,7 +15,6 @@ import { Footer } from "../components/Footer";
 import { PanelErrorBoundary } from "../components/PanelErrorBoundary";
 import { formatTimecode } from "../utils/format";
 import { FeedbackModal } from "../components/FeedbackModal";
-import { SettingsModal } from "../components/SettingsModal";
 import { ListIcon, SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
 import { Tooltip } from "../components/Tooltip";
 import { SessionsSidebar } from "../components/SessionsSidebar";
@@ -24,7 +23,6 @@ import { SessionsSidebar } from "../components/SessionsSidebar";
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
 import { SignalsSidebar } from "../components/SignalsSidebar";
 import { ExportDialog } from "../components/ExportDialog";
-import { MiroExportPanel } from "../components/MiroExportPanel";
 import { featureFlags } from "../utils/featureFlags";
 import { ActivityChipStack, normaliseAutoCode } from "../components/ActivityChipStack";
 import type { ActivityJob } from "../components/ActivityChipStack";
@@ -155,6 +153,14 @@ function buildCsvString(
 // is on — and then after first paint, not with it.
 const FigJamExportPanel = lazy(() =>
   import("../components/FigJamExportPanel").then((m) => ({ default: m.FigJamExportPanel })),
+);
+// Opened from a menu, never shown on arrival, so they load after first paint
+// rather than with it: together ~8 kB gzip of the first-paint budget (24 Oct 2026).
+const MiroExportPanel = lazy(() =>
+  import("../components/MiroExportPanel").then((m) => ({ default: m.MiroExportPanel })),
+);
+const SettingsModal = lazy(() =>
+  import("../components/SettingsModal").then((m) => ({ default: m.SettingsModal })),
 );
 /** Dev-only playground — lazy-loaded so it's tree-shaken in production. */
 const ResponsivePlayground = lazy(
@@ -983,12 +989,16 @@ function AppShell() {
           <FigJamExportPanel open={figjamOpen} onClose={toggleFigJam} />
         </Suspense>
       )}
-      <MiroExportPanel
-        open={miroOpen}
-        onClose={toggleMiro}
-        screens={location.pathname.startsWith("/report/screens")}
-      />
-      <SettingsModal open={settingsOpen} onClose={toggleSettings} />
+      <Suspense fallback={null}>
+        <MiroExportPanel
+          open={miroOpen}
+          onClose={toggleMiro}
+          screens={location.pathname.startsWith("/report/screens")}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SettingsModal open={settingsOpen} onClose={toggleSettings} />
+      </Suspense>
       <PanelErrorBoundary quiet>
         <ActivityChipStack jobs={chipJobs} onDismiss={removeJob} onSettled={settleJob} />
       </PanelErrorBoundary>

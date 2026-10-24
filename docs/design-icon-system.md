@@ -360,17 +360,16 @@ macOS 15, when nothing in it needs more than 14.
 
 In the order worth doing.
 
-1. **Decide whether serve and export keep preferring a project's baked theme CSS.** They
-   do today with no version check (`server/app.py` `serve_theme_css_with_fallback`,
-   `routes/export.py`), so every existing project keeps the CSS it was rendered with —
-   for every theme change, not only icons — until it is re-run. Phases 1–3 were made to
-   degrade (fallback stroke and size), but three glyphs could not be: see 2.
-2. **Three glyphs drawn by theme CSS, deferred until 1 is decided**: the AI badge's
+1. ~~**Decide whether serve and export keep preferring a project's baked theme CSS.**~~
+   Decided and built 17 Oct 2026 (`2f6127663`): serve and export use the running
+   version's theme CSS, never a project's baked copy, so a theme change reaches every
+   project.
+2. **Three glyphs drawn by theme CSS, now unblocked and not yet migrated**: the AI badge's
    delete × (`badge.css` `.badge-ai::after`), Settings' "copied" ✓ (`settings.css`), the
-   Dashboard coverage ▶/▼ (`coverage.css`). Migrating them means rendering an element and
-   removing the pseudo-element; under an old baked copy each would show twice. A
-   reviewed implementation existed and was reverted (Badge `.badge-ai-delete` with a
-   `:has()` guard that keeps the static report's × — reconstruct from the 16 Oct session).
+   Dashboard coverage ▶/▼ (`coverage.css`). Migrating each means rendering an element and
+   removing the pseudo-element. A reviewed implementation existed and was reverted on
+   16 Oct only because of 1 (Badge `.badge-ai-delete`, with a `:has()` guard that keeps
+   the static report's ×); it can be redone now.
 3. **Look at the result.** The owner has not yet seen the migrated app. The local
    catalogue's `compare.html` shows every icon before and now, in place; the stroke at
    very small sizes and the three grown boxes are the judgement calls.

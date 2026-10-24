@@ -746,6 +746,21 @@ def wire_model(settings: object, provider: str | None = None) -> str:
     return str(getattr(settings, _MODEL_FIELD.get(provider or "", "llm_model"), "") or "")
 
 
+def reported_model(settings: BristlenoseSettings) -> str:
+    """The model a run reports: the run summary, its cost, the manifest.
+
+    On a local run, the one Ollama is sent (``local_model``), not
+    ``llm_model``, which a local run snaps to the provider default: every gemma
+    run read as llama3.2:3b (RE#R105). Other providers keep ``llm_model``, which
+    ``_adopt_named_model`` already points at theirs; Azure is left alone there
+    on purpose. Nothing decides reuse from it: ``fresh_session_ids`` keys on
+    input fingerprints, and ``bristlenose status -v`` only shows it.
+    """
+    if settings.llm_provider == "local":
+        return wire_model(settings)
+    return settings.llm_model
+
+
 def _adopt_named_model(
     settings: BristlenoseSettings,
     overrides: dict[str, object],

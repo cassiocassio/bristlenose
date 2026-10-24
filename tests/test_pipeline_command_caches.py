@@ -1168,3 +1168,41 @@ def test_the_summary_names_a_cloud_model_as_before(tmp_path: Path) -> None:
              "local_model": "gemma4:e4b"}
     result = _drive(tmp_path, "run", 1, {}, settings_kw=cloud)
     assert result is not None and result.llm_model == "claude-sonnet-4-6", result
+
+
+@pytest.mark.parametrize("mode", ["run", "analyze"])
+def test_the_manifest_records_the_local_model_that_ran(tmp_path: Path, mode: str) -> None:
+    # Each session's record named llm_model, so `bristlenose status -v` showed
+    # every gemma session as llama3.2:3b. Nothing decides reuse from it
+    # (fresh_session_ids keys on input fingerprints): this is the record only.
+    from bristlenose.manifest import load_manifest
+
+    local = {"llm_provider": "local", "llm_model": "llama3.2:3b", "local_model": "gemma4:e4b"}
+    _drive(tmp_path, "run", 1, {}, settings_kw=local)
+    if mode == "analyze":
+        _drive(tmp_path, mode, 1, {}, settings_kw=local)
+    manifest = load_manifest(tmp_path / "output")
+    assert manifest is not None
+    models = {
+        (stage, sid): rec.model
+        for stage, record in manifest.stages.items()
+        for sid, rec in (record.sessions or {}).items()
+        if rec.provider == "local"
+    }
+    assert models, manifest.stages.keys()
+    assert set(models.values()) == {"gemma4:e4b"}, models
+
+
+def test_every_manifest_write_records_the_reported_model() -> None:
+    # The run above reaches some of the fourteen mark_session_* sites, not all
+    # (the readable chain, a failed session). Read the rest off the source, as
+    # tests/test_prompt_boundary.py does for its call sites.
+    import inspect
+
+    import bristlenose.pipeline
+    import bristlenose.readable_chain
+
+    for module in (bristlenose.pipeline, bristlenose.readable_chain):
+        source = inspect.getsource(module)
+        assert "model=self.settings.llm_model" not in source, module.__name__
+        assert "model=reported_model(self.settings)" in source, module.__name__

@@ -19,7 +19,7 @@ from rich.markup import escape as rich_escape
 # `bristlenose/__init__.py` (must be set before any HF import, including
 # the doctor preflight that runs before pipeline.py is reached).
 from bristlenose import __version__, shoal_feed
-from bristlenose.config import BristlenoseSettings, wire_model
+from bristlenose.config import BristlenoseSettings, reported_model
 from bristlenose.events import (
     Cause,
     CauseCategoryEnum,
@@ -170,17 +170,6 @@ def _dominant_cause(
 # ---------------------------------------------------------------------------
 # CLI output helpers
 # ---------------------------------------------------------------------------
-
-
-def _reported_model(settings: BristlenoseSettings) -> str:
-    """The model the run summary names and prices: on a local run, the one
-    Ollama is sent (``local_model``), not ``llm_model``, which a local run
-    snaps to the provider default (every gemma run read as llama3.2:3b,
-    RE#R105). Other providers keep ``llm_model``, which already names theirs
-    (``config._adopt_named_model``). The manifest still records ``llm_model``."""
-    if settings.llm_provider == "local":
-        return wire_model(settings)
-    return settings.llm_model
 
 
 def _format_duration(seconds: float) -> str:
@@ -3042,13 +3031,13 @@ class Pipeline:
                             mark_session_failed(
                                 manifest, STAGE_IDENTIFY_SPEAKERS, sid,
                                 provider=self.settings.llm_provider,
-                                model=self.settings.llm_model,
+                                model=reported_model(self.settings),
                             )
                             continue
                         mark_session_complete(
                             manifest, STAGE_IDENTIFY_SPEAKERS, sid,
                             provider=self.settings.llm_provider,
-                            model=self.settings.llm_model,
+                            model=reported_model(self.settings),
                             input_hash=_si_session_fps.get(sid),
                         )
 
@@ -3433,7 +3422,7 @@ class Pipeline:
                     mark_session_complete(
                         manifest, STAGE_TOPIC_SEGMENTATION, sid,
                         provider=self.settings.llm_provider,
-                        model=self.settings.llm_model, input_hash=fp,
+                        model=reported_model(self.settings), input_hash=fp,
                     )
 
                 status.update("[dim]Segmenting topics...[/dim]")
@@ -3466,7 +3455,7 @@ class Pipeline:
                         [tm.session_id for tm in _fresh_topic_maps],
                         _seg_outcome,
                         provider=self.settings.llm_provider,
-                        model=self.settings.llm_model,
+                        model=reported_model(self.settings),
                         input_hashes=_topic_session_fps,
                     )
                 else:
@@ -3673,7 +3662,7 @@ class Pipeline:
                     mark_session_complete(
                         manifest, STAGE_QUOTE_EXTRACTION, sid,
                         provider=self.settings.llm_provider,
-                        model=self.settings.llm_model, input_hash=fp,
+                        model=reported_model(self.settings), input_hash=fp,
                     )
 
                 status.update("[dim]Extracting quotes...[/dim]")
@@ -3707,7 +3696,7 @@ class Pipeline:
                         mark_session_complete(
                             manifest, STAGE_QUOTE_EXTRACTION, sid,
                             provider=self.settings.llm_provider,
-                            model=self.settings.llm_model,
+                            model=reported_model(self.settings),
                             input_hash=_quote_session_fps.get(sid),
                         )
                         write_manifest(manifest, output_dir)
@@ -3733,7 +3722,7 @@ class Pipeline:
                         [t.session_id for t in _remaining_transcripts_q],
                         _fresh_quote_outcome,
                         provider=self.settings.llm_provider,
-                        model=self.settings.llm_model,
+                        model=reported_model(self.settings),
                         input_hashes=_quote_session_fps,
                     )
                 else:
@@ -4119,7 +4108,7 @@ class Pipeline:
             llm_input_tokens=llm_client.tracker.input_tokens if llm_client else 0,
             llm_output_tokens=llm_client.tracker.output_tokens if llm_client else 0,
             llm_calls=llm_client.tracker.calls if llm_client else 0,
-            llm_model=_reported_model(self.settings),
+            llm_model=reported_model(self.settings),
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
             pipeline_error=_p_error,
@@ -4688,7 +4677,7 @@ class Pipeline:
                     session_ids=[tm.session_id for tm in topic_maps],
                     outcome=_seg_outcome_a, fingerprints=_topic_fps,
                     input_hashes={"analyzed_transcripts": _fingerprints_key(_topic_fps)},
-                    provider=self.settings.llm_provider, model=self.settings.llm_model,
+                    provider=self.settings.llm_provider, model=reported_model(self.settings),
                 )
             if self.settings.write_intermediate:
                 write_intermediate_json(
@@ -4711,7 +4700,7 @@ class Pipeline:
                     session_ids=[t.session_id for t in clean_transcripts],
                     outcome=_quote_outcome_a, fingerprints=_quote_fps,
                     input_hashes={"analyzed_transcripts": _fingerprints_key(_quote_fps)},
-                    provider=self.settings.llm_provider, model=self.settings.llm_model,
+                    provider=self.settings.llm_provider, model=reported_model(self.settings),
                 )
             _quotes_elapsed_a = time.perf_counter() - t0
             _msg_9a = f"Extracted {count_noun(len(all_quotes), 'quote')}"
@@ -4871,7 +4860,7 @@ class Pipeline:
             llm_input_tokens=llm_client.tracker.input_tokens,
             llm_output_tokens=llm_client.tracker.output_tokens,
             llm_calls=llm_client.tracker.calls,
-            llm_model=_reported_model(self.settings),
+            llm_model=reported_model(self.settings),
             llm_provider=self.settings.llm_provider,
             total_quotes=len(all_quotes),
             pipeline_error=_p_error_a,

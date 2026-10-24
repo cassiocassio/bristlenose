@@ -241,6 +241,11 @@ a = Analysis(
         # MLX only — no ctranslate2/faster-whisper in the sidecar.
         "mlx",
         "mlx_whisper",
+        # The voice pass imports onnxruntime through importlib in
+        # utils/onnxruntime_import.py (680ea0d93), so static analysis no longer
+        # sees it. Without this the package and its hook drop out of the bundle;
+        # the C-library trim below is what noticed (0.43.0 build, 24 Oct 2026).
+        "onnxruntime",
         # Serve mode
         "fastapi",
         "uvicorn",

@@ -6,6 +6,10 @@ import { Dashboard } from "./Dashboard";
 import type { DashboardResponse } from "../utils/types";
 import { HANDOVER_MS, RETRY_PAUSE_MS } from "../hooks/useLensRead";
 
+// Browser by default; the Mac app's routes flip it (the house pattern: mock the module).
+let mockEmbedded = false;
+vi.mock("../utils/embedded", () => ({ isEmbedded: () => mockEmbedded }));
+
 // ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
@@ -426,6 +430,38 @@ describe("Dashboard sessions table — row click (R65)", () => {
 });
 
 describe("Dashboard featured quote", () => {
+  // The app refuses a report page in a popup; a modifier-click asks it for a window of the study.
+  it("in the Mac app, a modifier-click on a quote with no recording opens its transcript in a new window", async () => {
+    mockFetch({
+      ...baseDashboard,
+      featured_quotes: [
+        {
+          dom_id: "q-p1-123", text: "It took three weeks", participant_id: "p1", session_id: "s1",
+          speaker_name: "Jordan", start_timecode: 123.6, end_timecode: 130, sentiment: null, intensity: 1,
+          researcher_context: null, rank: 1, has_media: false, is_starred: false, is_hidden: false,
+        },
+      ],
+    });
+    const posted: { type: string; place?: { path: string } }[] = [];
+    (window as unknown as Record<string, unknown>).webkit = {
+      messageHandlers: { navigation: { postMessage: (m: { type: string }) => posted.push(m) } },
+    };
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    mockEmbedded = true;
+    try {
+      const { container } = render(<Dashboard projectId="1" />);
+      await waitFor(() => expect(container.querySelector(".bn-featured-quote")).not.toBeNull());
+      fireEvent.click(container.querySelector(".bn-featured-quote .quote-text")!, { metaKey: true });
+      const req = posted.find((m) => m.type === "open-in-new-window");
+      expect(req?.place?.path).toBe("/report/sessions/s1#t-123");
+      expect(open).not.toHaveBeenCalled();
+    } finally {
+      mockEmbedded = false;
+      open.mockRestore();
+      delete (window as unknown as Record<string, unknown>).webkit;
+    }
+  });
+
   it("links its speaker to the paragraph the transcript can land on", async () => {
     mockFetch({
       ...baseDashboard,

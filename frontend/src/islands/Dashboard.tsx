@@ -19,6 +19,8 @@ import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { navigateTo } from "../shims/navigation";
+import { postOpenInNewWindow } from "../shims/bridge";
+import { isEmbedded } from "../utils/embedded";
 import {
   lensPlace,
   momentPlace,
@@ -441,7 +443,10 @@ function FeaturedQuote({ quote }: { quote: FeaturedQuoteResponse }) {
     // Fall back to session navigation.
     const url = `/report/sessions/${quote.session_id}#${anchor}`;
     if (e.metaKey || e.ctrlKey || e.shiftKey) {
-      window.open(url, "_blank");
+      // The Mac app opens a report page in a window of the study, never in a popup.
+      const place = momentPlace("navigate", quote.session_id, quote.start_timecode, null);
+      if (isEmbedded() && place) postOpenInNewWindow(place, false);
+      else window.open(url, "_blank");
       return;
     }
     navigateToSession(quote.session_id, anchor);

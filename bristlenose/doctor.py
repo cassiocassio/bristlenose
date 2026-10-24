@@ -1793,8 +1793,14 @@ def check_bundle_voice() -> CheckResult:
 
         from bristlenose.stages.s05b_voice import fbank_options
 
+        # Thread counts set, as the voice pass and Silero set theirs: a default
+        # pool pins its threads, and the strict snap refuses that with three
+        # "pthread_setaffinity_np failed" errors on stderr.
+        opts = onnxruntime.SessionOptions()
+        opts.intra_op_num_threads = 1
+        opts.inter_op_num_threads = 1
         session = onnxruntime.InferenceSession(
-            base64.b64decode(_ORT_IDENTITY_MODEL), providers=["CPUExecutionProvider"])
+            base64.b64decode(_ORT_IDENTITY_MODEL), opts, providers=["CPUExecutionProvider"])
         (out,) = session.run(["y"], {"x": np.array([2.5], dtype=np.float32)})
         if float(out[0]) != 2.5:
             raise RuntimeError(f"onnxruntime session returned {out!r} for an identity graph")

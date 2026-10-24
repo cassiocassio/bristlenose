@@ -261,8 +261,9 @@ class TestPatchTags:
             ]
         finally:
             db.close()
-        if not names:
-            pytest.skip("smoke fixture has no sentiment framework tags")
+        # The smoke fixture is committed, so no sentiment tags is a fixture
+        # regression to fail on, not an environment to skip in.
+        assert names, "smoke fixture has no sentiment framework tags"
         client.patch(f"{_P}/tags", json={"q-p1-46": {"add": [names[0]]}})
         assert _quote(client, "p1", 46).durable_id is None
 

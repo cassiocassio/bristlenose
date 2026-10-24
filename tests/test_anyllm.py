@@ -869,8 +869,9 @@ def test_the_real_library_has_the_shape_the_fake_assumes() -> None:
     import subprocess
 
     real = pytest.importorskip("any_llm")
-    if not isinstance(sys.modules.get("any_llm"), type(real)) or not hasattr(real, "__file__"):
-        pytest.skip("a fake any_llm is installed in this process")
+    # Every fake goes in through monkeypatch, so a fake here is a leak from
+    # another test: fail on it rather than skip and read as a pass.
+    assert hasattr(real, "__file__"), "a fake any_llm leaked into sys.modules"
     from any_llm.exceptions import MissingApiKeyError
 
     assert "api_key" in inspect.signature(real.AnyLLM.create).parameters
@@ -1019,8 +1020,9 @@ def test_the_real_library_maps_none_to_thinking_off_where_we_measured_it() -> No
     API reads as thinking off (measured 23 Oct 2026); DeepSeek and Mistral read
     it as their own off, never as the "high" Mistral makes of "low"."""
     real = pytest.importorskip("any_llm")
-    if not hasattr(real, "__file__"):
-        pytest.skip("a fake any_llm is installed in this process")
+    # Every fake goes in through monkeypatch, so a fake here is a leak from
+    # another test: fail on it rather than skip and read as a pass.
+    assert hasattr(real, "__file__"), "a fake any_llm leaked into sys.modules"
     from any_llm.providers.deepseek.deepseek import DeepseekProvider
     from any_llm.providers.mistral.mistral import MistralProvider
     from any_llm.providers.openrouter.openrouter import OpenrouterProvider

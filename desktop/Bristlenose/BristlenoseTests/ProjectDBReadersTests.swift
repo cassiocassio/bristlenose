@@ -22,9 +22,12 @@ struct ProjectDBReadersTests {
 
     /// A project folder whose `bristlenose-output/.bristlenose/bristlenose.db`
     /// has the tables the readers query, populated with `rows`.
-    private static func makeProject(rows: (OpaquePointer?) -> Void) throws -> URL {
+    private static func makeProject(
+        folderName: String = "bn-db-readers-\(UUID().uuidString)",
+        rows: (OpaquePointer?) -> Void
+    ) throws -> URL {
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("bn-db-readers-\(UUID().uuidString)")
+            .appendingPathComponent(folderName)
         let dot = root.appendingPathComponent("bristlenose-output/.bristlenose")
         try FileManager.default.createDirectory(at: dot, withIntermediateDirectories: true)
         var db: OpaquePointer?
@@ -128,6 +131,51 @@ struct ProjectDBReadersTests {
         #expect(snap.sessionCount == 2)
         #expect(snap.totalDurationSeconds == 300)
         #expect(snap.ingestedBasenames == ["a.mov", "b.m4a"])
+    }
+
+    // MARK: - A study folder whose name holds URI characters (N56, 24 Oct 2026)
+    //
+    // Both readers open the file as a SQLite URI. Built from the raw path, a
+    // `#` or `?` in the folder's name cut it short (the open failed and the
+    // sidebar read "unknown": no session count, and `--clean` discarded
+    // curation unasked on the Python side, which has since been fixed with
+    // `as_uri()`), and a `%` before two hex digits was decoded into another
+    // character, so the path named a folder that does not exist.
+
+    private static let awkwardNames = [
+        "bn-db #1 \(UUID().uuidString)",
+        "bn-db ?q=1 \(UUID().uuidString)",
+        "bn-db 100%25 \(UUID().uuidString)",
+    ]
+
+    private static func awkwardProject(_ name: String) throws -> URL {
+        try makeProject(folderName: name) { db in
+            exec(db, """
+            INSERT INTO projects VALUES (1, 'Study', '/p', '/p/bristlenose-output');
+            INSERT INTO sessions VALUES (1, 1, 's1', 100);
+            INSERT INTO sessions VALUES (2, 1, 's2', 200);
+            INSERT INTO source_files VALUES (1, 1, 'video', '/p/a.mov');
+            INSERT INTO quotes VALUES (1, 1);
+            INSERT INTO quote_states VALUES (1, 1, 0, 1);
+            """)
+        }
+    }
+
+    @Test(arguments: awkwardNames)
+    func theSessionCountReadsInAFolderWithUriCharactersInItsName(_ name: String) throws {
+        let root = try Self.awkwardProject(name)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let snap = SourceFilesReader.readSnapshot(projectRoot: root)
+        #expect(snap.sessionCount == 2)
+        #expect(snap.totalDurationSeconds == 300)
+    }
+
+    @Test(arguments: awkwardNames)
+    func theCurationCountsReadInAFolderWithUriCharactersInItsName(_ name: String) throws {
+        let root = try Self.awkwardProject(name)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let counts = try #require(CurationCountsReader.read(projectRoot: root))
+        #expect(counts.starredQuotes == 1)
     }
 
     // MARK: - CurationCountsReader

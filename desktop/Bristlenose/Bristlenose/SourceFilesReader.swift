@@ -139,7 +139,7 @@ enum SourceFilesReader {
         // per-watcher serial scanQueue, satisfying the contract. Future
         // refactors that share a handle across queues must switch to
         // `SQLITE_OPEN_FULLMUTEX`.
-        let uri = "file:\(dbURL.path)?immutable=1"
+        let uri = CurationCountsReader.immutableURI(for: dbURL)
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_URI
         guard sqlite3_open_v2(uri, &db, flags, nil) == SQLITE_OK else {
             let msg = db.flatMap { sqlite3_errmsg($0).map(String.init(cString:)) } ?? "unknown"

@@ -118,10 +118,20 @@ enum CurationCountsReader {
         return measured
     }
 
+    /// SQLite's URI for opening `dbURL` immutable. The path is percent-encoded
+    /// (`absoluteString`): a raw `file:<path>` treats a `#` or `?` in the study's
+    /// folder name as the start of the fragment or the query, so the open failed
+    /// and the reader said "unknown", and a `%` followed by two hex digits was
+    /// decoded into some other character. The Python side has the same rule
+    /// (`Path.as_uri()`, RE#13, 24 Oct 2026).
+    nonisolated static func immutableURI(for dbURL: URL) -> String {
+        dbURL.absoluteString + "?immutable=1"
+    }
+
     /// The five counts from the main file, or nil when it could not be read.
     private nonisolated static func counts(at dbURL: URL) -> CurationCounts? {
         var db: OpaquePointer?
-        let uri = "file:\(dbURL.path)?immutable=1"
+        let uri = Self.immutableURI(for: dbURL)
         let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_URI
         guard sqlite3_open_v2(uri, &db, flags, nil) == SQLITE_OK else {
             let msg = db.flatMap { sqlite3_errmsg($0).map(String.init(cString:)) } ?? "unknown"

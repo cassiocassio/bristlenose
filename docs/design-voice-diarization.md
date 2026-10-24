@@ -207,7 +207,9 @@ changelog), and the amd64 snap end to end the same day: a real strict-confined `
   environment variable runs early enough to silence it, and faster-whisper's Silero
   VAD (`vad_filter=True`) already triggers it in stage 5 of every snap
   transcription. The `hardware-observe` plug would remove it, which is a store
-  interface decision. The pass's own session logs no thread-affinity errors,
+  interface decision. Since 24 Oct 2026 every onnxruntime import goes through
+  `utils/onnxruntime_import.py`, which captures fd 2 for the first import and logs
+  what it caught; `snap.yml` checks the installed snap's stderr for it. The pass's own session logs no thread-affinity errors,
   because it sets its thread count; a default pool does log them.
 - **Behaviour change worth knowing:** `voice_runtime_available()` is true whenever
   kaldi-native-fbank imports, since onnxruntime is a core dependency. A pip user who

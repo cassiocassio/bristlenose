@@ -255,16 +255,47 @@ struct ReportContextMenuTests {
 
     // MARK: - Freshness
 
-    @Test func aTargetIsFreshOnlyForItsOwnMenu() {
+    @Test func aTargetIsUsedByItsOwnMenuOnce() {
         let now = Date()
-        let target = ContextTarget(seq: 5, place: nil)
-        #expect(BristlenoseWebView.freshTarget((target, now), lastSeq: 4, now: now) == target)
-        // Already used by an earlier menu.
-        #expect(BristlenoseWebView.freshTarget((target, now), lastSeq: 5, now: now) == nil)
-        // From a right-click too long ago to be this one's.
-        #expect(BristlenoseWebView.freshTarget((target, now.addingTimeInterval(-0.5)),
-                                               lastSeq: 4, now: now) == nil)
-        #expect(BristlenoseWebView.freshTarget(nil, lastSeq: 0, now: now) == nil)
+        var slot = ContextTargetSlot()
+        slot.receive(ContextTarget(seq: 5, place: nil), at: now)
+        #expect(slot.take(now: now)?.seq == 5)
+        // Nothing new arrived: the next menu has no target.
+        #expect(slot.take(now: now) == nil)
+    }
+
+    @Test func aTargetFromAnEarlierRightClickIsNotThisOnes() {
+        let now = Date()
+        var slot = ContextTargetSlot()
+        slot.receive(ContextTarget(seq: 5, place: nil), at: now)
+        _ = slot.take(now: now)
+        slot.receive(ContextTarget(seq: 5, place: nil), at: now)
+        #expect(slot.take(now: now) == nil)
+        slot.receive(ContextTarget(seq: 6, place: nil), at: now.addingTimeInterval(-0.5))
+        #expect(slot.take(now: now) == nil, "too old to be this right-click's")
+    }
+
+    /// The page numbers right-clicks from 1 in each document. After ⌘R, Reload
+    /// Report or the reload when a run finishes, its first right-click must
+    /// still be fresh (it read as already used until the count caught up).
+    @Test func afterAReloadTheFirstRightClickIsFresh() {
+        let now = Date()
+        var slot = ContextTargetSlot()
+        for seq in 1...40 {
+            slot.receive(ContextTarget(seq: seq, place: nil), at: now)
+            _ = slot.take(now: now)
+        }
+        slot.newDocument()
+        slot.receive(ContextTarget(seq: 1, place: nil), at: now)
+        #expect(slot.take(now: now)?.seq == 1)
+    }
+
+    @Test func anUnreadableMessageLeavesNoTarget() {
+        let now = Date()
+        var slot = ContextTargetSlot()
+        slot.receive(ContextTarget(seq: 1, place: nil), at: now)
+        slot.receiveUnreadable()
+        #expect(slot.take(now: now) == nil)
     }
 
     // MARK: - WebKit's identifiers

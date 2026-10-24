@@ -22,26 +22,10 @@ final class BristlenoseWebView: WKWebView {
     /// Set in `WebView.makeNSView`, for the right-click menu's Reload Report.
     weak var i18n: I18n?
 
-    /// What the page said the latest right-click landed on, and when it said
-    /// so. Written by the Coordinator as the message arrives, which is before
-    /// WebKit asks for the menu (measured 30 of 30, 8–71 ms ahead).
-    var pendingContextTarget: (target: ContextTarget, at: Date)?
-    /// The last right-click a menu was built from, so a later menu never reuses it.
-    private var lastMenuSeq = 0
-
-    /// How old a target may be and still describe the menu being opened.
-    static let contextTargetLifetime: TimeInterval = 0.25
-
-    /// The target for a menu opening now: one newer than the last menu's and
-    /// young enough to be this right-click's. Anything else is no target, and
-    /// the menu then takes WebKit's risky items out and adds nothing.
-    static func freshTarget(
-        _ pending: (target: ContextTarget, at: Date)?, lastSeq: Int, now: Date
-    ) -> ContextTarget? {
-        guard let pending, pending.target.seq > lastSeq,
-              now.timeIntervalSince(pending.at) <= contextTargetLifetime else { return nil }
-        return pending.target
-    }
+    /// What the page said the latest right-click landed on. Written by the
+    /// Coordinator as the message arrives, which is before WebKit asks for the
+    /// menu (measured 30 of 30, 8–71 ms ahead); reset when a new document loads.
+    var contextTargets = ContextTargetSlot()
 
     /// The report's right-click menu (`ReportContextMenu`, §9.4 of
     /// docs/design-webview-context-menu.md). Reload Report is the remedy the
@@ -49,9 +33,7 @@ final class BristlenoseWebView: WKWebView {
     /// (⌘R) is its twin.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
-        let target = Self.freshTarget(pendingContextTarget, lastSeq: lastMenuSeq, now: Date())
-        if let seq = pendingContextTarget?.target.seq { lastMenuSeq = max(lastMenuSeq, seq) }
-        pendingContextTarget = nil
+        let target = contextTargets.take(now: Date())
         guard let i18n, let handler = bridgeHandler else { return }
         ReportContextMenu.apply(
             to: menu, target: target, isEditing: handler.isEditing,
@@ -428,9 +410,9 @@ struct WebView: NSViewRepresentable {
                 MainActor.assumeIsolated {
                     guard let view = webView as? BristlenoseWebView else { return }
                     if let target = ContextTarget.from(body) {
-                        view.pendingContextTarget = (target, Date())
+                        view.contextTargets.receive(target, at: Date())
                     } else {
-                        view.pendingContextTarget = nil
+                        view.contextTargets.receiveUnreadable()
                         log.notice("a context-target this build cannot read; the menu adds nothing")
                     }
                 }
@@ -554,6 +536,8 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
                 guard let self, webView === self.webView else { return }
+                // The new document numbers its right-clicks from 1 again.
+                (webView as? BristlenoseWebView)?.contextTargets.newDocument()
                 log.notice("main-frame navigation started (url: \(webView.url?.path ?? "nil", privacy: .public)) → documentState .loading")
                 self.bridgeHandler.documentState = .loading
                 self.armUncoverCeiling()

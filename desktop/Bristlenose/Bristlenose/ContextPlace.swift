@@ -70,6 +70,47 @@ struct ContextTarget: Codable, Equatable {
     }
 }
 
+/// The latest right-click's target, kept from the page's message until WebKit
+/// asks for the menu.
+///
+/// A target is used once, by the menu it describes, and only while young enough
+/// to be that right-click's. The page numbers right-clicks per document, so the
+/// numbering starts again whenever the report reloads (⌘R, Reload Report, the
+/// reload after a run): `newDocument()` resets it. Without that, every
+/// right-click after a reload read as already used, until the count caught up.
+struct ContextTargetSlot {
+    /// How old a target may be and still describe the menu being opened.
+    static let lifetime: TimeInterval = 0.25
+
+    private var pending: (target: ContextTarget, at: Date)?
+    private var lastSeq = 0
+
+    mutating func receive(_ target: ContextTarget, at: Date) {
+        pending = (target, at)
+    }
+
+    /// The page said something this build cannot read: no target for this menu.
+    mutating func receiveUnreadable() {
+        pending = nil
+    }
+
+    mutating func newDocument() {
+        pending = nil
+        lastSeq = 0
+    }
+
+    /// The target for a menu opening now, or nil: none, already used, or too old.
+    mutating func take(now: Date) -> ContextTarget? {
+        defer { pending = nil }
+        guard let pending else { return nil }
+        let seq = pending.target.seq
+        guard seq > lastSeq else { return nil }
+        lastSeq = seq
+        guard now.timeIntervalSince(pending.at) <= Self.lifetime else { return nil }
+        return pending.target
+    }
+}
+
 /// Where a new window on the same study opens: the report applies it once, the
 /// way the link's own click would (`goToPlace`), and then forgets it.
 struct WindowPlace: Codable, Hashable {

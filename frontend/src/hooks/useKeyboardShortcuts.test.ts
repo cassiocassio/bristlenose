@@ -1617,6 +1617,22 @@ describe("a right-click tells the Mac app what it landed on", () => {
     unmount();
   });
 
+  it("leaves focus and selection alone for a link inside a card, whose menu is the link's", () => {
+    const { getCtx, unmount } = renderWithProviders();
+    card("q-a");
+    const b = card("q-b");
+    const link = document.createElement("a");
+    link.setAttribute("data-bn-place", JSON.stringify({
+      click: "play", verb: "show", dest: "transcript", path: "/report/sessions/s1#t-3", media: null,
+    }));
+    b.appendChild(link);
+    act(() => { getCtx().toggleSelection("q-a"); getCtx().setFocus("q-a"); });
+    act(() => { link.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
+    expect([...getCtx().selectedIds]).toEqual(["q-a"]);
+    expect(getCtx().focusedId).toBe("q-a");
+    unmount();
+  });
+
   it("is not listening in a browser", () => {
     mockEmbedded = false;
     const { unmount } = renderWithProviders();

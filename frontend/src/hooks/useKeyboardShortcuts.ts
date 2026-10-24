@@ -894,14 +894,15 @@ export function useKeyboardShortcuts({
 
     // ── Right-click → tell the Mac app what is under the pointer ──────
     // Capture phase, and never cancelled: WebKit builds the menu, the app edits it. A quote card
-    // under the pointer becomes the one its Star, Hide and Add Tag… act on, as Finder's
-    // right-click selects the item it lands on and keeps a selection it lands inside.
+    // body under the pointer becomes the one its Star, Hide and Add Tag… act on, keeping a
+    // selection it lands inside. A link in the card (its timecode, its badge) gets the link's
+    // menu, which acts on no card, so focus and selection stay as they were.
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target instanceof Element ? e.target : null;
       const read = readContextTarget(
         target, ++contextSeq, locationRef.current.pathname, hasRecording,
       );
-      if (read.card) {
+      if (read.card && !read.place) {
         if (!selectedIdsRef.current.has(read.card.domId) && selectedIdsRef.current.size > 0) {
           clearSelection();
         }

@@ -100,7 +100,8 @@ struct ReportContextMenuTests {
     @Test func thresholdReviewsTimecodeLeadsWithTheNewWindowItsClickOpens() {
         let m = linkMenu
         apply(m, linkTarget(place(.window)))
-        #expect(titles(m) == ["openTranscriptInNewWindow", "revealInTranscript", "—", "play"])
+        // Not Show in Transcript: it would navigate this window and close the review.
+        #expect(titles(m) == ["openTranscriptInNewWindow", "—", "play"])
     }
 
     @Test func aSessionNumberOpensItsTranscript() {

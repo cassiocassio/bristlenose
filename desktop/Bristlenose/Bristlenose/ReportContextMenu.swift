@@ -194,7 +194,9 @@ enum ReportContextMenu {
         switch click {
         case .play: groups = [[play].compactMap { $0 }, [nav, newWindow].compactMap { $0 }]
         case .navigate: groups = [[nav, newWindow].compactMap { $0 }, [play].compactMap { $0 }]
-        case .window: groups = [[newWindow, nav].compactMap { $0 }, [play].compactMap { $0 }]
+        // The click opens a new window so the dialog it sits in stays open (threshold
+        // review); going there in this window would close it, so that is not offered.
+        case .window: groups = [[newWindow].compactMap { $0 }, [play].compactMap { $0 }]
         }
         return groups.filter { !$0.isEmpty }
     }

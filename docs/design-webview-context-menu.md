@@ -1,5 +1,5 @@
 ---
-status: audit (no product change); menus revised 24 Oct 2026 (§9), one owner call open
+status: audit (no product change); menus revised 24 Oct 2026 (§9), §9.3 under discussion
 last-trued: 2026-10-24
 trued-against: HEAD@main 3725a938, macOS 27.0 (26A428), Swift 6.4
 ---
@@ -349,26 +349,25 @@ the message handler and loops twenty right-clicks over the link, both images and
 | D3 | An emptied link menu falls back to Reload Report (it is never empty, since 21 Oct) | owner |
 | D4 | Verbs: **Show in X** locates the clicked thing inside X; **Open X** opens X itself; the new-window item names its destination only when it isn't the clicked thing (Notes: "Show in Note" / "Open Note in New Window"; Music: "Open in New Window" / "Open Now Playing in New Window") | review, accepted |
 | D5 | Plain **Play**, not "Play from 12:34" (Music, Photos, QuickTime; the moment is under the pointer, and a recording may be audio only) | review, accepted |
-| D6 | **Reload Report only on page, text and `href="#"` menus**, not on link, image or video menus (Safari puts Reload only on the page background; View ▸ Reload Report covers the rest). Changes `ReportContextMenu.apply`, which today appends it everywhere | review, accepted pending the owner |
+| D6 | **Reload Report only on page, text and `href="#"` menus**, not on link, image or video menus (Safari puts Reload only on the page background; View ▸ Reload Report covers the rest). Changes `ReportContextMenu.apply`, which today appends it everywhere | review; owner: "go with Safari" |
 | D7 | External links: **Open Link · Copy Link — Share…**. No "in New Window" (the click already goes to the browser; the item would open the page in a Bristlenose window) and no Download | review, accepted |
 | D8 | Player video: **Play/Pause · Mute — Enter Full Screen · Enter Picture in Picture — Hide Controls**, matching WebKit's and QuickTime's names | review, accepted |
 | D9 | Menu bar agrees with the context menus (HIG: every context item is in the menu bar): Quotes ▸ **Show in Transcript** (was "Reveal in Transcript", a fossil by the glossary), with an Option-alternate **Open Transcript in New Window**; Video ▸ **Enter Full Screen / Exit Full Screen** (was "Fullscreen"). Values change, keys stay, 21 locales | review, accepted |
-| — | The review recommended making every bracketed timecode play, Signals and Codebooks included. **Rejected**: rule 3 makes the transcript the default for a fragment | owner |
+| D10 | **A blue timecode plays; a speaker badge opens the transcript.** "Time looks like video player UI, take me into that moment"; the badge is "that person and their whole conversation", at that moment. The quote-card timecode keeps playing, and its menu leads with Play | owner |
+| D11 | Speaker badges get their own menu | owner |
+| D12 | The quote card gets a menu of its own (§9.5) | owner |
+| — | The review recommended making every bracketed timecode play, Signals and Codebooks included. **Reopened by D10** (§9.3) | owner, under discussion |
 
-### 9.3 Open: the quote card's timecode
+### 9.3 Open: the blue timecodes that don't play
 
-On quote cards (Quotes, Discussion, Screens) and the dashboard coverage box, **clicking `[12:34]`
-plays** today (`TimecodeLink`); only the speaker badge beside it opens the transcript. Rule 3
-says a fragment's click goes to the transcript. Either:
-
-- **(a)** the card timecode's click becomes Show in Transcript, so every fragment's timecode goes to
-  the transcript and Play is the menu's third item everywhere except the featured quotes and the
-  transcript page; or
-- **(b)** it keeps playing, and its menu leads with Play (rule 1), which then differs from the
-  badge a few pixels away.
-
-The Screens version timecode beside the screengrab asks the same question. The table below
-assumes (a) and marks the affected rows.
+D10 settles the quote card (§9.4 rows follow it). Two blue, bracketed timecodes look the same and
+do not play: the **Signals expanded-quote timecode** (a plain link to the transcript, which
+reloads the report) and the **Codebooks threshold-review timecode** (a new-window link, today the
+player-window hijack). The review's recommendation, that they play too, now follows from D10.
+If they do, their speaker badges need the transcript link a quote card's badge already has
+(Signals' `PersonBadge` has no `href`; threshold review shows a plain code), or the transcript is
+reachable there only by right-click. Diagnostics' "Listen at 12:34" buttons (Diagnostics on) read
+as playing and open the transcript; same question, lower stakes.
 
 ### 9.4 Menus per target
 
@@ -376,11 +375,10 @@ assumes (a) and marks the affected rows.
 
 | Target | Click | Menu |
 |---|---|---|
-| Quote-card timecode (Quotes, Discussion, Screens); dashboard coverage timecode; Screens version time | Show in Transcript **(if 9.3 (a); today plays)** | **Show in Transcript** · Open Transcript in New Window — Play |
+| Blue timecode that plays: quote card (Quotes, Discussion, Screens), dashboard featured and coverage, Screens version time | Play | **Play** — Show in Transcript · Open Transcript in New Window (the new window plays, D1) |
 | Speaker badge on a quote card; Discussion moderator badge | Show in Transcript | **Show in Transcript** · Open Transcript in New Window (no Play on a person; the card's timecode is beside it) |
-| Signals expanded-quote timecode; Sessions journey label | Show in Transcript | **Show in Transcript** · Open Transcript in New Window — Play |
-| Codebooks threshold-review timecode | Show in Transcript (drop `target=_blank`) | **Show in Transcript** · Open Transcript in New Window — Play |
-| Dashboard featured-quote timecode | Play | **Play** — Show in Transcript · Open Transcript in New Window (the new window plays, D1) |
+| Signals expanded-quote timecode; Codebooks threshold-review timecode | Show in Transcript today (§9.3: Play if they follow D10) | as the blue-timecode row if they play; else **Show in Transcript** · Open Transcript in New Window — Play. Drop threshold review's `target=_blank` either way |
+| Sessions journey label | Show in Transcript | **Show in Transcript** · Open Transcript in New Window — Play |
 | Paragraph timecode on the transcript page | Play | **Play** — Open Transcript in New Window (plays, D1) |
 | Sessions `#N` | Open Transcript | **Open Transcript** · Open Transcript in New Window — Play |
 | Sessions filename; dashboard session filename | Play | **Play** — Open Transcript · Open Transcript in New Window |

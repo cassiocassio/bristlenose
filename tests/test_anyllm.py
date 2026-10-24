@@ -472,8 +472,14 @@ def test_readiness_names_every_state(fake_anyllm: _FakeLibrary, monkeypatch: pyt
 
 
 def test_readiness_without_the_library(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Missing on 3.11+ is "add the extra"; on 3.10 the extra can't install
+    (any-llm needs 3.11), so the answer is the Python. Both pinned, whatever
+    interpreter runs the suite: this test was red on the 3.10 CI cells."""
     monkeypatch.setattr(anyllm, "install_state", lambda: "not-installed")
+    monkeypatch.setattr(sys, "version_info", (3, 12, 0))
     assert _ready(MODEL).status == "not-installed"
+    monkeypatch.setattr(sys, "version_info", (3, 10, 0))
+    assert _ready(MODEL).status == "old-python"
     monkeypatch.setattr(anyllm, "install_state", lambda: "ImportError: cannot import name 'x'")
     broken = _ready(MODEL)
     assert broken.status == "broken" and "cannot import" in broken.detail

@@ -57,6 +57,12 @@ async def extract_audio_for_sessions(
         # A file already set aside — a copy of the recording the session
         # registry folded in — is neither used nor stated twice.
         usable = [f for f in session.files if f.error is None]
+        # A zero-byte recording is a fact from stat, no tool needed: a video gets it
+        # from ffprobe's verdict below, an audio file is used as-is and would reach
+        # Whisper to fail there as "transcription failed" on every run (N171).
+        for empty in [f for f in usable if f.file_type == FileType.AUDIO and _is_empty(f.path)]:
+            _record_unusable(session, empty.path, UnusableReason.EMPTY, None)
+        usable = [f for f in usable if f.error is None]
         audio_files = [f for f in usable if f.file_type == FileType.AUDIO]
         video_files = [f for f in usable if f.file_type == FileType.VIDEO]
         # One recording per session is used — the first audio file, else the
@@ -191,6 +197,15 @@ async def _extract_one(
             session.session_id,
             video_path.name,
         )
+
+
+def _is_empty(path: Path) -> bool:
+    """True only when stat says the file holds no bytes; an unreadable path is not
+    evidence of an empty one."""
+    try:
+        return path.stat().st_size == 0
+    except OSError:
+        return False
 
 
 def _record_unusable(

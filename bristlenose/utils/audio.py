@@ -49,6 +49,17 @@ class MediaFileDamagedError(AudioToolError):
     """
 
 
+class MediaExtractionTimedOutError(AudioToolError):
+    """ffmpeg ran past its time limit extracting one recording's audio.
+
+    The tool started and ffprobe had already read the file, so this is a verdict
+    on the recording (too long for the drive or share it sits on), not on the
+    toolchain: the caller can set that one session aside and go on, where a bare
+    :class:`AudioToolError` stops the run. Not :class:`MediaFileDamagedError`,
+    which would say the file is broken (N144).
+    """
+
+
 # Signatures of a *tool* that could not run, as opposed to a *file* it refused.
 # A dynamic-linker failure also exits non-zero (the snap's missing libblas.so.3
 # is the recorded case), so exit status alone cannot separate the two.
@@ -279,22 +290,29 @@ def extract_audio_from_video(
     # Harmless no-op for audio-only inputs; ignored if unsupported.
     hwaccel = ["-hwaccel", "videotoolbox"] if platform.system() == "Darwin" else []
 
-    result = subprocess.run(
-        [
-            binary_command("ffmpeg"),
-            *hwaccel,
-            "-i", str(video_path),
-            "-vn",                    # no video
-            "-acodec", "pcm_s16le",   # 16-bit PCM
-            "-ar", str(sample_rate),  # sample rate
-            "-ac", "1",               # mono
-            "-y",                     # overwrite
-            str(output_path),
-        ],
-        capture_output=True,
-        text=True, encoding="utf-8", errors="replace",
-        timeout=600,  # 10 minutes max
-    )
+    try:
+        result = subprocess.run(
+            [
+                binary_command("ffmpeg"),
+                *hwaccel,
+                "-i", str(video_path),
+                "-vn",                    # no video
+                "-acodec", "pcm_s16le",   # 16-bit PCM
+                "-ar", str(sample_rate),  # sample rate
+                "-ac", "1",               # mono
+                "-y",                     # overwrite
+                str(output_path),
+            ],
+            capture_output=True,
+            text=True, encoding="utf-8", errors="replace",
+            timeout=600,  # 10 minutes max
+        )
+    except subprocess.TimeoutExpired as exc:
+        # The killed ffmpeg leaves a part-written file; nothing may read it as audio.
+        output_path.unlink(missing_ok=True)
+        raise MediaExtractionTimedOutError(
+            f"ffmpeg timed out after 600s extracting audio from {video_path.name}"
+        ) from exc
 
     if result.returncode != 0:
         raise AudioToolError(

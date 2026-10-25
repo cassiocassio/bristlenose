@@ -10,6 +10,7 @@ from bristlenose.events import CauseCategoryEnum
 from bristlenose.models import FileType, InputSession
 from bristlenose.refusals import MESSAGES, UnusableReason, classify_unreadable
 from bristlenose.utils.audio import (
+    MediaExtractionTimedOutError,
     MediaFileDamagedError,
     extract_audio_from_video,
     has_audio_stream,
@@ -134,6 +135,9 @@ async def _extract_one(
     - a video with no audio stream at all (a silent screen recording), which is
       valid and merely untranscribable — also recorded, so its absence from the
       report is stated rather than inferred.
+    - ``MediaExtractionTimedOutError`` — ffmpeg ran past its limit extracting this
+      one recording (a long file on a slow drive or share). Recorded as
+      ``unreadable`` and skipped, so the run continues (N144).
     - ``CloudFetchTimeoutError`` — a cloud placeholder whose bytes did not
       arrive within the read bound. Nothing is wrong with the file or the tool;
       it was not here in time. Recorded as ``cloud_fetch`` (retryable) and the
@@ -173,6 +177,13 @@ async def _extract_one(
             _record_unusable(
                 session, video_path, classify_unreadable(video_path), exc
             )
+            return
+        except MediaExtractionTimedOutError as exc:
+            # Ran past the time limit: a long file on a slow drive or share, not a
+            # broken tool (ffprobe read it) and not a damaged file, so not
+            # `classify_unreadable`, whose answer for a whole file is "incomplete".
+            # Stated as unreadable, and the run goes on with the other sessions.
+            _record_unusable(session, video_path, UnusableReason.UNREADABLE, exc)
             return
         session.audio_path = extracted
         logger.info(

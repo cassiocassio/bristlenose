@@ -375,8 +375,8 @@ def _linux_proc_start_time(pid: int) -> str | _NoProc | None:
         return _NO_PROC  # /proc is not mounted
     try:
         raw = (_PROC_ROOT / str(pid) / "stat").read_bytes().decode("utf-8", errors="replace")
-    except FileNotFoundError:
-        return None  # no such process
+    except (FileNotFoundError, ProcessLookupError):
+        return None  # no such process (or it exited between the open and the read)
     except OSError:
         return _NO_PROC  # hidepid or a confinement rule: ps reads the same table
     # `pid (comm) state …`: comm may hold spaces and parentheses, so split after
@@ -521,11 +521,24 @@ def _is_alive_owned(pid_file: dict[str, Any]) -> bool:
     recorded_start = pid_file.get("start_time")
     if not isinstance(pid, int) or not isinstance(recorded_start, str):
         return False
+    actual_start: str | _NoProc | None
     if sys.platform.startswith("linux") and not recorded_start.startswith(_LINUX_TOKEN_PREFIX):
         # A run.pid from a build that recorded `ps` text (before N201): read the
         # process the way that build did, so a run live across an upgrade still
         # reads as live.
         actual_start = _ps_lstart(pid)
+    elif sys.platform.startswith("linux"):
+        actual_start = _linux_proc_start_time(pid)
+        if isinstance(actual_start, _NoProc):
+            # Written where /proc answered, read where it cannot (a mask, hidepid,
+            # another mount namespace): the identity cannot be checked, and `ps`
+            # text could never equal the token, which would read a live run as
+            # dead. A process that exists is taken for the run, as the Mac app
+            # does for a process it cannot inspect.
+            log.warning(
+                "run.pid names pid %s but /proc cannot confirm its start time", pid,
+            )
+            return _ps_lstart(pid) is not None
     else:
         actual_start = _ps_start_time(pid)
     if actual_start is None:

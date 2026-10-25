@@ -120,6 +120,52 @@ def test_without_proc_it_falls_back_to_ps(linux) -> None:
     assert linux.ps_calls and linux.ps_calls[0][0].endswith("ps")
 
 
+def test_a_proc_that_cannot_answer_is_not_a_dead_run(linux, monkeypatch) -> None:
+    """Written where /proc answered, read where it does not: the identity cannot
+    be checked, and ps text can never equal the token. A live process is the run."""
+    _write_proc(linux.proc)
+    recorded = _ps_start_time(PID)
+    empty = linux.proc.parent / "empty-proc"
+    empty.mkdir()
+    monkeypatch.setattr(run_lifecycle, "_PROC_ROOT", empty)
+
+    assert _is_alive_owned({"pid": PID, "start_time": recorded}) is True
+    assert linux.ps_calls, "ps was asked whether the process exists"
+
+
+def test_a_pid_stat_that_is_refused_falls_back_to_ps(linux, monkeypatch) -> None:
+    _write_proc(linux.proc)
+    real_read = Path.read_bytes
+
+    def refuse(self: Path):
+        if self.name == "stat" and self.parent.name == str(PID):
+            raise PermissionError(13, "denied")
+        return real_read(self)
+
+    monkeypatch.setattr(Path, "read_bytes", refuse)
+    assert _ps_start_time(PID) == "Sun Oct 25 10:32:42 2026"
+
+
+def test_a_missing_boot_id_falls_back_to_ps(linux) -> None:
+    _write_proc(linux.proc)
+    (linux.proc / "sys" / "kernel" / "random" / "boot_id").unlink()
+    assert _ps_start_time(PID) == "Sun Oct 25 10:32:42 2026"
+
+
+def test_a_process_that_exits_mid_read_is_dead_not_unknown(linux, monkeypatch) -> None:
+    _write_proc(linux.proc)
+    real_read = Path.read_bytes
+
+    def gone(self: Path):
+        if self.name == "stat" and self.parent.name == str(PID):
+            raise ProcessLookupError(3, "no such process")
+        return real_read(self)
+
+    monkeypatch.setattr(Path, "read_bytes", gone)
+    assert _ps_start_time(PID) is None
+    assert linux.ps_calls == []
+
+
 def test_a_run_pid_written_by_the_old_build_is_still_read_as_before(linux) -> None:
     """The old token is ps's text. A run that was live across the upgrade must
     still read as live, and a different text still as someone else's."""

@@ -420,7 +420,7 @@ class Process(BaseModel):
     """Diagnostics envelope captured once on run_started."""
 
     pid: int
-    start_time: str  # ISO8601 — process creation time
+    start_time: str  # opaque per-platform liveness token, equality only (run_lifecycle._ps_start_time)
     hostname: str
     user: str
     bristlenose_version: str

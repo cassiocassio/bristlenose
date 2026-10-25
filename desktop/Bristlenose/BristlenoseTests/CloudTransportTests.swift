@@ -1210,6 +1210,59 @@ struct AdapterRowDerivationTests {
         #expect(row.meetingID == nil)
     }
 
+    /// Graph's `calendarView` times are `dateTimeTimeZone`: the offset-free
+    /// `dateTime` Microsoft documents (`2017-08-29T04:00:00.0000000`) with the
+    /// zone in a sibling `timeZone`, here "UTC" because the request pins
+    /// `Prefer: outlook.timezone="UTC"`. The test above feeds Z-suffixed
+    /// strings, a shape Graph does not send, so it passed while every real
+    /// event failed to parse and no Teams row ever got its meeting (N141).
+    /// No observed tenant response is in the repo; the shape is Microsoft's
+    /// published one for the resource.
+    @Test("Teams reads the calendar clock in the shape Graph sends it")
+    func teamsReadsGraphsOwnDateTimeShape() async throws {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let graph = DateFormatter()
+        graph.locale = Locale(identifier: "en_US_POSIX")
+        graph.timeZone = TimeZone(secondsFromGMT: 0)
+        graph.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS"
+        let booked = Date().addingTimeInterval(-2 * 3600)
+        let landed = booked.addingTimeInterval(240)
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json("""
+        {"value":[{"id":"item-1","name":"P04 Interview-20260816_090000-Meeting Recording.mp4",
+          "size":1048576,"createdDateTime":"\(iso.string(from: landed))",
+          "parentReference":{"driveType":"business"},
+          "file":{"mimeType":"video/mp4"},
+          "video":{"duration":3131000},
+          "@microsoft.graph.downloadUrl":"https://example.invalid/d"}]}
+        """))
+        StubURLProtocol.enqueue(.json("""
+        {"value":[{"id":"cal-1","subject":"P04 Interview",
+          "start":{"dateTime":"\(graph.string(from: booked))","timeZone":"UTC"},
+          "end":{"dateTime":"\(graph.string(from: booked.addingTimeInterval(3600)))","timeZone":"UTC"},
+          "attendees":[{"emailAddress":{"name":"Priya","address":"priya@example.invalid"},
+                        "type":"required"}],
+          "organizer":{"emailAddress":{"address":"martin@example.invalid"}}}]}
+        """))
+
+        let source = TeamsSource(
+            config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
+                                         redirectURI: "msauth.test://auth"),
+            session: StubURLProtocol.session(),
+            restoredTokens: MicrosoftTokenResponse(
+                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
+        let listing = await source.list(window: window)
+
+        let row = try #require(listing.rows.first)
+        let scheduled = try #require(row.scheduledAt, "the event matched, so it has its booked start")
+        #expect(abs(scheduled.timeIntervalSince(booked)) < 1)
+        #expect(row.scheduledDuration == 3600)
+        #expect(row.title == "P04 Interview", "the meeting's own subject, not the filename's")
+        #expect(row.attendees.count == 1, "the roster came with the match")
+    }
+
     /// Zoom, end to end through the adapter: a stopped-and-restarted meeting
     /// lists as two rows of one meeting, and importing one writes its
     /// transcript beside it in Bristlenose's own format.

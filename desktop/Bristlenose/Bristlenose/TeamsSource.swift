@@ -617,8 +617,8 @@ final class TeamsSource: CloudImportSource {
         // column that makes Teams' real gap legible rather than baffling: the
         // meeting was booked for an hour, the recording began at 09:34, and
         // how long it ran is genuinely unknown because Graph does not say.
-        let scheduledAt = matched?.start?.dateTime.flatMap(Self.parseISO)
-        let scheduledEnd = matched?.end?.dateTime.flatMap(Self.parseISO)
+        let scheduledAt = matched?.start.flatMap(Self.parseWhen)
+        let scheduledEnd = matched?.end.flatMap(Self.parseWhen)
 
         return CloudImportRow(
             id: id,
@@ -692,7 +692,7 @@ final class TeamsSource: CloudImportSource {
     ) -> GraphCalendarView.Event? {
         events
             .compactMap { event -> (GraphCalendarView.Event, TimeInterval)? in
-                guard let start = event.start?.dateTime.flatMap(parseISO) else { return nil }
+                guard let start = event.start.flatMap(parseWhen) else { return nil }
                 let delta = abs(start.timeIntervalSince(recordingStart))
                 guard delta <= 1_800 else { return nil }
                 return (event, delta)
@@ -899,6 +899,54 @@ final class TeamsSource: CloudImportSource {
         let g = ISO8601DateFormatter()
         g.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return g.date(from: string)
+    }
+
+    /// A calendar event's `start` or `end`, as Graph's `dateTimeTimeZone`.
+    ///
+    /// Microsoft documents it as an offset-free `dateTime` with seven fractional
+    /// digits and the zone beside it: `"2017-08-29T04:00:00.0000000"` with
+    /// `"timeZone": "UTC"`, which is what `Prefer: outlook.timezone="UTC"` asks
+    /// for. `parseISO` needs an offset, so it read every such event as nil and
+    /// no recording ever matched its meeting (N141). A string that does carry an
+    /// offset is still read as it always was, and a zone that is neither UTC nor
+    /// an IANA identifier (Graph's own Windows names, which the pinned header
+    /// should never produce) is nil rather than guessed.
+    static func parseGraphTime(
+        dateTime: String?, timeZone: String?
+    ) -> Date? {
+        guard let raw = dateTime?.trimmingCharacters(in: .whitespaces), !raw.isEmpty
+        else { return nil }
+        if let carried = parseISO(raw) { return carried }
+
+        let zone: TimeZone
+        switch (timeZone ?? "UTC").uppercased() {
+        case "UTC", "GMT", "ETC/UTC", "Z": zone = TimeZone(secondsFromGMT: 0)!
+        default:
+            guard let named = timeZone.flatMap(TimeZone.init(identifier:)) else { return nil }
+            zone = named
+        }
+
+        // `yyyy-MM-ddTHH:mm:ss` then an optional fraction of any length.
+        let parts = raw.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+        let whole = String(parts[0])
+        var fraction = 0.0
+        if parts.count == 2 {
+            let digits = parts[1]
+            guard !digits.isEmpty, digits.allSatisfy(\.isASCII), digits.allSatisfy(\.isNumber),
+                  let value = Double("0." + digits)
+            else { return nil }
+            fraction = value
+        }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = zone
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        guard let base = f.date(from: whole) else { return nil }
+        return base.addingTimeInterval(fraction)
+    }
+
+    private static func parseWhen(_ when: GraphCalendarView.Event.When) -> Date? {
+        parseGraphTime(dateTime: when.dateTime, timeZone: when.timeZone)
     }
 }
 

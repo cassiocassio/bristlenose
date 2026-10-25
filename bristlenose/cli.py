@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import shlex
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
@@ -2647,6 +2648,9 @@ def _report_stashed_output(output_dir: Path) -> None:
     researcher deleting a project needs to be told they are there. `SECURITY.md`
     says `status` reports them; this is that.
     """
+    from rich.markup import escape
+    from rich.text import Text
+
     from bristlenose.utils import output_backup
 
     backup = output_backup.backup_path_for(output_dir)
@@ -2662,7 +2666,7 @@ def _report_stashed_output(output_dir: Path) -> None:
             note = "your previous report, replaced by a fresh analysis; the next run deletes it"
         else:
             note = "your previous report; the next run puts it back"
-        _say(MessageKind.INFO, f"{backup.name} — {note}")
+        _say(MessageKind.INFO, f"{escape(backup.name)} — {note}")
     for leftover in output_backup.leftovers_for(output_dir):
         # Left by a put-back or a delete cut short, or kept by a build with the
         # 22 Oct hold-back. Nothing reads them. DRAFT wording (RE#13).
@@ -2670,8 +2674,13 @@ def _report_stashed_output(output_dir: Path) -> None:
             note = "a replaced report, partly deleted; the next run deletes it"
         else:
             note = "a failed run's work; the next run deletes it"
-        _say(MessageKind.INFO, f"{leftover.name} — {note}")
-        console.print(f"    Delete with: [bold]rm -rf {leftover}[/bold]")
+        _say(MessageKind.INFO, f"{escape(leftover.name)} — {note}")
+        # One line the shell reads back as `rm -rf <this path>`: quoted (a folder
+        # called "Acme onboarding" otherwise pastes as two arguments and deletes a
+        # sibling called "Acme"), and never folded at a space in the path.
+        hint = Text("    Delete with: ")
+        hint.append(f"rm -rf {shlex.quote(str(leftover))}", style="bold")
+        console.print(hint, soft_wrap=True)
 
 
 def _resolve_output_dir(project_dir: Path) -> Path | None:

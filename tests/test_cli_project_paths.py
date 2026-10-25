@@ -212,6 +212,30 @@ class TestStatusReportsTheStash:
         assert "rm -rf" in text
 
 
+    def test_the_delete_hint_survives_a_paste_whatever_the_folder_is_called(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys,
+    ) -> None:
+        """N139: the path was interpolated bare, so a folder called "Acme onboarding"
+        pasted as ``rm -rf Acme onboarding/...`` and deleted an existing sibling
+        called "Acme". Rich also folded the line at the space once the path passed
+        the console width, so even a careful one-line copy ran a truncated delete.
+        The hint is one line, shell-quoted, with a bracketed word left alone."""
+        import shlex
+
+        monkeypatch.setattr(output_backup, "project_is_locked", lambda _p: False)
+        study = tmp_path / "Acme onboarding [draft] study with a long descriptive name"
+        study.mkdir()
+        out = study / "bristlenose-output"
+        failed = output_backup.failed_path_for(out)
+        failed.mkdir()
+        assert len(str(failed)) > 80, "the fixture must pass the console width"
+        cli._report_stashed_output(out)
+        lines = [ln for ln in capsys.readouterr().out.splitlines() if "rm -rf" in ln]
+        assert len(lines) == 1, "the command folded across lines or vanished"
+        command = lines[0].split("Delete with:", 1)[1].strip()
+        assert shlex.split(command) == ["rm", "-rf", str(failed)]
+
+
 class TestAnalyzeProjectName:
     """``bristlenose analyze <p>/bristlenose-output/transcripts-raw`` named the
     project ``transcripts-raw`` (handoff P8). Since ``remove_superseded_reports``

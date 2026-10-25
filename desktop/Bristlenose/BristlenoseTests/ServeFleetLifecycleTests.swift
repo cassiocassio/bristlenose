@@ -36,6 +36,38 @@ struct ServeFleetLifecycleTests {
         #expect(fleet.managers[Self.a] == nil)
     }
 
+    /// A reap frees the sidecar, not the record that an agent asked about the
+    /// study. Settings ▸ MCP Agents prints that record, and the reap went
+    /// through `discard`, which clears it, so ninety seconds after the window
+    /// closed the cell read "Never" for a study an agent asked about minutes
+    /// before (N158). `discard` is for a study leaving the sidebar.
+    @Test func aReapKeepsWhenAnAgentLastAskedAboutTheStudy() {
+        let fleet = ServeFleet()
+        let manager = fleet.manager(for: Self.a)
+        manager.instance.state = .running(port: 5000)
+        let asked = Date(timeIntervalSince1970: 1_800_000_000)
+        manager.instance.lastAgentCallAt = asked
+        fleet.refreshAppLevelFacts()
+        #expect(fleet.lastAgentCallAt[Self.a] == asked)
+
+        fleet.sweep(shownProjects: [], memoryPressure: true)   // reaped
+
+        #expect(fleet.managers[Self.a] == nil)
+        #expect(fleet.lastAgentCallAt[Self.a] == asked, "a reaped study was still asked about")
+    }
+
+    @Test func removingAStudyFromTheSidebarForgetsWhenAnAgentLastAskedAboutIt() {
+        let fleet = ServeFleet()
+        let manager = fleet.manager(for: Self.a)
+        manager.instance.state = .running(port: 5000)
+        manager.instance.lastAgentCallAt = Date(timeIntervalSince1970: 1_800_000_000)
+        fleet.refreshAppLevelFacts()
+
+        fleet.discard(Self.a)
+
+        #expect(fleet.lastAgentCallAt[Self.a] == nil, "a removed study has no row to show it on")
+    }
+
     @Test func aSweepNeverTouchesAStudyThatStillHasAWindow() {
         let fleet = ServeFleet()
         fleet.manager(for: Self.a).instance.state = .running(port: 5000)

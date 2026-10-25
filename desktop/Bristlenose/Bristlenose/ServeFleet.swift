@@ -143,7 +143,12 @@ final class ServeFleet: ObservableObject {
     /// kept running: ~140 MB and a live port serving a study the researcher had
     /// just deleted, with nothing reporting it. Strictly worse than the
     /// behaviour it replaced.
-    func discard(_ project: UUID) {
+    ///
+    /// `forgettingAgentActivity` is true for a study leaving the sidebar and
+    /// false for a reap: a reaped study is still in the sidebar and still in
+    /// Settings ▸ MCP Agents, where "Never" would be a claim that no agent
+    /// ever asked (N158 — the reap used to come through here and clear it).
+    func discard(_ project: UUID, forgettingAgentActivity: Bool = true) {
         managers[project]?.stop()
         SharedConfigStore.shared.release(projectID: project)
         unshownSince[project] = nil
@@ -152,7 +157,7 @@ final class ServeFleet: ObservableObject {
         // The project is leaving the sidebar entirely, so its activity record
         // goes with it — unlike a reap, which keeps it (see the merge in
         // `refreshAppLevelFacts`). A removed project has no row to render it.
-        lastAgentCallAt[project] = nil
+        if forgettingAgentActivity { lastAgentCallAt[project] = nil }
         screenReading.set(nil, for: project)
         screenReading.setAvailable(false, for: project)
         readableProjects.remove(project)
@@ -249,7 +254,7 @@ final class ServeFleet: ObservableObject {
                                           shownProjects: shownProjects,
                                           memoryPressure: memoryPressure)
         for (id, verdict) in verdicts where verdict == .reapNow {
-            discard(id)
+            discard(id, forgettingAgentActivity: false)
         }
         // Something is waiting out its grace period — come back and finish the
         // job. Without this the reap would only ever happen on the *next*

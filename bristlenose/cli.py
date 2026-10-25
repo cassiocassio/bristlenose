@@ -1907,18 +1907,22 @@ def _say_server_not_started(exc: BaseException, report_path: Path | None) -> Non
     ``Acme [draft]`` made the old f-string raise MarkupError here, replacing the
     server's real error with a traceback, and a ``]`` in a path corrupted the link.
     """
+    from rich.style import Style
     from rich.text import Text
 
     console.print()
     _say(MessageKind.WARNING, f"Could not start server: {_text(exc)}", indent="  ")
     # Show file link as fallback
     if report_path and report_path.exists():
-        file_url = f"file://{report_path.resolve()}"
+        # as_uri() percent-encodes the path and Style(link=) takes it whole: the
+        # raw path in a style string split on spaces, so a folder with a space
+        # lost its link without a word.
+        file_url = report_path.resolve().as_uri()
         try:
             display_path: Path | str = report_path.resolve().relative_to(Path.cwd())
         except ValueError:
             display_path = report_path.name
-        console.print(Text("  Report:  ") + Text(str(display_path), style=f"link {file_url}"))
+        console.print(Text("  Report:  ") + Text(str(display_path), style=Style(link=file_url)))
 
 
 @app.command(name="transcribe")

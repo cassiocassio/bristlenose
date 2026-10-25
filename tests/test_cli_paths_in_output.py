@@ -115,3 +115,29 @@ def test_the_server_failed_fallback_names_the_error_and_the_file_whatever_the_fo
     text = " ".join(capsys.readouterr().out.split())
     assert f"Could not start server: cannot bind [draft] {name}" in text
     assert f"Report: {name}/report.html" in text
+
+
+@pytest.mark.parametrize("name", ["Acme onboarding", "Acme [draft]", "a]b c"])
+def test_the_server_failed_fallback_links_the_file_whatever_the_folder_is_called(
+    name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The text was asserted but not the link. The URL was built unescaped (a space or a
+    bracket broke it) and passed as a Rich *style string*, which splits on
+    spaces, so ``link file:///…/Acme onboarding/…`` did not parse and the link was
+    dropped without a word. What matters is the hyperlink the terminal receives."""
+    import io
+
+    from rich.console import Console
+
+    buf = io.StringIO()
+    monkeypatch.setattr(
+        cli, "console", Console(file=buf, force_terminal=True, width=200, color_system="standard")
+    )
+    monkeypatch.chdir(tmp_path)
+    report = tmp_path / name / "report.html"
+    report.parent.mkdir()
+    report.write_text("x", encoding="utf-8")
+    cli._say_server_not_started(OSError("cannot bind"), report)
+    links = re.findall(r"\x1b\]8;[^;]*;([^\x1b]+)\x1b\\", buf.getvalue())
+    links = [u for u in links if u]
+    assert links == [report.resolve().as_uri()], buf.getvalue()

@@ -129,8 +129,33 @@ def _walk_leaks(node: object, path: str, needles: tuple[str, ...]) -> list[str]:
 
 
 @pytest.fixture()
-def seeded(tmp_path: Path) -> tuple[FastAPI, int]:
+def seeded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[FastAPI, int]:
+    # CI builds no frontend; the export route needs a bundle to inline, so a stub
+    # one stands in (the pattern of test_serve_export_filename.py). Never a skipif:
+    # that would take the privacy gate out of CI.
+    bundle = tmp_path / "static-export"
+    bundle.mkdir()
+    (bundle / "app.js").write_text("// stub", encoding="utf-8")
+    (bundle / "app.css").write_text("/* stub */", encoding="utf-8")
+    monkeypatch.setattr(export_mod, "_EXPORT_STATIC_DIR", bundle)
     return _seed(tmp_path)
+
+
+def test_the_anonymiser_names_every_flat_quote_list_of_the_schema() -> None:
+    """A fifth bucket added to /quotes would re-create N145 with nothing failing:
+    the seed above would not land a quote in it."""
+    from typing import get_args
+
+    from bristlenose.server.routes.quotes import QuoteResponse, QuotesListResponse
+
+    flat = {
+        name
+        for name, field in QuotesListResponse.model_fields.items()
+        if get_args(field.annotation)[:1] == (QuoteResponse,)
+    }
+    assert flat == {"uncategorised", "unjoined"}, (
+        f"a /quotes bucket changed ({flat}): add it to _anonymise_data and to the seed"
+    )
 
 
 def test_the_seed_reaches_both_buckets(seeded: tuple[FastAPI, int]) -> None:

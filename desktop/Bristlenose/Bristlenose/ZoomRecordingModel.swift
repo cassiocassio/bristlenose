@@ -196,9 +196,16 @@ enum ZoomFileSelection {
     /// processing. One media file processing holds back the whole meeting,
     /// deliberately: offering the finished audio while the video processes is
     /// how a researcher ends up with audio only, for good.
+    ///
+    /// A failed file never finishes, so it is not waited for: a meeting whose
+    /// every media file failed has nothing left to wait on. It used to count
+    /// as processing for ever ("1 still processing", and the window re-listing
+    /// the account each minute to see it clear); it is not offered, and not
+    /// counted (N156).
     static func isStillProcessing(_ files: [ZoomRecordingFile]) -> Bool {
-        let media = files.filter { $0.fileType.isMedia && !$0.hasFailed }
-        return media.isEmpty || media.contains(where: \.isStillProcessing)
+        let media = files.filter { $0.fileType.isMedia }
+        guard !media.isEmpty else { return true }
+        return media.contains { !$0.hasFailed && $0.isStillProcessing }
     }
 
     /// One recording of a meeting. A host who stops and restarts recording

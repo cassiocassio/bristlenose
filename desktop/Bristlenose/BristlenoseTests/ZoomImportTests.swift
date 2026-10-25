@@ -845,4 +845,18 @@ struct ZoomProcessingTests {
         #expect(!ZoomFileSelection.isStillProcessing(files.filter { !$0.hasFailed }))
         #expect(ZoomFileSelection.choose(from: files.filter { !$0.hasFailed }).media?.fileType == .m4a)
     }
+
+    /// Zoom's processing failed on every media file: there is nothing to wait
+    /// for. Counted as processing it read "1 still processing" for ever and
+    /// kept the window re-listing the whole account every minute (N156).
+    @Test("A meeting whose every media file failed is not still processing")
+    func allMediaFailedIsNotProcessing() {
+        #expect(!ZoomFileSelection.isStillProcessing([
+            file("MP4", "active_speaker", status: "failed"),
+            file("M4A", "audio_only", status: "failed"),
+        ]))
+        #expect(!ZoomFileSelection.isStillProcessing([
+            file("M4A", "audio_only", status: "failed"),
+        ]))
+    }
 }

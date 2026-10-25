@@ -2767,6 +2767,19 @@ struct ContentView: View {
         if directories.count == 1 && files.isEmpty {
             // Single folder — adopt as project path; folder-shaped → auto-run.
             let folder = directories[0]
+            // Unless a row already holds it: then it is that row's drop, as on
+            // any other door. An analysed folder was refused above, so this one
+            // never ran: the same arm `processDroppedURLs` gives a tracked,
+            // unanalysed folder. The placeholder stays as it was (N157).
+            if case .existing(let holderID) = PlaceholderDrop.resolve(
+                folder: folder, placeholder: id, in: projectIndex
+            ) {
+                selection = [.project(holderID)]
+                if let holder = projectIndex.projects.first(where: { $0.id == holderID }) {
+                    pipelineRunner.start(project: holder)
+                }
+                return
+            }
             projectIndex.relocateProject(id: id, newPath: folder.path)
             selection = [.project(id)]
             if let updated = projectIndex.projects.first(where: { $0.id == id }) {

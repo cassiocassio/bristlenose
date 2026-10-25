@@ -31,3 +31,26 @@ enum DroppedFolderState: Equatable {
         return folderLooksAnalysed ? .trackedAnalysed : .trackedUnanalysed
     }
 }
+
+/// A single folder dropped on the empty "+ New Project" placeholder: it becomes
+/// the placeholder's folder, unless another row already holds it. Then the drop
+/// means what it means on any other door (`processDroppedURLs`): that row is the
+/// one to show, and to analyse if it never was. Adopting it anyway made a second
+/// row on one folder and started a second run on one database (N157).
+///
+/// Pure over the index, so it has a test without a window or a drop.
+enum PlaceholderDrop: Equatable {
+    /// No other row holds the folder: the placeholder takes it.
+    case adopt
+    /// This row already holds it, under any spelling (a path, a symlink, another
+    /// mount point's name for it).
+    case existing(UUID)
+
+    @MainActor
+    static func resolve(folder: URL, placeholder: UUID, in index: ProjectIndex) -> PlaceholderDrop {
+        if let holder = index.otherProject(holding: folder, excluding: placeholder) {
+            return .existing(holder.id)
+        }
+        return .adopt
+    }
+}

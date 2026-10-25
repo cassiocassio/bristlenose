@@ -60,6 +60,18 @@ def test_a_healthy_keyring_that_lacks_the_key_is_still_the_keyring(
     assert isinstance(get_linux_store(), LinuxCredentialStore)
 
 
+def test_a_glib_warning_from_a_healthy_keyring_is_not_an_error(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """A flip to the file store would hide every key already in the keyring."""
+    _secret_tool(
+        tmp_path, monkeypatch,
+        'echo "(secret-tool:4242): GLib-GIO-WARNING **: 10:00:00.000: something" >&2; exit 1',
+    )
+
+    assert _is_secret_service_available() is True
+
+
 def test_a_keyring_that_answers_is_the_keyring(tmp_path: Path, monkeypatch) -> None:
     _secret_tool(tmp_path, monkeypatch, "echo found; exit 0")
 

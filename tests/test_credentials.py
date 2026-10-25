@@ -323,14 +323,13 @@ class TestLinuxCredentialStore:
 
     def test_get_linux_store_with_secret_tool(self) -> None:
         """Should return LinuxCredentialStore when secret-tool is available."""
-        from bristlenose.credentials_linux import get_linux_store
+        from bristlenose.credentials_linux import LinuxCredentialStore, get_linux_store
 
         with patch("shutil.which", return_value="/usr/bin/secret-tool"):
-            with patch("subprocess.run"):  # Prevent actual call
+            # A healthy keyring that lacks the probe's key: exit 1, nothing on stderr.
+            with patch("subprocess.run", return_value=MagicMock(returncode=1, stderr="")):
                 store = get_linux_store()
-                # On Linux, should be LinuxCredentialStore
-                # On macOS running this test, would be EnvCredentialStore (skipped)
-                assert store is not None
+                assert isinstance(store, LinuxCredentialStore)
 
     def test_get_linux_store_without_secret_tool(self) -> None:
         """Should return EnvCredentialStore when secret-tool is not available."""

@@ -7,11 +7,19 @@ Service is unavailable (headless servers, minimal installs).
 
 from __future__ import annotations
 
+import logging
+import re
 import shutil
 import subprocess
 
 from bristlenose.credentials import CredentialStore, FileCredentialStore
 from bristlenose.providers import credential_service_name
+
+logger = logging.getLogger(__name__)
+
+#: GLib's own log lines, `(secret-tool:1234): GLib-GIO-WARNING **: …`. A healthy
+#: keyring can emit one on a lookup; it is not secret-tool saying it failed.
+_GLIB_LOG_LINE_RE = re.compile(r"^\(.+:\d+\): \S+-(?:WARNING|CRITICAL|Message|INFO|DEBUG) \*\*")
 
 
 class LinuxCredentialStore(CredentialStore):
@@ -100,10 +108,19 @@ def _is_secret_service_available() -> bool:
         )
         # The exit code alone cannot tell them apart: a healthy keyring exits 1
         # for a key that is not stored, and so does a missing session bus. Only
-        # the second says anything (libsecret prints errors and nothing else), so
-        # a lookup that exited non-zero with a message is a keyring that cannot
-        # be used, and the config file is the store that works (N202).
-        return probe.returncode == 0 or not (probe.stderr or "").strip()
+        # the second says anything (libsecret prints its own errors and nothing else;
+        # GLib's `(prog:pid): … **:` log lines are not those), so a lookup that
+        # exited non-zero with an error is a keyring that cannot be used, and the
+        # config file is the store that works (N202).
+        errors = [
+            line for line in (probe.stderr or "").splitlines()
+            if line.strip() 
+        ]
+        logger.info(
+            "secret_tool_probe | returncode=%s | error=%r",
+            probe.returncode, errors[0][:200] if errors else None,
+        )
+        return probe.returncode == 0 or not errors
     except subprocess.TimeoutExpired:
         # D-Bus hung — Secret Service not properly configured
         return False

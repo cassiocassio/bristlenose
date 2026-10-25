@@ -256,6 +256,49 @@ def test_a_control_character_in_a_quote_does_not_stop_the_spreadsheet(client: Te
     assert "pagebreak and a bell" in cells
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        '\x0c=HYPERLINK("http://x","y")',
+        "\x00@SUM(1+1)",
+        "\x07\x0b+1",
+        "\t+1",
+        "\r-1",
+        "=1+1",
+    ],
+)
+def test_a_quote_cannot_reach_the_workbook_as_a_formula(
+    client: TestClient, payload: str
+) -> None:
+    """The control characters the workbook cannot hold are stripped, and the
+    stripped text is what the formula guard must look at: a form feed in front of
+    ``=`` used to pass the guard and become a live formula once it was removed
+    (found in review of 09bf2a15c)."""
+    from openpyxl import load_workbook
+
+    from bristlenose.server.models import Quote
+
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        quote = db.query(Quote).first()
+        quote.text = payload
+        db.commit()
+    finally:
+        db.close()
+    resp = client.get("/api/projects/1/export/quotes.xlsx")
+    assert resp.status_code == 200
+    cells = [c for row in load_workbook(io.BytesIO(resp.content)).active.iter_rows() for c in row]
+    visible = "".join(ch for ch in payload if ch not in "\x00\x07\x0b\x0c")
+    hits = [c for c in cells if isinstance(c.value, str) and visible.strip() in c.value]
+    assert hits, "the quote text should still be in the workbook"
+    for c in hits:
+        # openpyxl calls only "=" a formula; Excel also takes + - @ at the start.
+        assert c.value[0] not in "=+-@", (c.coordinate, c.value)
+    assert all(c.data_type != "f" for c in cells), [
+        (c.coordinate, c.value) for c in cells if c.data_type == "f"
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------

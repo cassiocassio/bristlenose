@@ -190,9 +190,11 @@ async def export_quotes_xlsx(
             for col_idx, value in enumerate(_quote_to_row(q), start=1):
                 # The workbook's XML cannot hold a control character (a form feed
                 # pasted from a PDF): saving raised, and the route answered 500.
+                # Strip first, then guard: the guard looks at the first character,
+                # and a form feed in front of "=" is gone by the time it is saved.
                 ws.cell(
                     row=row_idx, column=col_idx,
-                    value=ILLEGAL_CHARACTERS_RE.sub("", csv_safe(value)),
+                    value=csv_safe(ILLEGAL_CHARACTERS_RE.sub("", value)),
                 )
 
         # Freeze header row

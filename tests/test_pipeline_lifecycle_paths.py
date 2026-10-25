@@ -187,6 +187,47 @@ class TestEvictedRecording:
             f"the recording not downloaded in time was not retried: {h.transcribed}"
         )
 
+    def test_a_recording_stage_2_sets_aside_is_not_also_called_silent(
+        self, tmp_path: Path, monkeypatch,
+    ) -> None:
+        """The same seam, with a refusal instead of a slow download: stated once on
+        the ingest bucket with its own reason, never again as NO_SPEECH ("nothing was
+        said") about a file Whisper never heard, and not counted as an attempt."""
+        from bristlenose.events import UnusableReason
+        from bristlenose.pipeline import Pipeline
+        from bristlenose.refusals import MESSAGES
+        from bristlenose.stages import s02_extract_audio
+
+        real = Pipeline._record_ingest_outcome
+        calls = {"n": 0}
+
+        def after_stage_2(self, sessions, *a, **kw):  # type: ignore[no-untyped-def]
+            if calls["n"] == 0:
+                for s in sessions:
+                    for f in s.files:
+                        if f.path.stem == "empty":
+                            s02_extract_audio._record_unusable(
+                                s, f.path, UnusableReason.EMPTY, None,
+                            )
+                            s.audio_path = None
+            calls["n"] += 1
+            return real(self, sessions, *a, **kw)
+
+        monkeypatch.setattr(Pipeline, "_record_ingest_outcome", after_stage_2)
+
+        def two(d: Path, _i: int):
+            return [audio_session(d, 1, "kept"), audio_session(d, 2, "empty")]
+
+        h = run_pipeline(tmp_path, two)
+        summary = h.results[0].summary
+        assert summary is not None
+        assert [(f.session_id, f.cause.message) for f in summary.ingest.failed] == [
+            ("s2", MESSAGES[UnusableReason.EMPTY]),
+        ]
+        tx = summary.transcripts
+        assert tx.failed == [], f"stated a second time, as silent: {tx.failed!r}"
+        assert (tx.attempted, tx.succeeded) == (1, 1)
+
     def test_the_failed_session_is_recorded_failed_in_the_manifest(
         self, tmp_path: Path, monkeypatch,
     ) -> None:
@@ -317,3 +358,64 @@ def test_transcribe_states_a_recording_not_downloaded_as_cloud_fetch(
     assert tx.failed[0].cause.message == CLOUD_FETCH_MESSAGE
     assert tx.failed[0].source_file == "evicted.mp4"
     assert pipeline._summary.ingest.failed == []
+
+
+def test_transcribe_does_not_call_a_refused_recording_silent(
+    tmp_path: Path,
+) -> None:
+    """A recording stage 2 sets aside (empty audio, N171; an ffmpeg timeout, N144;
+    a damaged or soundless video) is stated once, with its own reason, on the
+    ingest bucket. It was also stated again on the transcripts bucket as NO_SPEECH,
+    "nothing was said in this recording", about a file that never reached Whisper,
+    and counted as an attempt (Fable review of N144/N171, 25 Oct 2026)."""
+    import asyncio
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock, patch
+
+    from bristlenose.events import StageOutcome, UnusableReason
+    from bristlenose.models import FileType, InputFile, InputSession, TranscriptSegment
+    from bristlenose.pipeline import Pipeline
+    from bristlenose.refusals import MESSAGES
+
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    now = datetime.now(timezone.utc)
+    sessions = []
+    for i, (name, body, kind) in enumerate(
+        (("kept.m4a", b"fake audio", FileType.AUDIO), ("empty.m4a", b"", FileType.AUDIO)),
+        start=1,
+    ):
+        media = input_dir / name
+        media.write_bytes(body)
+        sessions.append(InputSession(
+            session_id=f"s{i}", session_number=i, participant_id=f"p{i}", participant_number=i,
+            session_date=now,
+            files=[InputFile(path=media, file_type=kind, created_at=now,
+                             size_bytes=media.stat().st_size)],
+        ))
+
+    async def _fake_gather(_self, sess, **_kw):
+        heard = [s.session_id for s in sess if s.audio_path is not None]
+        segs = {sid: [TranscriptSegment(start_time=0.0, end_time=5.0, text="Hello there.")]
+                for sid in heard}
+        return segs, StageOutcome(attempted=len(heard), succeeded=len(heard))
+
+    settings = MagicMock()
+    settings.project_name = "empty"
+    settings.write_intermediate = False
+    settings.color_scheme = "default"
+    pipeline = Pipeline(settings)
+    with (
+        patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+        patch.object(Pipeline, "_gather_all_segments", new=_fake_gather),
+    ):
+        asyncio.run(pipeline.run_transcription_only(input_dir, tmp_path / "out"))
+
+    summary = pipeline._summary
+    assert [(f.session_id, f.cause.message) for f in summary.ingest.failed] == [
+        ("s2", MESSAGES[UnusableReason.EMPTY]),
+    ]
+    tx = summary.transcripts
+    assert tx is not None
+    assert tx.failed == [], f"stated a second time, as silent: {tx.failed!r}"
+    assert (tx.attempted, tx.succeeded) == (1, 1)

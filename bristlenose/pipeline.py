@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import shutil
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -215,6 +215,32 @@ def _print_stage(
 def _has_recording(session: InputSession) -> bool:
     """Whether the session holds an audio or video file Whisper would transcribe."""
     return any(f.file_type in (FileType.AUDIO, FileType.VIDEO) for f in session.files)
+
+
+def _refused_recording_sids(
+    sessions: list[InputSession],
+    session_segments: Mapping[str, Sequence[object]],
+    failed_sids: set[str],
+) -> set[str]:
+    """Sessions whose every recording stage 2 set aside as unusable (empty, unreadable,
+    soundless, a timed-out extraction). They are stated once, with their own reason, on
+    the ingest bucket; they never reached Whisper, so the transcripts bucket must neither
+    count them as attempts nor call them silent: "nothing was said in this recording"
+    about a file that was never heard. A recording that is merely a duplicate beside a
+    used one does not make its session refused, and neither does a transcript file that
+    gave the session words (or a transcription that failed for its own reason)."""
+    reasons = {r.value for r in UnusableReason}
+    out: set[str] = set()
+    for s in sessions:
+        recordings = [f for f in s.files if f.file_type in (FileType.AUDIO, FileType.VIDEO)]
+        if (
+            recordings
+            and all(f.error in reasons for f in recordings)
+            and not session_segments.get(s.session_id)
+            and s.session_id not in failed_sids
+        ):
+            out.add(s.session_id)
+    return out
 
 
 #: What a run that found files and refused every one says, after naming them.
@@ -2780,10 +2806,12 @@ class Pipeline:
             # abandon check on every silent recording. That fix is preserved —
             # these are excluded from `succeeded` **and** from the abandon
             # predicate below.
+            _refused_sids = _refused_recording_sids(sessions, session_segments, _failed_sids)
             _silent_sids = {
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids
                 and s.session_id not in _skipped_tx_sids
+                and s.session_id not in _refused_sids
                 and not session_segments.get(s.session_id)
             }
             _silent_failures = [
@@ -2800,9 +2828,10 @@ class Pipeline:
                 if s.session_id not in _failed_sids
                 and s.session_id not in _silent_sids
                 and s.session_id not in _skipped_tx_sids
+                and s.session_id not in _refused_sids
             ]
             self._summary.transcripts = StageOutcome(
-                attempted=len(sessions) - len(_skipped_tx_sids),
+                attempted=len(sessions) - len(_skipped_tx_sids | _refused_sids),
                 succeeded=len(_succeeded_sids),
                 failed=list(_fresh_transcript_outcome.failed) + _silent_failures,
                 duration_ms=(
@@ -4302,9 +4331,11 @@ class Pipeline:
                 f.session_id for f in _transcript_outcome_t.failed
                 if f.session_id is not None
             }
+            _refused_sids_t = _refused_recording_sids(sessions, session_segments, _failed_sids_t)
             _silent_sids_t = {
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids_t
+                and s.session_id not in _refused_sids_t
                 and not session_segments.get(s.session_id)
             }
             _silent_failures_t = [
@@ -4320,9 +4351,10 @@ class Pipeline:
                 s.session_id for s in sessions
                 if s.session_id not in _failed_sids_t
                 and s.session_id not in _silent_sids_t
+                and s.session_id not in _refused_sids_t
             ]
             self._summary.transcripts = StageOutcome(
-                attempted=len(sessions),
+                attempted=len(sessions) - len(_refused_sids_t),
                 succeeded=len(_succeeded_sids_t),
                 failed=list(_transcript_outcome_t.failed) + _silent_failures_t,
                 duration_ms=int((time.perf_counter() - t0) * 1000),

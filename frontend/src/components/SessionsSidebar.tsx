@@ -11,12 +11,14 @@
  * @module SessionsSidebar
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { apiGet } from "../utils/api";
 import { reportHref } from "../utils/reportHref";
 import { useProjectId } from "../hooks/useProjectId";
+import { useSpeakersChanged } from "../hooks/useSpeakersChanged";
+import { useLastRun } from "../contexts/LastRunStore";
 import type { SessionsListResponse } from "../utils/types";
 import { SessionEntryRow, useSessionRowLayout } from "./SessionEntry";
 
@@ -33,11 +35,22 @@ export function SessionsSidebar() {
   const [data, setData] = useState<SessionsListResponse | null>(null);
   const { navRef, layout } = useSessionRowLayout(data?.sessions ?? null);
 
-  useEffect(() => {
+  // Read again after a rename (this panel stays beside the transcript) and when a run
+  // lands; a failed re-read keeps the list that is drawn.
+  const { refreshKey } = useLastRun();
+  const latestRead = useRef(0);
+  const load = useCallback(() => {
+    const read = ++latestRead.current;
     apiGet<SessionsListResponse>("/sessions")
-      .then(setData)
+      .then((next) => { if (read === latestRead.current) setData(next); })
       .catch(() => {});
-  }, [projectId]);
+  }, []);
+  useEffect(() => {
+    const reads = latestRead;
+    load();
+    return () => { reads.current++; };
+  }, [projectId, refreshKey, load]);
+  useSpeakersChanged(load);
 
   // Auto-scroll active session into view.
   useEffect(() => {

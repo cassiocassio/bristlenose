@@ -1,5 +1,5 @@
 import { useContext, useCallback } from "react";
-import { PlayerContext } from "../contexts/PlayerContext";
+import { PlayerContext, useHasRecording } from "../contexts/PlayerContext";
 import { formatTimecode } from "../utils/format";
 import { momentPlace, placeProps } from "../utils/contextPlace";
 
@@ -24,6 +24,7 @@ export function TimecodeLink({
 }: TimecodeLinkProps) {
   const playerCtx = useContext(PlayerContext);
   const display = formatted ?? `[${formatTimecode(seconds)}]`;
+  const playable = useHasRecording(participantId);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -34,6 +35,8 @@ export function TimecodeLink({
     },
     [playerCtx, participantId, seconds],
   );
+
+  if (playerCtx && !playable) return <span className="timecode">{display}</span>;
 
   return (
     <a

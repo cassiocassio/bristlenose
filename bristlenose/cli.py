@@ -2305,8 +2305,23 @@ def _print_mcp_connect(port: int) -> None:
     console.print()
     console.print(
         "  [dim]Connect an agent — give it the MCP URL and this header. Works with any\n"
-        "  MCP-compatible agent (Claude, ChatGPT, Codex). Sends the quotes in your\n"
-        "  report, speaker codes in place of names; quote text is verbatim. How-to:[/dim]"
+        "  MCP-compatible agent (Claude, ChatGPT, Codex). It can read your report.[/dim]"
+    )
+    # Use the same gate as the tool responses; do not promise codes-only when
+    # the CLI's default is to include names. Without an app-wide override the
+    # study's DB preference is read on every call, so describe that live policy.
+    from bristlenose.server.grounding import _mcp_anonymise_active
+
+    if os.environ.get("BRISTLENOSE_MCP_ANONYMISE") is None:
+        names_message = "Speaker names are shared unless the study's Anonymise setting is on."
+    elif _mcp_anonymise_active(None):
+        names_message = "Anonymise for agents: On. MCP tools omit speaker names and use codes."
+    else:
+        names_message = "Anonymise for agents: Off. MCP tools include available speaker names."
+    console.print(f"  [dim]{names_message}[/dim]")
+    console.print(
+        "  [dim]Quote text is shared as written and may contain names.\n"
+        "  This CLI header also grants access to the report API, including names. How-to:[/dim]"
     )
     console.print(f"  [link={docs_url}]{docs_url}[/link]")
     token = os.environ.get("_BRISTLENOSE_AUTH_TOKEN", "")

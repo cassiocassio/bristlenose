@@ -452,19 +452,21 @@ export function QuoteCard({
 
   const handleTagCommit = useCallback(
     (tagName: string) => {
+      if (disabledTagNames?.has(tagName.toLowerCase())) return;
       setIsTagInputOpen(false);
       onTagAdd(domId, tagName);
     },
-    [domId, onTagAdd],
+    [domId, onTagAdd, disabledTagNames],
   );
 
   const handleTagCommitAndReopen = useCallback(
     (tagName: string) => {
+      if (disabledTagNames?.has(tagName.toLowerCase())) return;
       onTagAdd(domId, tagName);
       setIsTagInputOpen(false);
       requestAnimationFrame(() => setIsTagInputOpen(true));
     },
-    [domId, onTagAdd],
+    [domId, onTagAdd, disabledTagNames],
   );
 
   const handleTagCancel = useCallback(() => {

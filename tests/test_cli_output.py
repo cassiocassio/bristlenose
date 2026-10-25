@@ -329,7 +329,8 @@ class TestPrintPipelineSummary:
         with patch("bristlenose.cli.console", c):
             _print_pipeline_summary(_make_result(total_quotes=0))
         output = buf.getvalue()
-        assert "check API credits or logs" in output
+        # Rich can wrap the sentence even with a fixed-width test console.
+        assert "check API credits or logs" in " ".join(output.split())
 
 
 # ---------------------------------------------------------------------------

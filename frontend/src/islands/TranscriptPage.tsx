@@ -46,6 +46,7 @@ import { quoteExtents } from "../utils/quoteExtents";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { Selector } from "../components/Selector";
 import { isEmbedded } from "../utils/embedded";
+import { PreloadSessionsSidebar } from "../components/DeferredSessionsSidebar";
 import { isExportMode } from "../utils/exportData";
 import { redo, undo } from "../contexts/UndoStore";
 import { resetParagraphScope } from "../utils/paragraphScope";
@@ -963,6 +964,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
 
   return (
     <>
+      {!isEmbedded() && <PreloadSessionsSidebar />}
       {/* Sticky header — session selector + journey chain (when available) */}
       <div
         className={`bn-transcript-journey-header${showTimeline ? " bn-transcript-journey-header--timeline" : ""}`}

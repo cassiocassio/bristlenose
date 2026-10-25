@@ -1,7 +1,7 @@
 ---
 status: current
-last-trued: 2026-10-04
-trued-against: HEAD@main bd9a7f7d on 2026-10-04 — perf.yml (post-merge on main, hard); e2e/tests/perf-gate.spec.ts; check-bundle-budget.py (BUDGET_BYTES 222 kB) via ci.yml's `npm run size`
+last-trued: 2026-10-25
+trued-against: main working tree on 2026-10-25 — initial-load budget and Sessions loading only; workflow/performance checks retain their 4 Oct audit
 ---
 
 # Design: CI Performance Regression Gate
@@ -20,6 +20,19 @@ in `ci.yml`'s *Check bundle size* step, ceiling **222 kB** gzipped first paint
 in § Moves made. What is still on first paint that need not be, and whether to
 ratchet the ceiling, is § Still open.
 
+**25 Oct 2026 working-tree update (unreleased):** the measured initial eager
+JavaScript is **208,357 B**, leaving **13,643 B** under the unchanged 222,000 B
+budget. `SessionsTab` now imports its grid dynamically when its route opens;
+`DeferredSessionsSidebar` loads immediately if visible, otherwise its code is
+preloaded after the browser's grid/transcript has drawn its data (frame then
+idle time, with a timer fallback). Both sidebars' saved state and widths stay
+in the existing store. The Mac keeps its native Sessions navigation and skips
+that preload; its WebView grid now loads on route entry too. Sidebar splitting
+alone still measured 649 B over, which is why the grid's eager import changed
+as well. This is a bundle-gate measurement, not measured rendering latency or
+a promise that opening Sessions downloads no additional code. Dated 4 Oct
+numbers and import paths below are historical observations, not today's tree.
+
 > **It is deliberately NOT a pre-merge gate, and that is a reversal of this
 > doc's original design.** Until **20 May 2026** it was a `perf-gate` job inside
 > `ci.yml` running on every push, exactly as §Goal and §CI-integration below
@@ -37,6 +50,8 @@ ratchet the ceiling, is § Still open.
 > `project.conf:91`), and why `docs/release-premortem.md` incident 12 exists.
 
 ## Changelog
+
+- _2026-10-25_ — trued the initial-load summary against the checked, unreleased Sessions loading changes; preserved dated measurements and marked the modal proposal's later implementation. Anchors: `frontend/src/pages/SessionsTab.tsx`, `frontend/src/components/DeferredSessionsSidebar.tsx`, `frontend/src/islands/SessionsTable.tsx`, `frontend/src/islands/TranscriptPage.tsx`, `scripts/check-bundle-budget.py`; production build and `npm run size`.
 
 - _2026-10-04_ — trued up: status block now covers the bundle budget (222 kB, 192,704 B at `bd9a7f7d`); Problem and metric-table numbers; headroom and the ratchet proposal recomputed; identity-guard snippet, export-fetch snippet and Auth handling matched to the spec; results-schema note matched to the CI artifact upload; dated note on the 3.38 MB export period; `ci.yml` line ref. Anchors: `scripts/check-bundle-budget.py:58`; `e2e/tests/perf-gate.spec.ts:113-120,196-212`; `.github/workflows/perf.yml:88-97`; `.github/workflows/ci.yml:523-524`; commits "bundle budget: 220 -> 222 kB for report undo", "first paint: the locale loader names only the namespaces the spa requests".
 - _2026-09-20_ — trued up: the gate is post-merge on `main`, not pre-merge (see the banner above).
@@ -433,7 +448,13 @@ Headroom after these two moves was **26.8 kB under 222 kB**; at `bd9a7f7d` it is
    growth), and treat each later raise as the deliberate edit the script's
    header already asks for. Not done here: it is a policy call, and this task
    was asked not to move the number without one.
-2. **The always-mounted modals, ~12 kB.** `SettingsModal` (7.6 kB, plus
+2. **The always-mounted modals, ~12 kB (4 Oct proposal; partly superseded).**
+   **25 Oct check:** Settings and Miro are now dynamically imported by
+   `AppLayout`, as are Export and FigJam. Feedback remains eager. The
+   following estimate and proposed tradeoff are the 4 Oct baseline, not a
+   current instruction to convert all of them:
+
+   `SettingsModal` (7.6 kB, plus
    `ModalNav` 1.1 kB and `localeLabels`), `MiroExportPanel` (1.9 kB) and
    `FeedbackModal` (1.1 kB) are statically imported by `AppLayout` and
    rendered closed on every page. `React.lazy` plus mount-on-first-open would

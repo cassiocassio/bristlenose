@@ -2,6 +2,7 @@ import { render, screen, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionsSidebar } from "./SessionsSidebar";
+import { bumpRefreshKey, resetLastRunStore } from "../contexts/LastRunStore";
 import type { SessionsListResponse } from "../utils/types";
 
 // Mock apiGet
@@ -405,6 +406,81 @@ describe("SessionsSidebar", () => {
     // Widen to 400 — full names (fullNameAt ~252)
     fireResize(400);
     await waitFor(() => {
+      expect(screen.getByText("Rachel Chen")).toBeDefined();
+    });
+  });
+
+  // N182: the list was read once per project, so a rename made beside it, or a session a
+  // run added, showed only after a reload.
+  describe("stays current", () => {
+    const renamed = (name: string): SessionsListResponse => ({
+      ...ONE_TO_ONE,
+      sessions: ONE_TO_ONE.sessions.map((sess, i) =>
+        i === 0
+          ? {
+              ...sess,
+              speakers: sess.speakers.map((sp) =>
+                sp.speaker_code === "p1" ? { ...sp, name } : sp,
+              ),
+            }
+          : sess,
+      ),
+    });
+
+    beforeEach(() => {
+      resetLastRunStore();
+      mockApiGet.mockReset();
+    });
+
+    it("shows a participant's new name after a rename is written", async () => {
+      mockApiGet.mockResolvedValueOnce(ONE_TO_ONE);
+      renderInRouter("/report/sessions/s1");
+      await waitFor(() => expect(screen.getByText("Rachel Chen")).toBeDefined());
+
+      mockApiGet.mockResolvedValueOnce(renamed("Rachel Okafor"));
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:speakers-written"));
+      });
+
+      await waitFor(() => expect(screen.getByText("Rachel Okafor")).toBeDefined());
+      expect(screen.queryByText("Rachel Chen")).toBeNull();
+    });
+
+    it("lists a session a run added", async () => {
+      mockApiGet.mockResolvedValueOnce(MULTI_PARTICIPANT);
+      renderInRouter("/report/sessions");
+      await waitFor(() => expect(screen.getByText("#1")).toBeDefined());
+
+      mockApiGet.mockResolvedValueOnce({
+        ...MULTI_PARTICIPANT,
+        sessions: [...MULTI_PARTICIPANT.sessions, { ...MULTI_PARTICIPANT.sessions[0], session_id: "s2", session_number: 2 }],
+      });
+      act(() => bumpRefreshKey());
+
+      await waitFor(() => expect(screen.getByText("#2")).toBeDefined());
+    });
+
+    it("does not let an older read undo a rename", async () => {
+      let finishOld!: (data: SessionsListResponse) => void;
+      mockApiGet.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve; }));
+      renderInRouter("/report/sessions");
+      mockApiGet.mockResolvedValueOnce(renamed("Rachel Okafor"));
+      act(() => window.dispatchEvent(new CustomEvent("bn:speakers-written")));
+      await waitFor(() => expect(screen.getByText("Rachel Okafor")).toBeDefined());
+      await act(async () => finishOld(ONE_TO_ONE));
+      expect(screen.queryByText("Rachel Chen")).toBeNull();
+      expect(screen.getByText("Rachel Okafor")).toBeDefined();
+    });
+
+    it("keeps the list it has when a re-read fails", async () => {
+      mockApiGet.mockResolvedValueOnce(ONE_TO_ONE);
+      renderInRouter("/report/sessions");
+      await waitFor(() => expect(screen.getByText("Rachel Chen")).toBeDefined());
+
+      mockApiGet.mockRejectedValueOnce(new Error("offline"));
+      act(() => bumpRefreshKey());
+      await act(async () => {});
+
       expect(screen.getByText("Rachel Chen")).toBeDefined();
     });
   });

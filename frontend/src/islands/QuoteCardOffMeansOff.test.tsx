@@ -96,12 +96,21 @@ describe("QuoteCard tag input: a switched-off codebook's tag (N189)", () => {
     expect(onTagAdd).toHaveBeenCalledWith("q-p1-26", "friction");
   });
 
-  // Strict pin, owner ruling needed (decisions-pending): typing the whole name and pressing Return
-  // still applies the tag. Remove `.fails` when the ruling is built.
-  it.fails("does not apply it when its whole name is typed and Return is pressed", async () => {
+  it("does not apply it when its whole name is typed and Return is pressed", async () => {
     const onTagAdd = vi.fn();
     renderCard(onTagAdd);
     await typeTag("wayfinding");
     expect(onTagAdd).not.toHaveBeenCalled();
+    expect(document.querySelector("input.tag-input")).not.toBeNull();
+  });
+
+  it("also refuses a mixed-case disabled name committed with Tab", async () => {
+    const onTagAdd = vi.fn();
+    renderCard(onTagAdd);
+    fireEvent.click(screen.getByTestId("bn-quote-q-p1-26-add-tag"));
+    const input = document.querySelector("input.tag-input") as HTMLInputElement;
+    await userEvent.type(input, "Wayfinding{Tab}");
+    expect(onTagAdd).not.toHaveBeenCalled();
+    expect(document.querySelector("input.tag-input")).not.toBeNull();
   });
 });

@@ -4,6 +4,15 @@ Manual QA steps waiting to be confirmed. Per-item — say "QA done for X" to che
 
 ---
 
+## Deferred Sessions navigation — reliability #92
+
+**Date:** 25 Oct 2026 · Codex · uncommitted on main.
+
+- [ ] **Cold browser, first-open feel.** Run `.venv/bin/bristlenose serve --dev trial-runs/project-ikea` from the repo root; open http://localhost:8150/report/. Visit Sessions and a transcript with the left sidebar closed, then open it immediately and after reading for a moment. The main content should remain usable while the list arrives. For download timing use the production serve (omit `--dev`) with browser caching disabled; Vite dev modules do not measure production chunk latency.
+- [ ] **Remembered layout.** Open both sidebars on Quotes, resize each, visit Sessions and a transcript, return to Quotes, then reload. The open/closed choices and widths should persist (a narrow window may fit them closed temporarily). Repeat with the left sidebar saved open: it should return open and begin loading immediately. Check the Mac's native Sessions navigation still feels unchanged.
+
+---
+
 ## Problem reports — N08 and the whole-report crash pane
 
 **Date:** 24 Oct 2026

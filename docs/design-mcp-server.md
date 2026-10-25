@@ -1,7 +1,7 @@
 ---
 status: mixed
-last-trued: 2026-10-14
-trued-against: HEAD@main (6562c7be) on 2026-10-14
+last-trued: 2026-10-25
+trued-against: main working tree on 2026-10-25 — CLI name-sharing message and grounding gate only; not released
 split-candidate: true
 ---
 
@@ -28,7 +28,13 @@ _The §9a spike is built and accepted (30 Jul 2026) — see §9a-results. Phase 
 > offering 1(b), the in-app chat lens, is parked as of 4 Oct 2026: MCP is the
 > chat lens** — read §6b, §9a's comparison and §10 Q7 with that in mind.
 
+> **25 Oct 2026, targeted check:** the working-tree CLI message and §7 now
+> describe the existing name-sharing policy and CLI token scope accurately.
+> This is unreleased; the other coverage claims above retain their original dates.
+
 ## Changelog
+
+- _2026-10-25_ — trued the CLI name-sharing explanation and §7's default against the checked working tree (not yet released). The CLI prints the existing global override or study policy, warns that quote text may contain names, and explains its broader API credential. Anchors: `bristlenose/cli.py` (`_print_mcp_connect`), `bristlenose/server/grounding.py` (`_mcp_anonymise_active`), `tests/test_mcp_server.py`. Other phases and historical decisions were not re-audited.
 
 - _14 Oct 2026_ — trued up (progressive lenses): the tools answer during a first
   analysis, and every result then carries a `coverage` dict; §4 says so and gives
@@ -976,6 +982,13 @@ above:
   gated path to persons, read at tool-call time so a flip takes effect on
   the agent's next call. Names appear in the overview speaker map only;
   quotes always cite codes. The CLI does not yet expose the switch.
+  **25 Oct 2026 implementation clarification (unreleased):** the CLI still
+  has no dedicated switch, but the existing process environment override
+  `BRISTLENOSE_MCP_ANONYMISE` applies there too. Its connect block now prints
+  On/Off for that override, or explains the live per-study policy when absent.
+  It also states that quote text may contain names and that its single
+  credential opens the broader report API, including names. The desktop's
+  agent credential remains scoped; this fix changes no token permissions.
 - **Open model question (parked) — half resolved, half still live (21 Aug
   2026).** The *exposure* half is settled and the answer is neither option
   below: "fronted" stopped being the predicate when scope became derived
@@ -1030,8 +1043,19 @@ PII value with timecodes) and `llm-calls.jsonl` (session ids, prompt shas, timin
 fingerprints).
 
 **MCP exposure is an explicit allowlist, never a filesystem resource.** There is
-no MCP tool that takes a path. Anonymisation defaults on, reusing the export
-anonymisation boundary; real names are a per-connection opt-in.
+no MCP tool that takes a path. Speaker-name attribution follows the existing
+Anonymise setting, **off by default**: when `BRISTLENOSE_MCP_ANONYMISE` is
+present it overrides the study preference in both directions; otherwise the
+study's `projects.mcp_anonymise` value applies at tool-call time. This omits
+the supplied speaker-name roster when on; quote text remains as written and
+may contain names. The export Anonymise choice is separate.
+
+The CLI's printed credential also opens the report API, including names;
+omitting names from MCP tool responses does not restrict that credential.
+The desktop uses a separate scoped agent credential (see §6a's dated account).
+
+> **Earlier design, superseded:** anonymisation defaults on, reusing the export
+> anonymisation boundary; real names are a per-connection opt-in.
 
 ### 7a. What is recorded when an agent reads a study — decided 22 Aug 2026
 

@@ -53,6 +53,7 @@ import {
 import type { PersonData } from "../utils/api";
 import { postProjectAction } from "../shims/bridge";
 import { isEmbedded } from "../utils/embedded";
+import { PreloadSessionsSidebar } from "../components/DeferredSessionsSidebar";
 import { isExportMode } from "../utils/exportData";
 import { formatDurationHuman, formatFinderDate, formatFinderFilename } from "../utils/format";
 import type {
@@ -718,6 +719,7 @@ export function SessionsTable({
 
   return (
     <section className={handoverClass(handingOver, "bn-session-table")}>
+      {!embedded && <PreloadSessionsSidebar />}
       {/* Zone title. Must be a direct child of this <section> for the
           flush-to-datum rule to reach it
           (`.center > main > section:first-of-type > .section-heading`).

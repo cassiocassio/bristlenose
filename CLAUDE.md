@@ -487,6 +487,13 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 
 ## Session-end housekeeping
 
+### Shared Claude / Codex handoffs
+
+- Use the existing records, not a separate agent progress register: `TODO.md` for the current handoff, `docs/private/100days.md` for backlog, and the relevant design/decision doc for owner rulings. Private docs stay gitignored; never force-add them.
+- For each reliability ruling, record its id, owner's scope and deferrals, files changed, exact verification and review scope, and whether work is uncommitted, committed (sha), pushed or released. Name the agent; distinguish self-review from independent review. Leave a one-line release-note candidate in TODO for user-facing changes; `CHANGELOG.md` and README release entries are written at release time, not under an invented Unreleased heading.
+- On pickup, read this guidance, TODO, the relevant decision record and recent git history; inspect the working tree before editing. One agent owns a ruling's edits at a time in the shared checkout. Re-read files before changing them; preserve unrelated edits and stage only owned paths.
+- Respect `.claude/current-task.json`, workflow logs, review receipts and end-session sentinels as workflow state: do not overwrite another session's active task or mark a workflow completed unless its required steps actually ran. Claude auto-memory is supplementary; an agreed decision must also live in the shared project records.
+
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 
 ## Current status

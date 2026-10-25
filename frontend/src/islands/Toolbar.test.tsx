@@ -1,9 +1,10 @@
-import { render, fireEvent, act } from "@testing-library/react";
+import { render, fireEvent, act, waitFor } from "@testing-library/react";
 import { Toolbar } from "./Toolbar";
 import { addSearchToken, initFromQuotes, resetStore, setSearchQuery } from "../contexts/QuotesContext";
 import { announce } from "../utils/announce";
 import { personToken } from "../utils/searchTokens";
 import { _resetEmbeddedCache } from "../utils/embedded";
+import { getPeople } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 // Mock API
@@ -167,5 +168,41 @@ describe("Toolbar", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// N184: the people list was read once per page, and a Toolbar remount (leaving Quotes and
+// coming back) used the module's copy, so a participant renamed in between was still offered,
+// and still found, under the old name. It is read each time the Quotes lens opens.
+describe("Toolbar search names after a rename", () => {
+  it("offers a renamed participant under the new name and not the old one", async () => {
+    vi.useRealTimers();
+    initFromQuotes([makeQuote({ participant_id: "p1", speaker_name: "Participant 1" })], true);
+    // an earlier visit to Quotes read the old name; the researcher left and renamed
+    vi.mocked(getPeople).mockResolvedValueOnce({
+      p1: { full_name: "Rachel Chen", short_name: "Rachel" },
+    } as never);
+    const first = render(<Toolbar />);
+    await act(async () => {});
+    first.unmount();
+
+    vi.mocked(getPeople).mockResolvedValueOnce({
+      p1: { full_name: "Rachel Okafor", short_name: "Rachel" },
+    } as never);
+    const { getByTestId, queryAllByTestId } = render(<Toolbar />);
+    await act(async () => {});
+
+    const input = getByTestId("bn-toolbar-search-input");
+    fireEvent.focus(input);
+    // The field debounces what is typed into the store; the new name must come up
+    fireEvent.change(input, { target: { value: "Okafor" } });
+    await waitFor(() => expect(queryAllByTestId("bn-toolbar-search-option-person")).toHaveLength(1));
+
+    // and the old one must not
+    fireEvent.change(input, { target: { value: "Chen" } });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 400));
+    });
+    expect(queryAllByTestId("bn-toolbar-search-option-person")).toHaveLength(0);
   });
 });

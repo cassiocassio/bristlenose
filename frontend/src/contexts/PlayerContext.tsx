@@ -83,13 +83,33 @@ export function getPlayerPlaying(): boolean {
 // right-click offers Play only for a recording the player can find.
 let _videoMap: VideoMap = {};
 let _videoMapLoaded: () => void = () => {};
-let _videoMapReady = new Promise<void>((resolve) => {
-  _videoMapLoaded = resolve;
-});
+let _videoMapReady: Promise<void>;
+// A card drawn before the map is read, or after a run lands, follows it.
+const _mapListeners = new Set<() => void>();
+let _mapRead = false;
+function awaitVideoMap(): void {
+  _mapRead = false;
+  _videoMapReady = new Promise<void>((resolve) => {
+    _videoMapLoaded = () => {
+      resolve();
+      _mapRead = true;
+      _mapListeners.forEach((l) => l());
+    };
+  });
+}
+awaitVideoMap();
 
 /** Whether `seekTo(key, …)` would find a recording. */
 export function hasRecording(key: string): boolean {
   return !!_videoMap[key];
+}
+
+/** `hasRecording` that follows the map, and says yes until the map has been read. */
+export function useHasRecording(key: string): boolean {
+  return useSyncExternalStore(
+    (l) => (_mapListeners.add(l), () => _mapListeners.delete(l)),
+    () => !_mapRead || !!_videoMap[key],
+  );
 }
 
 /** Settles once the video map has been read (or failed to be), so a caller can seek at load. */
@@ -98,11 +118,10 @@ export function whenVideoMapLoaded(): Promise<void> {
 }
 
 /** Test helper. */
-export function resetVideoMapForTests(map: VideoMap = {}): void {
-  _videoMap = map;
-  _videoMapReady = new Promise<void>((resolve) => {
-    _videoMapLoaded = resolve;
-  });
+export function resetVideoMapForTests(map?: VideoMap): void {
+  _videoMap = map ?? {};
+  awaitVideoMap();
+  if (map) _videoMapLoaded();
 }
 
 // ── Player time (for the transcript's timeline mark) ─────────────────

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { QuoteSections } from "./QuoteSections";
 import { PlayerContext, resetVideoMapForTests } from "../contexts/PlayerContext";
 import type { QuotesListResponse } from "../utils/types";
@@ -86,13 +86,23 @@ describe("Quotes lens timecodes with and without a recording (N187)", () => {
     expect(document.querySelector('a.timecode[data-participant="p2"]')).not.toBeNull();
   });
 
-  // Strict pin, awaiting a ruling (decisions-pending): drop `.fails` when it is built.
-  it.fails("draws a plain [mm:ss], not a link, for a participant the player has no recording of", async () => {
+  it("draws a plain [mm:ss], not a link, for a participant the player has no recording of", async () => {
     resetVideoMapForTests({ p1: "/media/a.mp4" }); // p2: no recording
     renderLens();
     await waitFor(() => expect(screen.getByText("text of q-p2-240")).toBeInTheDocument());
     expect(document.querySelector('a.timecode[data-participant="p1"]')).not.toBeNull();
     expect(document.querySelector('a.timecode[data-participant="p2"]')).toBeNull();
     expect(screen.getByText("[04:00]")).toBeInTheDocument();
+  });
+
+  it("updates cards already drawn when the recording map arrives or changes", async () => {
+    resetVideoMapForTests(); // the map is still loading
+    renderLens();
+    await screen.findByText("text of q-p2-240");
+    expect(document.querySelector('a.timecode[data-participant="p2"]')).not.toBeNull();
+    act(() => resetVideoMapForTests({ p1: "/media/a.mp4" }));
+    expect(document.querySelector('a.timecode[data-participant="p2"]')).toBeNull();
+    act(() => resetVideoMapForTests({ p1: "/media/a.mp4", p2: "/media/b.mp4" }));
+    expect(document.querySelector('a.timecode[data-participant="p2"]')).not.toBeNull();
   });
 });

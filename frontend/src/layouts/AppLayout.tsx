@@ -17,7 +17,7 @@ import { formatTimecode } from "../utils/format";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { ListIcon, SidebarLayout, sidebarAnimations } from "../components/SidebarLayout";
 import { Tooltip } from "../components/Tooltip";
-import { SessionsSidebar } from "../components/SessionsSidebar";
+import { DeferredSessionsSidebar } from "../components/DeferredSessionsSidebar";
 // By path, not through the `components` barrel — the barrel rides in the
 // always-loaded chunk, and this is only reachable from one route.
 import { CodebookV2Sidebar } from "../components/CodebookV2Sidebar";
@@ -939,7 +939,7 @@ function AppShell() {
         // The embedded gate repeats here (belt to showSidebar's braces) so
         // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
         // useEffect fetch would otherwise still fire behind an inactive layout.
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? <SessionsSidebar /> : isCodebook ? <CodebookV2Sidebar /> : isSignals ? <SignalsSidebar /> : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <DeferredSessionsSidebar visible={sidebar.tocMode !== "closed"} /> : isCodebook ? <CodebookV2Sidebar /> : isSignals ? <SignalsSidebar /> : undefined
       }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"

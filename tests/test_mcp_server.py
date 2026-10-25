@@ -835,6 +835,35 @@ class TestCliConnectBlock:
     a reversed decision; nothing else would catch a vendor command creeping
     back into product output)."""
 
+    @pytest.mark.parametrize(
+        ("override", "expected"),
+        [
+            (None, "Speaker names are shared unless the study's Anonymise setting is on."),
+            ("1", "Anonymise for agents: On. MCP tools omit speaker names and use codes."),
+            (" true ", "Anonymise for agents: On. MCP tools omit speaker names and use codes."),
+            ("0", "Anonymise for agents: Off. MCP tools include available speaker names."),
+        ],
+    )
+    def test_name_sharing_message_matches_policy(self, override, expected, monkeypatch) -> None:
+        from io import StringIO
+
+        from rich.console import Console
+
+        from bristlenose import cli
+
+        if override is None:
+            monkeypatch.delenv("BRISTLENOSE_MCP_ANONYMISE", raising=False)
+        else:
+            monkeypatch.setenv("BRISTLENOSE_MCP_ANONYMISE", override)
+        stream = StringIO()
+        monkeypatch.setattr(cli, "console", Console(file=stream, width=120, color_system=None))
+        cli._print_mcp_connect(8150)
+        out = stream.getvalue()
+        assert expected in out
+        assert "Quote text is shared as written and may contain names." in out
+        assert "header also grants access to the report API, including names." in out
+        assert "speaker codes in place of names" not in out
+
     def test_prints_primitives_and_docs_url_never_a_vendor_command(
         self, capsys, monkeypatch,
     ) -> None:

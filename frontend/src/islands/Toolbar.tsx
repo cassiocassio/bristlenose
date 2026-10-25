@@ -85,6 +85,8 @@ export function Toolbar() {
       cancelled = true;
     };
   }, [peopleLoaded]);
+  // Gone with the lens: a person renamed meanwhile is read again when Quotes next opens.
+  useEffect(() => () => setSearchPeople(undefined), []);
 
   const combo = useMemo((): SearchCombo => {
     const colours = new Map<string, { colourSet: string; colourIndex: number }>();

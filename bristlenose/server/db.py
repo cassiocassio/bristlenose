@@ -7,7 +7,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine, event, inspect
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import URL, Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -24,7 +24,21 @@ def _default_db_url() -> str:
     """Fallback DB URL when no project directory is available."""
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     db_path = _CONFIG_DIR / "bristlenose.db"
-    return f"sqlite:///{db_path}"
+    return sqlite_url(db_path)
+
+
+def sqlite_url(db_path: Path) -> str:
+    """A SQLAlchemy URL for a SQLite file, with the path escaped.
+
+    ``f"sqlite:///{path}"`` is parsed as a URL: SQLAlchemy ends the database at
+    the first ``?`` and percent-decodes the rest, so a study under ``Who? Inc/``
+    kept its database in a stray file named ``Who`` beside the folder (shared with
+    every other study under it) and ``Interview%20recordings`` could not be
+    opened at all. ``URL.create`` escapes both; ``#`` and a bare ``%`` were
+    always safe. ``curation_counts`` and the Mac's readers escape the same
+    path with ``as_uri()``, so every reader names one file (N197).
+    """
+    return URL.create("sqlite", database=str(db_path)).render_as_string(hide_password=False)
 
 
 def db_url_for_project(project_dir: Path) -> str:
@@ -41,7 +55,7 @@ def db_url_for_project(project_dir: Path) -> str:
 
     db_path = project_output_dir(project_dir) / ".bristlenose" / "bristlenose.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{db_path}"
+    return sqlite_url(db_path)
 
 
 def get_engine(db_url: str | None = None) -> Engine:

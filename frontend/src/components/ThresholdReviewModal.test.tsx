@@ -557,6 +557,36 @@ describe("ThresholdReviewModal", () => {
     expect(sliders[1]).toHaveAttribute("aria-valuenow", "0.85");
   });
 
+  it("reopens a project whose stored thresholds drifted on exact stops, and Apply sends them clean (N185)", async () => {
+    // An earlier build stored 0.30000000000000004 / 0.8500000000000001.
+    mockGetStatus.mockResolvedValue({
+      applied_lower_threshold: 0.30000000000000004,
+      applied_upper_threshold: 0.8500000000000001,
+    } as never);
+    mockGetProposals.mockResolvedValue({
+      proposals: [makeProposal({ id: 1, confidence: 0.3 }), makeProposal({ id: 2, confidence: 0.85 })],
+      total: 2,
+    } as never);
+    mockAcceptAll.mockResolvedValue({ accepted: 1 });
+    mockDenyAll.mockResolvedValue({ denied: 0 });
+
+    render(
+      <ThresholdReviewModal
+        open
+        frameworkId="garrett"
+        frameworkTitle="Garrett"
+        onClose={vi.fn()}
+        onApply={vi.fn()}
+      />,
+    );
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId("bn-threshold-apply"));
+    await act(async () => {});
+
+    expect(mockAcceptAll).toHaveBeenCalledWith("garrett", 0.85);
+    expect(mockDenyAll).toHaveBeenCalledWith("garrett", 0.3);
+  });
+
   it("falls back to the defaults when nothing has been applied yet", async () => {
     mockGetProposals.mockResolvedValue({
       proposals: [makeProposal()],

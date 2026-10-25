@@ -23,6 +23,7 @@ import {
 import type { ApiError } from "../utils/api";
 import type { ProposedTagResponse } from "../utils/types";
 import { isExportMode } from "../utils/exportData";
+import { snapToStep } from "../utils/confidenceStep";
 import { reviewedElsewhere } from "../contexts/QuotesContext";
 import { ConfidenceHistogram } from "./ConfidenceHistogram";
 import { DualThresholdSlider } from "./DualThresholdSlider";
@@ -105,8 +106,10 @@ export function ThresholdReviewModal({
     // and this is fidelity, not a precondition for reviewing.
     getAutoCodeStatus(frameworkId)
       .then((job) => {
-        if (job.applied_lower_threshold != null) setLower(job.applied_lower_threshold);
-        if (job.applied_upper_threshold != null) setUpper(job.applied_upper_threshold);
+        // Snapped: an earlier build stored drifted values (0.30000000000000004)
+        // and reopening on one would keep sending it to Apply.
+        if (job.applied_lower_threshold != null) setLower(snapToStep(job.applied_lower_threshold));
+        if (job.applied_upper_threshold != null) setUpper(snapToStep(job.applied_upper_threshold));
       })
       .catch(() => {});
   }, [open, frameworkId]);

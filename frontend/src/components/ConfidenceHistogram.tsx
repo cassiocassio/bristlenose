@@ -29,8 +29,11 @@ interface ConfidenceHistogramProps {
 
 /** Assign a proposal to a bin index (0–19). */
 function binIndex(confidence: number): number {
-  const idx = Math.floor(confidence / BIN_WIDTH);
-  return Math.min(idx, NUM_BINS - 1);
+  // Not `confidence / BIN_WIDTH`: 0.7 / 0.05 is 13.999999999999998, which put a
+  // proposal sitting exactly on a bin edge one bin low. The epsilon is far below
+  // any real confidence's resolution and far above the division's error.
+  const idx = Math.floor(confidence * NUM_BINS + 1e-9);
+  return Math.max(0, Math.min(idx, NUM_BINS - 1));
 }
 
 /** Zone for a bin given thresholds. */

@@ -7,8 +7,9 @@
 
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { CONFIDENCE_STEP, snapToStep } from "../utils/confidenceStep";
 
-const STEP = 0.05;
+const STEP = CONFIDENCE_STEP;
 const MIN_GAP = 0.05;
 
 interface DualThresholdSliderProps {
@@ -18,14 +19,20 @@ interface DualThresholdSliderProps {
   onUpperChange: (value: number) => void;
 }
 
-/** Snap a raw 0–1 value to the nearest 0.05 step. */
-function snap(value: number): number {
-  return Math.round(value / STEP) * STEP;
-}
+/** Snap a raw 0–1 value to the nearest 0.05 step (see `snapToStep`). */
+const snap = snapToStep;
 
 /** Clamp a value to [min, max]. */
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Clamp a step value to bounds, then snap again: the bounds are `upper - 0.05`
+ * and `lower + 0.05`, which drift the same way (0.7 - 0.05 is 0.6499999999999999).
+ */
+function clampStep(value: number, min: number, max: number): number {
+  return snap(clamp(value, min, max));
 }
 
 export function DualThresholdSlider({
@@ -56,9 +63,9 @@ export function DualThresholdSlider({
       const onMove = (ev: PointerEvent) => {
         const raw = snap(clientXToValue(ev.clientX));
         if (which === "lower") {
-          onLowerChange(clamp(raw, 0, upper - MIN_GAP));
+          onLowerChange(clampStep(raw, 0, upper - MIN_GAP));
         } else {
-          onUpperChange(clamp(raw, lower + MIN_GAP, 1));
+          onUpperChange(clampStep(raw, lower + MIN_GAP, 1));
         }
       };
 
@@ -82,9 +89,9 @@ export function DualThresholdSlider({
       if (delta === 0) return;
       e.preventDefault();
       if (which === "lower") {
-        onLowerChange(clamp(snap(lower + delta), 0, upper - MIN_GAP));
+        onLowerChange(clampStep(snap(lower + delta), 0, upper - MIN_GAP));
       } else {
-        onUpperChange(clamp(snap(upper + delta), lower + MIN_GAP, 1));
+        onUpperChange(clampStep(snap(upper + delta), lower + MIN_GAP, 1));
       }
     },
     [lower, upper, onLowerChange, onUpperChange],
@@ -120,7 +127,7 @@ export function DualThresholdSlider({
         role="slider"
         aria-label={t("autocode.lowerThreshold")}
         aria-valuemin={0}
-        aria-valuemax={upper - MIN_GAP}
+        aria-valuemax={snap(upper - MIN_GAP)}
         aria-valuenow={lower}
         tabIndex={0}
         onPointerDown={startDrag("lower")}
@@ -136,7 +143,7 @@ export function DualThresholdSlider({
         style={{ left: upperPct }}
         role="slider"
         aria-label={t("autocode.upperThreshold")}
-        aria-valuemin={lower + MIN_GAP}
+        aria-valuemin={snap(lower + MIN_GAP)}
         aria-valuemax={1}
         aria-valuenow={upper}
         tabIndex={0}

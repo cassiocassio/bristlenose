@@ -14,6 +14,8 @@ Tests every code path that touches participant names:
 
 from __future__ import annotations
 
+import pytest
+
 from bristlenose.models import (
     FullTranscript,
     PeopleFile,
@@ -687,6 +689,29 @@ class TestExtractNamesFromLabels:
         t = _transcript_with_labels("p1", ["1234"] * 5)
         names = extract_names_from_labels([t])
         assert "p1" not in names
+
+    @pytest.mark.parametrize(
+        "label",
+        ["Speaker 9", "Speaker 10", "Speaker 12", "SPEAKER_10", "speaker10", "Unknown Speaker"],
+    )
+    def test_a_numbered_or_unknown_speaker_is_not_a_name(self, label: str) -> None:
+        """N172: the pattern took ``speaker`` plus ONE character, so an export that
+        numbers speakers past nine (Otter, Rev) made 'Speaker 10' and 'Speaker 11'
+        two people's names, and both short names came out 'Speaker 1.'."""
+        t = _transcript_with_labels("p1", [label] * 5)
+        assert "p1" not in extract_names_from_labels([t])
+
+    def test_two_high_numbered_speakers_get_no_names_to_collide(self) -> None:
+        a = _transcript_with_labels("p1", ["Speaker 10"] * 5)
+        b = _transcript_with_labels("p2", ["Speaker 11"] * 5)
+        assert extract_names_from_labels([a, b]) == {}
+
+    @pytest.mark.parametrize("label", ["Speaker", "Speaker Phone", "Speakers Corner", "Unknown Jones"])
+    def test_a_name_that_only_starts_like_a_placeholder_is_still_a_name(
+        self, label: str,
+    ) -> None:
+        t = _transcript_with_labels("p1", [label] * 5)
+        assert extract_names_from_labels([t]) == {"p1": label}
 
     def test_guid_not_filtered(self) -> None:
         """Azure AD GUIDs are not caught by generic filter — they become names.

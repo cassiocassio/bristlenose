@@ -436,9 +436,12 @@ def build_display_name_map(people: PeopleFile) -> dict[str, str]:
 # Name extraction from metadata
 # ---------------------------------------------------------------------------
 
-# Labels that are generic placeholders, not real names.
+# Labels that are generic placeholders, not real names. A speaker is a letter OR
+# a whole number: the pattern took one character, so "Speaker 10" and above (Otter
+# and Rev number past nine) became two people's names, both short-named "Speaker 1."
+# (N172). "Participant 1" is deliberately not here: a researcher's own pseudonym.
 _GENERIC_LABEL_RE = re.compile(
-    r"^(speaker\s*[a-z0-9]|SPEAKER_\d+|unknown|narrator)$",
+    r"^(speaker\s*(?:[a-z]|\d+)|SPEAKER_\d+|unknown(?:\s+speaker)?|narrator)$",
     re.IGNORECASE,
 )
 

@@ -217,6 +217,25 @@ def test_a_project_named_outside_latin_1_still_downloads(client: TestClient, ext
     assert unquote(star) == f"駅の調査 Łódź-quotes.{ext}"
 
 
+@pytest.mark.parametrize("name", ["Acme: checkout study", "Q3:Q4", "Round 2\x1f study"])
+def test_a_project_named_with_a_character_a_sheet_cannot_hold_still_downloads(
+    client: TestClient, name: str,
+) -> None:
+    """N138: a colon (Finder's rendering of a typed "/") or a control character in the
+    study's name made the workbook refuse its own title, and the route answered 500."""
+    from openpyxl import load_workbook
+
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        db.get(Project, 1).name = name
+        db.commit()
+    finally:
+        db.close()
+    resp = client.get("/api/projects/1/export/quotes.xlsx")
+    assert resp.status_code == 200
+    assert load_workbook(io.BytesIO(resp.content)).active.max_row == 5
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------

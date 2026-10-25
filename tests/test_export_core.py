@@ -104,6 +104,31 @@ class TestExcelSheetName:
         assert excel_sheet_name("[]*?/\\") == "Quotes"
 
 
+    def test_strips_colon(self):
+        """N138: openpyxl's title rule forbids ':' and ours did not, so every
+        spreadsheet export of a study called "Acme: checkout" (a folder Finder
+        names with a colon when a "/" is typed) was a 500."""
+        assert excel_sheet_name("Acme: checkout study") == "Acme checkout study"
+
+    @pytest.mark.parametrize(
+        "char", [chr(c) for c in range(0x20)] + ["\x7f", ":", "[", "]", "*", "?", "/", "\\"]
+    )
+    def test_every_character_a_workbook_refuses_is_gone(self, char: str):
+        """The oracle is the library that writes the file, not our own list: the
+        name must be assignable to a sheet and survive a save and a reload."""
+        import io
+
+        from openpyxl import Workbook, load_workbook
+
+        name = excel_sheet_name(f"Round{char}2 study")
+        wb = Workbook()
+        wb.active.title = name
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        assert load_workbook(buffer).active.title == name
+
+
 # _format_timecode() was a private copy of bristlenose.utils.timecodes.format_timecode
 # and was deleted on 22 Aug 2026 when the nine timecode implementations were
 # consolidated to one per language. Its five cases (0, 5, 125, 3661, 10.7 s) moved

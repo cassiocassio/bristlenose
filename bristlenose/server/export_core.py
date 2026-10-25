@@ -45,8 +45,10 @@ from bristlenose.utils.timecodes import format_timecode
 #: Characters that trigger formula interpretation in Excel / Google Sheets.
 _FORMULA_TRIGGERS = frozenset("=+-@\t\r")
 
-#: Characters illegal in Excel sheet names.
-_EXCEL_SHEET_ILLEGAL = re.compile(r"[\[\]\*\?/\\]")
+#: Characters illegal in Excel sheet names: ``: \\ / ? * [ ]`` (Excel's own list; the
+#: colon was missing until 25 Oct 2026) and the control characters, which the file's
+#: XML cannot hold, so the workbook refuses to save.
+_EXCEL_SHEET_ILLEGAL = re.compile(r"[\[\]\*\?/\\:\x00-\x1f\x7f]")
 
 
 def csv_safe(value: str) -> str:
@@ -104,7 +106,7 @@ def excel_sheet_name(name: str, max_length: int = 31) -> str:
     """Sanitise a project name for use as an Excel sheet tab name.
 
     Excel sheet names must not:
-    - Contain ``[ ] * ? / \\``
+    - Contain ``: [ ] * ? / \\`` or a control character
     - Start or end with ``'``
     - Exceed 31 characters
 

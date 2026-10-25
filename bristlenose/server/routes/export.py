@@ -180,13 +180,21 @@ def _anonymise_data(endpoints: dict[str, Any]) -> None:
                     if field in spk:
                         spk[field] = ""
 
-    # Quotes — speaker names in sections and themes
+    # Quotes — speaker names in sections and themes, and in the two flat buckets
+    # the same payload carries: ``uncategorised`` (pinned quotes the analysis files
+    # nowhere; the Uncategorised floor draws them) and ``unjoined`` (quotes in no
+    # section or theme and not on the floor).  Only the grouped lists were blanked
+    # until 25 Oct 2026, so the floor named the participant in an anonymised report.
     quotes = endpoints.get("/quotes") or {}
     for group_key in ("sections", "themes"):
         for group in quotes.get(group_key, []):
             for q in group.get("quotes", []):
                 if q.get("participant_id", "").startswith("p"):
                     q["speaker_name"] = ""
+    for bucket_key in ("uncategorised", "unjoined"):
+        for q in quotes.get(bucket_key, []):
+            if q.get("participant_id", "").startswith("p"):
+                q["speaker_name"] = ""
 
     # Transcripts — speaker names (one embed key per session)
     for key, tx in endpoints.items():

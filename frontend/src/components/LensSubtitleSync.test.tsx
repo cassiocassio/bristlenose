@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, waitFor, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { LensSubtitleSync, tabFromPath } from "./LensSubtitleSync";
 import { addSearchToken, initFromQuotes, resetStore } from "../contexts/QuotesContext";
 import { personToken } from "../utils/searchTokens";
-import { quotesSubtitle } from "../utils/lensSubtitle";
+import { codebookSubtitle, quotesSubtitle } from "../utils/lensSubtitle";
+import { getCodebook } from "../utils/api";
 import type { QuoteResponse } from "../utils/types";
 
 vi.mock("../utils/api", () => ({
@@ -74,5 +75,48 @@ describe("the Quotes subtitle counts what the filters leave", () => {
     await waitFor(() => expect(document.title).toBe(quotesSubtitle(3)));
     act(() => addSearchToken(personToken("p2")));
     await waitFor(() => expect(document.title).toBe(quotesSubtitle(2)));
+  });
+});
+
+// N180: the codebook was read at page load and again only on `codebook-changed`, which a
+// tag made on a quote card never fires, so the title kept the old count while the lens
+// itself (which re-reads when it opens) listed the new tag.
+describe("the Codebook subtitle after a tag made elsewhere", () => {
+  const book = (tags: string[]) =>
+    ({
+      groups: [
+        {
+          name: "Mine",
+          framework_id: null,
+          tags: tags.map((name) => ({ name })),
+        },
+      ],
+      ungrouped: [],
+      all_tag_names: tags,
+    }) as never;
+
+  it("is read again when the Codebook lens is opened", async () => {
+    resetStore();
+    initFromQuotes([]);
+    vi.mocked(getCodebook).mockResolvedValueOnce(book(["a"]));
+    const nav: { go: (to: string) => void } = { go: () => {} };
+    function Nav() {
+      const navigate = useNavigate();
+      nav.go = navigate;
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={["/report/quotes"]}>
+        <LensSubtitleSync />
+        <Nav />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(getCodebook).toHaveBeenCalled());
+
+    // a second tag is made on a quote card: nothing is dispatched
+    vi.mocked(getCodebook).mockResolvedValue(book(["a", "b"]));
+    act(() => nav.go("/report/codebook"));
+
+    await waitFor(() => expect(document.title).toBe(codebookSubtitle(1, 2)));
   });
 });

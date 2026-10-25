@@ -56,10 +56,12 @@ export function LensSubtitleSync(): null {
   const signals = useSignalStore();
   const screensCount = useScreensCount();
   const [codebook, setCodebook] = useState<CodebookResponse | null>(null);
+  const onCodebook = tab === "codebook";
 
-  // Codebook is fetched, not a reactive store — load on mount and refetch when
-  // tags change (codebook edits dispatch `codebook-changed`), so the count
-  // stays live the way the user expects.
+  // Codebook is fetched, not a reactive store — load on mount, refetch when
+  // tags change (codebook edits dispatch `codebook-changed`) and when the lens
+  // is opened, as the lens itself does: a tag made on a quote card dispatches
+  // nothing, so the count would otherwise stay as it was at page load.
   useEffect(() => {
     let cancelled = false;
     const load = () => {
@@ -75,7 +77,7 @@ export function LensSubtitleSync(): null {
       cancelled = true;
       window.removeEventListener("codebook-changed", load);
     };
-  }, []);
+  }, [onCodebook]);
 
   useEffect(() => {
     let subtitle = "";

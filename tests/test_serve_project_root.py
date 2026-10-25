@@ -133,13 +133,15 @@ def test_the_database_path_names_the_future_output_folder(tmp_path: Path) -> Non
     left every serve-level test green (measured 12 Oct 2026). This pins the
     function, so the fix does not depend on the order of two calls in another
     file."""
+    from sqlalchemy import make_url
+
     from bristlenose.server.db import db_url_for_project
 
     proj = _project(tmp_path)
     shutil.rmtree(proj / "bristlenose-output")  # never analysed
 
     url = db_url_for_project(proj)
-    assert Path(url.removeprefix("sqlite:///")) == (
+    assert Path(make_url(url).database) == (
         proj / "bristlenose-output" / ".bristlenose" / "bristlenose.db"
     )
     assert not (proj / ".bristlenose").exists(), "litter at the project root"

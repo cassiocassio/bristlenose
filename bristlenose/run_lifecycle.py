@@ -309,8 +309,13 @@ def _ps_start_time(pid: int) -> str | None:
     Monitor reads. Avoids ``/bin/ps``, which is blocked under macOS
     App Sandbox at exec time (the bundled desktop sidecar runs sandboxed).
 
-    On Linux, falls back to ``ps -o lstart=`` — POSIX-portable, no
-    sandbox concerns there.
+    On Linux, the process's start time in clock ticks since boot
+    (``/proc/<pid>/stat`` field 22) with the boot id, prefixed ``linux:``.
+    ``ps -o lstart=`` was the token until N201: local wall-clock text, in the
+    reader's time zone and language and recomputed from the boot time on every
+    read, so a second run under another ``TZ`` or after a clock step took a live
+    run for dead. Where ``/proc`` is not mounted, and on other Unixes, it is
+    still ``ps``.
 
     Caller contract: the string is opaque and only ever compared for
     equality across two reads of the same PID. Format is **not** stable
@@ -335,10 +340,60 @@ def _ps_start_time(pid: int) -> str | None:
     if sys.platform == "win32":
         return _win_start_time(pid)
 
-    # Non-Darwin (Linux, etc.) — keep the legacy /bin/ps subprocess. No
-    # sandbox blocker on these platforms, and parsing /proc/<pid>/stat
-    # field 22 is a separate code path that's only worth its weight if
-    # we ever ship a sandboxed Linux build.
+    if sys.platform.startswith("linux"):
+        token = _linux_proc_start_time(pid)
+        if not isinstance(token, _NoProc):
+            return token
+
+    return _ps_lstart(pid)
+
+
+#: Where Linux keeps its process table. A seam for tests.
+_PROC_ROOT = Path("/proc")
+
+#: Marker prefix of the Linux token, so a ``run.pid`` written by a build that
+#: recorded ``ps`` text (no such prefix) can still be told apart and read.
+_LINUX_TOKEN_PREFIX = "linux:"
+
+class _NoProc:
+    """"``/proc`` is not usable here" — distinct from None, "no such process"."""
+
+
+_NO_PROC = _NoProc()
+
+
+def _linux_proc_start_time(pid: int) -> str | _NoProc | None:
+    """``linux:<boot id>:<start ticks>`` for a live PID, None for a dead one,
+    ``_NO_PROC`` when ``/proc`` cannot answer at all (the caller asks ``ps``).
+
+    The ticks count from boot, so they do not move with the wall clock, a time
+    zone or a language; the boot id keeps one boot's ticks from matching
+    another's after a reboot recycles the PID."""
+    try:
+        (_PROC_ROOT / "self" / "stat").read_bytes()
+    except OSError:
+        return _NO_PROC  # /proc is not mounted
+    try:
+        raw = (_PROC_ROOT / str(pid) / "stat").read_bytes().decode("utf-8", errors="replace")
+    except FileNotFoundError:
+        return None  # no such process
+    except OSError:
+        return _NO_PROC  # hidepid or a confinement rule: ps reads the same table
+    # `pid (comm) state …`: comm may hold spaces and parentheses, so split after
+    # the LAST ")". Field 22 (starttime) is the 20th after it (state is field 3).
+    rest = raw.rpartition(")")[2].split()
+    try:
+        ticks = int(rest[19])
+        boot_id = (_PROC_ROOT / "sys" / "kernel" / "random" / "boot_id").read_text(
+            encoding="utf-8").strip()
+    except (IndexError, ValueError, OSError):
+        return _NO_PROC
+    return f"{_LINUX_TOKEN_PREFIX}{boot_id}:{ticks}"
+
+
+def _ps_lstart(pid: int) -> str | None:
+    """``ps -o lstart=`` for a PID: the Linux token before N201, and still the
+    answer where ``/proc`` is not there. Wall-clock text; see ``_ps_start_time``."""
     try:
         out = subprocess.run(
             ["/bin/ps", "-o", "lstart=", "-p", str(pid)],
@@ -466,7 +521,13 @@ def _is_alive_owned(pid_file: dict[str, Any]) -> bool:
     recorded_start = pid_file.get("start_time")
     if not isinstance(pid, int) or not isinstance(recorded_start, str):
         return False
-    actual_start = _ps_start_time(pid)
+    if sys.platform.startswith("linux") and not recorded_start.startswith(_LINUX_TOKEN_PREFIX):
+        # A run.pid from a build that recorded `ps` text (before N201): read the
+        # process the way that build did, so a run live across an upgrade still
+        # reads as live.
+        actual_start = _ps_lstart(pid)
+    else:
+        actual_start = _ps_start_time(pid)
     if actual_start is None:
         return False  # PID dead.
     return actual_start == recorded_start

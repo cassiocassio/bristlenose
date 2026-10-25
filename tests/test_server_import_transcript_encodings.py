@@ -36,7 +36,7 @@ def _study(tmp_path: Path, encoding: str) -> Path:
     lines = txt.read_text(encoding="utf-8").splitlines()
     lines[-1] = f"[01:00] [p1] {ACCENTED}"
     # "utf-16" writes a byte-order mark; the file is what a Windows editor saves.
-    txt.write_bytes("\n".join(lines).encode(encoding) + "\n".encode(encoding))
+    txt.write_bytes(("\n".join(lines) + "\n").encode(encoding))
     return proj
 
 

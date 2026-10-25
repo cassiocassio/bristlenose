@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Counter } from "./Counter";
+import { PlayerContext } from "../contexts/PlayerContext";
 import type { CounterItem } from "./Counter";
 
 const makeItem = (overrides: Partial<CounterItem> = {}): CounterItem => ({
@@ -285,5 +286,51 @@ describe("Counter", () => {
     );
     const tc = screen.getByText("[00:42]");
     expect(tc).toHaveAttribute("data-end-seconds", "55");
+  });
+
+  // N179: the timecode in the hidden list said "Play video" and followed href="#"
+  // (a jump to the top). It relied on the static report's delegated click handler,
+  // which does not run in the SPA.
+  describe("timecode in the hidden list", () => {
+    const open = (seekTo: () => void) =>
+      render(
+        <PlayerContext.Provider value={{ seekTo, sendCommand: vi.fn() }}>
+          <Counter
+            count={1}
+            items={[makeItem({ participantId: "p2", seconds: 99 })]}
+            isOpen
+            onToggle={() => {}}
+            onUnhide={() => {}}
+            onUnhideAll={() => {}}
+            data-testid="bn-counter"
+          />
+        </PlayerContext.Provider>,
+      );
+
+    it("clicking plays the moment and does not follow the link", () => {
+      const seekTo = vi.fn();
+      open(seekTo);
+      const tc = document.querySelector(".bn-hidden-item a.timecode") as HTMLElement;
+      const notPrevented = fireEvent.click(tc);
+      expect(seekTo).toHaveBeenCalledWith("p2", 99);
+      expect(notPrevented).toBe(false);
+    });
+
+    it("Enter on the focused timecode plays it", async () => {
+      const seekTo = vi.fn();
+      open(seekTo);
+      const tc = document.querySelector(".bn-hidden-item a.timecode") as HTMLElement;
+      tc.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(seekTo).toHaveBeenCalledWith("p2", 99);
+    });
+
+    it("does not play on a modifier-click", () => {
+      const seekTo = vi.fn();
+      open(seekTo);
+      const tc = document.querySelector(".bn-hidden-item a.timecode") as HTMLElement;
+      fireEvent.click(tc, { metaKey: true });
+      expect(seekTo).not.toHaveBeenCalled();
+    });
   });
 });

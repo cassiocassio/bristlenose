@@ -8,7 +8,9 @@
  * Uses existing `molecules/hidden-quotes.css` classes — zero new CSS.
  */
 
+import { useContext } from "react";
 import { useTranslation } from "react-i18next";
+import { PlayerContext } from "../contexts/PlayerContext";
 import { Icon } from "./Icon";
 
 export interface CounterItem {
@@ -50,6 +52,7 @@ export function Counter({
   "data-testid": testId,
 }: CounterProps) {
   const { t } = useTranslation();
+  const playerCtx = useContext(PlayerContext);
   if (count === 0) return null;
 
   // `t` was already in scope and used for every other string in this component
@@ -109,7 +112,9 @@ export function Counter({
                 data-quote-id={item.domId}
               >
                 {item.hasMedia ? (
-                  // Link-styled seek action; activated via delegated click, keyboard-accessible via role/tabIndex/onKeyDown.
+                  // Link-styled seek action, keyboard-accessible via role/tabIndex/onKeyDown. In the SPA it
+                  // seeks through PlayerContext; without one (the frozen static report) the delegated
+                  // click handler in player.js owns it.
                   // eslint-disable-next-line jsx-a11y/anchor-is-valid
                   <a
                     className="timecode"
@@ -122,6 +127,15 @@ export function Counter({
                       "data-end-seconds": item.endSeconds,
                     })}
                     title={t("quotes.playVideo")}
+                    onClick={
+                      playerCtx
+                        ? (e) => {
+                            if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+                            e.preventDefault();
+                            playerCtx.seekTo(item.participantId, item.seconds);
+                          }
+                        : undefined
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();

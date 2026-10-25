@@ -38,7 +38,7 @@ struct FailureCategoryPreflightSentenceTests {
     func rateLimitRefusalWithoutAProvider() {
         #expect(PipelineRunner.categoriseFailure(
             lines: ["Claude" + Self.rateLimit], exitStatus: 2) == .quota)
-        // The any-llm sentence, which also carries "Provider says:".
+        // The any-llm sentence; its "Provider says:" line must not claim it first.
         #expect(PipelineRunner.categoriseFailure(
             lines: ["Mistral is rate-limiting this key. Wait a minute and re-run.",
                     "Provider says: Rate limit exceeded"], exitStatus: 2) == .quota)
@@ -64,6 +64,29 @@ struct FailureCategoryPreflightSentenceTests {
     func noCreditRefusalIsOutOfCredit(provider: LLMProvider, lines: [String]) {
         #expect(PipelineRunner.categoriseFailure(
             lines: lines, exitStatus: 2, provider: provider) == .outOfCredit)
+    }
+
+    @Test("The no-credit sentence is out of credit with no provider recorded, as on a first Claude key")
+    func noCreditRefusalWithoutAProvider() {
+        // `activeProvider` is nil until a gesture writes it.
+        for lines in [
+            ["Your Claude account has no API credit available."],
+            ["Your ChatGPT account has no API credit available.",
+             "Top up at https://platform.openai.com/account/billing"],
+            ["Your Mistral account has no API credit available.",
+             "Provider says: insufficient funds",
+             "Top up in your Mistral account and re-run."],
+        ] {
+            #expect(PipelineRunner.categoriseFailure(lines: lines, exitStatus: 2) == .outOfCredit)
+        }
+    }
+
+    @Test("A rate-limit sentence wrapped at 80 columns, as Rich prints it, is still a quota")
+    func wrappedRateLimitRefusal() {
+        #expect(PipelineRunner.categoriseFailure(
+            lines: ["✗ Claude is rate-limiting this account. Wait a minute and re-run, or reduce",
+                    "`llm_concurrency` in your bristlenose.toml."],
+            exitStatus: 2, provider: .claude) == .quota)
     }
 
     @Test("The neighbours stay where they were",

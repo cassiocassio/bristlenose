@@ -206,7 +206,7 @@ export function QuoteGroup({
     [tagGroupMap, hiddenTagGroups, disabledFrameworks],
   );
   const anyBadgeHidden =
-    tagVisibility.hiddenGroups.size > 0 || tagVisibility.suppressedTagNames.size > 0;
+    tagVisibility.hiddenGroups.size > 0 || tagVisibility.disabledBadges.size > 0;
   const {
     selectedIds, clearSelection,
     registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag,

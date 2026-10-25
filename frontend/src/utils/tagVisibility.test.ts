@@ -107,10 +107,23 @@ describe("deriveTagVisibility", () => {
       expect(isBadgeHidden(v, "Flag discovery", "Discoverability")).toBe(true);
     });
 
+    // The eye is stored by group NAME, so hiding one same-named group hides both. That
+    // is the current behaviour, not a settled one: it waits on a ruling (the key would
+    // have to change in the stored data). Do not read this test as the spec.
     it("an eye-hidden group still hides every badge of that name (the eye is stored by name)", () => {
       const v = deriveTagVisibility(same, new Set(["Discoverability"]), new Set());
       expect(isBadgeHidden(v, "Affordance cues", "Discoverability")).toBe(true);
       expect(isBadgeHidden(v, "Flag discovery", "Discoverability")).toBe(true);
+    });
+
+    it("a floor tag that shares a framework tag's name keeps its badge when the framework is off", () => {
+      const clash: Record<string, TagGroupMeta> = {
+        // the map holds one entry per tag name, so the framework's wins the key
+        "pricing": { group: "Money", frameworkId: "cli-ux" },
+      };
+      const v = deriveTagVisibility(clash, new Set(), new Set(["cli-ux"]));
+      expect(isBadgeHidden(v, "Pricing", "Money")).toBe(true);
+      expect(isBadgeHidden(v, "Pricing", "Uncategorised")).toBe(false);
     });
 
     it("a tag the map does not know is shown unless its group is eye-hidden", () => {

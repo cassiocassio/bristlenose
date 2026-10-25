@@ -106,15 +106,20 @@ describe("badges of two codebooks with a same-named group", () => {
         { name: "Affordance cues", codebook_group: "Discoverability", colour_set: "ux", colour_index: 0 },
         { name: "Flag discovery", codebook_group: "Discoverability", colour_set: "ux", colour_index: 1 },
       ],
+      proposed_tags: [
+        { id: 1, tag_name: "Affordance cues", group_name: "Discoverability", colour_set: "ux", colour_index: 0, confidence: 0.9, rationale: "" },
+        { id: 2, tag_name: "Flag discovery", group_name: "Discoverability", colour_set: "ux", colour_index: 1, confidence: 0.9, rationale: "" },
+      ],
     });
     initFromQuotes([quote], true);
     renderGroup([quote]);
-    expect(document.body.textContent).toContain("Affordance cues");
-    expect(document.body.textContent).toContain("Flag discovery");
+    // each name shows twice at first: the applied badge and the proposal
+    expect(document.body.textContent?.match(/Affordance cues/g)).toHaveLength(2);
+    expect(document.body.textContent?.match(/Flag discovery/g)).toHaveLength(2);
 
     act(() => adoptFrameworkDisabled(new Set(["cli-ux"])));
 
-    expect(document.body.textContent).toContain("Affordance cues");
+    expect(document.body.textContent?.match(/Affordance cues/g)).toHaveLength(2);
     expect(document.body.textContent).not.toContain("Flag discovery");
   });
 });

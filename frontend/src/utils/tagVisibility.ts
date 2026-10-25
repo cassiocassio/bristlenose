@@ -34,6 +34,15 @@ export interface TagVisibility {
   /** Lowercased tag names dropped from autocomplete entirely — disabled
    *  frameworks. Merged into TagInput's exclude. */
   suppressedTagNames: Set<string>;
+  /** Badges (tag name lowercased + group name, see `badgeKey`) of disabled
+   *  frameworks. Drives the card badge filter. Keyed by the pair, not the tag
+   *  name alone: nothing forces a floor tag and a framework tag to differ in
+   *  name, and a switched-off codebook must not hide the other's badge. */
+  disabledBadges: Set<string>;
+}
+
+function badgeKey(tagName: string, groupName: string): string {
+  return `${tagName.toLowerCase()}\u0000${groupName}`;
 }
 
 /**
@@ -52,31 +61,33 @@ export function deriveTagVisibility(
   const hiddenGroups = new Set(hiddenTagGroups);
   const decoratedTagNames = new Set<string>();
   const suppressedTagNames = new Set<string>();
+  const disabledBadges = new Set<string>();
 
   for (const [tagNameLower, info] of Object.entries(tagGroupMap)) {
     const disabled =
       info.frameworkId != null && disabledFrameworks.has(info.frameworkId);
     if (disabled) {
-      // Disable → off means off: badge hidden AND suggestion suppressed. Both are
-      // keyed by TAG name (unique across codebooks), never by the group's name.
+      // Disable → off means off: badge hidden AND suggestion suppressed. The badge
+      // is keyed by (tag, group), never by the group's name alone.
       suppressedTagNames.add(tagNameLower);
+      disabledBadges.add(badgeKey(tagNameLower, info.group));
     } else if (hiddenTagGroups.has(info.group)) {
       // Hide → still reachable: decorate the suggestion, keep it suggestable.
       decoratedTagNames.add(tagNameLower);
     }
   }
 
-  return { hiddenGroups, decoratedTagNames, suppressedTagNames };
+  return { hiddenGroups, decoratedTagNames, suppressedTagNames, disabledBadges };
 }
 
 /**
- * Whether a tag badge is hidden on a quote card: its group is eye-hidden, or its
- * tag belongs to a disabled framework (`suppressedTagNames`, keyed by tag name).
+ * Whether a tag badge is hidden on a quote card: its group is eye-hidden, or the
+ * badge (tag + group) belongs to a disabled framework.
  */
 export function isBadgeHidden(
   vis: TagVisibility,
   tagName: string,
   groupName: string,
 ): boolean {
-  return vis.hiddenGroups.has(groupName) || vis.suppressedTagNames.has(tagName.toLowerCase());
+  return vis.hiddenGroups.has(groupName) || vis.disabledBadges.has(badgeKey(tagName, groupName));
 }

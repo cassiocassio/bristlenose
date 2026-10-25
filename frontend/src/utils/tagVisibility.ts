@@ -23,8 +23,10 @@ export interface TagGroupMeta {
 }
 
 export interface TagVisibility {
-  /** Group names whose badges are hidden on quote cards — eye-hidden groups ∪
-   *  every group belonging to a disabled framework. Drives the card badge filter. */
+  /** Group names the researcher has eye-hidden (stored by name). A disabled
+   *  framework's groups are NOT added here: two codebooks can have a group of the
+   *  same name ("Discoverability" in Norman and CLI UX), and switching one off must
+   *  not hide the other's badges. Use `isBadgeHidden` for the card badge filter. */
   hiddenGroups: Set<string>;
   /** Lowercased tag names that still autocomplete but show a closed-eye hint —
    *  eye-hidden groups only. Drives TagInput's decorate + auto-unhide. */
@@ -55,8 +57,8 @@ export function deriveTagVisibility(
     const disabled =
       info.frameworkId != null && disabledFrameworks.has(info.frameworkId);
     if (disabled) {
-      // Disable → off means off: badge hidden AND suggestion suppressed.
-      hiddenGroups.add(info.group);
+      // Disable → off means off: badge hidden AND suggestion suppressed. Both are
+      // keyed by TAG name (unique across codebooks), never by the group's name.
       suppressedTagNames.add(tagNameLower);
     } else if (hiddenTagGroups.has(info.group)) {
       // Hide → still reachable: decorate the suggestion, keep it suggestable.
@@ -65,4 +67,16 @@ export function deriveTagVisibility(
   }
 
   return { hiddenGroups, decoratedTagNames, suppressedTagNames };
+}
+
+/**
+ * Whether a tag badge is hidden on a quote card: its group is eye-hidden, or its
+ * tag belongs to a disabled framework (`suppressedTagNames`, keyed by tag name).
+ */
+export function isBadgeHidden(
+  vis: TagVisibility,
+  tagName: string,
+  groupName: string,
+): boolean {
+  return vis.hiddenGroups.has(groupName) || vis.suppressedTagNames.has(tagName.toLowerCase());
 }

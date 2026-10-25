@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { deriveTagVisibility, type TagGroupMeta } from "./tagVisibility";
+import { deriveTagVisibility, isBadgeHidden, type TagGroupMeta } from "./tagVisibility";
 
 const map: Record<string, TagGroupMeta> = {
   // eye-hideable floor tag (no framework)
@@ -28,7 +28,7 @@ describe("deriveTagVisibility", () => {
     const v = deriveTagVisibility(map, new Set(), new Set(["garrett"]));
     expect(v.suppressedTagNames.has("law-of-proximity")).toBe(true);
     expect(v.decoratedTagNames.has("law-of-proximity")).toBe(false);
-    expect(v.hiddenGroups.has("Laws of UX")).toBe(true); // badge hidden too
+    expect(isBadgeHidden(v, "Law-of-Proximity", "Laws of UX")).toBe(true); // badge hidden too
   });
 
   it("disable wins when a group is both eye-hidden AND disabled", () => {
@@ -88,5 +88,34 @@ describe("deriveTagVisibility", () => {
     const v = deriveTagVisibility(map, new Set(["Empty Group"]), new Set());
     expect(v.hiddenGroups.has("Empty Group")).toBe(true);
     expect(v.decoratedTagNames.size).toBe(0);
+  });
+
+  // N186: badges were filtered by group NAME, and the disabled framework's group
+  // names were added to the hidden set, so switching off one codebook hid the
+  // badges of any other codebook's same-named group (Norman's and CLI UX's
+  // "Discoverability"). The disabled half is keyed by tag now.
+  describe("two codebooks with a group of the same name", () => {
+    const same: Record<string, TagGroupMeta> = {
+      "affordance cues": { group: "Discoverability", frameworkId: "norman" },
+      "flag discovery": { group: "Discoverability", frameworkId: "cli-ux" },
+    };
+
+    it("disabling one does not hide the other's badges", () => {
+      const v = deriveTagVisibility(same, new Set(), new Set(["cli-ux"]));
+      expect(v.hiddenGroups.has("Discoverability")).toBe(false);
+      expect(isBadgeHidden(v, "Affordance cues", "Discoverability")).toBe(false);
+      expect(isBadgeHidden(v, "Flag discovery", "Discoverability")).toBe(true);
+    });
+
+    it("an eye-hidden group still hides every badge of that name (the eye is stored by name)", () => {
+      const v = deriveTagVisibility(same, new Set(["Discoverability"]), new Set());
+      expect(isBadgeHidden(v, "Affordance cues", "Discoverability")).toBe(true);
+      expect(isBadgeHidden(v, "Flag discovery", "Discoverability")).toBe(true);
+    });
+
+    it("a tag the map does not know is shown unless its group is eye-hidden", () => {
+      const v = deriveTagVisibility(same, new Set(), new Set(["cli-ux", "norman"]));
+      expect(isBadgeHidden(v, "Someone's own tag", "Discoverability")).toBe(false);
+    });
   });
 });

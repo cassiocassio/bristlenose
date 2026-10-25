@@ -22,7 +22,7 @@ import { getModeratorQuestion } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 import { featureFlags } from "../utils/featureFlags";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
-import { deriveTagVisibility } from "../utils/tagVisibility";
+import { deriveTagVisibility, isBadgeHidden } from "../utils/tagVisibility";
 import { NewBadge } from "../components/NewBadge";
 import { QuoteCard } from "./QuoteCard";
 import { useFocus } from "../contexts/FocusContext";
@@ -198,14 +198,15 @@ export function QuoteGroup({
   const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
 
   // The hide/disable split (design-codebook-state-model.md §5), computed once:
-  //  • hiddenGroups       → quote-card badge filter (hide ∪ disabled groups)
+  //  • isBadgeHidden      → quote-card badge filter (eye-hidden group ∪ disabled tag)
   //  • decoratedTagNames  → autocomplete closed-eye hint (eye-hidden, still suggests)
   //  • suppressedTagNames → dropped from autocomplete (disabled — off means off)
   const tagVisibility = useMemo(
     () => deriveTagVisibility(tagGroupMap, hiddenTagGroups, disabledFrameworks),
     [tagGroupMap, hiddenTagGroups, disabledFrameworks],
   );
-  const effectiveHiddenGroups = tagVisibility.hiddenGroups;
+  const anyBadgeHidden =
+    tagVisibility.hiddenGroups.size > 0 || tagVisibility.suppressedTagNames.size > 0;
   const {
     selectedIds, clearSelection,
     registerHideHandler, unregisterHideHandler, registerFlashTag, unregisterFlashTag,
@@ -926,13 +927,13 @@ export function QuoteGroup({
           const editedText = store.edits[q.dom_id] ?? null;
           const allUserTags = store.tags[q.dom_id] ?? [];
           const allTagNames = allUserTags.map((t) => t.name);
-          const userTags = effectiveHiddenGroups.size > 0
-            ? allUserTags.filter((t) => !effectiveHiddenGroups.has(t.codebook_group))
+          const userTags = anyBadgeHidden
+            ? allUserTags.filter((t) => !isBadgeHidden(tagVisibility, t.name, t.codebook_group))
             : allUserTags;
           const deletedBadgesList = store.deletedBadges[q.dom_id] ?? [];
           const allProposedTags = store.proposedTags[q.dom_id] ?? [];
-          const proposedTagsList = effectiveHiddenGroups.size > 0
-            ? allProposedTags.filter((pt) => !effectiveHiddenGroups.has(pt.group_name))
+          const proposedTagsList = anyBadgeHidden
+            ? allProposedTags.filter((pt) => !isBadgeHidden(tagVisibility, pt.tag_name, pt.group_name))
             : allProposedTags;
 
           // Quote in hide animation — render with .bn-hiding class.

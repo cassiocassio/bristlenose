@@ -40,7 +40,7 @@ import { toggleTagGroupHidden, useSidebarStore } from "../contexts/SidebarStore"
 import { apiGet, getCodebook } from "../utils/api";
 import { formatTimecode } from "../utils/format";
 import type { SearchTerm } from "../utils/searchMatch";
-import { deriveTagVisibility, type TagGroupMeta } from "../utils/tagVisibility";
+import { deriveTagVisibility, isBadgeHidden, type TagGroupMeta } from "../utils/tagVisibility";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import { QuoteCard } from "./QuoteCard";
 
@@ -232,7 +232,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         displayText={edited ?? q.text}
         isStarred={!!store.starred[id]}
         isHidden={false}
-        userTags={allTags.filter((tb) => !vis.hiddenGroups.has(tb.codebook_group))}
+        userTags={allTags.filter((tb) => !isBadgeHidden(vis, tb.name, tb.codebook_group))}
         allTagNames={allTags.map((tb) => tb.name)}
         hiddenTagNames={vis.decoratedTagNames}
         disabledTagNames={vis.suppressedTagNames}
@@ -243,7 +243,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         sessionId={q.session_id}
         hasMedia
         hasModerator={hasModerator}
-        proposedTags={proposed.filter((p) => !vis.hiddenGroups.has(p.group_name))}
+        proposedTags={proposed.filter((p) => !isBadgeHidden(vis, p.tag_name, p.group_name))}
         flashingTags={NO_FLASH}
         moderatorQuestion={null}
         isQuestionOpen={false}

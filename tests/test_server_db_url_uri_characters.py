@@ -76,12 +76,19 @@ def test_the_readers_agree_with_the_writer_on_the_file(tmp_path: Path, folder: s
     assert counts is not None and counts.total == 0
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows forbids '?' in a file name")
-def test_two_studies_under_one_folder_do_not_share_a_database(tmp_path: Path) -> None:
+# The folder that holds two studies. A "?" is the case that made them share one
+# file; where it cannot be a name the "%3F" spelling stands in (no skip).
+SHARED_PARENTS = ["Who%3F Inc" if sys.platform == "win32" else "Who? Inc"]
+
+
+@pytest.mark.parametrize("parent", SHARED_PARENTS)
+def test_two_studies_under_one_folder_do_not_share_a_database(
+    tmp_path: Path, parent: str
+) -> None:
     """Under a ``?`` the second study's report read the first study's rows."""
     studies = []
     for name in ("Study A", "Study B"):
-        proj = tmp_path / "Who? Inc" / name
+        proj = tmp_path / parent / name
         shutil.copytree(
             FIXTURE, proj,
             ignore=shutil.ignore_patterns("bristlenose.db*", "bristlenose.log*"),
@@ -105,8 +112,8 @@ def test_two_studies_under_one_folder_do_not_share_a_database(tmp_path: Path) ->
         with engine.connect() as conn:
             assert conn.execute(text("SELECT count(*) FROM projects")).scalar() == 1
         engine.dispose()
-    assert sorted(p.name for p in (tmp_path / "Who? Inc").iterdir()) == ["Study A", "Study B"]
-    assert [p.name for p in tmp_path.iterdir()] == ["Who? Inc"]
+    assert sorted(p.name for p in (tmp_path / parent).iterdir()) == ["Study A", "Study B"]
+    assert [p.name for p in tmp_path.iterdir()] == [parent]
 
 
 def test_the_default_database_path_is_escaped_too(tmp_path: Path, monkeypatch) -> None:

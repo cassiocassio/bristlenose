@@ -77,7 +77,10 @@ def test_the_readers_agree_with_the_writer_on_the_file(tmp_path: Path, folder: s
 
 
 # The folder that holds two studies. A "?" is the case that made them share one
-# file; where it cannot be a name the "%3F" spelling stands in (no skip).
+# file, and that sharing can only happen where a "?" can be a name: it is POSIX-only
+# by nature. On Windows the "%3F" spelling stands in, which proves only that two
+# studies under an encoded parent keep their own files (the decode half; the sharing
+# half is not reproducible there). Chosen over a skipif to keep the skip ratchet.
 SHARED_PARENTS = ["Who%3F Inc" if sys.platform == "win32" else "Who? Inc"]
 
 

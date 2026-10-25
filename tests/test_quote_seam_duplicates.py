@@ -128,6 +128,11 @@ async def test_a_turn_quoted_by_both_chunks_is_one_quote() -> None:
     topic_map = SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[])
     quotes, outcome = await extract_quotes([_transcript()], [topic_map], client, concurrency=1)
     _check_scenario(prompts, outcome)  # a broken set-up fails here, not as the known bug
-    assert [q.start_timecode for q in quotes] == [90.0], (
+    starts = [q.start_timecode for q in quotes]
+    if starts not in ([90.0], [90.0, 90.0]):
+        # Neither the fix nor the bug in its row (two quotes at 90 s): some other
+        # outcome, which must not read as the known failure.
+        raise _ScenarioBrokenError(f"an outcome that is neither: {starts}")
+    assert starts == [90.0], (
         f"expected one quote at 90 s, got {[(q.start_timecode, q.verbatim_excerpt) for q in quotes]}"
     )

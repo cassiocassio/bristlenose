@@ -131,7 +131,8 @@ def test_the_server_failed_fallback_links_the_file_whatever_the_folder_is_called
 
     buf = io.StringIO()
     monkeypatch.setattr(
-        cli, "console", Console(file=buf, force_terminal=True, width=200, color_system="standard")
+        cli, "console", Console(file=buf, force_terminal=True, width=200, color_system="standard",
+                legacy_windows=False)
     )
     monkeypatch.chdir(tmp_path)
     report = tmp_path / name / "report.html"

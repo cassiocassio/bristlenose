@@ -266,17 +266,22 @@ struct BristlenoseApp: App {
                     // failed save in the app uses. One handler for the three
                     // doors (sidebar, menu bar, Settings list) so the alert is
                     // said once, in the window that is in front.
-                    agentAccessNotSavedObserver = NotificationCenter.default.addObserver(
-                        forName: .bristlenoseAgentAccessNotSaved, object: nil, queue: .main
-                    ) { _ in
-                        Task { @MainActor in
-                            let alert = NSAlert()
-                            alert.messageText = i18n.t("common.sync.saveRefused")
-                            alert.addButton(withTitle: i18n.t("common.buttons.ok"))
-                            if let host = PanelHost.window {
-                                alert.beginSheetModal(for: host)
-                            } else {
-                                alert.runModal()
+                    // Once per process: this closure runs for every main window
+                    // that appears, and an observer per window would say it once
+                    // per window.
+                    if agentAccessNotSavedObserver == nil {
+                        agentAccessNotSavedObserver = NotificationCenter.default.addObserver(
+                            forName: .bristlenoseAgentAccessNotSaved, object: nil, queue: .main
+                        ) { _ in
+                            Task { @MainActor in
+                                let alert = NSAlert()
+                                alert.messageText = i18n.t("common.sync.saveRefused")
+                                alert.addButton(withTitle: i18n.t("common.buttons.ok"))
+                                if let host = PanelHost.window {
+                                    alert.beginSheetModal(for: host)
+                                } else {
+                                    alert.runModal()
+                                }
                             }
                         }
                     }

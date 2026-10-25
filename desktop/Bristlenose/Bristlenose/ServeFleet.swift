@@ -320,6 +320,12 @@ final class ServeFleet: ObservableObject {
     /// Marked stale by `applyEnvChange`, restarted when a window fronts them.
     private(set) var staleProjects: Set<UUID> = []
 
+    /// Studies `syncHandshake` restarted because they became readable by agents
+    /// while stale, and which are not offered to an agent until that restart is
+    /// done. Read back through `ServeManager.restartPending`, so it empties by
+    /// itself.
+    private var heldForRestart: Set<UUID> = []
+
     /// Call when a window adopts `project`. Restarts it if its environment went
     /// stale while nobody was looking.
     func front(_ project: UUID) {
@@ -410,13 +416,18 @@ final class ServeFleet: ObservableObject {
         // by the restarted serve reaching `.running`, offers it as usual.
         let inScope = HandshakeExposure.readableProjects(
             candidates: candidates, shown: shown, agentAccess: access)
-        var restarting: Set<UUID> = []
+        // Held until the restart is done, not only for this pass: the teardown
+        // is a Task queued behind the other syncs one Agent Access change
+        // schedules, so a second sync sees the old serve, no longer stale,
+        // still `.running` with its old token, and would offer it.
+        var restarting = heldForRestart.filter { managers[$0]?.restartPending == true }
         for id in staleProjects.intersection(inScope) {
             guard let manager = managers[id], manager.runningPort != nil else { continue }
             staleProjects.remove(id)
-            restarting.insert(id)
             manager.restartIfRunning()
+            if manager.restartPending { restarting.insert(id) }
         }
+        heldForRestart = restarting
         let offered = candidates.filter { !restarting.contains($0.key) }
 
         let entries = HandshakeExposure.entries(

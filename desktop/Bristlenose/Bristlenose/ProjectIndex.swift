@@ -699,8 +699,9 @@ final class ProjectIndex: ObservableObject {
         // house rule from `CredentialStore.set()`: returning cleanly is not
         // evidence anything was stored.
         guard agentAccessReachedDisk(id: id, enabled: enabled) else {
-            // Memory goes back to what the disk holds, so the sidebar, the
-            // Settings list and the file say one thing. Not retried: a full
+            // Memory goes back to what it was (the guard above makes that the
+            // value the disk still holds), so the sidebar, the Settings list
+            // and the file say one thing. Not retried: a full
             // disk or a refused write does not mend in the next millisecond,
             // and the same click works once it does.
             projects[index].agentAccess = !enabled

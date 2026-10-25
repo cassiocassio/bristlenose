@@ -218,6 +218,12 @@ final class ServeManager: ObservableObject {
     /// that crosses the language boundary.
     @Published private(set) var projectKey: String?
 
+    /// A `restartIfRunning` has been accepted and has not finished: the serve
+    /// is being torn down and respawned, though its state may still read
+    /// `.running` for a moment. Cleared when the respawn has been issued (the
+    /// state is then `.starting`) or the restart was superseded.
+    private(set) var restartPending = false
+
     /// Test seam: a real serve learns its key from `/api/health`.
     func setProjectKeyForTest(_ key: String?) { projectKey = key }
 
@@ -890,6 +896,10 @@ final class ServeManager: ObservableObject {
         }
         guard live, let path = currentProjectPath else { return }
         log.info("preferences changed — restarting serve")
+        // Said synchronously, before the teardown Task runs: until then the old
+        // serve still reads `.running`, and anything that decides by state (the
+        // handshake, the readable gate) cannot tell it is about to go.
+        restartPending = true
         // Ownership token, captured now rather than inside the Task: a start()
         // that lands before the Task runs, or while it awaits teardown, owns
         // the serve from then on. Without the re-checks this restart tore that
@@ -897,6 +907,7 @@ final class ServeManager: ObservableObject {
         // `generation` token, per desktop/CLAUDE.md — not a second epoch.
         let myGeneration = generation
         Task { @MainActor in
+            defer { restartPending = false }
             guard generation == myGeneration else { return }
             await shutdown(timeout: .seconds(2))
             guard generation == myGeneration else {

@@ -107,6 +107,29 @@ struct ServeFleetStaleExposureTests {
                 "a stale study that became readable was never restarted")
     }
 
+    /// One Agent Access change schedules several syncs (the app's own observer
+    /// and each manager's), and the teardown Task queues behind them. A second
+    /// sync that runs before the teardown sees the old serve no longer marked
+    /// stale and still `.running` with its old token; it must not offer it.
+    @Test func aSecondSyncBeforeTheTeardownDoesNotOfferTheOldServe() async throws {
+        let rig = try Self.rig()
+        defer { try? FileManager.default.removeItem(at: rig.dir) }
+        let b = rig.fleet.manager(for: Self.b)
+        rig.access.on.insert(Self.b)
+
+        rig.fleet.syncHandshake(shown: [Self.a, Self.b])
+        #expect(b.restartPending, "the restart was not recorded as pending, so a sync cannot tell")
+        rig.fleet.syncHandshake(shown: [Self.a, Self.b])   // before the teardown Task runs
+
+        #expect(rig.scope.opened(Self.b) == false,
+                "a second sync opened the gate on the serve that is about to be restarted")
+        #expect(handshakeNames(rig, Self.b) == false,
+                "a second sync named the serve that is about to be restarted")
+
+        await settle(b, to: .running(port: Self.restartPort))
+        #expect(b.restartPending == false)
+    }
+
     /// And once the restarted serve is up, it is exposed like any other.
     @Test func theRestartedStudyIsExposedOnTheNextSync() async throws {
         let rig = try Self.rig()

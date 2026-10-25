@@ -211,10 +211,10 @@ async def run_autocode_job(
         AutoCodeJob,
         AutoCodeSessionStamp,
         ProposedTag,
-        Quote,
         TagDefinition,
     )
     from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.speaker_slots import analysis_quotes
 
     # Bind telemetry context for the duration of the job. ``project_dir``
     # may be either the project root or the bristlenose-output dir; resolve
@@ -254,8 +254,10 @@ async def run_autocode_job(
             db.commit()
             return
 
-        # Load quotes
-        quotes_rows = db.query(Quote).filter_by(project_id=project_id).all()
+        # Load the quotes that count: a hidden quote is discounted evidence and
+        # counts nowhere, a recoded speaker's quotes have left the evidence
+        # (owner, 22 Oct 2026; N175). Sending them paid for tags nobody sees.
+        quotes_rows = analysis_quotes(db, project_id)
         if not quotes_rows:
             job.status = "completed"
             job.total_quotes = 0
@@ -669,7 +671,7 @@ def stamp_sessions(db: SASession, job_id: int, session_pks: Iterable[int]) -> No
 
 def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
     """The sessions ``job`` still owes, ``{"s1": Session.id}``: a session with at
-    least one quote and no stamp from this job (RE#66).
+    least one quote that is not hidden and no stamp from this job (RE#66).
 
     This replaced the watermark (``first_imported_at > completed_at``), which a
     partial failure moved past the sessions it never coded. A session with no
@@ -678,15 +680,19 @@ def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
     """
     from sqlalchemy import exists, select
 
-    from bristlenose.server.models import AutoCodeSessionStamp, Quote
+    from bristlenose.server.models import AutoCodeSessionStamp, Quote, QuoteState
     from bristlenose.server.models import Session as SessionModel
 
     stamped = select(AutoCodeSessionStamp.session_id).where(
         AutoCodeSessionStamp.job_id == job.id
     )
+    # A session whose every quote is hidden has nothing to send, and is not
+    # stamped as coded either, so unhiding a quote makes it owed (N175).
+    hidden = select(QuoteState.quote_id).where(QuoteState.is_hidden == True)  # noqa: E712
     has_quote = exists().where(
         Quote.project_id == SessionModel.project_id,
         Quote.session_id == SessionModel.session_id,
+        Quote.id.not_in(hidden),
     )
     return {
         row[0]: row[1]
@@ -916,8 +922,6 @@ async def reapply_to_new_quotes(
     batch (#62). It touches job status only to clear a failed or stopped
     catch-up's failure once nothing is left owed (#61).
     """
-    from sqlalchemy import select
-
     from bristlenose.llm import telemetry
     from bristlenose.llm.boundary import wrap_untrusted
     from bristlenose.llm.client import LLMClient
@@ -928,10 +932,10 @@ async def reapply_to_new_quotes(
         AutoCodeJob,
         CodebookGroup,
         ProposedTag,
-        Quote,
         QuoteTag,
         TagDefinition,
     )
+    from bristlenose.server.speaker_slots import analysis_quotes
 
     db = db_factory()
     failed = False
@@ -976,16 +980,14 @@ async def reapply_to_new_quotes(
                 _clear_failure_once_owed_nothing(db, job)
                 db.commit()
             return 0
-        proposed = select(ProposedTag.quote_id).where(ProposedTag.job_id == job_id)
-        new_quotes = (
-            db.query(Quote)
-            .filter(
-                Quote.project_id == project_id,
-                Quote.session_id.in_(sorted(owed)),
-                Quote.id.not_in(proposed),
-            )
-            .all()
-        )
+        proposed = {
+            row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job_id)
+        }
+        # Quotes that count only, as in the first apply (N175).
+        new_quotes = [
+            q for q in analysis_quotes(db, project_id)
+            if q.session_id in owed and q.id not in proposed
+        ]
         # An owed session with nothing left to send was coded already.
         done_already = set(owed) - {q.session_id for q in new_quotes}
         if not new_quotes:

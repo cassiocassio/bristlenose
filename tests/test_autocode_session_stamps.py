@@ -37,8 +37,10 @@ from bristlenose.server.models import (
     ProjectFrameworkState,
     ProposedTag,
     Quote,
+    QuoteState,
     QuoteTag,
     Session,
+    SessionSpeaker,
     TagDefinition,
 )
 
@@ -833,3 +835,154 @@ class TestQuoteAddedToACodedSession:
         with _LLM(_answer_all()) as llm:
             asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
         assert llm.prompts() == []
+
+
+# ── N175: a hidden quote counts nowhere ──────────────────────────────────────
+
+
+def _hide(factory, sid: str, index: int) -> int:
+    """Hide quote ``index`` of session ``sid`` (as the Quotes lens does)."""
+    db = factory()
+    try:
+        q = (
+            db.query(Quote).filter_by(project_id=1, session_id=sid)
+            .order_by(Quote.start_timecode).all()[index]
+        )
+        db.add(QuoteState(quote_id=q.id, is_hidden=True))
+        db.commit()
+        return q.id
+    finally:
+        db.close()
+
+
+def _recode_out(factory, sid: str) -> None:
+    """The session's participant ``p1`` recoded as an observer (§J7 R2): its
+    quotes leave the evidence."""
+    db = factory()
+    try:
+        pk = db.query(Session.id).filter_by(project_id=1, session_id=sid).scalar()
+        db.add(SessionSpeaker(session_id=pk, speaker_code="p1", speaker_role="observer"))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _sent(llm: _LLM) -> str:
+    return "\n".join(llm.prompts())
+
+
+class TestHiddenQuotesCountNowhere:
+    """The owner's 22 Oct ruling (#121/#122/#128): a hidden quote, and a recoded
+    speaker's withdrawn quotes, are discounted evidence. AutoCode neither sent
+    them to the model (and so paid for them), nor listed them in its review, and
+    Accept all tagged them unseen."""
+
+    def test_a_first_apply_does_not_send_a_hidden_quote(self, factory) -> None:
+        _session(factory, "s1")
+        _session(factory, "s2")
+        _hide(factory, "s1", 0)
+        db = factory()
+        db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="pending"))
+        db.commit()
+        db.close()
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+        assert "ok quote s1-0" not in _sent(llm)
+        assert "ok quote s1-1" in _sent(llm)
+        assert _job(factory).total_quotes == 3
+        assert "s1-0" not in "".join(_proposals(factory))
+
+    def test_a_first_apply_does_not_send_a_recoded_speakers_quotes(self, factory) -> None:
+        _session(factory, "s1")
+        _session(factory, "s2")
+        _recode_out(factory, "s1")
+        db = factory()
+        db.add(AutoCodeJob(project_id=1, framework_id="garrett", status="pending"))
+        db.commit()
+        db.close()
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(run_autocode_job(factory, 1, "garrett", _settings()))
+        assert "quote s1-" not in _sent(llm)
+        assert "quote s2-0" in _sent(llm)
+        assert _job(factory).total_quotes == 2
+
+    def test_a_re_apply_does_not_send_a_hidden_quote(self, factory) -> None:
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        _session(factory, "s2")  # a session added since: owed
+        _hide(factory, "s2", 1)
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert "ok quote s2-0" in _sent(llm)
+        assert "quote s2-1" not in _sent(llm)
+        assert "s2-1" not in "".join(_proposals(factory))
+
+    def test_a_session_whose_every_quote_is_hidden_is_not_owed(self, factory) -> None:
+        """It is not stamped as coded either: unhide a quote and it is owed."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        _session(factory, "s2")
+        _hide(factory, "s2", 0)
+        _hide(factory, "s2", 1)
+        db = factory()
+        try:
+            assert ac.owed_sessions(db, _job(factory)) == {}
+        finally:
+            db.close()
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert llm.prompts() == []
+        assert _stamped(factory) == {"s1"}
+
+        db = factory()
+        db.query(QuoteState).filter_by(is_hidden=True).update({"is_hidden": False})
+        db.commit()
+        try:
+            assert list(ac.owed_sessions(db, _job(factory))) == ["s2"]
+        finally:
+            db.close()
+
+    def test_the_review_lists_and_accept_all_tags_only_counted_quotes(self, factory) -> None:
+        from fastapi.testclient import TestClient
+
+        _session(factory, "s1")
+        _session(factory, "s2")
+        _first_apply(factory, _answer_all())  # every quote proposed at 0.85
+        assert len(_proposals(factory)) == 4
+        _hide(factory, "s1", 0)  # hidden after the pass, before the review
+        _recode_out(factory, "s2")
+        client = TestClient(_app(factory))
+
+        listed = client.get("/api/projects/1/autocode/garrett/proposals").json()
+        assert [p["quote_text"] for p in listed["proposals"]] == ["ok quote s1-1"]
+        assert listed["total"] == 1
+
+        assert client.post("/api/projects/1/autocode/garrett/accept-all").json() == {"accepted": 1}
+        assert _proposals(factory) == {
+            "s1-0": "pending", "s1-1": "accepted", "s2-0": "pending", "s2-1": "pending",
+        }
+        assert _count(factory, QuoteTag) == 1
+
+    def test_deny_all_leaves_unseen_proposals_alone(self, factory) -> None:
+        from fastapi.testclient import TestClient
+
+        _session(factory, "s1")
+        _first_apply(factory, _answer_all())
+        _hide(factory, "s1", 0)
+        client = TestClient(_app(factory))
+        assert client.post("/api/projects/1/autocode/garrett/deny-all").json() == {"denied": 1}
+        assert _proposals(factory) == {"s1-0": "pending", "s1-1": "denied"}
+
+    def test_unhiding_brings_the_proposal_back_to_the_review(self, factory) -> None:
+        from fastapi.testclient import TestClient
+
+        _session(factory, "s1")
+        _first_apply(factory, _answer_all())
+        _hide(factory, "s1", 0)
+        client = TestClient(_app(factory))
+        assert client.get("/api/projects/1/autocode/garrett/proposals").json()["total"] == 1
+        db = factory()
+        db.query(QuoteState).update({"is_hidden": False})
+        db.commit()
+        db.close()
+        assert client.get("/api/projects/1/autocode/garrett/proposals").json()["total"] == 2

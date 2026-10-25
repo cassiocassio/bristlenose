@@ -25,6 +25,7 @@ from bristlenose.server.models import (
     TagDefinition,
 )
 from bristlenose.server.refusal import RefusalError, RefusalReason
+from bristlenose.server.speaker_slots import analysis_quotes
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,16 @@ class BulkActionRequest(BaseModel):
 def _get_db(request: Request) -> Session:
     db: Session = request.app.state.db_factory()
     return db
+
+
+def _counted_quote_ids(db: Session, project_id: int) -> set[int]:
+    """The quotes that count: not hidden, and still evidence (``analysis_quotes``).
+
+    A proposal on any other quote is not listed in the review and is left alone
+    by the bulk actions: the researcher cannot see it, and it counts nowhere
+    (owner, 22 Oct 2026; N175). It stays pending, so unhiding the quote brings
+    it back to the review."""
+    return {q.id for q in analysis_quotes(db, project_id)}
 
 
 def _check_project(db: Session, project_id: int) -> Project:
@@ -506,6 +517,8 @@ def get_proposals(
             .order_by(ProposedTag.confidence.desc())
             .all()
         )
+        counted = _counted_quote_ids(db, project_id)
+        proposals = [row for row in proposals if row[0].quote_id in counted]
 
         # Build colour_index lookup: position of each tag within its group
         group_ids = {row[7] for row in proposals}  # codebook_group_id
@@ -687,7 +700,8 @@ def accept_all_proposals(
             ]
             query = query.filter(ProposedTag.tag_definition_id.in_(tag_ids))
 
-        proposals = query.all()
+        counted = _counted_quote_ids(db, project_id)
+        proposals = [p for p in query.all() if p.quote_id in counted]
         accepted = 0
         now = datetime.now(timezone.utc)
 
@@ -770,7 +784,8 @@ def deny_all_proposals(
             ]
             query = query.filter(ProposedTag.tag_definition_id.in_(tag_ids))
 
-        proposals = query.all()
+        counted = _counted_quote_ids(db, project_id)
+        proposals = [p for p in query.all() if p.quote_id in counted]
         denied = 0
         now = datetime.now(timezone.utc)
 

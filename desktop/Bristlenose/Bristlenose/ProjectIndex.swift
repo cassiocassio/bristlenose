@@ -597,10 +597,31 @@ final class ProjectIndex: ObservableObject {
     /// membership and position. Other items in the same scope shift to make
     /// room. Used by `UndoableRemovalStore` for Undo of "Remove from Sidebar".
     /// No-op if a project with the same ID already exists (idempotent against
-    /// double-undo / race with manifest scans).
+    /// double-undo / race with manifest scans), and no-op if another row now
+    /// holds the same folder: the researcher dropped it back before pressing
+    /// ⌘Z, and one folder is one row (N161), since each row starts its own
+    /// report server on the one database.
+    ///
+    /// A folder that was deleted in the meantime is not restored into: the row
+    /// goes to the root at the end, where a folder's own delete sends its
+    /// members. It was put back with a `folderId` nothing drew, so it was in
+    /// `projects.json` and on no row of the sidebar for good (N142).
     func restoreProject(_ project: Project, folderId: UUID?, position: Int) {
         guard !projects.contains(where: { $0.id == project.id }) else { return }
+        if !project.path.isEmpty,
+           findByPath(project.path) != nil
+            || findSameFolder(URL(fileURLWithPath: project.path)) != nil {
+            return
+        }
         var restored = project
+        var folderId = folderId
+        var position = position
+        if let missing = folderId, !folders.contains(where: { $0.id == missing }) {
+            folderId = nil
+            let rootPositions = projects.filter { $0.folderId == nil }.map(\.position)
+                + folders.map(\.position)
+            position = (rootPositions.max() ?? -1) + 1
+        }
         restored.folderId = folderId
         restored.position = position
         // Shift items in the same scope at or after `position` down by 1.

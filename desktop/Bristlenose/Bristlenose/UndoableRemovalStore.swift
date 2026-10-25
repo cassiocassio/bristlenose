@@ -143,8 +143,17 @@ final class UndoableRemovalStore: ObservableObject {
                                  position: entry.position)
         }
         pending = nil
-        if !batch.priorSelection.isEmpty {
-            onUndo?(batch.priorSelection)
+        // Only rows that exist: a restore that stood down (the folder was
+        // dropped back as a new row, or the study's folder was deleted) must
+        // not select a row nothing draws.
+        let live = batch.priorSelection.filter { selection in
+            switch selection {
+            case .project(let id): return index.projects.contains { $0.id == id }
+            case .folder(let id): return index.folders.contains { $0.id == id }
+            }
+        }
+        if !live.isEmpty {
+            onUndo?(live)
         }
     }
 

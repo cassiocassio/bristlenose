@@ -658,6 +658,99 @@ struct ProjectIndexTests {
         #expect(restored?.folderId == folder.id)
     }
 
+    /// Remove a study that sits in a folder, delete the folder, then ⌘Z: the
+    /// row was put back into a folder that no longer exists, so `sidebarItems`
+    /// (root projects and folders) never drew it and nothing listed it again
+    /// (N142). A folder's own delete sends its members to the root; so does this.
+    @MainActor @Test func restoreProject_intoAFolderThatIsGone_landsAtTheRoot() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "Studies")
+        let p = index.addProject(name: "Alpha", path: "/tmp/a")
+        index.addProject(name: "Beta", path: "/tmp/b")
+        index.moveProject(projectId: p.id, toFolder: folder.id)
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar(index.projects.first { $0.id == p.id }!)
+        index.removeFolder(id: folder.id)
+        store.undoLastRemoval()
+
+        let restored = index.projects.first { $0.id == p.id }
+        #expect(restored != nil)
+        #expect(restored?.folderId == nil, "the folder is gone; the row goes where a folder's members go")
+        #expect(index.sidebarItems.contains { $0.id == p.id }, "and it is drawn")
+        // No two root rows share a position (the root sort has no tiebreak).
+        let positions = index.sidebarItems.map(\.position)
+        #expect(Set(positions).count == positions.count)
+    }
+
+    /// Remove a study, drop its folder back on the sidebar instead of using
+    /// Undo, then ⌘Z: the drop made a new row on the same folder, and the
+    /// restore added the old one beside it (N161). One folder is one row.
+    @MainActor @Test func restoreProject_whenTheFolderIsAlreadyBackInTheSidebar_addsNoSecondRow() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let study = tempDir.appendingPathComponent("interviews")
+        try? FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        let first = index.addProject(name: "Interviews", path: study.path)
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+
+        store.removeFromSidebar(index.projects.first { $0.id == first.id }!)
+        let again = index.addProject(name: "Interviews", path: study.path)   // the drop
+        store.undoLastRemoval()
+
+        #expect(index.projects.count == 1, "two rows would each start a report server on one database")
+        #expect(index.projects.first?.id == again.id, "the row the researcher just added stays")
+        #expect(!store.hasPending, "the removal is settled either way")
+    }
+
+    /// What undo selects again is only what the sidebar can draw. A restore that
+    /// stood down (N161) or a folder that was deleted meanwhile (N142) must not
+    /// leave the selection on a row nothing shows.
+    @MainActor @Test func undoNeverReselectsAFolderThatIsGone() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let folder = index.addFolder(name: "Studies")
+        let p = index.addProject(name: "Alpha", path: "/tmp/a")
+        index.moveProject(projectId: p.id, toFolder: folder.id)
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+        var reselected: Set<SidebarSelection>?
+        store.setOnUndo { reselected = $0 }
+
+        store.removeFromSidebar(index.projects.first { $0.id == p.id }!,
+                                priorSelection: [.project(p.id), .folder(folder.id)])
+        index.removeFolder(id: folder.id)
+        store.undoLastRemoval()
+
+        #expect(reselected == [.project(p.id)], "the deleted folder is not selected again")
+    }
+
+    @MainActor @Test func aRestoreThatStoodDownSelectsNothing() {
+        let (index, tempDir) = Self.makeTempIndex()
+        defer { Self.cleanup(tempDir) }
+
+        let study = tempDir.appendingPathComponent("interviews")
+        try? FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        let first = index.addProject(name: "Interviews", path: study.path)
+        let store = UndoableRemovalStore()
+        store.setProjectIndex(index)
+        var reselected: Set<SidebarSelection>?
+        store.setOnUndo { reselected = $0 }
+
+        store.removeFromSidebar(index.projects.first { $0.id == first.id }!,
+                                priorSelection: [.project(first.id)])
+        index.addProject(name: "Interviews", path: study.path)
+        store.undoLastRemoval()
+
+        #expect(reselected == nil, "the row that was removed is not in the sidebar")
+    }
+
     // MARK: - UndoableRemovalStore round-trip
     //
     // These used to pass `undoWindow: 60` — not to test the window, but to stop

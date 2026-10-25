@@ -86,7 +86,7 @@ export function LensSubtitleSync(): null {
       subtitle = quotesSubtitle(visible, store.viewMode === "starred");
     } else if (tab === "signals") {
       subtitle = signalsSubtitle(signals.signals.length);
-    } else if ((tab === "codebook" || tab === "codebookV2") && codebook) {
+    } else if (tab === "codebook" && codebook) {
       const { codebooks, tags } = codebookCounts(codebook);
       subtitle = codebookSubtitle(codebooks, tags);
     } else if (tab === "screens") {

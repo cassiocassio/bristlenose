@@ -98,6 +98,7 @@ describe("the Codebook subtitle after a tag made elsewhere", () => {
   it("is read again when the Codebook lens is opened", async () => {
     resetStore();
     initFromQuotes([]);
+    vi.mocked(getCodebook).mockClear();
     vi.mocked(getCodebook).mockResolvedValueOnce(book(["a"]));
     const nav: { go: (to: string) => void } = { go: () => {} };
     function Nav() {
@@ -111,7 +112,8 @@ describe("the Codebook subtitle after a tag made elsewhere", () => {
         <Nav />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(getCodebook).toHaveBeenCalled());
+    await waitFor(() => expect(getCodebook).toHaveBeenCalledTimes(1));
+    await act(async () => {}); // the first answer lands: the title says 1 tag
 
     // a second tag is made on a quote card: nothing is dispatched
     vi.mocked(getCodebook).mockResolvedValue(book(["a", "b"]));

@@ -218,6 +218,9 @@ final class ServeManager: ObservableObject {
     /// that crosses the language boundary.
     @Published private(set) var projectKey: String?
 
+    /// Test seam: a real serve learns its key from `/api/health`.
+    func setProjectKeyForTest(_ key: String?) { projectKey = key }
+
     /// Where `setAgentScope` sends its PUT: a running serve that is not being
     /// torn down, else nil.
     ///

@@ -349,14 +349,23 @@ final class ServeFleet: ObservableObject {
         return handshakeProjectPaths.contains(path)
     }
 
+    /// Where `syncHandshake` writes the handshake. Nil in the app (the data
+    /// container and the group copy); a test points it at a temp directory so a
+    /// sync never touches the real file of a running app.
+    var handshakeDirectory: URL?
+
+    /// How the readable gate reaches a serve. A test records the calls rather
+    /// than PUTting to a port.
+    var applyAgentScope: (ServeManager, Bool) -> Void = { $0.setAgentScope(readable: $1) }
+
     /// Re-derive the handshake from the window roster and write it.
     ///
     /// One file, one writer, and no owner to designate. Called whenever any
     /// manager's contribution may have changed and on every roster sweep —
     /// derivation is cheap and cannot drift, which a designated slot could and
     /// did (five different answers across five consecutive tool calls, 20 Aug).
-    func syncHandshake() {
-        let shown = WindowRoster.shared.shownProjects
+    func syncHandshake(shown shownOverride: Set<UUID>? = nil) {
+        let shown = shownOverride ?? WindowRoster.shared.shownProjects
         var candidates: [UUID: HandshakeExposure.Candidate] = [:]
         for (id, manager) in managers {
             guard let path = manager.currentProjectPath else { continue }
@@ -388,12 +397,34 @@ final class ServeFleet: ObservableObject {
         let byID = agentAccessByID
         let access: (UUID) -> Bool = { id in byID?(id) ?? false }
 
-        let entries = HandshakeExposure.entries(
+        // A study that became readable while marked stale (N191, sweep 2): its
+        // environment went stale in a background window with its access off,
+        // so it is still on the OLD Anonymise (and key, and provider) setting.
+        // Turning its access on from another window, or re-ticking it in
+        // Settings where no content window is fronted, never fronts it, so
+        // `front()` would restart it only when someone clicked its window,
+        // and until then agents read it with the old setting. Restart it now,
+        // and neither name it in the handshake nor open its gate until the new
+        // serve is up: `restartIfRunning` tears down asynchronously, so the
+        // old serve still reads `.running` for a beat. The next sync, driven
+        // by the restarted serve reaching `.running`, offers it as usual.
+        let inScope = HandshakeExposure.readableProjects(
             candidates: candidates, shown: shown, agentAccess: access)
+        var restarting: Set<UUID> = []
+        for id in staleProjects.intersection(inScope) {
+            guard let manager = managers[id], manager.runningPort != nil else { continue }
+            staleProjects.remove(id)
+            restarting.insert(id)
+            manager.restartIfRunning()
+        }
+        let offered = candidates.filter { !restarting.contains($0.key) }
+
+        let entries = HandshakeExposure.entries(
+            candidates: offered, shown: shown, agentAccess: access)
         if entries.isEmpty {
-            MCPHandshake.remove()
+            MCPHandshake.remove(directory: handshakeDirectory)
         } else {
-            MCPHandshake.write(entries: entries)
+            MCPHandshake.write(entries: entries, directory: handshakeDirectory)
         }
 
         let paths = Set(entries.map(\.path))
@@ -403,10 +434,9 @@ final class ServeFleet: ObservableObject {
         // when the sidecar is reaped 90 s later — and safe against an agent
         // holding a cached port and bearer, not only against a proxy that
         // politely re-reads the file.
-        let readable = HandshakeExposure.readableProjects(
-            candidates: candidates, shown: shown, agentAccess: access)
+        let readable = inScope
         for (id, manager) in managers {
-            manager.setAgentScope(readable: readable.contains(id))
+            applyAgentScope(manager, readable.contains(id) && !restarting.contains(id))
         }
         // Published so Settings ▸ MCP Agents can print the gate set itself
         // rather than computing a second opinion of it. "Open to agents: N"

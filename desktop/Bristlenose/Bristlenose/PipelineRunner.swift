@@ -3171,11 +3171,12 @@ var args = ["run", project.path, "--no-serve"]
         // Gemini folds billing into RESOURCE_EXHAUSTED, so their `insufficient_
         // quota` stays a transient `.quota`, not a top-up-able credit wall.
         if provider == .claude || provider == .chatGPT {
-            if matches(tail, #"credit balance|insufficient_quota|billing_error|exceeded your current quota"#) {
+            if matches(tail, #"credit balance|no api credit|insufficient_quota|billing_error|exceeded your current quota"#) {
                 return .outOfCredit
             }
         }
-        if matches(tail, #"rate limit|quota|\b429\b"#) { return .quota }
+        // `rate[ -]limit`: the preflight says "rate-limiting this account".
+        if matches(tail, #"rate[ -]limit|quota|\b429\b"#) { return .quota }
         if matches(tail, #"connection refused|timed out|dns|could not resolve"#) {
             return .network
         }

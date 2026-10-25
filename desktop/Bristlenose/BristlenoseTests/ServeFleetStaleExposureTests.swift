@@ -39,7 +39,7 @@ struct ServeFleetStaleExposureTests {
 
     /// `a` fronted and `b` in a background window, both running, neither
     /// shared; Anonymise has just gone on, so `b` is marked stale.
-    private static func rig() throws -> Rig {
+    private static func rig(exposed: Bool = false) throws -> Rig {
         let fleet = ServeFleet(screenReading: ScreenReadingStore(), makeManager: {
             ServeManager(resolvedMode: .success(.external(port: restartPort)))
         })
@@ -64,10 +64,24 @@ struct ServeFleetStaleExposureTests {
         }
         fleet.frontedProject = a
 
+        if exposed {
+            // Both studies already shared and named in the handshake, as a
+            // study an agent is reading is, before the setting changes.
+            access.on = [a, b]
+            fleet.syncHandshake(shown: [a, b])
+            #expect(scope.opened(b), "precondition: b is open to agents")
+            #expect(FileManager.default.fileExists(atPath: dir.appendingPathComponent(MCPHandshake.filename).path),
+                    "precondition: the handshake is written")
+        }
+
         let suite = "ServeFleetStaleExposureTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         fleet.applyEnvChange(defaults: defaults)
+        if exposed {
+            #expect(fleet.staleProjects.isEmpty, "precondition: an exposed study is restarted now, not marked")
+            return Rig(fleet: fleet, scope: scope, access: access, dir: dir)
+        }
         #expect(fleet.staleProjects.contains(b), "precondition: b is marked stale")
         #expect(fleet.staleProjects.contains(a) == false, "precondition: a is fronted, so restarted")
         return Rig(fleet: fleet, scope: scope, access: access, dir: dir)
@@ -125,6 +139,59 @@ struct ServeFleetStaleExposureTests {
                 "a second sync opened the gate on the serve that is about to be restarted")
         #expect(handshakeNames(rig, Self.b) == false,
                 "a second sync named the serve that is about to be restarted")
+
+        await settle(b, to: .running(port: Self.restartPort))
+        #expect(b.restartPending == false)
+    }
+
+    /// REV-2: the hold covered only restarts `syncHandshake` started itself.
+    /// An exposed study restarted by a settings change (Anonymise on) is torn
+    /// down in a Task, and until it is gone its old serve still reads
+    /// `.running` with the old token: a sync in that gap named it and re-opened
+    /// its gate, so an agent could read the un-anonymised quotes.
+    @Test func anExposedStudyRestartedBySettingsIsNotOfferedWhileItRestarts() async throws {
+        let rig = try Self.rig(exposed: true)
+        defer { try? FileManager.default.removeItem(at: rig.dir) }
+        let b = rig.fleet.manager(for: Self.b)
+        #expect(b.restartPending, "precondition: the settings change started b's restart")
+
+        rig.fleet.syncHandshake(shown: [Self.a, Self.b])   // before the teardown Task runs
+
+        #expect(rig.scope.calls.last(where: { $0.project == Self.b })?.readable == false,
+                "a sync re-opened the gate on the serve that is about to be restarted")
+        #expect(handshakeNames(rig, Self.b) == false,
+                "a sync named the serve that is about to be restarted")
+
+        await settle(b, to: .running(port: Self.restartPort))
+        #expect(b.restartPending == false)
+        b.instance.mcpInstanceID = "inst-restarted"
+        b.instance.mcpToken = "tok-restarted"
+        b.setProjectKeyForTest("key-\(Self.b)")
+        rig.fleet.syncHandshake(shown: [Self.a, Self.b])
+        #expect(rig.scope.calls.last(where: { $0.project == Self.b })?.readable == true,
+                "the restarted serve was never offered again")
+        #expect(handshakeNames(rig, Self.b))
+    }
+
+    /// The other door: a stale study whose window was closed (so it was out of
+    /// scope and left alone) and reopens within the reap window is restarted by
+    /// `front()`, with Agent Access on. Same gap, same old serve.
+    @Test func aStaleStudyRestartedByFrontingItsWindowIsNotOfferedWhileItRestarts() async throws {
+        let rig = try Self.rig()
+        defer { try? FileManager.default.removeItem(at: rig.dir) }
+        let b = rig.fleet.manager(for: Self.b)
+        rig.access.on.insert(Self.b)
+        rig.fleet.syncHandshake(shown: [Self.a])           // b's window is closed
+        #expect(rig.fleet.staleProjects.contains(Self.b), "precondition: b is still marked stale")
+
+        rig.fleet.front(Self.b)                            // the window reopens
+        #expect(b.restartPending, "precondition: fronting restarted b")
+        rig.fleet.syncHandshake(shown: [Self.a, Self.b])   // before the teardown Task runs
+
+        #expect(rig.scope.opened(Self.b) == false,
+                "a sync opened the gate on the stale serve that front() is restarting")
+        #expect(handshakeNames(rig, Self.b) == false,
+                "a sync named the stale serve that front() is restarting")
 
         await settle(b, to: .running(port: Self.restartPort))
         #expect(b.restartPending == false)

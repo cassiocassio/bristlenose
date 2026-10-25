@@ -122,6 +122,8 @@ struct BristlenoseApp: App {
     @State private var prefsFanOut: (any NSObjectProtocol)?
     /// Holds the agent-access observer that designates the exposed study.
     @State private var agentAccessFanOut: (any NSObjectProtocol)?
+    /// Says so, once, when turning Agent Access on or off did not reach the disk.
+    @State private var agentAccessNotSavedObserver: (any NSObjectProtocol)?
     @StateObject private var projectIndex = ProjectIndex()
 
     /// Owns the single import window's store. App-level rather than
@@ -256,6 +258,26 @@ struct BristlenoseApp: App {
                         // has no CI, so warnings are its only mechanical signal.
                         Task { @MainActor in
                             serveFleet.syncHandshake()
+                        }
+                    }
+                    // The change was refused by the disk, so the study stays as
+                    // it was (`ProjectIndex.setAgentAccess` put the flag back)
+                    // and the researcher is told, in the words every other
+                    // failed save in the app uses. One handler for the three
+                    // doors (sidebar, menu bar, Settings list) so the alert is
+                    // said once, in the window that is in front.
+                    agentAccessNotSavedObserver = NotificationCenter.default.addObserver(
+                        forName: .bristlenoseAgentAccessNotSaved, object: nil, queue: .main
+                    ) { _ in
+                        Task { @MainActor in
+                            let alert = NSAlert()
+                            alert.messageText = i18n.t("common.sync.saveRefused")
+                            alert.addButton(withTitle: i18n.t("common.buttons.ok"))
+                            if let host = PanelHost.window {
+                                alert.beginSheetModal(for: host)
+                            } else {
+                                alert.runModal()
+                            }
                         }
                     }
                     prefsFanOut = NotificationCenter.default.addObserver(

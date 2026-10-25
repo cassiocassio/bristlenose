@@ -670,9 +670,12 @@ final class ProjectIndex: ObservableObject {
     /// agent installed. Posts `.bristlenoseAgentAccessChanged` so
     /// `ServeManager` can write or delete the MCP handshake for the fronted
     /// project without this store knowing about serve lifecycles.
-    /// Returns whether the change was applied. `false` means the project is
-    /// gone, the value was already there, or — the case that matters — the
-    /// policy refuses it.
+    /// Returns whether the change was applied **and reached the disk**. `false`
+    /// means the project is gone, the value was already there, or the write did
+    /// not land. In that last case the flag is put back to what the file says
+    /// (a study that was shared stays shown as shared, and the handshake is not
+    /// told it went off), and `.bristlenoseAgentAccessNotSaved` is posted so the
+    /// app can say so once. The caller never has to guess what is on disk.
     @discardableResult
     func setAgentAccess(id: UUID, enabled: Bool) -> Bool {
         guard let index = projects.firstIndex(where: { $0.id == id }),
@@ -695,8 +698,17 @@ final class ProjectIndex: ObservableObject {
         // launch while the researcher holds a receipt saying otherwise. The
         // house rule from `CredentialStore.set()`: returning cleanly is not
         // evidence anything was stored.
-        if !saveVerified() {
+        guard agentAccessReachedDisk(id: id, enabled: enabled) else {
+            // Memory goes back to what the disk holds, so the sidebar, the
+            // Settings list and the file say one thing. Not retried: a full
+            // disk or a refused write does not mend in the next millisecond,
+            // and the same click works once it does.
+            projects[index].agentAccess = !enabled
             log.error("agent access write did not persist for \(id, privacy: .public)")
+            NotificationCenter.default.post(
+                name: .bristlenoseAgentAccessNotSaved, object: nil,
+                userInfo: ["id": id, "enabled": enabled])
+            return false
         }
         // Carries WHICH project and which way: `ServeFleet` designates the
         // exposed study from this, and exposure follows the deliberate act of
@@ -707,16 +719,22 @@ final class ProjectIndex: ObservableObject {
         return true
     }
 
-    /// `save()` plus a read-back of the one field that matters most.
+    /// `save()`, then a read-back of the one field that matters most.
     ///
     /// Deliberately narrow: this is not a general integrity check, it is the
     /// answer to "did the permission I just changed actually reach the disk".
-    private func saveVerified() -> Bool {
-        save()
-        guard let data = try? Data(contentsOf: fileURL),
-              let decoded = try? JSONDecoder().decode(ProjectsFile.self, from: data)
+    /// It decodes with the app's own date strategy (the file's dates are
+    /// ISO-8601 strings, which a plain `JSONDecoder` cannot read, so until
+    /// 25 Oct 2026 this threw on every call) and compares the flag itself, not
+    /// how many projects there are: a failed atomic write leaves the old file,
+    /// which has the same count.
+    private func agentAccessReachedDisk(id: UUID, enabled: Bool) -> Bool {
+        guard save(),
+              let data = try? Data(contentsOf: fileURL),
+              let decoded = try? JSONDecoder.iso8601Fractional.decode(ProjectsFile.self, from: data),
+              let onDisk = decoded.projects.first(where: { $0.id == id })
         else { return false }
-        return decoded.projects.count == projects.count
+        return onDisk.agentAccess == enabled
     }
 
     /// Whether the project at `path` has agent access on. Path-standardised
@@ -1803,23 +1821,32 @@ final class ProjectIndex: ObservableObject {
     /// `save()` must not write over the one copy that exists.
     private var saveRefused = false
 
-    private func save() {
+    /// How the encoded list reaches the disk. A test replaces it to make a write
+    /// fail, or to return cleanly having stored nothing.
+    var fileWriter: (Data, URL) throws -> Void = { data, url in
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// Whether the list was written. Most callers have nothing to do about a
+    /// failure and ignore it; `setAgentAccess` is the first whose failure is a
+    /// privacy failure rather than a lost preference.
+    @discardableResult
+    private func save() -> Bool {
         guard !saveRefused else {
             log.error("save refused: projects.json failed to decode and is still in place")
-            return
+            return false
         }
         let wrapper = ProjectsFile(version: "1.0", folders: folders, projects: projects)
         do {
             let data = try JSONEncoder.iso8601Fractional.encode(wrapper)
-            try data.write(to: fileURL, options: .atomic)
+            try fileWriter(data, fileURL)
+            return true
         } catch {
             // `Logger`, not `print` — desktop/CLAUDE.md is explicit that print
             // is for scripts only, and an unguarded one here shipped the
             // container path to stdout where no support bundle can reach it.
-            // Callers that need to know a write landed read it back;
-            // `setAgentAccess` is the first whose failure is a privacy failure
-            // rather than a lost preference.
             log.error("Failed to save projects.json: \(error.localizedDescription, privacy: .public)")
+            return false
         }
     }
 }
@@ -1866,6 +1893,12 @@ private extension JSONEncoder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return encoder
     }()
+}
+
+extension Notification.Name {
+    /// Turning a study's Agent Access on or off did not reach the disk, so the
+    /// flag was left as it was. Carries `id` and the `enabled` value asked for.
+    static let bristlenoseAgentAccessNotSaved = Notification.Name("bristlenoseAgentAccessNotSaved")
 }
 
 extension Notification.Name {

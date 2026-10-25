@@ -180,7 +180,10 @@ export function TagInput({
 
   // Ghost text: suffix of best prefix match.
   const ghostText = useMemo(() => {
-    const val = inputValue.trim().toLowerCase();
+    // Match and slice on the trimmed text: "tru " must not splice a stray
+    // character into the completion (the commit uses the trimmed text too).
+    const typed = inputValue.trim();
+    const val = typed.toLowerCase();
     if (!val) return "";
 
     // All tag names from suggest rows (for ghost lookup).
@@ -190,13 +193,13 @@ export function TagInput({
 
     // If a suggestion is highlighted, use that.
     if (selectedTagName && selectedTagName.toLowerCase().startsWith(val)) {
-      return selectedTagName.substring(inputValue.length);
+      return selectedTagName.substring(typed.length);
     }
     // A complete existing name is not a prefix to be completed.
     if (typedIsExistingTag) return "";
     // Otherwise find best prefix match from suggestions.
     const prefix = tagNames.find((n) => n.toLowerCase().startsWith(val));
-    return prefix ? prefix.substring(inputValue.length) : "";
+    return prefix ? prefix.substring(typed.length) : "";
   }, [inputValue, selectedTagName, suggestRows, typedIsExistingTag]);
 
   // Auto-resize input box to fit typed text + ghost.
@@ -216,7 +219,7 @@ export function TagInput({
       return selectedTagName;
     }
     if (ghostText) {
-      return inputValue + ghostText;
+      return inputValue.trim() + ghostText;
     }
     return inputValue.trim();
   }, [inputValue, ghostText, selectedTagName]);
@@ -227,7 +230,7 @@ export function TagInput({
 
       if (e.key === "ArrowRight" && ghostText) {
         e.preventDefault();
-        const accepted = inputValue + ghostText;
+        const accepted = inputValue.trim() + ghostText;
         setInputValue(accepted);
         setSuggestIndex(-1);
       } else if (e.key === "ArrowDown" && selCount > 0) {

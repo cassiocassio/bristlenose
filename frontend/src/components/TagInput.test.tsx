@@ -156,6 +156,14 @@ describe("TagInput", () => {
       expect(container.querySelector(".tag-ghost")?.textContent).toBe("");
     });
 
+    it("whitespace around a partial name does not splice into the completion", async () => {
+      const onCommit = vi.fn();
+      render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
+      await userEvent.type(screen.getByPlaceholderText("tag"), " trus ");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("trust");
+    });
+
     it("an arrow-selected longer suggestion still wins", async () => {
       const onCommit = vi.fn();
       render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
@@ -164,7 +172,7 @@ describe("TagInput", () => {
       expect(onCommit).toHaveBeenCalledWith("trustworthiness");
     });
 
-    it("a shorter prefix still completes by ghost", async () => {
+    it("a shorter prefix still completes to the first prefix match", async () => {
       const onCommit = vi.fn();
       render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
       await userEvent.type(screen.getByPlaceholderText("tag"), "trus");

@@ -322,6 +322,7 @@ describe("Counter", () => {
       const tc = document.querySelector(".bn-hidden-item a.timecode") as HTMLElement;
       tc.focus();
       await userEvent.keyboard("{Enter}");
+      expect(seekTo).toHaveBeenCalledTimes(1);
       expect(seekTo).toHaveBeenCalledWith("p2", 99);
     });
 

@@ -112,9 +112,9 @@ export function Counter({
                 data-quote-id={item.domId}
               >
                 {item.hasMedia ? (
-                  // Link-styled seek action, keyboard-accessible via role/tabIndex/onKeyDown. In the SPA it
-                  // seeks through PlayerContext; without one (the frozen static report) the delegated
-                  // click handler in player.js owns it.
+                  // Link-styled seek action, keyboard-accessible via role/tabIndex/onKeyDown. It seeks
+                  // through PlayerContext (AppLayout provides one to every route). The static report's
+                  // delegated handler in player.js never runs in the SPA, which is what N179 was.
                   // eslint-disable-next-line jsx-a11y/anchor-is-valid
                   <a
                     className="timecode"

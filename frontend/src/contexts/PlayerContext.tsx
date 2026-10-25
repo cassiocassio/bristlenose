@@ -28,6 +28,7 @@ import { announce } from "../utils/announce";
 import { apiGet, apiGetText } from "../utils/api";
 import i18n from "../i18n";
 import { postPlayerState } from "../shims/bridge";
+import { useLastRun } from "./LastRunStore";
 import {
   getSubtitlePrefs,
   setSubtitlePref,
@@ -154,6 +155,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const glowIndexRef = useRef<Record<string, GlowEntry[]> | null>(null);
   const glowActiveRef = useRef<Set<Element>>(new Set());
 
+  // The map is read again whenever a run lands (the signal the lenses re-read on), so
+  // a quote from a session that arrived after the report opened can play.
+  const { refreshKey } = useLastRun();
+
   // Fetch video map from API (or fall back to window globals for legacy mode)
   useEffect(() => {
     const win = window as unknown as Record<string, unknown>;
@@ -186,7 +191,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         console.warn("[player] video map not read:", err);
       })
       .finally(() => _videoMapLoaded());
-  }, []);
+  }, [refreshKey]);
 
   // ── Glow helpers ─────────────────────────────────────────────────────
 

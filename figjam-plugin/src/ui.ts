@@ -3,6 +3,7 @@
 // textContent only.
 
 import { MAX_FILE_BYTES, REFUSAL_TEXT } from "./board";
+import { boardTextFromClipboard } from "./clipboard";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const input = $<HTMLInputElement>("file");
@@ -66,10 +67,11 @@ drop.addEventListener("drop", (e) => {
   if (file) send(file);
 });
 
-// Bristlenose's Copy for FigJam puts the board on the clipboard; ⌘V in this panel
-// builds it, the same as choosing the file. Only plain text is read.
+// A board pasted with ⌘V in this panel builds, the same as choosing the file
+// (clipboard.ts has the two flavours it reads).
 document.addEventListener("paste", (e) => {
-  const text = e.clipboardData?.getData("text/plain") ?? "";
+  const data = e.clipboardData;
+  const text = boardTextFromClipboard(data?.getData("text/html") ?? "", data?.getData("text/plain") ?? "");
   if (!text) return;
   e.preventDefault();
   if (text.length > MAX_FILE_BYTES) {

@@ -74,6 +74,21 @@ describe("panel progress", () => {
     expect(els.stop.hidden).toBe(true);
   });
 
+  it("a paste carrying the board in its HTML flavour builds that board", () => {
+    const board = '{"title":"Café"}';
+    const base64 = btoa(String.fromCharCode(...new TextEncoder().encode(board)));
+    const flavours: Record<string, string> = {
+      "text/html": `<div data-bristlenose-board="${base64}">Café</div>`,
+      "text/plain": "Café",
+    };
+    const paste = { clipboardData: { getData: (t: string) => flavours[t] ?? "" }, preventDefault: () => {} };
+    docListeners.paste.forEach((fn) => fn(paste));
+    expect((parent as any).postMessage).toHaveBeenCalledWith(
+      { pluginMessage: { type: "build", text: board } },
+      "*",
+    );
+  });
+
   it("a Stop pressed during a build stays pressed when the next count arrives", () => {
     const paste = { clipboardData: { getData: () => "{}" }, preventDefault: () => {} };
     docListeners.paste.forEach((fn) => fn(paste));

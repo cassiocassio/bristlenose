@@ -186,14 +186,20 @@ extension Notification.Name {
         Notification.Name("bristlenoseUndoableRemovalRestoredSelection")
 }
 
-/// Which history Edit ▸ Undo and ⌘Z take from. Two stacks share the key: the
-/// sidebar's pending removal and the report's own (`undo-state`). A pending
-/// removal is always the newer of the two, because a new act on the report
-/// settles it (`UndoableRemovalStore.commitIfPending`), so it goes first.
+/// Which history Edit ▸ Undo and ⌘Z take from. Three share the key: a native
+/// text field the researcher is typing in, the sidebar's pending removal, and
+/// the report's own (`undo-state`). The field goes first, always: ⌘Z while
+/// typing edits the text and never reaches either of the others (N140, see
+/// `TextEditingFocus`). A pending removal is always the newer of the other two,
+/// because a new act on the report settles it
+/// (`UndoableRemovalStore.commitIfPending`), so it goes before the report.
 enum EditUndoRoute: Equatable {
-    case removal, report, none
+    case textField, removal, report, none
 
-    static func resolve(removalPending: Bool, reportCanUndo: Bool) -> EditUndoRoute {
+    static func resolve(
+        textEditing: Bool = false, removalPending: Bool, reportCanUndo: Bool
+    ) -> EditUndoRoute {
+        if textEditing { return .textField }
         if removalPending { return .removal }
         return reportCanUndo ? .report : .none
     }

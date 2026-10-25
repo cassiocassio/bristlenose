@@ -73,7 +73,8 @@ struct MenuCommands: Commands {
         }
 
         CommandGroup(replacing: .undoRedo) {
-            UndoRedoMenuContent(bridgeHandler: bridgeHandler, removalStore: removalStore, i18n: i18n)
+            UndoRedoMenuContent(bridgeHandler: bridgeHandler, removalStore: removalStore,
+                                textEditing: TextEditingWatcher.shared, i18n: i18n)
         }
 
         CommandGroup(after: .textEditing) {
@@ -705,12 +706,18 @@ private struct FileMenuContent: View {
 private struct UndoRedoMenuContent: View {
     @ObservedObject var bridgeHandler: BridgeHandler
     @ObservedObject var removalStore: UndoableRemovalStore
+    /// Whether a native text field has the keyboard. Drives how the items read
+    /// and whether they are dimmed; what they do is decided when pressed
+    /// (`TextEditingFocus`).
+    @ObservedObject var textEditing: TextEditingWatcher
     @ObservedObject var i18n: I18n
 
-    /// A pending removal goes first: it is always the newer act, because a new
-    /// act on the report settles it (`BridgeHandler`, `undo-state`).
-    /// `EditUndoRoute` holds the rule.
+    /// A native text field's undo is the field's: it never names a removal.
+    /// Otherwise a pending removal goes first: it is always the newer act,
+    /// because a new act on the report settles it (`BridgeHandler`,
+    /// `undo-state`). `EditUndoRoute` holds the rule.
     private var undoLabel: String {
+        if textEditing.isEditing { return i18n.t("desktop.menu.edit.undo") }
         if let name = removalStore.pendingName {
             return String(format: i18n.t("desktop.menu.edit.undoRemove"), name)
         }
@@ -719,8 +726,9 @@ private struct UndoRedoMenuContent: View {
 
     /// The report's undo needs a live channel; a pending sidebar removal is
     /// native and does not (R70: `canUndo` outlives a dead sidecar).
-    private var route: EditUndoRoute {
-        EditUndoRoute.resolve(removalPending: removalStore.hasPending,
+    private func route(textEditing: Bool) -> EditUndoRoute {
+        EditUndoRoute.resolve(textEditing: textEditing,
+                              removalPending: removalStore.hasPending,
                               reportCanUndo: bridgeHandler.canDispatch && bridgeHandler.canUndo)
     }
 
@@ -729,21 +737,27 @@ private struct UndoRedoMenuContent: View {
         // no channel there is no editor to hand ⌘Z to (R70).
         if !(bridgeHandler.canDispatch && bridgeHandler.isEditing) {
             Button(undoLabel, systemImage: "arrow.uturn.backward") {
-                switch route {
+                // Asked now, not read from the published flag: a field focused
+                // by code is first responder before any update has told the menu.
+                switch route(textEditing: TextEditingFocus.isEditing()) {
+                case .textField: TextEditingFocus.undo()
                 case .removal: removalStore.undoLastRemoval()
                 case .report: bridgeHandler.menuAction("undo")
                 case .none: break
                 }
             }
             .keyboardShortcut("z", modifiers: .command)
-            .disabled(route == .none)
+            .disabled(route(textEditing: textEditing.isEditing) == .none)
 
-            Button(bridgeHandler.redoLabel ?? i18n.t("desktop.menu.edit.redo"),
+            Button(textEditing.isEditing
+                   ? i18n.t("desktop.menu.edit.redo")
+                   : (bridgeHandler.redoLabel ?? i18n.t("desktop.menu.edit.redo")),
                    systemImage: "arrow.uturn.forward") {
-                bridgeHandler.menuAction("redo")
+                if !TextEditingFocus.redo() { bridgeHandler.menuAction("redo") }
             }
             .keyboardShortcut("z", modifiers: [.command, .shift])
-            .disabled(!(bridgeHandler.canDispatch && bridgeHandler.canRedo))
+            .disabled(!(textEditing.isEditing
+                        || (bridgeHandler.canDispatch && bridgeHandler.canRedo)))
         }
     }
 }
@@ -1289,6 +1303,10 @@ private struct ProjectMenuContent: View {
             Divider()
 
             Button(i18n.t("desktop.menu.folder.delete"), systemImage: "trash", role: .destructive) {
+                // ⌘⌫ with a text field focused (a folder being renamed, the
+                // search box) is the field's: delete to the start of the line.
+                // Deleting the folder cannot be undone (N140).
+                if TextEditingFocus.deleteToStartOfLine(invokedBy: NSApp.currentEvent) { return }
                 windowCommands?.perform(.deleteFolder)
             }
             .keyboardShortcut(.delete, modifiers: .command)
@@ -1410,6 +1428,8 @@ private struct ProjectMenuContent: View {
             Divider()
 
             Button(i18n.t("desktop.menu.project.removeFromSidebar"), systemImage: "minus.circle") {
+                // As Folder ▸ Delete: ⌘⌫ in a focused text field is the field's.
+                if TextEditingFocus.deleteToStartOfLine(invokedBy: NSApp.currentEvent) { return }
                 windowCommands?.perform(.removeFromSidebar)
             }
             .keyboardShortcut(.delete, modifiers: .command)

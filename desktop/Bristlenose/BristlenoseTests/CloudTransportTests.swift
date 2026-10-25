@@ -1204,7 +1204,7 @@ struct AdapterRowDerivationTests {
         #expect(row.scheduledDuration == 3600)
         #expect(row.recordedAt != nil, "and when the file landed, separately")
         #expect(row.duration == 3131, "the media facet's own length, in seconds")
-        // Flat, always. `matchEvent` is a ±30-minute proximity guess, and
+        // Flat, always. `matchEvent` is an overlap guess, and
         // grouping on it would nest two unrelated interviews as one call's two
         // halves — hiding the titles that are the only thing telling them apart.
         #expect(row.meetingID == nil)
@@ -1261,6 +1261,162 @@ struct AdapterRowDerivationTests {
         #expect(row.scheduledDuration == 3600)
         #expect(row.title == "P04 Interview", "the meeting's own subject, not the filename's")
         #expect(row.attendees.count == 1, "the roster came with the match")
+    }
+
+    // MARK: Teams: which meeting a recording belongs to (REV-2, N141)
+    //
+    // `createdDateTime` is when the file LANDED, near the meeting's end (the
+    // adapter's own comment, from ae6befda8), so the join compares the
+    // recording's span, `[landed - length, landed]`, with each event's
+    // `[start, end]` and takes the event it overlaps most. Comparing the event's
+    // START with the landing moment took the NEXT booking for any session that
+    // ran longer than 30 minutes, and once N141 let calendar dates parse, that
+    // attached the wrong participant's title, roster and clock to a recording.
+
+    private static let graphClock: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS"
+        return f
+    }()
+
+    /// One recording and some calendar events, listed through the real adapter.
+    private func teamsRow(
+        landed: Date, lengthSeconds: Int?,
+        events: [(id: String, subject: String, who: String, start: Date, length: TimeInterval)]
+    ) async throws -> CloudImportRow {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        let video = lengthSeconds.map { #","video":{"duration":\#($0 * 1000)}"# } ?? ""
+        let calendar = events.map { e in
+            """
+            {"id":"\(e.id)","subject":"\(e.subject)",
+              "start":{"dateTime":"\(Self.graphClock.string(from: e.start))","timeZone":"UTC"},
+              "end":{"dateTime":"\(Self.graphClock.string(from: e.start.addingTimeInterval(e.length)))","timeZone":"UTC"},
+              "attendees":[{"emailAddress":{"name":"\(e.who)","address":"\(e.who.lowercased())@example.invalid"},
+                            "type":"required"}],
+              "organizer":{"emailAddress":{"address":"martin@example.invalid"}}}
+            """
+        }.joined(separator: ",")
+
+        StubURLProtocol.reset()
+        StubURLProtocol.enqueue(.json("""
+        {"value":[{"id":"item-1","name":"P04 Interview-20260816_090000-Meeting Recording.mp4",
+          "size":1048576,"createdDateTime":"\(iso.string(from: landed))",
+          "parentReference":{"driveType":"business"},
+          "file":{"mimeType":"video/mp4"}\(video),
+          "@microsoft.graph.downloadUrl":"https://example.invalid/d"}]}
+        """))
+        StubURLProtocol.enqueue(.json(#"{"value":[\#(calendar)]}"#))
+
+        let source = TeamsSource(
+            config: MicrosoftOAuthConfig(clientID: "cid", tenant: "common",
+                                         redirectURI: "msauth.test://auth"),
+            session: StubURLProtocol.session(),
+            restoredTokens: MicrosoftTokenResponse(
+                data: Data(#"{"access_token":"T","expires_in":3600}"#.utf8))!)
+        let listing = await source.list(window: window)
+        return try #require(listing.rows.first)
+    }
+
+    @Test("Teams: a long session that landed at its end takes its own meeting, not the next booking")
+    func teamsBackToBackTakesItsOwnMeeting() async throws {
+        let booked = Date().addingTimeInterval(-4 * 3600)
+        // 52 minutes long, landed at 53 minutes: 7 minutes before the second
+        // meeting's start, 53 minutes after its own.
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(53 * 60), lengthSeconds: 3131,
+            events: [
+                (id: "cal-1", subject: "P04 first interview", who: "Priya",
+                 start: booked, length: 3600),
+                (id: "cal-2", subject: "P05 second interview", who: "Sam",
+                 start: booked.addingTimeInterval(3600), length: 3600),
+            ])
+
+        #expect(row.title == "P04 first interview", "its own meeting's subject, not the next one's")
+        #expect(row.attendees.compactMap(\.displayName) == ["Priya"],
+                "its own roster: a wrong name on a recording is worse than none")
+        let scheduled = try #require(row.scheduledAt)
+        #expect(abs(scheduled.timeIntervalSince(booked)) < 1, "its own booked start")
+    }
+
+    @Test("Teams: the second of two back-to-back sessions takes the second booking")
+    func teamsTheSecondOfTwoTakesTheSecond() async throws {
+        let booked = Date().addingTimeInterval(-4 * 3600)
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(3600 + 51 * 60), lengthSeconds: 3000,
+            events: [
+                (id: "cal-1", subject: "P04 first interview", who: "Priya",
+                 start: booked, length: 3600),
+                (id: "cal-2", subject: "P05 second interview", who: "Sam",
+                 start: booked.addingTimeInterval(3600), length: 3600),
+            ])
+
+        #expect(row.title == "P05 second interview")
+        #expect(row.attendees.compactMap(\.displayName) == ["Sam"])
+    }
+
+    @Test("Teams: an isolated hour-long session that landed near its end still matches its event")
+    func teamsAnIsolatedLongSessionMatches() async throws {
+        let booked = Date().addingTimeInterval(-4 * 3600)
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(55 * 60), lengthSeconds: 3300,
+            events: [(id: "cal-1", subject: "P04 first interview", who: "Priya",
+                      start: booked, length: 3600)])
+
+        #expect(row.title == "P04 first interview")
+        #expect(row.attendees.compactMap(\.displayName) == ["Priya"])
+    }
+
+    @Test("Teams: a recording that ran into the next booking takes the one it mostly sat in")
+    func teamsAStraddlingRecordingTakesTheLargerOverlap() async throws {
+        let booked = Date().addingTimeInterval(-4 * 3600)
+        // Ran 60 minutes and landed 65 minutes after the first booking began:
+        // 55 minutes inside it, 5 inside the next. Listed second booking first,
+        // so taking whichever event comes first cannot pass by luck.
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(65 * 60), lengthSeconds: 3600,
+            events: [
+                (id: "cal-2", subject: "P05 second interview", who: "Sam",
+                 start: booked.addingTimeInterval(3600), length: 3600),
+                (id: "cal-1", subject: "P04 first interview", who: "Priya",
+                 start: booked, length: 3600),
+            ])
+
+        #expect(row.title == "P04 first interview")
+        #expect(row.attendees.compactMap(\.displayName) == ["Priya"])
+    }
+
+    @Test("Teams: an event the recording never overlapped is not taken")
+    func teamsAnEventWithNoOverlapMatchesNothing() async throws {
+        let booked = Date().addingTimeInterval(-6 * 3600)
+        // The file landed two hours after the meeting ended, and ran 20 minutes.
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(3 * 3600), lengthSeconds: 1200,
+            events: [(id: "cal-1", subject: "P04 first interview", who: "Priya",
+                      start: booked, length: 3600)])
+
+        #expect(row.title == "P04 Interview", "the filename's title, because nothing matched")
+        #expect(row.attendees.isEmpty)
+        #expect(row.scheduledAt == nil)
+    }
+
+    @Test("Teams: a recording whose length is unknown is not guessed onto a meeting")
+    func teamsARecordingOfUnknownLengthMatchesNothing() async throws {
+        let booked = Date().addingTimeInterval(-4 * 3600)
+        let row = try await teamsRow(
+            landed: booked.addingTimeInterval(53 * 60), lengthSeconds: nil,
+            events: [
+                (id: "cal-1", subject: "P04 first interview", who: "Priya",
+                 start: booked, length: 3600),
+                (id: "cal-2", subject: "P05 second interview", who: "Sam",
+                 start: booked.addingTimeInterval(3600), length: 3600),
+            ])
+
+        #expect(row.title == "P04 Interview")
+        #expect(row.attendees.isEmpty)
+        #expect(row.scheduledAt == nil)
     }
 
     /// Zoom, end to end through the adapter: a stopped-and-restarted meeting

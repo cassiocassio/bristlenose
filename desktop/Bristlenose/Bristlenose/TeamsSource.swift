@@ -608,7 +608,19 @@ final class TeamsSource: CloudImportSource {
             expectedFormat: .mp4
         )
 
-        let matched = Self.matchEvent(events, near: startedAt)
+        // Where the recording sat on the clock, for the join below. When the
+        // file's own `createdDateTime` is what we have, that is the moment it
+        // LANDED (see `recordedAt`), so the recording ran in the stretch just
+        // before it; when only the filename's UTC start survives, it ran just
+        // after. A recording of no known length has no span, and is joined to
+        // nothing rather than to a guess.
+        let span: DateInterval? = item.mediaDurationSeconds.flatMap { length in
+            guard length > 0 else { return nil }
+            return item.createdDateTime.flatMap(Self.parseISO) != nil
+                ? DateInterval(start: startedAt.addingTimeInterval(-length), end: startedAt)
+                : DateInterval(start: startedAt, duration: length)
+        }
+        let matched = span.flatMap { Self.matchEvent(events, recording: $0) }
         let attendees = matched.map { Self.attendees(of: $0, ownAddress: identity) } ?? []
 
         // The meeting's own clock, which this adapter has always had in hand
@@ -654,12 +666,11 @@ final class TeamsSource: CloudImportSource {
             //
             // The tempting line here is `matched?.id`, so two files that hit
             // the same event nest as two recordings of one call. It was written
-            // that way and is wrong, because `matchEvent` is a ±30-minute
-            // proximity guess with no identity check — and it is matched
-            // against `createdDateTime`, which is when the recording *landed*,
-            // near the meeting's end. A 50-minute session booked at 10:00
-            // produces a file stamped ~10:52, which is outside its own event's
-            // window and inside the next slot's.
+            // that way and is wrong, because `matchEvent` is an overlap guess
+            // with no identity check — and `createdDateTime`, which it works
+            // from, is when the recording *landed*, near the meeting's end. A
+            // 50-minute session booked at 10:00 produces a file stamped ~10:52
+            // that also touches the next slot when either ran over.
             //
             // Grouping on that guess is worse than a wrong title, because of
             // what the outline does with it: a child row draws only "Recording
@@ -675,29 +686,36 @@ final class TeamsSource: CloudImportSource {
         )
     }
 
-    /// Joins a recording to its calendar event.
+    /// Joins a recording to the calendar event it overlaps most.
     ///
-    /// Fuzzy on purpose, and bounded on purpose. The key is (title, timestamp)
-    /// where the title is user-mutable and the timestamp is *recording start*,
-    /// not meeting start — everyone joins a minute or two late. A 30-minute
-    /// window absorbs that without letting a back-to-back session steal the
-    /// match; widening it would silently attach the wrong roster to a row,
-    /// which is worse than no roster at all.
-    /// Takes the moment rather than the parsed filename: the join must run
-    /// against a zone-qualified instant, and on a business tenant the filename
-    /// cannot supply one.
+    /// Bounded on purpose: an event the recording's span never touches is not
+    /// taken, because attaching the wrong participant's title, roster and clock
+    /// is worse than attaching none. The key is the recording's **span**, not
+    /// its start. `createdDateTime` is when the file landed, near the meeting's
+    /// end (see `recordedAt`), so comparing an event's start with it took the
+    /// NEXT booking for any session that ran longer than 30 minutes (REV-2,
+    /// N141). The span `[landed - length, landed]` overlaps the event the
+    /// session actually belonged to, and only touches a neighbour by the
+    /// minutes either ran over.
+    ///
+    /// The most overlap wins; a tie goes to the event that started closer to
+    /// the recording's start. Takes the span rather than the parsed filename:
+    /// the join must run against zone-qualified instants, and on a business
+    /// tenant the filename cannot supply one.
     private static func matchEvent(
         _ events: [GraphCalendarView.Event],
-        near recordingStart: Date
+        recording: DateInterval
     ) -> GraphCalendarView.Event? {
         events
-            .compactMap { event -> (GraphCalendarView.Event, TimeInterval)? in
-                guard let start = event.start.flatMap(parseWhen) else { return nil }
-                let delta = abs(start.timeIntervalSince(recordingStart))
-                guard delta <= 1_800 else { return nil }
-                return (event, delta)
+            .compactMap { event -> (GraphCalendarView.Event, overlap: TimeInterval, gap: TimeInterval)? in
+                guard let start = event.start.flatMap(parseWhen),
+                      let end = event.end.flatMap(parseWhen), end > start,
+                      let shared = recording.intersection(with: DateInterval(start: start, end: end)),
+                      shared.duration > 0
+                else { return nil }
+                return (event, shared.duration, abs(start.timeIntervalSince(recording.start)))
             }
-            .min { $0.1 < $1.1 }?
+            .min { ($1.overlap, $0.gap) < ($0.overlap, $1.gap) }?
             .0
     }
 

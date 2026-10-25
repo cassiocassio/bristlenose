@@ -942,6 +942,33 @@ class TestHiddenQuotesCountNowhere:
         finally:
             db.close()
 
+    def test_a_recoded_out_session_is_not_stamped_as_coded(self, factory) -> None:
+        """A re-apply that sends nothing for a session must not mark it done:
+        undo the recode and its quotes are evidence again, still uncoded."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        _session(factory, "s2")
+        _recode_out(factory, "s2")
+        db = factory()
+        try:
+            assert ac.owed_sessions(db, _job(factory)) == {}
+        finally:
+            db.close()
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert llm.prompts() == []
+        assert _stamped(factory) == {"s1"}
+
+    def test_apply_with_every_quote_hidden_says_there_is_nothing_to_tag(self, factory) -> None:
+        from fastapi.testclient import TestClient
+
+        _session(factory, "s1")
+        _hide(factory, "s1", 0)
+        _hide(factory, "s1", 1)
+        resp = TestClient(_app(factory)).post("/api/projects/1/autocode/garrett")
+        assert resp.status_code == 400, resp.text
+        assert _count(factory, AutoCodeJob) == 0
+
     def test_the_review_lists_and_accept_all_tags_only_counted_quotes(self, factory) -> None:
         from fastapi.testclient import TestClient
 

@@ -671,36 +671,33 @@ def stamp_sessions(db: SASession, job_id: int, session_pks: Iterable[int]) -> No
 
 def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
     """The sessions ``job`` still owes, ``{"s1": Session.id}``: a session with at
-    least one quote that is not hidden and no stamp from this job (RE#66).
+    least one quote that counts and no stamp from this job (RE#66).
 
     This replaced the watermark (``first_imported_at > completed_at``), which a
     partial failure moved past the sessions it never coded. A session with no
     quotes is not owed: nothing would be sent, and a catch-up chip over it would
-    say "Re-coded" over nothing.
+    say "Re-coded" over nothing. Nor is one whose quotes are all hidden or
+    recoded out (``analysis_quotes``, the predicate the passes send by): it
+    must not be stamped as coded when nothing was sent, or unhiding a quote
+    later would find it done (N175).
     """
-    from sqlalchemy import exists, select
+    from sqlalchemy import select
 
-    from bristlenose.server.models import AutoCodeSessionStamp, Quote, QuoteState
+    from bristlenose.server.models import AutoCodeSessionStamp
     from bristlenose.server.models import Session as SessionModel
+    from bristlenose.server.speaker_slots import analysis_quotes
 
     stamped = select(AutoCodeSessionStamp.session_id).where(
         AutoCodeSessionStamp.job_id == job.id
     )
-    # A session whose every quote is hidden has nothing to send, and is not
-    # stamped as coded either, so unhiding a quote makes it owed (N175).
-    hidden = select(QuoteState.quote_id).where(QuoteState.is_hidden == True)  # noqa: E712
-    has_quote = exists().where(
-        Quote.project_id == SessionModel.project_id,
-        Quote.session_id == SessionModel.session_id,
-        Quote.id.not_in(hidden),
-    )
+    counted_sessions = {q.session_id for q in analysis_quotes(db, job.project_id)}
     return {
         row[0]: row[1]
         for row in db.query(SessionModel.session_id, SessionModel.id).filter(
             SessionModel.project_id == job.project_id,
             SessionModel.id.not_in(stamped),
-            has_quote,
         )
+        if row[0] in counted_sessions
     }
 
 

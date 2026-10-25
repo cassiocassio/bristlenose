@@ -330,6 +330,34 @@ class TestCodebook:
         _hide(client, "q-p1-10")
         assert self._sentiment(client) == ({"frustration": 2, "delight": 1}, 3, 3)
 
+    def test_a_proposal_on_a_hidden_quote_is_not_a_tentative_tag(self, client: TestClient) -> None:
+        """N175: the AutoCode review does not list it, so the sidebar must not count it."""
+        db = client.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            quote = next(
+                q for q in db.query(Quote).filter_by(project_id=1)
+                if f"q-{q.participant_id}-{int(q.start_timecode)}" == "q-p1-10"
+            )
+            delight = db.query(TagDefinition).filter_by(name="delight").one()
+            db.add(ProposedTag(job_id=_job(db, 1), quote_id=quote.id,
+                               tag_definition_id=delight.id, confidence=0.8,
+                               rationale="test", status="pending"))
+            db.commit()
+        finally:
+            db.close()
+
+        def tentative() -> int:
+            data = client.get("/api/projects/1/codebook").json()
+            (group,) = [g for g in data["groups"] if g["framework_id"] == "sentiment"]
+            (tag,) = [t for t in group["tags"] if t["name"] == "delight"]
+            return tag["tentative_count"]
+
+        assert tentative() == 1
+        _hide(client, "q-p1-10")
+        assert tentative() == 0
+        _hide(client, "q-p1-10", hidden=False)
+        assert tentative() == 1
+
     def test_another_projects_tags_are_not_counted(self, client: TestClient) -> None:
         """Tag definitions are instance-scoped; quote tags belong to a project."""
         db = client.app.state.db_factory()  # type: ignore[attr-defined]

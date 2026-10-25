@@ -258,7 +258,8 @@ async def start_autocode_job(
             )
 
         # Check project has quotes
-        quote_count = db.query(Quote).filter_by(project_id=project_id).count()
+        # Quotes that count: a project whose every quote is hidden has none to tag (N175).
+        quote_count = len(analysis_quotes(db, project_id))
         if quote_count == 0:
             raise RefusalError(
                 400, RefusalReason.NO_QUOTES, "Project has no quotes to tag"

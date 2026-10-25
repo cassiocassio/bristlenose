@@ -135,23 +135,30 @@ def _tag_quote_ids(
 
 
 def _tag_tentative_counts(
-    db: Session, project_id: int, tag_ids: list[int],
+    db: Session, project_id: int, tag_ids: list[int], counted: set[int],
 ) -> dict[int, int]:
-    """Return {tag_definition_id: this project's pending_proposal_count}."""
+    """Return {tag_definition_id: this project's pending_proposal_count}.
+
+    A pending proposal on a quote that does not count (hidden, recoded out) is
+    not in the AutoCode review either, so it is not a tentative tag here (N175).
+    """
     if not tag_ids:
         return {}
     rows = (
-        db.query(ProposedTag.tag_definition_id, func.count(ProposedTag.id))
+        db.query(ProposedTag.tag_definition_id, ProposedTag.quote_id)
         .join(Quote, Quote.id == ProposedTag.quote_id)
         .filter(
             Quote.project_id == project_id,
             ProposedTag.tag_definition_id.in_(tag_ids),
             ProposedTag.status == "pending",
         )
-        .group_by(ProposedTag.tag_definition_id)
         .all()
     )
-    return dict(rows)
+    out: dict[int, int] = {}
+    for tag_id, quote_id in rows:
+        if quote_id in counted:
+            out[tag_id] = out.get(tag_id, 0) + 1
+    return out
 
 
 def _get_or_create_uncategorised(db: Session) -> CodebookGroup:
@@ -238,7 +245,7 @@ def get_codebook(project_id: int, request: Request) -> CodebookResponse:
         # Get quote counts and tentative (pending proposal) counts per tag
         counted = {q.id for q in speaker_slots.analysis_quotes(db, project_id)}
         tagged = _tag_quote_ids(db, all_tag_ids, counted)
-        tentative_counts = _tag_tentative_counts(db, project_id, all_tag_ids)
+        tentative_counts = _tag_tentative_counts(db, project_id, all_tag_ids, counted)
 
         # Build response — Uncategorised is included as a regular group
         # with is_default=True, rendered last.

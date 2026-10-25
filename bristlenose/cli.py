@@ -469,7 +469,13 @@ def _maybe_auto_doctor(settings: object, command: str) -> bool:
 
     console.print("[dim]Checking your setup[/dim]")
 
-    report = run_preflight(settings, command)
+    # The same switch the every-run preflight honours: with transcription off,
+    # FFmpeg and Whisper are not needed. Without it the first run after an install
+    # stopped on a missing FFmpeg and, the sentinel being written only on a pass,
+    # so did every run after it (N152).
+    report = run_preflight(
+        settings, command, skip_transcription=bool(getattr(settings, "skip_transcription", False))
+    )
     _format_doctor_table(report)
     mlx_handled = _maybe_offer_mlx_install(report)
 
@@ -2743,10 +2749,16 @@ def _print_project_status(
     console.print(f"\n  [bold]{_text(project_status.project_name)}[/bold]")
     console.print(f"  [dim]Pipeline v{project_status.pipeline_version}[/dim]")
 
-    # Format last run timestamp
+    # Format last run timestamp. The manifest stores UTC; show it on this
+    # machine's clock (an aware value only: a naive one has no instant to move).
+    # The day is written from `dt.day`, not `%-d`, which raises on Windows.
     try:
+        from bristlenose.utils.timecodes import to_local
+
         dt = datetime.fromisoformat(project_status.last_run)
-        last_run_str = dt.strftime("%-d %b %Y %H:%M")
+        if dt.tzinfo is not None:
+            dt = to_local(dt)
+        last_run_str = f"{dt.day} {dt:%b %Y %H:%M}"
     except (ValueError, TypeError):
         last_run_str = project_status.last_run
     console.print(f"  [dim]Last run: {last_run_str}[/dim]\n")

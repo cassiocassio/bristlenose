@@ -86,6 +86,19 @@ _SEGMENT_RE = re.compile(
 )
 
 
+def _read_transcript(path: Path) -> str:
+    """A transcript file's text, in whichever encoding a tool saved it.
+
+    ``analyze`` reads transcripts through ``decode_text_any_encoding`` (R118): a
+    Windows-1252 or UTF-16 file analyses fine. This import read the same file as
+    strict UTF-8, so it raised and the report opened empty with only a log line
+    to say why (N199). One reader now, for every place the server opens one.
+    """
+    from bristlenose.stages.s03_parse_subtitles import read_text_any_encoding
+
+    return read_text_any_encoding(path)
+
+
 def _parse_timecode_to_seconds(tc: str) -> float:
     """Parse ``MM:SS`` or ``HH:MM:SS`` into seconds."""
     parts = tc.split(":")
@@ -857,7 +870,7 @@ def _parse_transcript_headers(
             continue
         # Session ID from filename: "s1.txt" → "s1"
         sid = txt_file.stem
-        header = txt_file.read_text(encoding="utf-8")[:500]  # only need header
+        header = _read_transcript(txt_file)[:500]  # only need header
 
         date_match = _HEADER_DATE_RE.search(header)
         dur_match = _HEADER_DURATION_RE.search(header)
@@ -1123,7 +1136,7 @@ def turn_starts(project: Project, session_id: str, code: str) -> list[float]:
         return []
     return [
         _parse_timecode_to_seconds(tc)
-        for tc, tag, _ in _SEGMENT_RE.findall(path.read_text(encoding="utf-8"))
+        for tc, tag, _ in _SEGMENT_RE.findall(_read_transcript(path))
         if tag == code
     ]
 
@@ -1199,7 +1212,7 @@ def _import_transcript_segments(
                 existing_count, sid, transcripts_dir.name,
             )
 
-        content = txt_file.read_text(encoding="utf-8")
+        content = _read_transcript(txt_file)
         segments = _SEGMENT_RE.findall(content)
         labels = _session_speaker_labels(transcripts_dir.parent, sid)
         # The last segment has no successor to end at. `# Duration:` is written
@@ -1575,7 +1588,7 @@ def _import_speakers(
             sp.speaker_code: sp
             for sp in db.query(SessionSpeaker).filter_by(session_id=sess.id).all()
         }
-        content = txt_file.read_text(encoding="utf-8")
+        content = _read_transcript(txt_file)
         codes: list[str] = []
         for _, code, _ in _SEGMENT_RE.findall(content):
             if code not in codes:

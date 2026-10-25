@@ -1897,17 +1897,28 @@ def run(
             port=port, open_browser=False, dev=dev, verbose=verbose,
         )
     except Exception as exc:
-        console.print()
-        _say(MessageKind.WARNING, f"Could not start server: {exc}", indent="  ")
-        # Show file link as fallback
-        report_path = getattr(result, "report_path", None)
-        if report_path and report_path.exists():
-            file_url = f"file://{report_path.resolve()}"
-            try:
-                display_path = report_path.resolve().relative_to(Path.cwd())
-            except ValueError:
-                display_path = report_path.name
-            console.print(f"  Report:  [link={file_url}]{display_path}[/link]")
+        _say_server_not_started(exc, getattr(result, "report_path", None))
+
+
+def _say_server_not_started(exc: BaseException, report_path: Path | None) -> None:
+    """The fallback when the report server will not start: why, and the file instead.
+
+    Neither the exception text nor the path is Rich markup: a folder called
+    ``Acme [draft]`` made the old f-string raise MarkupError here, replacing the
+    server's real error with a traceback, and a ``]`` in a path corrupted the link.
+    """
+    from rich.text import Text
+
+    console.print()
+    _say(MessageKind.WARNING, f"Could not start server: {_text(exc)}", indent="  ")
+    # Show file link as fallback
+    if report_path and report_path.exists():
+        file_url = f"file://{report_path.resolve()}"
+        try:
+            display_path: Path | str = report_path.resolve().relative_to(Path.cwd())
+        except ValueError:
+            display_path = report_path.name
+        console.print(Text("  Report:  ") + Text(str(display_path), style=f"link {file_url}"))
 
 
 @app.command(name="transcribe")

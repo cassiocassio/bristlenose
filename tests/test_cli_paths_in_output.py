@@ -99,3 +99,19 @@ def test_the_carry_incomplete_line_names_a_bracketed_folder(
     cli._say_carry_incomplete(tmp_path / "[draft] Acme" / "bristlenose-output")
     assert "[draft] Acme" in " ".join(capsys.readouterr().out.split())
 
+
+
+@pytest.mark.parametrize("name", [*_FOLDER_NAMES, "a]b"])
+def test_the_server_failed_fallback_names_the_error_and_the_file_whatever_the_folder_is_called(
+    name: str, tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Its job is to say why the server did not start and where the file is; a
+    bracketed folder made it raise MarkupError instead, hiding the real error."""
+    monkeypatch.chdir(tmp_path)
+    report = tmp_path / name / "report.html"
+    report.parent.mkdir()
+    report.write_text("x", encoding="utf-8")
+    cli._say_server_not_started(OSError(f"cannot bind [draft] {name}"), report)
+    text = " ".join(capsys.readouterr().out.split())
+    assert f"Could not start server: cannot bind [draft] {name}" in text
+    assert f"Report: {name}/report.html" in text

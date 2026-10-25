@@ -1027,20 +1027,85 @@ class TestApplyParamsPersisted:
     ) -> None:
         resp = client_with_completed_job.post(
             "/api/projects/1/autocode/garrett/accept-all",
-            json={"min_confidence": 0.72},
+            json={"min_confidence": 0.70},
         )
         assert resp.status_code == 200
-        assert self._job(client_with_completed_job).applied_upper_threshold == 0.72
+        assert self._job(client_with_completed_job).applied_upper_threshold == 0.70
 
     def test_deny_all_records_lower_threshold(
         self, client_with_completed_job: TestClient
     ) -> None:
         resp = client_with_completed_job.post(
             "/api/projects/1/autocode/garrett/deny-all",
-            json={"max_confidence": 0.28},
+            json={"max_confidence": 0.30},
         )
         assert resp.status_code == 200
-        assert self._job(client_with_completed_job).applied_lower_threshold == 0.28
+        assert self._job(client_with_completed_job).applied_lower_threshold == 0.30
+
+    def test_drifted_cutoff_is_stored_exact(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """N188: the review slider's float drift (0.7000000000000001, 0.30000000000000004)
+        is absorbed at the request boundary, so a catch-up never reads a drifted cutoff."""
+        c = client_with_completed_job
+        r = c.post(
+            "/api/projects/1/autocode/garrett/accept-all",
+            json={"min_confidence": 0.7000000000000001},
+        )
+        assert r.status_code == 200
+        assert self._job(c).applied_upper_threshold == 0.7
+        r = c.post(
+            "/api/projects/1/autocode/garrett/deny-all",
+            json={"max_confidence": 0.30000000000000004},
+        )
+        assert r.status_code == 200
+        assert self._job(c).applied_lower_threshold == 0.3
+
+    @pytest.mark.parametrize(
+        "field,value",
+        [
+            ("min_confidence", 0.72),
+            ("min_confidence", 1.05),
+            ("min_confidence", -0.05),
+            ("max_confidence", 0.28),
+            ("max_confidence", 2),
+            ("max_confidence", -1),
+        ],
+    )
+    def test_off_grid_or_out_of_range_cutoff_is_refused(
+        self, client_with_completed_job: TestClient, field: str, value: float
+    ) -> None:
+        c = client_with_completed_job
+        route = "accept-all" if field == "min_confidence" else "deny-all"
+        r = c.post(f"/api/projects/1/autocode/garrett/{route}", json={field: value})
+        assert r.status_code == 422
+        job = self._job(c)
+        assert job.applied_upper_threshold is None
+        assert job.applied_lower_threshold is None
+
+    def test_explicit_null_exclude_cutoff_does_not_become_deny_from_the_accept_cutoff(
+        self, client_with_completed_job: TestClient
+    ) -> None:
+        """A NaN the slider computed reaches the wire as `null`; read as "no exclude cutoff"
+        it would deny everything at or above 0.5 instead of everything below the cutoff."""
+        c = client_with_completed_job
+        r = c.post("/api/projects/1/autocode/garrett/deny-all", json={"max_confidence": None})
+        assert r.status_code == 422
+        assert self._job(c).applied_lower_threshold is None
+
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_cutoff_never_reaches_the_job(self, value: float) -> None:
+        """A client that sends NaN or Infinity (Python's JSON reader accepts both) gets
+        no job write: the model refuses it. (The 422 body itself cannot be rendered by
+        FastAPI for a non-finite input, so this is pinned at the model, not over HTTP.)"""
+        from pydantic import ValidationError
+
+        from bristlenose.server.routes.autocode import BulkActionRequest
+
+        with pytest.raises(ValidationError):
+            BulkActionRequest(min_confidence=value)
+        with pytest.raises(ValidationError):
+            BulkActionRequest(max_confidence=value)
 
     def test_accept_all_default_does_not_record(
         self, client_with_completed_job: TestClient

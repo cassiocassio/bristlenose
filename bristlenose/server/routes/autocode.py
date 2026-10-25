@@ -8,11 +8,11 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
-from bristlenose.server.autocode import run_autocode_job
+from bristlenose.server.autocode import run_autocode_job, snap_cutoff
 from bristlenose.server.codebook import get_template
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
@@ -108,6 +108,22 @@ class BulkActionRequest(BaseModel):
     group_id: int | None = None
     min_confidence: float = 0.5
     max_confidence: float | None = None
+
+    @field_validator("min_confidence", "max_confidence")
+    @classmethod
+    def _on_the_review_grid(cls, value: float | None) -> float | None:
+        """Cutoffs are stored and reused by the catch-up, so only the review's own
+        0.05 grid gets in, with the slider's float drift removed (N188)."""
+        return None if value is None else snap_cutoff(value)
+
+    @model_validator(mode="after")
+    def _no_null_exclude_cutoff(self) -> BulkActionRequest:
+        """An absent ``max_confidence`` means "deny from min_confidence up"; an explicit
+        null (what ``JSON.stringify`` writes for a NaN the slider computed) would flip a
+        deny-below-the-cutoff into that, denying the proposals the researcher meant to keep."""
+        if "max_confidence" in self.model_fields_set and self.max_confidence is None:
+            raise ValueError("max_confidence is a number, or left out")
+        return self
 
 
 # ---------------------------------------------------------------------------

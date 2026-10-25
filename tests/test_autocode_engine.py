@@ -1290,6 +1290,54 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
+    def test_drifted_stored_cutoff_accepts_a_proposal_at_that_cutoff(
+        self, project_with_garrett
+    ) -> None:
+        """N188: a project that stored the slider's 0.7000000000000001 (builds before
+        30f51432f) must accept a new 0.70 proposal, not deny it as 'reviewed'."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(
+            project_id, framework_id, db_factory, threshold=0.7000000000000001
+        )
+        self._add_quotes(db_factory, project_id, 2)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(2, "user need", 0.7))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        assert accepted == 2
+        db = db_factory()
+        try:
+            assert db.query(QuoteTag).count() == 2
+        finally:
+            db.close()
+
+    def test_drifted_stored_cutoff_still_denies_below_it(
+        self, project_with_garrett
+    ) -> None:
+        """The tolerance is for float drift only: 0.65 stays under a 0.70 cutoff."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(
+            project_id, framework_id, db_factory, threshold=0.7000000000000001
+        )
+        self._add_quotes(db_factory, project_id, 2)
+
+        with _patch_llm(
+            AsyncMock(return_value=_make_batch_result(2, "user need", 0.65))
+        ):
+            accepted = asyncio.run(
+                reapply_to_new_quotes(
+                    db_factory, project_id, framework_id, _mock_settings()
+                )
+            )
+
+        assert accepted == 0
+
     def test_no_new_quotes_is_noop(self, project_with_garrett) -> None:
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(project_id, framework_id, db_factory)

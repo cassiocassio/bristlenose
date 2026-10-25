@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import difflib
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -630,6 +631,26 @@ async def run_autocode_job(
 # threshold (mirrors the review dialog's DEFAULT_UPPER = 0.70).
 DEFAULT_ACCEPT_THRESHOLD = 0.70
 
+#: The review dialog's cutoffs sit on a 0.05 grid (``frontend/src/utils/confidenceStep.ts``).
+CONFIDENCE_STEPS_PER_UNIT = 20
+
+
+def snap_cutoff(value: float) -> float:
+    """A review cutoff as exact as the label it was read from, or ``ValueError``.
+
+    The slider's old arithmetic stored ``0.7000000000000001`` for "0.70", and a ``>=``
+    against that denied a proposal at exactly 0.70 as already reviewed (N188). Anything
+    that is not finite, not within [0, 1], or not on the 0.05 grid is refused; a value
+    that is on the grid up to float noise comes back as ``n / 20``, the correctly
+    rounded double of its label (as the web's ``snapToStep`` returns it).
+    """
+    if not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+        raise ValueError("a confidence cutoff is a number from 0 to 1")
+    steps = round(value * CONFIDENCE_STEPS_PER_UNIT)
+    if abs(value * CONFIDENCE_STEPS_PER_UNIT - steps) > 1e-6:
+        raise ValueError("a confidence cutoff is a multiple of 0.05")
+    return steps / CONFIDENCE_STEPS_PER_UNIT
+
 
 def _sessions_answered(
     batches: list[list[QuoteBatchItem]], results: list[Any],
@@ -958,6 +979,9 @@ async def reapply_to_new_quotes(
         threshold = job.applied_upper_threshold
         if threshold is None:
             threshold = DEFAULT_ACCEPT_THRESHOLD
+        # A cutoff stored by a build whose slider drifted (0.7000000000000001) is the
+        # cutoff its label says: compare at two decimals (N188).
+        threshold = round(threshold, 2)
 
         # Delta = the quotes of the sessions this job still owes (RE#66). A stamp
         # is per session and written once, so (a) a clean/full re-run of coded

@@ -164,6 +164,20 @@ export function TagInput({
     return row.type === "tag" ? row.tagName ?? null : null;
   }, [suggestIndex, suggestRows]);
 
+  // True when what is typed is, already, the full name of an existing tag.
+  // Suggestions drop that exact row (below), so without this the ghost would
+  // complete to a longer sibling ("trust" -> "trustworthiness") and Return
+  // would apply a tag the researcher did not type, while blur applies what
+  // they typed. An arrow-selected suggestion still wins (see resolveValue).
+  const typedIsExistingTag = useMemo(() => {
+    const val = inputValue.trim().toLowerCase();
+    if (!val) return false;
+    if (vocabulary.some((n) => n.toLowerCase() === val)) return true;
+    return (groupedVocabulary ?? []).some((g) =>
+      g.tags.some((t) => t.name.toLowerCase() === val),
+    );
+  }, [inputValue, vocabulary, groupedVocabulary]);
+
   // Ghost text: suffix of best prefix match.
   const ghostText = useMemo(() => {
     const val = inputValue.trim().toLowerCase();
@@ -178,10 +192,12 @@ export function TagInput({
     if (selectedTagName && selectedTagName.toLowerCase().startsWith(val)) {
       return selectedTagName.substring(inputValue.length);
     }
+    // A complete existing name is not a prefix to be completed.
+    if (typedIsExistingTag) return "";
     // Otherwise find best prefix match from suggestions.
     const prefix = tagNames.find((n) => n.toLowerCase().startsWith(val));
     return prefix ? prefix.substring(inputValue.length) : "";
-  }, [inputValue, selectedTagName, suggestRows]);
+  }, [inputValue, selectedTagName, suggestRows, typedIsExistingTag]);
 
   // Auto-resize input box to fit typed text + ghost.
   useEffect(() => {

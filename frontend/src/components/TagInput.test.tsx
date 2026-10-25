@@ -111,6 +111,91 @@ describe("TagInput", () => {
     expect(onCommit).toHaveBeenCalledWith("apple");
   });
 
+  // N178: typing an existing tag's full name, when a longer tag starts with
+  // it, must commit what was typed (as blur does), not the longer tag.
+  describe("exact name that is also the start of a longer tag", () => {
+    const PAIR = ["trust", "trustworthiness"];
+
+    it("Enter commits the typed name, not the longer tag", async () => {
+      const onCommit = vi.fn();
+      render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trust");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("trust");
+    });
+
+    it("Tab commits the typed name, not the longer tag", async () => {
+      const onCommit = vi.fn();
+      const onReopen = vi.fn();
+      render(
+        <TagInput
+          vocabulary={PAIR}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+          onCommitAndReopen={onReopen}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trust");
+      await userEvent.keyboard("{Tab}");
+      expect(onReopen).toHaveBeenCalledWith("trust");
+    });
+
+    it("matches without regard to case", async () => {
+      const onCommit = vi.fn();
+      render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
+      await userEvent.type(screen.getByPlaceholderText("tag"), "Trust");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("Trust");
+    });
+
+    it("shows no ghost completion for a name that is already complete", async () => {
+      const { container } = render(
+        <TagInput vocabulary={PAIR} onCommit={vi.fn()} onCancel={vi.fn()} />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trust");
+      expect(container.querySelector(".tag-ghost")?.textContent).toBe("");
+    });
+
+    it("an arrow-selected longer suggestion still wins", async () => {
+      const onCommit = vi.fn();
+      render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trust");
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("trustworthiness");
+    });
+
+    it("a shorter prefix still completes by ghost", async () => {
+      const onCommit = vi.fn();
+      render(<TagInput vocabulary={PAIR} onCommit={onCommit} onCancel={vi.fn()} />);
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trus");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("trust");
+    });
+
+    it("grouped vocabulary: Enter commits the typed name", async () => {
+      const onCommit = vi.fn();
+      const groups: TagVocabularyGroup[] = [
+        { groupName: "UXR", colourSet: "ux", tags: [{ name: "trust", colourIndex: 0 }] },
+        {
+          groupName: "Morville",
+          colourSet: "mv",
+          tags: [{ name: "trustworthiness", colourIndex: 0 }],
+        },
+      ];
+      render(
+        <TagInput
+          vocabulary={[]}
+          groupedVocabulary={groups}
+          onCommit={onCommit}
+          onCancel={vi.fn()}
+        />,
+      );
+      await userEvent.type(screen.getByPlaceholderText("tag"), "trust");
+      await userEvent.keyboard("{Enter}");
+      expect(onCommit).toHaveBeenCalledWith("trust");
+    });
+  });
+
   it("Enter with highlighted suggestion commits that suggestion", async () => {
     const onCommit = vi.fn();
     render(<TagInput vocabulary={VOCAB} onCommit={onCommit} onCancel={vi.fn()} />);

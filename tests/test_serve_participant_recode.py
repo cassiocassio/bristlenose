@@ -514,7 +514,11 @@ class TestReanalyse:
         project = _with_quotes(tmp_path)
         reg = _registry(project, {"s1": {"Me": "m1", "Wylie": "p1"}})
         client = _client(project)
-        (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").write_bytes(b"\xff\xfe\x00garbage")
+        # Shift-JIS: not UTF-8, not UTF-16, and not plausibly Windows-1252, so the
+        # shared decoder (which reads 1252 and UTF-16 since N199) refuses it.
+        (project / "bristlenose-output" / "transcripts-raw" / "s1.txt").write_bytes(
+            "こんにちは、今日はよろしくお願いします。製品について教えてください。".encode("shift_jis"),
+        )
         with caplog.at_level("WARNING"):
             resp = client.put("/api/projects/1/sessions/s1/speakers/p1",
                               json={"kind": "observer", "clear": True})

@@ -89,16 +89,21 @@ def _is_secret_service_available() -> bool:
     if not shutil.which("secret-tool"):
         return False
 
-    # Try a lookup to verify Secret Service is running
-    # This will fail quickly if the daemon isn't available
+    # Try a lookup to verify Secret Service is running. This fails quickly when
+    # there is no daemon or no session bus (SSH, WSL, a headless box).
     try:
-        subprocess.run(
+        probe = subprocess.run(
             ["secret-tool", "lookup", "application", "bristlenose-availability-check"],
             capture_output=True,
+            text=True, encoding="utf-8", errors="replace",
             timeout=2,
         )
-        # Exit code doesn't matter — if it ran without timeout, Secret Service is there
-        return True
+        # The exit code alone cannot tell them apart: a healthy keyring exits 1
+        # for a key that is not stored, and so does a missing session bus. Only
+        # the second says anything (libsecret prints errors and nothing else), so
+        # a lookup that exited non-zero with a message is a keyring that cannot
+        # be used, and the config file is the store that works (N202).
+        return probe.returncode == 0 or not (probe.stderr or "").strip()
     except subprocess.TimeoutExpired:
         # D-Bus hung — Secret Service not properly configured
         return False

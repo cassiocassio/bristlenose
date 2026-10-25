@@ -15,6 +15,7 @@ location at import. The server is on 127.0.0.1; nothing leaves the machine.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import textwrap
@@ -115,12 +116,20 @@ _SCRIPT = textwrap.dedent(
 def _run(tmp_path: Path, mode: str) -> dict:
     script = tmp_path / "fake_hub.py"
     script.write_text(_SCRIPT)
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
+           "BRISTLENOSE_SKIP_PREFLIGHT": "1",
+           "PYTHONPATH": str(Path(__file__).resolve().parents[1])}
+    if sys.platform == "win32":
+        # Without SystemRoot a Windows Python cannot start Winsock (WinError
+        # 10106), and the script's first act is a local server. The rest stays
+        # isolated: the profile and temp folders are the test's own.
+        env.update(
+            SYSTEMROOT=os.environ.get("SYSTEMROOT", r"C:\Windows"),
+            USERPROFILE=str(tmp_path), TEMP=str(tmp_path), TMP=str(tmp_path),
+        )
     proc = subprocess.run(
         [sys.executable, str(script), mode, str(tmp_path / "hub")],
-        capture_output=True, text=True, timeout=120,
-        env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
-             "BRISTLENOSE_SKIP_PREFLIGHT": "1",
-             "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+        capture_output=True, text=True, timeout=120, env=env,
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
     return json.loads(proc.stdout.strip().splitlines()[-1])

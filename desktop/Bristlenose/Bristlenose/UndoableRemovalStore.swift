@@ -143,13 +143,21 @@ final class UndoableRemovalStore: ObservableObject {
                                  position: entry.position)
         }
         pending = nil
-        // Only rows that exist: a restore that stood down (the folder was
-        // dropped back as a new row, or the study's folder was deleted) must
-        // not select a row nothing draws.
-        let live = batch.priorSelection.filter { selection in
+        // Only rows that exist. A restore that stood down because the folder was
+        // dropped back as a new row selects that row, so the press shows where
+        // the study is; a folder deleted meanwhile is not selected again.
+        var live: Set<SidebarSelection> = []
+        for selection in batch.priorSelection {
             switch selection {
-            case .project(let id): return index.projects.contains { $0.id == id }
-            case .folder(let id): return index.folders.contains { $0.id == id }
+            case .project(let id):
+                if index.projects.contains(where: { $0.id == id }) {
+                    live.insert(.project(id))
+                } else if let path = batch.entries.first(where: { $0.project.id == id })?.project.path,
+                          !path.isEmpty, let holder = index.findByPath(path) {
+                    live.insert(.project(holder.id))
+                }
+            case .folder(let id):
+                if index.folders.contains(where: { $0.id == id }) { live.insert(.folder(id)) }
             }
         }
         if !live.isEmpty {

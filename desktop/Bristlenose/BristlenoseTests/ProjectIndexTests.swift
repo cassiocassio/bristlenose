@@ -731,7 +731,7 @@ struct ProjectIndexTests {
         #expect(reselected == [.project(p.id)], "the deleted folder is not selected again")
     }
 
-    @MainActor @Test func aRestoreThatStoodDownSelectsNothing() {
+    @MainActor @Test func aRestoreThatStoodDownSelectsTheRowThatHoldsTheFolder() {
         let (index, tempDir) = Self.makeTempIndex()
         defer { Self.cleanup(tempDir) }
 
@@ -745,10 +745,11 @@ struct ProjectIndexTests {
 
         store.removeFromSidebar(index.projects.first { $0.id == first.id }!,
                                 priorSelection: [.project(first.id)])
-        index.addProject(name: "Interviews", path: study.path)
+        let again = index.addProject(name: "Interviews", path: study.path)
         store.undoLastRemoval()
 
-        #expect(reselected == nil, "the row that was removed is not in the sidebar")
+        #expect(reselected == [.project(again.id)],
+                "the removed row is not in the sidebar; the press shows the row that is")
     }
 
     // MARK: - UndoableRemovalStore round-trip

@@ -908,9 +908,11 @@ final class TeamsSource: CloudImportSource {
     /// `"timeZone": "UTC"`, which is what `Prefer: outlook.timezone="UTC"` asks
     /// for. `parseISO` needs an offset, so it read every such event as nil and
     /// no recording ever matched its meeting (N141). A string that does carry an
-    /// offset is still read as it always was, and a zone that is neither UTC nor
-    /// an IANA identifier (Graph's own Windows names, which the pinned header
-    /// should never produce) is nil rather than guessed.
+    /// offset is still read as it always was; no zone at all is read as UTC,
+    /// which is what the request pins; and a zone that is neither UTC nor an
+    /// IANA identifier (Graph's own Windows names, which the pinned header
+    /// should never produce) is nil rather than guessed, and logged, because
+    /// that symptom is N141 over again: no meeting ever matches.
     static func parseGraphTime(
         dateTime: String?, timeZone: String?
     ) -> Date? {
@@ -922,7 +924,10 @@ final class TeamsSource: CloudImportSource {
         switch (timeZone ?? "UTC").uppercased() {
         case "UTC", "GMT", "ETC/UTC", "Z": zone = TimeZone(secondsFromGMT: 0)!
         default:
-            guard let named = timeZone.flatMap(TimeZone.init(identifier:)) else { return nil }
+            guard let named = timeZone.flatMap(TimeZone.init(identifier:)) else {
+                Self.log.notice("calendar event zone \(timeZone ?? "none", privacy: .public) is not one we read; event unmatched")
+                return nil
+            }
             zone = named
         }
 

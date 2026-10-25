@@ -600,7 +600,7 @@ enum LLMValidator {
     static func pullModel(
         tag: String,
         baseURL: URL,
-        session: URLSession = URLSession(configuration: .ephemeral),
+        session injected: URLSession? = nil,
         onProgress: @escaping @MainActor (PullProgress) -> Void
     ) async throws {
         // Strip trailing /v1 if user pasted the OpenAI-compat URL.
@@ -616,8 +616,10 @@ enum LLMValidator {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = ["model": tag, "stream": true]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        // No timeout for the resource — model pulls take minutes.
-        defer { session.finishTasksAndInvalidate() }
+        // No timeout for the resource — model pulls take minutes. A session the
+        // caller passed in is the caller's to invalidate.
+        let session = injected ?? URLSession(configuration: .ephemeral)
+        defer { if injected == nil { session.finishTasksAndInvalidate() } }
 
         let (bytes, response) = try await session.bytes(for: req)
         guard let http = response as? HTTPURLResponse,
@@ -632,6 +634,7 @@ enum LLMValidator {
         var seen: [String: (completed: Int64, total: Int64)] = [:]
         var lastStatus = "Starting download…"
         var lineBuffer: [UInt8] = []
+        var finished = false
 
         /// One complete line of the stream. Once the 200 has gone out Ollama
         /// reports a failure (a full disk, an older daemon that does not know
@@ -645,6 +648,7 @@ enum LLMValidator {
             }
             if let status = event.status {
                 lastStatus = status
+                if status == "success" { finished = true }
             }
             if let digest = event.digest, let total = event.total {
                 let completed = event.completed ?? 0
@@ -679,6 +683,10 @@ enum LLMValidator {
         if !lineBuffer.isEmpty {
             try await handle(lineBuffer)
         }
+        // Ollama ends a pull that worked with {"status":"success"}. A stream that
+        // just stops (a daemon that exited, a proxy that cut it) is not a model
+        // on disk, and would otherwise read as one.
+        guard finished else { throw URLError(.badServerResponse) }
     }
 
     /// The daemon's own account of why a pull stopped, carried to the pill's

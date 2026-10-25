@@ -140,8 +140,31 @@ struct TextEditingFocusTests {
         editor.selectedRange = NSRange(location: 10, length: 0)
 
         #expect(!TextEditingFocus.deleteToStartOfLine(invokedBy: clickEvent(in: window), in: window))
-        #expect(!TextEditingFocus.deleteToStartOfLine(invokedBy: nil, in: window))
         #expect(editor.string == "alpha beta", "nothing was deleted from the field")
+    }
+
+    /// The two ways to be wrong are not the same size: a swallowed click costs a
+    /// second click, a honoured key costs a folder that cannot be brought back.
+    /// So an event that is not positively a mouse event is the key.
+    @Test("An event that is not a mouse event is taken as the key")
+    func anythingButAClickIsTheKey() throws {
+        let (window, _) = focusedField("alpha beta")
+        let editor = try #require(TextEditingFocus.editor(in: window))
+        editor.selectedRange = NSRange(location: 10, length: 0)
+        let keyUp = NSEvent.keyEvent(
+            with: .keyUp, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil,
+            characters: "\u{7F}", charactersIgnoringModifiers: "\u{7F}",
+            isARepeat: false, keyCode: 51)
+
+        #expect(TextEditingFocus.deleteToStartOfLine(invokedBy: keyUp, in: window),
+                "the key-up that replaced the key-down before the action ran")
+        #expect(editor.string == "")
+
+        let (other, _) = focusedField("gamma")
+        #expect(TextEditingFocus.deleteToStartOfLine(invokedBy: nil, in: other),
+                "no event at all is not a click either")
+        #expect(TextEditingFocus.editor(in: other)?.string == "")
     }
 
     @Test("⌘⌫ with no field focused is the menu's")

@@ -95,9 +95,29 @@ struct OllamaPullStreamTests {
 
     @Test("An empty error string is not a failure")
     func emptyErrorIsNotAFailure() async throws {
-        stream(#"{"status":"pulling manifest","error":""}"# + "\n")
+        stream(#"{"status":"pulling manifest","error":""}"# + "\n" + #"{"status":"success"}"# + "\n")
         let seen = try await pull()
-        #expect(seen.count == 1)
+        #expect(seen.count == 2)
+    }
+
+    /// A stream that just stops (a daemon that exited, a proxy that cut it) has
+    /// no error line and no success line. It is not a model on disk.
+    @Test("A stream that ends without success is a failed pull")
+    func noSuccessIsAFailedPull() async {
+        stream("""
+        {"status":"pulling manifest"}
+        {"status":"pulling abc","digest":"sha256:abc","total":100,"completed":40}
+
+        """)
+
+        do {
+            _ = try await pull()
+            Issue.record("a cut stream returned normally: the pill would read it as downloaded")
+        } catch let failure as URLError {
+            #expect(failure.code == .badServerResponse)
+        } catch {
+            Issue.record("the wrong kind of failure: \(error)")
+        }
     }
 }
 

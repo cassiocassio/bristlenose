@@ -608,9 +608,14 @@ final class ProjectIndex: ObservableObject {
     /// `projects.json` and on no row of the sidebar for good (N142).
     func restoreProject(_ project: Project, folderId: UUID?, position: Int) {
         guard !projects.contains(where: { $0.id == project.id }) else { return }
+        // A study on a network share is matched by its path alone: reading the
+        // identity of a folder on a sleeping share blocks the main actor until
+        // it wakes (`findSameFolder` leaves other rows on a share out for that
+        // reason, and so does this for the removed one).
         if !project.path.isEmpty,
            findByPath(project.path) != nil
-            || findSameFolder(URL(fileURLWithPath: project.path)) != nil {
+            || (project.location?.type != .network
+                && findSameFolder(URL(fileURLWithPath: project.path)) != nil) {
             return
         }
         var restored = project

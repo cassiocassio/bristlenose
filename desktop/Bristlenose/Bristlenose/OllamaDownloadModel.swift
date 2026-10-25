@@ -223,8 +223,15 @@ final class OllamaDownloadModel: ObservableObject {
         } catch is CancellationError {
             phase = .idle
         } catch {
-            Self.logger.error(
-                "Ollama download failed: \(error.localizedDescription, privacy: .public)")
+            if let pull = error as? LLMValidator.OllamaPullError {
+                // The daemon's own sentence can name a path under the user's
+                // home, so it is private; the kind of failure is not.
+                Self.logger.error(
+                    "Ollama download failed: the daemon said \(pull.message, privacy: .private)")
+            } else {
+                Self.logger.error(
+                    "Ollama download failed: \(error.localizedDescription, privacy: .public)")
+            }
             phase = .failed(Self.classify(error))
         }
     }

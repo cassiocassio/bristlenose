@@ -55,14 +55,24 @@ enum TextEditingFocus {
     }
 
     /// ⌘⌫ pressed with a field focused: the field's own meaning, delete to the
-    /// start of the line, in place of the menu item's. Only for the key — a
-    /// mouse click on Project ▸ Remove from Sidebar is that menu item's own
-    /// act, whatever has focus. True when the field took it.
+    /// start of the line, in place of the menu item's. A mouse click on
+    /// Project ▸ Remove from Sidebar is that menu item's own act, whatever has
+    /// focus: only an event that is **positively a mouse event** counts as one.
+    /// Anything else (a key, a key-up that replaced it before SwiftUI ran the
+    /// action, no event at all) is taken as the key, because the two ways to be
+    /// wrong are not the same size: a click that the field swallows costs one
+    /// more click, and a key that the menu honours costs a folder that cannot
+    /// be brought back. True when the field took it.
     @discardableResult
     static func deleteToStartOfLine(
         invokedBy event: NSEvent?, in window: NSWindow? = NSApp?.keyWindow
     ) -> Bool {
-        guard event?.type == .keyDown, let editor = editor(in: window) else { return false }
+        let mouse: Set<NSEvent.EventType> = [
+            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp,
+            .otherMouseDown, .otherMouseUp,
+        ]
+        let clicked = event.map { mouse.contains($0.type) } ?? false
+        guard !clicked, let editor = editor(in: window) else { return false }
         editor.doCommand(by: #selector(NSResponder.deleteToBeginningOfLine(_:)))
         return true
     }

@@ -38,12 +38,20 @@ def _struct(text: str, name: str) -> str:
     return text[start : start + 10 + nxt.start()] if nxt else text[start:]
 
 
+def _button_action(struct: str, title: str) -> str:
+    """The closure of the first `Button(<title>...) { ... }` in a struct, up to its modifiers."""
+    start = struct.index(title)
+    open_brace = struct.index("{", struct.index(")", start))
+    end = struct.index("}\n            .", open_brace)
+    return struct[open_brace:end]
+
+
 def test_undo_asks_the_focused_field_when_pressed() -> None:
     undo = _struct(_menu(), "UndoRedoMenuContent")
-    # The live responder at the press, not `textEditing.isEditing` (a flag a window
-    # update refreshes: a field focused by code is first responder before it does).
-    assert "route(textEditing: TextEditingFocus.isEditing())" in undo
-    assert "case .textField: TextEditingFocus.undo()" in undo
+    # In the Button's own action, not in `.disabled(...)`, where the stale flag is right.
+    action = _button_action(undo, "Button(undoLabel")
+    assert "route(textEditing: TextEditingFocus.isEditing())" in action
+    assert "case .textField: TextEditingFocus.undo()" in action
 
 
 def test_redo_asks_the_focused_field_first() -> None:
@@ -65,6 +73,9 @@ def test_both_command_delete_items_defer_to_a_focused_field_for_the_key() -> Non
             rf"\s*windowCommands\?\.perform\({re.escape(act)}\)"
         )
         assert re.search(pattern, text, flags=re.S), label
+        # ...and it is the only place that performs the act, so a second, unguarded
+        # Button added earlier in the file cannot satisfy the pattern above.
+        assert text.count(f"windowCommands?.perform({act})") == 1, act
 
 
 def test_the_undo_route_has_a_text_field_case_ahead_of_the_others() -> None:

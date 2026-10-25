@@ -176,6 +176,28 @@ def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:
     console.print(f"{indent}{cli_prefix(kind)} {message}")
 
 
+def _text(value: object) -> str:
+    """A path or a name as Rich markup text.
+
+    A folder called ``[draft] Acme`` is read by Rich as a style tag and loses its
+    word, and one holding ``[/`` raises MarkupError (N150; the N107 class). Every
+    path, folder or project name interpolated into a printed line goes through this.
+    """
+    from rich.markup import escape
+
+    return escape(str(value))
+
+
+def _typed(command: str, *args: object) -> str:
+    """A command as the shell reads it back, as Rich markup text (N149).
+
+    ``bristlenose run 'Acme onboarding/'``: each argument quoted for the shell, so a
+    pasted line is the command that was meant, and escaped for Rich so brackets
+    survive.
+    """
+    return _text(" ".join([command, *(shlex.quote(str(a)) for a in args)]))
+
+
 def _validate_codebook_slug(slug: str) -> None:
     """Raise ``typer.Exit(2)`` with the available-slugs list when ``slug`` is unknown.
 
@@ -1075,7 +1097,7 @@ def _print_pipeline_failure(
     from bristlenose.providers import PROVIDERS
 
     folder = input_dir.name or str(input_dir)
-    retry_cmd = f"bristlenose {command} {folder}/"
+    retry_cmd = _typed(f"bristlenose {command}", f"{folder}/")
     category = getattr(cause, "category", None)
     message = getattr(cause, "message", "") or ""
     provider_key = getattr(cause, "provider", None) or getattr(settings, "llm_provider", None)
@@ -1481,7 +1503,7 @@ def run(
         _say(
             MessageKind.ERROR,
             f"A previous report is stranded at "
-            f"{output_backup.backup_path_for(output_dir)} and could not be "
+            f"{_text(output_backup.backup_path_for(output_dir))} and could not be "
             f"recovered. Move it somewhere safe, then re-run.",
         )
         raise typer.Exit(1)
@@ -1679,14 +1701,14 @@ def run(
                     "could not carry the study id or start times into the new output: %s", exc
                 )
         if output_stash is not None:
-            console.print(f"\n[dim]Cleaned {output_dir}[/dim]")
+            console.print(f"\n[dim]Cleaned {_text(output_dir)}[/dim]")
         else:
             # `stash` returns None when the move failed (cross-device,
             # permissions) and deliberately does NOT fall back to deleting. The
             # run then writes over the previous output, so saying "Cleaned"
             # would be the opposite of what happened.
             console.print(
-                f"\n[dim]Could not set {output_dir} aside — "
+                f"\n[dim]Could not set {_text(output_dir)} aside — "
                 f"this run will write over it[/dim]"
             )
     if output_stash is not None:
@@ -1792,7 +1814,7 @@ def run(
                 _say(
                     MessageKind.ERROR,
                     f"Could not put your previous report back. It is safe at "
-                    f"{output_backup.backup_path_for(output_dir)} — the next "
+                    f"{_text(output_backup.backup_path_for(output_dir))} — the next "
                     f"run will recover it.",
                     indent="  ",
                 )
@@ -1967,7 +1989,7 @@ def transcribe(
     # Transcript-specific: point to the transcripts dir, not the report
     raw_dir = result.output_dir / "transcripts-raw"
     if raw_dir.exists():
-        console.print(f"\n  Transcripts  {raw_dir}")
+        console.print(f"\n  Transcripts  {_text(raw_dir)}")
 
 
 @app.command()
@@ -2350,7 +2372,7 @@ def _auto_render(project_dir: Path) -> None:
     # static re-render costs nothing it shows.
     if output_dir.name != "bristlenose-output":
         console.print(
-            f" [dim]Not re-rendering the static report: {output_dir.name} is not a "
+            f" [dim]Not re-rendering the static report: {_text(output_dir.name)} is not a "
             f"project's bristlenose-output folder[/dim]"
         )
         return
@@ -2586,8 +2608,8 @@ def status(
     output_dir = _resolve_output_dir(project_dir)
     if output_dir is None:
         console.print(
-            f"No pipeline data found in [bold]{project_dir}[/bold].\n"
-            f"Run [bold]bristlenose run {project_dir}[/bold] to start."
+            f"No pipeline data found in [bold]{_text(project_dir)}[/bold].\n"
+            f"Run [bold]{_typed('bristlenose run', project_dir)}[/bold] to start."
         )
         # A hard crash can leave the previous report in the stash and no output
         # folder at all — which is when the stash is the only copy (P2).
@@ -2606,15 +2628,15 @@ def status(
             f"be read, so Bristlenose can't tell which stages are done.",
         )
         console.print(
-            f"Run [bold]bristlenose run {escape(str(project_dir))}[/bold] to rebuild it "
+            f"Run [bold]{_typed('bristlenose run', project_dir)}[/bold] to rebuild it "
             f"— every stage runs again."
         )
         _report_stashed_output(output_dir)
         raise typer.Exit(1)
     if project_status is None:
         console.print(
-            f"No pipeline manifest in [bold]{output_dir}[/bold].\n"
-            f"Run [bold]bristlenose run {project_dir}[/bold] to start."
+            f"No pipeline manifest in [bold]{_text(output_dir)}[/bold].\n"
+            f"Run [bold]{_typed('bristlenose run', project_dir)}[/bold] to start."
         )
         _report_stashed_output(output_dir)
         raise typer.Exit(1)
@@ -2633,7 +2655,7 @@ def _say_carry_incomplete(output_dir: Path, *, indent: str = "") -> None:
     _say(
         MessageKind.WARNING,
         f"An exported folder couldn't be moved into the new report, so the "
-        f"previous report is kept at {output_backup.backup_path_for(output_dir)} "
+        f"previous report is kept at {_text(output_backup.backup_path_for(output_dir))} "
         f"until the next run moves it.",
         indent=indent,
     )
@@ -2718,7 +2740,7 @@ def _print_project_status(
     from bristlenose.manifest import StageStatus
 
     # Header
-    console.print(f"\n  [bold]{project_status.project_name}[/bold]")
+    console.print(f"\n  [bold]{_text(project_status.project_name)}[/bold]")
     console.print(f"  [dim]Pipeline v{project_status.pipeline_version}[/dim]")
 
     # Format last run timestamp

@@ -600,6 +600,7 @@ enum LLMValidator {
     static func pullModel(
         tag: String,
         baseURL: URL,
+        session: URLSession = URLSession(configuration: .ephemeral),
         onProgress: @escaping @MainActor (PullProgress) -> Void
     ) async throws {
         // Strip trailing /v1 if user pasted the OpenAI-compat URL.
@@ -616,7 +617,6 @@ enum LLMValidator {
         let body: [String: Any] = ["model": tag, "stream": true]
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         // No timeout for the resource — model pulls take minutes.
-        let session = URLSession(configuration: .ephemeral)
         defer { session.finishTasksAndInvalidate() }
 
         let (bytes, response) = try await session.bytes(for: req)
@@ -631,44 +631,67 @@ enum LLMValidator {
         // `completed` we've seen for each digest, then sum across.
         var seen: [String: (completed: Int64, total: Int64)] = [:]
         var lastStatus = "Starting download…"
-        var lineBuffer = ""
+        var lineBuffer: [UInt8] = []
+
+        /// One complete line of the stream. Once the 200 has gone out Ollama
+        /// reports a failure (a full disk, an older daemon that does not know
+        /// the model) as a `{"error": …}` line and ends the stream, so the
+        /// loop used to finish normally and the pill read it as success (N163).
+        func handle(_ line: [UInt8]) async throws {
+            guard let event = try? JSONDecoder().decode(PullEvent.self, from: Data(line))
+            else { return }
+            if let failure = event.error, !failure.isEmpty {
+                throw OllamaPullError(message: failure)
+            }
+            if let status = event.status {
+                lastStatus = status
+            }
+            if let digest = event.digest, let total = event.total {
+                let completed = event.completed ?? 0
+                seen[digest] = (completed, total)
+            }
+            let sumCompleted = seen.values.reduce(0) { $0 + $1.completed }
+            let sumTotal = seen.values.reduce(0) { $0 + $1.total }
+            let snapshot = PullProgress(
+                completedBytes: sumCompleted,
+                totalBytes: sumTotal,
+                statusLine: lastStatus)
+            await MainActor.run { onProgress(snapshot) }
+        }
+
         for try await byte in bytes {
             try Task.checkCancellation()
             if byte == 0x0A {  // newline
                 if !lineBuffer.isEmpty {
-                    if let event = try? JSONDecoder().decode(
-                        PullEvent.self,
-                        from: Data(lineBuffer.utf8))
-                    {
-                        if let status = event.status {
-                            lastStatus = status
-                        }
-                        if let digest = event.digest, let total = event.total {
-                            let completed = event.completed ?? 0
-                            seen[digest] = (completed, total)
-                        }
-                        let sumCompleted = seen.values.reduce(0) { $0 + $1.completed }
-                        let sumTotal = seen.values.reduce(0) { $0 + $1.total }
-                        let snapshot = PullProgress(
-                            completedBytes: sumCompleted,
-                            totalBytes: sumTotal,
-                            statusLine: lastStatus)
-                        await MainActor.run { onProgress(snapshot) }
-                    }
+                    try await handle(lineBuffer)
                     lineBuffer.removeAll(keepingCapacity: true)
                 }
             } else {
-                lineBuffer.unicodeScalars.append(Unicode.Scalar(byte))
+                lineBuffer.append(byte)
             }
             // Defensive cap — abort on absurdly long lines.
-            if lineBuffer.utf8.count > 65_536 {
+            if lineBuffer.count > 65_536 {
                 throw URLError(.cannotParseResponse)
             }
         }
+        // A last line with no newline after it is still a line: the error that
+        // ends a pull can be it.
+        if !lineBuffer.isEmpty {
+            try await handle(lineBuffer)
+        }
+    }
+
+    /// The daemon's own account of why a pull stopped, carried to the pill's
+    /// generic failure (`OllamaDownloadModel.classify`). Its words are Ollama's,
+    /// as every `Cause` message from the engine is. Not a `LocalizedError`: the
+    /// sentence is the daemon's, passed through, never one of ours.
+    struct OllamaPullError: Error, Equatable {
+        let message: String
     }
 
     /// Subset of fields we read from each /api/pull stream line.
     private struct PullEvent: Decodable {
+        let error: String?
         let status: String?
         let digest: String?
         let total: Int64?

@@ -286,6 +286,10 @@ final class OllamaDownloadModel: ObservableObject {
                 break
             }
         }
+        if let pull = error as? LLMValidator.OllamaPullError {
+            // The daemon's own sentence (a full disk, a model it does not know).
+            return .generic(pull.message)
+        }
         return .generic(error.localizedDescription)
     }
 }

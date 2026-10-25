@@ -724,6 +724,34 @@ class TestSetVerified:
         with pytest.raises(NotImplementedError):
             set_verified(EnvCredentialStore(), "anthropic", "sk-1")
 
+    def test_linux_keyring_refusing_the_write_is_false_not_a_traceback(self, caplog) -> None:
+        """N153: `secret-tool store` exits non-zero on a locked keyring."""
+        import subprocess
+
+        from bristlenose.credentials import set_verified
+        from bristlenose.credentials_linux import LinuxCredentialStore
+
+        def fake_run(args, **kwargs):
+            if args[:2] == ["secret-tool", "store"] and kwargs.get("check"):
+                raise subprocess.CalledProcessError(1, args)
+            if args[:2] == ["secret-tool", "lookup"]:
+                raise subprocess.CalledProcessError(1, args)
+            raise AssertionError(f"unexpected call: {args}")
+
+        with patch("bristlenose.credentials_linux.subprocess.run", new=fake_run), \
+                caplog.at_level("WARNING"):
+            assert set_verified(LinuxCredentialStore(), "anthropic", "sk-ant-secret") is False
+        assert "could not write anthropic" in caplog.text
+        assert "sk-ant-secret" not in caplog.text
+
+    def test_unwritable_config_file_is_false_not_a_traceback(self, tmp_path: Path) -> None:
+        from bristlenose.credentials import FileCredentialStore, set_verified
+
+        # A directory where the file should be: the write raises OSError.
+        blocked = tmp_path / ".env"
+        blocked.mkdir()
+        assert set_verified(FileCredentialStore(blocked), "anthropic", "sk-1") is False
+
     def test_env_var_shadowing_the_file_is_false(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -96,8 +97,23 @@ def set_verified(store: CredentialStore, key: str, value: str) -> bool:
     ``NotImplementedError`` from a store that cannot write at all (a bare
     :class:`EnvCredentialStore`) propagates: that is a different condition from
     a write that did not land, and callers say different things about it.
+
+    A write the backend *refuses* loudly — ``secret-tool store`` exiting non-zero
+    on a locked or prompt-less Linux keyring (``CalledProcessError``), the tool
+    vanishing, a config file that cannot be written (``OSError``) — is the same
+    condition as the silent no-op above: not saved. It returns False rather than
+    raising, so ``configure`` says "Not saved" instead of ending in a traceback.
     """
-    store.set(key, value)
+    try:
+        store.set(key, value)
+    except (subprocess.CalledProcessError, OSError) as exc:
+        # The command line carries no secret and stderr is not captured, so the
+        # exception text is safe to log.
+        logger.warning(
+            "%s could not write %s (%s) — not persisted",
+            type(store).__name__, key, exc,
+        )
+        return False
     try:
         stored = store.get(key)
     except Exception:  # a store that cannot answer cannot prove anything

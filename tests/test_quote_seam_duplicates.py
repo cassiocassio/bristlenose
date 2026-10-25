@@ -62,20 +62,25 @@ def _transcript(n_segments: int = 20, seg_seconds: float = 10.0) -> PiiCleanTran
     )
 
 
-def _client() -> tuple[AsyncMock, dict[str, int]]:
-    calls = {"n": 0}
+class _ScenarioBrokenError(Exception):
+    """The set-up no longer is the scenario. Not an AssertionError, so the xfail
+    below (``raises=AssertionError``) cannot take it for the known bug."""
+
+
+def _client() -> tuple[AsyncMock, list[str]]:
+    prompts: list[str] = []
 
     async def analyze(system_prompt, user_prompt, response_model, **kw):
-        calls["n"] += 1
-        if calls["n"] == 1:
+        prompts.append(user_prompt)
+        if len(prompts) == 1:
             raise TruncatedResponseError(
                 "truncated", provider="openai", model="gpt-4o",
                 requested_max_tokens=16384, model_cap=16384,
             )
         # The seam turn sits in both chunks. The chunk that opens at turn 0 sees
-        # it at its end; the other sees it at its start.
-        sees_it = re.search(rf"turn number {_SEAM_TURN} ", user_prompt) is not None
-        assert sees_it, "the seam turn must be in both chunks' overlap band"
+        # it at its end; the other sees it at its start. (Whether it really is
+        # in both is checked by the caller, outside the extractor's per-session
+        # error handling, which would swallow a failure raised in here.)
         opens_session = re.search(r"turn number 0 ", user_prompt) is not None
         verbatim = _WHOLE_TURN if opens_session else _TRIMMED_TURN
         return QuoteExtractionResult(quotes=[ExtractedQuoteItem(
@@ -87,29 +92,42 @@ def _client() -> tuple[AsyncMock, dict[str, int]]:
     client = AsyncMock()
     client.provider = "openai"
     client.analyze = analyze
-    return client, calls
+    return client, prompts
+
+
+def _check_scenario(prompts: list[str], outcome) -> None:
+    """The truncated full pass, then both chunks, each holding the seam turn, and
+    the session extracted without error."""
+    if len(prompts) != 3:
+        raise _ScenarioBrokenError(f"expected 3 calls, got {len(prompts)}")
+    for i, chunk in enumerate(prompts[1:], start=1):
+        if re.search(rf"turn number {_SEAM_TURN} ", chunk) is None:
+            raise _ScenarioBrokenError(f"the seam turn is not in chunk {i}")
+    if outcome.succeeded != 1 or outcome.failed:
+        raise _ScenarioBrokenError(f"the session did not extract: {outcome!r}")
 
 
 @pytest.mark.asyncio
 async def test_both_chunks_see_the_seam_turn_and_extract_it() -> None:
     """Sanity: the stand-in does what the scenario says (two passes, one turn)."""
-    client, calls = _client()
+    client, prompts = _client()
     topic_map = SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[])
-    await extract_quotes([_transcript()], [topic_map], client, concurrency=1)
-    assert calls["n"] == 3  # the truncated full pass, then one pass per chunk
+    _, outcome = await extract_quotes([_transcript()], [topic_map], client, concurrency=1)
+    _check_scenario(prompts, outcome)
 
 
 @pytest.mark.xfail(
     strict=True,
+    raises=AssertionError,
     reason="N42: the seam dedupe is byte-exact on verbatim_excerpt, so one turn quoted "
     "with different edges by the two chunks is kept twice",
 )
 @pytest.mark.asyncio
 async def test_a_turn_quoted_by_both_chunks_is_one_quote() -> None:
-    client, _ = _client()
+    client, prompts = _client()
     topic_map = SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[])
     quotes, outcome = await extract_quotes([_transcript()], [topic_map], client, concurrency=1)
-    assert outcome.succeeded == 1
+    _check_scenario(prompts, outcome)  # a broken set-up fails here, not as the known bug
     assert [q.start_timecode for q in quotes] == [90.0], (
         f"expected one quote at 90 s, got {[(q.start_timecode, q.verbatim_excerpt) for q in quotes]}"
     )

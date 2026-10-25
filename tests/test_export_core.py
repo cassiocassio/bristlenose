@@ -100,6 +100,13 @@ class TestExcelSheetName:
     def test_empty_returns_quotes(self):
         assert excel_sheet_name("") == "Quotes"
 
+    @pytest.mark.parametrize("name", ["History", "history", "HISTORY"])
+    def test_a_name_excel_reserves_is_replaced(self, name: str):
+        assert excel_sheet_name(name) == "Quotes"
+
+    def test_a_name_that_merely_contains_history_is_kept(self):
+        assert excel_sheet_name("History of Pay") == "History of Pay"
+
     def test_all_illegal_returns_quotes(self):
         assert excel_sheet_name("[]*?/\\") == "Quotes"
 

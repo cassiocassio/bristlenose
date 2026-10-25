@@ -107,7 +107,7 @@ def excel_sheet_name(name: str, max_length: int = 31) -> str:
 
     Excel sheet names must not:
     - Contain ``: [ ] * ? / \\`` or a control character
-    - Start or end with ``'``
+    - Start or end with ``'``, or be called ``History``
     - Exceed 31 characters
 
     Returns ``"Quotes"`` if the input reduces to nothing.
@@ -116,6 +116,10 @@ def excel_sheet_name(name: str, max_length: int = 31) -> str:
     result = result.strip("' ")
     if len(result) > max_length:
         result = result[:max_length].rstrip("' ")
+    # "History" is reserved by Excel (shared-workbook change history), any case.
+    # The library accepts it, so no round-trip test can see it.
+    if result.casefold() == "history":
+        return "Quotes"
     return result or "Quotes"
 
 

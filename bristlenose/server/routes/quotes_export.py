@@ -170,6 +170,7 @@ async def export_quotes_xlsx(
 
         # Lazy import — openpyxl is heavy and only needed for XLSX
         from openpyxl import Workbook
+        from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
         from openpyxl.styles import Font
 
         wb = Workbook()
@@ -187,7 +188,12 @@ async def export_quotes_xlsx(
         # spreadsheet app that evaluates leading =/+/-/@ cells.
         for row_idx, q in enumerate(quotes, start=2):
             for col_idx, value in enumerate(_quote_to_row(q), start=1):
-                ws.cell(row=row_idx, column=col_idx, value=csv_safe(value))
+                # The workbook's XML cannot hold a control character (a form feed
+                # pasted from a PDF): saving raised, and the route answered 500.
+                ws.cell(
+                    row=row_idx, column=col_idx,
+                    value=ILLEGAL_CHARACTERS_RE.sub("", csv_safe(value)),
+                )
 
         # Freeze header row
         ws.freeze_panes = "A2"

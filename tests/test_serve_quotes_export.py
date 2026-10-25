@@ -236,6 +236,26 @@ def test_a_project_named_with_a_character_a_sheet_cannot_hold_still_downloads(
     assert load_workbook(io.BytesIO(resp.content)).active.max_row == 5
 
 
+def test_a_control_character_in_a_quote_does_not_stop_the_spreadsheet(client: TestClient) -> None:
+    """A form feed pasted from a PDF cannot go in the workbook's XML; saving raised
+    and the route answered 500 (found in review of N138)."""
+    from openpyxl import load_workbook
+
+    from bristlenose.server.models import Quote
+
+    db = client.app.state.db_factory()  # type: ignore[attr-defined]
+    try:
+        quote = db.query(Quote).first()
+        quote.text = "page\x0cbreak and a bell\x07"
+        db.commit()
+    finally:
+        db.close()
+    resp = client.get("/api/projects/1/export/quotes.xlsx")
+    assert resp.status_code == 200
+    cells = [c.value for row in load_workbook(io.BytesIO(resp.content)).active.iter_rows() for c in row]
+    assert "pagebreak and a bell" in cells
+
+
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------

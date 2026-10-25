@@ -822,7 +822,7 @@
   "figjam": {
     "menuLabel": "Lähetä FigJamiin…",
     "title": "Lähetä FigJamiin",
-    "intro": "FigJam-taulut rakennetaan FigJamissa, joten Bristlenose tallentaa taulutiedoston, jonka Bristlenose board -laajennus avaa.",
+    "intro": "FigJam-taulut rakennetaan FigJamissa, joten Bristlenose tallentaa taulutiedoston, jonka Bristlenose -laajennus avaa.",
     "notice": "Tiedostossa ovat tämän projektin sitaatit piilotettuja lukuun ottamatta, puhujakoodein eikä koskaan nimin. Kun avaat sen laajennuksella, sitaatit siirtyvät Figma-tiedostoosi.",
     "download": "Lataa taulutiedosto",
     "preparing": "Taulutiedostoa valmistellaan…",
@@ -832,7 +832,7 @@
     "saved_other": "Taulutiedosto tallennettu, {{count}} sitaattia.",
     "nextSteps": "Sitten Figman työpöytäsovelluksessa:",
     "step1": "Avaa FigJam-taulu.",
-    "step2": "Suorita Bristlenose board -laajennus.",
+    "step2": "Suorita Bristlenose -laajennus.",
     "step3": "Valitse juuri tallentamasi tiedosto.",
     "errClipsBase": "Leikekansion on oltava verkko-osoite, joka alkaa https://.",
     "error": "Taulutiedostoa ei voitu luoda. Yritä uudelleen.",

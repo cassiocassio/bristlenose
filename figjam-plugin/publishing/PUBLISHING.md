@@ -1,4 +1,4 @@
-# Publishing the Bristlenose board plugin
+# Publishing the Bristlenose plugin
 
 Everything for the Figma Community submission, drafted 19 Oct 2026. The
 listing facts come from Figma's help centre as of that date (the "Publish
@@ -32,7 +32,7 @@ because Figma does not publish its field limits.
 
 ## Submitting
 
-1. Figma desktop app › Plugins › Manage plugins, then **Publish** on Bristlenose board.
+1. Figma desktop app › Plugins › Manage plugins, then **Publish** on Bristlenose.
 2. The dialog will say the manifest id is invalid (`bristlenose-board-dev` is a
    placeholder). Click **Generate ID**, put the new id in
    `figjam-plugin/manifest.json`, rebuild, and commit that one-line change to
@@ -46,13 +46,13 @@ because Figma does not publish its field limits.
 
 ### Describe
 
-**Name:** Bristlenose board
+**Name:** Bristlenose
 
 **Tagline:** Build a research board of sticky notes from a Bristlenose board file.
 
 **Description:**
 
-> Bristlenose board builds a research board in FigJam from the board file that
+> This plugin builds a research board in FigJam from the board file that
 > Bristlenose exports.
 >
 > Bristlenose is open-source software for user researchers. It turns interview
@@ -68,11 +68,10 @@ because Figma does not publish its field limits.
 > - Long quotes broken into two or three sticky notes, grouped, so you can
 >   delete the weaker parts and keep the rest
 > - Square or wide sticky notes, as chosen in Bristlenose
-> - Links to video clips, where the researcher added them
 >
 > **How to use it**
 > 1. In Bristlenose, choose Export › Send to FigJam… and save the board file.
-> 2. Open a FigJam board and run Bristlenose board.
+> 2. Open a FigJam board and run the Bristlenose plugin.
 > 3. Choose the file, or drop it on the plugin's window.
 >
 > One undo removes everything the plugin drew.
@@ -125,7 +124,7 @@ Optional at first submission. If you fill it in later, these are the facts:
 
 1. Bristlenose with a project open: Export › Send to FigJam…, the dialog with
    the board name filled in, **Download board file** (8 s).
-2. FigJam, an empty board: run Bristlenose board, choose the file (8 s).
+2. FigJam, an empty board: run the Bristlenose plugin, choose the file (8 s).
 3. The board drawing, with the progress bar (10 s).
 4. Zoom in on a column, ⌘-click one part of a long quote's set and delete it
    (10 s).

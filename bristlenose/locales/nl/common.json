@@ -822,7 +822,7 @@
   "figjam": {
     "menuLabel": "Naar FigJam sturen…",
     "title": "Naar FigJam sturen",
-    "intro": "FigJam-borden worden in FigJam zelf gemaakt, dus Bristlenose bewaart een bordbestand dat de plug-in Bristlenose board opent.",
+    "intro": "FigJam-borden worden in FigJam zelf gemaakt, dus Bristlenose bewaart een bordbestand dat de plug-in Bristlenose opent.",
     "notice": "Het bestand bevat de citaten van dit project, behalve verborgen citaten, met sprekercodes en nooit namen. Als je het met de plug-in opent, komen de citaten in je Figma-bestand.",
     "download": "Bordbestand downloaden",
     "preparing": "Bordbestand voorbereiden…",
@@ -832,7 +832,7 @@
     "saved_other": "Bordbestand bewaard, met {{count}} citaten.",
     "nextSteps": "Daarna in de Figma-desktopapp:",
     "step1": "Open een FigJam-bord.",
-    "step2": "Voer de plug-in Bristlenose board uit.",
+    "step2": "Voer de plug-in Bristlenose uit.",
     "step3": "Kies het bestand dat je net hebt bewaard.",
     "errClipsBase": "De clipmap moet een webadres zijn dat met https:// begint.",
     "error": "Het bordbestand kon niet worden gemaakt. Probeer het opnieuw.",

@@ -825,7 +825,7 @@
   "figjam": {
     "menuLabel": "Send to FigJam…",
     "title": "Send to FigJam",
-    "intro": "FigJam boards are built inside FigJam, so Bristlenose saves a board file for the Bristlenose board plugin to open.",
+    "intro": "FigJam boards are built inside FigJam, so Bristlenose saves a board file for the Bristlenose plugin to open.",
     "notice": "The file holds this project's quotes, except hidden ones, with speaker codes and never names. When you open it with the plugin, the quotes go into your Figma file.",
     "download": "Download board file",
     "preparing": "Preparing the board file…",
@@ -835,7 +835,7 @@
     "saved_other": "Board file saved, with {{count}} quotes.",
     "nextSteps": "Then, in the Figma desktop app:",
     "step1": "Open a FigJam board.",
-    "step2": "Run the Bristlenose board plugin.",
+    "step2": "Run the Bristlenose plugin.",
     "step3": "Choose the file you just saved.",
     "errClipsBase": "The clip folder must be a web address starting with https://.",
     "error": "The board file couldn't be made. Try again.",

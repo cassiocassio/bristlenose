@@ -1,5 +1,5 @@
 {
-  "name": "Bristlenose board",
+  "name": "Bristlenose",
   "id": "bristlenose-board-dev",
   "api": "1.0.0",
   "main": "dist/code.js",

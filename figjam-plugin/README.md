@@ -1,4 +1,4 @@
-# Bristlenose board — FigJam plugin
+# Bristlenose — FigJam plugin
 
 Builds a research board in FigJam from the board file Bristlenose downloads:
 one section per frame, a pink header sticky per column, the quotes beneath in
@@ -37,7 +37,7 @@ but the drawing itself is only proven in a real FigJam file.
 
 Needs the Figma desktop app. Build first, then in any FigJam board:
 Plugins › Development › Import plugin from manifest… and choose
-`figjam-plugin/manifest.json`. Run **Bristlenose board** and choose a file from
+`figjam-plugin/manifest.json`. Run **Bristlenose** and choose a file from
 Bristlenose's FigJam download, or `tests/fixtures/figjam-board-v1.json`.
 Pasting a board file's text into the plugin's window (⌘V) builds it too; tried
 in FigJam on 19 Oct 2026 with `publishing/sample-board.json`.

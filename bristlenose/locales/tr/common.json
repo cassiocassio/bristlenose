@@ -822,7 +822,7 @@
   "figjam": {
     "menuLabel": "FigJam'e Gönder…",
     "title": "FigJam'e Gönder",
-    "intro": "FigJam panoları FigJam'in içinde oluşturulur; bu yüzden Bristlenose, Bristlenose board eklentisinin açacağı bir pano dosyası kaydeder.",
+    "intro": "FigJam panoları FigJam'in içinde oluşturulur; bu yüzden Bristlenose, Bristlenose eklentisinin açacağı bir pano dosyası kaydeder.",
     "notice": "Dosyada, gizli olanlar dışında bu projenin alıntıları konuşmacı kodlarıyla yer alır, adlar asla yer almaz. Eklentiyle açtığınızda alıntılar Figma dosyanıza aktarılır.",
     "download": "Pano dosyasını indir",
     "preparing": "Pano dosyası hazırlanıyor…",
@@ -832,7 +832,7 @@
     "saved_other": "Pano dosyası kaydedildi ({{count}} alıntı).",
     "nextSteps": "Ardından Figma masaüstü uygulamasında:",
     "step1": "Bir FigJam panosu açın.",
-    "step2": "Bristlenose board eklentisini çalıştırın.",
+    "step2": "Bristlenose eklentisini çalıştırın.",
     "step3": "Az önce kaydettiğiniz dosyayı seçin.",
     "errClipsBase": "Klip klasörü https:// ile başlayan bir web adresi olmalıdır.",
     "error": "Pano dosyası oluşturulamadı. Yeniden deneyin.",

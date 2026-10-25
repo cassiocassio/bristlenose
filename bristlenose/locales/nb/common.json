@@ -822,7 +822,7 @@
   "figjam": {
     "menuLabel": "Send til FigJam …",
     "title": "Send til FigJam",
-    "intro": "FigJam-tavler bygges inne i FigJam, så Bristlenose lagrer en tavlefil som programtillegget Bristlenose board åpner.",
+    "intro": "FigJam-tavler bygges inne i FigJam, så Bristlenose lagrer en tavlefil som programtillegget Bristlenose åpner.",
     "notice": "Filen inneholder sitatene i dette prosjektet unntatt skjulte, med talerkoder og aldri navn. Når du åpner den med programtillegget, havner sitatene i Figma-filen din.",
     "download": "Last ned tavlefil",
     "preparing": "Forbereder tavlefilen …",
@@ -832,7 +832,7 @@
     "saved_other": "Tavlefil lagret, med {{count}} sitater.",
     "nextSteps": "Deretter i Figmas skrivebordsapp:",
     "step1": "Åpne en FigJam-tavle.",
-    "step2": "Kjør programtillegget Bristlenose board.",
+    "step2": "Kjør programtillegget Bristlenose.",
     "step3": "Velg filen du nettopp lagret.",
     "errClipsBase": "Klippmappen må være en nettadresse som begynner med https://.",
     "error": "Tavlefilen kunne ikke lages. Prøv igjen.",

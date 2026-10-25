@@ -916,7 +916,7 @@
   "figjam": {
     "menuLabel": "Wyślij do FigJam…",
     "title": "Wyślij do FigJam",
-    "intro": "Tablice FigJam powstają w samym FigJam, więc Bristlenose zapisuje plik tablicy, który otwiera wtyczka Bristlenose board.",
+    "intro": "Tablice FigJam powstają w samym FigJam, więc Bristlenose zapisuje plik tablicy, który otwiera wtyczka Bristlenose.",
     "notice": "Plik zawiera cytaty z tego projektu poza ukrytymi, z kodami rozmówców, nigdy z imionami. Gdy otworzysz go we wtyczce, cytaty trafią do Twojego pliku w Figmie.",
     "download": "Pobierz plik tablicy",
     "preparing": "Przygotowywanie pliku tablicy…",
@@ -930,7 +930,7 @@
     "saved_other": "Zapisano plik tablicy: {{count}} cytatu.",
     "nextSteps": "Następnie w aplikacji Figma na komputer:",
     "step1": "Otwórz tablicę FigJam.",
-    "step2": "Uruchom wtyczkę Bristlenose board.",
+    "step2": "Uruchom wtyczkę Bristlenose.",
     "step3": "Wybierz plik, który właśnie zapisałeś.",
     "errClipsBase": "Folder z klipami musi być adresem internetowym zaczynającym się od https://.",
     "error": "Nie udało się utworzyć pliku tablicy. Spróbuj ponownie.",

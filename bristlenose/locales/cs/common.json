@@ -905,7 +905,7 @@
   "figjam": {
     "menuLabel": "Odeslat do FigJamu…",
     "title": "Odeslat do FigJamu",
-    "intro": "Tabule ve FigJamu se tvoří přímo ve FigJamu, a tak Bristlenose uloží soubor tabule, který otevře plugin Bristlenose board.",
+    "intro": "Tabule ve FigJamu se tvoří přímo ve FigJamu, a tak Bristlenose uloží soubor tabule, který otevře plugin Bristlenose.",
     "notice": "Soubor obsahuje citace z tohoto projektu kromě skrytých, s kódy mluvčích, nikdy se jmény. Když ho otevřete pluginem, citace se přenesou do vašeho souboru ve Figmě.",
     "download": "Stáhnout soubor tabule",
     "preparing": "Připravuje se soubor tabule…",
@@ -919,7 +919,7 @@
     "saved_other": "Soubor tabule uložen, {{count}} citací.",
     "nextSteps": "Potom v desktopové aplikaci Figma:",
     "step1": "Otevřete tabuli ve FigJamu.",
-    "step2": "Spusťte plugin Bristlenose board.",
+    "step2": "Spusťte plugin Bristlenose.",
     "step3": "Vyberte soubor, který jste právě uložili.",
     "errClipsBase": "Složka s klipy musí být webová adresa začínající https://.",
     "error": "Soubor tabule se nepodařilo vytvořit. Zkuste to znovu.",

@@ -57,7 +57,7 @@ export class Refusal extends Error {
 export const REFUSAL_TEXT: Record<RefusalKind, string> = {
   not_json: "That file isn't a Bristlenose board file. Choose the .json file Bristlenose downloaded.",
   not_a_board: "That file isn't a Bristlenose board file. Choose the .json file Bristlenose downloaded.",
-  too_new: "This board was made by a newer Bristlenose. Update the Bristlenose board plugin, then try again.",
+  too_new: "This board was made by a newer Bristlenose. Update the Bristlenose plugin, then try again.",
   malformed: "This board file is damaged or was edited by hand, so it can't be drawn. Download it again from Bristlenose.",
   too_large: "This board file is too large to draw in one go. Export a smaller selection from Bristlenose.",
 };

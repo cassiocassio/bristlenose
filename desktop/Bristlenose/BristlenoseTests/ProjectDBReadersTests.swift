@@ -142,14 +142,20 @@ struct ProjectDBReadersTests {
     // `as_uri()`), and a `%` before two hex digits was decoded into another
     // character, so the path named a folder that does not exist.
 
+    /// The awkward part of each folder name. The UUID is NOT in this list: the
+    /// list is static, so a UUID here was one value per process, and the two
+    /// tests below, run in parallel by Swift Testing, then shared one folder and
+    /// one SQLite file ("table projects already exists", "database is locked",
+    /// one test deleting the folder under the other; N196). `awkwardProject`
+    /// adds a fresh UUID per call, so every test owns its own paths.
     private static let awkwardNames = [
-        "bn-db #1 \(UUID().uuidString)",
-        "bn-db ?q=1 \(UUID().uuidString)",
-        "bn-db 100%25 \(UUID().uuidString)",
+        "bn-db #1",
+        "bn-db ?q=1",
+        "bn-db 100%25",
     ]
 
     private static func awkwardProject(_ name: String) throws -> URL {
-        try makeProject(folderName: name) { db in
+        try makeProject(folderName: "\(name) \(UUID().uuidString)") { db in
             exec(db, """
             INSERT INTO projects VALUES (1, 'Study', '/p', '/p/bristlenose-output');
             INSERT INTO sessions VALUES (1, 1, 's1', 100);

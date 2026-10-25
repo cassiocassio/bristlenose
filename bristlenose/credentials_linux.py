@@ -114,7 +114,7 @@ def _is_secret_service_available() -> bool:
         # config file is the store that works (N202).
         errors = [
             line for line in (probe.stderr or "").splitlines()
-            if line.strip() 
+            if line.strip() and not _GLIB_LOG_LINE_RE.match(line)
         ]
         logger.info(
             "secret_tool_probe | returncode=%s | error=%r",

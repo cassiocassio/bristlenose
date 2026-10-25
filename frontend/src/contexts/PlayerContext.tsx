@@ -182,8 +182,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // SPA mode: fetch from API (must include auth token)
     apiGet<{ video_map: VideoMap; player_url?: string }>("/video-map")
       .then((data) => {
-        videoMapRef.current = data.video_map ?? {};
-        _videoMap = videoMapRef.current;
+        // A 200 without a map is a wrong answer, not an empty library: keep the old map.
+        if (data.video_map) _videoMap = videoMapRef.current = data.video_map;
         if (data.player_url) playerUrlRef.current = data.player_url;
       })
       .catch((err) => {

@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, act, waitFor } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import { PlayerProvider, usePlayer, hasRecording } from "./PlayerContext";
+import { PlayerProvider, usePlayer, hasRecording, resetVideoMapForTests } from "./PlayerContext";
 import { bumpRefreshKey, resetLastRunStore } from "./LastRunStore";
 
 vi.mock("../utils/announce", () => ({ announce: vi.fn() }));
@@ -41,6 +41,7 @@ describe("video map follows the run", () => {
   let openSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     resetLastRunStore();
+    resetVideoMapForTests();
     vi.mocked(apiGet).mockReset();
     openSpy = vi.spyOn(window, "open").mockReturnValue({
       closed: false,
@@ -70,6 +71,7 @@ describe("video map follows the run", () => {
     act(() => player.seek("p2", 5));
     expect(openSpy).toHaveBeenCalledOnce();
     expect(openSpy.mock.calls[0][0]).toContain("pid=p2");
+    expect(decodeURIComponent(openSpy.mock.calls[0][0] as string)).toContain("/media/two.mp4");
   });
 
   it("a failed re-read keeps the map it has", async () => {
@@ -79,6 +81,20 @@ describe("video map follows the run", () => {
     await waitFor(() => expect(hasRecording("p1")).toBe(true));
 
     vi.mocked(apiGet).mockRejectedValueOnce(new Error("offline"));
+    act(() => bumpRefreshKey());
+    await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+
+    expect(hasRecording("p1")).toBe(true);
+  });
+
+  it("an answer without a map does not wipe the one it has", async () => {
+    vi.mocked(apiGet).mockResolvedValueOnce({ video_map: { p1: "/media/one.mp4" } });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    mount();
+    await waitFor(() => expect(hasRecording("p1")).toBe(true));
+
+    vi.mocked(apiGet).mockResolvedValueOnce({});
     act(() => bumpRefreshKey());
     await waitFor(() => expect(apiGet).toHaveBeenCalledTimes(2));
     await act(async () => {});

@@ -254,6 +254,17 @@ enum LLMValidator {
                 .keyed(Self.V + "keyRejected",
                        vars: ["provider": provider.displayName, "status": String(status)])
             )
+        case 400 where provider == .gemini
+            && Self.geminiRejectsKey(body):
+            // Google answers a bad key with 400 INVALID_ARGUMENT, reason
+            // API_KEY_INVALID, never 401 (`doctor.py` records it and reads the
+            // body for exactly this). Any other Gemini 400 says nothing about
+            // the key and still falls to `.unavailable` below (N160).
+            return (
+                .invalid,
+                .keyed(Self.V + "keyRejected",
+                       vars: ["provider": provider.displayName, "status": String(status)])
+            )
         case 402:
             // Observed negative, NOT a failed observation: the account is
             // authenticated but out of credit. `.outOfCredit` is sticky and is
@@ -309,6 +320,13 @@ enum LLMValidator {
                                           vars: ["provider": provider.displayName,
                                                  "status": String(status)]))
         }
+    }
+
+    /// Whether a Gemini 400 body is Google saying the key is not valid, in the
+    /// two spellings `bristlenose/doctor.py` reads.
+    static func geminiRejectsKey(_ body: String?) -> Bool {
+        guard let body else { return false }
+        return body.contains("API_KEY_INVALID") || body.contains("API key not valid")
     }
 
     /// Backtick-wrapped shell commands embedded in a status message, surfaced so

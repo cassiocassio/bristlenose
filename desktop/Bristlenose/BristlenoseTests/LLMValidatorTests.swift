@@ -27,6 +27,39 @@ struct LLMValidatorTests {
         #expect(s403 == .invalid)
     }
 
+    /// Google answers a bad key on `GET v1beta/models` with **400**
+    /// INVALID_ARGUMENT, reason API_KEY_INVALID, not 401 (recorded as fact in
+    /// `bristlenose/doctor.py`, which reads the body for exactly this). The 400
+    /// fell to the default arm: orange "HTTP 400", still choosable, and a key
+    /// revoked after a green check stayed green behind its cached verdict (N160).
+    @Test("Gemini's 400 API_KEY_INVALID is a rejected key")
+    func classifyGeminiBadKey() {
+        let body = """
+        {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.",
+         "status":"INVALID_ARGUMENT",
+         "details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID"}]}}
+        """
+        let (status, err) = LLMValidator.classify(provider: .gemini, status: 400, body: body)
+        #expect(status == .invalid)
+        #expect(err?.key == "desktop.llmSettings.validation.keyRejected")
+    }
+
+    @Test("A Gemini 400 for any other reason is still not a verdict on the key")
+    func classifyGeminiOtherBadRequest() {
+        let body = #"{"error":{"code":400,"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT"}}"#
+        let (status, _) = LLMValidator.classify(provider: .gemini, status: 400, body: body)
+        #expect(status == .unavailable)
+        let (noBody, _) = LLMValidator.classify(provider: .gemini, status: 400)
+        #expect(noBody == .unavailable)
+    }
+
+    @Test("The API_KEY_INVALID reading is Gemini's alone")
+    func apiKeyInvalidBodyOnlyCountsForGemini() {
+        let body = #"{"error":{"details":[{"reason":"API_KEY_INVALID"}]}}"#
+        let (azure, _) = LLMValidator.classify(provider: .azure, status: 400, body: body)
+        #expect(azure == .unavailable)
+    }
+
     @Test("402 maps to .outOfCredit (observed negative, not transient) with key-is-fine message")
     func classifyOutOfCredits() {
         let (status, err) = LLMValidator.classify(provider: .claude, status: 402)

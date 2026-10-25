@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path as _Path
+from urllib.parse import quote as _quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -441,16 +442,18 @@ def _file_to_media_uri(file_path: str, project_dir: _Path | None) -> str:
     """Convert an absolute file path to a ``/media/`` HTTP URI.
 
     Strips the ``project_dir`` prefix so the remainder is a relative path
-    under ``/media/``.  Returns an **unencoded** path — the caller (or the
-    browser / JS ``encodeURIComponent``) is responsible for percent-encoding
-    when placing it in a URL.  Returning a raw path avoids the double-encoding
-    bug where Python encodes and then JS encodes again.
+    under ``/media/``, percent-encoded (``/`` kept). The player assigns this
+    string to ``video.src`` as it stands, and the SPA wraps it in
+    ``encodeURIComponent`` only to carry it through the player's URL hash —
+    which the player decodes once. So the one encoding lives here: an unencoded
+    ``#`` in "Participant #3.mp4" started a fragment and a ``?`` a query, the
+    browser asked for the cut-off path, and the recording never played (N173).
     """
     p = _Path(file_path)
     if project_dir is not None:
         try:
             rel = p.resolve().relative_to(project_dir.resolve())
-            return "/media/" + str(rel)
+            return "/media/" + _quote(rel.as_posix(), safe="/")
         except ValueError:
             pass
-    return "/media/" + p.name
+    return "/media/" + _quote(p.name, safe="/")

@@ -111,3 +111,71 @@ class TestPathTraversal:
 class TestNotFound:
     def test_missing_file(self, client: TestClient) -> None:
         assert client.get("/media/nonexistent.mp4").status_code == 404
+
+
+class TestRecordingNamesWithReservedCharacters:
+    """N173: the player assigns the video map's URI to ``video.src``, so a ``#``
+    in a file or folder name started a fragment and a ``?`` a query. The browser
+    requested the cut-off path, got a 403, and every timecode opened on nothing."""
+
+    NAMES = [
+        "Participant #3.mp4",
+        "Round #1/P?2 call.mov",
+        "100% done.mp4",
+        "50%41 off.mp4",  # a literal %41, which an unencoded path reads as "A"
+        "Café 你好.m4a",
+        "plain.mp4",
+    ]
+
+    @pytest.mark.parametrize("name", NAMES)
+    def test_the_video_map_uri_plays_as_the_browser_resolves_it(
+        self, tmp_path: Path, name: str,
+    ) -> None:
+        import shutil
+        from urllib.parse import unquote, urljoin, urlsplit
+
+        from bristlenose.server.models import Session as SessionModel
+        from bristlenose.server.models import SourceFile
+
+        project = tmp_path / "input"
+        shutil.copytree(_FIXTURE_DIR, project)
+        video = project / name
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes(b"fake-media")
+        app = create_app(project_dir=project, dev=False, db_url="sqlite://")
+        db = app.state.db_factory()
+        try:
+            sess = db.query(SessionModel).filter_by(session_id="s1").one()
+            db.add(SourceFile(session_id=sess.id, file_type="video", path=str(video), size_bytes=1))
+            db.commit()
+        finally:
+            db.close()
+        client = AuthTestClient(app)
+
+        body = client.get("/api/projects/1/video-map").json()
+        uri = body["video_map"]["s1"]
+
+        # What the browser requests for `video.src = uri` on the player page:
+        # the fragment and the query are not part of the request path.
+        page = "http://127.0.0.1:8150" + body["player_url"]
+        sent = urlsplit(urljoin(page, uri))
+        # The server decodes a request path once (uvicorn does; verified against
+        # a live one, 25 Oct 2026), and what it decodes to is the file's name.
+        assert unquote(sent.path) == "/media/" + name, (uri, sent.path)
+        if "%" in name:
+            # Starlette's TestClient decodes a path twice, so a literal "%41"
+            # reads back as "A" here and not on a real server: the check above
+            # is the whole claim for these names.
+            return
+        resp = client.get(sent.path)
+        assert resp.status_code == 200, (uri, sent.path)
+        assert resp.content == b"fake-media"
+
+    def test_a_recording_outside_the_project_folder_is_encoded_too(self, tmp_path: Path) -> None:
+        from bristlenose.server.routes.sessions import _file_to_media_uri
+
+        elsewhere = tmp_path / "elsewhere" / "Participant #3?.mp4"
+        project = tmp_path / "project"
+        project.mkdir()
+        assert _file_to_media_uri(str(elsewhere), project) == "/media/Participant%20%233%3F.mp4"
+        assert _file_to_media_uri(str(elsewhere), None) == "/media/Participant%20%233%3F.mp4"

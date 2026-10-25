@@ -64,7 +64,9 @@ def _visible(folder: Path) -> list[Path]:
     return [p for p in folder.iterdir() if not p.name.startswith((".", "~$"))]
 
 
-def _read_text(path: Path) -> str:
+def _read_text(path: Path, data: bytes) -> str:
+    """The guide's text. *data* is the bytes already read for the sha, so the
+    text is the text of the file that was hashed, never of a second read."""
     if path.suffix.lower() == ".docx":
         import docx  # python-docx: lazy, as every heavy import here
 
@@ -73,7 +75,14 @@ def _read_text(path: Path) -> str:
         # Tables included: a guide laid out as question | probe would
         # otherwise read as nearly empty.
         return "\n".join(block_texts(docx.Document(str(path))))
-    return path.read_text(encoding="utf-8", errors="replace")
+    # The house decoder, as for transcripts and subtitles (R118): a BOM or a
+    # BOM-less UTF-16 file (Notepad's "Unicode") and Windows-1252 read as
+    # themselves; text that is none of those raises, which the caller reports
+    # as an unreadable guide, where a replacement-character read would have
+    # sent the model garbage with no word that anything was wrong (N169).
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    return decode_text_any_encoding(data, path.name)
 
 
 def _locate(project_dir: Path) -> Path | None:
@@ -136,8 +145,9 @@ def _find_in(folder: Path) -> Guide | None:
         logger.warning("discussion guide is over %d bytes — refused", MAX_GUIDE_BYTES)
         return Guide(path, "", _meta_sha(path), rest, "too_large")
     try:
-        sha = hashlib.sha256(path.read_bytes()).hexdigest()
-        text = _read_text(path).strip()
+        data = path.read_bytes()
+        sha = hashlib.sha256(data).hexdigest()
+        text = _read_text(path, data).strip()
     except Exception as exc:  # noqa: BLE001 — a corrupt or locked document is the researcher's file, not our fault
         logger.warning("discussion guide could not be read: %s", type(exc).__name__)
         return Guide(path, "", _meta_sha(path), rest, "unreadable")

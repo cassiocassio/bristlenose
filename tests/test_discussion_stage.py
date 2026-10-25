@@ -396,6 +396,36 @@ def test_an_empty_guide_is_present_but_unreadable(tmp_path):
     assert g is not None and g.text == "" and g.sha and g.problem == "unreadable"
 
 
+GUIDE_TEXT = "Section 1: Warm-up\n1. Tell me about your caf\u00e9 visits.\n"
+
+
+@pytest.mark.parametrize("encoded", [
+    pytest.param(GUIDE_TEXT.encode("utf-16"), id="utf16-bom"),
+    pytest.param(GUIDE_TEXT.encode("utf-16-le"), id="utf16-le-no-bom"),
+    pytest.param(GUIDE_TEXT.encode("utf-16-be"), id="utf16-be-no-bom"),
+    pytest.param(GUIDE_TEXT.encode("utf-8-sig"), id="utf8-bom"),
+    pytest.param(GUIDE_TEXT.encode("cp1252"), id="windows-1252"),
+    pytest.param(GUIDE_TEXT.encode("utf-8"), id="utf8"),
+])
+def test_a_guide_in_another_encoding_reads_as_itself(tmp_path, encoded):
+    """N169: Notepad's "Unicode" and Windows-1252 guides were sent to the model
+    as replacement characters and NULs, with no word that anything was wrong."""
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "guide.txt").write_bytes(encoded)
+    g = find_guide(tmp_path)
+    assert g is not None and not g.problem
+    assert g.text == GUIDE_TEXT.strip()
+
+
+def test_a_guide_in_an_encoding_nobody_reads_is_unreadable_not_garbage(tmp_path):
+    folder = tmp_path / GUIDE_FOLDER
+    folder.mkdir()
+    (folder / "guide.md").write_bytes("\u8bbf\u8c08\u6307\u5357\u3002\u4f60\u597d\u5417".encode("gbk"))
+    g = find_guide(tmp_path)
+    assert g is not None and g.problem == "unreadable" and g.text == ""
+
+
 @pytest.mark.parametrize("payload", [b"", b"not a zip", b"PK\x03\x04truncated",
                                      b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"])  # last: Word's encrypted container
 def test_a_corrupt_or_locked_docx_never_raises(tmp_path, payload):

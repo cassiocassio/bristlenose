@@ -246,18 +246,23 @@ struct BristlenoseApp: App {
                     // act with a visible control — never fronting a window,
                     // which would silently re-point an external agent at a
                     // different study because someone pressed Cmd-backtick.
-                    agentAccessFanOut = NotificationCenter.default.addObserver(
-                        forName: .bristlenoseAgentAccessChanged, object: nil, queue: .main
-                    ) { note in
-                        // The payload is deliberately unread. Scope is derived
-                        // from the permission plus the window roster, so the
-                        // sweep re-reads every project — which is also what
-                        // makes it correct when several change at once. Binding
-                        // `id`/`enabled` to silence them was the shape that
-                        // left one of the two as a build warning; this target
-                        // has no CI, so warnings are its only mechanical signal.
-                        Task { @MainActor in
-                            serveFleet.syncHandshake()
+                    // Once per process, like the alert below: this closure runs
+                    // for every main window that appears, and an observer per
+                    // window ran one Agent Access change as N syncs.
+                    if agentAccessFanOut == nil {
+                        agentAccessFanOut = NotificationCenter.default.addObserver(
+                            forName: .bristlenoseAgentAccessChanged, object: nil, queue: .main
+                        ) { note in
+                            // The payload is deliberately unread. Scope is derived
+                            // from the permission plus the window roster, so the
+                            // sweep re-reads every project — which is also what
+                            // makes it correct when several change at once. Binding
+                            // `id`/`enabled` to silence them was the shape that
+                            // left one of the two as a build warning; this target
+                            // has no CI, so warnings are its only mechanical signal.
+                            Task { @MainActor in
+                                serveFleet.syncHandshake()
+                            }
                         }
                     }
                     // The change was refused by the disk, so the study stays as
@@ -285,10 +290,14 @@ struct BristlenoseApp: App {
                             }
                         }
                     }
-                    prefsFanOut = NotificationCenter.default.addObserver(
-                        forName: .bristlenosePrefsChanged, object: nil, queue: .main
-                    ) { _ in
-                        Task { @MainActor in serveFleet.applyEnvChange() }
+                    // Once per process, for the same reason: N windows would
+                    // otherwise run N environment sweeps per preferences change.
+                    if prefsFanOut == nil {
+                        prefsFanOut = NotificationCenter.default.addObserver(
+                            forName: .bristlenosePrefsChanged, object: nil, queue: .main
+                        ) { _ in
+                            Task { @MainActor in serveFleet.applyEnvChange() }
+                        }
                     }
                     pipelineRunner.setProjectIndex(projectIndex)
                     // Whisper starts downloading in the background once the AI

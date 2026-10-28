@@ -509,4 +509,4 @@ When the user signals end of session, **run `/end-session`** — the skill handl
 
 React migration complete; bundled-sidecar desktop is the primary distribution path; the CLI ships on PyPI, Homebrew, Snap and Fedora Copr; the static render is a sealed byproduct.
 
-- **R114 minimal recovery branch:** `docs/design-study-recovery-guard.md` owns current scope/evidence. Step1 machine-owned automatic recovery is implemented; pre-write admission is next. Do not continue the larger handover prototype by default; future100days item preserves that design and experiments.
+- **R114 minimal recovery branch:** `docs/design-study-recovery-guard.md` owns current scope/evidence. Step1 machine-owned automatic recovery is implemented; pre-write admission is next. Do not continue the larger handover prototype by default; `docs/private/100days.md` in main is the long-term planning source of truth; linked designs/experiments are supporting detail.

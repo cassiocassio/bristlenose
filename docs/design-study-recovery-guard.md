@@ -8,7 +8,9 @@ scope: R114 / reliability 179; destructive automatic recovery only
 
 Owner requested a William of Ockham reset on 28 October: deliver the simplest
 implementation providing most of the safety benefit, step by step. Later work
-may be tracked in 100days; preserve all previous thinking and experiments.
+is planned in `docs/private/100days.md`, the source of truth for long-term
+scope, priority, deferral and restart decisions. Preserve previous thinking and
+experiments as supporting evidence.
 
 ## Delivery sequence
 
@@ -59,8 +61,10 @@ The larger prototype remains on `codex/study-access-poc`, worktree
 `docs/design-study-read-only.md`; implementation/evidence map is
 `docs/design-study-read-only-plan.md`; experiments are under
 `experiments/study-access-poc/` (README, FINDINGS, HANDOVER, RESEARCH).
-Canonical private tracking is `docs/private/100days.md` and
-`docs/private/reviews/study-read-only.md` in the main checkout.
+Long-term planning authority is `docs/private/100days.md` in the main checkout.
+This design describes implementation and evidence; it does not set backlog
+priority or independently authorise deferred work. Review evidence remains in
+`docs/private/reviews/study-read-only.md`.
 
 Park seamless handover, private writable-storage migration, automatic incoming
 publication/adoption, unfinished-text recovery UI, editing re-entry and all-lens
@@ -70,7 +74,7 @@ are no longer prerequisites for this release. Reassess old review findings
 against the capability actually selected; do not mechanically carry obligations
 for removed capabilities into the minimal fix.
 
-Return to the larger design when there is demonstrated demand for uninterrupted
-cross-Mac handover, and agree a bounded end-to-end acceptance journey before
-resuming implementation. Duplication/merge and cloud-provider APIs stay outside
+Consult the current 100days item before resuming the larger design; its priority
+and restart criteria govern. Update that item when decisions change, rather than
+maintaining a separate roadmap here. Duplication/merge and cloud-provider APIs stay outside
 this delivery.

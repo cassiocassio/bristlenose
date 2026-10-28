@@ -68,6 +68,7 @@ from bristlenose.i18n import t_in
 from bristlenose.llm import telemetry
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 from bristlenose.utils.fs import open_private
+from bristlenose.utils.machine_identity import machine_id
 
 PID_FILENAME = "run.pid"
 
@@ -450,7 +451,7 @@ def _win_start_time(pid: int) -> str | None:
 
 
 def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
-    """Atomic-write ``run.pid`` with our (pid, start_time, run_id).
+    """Atomic-write ``run.pid`` with process identity and stable machine ownership.
 
     Mode 0o600 + O_NOFOLLOW + O_TRUNC: refuses to follow a symlink-attacked
     target and limits readability to the project's owner. Defensive default
@@ -462,6 +463,7 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
         "pid": os.getpid(),
         "start_time": start_time,
         "run_id": run_id,
+        "machine_id": machine_id(),
     }
     tmp = path.with_suffix(".tmp")
     fd = open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)

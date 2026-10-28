@@ -215,6 +215,11 @@ def crash_report_visible_before_any_rerun(proj: Path, tmp: Path) -> None:
     out = proj / "bristlenose-output"
     assert output_backup.stash(out) is not None
     _started(out, "KILLED")  # the run's first event, then SIGKILL
+    from bristlenose.run_lifecycle import _write_pid_file
+
+    # A new-build run records its machine too; a mismatched process start
+    # models the dead owner without depending on a particular unused PID.
+    _write_pid_file(out, "KILLED", "dead-process-start")
     with _client(_app(proj, tmp)) as client:
         assert_healthy(proj, client)
     assert not output_backup.backup_path_for(out).exists(), "the backup was not reclaimed"

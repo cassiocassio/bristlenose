@@ -784,7 +784,9 @@ def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
 
     So it reclaims in one shape only: the output folder's latest run is
     **stranded** — it started, wrote no terminus, and its PID file names no
-    live process. That is what a SIGKILL mid-run leaves.
+    live process, and a matching run marker proves it started on this machine.
+    A foreign or unknown owner (including old markers) is left untouched.
+    That is the only shape we can safely treat as a SIGKILL here.
 
     An **absent** output folder is not that shape, though it looks like a
     crash: it is also a run's first instant, between its rename and its first
@@ -794,6 +796,12 @@ def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
     `run_started` is the rest of the start-up window. A failed run's in-process
     restore already had its chance. All three are left for the next `run`.
     """
+    with _settling(output_dir):
+        return _reclaim_after_crash(output_dir)
+
+
+def _reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
+    """Check ownership and settle under the same local settle lock."""
     backup = backup_path_for(output_dir)
     if not backup.exists() or project_is_locked(output_dir):
         return RestoreOutcome.NOTHING_TO_DO
@@ -806,4 +814,23 @@ def reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
             "next run to reclaim", output_dir,
         )
         return RestoreOutcome.NOTHING_TO_DO
-    return reclaim_stale(output_dir)
+    # A synced foreign PID looks dead in our process table. Only positive
+    # ownership of this exact attempt permits destructive automatic recovery.
+    # Legacy/missing/malformed identity is uncertainty, never a local crash.
+    from bristlenose.run_lifecycle import _read_pid_file
+    from bristlenose.utils.machine_identity import machine_id
+
+    marker = _read_pid_file(output_dir)
+    local_machine = machine_id()
+    if (
+        local_machine is None
+        or marker is None
+        or marker.get("machine_id") != local_machine
+        or marker.get("run_id") != latest.run_id
+    ):
+        logger.warning(
+            "output_backup: cannot prove the unfinished analysis in %s belongs "
+            "to this machine — leaving its files and backup alone", output_dir,
+        )
+        return RestoreOutcome.NOTHING_TO_DO
+    return _reclaim_stale(output_dir)

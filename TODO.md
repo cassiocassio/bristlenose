@@ -1,5 +1,18 @@
 # Bristlenose — Where I Left Off
 
+**28 October — minimal R114 delivery:** Step1 committed `e83c68c79`: machine-owned
+automatic recovery preserves foreign/uncertain unfinished output and backup;
+known-local recovery retained.200regressions pass, Ruff clean, runtime review
+clean after Windows identity type fix. Not a full lock: ordinary startup/explicit
+run can still write; step2 must refuse before writers. Plan:
+[design-study-recovery-guard.md](docs/design-study-recovery-guard.md).
+Larger prototype and thinking preserved on codex/study-access-poc and main100days.
+No push/merge/release; unrelated main source unchanged.
+
+- Next-release candidate (Fixed): Opening a synced study no longer automatically
+  replaces another Mac's unfinished analysis with the previous report. This is
+  destructive-recovery protection, not full multi-Mac editing safety.
+
 Last updated: 25 Oct 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **25 Oct 2026 — Codex checkpoint: true-the-docs for #193/N190 and #92.** Targeted reconciliation of `docs/design-mcp-server.md` (C/mixed) and `docs/design-perf-regression-gate.md` (B), with one independent read-only docs auditor. Corrected the MCP doc's false on-by-default claim, recorded the checked CLI policy and token scope, updated Sessions loading/budget, and preserved dated history. Truing plan/checks: `docs/private/truing-reliability-193-92-2026-10-25.md`. Included in the local commit titled `fix agent messaging and defer sessions loading`; no push, tag or release. Existing unrelated untracked files excluded.

@@ -12,6 +12,21 @@ is planned in `docs/private/100days.md`, the source of truth for long-term
 scope, priority, deferral and restart decisions. Preserve previous thinking and
 experiments as supporting evidence.
 
+## UX gate — explicit owner instruction, 28 October
+
+Any UX change requires a complete mockup, review and explicit owner approval
+before implementation or activation. Reuse existing patterns; do not invent new
+UX features, controls, navigation, dialogs or status surfaces. Reusing a pattern
+does not waive approval for new copy, states, actions or visible behavior.
+
+Step 2 changes the user's opening/analysis flow: first inspect existing native
+and CLI failure/status machinery, then mock every relevant state and transition,
+including copy and existing actions, review it and obtain approval. Backend-only
+preparation/tests may proceed separately; do not wire an unapproved user flow.
+Step 3 has the same gate. Historical mocks and earlier discussions do not count
+as approval of the reduced delivery. Existing recovery mock remains unverified.
+Use the repository bn-mockup skill when producing native-style HTML mockups.
+
 ## Delivery sequence
 
 | Step | Benefit | Boundary and acceptance |

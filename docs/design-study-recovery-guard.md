@@ -93,3 +93,42 @@ Consult the current 100days item before resuming the larger design; its priority
 and restart criteria govern. Update that item when decisions change, rather than
 maintaining a separate roadmap here. Duplication/merge and cloud-provider APIs stay outside
 this delivery.
+
+## Step 2 preparation — 28 October (not activated)
+
+`utils/study_startup.py:startup_refusal` reads evidence without writing. New/empty
+studies and terminal attempts follow the existing flow; unfinished attempts need
+usable local machine/run/process markers. Foreign or unverified activity refuses.
+An output-to-backup start gap refuses. Unknown/torn/NUL/invalid-UTF8 history cannot
+hide behind an older completion: admission reads strict raw evidence, leaving the
+existing tolerant display reducer unchanged. This can conservatively refuse a
+historically damaged log; no repair/override UI is provided by this helper.
+
+No production caller exists yet. This is not step2 completed: CLI/native/server
+entry wiring and proof before every relevant startup writer remain undone.
+No watcher, live-transition fence, shared-SQLite safety claim or retained reader.
+
+A related step1 review correction validates positive non-boolean PID and nonempty
+start token before automatic local recovery, and treats invalid-UTF8 PID markers
+as unavailable. Both preserve uncertain files instead of destructive recovery.
+
+Verification:238passed/3deselected/2expectedfail in35.35s across admission,
+identity, other-Mac, backup/discard, lifecycle, portability and server lifecycle
+scenarios. Ruff clean. Mypy helper+backup clean; including run_lifecycle reports
+its pre-existing line224 list[Signals]/list[int] mismatch, reproduced against
+unchanged HEAD source. Logs:/tmp/bn-startup-{final-regressions,helper-mypy,baseline-mypy}.log.
+Runtime review found damaged-tail false admission and malformed local process
+markers; regressions added and reviewer rechecked both resolved.
+
+[Complete startup-refusal mock source](mockups/study-startup-refusal.html) reuses
+existing sidebar/popover, BootView, RunCoverPane and CLI error structure.
+Source review corrected the refused-analysis headline and details toggle; final
+source review clean. **Visual review and owner approval pending.** User approved
+local inspection, but the browser's independent file-protocol policy still
+rejected opening and forbids alternate rendering routes. No workaround attempted.
+JavaScript syntax checked; that is not pixel/interaction verification.
+
+Next: obtain the requested concrete UX approval, then wire pre-write admission
+and existing refusal presentation, prove actual CLI/native/server paths preserve
+protected bytes, review/fix. Long-term optional reader and full benefit remain
+prioritised only by main100days; no hidden dependency on the parked architecture.

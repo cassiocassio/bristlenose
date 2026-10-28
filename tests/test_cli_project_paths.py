@@ -1,14 +1,9 @@
 """``serve`` and ``status`` find a project's output folder by one rule.
 
-``cli._resolve_output_dir`` (``status``) used to try ``<p>/.bristlenose`` first,
-so a project littered by a serve that had rooted itself at the interview folder
-reported the litter and not the report. ``_auto_render`` (run by ``serve`` at
-startup) set ``input_dir = output_dir.parent`` on both branches, so ``serve
-<out>`` with an ``-o`` outside the interview folder re-ingested the parent — and
-crashed with ``UnsuitableInputDirError`` when that was ``$HOME``. And ``status``
-said nothing about a stashed report while the output folder was absent, which
-is exactly when the stash is the only copy. All measured 12 Oct 2026
-(docs/private handoff, findings S3, S12, P2).
+``serve`` and ``status`` must agree about a project's output folder.  In
+particular, a stray ``<project>/.bristlenose`` directory must not win over the
+actual report, and ``status`` must still name a stashed report when the output
+folder is absent.
 """
 
 from __future__ import annotations
@@ -25,53 +20,6 @@ from bristlenose.utils import output_backup
 def _intermediate(out: Path) -> None:
     (out / ".bristlenose" / "intermediate").mkdir(parents=True)
     (out / ".bristlenose" / "pipeline-events.jsonl").write_text("", encoding="utf-8")
-
-
-class _Recorder:
-    """Stands in for ``Pipeline``: records the input dir a render was asked for."""
-
-    calls: list[tuple[Path, Path]] = []
-
-    def __init__(self, settings, verbose=False):
-        pass
-
-    def run_render_only(self, output_dir: Path, input_dir: Path):
-        _Recorder.calls.append((output_dir, input_dir))
-
-        class _R:
-            total_quotes = 0
-
-        return _R()
-
-
-@pytest.fixture()
-def recorder(monkeypatch: pytest.MonkeyPatch) -> type[_Recorder]:
-    _Recorder.calls = []
-    monkeypatch.setattr("bristlenose.pipeline.Pipeline", _Recorder)
-    return _Recorder
-
-
-class TestAutoRender:
-    def test_default_layout_renders_with_the_interview_folder(
-        self, tmp_path: Path, recorder: type[_Recorder],
-    ) -> None:
-        proj = tmp_path / "proj"
-        out = proj / "bristlenose-output"
-        _intermediate(out)
-        cli._auto_render(proj)
-        assert recorder.calls == [(out, proj.resolve())]
-
-    def test_an_output_folder_elsewhere_is_not_rendered_from_its_parent(
-        self, tmp_path: Path, recorder: type[_Recorder],
-    ) -> None:
-        """``run -o ~/reports/study`` then ``serve ~/reports/study``: the parent
-        is not the interview folder, and ingesting it is a crash at best."""
-        out = tmp_path / "reports" / "study"
-        _intermediate(out)
-        cli._auto_render(out)
-        assert recorder.calls == [], (
-            f"rendered from a folder that holds no interviews: {recorder.calls}"
-        )
 
 
 class TestServeRootAfterRun:

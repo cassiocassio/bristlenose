@@ -2385,73 +2385,6 @@ def _serve_dynamic_port(
     asyncio.run(_run())
 
 
-def _auto_render(project_dir: Path) -> None:
-    """Re-render the HTML report from intermediate data before serving.
-
-    Fast (<0.1s) and ensures the served HTML always matches the current
-    render/ package code — no stale mount-point markers or missing CSS.
-    """
-    from bristlenose.output_paths import project_output_dir
-
-    output_dir = project_output_dir(project_dir)
-    intermediate = output_dir / ".bristlenose" / "intermediate"
-    if not intermediate.is_dir():
-        intermediate = output_dir / "intermediate"
-    if not intermediate.is_dir():
-        return  # No intermediate data — nothing to render
-
-    # The interview folder is the output folder's parent ONLY in the default
-    # layout. An output folder named anything else (``run -o``) says nothing
-    # about where its interviews are, and rendering from its parent re-ingests
-    # whatever that is — ``$HOME`` crashed with UnsuitableInputDirError
-    # (measured 12 Oct 2026). The SPA reads the database, so skipping the
-    # static re-render costs nothing it shows.
-    if output_dir.name != "bristlenose-output":
-        console.print(
-            f" [dim]Not re-rendering the static report: {_text(output_dir.name)} is not a "
-            f"project's bristlenose-output folder[/dim]"
-        )
-        return
-    input_dir = output_dir.resolve().parent
-
-    # Recover project name from pipeline metadata
-    from bristlenose.stages.s12_render_output import read_pipeline_metadata
-
-    meta = read_pipeline_metadata(output_dir)
-    project_name = meta.get("project_name")
-    if project_name is None:
-        if output_dir.name in ("bristlenose-output", "output"):
-            project_name = output_dir.resolve().parent.name
-        else:
-            project_name = output_dir.resolve().name
-
-    settings = load_settings(output_dir=output_dir, project_name=project_name)
-
-    from bristlenose.pipeline import Pipeline
-
-    pipeline = Pipeline(settings, verbose=False)
-    try:
-        result = pipeline.run_render_only(output_dir, input_dir)
-    except Exception:  # noqa: BLE001 — the sealed static render must never stop serve
-        # A typo in people.yaml or one truncated intermediate file raised out of
-        # serve before the server bound, so the report would not open at all
-        # (R112). The SPA reads the database, which the importer fills
-        # tolerantly; only the static copy goes stale.
-        import logging
-
-        logging.getLogger("bristlenose").warning(
-            "serve | static report not re-rendered; the report is served from "
-            "its database", exc_info=True,
-        )
-        return
-    console.print(
-        f" {cli_prefix(MessageKind.SUCCESS)} [dim]Rendered report[/dim]"
-        f"  {count_noun(result.total_quotes, 'quote')}"
-    )
-
-
-
-
 def _available_palettes() -> list[str]:
     """Colour-palette identifiers, discovered from the theme's palette-*.css files.
 
@@ -2514,11 +2447,10 @@ def serve(
     _run_preflight(settings, "serve")
     import uvicorn  # noqa: F401 — needed in the dev-mode branch below
 
-    # Re-render the HTML report before serving so it always matches the
-    # current code (templates, CSS, JS).  This is fast (<0.1s) and avoids
-    # stale-HTML surprises (e.g. missing mount-point markers).
-    if project_dir is not None:
-        _auto_render(project_dir)
+    # The report is the database-backed SPA.  Static HTML belongs to the
+    # pipeline's completed output, not server startup: a first analysis has a
+    # deliberately partial intermediate directory, and serving must remain
+    # available throughout it.
 
     # ``--port 0`` defers the Report: line to ``_serve_dynamic_port`` because
     # the actual port isn't known until uvicorn binds the socket. Used by the

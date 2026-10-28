@@ -321,8 +321,8 @@ is what Phase 1 stands on: without it, Phase 1 is not shippable alone (review, 1
 > Phase 1, so the only visible change is step 1's fix. What changed against the
 > plan below:
 > - **Step 1** landed as WS1 steps 1–4 and 7 of the lifecycle plan (the handoff in
->   the maintainer's private notes); steps 5–6 (the `status` resolver, `_auto_render`'s
->   input dir) and WS2 belong to the lifecycle sessions. One finding from the WS1/WS2
+>   the maintainer's private notes); steps 5–6 (the `status` resolver, the former static
+>   re-renderer's input dir) and WS2 belong to the lifecycle sessions. One finding from the WS1/WS2
 >   session's mutation pass: reverting `db.py` alone stays green, because the
 >   `setup_logging` call in `create_app` also creates the output folder before
 >   `db_url_for_project` runs; only reverting both turns the scenario test red.

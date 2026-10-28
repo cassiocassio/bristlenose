@@ -1,5 +1,15 @@
 # Bristlenose — Where I Left Off
 
+**28 October — reduced startup preparation:** `2ad06751d` strengthens malformed
+local recovery; `ed0e8456b` adds read-only admission classifier (NO production
+caller).238regressions pass; Ruff and helper+backup mypy pass; lifecycle baseline
+type error reproduced unchanged. Runtime findings fixed/rechecked. Mock proposal
+`docs/mockups/study-startup-refusal.html` source-reviewed; visual/owner approval
+pending. Explicit inspection permission did not override browser file-protocol
+policy; do not render through an alternate route. No UX wiring until approval.
+Long-term authority remains main100days. Next: approved existing refusal patterns
+and real CLI/native/server pre-write admission; no larger prototype expansion.
+
 **28 October — minimal R114 delivery:** Step1 committed `e83c68c79`: machine-owned
 automatic recovery preserves foreign/uncertain unfinished output and backup;
 known-local recovery retained.200regressions pass, Ruff clean, runtime review

@@ -132,3 +132,11 @@ Next: obtain the requested concrete UX approval, then wire pre-write admission
 and existing refusal presentation, prove actual CLI/native/server paths preserve
 protected bytes, review/fix. Long-term optional reader and full benefit remain
 prioritised only by main100days; no hidden dependency on the parked architecture.
+
+Mock register check: new proposal is registered. Whole-tree register check still
+reports18 pre-existing unregistered mockups (none is study-startup-refusal.html);
+not claimed as a passing gate and not broadened into unrelated documentation work.
+Receipt:/tmp/bn-startup-mock-register.log. Runtime/helper preparation commits:
+2ad06751d (malformed recovery), ed0e8456b (inactive admission); mock/source-review
+checkpoint56902958a. Explicit UX approval is still pending, not inferred from
+permission to inspect the file or approval of the reduced safety scope.

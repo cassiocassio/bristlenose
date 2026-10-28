@@ -348,3 +348,32 @@ def test_server_factory_preserves_uncertain_run_before_first_write(tmp_path, mon
         create_app(project_dir=out.parent)
     after = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
     assert after == before
+
+
+@pytest.mark.parametrize("key,value", [("pid", None), ("pid", True), ("pid", -1),
+                                      ("pid", "123"), ("start_time", None), ("start_time", " ")])
+def test_local_malformed_process_marker_never_authorises_recovery(tmp_path, key, value):
+    out = _study(tmp_path)
+    _seed_report(output_backup.backup_path_for(out), "PREVIOUS")
+    _seed_run_in_flight(out, host=socket.gethostname())
+    path = pid_file_path(out)
+    marker = json.loads(path.read_text())
+    marker[key] = value
+    path.write_text(json.dumps(marker))
+    before = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
+    assert output_backup.reclaim_after_crash(out) is output_backup.RestoreOutcome.NOTHING_TO_DO
+    after = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
+    assert after == before
+
+
+def test_invalid_utf8_marker_is_unavailable_not_destructive(tmp_path):
+    from bristlenose.run_lifecycle import _read_pid_file
+    out = _study(tmp_path)
+    _seed_report(output_backup.backup_path_for(out), "PREVIOUS")
+    _seed_run_in_flight(out, host=socket.gethostname())
+    pid_file_path(out).write_bytes(b"\xff")
+    before = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
+    assert _read_pid_file(out) is None
+    assert output_backup.reclaim_after_crash(out) is output_backup.RestoreOutcome.NOTHING_TO_DO
+    after = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
+    assert after == before

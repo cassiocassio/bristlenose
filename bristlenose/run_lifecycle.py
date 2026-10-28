@@ -491,7 +491,7 @@ def _read_pid_file(output_dir: Path) -> dict[str, Any] | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return None
     # Valid JSON that is not an object is as unreadable as invalid JSON:
     # callers `.get` on the result.

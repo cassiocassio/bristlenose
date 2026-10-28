@@ -827,6 +827,10 @@ def _reclaim_after_crash(output_dir: Path) -> RestoreOutcome:
         or marker is None
         or marker.get("machine_id") != local_machine
         or marker.get("run_id") != latest.run_id
+        or type(marker.get("pid")) is not int
+        or marker["pid"] <= 0
+        or not isinstance(marker.get("start_time"), str)
+        or not marker["start_time"].strip()
     ):
         logger.warning(
             "output_backup: cannot prove the unfinished analysis in %s belongs "

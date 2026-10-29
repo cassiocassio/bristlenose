@@ -17,6 +17,7 @@ struct RunCoverPane: View {
     let project: Project
     @ObservedObject var liveData: PipelineLiveData
     let onAnalyse: () -> Void
+    let onRetryStartup: () -> Void
     @EnvironmentObject private var i18n: I18n
     @State private var detailsExpanded = false
 
@@ -103,39 +104,55 @@ struct RunCoverPane: View {
         }
     }
 
+    @ViewBuilder
     private func failed(
         sentence: FailureMessage, rawCause: String?, category: PipelineFailureCategory,
         summary: PipelineSummary?
     ) -> some View {
-        ContentUnavailableView {
-            Label(i18n.t("desktop.chrome.failedTitle"), systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(sentence.resolved(i18n)).lineLimit(3)
-        } actions: {
-            HStack(spacing: 12) {
-                switch DetailPaneKind.FailureRemedy.of(category) {
-                case .setUpProvider: setUpProviderButton
-                case .retry: Button(i18n.t("desktop.boot.retry"), action: onAnalyse)
-                case .none: EmptyView()
+        if let refusal = sentence.startupRefusal {
+            ContentUnavailableView {
+                Label(refusal.headline(using: i18n), systemImage: "exclamationmark.triangle")
+            } description: {
+                VStack(spacing: 12) {
+                    Text(refusal.detail(using: i18n))
+                    Text(refusal.consequence(using: i18n))
                 }
-                Button(i18n.t(detailsExpanded
-                              ? "desktop.boot.hideDetails"
-                              : "desktop.boot.showDetails")) {
-                    detailsExpanded.toggle()
-                }
+            } actions: {
+                Button(i18n.t("desktop.boot.retry"), action: onRetryStartup)
+                    .keyboardShortcut(.defaultAction)
             }
-            if detailsExpanded {
-                ScrollView {
-                    Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .padding(8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ContentUnavailableView {
+                Label(i18n.t("desktop.chrome.failedTitle"), systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(sentence.resolved(i18n)).lineLimit(3)
+            } actions: {
+                HStack(spacing: 12) {
+                    switch DetailPaneKind.FailureRemedy.of(category) {
+                    case .setUpProvider: setUpProviderButton
+                    case .retry: Button(i18n.t("desktop.boot.retry"), action: onAnalyse)
+                    case .none: EmptyView()
+                    }
+                    Button(i18n.t(detailsExpanded
+                                  ? "desktop.boot.hideDetails"
+                                  : "desktop.boot.showDetails")) {
+                        detailsExpanded.toggle()
+                    }
                 }
-                .frame(maxWidth: 480, maxHeight: 140)
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                if detailsExpanded {
+                    ScrollView {
+                        Text(forensicRecord(rawCause: rawCause, category: category, summary: summary))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                            .padding(8)
+                    }
+                    .frame(maxWidth: 480, maxHeight: 140)
+                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
             }
         }
     }

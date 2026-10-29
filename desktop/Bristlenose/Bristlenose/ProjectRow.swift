@@ -37,6 +37,7 @@ struct ProjectRow: View {
     /// watcher entry). An in-flight copy is surfaced via `copyFraction` + the
     /// resolver's precedence (copying outranks the deltas), not by nil-ing this.
     let unanalysed: UnanalysedState?
+    let startupRefusal: StudyStartupRefusal?
     /// Display state of a drag-import copy landing files in THIS project, or nil
     /// when no copy targets it. Computed at the call site from
     /// `CopyMachinery.inFlight` (matched by `projectID`) so the row re-renders as
@@ -85,6 +86,7 @@ struct ProjectRow: View {
         isRenaming: Binding<Bool>,
         isDropTarget: Bool = false,
         liveData: PipelineLiveData,
+        startupRefusal: StudyStartupRefusal? = nil,
         unanalysed: UnanalysedState? = nil,
         copyState: CopyDisplay? = nil,
         onCancelCopy: (() -> Void)? = nil,
@@ -97,6 +99,7 @@ struct ProjectRow: View {
         isShowingDiagnostics: Binding<Bool> = .constant(false)
     ) {
         self.project = project
+        self.startupRefusal = startupRefusal
         self._isRenaming = isRenaming
         self.isDropTarget = isDropTarget
         self.unanalysed = unanalysed
@@ -252,13 +255,14 @@ struct ProjectRow: View {
             } else {
                 Text(" ").font(.caption).hidden()
             }
-        case .failed:
+        case .failed(let message):
             // Localised short header, not Python's raw summary — see
             // `SidebarSubtitleText.text` for why (row budget is ~22 chars; the
             // summary goes to the popover). Kept identical to the shipped
             // AppKit cell so the retired row can't disagree with it.
-            diagnosticSubtitle(kind: .error,
-                               text: i18n.t("desktop.pipeline.diagnostic.header.failed"))
+            diagnosticSubtitle(kind: message.startupRefusal == nil ? .error : .warning,
+                               text: message.startupRefusal?.headline(using: i18n)
+                                   ?? i18n.t("desktop.pipeline.diagnostic.header.failed"))
         case .failedDiagnostic:
             // Sidebar is the attention surface, not the detail surface —
             // budget is ~22 EN chars before DE/ES/FR swell truncates. The
@@ -433,16 +437,17 @@ struct ProjectRow: View {
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
             }
             .popover(isPresented: $isShowingDiagnostics, arrowEdge: .trailing) {
-                if let state = pipelineState {
+                if pipelineState != nil || startupRefusal != nil {
                     // No frame, no padding: the popover owns its own size —
                     // height follows content, capped at its ceiling.
                     // `docs/design-pipeline-popover-sizing.md`.
                     ProjectDiagnosticPopover(
-                        project: project, state: state, liveData: liveData,
+                        project: project, state: pipelineState ?? .idle, liveData: liveData,
                         onLocate: onLocate.map { locate in
                             { isShowingDiagnostics = false; locate() }
                         },
-                        closePopover: { isShowingDiagnostics = false }
+                        closePopover: { isShowingDiagnostics = false },
+                        startupRefusalOverride: startupRefusal
                     )
                 }
             }
@@ -533,6 +538,7 @@ struct ProjectRow: View {
             // Same reason as `addingCount` above: the cloud batch is published
             // to the AppKit sidebar, which is the shipped row.
             importBatch: nil,
+            startupRefusal: startupRefusal,
             lastRunAt: project.lastPipelineRunAt,
             missingCount: unanalysed?.missingFiles.count ?? 0,
             unanalysedCount: unanalysed?.newFiles.count ?? 0,

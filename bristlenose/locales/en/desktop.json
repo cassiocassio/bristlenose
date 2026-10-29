@@ -1290,5 +1290,14 @@
     "why": "For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
     "stop": "Stop Download",
     "stopNote": "Starts again from the beginning next time."
+  },
+  "studyStartup": {
+    "foreignTitle": "Started on another Mac",
+    "unknownTitle": "Activity not confirmed",
+    "foreignBody": "Analysis started on {{detail}}.",
+    "unknownBody": "An unfinished analysis was found, but the Mac that started it could not be verified.",
+    "consequence": "This study cannot be viewed or edited here.",
+    "anotherMac": "another Mac",
+    "todayAt": "today at {{time}}"
   }
 }

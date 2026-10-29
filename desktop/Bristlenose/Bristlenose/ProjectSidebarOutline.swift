@@ -156,6 +156,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// whose document failed and no other. Nil the rest of the time. Value-
     /// typed so a crash, and its clearing, re-run `updateNSViewController`.
     let reportCrash: (projectID: UUID, crash: ReportCrash)?
+    var startupRefusals: [UUID: StudyStartupRefusal] = [:]
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -209,6 +210,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.mcpMounted = mcpMounted
         controller.handshakeProjectPaths = handshakeProjectPaths
         controller.reportCrash = reportCrash
+        controller.startupRefusals = startupRefusals
         controller.exportingReportProjectID = exportingReportProjectID
         controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
@@ -293,6 +295,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// The window's report crash and the study it belongs to — see the
     /// representable's `reportCrash`.
     var reportCrash: (projectID: UUID, crash: ReportCrash)?
+    var startupRefusals: [UUID: StudyStartupRefusal] = [:]
     /// See the representable's `exportingReportProjectID`.
     var exportingReportProjectID: UUID?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
@@ -2057,6 +2060,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
             reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
+            startupRefusal: startupRefusals[id],
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,
@@ -2153,8 +2157,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // variant and the state falls back to `.idle` beside it.
         let crash: ReportCrash?
         if case .reportError(let c) = subtitleVariant(for: project) { crash = c } else { crash = nil }
-        guard let state = ReportCrash.popoverState(pipelineState: pipelineRunner?.state[id], crash: crash)
-        else { return }
+        let refusal = startupRefusals[id]
+        let state: PipelineState
+        if refusal != nil {
+            state = .idle
+        } else {
+            guard let current = ReportCrash.popoverState(pipelineState: pipelineRunner?.state[id], crash: crash)
+            else { return }
+            state = current
+        }
         // No frame, no padding: the popover owns its own size. The hosting
         // controller reports it through `fittingSize`, which is what NSPopover
         // sizes from — `.preferredContentSize` set explicitly so the controller
@@ -2167,7 +2178,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 self?.onLocate(id)
             },
             closePopover: { [weak self] in self?.activePopover?.close() },
-            reportCrash: crash)
+            reportCrash: crash, startupRefusalOverride: refusal)
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize

@@ -119,39 +119,55 @@ struct BootView: View {
     /// The failure, as every other detail pane draws a state: icon, headline,
     /// one line of reason, the buttons. Show details opens the engine's last
     /// lines beneath them.
+    @ViewBuilder
     private func failedPane(
         message: FailureMessage, retry: @escaping () -> Void, sendFeedback: @escaping () -> Void
     ) -> some View {
-        ContentUnavailableView {
-            Label(statusText, systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(message.resolved(i18n))
-                .lineLimit(3)
-        } actions: {
-            HStack(spacing: 12) {
-                let set = Self.failureButtons(
-                    startedByRetry: serveManagerForPane?.startedByRetry ?? false
-                )
-                ForEach(set.buttons, id: \.self) { which in
-                    failureButton(which, retry: retry, sendFeedback: sendFeedback)
-                        .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
+        if let refusal = message.startupRefusal {
+            ContentUnavailableView {
+                Label(refusal.headline(using: i18n), systemImage: "exclamationmark.triangle")
+            } description: {
+                VStack(spacing: 12) {
+                    Text(refusal.detail(using: i18n))
+                    Text(refusal.consequence(using: i18n))
+                }
+            } actions: {
+                Button(i18n.t("desktop.boot.retry"), action: retry)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ContentUnavailableView {
+                Label(statusText, systemImage: "exclamationmark.triangle")
+            } description: {
+                Text(message.resolved(i18n))
+                    .lineLimit(3)
+            } actions: {
+                HStack(spacing: 12) {
+                    let set = Self.failureButtons(
+                        startedByRetry: serveManagerForPane?.startedByRetry ?? false
+                    )
+                    ForEach(set.buttons, id: \.self) { which in
+                        failureButton(which, retry: retry, sendFeedback: sendFeedback)
+                            .keyboardShortcut(set.defaultButton == which ? .defaultAction : nil)
+                    }
+                }
+                if detailsExpanded {
+                    ScrollView {
+                        Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                            .padding(8)
+                    }
+                    .frame(maxWidth: 480, maxHeight: 140)
+                    .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
-            if detailsExpanded {
-                ScrollView {
-                    Text((serveManagerForPane?.outputLines ?? []).suffix(40).joined(separator: "\n"))
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                        .padding(8)
-                }
-                .frame(maxWidth: 480, maxHeight: 140)
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

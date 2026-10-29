@@ -50,6 +50,9 @@ final class ServeInstance: ObservableObject {
     /// Captured stdout/stderr, for the diagnostics pane and failure summaries.
     @Published var outputLines: [String] = []
 
+    /// Untrusted display facts; only the dedicated process exit confirms refusal.
+    var pendingStartupRefusal: StudyStartupRefusal?
+
     /// Bristlenose version from `/api/health`, shown in the About panel.
     @Published var serverVersion: String?
 

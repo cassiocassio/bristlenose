@@ -504,6 +504,25 @@ export interface TagSignalQuote {
   intensity: number;
   tag_names: string[];
   segment_index: number;
+  /** Stable evidence pointer inside a completed signal snapshot. */
+  quote_id?: string;
+}
+
+export interface SignalEvidenceFragment {
+  start: number;
+  end: number;
+  text: string;
+  rationale: "negative_actionable_cause" | "positive_enabling_cause";
+}
+
+export interface SignalEvidenceAssertion {
+  id: string;
+  ordinal: number;
+  text: string;
+  source_quote_id: string;
+  participant_id: string;
+  source_excerpt: string;
+  intervention_fragment?: SignalEvidenceFragment | null;
 }
 
 export interface TagSignal {
@@ -532,6 +551,7 @@ export interface TagSignal {
   signal_name?: string | null;
   pattern?: string | null;
   elaboration?: string | null;
+  evidence_assertions?: SignalEvidenceAssertion[];
 }
 
 export interface SignalMatrixCell {
@@ -809,6 +829,7 @@ export interface UnifiedSignal {
   signalName?: string | null;
   pattern?: string | null;
   elaboration?: string | null;
+  evidenceAssertions?: SignalEvidenceAssertion[];
   /** The chip's words, resolved server-side. Falls back to `columnLabel`. */
   label?: string;
   labelKind?: "value" | "valence" | "mixed" | "group";
@@ -834,6 +855,7 @@ export interface UnifiedQuote {
   tagNames: string[];
   colourSet: string;
   tagColourIndices: Record<string, number>;
+  quoteId?: string;
 }
 
 // ---------------------------------------------------------------------------

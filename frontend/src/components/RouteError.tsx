@@ -11,8 +11,8 @@ import {
 import { isEmbedded } from "../utils/embedded";
 import { getExportData } from "../utils/exportData";
 import type { HealthResponse } from "../utils/health";
-import { reportWasRetried, retryReport } from "../utils/reportRetry";
 import { FeedbackModal } from "./FeedbackModal";
+import { Icon } from "./Icon";
 
 /**
  * Route-level error fallback. React Router renders this via the route's
@@ -26,8 +26,9 @@ import { FeedbackModal } from "./FeedbackModal";
  * the surprise this guard exists to prevent).
  *
  * `scope="lens"` is the per-lens boundary (R85): it renders inside the layout,
- * so the nav and sidebars stay, and its sentence says the researcher can try
- * again or choose another lens. Without it, it replaces the whole layout —
+ * so the nav and sidebars stay. An unexpected lens crash names the affected
+ * lens and offers the existing problem-report door when enabled; its working
+ * navigation is already the way to leave it. Without it, it replaces the whole layout —
  * and, in the Mac app, tells the shell (`postReportError`, decision #2), which
  * lights the project's sidebar row and gives Copy details the stack. A lens
  * crash never does: the researcher can see it and leave it. A throw in a
@@ -64,7 +65,7 @@ export function RouteError({ scope = "report" }: { scope?: "report" | "lens" }) 
   }, [scope, error, pathname]);
 
   if (scope === "report") return <ReportCrashNotice error={error} pathname={pathname} />;
-  return <ErrorNotice scope={scope} />;
+  return <LensCrashNotice error={error} pathname={pathname} />;
 }
 
 /**
@@ -72,32 +73,27 @@ export function RouteError({ scope = "report" }: { scope?: "report" | "lens" }) 
  * then the error and the page, the line the Mac popover's caption shows. No
  * project, path or stack frames: it is sent as the person's message.
  */
-export function problemReportMessage(t: TFunction, error: unknown, pathname: string): string {
-  return `${t("labels.reportError")}\n${describeError(error).message} · ${pathname}`;
+export function problemReportMessage(
+  t: TFunction,
+  error: unknown,
+  pathname: string,
+  headline = t("labels.reportError"),
+): string {
+  return `${headline}\n${describeError(error).message} · ${pathname}`;
 }
 
 /**
- * The whole report's crash pane (spec `docs/mockups/report-crash-repeat.html`).
- * A first crash offers Retry. Once the reload Retry asked for has crashed too
- * (`reportWasRetried`), Retry gives way to one secondary button with no
- * default, which opens the feedback form as a problem report: in the Mac app,
- * this window's native sheet (the report's own form crashed with it); in a
- * browser, the web form mounted here. Where feedback is switched off, Retry
- * stays: there is no form to offer.
+ * The whole report's crash pane offers feedback rather than a speculative
+ * retry. A generic render crash has no user-controlled recovery, while its
+ * bounded diagnostic is useful to Bristlenose. In the Mac app it opens this
+ * window's native problem-report sheet; in a browser it opens the web form
+ * once health confirms feedback is available.
  */
 function ReportCrashNotice({ error, pathname }: { error: unknown; pathname: string }) {
   const { t } = useTranslation();
-  // Read once per crash: the mark is cleared only by a report that mounts.
-  const [retried] = useState(reportWasRetried);
   const embedded = isEmbedded();
-  const health = useCrashHealth(retried && !embedded);
+  const health = useCrashHealth(!embedded);
   const [formOpen, setFormOpen] = useState(false);
-  // In a browser, only once health says feedback is on: until it answers, or
-  // if it can't (no serve), Retry is the honest button.
-  const offerFeedback = retried && (embedded || health?.feedback.enabled === true);
-
-  if (!offerFeedback) return <ErrorNotice scope="report" onRetry={retryReport} />;
-
   const message = problemReportMessage(t, error, pathname);
   const label =
     embedded && i18n.exists("desktop:menu.help.sendFeedback")
@@ -106,13 +102,82 @@ function ReportCrashNotice({ error, pathname }: { error: unknown; pathname: stri
   return (
     <div className="bn-empty-state bn-route-error" role="alert">
       <p>{t("labels.reportError")}</p>
-      <button
-        type="button"
-        className="bn-btn bn-btn-secondary"
-        onClick={() => (embedded ? postOpenProblemReport(message) : setFormOpen(true))}
-      >
-        {label}
-      </button>
+      <p>
+        {t(
+          "desktop:statusPage.reportError",
+          "Bristlenose hit an unexpected problem while opening this report.",
+        )}
+      </p>
+      {(embedded || health?.feedback.enabled === true) && (
+        <button
+          type="button"
+          className="bn-btn bn-btn-secondary"
+          onClick={() => (embedded ? postOpenProblemReport(message) : setFormOpen(true))}
+        >
+          {label}
+        </button>
+      )}
+      {!embedded && health && (
+        <FeedbackModal
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          health={health}
+          mode={{ kind: "problem", initialMessage: message }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A route path's researcher-facing lens label, never a raw route segment. */
+function lensName(pathname: string, t: TFunction): string {
+  const segments = pathname.split("/").filter(Boolean);
+  const segment = segments[segments.length - 1];
+  const key = segment === "codebook" ? "codebook"
+    : segment === "signals" ? "signals"
+      : segment === "discussion" ? "discussion"
+        : segment === "screens" ? "screens"
+          : segment === "quotes" ? "quotes"
+            : segment === "sessions" ? "sessions"
+              : "project";
+  return t(`nav.${key}`);
+}
+
+/** An unexpected crash inside one lens: navigation survives, so Retry is not a recovery plan. */
+function LensCrashNotice({ error, pathname }: { error: unknown; pathname: string }) {
+  const { t } = useTranslation();
+  const embedded = isEmbedded();
+  const health = useCrashHealth(!embedded);
+  const [formOpen, setFormOpen] = useState(false);
+  const lens = lensName(pathname, t);
+  const headline = t("labels.lensCrash", {
+    lens,
+    defaultValue: `${lens} couldn’t be shown.`,
+  });
+  const context = t("labels.lensCrashContext", {
+    lens,
+    defaultValue: `Bristlenose hit an unexpected problem opening ${lens}.`,
+  });
+  const message = problemReportMessage(t, error, pathname, headline);
+  const label =
+    embedded && i18n.exists("desktop:menu.help.sendFeedback")
+      ? t("desktop:menu.help.sendFeedback")
+      : t("footer.giveFeedback");
+
+  return (
+    <div className="bn-empty-state bn-route-error bn-lens-crash" role="alert">
+      <Icon name="broken" decorative px={32} className="bn-route-error-icon" />
+      <p>{headline}</p>
+      <p>{context}</p>
+      {(embedded || health?.feedback.enabled === true) && (
+        <button
+          type="button"
+          className="bn-btn bn-btn-secondary"
+          onClick={() => (embedded ? postOpenProblemReport(message) : setFormOpen(true))}
+        >
+          {label}
+        </button>
+      )}
       {!embedded && health && (
         <FeedbackModal
           open={formOpen}
@@ -185,15 +250,15 @@ export function describeError(error: unknown): { message: string; frames: string
 export const NO_MESSAGE = "(no message)";
 
 /**
- * The fallback itself: a calm sentence and Retry. RouteError renders it for a
- * crash; a lens renders it with `scope="lens"` when its own read fails (R86),
+ * The fallback itself: a calm sentence and Retry for a classified read failure,
+ * not an unexpected route crash. Lenses render it when their own read fails (R86),
  * which used to print the wire string ("GET /transcripts/s3 404: …") in
  * English, with nothing to do about it. The caller logs the error; this shows
  * none of it.
  *
  * The report sentence is `labels.reportError` ("This report couldn't be
- * shown."), the lens sentence's sibling; it was the bare `labels.error`
- * ("Error") until 21 Oct 2026.
+ * shown."). Unexpected route crashes use `ReportCrashNotice` or
+ * `LensCrashNotice`; feedback is the only honest recovery for those states.
  */
 export function ErrorNotice({
   scope = "report",

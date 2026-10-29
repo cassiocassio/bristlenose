@@ -68,7 +68,9 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         let body: String
         switch state {
         case .reportCrash:
-            body = notice("This report couldn’t be shown.", button: "Retry")
+            body = notice("This report couldn’t be shown.",
+                          context: "Bristlenose hit an unexpected problem while opening this report.",
+                          button: "Give feedback", secondary: true)
         case .reportCrashAfterRetry:
             body = notice("This report couldn’t be shown.", button: "Give feedback", secondary: true)
         case .analysisFailed(let category):
@@ -81,7 +83,9 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         case .lens:
             body = """
             <div class="report"><header>Checkout research</header><nav>Project &nbsp; Sessions &nbsp; Quotes</nav>
-              <main>\(notice("This view couldn’t be shown.", button: "Retry"))</main></div>
+              <main>\(notice("Quotes couldn’t be shown.",
+                               context: "Bristlenose hit an unexpected problem opening Quotes.",
+                               button: "Give feedback", secondary: true, glyph: true))</main></div>
             """
         case .part:
             body = """
@@ -100,13 +104,16 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         nav { padding:9px 22px; color:light-dark(#6e6e73,#a1a1a6); border-bottom:1px solid light-dark(#e5e5ea,#38383a); font-size:13px; }
         main { padding:22px; } .notice,.empty { min-height:210px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:light-dark(#6e6e73,#a1a1a6); }
         p { margin:0 0 14px; } button { border:0; border-radius:6px; padding:7px 14px; font:inherit; background:#0a84ff; color:white; } button.secondary { background:light-dark(#f2f2f7,#363638); color:light-dark(#007aff,#0a84ff); }
-        .part { width:42px; height:42px; display:grid; place-items:center; color:light-dark(#8e8e93,#98989d); font-size:28px; border:1px dashed light-dark(#c7c7cc,#48484a); border-radius:7px; } .context { font-size:12px; color:light-dark(#8e8e93,#98989d); margin-top:10px; }
+        .part { width:42px; height:42px; display:grid; place-items:center; color:light-dark(#8e8e93,#98989d); font-size:28px; border:1px dashed light-dark(#c7c7cc,#48484a); border-radius:7px; } .error-mark { color:light-dark(#8e8e93,#98989d); font-size:28px; line-height:1; margin-bottom:12px; } .context { font-size:12px; color:light-dark(#8e8e93,#98989d); margin-top:10px; }
         </style></head><body>\(body)</body></html>
         """
     }
 
-    private static func notice(_ message: String, button: String, secondary: Bool = false) -> String {
-        "<div class=notice role=alert><p>\(escape(message))</p><button class=\(secondary ? "secondary" : "") onclick=\"window.webkit.messageHandlers.review.postMessage('\\(escape(button))')\">\(escape(button))</button></div>"
+    private static func notice(_ message: String, context: String? = nil,
+                               button: String, secondary: Bool = false, glyph: Bool = false) -> String {
+        let detail = context.map { "<p class=context>\(escape($0))</p>" } ?? ""
+        let mark = glyph ? "<div class=error-mark aria-hidden=true>⌧</div>" : ""
+        return "<div class=notice role=alert>\(mark)<p>\(escape(message))</p>\(detail)<button class=\(secondary ? "secondary" : "") onclick=\"window.webkit.messageHandlers.review.postMessage('\\(escape(button))')\">\(escape(button))</button></div>"
     }
 
     private static func escape(_ text: String) -> String {

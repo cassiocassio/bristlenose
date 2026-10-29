@@ -441,7 +441,7 @@
       "partialSessions_one": "{{done}} of {{total}} session analysed",
       "partialSessions_other": "{{done}} of {{total}} sessions analysed",
       "noStructuredCause": "Detailed cause not captured.",
-      "reportError": "Your analysis is safe — only the display failed. Retry reloads the report. If it happens again, copy the details and send them with Help ▸ Send Feedback.",
+      "reportError": "Bristlenose hit an unexpected problem while opening this report.",
       "overflow_one": "… and {{count}} more failure truncated",
       "overflow_other": "… and {{count}} more failures truncated",
       "reason": {

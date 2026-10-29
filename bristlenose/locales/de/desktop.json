@@ -440,7 +440,7 @@
       "partialSessions_one": "{{done}} von {{total}} Interview analysiert",
       "partialSessions_other": "{{done}} von {{total}} Interviews analysiert",
       "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
-      "reportError": "Ihre Analyse ist sicher – nur die Anzeige ist fehlgeschlagen. „Erneut versuchen“ lädt den Bericht neu. Falls es erneut passiert, kopieren Sie die Details und senden Sie sie über Hilfe ▸ Feedback senden.",
+      "reportError": "Bristlenose ist beim Öffnen dieses Berichts auf ein unerwartetes Problem gestoßen.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",
       "overflow_other": "… und {{count}} weitere Fehler gekürzt",
       "reason": {

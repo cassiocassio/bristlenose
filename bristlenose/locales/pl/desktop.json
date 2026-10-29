@@ -482,7 +482,7 @@
       "partialSessions_many": "Przeanalizowano {{done}} z {{total}} sesji",
       "partialSessions_other": "Przeanalizowano {{done}} z {{total}} sesji",
       "noStructuredCause": "Nie zarejestrowano szczegółowej przyczyny.",
-      "reportError": "Twoja analiza jest bezpieczna — nie powiodło się tylko wyświetlanie. Spróbuj ponownie wczytuje raport od nowa. Jeśli to się powtórzy, skopiuj szczegóły i wyślij je przez Pomoc ▸ Wyślij opinię.",
+      "reportError": "Bristlenose napotkał nieoczekiwany problem podczas otwierania tego raportu.",
       "overflow_one": "… oraz {{count}} kolejne niepowodzenie pominięto",
       "overflow_few": "… oraz {{count}} kolejne niepowodzenia pominięto",
       "overflow_many": "… oraz {{count}} kolejnych niepowodzeń pominięto",

@@ -127,12 +127,12 @@ _Decided 24 Oct 2026 (owner). Mockups:
 
 People reach the form by two journeys. **Feedback** is their own idea: they
 went looking for the door. A **problem report** is Bristlenose suggesting it,
-because something failed and a retry didn't fix it. The sheet's heading says
+because something failed in a way that is unusual or useful to investigate. The sheet's heading says
 which journey they took, and the two arrive in separate piles in the inbox.
 
 | | Feedback | Problem report |
 |---|---|---|
-| Doors | Help ▸ Send Feedback…, the sidebar ladybug, the report's footer, the status page's footer link | The boot pane (N08) once a Retry has failed too; the whole-report crash pane once its Retry has crashed too |
+| Doors | Help ▸ Send Feedback…, the sidebar ladybug, the report's footer, the status page's footer link | An unusual whole-report crash; other failures only when their classification earns it |
 | Heading | `common.feedback.heading` "How is Bristlenose working for you?" | `common.feedback.problemHeading` "Bristlenose had a problem" |
 | Field label | `common.feedback.helpUsImprove` "Help us improve" | `common.feedback.problemLabel` "Tell us what happened" |
 | Message | empty | prefilled with what the failure pane said, a blank line under it, the caret there; editable |
@@ -152,12 +152,11 @@ lines (`{{details}}`), which can name a study folder; the prefill drops them
 the error's name and message and the route (`describeError`), the line its
 popover caption already shows.
 
-**The buttons follow the same rule on both panes.** A first failure offers
-Retry, the default. Once the Retry has failed too, Retry goes and the pane
-offers Send Feedback… (Mac) or Give feedback (browser) as a secondary button
-with no default, beside Show details where the pane has one. A retry often fixes
-a passing cause; a failure that survives one is worth telling us about, and
-pressing Retry again would not help.
+**A problem report is not a substitute for recovery.** Offer Retry only when a
+fresh attempt is credible; offer the real fix when the person can take one.
+The generic whole-report crash has neither, so it offers one secondary Send
+Feedback… (Mac) or Give feedback (browser) button with no default. The main
+pane has no raw diagnostics or a Show details control.
 
 **`kind` is a fixed word we chose, never the sender's text.** The endpoint
 (`content/feedback.php` in the website repo) files a POST as a problem report
@@ -185,18 +184,9 @@ into the sheet. In a browser the pane mounts the web `FeedbackModal` itself with
 `mode={{kind: "problem", initialMessage}}`; a problem report there neither reads
 nor writes the feedback draft. In a browser the pane offers the form only once
 `/api/health` says feedback is on; until it answers, if it can't, or where
-feedback is switched off, the pane keeps Retry. (The Mac sheet copies to the
+feedback is switched off, the pane offers no action. (The Mac sheet copies to the
 clipboard when feedback is off, so the Mac pane always offers it.) An exported report offers it too, and the form's `file:` path copies the
 report to the clipboard, as the export's footer link does.
-
-**"Has the Retry crashed too?"** Retry is a page reload, so the crash pane's
-Retry leaves one flag, `sessionStorage["bn-report-retry"]`, before reloading
-(`utils/reportRetry.ts`); a report that mounts and stays mounted clears it (an
-`AppLayout` effect that waits a turn and is cancelled on unmount, so a throw in
-any of the layout's effects keeps it), and a crash that finds it standing
-is a repeat. A lens's Retry never sets it. It lasts for the tab or web view, so a
-new window, a project switch or a restarted serve starts with Retry again. The
-boot pane's equivalent is `ServeInstance.startedByRetry`.
 
 ---
 

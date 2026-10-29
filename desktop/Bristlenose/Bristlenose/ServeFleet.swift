@@ -42,6 +42,11 @@ final class ServeFleet: ObservableObject {
     /// on anything a view can see, so nothing is lost by dropping it.
     private(set) var managers: [UUID: ServeManager] = [:]
 
+    var startupRefusals: [UUID: StudyStartupRefusal] {
+        managers.compactMapValues { $0.startupRefusal }
+    }
+
+
     /// The project whose serve is fronted — what app-level surfaces
     /// (`MenuCommands`, Settings ▸ MCP Agents) resolve "which instance" to.
     @Published var frontedProject: UUID?

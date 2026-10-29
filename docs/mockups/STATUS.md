@@ -29,6 +29,12 @@ dates are necessarily hand-written — the instruction and the corpus disagree f
 exactly those rows. Where a timeline carries no date the evidence gave none — the
 state is still evidenced, the day is not.
 
+## study safety
+
+| File | Last edit | Lifecycle |
+| --- | --- | --- |
+| `study-startup-refusal.html` | 28 Oct 2026 | PROPOSED — reuses native failure row/popover/unavailable patterns for reduced startup refusal; source review clean after accurate heading/details-toggle fixes. Visual inspection blocked by browser policy; owner approval pending. No production UX wiring. |
+
 ## analysis
 
 | Mockup | Last edit | Lifecycle |

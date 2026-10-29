@@ -1,7 +1,7 @@
 ---
 status: partial
-last-trued: 2026-10-13
-trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
+last-trued: 2026-10-29
+trued-against: codex/study-recovery-guard sidebar-status truth fix, 2026-10-29
 ---
 
 > **Trued 27 Aug 2026.** Three line anchors into `ProjectSubtitle.swift` had
@@ -16,6 +16,16 @@ trued-against: HEAD@main (eb8509e1, 030b568b) on 2026-10-13
 
 ## Changelog
 
+- _2026-10-29_ — **Status truth truing.** A status line is now explicitly a
+  projection of the most specific, best-supported fact for its project and
+  attempt — never a reflection of selection, focus or sidecar lifecycle.
+  The foreign/uncertain startup-refusal path is the concrete regression: moving
+  focus tore down a sidecar and allowed the generic `Run failed` fallback to
+  overwrite **Started on another Mac**. Retain the confirmed cause across
+  lifecycle-only transitions and unrelated sidecar-start errors; replace it
+  only with authoritative newer evidence. The AppKit sidebar text/glyph path,
+  rather than only the state cache, is regression-tested. Implementation and
+  narrower safety scope: `design-study-recovery-guard.md`.
 - _2026-10-22_ — cloud truing: the fetch rows of the severity table, the `downloading-from-iCloud` rung of the precedence chain and the iCloud gaps in the §4 catalogue are struck, not deleted. There is no wait label, fetch state or at-rest cloud state; a read that outlives the bound is an ordinary per-file `cloud_fetch` failure. Policy: `design-cloud-files.md`.
 - _2026-10-13_ — trued up: the forked delta added to the shipped vocabulary, the severity table, the glyph rule, both precedence chains and the Swift-over-Python note; readers scoped to row 1. Anchors: `ProjectSubtitle.swift` `pickDelta`, `SourceFilesReader.reportProjectID`, `c3b887cb`, `eb8509e1`.
 - _2026-09-12_ — **Truing pass (session docs).** Two corrections, one set of owners. (1) The availability table's **iCloud-evicted → `inCloud`** cell is the *intended* state, not the measured one: with the folder present, availability resolves `.ready` and `.inCloud` is unreachable for evicted media (`design-project-storage.md` §3, measured 29 Jul 2026) — the cell now says so. (2) The fetch rows in the severity table gained their owners: severity and glyph are ruled **here**; copy and keys are the 1 Aug mockup (`docs/mockups/cloud-fetch-states.html`); scope (iCloud Drive / Google Drive / OneDrive only), policy and build state are `design-cloud-wait-label.md`. The 30-minute "never completed" row is confirmed against `MATERIALISE_TIMEOUT_SECONDS` in `bristlenose/utils/fs.py`. (3) Which half is built, so the rows don't read as shipped: the sidecar's bounded fetch is; the `cloud_fetch` failure category is declared and mirrored but has no producer; the fetching / still-fetching states have no channel (measured 12 Sep 2026 — the first version of this bullet, the same day, called the failure category built).
@@ -205,6 +215,32 @@ Both halves are lifted out of the view and unit-tested —
 `SubtitleGlyphContractTests`. They were a private `default: return nil` in
 `ProjectSidebarOutline` until 26 Aug 2026, which is how two states came to draw
 no glyph with nothing asking why.
+
+### Status truth before precedence
+
+Before choosing a winner, establish which facts remain true. **A project row
+shows the most specific, best-supported current fact for that project and
+attempt.** Selection, keyboard focus, pane replacement, a sidecar stopping, and
+an idle/starting transition are lifecycle observations — they are not evidence
+that the study condition has resolved. They must not make the row fall back to
+a generic status such as `Run failed`.
+
+A retained cause may be cleared or replaced only by newer authoritative evidence:
+
+- a successful admission/readiness result clears a startup-refusal cause;
+- a fresh, confirmed startup refusal replaces an older one;
+- a pipeline result retains its existing precedence when no startup-refusal
+  cause is retained; this patch does not invent cross-source event ordering;
+- availability still wins: an unreachable project cannot honestly be described
+  as otherwise healthy.
+
+An unrelated sidecar-start error is not an answer to whether an unfinished run
+on another Mac still owns the study, so it cannot erase that cause. The detail
+surface can explain its own current startup error without making the sidebar
+claim less certainty than the app has. Regressions must exercise the resolved
+text, glyph and diagnostic destination after focus/selection changes, not only
+the cache that feeds them. A future unified event/provenance model is required
+before claiming general ordering between independent startup and pipeline facts.
 
 ### Precedence — starting order (tweak when seen in reality)
 

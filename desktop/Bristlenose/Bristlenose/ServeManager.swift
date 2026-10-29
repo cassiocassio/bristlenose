@@ -78,7 +78,47 @@ final class ServeManager: ObservableObject {
 
     var state: ServeState {
         get { instance.state }
-        set { instance.state = newValue }
+        set {
+            instance.state = newValue
+            if case .failed = newValue { startupRecheckSucceeded = nil }
+            if case .running = newValue, let admitted = startupRecheckSucceeded {
+                startupRecheckSucceeded = nil
+                admitted()
+            }
+        }
+    }
+    /// Only an explicit refusal Retry installs this; ordinary opens keep their
+    /// existing shared-server/no-restart behavior.
+    private var startupRecheckSucceeded: (() -> Void)?
+    private var startupProbe: StudyStartupProbe?
+
+    func recheckStudyStartup(projectPath: String, onAdmitted: @escaping () -> Void) {
+        if case .starting = state { return }
+        if case .running = state, let currentProjectPath,
+           AgentActivity.samePath(currentProjectPath, projectPath) {
+            guard startupProbe == nil, let mode, let executable = mode.executableURL else { return }
+            let probe = StudyStartupProbe()
+            startupProbe = probe
+            let checkedGeneration = generation
+            let arguments = Self.arguments(for: mode, projectPath: projectPath) + ["--check-startup-only"]
+            probe.start(executable: executable, arguments: arguments,
+                        environment: BristlenoseShared.childEnvironment(for: mode)) { [weak self] result in
+                guard let self, self.startupProbe === probe else { return }
+                self.startupProbe = nil
+                guard self.generation == checkedGeneration,
+                      self.currentProjectPath == currentProjectPath,
+                      case .running = self.state else { return }
+                if case .admitted = result { onAdmitted() }
+                // Any failure preserves the existing refusal and live document.
+            }
+        } else {
+            startupRecheckSucceeded = onAdmitted
+            start(projectPath: projectPath, isRetry: true)
+        }
+    }
+
+    var startupRefusal: StudyStartupRefusal? {
+        instance.confirmedStartupRefusal
     }
     var outputLines: [String] {
         get { instance.outputLines }
@@ -648,6 +688,7 @@ final class ServeManager: ObservableObject {
         generation += 1
         state = .starting
         outputLines = []
+        instance.pendingStartupRefusal = nil
         // Clean slate for this sidecar's stdout captures. Critical for the cold
         // path of switchProject(to:), which *parks* the outgoing sidecar rather
         // than stop()-ing it — so `process` is nil here, the defensive stop()
@@ -743,15 +784,15 @@ final class ServeManager: ObservableObject {
         // Read pipe on a detached task to avoid Sendable/actor-isolation issues.
         readTask = Task.detached { [weak self] in
             let fileHandle = handle
+            var framer = ProcessOutputLines()
             while true {
                 let data = fileHandle.availableData
-                if data.isEmpty { break }  // EOF
-
-                if let chunk = String(data: data, encoding: .utf8) {
-                    let lines = chunk.components(separatedBy: "\n")
-                    for line in lines where !line.isEmpty {
-                        await self?.handleLine(line, fromProcessID: procID)
-                    }
+                if data.isEmpty {
+                    if let last = framer.finish() { await self?.handleLine(last, fromProcessID: procID) }
+                    break
+                }
+                for line in framer.append(data) {
+                    await self?.handleLine(line, fromProcessID: procID)
                 }
             }
         }
@@ -1296,6 +1337,10 @@ final class ServeManager: ObservableObject {
             // covers the crash where its atexit never ran.)
             mcpInstanceID = nil
             dropHandshake()
+            if status == StudyStartupRefusal.exitCode {
+                state = .failed(error: (instance.pendingStartupRefusal ?? .unverified).failureMessage)
+                return
+            }
             let lastLines = outputLines.suffix(5).joined(separator: "\n")
             if case .running = state {
                 state = .failed(error: .keyed(
@@ -1570,7 +1615,7 @@ final class ServeManager: ObservableObject {
         return BristlenoseShared.redactKeys(in: clean)
     }
 
-    private func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
+    func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
@@ -1590,6 +1635,16 @@ final class ServeManager: ObservableObject {
                 entry.buffer.append(shown)
                 if entry.buffer.count > 50 { entry.buffer.removeFirst(entry.buffer.count - 50) }
                 parked = entry
+            }
+            return
+        }
+
+        if let refusal = StudyStartupRefusal.fromLine(clean) {
+            instance.pendingStartupRefusal = refusal
+            // Termination may beat the final pipe read. Enrich an already
+            // confirmed refusal, but never let an arbitrary output line fail a run.
+            if case .failed(let current) = state, current.startupRefusal != nil {
+                state = .failed(error: refusal.failureMessage)
             }
             return
         }

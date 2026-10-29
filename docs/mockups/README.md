@@ -5,6 +5,10 @@ Standalone HTML mockups for features in progress. Open in a browser to see the d
 Each file is self-contained (inline CSS/JS) so it works without a build step.
 
 
+Current reduced study-safety proposal: [startup refusal](study-startup-refusal.html).
+It reuses existing native and CLI failure surfaces. Source-reviewed only;
+visual review and explicit owner approval are pending, so it is not implemented.
+
 ## Lifecycle
 
 A mockup is a snapshot of intent at a date. Some are the design of record; some

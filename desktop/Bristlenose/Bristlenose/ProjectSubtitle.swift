@@ -233,7 +233,9 @@ extension SubtitleVariant {
     /// glyph for two months.
     var glyphKind: MessageKind? {
         switch self {
-        case .failed, .failedDiagnostic:
+        case .failed(let message):
+            return message.startupRefusal == nil ? .error : .warning
+        case .failedDiagnostic:
             return .error
         case .completedPartial:
             return .warning
@@ -352,6 +354,7 @@ enum ProjectSubtitle {
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
         reportCrash: ReportCrash? = nil,
+        startupRefusal: StudyStartupRefusal? = nil,
         lastRunAt: Date?,
         missingCount: Int,
         unanalysedCount: Int,
@@ -361,6 +364,10 @@ enum ProjectSubtitle {
         // reached. `.ready` falls through.
         if case .cantFind(let reason) = availability {
             return .cantFind(reason: reason)
+        }
+
+        if let startupRefusal {
+            return .failed(message: startupRefusal.failureMessage)
         }
 
         // Tier 2–4 — verb-led pipeline activity. Exhaustive with no `default`:

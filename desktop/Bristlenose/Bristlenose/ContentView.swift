@@ -3225,6 +3225,7 @@ struct ContentView: View {
                 reportCrash: selectedProject.flatMap { p in
                     bridgeHandler.reportCrash.map { (projectID: p.id, crash: $0) }
                 },
+                startupRefusals: serveFleet.startupRefusals,
                 renameRequest: renameRequest,
                 // Export Report acts on this window's document, so the row
                 // is the sole-selected study's, paired as the crash is (#24).
@@ -3617,6 +3618,7 @@ struct ContentView: View {
             ),
             isDropTarget: dropTargetProjectID == project.id,
             liveData: pipelineRunner.liveData,
+            startupRefusal: serveFleet.startupRefusals[project.id],
             unanalysed: projectIndex.unanalysed[project.id],
             // Computed inline (not captured once) so the row re-renders as the
             // byte fraction ticks. Matched to THIS project, both phases — the
@@ -3893,7 +3895,13 @@ struct ContentView: View {
                                     cover: cover,
                                     project: project,
                                     liveData: pipelineRunner.liveData,
-                                    onAnalyse: { pipelineRunner.start(project: project) }
+                                    onAnalyse: { pipelineRunner.start(project: project) },
+                                    onRetryStartup: {
+                                        serveFleet.manager(for: project.id).recheckStudyStartup(projectPath: project.path) {
+                                            [weak pipelineRunner] in
+                                            pipelineRunner?.clearStartupRefusal(project: project)
+                                        }
+                                    }
                                 )
                                 // A Show details opened on one study stays there.
                                 .id(project.id)

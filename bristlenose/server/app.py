@@ -117,6 +117,9 @@ def create_app(
         from bristlenose.logging import setup_logging
         from bristlenose.output_paths import project_output_dir
         from bristlenose.utils.output_backup import RestoreOutcome, reclaim_after_crash
+        from bristlenose.utils.study_startup import require_study_startup
+
+        require_study_startup(project_output_dir(project_dir))
 
         # A crashed run's backup goes back BEFORE anything creates the output
         # folder: once the log and database exist there, the folder looks like

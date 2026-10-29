@@ -121,6 +121,10 @@ enum DetailPaneKind: Equatable {
     }
 
     static func runCover(pipelineState: PipelineState?, documentState: DocumentState) -> RunCover? {
+        if case .failed(let message, let category) = pipelineState,
+           message.startupRefusal != nil {
+            return .failed(sentence: message, rawCause: nil, category: category, summary: nil)
+        }
         guard case .statusPage = documentState else { return nil }
         switch pipelineState {
         case .queued(let position): return .queued(position: position)

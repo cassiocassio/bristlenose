@@ -36,8 +36,26 @@ final class ServeInstance: ObservableObject {
     @Published var state: ServeState = .idle {
         didSet {
             if case .running = state, startedByRetry { startedByRetry = false }
+            switch state {
+            case .failed(let message):
+                // A generic sidecar-start failure does not tell us that the
+                // protected study's foreign/uncertain attempt resolved. Keep
+                // the most specific confirmed project fact until a new
+                // startup refusal replaces it or admission succeeds.
+                if let refusal = message.startupRefusal { confirmedStartupRefusal = refusal }
+            case .running: confirmedStartupRefusal = nil
+            case .idle, .starting: break
+            }
         }
     }
+
+    /// A process teardown when switching studies does not resolve the study's
+    /// refusal. Keep its confirmed cause until a new attempt is admitted or a
+    /// fresh startup refusal confirms a replacement. This is display state,
+    /// never admission authority.
+    /// Mutated only by the published `state` observer above, so that single
+    /// notification covers both values without publishing a second change.
+    private(set) var confirmedStartupRefusal: StudyStartupRefusal?
 
     /// True while the current start attempt is one the researcher asked for
     /// with the boot pane's Retry. Set by `ServeManager.start(projectPath:isRetry:)`,
@@ -49,6 +67,9 @@ final class ServeInstance: ObservableObject {
 
     /// Captured stdout/stderr, for the diagnostics pane and failure summaries.
     @Published var outputLines: [String] = []
+
+    /// Untrusted display facts; only the dedicated process exit confirms refusal.
+    var pendingStartupRefusal: StudyStartupRefusal?
 
     /// Bristlenose version from `/api/health`, shown in the About panel.
     @Published var serverVersion: String?

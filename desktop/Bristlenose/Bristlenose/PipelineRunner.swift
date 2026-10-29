@@ -885,6 +885,15 @@ final class PipelineRunner: ObservableObject {
     /// All filesystem I/O (PID file read, libproc ownership check, manifest
     /// JSON parse) runs on a detached task. Only the final state mutation hops
     /// back to MainActor.
+    /// A successful explicit report-startup recheck clears only this refusal.
+    /// It never resumes an analysis or erases an ordinary failure.
+    func clearStartupRefusal(project: Project) {
+        guard case .failed(let message, _) = state[project.id],
+              message.startupRefusal != nil else { return }
+        state[project.id] = nil
+        scan(project: project)
+    }
+
     func scan(project: Project) {
         let projectID = project.id
         let manifestURL = Self.manifestURL(for: project)
@@ -2538,25 +2547,14 @@ var args = ["run", project.path, "--no-serve"]
             let fh = handle
             // Accumulate across read boundaries so a `✓ stage name` line
             // straddling two `availableData` chunks is delivered intact.
-            var buffer = ""
+            var buffer = ProcessOutputLines()
             while true {
                 let data = fh.availableData
                 if data.isEmpty {
-                    // EOF — flush any unterminated final line.
-                    if !buffer.isEmpty {
-                        lines.yield(buffer)
-                    }
+                    if let last = buffer.finish() { lines.yield(last) }
                     break
                 }
-                guard let chunk = String(data: data, encoding: .utf8) else { continue }
-                buffer.append(chunk)
-                while let nl = buffer.firstIndex(of: "\n") {
-                    let line = String(buffer[..<nl])
-                    buffer = String(buffer[buffer.index(after: nl)...])
-                    if !line.isEmpty {
-                        lines.yield(line)
-                    }
-                }
+                for line in buffer.append(data) { lines.yield(line) }
             }
             lines.finish()
         }
@@ -2677,6 +2675,9 @@ var args = ["run", project.path, "--no-serve"]
 
         // Cancellation only takes effect on a non-zero exit — if the sidecar
         // raced the cancel and finished cleanly anyway, we keep the result.
+        if outcome == .exited(code: StudyStartupRefusal.exitCode) {
+            cancellationRequested = false
+        }
         if status != 0, cancellationRequested {
             cancellationRequested = false
             // Say what the run left, as Stop on a reconnected run does
@@ -2948,6 +2949,13 @@ var args = ["run", project.path, "--no-serve"]
         // Same number every branch here has always used; `outcome` carries the
         // extra fact of whether it is an exit code or a signal, for the logs.
         let status = outcome.rawStatus
+        if case .exited(let code) = outcome, code == StudyStartupRefusal.exitCode {
+            let refusal = lines.reversed().compactMap(StudyStartupRefusal.fromLine).first
+                ?? .unverified
+            // No previous-run cause lookup and, critically, no failure-log write
+            // in the study whose writers Python has just refused to start.
+            return .failed(refusal.failureMessage, category: .unknown)
+        }
         // Prefer the structured cause emitted by the Python abandon path
         // (`pipeline-events.jsonl` → `run_failed` → `cause.{category,message}`)
         // — but only when that terminus belongs to THIS attempt. The file is

@@ -129,7 +129,7 @@ class TestPeopleFile:
     def test_render_only_leaves_it_and_says_so(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """serve's static re-render reads people.yaml too (`run_render_only`)."""
+        """The retained render-only path reads people.yaml without overwriting it."""
         from bristlenose.config import BristlenoseSettings
         from bristlenose.pipeline import Pipeline
 

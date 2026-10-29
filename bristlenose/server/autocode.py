@@ -1296,33 +1296,9 @@ def _maintained_framework_ids(db: SASession, project_id: int) -> set[str]:
     """Frameworks still installed in this project (≥1 linked group) and not
     switched off. Absence of a state row means enabled (the default), so the
     switch only ever excludes."""
-    from bristlenose.server.models import (
-        CodebookGroup,
-        ProjectCodebookGroup,
-        ProjectFrameworkState,
-    )
+    from bristlenose.server.active_codebooks import maintained_framework_ids
 
-    linked = {
-        row[0]
-        for row in db.query(CodebookGroup.framework_id)
-        .join(
-            ProjectCodebookGroup,
-            ProjectCodebookGroup.codebook_group_id == CodebookGroup.id,
-        )
-        .filter(
-            ProjectCodebookGroup.project_id == project_id,
-            CodebookGroup.framework_id.isnot(None),
-        )
-        .distinct()
-        if row[0] is not None
-    }
-    disabled = {
-        row[0]
-        for row in db.query(ProjectFrameworkState.framework_id).filter_by(
-            project_id=project_id, enabled=False
-        )
-    }
-    return linked - disabled
+    return maintained_framework_ids(db, project_id)
 
 
 async def reapply_active_frameworks(

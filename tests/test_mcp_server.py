@@ -391,6 +391,7 @@ class TestElaborationCache:
     def _seed_cache_row(self, db) -> None:
         from bristlenose.server.elaboration import (
             compute_content_hash,
+            compute_quote_reference,
             compute_signal_key,
         )
         from bristlenose.server.models import ElaborationCache
@@ -406,7 +407,9 @@ class TestElaborationCache:
         db.add(ElaborationCache(
             project_id=1,
             signal_key=compute_signal_key(sig.source_type, sig.location, sig.sentiment),
-            content_hash=compute_content_hash(texts, tags),
+            content_hash=compute_content_hash(
+                texts, tags, [compute_quote_reference(q) for q in sig.quotes],
+            ),
             signal_name="Dashboard doubt",
             pattern="gap",
             elaboration="Both participants stall on the dashboard.",

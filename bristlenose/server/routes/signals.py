@@ -29,11 +29,12 @@ Tag sources and weighting:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import defaultdict
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -41,7 +42,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots
+from bristlenose.server.active_codebooks import active_project_groups
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
+from bristlenose.server.signal_snapshots import (
+    latest_completed_snapshot,
+    snapshot_payload,
+    store_completed_snapshot,
+)
 from bristlenose.signals.generic_detect import QuoteRecord, detect_signals_generic
 from bristlenose.signals.generic_matrix import QuoteContribution, build_matrix_from_contributions
 from bristlenose.signals.metrics import classify_flag
@@ -50,11 +57,9 @@ if TYPE_CHECKING:
     from bristlenose.server.elaboration import ElaborationResult
     from bristlenose.signals.models import Matrix, Signal
 from bristlenose.server.models import (
-    UNCATEGORISED_GROUP_NAME,
     ClusterQuote,
     CodebookGroup,
     Project,
-    ProjectCodebookGroup,
     ProposedTag,
     Quote,
     QuoteTag,
@@ -66,6 +71,13 @@ from bristlenose.server.models import (
 from bristlenose.signals.sentiment_label import sentiment_label
 
 router = APIRouter(prefix="/api")
+
+# Lifecycle completion events can arrive while a prior Signals synthesis is
+# still awaiting its model.  Keep each project's writes in arrival order: a
+# newer event computes after the older one and therefore cannot be overwritten
+# by a late result from that older event.  The server is single-process; the
+# database remains the durability boundary.
+_SNAPSHOT_WRITE_LOCKS: defaultdict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 _TRADE_OFF_NOTE = (
     "Quotes tagged with codes from multiple groups count in each group column."
@@ -90,6 +102,29 @@ class TagSignalQuote(BaseModel):
     intensity: int
     tag_names: list[str] = []
     segment_index: int = -1
+    #: Stable reference for the immutable snapshot/card; not a database row ID.
+    quote_id: str = ""
+
+
+class SignalEvidenceFragmentOut(BaseModel):
+    """An optional actionable phrase in a generated evidence playback."""
+
+    start: int
+    end: int
+    text: str
+    rationale: str
+
+
+class SignalEvidenceAssertionOut(BaseModel):
+    """Validated narrative evidence with its durable source pointer."""
+
+    id: str
+    ordinal: int
+    text: str
+    source_quote_id: str
+    participant_id: str
+    source_excerpt: str
+    intervention_fragment: SignalEvidenceFragmentOut | None = None
 
 
 class TagSignal(BaseModel):
@@ -121,6 +156,8 @@ class TagSignal(BaseModel):
     signal_name: str | None = None
     pattern: str | None = None
     elaboration: str | None = None
+    #: Generated and validated with title/claim; never inferred by the reader.
+    evidence_assertions: list[SignalEvidenceAssertionOut] = []
 
 
 class MatrixCellOut(BaseModel):
@@ -184,6 +221,18 @@ class CodebookSignalsListResponse(BaseModel):
     codebooks: list[CodebookSignalsOut]
     total_participants: int
     trade_off_note: str
+
+
+class StoredSignalSnapshotResponse(BaseModel):
+    """The last completed card set, or no snapshot for a new project."""
+
+    snapshot: dict[str, object] | None
+    source: str | None
+    computed_at: str | None
+    #: True only while the desktop sidecar is recovering a missing first
+    #: snapshot.  The reader uses it to receive that quiet background result
+    #: without ever treating offline/no-provider as a retryable user task.
+    pending: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +303,7 @@ def _serialize_signal(
     anchors: dict[str, str] | None = None,
 ) -> TagSignal:
     """Convert a Signal dataclass to the response model."""
+    from bristlenose.server.elaboration import compute_quote_reference
     from bristlenose.signals.models import Signal
 
     assert isinstance(s, Signal)
@@ -312,6 +362,7 @@ def _serialize_signal(
                 intensity=q.intensity,
                 tag_names=list(q.tag_names),
                 segment_index=q.segment_index,
+                quote_id=compute_quote_reference(q),
             )
             for q in s.quotes
         ],
@@ -1006,6 +1057,7 @@ async def stream_elaborations(
                     "signal_name": elab.signal_name,
                     "pattern": elab.pattern,
                     "elaboration": elab.elaboration,
+                    "evidence_assertions": elab.evidence_assertions,
                 })
                 yield f"event: elaboration\ndata: {payload}\n\n"
 
@@ -1036,14 +1088,39 @@ async def stream_elaborations(
 
 
 @router.get(
-    "/projects/{project_id}/signals/codebooks",
-    response_model=CodebookSignalsListResponse,
+    "/projects/{project_id}/signals/snapshot",
+    response_model=StoredSignalSnapshotResponse,
 )
-async def get_codebook_analysis(
+def get_stored_signal_snapshot(project_id: int, request: Request) -> StoredSignalSnapshotResponse:
+    """Read the last completed analysis; never calculate or call an LLM."""
+    db = _get_db(request)
+    try:
+        _check_project(db, project_id)
+        snapshot = latest_completed_snapshot(db, project_id)
+        if snapshot is None:
+            return StoredSignalSnapshotResponse(
+                snapshot=None,
+                source=None,
+                computed_at=None,
+                pending=bool(getattr(request.app.state, "initial_signal_snapshot_pending", False)),
+            )
+        return StoredSignalSnapshotResponse(
+            snapshot=snapshot_payload(snapshot),
+            source=snapshot.source,
+            computed_at=snapshot.computed_at.isoformat(),
+        )
+    finally:
+        db.close()
+
+
+async def _build_codebook_analysis(
     project_id: int,
-    request: Request,
-    top_n: int = Query(default=12, ge=1, le=100),
-    elaborate: bool = Query(default=False),
+    request: Request | None = None,
+    top_n: int = 12,
+    elaborate: bool = False,
+    *,
+    db: Session | None = None,
+    project_dir: Path | None = None,
 ) -> CodebookSignalsListResponse:
     """Compute per-codebook signal analysis for a project.
 
@@ -1051,7 +1128,13 @@ async def get_codebook_analysis(
     codebook entry. User-created groups (framework_id=None) are collected
     into a single "Custom" codebook.
     """
-    db = _get_db(request)
+    owns_db = db is None
+    if db is None:
+        if request is None:
+            raise ValueError("request or database session required for signal analysis")
+        db = _get_db(request)
+    if project_dir is None and request is not None:
+        project_dir = getattr(request.app.state, "project_dir", None)
     try:
         _check_project(db, project_id)
         active_groups = _resolve_active_groups(db, project_id, groups=None)
@@ -1117,7 +1200,7 @@ async def get_codebook_analysis(
             # everything. The streaming sibling forwards the same yields.
             async for _key, _elab in _elaborate_signals(
                 codebooks, db, project_id,
-                project_dir=getattr(request.app.state, "project_dir", None),
+                project_dir=project_dir,
             ):
                 pass
 
@@ -1127,7 +1210,88 @@ async def get_codebook_analysis(
             trade_off_note=_TRADE_OFF_NOTE,
         )
     finally:
-        db.close()
+        if owns_db:
+            db.close()
+
+
+async def materialise_completed_signal_snapshot(
+    db: Session,
+    project_id: int,
+    *,
+    source: str,
+    project_dir: Path | None = None,
+) -> None:
+    """Calculate and persist a complete card set after an LLM coding lifecycle.
+
+    This function is intentionally not called by either Signals reader route.
+    It is the only bridge from a successful AutoCode/reapply completion to the
+    durable lens artifact.
+    """
+    async with _SNAPSHOT_WRITE_LOCKS[project_id]:
+        result = await _build_codebook_analysis(
+            project_id,
+            db=db,
+            elaborate=True,
+            project_dir=project_dir,
+        )
+        payload = result.model_dump(mode="json")
+        # A snapshot is the reader's frozen last-good report.  The elaboration
+        # layer deliberately returns cache hits on a provider failure, which is
+        # right for an interactive reader but not sufficient to replace this
+        # artifact: a partial answer would erase completed findings offline.
+        if not _signal_snapshot_has_complete_narratives(payload):
+            logging.getLogger(__name__).warning(
+                "Signal snapshot materialisation skipped for project %s: "
+                "not every computed card has a narrative",
+                project_id,
+            )
+            return
+        store_completed_snapshot(
+            db,
+            project_id,
+            source=source,
+            payload=payload,
+        )
+        db.commit()
+
+
+def _signal_snapshot_has_complete_narratives(payload: dict[str, Any]) -> bool:
+    """Whether every materialised card has its complete narrative bundle.
+
+    An empty analysis is a valid, complete snapshot.  For a non-empty one,
+    title and claim are an atomic reader contract: retain the previous snapshot
+    rather than publishing partially generated metric cards.
+    """
+    for codebook in payload.get("codebooks", []):
+        # Custom groups intentionally have no framework definition, therefore
+        # cannot be sent through the interpretation prompt yet. They are
+        # complete as metrics-only cards; their absence must not prevent a
+        # framework snapshot from being frozen.
+        if codebook.get("codebook_id") == "custom":
+            continue
+        for signal in codebook.get("signals", []):
+            if not signal.get("signal_name") or not signal.get("elaboration"):
+                return False
+    return True
+
+
+@router.get(
+    "/projects/{project_id}/signals/codebooks",
+    response_model=CodebookSignalsListResponse,
+)
+async def get_codebook_analysis(
+    project_id: int,
+    request: Request,
+    top_n: int = Query(default=12, ge=1, le=100),
+    elaborate: bool = Query(default=False),
+) -> CodebookSignalsListResponse:
+    """Compute live analysis for legacy callers; it never persists a snapshot."""
+    return await _build_codebook_analysis(
+        project_id,
+        request,
+        top_n=top_n,
+        elaborate=elaborate,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1146,29 +1310,9 @@ def _resolve_active_groups(
             raise HTTPException(
                 status_code=400, detail="groups must be comma-separated integers",
             ) from None
-        return (
-            db.query(CodebookGroup)
-            .filter(CodebookGroup.id.in_(group_ids))
-            .all()
-        )
+        return active_project_groups(db, project_id, group_ids=group_ids)
 
-    pcg_rows = (
-        db.query(ProjectCodebookGroup)
-        .filter_by(project_id=project_id)
-        .order_by(ProjectCodebookGroup.sort_order)
-        .all()
-    )
-    active_group_ids = [r.codebook_group_id for r in pcg_rows]
-    if not active_group_ids:
-        return []
-    return (
-        db.query(CodebookGroup)
-        .filter(
-            CodebookGroup.id.in_(active_group_ids),
-            CodebookGroup.name != UNCATEGORISED_GROUP_NAME,
-        )
-        .all()
-    )
+    return active_project_groups(db, project_id)
 
 
 def _resolve_codebook_identity(
@@ -1368,4 +1512,8 @@ async def _elaborate_signals(
                     sig.signal_name = elab.signal_name
                     sig.pattern = elab.pattern
                     sig.elaboration = elab.elaboration
+                    sig.evidence_assertions = [
+                        SignalEvidenceAssertionOut.model_validate(assertion)
+                        for assertion in getattr(elab, "evidence_assertions", [])
+                    ]
                     yield key, elab

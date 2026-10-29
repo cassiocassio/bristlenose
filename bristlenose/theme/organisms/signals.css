@@ -43,7 +43,8 @@
        (md) rounder than its parent (inverted nesting). lg outer / md inner is
        the correct decreasing nest. See docs/design-lens-template.md § Radii. */
     border-radius: 0;
-    padding: var(--bn-space-lg);
+    container-type: inline-size;
+    padding: var(--bn-signal-card-inset);
     background: var(--bn-colour-bg);
     transition: box-shadow var(--bn-transition-fast);
     position: relative;
@@ -55,11 +56,22 @@
     background: var(--bn-colour-hover);
 }
 
-/* Selected signal card — same blue wash as quote cards (.bn-selected)
-   from the atomic design system. Shows which card the inspector is displaying. */
+/* Selected signal card — a restrained tint derived from the signal's group or
+   sentiment hue. Shows which card the inspector is displaying. */
 .signal-card.bn-selected {
-    background: var(--bn-selection-bg);
-    border-color: var(--bn-selection-border);
+    background: var(--signal-card-selected-bg, var(--bn-selection-bg));
+    border-color: var(--signal-card-selected-border, var(--bn-selection-border));
+}
+
+/* One card-local analytical hue connects the selected keyline to the card's
+   classification and its attributable evidence. The values are assigned once
+   by SignalCard; individual descendants must not pick their own palette. */
+.signal-card.bn-selected .signal-card-hero {
+    color: var(--bn-signal-accent-ink, inherit);
+}
+
+.signal-card.bn-selected .signal-card-hero:hover {
+    border-color: var(--bn-signal-accent-keyline, var(--bn-colour-border-hover));
 }
 
 /* The hero floats into the card's top-right corner and the headline AND the
@@ -118,10 +130,11 @@
 }
 
 .signal-card-location {
-    font-size: var(--bn-text-heading);
-    line-height: var(--bn-text-heading-lh);
-    font-weight: var(--bn-weight-emphasis);
-    margin-bottom: var(--bn-space-sm);
+    font-size: var(--bn-text-signal-title);
+    line-height: var(--bn-text-signal-title-lh);
+    letter-spacing: var(--bn-track-signal-title);
+    font-weight: var(--bn-weight-signal-title);
+    margin-bottom: var(--bn-space-md);
 }
 
 .signal-card-location-link {
@@ -206,8 +219,8 @@
     clear: both;
     background: var(--bn-colour-quote-bg);
     border-radius: var(--bn-radius-md);
-    margin: var(--bn-space-md) 0;
-    padding: var(--bn-space-sm) 0;
+    margin: var(--bn-signal-card-section-gap) 0;
+    padding: var(--bn-signal-card-quote-inset) 0;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -215,15 +228,18 @@
 }
 
 .signal-card-quotes blockquote {
-    margin: 0 var(--bn-space-md);
+    margin: 0 var(--bn-signal-card-quote-inset);
+}
+
+.signal-card-quotes blockquote + blockquote {
+    margin-top: var(--bn-signal-card-evidence-gap);
 }
 
 .signal-card-quotes blockquote .intensity-dots {
-    flex-shrink: 0;
+    float: right;
     width: 46px;
-    align-self: center;
     cursor: help;
-    margin-right: 22px;
+    margin: var(--bn-space-xs) 0 var(--bn-space-xs) var(--bn-space-md);
     --dot-colour: var(--bn-colour-muted);
 }
 
@@ -244,11 +260,97 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: var(--bn-signal-card-footer-gap);
     font-size: var(--bn-text-label);
     color: var(--bn-colour-muted);
 }
 
-/* Participant presence grid */
+/* Keep the current timecode gutter, but let each quote use the empty top-right
+   corner for its intensity so the participant's words retain the full measure. */
+.signal-card-quotes blockquote .quote-row {
+    display: block;
+}
+
+.signal-card-quotes blockquote .timecode {
+    float: left;
+    margin-right: var(--bn-space-md);
+}
+
+.signal-card-quotes blockquote .quote-body {
+    display: block;
+}
+
+.signal-card-quotes blockquote .quote-row::after {
+    content: "";
+    display: block;
+    clear: both;
+}
+
+/* Evidence contribution array — contribution strength, not participant identity. */
+.evidence-contribution-array {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.evidence-contribution-cell {
+    display: inline-block;
+    font-family: var(--bn-font-mono);
+    font-size: var(--bn-text-micro);
+    line-height: var(--bn-text-micro-lh);
+    min-width: 1.55rem;
+    height: 1.25rem;
+    padding: var(--bn-space-xs) 0.2rem;
+    text-align: center;
+    border-radius: var(--bn-radius-sm);
+    border: 1px solid color-mix(in srgb, var(--bn-colour-muted) 32%, transparent);
+    background: transparent;
+    color: var(--bn-colour-muted);
+}
+
+.evidence-contribution-cell.strength-1,
+.evidence-contribution-cell.strength-2,
+.evidence-contribution-cell.strength-3 {
+    border-color: transparent;
+    color: var(--bn-colour-bg);
+}
+
+.evidence-contribution-cell.strength-1 {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 35%, var(--bn-colour-muted));
+}
+
+.evidence-contribution-cell.strength-2 {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 58%, var(--bn-colour-muted));
+}
+
+.evidence-contribution-cell.strength-3 {
+    background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 80%, var(--bn-colour-muted));
+}
+
+.evidence-contribution-cell.is-evidence-focused {
+    outline: 2px solid var(--bn-colour-highlight);
+    outline-offset: 1px;
+}
+
+@container (max-width: 35rem) {
+    .evidence-contribution-array {
+        gap: 3px;
+        flex-wrap: nowrap;
+    }
+
+    .evidence-contribution-cell {
+        min-width: 0;
+        width: 0.65rem;
+        height: 1rem;
+        padding: 0;
+        font-size: 0;
+    }
+}
+
+/* The frozen static renderer still emits the former binary presence grid.
+   Keep it readable until that renderer adopts EvidenceContributionArray. */
 .participant-grid {
     display: flex;
     gap: 3px;
@@ -268,26 +370,6 @@
     opacity: 0.6;
 }
 
-.participant-grid .participant-count {
-    font-size: var(--bn-text-badge);
-    color: var(--bn-colour-muted);
-    margin-right: 0.2rem;
-    white-space: nowrap;
-}
-
-/* A participant who contributed a quote to this card.
-   THE ACCENT IS A BACKGROUND TOKEN. `--card-accent` is set from
-   `getGroupBg()`, and the `--bn-group-*` family is oklch 97% lightness — a
-   tint to sit behind things. It was also being used as the TEXT colour here,
-   which put 97%-lightness type on a white card: contrast near 1:1, and the
-   present participants read as blank space. Reported 20 Sep 2026 as "white on
-   white", and visible in the shipped app.
-
-   The accent stays as the background, which is what it is for. The text takes
-   the normal ink: the tint carries the identity, the weight carries the
-   state, and neither has to be legible in a colour that was never chosen to
-   be read. (`--bn-bar-*` at 65–70% is the mark colour of that family, but it
-   is specified for bars — 3:1 — not for badge-sized text, which wants 4.5:1.) */
 .participant-grid .p-box.p-present {
     background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 30%, var(--bn-colour-bg));
     color: var(--bn-colour-text);
@@ -778,9 +860,86 @@ button.signal-card-toggle {
    wins the tie on source order and would silently defeat it. Alternatives are
    live in `docs/mockups/lead-sentence-playground.html`. */
 .signal-elaboration {
-    font-size: var(--bn-text-label);
-    line-height: var(--bn-text-label-lh);
-    margin-bottom: var(--bn-space-sm);
+    font-family: var(--bn-font-editorial);
+    font-size: var(--bn-text-signal-claim);
+    line-height: var(--bn-text-signal-claim-lh);
+    letter-spacing: var(--bn-track-signal-claim);
+    font-weight: var(--bn-weight-signal-claim);
+    max-inline-size: 76ch;
+    margin-bottom: var(--bn-space-lg);
+}
+
+/* Generated assertions are a compact, attributable explanation of the claim,
+   not a second headline. Native list flow gives the marker a real hanging
+   indent: continuation lines begin under the text, never under the bullet. */
+.signal-evidence-assertions {
+    margin: 0 0 var(--bn-signal-card-section-gap);
+    padding-inline-start: var(--bn-space-lg);
+    color: var(--bn-colour-muted);
+    font-family: var(--bn-font-body);
+    font-size: var(--bn-text-body);
+    line-height: var(--bn-text-body-lh);
+}
+
+.signal-evidence-assertions li + li {
+    margin-top: var(--bn-signal-card-assertion-gap, var(--bn-space-sm));
+}
+
+/* This is deliberately an inline marker, not a badge. `clone` gives a wrapped
+   causal unit an intentional continuation without forcing it onto a new line. */
+.signal-evidence-highlight {
+    display: inline;
+    color: var(--bn-signal-accent-ink, var(--bn-colour-text));
+    background: var(--bn-signal-accent-highlight, var(--bn-colour-hover));
+    border-radius: var(--bn-radius-sm);
+    padding-inline: 0.08em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+/* A real control around the shared identity primitive. The badge remains
+   inline with its sentence; no fixed prefix/flex row can strand the words. */
+.signal-evidence-speaker {
+    display: inline;
+    vertical-align: baseline;
+    margin-inline-start: var(--bn-space-xs);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.signal-evidence-speaker:focus-visible {
+    outline: 2px solid var(--bn-signal-accent-keyline, var(--bn-colour-accent));
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* The same reciprocal evidence control on a cited quote. It intentionally
+   preserves the ordinary badge's inline footprint. */
+.signal-quote-evidence-speaker {
+    display: inline;
+    vertical-align: baseline;
+    margin-inline-start: var(--bn-space-xs);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.signal-quote-evidence-speaker:focus-visible {
+    outline: 2px solid var(--bn-signal-accent-keyline, var(--bn-colour-accent));
+    outline-offset: 2px;
+    border-radius: var(--bn-radius-sm);
+}
+
+/* Assertion → quote focus uses the app's existing arrival-highlight hue as an
+   attention cue, while the semantic accent remains reserved for meaning. */
+.signal-card-quotes blockquote.is-evidence-focused {
+    background: color-mix(in srgb, var(--bn-colour-highlight) 14%, var(--bn-colour-quote-bg));
+    box-shadow: inset 2px 0 0 var(--bn-colour-highlight);
 }
 
 /* ── Responsive: narrow viewport — stack card top vertically ── */
@@ -796,8 +955,13 @@ button.signal-card-toggle {
     }
 
     .signal-card-right {
+        float: none;
         align-items: flex-start;
         align-self: stretch;
+    }
+
+    .signal-card {
+        padding: var(--bn-space-lg);
     }
 
 }

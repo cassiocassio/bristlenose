@@ -791,8 +791,9 @@ class ElaborationCache(Base):
 
     Keyed by (project_id, signal_key) where signal_key encodes
     source_type, location, and group_name.  content_hash is a SHA-256
-    of the signal's quote texts and tag names — when the underlying
-    data changes the hash changes and a new elaboration is generated.
+    of the signal's quote texts, tags and stable provenance references — when
+    the underlying evidence or its identity changes, a new elaboration is
+    generated.
     """
 
     __tablename__ = "elaboration_caches"
@@ -804,6 +805,9 @@ class ElaborationCache(Base):
     signal_name: Mapped[str] = mapped_column(String(200))
     pattern: Mapped[str] = mapped_column(String(20))
     elaboration: Mapped[str] = mapped_column(Text)
+    #: JSON array of validated, attributed evidence assertions. ``[]`` keeps
+    #: cache rows written before the narrative-evidence contract readable.
+    evidence_assertions: Mapped[str] = mapped_column(Text, default="[]")
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     __table_args__ = (
@@ -811,6 +815,32 @@ class ElaborationCache(Base):
             "project_id", "signal_key", name="uq_elaboration_project_signal"
         ),
     )
+
+
+class SignalSnapshot(Base):
+    """One completed, coherent Signals-lens read model.
+
+    Signal computation used to be a request-time calculation followed by an
+    LLM stream, so a title and claim could vanish when a researcher returned
+    without the provider configured.  A snapshot is deliberately whole-payload
+    JSON: cards, metrics, selected evidence and generated prose remain one
+    atomic reader artifact.  It is written after a codebook/new-interview LLM
+    run, or a one-time reader-contract upgrade; hand curation leaves the
+    latest row frozen in v1.
+    """
+
+    __tablename__ = "signal_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    #: The lifecycle that produced it, e.g. ``codebook_apply``,
+    #: ``new_interviews`` or a one-off startup repair/contract upgrade.
+    source: Mapped[str] = mapped_column(String(50))
+    #: Version of the snapshot payload contract, not the project schema.
+    payload_version: Mapped[int] = mapped_column(default=1)
+    #: JSON-encoded complete signals response. Text keeps SQLite and export simple.
+    payload: Mapped[str] = mapped_column(Text)
+    computed_at: Mapped[datetime] = mapped_column(default=func.now(), index=True)
 
 
 class ImportConflict(Base):

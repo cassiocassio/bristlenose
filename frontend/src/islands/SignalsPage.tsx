@@ -27,7 +27,7 @@ import {
   setFocusedSignalKey,
 } from "../contexts/SignalStore";
 import { useIsDarkAppearance } from "../hooks/useIsDarkAppearance";
-import { apiGet, getCodebookSignals, streamElaborations } from "../utils/api";
+import { apiGet } from "../utils/api";
 import {
   dedupeSignals,
   groupSignalsByLocation,
@@ -39,7 +39,7 @@ import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import { selectQuotes } from "../utils/quoteSelection";
-import { renderLead } from "../utils/leadSentence";
+import { renderLead, splitLead } from "../utils/leadSentence";
 import { Icon } from "../components/Icon";
 import { momentPlace, placeProps, quotesPlace } from "../utils/contextPlace";
 import type {
@@ -48,6 +48,7 @@ import type {
   SentimentSignalsData,
   SentimentSignal,
   SourceBreakdown,
+  SignalEvidenceAssertion,
   TagSignalQuote,
   UnifiedSignal,
   UnifiedQuote,
@@ -84,8 +85,23 @@ const SAFETY_CAP = 60;
 /** Quotes a card shows at rest. The rest are one click away and never dropped. */
 const VISIBLE_QUOTES = 4;
 
+/** A sidecar may be quietly writing a first durable Signal snapshot for a
+ * legacy study. Poll only for that absent artefact: ordinary completed
+ * snapshots remain a single cheap read and offline readers never spin. */
+const INITIAL_SNAPSHOT_POLL_MS = 2_000;
+
 // ── Types ──────────────────────────────────────────────────────────────
 // UnifiedSignal and UnifiedQuote are imported from utils/types.ts
+
+/** The completed Signals artifact.  Reading it must never trigger calculation
+ * or an LLM request: it is deliberately allowed to be older than later manual
+ * curation while the researcher is working offline. */
+interface StoredSignalSnapshot {
+  snapshot: CodebookSignalsListResponse | null;
+  source: string | null;
+  computed_at: string | null;
+  pending?: boolean;
+}
 
 /**
  * The card's hero: the group or sentiment, the score, and the control that
@@ -165,9 +181,8 @@ function SignalHero({
       aria-expanded={expanded}
       data-testid="bn-signal-hero"
       onClick={(e) => {
-        // The whole card is role="button" and focuses on click. Without this
-        // the chip fires both — you open the working AND re-point the
-        // inspector, which is not what pressing a disclosure should do.
+        // Keep the disclosure self-contained: the card is a document region,
+        // not a synthetic button around this real control.
         e.stopPropagation();
         onToggle();
       }}
@@ -245,10 +260,12 @@ function adaptCodebookSignals(data: CodebookSignalsListResponse): UnifiedSignal[
           tagNames: q.tag_names || [],
           colourSet: s.colour_set || cb.colour_set,
           tagColourIndices: cb.tag_colour_indices || {},
+          quoteId: q.quote_id,
         })),
         signalName: s.signal_name ?? null,
         pattern: s.pattern ?? null,
         elaboration: s.elaboration ?? null,
+        evidenceAssertions: s.evidence_assertions ?? [],
       });
     }
   }
@@ -387,26 +404,40 @@ function SourceBanner({ breakdown }: { breakdown: SourceBreakdown }) {
   );
 }
 
-function ParticipantGrid({
+function EvidenceContributionArray({
   allPids,
-  presentPids,
+  quotes,
   accentVar,
+  focusedParticipantId,
 }: {
   allPids: string[];
-  presentPids: string[];
+  quotes: UnifiedQuote[];
   accentVar?: string;
+  focusedParticipantId?: string;
 }) {
-  const presentSet = useMemo(() => new Set(presentPids), [presentPids]);
+  const strengths = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const quote of quotes) {
+      totals.set(quote.pid, (totals.get(quote.pid) ?? 0) + (quote.intensity || 1));
+    }
+    const distinct = [...new Set(totals.values())].sort((a, b) => a - b);
+    return new Map(
+      [...totals.entries()].map(([pid, value]) => {
+        const rank = distinct.indexOf(value);
+        const level = distinct.length === 1 ? 3 : Math.max(1, Math.ceil(((rank + 1) / distinct.length) * 3));
+        return [pid, level];
+      }),
+    );
+  }, [quotes]);
+
   return (
-    <span className="participant-grid">
-      <span className="participant-count">
-        {presentPids.length}/{allPids.length}
-      </span>
+    <span className="evidence-contribution-array" aria-label="Evidence contribution by participant">
       {allPids.map((pid) => (
         <span
           key={pid}
-          className={`p-box${presentSet.has(pid) ? " p-present" : ""}`}
+          className={`evidence-contribution-cell${strengths.has(pid) ? ` strength-${strengths.get(pid)}` : " is-absent"}${focusedParticipantId === pid ? " is-evidence-focused" : ""}`}
           style={accentVar ? ({ "--card-accent": accentVar } as React.CSSProperties) : undefined}
+          aria-label={strengths.has(pid) ? `${pid}, relative evidence contribution level ${strengths.get(pid)} of 3` : `${pid}, no evidence contribution`}
         >
           {pid}
         </span>
@@ -461,7 +492,6 @@ function SignalCard({
   siblingSignals,
   signalIndex,
   elaborationsIn,
-  onFocus,
 }: {
   signal: UnifiedSignal;
   allPids: string[];
@@ -473,16 +503,21 @@ function SignalCard({
   cardRef?: (el: HTMLDivElement | null) => void;
   siblingSignals?: number[];
   signalIndex?: number;
-  onFocus?: (signal: UnifiedSignal) => void;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
+  const [focusedEvidenceQuoteId, setFocusedEvidenceQuoteId] = useState<string | null>(null);
 
   const accentVar = isSentiment
     ? `var(--bn-sentiment-${signal.columnLabel})`
     : signal.colourSet
       ? getGroupBg(signal.colourSet)
+      : "var(--bn-colour-accent)";
+  const selectionAccent = isSentiment
+    ? accentVar
+    : signal.colourSet
+      ? getBarColour(signal.colourSet)
       : "var(--bn-colour-accent)";
 
   const concPct = Math.min(100, Math.max(0, (signal.concentration / 5) * 100));
@@ -529,28 +564,41 @@ function SignalCard({
    *  which owns the hidden QUOTES — two disclosures, two states. */
   const [workingOpen, setWorkingOpen] = useState(false);
   const toggleWorking = useCallback(() => setWorkingOpen((prev) => !prev), []);
+  const focusEvidenceQuote = useCallback((quoteId: string) => {
+    // A citation should never appear inert merely because its source is folded
+    // into the overflow. Reveal its quote before giving it the shared focus.
+    if (!visibleQuotes.some((quote) => quote.quoteId === quoteId)) {
+      setExpanded(true);
+    }
+    setFocusedEvidenceQuoteId((current) => current === quoteId ? null : quoteId);
+  }, [visibleQuotes]);
+  const assertions = signal.evidenceAssertions ?? [];
+  const narrative = signal.elaboration ? splitLead(signal.elaboration) : null;
+  const focusedEvidenceParticipant = signal.quotes.find(
+    (quote) => quote.quoteId === focusedEvidenceQuoteId,
+  )?.pid;
 
   return (
     <div
       className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
-      style={{ "--card-accent": accentVar } as React.CSSProperties}
+      style={{
+        "--bn-signal-accent": selectionAccent,
+        "--bn-signal-accent-wash": `color-mix(in srgb, ${selectionAccent} 10%, var(--bn-colour-bg))`,
+        "--bn-signal-accent-keyline": `color-mix(in srgb, ${selectionAccent} 40%, var(--bn-colour-bg))`,
+        "--bn-signal-accent-ink": `color-mix(in srgb, ${selectionAccent} 72%, var(--bn-colour-text))`,
+        "--bn-signal-accent-highlight": `color-mix(in srgb, ${selectionAccent} 18%, var(--bn-colour-bg))`,
+        "--card-accent": selectionAccent,
+        "--signal-card-selected-bg": "var(--bn-signal-accent-wash)",
+        "--signal-card-selected-border": "var(--bn-signal-accent-keyline)",
+      } as React.CSSProperties}
       data-testid="bn-signal-card"
       ref={cardRef ?? undefined}
-      role="button"
-      tabIndex={0}
       // The pending headline block is decorative and correctly aria-hidden,
       // which left a screen-reader user with NO signal that a finding was
       // still coming — a sighted reader at least had a grey bar. Marked on the
       // card rather than announced per bar: role="status" on forty skeletons
       // would read forty announcements, which is not an improvement.
       aria-busy={!signal.signalName && !elaborationsIn ? true : undefined}
-      onClick={() => onFocus?.(signal)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onFocus?.(signal);
-        }
-      }}
     >
       {/* The hero is emitted FIRST so the float catches the headline and the
           elaboration both — a float only affects content that follows it. The
@@ -631,8 +679,17 @@ function SignalCard({
               className="signal-elaboration bn-lead-para"
               data-testid="signal-elaboration"
             >
-              {renderLead(signal.elaboration)}
+              {assertions.length > 0 && narrative ? (
+                <p className="bn-lead-claim"><strong>{narrative.lead}</strong></p>
+              ) : renderLead(signal.elaboration)}
             </div>
+          )}
+          {assertions.length > 0 && (
+            <EvidenceAssertions
+              assertions={assertions}
+              focusedQuoteId={focusedEvidenceQuoteId}
+              onFocusQuote={focusEvidenceQuote}
+            />
           )}
           {/* Readings folded into this card. They cite essentially the same
               quotes, usually the same finding in another codebook's language —
@@ -673,6 +730,9 @@ function SignalCard({
             isSentiment={isSentiment}
             sequenceMeta={sequenceMetas[i]}
             isDissenting={q === dissenting}
+            isEvidenceFocused={q.quoteId === focusedEvidenceQuoteId}
+            isEvidenceCited={assertions.some((assertion) => assertion.source_quote_id === q.quoteId)}
+            onFocusEvidence={focusEvidenceQuote}
           />
         ))}
         <div
@@ -686,6 +746,9 @@ function SignalCard({
               quote={q}
               isSentiment={isSentiment}
               sequenceMeta={hiddenMetas[i]}
+              isEvidenceFocused={q.quoteId === focusedEvidenceQuoteId}
+              isEvidenceCited={assertions.some((assertion) => assertion.source_quote_id === q.quoteId)}
+              onFocusEvidence={focusEvidenceQuote}
             />
           ))}
         </div>
@@ -706,13 +769,67 @@ function SignalCard({
             {t("signals.oneQuote")}
           </span>
         )}
-        <ParticipantGrid
+        <EvidenceContributionArray
           allPids={allPids}
-          presentPids={signal.participants}
-          accentVar={accentVar}
+          quotes={signal.quotes}
+          accentVar={selectionAccent}
+          focusedParticipantId={focusedEvidenceParticipant}
         />
       </div>
     </div>
+  );
+}
+
+function EvidenceAssertions({
+  assertions,
+  focusedQuoteId,
+  onFocusQuote,
+}: {
+  assertions: SignalEvidenceAssertion[];
+  focusedQuoteId: string | null;
+  onFocusQuote: (quoteId: string) => void;
+}) {
+  return (
+    <ul className="signal-evidence-assertions" data-testid="signal-evidence-assertions">
+      {assertions.map((assertion) => {
+        const fragment = assertion.intervention_fragment;
+        const hasValidFragment = fragment
+          && fragment.start >= 0
+          && fragment.end > fragment.start
+          && assertion.text.slice(fragment.start, fragment.end) === fragment.text;
+        const focused = focusedQuoteId === assertion.source_quote_id;
+        const before = hasValidFragment ? assertion.text.slice(0, fragment.start) : assertion.text;
+        const after = hasValidFragment ? assertion.text.slice(fragment.end) : "";
+
+        return (
+          <li key={assertion.id}>
+            {before}
+            {hasValidFragment && (
+              <mark className="signal-evidence-highlight">{fragment.text}</mark>
+            )}
+            {after}
+            {" "}
+            <button
+              type="button"
+              className={`signal-evidence-speaker${focused ? " is-evidence-focused" : ""}`}
+              aria-pressed={focused}
+              aria-label={`Participant ${assertion.participant_id}; show source quote supporting this evidence`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onFocusQuote(assertion.source_quote_id);
+              }}
+            >
+              <PersonBadge
+                code={assertion.participant_id}
+                role="participant"
+                compact
+                highlighted={focused}
+              />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -721,6 +838,9 @@ function QuoteBlock({
   isSentiment,
   sequenceMeta,
   isDissenting,
+  isEvidenceFocused,
+  isEvidenceCited,
+  onFocusEvidence,
 }: {
   quote: UnifiedQuote;
   isSentiment: boolean;
@@ -728,6 +848,11 @@ function QuoteBlock({
   /** Took the slot reserved for a voice that argues with the finding. Marked
    *  so a reader can see the card is not only agreeing with itself. */
   isDissenting?: boolean;
+  /** The evidence assertion's citation currently points to this quote. */
+  isEvidenceFocused?: boolean;
+  /** This quote is cited by a generated evidence assertion. */
+  isEvidenceCited?: boolean;
+  onFocusEvidence: (quoteId: string) => void;
 }) {
   const { t } = useTranslation();
   const tc = formatTimecode(quote.startSeconds);
@@ -736,12 +861,20 @@ function QuoteBlock({
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";
   const seqClass = seqPos !== "solo" ? ` seq-${seqPos}` : "";
-  const cls = [seqClass.trim(), isDissenting ? "bn-dissenting" : ""]
+  const cls = [
+    seqClass.trim(),
+    isDissenting ? "bn-dissenting" : "",
+    isEvidenceFocused ? "is-evidence-focused" : "",
+  ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <blockquote className={cls || undefined} data-dissenting={isDissenting || undefined}>
+    <blockquote
+      className={cls || undefined}
+      data-dissenting={isDissenting || undefined}
+      data-evidence-focused={isEvidenceFocused || undefined}
+    >
       <div className="quote-row">
         <a
           className="timecode"
@@ -755,9 +888,19 @@ function QuoteBlock({
         <span className="quote-body">
           <span className="quote-text">{quote.text}</span>
           {!isContinuation && (
-            <>{" "}<span className="speaker">
-              <PersonBadge code={quote.pid} role="participant" />
-            </span></>
+            <>{" "}{isEvidenceCited && quote.quoteId ? (
+              <button
+                type="button"
+                className={`signal-quote-evidence-speaker${isEvidenceFocused ? " is-evidence-focused" : ""}`}
+                aria-pressed={isEvidenceFocused}
+                aria-label={`Participant ${quote.pid}; focus evidence assertion using this quote`}
+                onClick={() => onFocusEvidence(quote.quoteId!)}
+              >
+                <PersonBadge code={quote.pid} role="participant" compact highlighted={isEvidenceFocused} />
+              </button>
+            ) : (
+              <span className="speaker"><PersonBadge code={quote.pid} role="participant" /></span>
+            )}</>
           )}
           {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
             <Badge
@@ -1067,53 +1210,43 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
       .catch(() => {});
   }, [projectId]);
 
-  // Fetch per-codebook tag analysis from API
+  // Read the last completed Signals artifact.  Signal writing is owned by the
+  // successful cloud-codebook/new-interview lifecycle; opening this lens is
+  // always cheap, deterministic and safe while offline.
   useEffect(() => {
-    getCodebookSignals()
-      .then((data) => { setCbData(data); setTagLoaded(true); })
-      .catch((err: Error) => { setTagError(err.message); setTagLoaded(true); });
-  }, [projectId]);
+    let disposed = false;
+    let retry: number | undefined;
+    setTagLoaded(false);
+    setTagError(null);
+    setCbData(null);
 
-  // Findings stream in, card by card, over the cards already on screen.
-  //
-  // It was a second whole-payload fetch with ?elaborate=true, which generated
-  // every card's finding inline before answering. That is the cheapest way to
-  // get them all and the worst way to get the first: the reader sat behind a
-  // placeholder for the length of a batched serve-time LLM call — the closest
-  // measured analogue in the telemetry runs a median 25.8s.
-  //
-  // `elaborationsIn` now means "the stream ended", not "the fetch settled". It
-  // is still what retires the placeholder, and it still has to exist: a card
-  // the model declined to name sends no event, so without a terminator its
-  // placeholder would sit there for ever.
-  const [elaborationsIn, setElaborationsIn] = useState(false);
-  useEffect(() => {
-    if (!tagLoaded) return;
-    const ac = new AbortController();
-    streamElaborations((e) => {
-      setCbData((prev) => {
-        if (!prev) return prev;
-        // Patch in place by key, which is byte-identical to the server's
-        // compute_signal_key. New objects for the codebook and signal that
-        // changed only — React needs a new reference to repaint, and cloning
-        // the whole payload per event would rebuild every card N times.
-        let hit = false;
-        const codebooks = prev.codebooks.map((cb) => {
-          const signals = cb.signals.map((sig) => {
-            if (`${sig.source_type}|${sig.location}|${sig.group_name}` !== e.key) return sig;
-            hit = true;
-            return { ...sig, signal_name: e.signal_name, pattern: e.pattern,
-                     elaboration: e.elaboration };
-          });
-          return hit ? { ...cb, signals } : cb;
+    const readSnapshot = () => {
+      apiGet<StoredSignalSnapshot>("/signals/snapshot")
+        .then((data) => {
+          if (disposed) return;
+          setCbData(data.snapshot);
+          setTagLoaded(true);
+          // The missing-first-snapshot lifecycle is background work the
+          // researcher did not ask to manage.  Once it lands, this open lens
+          // quietly receives it; a completed or offline/error response never
+          // becomes a polling loop.
+          if (data.snapshot === null && data.pending) {
+            retry = window.setTimeout(readSnapshot, INITIAL_SNAPSHOT_POLL_MS);
+          }
+        })
+        .catch((err: Error) => {
+          if (disposed) return;
+          setTagError(err.message);
+          setTagLoaded(true);
         });
-        return hit ? { ...prev, codebooks } : prev;
-      });
-    }, ac.signal)
-      .catch(() => {})          // a failed stream is non-fatal: cards stay nameless
-      .finally(() => { if (!ac.signal.aborted) setElaborationsIn(true); });
-    return () => ac.abort();
-  }, [projectId, tagLoaded]);
+    };
+
+    readSnapshot();
+    return () => {
+      disposed = true;
+      if (retry !== undefined) window.clearTimeout(retry);
+    };
+  }, [projectId]);
 
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
   const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
@@ -1177,6 +1310,9 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
    * only for as long as nobody edited one of them.
    */
   const places = useMemo(() => groupSignalsByLocation(signals), [signals]);
+  const [activeLocation, setActiveLocation] = useState<string | null>(null);
+  const [pendingFocusKey, setPendingFocusKey] = useState<string | null>(null);
+  const activePlace = places.find((place) => place.location === activeLocation) ?? places[0] ?? null;
 
   // Sentiment data (flat, single matrix)
   const sentimentColumns = useMemo<string[]>(
@@ -1270,36 +1406,32 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     }
   }, []);
 
-  const handleCellClick = useCallback((key: string) => {
+  const activateSignal = useCallback((key: string) => {
+    const signal = signals.find((candidate) => candidate.key === key);
+    if (signal) setActiveLocation(signal.location);
     setFocusedSignalKey(key);
-    scrollToCard(key);
-  }, [scrollToCard]);
+    setPendingFocusKey(key);
+  }, [signals]);
 
-  const handleCardFocus = useCallback(
-    (signal: UnifiedSignal) => {
-      setFocusedSignalKey(signal.key);
-      // Determine which source key this signal belongs to
-      let sourceKey: string;
-      if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
-        sourceKey = "sentiment";
-      } else {
-        // Find the codebook ID for this signal
-        const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
-        sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
-      }
-      const dim: InspectorDimension = signal.sourceType === "theme" ? "theme" : "section";
-      setInspectorSourceAndDimension(sourceKey, dim);
-      setShimmerTrigger((n) => n + 1);
-    },
-    [cbData],
-  );
+  const handleCellClick = useCallback((key: string) => {
+    activateSignal(key);
+  }, [activateSignal]);
+
+  useEffect(() => {
+    if (!pendingFocusKey) return;
+    const frame = requestAnimationFrame(() => {
+      scrollToCard(pendingFocusKey);
+      setPendingFocusKey(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeLocation, pendingFocusKey, scrollToCard]);
 
   // Listen for sidebar signal-focus events
   useEffect(() => {
     const handler = (e: Event) => {
       const key = (e as CustomEvent<{ key: string }>).detail.key;
-      scrollToCard(key);
-      // Also sync inspector via handleCardFocus logic
+      activateSignal(key);
+      // Keep the inspector in step with navigation-originated focus.
       const signal = signals.find((s) => s.key === key);
       if (signal) {
         let sourceKey: string;
@@ -1316,7 +1448,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     };
     window.addEventListener("bn:signal-focus", handler);
     return () => window.removeEventListener("bn:signal-focus", handler);
-  }, [scrollToCard, signals, cbData]);
+  }, [activateSignal, signals, cbData]);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources
 
@@ -1469,7 +1601,12 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
         <SectionHeading>{t("signals.heading")}</SectionHeading>
         {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
         {places.map(({ location, cards }) => (
-          <Fragment key={location}>
+          <section
+            key={location}
+            className="signal-compound-page"
+            hidden={location !== activePlace?.location}
+            aria-label={location}
+          >
             <LocationHeading location={location} anchor={cards[0].anchor} />
             <div className="signal-cards">
               {cards.map((s) => (
@@ -1479,18 +1616,17 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
                   allPids={isFromSentimentLens(s) ? sentimentPids : tagAllPids}
                   isSentiment={isFromSentimentLens(s)}
                   isFocused={focusedSignalKey === s.key}
-                  elaborationsIn={elaborationsIn}
+                  elaborationsIn
                   siblingSignals={siblingComposites}
                   signalIndex={siblingIndex.get(s.key)}
                   cardRef={(el: HTMLDivElement | null) => {
                     if (el) cardRefs.current.set(s.key, el);
                     else cardRefs.current.delete(s.key);
                   }}
-                  onFocus={handleCardFocus}
                 />
               ))}
             </div>
-          </Fragment>
+          </section>
         ))}
       </div>
 

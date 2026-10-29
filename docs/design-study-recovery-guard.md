@@ -118,6 +118,28 @@ no live-transition fence, shared-SQLite guarantee, retained reader or auto-unloc
 has been added. Main100days remains authoritative for deferred scope. Preserve
 unrelated uncommitted main work when integrating this branch.
 
+## Completion audit — reduced delivery
+
+Audited against current source, real test receipts and the owner's later scope
+decisions, rather than treating the original larger prototype as the goal.
+
+| Requirement | Current evidence | Result |
+| --- | --- | --- |
+| Preserve another machine's unfinished analysis and backup | Exact machine/run/process checks in output_backup; foreign, uncertain, malformed and positive-local recovery cases in test_run_on_another_mac | Complete |
+| Refuse fresh writable startup before protected writes | CLI command/alias byte comparisons, direct lifecycle guard and real create_app first-writer test; healthy/clean reanalysis controls | Complete |
+| Honest native cause, optional Apple name/time, unknown fallback | Typed exit75/facts path, native refusal/Unicode/Stop tests, actual light/dark view and AppKit window inspection | Complete |
+| Approved existing UX only | BootView/RunCoverPane, both existing sidebar renderers and diagnostic popover; main Retry only, popover Copy details only; owner approval before wiring | Complete |
+| Retry does not start analysis or discard live documents | Non-writing probe CLI tests, native process/state identity and superseded-result tests, bounded failure/timeout handling; fresh source review | Complete |
+| Review, fix and verify findings | Runtime, fresh native and William review dispositions in private review log; full native gate2,834pass/0fail and Python296pass/2xfail | Complete |
+| Keep future work and Claude pickup clear | Main100days explicit deferrals, retained codex/study-access-poc ref, current design/TODO/CLAUDE/handoff/review and native evidence archive | Complete |
+| Explain the result and practical limits | Current implementation/verification sections and private review record; detailed owner close-out | Complete |
+
+Read-only browsing, live fencing/re-entry, duplication/merge and cloud-project
+infrastructure are explicitly deferred by the owner, not unfinished requirements
+of this delivery. Actual merge/push/release was not requested by “ready to merge”.
+Tracked-main merge-tree check is clean; integration must preserve main's unrelated
+uncommitted work. No code changed during this completion audit.
+
 ## UX gate — explicit owner instruction, 28 October
 
 Any UX change requires a complete mockup, review and explicit owner approval
@@ -130,20 +152,21 @@ and CLI failure/status machinery, then mock every relevant state and transition,
 including copy and existing actions, review it and obtain approval. Backend-only
 preparation/tests may proceed separately; do not wire an unapproved user flow.
 Step 3 has the same gate. Historical mocks and earlier discussions do not count
-as approval of the reduced delivery. Existing recovery mock remains unverified.
+as approval of the reduced delivery. The older full-recovery mock is not approval
+of this scope; the revised startup-refusal mock was approved before wiring.
 Use the repository bn-mockup skill when producing native-style HTML mockups.
 
 ## Delivery sequence
 
 | Step | Benefit | Boundary and acceptance |
 | --- | --- | --- |
-| 1. Machine-owned recovery | Opening on this Mac cannot automatically restore/delete another Mac's unfinished analysis. | Require stable local machine and exact run identity under existing local settle lock. Foreign, missing, legacy, malformed and mismatched identity preserve output and backup; positive local crashes still recover. |
-| 2. Conservative startup admission | An uncertain unfinished study cannot start ordinary writers here. | Refuse server/importer/jobs and analysis/reanalysis before opening writable state. Existing unavailable/status UI explains the cause. Test actual CLI/native entry points and source bytes. |
-| 3. Optional fixed reader | Read a known complete report while editing is refused. | Start from validated immutable local contents; read-only for the entire reader lifetime. No automatic adoption or editing re-entry. Unsupported resources/policy mean unavailable, never fallback to changing source. |
+| 1. Machine-owned recovery — implemented | Opening on this Mac cannot automatically restore/delete another Mac's unfinished analysis. | Require stable local machine and exact run identity under existing local settle lock. Foreign, missing, legacy, malformed and mismatched identity preserve output and backup; positive local crashes still recover. |
+| 2. Conservative startup admission — implemented | An uncertain unfinished study cannot start ordinary writers here. | Refuse server/importer/jobs and analysis/reanalysis before opening writable state. Existing unavailable/status UI explains the cause. Test actual CLI/native entry points and source bytes. |
+| 3. Optional fixed reader — owner deferred to main100days | Read a known complete report while editing is refused. | Start from validated immutable local contents; read-only for the entire reader lifetime. No automatic adoption or editing re-entry. Unsupported resources/policy mean unavailable, never fallback to changing source. |
 
-Step 1 is a destructive-recovery fix, not a study-wide lock. Ordinary startup
-still writes a log/database after recovery. Explicit `run` still has separate
-recovery paths. Do not advertise those paths as protected until step 2 is proven.
+Step 1 alone is a destructive-recovery fix, not a study-wide lock. Step 2 now
+guards fresh startup before ordinary log/database and analysis/reanalysis writes.
+Admitted startup retains its normal writable behavior after that point.
 No marker provides a distributed lock, proves unseen cloud changes have arrived,
 or makes live shared SQLite safe. Missing ownership is uncertainty, not a crash.
 

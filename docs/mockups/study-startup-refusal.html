@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- 2026-10-28 PROPOSED: reduced startup refusal; source reviewed, visual review and owner approval pending. --><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Synced study — reduced startup refusal</title><style>
+<!-- 2026-10-28 PROPOSED: reduced startup refusal; owner feedback revision: cause, friendly Mac name/time, viewing/editing consequence, Retry only in main panes; awaiting review of this revision. --><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Synced study — reduced startup refusal</title><style>
   /* ---- Native macOS approximation (NOT the web theme). Same envelope and
          fonts as pipeline-popover-sizing.html; sidebar metrics are the measured
          ProjectCellSpec values from sidebar-status-vocabulary.html.
@@ -174,31 +174,84 @@
 .commentary{margin-top:20px;padding:16px;border-left:3px solid #aaa;background:repeating-linear-gradient(45deg,#fff1,#fff1 3px,transparent 3px,transparent 6px);color:#eee}
 .commentary p,.commentary li{font:13px/1.5 var(--sf);max-width:90ch}
 select{font:13px var(--sf)}.terminal{width:100%;box-sizing:border-box;background:#1b1b1d;color:#eee;padding:20px;border-radius:8px;font:13px/1.6 var(--mono);white-space:pre-wrap}
+/* Owner revision: cause and consequence retain separate paragraphs. */
+#popover-copy p{margin:0 0 12px;line-height:1.45}#popover-copy p:last-child{margin-bottom:0}
+.reason p:last-child{margin-bottom:18px}.reason strong,#popover-copy strong{font-weight:600}
 </style></head><body>
 <h1>Synced study — reduced startup refusal</h1>
-<p class="sub">Proposed copy. Existing native sidebar/popover and unavailable panes; existing CLI error line. No retained report, lock cartouche or new action in this delivery.</p>
+<p class="sub">Updated for owner review: existing sidebar/popover and unavailable-pane patterns. Retry checks again; Copy details stays in the popover. Illustrative Mac name and time. No read-only browsing in this delivery.</p>
 <div class="key"><span><i class="art"></i>Artefact — product pixels only</span><span><i class="com"></i>Commentary — not product UI</span></div>
-<div class="chrome"><label>Evidence <select id="evidence"><option value="foreign">Foreign unfinished analysis</option><option value="unknown">Ownership cannot be verified</option></select></label> <label>Attempt <select id="attempt"><option value="first">First attempt</option><option value="retry">Same refusal after Retry</option></select></label> <button id="light">Light</button><button id="dark">Dark</button></div>
+<div class="chrome"><label>Evidence <select id="evidence"><option value="foreign">Foreign unfinished analysis</option><option value="unknown">Ownership cannot be verified</option></select></label> <label>Attempt <select id="attempt"><option value="first">First attempt</option><option value="retry">Same refusal after Retry</option></select></label> <label>Available details <select id="metadata"><option value="both">Mac name and time</option><option value="name">Mac name only</option><option value="time">Time only</option><option value="none">Neither</option></select></label> <button id="light">Light</button><button id="dark">Dark</button></div>
 <div class="case"><p class="cap">Sidebar row and its existing diagnostic popover — proposed cause copy</p><div class="pair">
 <div class="sb"><div class="r sel"><div class="ico"><span class="g s-figure-climbing k-mute"></span></div><div class="stack"><div class="tl"><span class="nm">Checkout study</span><span class="cnt">8</span></div><div class="st"><span class="g s-exclamationmark-triangle-fill k-warn"></span><span class="stx" id="row-status"></span></div></div></div></div>
 <div class="popover"><div class="head"><div class="verb" id="popover-title"></div><button class="btn" id="copy-details">Copy details</button></div><div class="scroll"><div class="cause"><div class="msg" id="popover-copy"></div></div></div></div>
 </div></div>
-<div class="case"><p class="cap">Open study — existing BootView failure pane</p><div class="preview-pane"><span class="g s-exclamationmark-triangle-fill"></span><h3>Couldn’t start Bristlenose</h3><p class="reason"></p><div id="boot-actions"></div><pre class="details" hidden></pre></div></div>
-<div class="case"><p class="cap">Analyse / Re-analyse — existing RunCoverPane failure shape</p><div class="preview-pane"><span class="g s-exclamationmark-triangle-fill"></span><h3>Analysis not started</h3><p class="reason"></p><div><button class="primary" id="analysis-retry">Retry</button><button class="show-details">Show details</button></div><pre class="details" hidden></pre></div></div>
+<div class="case"><p class="cap">Open study — existing unavailable-pane layout, revised cause copy</p><div class="preview-pane"><span class="g s-exclamationmark-triangle-fill"></span><h3 class="refusal-title"></h3><div class="reason"></div><div><button class="primary retry-check">Retry</button></div></div></div>
+<div class="case"><p class="cap">Analyse / Re-analyse — same cause and existing unavailable-pane layout</p><div class="preview-pane"><span class="g s-exclamationmark-triangle-fill"></span><h3 class="refusal-title"></h3><div class="reason"></div><div><button class="primary retry-check">Retry</button></div></div></div>
 <div class="case"><p class="cap">Terminal — existing refusal output style, both serve and run</p><pre class="terminal" id="terminal"></pre></div>
-<section class="commentary"><b>Commentary — not product UI</b><p>Draft reuse of existing patterns, not approved implementation. SF Symbol masks and sidebar/popover metrics are copied from analysis-failure-states.html. Pane is an approximation of the current Swift ContentUnavailableView, not a new component. Copy below is proposed; data is synthetic.</p>
-<ul><li>Known foreign: “Started on another Mac” reuses the earlier reduced mock’s cause. It does not claim the other Mac is still running.</li><li>Unknown ownership covers legacy/missing/malformed markers, mismatched attempts and unavailable machine identity. No invented machine name, takeover, duplicate or unlock action.</li><li>Opening refuses before log/database/importer/jobs. Analyse/Re-analyse refuses before replacing run markers, recording failure against the old run or touching backups.</li><li>Retry only checks again. It does not override protection. Boot’s repeated-failure Show details / Send Feedback… arrangement is unchanged; analysis retains its existing Retry / Show details arrangement.</li><li>Details are selectable; Copy details uses existing diagnostics behavior. No claim that work is globally latest or cloud sync is complete.</li><li>After the other run has a recorded terminus and a new opening is admitted, the ordinary app opens. There is no watcher, automatic reopen or live transition in this step. Newly arrived activity while an already-open window is working remains outside this protection.</li><li>Earlier complete local study / known-local run / new empty study: ordinary existing flow, no new screen. Damaged or unreadable evidence: the unknown case here.</li><li>Review/owner approval needed for proposed cause copy and mapping into the existing native sidebar/panes. Unknown evidence can remain refused indefinitely. A recorded terminus removes only this unfinished-activity refusal; it is not proof of a complete synced study or shared SQLite safety. No production flow has been wired.</li></ul>
-<table class="map"><tr><th>Copy source</th><th>Words</th></tr><tr><td>Shipped desktop.boot.failedTitle; proposed analysis-refusal heading</td><td>Couldn’t start Bristlenose / Analysis not started</td></tr><tr><td>Shipped action labels</td><td>Retry; Show details; Hide details; Send Feedback…; Copy details</td></tr><tr><td>Earlier reduced mock, retained</td><td>Started on another Mac; Activity not confirmed</td></tr><tr><td>New proposed cause text</td><td>Analysis started on another Mac. This study cannot be changed here.<br>An unfinished analysis could not be verified. This study cannot be changed here.</td></tr></table>
+<section class="commentary"><b>Commentary — not product UI</b>
+<p>Owner-feedback revision. Sidebar metrics, warning SF Symbol and 360pt/content-height popover are reused from the existing mockups. Main panes reuse the native unavailable-pane layout with the cause as the heading. This mockup does not activate or change the app.</p>
+<ul>
+<li>Known origin: the sidebar keeps “Started on another Mac”. Main pane and popover share the cause, available friendly Mac name/start time, then a separate consequence paragraph.</li>
+<li>Only the friendly Apple display name is shown. If unavailable, use “another Mac”; never substitute a DNS hostname. Omit unknown time. The metadata selector is a review control outside the app.</li>
+<li>Unverified origin: “Activity not confirmed”. No guessed name or start time. Main pane and popover share the same explanation.</li>
+<li>Retry remains the only action in both main panes, including repeated refusals. It checks the evidence again, never overrides protection. Nothing changes if the evidence is unchanged. There is no automatic eventual unlock promise.</li>
+<li>No Show details, Hide details or Send Feedback action in these panes. Copy details remains in the popover and copies the diagnostic record for troubleshooting.</li>
+<li>The study cannot be viewed or edited here while startup is refused. Read-only browsing stays in 100days for later. No cartouche, takeover, duplicate or unlock control.</li>
+<li>A recorded terminus can remove this particular refusal on a new check; it does not prove a complete synced study or shared SQLite safety. Newly arrived activity while a window is already open remains outside this startup protection.</li>
+</ul>
+<table class="map"><tr><th>State</th><th>Main pane and popover copy</th></tr>
+<tr><td>Known foreign origin</td><td><b>Started on another Mac</b><br>Analysis started on <b>Cassio’s Mac Studio today at 10:20</b>.<br><br>This study cannot be viewed or edited here.</td></tr>
+<tr><td>Unverified origin</td><td><b>Activity not confirmed</b><br>An unfinished analysis was found, but the Mac that started it could not be verified.<br><br>This study cannot be viewed or edited here.</td></tr></table>
 <p id="review-feedback" aria-live="polite"></p></section>
 <script>
-const $=id=>document.getElementById(id);let expanded=false;
-function render(){const foreign=$('evidence').value==='foreign';const title=foreign?'Started on another Mac':'Activity not confirmed';const reason=foreign?'Analysis started on another Mac. This study cannot be changed here.':'An unfinished analysis could not be verified. This study cannot be changed here.';
-$('row-status').textContent=title;$('popover-title').textContent=title;$('popover-copy').textContent=reason;document.querySelectorAll('.reason').forEach(n=>n.textContent=reason);
-const diagnostic='Study: Checkout study\nReason: '+(foreign?'foreign_unfinished':'unverified_unfinished')+'\nNo study writers started.';
-document.querySelectorAll('.details').forEach(n=>{n.textContent=diagnostic;n.hidden=!expanded});
-$('boot-actions').replaceChildren();const retry=$('attempt').value==='first';for(const label of retry?['Retry','Show details']:['Show details','Send Feedback…']){const b=document.createElement('button');b.textContent=label;if(label==='Retry'){b.className='primary';b.onclick=()=>{$('attempt').value='retry';render()}}else if(label==='Show details'){b.className='show-details';b.textContent=expanded?'Hide details':'Show details';b.onclick=details;}else b.onclick=()=>{$('review-feedback').textContent='Preview: existing problem-report sheet; no study write.'};$('boot-actions').append(b)}
-$('terminal').textContent='$ bristlenose serve "Checkout study"\n⚠ '+reason+'\n\n$ bristlenose run "Checkout study"\n⚠ '+reason;
+const $=id=>document.getElementById(id);
+let diagnostic='';
+function copyBody(target, foreign){
+  const first=document.createElement('p');
+  if(foreign){
+    const detail=$('metadata').value;
+    const hasName=detail==='both'||detail==='name';
+    const hasTime=detail==='both'||detail==='time';
+    first.append('Analysis started on ');
+    if(hasName||hasTime){
+      if(!hasName) first.append('another Mac ');
+      const emphasis=document.createElement('strong');
+      emphasis.textContent=(hasName?'Cassio’s Mac Studio':'')+(hasName&&hasTime?' ':'')+(hasTime?'today at 10:20':'');
+      first.append(emphasis,'.');
+    }else first.append('another Mac.');
+  }else first.textContent='An unfinished analysis was found, but the Mac that started it could not be verified.';
+  const consequence=document.createElement('p');
+  consequence.textContent='This study cannot be viewed or edited here.';
+  target.replaceChildren(first,consequence);
 }
-function details(){expanded=!expanded;document.querySelectorAll('.details').forEach(n=>n.hidden=!expanded);document.querySelectorAll('.show-details').forEach(n=>n.textContent=expanded?'Hide details':'Show details')}
-$('evidence').onchange=render;$('attempt').onchange=render;$('light').onclick=()=>document.body.classList.remove('dark');$('dark').onclick=()=>document.body.classList.add('dark');$('analysis-retry').onclick=()=>{$('review-feedback').textContent='Preview: unchanged evidence refuses again; Retry is not takeover.'};document.querySelectorAll('.show-details').forEach(n=>n.onclick=details);$('copy-details').onclick=async()=>{try{await navigator.clipboard.writeText($('popover-copy').textContent)}catch{$('review-feedback').textContent='Preview: select the diagnostic text to copy it.'}};render();
+function render(){
+  const foreign=$('evidence').value==='foreign';
+  const title=foreign?'Started on another Mac':'Activity not confirmed';
+  $('row-status').textContent=title;
+  $('popover-title').textContent=title;
+  document.querySelectorAll('.refusal-title').forEach(n=>n.textContent=title);
+  copyBody($('popover-copy'),foreign);
+  document.querySelectorAll('.reason').forEach(n=>copyBody(n,foreign));
+  $('metadata').disabled=!foreign;
+  diagnostic='Study: Checkout study\nReason: '+(foreign?'foreign_unfinished':'unverified_unfinished');
+  if(foreign&&['both','name'].includes($('metadata').value))diagnostic+='\nStarted on: Cassio’s Mac Studio';
+  if(foreign&&['both','time'].includes($('metadata').value))diagnostic+='\nStarted at: today at 10:20 (illustrative)';
+  diagnostic+='\nStartup refused before study writers started.';
+  const reason=Array.from($('popover-copy').querySelectorAll('p')).map(n=>n.textContent).join('\n');
+  $('terminal').textContent='$ bristlenose serve "Checkout study"\n⚠ '+reason+'\n\n$ bristlenose run "Checkout study"\n⚠ '+reason;
+}
+function retry(){
+  $('attempt').value='retry';
+  render();
+  $('review-feedback').textContent='Preview: evidence checked again and unchanged; the study remains unavailable. Retry does not override protection.';
+}
+$('evidence').onchange=()=>{$('review-feedback').textContent='';render()};
+$('attempt').onchange=()=>{render();$('review-feedback').textContent=$('attempt').value==='retry'?'Preview: the same refusal keeps Retry as the only main-pane action.':''};
+$('metadata').onchange=render;
+$('light').onclick=()=>document.body.classList.remove('dark');
+$('dark').onclick=()=>document.body.classList.add('dark');
+document.querySelectorAll('.retry-check').forEach(n=>n.onclick=retry);
+$('copy-details').onclick=async()=>{try{await navigator.clipboard.writeText(diagnostic);$('review-feedback').textContent='Preview: diagnostic details copied.'}catch{$('review-feedback').textContent='Preview: clipboard access was unavailable; no app state changed.'}};
+render();
 </script></body></html>

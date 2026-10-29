@@ -1,16 +1,87 @@
 ---
-status: step-1-implemented
-updated: 2026-10-28
-scope: R114 / reliability 179; destructive automatic recovery only
+status: partial
+last-trued: 2026-10-29
+trued-against: working tree on codex/study-recovery-guard, 2026-10-29
+updated: 2026-10-29
+scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 ---
 
 # Synced-study safety — smallest useful delivery
+
+> **29 October reconciliation:** backend admission and approved native refusal
+> presentation are implemented locally. Retry preserves running documents.
+> Native suite limitations below remain explicit; no release or merge claimed.
 
 Owner requested a William of Ockham reset on 28 October: deliver the simplest
 implementation providing most of the safety benefit, step by step. Later work
 is planned in `docs/private/100days.md`, the source of truth for long-term
 scope, priority, deferral and restart decisions. Preserve previous thinking and
 experiments as supporting evidence.
+
+## Current implementation — 29 October
+
+Owner finished mock feedback and explicitly resumed implementation. Revised copy:
+Started on another Mac / Activity not confirmed; friendly Apple computer name
+and source start time when available; separate “This study cannot be viewed or
+edited here.” paragraph. Main panes Retry only, even on repeat; Copy details in
+popover only. Read-only browsing remains deferred in main 100days. Typography
+pushOut/pretty-wrap is a separate future100days item, not this patch.
+
+Backend guards now precede CLI run/transcribe/analyze/serve, factory logging/DB,
+and direct lifecycle writes. CLI run carries its already-checked status across
+its deliberate stash/setup gap; no other unowned gap is admitted. Review found
+and fixed the initial double-check regression. Real CLI and factory tests assert
+protected output/backup bytes do not change; normal --clean tests use actual
+schema-valid lifecycle records. Refusal uses exit 75 and the existing @-line
+convention for optional JSON facts; native must refuse safely even without facts.
+Apple ComputerName is captured by scutil, never DNS fallback; time/name are not
+admission authority. A late factory refusal takes the same dedicated exit path.
+
+Final backend regression receipt:289 passed / 2 expected failures in39.72 s across startup,
+other-Mac, clean reanalysis, identity, lifecycle, server-lifecycle, backup/discard
+and portability.37 portability tests independently pass with normal host access.
+Earlier restricted attempts aborted in Metal and are not passing evidence.
+Logs:/tmp/bn-startup-python-final.log,/tmp/bn-startup-portability-host.log.
+Mypy CLI has three pre-existing errors reproduced against HEAD (account_name
+and render legacy-argument types); final scoped recheck reports the same three. No unrelated
+production fixes made. Previous typecheck attempt also caught a new wrapper
+return annotation, corrected to NoReturn; do not count that failed run as green.
+
+Native presentation is wired: typed refusal facts travel through the existing
+failure model to the approved main pane, both sidebar implementations and the
+popover. Exit75 wins over old completion/Stop and never writes a failure log.
+Byte-based process line framing preserves optional Unicode names across pipe
+chunks. Retry never launches analysis. A running server uses a separate hidden
+`serve --check-startup-only` probe, returning before settings or any writer; it
+does not restart the server or unmount either window's WebView. Review caught
+and corrected an earlier restart path that could discard unsent editor text.
+Probe errors/timeouts keep the refusal; superseded completions cannot clear it.
+
+First native build needed the standard GeneratedBuildInfo generator; a normal
+app build then hit missing frontend dependencies at the sidecar freshness gate.
+The repository unit-test script bypasses that gate by design. Three subsequent
+full Swift runs built successfully and passed the refusal tests, but each was
+red on existing PoolStarvationTimeoutTests. Cause is not established; unchanged
+test source does not prove baseline equivalence. The final exact-source run,
+including the Retry probe, built and passed 2,831 tests with one pool-timeout
+failure. A focused run of all new suites plus both pool tests passed 20 tests
+with the existing expected saturation issue. Logs: /tmp/bn-startup-native-probe/
+and /tmp/bn-startup-focused.log. Untouched f61205a11 checkpoint full suite passed
+2,814 tests. The combined-run failure therefore cannot be called a proven
+baseline failure. All 2,814 existing tests also passed against changed production
+code when the five new suites ran separately. The focused run covers all new
+suites and both pool tests. Every test therefore has passing split-run evidence,
+but no combined native green is claimed. Existing-suite log/result:
+`/tmp/bn-startup-existing-suite.log`, `/tmp/bn-startup-existing-suite.xcresult`.
+The remaining verification limitation is combined-suite executor isolation;
+review found no concrete new blocker/global mutation, but did not establish a
+root cause. Keep this explicit at integration; do not weaken the timeout test or
+present the split run as the normal all-suite gate. Backend commit b9f60812f;
+native commit 032b3fcfc.
+No manual native UI/DOM verification, no push/merge/release. Existing running-sidecar reuse is NOT a
+fresh startup: preserve multi-window no-restart rules; do not silently expand this
+into live-transition protection. Reassess any cold-opening/warm-reuse claims in
+native review and tests rather than restarting another window's active server.
 
 ## UX gate — explicit owner instruction, 28 October
 
@@ -95,6 +166,8 @@ maintaining a separate roadmap here. Duplication/merge and cloud-provider APIs s
 this delivery.
 
 ## Step 2 preparation — 28 October (not activated)
+
+> Historical preparation receipt, superseded by the29October current section.
 
 `utils/study_startup.py:startup_refusal` reads evidence without writing. New/empty
 studies and terminal attempts follow the existing flow; unfinished attempts need

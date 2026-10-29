@@ -1,5 +1,20 @@
 # Bristlenose — Where I Left Off
 
+**Current 29 October:** owner resumed revised approved mock. Backend startup
+wiring + optional friendly-name/time facts implemented;289 regressions pass,
+2 expected failures (normal host access). Approved native panes/sidebar/popover wired;
+Retry uses a non-writing probe for a running server, preserving all its windows.
+Review corrected restart/draft-loss, Stop-race and split-Unicode issues. Final
+native build succeeds, all 20 focused native checks pass plus one expected pool
+issue; combined suite 2,831 passed / 1 pool timeout. Untouched checkpoint and all
+2,814 existing tests against changed code pass. All tests pass in split runs;
+combined-run pool-timeout isolation remains unresolved, do not claim full green.
+See current
+section of design-study-recovery-guard.md, not older “approval pending” entries.
+Backend committed b9f60812f; native committed032b3fcfc. No manual native UI review,
+push/merge/release. Read-only browsing/typography follow-ups stay in
+main 100days; no private-storage or transition-controller expansion.
+
 **28 October — reduced startup preparation:** `2ad06751d` strengthens malformed
 local recovery; `ed0e8456b` adds read-only admission classifier (NO production
 caller).238regressions pass; Ruff and helper+backup mypy pass; lifecycle baseline

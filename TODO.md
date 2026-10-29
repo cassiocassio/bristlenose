@@ -1,5 +1,9 @@
 # Bristlenose — Where I Left Off
 
+**29 Oct local main:** recovery/status integrated via5a7830935/014c04685; combined main 2846native passed/0failed,343Python passed/2xfail. Exact evidence and known limits: docs/design-study-recovery-guard.md. No push/release; original shared Signals checkout untouched. Read-only reader/handover remains deferred in100days.
+
+**Release-note candidate:** Opening a synced study preserves unfinished analysis from another Mac and explains why it cannot be opened here; sidebar warnings survive switching studies and unrelated startup failures.
+
 **Current 29 October — ready on isolated branch:** reduced startup safety is
 implemented and reviewed. Backend b9f60812f; native 032b3fcfc; runner/visual
 follow-up a1718744f; owner-QA warning-retention d8b5c8c51 and confirmation safeguard8a7aabcd6. Full native gate: 2,836 passed / zero failed; Python: 296

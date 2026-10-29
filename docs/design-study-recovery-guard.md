@@ -9,8 +9,8 @@ scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 # Synced-study safety — smallest useful delivery
 
 > **29 October reconciliation:** backend admission and approved native refusal
-> presentation are implemented locally. Retry preserves running documents.
-> Full native gate and native visual review pass; no release or merge claimed.
+> presentation are merged into local main. Retry preserves running documents.
+> Combined main verification is recorded below; no push or release claimed.
 
 Owner requested a William of Ockham reset on 28 October: deliver the simplest
 implementation providing most of the safety benefit, step by step. Later work
@@ -337,3 +337,30 @@ Receipt:/tmp/bn-startup-mock-register.log. Runtime/helper preparation commits:
 2ad06751d (malformed recovery), ed0e8456b (inactive admission); mock/source-review
 checkpoint56902958a. Explicit UX approval is still pending, not inferred from
 permission to inspect the file or approval of the reduced safety scope.
+
+
+## Local main integration — 29 October 2026
+
+Reduced recovery and sidebar-status follow-up are merged into local main.
+Signals-session merge5a7830935 independently integrated the preserved feature
+branches under separate owner authorization while the reduced gate was running.
+Coordinator merge014c04685 then added the valid backup-wiring fixtures and combined
+review record1077d6857. No original dirty shared files were replaced or reset.
+
+Post-integration verification used pinned main014c04685 plus test-fixture correction
+c92bba10a in an independent checkout:
+**2846 native passed, zero failed**, official two-process gate exit0;
+**343 Python passed, 2 expected failures**, exit0 in44.79s. Native log:
+`/private/tmp/bn-recovery-main-final-native-canonical-runner.log`; Python log:
+`/private/tmp/bn-recovery-main-final-python.log`. Recovery/status production files
+match the reviewed branch byte-for-byte. Whole-repository Ruff, shell and whitespace checks
+pass. Earlier pre-merge gate:2,836native;343Python/2xfail. The five initial backup
+wiring failures and fresh-worktree metadata failure are documented above, not
+counted as passing evidence. No fresh visual approval or packaged sidecar proof
+is implied. No push, release, read-only activation, takeover or duplication.
+
+The original mixed shared checkout stays on codex/signals-lens and retains its
+private snapshot and all source edits. Continue against the agreed clean main
+checkout only after cross-session coordination; never replay those stale mixed
+patches wholesale. Branches/worktrees remain preserved; no archival was performed.
+Long-term reader/handover work stays deferred in main100days.

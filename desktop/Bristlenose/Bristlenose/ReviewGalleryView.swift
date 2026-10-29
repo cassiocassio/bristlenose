@@ -60,9 +60,13 @@ struct ReviewGalleryView: View {
         var id: String { rawValue }
         var points: CGFloat {
             switch self {
-            case .narrow: 280
-            case .standard: 440
-            case .wide: 620
+            // These are the app's plausible detail-pane widths, not arbitrary
+            // device torture sizes. Error actions must stay on one line across
+            // this range; needing a vertical fallback means the action design
+            // itself is wrong.
+            case .narrow: 520
+            case .standard: 700
+            case .wide: 900
             }
         }
     }
@@ -295,7 +299,7 @@ struct ReviewGalleryView: View {
                     Text(width.rawValue).tag(width)
                 }
             }
-            .help("Specimen width: use Narrow to expose wrapping and action-label truncation")
+            .help("Plausible detail-pane width. Every action label must remain fully visible on one line.")
             Picker("Changed since", selection: $changedSince) {
                 Text("Everything").tag("")
                 ForEach(landedDates, id: \.self) { Text("Since \($0)").tag($0) }

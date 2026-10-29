@@ -244,8 +244,10 @@ function lensArea(container: HTMLElement): HTMLElement {
 
 function expectContainedFallback(container: HTMLElement) {
   const alert = within(lensArea(container)).getByRole("alert");
-  expect(alert).toHaveTextContent(/couldn.t be shown/i);
-  expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  expect(alert).toHaveTextContent("Signals couldn’t be shown.");
+  expect(alert).toHaveTextContent("Bristlenose hit an unexpected problem opening Signals.");
+  expect(alert.querySelector(".bn-icon-broken")).not.toBeNull();
+  expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
   expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
   // The detail goes to the console for diagnosis, not to the screen.
   expect(console.error).toHaveBeenCalledWith("[RouteError]", expect.any(Error));
@@ -258,6 +260,22 @@ describe("a crash in one lens", () => {
     expectContainedFallback(container);
     expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Quotes" })).toBeInTheDocument();
+  });
+
+  it("uses the existing native problem-report door for an unexpected lens crash", () => {
+    i18n.addResourceBundle("en", "desktop", desktopEn, true, true);
+    (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
+    _resetEmbeddedCache();
+    try {
+      boom.mode = "first-render";
+      renderAt("/report/signals/");
+      fireEvent.click(screen.getByRole("button", { name: "Send Feedback…" }));
+      expect(mockPostOpenProblemReport).toHaveBeenCalledWith(
+        "Signals couldn’t be shown.\nError: kaboom-secret-stack-detail · /report/signals/",
+      );
+    } finally {
+      i18n.removeResourceBundle("en", "desktop");
+    }
   });
 
   it("after an interaction is contained to the lens; the nav stays", async () => {
@@ -330,17 +348,18 @@ function expectContainedPanelFallback(panel: Element) {
 
 describe("a crash in the whole report", () => {
   // Decision #2 (21 Oct 2026, spec docs/mockups/report-crash-fallback.html):
-  // the /report boundary says what couldn't be shown, keeps Retry, and tells
-  // the shell once — route, error, first frames — so the Mac sidebar row and
+  // the /report boundary says what couldn't be shown, explains that opening
+  // failed, and tells the shell once — route, error, first frames — so the Mac sidebar row and
   // its popover have something to show. A lens crash tells the shell nothing.
 
-  it("says the report couldn't be shown, with Retry, and nothing of the error", () => {
+  it("says the report couldn't be shown, explains the unknown failure, and hides the error", () => {
     boom.layout = true;
     renderAt("/report/quotes/");
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("This report couldn’t be shown.");
+    expect(alert).toHaveTextContent("Bristlenose hit an unexpected problem while opening this report.");
     expect(alert).not.toHaveTextContent(/^Error$/);
-    expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
     expect(screen.queryByText(/kaboom-secret-stack-detail/)).toBeNull();
     expect(screen.queryByRole("navigation")).toBeNull();
     expect(console.error).toHaveBeenCalledWith("[RouteError]", expect.any(Error));
@@ -710,11 +729,9 @@ describe("a crash inside an open modal", () => {
   });
 });
 
-describe("a whole-report crash that survives its Retry", () => {
-  // Owner, 24 Oct 2026 (spec docs/mockups/report-crash-repeat.html;
-  // docs/design-feedback-native.md § Feedback and problem reports): a first
-  // crash offers Retry; once the reload Retry asked for crashes too, one
-  // secondary button opens the feedback form as a problem report.
+describe("a whole-report crash", () => {
+  // A generic render crash has no credible user-controlled retry. It offers
+  // selective feedback immediately, with a bounded technical prefill.
 
   const sentence = "This report couldn’t be shown.";
   const prefill = `${sentence}\nError: kaboom-secret-stack-detail · /report/quotes/`;
@@ -738,34 +755,23 @@ describe("a whole-report crash that survives its Retry", () => {
     });
   }
 
-  it("offers Retry on the first crash, and its Retry leaves the mark before reloading", () => {
-    boom.layout = true;
-    renderAt("/report/quotes/");
-    const alert = screen.getByRole("alert");
-    const retry = within(alert).getByRole("button", { name: "Retry" });
-    expect(retry).toHaveClass("bn-btn-primary");
-    fireEvent.click(retry);
-    expect(mockRetryReport).toHaveBeenCalledOnce();
-    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBe("1");
-  });
-
-  it("in a browser, offers one secondary Give feedback in Retry's place", async () => {
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+  it("in a browser, offers one secondary Give feedback without a speculative Retry", async () => {
     boom.layout = true;
     serveHealth(true);
     renderAt("/report/quotes/");
     await screen.findByRole("button", { name: "Give feedback" });
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent(sentence);
+    expect(alert).toHaveTextContent("Bristlenose hit an unexpected problem while opening this report.");
     const buttons = within(alert).getAllByRole("button");
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveTextContent("Give feedback");
     expect(buttons[0]).toHaveClass("bn-btn-secondary");
     expect(buttons[0]).not.toHaveClass("bn-btn-primary");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
   it("in a browser, opens the feedback form as a problem report, which sends kind: problem", async () => {
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
     boom.layout = true;
     const posted: unknown[] = [];
     vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
@@ -816,7 +822,6 @@ describe("a whole-report crash that survives its Retry", () => {
     (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__ = true;
     _resetEmbeddedCache();
     try {
-      sessionStorage.setItem(REPORT_RETRY_KEY, "1");
       boom.layout = true;
       renderAt("/report/quotes/");
       const buttons = within(screen.getByRole("alert")).getAllByRole("button");
@@ -831,47 +836,29 @@ describe("a whole-report crash that survives its Retry", () => {
     }
   });
 
-  it("re-arms Retry once a report mounts", async () => {
-    // Retry's reload worked: the report mounted.
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
-    const { unmount } = renderAt("/report/quotes/");
-    expect(screen.getByTestId("quotes-lens")).toBeInTheDocument();
-    await waitFor(() => expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBeNull());
-    unmount();
-    // A later crash, in a fresh load, is a first crash again.
-    boom.layout = true;
-    renderAt("/report/quotes/");
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(sentence);
-    expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument();
-  });
-
-  it("in a browser, keeps Retry where feedback is switched off", async () => {
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+  it("in a browser, offers no action where feedback is switched off", async () => {
     boom.layout = true;
     serveHealth(false);
     renderAt("/report/quotes/");
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
   });
 
-  it("in a browser, keeps Retry while health has not said feedback is on", async () => {
+  it("in a browser, offers no action while feedback availability is unknown", async () => {
     // No serve to answer: the default stub has no version, so health stays unknown.
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
     boom.layout = true;
     renderAt("/report/quotes/");
     await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/health"));
-    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByRole("button", { name: "Give feedback" })).toBeNull();
   });
 
-  it("a layout that crashes keeps the mark", async () => {
-    sessionStorage.setItem(REPORT_RETRY_KEY, "1");
+  it("a layout crash does not create a retry mark", async () => {
     boom.layout = true;
     renderAt("/report/quotes/");
     await new Promise((r) => setTimeout(r, 20));
-    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBe("1");
+    expect(sessionStorage.getItem(REPORT_RETRY_KEY)).toBeNull();
   });
 
   it("a lens crash's Retry leaves no mark", () => {

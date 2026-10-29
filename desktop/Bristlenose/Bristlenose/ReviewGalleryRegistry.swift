@@ -125,7 +125,7 @@ struct ReviewGalleryContext {
     let appearance: ColorScheme?
     /// Review-only width control. Error patterns use this to make localisation
     /// and action layout pressure visible before we bless an implementation.
-    var specimenWidth: CGFloat = 440
+    var specimenWidth: CGFloat = 700
     /// Writes the footer readout line. Specimen buttons call this instead of
     /// opening real sheets.
     let log: (String) -> Void
@@ -178,7 +178,7 @@ enum ReviewGalleryRegistry {
         ReviewGalleryEntry(
             id: "ux-boot-failure",
             title: "Error pattern · analysis engine failed to start",
-            what: "Real native BootView beside the current web report-crash fallback. They are not equivalents: a sidecar startup failure only exists in the Mac shell.",
+            what: "Current native startup-failure pane. A sidecar startup failure only exists in the Mac shell; there is no web equivalent to manufacture.",
             commits: ["4e8cc854a"],
             files: ["BootView.swift", "RouteError.tsx"],
             section: .panesAndSheets,
@@ -188,23 +188,20 @@ enum ReviewGalleryRegistry {
                     errorPatternBoot(row, ctx)
                 }
             },
-            audit: .noEquivalent,
-            auditNote: "Native-only failure. Review the native recovery and diagnostics; do not force a web twin."
+            audit: .diverges,
+            auditNote: "Direction agreed: “Failed to start”. Omit technical body copy when it gives no user action. Offer Retry only when the cause says another attempt could work."
         ),
         ReviewGalleryEntry(
             id: "ux-report-crash",
             title: "Error pattern · report couldn’t be shown",
-            what: "The current web report crash, before and after its one Retry. The native host exposes its diagnostic through the project popover rather than duplicating this page.",
+            what: "The current web report crash. It has no credible retry, so it offers a selectively chosen feedback report with bounded technical prefill. The native host exposes its diagnostic through the project popover rather than duplicating this page.",
             commits: ["4e8cc854a"],
             files: ["RouteError.tsx", "ProjectDiagnosticPopover.swift"],
             section: .panesAndSheets,
             landed: "2026-10-29",
             states: [
-                ReviewGalleryState(name: "First crash") { ctx in
+                ReviewGalleryState(name: "Unexpected crash") { ctx in
                     errorPatternWeb(.reportCrash, ctx)
-                },
-                ReviewGalleryState(name: "Crash after Retry") { ctx in
-                    errorPatternWeb(.reportCrashAfterRetry, ctx)
                 },
             ],
             audit: .needsDecision,
@@ -235,14 +232,14 @@ enum ReviewGalleryRegistry {
         ReviewGalleryEntry(
             id: "ux-lens-failure",
             title: "Error pattern · one report view failed",
-            what: "The current web lens fallback leaves the rest of the report usable. There is no matching native content pane because lenses are web content.",
+            what: "An unexpected web lens crash leaves the rest of the report usable. It names the affected lens and uses the existing problem-report door when feedback is enabled. There is no matching native content pane because lenses are web content.",
             commits: ["4e8cc854a"],
             files: ["RouteError.tsx"],
             section: .panesAndSheets,
             landed: "2026-10-29",
             states: [ReviewGalleryState(name: "Lens fallback") { ctx in errorPatternWeb(.lens, ctx) }],
-            audit: .intentionalDifference,
-            auditNote: "Web-only by architecture. Confirm that retry is credible for a failed data read."
+            audit: .aligned,
+            auditNote: "Unexpected render crashes have no blind Retry. Ordinary classified read failures remain separate and may retry when the request is credibly transient."
         ),
         ReviewGalleryEntry(
             id: "ux-part-failure",
@@ -253,8 +250,8 @@ enum ReviewGalleryRegistry {
             section: .panesAndSheets,
             landed: "2026-10-29",
             states: [ReviewGalleryState(name: "Part fallback") { ctx in errorPatternWeb(.part, ctx) }],
-            audit: .needsDecision,
-            auditNote: "Decide whether a glyph alone remains sufficiently discoverable and whether reload is an adequate implied remedy."
+            audit: .aligned,
+            auditNote: "Decided: retain the quiet, glyph-only mark. It follows the familiar failed-image pattern; the rest remains usable and refresh is implied."
         ),
         ReviewGalleryEntry(
             id: "M14",

@@ -440,7 +440,7 @@
       "partialSessions_one": "{{done}} af {{total}} session analyseret",
       "partialSessions_other": "{{done}} af {{total}} sessioner analyseret",
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
-      "reportError": "Din analyse er i sikkerhed – kun visningen fejlede. Prøv igen genindlæser rapporten. Sker det igen, så kopiér detaljerne og send dem via Hjælp ▸ Send feedback.",
+      "reportError": "Bristlenose stødte på et uventet problem under åbning af denne rapport.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",
       "overflow_other": "… og {{count}} yderligere fejl blev afkortet",
       "reason": {

@@ -440,7 +440,7 @@
       "partialSessions_one": "{{done}} de {{total}} sessão analisada",
       "partialSessions_other": "{{done}} de {{total}} sessões analisadas",
       "noStructuredCause": "Causa detalhada não registada.",
-      "reportError": "A sua análise está segura — só a apresentação falhou. Tentar novamente recarrega o relatório. Se voltar a acontecer, copie os detalhes e envie-os com Ajuda ▸ Enviar comentários.",
+      "reportError": "O Bristlenose encontrou um problema inesperado ao abrir este relatório.",
       "overflow_one": "… e mais {{count}} falha truncada",
       "overflow_other": "… e mais {{count}} falhas truncadas",
       "reason": {

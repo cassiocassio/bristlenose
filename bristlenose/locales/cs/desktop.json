@@ -481,7 +481,7 @@
       "partialSessions_many": "Analyzováno {{done}} z {{total}} sezení",
       "partialSessions_other": "Analyzováno {{done}} z {{total}} sezení",
       "noStructuredCause": "Podrobná příčina nebyla zaznamenána.",
-      "reportError": "Vaše analýza je v bezpečí – selhalo jen zobrazení. Zkusit znovu zprávu znovu načte. Pokud se to bude opakovat, zkopírujte podrobnosti a odešlete je přes Nápověda ▸ Odeslat zpětnou vazbu.",
+      "reportError": "Bristlenose narazil na neočekávaný problém při otevírání tohoto reportu.",
       "overflow_one": "… a {{count}} další chyba skryta",
       "overflow_few": "… a {{count}} další chyby skryty",
       "overflow_many": "… a {{count}} další chyby skryto",

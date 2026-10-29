@@ -1,19 +1,16 @@
 # Bristlenose — Where I Left Off
 
-**Current 29 October:** owner resumed revised approved mock. Backend startup
-wiring + optional friendly-name/time facts implemented;289 regressions pass,
-2 expected failures (normal host access). Approved native panes/sidebar/popover wired;
-Retry uses a non-writing probe for a running server, preserving all its windows.
-Review corrected restart/draft-loss, Stop-race and split-Unicode issues. Final
-native build succeeds, all 20 focused native checks pass plus one expected pool
-issue; combined suite 2,831 passed / 1 pool timeout. Untouched checkpoint and all
-2,814 existing tests against changed code pass. All tests pass in split runs;
-combined-run pool-timeout isolation remains unresolved, do not claim full green.
-See current
-section of design-study-recovery-guard.md, not older “approval pending” entries.
-Backend committed b9f60812f; native committed032b3fcfc. No manual native UI review,
-push/merge/release. Read-only browsing/typography follow-ups stay in
-main 100days; no private-storage or transition-controller expansion.
+**Current 29 October — ready on isolated branch:** reduced startup safety is
+implemented and reviewed. Backend b9f60812f; native 032b3fcfc; runner/visual
+follow-up a1718744f. Full native gate: 2,834 passed / zero failed; Python: 296
+passed / two expected failures. Executor-saturation tests now run in their own
+required process, with unchanged assertions/deadlines and honest combined verdict.
+Seven runner fault cases prove no false green receipt. Native visual review passed
+for both sidebars, pane and popover in light/dark; actual AppKit selected row
+inspected via CUA because view bitmaps cannot capture vibrant material faithfully.
+See design-study-recovery-guard.md and main private review/handoff for receipts.
+No push/merge/release; preserve unrelated main edits during integration. Read-only
+browsing, typography and full handover remain deferred in main100days.
 
 **28 October — reduced startup preparation:** `2ad06751d` strengthens malformed
 local recovery; `ed0e8456b` adds read-only admission classifier (NO production

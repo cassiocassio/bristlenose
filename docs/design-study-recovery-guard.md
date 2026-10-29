@@ -1,5 +1,5 @@
 ---
-status: partial
+status: current
 last-trued: 2026-10-29
 trued-against: working tree on codex/study-recovery-guard, 2026-10-29
 updated: 2026-10-29
@@ -10,7 +10,7 @@ scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 
 > **29 October reconciliation:** backend admission and approved native refusal
 > presentation are implemented locally. Retry preserves running documents.
-> Native suite limitations below remain explicit; no release or merge claimed.
+> Full native gate and native visual review pass; no release or merge claimed.
 
 Owner requested a William of Ockham reset on 28 October: deliver the simplest
 implementation providing most of the safety benefit, step by step. Later work
@@ -57,31 +57,66 @@ does not restart the server or unmount either window's WebView. Review caught
 and corrected an earlier restart path that could discard unsent editor text.
 Probe errors/timeouts keep the refusal; superseded completions cannot clear it.
 
-First native build needed the standard GeneratedBuildInfo generator; a normal
-app build then hit missing frontend dependencies at the sidecar freshness gate.
-The repository unit-test script bypasses that gate by design. Three subsequent
-full Swift runs built successfully and passed the refusal tests, but each was
-red on existing PoolStarvationTimeoutTests. Cause is not established; unchanged
-test source does not prove baseline equivalence. The final exact-source run,
-including the Retry probe, built and passed 2,831 tests with one pool-timeout
-failure. A focused run of all new suites plus both pool tests passed 20 tests
-with the existing expected saturation issue. Logs: /tmp/bn-startup-native-probe/
-and /tmp/bn-startup-focused.log. Untouched f61205a11 checkpoint full suite passed
-2,814 tests. The combined-run failure therefore cannot be called a proven
-baseline failure. All 2,814 existing tests also passed against changed production
-code when the five new suites ran separately. The focused run covers all new
-suites and both pool tests. Every test therefore has passing split-run evidence,
-but no combined native green is claimed. Existing-suite log/result:
-`/tmp/bn-startup-existing-suite.log`, `/tmp/bn-startup-existing-suite.xcresult`.
-The remaining verification limitation is combined-suite executor isolation;
-review found no concrete new blocker/global mutation, but did not establish a
-root cause. Keep this explicit at integration; do not weaken the timeout test or
-present the split run as the normal all-suite gate. Backend commit b9f60812f;
-native commit 032b3fcfc.
-No manual native UI/DOM verification, no push/merge/release. Existing running-sidecar reuse is NOT a
-fresh startup: preserve multi-window no-restart rules; do not silently expand this
-into live-transition protection. Reassess any cold-opening/warm-reuse claims in
-native review and tests rather than restarting another window's active server.
+## Merge-readiness verification — 29 October
+
+The full repository entry point is green: **2,834 native tests passed, zero
+failed** (`/tmp/bn-startup-native-ready-runner.log`). It builds once, runs the
+general suite, then runs `PoolStarvationTimeoutTests` in a separate process.
+Both results and independent nonempty checks are required. Both xcresults are
+retained in `/tmp/bn-startup-native-ready/`; no failed test was excluded.
+
+The failure was an executor-isolation problem: these tests intentionally block the
+shared Swift executor. Their `.serialized` trait orders only their own cases;
+it does not reserve that executor from other suites. Earlier runs either could
+not start a read within five seconds or missed the three-second control deadline.
+The isolated control passes; saturation still records its existing known issue.
+No single new test was identified as the trigger. Isolation removes competing
+work rather than lengthening limits. No production timeout, test assertion or
+deadline changed. Seven runner contract
+cases prove that either phase failing, crashing or running no tests removes the
+old receipt and cannot produce green. Final Python regression: **296 passed,
+two expected failures**, 41.62 s (`/tmp/bn-startup-ready-python.log`).
+
+Native visual review uses actual BootView, RunCoverPane, ProjectDiagnosticPopover,
+ProjectRow and SidebarOutlineController views, with real English resources.
+The opt-in presentation test passed and produced 33 light/dark captures covering
+named/time, missing metadata, unverified activity, long names and a narrow pane.
+The body contributes to popover intrinsic height; Retry and Copy details resolve
+to real labels. Parent and independent reviewer inspected the rendered copy,
+emphasis, wrapping and available controls; no product layout fix was needed.
+
+AppKit vibrant selection cannot be certified by a view bitmap. Actual light and
+dark QA windows were therefore inspected via CUA, including a selected dark row
+and its accessibility text/glyph. A separate QA bundle identity avoided the
+user's running app. Computer-use attachment initially timed out/selected a
+duplicate QA process; that duplicate was stopped, startup allowed to finish,
+and the actual test-host window was inspected successfully. No real study was
+opened by the fixture. No interactive multi-Mac handover or two-window editor
+DOM test is claimed.
+
+Native visual result: `/tmp/bn-startup-native-cua-review.xcresult` (test passed).
+Standalone captures are retained in main
+`docs/private/reviews/study-recovery-guard-native-2026-10-29/`; invalid AppKit
+vibrancy bitmaps are deliberately excluded. See the private review log for
+review dispositions and evidence limits. `StudyStartupPresentationTests` is
+opt-in and runs separately from the normal gate; use
+`TEST_RUNNER_BN_STARTUP_VISUAL=1` with only that suite. The optional `_HOLD` flag
+holds real QA windows for inspection, without adding product UX.
+
+Historical comparison receipts remain useful: the original combined run was
+2,831 pass / one pool timeout; untouched f61205a11 passed 2,814; changed production
+also passed all 2,814 old tests separately; focused new suites plus pool passed
+20 checks. These were diagnostic split runs, not the final green gate above.
+Initial presentation-fixture captures lacked a background/locale setup and one
+zero-width row failed; fixture setup was corrected before visual approval.
+A fresh normal app build also hit the missing frontend/sidecar freshness gate;
+the standard unit-test bypass was used. No signed release-package proof claimed.
+
+Backend commit b9f60812f; native commit 032b3fcfc; runner/visual follow-up a1718744f.
+No push, merge or release. Existing live/warm-sidecar reuse is not fresh admission:
+no live-transition fence, shared-SQLite guarantee, retained reader or auto-unlock
+has been added. Main100days remains authoritative for deferred scope. Preserve
+unrelated uncommitted main work when integrating this branch.
 
 ## UX gate — explicit owner instruction, 28 October
 

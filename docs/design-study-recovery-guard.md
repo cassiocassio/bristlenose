@@ -57,10 +57,27 @@ does not restart the server or unmount either window's WebView. Review caught
 and corrected an earlier restart path that could discard unsent editor text.
 Probe errors/timeouts keep the refusal; superseded completions cannot clear it.
 
+**Owner QA follow-up, 29 October:** the first study's row fell back to red “Run
+failed” after selecting a second study. ContentView tears down the outgoing
+serve, and its process-state reset had erased the confirmed refusal used by the
+sidebar. Commit d8b5c8c51 retains that display-only cause through idle/starting;
+admission or a new ordinary failure replaces it. This does not affect admission
+authority or add persistence to disk. New fleet/manager regressions cover switching
+and clearing. An initial full run caught duplicate observer notifications; the
+cache now changes only inside the already-published state observer, preserving
+the existing one-notification contract. Follow-up8a7aabcd6 also keeps the
+late-output enrichment predicate tied to the current attempt's confirmed failure,
+not the retained display cache. The actual parser/PID/exit regression proves that
+new output cannot fail a starting attempt until its own exit75. Final full gate:2,836pass/0fail, log
+`/tmp/bn-startup-row-retention-exit-final-runner.log`. Both QA studies/backups remain
+byte-identical. The QA launcher app is rebuilt for owner retest; earlier static
+visual checks did not cover this transition. No visible UX redesign was made.
+
 ## Merge-readiness verification — 29 October
 
-The full repository entry point is green: **2,834 native tests passed, zero
-failed** (`/tmp/bn-startup-native-ready-runner.log`). It builds once, runs the
+The latest full repository entry point is green: **2,836 native tests passed, zero
+failed** (`/tmp/bn-startup-row-retention-exit-final-runner.log`). The earlier pre-owner-QA
+receipt was2,834passed in `/tmp/bn-startup-native-ready-runner.log`. It builds once, runs the
 general suite, then runs `PoolStarvationTimeoutTests` in a separate process.
 Both results and independent nonempty checks are required. Both xcresults are
 retained in `/tmp/bn-startup-native-ready/`; no failed test was excluded.

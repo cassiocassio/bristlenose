@@ -2,13 +2,17 @@
 
 **Current 29 October — ready on isolated branch:** reduced startup safety is
 implemented and reviewed. Backend b9f60812f; native 032b3fcfc; runner/visual
-follow-up a1718744f. Full native gate: 2,834 passed / zero failed; Python: 296
+follow-up a1718744f; owner-QA warning-retention d8b5c8c51 and confirmation safeguard8a7aabcd6. Full native gate: 2,836 passed / zero failed; Python: 296
 passed / two expected failures. Executor-saturation tests now run in their own
 required process, with unchanged assertions/deadlines and honest combined verdict.
 Seven runner fault cases prove no false green receipt. Native visual review passed
 for both sidebars, pane and popover in light/dark; actual AppKit selected row
 inspected via CUA because view bitmaps cannot capture vibrant material faithfully.
 See design-study-recovery-guard.md and main private review/handoff for receipts.
+Owner QA found the previous study's warning becoming Run failed after switching.
+Confirmed display cause now survives server teardown; admission/new failure clears
+it. Regression and observation-contract tests pass. Rebuilt QA app ready for owner
+retest; source log /tmp/bn-startup-row-retention-exit-final-runner.log.
 No push/merge/release; preserve unrelated main edits during integration. Read-only
 browsing, typography and full handover remain deferred in main100days.
 

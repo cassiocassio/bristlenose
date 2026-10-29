@@ -83,6 +83,59 @@ enum AppAppearance {
     }
 }
 
+/// Carries the app appearance through SwiftUI's hosting boundary and onto the
+/// concrete window. `NSApp.appearance` supplies the default for new AppKit
+/// surfaces, but an already-mounted unified toolbar can retain the system
+/// appearance while its SwiftUI content has moved to Dark. Installing this
+/// zero-sized view in a window keeps the AppKit chrome on the same appearance
+/// as the report and its SwiftUI popovers.
+///
+/// This deliberately says nothing about palette: `NSWindow.appearance` owns
+/// light/dark only. Palette-aware SwiftUI content continues to use `.tint`,
+/// while system-owned AppKit controls retain the user's system accent unless a
+/// component explicitly draws its own palette-aware chrome.
+struct WindowAppearanceSynchronizer: NSViewRepresentable {
+    let appearance: NSAppearance?
+
+    func makeNSView(context: Context) -> AppearanceView {
+        AppearanceView(appearance: appearance)
+    }
+
+    func updateNSView(_ view: AppearanceView, context: Context) {
+        view.sync(to: appearance)
+    }
+
+    final class AppearanceView: NSView {
+        private var requestedAppearance: NSAppearance?
+
+        init(appearance: NSAppearance?) {
+            requestedAppearance = appearance
+            super.init(frame: .zero)
+            isHidden = true
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+
+        func sync(to appearance: NSAppearance?) {
+            requestedAppearance = appearance
+            apply()
+        }
+
+        private func apply() {
+            guard let window else { return }
+            // Avoid needless reassignment while SwiftUI recomputes the body;
+            // swapping the appearance is observable to AppKit's toolbar.
+            guard window.appearance?.name != requestedAppearance?.name else { return }
+            window.appearance = requestedAppearance
+        }
+    }
+}
+
 /// KVO on UserDefaults needs an `@objc dynamic` keypath, and UserDefaults only
 /// emits change notifications for a property whose **name matches the defaults
 /// key** — so this must stay spelled `appearance`.

@@ -2261,10 +2261,50 @@ struct ContentView: View {
     /// for drops on a project-sidebar-folder row (see `handleDropOnFolder`);
     /// nil for empty-sidebar and empty-pane drops, which create at root.
     private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID? = nil) {
+        Task {
+            let payload = await Task.detached(priority: .userInitiated) {
+                SidebarFinderDrop.resolve(
+                    urls, acceptedExtensions: Self.acceptedExtensions,
+                    folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
+                )
+            }.value
+            processDroppedURLs(urls, intoFolder: folderID, payload: payload)
+        }
+    }
+
+    private func processDroppedURLs(_ urls: [URL], intoFolder folderID: UUID?,
+                                    payload: SidebarFinderDrop.Payload) {
         guard !urls.isEmpty else { return }
+        guard payload != .irrelevant, payload != .indeterminate else { return }
 
         let directories = urls.filter { $0.hasDirectoryPath }
         let files = urls.filter { !$0.hasDirectoryPath }
+
+        // A wrapper full of prior Bristlenose work is an import/open gesture,
+        // not a request to create one new study from the wrapper's loose media.
+        // Resolve this only after release: the AppKit hover path stays bounded
+        // and metadata-only (see SidebarFinderDrop).
+        let isDirectProject = directories.count == 1 && files.isEmpty
+            && LocateFlow.folderLooksAnalysed(url: directories[0])
+        if !isDirectProject {
+            switch payload {
+            case .projects(let projects):
+                // Process each project through the existing marker-aware path:
+                // known folders select, moved folders relocate, copies remint,
+                // and imported projects scan rather than start. Loose siblings
+                // are intentionally ignored once a wrapper contains a project.
+                for project in projects {
+                    processDroppedURLs([project], intoFolder: folderID)
+                }
+                return
+            case .irrelevant, .indeterminate:
+                // Structural refusal. The AppKit path says this during the
+                // drag; release-time guards keep SwiftUI and races harmless.
+                return
+            case .source:
+                break
+            }
+        }
 
         // Single folder already in the index: route by whether it's actually
         // been analysed, not merely tracked. Drop means "analyse these
@@ -2313,8 +2353,13 @@ struct ContentView: View {
                     if let droppedStudy {
                         _ = try? StudyMarker.remint(folder: folder, copiedFrom: droppedStudy)
                     }
-                case .none, .unsure:
+                case .none:
                     break
+                case .unsure:
+                    // There is a project marker but it cannot yet prove
+                    // whether this is a move or a copy. Do not create a
+                    // second sidebar entry on ambiguous identity evidence.
+                    return
                 }
                 // fall through to createProjectFromURLs
             case .trackedUnanalysed:
@@ -2517,6 +2562,13 @@ struct ContentView: View {
                     copyDiskSpaceAlert = CopyDiskSpaceAlertState(
                         needed: needed, available: available
                     )
+                } catch CopyMachinery.CopyError.noItemsAfterFiltering,
+                    CopyMachinery.CopyError.alreadyInFlight {
+                    // Unsupported material and a second concurrent copy both
+                    // bounce without a cognitive detour. The latter can only
+                    // race with the save sheet; visible drops are refused
+                    // before the sheet opens.
+                    return
                 } catch {
                     // Every `CopyError` case renders through its `errorDescription`
                     // (the type is `LocalizedError`), so this reads the same sentence
@@ -2556,6 +2608,21 @@ struct ContentView: View {
     /// - anything else: copy the files, then run (incrementally if already
     ///   analysed; `PipelineRunner` queues it behind another run)
     private func handleDropOnProject(id: UUID, urls: [URL]) {
+        Task {
+            let payload = await Task.detached(priority: .userInitiated) {
+                SidebarFinderDrop.resolve(
+                    urls, acceptedExtensions: Self.acceptedExtensions,
+                    folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
+                )
+            }.value
+            handleDropOnProject(id: id, urls: urls, payload: payload)
+        }
+    }
+
+    private func handleDropOnProject(id: UUID, urls: [URL], payload: SidebarFinderDrop.Payload) {
+        // The AppKit validator and SwiftUI closure reject while this is known;
+        // repeat it at commit for a drop whose hover pre-dated another batch.
+        guard copyMachinery.inFlight == nil else { return }
         let accepted = Self.filterAcceptedURLs(urls)
         guard let project = projectIndex.projects.first(where: { $0.id == id }) else {
             return
@@ -2567,7 +2634,7 @@ struct ContentView: View {
         // single folder → adopt path + auto-run; multi-item → ask where a new
         // study folder goes and copy the items into it.
         if project.path.isEmpty {
-            establishEmptyProject(id: id, accepted: accepted)
+            establishEmptyProject(id: id, accepted: accepted, payload: payload)
             return
         }
 
@@ -2579,6 +2646,24 @@ struct ContentView: View {
         //    would corrupt directory structure / leak its outputs.
         let projectPath = URL(fileURLWithPath: project.path)
             .standardizedFileURL.path
+        // A populated project never accepts another BN project, whether it is
+        // dropped directly or buried in a wrapper.  This is a structural
+        // refusal: AppKit presents the prohibited cursor during validation;
+        // this release-time check covers SwiftUI and TOCTOU without a toast.
+        switch payload {
+        case .projects(let projects):
+            let allAreSelf = !projects.isEmpty && projects.allSatisfy {
+                $0.standardizedFileURL.path == projectPath
+            }
+            if !allAreSelf { return }
+        case .irrelevant, .indeterminate:
+            // Do not hand a structurally invalid or over-limit folder to the
+            // copy planner. It would eventually do no work, but the accepted
+            // drop would already have broken the spring-back contract.
+            return
+        case .source:
+            break
+        }
         var filteredURLs: [URL] = []
         var selfDropDetected = false
         for url in accepted {
@@ -2590,30 +2675,6 @@ struct ContentView: View {
                 // when the drop completed) and schedule a clear.
                 selfDropDetected = true
                 continue
-            }
-            if url.hasDirectoryPath, LocateFlow.folderLooksAnalysed(url: url) {
-                // Plan §11 reject — non-modal toast. Alerts are for
-                // decisions, not apologies. Toast itself is a webism
-                // banked for a native replacement (Mac drop-cursor
-                // decoration or sidebar HUD) on a later pass.
-                let message = String(
-                    format: i18n.t("desktop.chrome.dropProjectOntoProjectToast"),
-                    url.lastPathComponent
-                )
-                toast.show(message)
-                return
-            }
-            if url.hasDirectoryPath,
-               let containedName = Self.containedAnalysedProjectName(in: url) {
-                // Plan §11 reject — dropping a *parent* of a Bristlenose
-                // project. Copying would haul that project's output into
-                // the target alongside its source media, corrupting both.
-                let message = String(
-                    format: i18n.t("desktop.chrome.dropFolderContainsProject"),
-                    containedName
-                )
-                toast.show(message)
-                return
             }
             filteredURLs.append(url)
         }
@@ -2724,6 +2785,9 @@ struct ContentView: View {
                 )
             } catch CopyMachinery.CopyError.noItemsAfterFiltering {
                 // Should not happen — we filtered above. Silent.
+            } catch CopyMachinery.CopyError.alreadyInFlight {
+                // Commit-time race; no toast and no false success.
+                return
             } catch {
                 // `.underlying` and every other case render through `errorDescription`
                 // — the same sentence the loose-files site above reads.
@@ -2737,49 +2801,98 @@ struct ContentView: View {
     /// the project's folder rather than copying files into a non-folder.
     /// Mirrors `createProjectFromURLs` semantics but updates the existing
     /// project in place (preserves ID, user-typed name, position).
-    private func establishEmptyProject(id: UUID, accepted: [URL]) {
-        // Same integrity guards as the populated-project path — reject
-        // dropping another Bristlenose project or a folder that contains
-        // one. Self-drop isn't possible here (project has no path).
-        for url in accepted where url.hasDirectoryPath {
-            if LocateFlow.folderLooksAnalysed(url: url) {
-                let message = String(
-                    format: i18n.t("desktop.chrome.dropProjectOntoProjectToast"),
-                    url.lastPathComponent
-                )
-                toast.show(message)
-                return
-            }
-            if let containedName = Self.containedAnalysedProjectName(in: url) {
-                let message = String(
-                    format: i18n.t("desktop.chrome.dropFolderContainsProject"),
-                    containedName
-                )
-                toast.show(message)
-                return
-            }
-        }
-
+    private func establishEmptyProject(id: UUID, accepted: [URL], payload: SidebarFinderDrop.Payload) {
+        guard payload != .irrelevant, payload != .indeterminate else { return }
         let directories = accepted.filter { $0.hasDirectoryPath }
         let files = accepted.filter { !$0.hasDirectoryPath }
         guard !directories.isEmpty || !files.isEmpty else { return }
 
+        // A project already listed in this sidebar wins over the placeholder,
+        // even when its folder has output. The sidebar-level drop route treats
+        // that as navigation; checking for an analysed folder first made the
+        // placeholder alone show the "drag its source files" rejection toast.
+        // In practice this is easy to hit: the empty New Project row sits
+        // directly above the project a researcher is dragging back in.
+        if directories.count == 1, files.isEmpty,
+           case .existing(let holderID) = PlaceholderDrop.resolve(
+               folder: directories[0], placeholder: id, in: projectIndex
+           ) {
+            selection = [.project(holderID)]
+            dropTargetProjectID = holderID
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                if dropTargetProjectID == holderID {
+                    dropTargetProjectID = nil
+                }
+            }
+            return
+        }
+
+        // New Project is deliberately unlike a populated project: an existing
+        // BN project establishes this entry.  Opening analysis from another
+        // Mac must preserve its report, not copy its output into a fresh run.
+        if directories.count == 1, files.isEmpty,
+           LocateFlow.folderLooksAnalysed(url: directories[0]) {
+            let folder = directories[0]
+            let droppedStudy = StudyMarker.read(folder: folder)
+            switch StudyDropMatch.resolve(
+                droppedStudyID: droppedStudy,
+                candidates: projectIndex.studyCandidates(),
+                droppedPath: folder.resolvingSymlinksInPath().standardizedFileURL.path,
+                folderExists: { FileManager.default.fileExists(atPath: $0) }
+            ) {
+            case .moved(let holderID):
+                // The same study changed location; its established sidebar row
+                // follows it rather than turning this empty placeholder into a
+                // duplicate.
+                projectIndex.relocateProject(id: holderID, newPath: folder.path)
+                selection = [.project(holderID)]
+                dropTargetProjectID = holderID
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    if dropTargetProjectID == holderID { dropTargetProjectID = nil }
+                }
+                return
+            case .copy:
+                // The imported copy needs its own marker before it becomes a
+                // second sidebar entry; otherwise a later drop would mistake
+                // it for a move of the original.
+                if let droppedStudy {
+                    _ = try? StudyMarker.remint(folder: folder, copiedFrom: droppedStudy)
+                }
+            case .none:
+                break
+            case .unsure:
+                // Do not guess when identity evidence is incomplete.
+                return
+            }
+            projectIndex.relocateProject(id: id, newPath: folder.path)
+            projectIndex.renameProject(id: id, newName: folder.lastPathComponent)
+            projectIndex.captureStudyID(id: id, folder: folder)
+            selection = [.project(id)]
+            if let imported = projectIndex.projects.first(where: { $0.id == id }) {
+                // This reads the imported manifest so its existing report and
+                // state are shown. It is not evidence that an already-known
+                // project's remote/foreign-run status has changed: known and
+                // moved projects returned above without scanning.
+                pipelineRunner.scan(project: imported)
+            }
+            return
+        }
+
+        // A wrapper with BN projects is a batch-open gesture.  Use the first
+        // project to establish this placeholder, then register the rest via
+        // the marker-aware root route.  Any loose media beside those projects
+        // is intentionally ignored.
+        if case .projects(let projects) = payload, let first = projects.first {
+            establishEmptyProject(id: id, accepted: [first], payload: .projects([first]))
+            for project in projects.dropFirst() { processDroppedURLs([project]) }
+            return
+        }
+
         if directories.count == 1 && files.isEmpty {
             // Single folder — adopt as project path; folder-shaped → auto-run.
             let folder = directories[0]
-            // Unless a row already holds it: then it is that row's drop, as on
-            // any other door. An analysed folder was refused above, so this one
-            // never ran: the same arm `processDroppedURLs` gives a tracked,
-            // unanalysed folder. The placeholder stays as it was (N157).
-            if case .existing(let holderID) = PlaceholderDrop.resolve(
-                folder: folder, placeholder: id, in: projectIndex
-            ) {
-                selection = [.project(holderID)]
-                if let holder = projectIndex.projects.first(where: { $0.id == holderID }) {
-                    pipelineRunner.start(project: holder)
-                }
-                return
-            }
             projectIndex.relocateProject(id: id, newPath: folder.path)
             selection = [.project(id)]
             if let updated = projectIndex.projects.first(where: { $0.id == id }) {
@@ -3327,6 +3440,9 @@ struct ContentView: View {
         // takes precedence — SwiftUI delivers the drop to the innermost
         // valid target, so this only fires when no row was hit.
         .dropDestination(for: URL.self) { urls, _ in
+            guard SidebarFinderDrop.quicklyMayContain(
+                urls, acceptedExtensions: Self.acceptedExtensions
+            ) else { return false }
             handleDrop(urls: urls)
             return true
         }
@@ -3389,6 +3505,9 @@ struct ContentView: View {
                     }
                 }
                 if !finderURLs.isEmpty {
+                    guard SidebarFinderDrop.quicklyMayContain(
+                        finderURLs, acceptedExtensions: Self.acceptedExtensions
+                    ) else { return false }
                     handleDropOnFolder(id: folder.id, urls: finderURLs)
                 }
                 return true
@@ -3658,6 +3777,7 @@ struct ContentView: View {
         // AppKit outline (`StudyFinderDrop`, R47, R48). The destination stays:
         // without it the List's own would take the drop and make a new study.
         .dropDestination(for: URL.self) { urls, _ in
+            guard copyMachinery.inFlight == nil else { return false }
             guard StudyFinderDrop.takesDrop(state: pipelineRunner.state[project.id],
                                             folder: project.path, urls: urls)
             else { return false }
@@ -3942,10 +4062,18 @@ struct ContentView: View {
                         .padding(12)
                 }
             }
-            // The sidebar's own route: a listed folder is selected, not added
-            // again, and a moved study's row follows it (R46).
+            // A selected project-sidebar-folder is a real destination too,
+            // not merely an absence of a project selection. This keeps its
+            // main pane aligned with dropping directly on the sidebar row.
             .dropDestination(for: URL.self) { urls, _ in
-                handleDrop(urls: urls)
+                guard SidebarFinderDrop.quicklyMayContain(
+                    urls, acceptedExtensions: Self.acceptedExtensions
+                ) else { return false }
+                if let folder = selectedFolder {
+                    handleDropOnFolder(id: folder.id, urls: urls)
+                } else {
+                    handleDrop(urls: urls)
+                }
                 return true
             } isTargeted: { noSelectionDropTargeted = $0 }
         }

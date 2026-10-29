@@ -36,8 +36,20 @@ final class ServeInstance: ObservableObject {
     @Published var state: ServeState = .idle {
         didSet {
             if case .running = state, startedByRetry { startedByRetry = false }
+            switch state {
+            case .failed(let message): confirmedStartupRefusal = message.startupRefusal
+            case .running: confirmedStartupRefusal = nil
+            case .idle, .starting: break
+            }
         }
     }
+
+    /// A process teardown when switching studies does not resolve the study's
+    /// refusal. Keep its confirmed cause until a new attempt is admitted or
+    /// reports another failure. This is display state, never admission authority.
+    /// Mutated only by the published `state` observer above, so that single
+    /// notification covers both values without publishing a second change.
+    private(set) var confirmedStartupRefusal: StudyStartupRefusal?
 
     /// True while the current start attempt is one the researcher asked for
     /// with the boot pane's Retry. Set by `ServeManager.start(projectPath:isRetry:)`,

@@ -118,8 +118,7 @@ final class ServeManager: ObservableObject {
     }
 
     var startupRefusal: StudyStartupRefusal? {
-        if case .failed(let message) = state { return message.startupRefusal }
-        return nil
+        instance.confirmedStartupRefusal
     }
     var outputLines: [String] {
         get { instance.outputLines }

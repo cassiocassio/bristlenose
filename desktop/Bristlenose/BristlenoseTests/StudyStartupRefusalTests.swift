@@ -46,6 +46,32 @@ struct StudyStartupRefusalTests {
 @MainActor
 @Suite("Study startup refusal termination")
 struct StudyStartupRefusalTerminationTests {
+    @Test("Switching studies keeps the original row's confirmed refusal until a new result")
+    func refusalSurvivesSwitch() {
+        let fleet = ServeFleet(makeManager: { ServeManager(resolvedMode: .success(.external(port: 9998))) })
+        let first = UUID(), second = UUID()
+        let manager = fleet.manager(for: first)
+        let facts = StudyStartupRefusal(reason: .foreign, machineName: "Home Mac", startedAt: nil)
+        manager.state = .failed(error: facts.failureMessage)
+        manager.stop() // ContentView's outgoing-project cleanup.
+        fleet.front(second)
+        #expect(manager.state == .idle)
+        #expect(fleet.startupRefusals[first] == facts)
+        manager.state = .starting
+        #expect(fleet.startupRefusals[first] == facts)
+        manager.state = .running(port: 9998)
+        #expect(fleet.startupRefusals[first] == nil)
+    }
+
+    @Test("A new ordinary failure replaces a retained refusal")
+    func newFailureReplacesRefusal() {
+        let manager = ServeManager(resolvedMode: .success(.external(port: 9998)))
+        manager.state = .failed(error: StudyStartupRefusal.unverified.failureMessage)
+        manager.stop()
+        manager.state = .failed(error: FailureMessage(english: "New startup failure"))
+        #expect(manager.startupRefusal == nil)
+    }
+
     @Test("Retry admission callback runs once, only after the server is ready")
     func retryAdmission() {
         // External mode isolates callback wiring; Python admission itself is

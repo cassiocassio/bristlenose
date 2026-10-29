@@ -609,7 +609,8 @@ enum ReviewGalleryRegistry {
             rawCause: "A bounded diagnostic record for review.", category: category, summary: nil
         )
         let native = RunCoverPane(cover: cover, project: project, liveData: PipelineLiveData(),
-                                  onAnalyse: { ctx.log("Native Analyse pressed") })
+                                  onAnalyse: { ctx.log("Native Analyse pressed") },
+                                  onRetryStartup: { ctx.log("Native startup retry pressed") })
             .frame(width: ctx.specimenWidth, height: 300)
         return .views([
             ("Native · RunCoverPane · \(category.rawValue)", AnyView(native)),

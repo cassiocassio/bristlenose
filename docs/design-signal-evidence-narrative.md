@@ -211,4 +211,3 @@ future calibrated prompt cannot reuse records from an incompatible contract.
 4. Persist and reuse valid assertions through the refresh coordinator.
 5. Expose the read-only assertion contract to the client.
 6. Implement the separate visual treatment and interaction spec.
-

@@ -50,7 +50,6 @@ Signal: **Minimum order opacity**
 Marked fragment:
 
 Why this is the explanatory core (optional):
-
 ### 03 — low stock / missing information
 
 Signal: **Stock clarity arrives late**
@@ -249,4 +248,4 @@ Signal: **Post-task UX friction and unmet expectations**
 Marked fragment:
 
 Why this is the explanatory core (optional):
-
+<!-- Reserved for the human calibration pass. -->

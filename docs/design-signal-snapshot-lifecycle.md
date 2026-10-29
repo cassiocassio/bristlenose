@@ -367,4 +367,3 @@ it already explains that copies may be shared.
    local and offline.
 3. **Freshness visibility:** retain the state now; decide later whether readers
    see it by default, only in the hero disclosure, or only in diagnostics.
-

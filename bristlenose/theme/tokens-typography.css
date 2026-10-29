@@ -25,6 +25,7 @@
        Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
        Chromium on a Mac and Courier New in Windows 10's Edge. */
     --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
        On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
@@ -73,6 +74,17 @@
     --bn-text-title-lh:    1.25;
     --bn-text-display:     1.75rem;     /* 28px   — report h1 */
     --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
 }
 
 /* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,

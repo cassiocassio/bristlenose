@@ -38,12 +38,17 @@ def test_no_module_names_o_nofollow_directly() -> None:
     assert offenders == [], f"use utils.fs.open_private instead: {offenders}"
 
 
-def test_pid_file_writes_without_o_nofollow(no_nofollow: None, tmp_path: Path) -> None:
+def test_pid_file_writes_without_o_nofollow(
+    no_nofollow: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from bristlenose.run_lifecycle import _read_pid_file, _write_pid_file
 
+    monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "this-machine")
+    monkeypatch.setattr("bristlenose.run_lifecycle.friendly_machine_name", lambda: None)
     _write_pid_file(tmp_path, "run-1", "start")
     assert _read_pid_file(tmp_path) == {
         "pid": os.getpid(), "start_time": "start", "run_id": "run-1",
+        "machine_id": "this-machine",
     }
 
 

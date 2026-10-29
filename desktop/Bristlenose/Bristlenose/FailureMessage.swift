@@ -36,11 +36,15 @@ struct FailureMessage: Equatable, Sendable {
     let vars: [String: String]
     /// What the log gets, and what the UI falls back to if a key ever goes missing.
     let english: String
+    /// The existing failure surfaces render this factual startup cause specially.
+    let startupRefusal: StudyStartupRefusal?
 
-    init(key: String? = nil, vars: [String: String] = [:], english: String) {
+    init(key: String? = nil, vars: [String: String] = [:], english: String,
+         startupRefusal: StudyStartupRefusal? = nil) {
         self.key = key
         self.vars = vars
         self.english = english
+        self.startupRefusal = startupRefusal
     }
 
     /// Someone else's own sentence, passed through untouched.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -9,7 +10,9 @@ import pytest
 from bristlenose.server.elaboration import (
     VALID_PATTERNS,
     _normalise_pattern,
+    _validated_evidence_assertions,
     compute_content_hash,
+    compute_quote_reference,
     compute_signal_key,
     format_signals_for_prompt,
     generate_elaborations,
@@ -56,6 +59,11 @@ class TestComputeContentHash:
     def test_different_tags_different_hash(self) -> None:
         h1 = compute_content_hash(["quote A"], ["tag1"])
         h2 = compute_content_hash(["quote A"], ["tag2"])
+        assert h1 != h2
+
+    def test_different_quote_reference_invalidates_same_text_and_tags(self) -> None:
+        h1 = compute_content_hash(["quote A"], ["tag1"], ["q_before"])
+        h2 = compute_content_hash(["quote A"], ["tag1"], ["q_after"])
         assert h1 != h2
 
     def test_returns_hex_string(self) -> None:
@@ -193,6 +201,7 @@ class TestFormatSignalsForPrompt:
         assert "[p2]" in result
         assert "I can't find it" in result
         assert "[tag: hidden feature]" in result
+        assert "[quote_id: q_" in result
 
     def test_multiple_signals_numbered(self) -> None:
         sig0 = _make_signal(location="Home", quotes=[_make_signal_quote()])
@@ -210,6 +219,75 @@ class TestFormatSignalsForPrompt:
         template = _make_template([])
         result = format_signals_for_prompt([sig], template)
         assert "Group: Unknown Group" in result
+
+
+class TestEvidenceAssertions:
+    def test_keeps_a_grounded_actionable_fragment_with_its_source_pointer(self) -> None:
+        quote = _make_signal_quote(
+            text="The low-stock warning did not name which specific items were unavailable.",
+            pid="p3",
+        )
+        signal = _make_signal(quotes=[quote])
+        text = "One participant said the warning did not name which specific items were unavailable."
+        fragment = "the warning did not name which specific items were unavailable"
+        start = text.index(fragment)
+        candidate = SimpleNamespace(
+            text=text,
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=SimpleNamespace(
+                start=start,
+                end=start + len(fragment),
+                text=fragment,
+                rationale="negative_actionable_cause",
+            ),
+        )
+
+        assertions = _validated_evidence_assertions([candidate], signal)
+
+        assert assertions == [{
+            "id": f"ea_{compute_quote_reference(quote).removeprefix('q_')}",
+            "ordinal": 0,
+            "text": text,
+            "source_quote_id": compute_quote_reference(quote),
+            "participant_id": "p3",
+            "source_excerpt": quote.text,
+            "intervention_fragment": {
+                "start": start,
+                "end": start + len(fragment),
+                "text": fragment,
+                "rationale": "negative_actionable_cause",
+            },
+        }]
+
+    def test_keeps_playback_but_removes_a_generic_or_malformed_highlight(self) -> None:
+        quote = _make_signal_quote(text="I was frustrated by the wording.")
+        signal = _make_signal(quotes=[quote])
+        candidate = SimpleNamespace(
+            text="The participant was frustrated by the wording.",
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=SimpleNamespace(
+                start=20, end=30, text="frustrated", rationale="negative_actionable_cause",
+            ),
+        )
+
+        assertions = _validated_evidence_assertions([candidate], signal)
+
+        assert len(assertions) == 1
+        assert assertions[0]["intervention_fragment"] is None
+
+    def test_derives_source_excerpt_from_the_canonical_quote(self) -> None:
+        quote = _make_signal_quote(text="The stock warning was unclear.")
+        signal = _make_signal(quotes=[quote])
+        candidate = SimpleNamespace(
+            text="A participant could not identify unavailable items.",
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=None,
+        )
+
+        assertions = _validated_evidence_assertions([candidate], signal)
+
+        assert len(assertions) == 1
+        assert assertions[0]["source_excerpt"] == quote.text
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +338,9 @@ class TestGenerateElaborations:
         )
         settings = _make_settings()
         expected_key = "section|Homepage|Discoverability"
-        expected_hash = compute_content_hash(["test"], ["visible action"])
+        expected_hash = compute_content_hash(
+            ["test"], ["visible action"], [compute_quote_reference(sig.quotes[0])],
+        )
 
         # Mock DB to return a cached row
         cache_row = MagicMock()
@@ -333,6 +413,55 @@ class TestGenerateElaborations:
         mock_client.analyze.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_generation_keeps_cited_evidence_without_a_model_copied_excerpt(self) -> None:
+        """The quote ID is canonical provenance; no duplicate transcription is needed."""
+        quote = _make_signal_quote(
+            text="The low-stock warning did not say which items were unavailable.",
+            tags=["stock clarity"],
+        )
+        sig = _make_signal(location="Product", group_name="Stock", quotes=[quote])
+        settings = _make_settings()
+        db = MagicMock()
+        db.query.return_value.filter.return_value.all.return_value = []
+
+        assertion_text = "The warning did not say which items were unavailable."
+        fragment = "The warning did not say which items were unavailable"
+        mock_elab = SimpleNamespace(
+            signal_index=0,
+            signal_name="Stock warning obscures",
+            pattern="gap",
+            elaboration="Stock information left uncertainty. || Participants could not identify affected items.",
+            evidence_assertions=[SimpleNamespace(
+                text=assertion_text,
+                source_quote_id=compute_quote_reference(quote),
+                intervention_fragment=SimpleNamespace(
+                    start=0,
+                    end=len(fragment),
+                    text=fragment,
+                    rationale="negative_actionable_cause",
+                ),
+            )],
+        )
+        mock_client = AsyncMock()
+        mock_client.analyze.return_value = SimpleNamespace(elaborations=[mock_elab])
+
+        with (
+            patch(
+                "bristlenose.server.codebook.get_template",
+                return_value=_make_template([("Stock", "lens", [])]),
+            ),
+            patch("bristlenose.llm.client.LLMClient", return_value=mock_client),
+            patch("bristlenose.llm.prompts.get_prompt") as mock_prompt,
+        ):
+            mock_prompt.return_value.system = "system prompt"
+            mock_prompt.return_value.user = "User: {signals_text}"
+            result = await generate_elaborations([sig], "norman", settings, db, 1)
+
+        evidence = result["section|Product|Stock"].evidence_assertions
+        assert evidence[0]["source_excerpt"] == quote.text
+        assert evidence[0]["intervention_fragment"]["text"] == fragment
+
+    @pytest.mark.asyncio
     async def test_stale_cache_regenerates(self) -> None:
         """When cache exists but hash differs, LLM is called again."""
         sig = _make_signal(
@@ -399,7 +528,9 @@ class TestGenerateElaborations:
         settings = _make_settings()
 
         # sig0 is cached, sig1 is not
-        cached_hash = compute_content_hash(["q1"], ["t1"])
+        cached_hash = compute_content_hash(
+            ["q1"], ["t1"], [compute_quote_reference(sig0.quotes[0])],
+        )
         cache_row = MagicMock()
         cache_row.signal_key = "section|Home|Disco"
         cache_row.content_hash = cached_hash

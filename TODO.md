@@ -1,5 +1,44 @@
 # Bristlenose — Where I Left Off
 
+**Current 29 October — ready on isolated branch:** reduced startup safety is
+implemented and reviewed. Backend b9f60812f; native 032b3fcfc; runner/visual
+follow-up a1718744f; owner-QA warning-retention d8b5c8c51 and confirmation safeguard8a7aabcd6. Full native gate: 2,836 passed / zero failed; Python: 296
+passed / two expected failures. Executor-saturation tests now run in their own
+required process, with unchanged assertions/deadlines and honest combined verdict.
+Seven runner fault cases prove no false green receipt. Native visual review passed
+for both sidebars, pane and popover in light/dark; actual AppKit selected row
+inspected via CUA because view bitmaps cannot capture vibrant material faithfully.
+See design-study-recovery-guard.md and main private review/handoff for receipts.
+Owner QA found the previous study's warning becoming Run failed after switching.
+Confirmed display cause now survives server teardown; admission/new failure clears
+it. Regression and observation-contract tests pass. Rebuilt QA app ready for owner
+retest; source log /tmp/bn-startup-row-retention-exit-final-runner.log.
+No push/merge/release; preserve unrelated main edits during integration. Read-only
+browsing, typography and full handover remain deferred in main100days.
+
+**28 October — reduced startup preparation:** `2ad06751d` strengthens malformed
+local recovery; `ed0e8456b` adds read-only admission classifier (NO production
+caller).238regressions pass; Ruff and helper+backup mypy pass; lifecycle baseline
+type error reproduced unchanged. Runtime findings fixed/rechecked. Mock proposal
+`docs/mockups/study-startup-refusal.html` source-reviewed; visual/owner approval
+pending. Explicit inspection permission did not override browser file-protocol
+policy; do not render through an alternate route. No UX wiring until approval.
+Long-term authority remains main100days. Next: approved existing refusal patterns
+and real CLI/native/server pre-write admission; no larger prototype expansion.
+
+**28 October — minimal R114 delivery:** Step1 committed `e83c68c79`: machine-owned
+automatic recovery preserves foreign/uncertain unfinished output and backup;
+known-local recovery retained.200regressions pass, Ruff clean, runtime review
+clean after Windows identity type fix. Not a full lock: ordinary startup/explicit
+run can still write; step2 must refuse before writers. Plan:
+[design-study-recovery-guard.md](docs/design-study-recovery-guard.md).
+Larger prototype and thinking preserved on codex/study-access-poc and main100days.
+No push/merge/release; unrelated main source unchanged.
+
+- Next-release candidate (Fixed): Opening a synced study no longer automatically
+  replaces another Mac's unfinished analysis with the previous report. This is
+  destructive-recovery protection, not full multi-Mac editing safety.
+
 Last updated: 25 Oct 2026. _This file is a capture inbox + session context, not a changelog — `git log` + `CHANGELOG.md` are the unabridged record._
 
 **25 Oct 2026 — Codex checkpoint: true-the-docs for #193/N190 and #92.** Targeted reconciliation of `docs/design-mcp-server.md` (C/mixed) and `docs/design-perf-regression-gate.md` (B), with one independent read-only docs auditor. Corrected the MCP doc's false on-by-default claim, recorded the checked CLI policy and token scope, updated Sessions loading/budget, and preserved dated history. Truing plan/checks: `docs/private/truing-reliability-193-92-2026-10-25.md`. Included in the local commit titled `fix agent messaging and defer sessions loading`; no push, tag or release. Existing unrelated untracked files excluded.

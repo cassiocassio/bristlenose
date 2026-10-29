@@ -8,7 +8,7 @@ change the hash changes and a new elaboration is generated.
 Public API::
 
     compute_signal_key(source_type, location, group_name) → str
-    compute_content_hash(quote_texts, tag_names)           → str
+    compute_content_hash(quote_texts, tag_names, quote_references) → str
     format_signals_for_prompt(signals, template)            → str
     generate_elaborations(signals, codebook_id, settings,
                           db, project_id)                   → dict
@@ -17,9 +17,10 @@ Public API::
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -61,6 +62,8 @@ class ElaborationResult:
     signal_name: str
     pattern: str
     elaboration: str
+    #: Validated reader records, retained with the cached narrative bundle.
+    evidence_assertions: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -83,11 +86,38 @@ def compute_signal_key(source_type: str, location: str, group_name: str) -> str:
     return f"{source_type}|{location}|{group_name}"
 
 
-def compute_content_hash(quote_texts: list[str], tag_names: list[str]) -> str:
+def compute_quote_reference(quote: object) -> str:
+    """Return a durable quote reference for card/narrative provenance.
+
+    Signal computation deliberately uses lightweight records rather than ORM
+    rows, so a database primary key is not available on every path. This hash
+    is stable for the quote's session, speaker, temporal/segment position and
+    text, and changes when the quote itself changes. It is an evidence pointer
+    inside an immutable snapshot, not a public database identifier.
+    """
+    payload = "\x1f".join((
+        str(getattr(quote, "participant_id", "")),
+        str(getattr(quote, "session_id", "")),
+        f"{float(getattr(quote, 'start_seconds', 0.0)):.6f}",
+        str(getattr(quote, "segment_index", -1)),
+        str(getattr(quote, "ordinal", 0)),
+        str(getattr(quote, "text", "")),
+    ))
+    return f"q_{hashlib.sha256(payload.encode()).hexdigest()[:16]}"
+
+
+def compute_content_hash(
+    quote_texts: list[str],
+    tag_names: list[str],
+    quote_references: list[str] | None = None,
+) -> str:
     """A SHA-256 over everything that decides what the elaboration should say.
 
-    Changes when quotes are added or removed, when tags change — **and when the
-    prompt changes**, which it did not until 20 Sep 2026.
+    Changes when quotes are added or removed, when their identity changes, when
+    tags change — **and when the prompt changes**, which it did not until 20
+    Sep 2026.  Quote references matter because an evidence assertion stores one
+    as its provenance pointer; serving a cached pointer for a re-segmented or
+    re-attributed quote would make an otherwise correct card untraceable.
 
     THE PROMPT IS PART OF THE CONTENT. Without it, rewriting an instruction
     invalidates nothing: every cached elaboration keeps the words it was given
@@ -109,6 +139,8 @@ def compute_content_hash(quote_texts: list[str], tag_names: list[str]) -> str:
         "\n".join(sorted(quote_texts))
         + "\n---\n"
         + "\n".join(sorted(tag_names))
+        + "\n---quote-references---\n"
+        + "\n".join(sorted(quote_references or []))
         + "\n---prompt---\n"
         + str(prompt_sha)
     )
@@ -172,7 +204,10 @@ def format_signals_for_prompt(
         for q in sig.quotes:
             tags_str = ", ".join(q.tag_names) if q.tag_names else ""
             tag_suffix = f" [tag: {tags_str}]" if tags_str else ""
-            lines.append(f"- [{q.participant_id}] \"{q.text}\"{tag_suffix}")
+            lines.append(
+                f"- [quote_id: {compute_quote_reference(q)}] [{q.participant_id}] "
+                f"\"{q.text}\"{tag_suffix}"
+            )
 
         blocks.append("\n".join(lines))
 
@@ -210,10 +245,18 @@ def _load_cached(
     results: dict[str, ElaborationResult] = {}
     for row in rows:
         if row.content_hash == hash_by_key.get(row.signal_key):
+            try:
+                assertions = json.loads(row.evidence_assertions or "[]")
+            except (TypeError, json.JSONDecodeError):
+                logger.warning("Ignoring malformed cached evidence assertions for %s", row.signal_key)
+                assertions = []
+            if not isinstance(assertions, list):
+                assertions = []
             results[row.signal_key] = ElaborationResult(
                 signal_name=row.signal_name,
                 pattern=row.pattern,
                 elaboration=row.elaboration,
+                evidence_assertions=assertions,
             )
     return results
 
@@ -250,9 +293,10 @@ def load_cached_elaborations(
             for q in s.quotes  # type: ignore[attr-defined]
             for t in (q.tag_names or [])
         ]
+        quote_references = [compute_quote_reference(q) for q in s.quotes]  # type: ignore[attr-defined]
         pairs.append((
             compute_signal_key(s.source_type, s.location, s.sentiment),  # type: ignore[attr-defined]
-            compute_content_hash(quote_texts, tag_names),
+            compute_content_hash(quote_texts, tag_names, quote_references),
         ))
     return _load_cached(db, project_id, pairs)
 
@@ -282,6 +326,9 @@ def _save_cached(
             signal_name=result.signal_name,
             pattern=result.pattern,
             elaboration=result.elaboration,
+            evidence_assertions=json.dumps(
+                result.evidence_assertions, ensure_ascii=False, separators=(",", ":"),
+            ),
         ))
 
     db.commit()
@@ -299,6 +346,95 @@ def _normalise_pattern(raw: str) -> str:
         return normalised
     logger.warning("Unknown elaboration pattern %r, defaulting to 'tension'", raw)
     return "tension"
+
+
+_EVIDENCE_RATIONALES = frozenset({
+    "negative_actionable_cause",
+    "positive_enabling_cause",
+})
+_GENERIC_FRAGMENT_WORDS = frozenset({
+    "frustrated", "frustration", "confused", "confusion", "delighted",
+    "delight", "satisfied", "satisfaction", "surprised", "surprise",
+    "doubt", "uncertain", "uncertainty",
+})
+
+
+def _normalise_evidence_text(value: str) -> str:
+    """Normalise transcript whitespace/case without changing source meaning."""
+    return " ".join(value.split()).casefold()
+
+
+def _validated_evidence_assertions(
+    candidates: list[object],
+    signal: TagSignal,
+) -> list[dict[str, Any]]:
+    """Return only attributable, structurally valid assertion records.
+
+    The LLM can judge whether a paraphrase is entailed; this local gate proves
+    its source pointer, participant and highlight range before a snapshot can
+    claim that relationship. Invalid candidate assertions are intentionally
+    dropped individually: a good title/claim must not disappear because one
+    decorative assertion was malformed.
+    """
+    by_ref = {compute_quote_reference(quote): quote for quote in signal.quotes}
+    seen_quote_refs: set[str] = set()
+    accepted: list[dict[str, Any]] = []
+
+    for candidate in candidates[:4]:
+        source_quote_id = str(getattr(candidate, "source_quote_id", ""))
+        quote = by_ref.get(source_quote_id)
+        text = str(getattr(candidate, "text", "")).strip()
+        if not quote or source_quote_id in seen_quote_refs or not text:
+            continue
+
+        # ``source_quote_id`` is the supplied, stable provenance pointer.  The
+        # model used to be asked to copy a second, exact source substring as
+        # well; it frequently made harmless punctuation/cleanup changes and
+        # we then discarded an otherwise useful cited assertion.  Preserve a
+        # truthful reader record by deriving the excerpt from the canonical
+        # quote instead of trusting a second LLM transcription.
+        excerpt = quote.text
+
+        fragment = getattr(candidate, "intervention_fragment", None)
+        fragment_payload: dict[str, Any] | None = None
+        if fragment is not None:
+            start = getattr(fragment, "start", -1)
+            end = getattr(fragment, "end", -1)
+            fragment_text = str(getattr(fragment, "text", ""))
+            rationale = str(getattr(fragment, "rationale", ""))
+            if (
+                not isinstance(start, int)
+                or not isinstance(end, int)
+                or start < 0
+                or end <= start
+                or end > len(text)
+                or text[start:end] != fragment_text
+                or _normalise_evidence_text(fragment_text) in _GENERIC_FRAGMENT_WORDS
+                or rationale not in _EVIDENCE_RATIONALES
+            ):
+                # An assertion can still be useful when the model's proposed
+                # highlighter fails the stricter intervention contract.
+                fragment_payload = None
+            else:
+                fragment_payload = {
+                    "start": start,
+                    "end": end,
+                    "text": fragment_text,
+                    "rationale": rationale,
+                }
+
+        accepted.append({
+            "id": f"ea_{source_quote_id.removeprefix('q_')}",
+            "ordinal": len(accepted),
+            "text": text,
+            "source_quote_id": source_quote_id,
+            "participant_id": quote.participant_id,
+            "source_excerpt": excerpt,
+            "intervention_fragment": fragment_payload,
+        })
+        seen_quote_refs.add(source_quote_id)
+
+    return accepted
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +486,11 @@ async def generate_elaborations(
         tag_names: list[str] = []
         for q in sig.quotes:
             tag_names.extend(q.tag_names)
-        h = compute_content_hash(quote_texts, tag_names)
+        h = compute_content_hash(
+            quote_texts,
+            tag_names,
+            [compute_quote_reference(q) for q in sig.quotes],
+        )
         key_hash_pairs.append((key, h))
         signal_by_key[key] = sig
 
@@ -416,6 +556,10 @@ async def generate_elaborations(
                 signal_name=item.signal_name,
                 pattern=_normalise_pattern(item.pattern),
                 elaboration=item.elaboration,
+                evidence_assertions=_validated_evidence_assertions(
+                    item.evidence_assertions,
+                    uncached_signals[item.signal_index],
+                ),
             )
             cached[key] = elab
             new_entries.append((key, h, elab))

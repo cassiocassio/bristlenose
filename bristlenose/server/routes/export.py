@@ -58,6 +58,7 @@ EMBED_PATH_TEMPLATES: frozenset[str] = frozenset(
         "/projects/{project_id}/video-map",
         "/projects/{project_id}/signals/sentiment",
         "/projects/{project_id}/signals/codebooks",
+        "/projects/{project_id}/signals/snapshot",
         "/projects/{project_id}/framework-states",
         "/projects/{project_id}/hidden-tag-groups",
         "/projects/{project_id}/transcripts/{session_id}",
@@ -483,6 +484,9 @@ def export_report(
     from bristlenose.server.routes.signals import (
         get_sentiment_analysis as _get_sentiment_analysis_handler,
     )
+    from bristlenose.server.routes.signals import (
+        get_stored_signal_snapshot as _get_stored_signal_snapshot_handler,
+    )
     from bristlenose.server.routes.tapestry import get_tapestry as _get_tapestry_handler
     from bristlenose.server.routes.transcript import (
         get_transcript as _get_transcript_handler,
@@ -532,6 +536,7 @@ def export_report(
     codebook_analysis = asyncio.run(
         _get_codebook_analysis_handler(project_id, request, top_n=20, elaborate=False)
     )
+    signal_snapshot = _get_stored_signal_snapshot_handler(project_id, request)
 
     # Transcripts — one embed key per session
     transcripts: dict[str, object] = {}
@@ -580,6 +585,7 @@ def export_report(
         "/video-map": None,
         "/signals/sentiment": jsonable_encoder(sentiment),
         "/signals/codebooks": jsonable_encoder(codebook_analysis),
+        "/signals/snapshot": jsonable_encoder(signal_snapshot),
         "/framework-states": jsonable_encoder(framework_states),
         "/hidden-tag-groups": jsonable_encoder(hidden_tag_groups),
         "/discussion": jsonable_encoder(discussion),

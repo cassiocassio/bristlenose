@@ -343,12 +343,37 @@ async def start_autocode_job(
         # "running"). Discard on completion.
         db_factory = request.app.state.db_factory
         project_dir = request.app.state.project_dir
-        task = asyncio.create_task(
-            run_autocode_job(
+        async def _run_and_snapshot() -> None:
+            await run_autocode_job(
                 db_factory, project_id, framework_id, settings,
                 project_dir=project_dir,
             )
-        )
+            snapshot_db = db_factory()
+            try:
+                completed = snapshot_db.query(AutoCodeJob).filter_by(
+                    project_id=project_id,
+                    framework_id=framework_id,
+                    status="completed",
+                ).first()
+                if completed is None:
+                    return
+                from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+
+                await materialise_completed_signal_snapshot(
+                    snapshot_db,
+                    project_id,
+                    source="codebook_apply",
+                    project_dir=project_dir,
+                )
+            except Exception:
+                # A completed codebook must remain completed if optional signal
+                # synthesis fails; retry happens on the next LLM-backed run.
+                snapshot_db.rollback()
+                logger.exception("Signal snapshot after AutoCode %s failed", framework_id)
+            finally:
+                snapshot_db.close()
+
+        task = asyncio.create_task(_run_and_snapshot())
         _AUTOCODE_TASKS.add(task)
         task.add_done_callback(_AUTOCODE_TASKS.discard)
         key = (project_id, framework_id)

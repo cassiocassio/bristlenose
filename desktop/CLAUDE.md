@@ -1168,10 +1168,17 @@ Build settings must match the app target:
 ### Running tests
 
 ```bash
-xcodebuild test -project desktop/Bristlenose/Bristlenose.xcodeproj -scheme Bristlenose -destination 'platform=macOS'
+desktop/scripts/test-swift.sh
 ```
 
-Or in Xcode: Cmd+U.
+Use this entry point for the full gate. It runs the general suite, then
+`PoolStarvationTimeoutTests` in a separate process: those tests deliberately
+block the shared executor, and `.serialized` does not isolate them from other
+suites. Both invocations must pass and report tests before a green receipt is
+written. Assertions, deadlines and the known saturation issue are unchanged.
+Individual tests can still run in Xcode; a single-process Cmd+U full run can
+reproduce the executor-contention false failure. See
+`docs/design-study-recovery-guard.md` for the 29 October comparison receipts.
 
 **A green `test-swift.sh` deletes its logs, so it cannot show you that a NEW test ran.** With `BN_LOG_DIR` unset it logs to a `mktemp -d` directory and `rm -rf`s it on success, leaving only the `N passed` total. Don't go looking for that directory afterwards: on 30 Sep 2026 the newest `$TMPDIR/tmp.*` holding a `test.log` belonged to *another session's* earlier run, without the tests in question, and read as "my suite never ran". To see your tests by name, pass `BN_LOG_DIR=<dir>` and grep `<dir>/test.log` for `Test case '<Suite>/<name>' passed`. Better still, run it once against a mutant that restores the old behaviour. Exactly your tests going red is proof that they ran *and* that they bite.
 

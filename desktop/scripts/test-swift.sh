@@ -134,7 +134,9 @@ TEST_LOG="$LOG_DIR/test.log"
 # (the SidebarFit harness went red on every Mac Build run for three days with
 # its own trace sitting unread in an .xcresult nobody uploaded).
 RESULT_BUNDLE="$LOG_DIR/BristlenoseTests.xcresult"
-rm -rf "$RESULT_BUNDLE"
+POOL_RESULT_BUNDLE="$LOG_DIR/PoolStarvationTests.xcresult"
+POOL_TEST_LOG="$LOG_DIR/pool-test.log"
+rm -rf "$RESULT_BUNDLE" "$POOL_RESULT_BUNDLE"
 
 DEST='platform=macOS,arch=arm64'
 BYPASS_A=BRISTLENOSE_SKIP_SIDECAR_ENSURE=1
@@ -186,13 +188,34 @@ if [ "$build_rc" -ne 0 ]; then
   exit 3
 fi
 
-[ "$QUIET" -eq 1 ] || echo "==> running BristlenoseTests"
+[ "$QUIET" -eq 1 ] || echo "==> running BristlenoseTests (general)"
 test_rc=0
 env "$BYPASS_A" xcodebuild test-without-building \
     -scheme Bristlenose -destination "$DEST" \
     -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
     -only-testing:BristlenoseTests -resultBundlePath "$RESULT_BUNDLE" \
+    -skip-testing:BristlenoseTests/PoolStarvationTimeoutTests \
     ${SIGNING[@]+"${SIGNING[@]}"} ${DD[@]+"${DD[@]}"} > "$TEST_LOG" 2>&1 || test_rc=$?
+
+# These tests deliberately block the cooperative executor. Swift Testing's
+# .serialized orders their two cases, not unrelated suites sharing that pool.
+# Keep their control/deadlines/known issue unchanged, but give the measurement
+# its own process. BOTH invocations must pass before any green receipt exists.
+[ "$QUIET" -eq 1 ] || echo "==> running executor-saturation tests (separate process)"
+env "$BYPASS_A" xcodebuild test-without-building \
+    -scheme Bristlenose -destination "$DEST" \
+    -project "$PROJECT_DIR/Bristlenose.xcodeproj" \
+    -only-testing:BristlenoseTests/PoolStarvationTimeoutTests \
+    -resultBundlePath "$POOL_RESULT_BUNDLE" \
+    ${SIGNING[@]+"${SIGNING[@]}"} ${DD[@]+"${DD[@]}"} > "$POOL_TEST_LOG" 2>&1 || test_rc=$?
+
+# Preserve a combined human-readable log while independently checking that
+# each invocation actually ran tests (a stale filter must not look green).
+set +e
+general_passed=$(grep -oE "' passed on" "$TEST_LOG" | wc -l | tr -d ' ')
+pool_passed=$(grep -oE "' passed on" "$POOL_TEST_LOG" | wc -l | tr -d ' ')
+set -e
+cat "$POOL_TEST_LOG" >> "$TEST_LOG"
 
 # `grep` exits 1 when it matches nothing, so under `set -e` + `pipefail` a suite
 # with ZERO failures kills the script — exit 1, no output, indistinguishable from
@@ -210,13 +233,15 @@ if [ "$failed" -gt 0 ]; then
   # Each failure's own message, from the result bundle. Best effort: the verdict
   # above is already decided, so a missing tool or bundle only costs the detail.
   if [ -d "$RESULT_BUNDLE" ] && command -v python3 >/dev/null 2>&1; then
-    echo "--- failure messages (from $(basename "$RESULT_BUNDLE")):" >&2
-    xcrun xcresulttool get test-results summary --path "$RESULT_BUNDLE" 2>/dev/null \
+    for bundle in "$RESULT_BUNDLE" "$POOL_RESULT_BUNDLE"; do
+      echo "--- failure messages (from $(basename "$bundle")):" >&2
+      xcrun xcresulttool get test-results summary --path "$bundle" 2>/dev/null \
       | python3 -c 'import json,sys
 for f in json.load(sys.stdin).get("testFailures", []):
     name = f.get("testIdentifierString") or f.get("testName")
     print("  %s: %s" % (name, f.get("failureText", "")))' >&2 \
-      || echo "  (could not read the result bundle)" >&2
+        || echo "  (could not read the result bundle)" >&2
+    done
   fi
   exit 1
 fi
@@ -230,7 +255,7 @@ if [ "$test_rc" -ne 0 ]; then
   exit 1
 fi
 
-if [ "$passed" -eq 0 ]; then
+if [ "$general_passed" -eq 0 ] || [ "$pool_passed" -eq 0 ]; then
   echo "no test verdicts in output — nothing ran, or the reporter changed" >&2
   tail -30 "$TEST_LOG" >&2
   exit 1

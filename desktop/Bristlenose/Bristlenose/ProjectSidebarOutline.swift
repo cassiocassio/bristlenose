@@ -156,6 +156,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// whose document failed and no other. Nil the rest of the time. Value-
     /// typed so a crash, and its clearing, re-run `updateNSViewController`.
     let reportCrash: (projectID: UUID, crash: ReportCrash)?
+    var startupRefusals: [UUID: StudyStartupRefusal] = [:]
     /// Per-window "begin rename on the sole selected row", bumped by the
     /// menu-bar Project ▸ Rename items via this window's `WindowCommandSink`.
     ///
@@ -209,6 +210,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.mcpMounted = mcpMounted
         controller.handshakeProjectPaths = handshakeProjectPaths
         controller.reportCrash = reportCrash
+        controller.startupRefusals = startupRefusals
         controller.exportingReportProjectID = exportingReportProjectID
         controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
@@ -293,6 +295,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// The window's report crash and the study it belongs to — see the
     /// representable's `reportCrash`.
     var reportCrash: (projectID: UUID, crash: ReportCrash)?
+    var startupRefusals: [UUID: StudyStartupRefusal] = [:]
     /// See the representable's `exportingReportProjectID`.
     var exportingReportProjectID: UUID?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
@@ -1346,10 +1349,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // path (the two payload types are mutually exclusive on the pasteboard).
         if pasteboardHasFileURLs(info.draggingPasteboard) {
             guard let target = externalDropTarget(item: item) else { return [] }
+            let urls = readFileURLs(from: info.draggingPasteboard)
             // Nothing in the drag that a study can take (a PDF, a zip, a
             // Keynote): refuse it here, where the pointer says so, rather than
             // accept it and have the drop handlers discard every file (R48).
-            guard Self.acceptsFinderFiles(readFileURLs(from: info.draggingPasteboard)) else {
+            guard Self.acceptsFinderFiles(urls) else {
                 return []
             }
             // Answer during the drag, not after it. Returning `[]` makes AppKit
@@ -1363,6 +1367,23 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                !Self.acceptsFinderDrop(
                    state: pipelineRunner?.state[id],
                    folder: projectIndex?.projects.first(where: { $0.id == id })?.path ?? "") {
+                return []
+            }
+            if case .project = target, copyMachinery?.inFlight != nil {
+                // One global copy batch at a time. Returning [] is the native
+                // answer; `CopyMachinery` repeats the guard for the race.
+                return []
+            }
+            // A populated study takes source material, not another BN study.
+            // Keep this hover decision deliberately shallow and bounded; the
+            // release handler performs the full bounded resolver for nested
+            // wrappers, where a late refusal is still safe.
+            if case .project(let id) = target,
+               let project = projectIndex?.projects.first(where: { $0.id == id }),
+               !project.path.isEmpty,
+               SidebarFinderDrop.quicklyContainsProject(
+                   urls, folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
+               ) {
                 return []
             }
             // Retarget the highlight to match where the drop will actually land:
@@ -1595,7 +1616,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// folder, or a file of a type the pipeline ingests. The same filter the
     /// handlers apply (`ContentView.filterAcceptedURLs`), asked before the drop.
     static func acceptsFinderFiles(_ urls: [URL]) -> Bool {
-        !ContentView.filterAcceptedURLs(urls).isEmpty
+        SidebarFinderDrop.quicklyMayContain(
+            urls, acceptedExtensions: ContentView.acceptedExtensions
+        )
     }
 
     private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {
@@ -2057,6 +2080,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },
             reportCrash: reportCrash.flatMap { $0.projectID == id ? $0.crash : nil },
+            startupRefusal: startupRefusals[id],
             lastRunAt: project.lastPipelineRunAt,
             missingCount: projectIndex?.unanalysed[id]?.missingFiles.count ?? 0,
             unanalysedCount: projectIndex?.unanalysed[id]?.newFiles.count ?? 0,
@@ -2153,8 +2177,15 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // variant and the state falls back to `.idle` beside it.
         let crash: ReportCrash?
         if case .reportError(let c) = subtitleVariant(for: project) { crash = c } else { crash = nil }
-        guard let state = ReportCrash.popoverState(pipelineState: pipelineRunner?.state[id], crash: crash)
-        else { return }
+        let refusal = startupRefusals[id]
+        let state: PipelineState
+        if refusal != nil {
+            state = .idle
+        } else {
+            guard let current = ReportCrash.popoverState(pipelineState: pipelineRunner?.state[id], crash: crash)
+            else { return }
+            state = current
+        }
         // No frame, no padding: the popover owns its own size. The hosting
         // controller reports it through `fittingSize`, which is what NSPopover
         // sizes from — `.preferredContentSize` set explicitly so the controller
@@ -2167,7 +2198,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                 self?.onLocate(id)
             },
             closePopover: { [weak self] in self?.activePopover?.close() },
-            reportCrash: crash)
+            reportCrash: crash, startupRefusalOverride: refusal)
             .environmentObject(i18n)
         let host = NSHostingController(rootView: content)
         host.sizingOptions = .preferredContentSize

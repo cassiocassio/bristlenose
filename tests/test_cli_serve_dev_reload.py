@@ -49,7 +49,6 @@ def test_dev_reloader_watches_the_package_only(project: Path, monkeypatch: pytes
     """From the repo root uvicorn's default watches everything, and a sidecar rebuild under
     desktop/Bristlenose/Resources/ restarted the dev server dozens of times (12 Oct 2026)."""
     calls: list[dict[str, object]] = []
-    monkeypatch.setattr(cli, "_auto_render", lambda p: None)
     monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: None)
     monkeypatch.setattr(subprocess, "Popen", _NoProc)
     import uvicorn
@@ -75,7 +74,6 @@ def test_a_mac_build_does_not_restart_the_dev_server(project: Path, monkeypatch:
     from uvicorn.supervisors.watchfilesreload import FileFilter
 
     calls: list[dict[str, object]] = []
-    monkeypatch.setattr(cli, "_auto_render", lambda p: None)
     monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: None)
     monkeypatch.setattr(subprocess, "Popen", _NoProc)
     import uvicorn

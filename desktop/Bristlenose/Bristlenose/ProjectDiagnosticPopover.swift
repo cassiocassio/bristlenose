@@ -38,6 +38,7 @@ struct ProjectDiagnosticPopover: View {
     /// `.idle` stand-in from `ReportCrash.popoverState`, so no header button
     /// may key on `.idle`.
     var reportCrash: ReportCrash? = nil
+    var startupRefusalOverride: StudyStartupRefusal? = nil
     @EnvironmentObject var i18n: I18n
     @Environment(\.dismiss) private var dismiss
 
@@ -88,22 +89,28 @@ struct ProjectDiagnosticPopover: View {
         .padding(Self.inset)
     }
 
+    private var startupRefusal: StudyStartupRefusal? {
+        if let startupRefusalOverride { return startupRefusalOverride }
+        if case .failed(let message, _) = state { return message.startupRefusal }
+        return nil
+    }
+
     private var header: some View {
         HStack(spacing: 8) {
             Text(headlineStatus).font(.headline)
             Spacer()
-            if state.needsFolderAccess, let onLocate {
+            if startupRefusal == nil, state.needsFolderAccess, let onLocate {
                 Button(i18n.t("desktop.chrome.locate")) { onLocate() }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-            } else if state.needsProvider {
+            } else if startupRefusal == nil, state.needsProvider {
                 Button(i18n.t("desktop.pipeline.diagnostic.action.setUpProvider")) {
                     closePopover?()
                     SettingsWindow.shared.show(pane: .llm)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-            } else if FileManager.default.fileExists(
+            } else if startupRefusal == nil, FileManager.default.fileExists(
                 atPath: PipelineRunner.logFileURL(for: project).path
             ) {
                 Button(i18n.t("desktop.pipeline.diagnostic.action.showLog")) {
@@ -116,7 +123,11 @@ struct ProjectDiagnosticPopover: View {
             Button {
                 copyDiagnosticForCurrentState()
             } label: {
-                Image(systemName: "doc.on.doc")
+                if startupRefusal != nil {
+                    Text(i18n.t("desktop.pipeline.diagnostic.action.copy"))
+                } else {
+                    Image(systemName: "doc.on.doc")
+                }
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -147,13 +158,15 @@ struct ProjectDiagnosticPopover: View {
     /// ("the affordance promises something it doesn't deliver"). `.unreachable`
     /// became clickable on 26 Aug 2026 and this switch is why it isn't empty.
     private var headlineStatus: String {
+        if let startupRefusal { return startupRefusal.headline(using: i18n) }
         if reportCrash != nil {
             // The row's key, so the two cannot disagree (as "Run failed").
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         }
         switch state {
-        case .failed:
-            return i18n.t("desktop.pipeline.status.headline.failed")
+        case .failed(let message, _):
+            return message.startupRefusal?.headline(using: i18n)
+                ?? i18n.t("desktop.pipeline.status.headline.failed")
         case .completedPartial:
             return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
         case .failedWithDiagnostic:
@@ -168,7 +181,14 @@ struct ProjectDiagnosticPopover: View {
 
     @ViewBuilder
     private func popoverBodyForCurrentState() -> some View {
-        if let reportCrash {
+        if let startupRefusal {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(startupRefusal.detail(using: i18n))
+                Text(startupRefusal.consequence(using: i18n))
+            }
+            .font(.callout)
+            .textSelection(.enabled)
+        } else if let reportCrash {
             reportCrashBody(reportCrash)
         } else {
             popoverBodyForPipelineState()
@@ -203,7 +223,16 @@ struct ProjectDiagnosticPopover: View {
         case .completedPartial(let summary), .failedWithDiagnostic(let summary):
             bucketsBody(summary: summary)
         case .failed(let message, let category):
-            degradedBody(message: message, category: category)
+            if let refusal = message.startupRefusal {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(refusal.detail(using: i18n))
+                    Text(refusal.consequence(using: i18n))
+                }
+                .font(.callout)
+                .textSelection(.enabled)
+            } else {
+                degradedBody(message: message, category: category)
+            }
         case .unreachable(let reason):
             unreachableBody(reason: reason)
         case .scanning, .idle, .queued, .running, .ready, .partial, .stopped:
@@ -354,6 +383,12 @@ struct ProjectDiagnosticPopover: View {
     /// native Mac pattern (Finder, Safari Copy URL). Dispatches on `state`.
     private func copyDiagnosticForCurrentState() {
         let text: String
+        if let startupRefusal {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString("Study: \(project.name)\n" + startupRefusal.diagnosticDetails, forType: .string)
+            return
+        }
         if let reportCrash {
             text = Self.formatReportCrashPlaintext(
                 crash: reportCrash, projectName: project.name, projectPath: project.path

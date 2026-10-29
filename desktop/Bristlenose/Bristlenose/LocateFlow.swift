@@ -58,7 +58,7 @@ final class LocateFlow {
     }
 
     /// Name of the marker subdirectory that identifies a Bristlenose project root.
-    static let outputMarker = "bristlenose-output"
+    nonisolated static let outputMarker = "bristlenose-output"
 
     /// Files inside `bristlenose-output/` that signal a real analysed project.
     /// At least one of these must exist — defeats the "empty marker dir
@@ -69,7 +69,7 @@ final class LocateFlow {
     /// the moment a run starts, so its presence is a "looks started" not
     /// "looks analysed" signal. Requiring the manifest file matches what
     /// `PipelineRunner.readManifestState` reads.
-    static let outputArtefacts = [".bristlenose/pipeline-manifest.json"]
+    nonisolated static let outputArtefacts = [".bristlenose/pipeline-manifest.json"]
 
     private let project: Project
     private let spotlight: any LocateSearching
@@ -90,7 +90,7 @@ final class LocateFlow {
     /// contains `bristlenose-output/` AND at least one canonical artefact
     /// inside. Exposed as a static so the retry path (Choose Different…
     /// alert button) can reuse the same check.
-    static func folderLooksAnalysed(url: URL) -> Bool {
+    nonisolated static func folderLooksAnalysed(url: URL) -> Bool {
         let outputDir = url.appendingPathComponent(outputMarker, isDirectory: true)
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: outputDir.path, isDirectory: &isDir),

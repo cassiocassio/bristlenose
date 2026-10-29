@@ -29,7 +29,8 @@ enum SidebarSubtitleText {
         case .cantFind:
             // Text + glyph both derive from `availability` (`:234`).
             return availability.subtitle(using: i18n)
-        case .failed:
+        case .failed(let message):
+            if let refusal = message.startupRefusal { return refusal.headline(using: i18n) }
             // **Not the summary.** `.failed` used to pass Python's raw sentence
             // straight through — "All topic segmentation calls failed." is 36
             // chars against a ~22-char row budget, so it truncated mid-phrase in

@@ -203,6 +203,16 @@
     --bn-space-md: 0.75rem;
     --bn-space-lg: 1.5rem;
     --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
 
     /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
        the same in light and dark; the dark text reads on it in both modes. */

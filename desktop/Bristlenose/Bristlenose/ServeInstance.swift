@@ -37,7 +37,12 @@ final class ServeInstance: ObservableObject {
         didSet {
             if case .running = state, startedByRetry { startedByRetry = false }
             switch state {
-            case .failed(let message): confirmedStartupRefusal = message.startupRefusal
+            case .failed(let message):
+                // A generic sidecar-start failure does not tell us that the
+                // protected study's foreign/uncertain attempt resolved. Keep
+                // the most specific confirmed project fact until a new
+                // startup refusal replaces it or admission succeeds.
+                if let refusal = message.startupRefusal { confirmedStartupRefusal = refusal }
             case .running: confirmedStartupRefusal = nil
             case .idle, .starting: break
             }
@@ -45,8 +50,9 @@ final class ServeInstance: ObservableObject {
     }
 
     /// A process teardown when switching studies does not resolve the study's
-    /// refusal. Keep its confirmed cause until a new attempt is admitted or
-    /// reports another failure. This is display state, never admission authority.
+    /// refusal. Keep its confirmed cause until a new attempt is admitted or a
+    /// fresh startup refusal confirms a replacement. This is display state,
+    /// never admission authority.
     /// Mutated only by the published `state` observer above, so that single
     /// notification covers both values without publishing a second change.
     private(set) var confirmedStartupRefusal: StudyStartupRefusal?

@@ -61,7 +61,9 @@ Probe errors/timeouts keep the refusal; superseded completions cannot clear it.
 failed” after selecting a second study. ContentView tears down the outgoing
 serve, and its process-state reset had erased the confirmed refusal used by the
 sidebar. Commit d8b5c8c51 retains that display-only cause through idle/starting;
-admission or a new ordinary failure replaces it. This does not affect admission
+admission or a newly confirmed startup refusal replaces it. An unrelated sidecar
+failure is not evidence that the protected study became safe, so it preserves the
+more specific refusal. This does not affect admission
 authority or add persistence to disk. New fleet/manager regressions cover switching
 and clearing. An initial full run caught duplicate observer notifications; the
 cache now changes only inside the already-published state observer, preserving
@@ -72,6 +74,20 @@ new output cannot fail a starting attempt until its own exit75. Final full gate:
 `/tmp/bn-startup-row-retention-exit-final-runner.log`. Both QA studies/backups remain
 byte-identical. The QA launcher app is rebuilt for owner retest; earlier static
 visual checks did not cover this transition. No visible UX redesign was made.
+
+**Sidebar status truth invariant:** a project row is a projection of the most
+specific, best-supported current fact known for that project — never of whether
+it is selected, whether its sidecar is currently alive, or which pane happens to
+have focus. A confirmed startup refusal therefore continues to read **Started on
+another Mac** (or **Activity not confirmed**) through the outgoing sidecar's
+idle/starting lifecycle. Selection changes and process teardown are not evidence
+that the underlying foreign/uncertain attempt ended. A newly admitted serve or a
+new confirmed startup refusal may supersede the retained cause; an unrelated
+sidecar-start error cannot. Ordinary sidebar
+precedence still lets an unavailable folder win. The regression must assert the
+rendered AppKit sidebar text and warning glyph after switching away, not only the
+manager cache, so a future state-owner change cannot reintroduce the generic
+**Run failed** fallback.
 
 ## Merge-readiness verification — 29 October
 

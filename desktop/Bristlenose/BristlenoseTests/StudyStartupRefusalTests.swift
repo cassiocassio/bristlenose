@@ -75,19 +75,40 @@ struct StudyStartupRefusalTerminationTests {
         fleet.front(second)
         #expect(manager.state == .idle)
         #expect(fleet.startupRefusals[first] == facts)
+        // The actual sidebar path must keep the fact that made the pane say
+        // "Started on another Mac", rather than falling back to the generic
+        // failed-run label merely because this study is no longer selected.
+        let row = ProjectSubtitle.resolve(
+            availability: .ready,
+            pipelineState: .failed(.passthrough("sidecar stopped"), category: .unknown),
+            isStopping: false,
+            addingCount: nil,
+            copy: nil,
+            importBatch: nil,
+            startupRefusal: fleet.startupRefusals[first],
+            lastRunAt: nil,
+            missingCount: 0,
+            unanalysedCount: 0
+        )
+        #expect(row.glyphKind == .warning)
+        #expect(row.glyphAction == .diagnostics)
+        #expect(SidebarSubtitleText.text(for: row, availability: .ready,
+                                         progress: nil, i18n: I18n())
+            == "Started on another Mac")
         manager.state = .starting
         #expect(fleet.startupRefusals[first] == facts)
         manager.state = .running(port: 9998)
         #expect(fleet.startupRefusals[first] == nil)
     }
 
-    @Test("A new ordinary failure replaces a retained refusal")
-    func newFailureReplacesRefusal() {
+    @Test("An unrelated sidecar failure does not erase the most specific project cause")
+    func unrelatedFailurePreservesRefusal() {
         let manager = ServeManager(resolvedMode: .success(.external(port: 9998)))
-        manager.state = .failed(error: StudyStartupRefusal.unverified.failureMessage)
+        let refusal = StudyStartupRefusal.unverified
+        manager.state = .failed(error: refusal.failureMessage)
         manager.stop()
         manager.state = .failed(error: FailureMessage(english: "New startup failure"))
-        #expect(manager.startupRefusal == nil)
+        #expect(manager.startupRefusal == refusal)
     }
 
     @Test("Retry admission callback runs once, only after the server is ready")

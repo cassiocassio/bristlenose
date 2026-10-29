@@ -60,6 +60,24 @@ struct PlaceholderDropTests {
                 == .existing(held.id))
     }
 
+    @Test func anAnalysedFolderAnotherRowHoldsIsStillThatRowsDrop() throws {
+        let (index, tempDir) = ProjectIndexTests.makeTempIndex()
+        defer { ProjectIndexTests.cleanup(tempDir) }
+        let folder = tempDir.appendingPathComponent("analysed")
+        let marker = folder
+            .appendingPathComponent("bristlenose-output")
+            .appendingPathComponent(".bristlenose")
+        try FileManager.default.createDirectory(at: marker, withIntermediateDirectories: true)
+        try Data().write(to: marker.appendingPathComponent("pipeline-manifest.json"))
+        #expect(LocateFlow.folderLooksAnalysed(url: folder))
+
+        let held = index.addProject(name: "Analysed", path: folder.path)
+        let placeholder = index.addProject(name: "New Project", path: "")
+
+        #expect(PlaceholderDrop.resolve(folder: folder, placeholder: placeholder.id, in: index)
+                == .existing(held.id))
+    }
+
     @Test func theSameFolderUnderAnotherSpellingIsStillHeld() throws {
         let (index, tempDir) = ProjectIndexTests.makeTempIndex()
         defer { ProjectIndexTests.cleanup(tempDir) }

@@ -70,6 +70,27 @@ struct StudyFinderDropTests {
         #expect(StudyFinderDrop.takesDrop(state: state, folder: "", urls: [Self.pdf, Self.video]))
     }
 
+    /// A populated project is not a merge target. SwiftUI cannot change its
+    /// hover cursor on the supported macOS floor, but release must still
+    /// refuse a direct project; wrappers are classified off-main after release.
+    @MainActor @Test func aFreeStudyRefusesADirectOrShallowWrappedBNProject() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BristlenoseTests-study-drop-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let project = root.appendingPathComponent("Imported", isDirectory: true)
+        let marker = project
+            .appendingPathComponent("bristlenose-output/.bristlenose", isDirectory: true)
+        try FileManager.default.createDirectory(at: marker, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: marker.appendingPathComponent("pipeline-manifest.json"))
+        try #require(LocateFlow.folderLooksAnalysed(url: project))
+
+        #expect(!StudyFinderDrop.takesDrop(state: .idle, folder: "/tmp/target", urls: [project]))
+        // Wrappers require off-main discovery after release; hover never lists.
+        #expect(StudyFinderDrop.takesDrop(state: .idle, folder: "/tmp/target", urls: [root]))
+        #expect(StudyFinderDrop.takesDrop(state: .idle, folder: "", urls: [project]))
+        #expect(StudyFinderDrop.takesDrop(state: .idle, folder: "", urls: [root]))
+    }
+
     // MARK: - Decision #100: a study being analysed takes files
 
     @MainActor @Test(arguments: analysing)

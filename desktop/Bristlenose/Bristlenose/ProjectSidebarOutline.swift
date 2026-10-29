@@ -1349,10 +1349,11 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // path (the two payload types are mutually exclusive on the pasteboard).
         if pasteboardHasFileURLs(info.draggingPasteboard) {
             guard let target = externalDropTarget(item: item) else { return [] }
+            let urls = readFileURLs(from: info.draggingPasteboard)
             // Nothing in the drag that a study can take (a PDF, a zip, a
             // Keynote): refuse it here, where the pointer says so, rather than
             // accept it and have the drop handlers discard every file (R48).
-            guard Self.acceptsFinderFiles(readFileURLs(from: info.draggingPasteboard)) else {
+            guard Self.acceptsFinderFiles(urls) else {
                 return []
             }
             // Answer during the drag, not after it. Returning `[]` makes AppKit
@@ -1366,6 +1367,23 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
                !Self.acceptsFinderDrop(
                    state: pipelineRunner?.state[id],
                    folder: projectIndex?.projects.first(where: { $0.id == id })?.path ?? "") {
+                return []
+            }
+            if case .project = target, copyMachinery?.inFlight != nil {
+                // One global copy batch at a time. Returning [] is the native
+                // answer; `CopyMachinery` repeats the guard for the race.
+                return []
+            }
+            // A populated study takes source material, not another BN study.
+            // Keep this hover decision deliberately shallow and bounded; the
+            // release handler performs the full bounded resolver for nested
+            // wrappers, where a late refusal is still safe.
+            if case .project(let id) = target,
+               let project = projectIndex?.projects.first(where: { $0.id == id }),
+               !project.path.isEmpty,
+               SidebarFinderDrop.quicklyContainsProject(
+                   urls, folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
+               ) {
                 return []
             }
             // Retarget the highlight to match where the drop will actually land:
@@ -1598,7 +1616,9 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// folder, or a file of a type the pipeline ingests. The same filter the
     /// handlers apply (`ContentView.filterAcceptedURLs`), asked before the drop.
     static func acceptsFinderFiles(_ urls: [URL]) -> Bool {
-        !ContentView.filterAcceptedURLs(urls).isEmpty
+        SidebarFinderDrop.quicklyMayContain(
+            urls, acceptedExtensions: ContentView.acceptedExtensions
+        )
     }
 
     private func externalDropTarget(item: Any?) -> SidebarExternalDrop? {

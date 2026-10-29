@@ -134,6 +134,31 @@ struct SidebarOutlineDropAndRevealTests {
         #expect(validate(rig, [pdf], onto: item) == [])
     }
 
+    /// AppKit gives the stronger half of the structural refusal: no row
+    /// highlight and the native prohibited cursor before release. Limit this
+    /// to direct projects by design — any directory inspection belongs
+    /// to `SidebarFinderDrop.resolve` after a drop, not to validateDrop.
+    @Test func aStudyRefusesADirectOrShallowWrappedBNProjectDuringTheDrag() throws {
+        let rig = OutlineRig(); defer { rig.cleanup() }
+        let study = rig.index.addProject(name: "Target", path: rig.tempDir.path)
+        let imported = rig.tempDir.appendingPathComponent("Imported", isDirectory: true)
+        let marker = imported
+            .appendingPathComponent("bristlenose-output/.bristlenose", isDirectory: true)
+        try FileManager.default.createDirectory(at: marker, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: marker.appendingPathComponent("pipeline-manifest.json"))
+        try #require(LocateFlow.folderLooksAnalysed(url: imported))
+        rig.publish()
+        let item = rig.outlineView.item(atRow: try #require(rig.row(of: study.id)))
+
+        #expect(validate(rig, [imported], onto: item) == [])
+        let wrapper = URL(fileURLWithPath: rig.tempDir.path, isDirectory: true)
+        #expect(validate(rig, [wrapper], onto: item) == .copy)
+        let placeholder = rig.index.addProject(name: "New Project", path: "")
+        rig.publish()
+        let emptyItem = rig.outlineView.item(atRow: try #require(rig.row(of: placeholder.id)))
+        #expect(validate(rig, [imported], onto: emptyItem) == .copy)
+    }
+
     @Test func aRecordingOrAFolderIsStillTaken() {
         let rig = OutlineRig(); defer { rig.cleanup() }
         rig.publish()

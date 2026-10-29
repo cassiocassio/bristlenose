@@ -46,6 +46,24 @@ struct StudyStartupRefusalTests {
 @MainActor
 @Suite("Study startup refusal termination")
 struct StudyStartupRefusalTerminationTests {
+    @Test("Retained display facts do not confirm a new attempt before its refusal exit")
+    func retryStillRequiresExit() {
+        let manager = ServeManager(resolvedMode: .success(.external(port: 9998)))
+        let old = StudyStartupRefusal(reason: .foreign, machineName: "Home Mac", startedAt: nil)
+        manager.state = .failed(error: old.failureMessage)
+        manager.stop()
+        let process = Process()
+        manager.instance.process = process
+        manager.state = .starting
+        manager.handleLine(StudyStartupRefusal.prefix
+            + #"{"reason":"unverified_unfinished","machine_name":null,"started_at":null}"#,
+            fromProcessID: ObjectIdentifier(process))
+        #expect(manager.state == .starting)
+        #expect(manager.startupRefusal == old)
+        manager.handleTermination(processID: ObjectIdentifier(process), status: StudyStartupRefusal.exitCode)
+        #expect(manager.startupRefusal == .unverified)
+    }
+
     @Test("Switching studies keeps the original row's confirmed refusal until a new result")
     func refusalSurvivesSwitch() {
         let fleet = ServeFleet(makeManager: { ServeManager(resolvedMode: .success(.external(port: 9998))) })

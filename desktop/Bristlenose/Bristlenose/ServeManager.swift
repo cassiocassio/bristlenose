@@ -1615,7 +1615,7 @@ final class ServeManager: ObservableObject {
         return BristlenoseShared.redactKeys(in: clean)
     }
 
-    private func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
+    func handleLine(_ line: String, fromProcessID procID: ObjectIdentifier) {
         let clean = Self.ansiRegex.stringByReplacingMatches(
             in: line,
             range: NSRange(line.startIndex..., in: line),
@@ -1643,7 +1643,9 @@ final class ServeManager: ObservableObject {
             instance.pendingStartupRefusal = refusal
             // Termination may beat the final pipe read. Enrich an already
             // confirmed refusal, but never let an arbitrary output line fail a run.
-            if startupRefusal != nil { state = .failed(error: refusal.failureMessage) }
+            if case .failed(let current) = state, current.startupRefusal != nil {
+                state = .failed(error: refusal.failureMessage)
+            }
             return
         }
 

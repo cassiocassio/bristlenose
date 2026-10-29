@@ -21,8 +21,15 @@ struct SidebarFinderDropTests {
         try Data().write(to: recording)
 
         let result = SidebarFinderDrop.resolve([root], acceptedExtensions: ["mov"],
-            folderLooksAnalysed: { $0.standardizedFileURL == project.standardizedFileURL })
-        #expect(result == .projects([project]))
+            folderLooksAnalysed: { ScanSelection.realPath($0.path) == ScanSelection.realPath(project.path) })
+        guard case .projects(let found) = result else {
+            Issue.record("Expected projects, got \(result)"); return
+        }
+        // FileManager can enumerate /var through /private/var. Compare actual
+        // filesystem locations, retaining payload-kind and multiplicity checks.
+        #expect(found.count == 1)
+        #expect(found.map { ScanSelection.realPath($0.path) }
+            == [ScanSelection.realPath(project.path)])
     }
 
     @Test func severalProjectsInOneWrapperAreAllClassifiedForRegistration() throws {
@@ -38,12 +45,16 @@ struct SidebarFinderDropTests {
 
         let result = SidebarFinderDrop.resolve([root], acceptedExtensions: ["mov"],
             folderLooksAnalysed: { candidate in
-                projects.contains { $0.standardizedFileURL == candidate.standardizedFileURL }
+                projects.contains {
+                    ScanSelection.realPath($0.path) == ScanSelection.realPath(candidate.path)
+                }
             })
         guard case .projects(let found) = result else {
             Issue.record("Expected projects, got \(result)"); return
         }
-        #expect(Set(found) == Set(projects))
+        #expect(found.count == projects.count)
+        #expect(Set(found.map { ScanSelection.realPath($0.path) })
+            == Set(projects.map { ScanSelection.realPath($0.path) }))
     }
 
     @Test func mixedMediaAndIrrelevantFilesRemainASourceDrop() throws {

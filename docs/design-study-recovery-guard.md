@@ -1,7 +1,7 @@
 ---
 status: current
 last-trued: 2026-10-29
-trued-against: working tree on codex/study-recovery-guard, 2026-10-29
+trued-against: combined recovery/status source on codex/sidebar-status-separated, 2026-10-29
 updated: 2026-10-29
 scope: R114 / reliability 179; machine-owned recovery and fresh-start refusal
 ---
@@ -90,6 +90,39 @@ manager cache, so a future state-owner change cannot reintroduce the generic
 **Run failed** fallback.
 
 ## Merge-readiness verification — 29 October
+
+**Combined recovery/status review, 29 October:** the isolated
+`codex/sidebar-status-separated` source combines the reduced guard with retained
+sidebar-cause precedence. Source review checked that selection/teardown and generic
+sidecar failure cannot erase the confirmed cause, readiness clears it, replacement
+metadata requires the current owned attempt's exit75, and display retention grants
+no admission authority. This pass was coordinator self-review; earlier independent
+reviews remain recorded separately. No new UX or reader activation.
+
+Fresh official native gate: **2,836 passed, zero failed**, exit0;
+`/private/tmp/bn-recovery-status-combined-native-final-runner.log` and xcresults in
+`/private/tmp/bn-recovery-status-combined-native-final/`. Fresh-worktree first build
+failed to discover generated build info; standard generation/rebuild resolved it.
+A sidebar session's independently started native gate overlapped the run; both
+completed green in separate DerivedData. No failed tests were excluded.
+
+Expanded combined Python selection: **343 passed, 2 expected failures**, exit0,
+57.33s; `/private/tmp/bn-recovery-status-python-final.log`. Covers startup, other-Mac,
+identity, lifecycle, clean reanalysis, CLI paths/dev reload, serve degradation,
+runner contract, backup/discard, backup CLI wiring and server lifecycle. The broader
+backup wiring run initially exposed five schema-invalid/ownerless fixtures. They
+now use valid lifecycle records and positive local ownership for recovery; a new
+ownerless-gap test explicitly asserts exit75, no pipeline call and byte preservation.
+The shared invoke helper rejects accidental startup refusal, avoiding vacuous
+report-preservation passes. Production admission was not weakened. Scoped Ruff,
+shell syntax and git whitespace checks pass. Full Python suite and fresh native
+visual QA were not repeated; prior approved native visuals remain the presentation
+receipt, supplemented here by the actual row text/glyph transition regression.
+
+Integration is owner-authorized through a clean checkout of main. The original
+shared Signals checkout, other isolated lanes and the deferred reader pilot must
+remain untouched. Merge is local only, not push/release.
+
 
 The latest full repository entry point is green: **2,836 native tests passed, zero
 failed** (`/tmp/bn-startup-row-retention-exit-final-runner.log`). The earlier pre-owner-QA

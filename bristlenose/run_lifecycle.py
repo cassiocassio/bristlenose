@@ -68,6 +68,7 @@ from bristlenose.i18n import t_in
 from bristlenose.llm import telemetry
 from bristlenose.llm.failure_classifier import LLMFailureKind as _LLMFailureKind
 from bristlenose.utils.fs import open_private
+from bristlenose.utils.machine_identity import friendly_machine_name, machine_id
 
 PID_FILENAME = "run.pid"
 
@@ -450,7 +451,7 @@ def _win_start_time(pid: int) -> str | None:
 
 
 def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
-    """Atomic-write ``run.pid`` with our (pid, start_time, run_id).
+    """Atomic-write ``run.pid`` with process identity and stable machine ownership.
 
     Mode 0o600 + O_NOFOLLOW + O_TRUNC: refuses to follow a symlink-attacked
     target and limits readability to the project's owner. Defensive default
@@ -462,7 +463,11 @@ def _write_pid_file(output_dir: Path, run_id: str, start_time: str) -> Path:
         "pid": os.getpid(),
         "start_time": start_time,
         "run_id": run_id,
+        "machine_id": machine_id(),
     }
+    name = friendly_machine_name()
+    if name is not None:
+        payload["machine_name"] = name
     tmp = path.with_suffix(".tmp")
     fd = open_private(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
     try:
@@ -489,7 +494,7 @@ def _read_pid_file(output_dir: Path) -> dict[str, Any] | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return None
     # Valid JSON that is not an object is as unreadable as invalid JSON:
     # callers `.get` on the result.
@@ -1024,6 +1029,7 @@ def run_lifecycle(
     kind: KindEnum,
     *,
     install_signal_handlers: bool = True,
+    _startup_checked: bool = False,
 ) -> Iterator[RunHandle]:
     """Wrap a CLI command body with run-level event-log discipline.
 
@@ -1043,6 +1049,13 @@ def run_lifecycle(
         - On other exceptions: appends ``run_failed`` with categorised
           cause, removes PID file, re-raises.
     """
+    from bristlenose.utils.study_startup import require_study_startup
+
+    # CLI run checks before its intentional output-to-backup preparation.
+    # Rechecking that owned in-process gap would refuse a normal Re-analyse.
+    if not _startup_checked:
+        require_study_startup(output_dir)
+
     global _caught_signal, _hosted_backstop
     # This run has not been signalled: a signal recorded before it (an earlier
     # run in this process) must not make its failure read as a cancel.

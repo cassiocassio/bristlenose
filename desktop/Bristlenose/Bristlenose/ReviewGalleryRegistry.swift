@@ -20,6 +20,49 @@ import SwiftUI
 /// names a gone commit or a view that no longer builds fails a test rather than
 /// rotting quietly.
 struct ReviewGalleryEntry: Identifiable {
+    /// The UX-review conclusion for this entry. This is deliberately review
+    /// metadata, not a product-facing state contract: the gallery is where we
+    /// make and revise the human judgement before any contract codifies it.
+    enum AuditState: String, CaseIterable, Identifiable {
+        case aligned
+        case diverges
+        case needsDecision
+        case noEquivalent
+        case intentionalDifference
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .aligned: "Aligned"
+            case .diverges: "Diverges"
+            case .needsDecision: "Needs decision"
+            case .noEquivalent: "No equivalent"
+            case .intentionalDifference: "Intentional difference"
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .aligned: "checkmark.circle.fill"
+            case .diverges: "exclamationmark.triangle.fill"
+            case .needsDecision: "questionmark.circle.fill"
+            case .noEquivalent: "minus.circle.fill"
+            case .intentionalDifference: "arrow.left.arrow.right.circle.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .aligned: .green
+            case .diverges: .orange
+            case .needsDecision: .blue
+            case .noEquivalent: .secondary
+            case .intentionalDifference: .purple
+            }
+        }
+    }
+
     enum Section: String, CaseIterable, Identifiable {
         case panesAndSheets, sidebarRows, popovers, settings, inTheApp
         var id: String { rawValue }
@@ -50,6 +93,10 @@ struct ReviewGalleryEntry: Identifiable {
     /// filters on.
     let landed: String
     let states: [ReviewGalleryState]
+    /// What remains to be judged or changed. It is visible in the gallery, so
+    /// a green review tick can never conceal an unresolved UX decision.
+    var audit: AuditState = .aligned
+    var auditNote: String = "Matches the current review rule."
 }
 
 struct ReviewGalleryState {
@@ -76,6 +123,9 @@ struct ReviewGalleryContext {
     let i18n: I18n
     /// The toolbar's Appearance; nil follows the app.
     let appearance: ColorScheme?
+    /// Review-only width control. Error patterns use this to make localisation
+    /// and action layout pressure visible before we bless an implementation.
+    var specimenWidth: CGFloat = 700
     /// Writes the footer readout line. Specimen buttons call this instead of
     /// opening real sheets.
     let log: (String) -> Void
@@ -125,6 +175,84 @@ enum ReviewGalleryRegistry {
     // MARK: Gallery entries
 
     private static let gallery: [ReviewGalleryEntry] = [
+        ReviewGalleryEntry(
+            id: "ux-boot-failure",
+            title: "Error pattern · analysis engine failed to start",
+            what: "Current native startup-failure pane. A sidecar startup failure only exists in the Mac shell; there is no web equivalent to manufacture.",
+            commits: ["4e8cc854a"],
+            files: ["BootView.swift", "RouteError.tsx"],
+            section: .panesAndSheets,
+            landed: "2026-10-29",
+            states: bootStates.prefix(2).map { row in
+                ReviewGalleryState(name: row.name) { ctx in
+                    errorPatternBoot(row, ctx)
+                }
+            },
+            audit: .diverges,
+            auditNote: "Direction agreed: “Failed to start”. Omit technical body copy when it gives no user action. Offer Retry only when the cause says another attempt could work."
+        ),
+        ReviewGalleryEntry(
+            id: "ux-report-crash",
+            title: "Error pattern · report couldn’t be shown",
+            what: "The current web report crash. It has no credible retry, so it offers a selectively chosen feedback report with bounded technical prefill. The native host exposes its diagnostic through the project popover rather than duplicating this page.",
+            commits: ["4e8cc854a"],
+            files: ["RouteError.tsx", "ProjectDiagnosticPopover.swift"],
+            section: .panesAndSheets,
+            landed: "2026-10-29",
+            states: [
+                ReviewGalleryState(name: "Unexpected crash") { ctx in
+                    errorPatternWeb(.reportCrash, ctx)
+                },
+            ],
+            audit: .needsDecision,
+            auditNote: "Review wording, retry evidence, and when the existing problem-report door is earned."
+        ),
+        ReviewGalleryEntry(
+            id: "ux-analysis-failure-remedies",
+            title: "Error pattern · analysis didn’t finish",
+            what: "The real native failed-analysis cover pane across the existing remedy branches. The web comparison is the current failed-run status treatment, not a claim of identical chrome.",
+            commits: ["4e8cc854a"],
+            files: ["RunCoverPane.swift", "DetailPaneKind.swift", "status_page.py"],
+            section: .panesAndSheets,
+            landed: "2026-10-29",
+            states: [
+                ReviewGalleryState(name: "Set up provider") { ctx in
+                    errorPatternRunFailure(.auth, ctx)
+                },
+                ReviewGalleryState(name: "Retry could help") { ctx in
+                    errorPatternRunFailure(.quota, ctx)
+                },
+                ReviewGalleryState(name: "No retry — model output limit") { ctx in
+                    errorPatternRunFailure(.outputTruncated, ctx)
+                },
+            ],
+            audit: .diverges,
+            auditNote: "The native pane still uses a fixed horizontal action row and an inline details dump. This is the first repair target after review."
+        ),
+        ReviewGalleryEntry(
+            id: "ux-lens-failure",
+            title: "Error pattern · one report view failed",
+            what: "An unexpected web lens crash leaves the rest of the report usable. It names the affected lens and uses the existing problem-report door when feedback is enabled. There is no matching native content pane because lenses are web content.",
+            commits: ["4e8cc854a"],
+            files: ["RouteError.tsx"],
+            section: .panesAndSheets,
+            landed: "2026-10-29",
+            states: [ReviewGalleryState(name: "Lens fallback") { ctx in errorPatternWeb(.lens, ctx) }],
+            audit: .aligned,
+            auditNote: "Unexpected render crashes have no blind Retry. Ordinary classified read failures remain separate and may retry when the request is credibly transient."
+        ),
+        ReviewGalleryEntry(
+            id: "ux-part-failure",
+            title: "Error pattern · one small part failed",
+            what: "The current web part fallback is an accessible broken glyph, with no words or action. It is intentionally quieter than a failed report view.",
+            commits: ["4e8cc854a"],
+            files: ["PanelErrorBoundary.tsx", "Icon.tsx"],
+            section: .panesAndSheets,
+            landed: "2026-10-29",
+            states: [ReviewGalleryState(name: "Part fallback") { ctx in errorPatternWeb(.part, ctx) }],
+            audit: .aligned,
+            auditNote: "Decided: retain the quiet, glyph-only mark. It follows the familiar failed-image pattern; the rest remains usable and refresh is implied."
+        ),
         ReviewGalleryEntry(
             id: "M14",
             title: "Couldn’t start Bristlenose",
@@ -433,6 +561,60 @@ enum ReviewGalleryRegistry {
         .frame(width: 520, height: 360)
         return .view(AnyView(view),
                      label: "BootView · .failed · \(row.label) · startedByRetry = \(row.retried) · 520 × 360")
+    }
+
+    /// The UX workbench uses the same real `BootView` fixture as M14. The web
+    /// card is intentionally labelled as a *comparison*, not an equivalent:
+    /// a browser never starts the Mac sidecar.
+    private static func errorPatternBoot(
+        _ row: BootState, _ ctx: ReviewGalleryContext
+    ) -> ReviewGallerySpecimen {
+        let fixture = bootFixture(row)
+        let native = BootView(
+            phase: .failed(message: row.message,
+                           retry: { ctx.log("Native Retry pressed") },
+                           sendFeedback: { ctx.log("Native Send Feedback… pressed") }),
+            project: fixture.project
+        )
+        .environmentObject(fixture.fleet)
+        .frame(width: ctx.specimenWidth, height: 300)
+
+        return .views([
+            ("Native · BootView · \(row.label)", AnyView(native)),
+            ("Web · no equivalent", AnyView(ErrorPatternWebPreview(
+                state: .notApplicable("This failure happens before the web report exists."),
+                onAction: ctx.log
+            ).frame(width: ctx.specimenWidth, height: 300))),
+        ])
+    }
+
+    /// Current web fallbacks shown in WebKit, not redrawn in SwiftUI. The
+    /// review window needs no sidecar or fault-injection route to inspect them.
+    private static func errorPatternWeb(
+        _ state: ErrorPatternWebPreview.State, _ ctx: ReviewGalleryContext
+    ) -> ReviewGallerySpecimen {
+        .view(AnyView(ErrorPatternWebPreview(state: state, onAction: ctx.log)
+            .frame(width: ctx.specimenWidth, height: 360)), label: "WebKit · \(state.sourceLabel)")
+    }
+
+    private static func errorPatternRunFailure(
+        _ category: PipelineFailureCategory, _ ctx: ReviewGalleryContext
+    ) -> ReviewGallerySpecimen {
+        let project = Project(id: UUID(), name: "Checkout research", path: "/private/tmp/review-study")
+        let cover = DetailPaneKind.RunCover.failed(
+            sentence: FailureMessage.failure(for: category, provider: .claude),
+            rawCause: "A bounded diagnostic record for review.", category: category, summary: nil
+        )
+        let native = RunCoverPane(cover: cover, project: project, liveData: PipelineLiveData(),
+                                  onAnalyse: { ctx.log("Native Analyse pressed") },
+                                  onRetryStartup: { ctx.log("Native startup retry pressed") })
+            .frame(width: ctx.specimenWidth, height: 300)
+        return .views([
+            ("Native · RunCoverPane · \(category.rawValue)", AnyView(native)),
+            ("Web · failed-run status", AnyView(ErrorPatternWebPreview(
+                state: .analysisFailed(category.rawValue), onAction: ctx.log
+            ).frame(width: ctx.specimenWidth, height: 300))),
+        ])
     }
 
     private static func reAnalyse(counts: CurationCounts?, label: String,

@@ -289,6 +289,42 @@ class AutoCodeBatchResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class SignalEvidenceFragment(BaseModel):
+    """The one actionable, contiguous phrase inside an evidence playback."""
+
+    start: int = Field(ge=0, description="0-based start offset in assertion_text")
+    end: int = Field(gt=0, description="Exclusive end offset in assertion_text")
+    text: str = Field(description="Exact assertion_text substring from start to end")
+    rationale: str = Field(
+        description="One of: negative_actionable_cause, positive_enabling_cause"
+    )
+
+
+class SignalEvidenceAssertion(BaseModel):
+    """One grounded participant playback for a signal-card narrative."""
+
+    text: str = Field(description="Short faithful playback of one participant's evidence")
+    source_quote_id: str = Field(
+        description="Quote reference supplied in the signal input; do not invent one"
+    )
+    source_excerpt: str = Field(
+        default="",
+        description=(
+            "Deprecated optional source hint. Provenance is the supplied "
+            "source_quote_id; the server derives the stored excerpt from that "
+            "canonical quote."
+        ),
+    )
+    intervention_fragment: SignalEvidenceFragment | None = Field(
+        default=None,
+        description=(
+            "One contiguous actionable product/system mechanism in text. Write evidence "
+            "assertions only when this exists; null is allowed solely for a source with "
+            "no actionable mechanism, never merely because the assertion omitted it."
+        ),
+    )
+
+
 class SignalElaborationItem(BaseModel):
     """One elaboration for a single signal card."""
 
@@ -314,6 +350,10 @@ class SignalElaborationItem(BaseModel):
             "an em dash, and do not chain clauses with em dashes inside either "
             "part."
         )
+    )
+    evidence_assertions: list[SignalEvidenceAssertion] = Field(
+        default_factory=list,
+        description="Zero to four grounded assertion records, each citing one supplied quote",
     )
 
 

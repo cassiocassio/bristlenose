@@ -17,6 +17,22 @@ trued-against: working tree on 2026-08-19 (extension-set parity + format widenin
 
 > **Status:** Draft V1. Captures the unambiguous-cases-first revision of drop behaviour. **Sequenced after the current `multi-project-drag-onto` branch ships** — see §"Relationship to current branch work" below. The toasts live through cohort 1; this design picks them up for cohort 2 once the wordless-cursor model has been validated against real researcher use. Harder cases (bulk import, multi-project folders, multi-platform mixed folders, merge semantics) are deferred to a sibling V2 doc — `design-sidebar-drop-v2.md`.
 
+> **Superseded decisions, 29 Oct 2026 — Finder sidebar follow-up.** The
+> narrow V1/V2 boundary below is historical. A BN project, or a bounded wrapper
+> containing one or more BN projects, dropped on sidebar root, New Project, or
+> a sidebar folder now means register/open those projects; loose sibling media
+> is ignored. A drop on a populated project means source material only: direct
+> BN projects refuse during the drag on AppKit and refuse on release in the
+> macOS-15 SwiftUI fallback. Wrapper discovery runs off the main thread after
+> release; hover never enumerates directories. Dataless items are refused
+> before listing or marker probing, with no request to download them.
+> Empty New Project entries admit BN projects on both sidebar implementations.
+> Imported projects scan their existing manifest state and never start a new
+> analysis. `SidebarFinderDrop` owns the bounded release classification; it
+> does not replace `CopyMachinery` or `StudyDropMatch` identity handling. A
+> second add-files drop while a copy is in flight refuses; its commit-time race
+> is silent rather than another explanatory toast.
+
 # Sidebar Drop Behaviour — V1
 
 ## Phase plan

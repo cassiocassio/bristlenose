@@ -71,6 +71,90 @@ _STATIC_DIR = Path(__file__).parent / "static"
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def _schedule_missing_signal_snapshot(
+    app: FastAPI,
+    session_factory: Callable[[], Session],
+    project_dir: Path,
+) -> asyncio.Task[None]:
+    """Create the first durable Signals artifact without making it a user task.
+
+    A study that predates durable signal snapshots already has the meaningful
+    research work (codebooks and accepted tags), but no reader-facing
+    narrative.  A later release can also tighten the *narrative contract* —
+    for example, adding attributable causal fragments to the evidence bullets.
+    When a cloud model becomes available, opening that study is enough to
+    quietly materialise the missing or superseded artifact.
+
+    This is deliberately a lifecycle repair, not a reader-route side effect.
+    It runs once per sidecar lifetime, skips offline/local providers, and
+    replaces an existing snapshot only when its explicit reader-contract
+    version is older. Subsequent meaningful research changes are owned by
+    their normal codebook/new-interview lifecycle hooks.
+    """
+
+    # The reader route uses this only to decide whether an otherwise-absent
+    # first snapshot is genuinely on its way.  It is never product chrome.
+    app.state.initial_signal_snapshot_pending = True
+
+    async def _materialise_missing() -> None:
+        from bristlenose.config import load_settings
+        from bristlenose.server.elaboration import _has_api_key
+        from bristlenose.server.models import Project
+        from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+        from bristlenose.server.signal_snapshots import (
+            SIGNAL_SNAPSHOT_PAYLOAD_VERSION,
+            latest_completed_snapshot,
+        )
+
+        db: Session | None = None
+        try:
+            settings = getattr(app.state, "settings", None) or load_settings()
+            if settings.llm_provider == "local" or not _has_api_key(settings):
+                return
+
+            db = session_factory()
+            # The app normally serves project row 1, but keeping this per row
+            # makes an imported or repaired database no less self-healing.
+            project_ids = [project_id for (project_id,) in db.query(Project.id).order_by(Project.id)]
+            for project_id in project_ids:
+                snapshot = latest_completed_snapshot(db, project_id)
+                if (
+                    snapshot is not None
+                    and snapshot.payload_version >= SIGNAL_SNAPSHOT_PAYLOAD_VERSION
+                ):
+                    continue
+                source = (
+                    "startup_missing_snapshot"
+                    if snapshot is None
+                    else "startup_snapshot_upgrade"
+                )
+                logger.info(
+                    "materialising durable Signals snapshot for project %s (%s)",
+                    project_id,
+                    source,
+                )
+                await materialise_completed_signal_snapshot(
+                    db,
+                    project_id,
+                    source=source,
+                    project_dir=project_dir,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # A first narrative is an enhancement to an otherwise readable
+            # report.  It must never make the sidecar fail to start.
+            logger.exception("could not materialise a missing Signals snapshot on startup")
+        finally:
+            if db is not None:
+                db.close()
+            app.state.initial_signal_snapshot_pending = False
+
+    return asyncio.create_task(
+        _materialise_missing(), name="bristlenose-initial-signals-snapshot",
+    )
+
+
 def create_app(
     project_dir: Path | None = None,
     dev: bool = False,
@@ -117,6 +201,9 @@ def create_app(
         from bristlenose.logging import setup_logging
         from bristlenose.output_paths import project_output_dir
         from bristlenose.utils.output_backup import RestoreOutcome, reclaim_after_crash
+        from bristlenose.utils.study_startup import require_study_startup
+
+        require_study_startup(project_output_dir(project_dir))
 
         # A crashed run's backup goes back BEFORE anything creates the output
         # folder: once the log and database exist there, the folder looks like
@@ -1296,8 +1383,16 @@ def _make_run_completed_handler(
         try:
             from bristlenose.config import load_settings
             from bristlenose.server.autocode import reapply_active_frameworks
+            from bristlenose.server.elaboration import _has_api_key as elaboration_has_api_key
 
             settings = getattr(app.state, "settings", None) or load_settings()
+            # The durable card set is a cloud-LLM artifact.  A researcher may
+            # deliberately turn their provider off after the initial study and
+            # continue curating tags; leave the last complete set untouched in
+            # that mode rather than replacing it with metrics-only cards.
+            if settings.llm_provider == "local" or not elaboration_has_api_key(settings):
+                logger.info("Skipping codebook re-apply and Signals refresh: no cloud LLM")
+                return
             reapply = reapply_active_frameworks(session_factory, project_id, settings)
         except Exception:
             logger.exception("Auto re-apply after run_completed failed")
@@ -1306,8 +1401,20 @@ def _make_run_completed_handler(
         async def _reapply_after_run() -> None:
             try:
                 await reapply
+                from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
+
+                snapshot_db = session_factory()
+                try:
+                    await materialise_completed_signal_snapshot(
+                        snapshot_db,
+                        project_id,
+                        source="new_interviews",
+                        project_dir=getattr(app.state, "project_dir", None),
+                    )
+                finally:
+                    snapshot_db.close()
             except Exception:
-                logger.exception("Auto re-apply after run_completed failed")
+                logger.exception("Auto re-apply or signal snapshot after run_completed failed")
 
         task = asyncio.create_task(_reapply_after_run())
         _REAPPLY_AFTER_RUN_TASKS.add(task)  # a bare task can be GC'd mid-flight
@@ -1575,6 +1682,9 @@ def _install_event_watcher(
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         app.state.scene_strips.start()
         app.state.screen_text.start()
+        initial_signals = _schedule_missing_signal_snapshot(
+            app, session_factory, project_dir,
+        )
         task = asyncio.create_task(
             run_event_watcher(
                 _events_file, _on_run_completed, on_change=_on_change,
@@ -1589,6 +1699,11 @@ def _install_event_watcher(
         try:
             yield
         finally:
+            initial_signals.cancel()
+            try:
+                await initial_signals
+            except asyncio.CancelledError:
+                pass
             task.cancel()
             try:
                 await task

@@ -1,22 +1,14 @@
-"""One damaged file must not stop the report opening (R112).
-
-`serve` re-renders the sealed static report before it starts (`_auto_render`).
-That render reads `people.yaml` and the intermediate JSON, and until 20 Oct
-2026 a typo in the one or a truncated copy of the other raised out of `serve`
-before the server bound: the Mac app said "exited before ready". The SPA reads
-the database, which the importer fills tolerantly, so the static render is
-skipped with a warning and the server starts.
-"""
+"""Incomplete analysis output remains safe for the live report (R112)."""
 
 from __future__ import annotations
 
-import logging
 import shutil
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
-from bristlenose.cli import _auto_render
+from bristlenose import cli
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "smoke-test" / "input"
 
@@ -32,53 +24,34 @@ def _intermediate(project: Path) -> Path:
     return project / "bristlenose-output" / ".bristlenose" / "intermediate"
 
 
-class _Warnings(logging.Handler):
-    def __init__(self) -> None:
-        super().__init__(logging.WARNING)
-        self.records: list[logging.LogRecord] = []
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self.records.append(record)
-
-
-def _render_capturing(project: Path) -> list[logging.LogRecord]:
-    # The render reconfigures logging, so caplog cannot see it; listen on the
-    # package logger directly.
-    handler = _Warnings()
-    log = logging.getLogger("bristlenose")
-    log.addHandler(handler)
-    try:
-        _auto_render(project)
-    finally:
-        log.removeHandler(handler)
-    return handler.records
-
-
-def test_a_people_yaml_typo_neither_stops_the_render_nor_is_written_over(
-    project: Path,
+def test_serve_starts_during_a_first_analysis_with_partial_intermediate(
+    project: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Since decision #17 (22 Oct 2026) the render reads past the typo, without
-    the names in it, and leaves the researcher's file as it is; it used to raise
-    here and the static re-render was skipped."""
-    typo = 'participants:\n  p1:\n    editable: {full_name: "Ann\n'
-    people = project / "bristlenose-output" / "people.yaml"
-    people.write_text(typo, encoding="utf-8")
-    records = _render_capturing(project)
-    assert not any("static report" in r.getMessage() for r in records)
-    assert people.read_text(encoding="utf-8") == typo
+    """Server startup does not read final analysis files a first run has not made yet."""
+    for name in ("screen_clusters.json", "theme_groups.json"):
+        _intermediate(project).joinpath(name).unlink()
 
+    started: list[tuple[Path, dict[str, object]]] = []
+    rendered: list[object] = []
 
-@pytest.mark.parametrize("name", ["screen_clusters.json", "extracted_quotes.json"])
-def test_a_truncated_intermediate_file_is_skipped_not_fatal(project: Path, name: str) -> None:
-    path = _intermediate(project) / name
-    path.write_text('[{"screen_label": "Dash', encoding="utf-8")
-    records = _render_capturing(project)
-    assert any("static report" in r.getMessage() for r in records)
+    def _unexpected_render(*args: object, **kwargs: object) -> object:
+        rendered.append((args, kwargs))
+        return object()
 
+    monkeypatch.setattr(cli, "_run_preflight", lambda *_args: None)
+    monkeypatch.setattr(cli, "_print_mcp_connect", lambda _port: None)
+    monkeypatch.setattr("bristlenose.pipeline.Pipeline.run_render_only", _unexpected_render)
+    monkeypatch.setattr(
+        cli, "_start_server", lambda path, **kwargs: started.append((path, kwargs)),
+    )
 
-def test_an_intact_project_still_renders(project: Path) -> None:
-    records = _render_capturing(project)
-    assert not any("static report" in r.getMessage() for r in records)
+    result = CliRunner().invoke(
+        cli.app, ["serve", str(project), "--no-open", "--port", "8199"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert started == [(project, {"port": 8199, "open_browser": False, "verbose": False})]
+    assert rendered == []
 
 
 # ---------------------------------------------------------------------------
@@ -149,18 +122,3 @@ def test_half_the_quotes_are_never_shown_as_the_whole(db, project: Path, name: s
     (_intermediate(project) / name).write_text('[{"screen_label": "Dash', encoding="utf-8")
     project_row = import_project(db, project)
     assert db.query(Quote).filter_by(project_id=project_row.id).count() == 0
-
-
-def test_missing_intermediate_files_are_not_reported_as_rendered(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str],
-) -> None:
-    """An intermediate folder without the cluster files printed the red
-    "Missing intermediate files" and then "✓ Rendered report 0 quotes": the
-    render returned an empty result instead of failing."""
-    project = tmp_path / "input"
-    (project / "bristlenose-output" / ".bristlenose" / "intermediate").mkdir(parents=True)
-    records = _render_capturing(project)
-    out = capsys.readouterr().out
-    assert "Missing intermediate files" in out, out
-    assert "Rendered report" not in out, out
-    assert any("static report" in r.getMessage() for r in records)

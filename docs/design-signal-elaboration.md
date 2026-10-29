@@ -262,7 +262,7 @@ Flow:
 
 ### Caching
 
-Cached in SQLite under two values, and neither is what this line used to claim. `compute_signal_key(source_type, location, group_name)` identifies the card; `compute_content_hash(quote_texts, tag_names)` decides whether the cached answer is still good — **quote *texts* and tag *names*, not ids**, plus the prompt's SHA since 20 Sep 2026. The SHA is the load-bearing part: without it a prompt rewrite invalidated nothing and reached none of the cached elaborations, so the instruction changed and the output did not.
+Cached in SQLite under two values. `compute_signal_key(source_type, location, group_name)` identifies the card; `compute_content_hash(quote_texts, tag_names, quote_references)` decides whether the cached answer is still good — quote text, tag names and the stable reference used by any cited evidence assertion, plus the prompt's SHA since 20 Sep 2026. Including references means a speaker, timing or segmentation correction invalidates an old citation even where the quote text is unchanged. The SHA is load-bearing: without it a prompt rewrite invalidated nothing and reached none of the cached elaborations, so the instruction changed and the output did not.
 
 ### Prompt template
 

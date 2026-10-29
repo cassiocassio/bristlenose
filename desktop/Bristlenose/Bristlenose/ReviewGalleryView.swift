@@ -36,8 +36,10 @@ struct ReviewGalleryView: View {
     @State private var filter = ""
     @State private var stateIndex = 0
     @State private var appearance: GalleryAppearance = .auto
+    @State private var specimenWidth: GalleryWidth = .standard
     @State private var language = "en"
     @State private var changedSince = ""          // "" = everything
+    @State private var auditFilter: ReviewGalleryEntry.AuditState?
     @State private var readout = "Specimen buttons write here."
     @State private var built: (key: String, specimen: ReviewGallerySpecimen)?
 
@@ -49,6 +51,22 @@ struct ReviewGalleryView: View {
             case .auto: nil
             case .light: .light
             case .dark: .dark
+            }
+        }
+    }
+
+    enum GalleryWidth: String, CaseIterable, Identifiable {
+        case narrow = "Narrow", standard = "Standard", wide = "Wide"
+        var id: String { rawValue }
+        var points: CGFloat {
+            switch self {
+            // These are the app's plausible detail-pane widths, not arbitrary
+            // device torture sizes. Error actions must stay on one line across
+            // this range; needing a vertical fallback means the action design
+            // itself is wrong.
+            case .narrow: 520
+            case .standard: 700
+            case .wide: 900
             }
         }
     }
@@ -67,6 +85,7 @@ struct ReviewGalleryView: View {
     private var visibleEntries: [ReviewGalleryEntry] {
         ReviewGalleryRegistry.entries.filter { entry in
             (changedSince.isEmpty || entry.landed >= changedSince)
+                && (auditFilter == nil || entry.audit == auditFilter)
                 && (filter.isEmpty
                     || entry.title.localizedCaseInsensitiveContains(filter)
                     || entry.id.localizedCaseInsensitiveContains(filter)
@@ -86,7 +105,7 @@ struct ReviewGalleryView: View {
     /// fixtures (a fleet, a temp project list) are made once per showing, not
     /// on every redraw.
     private var buildKey: String {
-        "\(selection ?? "")#\(stateIndex)#\(language)#\(appearance.rawValue)"
+        "\(selection ?? "")#\(stateIndex)#\(language)#\(appearance.rawValue)#\(specimenWidth.rawValue)"
     }
 
     // MARK: - Body
@@ -155,6 +174,9 @@ struct ReviewGalleryView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
+            Image(systemName: entry.audit.symbolName)
+                .foregroundStyle(entry.audit.tint)
+                .help(entry.audit.title)
         }
     }
 
@@ -205,6 +227,14 @@ struct ReviewGalleryView: View {
                 .keyboardShortcut(.return, modifiers: .command)
             }
             Text(entry.what)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+            Label(entry.audit.title, systemImage: entry.audit.symbolName)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(entry.audit.tint)
+            Text(entry.auditNote)
+                .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
@@ -264,11 +294,24 @@ struct ReviewGalleryView: View {
                 ForEach(I18n.supportedLocales.sorted(), id: \.self) { Text($0).tag($0) }
             }
             .help("Language of the specimens (a gallery-owned I18n; the app's language is untouched)")
+            Picker("Width", selection: $specimenWidth) {
+                ForEach(GalleryWidth.allCases) { width in
+                    Text(width.rawValue).tag(width)
+                }
+            }
+            .help("Plausible detail-pane width. Every action label must remain fully visible on one line.")
             Picker("Changed since", selection: $changedSince) {
                 Text("Everything").tag("")
                 ForEach(landedDates, id: \.self) { Text("Since \($0)").tag($0) }
             }
             .help("Entries whose latest commit landed on or after this day")
+            Picker("Audit", selection: $auditFilter) {
+                Text("All audit states").tag(ReviewGalleryEntry.AuditState?.none)
+                ForEach(ReviewGalleryEntry.AuditState.allCases) { state in
+                    Label(state.title, systemImage: state.symbolName).tag(Optional(state))
+                }
+            }
+            .help("Filter by UX review conclusion")
         }
     }
 
@@ -306,6 +349,7 @@ struct ReviewGalleryView: View {
         let state = entry.states[min(stateIndex, entry.states.count - 1)]
         galleryI18n.setLocale(state.locale ?? language)
         let context = ReviewGalleryContext(i18n: galleryI18n, appearance: appearance.scheme,
+                                           specimenWidth: specimenWidth.points,
                                            log: { log($0) })
         built = (key: buildKey, specimen: state.make(context))
     }

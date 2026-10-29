@@ -512,8 +512,13 @@ def test_pid_file_holding_non_object_json_reads_as_absent(tmp_path: Path, payloa
     path.parent.mkdir(parents=True)
     path.write_text(payload, encoding="utf-8")
     assert _read_pid_file(tmp_path) is None
-    with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
-        pass
+    from bristlenose.utils.study_startup import StudyStartupRefusedError
+
+    before = path.read_bytes()
+    with pytest.raises(StudyStartupRefusedError):
+        with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
+            pytest.fail("malformed ownership must not start writers")
+    assert path.read_bytes() == before
 
 
 def test_lifecycle_started_event_includes_process_envelope(tmp_path: Path):
@@ -705,7 +710,7 @@ def test_a_pid_file_that_will_not_go_does_not_replace_the_cancel(tmp_path: Path,
 # ---------------------------------------------------------------------------
 
 
-def test_stranded_run_started_synthesises_failed_on_next_start(tmp_path: Path):
+def test_stranded_run_started_synthesises_failed_on_next_start(tmp_path: Path, monkeypatch):
     """A prior run that crashed without a terminus → synthesised run_failed appended."""
     # Simulate a crashed prior run: one run_started, no terminus.
     f = events_path(tmp_path)
@@ -723,7 +728,11 @@ def test_stranded_run_started_synthesises_failed_on_next_start(tmp_path: Path):
     )
     append_event(f, started)
 
-    # No PID file from the prior crash. Next lifecycle should reconcile.
+    # Positive machine ownership is now required to reconcile a local crash.
+    from bristlenose.run_lifecycle import _write_pid_file
+    monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "test-machine")
+    monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: "test-machine")
+    _write_pid_file(tmp_path, started.run_id, "dead-process-start")
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         pass
 
@@ -750,42 +759,37 @@ def test_no_reconciliation_when_log_ends_in_terminus(tmp_path: Path):
     assert len(events) == 4  # +started +completed, no synth
 
 
-def test_stale_pid_file_with_dead_pid_does_not_refuse(tmp_path: Path):
-    """PID file from a long-dead process should not block a new run."""
-    pid_file_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    pid_file_path(tmp_path).write_text(json.dumps({
-        "pid": 999_999, "start_time": "Stale", "run_id": "OLD",
-    }), encoding="utf-8")
-    # Should run cleanly — no ConcurrentRunError.
+def _owned_attempt(out: Path, monkeypatch, *, pid: int, start: str) -> None:
+    """A complete local ownership fixture, not a legacy/unverified PID file."""
+    from bristlenose.events import Process
+    monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "test-machine")
+    monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: "test-machine")
+    now = _now_iso()
+    append_event(events_path(out), RunStartedEvent(
+        ts=now, run_id="OLD", kind=KindEnum.RUN, started_at=now,
+        process=Process(pid=pid, start_time=start, hostname="test", user="u",
+                        bristlenose_version="0", python_version="3.12", os="test")))
+    pid_file_path(out).write_text(json.dumps({
+        "pid": pid, "start_time": start, "run_id": "OLD", "machine_id": "test-machine"}))
+
+
+def test_stale_pid_file_with_dead_pid_does_not_refuse(tmp_path: Path, monkeypatch):
+    """A positively owned local dead process still permits recovery."""
+    _owned_attempt(tmp_path, monkeypatch, pid=999_999, start="Stale")
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         pass
 
 
-def test_pid_file_with_reused_pid_but_mismatched_start_time_does_not_refuse(tmp_path: Path):
-    """PID belongs to a live unrelated process; start_time mismatches → not ours."""
-    pid_file_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    pid_file_path(tmp_path).write_text(json.dumps({
-        "pid": os.getpid(),  # real, alive
-        "start_time": "Definitely Not Our Start Time",
-        "run_id": "X",
-    }), encoding="utf-8")
+def test_pid_file_with_reused_pid_but_mismatched_start_time_does_not_refuse(tmp_path: Path, monkeypatch):
+    _owned_attempt(tmp_path, monkeypatch, pid=os.getpid(), start="Definitely Not Our Start Time")
     with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
         pass
 
 
-# ---------------------------------------------------------------------------
-# Concurrent-run refusal
-# ---------------------------------------------------------------------------
-
-
-def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path):
-    """If a live process owns the PID file, second lifecycle refuses."""
-    # Write PID file pointing at our own live PID with our real start_time.
+def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path, monkeypatch):
     real_start = _ps_start_time(os.getpid())
-    pid_file_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    pid_file_path(tmp_path).write_text(json.dumps({
-        "pid": os.getpid(), "start_time": real_start, "run_id": "OTHER",
-    }), encoding="utf-8")
+    assert real_start is not None
+    _owned_attempt(tmp_path, monkeypatch, pid=os.getpid(), start=real_start)
     with pytest.raises(ConcurrentRunError, match="already in progress"):
         with run_lifecycle(tmp_path, KindEnum.RUN, install_signal_handlers=False):
             pass

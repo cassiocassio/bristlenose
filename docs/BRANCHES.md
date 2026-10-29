@@ -888,3 +888,8 @@ split. Guard: `scripts/git-hooks/pre-push` (CLAUDE.md § Gotchas has the
 pre-commit reasoning; `scripts/test-pre-push.sh` proves it). Locals still
 carrying the tree, never to be pushed: `tower-of-hanoi` and the four branches
 above.
+
+
+### 29 October local integration — recovery/status
+
+`codex/study-recovery-guard` and `codex/sidebar-status-separated` are ancestors of local main. Integration5a7830935; final recovery-fixture/evidence merge014c04685. Combined main gate 2846native/0fail;343Python/2xfail. No push or release. Feature worktrees/branches and dirty shared originals are retained; no close-branch archival has run. Deferred study-access-poc remains separate. Exact paths/receipts: private handoff and design-study-recovery-guard.md.

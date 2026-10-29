@@ -45,6 +45,20 @@
     margin-top: var(--bn-space-md);
 }
 
+/* An unavailable lens is a contained broken view, not a general warning. */
+.bn-lens-crash .bn-route-error-icon {
+    display: block;
+    margin: 0 auto var(--bn-space-md);
+}
+
+.bn-lens-crash p {
+    margin: 0;
+}
+
+.bn-lens-crash p + p {
+    margin-top: var(--bn-space-xs);
+}
+
 /* The same fallback inside a sidebar (PanelErrorBoundary.tsx) is panel
    chrome, so it takes the chrome size, not the body size. */
 .bn-empty-state.bn-panel-error {

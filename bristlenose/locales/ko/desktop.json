@@ -419,7 +419,7 @@
       },
       "partialSessions_other": "세션 {{total}}개 중 {{done}}개 분석됨",
       "noStructuredCause": "\uc790\uc138\ud55c \uc6d0\uc778\uc774 \uae30\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
-      "reportError": "분석 결과는 안전합니다. 표시만 실패했습니다. 다시 시도를 누르면 보고서를 다시 불러옵니다. 다시 발생하면 세부 정보를 복사해 도움말 ▸ 피드백 보내기로 보내 주세요.",
+      "reportError": "이 보고서를 여는 동안 Bristlenose에 예기치 않은 문제가 발생했습니다.",
       "overflow_other": "\u2026 \uc678 {{count}}\uac1c \uc2e4\ud328 \uc0dd\ub7b5\ub428",
       "reason": {
         "unsupported_format": "Bristlenose가 읽을 수 있는 형식이 아닙니다.",

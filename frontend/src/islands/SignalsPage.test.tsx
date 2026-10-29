@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
 import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils/types";
 import { resetSignalStore } from "../contexts/SignalStore";
+import { resetInspectorStore } from "../contexts/InspectorStore";
 import { navigateTo } from "../shims/navigation";
 
 // The location link goes to the Quotes lens's own address (utils/quotesLink.ts), through the
@@ -222,6 +223,8 @@ const emptyCbData: CodebookSignalsListResponse = {
 let fetchMock: any;
 
 beforeEach(() => {
+  resetSignalStore();
+  resetInspectorStore();
   fetchMock = vi.fn();
   globalThis.fetch = fetchMock;
   // Reset window globals
@@ -230,13 +233,18 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 function mockFetchCodebookSignals(data: CodebookSignalsListResponse) {
   fetchMock.mockResolvedValue({
     ok: true,
-    json: () => Promise.resolve(data),
+    json: () => Promise.resolve({
+      snapshot: data,
+      source: "codebook_apply",
+      computed_at: "2026-10-27T12:00:00+00:00",
+    }),
   });
 }
 
@@ -255,6 +263,62 @@ describe("SignalsPage", () => {
 
     expect(screen.getAllByText("Checkout").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Pain points").length).toBeGreaterThanOrEqual(1);
+    const urls = fetchMock.mock.calls.map(([url]: [string]) => String(url));
+    expect(urls.some((url: string) => url.endsWith("/signals/snapshot"))).toBe(true);
+    expect(urls.some((url: string) => url.includes("/signals/elaborations"))).toBe(false);
+  });
+
+  it("quietly receives a first snapshot the sidecar is materialising", async () => {
+    vi.useFakeTimers();
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ snapshot: null, source: null, computed_at: null, pending: true }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ snapshot: mockCbData, source: "startup_missing_snapshot", computed_at: "2026-10-28T09:00:00+00:00", pending: false }),
+      });
+
+    render(<SignalsPage projectId="1" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not poll an absent snapshot when no background repair is pending", async () => {
+    vi.useFakeTimers();
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ snapshot: null, source: null, computed_at: null, pending: false }),
+    });
+
+    render(<SignalsPage projectId="1" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows one compound location at a time and reveals the sidebar target", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Checkout")).not.toHaveAttribute("hidden");
+    });
+
+    window.dispatchEvent(new CustomEvent("bn:signal-focus", {
+      detail: { key: "theme|Onboarding|Mental models" },
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Checkout")).toHaveAttribute("hidden");
+      expect(screen.getByLabelText("Onboarding")).not.toHaveAttribute("hidden");
+    });
   });
 
   it("shows source breakdown banner for pending tags", async () => {
@@ -390,6 +454,53 @@ describe("SignalsPage", () => {
     expect(screen.queryByText("TENSION")).toBeNull();
   });
 
+  it("renders a validated evidence assertion inline and links its speaker badge to the source quote", async () => {
+    const asserted: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const signal = asserted.codebooks[0].signals[0];
+    signal.elaboration = "Checkout delays interrupt purchase intent. || Participants wait for a response before continuing.";
+    signal.quotes[0].quote_id = "q_checkout_latency";
+    const assertionText = "One participant said the checkout was really slow.";
+    const highlighted = "the checkout was really slow";
+    signal.evidence_assertions = [{
+      id: "ea_checkout_latency",
+      ordinal: 0,
+      text: assertionText,
+      source_quote_id: "q_checkout_latency",
+      participant_id: "p1",
+      source_excerpt: "checkout was really slow",
+      intervention_fragment: {
+        start: assertionText.indexOf(highlighted),
+        end: assertionText.indexOf(highlighted) + highlighted.length,
+        text: highlighted,
+        rationale: "negative_actionable_cause",
+      },
+    }];
+    mockFetchCodebookSignals(asserted);
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("signal-evidence-assertions")).toBeTruthy();
+    });
+
+    const list = screen.getByTestId("signal-evidence-assertions");
+    expect(list.querySelector("mark")?.textContent).toBe(highlighted);
+    expect(screen.queryByText("Participants wait for a response before continuing.")).toBeNull();
+
+    const badge = screen.getByRole("button", {
+      name: "Participant p1; show source quote supporting this evidence",
+    });
+    fireEvent.click(badge);
+    expect(document.querySelector('blockquote[data-evidence-focused="true"]')).toBeTruthy();
+
+    // The source quote provides the reciprocal, keyboard-reachable route back
+    // to the same evidence focus rather than making citation a one-way cue.
+    const quoteBadge = screen.getByRole("button", {
+      name: "Participant p1; focus evidence assertion using this quote",
+    });
+    fireEvent.click(quoteBadge);
+    expect(quoteBadge.getAttribute("aria-pressed")).toBe("false");
+  });
+
   it("expands signal card quotes on toggle click", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);
@@ -403,6 +514,36 @@ describe("SignalsPage", () => {
     expect(toggle.textContent).toContain("Show all 5 quotes");
     fireEvent.click(toggle);
     expect(toggle.textContent).toContain("Hide");
+  });
+
+  it("reveals an overflow source quote when an evidence citation focuses it", async () => {
+    const asserted: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const signal = asserted.codebooks[0].signals[0];
+    signal.elaboration = "Checkout delays interrupt purchase intent.";
+    signal.quotes[4].quote_id = "q_overflow";
+    signal.evidence_assertions = [{
+      id: "ea_overflow",
+      ordinal: 0,
+      text: "One participant described the lengthy wait.",
+      source_quote_id: "q_overflow",
+      participant_id: signal.quotes[4].participant_id,
+      source_excerpt: signal.quotes[4].text,
+      intervention_fragment: null,
+    }];
+    mockFetchCodebookSignals(asserted);
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("signal-evidence-assertions")).toBeTruthy();
+    });
+    const card = screen.getAllByTestId("bn-signal-card")[0];
+    expect(card.classList.contains("expanded")).toBe(false);
+    fireEvent.click(screen.getByRole("button", {
+      name: `Participant ${signal.quotes[4].participant_id}; show source quote supporting this evidence`,
+    }));
+    expect(card.classList.contains("expanded")).toBe(true);
+    expect(document.querySelector('blockquote[data-evidence-focused="true"]')?.textContent)
+      .toContain(signal.quotes[4].text);
   });
 
   it("does not show source banner when only sentiment data", async () => {
@@ -454,8 +595,7 @@ describe("SignalsPage", () => {
   });
 
   it("opening the working does not also focus the card", async () => {
-    // The card is role="button" and focuses on click, so the chip must stop
-    // the event — pressing a disclosure should not re-point the inspector.
+    // Pressing the disclosure never changes the navigation-owned selection.
     resetSignalStore();
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);
@@ -470,7 +610,7 @@ describe("SignalsPage", () => {
     expect(card.classList.contains("bn-selected")).toBe(false);
   });
 
-  it("shows participant grid with presence indicators", async () => {
+  it("shows the responsive evidence contribution array", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);
 
@@ -478,8 +618,9 @@ describe("SignalsPage", () => {
       expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
     });
 
-    const grids = document.querySelectorAll(".participant-grid");
+    const grids = document.querySelectorAll(".evidence-contribution-array");
     expect(grids.length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".evidence-contribution-cell.strength-3").length).toBeGreaterThan(0);
   });
 
   // --- Per-codebook features ---
@@ -833,11 +974,9 @@ describe("SignalsPage", () => {
   // also re-focuses the card and re-points the inspector behind your back.
   it("the location link is outside every card, so following it cannot focus one", async () => {
     // This replaces a test that pinned a stopPropagation on the card's own
-    // location link: the whole card is role="button", so clicking the link
-    // fired BOTH — you landed in the quotes lens and the analysis lens had
-    // silently re-focused the card behind you. The link now lives on the
-    // heading, outside every card, so the hazard is structural rather than
-    // guarded. This asserts the structure that makes it impossible.
+    // The location link lives on the heading, outside every card, so following
+    // it cannot alter a card's navigation-owned selection. This asserts the
+    // structure that makes that separation automatic.
     resetSignalStore();   // module singleton — an earlier test's focus leaks in
     mockFetchCodebookSignals(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
@@ -1108,90 +1247,4 @@ describe("SignalsPage", () => {
     expect(alt.getAttribute("title")).not.toContain("||");
   });
 
-});
-
-describe("the headline while a finding is still being written", () => {
-  /** Drive the SSE stream by hand.
-   *
-   *  The cards fetch answers at once; the elaboration stream stays open until
-   *  `push`/`close` are called. Before streaming, the suite's helper resolved
-   *  both fetches immediately, so the pending state existed in production and
-   *  in no test — which is how it shipped as a motionless grey block.
-   */
-  function mockStream(data: CodebookSignalsListResponse) {
-    const queue: string[] = [];
-    let notify: (() => void) | null = null;
-    let ended = false;
-
-    const reader = {
-      read: async (): Promise<{ done: boolean; value?: Uint8Array }> => {
-        for (;;) {
-          if (queue.length) {
-            return { done: false, value: new TextEncoder().encode(queue.shift()!) };
-          }
-          if (ended) return { done: true };
-          await new Promise<void>((r) => { notify = r; });
-        }
-      },
-    };
-
-    fetchMock.mockImplementation((url: string) =>
-      String(url).includes("/signals/elaborations")
-        ? Promise.resolve({ ok: true, body: { getReader: () => reader } })
-        : Promise.resolve({ ok: true, json: () => Promise.resolve(data) }),
-    );
-
-    const wake = () => { const n = notify; notify = null; n?.(); };
-    return {
-      push: (frame: string) => { queue.push(frame); wake(); },
-      close: () => { ended = true; wake(); },
-    };
-  }
-
-  const frame = (key: string, name: string) =>
-    `event: elaboration\ndata: ${JSON.stringify({
-      key, signal_name: name, pattern: "gap", elaboration: "Because. || And so.",
-    })}\n\n`;
-
-  it("draws a placeholder, and says it is busy, while the finding is coming", async () => {
-    mockStream(mockCbData);
-    const { container } = render(<SignalsPage projectId="1" />);
-
-    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
-
-    expect(container.querySelector(".signal-card-location-pending")).not.toBeNull();
-    expect(screen.getAllByTestId("bn-signal-card")[0]).toHaveAttribute("aria-busy", "true");
-  });
-
-  it("a card takes its headline the moment ITS finding lands, not when the stream ends", async () => {
-    /** The whole point of streaming. If this passes only after `close()`, the
-     *  events are being buffered and nothing has been gained. */
-    const stream = mockStream(mockCbData);
-    render(<SignalsPage projectId="1" />);
-    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
-
-    stream.push(frame("section|Checkout|Pain points", "Checkout stalls on payment"));
-
-    await waitFor(() =>
-      expect(screen.getByText("Checkout stalls on payment")).toBeInTheDocument(),
-    );
-    // Still streaming — other cards must still be waiting, not resolved early.
-    expect(document.querySelector(".signal-card-location-pending")).not.toBeNull();
-  });
-
-  it("retires every placeholder when the stream ends, even for cards it never named", async () => {
-    /** A card the model declined to name sends no event. Without the
-     *  terminator its placeholder would sit there for ever — which is the
-     *  defect the streaming exists to end, not to reintroduce. */
-    const stream = mockStream(mockCbData);
-    const { container } = render(<SignalsPage projectId="1" />);
-    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0));
-
-    stream.close();
-
-    await waitFor(() =>
-      expect(container.querySelector(".signal-card-location-pending")).toBeNull(),
-    );
-    expect(screen.getAllByTestId("bn-signal-card")[0]).not.toHaveAttribute("aria-busy");
-  });
 });

@@ -49,7 +49,8 @@ The clip colour is computed by `bristlenose/utils/scene_colour.py`, which `Pipel
 **In the app (6 Oct 2026):** `GET /api/projects/{id}/tapestry` (`bristlenose/server/routes/tapestry.py`) serves every session's turns, section flags and quotes from the database, so hidden quotes, quote edits and heading renames apply. It matches each turn to a scene colour by time, so a speaker edit made in serve doesn't orphan the colours. The route is embedded in the HTML export. `frontend/src/components/SessionTapestry.tsx` draws it as a disclosure under each Sessions-grid row. The chevron sits in the ID cell, so the grid gains no column. The component is lazy-loaded; on first paint are only `utils/tapestryScale.ts`, the closed strip (`components/TapestryPreview.tsx`) and `utils/sceneInk.ts`; the open/close animation (`utils/tapestryMotion.ts`) is a dynamic import, prefetched once the grid has timelines. The CSS is `bristlenose/theme/organisms/session-tapestry.css`.
 
 Not wired yet:
-- `analyze` (no video) and render-only runs (serve's `_auto_render`) don't compute colours.
+- `analyze` (no video) and render-only runs don't compute colours. `serve` no longer runs a
+  render-only pass at startup.
 - Projects analysed before this change show neutral clips until their next `run`.
 - ~~Under a progressive first analysis readable rows show neutral clips until render~~ — closed
   the same night: the readable chain computes each session's colours before recording it merged

@@ -18,7 +18,16 @@ import pytest
 from typer.testing import CliRunner
 
 from bristlenose.cli import app
-from bristlenose.events import PipelineSummary
+from bristlenose.events import (
+    KindEnum,
+    PipelineSummary,
+    Process,
+    RunCompletedEvent,
+    RunStartedEvent,
+    _now_iso,
+    append_event,
+    events_path,
+)
 from bristlenose.utils import output_backup
 
 _MARKER = "bristlenose-report.html"
@@ -44,9 +53,28 @@ def _seed_report(out_dir: Path, marker: str) -> None:
     state = out_dir / ".bristlenose"
     state.mkdir(exist_ok=True)
     (state / "bristlenose.db").write_text(f"db:{marker}", encoding="utf-8")
-    (state / "pipeline-events.jsonl").write_text(
-        json.dumps({"event": "run_completed", "run_id": "old"}) + "\n", encoding="utf-8"
-    )
+    now = _now_iso()
+    # Admission reads the real event schema; abbreviated dictionaries are
+    # damaged evidence and must refuse rather than exercise pipeline wiring.
+    append_event(events_path(out_dir), RunCompletedEvent(
+        ts=now, run_id="old", kind=KindEnum.RUN, started_at=now, ended_at=now,
+    ))
+
+
+def _seed_local_crash(out_dir: Path) -> None:
+    """A positively owned dead local attempt, not an ownerless backup gap."""
+    now = _now_iso()
+    append_event(events_path(out_dir), RunStartedEvent(
+        ts=now, run_id="crashed", kind=KindEnum.RUN, started_at=now,
+        process=Process(pid=99_000, start_time="fixture-dead", hostname="fixture",
+                        user="test", bristlenose_version="0", python_version="3.12", os="test"),
+    ))
+    from bristlenose.run_lifecycle import pid_file_path
+
+    pid_file_path(out_dir).write_text(json.dumps({
+        "pid": 99_000, "start_time": "fixture-dead", "run_id": "crashed",
+        "machine_id": "fixture-local-machine",
+    }), encoding="utf-8")
 
 
 @pytest.fixture
@@ -57,6 +85,11 @@ def cli_to_pipeline(monkeypatch):
     that fixture exits before the pipeline, which is exactly the region under
     test here.
     """
+    monkeypatch.setattr("bristlenose.cli._print_header", lambda *a, **k: None)
+    monkeypatch.setattr("bristlenose.cli._build_estimator", lambda *a, **k: (None, None))
+    monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: "fixture-local-machine")
+    monkeypatch.setattr("bristlenose.utils.machine_identity.machine_id", lambda: "fixture-local-machine")
+    monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "fixture-local-machine")
     monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
     monkeypatch.setattr("bristlenose.cli._maybe_guide_provider_setup", lambda s: None)
     # True means "doctor handled it" — skips _run_preflight.
@@ -69,7 +102,9 @@ def cli_to_pipeline(monkeypatch):
 
 def _run(runner: CliRunner, input_dir: Path):
     # --no-serve: the pipeline runs, the summary prints, and nothing binds a port.
-    return runner.invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
+    result = runner.invoke(app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"])
+    assert result.exit_code != 75, result.output
+    return result
 
 
 class TestTheReportSurvivesAFailedRun:
@@ -234,6 +269,7 @@ class TestCrashRecovery:
         # half-written output directory.
         _seed_report(output_backup.backup_path_for(out_dir), "good")
         _seed_report(out_dir, "half-written")
+        _seed_local_crash(out_dir)
 
         async def _boom(*a, **k):
             raise RuntimeError("and it died again")
@@ -256,7 +292,10 @@ class TestCrashRecovery:
         input_dir = tmp_path / "interviews"
         out_dir = input_dir / "bristlenose-output"
         _seed_report(output_backup.backup_path_for(out_dir), "good")
-        # No output directory at all — the dead run's was never recreated.
+        # Recovery must precede the existing-output probe, but requires a
+        # positively owned local attempt. A backup alone cannot authorize it.
+        _seed_report(out_dir, "half-written")
+        _seed_local_crash(out_dir)
 
         seen: dict[str, bool] = {}
 
@@ -276,6 +315,27 @@ class TestCrashRecovery:
             "must precede the output_exists probe"
         )
         assert (out_dir / _MARKER).read_text(encoding="utf-8") == "new"
+
+
+    def test_ownerless_backup_gap_refuses_without_changing_files(
+        self, cli_to_pipeline, tmp_path: Path, monkeypatch
+    ) -> None:
+        input_dir = tmp_path / "interviews"
+        out_dir = input_dir / "bristlenose-output"
+        _seed_report(output_backup.backup_path_for(out_dir), "good")
+        before = {p.relative_to(input_dir): p.read_bytes()
+                  for p in input_dir.rglob("*") if p.is_file()}
+
+        async def must_not_run(*a, **k):
+            pytest.fail("ownerless evidence must not enter the pipeline")
+
+        monkeypatch.setattr("bristlenose.pipeline.Pipeline.run", must_not_run)
+        result = cli_to_pipeline.invoke(
+            app, ["run", str(input_dir), "--clean", "--yes", "--no-serve"]
+        )
+        assert result.exit_code == 75, result.output
+        assert before == {p.relative_to(input_dir): p.read_bytes()
+                          for p in input_dir.rglob("*") if p.is_file()}
 
 
 @pytest.fixture

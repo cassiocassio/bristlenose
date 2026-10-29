@@ -440,7 +440,7 @@
       "partialSessions_one": "{{done}} de {{total}} sessió analitzada",
       "partialSessions_other": "{{done}} de {{total}} sessions analitzades",
       "noStructuredCause": "No s'ha capturat la causa detallada.",
-      "reportError": "La teva anàlisi està segura: només ha fallat la visualització. Torna-ho a provar recarrega l'informe. Si torna a passar, copia els detalls i envia'ls amb Ajuda ▸ Envia comentaris.",
+      "reportError": "Bristlenose ha tingut un problema inesperat en obrir aquest informe.",
       "overflow_one": "… i {{count}} error més truncat",
       "overflow_other": "… i {{count}} errors més truncats",
       "reason": {

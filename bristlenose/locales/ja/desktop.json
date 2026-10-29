@@ -482,7 +482,7 @@
       },
       "partialSessions_other": "{{total}} 件中 {{done}} 件のセッションを分析済み",
       "noStructuredCause": "\u8a73\u7d30\u306a\u539f\u56e0\u306f\u8a18\u9332\u3055\u308c\u3066\u3044\u307e\u305b\u3093\u3002",
-      "reportError": "分析結果は無事です。表示だけが失敗しました。「再試行」でレポートを再読み込みします。再び起きる場合は、詳細をコピーして「ヘルプ ▸ フィードバックを送信」からお送りください。",
+      "reportError": "このレポートを開くときに、Bristlenose で予期しない問題が発生しました。",
       "overflow_other": "\u2026\u307b\u304b {{count}} \u4ef6\u306e\u5931\u6557\u3092\u7701\u7565\u3057\u307e\u3057\u305f",
       "reason": {
         "unsupported_format": "Bristlenose が読み取れる形式ではありません。",

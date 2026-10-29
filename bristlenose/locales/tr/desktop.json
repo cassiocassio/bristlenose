@@ -440,7 +440,7 @@
       "partialSessions_one": "{{total}} oturumdan {{done}} tanesi analiz edildi",
       "partialSessions_other": "{{total}} oturumdan {{done}} tanesi analiz edildi",
       "noStructuredCause": "Ayrıntılı neden yakalanmadı.",
-      "reportError": "Çözümlemeniz güvende; yalnızca görüntüleme başarısız oldu. Yeniden Dene raporu yeniden yükler. Yine olursa ayrıntıları kopyalayıp Yardım ▸ Geri Bildirim Gönder ile gönderin.",
+      "reportError": "Bristlenose bu raporu açarken beklenmeyen bir sorunla karşılaştı.",
       "overflow_one": "… ve {{count}} hata daha kesildi",
       "overflow_other": "… ve {{count}} hata daha kesildi",
       "reason": {

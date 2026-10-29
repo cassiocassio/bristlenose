@@ -23,7 +23,15 @@ enum StudyFinderDrop {
     /// closures call this and nothing else.
     @MainActor
     static func takesDrop(state: PipelineState?, folder: String, urls: [URL]) -> Bool {
-        accepts(state: state, folder: folder) && SidebarOutlineController.acceptsFinderFiles(urls)
+        accepts(state: state, folder: folder)
+            && SidebarOutlineController.acceptsFinderFiles(urls)
+            // A populated study takes source material only. This bounded
+            // guard gives SwiftUI the best available release-time refusal on
+            // macOS 15; AppKit presents the same answer as a prohibited
+            // cursor from validateDrop.
+            && (folder.isEmpty || !SidebarFinderDrop.quicklyContainsProject(
+                urls, folderLooksAnalysed: SidebarFinderDrop.locallyLooksAnalysed
+            ))
     }
 
     /// Whether the study takes files at all, from its state and its folder.

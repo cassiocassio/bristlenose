@@ -49,3 +49,20 @@ def machine_id() -> str | None:
         return hashlib.sha256(("bristlenose-machine-v1:" + raw).encode("ascii")).hexdigest()
     except (OSError, ValueError, TypeError, subprocess.SubprocessError):
         return None
+
+
+def friendly_machine_name() -> str | None:
+    """Apple's ComputerName for display only; never fall back to a DNS name."""
+    if sys.platform != "darwin":
+        return None
+    try:
+        result = subprocess.run(
+            ["/usr/sbin/scutil", "--get", "ComputerName"],
+            capture_output=True, text=True, encoding="utf-8", check=True, timeout=2,
+        )
+        name = result.stdout.strip()
+        if not name or len(name) > 256 or any(ord(c) < 32 or ord(c) == 127 for c in name):
+            return None
+        return name
+    except (OSError, UnicodeError, subprocess.SubprocessError):
+        return None

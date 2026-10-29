@@ -66,3 +66,33 @@ def test_windows_guid_uses_same_private_contract(monkeypatch, guid):
 def test_unsupported_os_is_unknown(monkeypatch):
     monkeypatch.setattr(identity.sys, "platform", "unsupported")
     assert identity.machine_id() is None
+
+
+def test_friendly_name_uses_apple_display_name_not_hostname(monkeypatch):
+    monkeypatch.setattr(identity.sys, "platform", "darwin")
+    calls = []
+
+    def scutil(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(stdout="Cassio’s Mac Studio\n")
+
+    monkeypatch.setattr(identity.subprocess, "run", scutil)
+    assert identity.friendly_machine_name() == "Cassio’s Mac Studio"
+    assert calls == [["/usr/sbin/scutil", "--get", "ComputerName"]]
+
+
+@pytest.mark.parametrize("name", ["", "a" * 257, "Office\nMac", "Office\x00Mac"])
+def test_unusable_friendly_name_is_omitted(monkeypatch, name):
+    monkeypatch.setattr(identity.sys, "platform", "darwin")
+    monkeypatch.setattr(identity.subprocess, "run", lambda *a, **k: SimpleNamespace(stdout=name))
+    assert identity.friendly_machine_name() is None
+
+
+def test_unavailable_display_name_never_falls_back_to_dns(monkeypatch):
+    monkeypatch.setattr(identity.sys, "platform", "darwin")
+
+    def unavailable(*args, **kwargs):
+        raise subprocess.CalledProcessError(1, "scutil")
+
+    monkeypatch.setattr(identity.subprocess, "run", unavailable)
+    assert identity.friendly_machine_name() is None

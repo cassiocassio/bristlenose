@@ -169,42 +169,48 @@ def reanalyse_fails_and_curation_survives(proj: Path, tmp: Path) -> None:
         assert _wait(lambda: _starred(client)), "a failed re-analyse lost the researcher's star"
 
 
+def _refused_open_preserves(proj: Path, tmp: Path) -> None:
+    from bristlenose.utils.study_startup import StudyStartupRefusedError
+
+    before = {p.relative_to(proj): p.read_bytes() for p in proj.rglob("*") if p.is_file()}
+    with pytest.raises(StudyStartupRefusedError):
+        _app(proj, tmp)
+    after = {p.relative_to(proj): p.read_bytes() for p in proj.rglob("*") if p.is_file()}
+    assert after == before
+
+
 def server_restarted_mid_reanalyse(proj: Path, tmp: Path) -> None:
-    """The incident itself: the server is (re)started while the output is moved
-    aside, then the run finishes."""
+    """An unowned startup gap refuses; opening again after completion works."""
     out = proj / "bristlenose-output"
     stash = output_backup.stash(out)
     assert stash is not None
+    _refused_open_preserves(proj, tmp)
+    _rebuild_from(stash, out)
+    _started(out, "RERUN")
+    _completed(out, "RERUN")
+    output_backup.discard(stash)
     with _client(_app(proj, tmp)) as client:
-        _rebuild_from(stash, out)
-        _started(out, "RERUN")
-        _completed(out, "RERUN")
-        output_backup.discard(stash)
         assert_healthy(proj, client)
 
 
 def server_restarted_mid_reanalyse_then_the_run_fails(proj: Path, tmp: Path) -> None:
-    """As above, but the run fails and the previous report is put back under a
-    server that has never seen it."""
     out = proj / "bristlenose-output"
     stash = output_backup.stash(out)
     assert stash is not None
+    _refused_open_preserves(proj, tmp)
+    _started(out, "BAD")
+    _failed(out, "BAD")
+    assert output_backup.restore(stash, out).report_is_back
     with _client(_app(proj, tmp)) as client:
-        _started(out, "BAD")
-        _failed(out, "BAD")
-        assert output_backup.restore(stash, out).report_is_back
         assert_healthy(proj, client)
 
 
 def crash_leaves_a_stash_and_the_next_run_reclaims_it(proj: Path, tmp: Path) -> None:
-    """A hard crash runs no restore, so the previous report sits in the stash.
-    The app relaunches and starts the server; the next run reclaims the stash
-    under it before doing anything else."""
+    """A stash with no new marker/history cannot prove a local crash."""
     out = proj / "bristlenose-output"
-    assert output_backup.stash(out) is not None  # and then the process died
-    with _client(_app(proj, tmp)) as client:
-        assert output_backup.reclaim_stale(out).report_is_back
-        assert_healthy(proj, client)
+    assert output_backup.stash(out) is not None
+    _refused_open_preserves(proj, tmp)
+    assert output_backup.backup_path_for(out).exists()
 
 
 def crash_report_visible_before_any_rerun(proj: Path, tmp: Path) -> None:
@@ -237,8 +243,7 @@ def server_starting_inside_a_runs_start_up_is_left_alone(proj: Path, tmp: Path) 
     assert output_backup.stash(out) is not None
     (out / ".bristlenose").mkdir(parents=True)
     (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n")
-    with _client(_app(proj, tmp)):
-        pass
+    _refused_open_preserves(proj, tmp)
     assert output_backup.backup_path_for(out).exists(), (
         "the server reclaimed a backup during a run's start-up"
     )
@@ -346,7 +351,7 @@ SCENARIOS = [
     pytest.param(server_restarted_mid_reanalyse_then_the_run_fails,
                  id="server-restarted-mid-reanalyse-run-fails",
                  marks=_MOVES_AN_OPEN_DATABASE),
-    pytest.param(crash_leaves_a_stash_and_the_next_run_reclaims_it, id="crash-then-next-run-reclaims",
+    pytest.param(crash_leaves_a_stash_and_the_next_run_reclaims_it, id="uncertain-stash-refuses-startup",
                  marks=_MOVES_AN_OPEN_DATABASE),
     pytest.param(served_from_the_output_folder_then_the_project, id="output-entry-then-root-entry"),
     pytest.param(renamed_under_a_live_serve_is_said, id="rename-under-live-serve-is-said",

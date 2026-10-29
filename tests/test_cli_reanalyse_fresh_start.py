@@ -69,12 +69,27 @@ def _seed_report(out_dir: Path, marker: str, *, created: str | None = None) -> N
     state.mkdir(exist_ok=True)
     (state / "bristlenose.db").write_text(f"db:{marker}", encoding="utf-8")
     (state / "pipeline-manifest.json").write_text("{}", encoding="utf-8")
-    with (state / "pipeline-events.jsonl").open("a", encoding="utf-8") as fh:
-        if created is not None:
-            # The run that made this analysis: its start dates the analysis.
-            fh.write(json.dumps({"event": "run_started", "run_id": marker,
-                                 "started_at": created}) + "\n")
-        fh.write(json.dumps({"event": "run_completed", "run_id": marker}) + "\n")
+    # Startup admission must see real lifecycle records, not abbreviated
+    # dictionaries that intentionally fail the shared event schema.
+    from bristlenose.events import (
+        KindEnum,
+        Process,
+        RunCompletedEvent,
+        RunStartedEvent,
+        _now_iso,
+        append_event,
+        events_path,
+    )
+
+    now = _now_iso()
+    if created is not None:
+        append_event(events_path(out_dir), RunStartedEvent(
+            ts=created, run_id=marker, kind=KindEnum.RUN, started_at=created,
+            process=Process(pid=1, start_time="seed", hostname="fixture", user="test",
+                            bristlenose_version="0", python_version="3.12", os="test")))
+    append_event(events_path(out_dir), RunCompletedEvent(
+        ts=now, run_id=marker, kind=KindEnum.RUN, started_at=created or now, ended_at=now))
+
 
 
 def _land_sessions(out_dir: Path, sids: list[str], *, quotes_each: int = 2) -> None:
@@ -102,6 +117,9 @@ def _land_sessions(out_dir: Path, sids: list[str], *, quotes_each: int = 2) -> N
 
 @pytest.fixture
 def runner(monkeypatch):
+    # These are lifecycle/backup tests with a stubbed pipeline, not hardware probes.
+    monkeypatch.setattr("bristlenose.cli._print_header", lambda *a, **k: None)
+    monkeypatch.setattr("bristlenose.cli._build_estimator", lambda *a, **k: (None, None))
     monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
     monkeypatch.setattr("bristlenose.cli._maybe_guide_provider_setup", lambda s: None)
     monkeypatch.setattr("bristlenose.cli._maybe_auto_doctor", lambda s, c: True)
@@ -233,7 +251,8 @@ class TestAFreshStartThatProducedNothing:
         _no_litter(out_dir)
         # And the failure stays on the record (30 Aug design).
         events = _read(out_dir / ".bristlenose" / "pipeline-events.jsonl")
-        assert '"run_id": "attempt"' in events
+        assert any(json.loads(line).get("run_id") == "attempt"
+                   for line in events.splitlines() if line.strip())
 
     def test_a_session_with_no_quotes_is_not_an_analysis(
         self, runner, tmp_path: Path, monkeypatch

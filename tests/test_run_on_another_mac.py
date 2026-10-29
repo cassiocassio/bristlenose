@@ -75,6 +75,7 @@ def known_local_identity(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("bristlenose.utils.machine_identity.machine_id", lambda: "this-machine")
     monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "this-machine")
     monkeypatch.setattr(__name__ + ".machine_id", lambda: "this-machine")
+    monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: "this-machine")
 
 
 def _dead_pid() -> int:
@@ -163,6 +164,9 @@ class _Result:
 
 
 def _stub_pipeline(monkeypatch) -> dict:
+    # Hardware selection is unrelated to ownership; do not initialise Metal/MLX.
+    monkeypatch.setattr("bristlenose.cli._print_header", lambda *a, **k: None)
+    monkeypatch.setattr("bristlenose.cli._build_estimator", lambda *a, **k: (None, None))
     seen: dict = {}
 
     async def _run(_self, _in, out, *a, **k):
@@ -209,7 +213,6 @@ def test_control_opening_the_study_after_a_crash_here_puts_the_report_back(
 # --- A run on A while B runs ------------------------------------------------
 
 
-@_OPEN
 def test_a_run_here_does_not_fail_a_run_on_another_mac(
     runner, tmp_path: Path, monkeypatch,
 ) -> None:
@@ -225,7 +228,6 @@ def test_a_run_here_does_not_fail_a_run_on_another_mac(
     assert json.loads(pid_file_path(out).read_text(encoding="utf-8"))["run_id"] == run_id
 
 
-@_OPEN
 def test_a_run_here_does_not_put_a_report_back_over_a_re_analyse_on_another_mac(
     runner, tmp_path: Path, monkeypatch,
 ) -> None:
@@ -344,7 +346,9 @@ def test_server_factory_preserves_uncertain_run_before_first_write(tmp_path, mon
         raise FirstWriterReachedError
 
     monkeypatch.setattr("bristlenose.logging.setup_logging", stop_before_logging)
-    with pytest.raises(FirstWriterReachedError):
+    from bristlenose.utils.study_startup import StudyStartupRefusedError
+
+    with pytest.raises(StudyStartupRefusedError):
         create_app(project_dir=out.parent)
     after = {p.relative_to(out.parent): p.read_bytes() for p in out.parent.rglob("*") if p.is_file()}
     assert after == before

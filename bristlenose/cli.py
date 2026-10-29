@@ -7,7 +7,7 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, NoReturn
 
 import typer
 from rich.console import Console
@@ -27,9 +27,12 @@ from bristlenose.utils.text import count_noun
 if TYPE_CHECKING:  # imported lazily at runtime; mypy still resolves the name
     from collections.abc import Callable
 
+    from fastapi import FastAPI
+
     from bristlenose.config import BristlenoseSettings
     from bristlenose.status import ProjectStatus
     from bristlenose.timing import PipelineEvent, TimingEstimator
+    from bristlenose.utils.study_startup import StudyStartupRefusedError
 
 # Known commands — used by _maybe_inject_run() to detect bare directory arguments
 _COMMANDS = {
@@ -164,6 +167,40 @@ def _confirm_clean_discards(output_dir: Path, project: str) -> None:
     if not typer.confirm("Discard it and re-analyse?", default=False):
         console.print("Nothing changed.")
         raise typer.Exit(0)
+
+
+def _refuse_unsafe_study(output_dir: Path) -> None:
+    from bristlenose.utils.study_startup import StudyStartupRefusedError, require_study_startup
+
+    try:
+        require_study_startup(output_dir)
+    except StudyStartupRefusedError as exc:
+        _exit_startup_refusal(exc)
+
+
+def _exit_startup_refusal(exc: StudyStartupRefusedError) -> NoReturn:
+    from bristlenose.utils.study_startup import STUDY_STARTUP_REFUSAL_EXIT_CODE
+
+    if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
+        import json
+
+        facts = {"reason": exc.reason.value, "machine_name": exc.machine_name,
+                 "started_at": exc.started_at}
+        console.print("@study-startup-refused " + json.dumps(facts, ensure_ascii=False),
+                      markup=False, highlight=False, soft_wrap=True)
+    _say(MessageKind.WARNING, str(exc))
+    raise typer.Exit(STUDY_STARTUP_REFUSAL_EXIT_CODE) from exc
+
+
+def _create_admitted_app(project_dir: Path | None, dev: bool, verbose: bool) -> FastAPI:
+    """Keep a second factory-level refusal on the same native/CLI error path."""
+    from bristlenose.server.app import create_app
+    from bristlenose.utils.study_startup import StudyStartupRefusedError
+
+    try:
+        return create_app(project_dir=project_dir, dev=dev, verbose=verbose)
+    except StudyStartupRefusedError as exc:
+        _exit_startup_refusal(exc)
 
 
 def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:
@@ -1495,6 +1532,8 @@ def run(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
+    _refuse_unsafe_study(output_dir)
+
     # A hard crash runs no handler, so the previous run's report may still be
     # sitting in a stashed backup with nothing pointing at it. Recover it BEFORE
     # anything inspects the output directory — `output_exists` and the resume
@@ -1738,7 +1777,7 @@ def run(
     # decision. One place to get right rather than four.
     run_produced_a_report = False
     try:
-        with run_lifecycle(output_dir, KindEnum.RUN) as _run_handle:
+        with run_lifecycle(output_dir, KindEnum.RUN, _startup_checked=True) as _run_handle:
             pipeline.set_progress_sink(_run_handle.progress)
             # `--clean` reads every file even when the stash above failed and
             # the run writes over the previous output: the freeze on an
@@ -1967,6 +2006,8 @@ def transcribe(
     if output_dir is None:
         output_dir = input_dir / "bristlenose-output"
 
+    _refuse_unsafe_study(output_dir)
+
     settings_kwargs: dict[str, object] = {
         "output_dir": output_dir,
         "skip_transcription": False,
@@ -2072,6 +2113,8 @@ def analyze(
             output_dir = transcripts_dir.parent
         else:
             output_dir = transcripts_dir.parent / "bristlenose-output"
+
+    _refuse_unsafe_study(output_dir)
 
     if codebook is not None:
         _validate_codebook_slug(codebook)
@@ -2234,7 +2277,6 @@ def _start_server(
     """
     import uvicorn
 
-    from bristlenose.server.app import create_app
     from bristlenose.server.lifecycle import (
         install_exit_logger,
         install_parent_death_watcher,
@@ -2252,7 +2294,7 @@ def _start_server(
     if open_browser:
         _schedule_browser_open(report_url)
 
-    app_instance = create_app(project_dir=project_dir, dev=dev, verbose=verbose)
+    app_instance = _create_admitted_app(project_dir, dev, verbose)
     uvicorn.run(
         app_instance,
         host="127.0.0.1",
@@ -2350,9 +2392,7 @@ def _serve_dynamic_port(
 
     import uvicorn
 
-    from bristlenose.server.app import create_app
-
-    app_instance = create_app(project_dir=project_dir, dev=dev, verbose=verbose)
+    app_instance = _create_admitted_app(project_dir, dev, verbose)
     config = uvicorn.Config(
         app_instance,
         host="127.0.0.1",
@@ -2427,8 +2467,21 @@ def serve(
         bool,
         typer.Option("--verbose", "-v", help="Enable verbose logging."),
     ] = False,
+    check_startup_only: Annotated[
+        bool,
+        typer.Option("--check-startup-only", hidden=True),
+    ] = False,
 ) -> None:
     """Open a previous report in your browser (no analysis)."""
+    if project_dir is not None:
+        from bristlenose.output_paths import project_output_dir
+
+        _refuse_unsafe_study(project_output_dir(project_dir))
+    if check_startup_only:
+        if project_dir is None:
+            raise typer.Exit(2)
+        # Internal native Retry probe: no settings, recovery, app, log or socket.
+        return
     # --palette / BRISTLENOSE_PALETTE → env for app.py._html_root_attrs, which
     # renders data-color-theme onto <html>. The internal attribute keeps its
     # name; only the user-facing --palette / BRISTLENOSE_PALETTE spelling is new.

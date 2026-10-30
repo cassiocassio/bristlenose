@@ -25,9 +25,11 @@ backlog. "State" is the provider, the model and whether a key is set, never the
 key: no key value is kept or logged here. It is held in this process, so a serve
 restart (which the Mac does when a key is saved) is a change too, and only while
 the job still says it failed that way, so any later pass that works lifts it.
-Topping up credit changes none of these: an out-of-credit codebook is tried again
-after a restart or a change of provider or model, not before. A provider with no key
-is not tried at all (as ``app.py`` skips the run's re-apply) and writes nothing to
+Topping up credit or replacing a key from another terminal changes none of these,
+so the hold also lapses with the clock (``HOLD_S``, 15 minutes): the next trigger
+after that makes one attempt, and a failure for the same reason holds for another
+period. Nothing runs on a timer; with no trigger, nothing is spent. A provider with no
+key is not tried at all (as ``app.py`` skips the run's re-apply) and writes nothing to
 the job.
 """
 
@@ -55,6 +57,16 @@ CAP_S = 60.0
 #: Rate limits, outages and a stopped pass are not here: they pass.
 KEY_OR_CREDIT_KINDS = frozenset({"invalid_key", "out_of_credit"})
 
+#: How long that hold lasts. A key mended where this process cannot see it (``bristlenose
+#: configure`` in another terminal while a CLI ``serve`` runs) changes nothing the
+#: signature holds, so the hold also lapses with the clock: the first trigger after
+#: it makes ONE attempt, and a failure for the same reason holds for another period.
+#: No timer runs and nothing is spent without a trigger.
+HOLD_S = 15 * 60.0
+
+#: The clock the hold is measured on (monotonic seconds); a test replaces it.
+_clock = time.monotonic
+
 
 class _Wait:
     """One project's pending pass: when its first trigger arrived, and its timer."""
@@ -66,9 +78,9 @@ class _Wait:
 
 _WAITS: dict[int, _Wait] = {}
 #: ``(project, framework)`` -> the state in which its last attempt failed for a
-#: key or credit reason. Memory only: on the row it would outlive the restart
-#: that fixes it.
-_BLOCKED: dict[tuple[int, str], tuple[str, str, bool]] = {}
+#: key or credit reason, and when (``_clock``). Memory only: on the row it would
+#: outlive the restart that fixes it.
+_BLOCKED: dict[tuple[int, str], tuple[tuple[str, str, bool], float]] = {}
 #: Strong references: the loop holds a bare task weakly (server/CLAUDE.md).
 _FIRING: set[asyncio.Task[Any]] = set()
 
@@ -116,8 +128,11 @@ def signature(settings: Any) -> tuple[str, str, bool]:
 
 def blocked(project_id: int, framework_id: str, settings: Any, job: AutoCodeJob) -> bool:
     """Whether the last attempt failed for a key or credit reason and nothing has
-    changed since: the state is the one it failed in, and the job still says so.
-    A pass that has worked since (any path) cleared the job's failure and lifts it."""
+    changed since: the state is the one it failed in, the job still says so, and
+    ``HOLD_S`` has not passed. A pass that has worked since (any path) cleared the
+    job's failure and lifts it. A lapsed hold is left in place, not removed: the
+    attempt it allows ends by setting it again (or lifting it), so a second trigger
+    during that attempt does not start another."""
     key = (project_id, framework_id)
     held = _BLOCKED.get(key)
     if held is None:
@@ -125,7 +140,8 @@ def blocked(project_id: int, framework_id: str, settings: Any, job: AutoCodeJob)
     if job.status != "failed" or job.failure_kind not in KEY_OR_CREDIT_KINDS:
         del _BLOCKED[key]
         return False
-    return held == signature(settings)
+    state, since = held
+    return state == signature(settings) and _clock() - since < HOLD_S
 
 
 def _eligible_jobs(db: SASession, project_id: int, app: Any) -> list[AutoCodeJob]:
@@ -299,10 +315,10 @@ async def _catch_up(app: Any, project_id: int, framework_id: str) -> None:
         db.close()
     key = (project_id, framework_id)
     if status == "failed" and kind in KEY_OR_CREDIT_KINDS:
-        _BLOCKED[key] = signature(_settings(app))
+        _BLOCKED[key] = (signature(_settings(app)), _clock())
         logger.info(
             "AutoCode catch-up %s failed (%s); no more attempts until the provider "
-            "or key changes", framework_id, kind,
+            "or key changes, or %d minutes pass", framework_id, kind, int(HOLD_S // 60),
         )
     elif status == "completed":
         _BLOCKED.pop(key, None)

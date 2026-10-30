@@ -573,6 +573,63 @@ class TestAKeyOrCreditFailure:
         assert len(model.prompts) - applied == 2, "one more attempt, not one per unhide"
         assert model.batch_sizes()[applied + 1:] == [7], "the whole backlog in it"
 
+    def test_the_hold_lapses_after_a_while_for_one_attempt_and_is_set_again_if_it_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A key mended by ``bristlenose configure`` while a CLI serve runs changes
+        nothing the serve can see: the hold is lifted by the clock, once, on the next
+        trigger (no timer, nothing spent without one)."""
+        assert 10 * 60 <= cu.HOLD_S <= 30 * 60, "about a quarter of an hour"
+        now = [1000.0]
+        monkeypatch.setattr(cu, "_clock", lambda: now[0])
+        app, client = _app(tmp_path)
+        _more_quotes(app, 6)
+        doms = _dom(app, like="burst quote")
+        _hide_in_db(app, doms)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+
+        def attempts() -> int:
+            return len(model.prompts) - applied
+
+        def settled(n: int) -> None:
+            _wait(lambda: attempts() == n and not cu._FIRING, f"attempt {n} to end")
+            _wait(lambda: self_job(app).status in ("failed", "completed"), "the job to settle")
+
+        model.fail = "api key not valid"
+        with model, client:
+            _hide(client, doms[:1], False)
+            settled(1)
+            assert self_job(app).failure_kind == "invalid_key"
+
+            now[0] += cu.HOLD_S - 1  # inside the hold: nothing tried
+            assert _hide(client, doms[1:2], False)["catchUp"] == []
+            _quiet(0.5)
+            assert attempts() == 1
+
+            now[0] += 2  # past it: ONE attempt, for the whole backlog
+            assert [c["framework_id"] for c in _hide(client, doms[2:3], False)["catchUp"]] == [
+                "garrett"
+            ]
+            settled(2)
+            assert self_job(app).failure_kind == "invalid_key"  # failed again
+
+            # ... and held again for another full period from now.
+            assert _hide(client, doms[3:4], False)["catchUp"] == []
+            now[0] += cu.HOLD_S - 1
+            assert _hide(client, doms[4:5], False)["catchUp"] == []
+            _quiet(0.5)
+            assert attempts() == 2
+
+            model.fail = None  # the key is mended
+            now[0] += 2
+            _hide(client, doms[5:], False)
+            settled(3)
+            assert self_job(app).status == "completed"
+            assert cu._BLOCKED == {}
+        assert model.batch_sizes()[applied + 2:] == [6], "the whole backlog in the last"
+
     def test_a_credit_failure_is_held_the_same_way(self, tmp_path: Path) -> None:
         app, client = _app(tmp_path)
         _more_quotes(app, 2)

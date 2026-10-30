@@ -67,3 +67,42 @@ twostep 34%, combined 28%, **stored (today) 14%**. No one picked "no highlight".
 - **Not tested yet:** wording written from this spec. The picks say what reads well from
   existing candidates; whether a new prompt reproduces it needs one more replay (about
   £0.10) and then the joint bullet-plus-highlight check on the production model.
+
+## Replay from the spec (30 Oct 2026, later)
+
+Wording written from the spec (`spec`, `spec_ex`, then `mid`: the same rules plus a 6 to 9
+word length and three invented examples), no scratch step, scored against the 91 picks.
+The owner's own reading of it: the hard part is "just enough meaning"; what matters is
+precise **start and end points**, and whether a researcher wants to read the highlight at
+all. So boundaries are scored, not only length.
+
+| variant (model) | located | words median | 4 or fewer | over 12 | over half | same start as pick | same end as pick | both |
+|---|---|---|---|---|---|---|---|---|
+| `tight1` (Haiku) | 88 | 8 | 8 | 7 | 6 | 67 | 56 | 43 |
+| `mid` (Haiku) | 87 | 10 | 0 | 21 | 19 | 52 | 41 | 26 |
+| `spec` (Haiku) | 86 | 11 | 1 | 34 | 31 | 50 | 45 | 30 |
+| `tight1` (Sonnet 4.6) | 91 | 5 | 27 | 0 | 0 | 43 | 38 | 19 |
+| `mid` (Sonnet 4.6) | 91 | 9 | 0 | 10 | 8 | 51 | 35 | 25 |
+| `spec` (Sonnet 4.6) | 88 | 10 | 2 | 22 | 17 | 48 | 42 | 28 |
+
+- **Length is model-dependent.** Told "5 words, a quarter", Haiku overshoots to a median
+  of 8 (the picked length) and Sonnet obeys, giving 5 (27 of 91 at four words or fewer, a
+  length the picks rejected). Wording tuned on one model is wrong on the other, and the
+  production default is Sonnet.
+- **Wording written from the spec overshoots on both models** unless the number is stated
+  hard: "6 to 10 words, never more than 12" gave a median of 11 on Haiku. `mid` (6 to 9,
+  a third) is the best of the Sonnet wordings on length (no highlight of 4 or fewer, 10
+  over 12), at the cost of still running long on a fifth of bullets.
+- **No wording reproduces the picked boundaries on Sonnet more than about a third of the
+  time** (both ends match on 25 to 28 of 91). An exact match is a harsh test, since two
+  good highlights can differ by a word, so the second blind round (`lab.py round2`,
+  `data/viewer-round2.html`) puts Sonnet's candidates, Haiku's best and the owner's
+  round-1 pick side by side on the 90 bullets where they differ.
+- **The regenerated `recommended-prompt.diff`** is built on `mid`'s rules (start where the
+  product's behaviour begins, end before the outcome, 6 to 9 words and at most a third,
+  no feeling word alone). It has no scratch field and no schema field, only two
+  description edits in `structured.py`. It is not yet tested on the production model
+  writing bullet and highlight together.
+
+Spend on this thread: 78 + 39 + 78 + 39 further calls (Haiku and Sonnet 4.6), about $0.65
+in all; lab total about $1.9, roughly £1.5.

@@ -25,7 +25,10 @@ from pydantic import BaseModel, Field
 
 HERE = Path(__file__).parent
 DATA = HERE / "data"
-MODEL = "claude-haiku-4-5-20251001"          # cheapest adequate; $1 / $5 per M tokens
+import os
+MODEL = os.environ.get("LAB_MODEL", "claude-haiku-4-5-20251001")   # default: cheapest adequate
+RESULTS = os.environ.get("LAB_RESULTS", "results.json")
+ONLY = [v for v in os.environ.get("LAB_VARIANTS", "").split(",") if v]
 PRICE_IN, PRICE_OUT = 1.0, 5.0
 
 FRAME = """You choose the highlight inside evidence bullets that are already written.
@@ -123,6 +126,51 @@ highlight: "found the sort control"
 - bullet: "The label on the tile did not match the page it opened, so a participant doubted \
 the site." highlight: "label on the tile did not match" (5 words)"""
 
+# Written from picks-spec.md (the owner's 91 blind picks). No scratch step.
+SPEC = """
+Rule: the highlight is the shortest span that works as a small, self-contained claim \
+about the product: what it did or failed to do, with the specific thing it was done to \
+and, if it matters, when or where. Aim for 6 to 10 words; never more than 12, and \
+normally no more than about a third of the bullet (on a very short bullet it may be \
+most of it). Begin where the product's behaviour begins: not at "a participant" and not \
+at a reporting verb ("said", "found that", "expressed"). End before the outcome or \
+reaction that follows ("leaving ...", "causing ...", "which ...", "so ..."). A feeling \
+word on its own is never the highlight. The bullet is a paraphrase, so the participant's \
+own words are usually not in it: copy characters that are really in the bullet. If the \
+bullet has no such span, highlight is null."""
+
+SPEC_EX = SPEC + """
+Examples (invented):
+- bullet: "The filter panel hid the size options behind a second click, leaving a \
+participant convinced the shop did not stock their size." highlight: "hid the size \
+options behind a second click"
+- bullet: "A participant could not tell the two basket buttons apart and pressed the wrong \
+one, saying it was confusing." highlight: "could not tell the two basket buttons apart"
+- bullet: "The order summary listed a fee that the product page had never mentioned, which \
+made a participant distrust the total." highlight: "listed a fee that the product page \
+had never mentioned" """
+
+# `tight1`'s structure, with the length the owner's picks showed (about 8 words, a third)
+MID = """
+Rule: choose the `highlight`: find the words in the BULLET that carry the evidence and \
+copy one span of 6 to 9 words, and never more than a third of the bullet's words (on a \
+very short bullet it may be most of it). The span is a small claim about the product: \
+what it did or failed to do, with the specific thing it was done to and, if it matters, \
+when or where. Begin where the product's behaviour begins (not at "a participant", not at \
+a reporting verb such as "said" or "expressed") and end before the outcome or reaction \
+that follows ("leaving ...", "causing ...", "which ...", "so ..."). A feeling word on its \
+own is never the highlight. The bullet is a paraphrase, so the participant's own words \
+are usually NOT in it: copy characters that are really in the bullet. If the bullet has \
+no such span, highlight is null.
+Examples (invented):
+- bullet: "The filter panel hid the size options behind a second click, leaving a \
+participant convinced the shop did not stock their size." highlight: "hid the size \
+options behind a second click" (6 words)
+- bullet: "A participant could not tell the two basket buttons apart and pressed the wrong \
+one, saying it was confusing." highlight: "could not tell the two basket buttons apart" (8 words)
+- bullet: "The order summary listed a fee that the product page had never mentioned, which \
+made a participant distrust the total." highlight: "listed a fee that the product page had never mentioned" (10 words)"""
+
 VARIANTS = {
     "current": (CURRENT, False),
     "cap6": (CAP6, False),
@@ -132,6 +180,9 @@ VARIANTS = {
     "combined": (COMBINED, True),
     "tight": (TIGHT, True),
     "tight1": (TIGHT1, False),
+    "spec": (SPEC, False),
+    "spec_ex": (SPEC_EX, False),
+    "mid": (MID, False),
 }
 ORDER = ["stored", "none", *VARIANTS]
 
@@ -208,7 +259,7 @@ async def run() -> None:
     from bristlenose.llm import telemetry
     from bristlenose.llm.client import LLMClient
 
-    out_path = DATA / "results.json"
+    out_path = DATA / RESULTS
     results = json.loads(out_path.read_text()) if out_path.exists() else {}
     settings = load_settings(llm_provider="anthropic", llm_model=MODEL)
     client = LLMClient(settings)
@@ -236,7 +287,7 @@ async def run() -> None:
         print("done", k)
 
     try:
-        await asyncio.gather(*(one(v, c) for v in VARIANTS for c in cards()))
+        await asyncio.gather(*(one(v, c) for v in (ONLY or VARIANTS) for c in cards()))
     finally:
         telemetry.reset_run_context(tokens)
     u = client.tracker
@@ -256,7 +307,7 @@ def quote_overlap(highlight: str, quote: str) -> float:
 
 
 def measure() -> dict:
-    results = json.loads((DATA / "results.json").read_text())
+    results = json.loads((DATA / RESULTS).read_text())
     rows = {}
     for c in cards():
         for a in c["items"]:
@@ -325,7 +376,7 @@ mark{background:#ffd9b0;color:inherit;border-radius:2px;padding:0 1px}
 <div id=app class=hide></div>
 <script>
 const DATA=__DATA__;
-const KEY="highlight-lab-picks-v1";
+const KEY="__KEY__";
 let picks={};try{picks=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){}
 const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function seed(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%1000)/1000}}
@@ -378,10 +429,43 @@ def write_viewer() -> None:
                 "options": [{"text": t, "variants": vs} for t, vs in groups.items()],
             })
     blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
-    (DATA / "viewer.html").write_text(VIEWER.replace("__DATA__", blob))
+    (DATA / "viewer.html").write_text(VIEWER.replace("__DATA__", blob).replace("__KEY__", "highlight-lab-picks-v1"))
     print("wrote", DATA / "viewer.html", f"({len(data)} bullets)")
+
+
+def write_round2() -> None:
+    """Second blind round: the production model's candidates, your round-1 pick and Haiku's tight1."""
+    haiku = json.loads((DATA / "results.json").read_text())
+    sonnet = json.loads((DATA / "results-sonnet.json").read_text())
+    picks = {tuple(line.split("|")[:2]): line.split("|")[2] for line in (DATA / "picks.tsv").read_text().splitlines()}
+    sources = [("sonnet:tight1", sonnet, "tight1"), ("sonnet:mid", sonnet, "mid"),
+               ("sonnet:spec", sonnet, "spec"), ("haiku:tight1", haiku, "tight1")]
+    data = []
+    for c in cards():
+        for a in c["items"]:
+            groups: dict[str, list[str]] = {}
+            pick = picks.get((c["key"].split("::")[-1], a["id"][3:]))
+            if pick:
+                groups.setdefault(pick, []).append("your round-1 pick")
+            for label, res, v in sources:
+                p = res.get(f"{v}::{c['key']}", {}).get(a["id"])
+                t = p and p["highlight"]
+                if t and validate(a["text"], t):
+                    groups.setdefault(t, []).append(label)
+            if len(groups) < 2:
+                continue                              # everyone agrees: nothing to choose
+            data.append({
+                "key": f"r2::{c['key']}::{a['id']}", "project": c["project"], "card": c["card"],
+                "id": a["id"], "text": a["text"], "quote": a["quote"],
+                "options": [{"text": t, "variants": vs} for t, vs in groups.items()],
+            })
+    blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
+    html_ = (VIEWER.replace("__DATA__", blob).replace("__KEY__", "highlight-lab-picks-round2")
+             .replace("Pick the one that reads best", "Round 2: which would you want to read?"))
+    (DATA / "viewer-round2.html").write_text(html_)
+    print("wrote", DATA / "viewer-round2.html", f"({len(data)} bullets with a real choice)")
 
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "plan"
-    {"plan": plan, "report": report}.get(cmd, lambda: asyncio.run(run()))()
+    {"plan": plan, "report": report, "round2": write_round2}.get(cmd, lambda: asyncio.run(run()))()

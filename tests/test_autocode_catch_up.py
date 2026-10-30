@@ -827,3 +827,25 @@ class TestAHoldIsLiftedByAnyPassThatWorks:
 
             hide_again = _hide(client, doms[2:], False)
         assert [c["framework_id"] for c in hide_again["catchUp"]] == ["garrett"]
+
+
+class TestWhatAnUnhideCosts:
+    """The route asks on every unhide; the credential store is a subprocess per key on the Mac."""
+
+    def test_a_project_with_no_codebook_applied_reads_no_settings(self, tmp_path: Path) -> None:
+        app, _client = _app(tmp_path)
+        del app.state.settings
+        with patch("bristlenose.config.load_settings") as load:
+            assert cu.note_quotes_counting(app, 1) == []
+        load.assert_not_called()
+
+    def test_the_settings_are_kept_for_a_while(self, tmp_path: Path) -> None:
+        app, _client = _app(tmp_path)
+        del app.state.settings
+        with patch("bristlenose.config.load_settings", return_value=_settings()) as load:
+            for _ in range(5):
+                cu._settings(app)
+            assert load.call_count == 1
+            cu._settings_memo = (id(app), time.monotonic() - cu._SETTINGS_TTL_S - 1, _settings())
+            cu._settings(app)
+            assert load.call_count == 2

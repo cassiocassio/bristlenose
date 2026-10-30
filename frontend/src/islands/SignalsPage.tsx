@@ -12,6 +12,7 @@
  * the vanilla JS analysis.js so all styling carries over.
  */
 
+import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Metric, PersonBadge, SectionHeading } from "../components";
@@ -564,10 +565,11 @@ function SignalCard({
   }, [expanded]);
 
   const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
-  /** The metrics block, minimised by default. Independent of `expanded`,
-   *  which owns the hidden QUOTES — two disclosures, two states. */
-  const [workingOpen, setWorkingOpen] = useState(false);
-  const toggleWorking = useCallback(() => setWorkingOpen((prev) => !prev), []);
+  /** The metrics block, minimised by default and shared by every card: opening it on
+   *  one opens it on all (SignalWorkingStore). Independent of `expanded`, which owns
+   *  the collapsed QUOTES, per card: two disclosures, two states. */
+  const workingOpen = useSignalWorkingOpen();
+  const toggleWorking = toggleSignalWorking;
   const focusEvidenceQuote = useCallback((quoteId: string) => {
     // A citation should never appear inert merely because its source is folded
     // into the overflow. Reveal its quote before giving it the shared focus.

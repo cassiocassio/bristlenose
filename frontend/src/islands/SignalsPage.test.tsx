@@ -1,3 +1,4 @@
+import { resetSignalWorkingStore } from "../contexts/SignalWorkingStore";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
@@ -223,6 +224,7 @@ const emptyCbData: CodebookSignalsListResponse = {
 let fetchMock: any;
 
 beforeEach(() => {
+    resetSignalWorkingStore();
   resetSignalStore();
   resetInspectorStore();
   fetchMock = vi.fn();
@@ -602,6 +604,32 @@ describe("SignalsPage", () => {
     // columns — so the rest is for whoever wants to audit it.
     expect(screen.getAllByTestId("bn-signal-hero")[0].textContent).toContain("0.46");
     expect(screen.queryByText("2.5×")).toBeNull();
+    expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+  });
+
+  it("opens the working on every card at once, and keeps it open when the page is left and returned to", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    const first = render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+
+    fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
+    // One card was clicked; both show their working.
+    expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
+
+    // Leave the lens and come back: it is still open on every card.
+    first.unmount();
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    expect(screen.getAllByTestId("bn-signal-working")).toHaveLength(2);
+
+    // Closing it on the second card closes it on both.
+    fireEvent.click(screen.getAllByTestId("bn-signal-hero")[1]);
     expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
   });
 

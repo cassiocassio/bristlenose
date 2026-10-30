@@ -294,16 +294,11 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
     if (!Array.isArray(runs)) return;
     for (const run of runs) {
       if (typeof run?.framework_id !== "string") continue;
-      // A running job that finished once is a catch-up: switching a codebook back on is the
-      // only path that sets a finished job running again (§4a). It comes back as the chip the
-      // switch gave it (R12).
+      // A running job that finished once is a catch-up: switching a codebook back on, or a
+      // quote counting again, sets a finished job running again (§4a). It comes back as the
+      // chip the switch gave it (R12).
       if (run.completed_at) {
-        if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) continue;
-        addJob(newJobId(`catchup:${run.framework_id}:restored`), {
-          type: "catchup",
-          frameworkId: run.framework_id,
-          frameworkTitle: run.title,
-        });
+        adoptCatchUp(run);
         continue;
       }
       if (hasJob((j) => j.type === "autocode" && j.frameworkId === run.framework_id)) continue;
@@ -317,11 +312,65 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
   }).catch((err: unknown) => console.warn("Activity: restoring the chips on load failed", err));
 }
 
+/** A catch-up the server is running gets a chip, unless this window has one for its codebook. */
+function adoptCatchUp(run: { framework_id: string; title: string }): boolean {
+  if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) return false;
+  addJob(newJobId(`catchup:${run.framework_id}:restored`), {
+    type: "catchup",
+    frameworkId: run.framework_id,
+    frameworkTitle: run.title,
+  });
+  return true;
+}
+
+// ── A quote that counts again (ruling 4) ─────────────────────────────────
+
+/** How often, and for how long after the last unhide, to look for the catch-up the server starts
+ *  by itself: its wait is 10 s from the last unhide, 60 s at most, and the pass follows. */
+const WATCH_EVERY_MS = 3_000;
+const WATCH_FOR_MS = 90_000;
+let watching: ReturnType<typeof setInterval> | null = null;
+let watchUntil = 0;
+
+/**
+ * An unhide can hand a quote to a codebook that never saw it; the server then codes it a few
+ * seconds on, with no request from the page, so nothing would tell the page its tags had arrived.
+ * Look for the pass in `/autocode/jobs` and give it the catch-up chip, whose completion refreshes
+ * the lenses (`bn:tags-changed`). A pass this window never sees (it ended between two looks) still
+ * leaves the lenses refreshed once the watch runs out. Another unhide while watching lengthens it.
+ */
+export function watchForCatchUp(): void {
+  if (isExportMode()) return;
+  watchUntil = Date.now() + WATCH_FOR_MS;
+  if (watching !== null) return;
+  watching = setInterval(() => {
+    const stop = () => {
+      if (watching !== null) clearInterval(watching);
+      watching = null;
+    };
+    listAutoCodeJobs()
+      .then((r) => {
+        let found = false;
+        for (const run of r?.jobs ?? []) if (run.completed_at && adoptCatchUp(run)) found = true;
+        if (found) stop();
+      })
+      .catch(() => undefined) // the next look is the retry
+      .finally(() => {
+        if (watching !== null && Date.now() > watchUntil) {
+          stop();
+          document.dispatchEvent(new CustomEvent("bn:tags-changed"));
+        }
+      });
+  }, WATCH_EVERY_MS);
+}
+
 /** Reset for tests. `keepSession` stands for a reload: the page's memory goes, the window's
  *  session storage stays. */
 export function resetActivityStore({ keepSession = false }: { keepSession?: boolean } = {}): void {
   jobs = new Map();
   snapshot = jobs;
+  if (watching !== null) clearInterval(watching);
+  watching = null;
   rehydratedProjectId = null;
   storageKey = null;
   carriedIds = new Set();

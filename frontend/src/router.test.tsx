@@ -251,6 +251,73 @@ describe("AutoCode chip completion", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Ruling 4: a quote unhidden is coded by the codebooks that never sent it, a few seconds on, by the
+// server alone. The page finds that pass and its chip ends with the refresh that shows the tags.
+// ---------------------------------------------------------------------------
+
+describe("A quote that counts again", () => {
+  // The server starts the pass some seconds after the unhide; before that no job runs.
+  let passStarted = false;
+
+  beforeEach(() => {
+    passStarted = false;
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    resetSidebarStore();
+    resetActivityStore();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
+      const url = String(input);
+      const body = url.includes("/autocode/jobs")
+        ? {
+            jobs: passStarted
+              ? [{
+                  framework_id: "norman", title: "Norman", status: "running",
+                  completed_at: "2026-10-20T10:00:00Z",
+                }]
+              : [],
+          }
+        : url.includes("/autocode/norman/status")
+          ? {
+              status: "completed", processed_quotes: 40, total_quotes: 40,
+              catch_up_total: 1, catch_up_processed: 1,
+              started_at: "2026-10-30T10:00:00Z", completed_at: "2026-10-30T10:01:00Z",
+            }
+          : url.includes("/quotes")
+            ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
+            : url.includes("/sessions")
+              ? { sessions: [] }
+              : url.includes("/codebook")
+                ? { groups: [], ungrouped: [], all_tag_names: [] }
+                : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+    vi.useRealTimers();
+  });
+
+  it("refreshes the lenses when the pass the server started by itself ends", async () => {
+    const heard = vi.fn();
+    document.addEventListener("bn:tags-changed", heard);
+    try {
+      renderRoute("/report/sessions/");
+      await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+      heard.mockClear();
+      act(() => { window.dispatchEvent(new CustomEvent("bn:catch-up-armed")); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
+      expect(heard).not.toHaveBeenCalled(); // nothing has run yet
+      passStarted = true;
+      await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
+      // The chip is found, polls the job, and ends with the refresh; it is gone by then.
+      await waitFor(() => expect(heard).toHaveBeenCalled());
+    } finally {
+      document.removeEventListener("bn:tags-changed", heard);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // R12: switching a codebook back on re-codes its new sessions, and the chip for
 // it is numberless by design — the job's counts are the codebook's cumulative
 // totals, not the sessions being coded — so it must not draw them while it runs.

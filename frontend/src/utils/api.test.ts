@@ -6,6 +6,7 @@ import {
   getAutoCodeStatus,
   getClipExtractionStatus,
   getScreensExportStatus,
+  patchHidden,
   patchStarred,
   patchTags,
   putFrameworkStates,
@@ -279,6 +280,39 @@ describe("a curation write that the server could not place", () => {
     fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
     await expect(patchStarred({ "q-p1-10": true })).resolves.toBeUndefined();
     expect(toastMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * An unhide can hand a quote to a codebook that never saw it. The server then codes it a few
+ * seconds on, on its own, and says so in the write's answer: the page must hear it to look for
+ * the pass, or its tags arrive unannounced (ruling 4).
+ */
+describe("an unhide the server will code", () => {
+  it("tells the shell to look for the catch-up", async () => {
+    const heard = vi.fn();
+    window.addEventListener("bn:catch-up-armed", heard);
+    try {
+      fetchMock.mockResolvedValue(answer(200, {
+        status: "ok", unresolved: [], catchUp: [{ framework_id: "garrett", title: "Garrett" }],
+      }));
+      await patchHidden({ "q-p1-10": false });
+      expect(heard).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener("bn:catch-up-armed", heard);
+    }
+  });
+
+  it("says nothing when no codebook will code it", async () => {
+    const heard = vi.fn();
+    window.addEventListener("bn:catch-up-armed", heard);
+    try {
+      fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
+      await patchHidden({ "q-p1-10": false });
+      expect(heard).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("bn:catch-up-armed", heard);
+    }
   });
 });
 

@@ -31,7 +31,7 @@ import { UndoSync } from "../components/UndoSync";
 import { applyNativeSearchAction, NativeSearchSync } from "../components/NativeSearchSync";
 import { PlayerProvider } from "../contexts/PlayerContext";
 import { FocusProvider, useFocus } from "../contexts/FocusContext";
-import { useActivityJobs, removeJob, rehydrateActivityJobs, sameExport, settleJob } from "../contexts/ActivityStore";
+import { useActivityJobs, removeJob, rehydrateActivityJobs, sameExport, settleJob, watchForCatchUp } from "../contexts/ActivityStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useAnchorReporter } from "../hooks/useAnchorReporter";
 import { useScrollToAnchor } from "../hooks/useScrollToAnchor";
@@ -319,6 +319,13 @@ function AppShell() {
   useEffect(() => {
     void rehydrateActivityJobs(projectId);
   }, [projectId]);
+
+  // An unhide that hands a quote to a codebook starts a pass the server runs by itself a few seconds
+  // on; the chip for it is found, not given, so its tags appear without a reload.
+  useEffect(() => {
+    window.addEventListener("bn:catch-up-armed", watchForCatchUp);
+    return () => window.removeEventListener("bn:catch-up-armed", watchForCatchUp);
+  }, []);
 
   // Push the focused quote to native so the Quotes menu's focus-gated items
   // (Add Tag, Reveal in Transcript) enable exactly when a quote is focused —

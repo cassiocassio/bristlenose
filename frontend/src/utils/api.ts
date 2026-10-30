@@ -249,7 +249,13 @@ function sendWrite(
         const answer = (await resp.json().catch((e: unknown) => {
           console.warn(`${method} ${path}: answer unreadable, taken as placed`, e);
           return null;
-        })) as { unresolved?: unknown } | null;
+        })) as { unresolved?: unknown; catchUp?: unknown } | null;
+        // A quote that counts again (an unhide) is owed to the codebooks that never sent
+        // it, and the server codes it a little later by itself; the shell looks for that
+        // pass so its tags appear without a reload (`watchForCatchUp`).
+        if (Array.isArray(answer?.catchUp) && answer.catchUp.length > 0) {
+          window.dispatchEvent(new CustomEvent("bn:catch-up-armed"));
+        }
         const unresolved = Array.isArray(answer?.unresolved) ? (answer.unresolved as string[]) : [];
         if (unresolved.length > 0) {
           throw Object.assign(new Error(`${method} ${path}: no such quote`), {

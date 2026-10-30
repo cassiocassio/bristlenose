@@ -9,6 +9,7 @@ import {
   useActivityJobs,
   resetActivityStore,
   rehydrateActivityJobs,
+  watchForCatchUp,
 } from "./ActivityStore";
 import { getClipExtractionStatus, getScreensExportStatus, listAutoCodeJobs } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
@@ -527,5 +528,87 @@ describe("a window's chips across a reload", () => {
     ]));
     await reload();
     expect(getJobs().size).toBe(0);
+  });
+});
+
+// An unhide can start a catch-up the server runs a few seconds later, with no request from the
+// page (ruling 4). The page looks for it, so its chip, and the refresh that chip ends with, exist.
+describe("watchForCatchUp", () => {
+  const autocode = vi.mocked(listAutoCodeJobs);
+  const running = {
+    jobs: [{ framework_id: "norman", title: "Norman", status: "running", completed_at: "2026-10-20T10:00:00" }],
+  } as never;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    resetActivityStore();
+    vi.mocked(isExportMode).mockReturnValue(false);
+    autocode.mockReset().mockResolvedValue({ jobs: [] });
+  });
+
+  afterEach(() => {
+    resetActivityStore();
+    vi.useRealTimers();
+  });
+
+  const tick = async (ms: number) => {
+    await act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+  };
+
+  it("gives the catch-up the server starts later its chip, once, and stops looking", async () => {
+    watchForCatchUp();
+    await tick(3_000);
+    expect(kinds()).toEqual([]);
+    autocode.mockResolvedValue(running);
+    await tick(3_000);
+    expect(kinds()).toEqual(["catchup:norman:restored"]);
+    expect(byKind("catchup:norman:restored")).toEqual({
+      type: "catchup", frameworkId: "norman", frameworkTitle: "Norman",
+    });
+    const reads = autocode.mock.calls.length;
+    await tick(30_000);
+    expect(autocode.mock.calls.length).toBe(reads);
+  });
+
+  it("does not double the chip it already has for that codebook", async () => {
+    autocode.mockResolvedValue(running);
+    addJob("catchup:norman:1", { type: "catchup", frameworkId: "norman", frameworkTitle: "Norman" });
+    watchForCatchUp();
+    await tick(3_000);
+    expect([...getJobs().keys()]).toEqual(["catchup:norman:1"]);
+  });
+
+  it("refreshes the lenses once when the pass came and went between two looks", async () => {
+    const refreshed = vi.fn();
+    document.addEventListener("bn:tags-changed", refreshed);
+    try {
+      watchForCatchUp();
+      await tick(88_000);
+      expect(refreshed).not.toHaveBeenCalled();
+      await tick(10_000);
+      expect(refreshed).toHaveBeenCalledTimes(1);
+      const reads = autocode.mock.calls.length;
+      await tick(30_000);
+      expect(autocode.mock.calls.length).toBe(reads);
+      expect(refreshed).toHaveBeenCalledTimes(1);
+    } finally {
+      document.removeEventListener("bn:tags-changed", refreshed);
+    }
+  });
+
+  it("is one watch however many unhides, and the last one lengthens it", async () => {
+    watchForCatchUp();
+    await tick(60_000);
+    watchForCatchUp();
+    watchForCatchUp();
+    await tick(60_000);
+    expect(autocode.mock.calls.length).toBe(40); // one look every 3 s for 120 s, not three watches
+  });
+
+  it("looks at nothing in an exported report", async () => {
+    vi.mocked(isExportMode).mockReturnValue(true);
+    watchForCatchUp();
+    await tick(10_000);
+    expect(autocode).not.toHaveBeenCalled();
   });
 });

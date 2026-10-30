@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
 import type { CodebookSignalsListResponse, SentimentSignalsData } from "../utils/types";
-import { resetSignalStore } from "../contexts/SignalStore";
+import { resetSignalStore, useSignalStore } from "../contexts/SignalStore";
 import { resetInspectorStore } from "../contexts/InspectorStore";
 import { navigateTo } from "../shims/navigation";
 
@@ -317,17 +317,55 @@ describe("SignalsPage", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("fills in by itself once the lens is lit again", async () => {
+  it("a page open when a build begins has the report as soon as the lens lights, with nothing wrong shown in between", async () => {
+    vi.useFakeTimers();
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    // Mounted lit, the last read says there is nothing and nothing is coming.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ snapshot: null, source: null, computed_at: null, pending: false }),
+    });
+    const { rerender, container } = render(<SignalsPage projectId="1" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // A run completes: the lens is withheld. The page empties and keeps reading.
     lensState.signalsWithheld = true;
-    mockFetchCodebookSignals(mockCbData);
-    const { rerender } = render(<SignalsPage projectId="1" />);
+    rerender(<SignalsPage projectId="1" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByTestId("signals-withheld")).toBeTruthy();
+    expect(container.textContent).toBe("");
+    const readsWhileWithheld = fetchMock.mock.calls.length;
+
+    // The report lands. The page reads it while still withheld.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        snapshot: mockCbData, source: "new_interviews", computed_at: "2026-10-30T09:01:00+00:00", pending: false,
+      }),
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(readsWhileWithheld);
     expect(screen.queryAllByTestId("bn-signal-card")).toHaveLength(0);
 
+    // The lens lights: cards, never the no-data sentence or the live cards first.
     lensState.signalsWithheld = false;
     rerender(<SignalsPage projectId="1" />);
-    await waitFor(() => {
-      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
-    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toContain("No signals yet");
+  });
+
+  it("publishes no entries to the sidebar while the body is empty", async () => {
+    lensState.signalsWithheld = true;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    mockFetchCodebookSignals(mockCbData);
+    function Probe() {
+      return <span data-testid="probe">{useSignalStore().signals.length}</span>;
+    }
+    render(<><SignalsPage projectId="1" /><Probe /></>);
+    await waitFor(() => expect(screen.getByTestId("signals-withheld")).toBeTruthy());
+    expect(screen.getByTestId("probe").textContent).toBe("0");
   });
 
   it("keeps asking while an empty report is pending, so the first real one arrives", async () => {

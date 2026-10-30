@@ -369,6 +369,51 @@ class TestStartAutoCodeJob:
         finally:
             db.close()
 
+    def test_a_codebook_apply_notes_the_signals_build_for_the_whole_job(
+        self, client_with_garrett: TestClient
+    ) -> None:
+        """The lens is withheld from the job's start to its end, whatever happens.
+
+        For a study with no report with cards the lens would otherwise be lit
+        through the job, dim for the build and lit again.
+        """
+        import asyncio
+
+        from bristlenose.server.signal_snapshots import signals_preparing
+
+        app = client_with_garrett.app  # type: ignore[union-attr]
+        seen: list[bool] = []
+        captured: list = []
+
+        async def fake_job(*_args, **_kwargs) -> None:
+            seen.append(signals_preparing(app.state))
+            raise RuntimeError("the model is down")
+
+        def keep(coro, **_kw):
+            captured.append(coro)
+            return MagicMock()
+
+        async def go() -> None:
+            try:
+                await captured[0]
+            except RuntimeError:
+                pass
+
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings") as mock_ls,
+            patch("bristlenose.server.routes.autocode.run_autocode_job", fake_job),
+            patch("bristlenose.server.routes.autocode.asyncio.create_task", keep),
+        ):
+            mock_ls.return_value = _mock_cloud_settings()
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+            assert resp.status_code == 200
+            assert len(captured) == 1
+            assert signals_preparing(app.state) is False  # nothing has run yet
+            asyncio.run(go())
+
+        assert seen == [True]
+        assert signals_preparing(app.state) is False
+
     @pytest.mark.parametrize("status", ["cancelled", "failed"])
     def test_apply_over_an_applied_job_is_refused(
         self, client_with_garrett: TestClient, status: str

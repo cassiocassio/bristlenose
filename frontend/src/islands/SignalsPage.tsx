@@ -1195,15 +1195,30 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
       .catch(() => {});
   }, [projectId]);
 
+  // The server withholds Signals while its first report is being built.
+  const signalsWithheld = !useLenses().signals;
+  // After the lens lights, the page stays empty until one read taken since has
+  // landed: its last read may be from before the report existed, and showing
+  // the no-data sentence or the live cards for a moment first would be
+  // something true followed by something else.
+  const [settling, setSettling] = useState(false);
+  const wasWithheld = useRef(false);
+  const readProject = useRef<string | null>(null);
+
   // Read the last completed Signals artifact.  Signal writing is owned by the
   // successful cloud-codebook/new-interview lifecycle; opening this lens is
   // always cheap, deterministic and safe while offline.
   useEffect(() => {
     let disposed = false;
     let retry: number | undefined;
-    setTagLoaded(false);
-    setTagError(null);
-    setCbData(null);
+    if (readProject.current !== projectId) {
+      readProject.current = projectId;
+      setTagLoaded(false);
+      setTagError(null);
+      setCbData(null);
+    }
+    if (wasWithheld.current && !signalsWithheld) setSettling(true);
+    wasWithheld.current = signalsWithheld;
 
     const readSnapshot = () => {
       apiGet<StoredSignalSnapshot>("/signals/snapshot")
@@ -1211,11 +1226,14 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
           if (disposed) return;
           setCbData(data.snapshot);
           setTagLoaded(true);
+          setSettling(false);
           // The missing-first-snapshot lifecycle is background work the
           // researcher did not ask to manage.  Once it lands, this open lens
           // quietly receives it; a completed or offline/error response never
-          // becomes a polling loop.
-          if (data.pending) {
+          // becomes a polling loop.  While the lens is withheld the read goes
+          // on whatever the answer, so a page that was open when a build began
+          // has the report by the time the lens lights.
+          if (data.pending || signalsWithheld) {
             retry = window.setTimeout(readSnapshot, INITIAL_SNAPSHOT_POLL_MS);
           }
         })
@@ -1223,6 +1241,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
           if (disposed) return;
           setTagError(err.message);
           setTagLoaded(true);
+          setSettling(false);
         });
     };
 
@@ -1231,10 +1250,8 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
       disposed = true;
       if (retry !== undefined) window.clearTimeout(retry);
     };
-  }, [projectId]);
+  }, [projectId, signalsWithheld]);
 
-  // The server withholds Signals while its first report is being built.
-  const signalsWithheld = !useLenses().signals;
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
   const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
 
@@ -1382,9 +1399,12 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
   // Populate the store so the sidebar can render signal entries — the same
   // de-duplicated list the cards below are drawn from, which is what makes the
   // navigation one-to-one with the main content.
+  // Nothing while the body is empty: the list and the subtitle would name cards
+  // that are not on the page.
+  const showingNothing = signalsWithheld || settling;
   useEffect(() => {
-    setSignals(signals);
-  }, [signals]);
+    setSignals(showingNothing ? [] : signals);
+  }, [signals, showingNothing]);
 
   const scrollToCard = useCallback((key: string) => {
     const el = cardRefs.current.get(key);
@@ -1540,7 +1560,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
   // to show yet. No cards, no live sentiment fallback, no spinner and no
   // sentence, not even the no-data one: the page fills in by itself when the
   // report lands (the snapshot poll above keeps asking while it is pending).
-  if (signalsWithheld) {
+  if (signalsWithheld || settling) {
     return <div data-testid="signals-withheld" aria-busy="true" />;
   }
 

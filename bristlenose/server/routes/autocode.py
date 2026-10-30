@@ -347,6 +347,23 @@ async def start_autocode_job(
         app = request.app
 
         async def _run_and_snapshot() -> None:
+            # The first report is withheld from the lens from the moment this
+            # starts, not when the job ends: for a study with no report with cards
+            # the lens would otherwise be lit through the whole job, dim for the
+            # build and lit again. A study that has a report is never withheld
+            # (the lens reads "no report with cards AND a build in flight").
+            from bristlenose.server.signal_snapshots import (
+                begin_signals_preparing,
+                end_signals_preparing,
+            )
+
+            begin_signals_preparing(app.state)
+            try:
+                await _apply_and_snapshot()
+            finally:
+                end_signals_preparing(app.state)
+
+        async def _apply_and_snapshot() -> None:
             await run_autocode_job(
                 db_factory, project_id, framework_id, settings,
                 project_dir=project_dir,
@@ -365,21 +382,13 @@ async def start_autocode_job(
                 if completed is None:
                     return
                 from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
-                from bristlenose.server.signal_snapshots import (
-                    begin_signals_preparing,
-                    end_signals_preparing,
-                )
 
-                begin_signals_preparing(app.state)
-                try:
-                    await materialise_completed_signal_snapshot(
-                        snapshot_db,
-                        project_id,
-                        source="codebook_apply",
-                        project_dir=project_dir,
-                    )
-                finally:
-                    end_signals_preparing(app.state)
+                await materialise_completed_signal_snapshot(
+                    snapshot_db,
+                    project_id,
+                    source="codebook_apply",
+                    project_dir=project_dir,
+                )
             except Exception:
                 # A completed codebook must remain completed if optional signal
                 # synthesis fails; retry happens on the next LLM-backed run.

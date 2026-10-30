@@ -163,6 +163,21 @@ def test_a_report_with_cards_is_never_pending(tmp_path) -> None:
     assert client.get(f"/api/projects/{pid}/signals/snapshot").json()["pending"] is False
 
 
+def test_the_startup_repair_withholds_the_lens_and_says_pending(tmp_path) -> None:
+    app, client, pid = _client(tmp_path, None)
+    app.state.initial_signal_snapshot_pending = True
+    assert _signals_lit(client, pid) is False
+    assert client.get(f"/api/projects/{pid}/signals/snapshot").json()["pending"] is True
+    app.state.initial_signal_snapshot_pending = False
+    assert _signals_lit(client, pid) is True
+
+
+def test_the_startup_repair_never_withholds_a_readable_report(tmp_path) -> None:
+    app, client, pid = _client(tmp_path, CARD)
+    app.state.initial_signal_snapshot_pending = True
+    assert _signals_lit(client, pid) is True
+
+
 # ── where a run's overlay ends ────────────────────────────────────────────────
 
 def _completed_event() -> RunCompletedEvent:
@@ -224,10 +239,12 @@ def test_a_finished_run_notes_the_build_before_the_reapply_and_ends_it(
     assert built == [True]
 
 
-def test_a_failed_build_still_ends_the_preparing_fact(tmp_path, monkeypatch) -> None:
+def test_a_failed_reapply_still_ends_the_preparing_fact(tmp_path, monkeypatch) -> None:
     app, project_dir = _handler_app(tmp_path, monkeypatch, "openai")
+    seen: list[bool] = []
 
     async def fake_reapply(_factory, _pid, _settings):
+        seen.append(signals_preparing(app.state))
         raise RuntimeError("provider down")
 
     monkeypatch.setattr("bristlenose.server.autocode.reapply_active_frameworks", fake_reapply)
@@ -235,7 +252,70 @@ def test_a_failed_build_still_ends_the_preparing_fact(tmp_path, monkeypatch) -> 
 
     async def scenario() -> None:
         await handler(_completed_event())
+        assert len(app_module._REAPPLY_AFTER_RUN_TASKS) == 1
         await asyncio.gather(*app_module._REAPPLY_AFTER_RUN_TASKS)
+        assert signals_preparing(app.state) is False
+
+    asyncio.run(scenario())
+    # The build was noted before the failing step ran: the pass was not vacuous.
+    assert seen == [True]
+
+
+def test_a_failed_materialisation_still_ends_the_preparing_fact(tmp_path, monkeypatch) -> None:
+    app, project_dir = _handler_app(tmp_path, monkeypatch, "openai")
+
+    async def fake_reapply(_factory, _pid, _settings):
+        return None
+
+    async def failing_materialise(_db, _pid, *, source, project_dir):
+        assert signals_preparing(app.state) is True
+        raise RuntimeError("the model refused")
+
+    monkeypatch.setattr("bristlenose.server.autocode.reapply_active_frameworks", fake_reapply)
+    monkeypatch.setattr(
+        "bristlenose.server.routes.signals.materialise_completed_signal_snapshot",
+        failing_materialise,
+    )
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+
+    async def scenario() -> None:
+        await handler(_completed_event())
+        await asyncio.gather(*app_module._REAPPLY_AFTER_RUN_TASKS)
+        assert signals_preparing(app.state) is False
+
+    asyncio.run(scenario())
+
+
+def test_a_run_whose_import_failed_never_notes_a_build(tmp_path, monkeypatch) -> None:
+    app, project_dir = _handler_app(tmp_path, monkeypatch, "openai")
+
+    def boom(_db, _path):
+        raise RuntimeError("import failed")
+
+    monkeypatch.setattr("bristlenose.server.importer.import_project", boom)
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+
+    async def scenario() -> None:
+        before = len(app_module._REAPPLY_AFTER_RUN_TASKS)
+        await handler(_completed_event())
+        assert len(app_module._REAPPLY_AFTER_RUN_TASKS) == before
+        assert signals_preparing(app.state) is False
+
+    asyncio.run(scenario())
+
+
+def test_settings_that_cannot_be_read_never_note_a_build(tmp_path, monkeypatch) -> None:
+    app, project_dir = _handler_app(tmp_path, monkeypatch, "openai")
+    app.state.settings = None
+
+    def boom():
+        raise RuntimeError("no config")
+
+    monkeypatch.setattr("bristlenose.config.load_settings", boom)
+    handler = _make_run_completed_handler(app, app.state.db_factory, project_dir)
+
+    async def scenario() -> None:
+        await handler(_completed_event())
         assert signals_preparing(app.state) is False
 
     asyncio.run(scenario())

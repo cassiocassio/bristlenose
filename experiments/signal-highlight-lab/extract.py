@@ -32,7 +32,7 @@ def load(label: str, path: str) -> list[dict]:
     p = Path(path) if Path(path).is_absolute() else root / path
     con = sqlite3.connect(f"file:{p}?mode=ro", uri=True)
     rows = con.execute(
-        "select signal_key, signal_name, pattern, evidence_assertions from elaboration_caches"
+        "select signal_key, signal_name, pattern, evidence_assertions, elaboration from elaboration_caches"
     ).fetchall()
     # quote texts from the latest snapshot give us the full quote for each id
     quotes: dict[str, str] = {}
@@ -55,15 +55,16 @@ def load(label: str, path: str) -> list[dict]:
                         f"{sig.get('source_type')}|{sig.get('location')}|{sig.get('group_name')}",
                         sig.get("signal_name", ""), sig.get("pattern", ""),
                         json.dumps(sig.get("evidence_assertions", [])),
+                        sig.get("elaboration", ""),
                     ))
     except sqlite3.Error:
         pass
     out = []
-    for src, key, name, pattern, ev in [("cache", *r) for r in rows] + [("snapshot", *r) for r in snap_rows]:
+    for src, key, name, pattern, ev, elab in [("cache", *r) for r in rows] + [("snapshot", *r) for r in snap_rows]:
         for a in json.loads(ev or "[]"):
             frag = a.get("intervention_fragment")
             out.append({
-                "project": label, "from": src, "card": key, "card_name": name, "pattern": pattern,
+                "project": label, "from": src, "card": key, "claim": elab.split("||")[0].strip(), "card_name": name, "pattern": pattern,
                 "id": a["id"], "text": a["text"], "quote_id": a["source_quote_id"],
                 "quote": quotes.get(a["source_quote_id"]) or a.get("source_excerpt", ""),
                 "fragment": frag,

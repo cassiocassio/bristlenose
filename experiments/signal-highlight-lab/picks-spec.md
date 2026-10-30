@@ -106,3 +106,30 @@ all. So boundaries are scored, not only length.
 
 Spend on this thread: 78 + 39 + 78 + 39 further calls (Haiku and Sonnet 4.6), about $0.65
 in all; lab total about $1.9, roughly £1.5.
+
+## Round 3: does giving the model the card's claim help? (30 Oct 2026)
+
+Owner's round-2 reading: 22 of 30 changed picks got shorter ("not ruthless enough the first
+time"), 8 got longer ("too short and you are meaningless"); whether a tail such as
+"until postcode entry" is crucial depends on what the reader already knows, so it cannot be
+a rule. Idea tested: the highlight is read under the card's claim, so show the replay that
+claim and tell it to skip what the claim already says. Scored against the owner's FINAL pick
+per bullet (round 2 where made, else round 1), Sonnet 4.6, 91 bullets:
+
+| variant | words median | start | end | both | F1 |
+|---|---|---|---|---|---|
+| `mid` (6 to 9 words) | 9 | 54 | 40 | 34 | 0.71 |
+| `mid58` (5 to 8 words, control) | 9 | 51 | 45 | 33 | 0.72 |
+| `claim` (`mid58` + the card's claim) | 9 | 47 | 40 | 27 | 0.69 |
+| `tight1` (5 words, 25%) | 5 | 56 | 47 | 32 | 0.71 |
+| Haiku `tight1` | 8 | 66 | 57 | 46 | 0.85 |
+
+The claim **did not help**. It differed from the control on 22 bullets, and where it
+differed it mostly moved the highlight to a *different part* of the bullet (the part the
+claim does not cover) instead of trimming the same part, which is not what the owner picks.
+Shortening the range from 6-9 to 5-8 made no measurable difference either: Sonnet reads a
+range as "about 9". Haiku with a nominal 5-word cap still matches the owner best (46 of 91
+exact), because it overshoots to the picked length.
+
+Open option, not built: a separate cheap highlight step (Haiku) after the bullet is written,
+instead of asking the bullet-writing model for both. Costs one extra small call per card.

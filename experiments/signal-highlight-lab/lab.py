@@ -171,6 +171,19 @@ one, saying it was confusing." highlight: "could not tell the two basket buttons
 - bullet: "The order summary listed a fee that the product page had never mentioned, which \
 made a participant distrust the total." highlight: "listed a fee that the product page had never mentioned" (10 words)"""
 
+# Round 3: the owner's picks say the floor is meaning and the tail is a judgement about
+# what the reader already knows. `mid58` is MID at the length the picks showed (5 to 8 words);
+# `claim` adds the card's claim to the prompt and asks the model to use it.
+MID58 = MID.replace("copy one span of 6 to 9 words, and never more than a third", "copy one span of 5 to 8 words, and never more than a third")
+CLAIM = MID58 + """
+The reader has just read the card's claim (given above the quotes). Do not spend the \
+highlight on what the claim already says. Keep a tail such as "until postcode entry" or \
+"for a postcode nowhere near it" when it says WHY or WHERE and the claim does not; drop it \
+when the claim, or a researcher's ordinary knowledge of the product, already supplies it. \
+The highlight must still make sense on its own: never so short that it points at nothing."""
+
+CLAIM_VARIANTS = {"claim"}
+
 VARIANTS = {
     "current": (CURRENT, False),
     "cap6": (CAP6, False),
@@ -183,6 +196,8 @@ VARIANTS = {
     "spec": (SPEC, False),
     "spec_ex": (SPEC_EX, False),
     "mid": (MID, False),
+    "mid58": (MID58, False),
+    "claim": (CLAIM, False),
 }
 ORDER = ["stored", "none", *VARIANTS]
 
@@ -214,14 +229,16 @@ def cards() -> list[dict]:
     return out
 
 
-def user_prompt(card: dict) -> str:
+def user_prompt(card: dict, with_claim: bool = False) -> str:
     from bristlenose.llm.boundary import wrap_untrusted
     quotes = "\n".join(
         f'- [{a["id"]}] [{a["id"][3:9]}] participant quote: "{a["quote"]}"' for a in card["items"]
     )
     bullets = "\n".join(f'- id: {a["id"]}\n  bullet: {a["text"]}' for a in card["items"])
+    claim = card["items"][0].get("claim", "")
+    shown = f"The card's claim, which the reader has just read above the bullets:\n{claim}\n\n" if with_claim and claim else ""
     return (
-        f"Signal card: {card['card']}\n\nQuotes (data):\n{wrap_untrusted('signals', quotes)}\n\n"
+        f"Signal card: {card['card']}\n\n{shown}Quotes (data):\n{wrap_untrusted('signals', quotes)}\n\n"
         f"Bullets to highlight:\n{bullets}"
     )
 
@@ -276,7 +293,7 @@ async def run() -> None:
             try:
                 with telemetry.stage("signal_highlight_lab"):
                     r = await client.analyze(
-                        system_prompt=system_prompt(v), user_prompt=user_prompt(c),
+                        system_prompt=system_prompt(v), user_prompt=user_prompt(c, v in CLAIM_VARIANTS),
                         response_model=Picks, max_tokens=4000,
                     )
             except Exception as e:                  # noqa: BLE001 - lab: record and move on

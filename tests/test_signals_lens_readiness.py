@@ -23,6 +23,7 @@ from bristlenose.server.app import _make_run_completed_handler, create_app
 from bristlenose.server.lens_readiness import Progress, lens_readiness
 from bristlenose.server.models import Project, SignalSnapshot
 from bristlenose.server.signal_snapshots import (
+    SIGNAL_SNAPSHOT_PAYLOAD_VERSION,
     begin_signals_preparing,
     end_signals_preparing,
     signals_preparing,
@@ -58,7 +59,7 @@ def test_preparing_withholds_signals_after_a_progressive_run_joins() -> None:
 def _snapshot(payload: dict) -> SignalSnapshot:
     import json
 
-    return SignalSnapshot(project_id=1, source="t", payload_version=5, payload=json.dumps(payload))
+    return SignalSnapshot(project_id=1, source="t", payload_version=SIGNAL_SNAPSHOT_PAYLOAD_VERSION, payload=json.dumps(payload))
 
 
 def test_a_snapshot_with_a_card_has_cards() -> None:

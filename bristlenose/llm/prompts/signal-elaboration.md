@@ -1,6 +1,6 @@
 ---
 id: signal-elaboration
-version: 0.5.0
+version: 0.6.0
 ---
 # Signal Elaboration
 
@@ -113,11 +113,33 @@ frequency, consensus or causality.
 
 Write each assertion as one or two short sentences. **Never use an em dash, an en dash or a spaced hyphen to join clauses in an assertion**; use a full stop or a semicolon instead.
 
-Each assertion **must contain one intervention fragment whenever its source
-quote supports an actionable product/system cause**. This is not
-the strongest emotional word. It is one contiguous, intelligible causal unit
-which names the product/system property, behaviour or omission that explains
-why this quote supports the signal.
+**Colour is a budget.** The card colours the fragment, and a card whose every line
+is coloured has no pointer left. Give a fragment to **at most two assertions per
+signal**: the ones whose evidence most directly shows the claim you wrote in Step 5,
+and whose source quote supports an actionable product/system cause. For every other
+assertion return no fragment (`null`); the assertion itself stays.
+
+The fragment is a pointer, not a summary: the card colours it, and a click on it
+jumps to the participant's quote. It is the shortest span that works as a small,
+self-contained claim about the product: what it did or failed to do, with the
+specific thing it was done to and, if it matters, when or where. Most of the
+assertion stays unmarked.
+
+**Where it starts and ends is what makes it readable.**
+
+- **Length:** aim for 5 to 7 words, never more than 10, and normally no more than a
+  quarter of the assertion's words. On a very short assertion it may be most of it.
+  Go below 5 words only when the short span is a complete thing that stands alone
+  ("Conflicting minimum-order figures"); if cutting a word would leave a phrase that
+  points at nothing, keep the word.
+- **Start** where the product's behaviour begins: not at "a participant", and not at
+  a verb of reporting ("said", "found that", "expressed").
+- **End** before the outcome or reaction that follows the cause ("leaving ...",
+  "causing ...", "which ...", "so ..."). Keep a trailing "until ..." or "for ..." only
+  when it says why or where and the claim does not already.
+- A feeling word on its own is never the fragment.
+- It must be characters that really appear in the assertion's `text`. The assertion
+  paraphrases the participant, so the participant's own words are usually not in it.
 
 Write the assertion in a compact cause-and-effect form so that the mechanism
 is actually present in its text. Do not write only an outcome such as “a
@@ -128,13 +150,13 @@ failed to do. For example:
   checkout would do.” → fragment: “Conflicting minimum-order figures”
 - “The bag withheld delivery cost and timing until postcode entry, frustrating
   a participant who needed both to decide.” → fragment: “withheld delivery
-  cost and timing until postcode entry”
+  cost and timing”
 - “Click-and-collect was not made clear, so a participant assumed delivery was
-  the only route.” → fragment: “was not made clear”
+  the only route.” → fragment: “Click-and-collect was not made clear”
 
 If a quote has no actionable product/system cause, omit the assertion entirely
-rather than returning a cause-free assertion with a `null` fragment. Every
-assertion returned should therefore normally include exactly one fragment.
+rather than returning a cause-free assertion with a `null` fragment. Of the
+assertions you do return, at most two carry a fragment, as above.
 
 Use this counterfactual test:
 
@@ -143,17 +165,18 @@ Use this counterfactual test:
 - for positive evidence, if the property were removed or weakened, would the
   benefit plausibly diminish?
 
-Only omit a fragment when the supplied quote genuinely supports no actionable
-product/system cause. Prefer the
+Omit a fragment when the supplied quote genuinely supports no actionable
+product/system cause, and on every assertion beyond the two that carry the colour
+budget. Prefer the
 underlying mechanism over generic emotion, participant intention, a participant
 mistake, or a later outcome. Do not select only an adjective or a tag word.
-Keep the verb/relation needed to make the fragment intelligible. Return one
-contiguous fragment or none; never two fragments.
+Return one contiguous fragment or none; never two fragments.
 
 `source_quote_id` is the complete provenance pointer; do not return a second
 copy of the quote or a `source_excerpt`. `start`, `end` and `text` must point
 exactly at the fragment inside the assertion's `text`; omit
-`intervention_fragment` when no actionable source-grounded mechanism exists.
+`intervention_fragment` when no actionable source-grounded mechanism exists, and
+on every assertion beyond the two that carry the colour budget.
 
 ## User
 
@@ -163,6 +186,7 @@ For each signal above, return a JSON object with an "elaborations" array. Each
 item must have: signal_index (0-based, matching the signal number above),
 signal_name, pattern, elaboration, and evidence_assertions. Each evidence
 assertion must have text, source_quote_id and optional
-intervention_fragment {{start, end, text, rationale}} whenever that assertion
-has an actionable source-grounded mechanism. Rationale is exactly
-negative_actionable_cause or positive_enabling_cause.
+intervention_fragment {{start, end, text, rationale}}, which at most two
+assertions per signal carry: the ones with an actionable source-grounded mechanism
+that most directly show the claim. Rationale is exactly negative_actionable_cause
+or positive_enabling_cause.

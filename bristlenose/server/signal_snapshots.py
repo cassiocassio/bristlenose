@@ -32,7 +32,9 @@ _READ_WINDOW = 8
 # without changing SQLite.  On the next sidecar start, an older frozen report
 # is refreshed once if a cloud provider is available; offline readers keep the
 # last good report rather than receiving a blank lens or a maintenance task.
-SIGNAL_SNAPSHOT_PAYLOAD_VERSION = 5
+# 6 (30 Oct 2026): evidence highlights are short and at most two per card, so a study
+# frozen with long ones refreshes once at the next start (`experiments/signal-highlight-lab/`).
+SIGNAL_SNAPSHOT_PAYLOAD_VERSION = 6
 
 
 def snapshot_has_cards(snapshot: SignalSnapshot | None) -> bool:

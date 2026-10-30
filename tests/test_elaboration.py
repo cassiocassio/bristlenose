@@ -259,6 +259,66 @@ class TestEvidenceAssertions:
             },
         }]
 
+    def test_only_the_first_two_assertions_per_signal_keep_their_highlight(self) -> None:
+        """The colour budget: the bullets stay, the later highlights go."""
+        quotes = [
+            _make_signal_quote(text=f"The checkout lost choice number {i}.", pid=f"p{i}")
+            for i in range(1, 5)
+        ]
+        signal = _make_signal(quotes=quotes)
+        candidates = []
+        for i, quote in enumerate(quotes, start=1):
+            text = f"The checkout lost choice number {i}, leaving a participant unsure."
+            fragment = f"lost choice number {i}"
+            candidates.append(SimpleNamespace(
+                text=text,
+                source_quote_id=compute_quote_reference(quote),
+                intervention_fragment=SimpleNamespace(
+                    start=text.index(fragment),
+                    end=text.index(fragment) + len(fragment),
+                    text=fragment,
+                    rationale="negative_actionable_cause",
+                ),
+            ))
+
+        assertions = _validated_evidence_assertions(candidates, signal)
+
+        assert len(assertions) == 4
+        assert [a["intervention_fragment"] is not None for a in assertions] == [
+            True, True, False, False,
+        ]
+
+    def test_a_dropped_bad_highlight_does_not_spend_the_colour_budget(self) -> None:
+        quotes = [
+            _make_signal_quote(text=f"Quote number {i} about the basket.", pid=f"p{i}")
+            for i in range(1, 4)
+        ]
+        signal = _make_signal(quotes=quotes)
+        good, bad = "lost the basket", "frustrated"
+        candidates = [
+            SimpleNamespace(
+                text="The basket was frustrated and lost.",
+                source_quote_id=compute_quote_reference(quotes[0]),
+                intervention_fragment=SimpleNamespace(
+                    start=0, end=10, text=bad, rationale="negative_actionable_cause",
+                ),
+            ),
+            *[
+                SimpleNamespace(
+                    text=f"The page {good} entirely for participant {i}.",
+                    source_quote_id=compute_quote_reference(q),
+                    intervention_fragment=SimpleNamespace(
+                        start=-1, end=-1, text=good, rationale="negative_actionable_cause",
+                    ),
+                )
+                for i, q in enumerate(quotes[1:], start=2)
+            ],
+        ]
+
+        assertions = _validated_evidence_assertions(candidates, signal)
+
+        assert [a["intervention_fragment"] is not None for a in assertions] == [False, True, True]
+
     def test_keeps_playback_but_removes_a_generic_or_malformed_highlight(self) -> None:
         quote = _make_signal_quote(text="I was frustrated by the wording.")
         signal = _make_signal(quotes=[quote])

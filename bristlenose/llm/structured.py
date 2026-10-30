@@ -294,7 +294,12 @@ class SignalEvidenceFragment(BaseModel):
 
     start: int = Field(ge=0, description="0-based start offset in assertion_text")
     end: int = Field(gt=0, description="Exclusive end offset in assertion_text")
-    text: str = Field(description="Exact assertion_text substring from start to end")
+    text: str = Field(
+        description=(
+            "Exact assertion_text substring from start to end: a small claim about the "
+            "product, 5 to 7 words, starting at its behaviour and ending before the outcome"
+        )
+    )
     rationale: str = Field(
         description="One of: negative_actionable_cause, positive_enabling_cause"
     )
@@ -323,9 +328,9 @@ class SignalEvidenceAssertion(BaseModel):
     intervention_fragment: SignalEvidenceFragment | None = Field(
         default=None,
         description=(
-            "One contiguous actionable product/system mechanism in text. Write evidence "
-            "assertions only when this exists; null is allowed solely for a source with "
-            "no actionable mechanism, never merely because the assertion omitted it."
+            "One short contiguous actionable product/system mechanism in text. At most "
+            "two assertions per signal carry one (the colour budget); null on the others "
+            "and on a source with no actionable mechanism."
         ),
     )
 

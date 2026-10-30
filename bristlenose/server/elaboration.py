@@ -396,6 +396,12 @@ def _normalise_evidence_text(value: str) -> str:
 
 _MAX_EVIDENCE_ASSERTIONS = 4
 
+#: The colour budget. A card whose every bullet is coloured has no pointer left, so at
+#: most this many assertions per signal keep their highlight. The prompt asks the model
+#: to choose which; this is the guarantee for the card where it ignores the request
+#: (1 of 39 in the 30 Oct 2026 replay), keeping the first ones in the model's own order.
+_MAX_FRAGMENTS_PER_SIGNAL = 2
+
 
 def _utf16_offset(text: str, index: int) -> int:
     """Convert a code-point index into UTF-16 code units, which the SPA slices by."""
@@ -453,6 +459,7 @@ def _validated_evidence_assertions(
     by_ref = {compute_quote_reference(quote): quote for quote in signal.quotes}
     seen_quote_refs: set[str] = set()
     accepted: list[dict[str, Any]] = []
+    fragments_kept = 0
 
     dropped: dict[str, int] = {}
 
@@ -491,6 +498,12 @@ def _validated_evidence_assertions(
                 # An assertion can still be useful when the model's proposed
                 # highlighter fails the stricter intervention contract.
                 _drop("fragment")
+            elif fragments_kept >= _MAX_FRAGMENTS_PER_SIGNAL:
+                # Over the colour budget: the bullet stays, uncoloured.
+                fragment_payload = None
+                _drop("fragment_budget")
+            else:
+                fragments_kept += 1
 
         accepted.append({
             "id": f"ea_{source_quote_id.removeprefix('q_')}",

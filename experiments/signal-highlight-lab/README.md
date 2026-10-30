@@ -4,9 +4,13 @@ Owner feedback, 30 Oct 2026: on a Signals card each evidence bullet colours a sp
 text, and there is too much colour. This lab measured it, replayed Step 6 of
 `signal-elaboration.md` under different wordings, and had the owner pick by eye, blind.
 
-**Status: ongoing experiment, nothing adopted.** The shipped prompt, schema, frontend and
-CSS are untouched. `recommended-prompt.diff` is the proposed edit; it applies cleanly to
-`main` (`git apply --check -p1`) and has not been applied. The owner decides.
+**Status: adopted on `main` (30 Oct 2026, owner's decision), lab still open.** The third
+option, shorter highlights plus a budget of two per card, is in the shipped prompt
+(0.6.0, old version archived) and the server enforces the budget. Not pushed or released.
+`recommended-prompt.diff` is the version that was tested; the adopted prompt differs from
+it by three review fixes (example 2 shortened to 5 words, two lines that still required
+a fragment on every bullet). The frontend and CSS are untouched. Not yet done: the
+end-to-end check with the model writing bullet and highlight together.
 
 ## The short version
 
@@ -122,12 +126,16 @@ Per `bristlenose/llm/CLAUDE.md`, adopting it is a minor bump: archive 0.5.0 to
    viewer is the check to run before adopting.
 2. **The budget needs eyes.** Is it right that two of three or four bullets go uncoloured? Is
    "most directly shows the claim" the right choice rule? (`viewer-cards.html`)
-3. **A backstop in the server?** Cap fragments per signal at two, and optionally drop any
-   fragment over about half its assertion. Deterministic, and it makes the prompt's budget a
-   hope, not a guarantee, only where the model ignores it (1 card in 39 here).
-4. **Existing cards keep their long highlights.** The elaboration cache is keyed on the quote
-   texts, tags and references, not the prompt version, so a new prompt only affects cards
-   that are regenerated. Decide whether to invalidate on adoption.
+3. **Backstop: done for the cap, not for length.** The server keeps the first two fragments
+   per signal (`_MAX_FRAGMENTS_PER_SIGNAL`). Dropping any fragment over about half its
+   assertion is not done; with the adopted wording the longest highlight in the Sonnet
+   replay was 51% of its bullet, so it would catch almost nothing.
+4. **Existing studies regenerate once.** (Correction: this item said the cache ignores the
+   prompt version; it does not, the content hash includes the prompt's SHA.) Adopting the
+   prompt invalidates every cached card, and the snapshot payload version was bumped to 6
+   so each study's frozen report refreshes once at the next serve start when a cloud key is
+   present: one paid batched call per study, and the claims and headlines are rewritten
+   too, not only the highlights. Same mechanism as `b42dd101b`.
 5. **A separate small highlight step** (Haiku, after the bullet) matched the owner best of
    anything tried. It costs one extra cheap call per card. Not built; the owner decided to stop
    at this point.

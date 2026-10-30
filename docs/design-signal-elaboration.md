@@ -8,6 +8,14 @@ trued-against: HEAD@main on 2026-09-20
 
 ## Changelog
 
+- _2026-10-30_ — evidence highlights shortened and budgeted (prompt 0.6.0, snapshot
+  payload version 6). The coloured span in an evidence bullet was a whole clause
+  (median 45% of the bullet, 12 words), and every bullet carried one, so a card was
+  about 45% colour. Now: 5 to 7 words that start where the product's behaviour
+  begins and end before the outcome, and at most two coloured bullets per card (a
+  prompt request, plus `_MAX_FRAGMENTS_PER_SIGNAL` in `elaboration.py` as the
+  guarantee). Measured on 39 cards: page colour 46% to 24%. Method, the owner's 91
+  blind picks, all variants and the open items: `experiments/signal-highlight-lab/`.
 - _2026-09-20_ — trued up. The header had been patched three times over a
   February body, which is the failure mode this doc is now the worked example
   of: a banner saying "the top-ten cap is gone" sat thirty lines above a Scope
@@ -278,6 +286,15 @@ The prompt is the algorithm above, almost verbatim. Key constraints in the promp
 - Do not invent findings not supported by the quotes
 
 The full tag definitions (definition + apply_when + not_this) are included for each tag that appears in the card's quotes. The group subtitle is the framing question.
+
+### Evidence highlights and the colour budget
+
+Each evidence bullet may colour one span (`intervention_fragment`), a pointer that a click turns into a jump to the participant's quote. Two rules, both from the owner's blind picks (`experiments/signal-highlight-lab/picks-spec.md`):
+
+- **Shape.** The shortest span that works as a small self-contained claim about the product: 5 to 7 words, never more than 10, normally no more than a quarter of the bullet. It starts where the product's behaviour begins (never "a participant" or a reporting verb), ends before the outcome or reaction that follows, and is never a feeling word alone. It may go below 5 words only when the short span stands alone. Whether a trailing "until ..." earns its place depends on what the reader already knows, so the prompt states the test and not a rule.
+- **Budget.** At most two bullets per card keep their span, chosen by how directly they show the claim. The server keeps the first two fragments in the model's order and clears the rest (`fragment_budget`, logged); the bullet stays.
+
+The span is located in the **bullet's** text, not the quote's, and a click reveals the quote by `source_quote_id`. Not tested end to end: the production model writing bullet and span together on a real project (the lab replays the span with the bullet fixed). Sonnet 4.6 follows a stated word count and Haiku overshoots it, so the wording is calibrated for the production default and may need re-tuning when it changes.
 
 ### Data model
 

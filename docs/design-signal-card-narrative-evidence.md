@@ -191,7 +191,7 @@ Use real list semantics and ordinary inline content:
     One participant was
     <mark class="signal-evidence-highlight">the warning did not name
       which specific items were unavailable</mark>
-    <button class="signal-evidence-speaker" aria-label="Show evidence from p1">p1</button>.
+    <a class="speaker-link" href="…transcript at that moment">p1</a> (a link to the transcript, as the speaker badge is everywhere; the highlighted words are the control that flashes the quote, 30 Oct 2026).
   </li>
 </ul>
 ```

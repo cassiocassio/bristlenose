@@ -471,7 +471,7 @@
     "concLabel": "Conc.",
     "concTitle": "Rácio de concentração: quão sobre-representado vs. a média do estudo",
     "agreeLabel": "Concord.",
-    "agreeTitle": "Concordância: número efetivo de vozes (diversidade de Simpson)",
+    "agreeTitle": "Vozes em concordância: número efetivo de vozes (diversidade de Simpson)",
     "intensityLabel": "Intensidade",
     "intensityTitle": "Intensidade emocional média (1–3)",
     "metricSignal": "Força do sinal",

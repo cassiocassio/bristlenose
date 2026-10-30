@@ -516,7 +516,7 @@
     "concLabel": "Konc.",
     "concTitle": "Poměr koncentrace: jak nadměrně zastoupeno oproti průměru studie",
     "agreeLabel": "Shoda",
-    "agreeTitle": "Shoda: efektivní počet hlasů (Simpsonova diverzita)",
+    "agreeTitle": "Hlasy ve shodě: efektivní počet hlasů (Simpsonova diverzita)",
     "intensityLabel": "Intenzita",
     "intensityTitle": "Průměrná emocionální intenzita (1–3)",
     "metricSignal": "Síla signálu",

@@ -66,14 +66,16 @@
    0.2): dark and strong on a light page, light and strong on a dark one. Lightness 0.42 / 0.82
    was measured (30 Oct 2026) against every codebook and sentiment hue on the card, the pale
    highlight and the sidebar, light and dark: the worst contrast is 5.5:1 / 6.3:1, so AA holds
-   with room to spare. Hover is the hue at the shipped hover densities (--bn-hover-bg is 4% on a
-   light page, 6% on a dark one), below the selected wash (10%). */
+   with room to spare. Hover is the INK at 4% (light) / 5% (dark): the system hover's 4% of black
+   draws a colour distance of about 18 on white, and 4% of the pastel hue drew only 6 to 8, which
+   no one could see (reviewed 30 Oct 2026); 4% of the ink draws 11 to 15 and 5% on dark 14 to 17,
+   below the selected wash (10% of the hue, 15 to 19) for every colour set. */
 .signal-card,
 .signal-entry {
     --bn-signal-accent-ink: color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 72%, var(--bn-colour-text));
     --bn-signal-accent-hover: light-dark(
-        color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 4%, var(--bn-colour-bg)),
-        color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 6%, var(--bn-colour-bg))
+        color-mix(in srgb, var(--bn-signal-accent-ink) 4%, var(--bn-colour-bg)),
+        color-mix(in srgb, var(--bn-signal-accent-ink) 5%, var(--bn-colour-bg))
     );
 }
 
@@ -101,10 +103,6 @@
 /* One card-local analytical hue connects the selected keyline to the card's
    classification and its attributable evidence. The values are assigned once
    by SignalCard; individual descendants must not pick their own palette. */
-.signal-card.bn-selected .signal-card-hero:hover {
-    border-color: var(--bn-signal-accent-keyline, var(--bn-colour-border-hover));
-}
-
 /* The hero floats into the card's top-right corner and the headline AND the
    elaboration flow around and under it.
 
@@ -208,7 +206,7 @@
     display: none;
 }
 
-@container (max-width: 28rem) {
+@container (max-width: 20rem) {
     .metric-label-long {
         display: none;
     }
@@ -776,7 +774,7 @@ button.signal-card-toggle {
 }
 
 .signal-card-hero:hover {
-    border-color: var(--bn-colour-border-hover);
+    border-color: var(--bn-signal-accent-ink, var(--bn-colour-border-hover));
 }
 
 .signal-card-hero:focus-visible {
@@ -810,7 +808,8 @@ button.signal-card-toggle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .signal-card-hero-caret {
+    .signal-card-hero-caret,
+    .signal-card-expansion {
         transition: none;
     }
 }
@@ -933,9 +932,12 @@ button.signal-card-toggle {
     margin-inline-start: var(--bn-space-xs);
 }
 
-/* ── Responsive: narrow viewport — stack card top vertically ── */
-/* --bn-breakpoint-compact = 500px */
-@media (max-width: 500px) {
+/* ── Responsive: narrow CARD — stack the top, by the card's own width ──
+   This was a viewport query (500px). A card is narrow whenever the window is shared with both
+   side panels, which is a wide window, so the right column kept its 210 to 266px and left the
+   headline 85px (six lines of one or two words at a 420px card). The card is the container, so
+   the top stacks when the card's content is under 32rem. */
+@container (max-width: 32rem) {
     .signal-card-top {
         flex-direction: column;
         gap: var(--bn-space-sm);
@@ -950,13 +952,15 @@ button.signal-card-toggle {
         align-items: flex-start;
         align-self: stretch;
     }
+}
 
+/* A small viewport also tightens the card's own padding (a container query cannot restyle its
+   container). */
+@media (max-width: 500px) {
     .signal-card {
         padding: var(--bn-space-lg);
     }
-
 }
-
 
 /* The flag, as a prefix INSIDE the hero chip — never a second chip. A second
    one was rejected on 20 Sep 2026: "two chips is too complex visually, adds

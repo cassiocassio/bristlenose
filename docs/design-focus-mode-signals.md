@@ -66,7 +66,7 @@ while engaged — receding is a resting state, never a disabled one.
 | Part of the card (`SignalsPage.tsx`) | Treatment | Axis |
 |---|---|---|
 | `.quote-text`, `.speaker` (`PersonBadge`) | **lit** | 1 — the source's marks |
-| `.signals-codebook-heading` (location) | `--bn-focus-heading-opacity` (0.4); returns on `:hover`/`:focus-within` (it holds a link) | 1 — the twin of `.bn-group-header`, which takes 0.4 as wayfinding |
+| `.signals-center > .section-heading` (the page title, which is the section or theme since 30 Oct 2026; it was `.signals-codebook-heading`, now removed) | `--bn-focus-heading-opacity` (0.4); returns on `:hover`/`:focus-within` (it holds a link) | 1 — the twin of `.bn-group-header`, which takes 0.4 as wayfinding |
 | `.signal-card-location` (headline), `.signal-elaboration` (claim + evidence) | **0.4 — variant A, proposed**; variant B keeps them lit. See §3 | 1 — the machine's reading of the quotes |
 | `.signal-card-hero` (group + score, a `<button>`) | ghost 0.14; returns on card hover / focus-within / `[aria-expanded="true"]`; **keeps `pointer-events`** | 2 — a control: receded, never disabled |
 | `.signal-card-metrics` (the working) | untouched | 2 — only rendered when the researcher opened it, which is engagement |

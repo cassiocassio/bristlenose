@@ -471,7 +471,7 @@
     "concLabel": "Conc.",
     "concTitle": "Ratio de concentración: sobrerrepresentación respecto al promedio del estudio",
     "agreeLabel": "Acuerdo",
-    "agreeTitle": "Acuerdo: número efectivo de voces (diversidad de Simpson)",
+    "agreeTitle": "Voces de acuerdo: número efectivo de voces (diversidad de Simpson)",
     "intensityLabel": "Intensidad",
     "intensityTitle": "Intensidad emocional media (1–3)",
     "metricSignal": "Fuerza de la señal",

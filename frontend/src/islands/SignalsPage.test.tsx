@@ -697,6 +697,30 @@ describe("SignalsPage", () => {
     expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
   });
 
+  it("scrolls to a card when the navigation or a heatmap cell asks for it", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    const scrolled: Element[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this); };
+    try {
+      render(<SignalsPage projectId="1" />);
+      await waitFor(() => {
+        expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+      });
+      scrolled.length = 0;
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:signal-focus", {
+          detail: { key: "section|Checkout|Pain points" },
+        }));
+      });
+      await waitFor(() => {
+        expect(scrolled.some((el) => el.getAttribute("data-testid") === "bn-signal-card")).toBe(true);
+      });
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it("names each metric in full, with the short name beside it for narrow cards", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);

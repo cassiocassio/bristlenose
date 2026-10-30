@@ -564,7 +564,7 @@ function SignalCard({
       .find((el) => el.getAttribute("data-quote-id") === flashRequest.id);
     if (!target) return;
     markArrived(target);
-    (target as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    (target as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: scrollBehaviour() });
   }, [flashRequest]);
   const assertions = signal.evidenceAssertions ?? [];
   const narrative = signal.elaboration ? splitLead(signal.elaboration) : null;
@@ -769,6 +769,14 @@ function SignalCard({
       </div>
     </div>
   );
+}
+
+/** Smooth scrolling unless the researcher has asked their system for less motion. */
+function scrollBehaviour(): ScrollBehavior {
+  return typeof window !== "undefined"
+    && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ? "auto"
+    : "smooth";
 }
 
 /** Where a quote sits in the transcript: the badge and the timecode both lead here. */
@@ -1376,7 +1384,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
   const scrollToCard = useCallback((key: string) => {
     const el = cardRefs.current.get(key);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.scrollIntoView({ behavior: scrollBehaviour(), block: "center" });
     }
   }, []);
 

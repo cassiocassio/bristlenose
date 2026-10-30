@@ -471,7 +471,7 @@
     "concLabel": "Yoğ.",
     "concTitle": "Yoğunlaşma oranı: çalışma ortalamasına göre ne kadar fazla temsil edildiği",
     "agreeLabel": "Uzl.",
-    "agreeTitle": "Uzlaşma: etkin ses sayısı (Simpson çeşitliliği)",
+    "agreeTitle": "Uzlaşan sesler: etkin ses sayısı (Simpson çeşitliliği)",
     "intensityLabel": "Yoğunluk",
     "intensityTitle": "Ortalama duygusal yoğunluk (1–3)",
     "metricSignal": "Sinyal gücü",

@@ -524,7 +524,7 @@
     "concLabel": "Konc.",
     "concTitle": "Wskaźnik koncentracji: jak bardzo nadreprezentowany względem średniej badania",
     "agreeLabel": "Zgod.",
-    "agreeTitle": "Zgodność: efektywna liczba głosów (różnorodność Simpsona)",
+    "agreeTitle": "Głosy w zgodzie: efektywna liczba głosów (różnorodność Simpsona)",
     "intensityLabel": "Natężenie",
     "intensityTitle": "Średnie natężenie emocjonalne (1–3)",
     "metricSignal": "Siła sygnału",

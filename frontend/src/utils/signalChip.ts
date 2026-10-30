@@ -55,5 +55,11 @@ export function chipWords(
  */
 export function signalAccent(signal: UnifiedSignal, isSentiment: boolean): string {
   if (isSentiment) return `var(--bn-sentiment-${signal.columnLabel})`;
+  // A card that names one feeling is that feeling's own colour (frustration is orange here as
+  // it is in the Quotes lens). Without this every card of the sentiment codebook took the
+  // codebook's one teal, so "Frustration", "Negative" and "Mixed" were the same ink.
+  if (signal.labelKind === "value" && signal.label) {
+    return `var(--bn-sentiment-${signal.label.toLowerCase()})`;
+  }
   return signal.colourSet ? getBarColour(signal.colourSet) : "var(--bn-colour-accent)";
 }

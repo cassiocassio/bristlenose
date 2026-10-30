@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import {
   getSignalWorkingOpen,
   resetSignalWorkingStore,
   setSignalWorkingOpen,
   toggleSignalWorking,
+  useSignalWorkingOpen,
 } from "./SignalWorkingStore";
 
 afterEach(() => resetSignalWorkingStore());
@@ -13,11 +15,20 @@ describe("SignalWorkingStore", () => {
     expect(getSignalWorkingOpen()).toBe(false);
   });
 
-  it("toggles, and says so to every listener once", () => {
-    toggleSignalWorking();
+  it("toggles, and tells every subscribed reader once per change", () => {
+    let renders = 0;
+    const a = renderHook(() => { renders += 1; return useSignalWorkingOpen(); });
+    const b = renderHook(() => useSignalWorkingOpen());
+    const before = renders;
+    act(() => toggleSignalWorking());
     expect(getSignalWorkingOpen()).toBe(true);
-    toggleSignalWorking();
-    expect(getSignalWorkingOpen()).toBe(false);
+    // Both readers see it, and the first re-rendered once for the one change.
+    expect(a.result.current).toBe(true);
+    expect(b.result.current).toBe(true);
+    expect(renders - before).toBe(1);
+    act(() => toggleSignalWorking());
+    expect(a.result.current).toBe(false);
+    expect(b.result.current).toBe(false);
   });
 
   it("does nothing when asked for the state it is already in", () => {

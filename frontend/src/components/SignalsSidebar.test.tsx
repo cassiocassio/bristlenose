@@ -182,8 +182,29 @@ describe("SignalsSidebar", () => {
       render(<SignalsSidebar />);
       const [codebook, sentiment] = [...document.querySelectorAll<HTMLElement>(".signal-entry")];
       expect(codebook.style.getPropertyValue("--bn-signal-accent")).toBe("var(--bn-bar-emo)");
-      // A sentiment card that is not the fallback lens takes its colour set's bar, as the card does.
-      expect(sentiment.style.getPropertyValue("--bn-signal-accent")).toBeTruthy();
+      // A card that names one feeling carries that feeling's own colour, as the card does.
+      expect(sentiment.style.getPropertyValue("--bn-signal-accent")).toBe("var(--bn-sentiment-frustration)");
+    });
+
+    it("gives the fallback lens's value card its sentiment colour and its own badge class", () => {
+      setSignals([makeSignal({ key: "a", columnLabel: "frustration", codebookName: "" })]);
+      render(<SignalsSidebar />);
+      const entry = document.querySelector<HTMLElement>(".signal-entry")!;
+      expect(entry.style.getPropertyValue("--bn-signal-accent")).toBe("var(--bn-sentiment-frustration)");
+      expect(entry.querySelector(".badge")?.classList.contains("badge-frustration")).toBe(true);
+    });
+
+    it("styles a value card by the feeling the chip names, not by the codebook's column label", () => {
+      setSignals([
+        makeSignal({
+          key: "a", columnLabel: "Sentiment", codebookName: "Sentiment",
+          label: "delight", labelKind: "value",
+        }),
+      ]);
+      render(<SignalsSidebar />);
+      const badge = document.querySelector(".signal-entry .badge")!;
+      expect(badge.classList.contains("badge-delight")).toBe(true);
+      expect(badge.classList.contains("badge-Sentiment")).toBe(false);
     });
 
     it("keeps a codebook card's group name", () => {

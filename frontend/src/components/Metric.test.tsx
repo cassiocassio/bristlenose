@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Metric } from "./Metric";
+import { Metric, MetricLabel } from "./Metric";
 import type { MetricViz } from "./Metric";
 
 describe("Metric", () => {
@@ -168,3 +168,19 @@ describe("Metric", () => {
     });
   });
 });
+
+describe("MetricLabel", () => {
+  it("draws both lengths so a container query can choose", () => {
+    const { container } = render(<MetricLabel label="Concentration ratio" shortLabel="Conc." />);
+    expect(container.querySelector(".metric-label-long")?.textContent).toBe("Concentration ratio");
+    expect(container.querySelector(".metric-label-short")?.textContent).toBe("Conc.");
+  });
+
+  it("draws one plain label when both lengths are the same word", () => {
+    const { container } = render(<MetricLabel label="Intensity" shortLabel="Intensity" />);
+    expect(container.querySelector(".metric-label-long")).toBeNull();
+    expect(container.querySelector(".metric-label-short")).toBeNull();
+    expect(container.textContent).toBe("Intensity");
+  });
+});
+

@@ -42,7 +42,7 @@ gone, and `.signal-card-badges` with them.
 | 8 | **Nav rows wrap, never truncate.** Measured: 90% of rows truncate against a 28-character line. | V1 |
 | 9 | **A nameless row is its group chip alone** — no location fallback, no placeholder. | T6b |
 | 10 | **Sections and themes interleave, unlabelled.** The Quotes lens still owns the demarcation. | U3 |
-| 11 | **The main content follows the navigation** — one run of locations under `.signals-codebook-heading`. | W2 |
+| 11 | **The main content follows the navigation** — one run of locations under `.signals-codebook-heading` (removed 30 Oct 2026: each page is one place and its title is the place). | W2 |
 | 12 | **Nothing caps the card count.** De-duplication is the bound; `SAFETY_CAP` exists so nothing pathological renders. | — |
 
 **Still open, and the first one blocks ordering:**
@@ -59,7 +59,7 @@ gone, and `.signal-card-badges` with them.
    de-duplication: 18 of 76 cards across the trial corpus have no elaborated
    name. A cost decision — every miss is an LLM call.
 3. **Does the main content follow the navigation?** Proposed — location-sectioned
-   cards matching the nav's sequence, reusing `.signals-codebook-heading` and
+   cards matching the nav's sequence, reusing `.signals-codebook-heading` (removed 30 Oct 2026, see above) and
    inventing no new heading styles, with today's two flat grids kept as the
    second choice in the view menu. Not drawn yet.
 

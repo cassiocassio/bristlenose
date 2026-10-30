@@ -335,7 +335,7 @@ All organism files live in `bristlenose/theme/organisms/`. Sixteen files.
 - Also: `.coverage-body`, `.coverage-details`, `.coverage-summary`, `.coverage-session`, `.coverage-session-title`, `.coverage-segment`, `.coverage-fragments`, `.coverage-empty`, `.pattern-gap`, `.pattern-recovery`, `.pattern-success`, `.pattern-tension`, `.pattern-label`
 
 ### Analysis (heatmap + signals) — `organisms/signals.css`
-- `.signals-layout`, `.signals-center`, `.analysis-heatmap`, `.analysis-heatmap-label`, `.signals-codebook-section`, `.signals-codebook-heading`
+- `.signals-layout`, `.signals-center`, `.analysis-heatmap`, `.analysis-heatmap-label`, `.signals-codebook-section`, `.signals-codebook-heading` (removed 30 Oct 2026: the page title is now the section or theme)
 - `.heatmap-cell`, `.heatmap-col-label`, `.heatmap-row-hl`, `.heatmap-header-hl`, `.heatmap-total`, `.heatmap-grand-total`
 - `.cell-tooltip`, `.cell-tooltip-body`, `.cell-tooltip-footer`, `.cell-tooltip-metrics`, `.cell-tooltip-pips`, `.cell-tooltip-pip`, `.cell-tooltip-quotes`, `.cell-tooltip-quote`, `.cell-tooltip-quote-text`, `.cell-tooltip-speaker`, `.cell-tooltip-val`
 - `.signal-cards`, `.signal-card`, `.signal-card-top`, `.signal-card-right`, `.signal-card-identity`, `.signal-card-location`, `.signal-card-location-link`, `.signal-card-source`, `.signal-card-badges`, `.signal-card-metrics`, `.signal-card-quotes`, `.signal-card-expansion`, `.signal-card-footer`, `.signal-card-link`

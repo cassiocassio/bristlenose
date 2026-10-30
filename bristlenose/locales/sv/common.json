@@ -487,8 +487,7 @@
     "evidenceContribution": "Bidrag till evidens per deltagare",
     "evidenceContributionLevel": "{{participant}}, relativ evidensbidragsnivå {{level}} av 3",
     "noEvidenceContribution": "{{participant}}, inget evidensbidrag",
-    "showEvidenceSource": "Deltagare {{participant}}; visa källcitatet som stöder denna evidens",
-    "focusEvidenceAssertion": "Deltagare {{participant}}; fokusera evidenspåståendet som använder detta citat"
+    "showEvidenceSource": "Deltagare {{participant}}; visa källcitatet som stöder denna evidens"
   },
   "codebook": {
     "uninstallTitle": "Avinstallera \u201d{{name}}\u201d?",

@@ -346,11 +346,6 @@
     background: color-mix(in srgb, var(--card-accent, var(--bn-colour-muted)) 80%, var(--bn-colour-muted));
 }
 
-.evidence-contribution-cell.is-evidence-focused {
-    outline: 2px solid var(--bn-colour-highlight);
-    outline-offset: 1px;
-}
-
 @container (max-width: 35rem) {
     .evidence-contribution-array {
         gap: 3px;
@@ -895,49 +890,35 @@ button.signal-card-toggle {
     -webkit-box-decoration-break: clone;
 }
 
-/* A real control around the shared identity primitive. The badge remains
-   inline with its sentence; no fixed prefix/flex row can strand the words. */
-.signal-evidence-speaker {
+/* The highlighted words in an evidence bullet are a control: hover says they can be pressed,
+   and pressing flashes the quote they came from (the same arrival flash as every link).
+   A real button around the mark, so it takes focus and Enter / Space with no ARIA. */
+.signal-evidence-highlight-button {
     display: inline;
-    vertical-align: baseline;
-    margin-inline-start: var(--bn-space-xs);
     padding: 0;
     border: 0;
     background: transparent;
     font: inherit;
+    color: inherit;
+    text-align: inherit;
     cursor: pointer;
 }
 
-.signal-evidence-speaker:focus-visible {
+.signal-evidence-highlight-button:hover .signal-evidence-highlight,
+.signal-evidence-highlight-button:focus-visible .signal-evidence-highlight {
+    background: color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 30%, var(--bn-colour-bg));
+}
+
+.signal-evidence-highlight-button:focus-visible {
     outline: 2px solid var(--bn-signal-accent-keyline, var(--bn-colour-accent));
     outline-offset: 2px;
     border-radius: var(--bn-radius-sm);
 }
 
-/* The same reciprocal evidence control on a cited quote. It intentionally
-   preserves the ordinary badge's inline footprint. */
-.signal-quote-evidence-speaker {
-    display: inline;
-    vertical-align: baseline;
+/* The speaker badge after a bullet keeps a small gap from the sentence. */
+.signal-evidence-assertions .speaker-link,
+.signal-evidence-assertions .bn-person-badge {
     margin-inline-start: var(--bn-space-xs);
-    padding: 0;
-    border: 0;
-    background: transparent;
-    font: inherit;
-    cursor: pointer;
-}
-
-.signal-quote-evidence-speaker:focus-visible {
-    outline: 2px solid var(--bn-signal-accent-keyline, var(--bn-colour-accent));
-    outline-offset: 2px;
-    border-radius: var(--bn-radius-sm);
-}
-
-/* Assertion → quote focus uses the app's existing arrival-highlight hue as an
-   attention cue, while the semantic accent remains reserved for meaning. */
-.signal-card-quotes blockquote.is-evidence-focused {
-    background: color-mix(in srgb, var(--bn-colour-highlight) 14%, var(--bn-colour-quote-bg));
-    box-shadow: inset 2px 0 0 var(--bn-colour-highlight);
 }
 
 /* ── Responsive: narrow viewport — stack card top vertically ── */

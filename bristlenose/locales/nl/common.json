@@ -487,8 +487,7 @@
     "evidenceContribution": "Bijdrage aan bewijs per deelnemer",
     "evidenceContributionLevel": "{{participant}}, relatief niveau van bewijsbijdrage {{level}} van 3",
     "noEvidenceContribution": "{{participant}}, geen bewijsbijdrage",
-    "showEvidenceSource": "Deelnemer {{participant}}; toon het broncitaat dat dit bewijs ondersteunt",
-    "focusEvidenceAssertion": "Deelnemer {{participant}}; focus op de bewijsstelling die dit citaat gebruikt"
+    "showEvidenceSource": "Deelnemer {{participant}}; toon het broncitaat dat dit bewijs ondersteunt"
   },
   "codebook": {
     "uninstallTitle": "\u201d{{name}}\u201d de\u00efnstalleren?",

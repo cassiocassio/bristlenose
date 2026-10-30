@@ -532,8 +532,7 @@
     "evidenceContribution": "Příspěvek účastníků k důkazům",
     "evidenceContributionLevel": "{{participant}}, relativní úroveň příspěvku k důkazům {{level}} ze 3",
     "noEvidenceContribution": "{{participant}}, žádný příspěvek k důkazům",
-    "showEvidenceSource": "Účastník {{participant}}; zobrazit zdrojovou citaci podporující tento důkaz",
-    "focusEvidenceAssertion": "Účastník {{participant}}; zaměřit tvrzení podložené touto citací"
+    "showEvidenceSource": "Účastník {{participant}}; zobrazit zdrojovou citaci podporující tento důkaz"
   },
   "codebook": {
     "uninstallTitle": "Odinstalovat \u201e{{name}}\u201c?",

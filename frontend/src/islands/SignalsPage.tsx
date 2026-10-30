@@ -15,7 +15,7 @@
 import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading } from "../components";
+import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading, TimecodeLink } from "../components";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
 import {
   useInspectorStore,
@@ -35,10 +35,10 @@ import {
   isFromSentimentLens,
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
+import { markArrived } from "../utils/arrival";
 import { chipWords } from "../utils/signalChip";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
-import { formatTimecode } from "../utils/format";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
 import { selectQuotes } from "../utils/quoteSelection";
 import { renderLead, splitLead } from "../utils/leadSentence";
@@ -390,12 +390,10 @@ function EvidenceContributionArray({
   allPids,
   quotes,
   accentVar,
-  focusedParticipantId,
 }: {
   allPids: string[];
   quotes: UnifiedQuote[];
   accentVar?: string;
-  focusedParticipantId?: string;
 }) {
   const { t } = useTranslation();
   const strengths = useMemo(() => {
@@ -418,7 +416,7 @@ function EvidenceContributionArray({
       {allPids.map((pid) => (
         <span
           key={pid}
-          className={`evidence-contribution-cell${strengths.has(pid) ? ` strength-${strengths.get(pid)}` : " is-absent"}${focusedParticipantId === pid ? " is-evidence-focused" : ""}`}
+          className={`evidence-contribution-cell${strengths.has(pid) ? ` strength-${strengths.get(pid)}` : " is-absent"}`}
           style={accentVar ? ({ "--card-accent": accentVar } as React.CSSProperties) : undefined}
           role="img"
           aria-label={strengths.has(pid)
@@ -493,7 +491,9 @@ function SignalCard({
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const expansionRef = useRef<HTMLDivElement>(null);
-  const [focusedEvidenceQuoteId, setFocusedEvidenceQuoteId] = useState<string | null>(null);
+  /** The quote an evidence bullet just pointed at, to flash. `n` makes a repeat click flash again. */
+  const [flashRequest, setFlashRequest] = useState<{ id: string; n: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const accentVar = isSentiment
     ? `var(--bn-sentiment-${signal.columnLabel})`
@@ -551,19 +551,25 @@ function SignalCard({
    *  the collapsed QUOTES, per card: two disclosures, two states. */
   const workingOpen = useSignalWorkingOpen();
   const toggleWorking = toggleSignalWorking;
-  const focusEvidenceQuote = useCallback((quoteId: string) => {
+  const revealEvidenceQuote = useCallback((quoteId: string) => {
     // A citation should never appear inert merely because its source is folded
-    // into the overflow. Reveal its quote before giving it the shared focus.
+    // into the overflow. Open the overflow, then flash the quote: the same fading
+    // cue every link in the app gives the thing it landed on (utils/arrival.ts).
     if (!visibleQuotes.some((quote) => quote.quoteId === quoteId)) {
       setExpanded(true);
     }
-    setFocusedEvidenceQuoteId((current) => current === quoteId ? null : quoteId);
+    setFlashRequest((current) => ({ id: quoteId, n: (current?.n ?? 0) + 1 }));
   }, [visibleQuotes]);
+  useEffect(() => {
+    if (!flashRequest) return;
+    const target = [...(rootRef.current?.querySelectorAll("[data-quote-id]") ?? [])]
+      .find((el) => el.getAttribute("data-quote-id") === flashRequest.id);
+    if (!target) return;
+    markArrived(target);
+    (target as HTMLElement).scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [flashRequest]);
   const assertions = signal.evidenceAssertions ?? [];
   const narrative = signal.elaboration ? splitLead(signal.elaboration) : null;
-  const focusedEvidenceParticipant = signal.quotes.find(
-    (quote) => quote.quoteId === focusedEvidenceQuoteId,
-  )?.pid;
 
   return (
     <div
@@ -579,7 +585,10 @@ function SignalCard({
         "--signal-card-selected-border": "var(--bn-signal-accent-keyline)",
       } as React.CSSProperties}
       data-testid="bn-signal-card"
-      ref={cardRef ?? undefined}
+      ref={(el: HTMLDivElement | null) => {
+        rootRef.current = el;
+        cardRef?.(el);
+      }}
       // The pending headline block is decorative and correctly aria-hidden,
       // which left a screen-reader user with NO signal that a finding was
       // still coming — a sighted reader at least had a grey bar. Marked on the
@@ -677,8 +686,8 @@ function SignalCard({
           {assertions.length > 0 && (
             <EvidenceAssertions
               assertions={assertions}
-              focusedQuoteId={focusedEvidenceQuoteId}
-              onFocusQuote={focusEvidenceQuote}
+              quotes={signal.quotes}
+              onRevealQuote={revealEvidenceQuote}
             />
           )}
           {/* Readings folded into this card. They cite essentially the same
@@ -720,9 +729,6 @@ function SignalCard({
             isSentiment={isSentiment}
             sequenceMeta={sequenceMetas[i]}
             isDissenting={q === dissenting}
-            isEvidenceFocused={q.quoteId === focusedEvidenceQuoteId}
-            isEvidenceCited={assertions.some((assertion) => assertion.source_quote_id === q.quoteId)}
-            onFocusEvidence={focusEvidenceQuote}
           />
         ))}
         <div
@@ -736,9 +742,6 @@ function SignalCard({
               quote={q}
               isSentiment={isSentiment}
               sequenceMeta={hiddenMetas[i]}
-              isEvidenceFocused={q.quoteId === focusedEvidenceQuoteId}
-              isEvidenceCited={assertions.some((assertion) => assertion.source_quote_id === q.quoteId)}
-              onFocusEvidence={focusEvidenceQuote}
             />
           ))}
         </div>
@@ -763,21 +766,26 @@ function SignalCard({
           allPids={allPids}
           quotes={signal.quotes}
           accentVar={selectionAccent}
-          focusedParticipantId={focusedEvidenceParticipant}
         />
       </div>
     </div>
   );
 }
 
+/** Where a quote sits in the transcript: the badge and the timecode both lead here. */
+function transcriptHrefFor(quote: Pick<UnifiedQuote, "sessionId" | "startSeconds">): string {
+  return reportHref(`/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`);
+}
+
 function EvidenceAssertions({
   assertions,
-  focusedQuoteId,
-  onFocusQuote,
+  quotes,
+  onRevealQuote,
 }: {
   assertions: SignalEvidenceAssertion[];
-  focusedQuoteId: string | null;
-  onFocusQuote: (quoteId: string) => void;
+  quotes: UnifiedQuote[];
+  /** Flash the quote this bullet came from (opening the overflow if it is folded). */
+  onRevealQuote: (quoteId: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -788,35 +796,42 @@ function EvidenceAssertions({
           && fragment.start >= 0
           && fragment.end > fragment.start
           && assertion.text.slice(fragment.start, fragment.end) === fragment.text;
-        const focused = focusedQuoteId === assertion.source_quote_id;
         const before = hasValidFragment ? assertion.text.slice(0, fragment.start) : assertion.text;
         const after = hasValidFragment ? assertion.text.slice(fragment.end) : "";
+        const source = quotes.find((quote) => quote.quoteId === assertion.source_quote_id);
+        const reveal = () => onRevealQuote(assertion.source_quote_id);
 
         return (
           <li key={assertion.id}>
             {before}
             {hasValidFragment && (
-              <mark className="signal-evidence-highlight">{fragment.text}</mark>
+              // The words that picked the quote out: hover shows they can be pressed, and
+              // pressing flashes the quote they came from. A real button, so it takes focus
+              // and Enter / Space with no ARIA of its own.
+              <button
+                type="button"
+                className="signal-evidence-highlight-button"
+                title={t("signals.showEvidenceSource", { participant: assertion.participant_id })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  reveal();
+                }}
+              >
+                <mark className="signal-evidence-highlight">{fragment.text}</mark>
+              </button>
             )}
             {after}
             {" "}
-            <button
-              type="button"
-              className={`signal-evidence-speaker${focused ? " is-evidence-focused" : ""}`}
-              aria-pressed={focused}
-              aria-label={t("signals.showEvidenceSource", { participant: assertion.participant_id })}
-              onClick={(event) => {
-                event.stopPropagation();
-                onFocusQuote(assertion.source_quote_id);
-              }}
-            >
-              <PersonBadge
-                code={assertion.participant_id}
-                role="participant"
-                compact
-                highlighted={focused}
-              />
-            </button>
+            {/* The same badge as on the quote, doing the same thing: the transcript at that moment. */}
+            <PersonBadge
+              code={assertion.participant_id}
+              role="participant"
+              compact
+              href={source ? transcriptHrefFor(source) : undefined}
+              place={source
+                ? momentPlace("navigate", source.sessionId, source.startSeconds, source.sessionId)
+                : undefined}
+            />
           </li>
         );
       })}
@@ -829,9 +844,6 @@ function QuoteBlock({
   isSentiment,
   sequenceMeta,
   isDissenting,
-  isEvidenceFocused,
-  isEvidenceCited,
-  onFocusEvidence,
 }: {
   quote: UnifiedQuote;
   isSentiment: boolean;
@@ -839,15 +851,9 @@ function QuoteBlock({
   /** Took the slot reserved for a voice that argues with the finding. Marked
    *  so a reader can see the card is not only agreeing with itself. */
   isDissenting?: boolean;
-  /** The evidence assertion's citation currently points to this quote. */
-  isEvidenceFocused?: boolean;
-  /** This quote is cited by a generated evidence assertion. */
-  isEvidenceCited?: boolean;
-  onFocusEvidence: (quoteId: string) => void;
 }) {
   const { t } = useTranslation();
-  const tc = formatTimecode(quote.startSeconds);
-  const tcHref = reportHref(`/report/sessions/${quote.sessionId}#t-${Math.floor(quote.startSeconds)}`);
+  const transcriptHref = transcriptHrefFor(quote);
 
   const seqPos = sequenceMeta?.position ?? "solo";
   const isContinuation = seqPos === "middle" || seqPos === "last";
@@ -855,7 +861,6 @@ function QuoteBlock({
   const cls = [
     seqClass.trim(),
     isDissenting ? "bn-dissenting" : "",
-    isEvidenceFocused ? "is-evidence-focused" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -864,34 +869,29 @@ function QuoteBlock({
     <blockquote
       className={cls || undefined}
       data-dissenting={isDissenting || undefined}
-      data-evidence-focused={isEvidenceFocused || undefined}
+      data-quote-id={quote.quoteId || undefined}
     >
       <div className="quote-row">
-        <a
-          className="timecode"
-          href={tcHref}
-          {...placeProps(momentPlace("navigate", quote.sessionId, quote.startSeconds, quote.sessionId))}
-        >
-          <span className="timecode-bracket">[</span>
-          {tc}
-          <span className="timecode-bracket">]</span>
-        </a>
+        {/* The timecode plays the video, as everywhere else; the speaker badge goes to the
+            transcript at that moment. */}
+        <TimecodeLink
+          seconds={quote.startSeconds}
+          participantId={quote.pid}
+          sessionId={quote.sessionId}
+        />
         <span className="quote-body">
           <span className="quote-text">{quote.text}</span>
           {!isContinuation && (
-            <>{" "}{isEvidenceCited && quote.quoteId ? (
-              <button
-                type="button"
-                className={`signal-quote-evidence-speaker${isEvidenceFocused ? " is-evidence-focused" : ""}`}
-                aria-pressed={isEvidenceFocused}
-                aria-label={t("signals.focusEvidenceAssertion", { participant: quote.pid })}
-                onClick={() => onFocusEvidence(quote.quoteId!)}
-              >
-                <PersonBadge code={quote.pid} role="participant" compact highlighted={isEvidenceFocused} />
-              </button>
-            ) : (
-              <span className="speaker"><PersonBadge code={quote.pid} role="participant" /></span>
-            )}</>
+            <>{" "}
+              <span className="speaker">
+                <PersonBadge
+                  code={quote.pid}
+                  role="participant"
+                  href={transcriptHref}
+                  place={momentPlace("navigate", quote.sessionId, quote.startSeconds, quote.sessionId)}
+                />
+              </span>
+            </>
           )}
           {!isSentiment && quote.tagNames.length > 0 && quote.tagNames.map((tag) => (
             <Badge

@@ -487,8 +487,7 @@
     "evidenceContribution": "Contributo alle evidenze per partecipante",
     "evidenceContributionLevel": "{{participant}}, livello relativo di contributo alle evidenze {{level}} su 3",
     "noEvidenceContribution": "{{participant}}, nessun contributo alle evidenze",
-    "showEvidenceSource": "Partecipante {{participant}}; mostra la citazione originale a sostegno di questa evidenza",
-    "focusEvidenceAssertion": "Partecipante {{participant}}; focalizza l’affermazione supportata da questa citazione"
+    "showEvidenceSource": "Partecipante {{participant}}; mostra la citazione originale a sostegno di questa evidenza"
   },
   "codebook": {
     "uninstallTitle": "Disinstallare \u201c{{name}}\u201d?",

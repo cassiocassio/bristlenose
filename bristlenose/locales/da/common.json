@@ -487,8 +487,7 @@
     "evidenceContribution": "Bidrag til evidens pr. deltager",
     "evidenceContributionLevel": "{{participant}}, relativt evidensbidrag på niveau {{level}} af 3",
     "noEvidenceContribution": "{{participant}}, intet evidensbidrag",
-    "showEvidenceSource": "Deltager {{participant}}; vis kildecitatet, der understøtter denne evidens",
-    "focusEvidenceAssertion": "Deltager {{participant}}; fremhæv evidensudsagnet, der bruger dette citat"
+    "showEvidenceSource": "Deltager {{participant}}; vis kildecitatet, der understøtter denne evidens"
   },
   "codebook": {
     "uninstallTitle": "Afinstall\u00e9r \u201d{{name}}\u201d?",

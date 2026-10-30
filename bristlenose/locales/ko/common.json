@@ -462,8 +462,7 @@
     "evidenceContribution": "참여자별 근거 기여도",
     "evidenceContributionLevel": "{{participant}}, 상대적 근거 기여도 3단계 중 {{level}}단계",
     "noEvidenceContribution": "{{participant}}, 근거 기여 없음",
-    "showEvidenceSource": "참여자 {{participant}}; 이 근거를 뒷받침하는 원본 인용문 표시",
-    "focusEvidenceAssertion": "참여자 {{participant}}; 이 인용문을 사용하는 근거 진술에 초점 맞추기"
+    "showEvidenceSource": "참여자 {{participant}}; 이 근거를 뒷받침하는 원본 인용문 표시"
   },
   "codebook": {
     "uninstallTitle": "\u201c{{name}}\u201d\uc744(\ub97c) \uc81c\uac70\ud560\uae4c\uc694?",

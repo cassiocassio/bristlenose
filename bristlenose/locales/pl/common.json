@@ -543,8 +543,7 @@
     "evidenceContribution": "Wkład uczestników w materiał dowodowy",
     "evidenceContributionLevel": "{{participant}}, względny poziom wkładu w materiał dowodowy {{level}} z 3",
     "noEvidenceContribution": "{{participant}}, brak wkładu w materiał dowodowy",
-    "showEvidenceSource": "Uczestnik {{participant}}; pokaż cytat źródłowy wspierający ten dowód",
-    "focusEvidenceAssertion": "Uczestnik {{participant}}; wyróżnij stwierdzenie poparte tym cytatem"
+    "showEvidenceSource": "Uczestnik {{participant}}; pokaż cytat źródłowy wspierający ten dowód"
   },
   "codebook": {
     "uninstallTitle": "Odinstalowa\u0107 \u201e{{name}}\u201d?",

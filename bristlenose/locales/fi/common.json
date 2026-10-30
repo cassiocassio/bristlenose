@@ -487,8 +487,7 @@
     "evidenceContribution": "Osallistujakohtainen osuus näytöstä",
     "evidenceContributionLevel": "{{participant}}, suhteellisen näyttöosuuden taso {{level}}/3",
     "noEvidenceContribution": "{{participant}}, ei osuutta näyttöön",
-    "showEvidenceSource": "Osallistuja {{participant}}; näytä tätä näyttöä tukeva alkuperäinen lainaus",
-    "focusEvidenceAssertion": "Osallistuja {{participant}}; kohdista tähän lainaukseen perustuva näyttöväite"
+    "showEvidenceSource": "Osallistuja {{participant}}; näytä tätä näyttöä tukeva alkuperäinen lainaus"
   },
   "codebook": {
     "uninstallTitle": "Poistetaanko \u201d{{name}}\u201d?",

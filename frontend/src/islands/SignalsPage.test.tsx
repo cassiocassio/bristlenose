@@ -491,19 +491,36 @@ describe("SignalsPage", () => {
     expect(list.querySelector("mark")?.textContent).toBe(highlighted);
     expect(screen.queryByText("Participants wait for a response before continuing.")).toBeNull();
 
-    const badge = screen.getByRole("button", {
-      name: "Participant p1; show source quote supporting this evidence",
-    });
-    fireEvent.click(badge);
-    expect(document.querySelector('blockquote[data-evidence-focused="true"]')).toBeTruthy();
+    // The speaker badge in the bullet and the one on the quote do the same thing: they go to
+    // the transcript at that moment, as the badge does everywhere else.
+    const bulletBadge = list.querySelector("a.speaker-link") as HTMLAnchorElement;
+    const quoteEl = document.querySelector('blockquote[data-quote-id="q_checkout_latency"]') as HTMLElement;
+    const quoteBadge = quoteEl.querySelector("a.speaker-link") as HTMLAnchorElement;
+    expect(bulletBadge.getAttribute("href")).toContain("/report/sessions/");
+    expect(bulletBadge.getAttribute("href")).toBe(quoteBadge.getAttribute("href"));
+    expect(screen.queryByRole("button", { name: /focus evidence assertion using this quote/ })).toBeNull();
+    // The timecode is the shared play link (it plays the video where there is a recording),
+    // not a bare anchor to the transcript.
+    const timecode = quoteEl.querySelector("a.timecode") as HTMLElement;
+    expect(timecode.getAttribute("data-participant")).toBeTruthy();
+    expect(timecode.getAttribute("data-seconds")).not.toBeNull();
 
-    // The source quote provides the reciprocal, keyboard-reachable route back
-    // to the same evidence focus rather than making citation a one-way cue.
-    const quoteBadge = screen.getByRole("button", {
-      name: "Participant p1; focus evidence assertion using this quote",
-    });
-    fireEvent.click(quoteBadge);
-    expect(quoteBadge.getAttribute("aria-pressed")).toBe("false");
+    // The highlighted words are the control: pressing them flashes the quote they came from.
+    expect(quoteEl.hasAttribute("data-arrived")).toBe(false);
+    // Its name is its own words (a visible label must be part of the accessible name); the
+    // tooltip says what pressing it does.
+    const words = screen.getByRole("button", { name: highlighted });
+    expect(words.getAttribute("title")).toBe("Participant p1; show source quote supporting this evidence");
+    fireEvent.click(words);
+    expect(quoteEl.hasAttribute("data-arrived")).toBe(true);
+    // No persistent state is left on anything: the flash is the whole cue.
+    expect(document.querySelector("[data-evidence-focused]")).toBeNull();
+    expect(words.getAttribute("aria-pressed")).toBeNull();
+
+    // A repeat press flashes again.
+    quoteEl.removeAttribute("data-arrived");
+    fireEvent.click(words);
+    expect(quoteEl.hasAttribute("data-arrived")).toBe(true);
   });
 
   it("expands signal card quotes on toggle click", async () => {
@@ -552,7 +569,7 @@ describe("SignalsPage", () => {
     });
   });
 
-  it("reveals an overflow source quote when an evidence citation focuses it", async () => {
+  it("opens the overflow and flashes the source quote when its evidence words are pressed", async () => {
     const asserted: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
     const signal = asserted.codebooks[0].signals[0];
     signal.elaboration = "Checkout delays interrupt purchase intent.";
@@ -564,7 +581,12 @@ describe("SignalsPage", () => {
       source_quote_id: "q_overflow",
       participant_id: signal.quotes[4].participant_id,
       source_excerpt: signal.quotes[4].text,
-      intervention_fragment: null,
+      intervention_fragment: {
+        start: "One participant described the lengthy wait.".indexOf("the lengthy wait"),
+        end: "One participant described the lengthy wait.".indexOf("the lengthy wait") + "the lengthy wait".length,
+        text: "the lengthy wait",
+        rationale: "negative_actionable_cause",
+      },
     }];
     mockFetchCodebookSignals(asserted);
     render(<SignalsPage projectId="1" />);
@@ -574,11 +596,9 @@ describe("SignalsPage", () => {
     });
     const card = screen.getAllByTestId("bn-signal-card")[0];
     expect(card.classList.contains("expanded")).toBe(false);
-    fireEvent.click(screen.getByRole("button", {
-      name: `Participant ${signal.quotes[4].participant_id}; show source quote supporting this evidence`,
-    }));
+    fireEvent.click(screen.getByRole("button", { name: "the lengthy wait" }));
     expect(card.classList.contains("expanded")).toBe(true);
-    expect(document.querySelector('blockquote[data-evidence-focused="true"]')?.textContent)
+    expect(document.querySelector('blockquote[data-arrived]')?.textContent)
       .toContain(signal.quotes[4].text);
   });
 

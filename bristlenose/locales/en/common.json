@@ -489,8 +489,7 @@
     "evidenceContribution": "Evidence contribution by participant",
     "evidenceContributionLevel": "{{participant}}, relative evidence contribution level {{level}} of 3",
     "noEvidenceContribution": "{{participant}}, no evidence contribution",
-    "showEvidenceSource": "Participant {{participant}}; show source quote supporting this evidence",
-    "focusEvidenceAssertion": "Participant {{participant}}; focus evidence assertion using this quote"
+    "showEvidenceSource": "Participant {{participant}}; show source quote supporting this evidence"
   },
   "codebook": {
     "uninstallTitle": "Uninstall \u201c{{name}}\u201d?",

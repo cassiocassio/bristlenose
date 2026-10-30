@@ -487,8 +487,7 @@
     "evidenceContribution": "Contribution aux éléments probants par participant",
     "evidenceContributionLevel": "{{participant}}, niveau relatif de contribution aux éléments probants {{level}} sur 3",
     "noEvidenceContribution": "{{participant}}, aucune contribution aux éléments probants",
-    "showEvidenceSource": "Participant {{participant}} ; afficher la citation source étayant cet élément probant",
-    "focusEvidenceAssertion": "Participant {{participant}} ; cibler l’affirmation étayée par cette citation"
+    "showEvidenceSource": "Participant {{participant}} ; afficher la citation source étayant cet élément probant"
   },
   "codebook": {
     "uninstallTitle": "D\u00e9sinstaller \u00ab\u202f{{name}}\u202f\u00bb\u00a0?",

@@ -4,7 +4,7 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
-**30 Oct — Whisper first run on a clean Mac (Claude; UNCOMMITTED in the main checkout).**
+**30 Oct — Whisper first run on a clean Mac (Claude; committed 4ba513387, not pushed).**
 Plan and Fable review: `docs/private/plan-whisper-first-run-2026-10-30.md`. Found on clean Tart
 guests with the 0.43.0 DMG: macOS 15.7.7 sidecar SIGTRAPs in `mlx::core::metal::Device::Device()` 2 s
 after launch (red pill, Retry dies instantly); 26.6.2 and 27.0 fine. Cause: pip took MLX's

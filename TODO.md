@@ -1,5 +1,9 @@
 # Bristlenose — Where I Left Off
 
+**Cross-session pickup map:** `docs/session-consolidation-2026-10-30.md` records
+every known Claude/Codex session, merge result, parked item, stash, preservation
+copy and remaining worktree after the 30 October consolidation.
+
 **30 Oct — Codex consolidation and canonical checkout transfer complete.** The
 canonical `/Users/cassio/Code/bristlenose` checkout is clean on local `main`, which now
 contains `0b7eb11d5` (Zoom 30-day UTC/DST fix plus deterministic startup-probe

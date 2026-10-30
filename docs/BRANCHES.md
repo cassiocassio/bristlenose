@@ -919,6 +919,9 @@ above.
 
 ### 30 October consolidation — complete
 
+Full session-by-session disposition, preservation evidence and safe pickup rules:
+`docs/session-consolidation-2026-10-30.md`.
+
 The clean integration checkout's local `main` now includes `0b7eb11d5` (Zoom
 UTC/DST range fix and deterministic startup-probe verification) and `c84c26606`
 (parked multi-Mac design/mockup bundle plus register). Full Python is green

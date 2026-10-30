@@ -527,6 +527,10 @@ unregistered directories, not Git worktrees; app archival could not verify this
 chat's old primary checkout, so their directories were left intact. No push,
 tag, release or public changelog update is authorised.
 
+The complete cross-session map and preservation/cleanup account is
+[`docs/session-consolidation-2026-10-30.md`](docs/session-consolidation-2026-10-30.md).
+Read it before resuming any branch or stash named there.
+
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.
 
 ## Current status

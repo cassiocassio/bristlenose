@@ -479,7 +479,6 @@
     "pending": "{{count}} väntande",
     "basedOnTags": "Baserat på {{parts}} tagg",
     "basedOnTags_other": "Baserat på {{parts}} taggar",
-    "pendingWeighted": "(väntande taggar viktade efter AI-konfidens)",
     "evidenceContribution": "Bidrag till evidens per deltagare",
     "evidenceContributionLevel": "{{participant}}, relativ evidensbidragsnivå {{level}} av 3",
     "noEvidenceContribution": "{{participant}}, inget evidensbidrag",

@@ -535,7 +535,6 @@
     "basedOnTags_few": "Na podstawie {{parts}} tagów",
     "basedOnTags_many": "Na podstawie {{parts}} tagów",
     "basedOnTags_other": "Na podstawie {{parts}} tagów",
-    "pendingWeighted": "(oczekujące tagi ważone pewnością AI)",
     "evidenceContribution": "Wkład uczestników w materiał dowodowy",
     "evidenceContributionLevel": "{{participant}}, względny poziom wkładu w materiał dowodowy {{level}} z 3",
     "noEvidenceContribution": "{{participant}}, brak wkładu w materiał dowodowy",

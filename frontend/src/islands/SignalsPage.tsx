@@ -400,7 +400,6 @@ function SourceBanner({ breakdown }: { breakdown: SourceBreakdown }) {
       data-testid="bn-source-banner"
     >
       {t("signals.basedOnTags", { parts: parts.join(" + "), count: breakdown.total })}
-      {breakdown.pending > 0 && ` ${t("signals.pendingWeighted")}`}
     </p>
   );
 }

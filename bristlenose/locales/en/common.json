@@ -481,7 +481,6 @@
     "pending": "{{count}} pending",
     "basedOnTags": "Based on {{parts}} tag",
     "basedOnTags_other": "Based on {{parts}} tags",
-    "pendingWeighted": "(pending tags weighted by AI confidence)",
     "evidenceContribution": "Evidence contribution by participant",
     "evidenceContributionLevel": "{{participant}}, relative evidence contribution level {{level}} of 3",
     "noEvidenceContribution": "{{participant}}, no evidence contribution",

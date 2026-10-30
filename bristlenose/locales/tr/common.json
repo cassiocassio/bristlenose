@@ -479,7 +479,6 @@
     "pending": "{{count}} bekliyor",
     "basedOnTags": "{{parts}} etikete dayalı",
     "basedOnTags_other": "{{parts}} etikete dayalı",
-    "pendingWeighted": "(bekleyen etiketler YZ güvenine göre ağırlıklandırıldı)",
     "evidenceContribution": "Katılımcıya göre kanıta katkı",
     "evidenceContributionLevel": "{{participant}}, 3 üzerinden {{level}} düzeyinde göreli kanıt katkısı",
     "noEvidenceContribution": "{{participant}}, kanıta katkı yok",

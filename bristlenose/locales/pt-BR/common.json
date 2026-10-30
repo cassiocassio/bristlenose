@@ -479,7 +479,6 @@
     "pending": "{{count}} pendentes",
     "basedOnTags": "Com base em {{parts}} etiqueta",
     "basedOnTags_other": "Com base em {{parts}} etiquetas",
-    "pendingWeighted": "(etiquetas pendentes ponderadas pela confiança da IA)",
     "evidenceContribution": "Contribuição para as evidências por participante",
     "evidenceContributionLevel": "{{participant}}, nível relativo de contribuição para as evidências {{level}} de 3",
     "noEvidenceContribution": "{{participant}}, sem contribuição para as evidências",

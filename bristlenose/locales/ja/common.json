@@ -469,7 +469,6 @@
     "pending": "{{count}} 件保留",
     "basedOnTags": "{{parts}} 件のタグに基づく",
     "basedOnTags_other": "{{parts}} 件のタグに基づく",
-    "pendingWeighted": "(保留中のタグは AI の信頼度で重み付け)",
     "evidenceContribution": "参加者別の根拠への寄与",
     "evidenceContributionLevel": "{{participant}}、根拠への相対的な寄与レベル：3段階中{{level}}",
     "noEvidenceContribution": "{{participant}}、根拠への寄与なし",

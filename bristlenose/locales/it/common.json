@@ -479,7 +479,6 @@
     "pending": "{{count}} in sospeso",
     "basedOnTags": "Basato su {{parts}} tag",
     "basedOnTags_other": "Basato su {{parts}} tag",
-    "pendingWeighted": "(tag in sospeso ponderati in base alla confidenza dell'IA)",
     "evidenceContribution": "Contributo alle evidenze per partecipante",
     "evidenceContributionLevel": "{{participant}}, livello relativo di contributo alle evidenze {{level}} su 3",
     "noEvidenceContribution": "{{participant}}, nessun contributo alle evidenze",

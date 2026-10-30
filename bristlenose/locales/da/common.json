@@ -479,7 +479,6 @@
     "pending": "{{count}} afventer",
     "basedOnTags": "Baseret på {{parts}} tag",
     "basedOnTags_other": "Baseret på {{parts}} tags",
-    "pendingWeighted": "(afventende tags vægtet efter AI-tillid)",
     "evidenceContribution": "Bidrag til evidens pr. deltager",
     "evidenceContributionLevel": "{{participant}}, relativt evidensbidrag på niveau {{level}} af 3",
     "noEvidenceContribution": "{{participant}}, intet evidensbidrag",

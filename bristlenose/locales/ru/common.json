@@ -535,7 +535,6 @@
     "basedOnTags_few": "На основе {{parts}} тегов",
     "basedOnTags_many": "На основе {{parts}} тегов",
     "basedOnTags_other": "На основе {{parts}} тегов",
-    "pendingWeighted": "(ожидающие теги взвешены по уверенности ИИ)",
     "evidenceContribution": "Вклад участников в подтверждающие данные",
     "evidenceContributionLevel": "{{participant}}, относительный уровень вклада в подтверждающие данные {{level}} из 3",
     "noEvidenceContribution": "{{participant}}, вклад в подтверждающие данные отсутствует",

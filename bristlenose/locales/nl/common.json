@@ -479,7 +479,6 @@
     "pending": "{{count}} in behandeling",
     "basedOnTags": "Gebaseerd op {{parts}} tag",
     "basedOnTags_other": "Gebaseerd op {{parts}} tags",
-    "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)",
     "evidenceContribution": "Bijdrage aan bewijs per deelnemer",
     "evidenceContributionLevel": "{{participant}}, relatief niveau van bewijsbijdrage {{level}} van 3",
     "noEvidenceContribution": "{{participant}}, geen bewijsbijdrage",

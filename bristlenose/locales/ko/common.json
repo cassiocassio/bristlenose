@@ -454,7 +454,6 @@
     "pending": "{{count}}개 보류",
     "basedOnTags": "{{parts}}개 태그 기반",
     "basedOnTags_other": "{{parts}}개 태그 기반",
-    "pendingWeighted": "(보류 태그는 AI 신뢰도로 가중)",
     "evidenceContribution": "참여자별 근거 기여도",
     "evidenceContributionLevel": "{{participant}}, 상대적 근거 기여도 3단계 중 {{level}}단계",
     "noEvidenceContribution": "{{participant}}, 근거 기여 없음",

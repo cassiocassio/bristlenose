@@ -524,7 +524,6 @@
     "pending": "{{count}} čeká",
     "basedOnTags": "Na základě {{parts}} štítku",
     "basedOnTags_other": "Na základě štítků: {{parts}}",
-    "pendingWeighted": "(čekající štítky vážené spolehlivostí AI)",
     "evidenceContribution": "Příspěvek účastníků k důkazům",
     "evidenceContributionLevel": "{{participant}}, relativní úroveň příspěvku k důkazům {{level}} ze 3",
     "noEvidenceContribution": "{{participant}}, žádný příspěvek k důkazům",

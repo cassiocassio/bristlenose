@@ -1,5 +1,12 @@
 # Desktop App — macOS Shell
 
+**Filesystem-location assertions:** Foundation can enumerate a temporary folder
+through `/private/var` while a constructed URL spells it `/var`. In tests that
+assert the same directory, compare `ScanSelection.realPath(url.path)` on both
+sides; changing only the fixture root with `resolvingSymlinksInPath()` is not
+sufficient. Keep payload-kind and count checks so canonical sets cannot hide
+duplicate imports. See `SidebarFinderDropTests` and c92bba10a (30 Oct close-out).
+
 SwiftUI macOS app wrapping the Bristlenose React SPA in a WKWebView. Native project sidebar, native toolbar, native Settings window, web content in embedded mode. **Alpha ships a bundled, signed PyInstaller sidecar** that runs `bristlenose serve` inside the `.app`, distributed via internal TestFlight. The current code uses **launcher-style scaffolding** (the Swift app searches the user's `$PATH` and venv directories for an installed `bristlenose` CLI rather than carrying its own) so v0.2 native-shell work could iterate without paying the bundle-sign-distribute tax on every change. Track C in Sprint 2 replaces it with the bundled sidecar.
 
 ## SwiftUI authoring + review help

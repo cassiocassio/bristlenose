@@ -1,12 +1,17 @@
 ---
-status: pending
+status: historical-v1-with-implemented-followup
 scope: v1 — unambiguous cases only
-last-updated: 2026-05-15
-last-trued: 2026-08-19
-trued-against: working tree on 2026-08-19 (extension-set parity + format widening)
+last-updated: 2026-10-30
+last-trued: 2026-10-30
+trued-against: sidebar source on main through c92bba10a; routing contracts 5120928de
 ---
 
-> **Trued 2026-08-19.** The V1 design below is still unshipped and still the
+> **Current status, 30 Oct 2026:** the 29 October supersession note below is
+> implemented on local main. Earlier status notes and V1 tables are historical.
+> Verification, owner QA, known gate failures and archival are recorded in
+> [the sidebar close-out](sidebar-finder-drop-closeout.md).
+
+> **Historical status, 2026-08-19.** The V1 design below is still unshipped and still the
 > plan — `DropEvaluator`, `containsRecognisedMedia` and `dropTargetIsRefused`
 > have no implementation yet, and the row-state toasts this doc retires are
 > still firing. Two things underneath it changed and are corrected in place:

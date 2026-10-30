@@ -1,5 +1,13 @@
 # Bristlenose — Where I Left Off
 
+**30 Oct — sidebar Finder drops closed on local main.** Implementation 56b46608a
+landed via 5a7830935; test corrections c92bba10a and 5120928de. Final pinned
+Swift gate: 2,846 passed / zero failed; sidebar Python contracts: 44 passed.
+The additional full Python run exposed broader failures, handed to recovery;
+this is not a global green/release sign-off. Evidence, limits and archival:
+`docs/sidebar-finder-drop-closeout.md`. Shared-checkout defaults for Codex:
+`AGENTS.md`. No push/release.
+
 **29 Oct local main:** recovery/status integrated via5a7830935/014c04685; combined main 2846native passed/0failed,343Python passed/2xfail. Exact evidence and known limits: docs/design-study-recovery-guard.md. No push/release; original shared Signals checkout untouched. Read-only reader/handover remains deferred in100days.
 
 **Release-note candidate:** Opening a synced study preserves unfinished analysis from another Mac and explains why it cannot be opened here; sidebar warnings survive switching studies and unrelated startup failures.

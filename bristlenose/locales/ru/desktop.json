@@ -348,6 +348,7 @@
       "stopping": "Остановка…",
       "analysing": "Анализ…",
       "analysingHint": "Отчёт откроется, как только первое интервью можно будет прочитать.",
+      "pickingUpSignals": "Сбор сигналов…",
       "resuming": "Возобновление…",
       "analysedRelative": "Проанализировано {{when}}",
       "transcribed": "Транскрибировано",

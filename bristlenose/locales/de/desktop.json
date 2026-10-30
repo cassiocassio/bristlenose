@@ -312,6 +312,7 @@
       "stopping": "Wird angehalten\u2026",
       "analysing": "Wird analysiert\u2026",
       "analysingHint": "Der Bericht öffnet sich, sobald das erste Interview lesbar ist.",
+      "pickingUpSignals": "Signale sammeln…",
       "resuming": "Wird fortgesetzt\u2026",
       "analysedRelative": "Analysiert {{when}}",
       "transcribed": "Transkribiert",

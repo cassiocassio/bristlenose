@@ -348,6 +348,7 @@
       "stopping": "Зупинення…",
       "analysing": "Аналіз…",
       "analysingHint": "Звіт відкриється, щойно перше інтерв’ю можна буде прочитати.",
+      "pickingUpSignals": "Збір сигналів…",
       "resuming": "Відновлення…",
       "analysedRelative": "Проаналізовано {{when}}",
       "transcribed": "Транскрибовано",

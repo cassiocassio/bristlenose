@@ -313,6 +313,7 @@
       "stopping": "Stopping\u2026",
       "analysing": "Analysing\u2026",
       "analysingHint": "The report opens as soon as the first interview is readable.",
+      "pickingUpSignals": "Picking up Signals…",
       "resuming": "Resuming\u2026",
       "analysedRelative": "Analysed {{when}}",
       "transcribed": "Transcribed",

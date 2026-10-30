@@ -312,6 +312,7 @@
       "stopping": "Durduruluyor…",
       "analysing": "Analiz ediliyor…",
       "analysingHint": "İlk görüşme okunabilir olur olmaz rapor açılır.",
+      "pickingUpSignals": "Sinyaller toplanıyor…",
       "resuming": "Sürdürülüyor…",
       "analysedRelative": "{{when}} analiz edildi",
       "transcribed": "Döküldü",

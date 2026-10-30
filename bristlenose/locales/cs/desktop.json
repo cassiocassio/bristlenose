@@ -347,6 +347,7 @@
       "stopping": "Zastavování…",
       "analysing": "Analýza…",
       "analysingHint": "Zpráva se otevře, jakmile bude první rozhovor k přečtení.",
+      "pickingUpSignals": "Sběr signálů…",
       "resuming": "Pokračování…",
       "analysedRelative": "Analyzováno {{when}}",
       "transcribed": "Přepsáno",

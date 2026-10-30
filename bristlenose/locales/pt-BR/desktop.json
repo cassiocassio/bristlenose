@@ -312,6 +312,7 @@
       "stopping": "Parando…",
       "analysing": "Analisando…",
       "analysingHint": "O relatório abre assim que a primeira entrevista puder ser lida.",
+      "pickingUpSignals": "Reunindo Sinais…",
       "resuming": "Retomando…",
       "analysedRelative": "Analisado {{when}}",
       "transcribed": "Transcrito",

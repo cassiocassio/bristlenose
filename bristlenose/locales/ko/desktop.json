@@ -294,6 +294,7 @@
       "stopping": "\uc911\uc9c0 \uc911\u2026",
       "analysing": "\ubd84\uc11d \uc911\u2026",
       "analysingHint": "첫 번째 인터뷰를 읽을 수 있게 되면 바로 보고서가 열립니다.",
+      "pickingUpSignals": "시그널 수집 중…",
       "resuming": "\uc7ac\uac1c \uc911\u2026",
       "analysedRelative": "\ubd84\uc11d\ub428 {{when}}",
       "transcribed": "\uc804\uc0ac\ub428",

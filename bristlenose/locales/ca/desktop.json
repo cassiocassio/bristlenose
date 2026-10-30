@@ -312,6 +312,7 @@
       "stopping": "S'està aturant…",
       "analysing": "S'està analitzant…",
       "analysingHint": "L'informe s'obre tan bon punt la primera entrevista es pot llegir.",
+      "pickingUpSignals": "Recopilant Senyals…",
       "resuming": "S'està reprenent…",
       "analysedRelative": "Analitzat {{when}}",
       "transcribed": "Transcrit",

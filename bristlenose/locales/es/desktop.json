@@ -312,6 +312,7 @@
       "stopping": "Deteniendo\u2026",
       "analysing": "Analizando\u2026",
       "analysingHint": "El informe se abre en cuanto la primera entrevista se puede leer.",
+      "pickingUpSignals": "Recopilando Señales…",
       "resuming": "Reanudando\u2026",
       "analysedRelative": "Analizado {{when}}",
       "transcribed": "Transcrito",

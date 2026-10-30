@@ -312,6 +312,7 @@
       "stopping": "Stoppen…",
       "analysing": "Analyseren…",
       "analysingHint": "Het rapport opent zodra het eerste interview leesbaar is.",
+      "pickingUpSignals": "Signalen verzamelen…",
       "resuming": "Hervatten…",
       "analysedRelative": "Geanalyseerd {{when}}",
       "transcribed": "Getranscribeerd",

@@ -312,6 +312,7 @@
       "stopping": "Stopper…",
       "analysing": "Analyserer…",
       "analysingHint": "Rapporten åpnes så snart det første intervjuet kan leses.",
+      "pickingUpSignals": "Samler Signaler…",
       "resuming": "Fortsetter…",
       "analysedRelative": "Analysert {{when}}",
       "transcribed": "Transkribert",

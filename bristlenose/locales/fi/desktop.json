@@ -312,6 +312,7 @@
       "stopping": "Pysäytetään…",
       "analysing": "Analysoidaan…",
       "analysingHint": "Raportti avautuu heti, kun ensimmäinen haastattelu on luettavissa.",
+      "pickingUpSignals": "Kerätään signaaleja…",
       "resuming": "Jatketaan…",
       "analysedRelative": "Analysoitu {{when}}",
       "transcribed": "Litteroitu",

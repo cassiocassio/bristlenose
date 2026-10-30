@@ -294,6 +294,7 @@
       "stopping": "正在停止⋯",
       "analysing": "正在分析⋯",
       "analysingHint": "第一份訪談可供閱讀時，報告就會開啟。",
+      "pickingUpSignals": "正在收集訊號⋯",
       "resuming": "正在繼續⋯",
       "analysedRelative": "已於 {{when}} 分析",
       "transcribed": "已轉錄逐字稿",

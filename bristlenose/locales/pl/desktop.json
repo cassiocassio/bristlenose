@@ -348,6 +348,7 @@
       "stopping": "Zatrzymywanie…",
       "analysing": "Analizowanie…",
       "analysingHint": "Raport otworzy się, gdy tylko pierwszy wywiad będzie można przeczytać.",
+      "pickingUpSignals": "Zbieranie sygnałów…",
       "resuming": "Wznawianie…",
       "analysedRelative": "Przeanalizowano {{when}}",
       "transcribed": "Transkrybowano",

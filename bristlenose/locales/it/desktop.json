@@ -312,6 +312,7 @@
       "stopping": "Interruzione…",
       "analysing": "Analisi…",
       "analysingHint": "Il report si apre non appena la prima intervista è leggibile.",
+      "pickingUpSignals": "Raccolta segnali…",
       "resuming": "Ripresa…",
       "analysedRelative": "Analizzato {{when}}",
       "transcribed": "Trascritto",

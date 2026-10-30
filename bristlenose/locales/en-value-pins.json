@@ -860,6 +860,7 @@
  "desktop.chrome.pipeline.etaUnderMinute": "4eff9b",
  "desktop.chrome.pipeline.importBatch": "b89f64",
  "desktop.chrome.pipeline.partialRun": "9ccc71",
+ "desktop.chrome.pipeline.pickingUpSignals": "92594e",
  "desktop.chrome.pipeline.queuedHint": "462a09",
  "desktop.chrome.pipeline.queuedPosition": "78c4e8",
  "desktop.chrome.pipeline.resuming": "c494e3",

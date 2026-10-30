@@ -479,7 +479,12 @@
     "pending": "{{count}} bekliyor",
     "basedOnTags": "{{parts}} etikete dayalı",
     "basedOnTags_other": "{{parts}} etikete dayalı",
-    "pendingWeighted": "(bekleyen etiketler YZ güvenine göre ağırlıklandırıldı)"
+    "pendingWeighted": "(bekleyen etiketler YZ güvenine göre ağırlıklandırıldı)",
+    "evidenceContribution": "Katılımcıya göre kanıta katkı",
+    "evidenceContributionLevel": "{{participant}}, 3 üzerinden {{level}} düzeyinde göreli kanıt katkısı",
+    "noEvidenceContribution": "{{participant}}, kanıta katkı yok",
+    "showEvidenceSource": "Katılımcı {{participant}}; bu kanıtı destekleyen kaynak alıntıyı göster",
+    "focusEvidenceAssertion": "Katılımcı {{participant}}; bu alıntıyı kullanan kanıt ifadesine odaklan"
   },
   "codebook": {
     "uninstallTitle": "\u201c{{name}}\u201d kald\u0131r\u0131ls\u0131n m\u0131?",

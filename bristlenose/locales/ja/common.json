@@ -469,7 +469,12 @@
     "pending": "{{count}} 件保留",
     "basedOnTags": "{{parts}} 件のタグに基づく",
     "basedOnTags_other": "{{parts}} 件のタグに基づく",
-    "pendingWeighted": "(保留中のタグは AI の信頼度で重み付け)"
+    "pendingWeighted": "(保留中のタグは AI の信頼度で重み付け)",
+    "evidenceContribution": "参加者別の根拠への寄与",
+    "evidenceContributionLevel": "{{participant}}、根拠への相対的な寄与レベル：3段階中{{level}}",
+    "noEvidenceContribution": "{{participant}}、根拠への寄与なし",
+    "showEvidenceSource": "参加者{{participant}}。この根拠を裏付ける元の引用を表示",
+    "focusEvidenceAssertion": "参加者{{participant}}。この引用を使用する根拠の記述にフォーカス"
   },
   "codebook": {
     "uninstallTitle": "\u300c{{name}}\u300d\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f",

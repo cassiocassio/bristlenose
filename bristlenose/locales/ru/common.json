@@ -535,7 +535,12 @@
     "basedOnTags_few": "На основе {{parts}} тегов",
     "basedOnTags_many": "На основе {{parts}} тегов",
     "basedOnTags_other": "На основе {{parts}} тегов",
-    "pendingWeighted": "(ожидающие теги взвешены по уверенности ИИ)"
+    "pendingWeighted": "(ожидающие теги взвешены по уверенности ИИ)",
+    "evidenceContribution": "Вклад участников в подтверждающие данные",
+    "evidenceContributionLevel": "{{participant}}, относительный уровень вклада в подтверждающие данные {{level}} из 3",
+    "noEvidenceContribution": "{{participant}}, вклад в подтверждающие данные отсутствует",
+    "showEvidenceSource": "Участник {{participant}}; показать исходную цитату, подтверждающую эти данные",
+    "focusEvidenceAssertion": "Участник {{participant}}; выделить утверждение, основанное на этой цитате"
   },
   "codebook": {
     "uninstallTitle": "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u00ab{{name}}\u00bb?",

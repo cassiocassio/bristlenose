@@ -479,7 +479,12 @@
     "pending": "{{count}} pendents",
     "basedOnTags": "Basat en {{parts}} etiqueta",
     "basedOnTags_other": "Basat en {{parts}} etiquetes",
-    "pendingWeighted": "(les etiquetes pendents es ponderen per la confiança de la IA)"
+    "pendingWeighted": "(les etiquetes pendents es ponderen per la confiança de la IA)",
+    "evidenceContribution": "Contribució a les evidències per participant",
+    "evidenceContributionLevel": "{{participant}}, nivell relatiu de contribució a les evidències {{level}} de 3",
+    "noEvidenceContribution": "{{participant}}, sense contribució a les evidències",
+    "showEvidenceSource": "Participant {{participant}}; mostra la cita original que dona suport a aquesta evidència",
+    "focusEvidenceAssertion": "Participant {{participant}}; centra l’afirmació d’evidència que utilitza aquesta cita"
   },
   "codebook": {
     "uninstallTitle": "Voleu desinstal\u00b7lar \u00ab{{name}}\u00bb?",

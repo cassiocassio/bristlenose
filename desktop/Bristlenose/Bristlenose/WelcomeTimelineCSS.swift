@@ -8,7 +8,7 @@
 
 enum WelcomeTimelineCSS {
     static let shipped = #"""
-/* ════ bristlenose/theme/tokens.css — lines 1–434 ════ */
+/* ════ bristlenose/theme/tokens.css — lines 1–444 ════ */
 /* Design tokens — the single source of truth for all visual decisions.
 
    This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
@@ -214,6 +214,16 @@ enum WelcomeTimelineCSS {
     --bn-space-md: 0.75rem;
     --bn-space-lg: 1.5rem;
     --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
 
     /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
        the same in light and dark; the dark text reads on it in both modes. */
@@ -444,7 +454,7 @@ enum WelcomeTimelineCSS {
     [data-theme="dark"]:root  { color-scheme: dark; }
 }
 
-/* ════ bristlenose/theme/tokens-typography.css — lines 1–88 ════ */
+/* ════ bristlenose/theme/tokens-typography.css — lines 1–100 ════ */
 /* Typography tokens — web defaults (Inter Variable from Google Fonts).
    Desktop overrides are in tokens-desktop.css.
 
@@ -472,6 +482,7 @@ enum WelcomeTimelineCSS {
        Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
        Chromium on a Mac and Courier New in Windows 10's Edge. */
     --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
 
     /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
        On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
@@ -520,6 +531,17 @@ enum WelcomeTimelineCSS {
     --bn-text-title-lh:    1.25;
     --bn-text-display:     1.75rem;     /* 28px   — report h1 */
     --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
 }
 
 /* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,

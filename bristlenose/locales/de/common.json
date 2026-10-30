@@ -479,7 +479,12 @@
     "pending": "{{count}} ausstehend",
     "basedOnTags": "Basiert auf {{parts}} Tag",
     "basedOnTags_other": "Basiert auf {{parts}} Tags",
-    "pendingWeighted": "(ausstehende Tags gewichtet nach KI-Konfidenz)"
+    "pendingWeighted": "(ausstehende Tags gewichtet nach KI-Konfidenz)",
+    "evidenceContribution": "Beitrag zur Evidenz nach Teilnehmenden",
+    "evidenceContributionLevel": "{{participant}}, relativer Evidenzbeitrag auf Stufe {{level}} von 3",
+    "noEvidenceContribution": "{{participant}}, kein Evidenzbeitrag",
+    "showEvidenceSource": "Teilnehmer {{participant}}; Quellzitat anzeigen, das diese Evidenz stützt",
+    "focusEvidenceAssertion": "Teilnehmer {{participant}}; Evidenzaussage hervorheben, die dieses Zitat verwendet"
   },
   "codebook": {
     "uninstallTitle": "\u201e{{name}}\u201c deinstallieren?",

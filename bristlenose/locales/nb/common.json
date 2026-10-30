@@ -479,7 +479,12 @@
     "pending": "{{count}} venter",
     "basedOnTags": "Basert på {{parts}} tagg",
     "basedOnTags_other": "Basert på {{parts}} tagger",
-    "pendingWeighted": "(ventende tagger vektet etter AI-tillit)"
+    "pendingWeighted": "(ventende tagger vektet etter AI-tillit)",
+    "evidenceContribution": "Bidrag til evidens per deltaker",
+    "evidenceContributionLevel": "{{participant}}, relativt evidensbidrag på nivå {{level}} av 3",
+    "noEvidenceContribution": "{{participant}}, intet evidensbidrag",
+    "showEvidenceSource": "Deltaker {{participant}}; vis kildeutsagnet som støtter denne evidensen",
+    "focusEvidenceAssertion": "Deltaker {{participant}}; fremhev evidensutsagnet som bruker dette sitatet"
   },
   "codebook": {
     "uninstallTitle": "Avinstaller \u00ab{{name}}\u00bb?",

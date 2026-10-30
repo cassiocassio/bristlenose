@@ -864,7 +864,8 @@ button.signal-card-toggle {
     font-size: var(--bn-text-signal-claim);
     line-height: var(--bn-text-signal-claim-lh);
     letter-spacing: var(--bn-track-signal-claim);
-    font-weight: var(--bn-weight-signal-claim);
+    --bn-lead-weight: var(--bn-weight-signal-claim);
+    --bn-lead-rest-weight: var(--bn-weight-signal-claim);
     max-inline-size: 76ch;
     margin-bottom: var(--bn-space-lg);
 }

@@ -479,7 +479,12 @@
     "pending": "{{count}} in behandeling",
     "basedOnTags": "Gebaseerd op {{parts}} tag",
     "basedOnTags_other": "Gebaseerd op {{parts}} tags",
-    "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)"
+    "pendingWeighted": "(tags in behandeling gewogen op AI-betrouwbaarheid)",
+    "evidenceContribution": "Bijdrage aan bewijs per deelnemer",
+    "evidenceContributionLevel": "{{participant}}, relatief niveau van bewijsbijdrage {{level}} van 3",
+    "noEvidenceContribution": "{{participant}}, geen bewijsbijdrage",
+    "showEvidenceSource": "Deelnemer {{participant}}; toon het broncitaat dat dit bewijs ondersteunt",
+    "focusEvidenceAssertion": "Deelnemer {{participant}}; focus op de bewijsstelling die dit citaat gebruikt"
   },
   "codebook": {
     "uninstallTitle": "\u201d{{name}}\u201d de\u00efnstalleren?",

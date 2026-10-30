@@ -479,7 +479,12 @@
     "pending": "{{count}} vireillä",
     "basedOnTags": "Perustuu {{parts}} tunnisteeseen",
     "basedOnTags_other": "Perustuu {{parts}} tunnisteeseen",
-    "pendingWeighted": "(vireillä olevat tunnisteet painotettu tekoälyn luottamuksen mukaan)"
+    "pendingWeighted": "(vireillä olevat tunnisteet painotettu tekoälyn luottamuksen mukaan)",
+    "evidenceContribution": "Osallistujakohtainen osuus näytöstä",
+    "evidenceContributionLevel": "{{participant}}, suhteellisen näyttöosuuden taso {{level}}/3",
+    "noEvidenceContribution": "{{participant}}, ei osuutta näyttöön",
+    "showEvidenceSource": "Osallistuja {{participant}}; näytä tätä näyttöä tukeva alkuperäinen lainaus",
+    "focusEvidenceAssertion": "Osallistuja {{participant}}; kohdista tähän lainaukseen perustuva näyttöväite"
   },
   "codebook": {
     "uninstallTitle": "Poistetaanko \u201d{{name}}\u201d?",

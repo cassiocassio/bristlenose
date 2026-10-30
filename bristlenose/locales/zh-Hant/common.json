@@ -454,7 +454,12 @@
     "pending": "{{count}} 個待處理",
     "basedOnTags": "依據 {{parts}} 個標籤",
     "basedOnTags_other": "依據 {{parts}} 個標籤",
-    "pendingWeighted": "（待處理標籤依 AI 信心加權）"
+    "pendingWeighted": "（待處理標籤依 AI 信心加權）",
+    "evidenceContribution": "各參與者的證據貢獻",
+    "evidenceContributionLevel": "{{participant}}，相對證據貢獻等級為第 {{level}} 級，共 3 級",
+    "noEvidenceContribution": "{{participant}}，無證據貢獻",
+    "showEvidenceSource": "參與者 {{participant}}；顯示支持此證據的原始引文",
+    "focusEvidenceAssertion": "參與者 {{participant}}；聚焦使用此引文的證據陳述"
   },
   "codebook": {
     "uninstallTitle": "\u8981\u79fb\u9664\u300c{{name}}\u300d\u55ce\uff1f",

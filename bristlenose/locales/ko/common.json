@@ -454,7 +454,12 @@
     "pending": "{{count}}개 보류",
     "basedOnTags": "{{parts}}개 태그 기반",
     "basedOnTags_other": "{{parts}}개 태그 기반",
-    "pendingWeighted": "(보류 태그는 AI 신뢰도로 가중)"
+    "pendingWeighted": "(보류 태그는 AI 신뢰도로 가중)",
+    "evidenceContribution": "참여자별 근거 기여도",
+    "evidenceContributionLevel": "{{participant}}, 상대적 근거 기여도 3단계 중 {{level}}단계",
+    "noEvidenceContribution": "{{participant}}, 근거 기여 없음",
+    "showEvidenceSource": "참여자 {{participant}}; 이 근거를 뒷받침하는 원본 인용문 표시",
+    "focusEvidenceAssertion": "참여자 {{participant}}; 이 인용문을 사용하는 근거 진술에 초점 맞추기"
   },
   "codebook": {
     "uninstallTitle": "\u201c{{name}}\u201d\uc744(\ub97c) \uc81c\uac70\ud560\uae4c\uc694?",

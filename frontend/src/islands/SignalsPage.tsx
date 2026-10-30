@@ -415,6 +415,7 @@ function EvidenceContributionArray({
   accentVar?: string;
   focusedParticipantId?: string;
 }) {
+  const { t } = useTranslation();
   const strengths = useMemo(() => {
     const totals = new Map<string, number>();
     for (const quote of quotes) {
@@ -431,13 +432,15 @@ function EvidenceContributionArray({
   }, [quotes]);
 
   return (
-    <span className="evidence-contribution-array" aria-label="Evidence contribution by participant">
+    <span className="evidence-contribution-array" aria-label={t("signals.evidenceContribution")}>
       {allPids.map((pid) => (
         <span
           key={pid}
           className={`evidence-contribution-cell${strengths.has(pid) ? ` strength-${strengths.get(pid)}` : " is-absent"}${focusedParticipantId === pid ? " is-evidence-focused" : ""}`}
           style={accentVar ? ({ "--card-accent": accentVar } as React.CSSProperties) : undefined}
-          aria-label={strengths.has(pid) ? `${pid}, relative evidence contribution level ${strengths.get(pid)} of 3` : `${pid}, no evidence contribution`}
+          aria-label={strengths.has(pid)
+            ? t("signals.evidenceContributionLevel", { participant: pid, level: strengths.get(pid) })
+            : t("signals.noEvidenceContribution", { participant: pid })}
         >
           {pid}
         </span>
@@ -789,6 +792,7 @@ function EvidenceAssertions({
   focusedQuoteId: string | null;
   onFocusQuote: (quoteId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <ul className="signal-evidence-assertions" data-testid="signal-evidence-assertions">
       {assertions.map((assertion) => {
@@ -813,7 +817,7 @@ function EvidenceAssertions({
               type="button"
               className={`signal-evidence-speaker${focused ? " is-evidence-focused" : ""}`}
               aria-pressed={focused}
-              aria-label={`Participant ${assertion.participant_id}; show source quote supporting this evidence`}
+              aria-label={t("signals.showEvidenceSource", { participant: assertion.participant_id })}
               onClick={(event) => {
                 event.stopPropagation();
                 onFocusQuote(assertion.source_quote_id);
@@ -893,7 +897,7 @@ function QuoteBlock({
                 type="button"
                 className={`signal-quote-evidence-speaker${isEvidenceFocused ? " is-evidence-focused" : ""}`}
                 aria-pressed={isEvidenceFocused}
-                aria-label={`Participant ${quote.pid}; focus evidence assertion using this quote`}
+                aria-label={t("signals.focusEvidenceAssertion", { participant: quote.pid })}
                 onClick={() => onFocusEvidence(quote.quoteId!)}
               >
                 <PersonBadge code={quote.pid} role="participant" compact highlighted={isEvidenceFocused} />

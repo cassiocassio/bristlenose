@@ -479,7 +479,12 @@
     "pending": "{{count}} en attente",
     "basedOnTags": "Basé sur {{parts}} étiquette",
     "basedOnTags_other": "Basé sur {{parts}} étiquettes",
-    "pendingWeighted": "(étiquettes en attente pondérées par la confiance IA)"
+    "pendingWeighted": "(étiquettes en attente pondérées par la confiance IA)",
+    "evidenceContribution": "Contribution aux éléments probants par participant",
+    "evidenceContributionLevel": "{{participant}}, niveau relatif de contribution aux éléments probants {{level}} sur 3",
+    "noEvidenceContribution": "{{participant}}, aucune contribution aux éléments probants",
+    "showEvidenceSource": "Participant {{participant}} ; afficher la citation source étayant cet élément probant",
+    "focusEvidenceAssertion": "Participant {{participant}} ; cibler l’affirmation étayée par cette citation"
   },
   "codebook": {
     "uninstallTitle": "D\u00e9sinstaller \u00ab\u202f{{name}}\u202f\u00bb\u00a0?",

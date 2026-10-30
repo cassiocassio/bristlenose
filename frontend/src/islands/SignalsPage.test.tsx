@@ -797,27 +797,122 @@ describe("SignalsPage", () => {
     expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
   });
 
-  it("scrolls to a card when the navigation or a heatmap cell asks for it", async () => {
-    mockFetchCodebookSignals(mockCbData);
-    const scrolled: Element[] = [];
+  /** Two cards for one place: the first and a second one under it. */
+  function twoCardsOnOnePage(): CodebookSignalsListResponse {
+    const base = mockCbData.codebooks[0];
+    const first = base.signals[0];
+    // Different quotes, or the page folds the two readings into one card.
+    const other = mockCbData.codebooks[1].signals[0];
+    return {
+      ...mockCbData,
+      codebooks: [{
+        ...base,
+        signals: [first, {
+          ...other,
+          location: first.location,
+          source_type: first.source_type,
+          anchor: first.anchor,
+          group_name: "Mental models",
+          composite_signal: 0.31,
+        }],
+      }],
+    };
+  }
+
+  async function renderTwoCards() {
+    mockFetchCodebookSignals(twoCardsOnOnePage());
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+  }
+
+  function recordScrolls() {
+    const scrolled: { el: Element; arg: unknown }[] = [];
     const original = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = function (this: Element) { scrolled.push(this); };
+    Element.prototype.scrollIntoView = function (this: Element, arg?: unknown) {
+      scrolled.push({ el: this, arg });
+    };
+    return { scrolled, restore: () => { Element.prototype.scrollIntoView = original; } };
+  }
+
+  it("a later card scrolls so its top edge is just inside the viewport", async () => {
+    const rec = recordScrolls();
     try {
-      render(<SignalsPage projectId="1" />);
-      await waitFor(() => {
-        expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+      await renderTwoCards();
+      rec.scrolled.length = 0;
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:signal-focus", {
+          detail: { key: "section|Checkout|Mental models" },
+        }));
       });
-      scrolled.length = 0;
+      await waitFor(() => expect(rec.scrolled.length).toBeGreaterThan(0));
+      const last = rec.scrolled[rec.scrolled.length - 1];
+      expect(last.el.getAttribute("data-testid")).toBe("bn-signal-card");
+      expect(last.el.textContent).toContain("Mental models");
+      expect((last.arg as ScrollIntoViewOptions).block).toBe("start");
+    } finally {
+      rec.restore();
+    }
+  });
+
+  it("the first card on a page scrolls to the top of the page, title and all", async () => {
+    const rec = recordScrolls();
+    try {
+      await renderTwoCards();
+      rec.scrolled.length = 0;
       act(() => {
         window.dispatchEvent(new CustomEvent("bn:signal-focus", {
           detail: { key: "section|Checkout|Pain points" },
         }));
       });
-      await waitFor(() => {
-        expect(scrolled.some((el) => el.getAttribute("data-testid") === "bn-signal-card")).toBe(true);
-      });
+      await waitFor(() => expect(rec.scrolled.length).toBeGreaterThan(0));
+      const last = rec.scrolled[rec.scrolled.length - 1];
+      expect(last.el.classList.contains("signals-center")).toBe(true);
+      expect((last.arg as ScrollIntoViewOptions).block).toBe("start");
     } finally {
-      Element.prototype.scrollIntoView = original;
+      rec.restore();
+    }
+  });
+
+  it("a click on the card itself selects it, without scrolling", async () => {
+    const rec = recordScrolls();
+    try {
+      await renderTwoCards();
+      rec.scrolled.length = 0;
+      const [, second] = screen.getAllByTestId("bn-signal-card");
+      expect(second.classList.contains("bn-selected")).toBe(false);
+      fireEvent.click(second);
+      expect(second.classList.contains("bn-selected")).toBe(true);
+      expect(screen.getAllByTestId("bn-signal-card")[0].classList.contains("bn-selected")).toBe(false);
+      expect(rec.scrolled).toHaveLength(0);
+    } finally {
+      rec.restore();
+    }
+  });
+
+  it("a click on a control or a link inside the card does not select it", async () => {
+    await renderTwoCards();
+    const [first] = screen.getAllByTestId("bn-signal-card");
+    // The chip is a button: it opens the chart, it does not also select.
+    fireEvent.click(first.querySelector("[data-testid='bn-signal-hero']") as HTMLElement);
+    expect(first.classList.contains("bn-selected")).toBe(false);
+    const link = first.querySelector("a") as HTMLElement;
+    if (link) {
+      fireEvent.click(link);
+      expect(first.classList.contains("bn-selected")).toBe(false);
+    }
+  });
+
+  it("selecting words does not select the card", async () => {
+    await renderTwoCards();
+    const [first] = screen.getAllByTestId("bn-signal-card");
+    const spy = vi.spyOn(window, "getSelection").mockReturnValue({ toString: () => "some words" } as unknown as Selection);
+    try {
+      fireEvent.click(first);
+      expect(first.classList.contains("bn-selected")).toBe(false);
+    } finally {
+      spy.mockRestore();
     }
   });
 

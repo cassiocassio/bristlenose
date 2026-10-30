@@ -477,6 +477,7 @@ function SignalCard({
   allPids,
   isSentiment,
   isFocused,
+  onSelect,
   cardRef,
   siblingSignals,
   signalIndex,
@@ -489,6 +490,8 @@ function SignalCard({
    *  "no finding at all", which want different treatments. */
   elaborationsIn?: boolean;
   isFocused?: boolean;
+  /** A click on the card's own surface (not a link, a control or a text selection). */
+  onSelect?: () => void;
   cardRef?: (el: HTMLDivElement | null) => void;
   siblingSignals?: number[];
   signalIndex?: number;
@@ -573,6 +576,9 @@ function SignalCard({
   const narrative = signal.elaboration ? splitLead(signal.elaboration) : null;
 
   return (
+    // The pointer's shortcut for what the list's row already does by keyboard; the
+    // card is not itself a control, so no key handler and no role.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
       style={{
@@ -587,6 +593,14 @@ function SignalCard({
         "--signal-card-selected-border": "var(--bn-signal-accent-keyline)",
       } as React.CSSProperties}
       data-testid="bn-signal-card"
+      onClick={onSelect ? (e) => {
+        // The card's own surface only: a link, a control, a highlighted reason or
+        // the reader selecting words each already mean something else.
+        if (e.defaultPrevented) return;
+        if ((e.target as HTMLElement).closest("a, button, input, textarea, select, mark, [role='button']")) return;
+        if (window.getSelection()?.toString()) return;
+        onSelect();
+      } : undefined}
       ref={(el: HTMLDivElement | null) => {
         rootRef.current = el;
         cardRef?.(el);
@@ -1406,11 +1420,18 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     setSignals(showingNothing ? [] : signals);
   }, [signals, showingNothing]);
 
+  // Where a card lands when the navigation or a heatmap cell asks for it. The
+  // first card on a page (the only card, or the top signal) scrolls to the top of
+  // the page, so its title is read with it. Any later card comes up so that its
+  // top edge, keyline included, is just inside the viewport (`scroll-margin-top`
+  // on `.signal-card`). Centring put the title above the fold and the card's own
+  // top above that.
   const scrollToCard = useCallback((key: string) => {
     const el = cardRefs.current.get(key);
-    if (el) {
-      el.scrollIntoView({ behavior: scrollBehaviour(), block: "center" });
-    }
+    if (!el) return;
+    const first = el.closest(".signal-compound-page")?.querySelector(".signal-card");
+    const target = first === el ? (el.closest(".signals-center") ?? el) : el;
+    target.scrollIntoView({ behavior: scrollBehaviour(), block: "start" });
   }, []);
 
   const activateSignal = useCallback((key: string) => {
@@ -1433,29 +1454,39 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     return () => cancelAnimationFrame(frame);
   }, [activeLocation, pendingFocusKey, scrollToCard]);
 
+  // Keep the inspector in step with a focus that came from outside the heatmap.
+  const syncInspectorFor = useCallback((key: string) => {
+    const signal = signals.find((s) => s.key === key);
+    if (!signal) return;
+    let sourceKey: string;
+    if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
+      sourceKey = "sentiment";
+    } else {
+      const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
+      sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
+    }
+    const dim: InspectorDimension = signal.sourceType === "theme" ? "theme" : "section";
+    setInspectorSourceAndDimension(sourceKey, dim);
+    setShimmerTrigger((n) => n + 1);
+  }, [signals, cbData]);
+
+  // A click on the card itself selects it, as a click on its row in the list
+  // does, without scrolling: the card is already where the reader is looking.
+  const selectCard = useCallback((key: string) => {
+    setFocusedSignalKey(key);
+    syncInspectorFor(key);
+  }, [syncInspectorFor]);
+
   // Listen for sidebar signal-focus events
   useEffect(() => {
     const handler = (e: Event) => {
       const key = (e as CustomEvent<{ key: string }>).detail.key;
       activateSignal(key);
-      // Keep the inspector in step with navigation-originated focus.
-      const signal = signals.find((s) => s.key === key);
-      if (signal) {
-        let sourceKey: string;
-        if (signal.codebookName === "" || signal.codebookName === "Sentiment") {
-          sourceKey = "sentiment";
-        } else {
-          const cb = cbData?.codebooks.find((c) => c.codebook_name === signal.codebookName);
-          sourceKey = cb ? `cb-${cb.codebook_id}` : "sentiment";
-        }
-        const dim: InspectorDimension = signal.sourceType === "theme" ? "theme" : "section";
-        setInspectorSourceAndDimension(sourceKey, dim);
-        setShimmerTrigger((n) => n + 1);
-      }
+      syncInspectorFor(key);
     };
     window.addEventListener("bn:signal-focus", handler);
     return () => window.removeEventListener("bn:signal-focus", handler);
-  }, [activateSignal, signals, cbData]);
+  }, [activateSignal, syncInspectorFor]);
 
   void activeDimension; // used indirectly by DimensionToggle components in sources
 
@@ -1635,6 +1666,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
                   allPids={isFromSentimentLens(s) ? sentimentPids : tagAllPids}
                   isSentiment={isFromSentimentLens(s)}
                   isFocused={focusedSignalKey === s.key}
+                  onSelect={() => selectCard(s.key)}
                   elaborationsIn
                   siblingSignals={siblingComposites}
                   signalIndex={siblingIndex.get(s.key)}

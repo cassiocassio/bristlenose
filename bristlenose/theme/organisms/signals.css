@@ -95,6 +95,12 @@
 
 /* Selected signal card — a restrained tint derived from the signal's group or
    sentiment hue. Shows which card the inspector is displaying. */
+/* A card scrolled to from the list or the heatmap lands with its top edge, keyline
+   included, just inside the viewport. */
+.signal-card {
+    scroll-margin-top: var(--bn-space-md);
+}
+
 .signal-card.bn-selected {
     background: var(--signal-card-selected-bg, var(--bn-selection-bg));
     border-color: var(--signal-card-selected-border, var(--bn-selection-border));

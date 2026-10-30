@@ -894,13 +894,56 @@ describe("SignalsPage", () => {
   it("a click on a control or a link inside the card does not select it", async () => {
     await renderTwoCards();
     const [first] = screen.getAllByTestId("bn-signal-card");
-    // The chip is a button: it opens the chart, it does not also select.
+    // The chip opens the chart; it stops the click itself.
     fireEvent.click(first.querySelector("[data-testid='bn-signal-hero']") as HTMLElement);
     expect(first.classList.contains("bn-selected")).toBe(false);
-    const link = first.querySelector("a") as HTMLElement;
-    if (link) {
-      fireEvent.click(link);
-      expect(first.classList.contains("bn-selected")).toBe(false);
+    // A link inside the card: the participant badge.
+    const link = first.querySelector("a");
+    expect(link).not.toBeNull();
+    fireEvent.click(link as HTMLElement);
+    expect(first.classList.contains("bn-selected")).toBe(false);
+  });
+
+  it("the show-all toggle does not select the card, it only expands it", async () => {
+    // More quotes than a card shows at rest, so the toggle exists. It does not stop
+    // the click itself, so the card's own guard is what keeps it from selecting.
+    const many = twoCardsOnOnePage();
+    const q = many.codebooks[0].signals[0].quotes;
+    // A copy: the fixture's signals are shared with every other test in the file.
+    many.codebooks[0].signals[0] = {
+      ...many.codebooks[0].signals[0],
+      quotes: [...q, ...q, ...q].map((x, i) => ({
+        ...x, text: `${x.text} ${i}`, start_seconds: x.start_seconds + i,
+      })),
+    };
+    mockFetchCodebookSignals(many);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2));
+    const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
+    fireEvent.click(toggle);
+    expect(screen.getAllByTestId("bn-signal-card")[0].classList.contains("bn-selected")).toBe(false);
+  });
+
+  it("a focus aimed at the first card of a page that was hidden scrolls to the top of that page", async () => {
+    const rec = recordScrolls();
+    try {
+      mockFetchCodebookSignals(mockCbData); // two places, one card each
+      render(<SignalsPage projectId="1" />);
+      await waitFor(() => expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2));
+      rec.scrolled.length = 0;
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:signal-focus", {
+          detail: { key: "theme|Onboarding|Mental models" },
+        }));
+      });
+      await waitFor(() => expect(rec.scrolled.length).toBeGreaterThan(0));
+      const last = rec.scrolled[rec.scrolled.length - 1];
+      expect(last.el.classList.contains("signals-center")).toBe(true);
+      // The page that was hidden is the one showing now.
+      const shown = document.querySelector(".signal-compound-page:not([hidden])");
+      expect(shown?.getAttribute("aria-label")).toBe("Onboarding");
+    } finally {
+      rec.restore();
     }
   });
 

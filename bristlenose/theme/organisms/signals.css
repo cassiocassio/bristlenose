@@ -93,14 +93,20 @@
     color: var(--bn-signal-accent-ink, inherit);
 }
 
-/* Selected signal card — a restrained tint derived from the signal's group or
-   sentiment hue. Shows which card the inspector is displaying. */
 /* A card scrolled to from the list or the heatmap lands with its top edge, keyline
-   included, just inside the viewport. */
+   included, just inside the viewport. The first card on a page scrolls the whole
+   lens column instead, so its title is read with it and rests at the same height
+   it has on first paint, not flush with the top edge or the toolbar seam. */
 .signal-card {
     scroll-margin-top: var(--bn-space-md);
 }
 
+.signals-center {
+    scroll-margin-top: var(--bn-space-xl);
+}
+
+/* Selected signal card — a restrained tint derived from the signal's group or
+   sentiment hue. Shows which card the inspector is displaying. */
 .signal-card.bn-selected {
     background: var(--signal-card-selected-bg, var(--bn-selection-bg));
     border-color: var(--signal-card-selected-border, var(--bn-selection-border));

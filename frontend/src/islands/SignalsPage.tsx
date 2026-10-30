@@ -596,7 +596,6 @@ function SignalCard({
       onClick={onSelect ? (e) => {
         // The card's own surface only: a link, a control, a highlighted reason or
         // the reader selecting words each already mean something else.
-        if (e.defaultPrevented) return;
         if ((e.target as HTMLElement).closest("a, button, input, textarea, select, mark, [role='button']")) return;
         if (window.getSelection()?.toString()) return;
         onSelect();

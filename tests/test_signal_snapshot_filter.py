@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import copy
+from collections import Counter
 from typing import Any
-
-import pytest
 
 from bristlenose.server.models import Quote, QuoteState
 from bristlenose.server.signal_snapshots import (
@@ -15,9 +14,16 @@ from bristlenose.server.signal_snapshots import (
 )
 from tests.test_serve_signals_api import _create_tagged_project
 
+# Distinct intensities, so a test of which one left the cell can tell removing the right one
+# from removing any one.
+_INTENSITY = {"a": 1, "b": 2, "c": 2, "d": 3}
 
-def _quote(ref: str, pid: str, intensity: int = 2) -> dict[str, Any]:
-    return {"quote_id": ref, "participant_id": pid, "intensity": intensity, "text": ref}
+
+def _quote(ref: str, pid: str) -> dict[str, Any]:
+    return {
+        "quote_id": ref, "participant_id": pid,
+        "intensity": _INTENSITY.get(ref, 2), "text": ref,
+    }
 
 
 def _card(refs: list[tuple[str, str]], *, source: str = "section", assertions=()) -> dict[str, Any]:
@@ -77,12 +83,13 @@ def test_a_removed_quote_leaves_the_card_the_count_and_the_voices() -> None:
 
 
 def test_the_cells_in_the_matrix_lose_the_same_quotes() -> None:
-    out = filter_snapshot_to_counted(_payload(_card(ALL)), {"a", "c"})  # b and d leave
+    out = filter_snapshot_to_counted(_payload(_card(ALL)), {"b", "d"})  # a and c leave
     matrix = out["codebooks"][0]["section_matrix"]
     cell = matrix["cells"]["Checkout|Friction"]
     assert cell["count"] == 2
-    assert cell["participants"] == {"p1": 1, "p2": 1}
-    assert cell["intensities"] == [2, 2]
+    assert cell["participants"] == {"p2": 1, "p3": 1}
+    # a (1) and c (2) left: the 2 and the 3 stay, whichever order they are held in.
+    assert sorted(cell["intensities"]) == [2, 3]
     assert (matrix["row_totals"]["Checkout"], matrix["col_totals"]["Friction"]) == (2, 2)
     assert matrix["grand_total"] == 2
     assert out["codebooks"][0]["theme_matrix"]["grand_total"] == 0  # the other matrix is untouched
@@ -225,13 +232,17 @@ def _stored_project_with_hidden_first(quote_id: int):
 
 def test_reading_the_snapshot_never_calculates_or_calls_a_model(monkeypatch) -> None:
     client = _stored_project()
+    from bristlenose.server import elaboration
     from bristlenose.server.routes import signals as routes
 
     def forbidden(*args, **kwargs):
         raise AssertionError("the snapshot reader must only read and filter")
 
+    # The calculation, the detection, and the whole model layer.
     monkeypatch.setattr(routes, "_build_codebook_analysis", forbidden)
     monkeypatch.setattr(routes, "detect_signals_generic", forbidden)
+    monkeypatch.setattr(routes, "_elaborate_signals", forbidden)
+    monkeypatch.setattr(elaboration, "generate_elaborations", forbidden)
     row = _a_card_quote_row(client)
     _set_hidden(client, row.id, True)
     assert client.get("/api/projects/1/signals/snapshot").status_code == 200
@@ -249,8 +260,7 @@ def test_the_references_in_the_snapshot_are_the_ones_the_counted_set_is_built_fr
     assert refs and refs <= counted
 
 
-@pytest.mark.parametrize("hide_all", [True])
-def test_hiding_every_quote_of_the_cards_drops_the_cards(hide_all) -> None:
+def test_hiding_every_quote_of_the_cards_drops_the_cards() -> None:
     client = _stored_project()
     db = client.app.state.db_factory()
     try:
@@ -291,3 +301,42 @@ def test_an_export_made_after_a_hide_does_not_carry_the_hidden_quote_in_signals(
     cited = {a["source_quote_id"] for cb in exported["codebooks"] for s in cb["signals"]
              for a in s.get("evidence_assertions", [])}
     assert quote_reference_for_row(row) not in cited
+
+
+def test_hiding_one_of_two_identical_rows_removes_exactly_one_entry() -> None:
+    """Two rows with the same participant, session, start and text share a reference."""
+    payload = _payload(_card([("t", "p1"), ("t", "p1"), ("b", "p2")]))
+    out = filter_snapshot_to_counted(payload, Counter({"t": 1, "b": 1}))
+    card = out["codebooks"][0]["signals"][0]
+    assert [q["quote_id"] for q in card["quotes"]] == ["t", "b"]
+    assert out["codebooks"][0]["section_matrix"]["cells"]["Checkout|Friction"]["count"] == 2
+
+
+def test_a_counter_with_both_twins_counting_keeps_both() -> None:
+    payload = _payload(_card([("t", "p1"), ("t", "p1")]))
+    out = filter_snapshot_to_counted(payload, Counter({"t": 2}))
+    assert len(out["codebooks"][0]["signals"][0]["quotes"]) == 2
+
+
+def test_a_malformed_reference_is_dropped_not_a_crash() -> None:
+    payload = _payload(_card([("a", "p1"), ("b", "p2")]))
+    payload["codebooks"][0]["signals"][0]["quotes"][0]["quote_id"] = ["not", "a", "string"]
+    payload["codebooks"][0]["signals"][0]["evidence_assertions"] = [
+        {"id": "x", "ordinal": 0, "source_quote_id": {"bad": 1}},
+    ]
+    out = filter_snapshot_to_counted(payload, {"b"})
+    assert [q["quote_id"] for q in out["codebooks"][0]["signals"][0]["quotes"]] == ["b"]
+    assert out["codebooks"][0]["signals"][0]["evidence_assertions"] == []
+
+
+def test_a_matrix_that_disagrees_with_its_card_is_logged_and_never_goes_negative(caplog) -> None:
+    payload = _payload(_card(ALL))
+    matrix = payload["codebooks"][0]["section_matrix"]
+    matrix["cells"]["Checkout|Friction"]["count"] = 0  # the snapshot is inconsistent
+    matrix["grand_total"] = 0
+    with caplog.at_level("WARNING"):
+        out = filter_snapshot_to_counted(payload, {"a"})
+    cell = out["codebooks"][0]["section_matrix"]["cells"]["Checkout|Friction"]
+    assert cell["count"] == 0 and out["codebooks"][0]["section_matrix"]["grand_total"] == 0
+    assert "disagrees with its card" in caplog.text
+    assert "Checkout" in caplog.text and "p1" not in caplog.text  # a cell name, no payload text

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1102,7 +1102,9 @@ def get_stored_signal_snapshot(project_id: int, request: Request) -> StoredSigna
             )
         # A hide made after the snapshot was built must show here too: keep only
         # what counts now. Filtering only removes, so this stays a read.
-        counted = {quote_reference_for_row(q) for q in speaker_slots.analysis_quotes(db, project_id)}
+        counted = Counter(
+            quote_reference_for_row(q) for q in speaker_slots.analysis_quotes(db, project_id)
+        )
         return StoredSignalSnapshotResponse(
             snapshot=filter_snapshot_to_counted(snapshot_payload(snapshot), counted),
             source=snapshot.source,

@@ -1,6 +1,6 @@
 # Signals follows a hide
 
-**Status: proposal, 30 Oct 2026. Nothing built.** Mockup: `docs/mockups/signals-follow-hide.html`.
+**Status: slices 1–5 built and committed, 30 Oct 2026** (`056393078`, `752cb6b50`, `74309b22b`, `f44d6cde4`, and a review-fix commit). The page-level hidden-quotes counter (D5) is parked and not built. Mockup: `docs/mockups/signals-follow-hide.html`.
 Owner-agreed in principle on 30 Oct 2026 ("the plan is sound"). Revised the same day after two
 independent reviews (the plan against the code, and the UX consequences). Decisions D1, D3, D5,
 D6 and the "Show fewer" string were settled by the owner the same day; D2 is still open.
@@ -17,11 +17,10 @@ snapshot (`/signals/snapshot`, migrations 023 and 024), a hide made after the sn
 still shows on the card, in "Show all N", and in the HTML export, which embeds that snapshot.
 A snapshot is rebuilt only after a completed run, a completed codebook apply, or a server start
 that finds it missing or on an older payload version (`app.py`, `routes/autocode.py`).
-The module docstring of `signal_snapshots.py` says hand curation does not touch it, and
-`docs/design-signal-snapshot-lifecycle.md` promises a reader that returns the last complete
-snapshot unchanged (Reader contract, invariant 2). This change reverses both for the quote list,
-on purpose. The lifecycle doc's own event map (§5) already lists a hide as a refresh trigger, so
-the doc disagrees with itself.
+Before this change the module docstring of `signal_snapshots.py` said hand curation does not
+touch it, and `docs/design-signal-snapshot-lifecycle.md` promised a reader that returns the last
+complete snapshot unchanged (Reader contract, invariant 2) while its own event map (§5) listed a
+hide as a refresh trigger. Both are corrected for the quote list (slice 5).
 
 ## What changes, and what does not
 
@@ -36,7 +35,8 @@ the doc disagrees with itself.
 | Strength, concentration, effective voices, composite, confidence, flag | **Frozen as calculated** | A recalculation, deliberately not done here |
 | The sentiment chip's label and flag | **Frozen** | Computed from the quotes at build time |
 | Written headline and claim; the summary paragraph | **Frozen** | Costs an LLM call; may still paraphrase a hidden quote (D4) |
-| Inspector heatmap cells that have a card: count, participants, intensities, and the row, column and grand totals | Follow the hide (D6) | A cell that says 6 must lead to a card that says "Show all 6" |
+| Inspector heatmap cells that have a card: count, participants, intensities, and the row, column and grand totals **by those cells' quotes** | Follow the hide (D6) | A cell that says 6 must lead to a card that says "Show all 6" |
+| The totals' share from cells with no card | **Frozen** | A hidden quote whose cells have no card still counts in the row, column and grand totals until the next run; they can read a little higher than a live recompute |
 | Heatmap cells with no card, the "Based on N tags" banner, the participant universe | **Frozen** | No quote list in the payload to subtract from |
 
 On screen two more things move that the server does not: the client folds near-duplicate cards
@@ -65,11 +65,14 @@ introduces or fixes.
 it, so unhiding that quote brings nothing back until the next rebuild. A quote hidden after the
 build comes back at once on unhide.
 
+**Identical rows.** Two rows with the same participant, session, start and text share a
+reference. The route passes the filter a `Counter` of references, so a card keeps at most as many
+entries per reference as there are counted rows: hiding one of two identical rows removes one.
+
 **The join key** is `compute_quote_reference`, already in every snapshot quote as `quote_id`.
 Its shape is frozen in payload v4: the signal path builds its record without a segment index or
 an ordinal, so every stored reference is a hash with segment index -1 and ordinal 0, whatever the
-database row holds. Two rows with the same participant, session, start and text share a
-reference; hiding one leaves the other's twin in the snapshot (an accepted limit, rare).
+database row holds. The twin case is handled above.
 
 ## Plan, in slices (each its own commit, in this order)
 
@@ -92,12 +95,14 @@ reference; hiding one leaves the other's twin in the snapshot (an accepted limit
    quote; set `count`; and subtract each removed quote from the card's cell in the matching
    matrix (section or theme, by `source_type`): `count`, the participant's tally, one intensity,
    and the row, column and grand totals (D6). A card's quotes are the whole cell's quotes
-   (`generic_detect.py`), so this is exact for `count`, participants, intensities and totals.
-   `weighted_count` needs the quote's group weight, which the payload does not carry: check how
-   the client uses it before deciding whether to leave it or carry the weight. It tolerates missing keys. Leave every other field alone. Record on the
+   (`generic_detect.py`), so this is exact for `count`, participants, intensities and totals of
+   cells that have a card. `weighted_count` needs the quote's group weight, which the payload does
+   not carry; the client reads it nowhere (`types.ts` only declares it), so it is left as built.
+   A count that would go below zero is clamped and logged (cell name only), because it means the
+   snapshot disagrees with itself. It tolerates missing keys. Leave every other field alone. Record on the
    card, before filtering, whether it had assertions (see slice 4).
 3. **The export.** The export calls the same handler, so slice 2 covers it. This slice is a test,
-   in `tests/test_serve_hidden_counts_nowhere.py` (which today pins only the live routes): an
+   in `tests/test_signal_snapshot_filter.py`: an
    export made after a hide contains neither the hidden quote's text nor an assertion citing it.
    `/signals/codebooks` and `/signals/sentiment` are computed live and are already correct.
 4. **Client.** `selectQuotes`, "Show all N" and the contribution cells already read `signal.quotes`.
@@ -165,8 +170,8 @@ Still open:
 ## Known small defects this leaves (recorded in the forward plan)
 
 A hide made before the snapshot was built does not come back on unhide until the next rebuild
-(the filter only removes); Signals ignores the researcher's quote edits; two identical rows share
-one reference; heatmap cells with no card keep their old counts; contribution shades are relative,
+(the filter only removes); a re-run that rewords a quote changes its reference, so the quote leaves
+its card until a rebuild (when the rebuild is skipped); Signals ignores the researcher's quote edits; heatmap cells with no card keep their old counts; contribution shades are relative,
 so one hide can change another participant's cell; unhide does not rebuild the snapshot; the
 client's folding of similar cards re-runs over the remaining quotes; and the chat lens and MCP
 build their quote references differently from the Signals route, so MCP likely never serves a

@@ -1,6 +1,6 @@
 ---
 status: proposed
-last-trued: 2026-10-27
+last-trued: 2026-10-30
 ---
 
 # Durable Signal Snapshots and Refresh Lifecycle
@@ -307,7 +307,7 @@ analysis callers agree on the same resolver result.
 a page request does not initiate generation. The one thing it does to the
 stored snapshot is remove what no longer counts: a quote the researcher has
 hidden (or that has otherwise left the evidence) is filtered out on read, with
-its assertions and its share of the heatmap cell, and a card left with no quote
+its assertions and its share of the heatmap cell (and of the totals, for cells that have a card), and a card left with no quote
 is dropped. It never adds, recalculates or calls a model
 (`docs/design-signals-follow-hide.md`).
 3. A changed card cannot inherit an old narrative unless its evidence

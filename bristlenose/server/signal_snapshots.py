@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
@@ -121,7 +122,7 @@ _MATRIX_BY_SOURCE = {"section": "section_matrix", "theme": "theme_matrix"}
 
 
 def filter_snapshot_to_counted(
-    payload: dict[str, Any], counted_refs: set[str] | frozenset[str],
+    payload: dict[str, Any], counted_refs: Mapping[str, int] | set[str] | frozenset[str],
 ) -> dict[str, Any]:
     """Remove what no longer counts from a decoded snapshot, in place, and return it.
 
@@ -130,7 +131,10 @@ def filter_snapshot_to_counted(
     only removes, so the reader stays free of any signal calculation or LLM call
     (docs/design-signals-follow-hide.md):
 
-    - a card keeps a quote only if its ``quote_id`` is in ``counted_refs``;
+    - a card keeps a quote only if its ``quote_id`` is in ``counted_refs``. Pass a
+      ``Counter`` (how many counted quotes share each reference) and a card keeps at
+      most that many entries per reference, so hiding one of two identical rows removes
+      one entry and not neither; a plain set keeps every entry whose reference is in it;
     - an evidence assertion that cites a quote no longer counted is dropped, and
       ``had_evidence_assertions`` records that the card had some, so the reader
       does not fall back to prose that was written over every quote;
@@ -148,8 +152,7 @@ def filter_snapshot_to_counted(
         kept_signals: list[dict[str, Any]] = []
         for signal in codebook.get("signals") or []:
             quotes = signal.get("quotes") or []
-            kept = [q for q in quotes if q.get("quote_id") in counted_refs]
-            removed = [q for q in quotes if q.get("quote_id") not in counted_refs]
+            kept, removed = _split_quotes(quotes, counted_refs)
             if removed:
                 _subtract_from_matrix(codebook, signal, removed)
             if quotes and not kept:
@@ -161,7 +164,7 @@ def filter_snapshot_to_counted(
                     q["participant_id"] for q in kept if q.get("participant_id")
                 })
             assertions = signal.get("evidence_assertions") or []
-            surviving = [a for a in assertions if a.get("source_quote_id") in counted_refs]
+            surviving = [a for a in assertions if _is_counted(a.get("source_quote_id"), counted_refs)]
             if len(surviving) != len(assertions):
                 for ordinal, assertion in enumerate(surviving):
                     assertion["ordinal"] = ordinal
@@ -170,6 +173,38 @@ def filter_snapshot_to_counted(
             kept_signals.append(signal)
         codebook["signals"] = kept_signals
     return payload
+
+
+def _is_counted(ref: object, counted_refs: Mapping[str, int] | set[str] | frozenset[str]) -> bool:
+    """Whether a reference still counts; a malformed (non-string) reference does not."""
+    if not isinstance(ref, str) or not ref:
+        return False
+    if isinstance(counted_refs, Mapping):
+        return counted_refs.get(ref, 0) > 0
+    return ref in counted_refs
+
+
+def _split_quotes(
+    quotes: list[dict[str, Any]],
+    counted_refs: Mapping[str, int] | set[str] | frozenset[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split a card's quotes into those that still count and those that do not."""
+    remaining = Counter(counted_refs) if isinstance(counted_refs, Mapping) else None
+    kept: list[dict[str, Any]] = []
+    removed: list[dict[str, Any]] = []
+    for quote in quotes:
+        ref = quote.get("quote_id")
+        if not _is_counted(ref, counted_refs):
+            removed.append(quote)
+        elif remaining is not None:
+            if remaining[ref] > 0:
+                remaining[ref] -= 1
+                kept.append(quote)
+            else:
+                removed.append(quote)  # a twin whose row stopped counting
+        else:
+            kept.append(quote)
+    return kept, removed
 
 
 def _subtract_from_matrix(
@@ -183,6 +218,8 @@ def _subtract_from_matrix(
     cell = (matrix.get("cells") or {}).get(f"{row}|{col}")
     for quote in removed:
         if cell is not None:
+            if cell.get("count", 0) <= 0:
+                _warn_disagreement(row, col, "cell count")
             cell["count"] = max(0, cell.get("count", 0) - 1)
             tally = cell.get("participants") or {}
             pid = quote.get("participant_id")
@@ -195,7 +232,22 @@ def _subtract_from_matrix(
                 intensities.remove(quote["intensity"])
         for totals, key in ((matrix.get("row_totals"), row), (matrix.get("col_totals"), col)):
             if totals is not None and key in totals:
+                if totals[key] <= 0:
+                    _warn_disagreement(row, col, "row or column total")
                 totals[key] = max(0, totals[key] - 1)
         if "grand_total" in matrix:
+            if matrix["grand_total"] <= 0:
+                _warn_disagreement(row, col, "grand total")
             matrix["grand_total"] = max(0, matrix["grand_total"] - 1)
+
+
+def _warn_disagreement(row: object, col: object, what: str) -> None:
+    """The matrix and its card disagree: a count would have gone below zero.
+
+    Names the cell only; the payload holds participant quotes.
+    """
+    logger.warning(
+        "Signal snapshot matrix disagrees with its card for cell %r|%r: %s was already 0",
+        row, col, what,
+    )
 

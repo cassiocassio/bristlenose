@@ -13,11 +13,25 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
 
 ## Changelog
 
+- _2026-10-30_ — **a register of sent quotes replaces the per-session stamps**
+  (ruling 4, owner). "Remember what was sent; if a quote was not sent and is later
+  unhidden it is automatically AutoCoded at the same thresholds that were in place
+  at the last AutoCode; the tags just appear; assume a valid key." The stamp was the
+  wrong grain: it said a session was done whatever it held, so a quote added to a
+  coded session (N89) and a quote hidden when the codebook ran and unhidden later
+  (N175's residue) were never sent. `autocode_sent_quotes` (migration 025) holds one
+  row per (job, quote) sent in a batch that answered, tagged or not; the stamps table
+  is dropped. A quote that counts and is not on the register is owed; when one starts
+  to count (unhide, a speaker recoded back in, a paragraph move undone) a debounced
+  pass codes it. §4a rewritten; the 22 Oct entry below is the record of what it
+  replaced.
+
 - _2026-10-22_ — **Apply on a never-applied job keeps its work** (#127, owner). A
   stopped or failed first apply was deleted and the whole corpus sent again; the
   job now runs again on its own row, sending only quotes with no proposal and no
   stamp, so nothing is paid twice and denied tags stay denied. §4a.
-- _2026-10-22_ — **per-session stamps replace the watermark** (RE#66, decisions
+- _2026-10-22_ — **per-session stamps replace the watermark** (RE#66; replaced by the per-quote
+  register on 30 Oct, above; decisions
   #60–#67, owner). A session counts as coded by a codebook only when every one of
   its quotes was sent in a batch that answered (`autocode_session_stamps`,
   migration 022, backfilled from the old watermark so an upgraded project's next
@@ -48,7 +62,7 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   where every batch fails is a failure that leaves `completed_at` where it was,
   so the next catch-up codes those sessions (it said "completed" and skipped
   them for good). A partial failure still advances the watermark; that is the
-  deferred per-session stamp below. Register: R12.
+  deferred per-session stamp below (built 22 Oct, replaced by the per-quote register 30 Oct). Register: R12.
   Then two more (wave 5): switching a codebook off and on while its catch-up is
   still coding no longer starts a second catch-up on the same job
   (`_start_catch_ups` skips a framework whose catch-up task is still live, so
@@ -242,9 +256,10 @@ The floor codebook has **no** version of this machine — only the hide/show ove
 |---|---|
 | Add codebook | insert `ProjectCodebookGroup` links (+ tag defs) |
 | Apply | `AutoCodeJob` runs → `ProposedTag`s → accepted become `QuoteTag(autocode)`; cutoff/prompt stamped |
-| Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only the sessions it owes (no stamp, §4a), non-clobbering |
+| Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only the quotes it owes (counting, not on its register, §4a), non-clobbering |
 | Disable | set `enabled=false` — *(described)* stops the delta re-apply; results retained |
-| Enable | set `enabled=true` — *(described)* one catch-up delta for the sessions owed (those added while off, and any a failed pass left) |
+| Enable | set `enabled=true` — *(described)* one catch-up delta for the quotes owed (those added while off, and any a failed pass left) |
+| Unhide a quote / recode a speaker back in / undo a paragraph move | the quote counts again; if a codebook never sent it, a debounced catch-up codes it (§4a) |
 | Hide group | insert `hidden_tag_groups` |
 | Remove | drop `ProjectCodebookGroup` links; **no promise** to keep `QuoteTag`/`ProposedTag` |
 
@@ -277,48 +292,81 @@ on a deep link straight to the codebook lens. The surface that owns the switch
 owns the authoritative set, and mirrors it into the store rather than reading
 its payload out of it.
 
-### 4a. How re-enable knows what to code: per-session stamps
+### 4a. How re-enable knows what to code: the register of sent quotes
 
-**A session is coded by a codebook when it carries that codebook's stamp**
-(`autocode_session_stamps`: one row per job and session, migration 022). A pass,
-whether the first apply, a catch-up or a run's re-apply, stamps a session when every quote it
-sent from that session was in a batch that answered, in the same transaction as
-the proposals. A session with at least one quote and no stamp is **owed**
-(`autocode.owed_sessions`), and the next re-apply sends its quotes that have no
-proposal on the job yet. A batch that failed, or that a Stop or a switch-off never
-sent, leaves its sessions owed; a session with no quotes is never owed, so a
-catch-up chip never says "Re-coded" over nothing. `completed_at` means only
-"applied at least once": it gates maintenance, it is how the startup sweep tells
-the two orphans apart, and Apply refuses a job that has it.
+**A quote is coded by a codebook when it is on that codebook's register**
+(`autocode_sent_quotes`: one row per job and quote, migration 025). A pass, whether
+the first apply, a catch-up or a run's re-apply, puts on it every quote it sent in a
+batch that answered, in the same transaction as the proposals, **whether or not the
+model tagged the quote**: one it declined stays on the register and is never paid for
+twice. A quote that counts (`speaker_slots.analysis_quotes`: not hidden, its speaker
+still a participant) and is not on the register is **owed**
+(`autocode.owed_quotes`), and the next pass sends exactly those. A batch that failed,
+or that a Stop or a switch-off never sent, leaves its quotes owed; nothing owed
+starts nothing, so a catch-up chip never says "Re-coded" over nothing.
+`completed_at` means only "applied at least once": it gates maintenance, it is how the
+startup sweep tells the two orphans apart, and Apply refuses a job that has it.
+
+**A quote that does not count is never sent, and is not marked sent.** A hidden quote
+is discounted evidence and a recoded speaker's quotes have left the evidence (N175,
+25 Oct 2026): neither is sent while it does not count, and neither is on the register.
+So when it counts again it is owed, and it is coded. Until 30 Oct 2026 the per-session
+stamp (below) marked the session done on the quotes that did count, and the quote
+unhidden later was never sent: hide, Apply, unhide was a gap an everyday curation
+sequence reached.
+
+**When a quote starts counting, it is coded by itself (30 Oct 2026, ruling 4).** An
+unhide, a speaker recoded back in or swapped, and a paragraph move made or undone each
+ask `autocode_catch_up.note_quotes_counting`, which arms a **debounced** pass for the
+codebooks that are applied, installed, on and owe a quote: a trailing timer of 10 s
+restarted by each gesture, capped at 60 s from the first, then one pass per codebook
+over everything owed, 25 quotes a batch, at the cutoff the Apply stored
+(`applied_upper_threshold`), with no review and no human tag touched. The wait is there
+because a call re-sends the whole codebook (4,000 to 10,000 tokens) however few quotes
+ride in it, so one call per unhidden quote would cost many times one call for the burst. What is owed is read when the timer
+fires, so a quote hidden again in the wait is skipped and stays owed. The queue is not
+persisted: it is derived from the register, so quitting in the wait loses nothing; and
+owed quotes alone start nothing at serve start. A codebook switched off leaves its
+quotes owed until it is switched on (§ below), when the existing catch-up codes them.
+
+**Failure is quiet and spends once.** If the call cannot run (no key, offline, a rate
+limit, a Stop) the quotes stay owed and nothing is lost; there is no dialog and no
+retry. A provider with no key is not tried. A pass that fails for a key or credit
+reason (`invalid_key`, `out_of_credit`) shows the job's existing "Tagging failed" chip
+once, and until the provider, the model or whether a key is set changes (or the serve
+restarts, which the Mac does when a key is saved) no unhide calls the provider again;
+then one pass codes the whole backlog. Topping up credit is not a change the server can
+see. The page learns of the pass from the write's answer and gives it the catch-up chip.
+
+_Superseded 30 Oct 2026 (ruling 4):_ the 22 Oct per-session stamp
+(`autocode_session_stamps`, migration 022: one row per job and session, written when
+every quote sent from the session was in a batch that answered; `owed_sessions`) said
+a session was coded, not which quotes it held. That is why a quote added to a coded
+session (N89) and a quote that was hidden when the codebook ran (N175's residue) were
+never sent. Migration 025 wrote the register from proposals and from stamped sessions,
+leaving off the quotes hidden or recoded out at the time, and dropped the table.
 
 _Superseded 22 Oct 2026 (RE#66):_ until then scope was inferred from two
 timestamps, a session's `first_imported_at` and the codebook's last
-`completed_at`, which each re-apply advanced. The text below said a partial run
-could not move it past uncoded sessions, and it could: a pass where some batches
-failed (a rate limit on two of six) still advanced it, and those sessions were
-never coded by that codebook again. That was the "normal-lifecycle partial-run
-edge" this section's deferred fallback named. Migration 022 backfilled stamps for
-what the watermark claimed (sessions first imported at or before `completed_at`,
-and those with no import time), so nothing an upgraded project had paid for is
-sent again, and what a past partial failure lost stays lost: nothing recorded
-which batches failed.
+`completed_at`, which each re-apply advanced. A pass where some batches failed (a
+rate limit on two of six) still advanced it, and those sessions were never coded by
+that codebook again. That was the "normal-lifecycle partial-run edge" this section's
+deferred fallback named.
 
-The two jobs below still hold, with the stamp in the timestamp's place:
+The two jobs below still hold, with the register in the timestamp's place:
 
-- **The stamp is a *cost gate*, not a correctness rule.** Its only job is to avoid
-  re-spending the LLM on sessions we know are done. Erring broad (a quote the model
-  left untagged, in a session whose other batch failed, is sent again) costs a
-  little wasted work, never a double-code.
+- **The register is a *cost gate*, not a correctness rule.** Its only job is to avoid
+  re-spending the LLM on quotes we know were sent. Erring broad costs a little wasted
+  work, never a double-code.
 - **Correctness lives in the per-quote guard that already ships.** Before applying a
   tag the delta skips any `(quote, tag)` that already has a `QuoteTag`. A human tag
   survives because it **occupies the pair**, not because it is recognised: the guard
   has no source predicate (corrected 31 Aug 2026). It would stop protecting it the
   moment any path removes and re-applies a tag, or applies the same tag under a
-  second `tag_definition_id`. And within an owed session a quote that already has a
-  proposal on the job is not sent, so a half-coded session never breaks
-  `(job, quote)`.
+  second `tag_definition_id`. And a quote that already has a proposal on the job is
+  not sent, so a half-coded pass never breaks `(job, quote)`.
 
-Disable stops the re-applies: new sessions pile up owed, and re-enable fires one
+Disable stops the re-applies: new quotes pile up owed, and re-enable fires one
 catch-up over them, unless that codebook's previous catch-up, or a finished run's
 re-apply of it, is still running, in which case the re-enable starts nothing and
 the running one codes them (20 Oct 2026). A run's re-apply reads the switch again
@@ -331,15 +379,14 @@ codebook, and codes every other codebook first, so a long catch-up holds only it
 own; it runs on its own task, never inside the event watcher (#67).
 
 **Stops and failures.** A Stop on a catch-up keeps the batches that answered and
-their stamps; the job stays `cancelled` and the rest stays owed (#60). A Stop on a
+their register rows; the job stays `cancelled` and the rest stays owed (#60). A Stop on a
 first apply leaves `completed_at` empty: a stopped first apply is not an applied
 one, and nothing maintains it (#65). A run's re-apply that leaves nothing owed sets
 a `failed` or `cancelled` applied job back to `completed` and clears its error
 (#61). Apply on a stopped or failed first apply runs the same job again and keeps
-its proposals (accepted, denied and pending) and stamps: it sends only quotes with
-no proposal on the job, in sessions it has not stamped, as a re-apply does, and
-stamps the sessions it codes; with nothing left to send it completes without an
-LLM call (#127). While the stopped run's last batch is still out, Apply is
+its proposals (accepted, denied and pending) and register rows: it sends only quotes
+that count and are not on the register, as a re-apply does, and registers what it
+sends; with nothing left to send it completes without an LLM call (#127). While the stopped run's last batch is still out, Apply is
 refused as already running, so two runners never code one job. Until 22 Oct 2026
 Apply deleted the job and sent every quote, so the coded half was paid for twice
 and the tags the researcher had denied came back pending.
@@ -348,7 +395,7 @@ and the tags the researcher had denied came back pending.
 (`bristlenose/server/autocode.py`) sweeps in-flight jobs: `completed_at IS NULL`
 (initial apply never finished) → `failed`, retryable; `completed_at` set (a catch-up
 the restart cut off) → `failed`, unclassified, so a chip still polling says
-"Tagging failed." (#63). That catch-up wrote no stamps, so its sessions are owed
+"Tagging failed." (#63). That catch-up wrote no register rows, so its quotes are owed
 either way. Until 22 Oct 2026 it was restored to `completed` with its counts at
 zero, and a surviving chip said "Re-coded" over nothing; `failed` was avoided then
 because it invited a re-Apply that deleted the original proposals, which Apply now
@@ -460,9 +507,9 @@ autocomplete) and should be reverted.
   re-enable.** Rationale: you might never re-enable, so never spend on a switched-off
   lens; and when you do re-enable, the LLM cost/time of coding the newly-added sessions
   is implicit and accepted (re-enable is an auto-tagged-codebook feature — the spend is
-  inherent to the gesture). Mechanically: no re-apply stamps a session while the codebook is
-  disabled, so re-enable fires one delta over every session it owes (§4a; a
-  session-recency watermark until 22 Oct 2026).
+  inherent to the gesture). Mechanically: no re-apply registers a quote while the codebook is
+  disabled, so re-enable fires one delta over every quote it owes (§4a; a per-session stamp
+  from 22 Oct 2026, a session-recency watermark before that).
 
 **Open**
 - **Q-C:** denial-ledger — a future "re-apply after codebook edit" would resurrect

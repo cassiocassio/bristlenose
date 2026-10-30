@@ -2032,7 +2032,11 @@ class TestSentinelLogic:
 
         env = os.environ.copy()
         env.pop("SNAP_USER_COMMON", None)
-        with patch.dict(os.environ, env, clear=True):
+        # The suite redirects the constant (conftest); the default is what it is built from.
+        real = Path("~/.config/bristlenose").expanduser()
+        with patch.dict(os.environ, env, clear=True), patch(
+            "bristlenose.cli._DOCTOR_SENTINEL_DIR", real
+        ):
             result = _doctor_sentinel_dir()
         assert Path(result).parts[-2:] == (".config", "bristlenose")
 

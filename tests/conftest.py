@@ -295,6 +295,10 @@ class _InMemoryCredentialStore(CredentialStore):
         self._items.pop(key, None)
 
 
+# Resolved at import, before any test can move HOME or XDG_CONFIG_HOME.
+_REAL_CONFIG_DIR = Path("~/.config/bristlenose").expanduser().resolve()
+
+
 def _rebind_everywhere(
     monkeypatch: pytest.MonkeyPatch, real: Callable[..., Any], fake: Callable[..., Any]
 ) -> None:
@@ -368,6 +372,27 @@ def _isolate_machine_config(
     # A Miro board build keeps its call rates in the real config folder; a test's go to its own.
     board_history = tmp_path_factory.mktemp("board-timing")
     _rebind_everywhere(monkeypatch, _real_board_history_dir, lambda: board_history)
+    # The run's timing profile (and the doctor sentinel) live in `cli._DOCTOR_SENTINEL_DIR`,
+    # fixed at import to the real ~/.config/bristlenose and blind to XDG_CONFIG_HOME. Left
+    # alone, every CliRunner `run` with a fake LLM taught the real timing.json a ~0.02 s
+    # per session rate (n≈16,000 by 30 Oct 2026). Redirected, and a guard makes any other
+    # route to the real folder fail the test instead of polluting it.
+    monkeypatch.setattr(
+        "bristlenose.cli._DOCTOR_SENTINEL_DIR", tmp_path_factory.mktemp("config-dir")
+    )
+    from bristlenose import timing as _timing
+
+    _orig_estimator_init = _timing.TimingEstimator.__init__
+
+    def _guarded_estimator_init(self: Any, hardware_key: str, config_dir: Path) -> None:
+        if Path(config_dir).resolve() == _REAL_CONFIG_DIR:
+            raise AssertionError(
+                "a test built a TimingEstimator on the real ~/.config/bristlenose; "
+                "it would write timing.json there"
+            )
+        _orig_estimator_init(self, hardware_key, config_dir)
+
+    monkeypatch.setattr(_timing.TimingEstimator, "__init__", _guarded_estimator_init)
     monkeypatch.delenv("SNAP_USER_COMMON", raising=False)
     monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)
     for name, field in BristlenoseSettings.model_fields.items():

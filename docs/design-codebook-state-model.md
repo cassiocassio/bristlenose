@@ -24,7 +24,11 @@ trued-against: HEAD@main 8fee4ead on 2026-08-31
   is dropped. A quote that counts and is not on the register is owed; when one starts
   to count (unhide, a speaker recoded back in, a paragraph move undone) a debounced
   pass codes it. §4a rewritten; the 22 Oct entry below is the record of what it
-  replaced.
+  replaced. "The same thresholds" is all of them: the pass accepts at or above the
+  upper line, denies below the lower line and leaves the band between pending for
+  the review (as the review dialog does); and a hold on a key or credit failure
+  lapses after 15 minutes (decided by the coordinator on the owner's behalf, 30 Oct;
+  the owner can reverse either).
 
 - _2026-10-22_ — **Apply on a never-applied job keeps its work** (#127, owner). A
   stopped or failed first apply was deleted and the whole corpus sent again; the
@@ -259,7 +263,7 @@ The floor codebook has **no** version of this machine — only the hide/show ove
 | Add sessions + re-run | *(described)* if codebook **enabled**: delta re-apply codes only the quotes it owes (counting, not on its register, §4a), non-clobbering |
 | Disable | set `enabled=false` — *(described)* stops the delta re-apply; results retained |
 | Enable | set `enabled=true` — *(described)* one catch-up delta for the quotes owed (those added while off, and any a failed pass left) |
-| Unhide a quote / recode a speaker back in / undo a paragraph move | the quote counts again; if a codebook never sent it, a debounced catch-up codes it (§4a) |
+| Unhide a quote / recode a speaker back in / undo a paragraph move (or move one back by hand) | the quote counts again; if a codebook never sent it, a debounced catch-up codes it (§4a) |
 | Hide group | insert `hidden_tag_groups` |
 | Remove | drop `ProjectCodebookGroup` links; **no promise** to keep `QuoteTag`/`ProposedTag` |
 
@@ -320,8 +324,15 @@ unhide, a speaker recoded back in or swapped, and a paragraph move made or undon
 ask `autocode_catch_up.note_quotes_counting`, which arms a **debounced** pass for the
 codebooks that are applied, installed, on and owe a quote: a trailing timer of 10 s
 restarted by each gesture, capped at 60 s from the first, then one pass per codebook
-over everything owed, 25 quotes a batch, at the cutoff the Apply stored
-(`applied_upper_threshold`), with no review and no human tag touched. The wait is there
+over everything owed, 25 quotes a batch, at the thresholds the Apply stored, with no
+review and no human tag touched. Those are the review dialog's three bands, with its
+inequalities: a proposal at or above the upper line (`applied_upper_threshold`, 2 dp)
+is accepted and tags the quote; one strictly below the lower line
+(`applied_lower_threshold`, 2 dp; the dialog's 0.30 when none was stored) is denied;
+one in between stays **pending**, undated, so the review lists it and the Codebook
+sidebar counts it as tentative, and nothing applies it until the researcher does. A
+denial cannot be undone in the UI, so a quote the model is unsure about is never
+denied by a pass nobody watched. The wait is there
 because a call re-sends the whole codebook (4,000 to 10,000 tokens) however few quotes
 ride in it, so one call per unhidden quote would cost many times one call for the burst. What is owed is read when the timer
 fires, so a quote hidden again in the wait is skipped and stays owed. The queue is not
@@ -331,12 +342,18 @@ quotes owed until it is switched on (§ below), when the existing catch-up codes
 
 **Failure is quiet and spends once.** If the call cannot run (no key, offline, a rate
 limit, a Stop) the quotes stay owed and nothing is lost; there is no dialog and no
-retry. A provider with no key is not tried. A pass that fails for a key or credit
+retry loop (a rate limit is simply tried again by the next gesture). A provider with no
+key is not tried. A pass that fails for a key or credit
 reason (`invalid_key`, `out_of_credit`) shows the job's existing "Tagging failed" chip
 once, and until the provider, the model or whether a key is set changes (or the serve
 restarts, which the Mac does when a key is saved) no unhide calls the provider again;
-then one pass codes the whole backlog. Topping up credit is not a change the server can
-see. The page learns of the pass from the write's answer and gives it the catch-up chip.
+then one pass codes the whole backlog. Topping up credit, or replacing a key with
+`bristlenose configure` while a CLI `serve` runs, is not a change the server can see, so
+the hold also lapses with the clock: after 15 minutes (`HOLD_S`) the next gesture makes
+one attempt, and if it fails for the same reason the hold is set again for another 15.
+There is no timer: with no gesture nothing is tried and nothing is spent, and no key
+value is read or kept for this. The page learns of the pass from the write's answer and
+gives it the catch-up chip.
 
 _Superseded 30 Oct 2026 (ruling 4):_ the 22 Oct per-session stamp
 (`autocode_session_stamps`, migration 022: one row per job and session, written when

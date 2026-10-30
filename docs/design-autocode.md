@@ -125,12 +125,17 @@ proposals with confidence + rationale).
   speaker's, is not sent *while it does not count* (N175), and it is not on the
   register, so when it counts again (unhide, recoded back in, a paragraph move
   undone) it is owed and is coded: after a 10 s wait restarted by each gesture
-  (60 s at most), one call per codebook, 25 quotes a batch, at the cutoff the Apply
-  stored, with no review and no human tag touched. A quote added to a coded session
-  is owed the same way (N89). Nothing runs at serve start for owed quotes alone.
-  Failure is quiet: the quote stays owed, and after a key or credit failure no
-  further unhide calls the provider until its provider, model or has-key state
-  changes. Mechanism and the page's side: `bristlenose/server/CLAUDE.md` § AutoCode;
+  (60 s at most), one pass per codebook (one call for every 25 quotes owed), at the
+  thresholds the Apply stored, with no review and no human tag touched. Those are
+  the review dialog's three bands: at or above the upper line the tag is added, below
+  the lower line (the dialog's 0.30 when none was stored) the proposal is denied, and
+  between them it stays pending for the review, which shows it and counts it as
+  tentative. A quote added to a coded session is owed the same way (N89). Nothing
+  runs at serve start for owed quotes alone. Failure is quiet: the quote stays owed,
+  and after a key or credit failure no further unhide calls the provider until its
+  provider, model or has-key state changes, or 15 minutes pass (the next unhide then
+  makes one attempt, and a failure for the same reason holds for another 15).
+  Mechanism and the page's side: `bristlenose/server/CLAUDE.md` § AutoCode;
   the rule: `docs/design-codebook-state-model.md` §4a.
 - **Cloud-only**: Prompt weight ~14K-17K tokens per call. Ollama excluded (4K
   context can't fit taxonomy + quotes) — 503 `PROVIDER_LOCAL`.

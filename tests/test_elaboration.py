@@ -275,6 +275,110 @@ class TestEvidenceAssertions:
         assert len(assertions) == 1
         assert assertions[0]["intervention_fragment"] is None
 
+    def test_unknown_duplicate_and_empty_candidates_are_dropped(self) -> None:
+        quote = _make_signal_quote(text="The stock warning was unclear.")
+        signal = _make_signal(quotes=[quote])
+        ref = compute_quote_reference(quote)
+        candidates = [
+            SimpleNamespace(text="Not cited", source_quote_id="q_unknown", intervention_fragment=None),
+            SimpleNamespace(text="   ", source_quote_id=ref, intervention_fragment=None),
+            SimpleNamespace(text="Kept", source_quote_id=ref, intervention_fragment=None),
+            SimpleNamespace(text="Again", source_quote_id=ref, intervention_fragment=None),
+        ]
+
+        assertions = _validated_evidence_assertions(candidates, signal)
+
+        assert [a["text"] for a in assertions] == ["Kept"]
+
+    def test_invalid_early_candidates_do_not_use_up_the_four_slots(self) -> None:
+        quotes = [_make_signal_quote(text=f"Quote number {i}.", pid=f"p{i}") for i in range(6)]
+        signal = _make_signal(quotes=quotes)
+        candidates = [
+            SimpleNamespace(text="x", source_quote_id=f"q_bad{i}", intervention_fragment=None)
+            for i in range(4)
+        ] + [
+            SimpleNamespace(
+                text=f"Playback {i}", source_quote_id=compute_quote_reference(q),
+                intervention_fragment=None,
+            )
+            for i, q in enumerate(quotes)
+        ]
+
+        assertions = _validated_evidence_assertions(candidates, signal)
+
+        assert [a["ordinal"] for a in assertions] == [0, 1, 2, 3]
+        assert assertions[0]["text"] == "Playback 0"
+
+    @pytest.mark.parametrize(
+        ("start", "end", "rationale"),
+        [
+            (-1, 5, "negative_actionable_cause"),
+            (5, 5, "negative_actionable_cause"),
+            (0, 999, "negative_actionable_cause"),
+            (0, 4, "invented_rationale"),
+        ],
+    )
+    def test_each_highlight_contract_branch_removes_only_the_highlight(
+        self, start: int, end: int, rationale: str,
+    ) -> None:
+        quote = _make_signal_quote(text="The low-stock warning was unclear.")
+        signal = _make_signal(quotes=[quote])
+        text = "The warning was unclear to them."
+        candidate = SimpleNamespace(
+            text=text,
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=SimpleNamespace(
+                start=start, end=end, text="warning was unclear", rationale=rationale,
+            ),
+        )
+
+        assertions = _validated_evidence_assertions([candidate], signal)
+
+        if rationale == "negative_actionable_cause":
+            # Wrong offsets are recovered from the fragment text when it matches once.
+            assert assertions[0]["intervention_fragment"]["text"] == "warning was unclear"
+            assert assertions[0]["intervention_fragment"]["start"] == text.index("warning")
+        else:
+            assert len(assertions) == 1
+            assert assertions[0]["intervention_fragment"] is None
+
+    def test_an_ambiguous_fragment_with_wrong_offsets_is_not_guessed(self) -> None:
+        quote = _make_signal_quote(text="Button label unclear, button hidden.")
+        signal = _make_signal(quotes=[quote])
+        candidate = SimpleNamespace(
+            text="The button was hidden and the button unclear.",
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=SimpleNamespace(
+                start=0, end=6, text="button", rationale="negative_actionable_cause",
+            ),
+        )
+
+        assertions = _validated_evidence_assertions([candidate], signal)
+
+        assert assertions[0]["intervention_fragment"] is None
+
+    def test_highlight_offsets_are_utf16_units_for_the_browser(self) -> None:
+        quote = _make_signal_quote(text="The warning was unclear.")
+        signal = _make_signal(quotes=[quote])
+        text = "\U0001F600 The warning was unclear."
+        fragment = "warning was unclear"
+        candidate = SimpleNamespace(
+            text=text,
+            source_quote_id=compute_quote_reference(quote),
+            intervention_fragment=SimpleNamespace(
+                start=text.index(fragment), end=text.index(fragment) + len(fragment),
+                text=fragment, rationale="negative_actionable_cause",
+            ),
+        )
+
+        highlight = _validated_evidence_assertions([candidate], signal)[0]["intervention_fragment"]
+
+        # One astral character is two UTF-16 units but one Python code point.
+        assert highlight["start"] == text.index(fragment) + 1
+        assert highlight["end"] - highlight["start"] == len(fragment)
+        units = text.encode("utf-16-le")
+        assert units[highlight["start"] * 2:highlight["end"] * 2].decode("utf-16-le") == fragment
+
     def test_derives_source_excerpt_from_the_canonical_quote(self) -> None:
         quote = _make_signal_quote(text="The stock warning was unclear.")
         signal = _make_signal(quotes=[quote])

@@ -432,12 +432,13 @@ function EvidenceContributionArray({
   }, [quotes]);
 
   return (
-    <span className="evidence-contribution-array" aria-label={t("signals.evidenceContribution")}>
+    <span className="evidence-contribution-array" role="group" aria-label={t("signals.evidenceContribution")}>
       {allPids.map((pid) => (
         <span
           key={pid}
           className={`evidence-contribution-cell${strengths.has(pid) ? ` strength-${strengths.get(pid)}` : " is-absent"}${focusedParticipantId === pid ? " is-evidence-focused" : ""}`}
           style={accentVar ? ({ "--card-accent": accentVar } as React.CSSProperties) : undefined}
+          role="img"
           aria-label={strengths.has(pid)
             ? t("signals.evidenceContributionLevel", { participant: pid, level: strengths.get(pid) })
             : t("signals.noEvidenceContribution", { participant: pid })}

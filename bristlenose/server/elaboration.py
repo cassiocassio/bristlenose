@@ -219,6 +219,27 @@ def format_signals_for_prompt(
 # ---------------------------------------------------------------------------
 
 
+def _cached_assertion_is_readable(assertion: object) -> bool:
+    """True when a cached assertion still has the shape the reader serves."""
+    if not isinstance(assertion, dict):
+        return False
+    required_text = ("id", "text", "source_quote_id", "participant_id", "source_excerpt")
+    if not all(isinstance(assertion.get(key), str) for key in required_text):
+        return False
+    if not isinstance(assertion.get("ordinal"), int):
+        return False
+    fragment = assertion.get("intervention_fragment")
+    if fragment is None:
+        return True
+    return (
+        isinstance(fragment, dict)
+        and isinstance(fragment.get("start"), int)
+        and isinstance(fragment.get("end"), int)
+        and isinstance(fragment.get("text"), str)
+        and isinstance(fragment.get("rationale"), str)
+    )
+
+
 def _load_cached(
     db: SASession,
     project_id: int,
@@ -252,6 +273,15 @@ def _load_cached(
                 assertions = []
             if not isinstance(assertions, list):
                 assertions = []
+            # One bad element must not fail the whole project's elaboration:
+            # keep the elements that still parse, drop the rest with a warning.
+            kept = [a for a in assertions if _cached_assertion_is_readable(a)]
+            if len(kept) != len(assertions):
+                logger.warning(
+                    "Dropped %d unreadable cached evidence assertion(s) for %s",
+                    len(assertions) - len(kept), row.signal_key,
+                )
+            assertions = kept
             results[row.signal_key] = ElaborationResult(
                 signal_name=row.signal_name,
                 pattern=row.pattern,
@@ -364,6 +394,50 @@ def _normalise_evidence_text(value: str) -> str:
     return " ".join(value.split()).casefold()
 
 
+_MAX_EVIDENCE_ASSERTIONS = 4
+
+
+def _utf16_offset(text: str, index: int) -> int:
+    """Convert a code-point index into UTF-16 code units, which the SPA slices by."""
+    return len(text[:index].encode("utf-16-le")) // 2
+
+
+def _validated_fragment(fragment: object, text: str) -> dict[str, Any] | None:
+    """The highlight for ``text``, or None when it fails the intervention contract.
+
+    The model is poor at counting characters, so its offsets are a hint: when
+    they do not select the fragment text, the fragment is located by its text
+    instead, provided that match is unique. The offsets returned are UTF-16
+    code units, because the SPA slices the assertion text in JavaScript.
+    """
+    start = getattr(fragment, "start", -1)
+    end = getattr(fragment, "end", -1)
+    fragment_text = str(getattr(fragment, "text", ""))
+    rationale = str(getattr(fragment, "rationale", ""))
+    if (
+        not fragment_text
+        or _normalise_evidence_text(fragment_text) in _GENERIC_FRAGMENT_WORDS
+        or rationale not in _EVIDENCE_RATIONALES
+    ):
+        return None
+    offsets_ok = (
+        isinstance(start, int) and isinstance(end, int)
+        and 0 <= start < end <= len(text)
+        and text[start:end] == fragment_text
+    )
+    if not offsets_ok:
+        if text.count(fragment_text) != 1:
+            return None
+        start = text.index(fragment_text)
+        end = start + len(fragment_text)
+    return {
+        "start": _utf16_offset(text, start),
+        "end": _utf16_offset(text, end),
+        "text": fragment_text,
+        "rationale": rationale,
+    }
+
+
 def _validated_evidence_assertions(
     candidates: list[object],
     signal: TagSignal,
@@ -380,11 +454,25 @@ def _validated_evidence_assertions(
     seen_quote_refs: set[str] = set()
     accepted: list[dict[str, Any]] = []
 
-    for candidate in candidates[:4]:
+    dropped: dict[str, int] = {}
+
+    def _drop(reason: str) -> None:
+        dropped[reason] = dropped.get(reason, 0) + 1
+
+    for candidate in candidates:
+        if len(accepted) >= _MAX_EVIDENCE_ASSERTIONS:
+            break
         source_quote_id = str(getattr(candidate, "source_quote_id", ""))
         quote = by_ref.get(source_quote_id)
         text = str(getattr(candidate, "text", "")).strip()
-        if not quote or source_quote_id in seen_quote_refs or not text:
+        if not quote:
+            _drop("unknown_quote")
+            continue
+        if source_quote_id in seen_quote_refs:
+            _drop("duplicate_quote")
+            continue
+        if not text:
+            _drop("empty_text")
             continue
 
         # ``source_quote_id`` is the supplied, stable provenance pointer.  The
@@ -398,30 +486,11 @@ def _validated_evidence_assertions(
         fragment = getattr(candidate, "intervention_fragment", None)
         fragment_payload: dict[str, Any] | None = None
         if fragment is not None:
-            start = getattr(fragment, "start", -1)
-            end = getattr(fragment, "end", -1)
-            fragment_text = str(getattr(fragment, "text", ""))
-            rationale = str(getattr(fragment, "rationale", ""))
-            if (
-                not isinstance(start, int)
-                or not isinstance(end, int)
-                or start < 0
-                or end <= start
-                or end > len(text)
-                or text[start:end] != fragment_text
-                or _normalise_evidence_text(fragment_text) in _GENERIC_FRAGMENT_WORDS
-                or rationale not in _EVIDENCE_RATIONALES
-            ):
+            fragment_payload = _validated_fragment(fragment, text)
+            if fragment_payload is None:
                 # An assertion can still be useful when the model's proposed
                 # highlighter fails the stricter intervention contract.
-                fragment_payload = None
-            else:
-                fragment_payload = {
-                    "start": start,
-                    "end": end,
-                    "text": fragment_text,
-                    "rationale": rationale,
-                }
+                _drop("fragment")
 
         accepted.append({
             "id": f"ea_{source_quote_id.removeprefix('q_')}",
@@ -434,6 +503,12 @@ def _validated_evidence_assertions(
         })
         seen_quote_refs.add(source_quote_id)
 
+    if dropped:
+        logger.info(
+            "Evidence assertions for %s: kept %d of %d candidates; dropped %s",
+            getattr(signal, "location", "?"), len(accepted), len(candidates),
+            ", ".join(f"{reason}={count}" for reason, count in sorted(dropped.items())),
+        )
     return accepted
 
 

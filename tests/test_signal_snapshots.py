@@ -6,6 +6,7 @@ import asyncio
 import json
 from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import inspect, text
 
 from bristlenose.events import KindEnum, RunCompletedEvent, new_run_id
@@ -120,7 +121,9 @@ def test_latest_snapshot_is_newest_and_preserves_its_complete_payload() -> None:
         db.close()
 
 
-def test_reader_skips_a_corrupt_newer_snapshot_and_keeps_the_last_good_one() -> None:
+def test_reader_skips_a_corrupt_newer_snapshot_and_keeps_the_last_good_one(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """A recoverable bad row must not blank the offline Signals report."""
     engine = get_engine("sqlite://")
     init_db(engine)
@@ -140,7 +143,11 @@ def test_reader_skips_a_corrupt_newer_snapshot_and_keeps_the_last_good_one() -> 
         db.add(bad)
         db.commit()
 
-        assert latest_completed_snapshot(db, project.id).id == good.id
+        with caplog.at_level("WARNING"):
+            assert latest_completed_snapshot(db, project.id).id == good.id
+        # The skip is logged by id so a maintainer can see it; never the payload.
+        assert f"snapshot {bad.id} for project {project.id}" in caplog.text
+        assert "not json" not in caplog.text
     finally:
         db.close()
 

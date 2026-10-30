@@ -8,12 +8,19 @@ in the next slice; hand curation does not call this module in v1.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from bristlenose.server.models import SignalSnapshot
+
+logger = logging.getLogger(__name__)
+
+# A corrupt newest row is rare; look past a handful of rows, not the whole
+# history, so a read stays cheap however many snapshots have accumulated.
+_READ_WINDOW = 8
 
 # This is a reader-contract version, deliberately separate from the database
 # migration revision.  A release can improve the LLM-written narrative shape
@@ -54,12 +61,18 @@ def latest_completed_snapshot(db: Session, project_id: int) -> SignalSnapshot | 
         db.query(SignalSnapshot)
         .filter_by(project_id=project_id)
         .order_by(SignalSnapshot.computed_at.desc(), SignalSnapshot.id.desc())
+        .limit(_READ_WINDOW)
         .all()
     )
     for snapshot in snapshots:
         try:
             snapshot_payload(snapshot)
         except (TypeError, ValueError):
+            # Ids only: the payload holds participant quotes.
+            logger.warning(
+                "Skipping unreadable signal snapshot %s for project %s",
+                snapshot.id, project_id,
+            )
             continue
         return snapshot
     return None

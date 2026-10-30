@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en" data-platform="desktop" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Signals lens readiness · Bristlenose mockups</title>
+<!-- bn-accurate mockup. Lifecycle: PROPOSED 30 Oct 2026 (see docs/mockups/STATUS.md).
+     Plan: docs/design-signals-lens-readiness.md. The token CSS between the markers is read
+     from bristlenose/theme/ by a script, unedited. The sidebar is NATIVE macOS chrome in
+     the product (SwiftUI), so it is drawn here with system colours and stand-in glyphs, not
+     SF Symbols. -->
+<style>
+/* ── BEGIN verbatim theme CSS ── */
+/* ════ bristlenose/theme/tokens.css — whole file, lines 1–445 ════ */
+/* Design tokens — the single source of truth for all visual decisions.
+
+   This file contains STRUCTURAL tokens (layout, spacing, radii, transitions),
+   ANALYTICAL tokens (sentiment colours, codebook tag colours, heatmap), and
+   SEMANTIC ALIASES that name a decision rather than a value (the inline
+   edit-field set below). An alias points at a palette token, so it costs no
+   per-palette maintenance and cannot drift from the palette it borrows from.
+
+   TYPOGRAPHY tokens are in tokens-typography.css (web) / tokens-desktop.css (macOS).
+   COLOUR PALETTE tokens are in colors/palette-default.css and colors/palette-edo.css.
+
+   Override palette tokens with data-color-theme="<name>" on <html>.
+   Override platform tokens with data-platform="desktop" on <html>. */
+
+:root {
+    /* Sentiment colours (v0.7+ taxonomy) — analytical, NOT theme-overridable.
+       See docs/academic-sources.html for theoretical foundations. */
+
+    /* Negative sentiments */
+    --bn-sentiment-frustration: #ea580c;
+    --bn-sentiment-frustration-bg: #fff7ed;
+    --bn-sentiment-confusion: #dc2626;
+    /* Error text — sentiment-frustration (#ea580c) is a fill hue, only 3.56:1
+       on white as body text; this darker shade clears WCAG AA (4.5:1). */
+    --bn-colour-error-text: #c2410c;
+    --bn-sentiment-confusion-bg: #fef2f2;
+    --bn-sentiment-doubt: #7c3aed;
+    --bn-sentiment-doubt-bg: #f5f3ff;
+
+    /* Neutral (investigation flag) */
+    --bn-sentiment-surprise: #d97706;
+    --bn-sentiment-surprise-bg: #fffbeb;
+
+    /* Positive sentiments */
+    --bn-sentiment-satisfaction: #16a34a;
+    --bn-sentiment-satisfaction-bg: #f0fdf4;
+    --bn-sentiment-delight: #059669;
+    --bn-sentiment-delight-bg: #ecfdf5;
+    --bn-sentiment-confidence: #2563eb;
+    --bn-sentiment-confidence-bg: #eff6ff;
+
+    /* Analysis heatmap — OKLCH colour ramp tokens */
+    --bn-heat-frustration-h: 55;
+    --bn-heat-confusion-h: 30;
+    --bn-heat-doubt-h: 295;
+    --bn-heat-surprise-h: 75;
+    --bn-heat-satisfaction-h: 155;
+    --bn-heat-delight-h: 170;
+    --bn-heat-confidence-h: 260;
+    --bn-heat-chroma: 0.12;
+    --bn-heat-l-min: 95%;
+    --bn-heat-l-max: 45%;
+    --bn-heat-depleted-h: 75;
+    --bn-heat-depleted-chroma: 0.08;
+
+    /* Codebook user-tag colours — OKLCH v5 pentadic palette.
+       5 sets at ~72° hue anchors, ±25° per set, ~12° steps.
+       Light mode: washed (pale bg, dark text).
+       Dark mode: saturated (mid-dark bg, white text).
+       See immutable-chasing-patterson plan for rationale. */
+
+    /* UX set (blue, H=225-275, anchor 250) */
+    --bn-ux-1-bg: oklch(94% 0.03 225);
+    --bn-ux-2-bg: oklch(94% 0.03 237);
+    --bn-ux-3-bg: oklch(94% 0.03 250);
+    --bn-ux-4-bg: oklch(94% 0.03 263);
+    --bn-ux-5-bg: oklch(94% 0.03 275);
+
+    /* Emotion set (red-pink, H=340-40, anchor 10) */
+    --bn-emo-1-bg: oklch(94% 0.03 340);
+    --bn-emo-2-bg: oklch(94% 0.03 352);
+    --bn-emo-3-bg: oklch(94% 0.03 4);
+    --bn-emo-4-bg: oklch(94% 0.03 16);
+    --bn-emo-5-bg: oklch(94% 0.03 28);
+    --bn-emo-6-bg: oklch(94% 0.03 40);
+
+    /* Task set (green-teal, H=130-180, anchor 155) */
+    --bn-task-1-bg: oklch(94% 0.03 130);
+    --bn-task-2-bg: oklch(94% 0.03 142);
+    --bn-task-3-bg: oklch(94% 0.03 155);
+    --bn-task-4-bg: oklch(94% 0.03 168);
+    --bn-task-5-bg: oklch(94% 0.03 180);
+
+    /* Trust set (purple, H=275-325, anchor 300) */
+    --bn-trust-1-bg: oklch(94% 0.03 275);
+    --bn-trust-2-bg: oklch(94% 0.03 287);
+    --bn-trust-3-bg: oklch(94% 0.03 300);
+    --bn-trust-4-bg: oklch(94% 0.03 313);
+    --bn-trust-5-bg: oklch(94% 0.03 325);
+
+    /* Opportunity set (amber, H=50-100, anchor 75) */
+    --bn-opp-1-bg: oklch(94% 0.03 50);
+    --bn-opp-2-bg: oklch(94% 0.03 62);
+    --bn-opp-3-bg: oklch(94% 0.03 75);
+    --bn-opp-4-bg: oklch(94% 0.03 88);
+    --bn-opp-5-bg: oklch(94% 0.03 100);
+
+    /* Sentiment set — numeric aliases for the codebook colour system.
+       Maps index-based getTagBg() to the existing named sentiment vars. */
+    --bn-sentiment-1-bg: var(--bn-sentiment-frustration-bg);
+    --bn-sentiment-2-bg: var(--bn-sentiment-confusion-bg);
+    --bn-sentiment-3-bg: var(--bn-sentiment-doubt-bg);
+    --bn-sentiment-4-bg: var(--bn-sentiment-surprise-bg);
+    --bn-sentiment-5-bg: var(--bn-sentiment-satisfaction-bg);
+    --bn-sentiment-6-bg: var(--bn-sentiment-delight-bg);
+    --bn-sentiment-7-bg: var(--bn-sentiment-confidence-bg);
+
+    /* Custom / ungrouped */
+    --bn-custom-bg: oklch(94% 0.005 260);
+
+    /* Group card background tints (very subtle set tint for codebook panel) */
+    --bn-group-ux:        oklch(97% 0.015 250);
+    --bn-group-emo:       oklch(97% 0.015 10);
+    --bn-group-task:      oklch(97% 0.015 155);
+    --bn-group-trust:     oklch(97% 0.015 300);
+    --bn-group-opp:       oklch(97% 0.015 75);
+    --bn-group-sentiment: oklch(97% 0.010 200);
+
+    /* Micro histogram bar colours (slightly more saturated than badge bg) */
+    --bn-bar-ux:        oklch(70% 0.08 250);
+    --bn-bar-emo:       oklch(70% 0.08 10);
+    --bn-bar-task:      oklch(70% 0.06 155);
+    --bn-bar-trust:     oklch(70% 0.07 300);
+    --bn-bar-opp:       oklch(72% 0.07 75);
+    --bn-bar-sentiment: oklch(65% 0.06 200);
+
+    /* Set indicator dots (saturated anchors for codebook panel) */
+    --bn-set-ux-dot: oklch(50% 0.12 250);
+    --bn-set-emo-dot: oklch(50% 0.12 10);
+    --bn-set-task-dot: oklch(50% 0.10 155);
+    --bn-set-trust-dot: oklch(50% 0.11 300);
+    --bn-set-opp-dot: oklch(52% 0.11 75);
+
+    /* Legacy sentiment colours (deprecated — kept for backward compat) */
+    --bn-colour-confusion: var(--bn-sentiment-confusion);
+    --bn-colour-confusion-bg: var(--bn-sentiment-confusion-bg);
+    --bn-colour-frustration: var(--bn-sentiment-frustration);
+    --bn-colour-frustration-bg: var(--bn-sentiment-frustration-bg);
+    --bn-colour-delight: var(--bn-sentiment-delight);
+    --bn-colour-delight-bg: var(--bn-sentiment-delight-bg);
+
+    /* Layout */
+    --bn-max-width: 52rem;
+    --bn-quote-max-width: 23rem;   /* card reading measure — ~5 words/line */
+    --bn-grid-gap: 1.25rem;        /* gap between grid columns */
+    --bn-flow-tolerance: 5em;      /* grid-lanes masonry: how much height imbalance
+                                      to tolerate before breaking reading order.
+                                      Safari 26.4+ only. Provisional — tuned on the
+                                      Phase-1 mockup, pending real-corpus validation. */
+    --bn-toolbar-height: 3rem;
+
+    /* Sidebar layout (serve-mode dual-sidebar with resizable panels) */
+    --bn-sidebar-width: 280px;   /* default panel width */
+    --bn-sidebar-min: 200px;     /* minimum resize bound */
+    --bn-sidebar-max: 480px;     /* maximum resize bound */
+    --bn-rail-width: 36px;       /* collapsed icon rail width */
+    --bn-minimap-width: 5rem;    /* minimap column incl. breathing room (80px; ~56px content + 12px each side) */
+    --bn-overlay-duration: 0.3s;   /* overlay open/close animation speed */
+
+    /* Dialogs (atoms/modal.css, components/Dialog.tsx) — the macOS sheet, measured
+       24 Oct 2026 from a stock Save sheet in light mode on macOS 27: the window
+       behind is pulled towards a light grey rather than covered in black (no
+       blur), the sheet has a ~20 pt radius and a shadow offset downward, and it
+       slides 32 pt down into place while it fades in. Dark values below are
+       a judgement, not a measurement. */
+    --bn-overlay-scrim: rgb(170 170 170 / 0.59);
+    --bn-overlay-z: 1000;
+    --bn-toast-z: 1100;                     /* a notification stays above a dialog */
+    --bn-modal-bg: var(--bn-colour-bg);
+    --bn-modal-radius: 20px;
+    --bn-modal-hairline: rgb(0 0 0 / 0.1);
+    --bn-modal-shadow-colour: rgb(0 0 0 / 0.3);
+    --bn-modal-shadow: 0 0 0 1px var(--bn-modal-hairline), 0 10px 40px var(--bn-modal-shadow-colour);
+    --bn-modal-offset: 32px;                /* the sheet drops this far into place */
+    --bn-modal-enter: 230ms;                /* the drop, and the backdrop dimming */
+    --bn-modal-enter-fade: 100ms;           /* solid early; the drop carries on */
+    --bn-modal-enter-ease: cubic-bezier(0, 0, 0.58, 1);
+    --bn-modal-exit: 240ms;                 /* rise, fade and backdrop together, linear */
+    --bn-gutter-left: 2rem;        /* gap: rail/sidebar → center content */
+    --bn-gutter-right: 0.5rem;     /* gap: center content → minimap column */
+
+    /* (--bn-first-baseline retired 25 Jul 2026. It was a cross-seam datum
+       aligning webview baselines to the native sidebar's "Project" row — an
+       alignment the red-background test proved unrealisable (the webview's
+       layout viewport starts at the toolbar seam, below that native baseline).
+       With the toolbar-inset residual now 0, content and the flanking inspector
+       share one web-internal datum of --bn-space-xl below the seam; the base
+       .tag-sidebar bleed and the body top-pad already agree. See
+       organisms/sidebar.css § "First-baseline datum".) */
+
+    /* Breakpoints — reference values for @media queries across the system.
+       CSS @media can't consume var(), so use these values directly in
+       media queries and reference the token name in a comment.
+       When adding a new media query, pick from this list or add a new entry. */
+    --bn-breakpoint-compact:  500px;   /* help overlay, single-column fallback */
+    --bn-breakpoint-toolbar:  600px;   /* toolbar collapse (planned) */
+    --bn-breakpoint-content:  1100px;  /* transcript annotation margin layout */
+    --bn-breakpoint-wide:     1400px;  /* 16"+ / wide displays — dashboard featured quotes go to 5 across */
+
+    /* Spacing scale */
+    --bn-space-xs: 0.15rem;
+    --bn-space-sm: 0.35rem;
+    --bn-space-md: 0.75rem;
+    --bn-space-lg: 1.5rem;
+    --bn-space-xl: 2rem;
+    --bn-space-2xl: 3rem;
+
+    /* Signals lens — semantic spacing aliases. The card keeps one generous
+       reading rhythm even when it is one member of a compound location. */
+    --bn-signal-card-inset: var(--bn-space-2xl);
+    --bn-signal-card-section-gap: var(--bn-space-xl);
+    --bn-signal-card-evidence-gap: var(--bn-space-md);
+    --bn-signal-card-quote-inset: var(--bn-space-md);
+    --bn-signal-card-footer-gap: var(--bn-space-lg);
+    --bn-signal-card-assertion-gap: var(--bn-space-sm);
+
+    /* "New"-material highlighter (Phase 3 placeholder) — a fixed marker green,
+       the same in light and dark; the dark text reads on it in both modes. */
+    --bn-colour-new-highlight: #75fb4c;
+    --bn-colour-new-highlight-text: #0f2b08;
+
+    /* Radii */
+    --bn-radius-sm: 3px;
+    --bn-radius-md: 6px;
+    --bn-radius-lg: 8px;
+    --bn-radius-pill: 999px;
+
+    /* ── Inline edit fields — READ THIS BEFORE STYLING A NEW ONE ──────────
+     *
+     * An inline edit field is a piece of text the researcher can click into
+     * and retype: a theme heading, a session name, a code group's title, a
+     * code. There are exactly TWO treatments and the choice is mechanical,
+     * decided by the GROUND the field sits on, not by which lens you are in:
+     *
+     *   field on page background  →  --bn-field-edit-fill-on-page  (tints up)
+     *   field on a tinted surface →  --bn-field-edit-fill-on-tint  (blanks to
+     *                                                               neutral)
+     *
+     * Both carry --bn-field-edit-edge at 1px. The fill inverts because the
+     * ground does; the edge never changes, so the signal is one signal.
+     * Border or outline is yours to pick — outline for a span in running
+     * prose (it costs no layout and will not reflow the line), border for
+     * something that already has a box. That is a mechanism, not a meaning.
+     *
+     * DO NOT invent a third fill. Two surfaces got one each before these
+     * tokens existed (a quote-bg tint, a page-bg blank) and two more got
+     * nothing at all, which is how "is this field live?" came to have four
+     * answers on one screen.
+     *
+     * THE ONE EXEMPTION is quote cropping — `.crop-editable` and the bracket
+     * handles in molecules/editable-text.css. That is not "edit this text",
+     * it is "move this boundary", it was designed as a single signal with the
+     * burnt-amber brackets, and it keeps --bn-colour-crop-bg. Do not reach
+     * for that yellow for anything else, and do not restyle crop to match
+     * these: a different verb is allowed a different look. The token was
+     * called --bn-colour-editing-bg until 20 Sep 2026; it was renamed
+     * because a token named for a state it must not be used in is how the
+     * four-answers-on-one-screen problem started. */
+    --bn-field-edit-edge: var(--bn-colour-accent);
+    --bn-field-edit-fill-on-page: var(--bn-colour-quote-bg);
+    --bn-field-edit-fill-on-tint: var(--bn-colour-bg);
+    --bn-field-edit-radius: var(--bn-radius-sm);
+    --bn-field-edit-offset: 1px;
+
+    /* Section-divider keyline — the colour of the h2 / .section-heading /
+       .framework-section-header bottom rules and the header <hr>. Aliases
+       --bn-colour-border by default (visible); set to `transparent`
+       (globally here, or per-surface) to hide every section divider WITHOUT
+       moving anything — the 1px box still lays out, it just stops painting.
+       The reversible borders-off experiment. Table-header (th) rules keep
+       --bn-colour-border (data-grid chrome, not a section divider).
+       See docs/design-lens-template.md § Keylines. */
+    --bn-colour-keyline: var(--bn-colour-border);
+
+    /* Transitions */
+    --bn-transition-fast: 0.15s ease;
+    --bn-transition-normal: 0.2s ease;
+    --bn-transition-slow: 0.3s ease;
+
+    /* Focus Mode — the distraction-free reading state (templates/focus-mode.css,
+       docs/design-focus-mode.md). Structural, NOT palette-overridable: the whole
+       transform is colour-free by design, which is what lets it compose with
+       every palette × appearance with zero per-palette overrides. Deliberately
+       here and not in colors/_contract.css — a Focus token in the contract would
+       oblige every future palette author to answer a question the feature
+       doesn't ask. "Dusk, not a light-switch": no overshoot, no bounce — the
+       wrong register for reading evidence. */
+    --bn-focus-ghost-opacity: 0.14;
+    --bn-focus-heading-opacity: 0.4;
+    --bn-focus-dur: 320ms;
+    --bn-focus-ease: ease-in-out;
+    /* How much of a receded card's outline survives — the border is mixed
+       toward transparent by the remainder. One number for both lenses (the
+       quote card's left edge, the signal card's box and fused seam); it was a
+       literal 40% in two places until the Signals lens made it three. */
+    --bn-focus-outline-mix: 40%;
+
+    /* Arrival — the "you are here" cue on the thing a link landed on: a
+       transcript paragraph, a quote card, a group heading
+       (atoms/arrival.css, docs/design-arrival-flash.md). Seconds, not the
+       Acknowledge range, because the eye is still travelling when it starts.
+       Structural, like Focus: the colour is an alias of the palette's
+       highlight, so every palette × appearance answers through the contract
+       it already keeps. */
+    --bn-arrival-colour: var(--bn-colour-highlight);
+    --bn-arrival-duration: 5s;
+    --bn-arrival-easing: ease-out;
+
+    /* Thinking-shimmer — the "work in progress" travelling-sheen for text.
+       Shared cross-surface spec, locked 18 Jul 2026 (docs/design-motion.md
+       §4.7.1). Consuming surfaces set --bn-shimmer-base (resting text colour)
+       and --bn-shimmer-peak (the pole the band moves toward: white where text
+       is dark, the surface background where text is light) so the sheen has
+       headroom in every theme. See atoms/shimmer.css. */
+    --bn-shimmer-contrast: 5%;    /* band peak = 5% from base toward the peak pole */
+    --bn-shimmer-band: 34%;       /* feathered band width, as % of the gradient */
+    --bn-shimmer-angle: 100deg;   /* slight off-horizontal tilt */
+    --bn-shimmer-sweep: 1800ms;   /* travel time (documentation; keyframe encodes the split) */
+    --bn-shimmer-gap: 900ms;      /* dark hold between sweeps (documentation) */
+    --bn-shimmer-period: 2700ms;  /* sweep + gap — the animation duration */
+    --bn-shimmer-easing: ease-in-out;
+
+    /* Legacy aliases — used by inline styles in generated HTML.
+       Theme authors: override the --bn-* versions above;
+       these aliases follow automatically. */
+    --font-body: var(--bn-font-body);
+    --font-mono: var(--bn-font-mono);
+    --colour-bg: var(--bn-colour-bg);
+    --colour-text: var(--bn-colour-text);
+    --colour-muted: var(--bn-colour-muted);
+    --colour-border: var(--bn-colour-border);
+    --colour-accent: var(--bn-colour-accent);
+    --colour-quote-bg: var(--bn-colour-quote-bg);
+    --colour-badge-bg: var(--bn-colour-badge-bg);
+    --colour-badge-text: var(--bn-colour-badge-text);
+    --colour-confusion: var(--bn-colour-confusion);
+    --colour-frustration: var(--bn-colour-frustration);
+    --colour-delight: var(--bn-colour-delight);
+    --colour-suggestion: var(--bn-colour-suggestion);
+    --max-width: var(--bn-max-width);
+}
+
+/* Dark mode overrides for analytical tokens.
+   Palette colours are handled in their own palette-*.css files. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root {
+        color-scheme: light dark;
+
+        /* Sentiment colours (v0.7+ taxonomy) — foreground hues lighter on dark */
+        --bn-sentiment-frustration:      light-dark(#ea580c, #fb923c);
+        --bn-sentiment-frustration-bg:   light-dark(#fff7ed, #2d1d0e);
+        --bn-sentiment-confusion:        light-dark(#dc2626, #f87171);
+        --bn-colour-error-text:          light-dark(#c2410c, #fb923c);
+        --bn-sentiment-confusion-bg:     light-dark(#fef2f2, #2d1515);
+        --bn-sentiment-doubt:            light-dark(#7c3aed, #a78bfa);
+        --bn-sentiment-doubt-bg:         light-dark(#f5f3ff, #1e1533);
+        --bn-sentiment-surprise:         light-dark(#d97706, #fbbf24);
+        --bn-sentiment-surprise-bg:      light-dark(#fffbeb, #2d2305);
+        --bn-sentiment-satisfaction:     light-dark(#16a34a, #4ade80);
+        --bn-sentiment-satisfaction-bg:  light-dark(#f0fdf4, #0f2918);
+        --bn-sentiment-delight:          light-dark(#059669, #34d399);
+        --bn-sentiment-delight-bg:       light-dark(#ecfdf5, #0d261c);
+        --bn-sentiment-confidence:       light-dark(#2563eb, #60a5fa);
+        --bn-sentiment-confidence-bg:    light-dark(#eff6ff, #111d2e);
+
+        /* Analysis heatmap — dark mode overrides */
+        --bn-heat-chroma: light-dark(0.12, 0.10);
+        --bn-heat-l-min: light-dark(95%, 30%);
+        --bn-heat-l-max: light-dark(45%, 75%);
+        --bn-heat-depleted-chroma: light-dark(0.08, 0.06);
+
+        /* Codebook user-tag colours — dark mode: saturated bg, white text */
+        --bn-ux-1-bg: light-dark(oklch(94% 0.03 225), oklch(50% 0.12 225));
+        --bn-ux-2-bg: light-dark(oklch(94% 0.03 237), oklch(48% 0.11 237));
+        --bn-ux-3-bg: light-dark(oklch(94% 0.03 250), oklch(53% 0.12 250));
+        --bn-ux-4-bg: light-dark(oklch(94% 0.03 263), oklch(55% 0.10 263));
+        --bn-ux-5-bg: light-dark(oklch(94% 0.03 275), oklch(49% 0.11 275));
+        --bn-emo-1-bg: light-dark(oklch(94% 0.03 340), oklch(50% 0.12 340));
+        --bn-emo-2-bg: light-dark(oklch(94% 0.03 352), oklch(48% 0.11 352));
+        --bn-emo-3-bg: light-dark(oklch(94% 0.03 4), oklch(53% 0.10 4));
+        --bn-emo-4-bg: light-dark(oklch(94% 0.03 16), oklch(49% 0.12 16));
+        --bn-emo-5-bg: light-dark(oklch(94% 0.03 28), oklch(55% 0.10 28));
+        --bn-emo-6-bg: light-dark(oklch(94% 0.03 40), oklch(51% 0.11 40));
+        --bn-task-1-bg: light-dark(oklch(94% 0.03 130), oklch(50% 0.10 130));
+        --bn-task-2-bg: light-dark(oklch(94% 0.03 142), oklch(48% 0.09 142));
+        --bn-task-3-bg: light-dark(oklch(94% 0.03 155), oklch(53% 0.09 155));
+        --bn-task-4-bg: light-dark(oklch(94% 0.03 168), oklch(49% 0.10 168));
+        --bn-task-5-bg: light-dark(oklch(94% 0.03 180), oklch(51% 0.09 180));
+        --bn-trust-1-bg: light-dark(oklch(94% 0.03 275), oklch(50% 0.11 275));
+        --bn-trust-2-bg: light-dark(oklch(94% 0.03 287), oklch(48% 0.10 287));
+        --bn-trust-3-bg: light-dark(oklch(94% 0.03 300), oklch(53% 0.10 300));
+        --bn-trust-4-bg: light-dark(oklch(94% 0.03 313), oklch(49% 0.11 313));
+        --bn-trust-5-bg: light-dark(oklch(94% 0.03 325), oklch(51% 0.10 325));
+        --bn-opp-1-bg: light-dark(oklch(94% 0.03 50), oklch(52% 0.11 50));
+        --bn-opp-2-bg: light-dark(oklch(94% 0.03 62), oklch(50% 0.10 62));
+        --bn-opp-3-bg: light-dark(oklch(94% 0.03 75), oklch(54% 0.12 75));
+        --bn-opp-4-bg: light-dark(oklch(94% 0.03 88), oklch(48% 0.10 88));
+        --bn-opp-5-bg: light-dark(oklch(94% 0.03 100), oklch(51% 0.11 100));
+        --bn-custom-bg: light-dark(oklch(94% 0.005 260), oklch(52% 0.02 260));
+        /* Group card background tints */
+        --bn-group-ux:        light-dark(oklch(97% 0.015 250), oklch(22% 0.025 250));
+        --bn-group-emo:       light-dark(oklch(97% 0.015 10),  oklch(22% 0.025 10));
+        --bn-group-task:      light-dark(oklch(97% 0.015 155), oklch(22% 0.020 155));
+        --bn-group-trust:     light-dark(oklch(97% 0.015 300), oklch(22% 0.025 300));
+        --bn-group-opp:       light-dark(oklch(97% 0.015 75),  oklch(22% 0.022 75));
+        --bn-group-sentiment: light-dark(oklch(97% 0.010 200), oklch(22% 0.015 200));
+
+        /* Micro histogram bar colours */
+        --bn-bar-ux:        light-dark(oklch(70% 0.08 250), oklch(55% 0.08 250));
+        --bn-bar-emo:       light-dark(oklch(70% 0.08 10),  oklch(55% 0.08 10));
+        --bn-bar-task:      light-dark(oklch(70% 0.06 155), oklch(55% 0.06 155));
+        --bn-bar-trust:     light-dark(oklch(70% 0.07 300), oklch(55% 0.07 300));
+        --bn-bar-opp:       light-dark(oklch(72% 0.07 75),  oklch(57% 0.07 75));
+        --bn-bar-sentiment: light-dark(oklch(65% 0.06 200), oklch(50% 0.06 200));
+
+        --bn-set-ux-dot: light-dark(oklch(50% 0.12 250), oklch(60% 0.10 250));
+        --bn-set-emo-dot: light-dark(oklch(50% 0.12 10), oklch(60% 0.10 10));
+        --bn-set-task-dot: light-dark(oklch(50% 0.10 155), oklch(60% 0.08 155));
+        --bn-set-trust-dot: light-dark(oklch(50% 0.11 300), oklch(60% 0.09 300));
+        --bn-set-opp-dot: light-dark(oklch(52% 0.11 75), oklch(62% 0.09 75));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-confusion:        var(--bn-sentiment-confusion);
+        --bn-colour-confusion-bg:     var(--bn-sentiment-confusion-bg);
+        --bn-colour-frustration:      var(--bn-sentiment-frustration);
+        --bn-colour-frustration-bg:   var(--bn-sentiment-frustration-bg);
+        --bn-colour-delight:          var(--bn-sentiment-delight);
+        --bn-colour-delight-bg:       var(--bn-sentiment-delight-bg);
+
+        /* Dialogs in dark: the page dims towards black, and the sheet is a raised
+           surface, lighter than the page, with a light hairline, the way a dark
+           macOS sheet reads. Without the lift a dark card vanished into the dimmed
+           dark report (docs/mockups/modal-crash-way-out.html, dark frame). */
+        --bn-overlay-scrim:        light-dark(rgb(170 170 170 / 0.59), rgb(0 0 0 / 0.5));
+        --bn-modal-bg:             light-dark(var(--bn-colour-bg), color-mix(in srgb, var(--bn-colour-bg), white 9%));
+        --bn-modal-hairline:       light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.14));
+        --bn-modal-shadow-colour:  light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.6));
+    }
+
+    /* Explicit overrides — lock theme regardless of OS preference */
+    [data-theme="light"]:root { color-scheme: light; }
+    [data-theme="dark"]:root  { color-scheme: dark; }
+}
+
+/* ════ bristlenose/theme/tokens-typography.css — whole file, lines 1–101 ════ */
+/* Typography tokens — web defaults (Inter Variable from Google Fonts).
+   Desktop overrides are in tokens-desktop.css.
+
+   Scale D — 8 stops. Semantic intent:
+   - label (13px) = app's voice (chrome, UI labels, navigation, context)
+   - body  (15px) = participant's voice (quote text, transcript segments)
+
+   Archive of previous scale: tokens-typography-v1.css */
+
+:root {
+    /* Font family — Inter Variable loaded from Google Fonts (see index.html).
+       Fallback chain: Segoe UI Variable (Win 11), Segoe UI (Win 10),
+       system-ui, SF Pro (macOS), CJK families. */
+    --bn-font-body: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",   /* macOS Japanese */
+        "Yu Gothic UI",                                  /* Windows Japanese */
+        "Malgun Gothic",                                 /* Windows Korean */
+        "Apple SD Gothic Neo",                           /* macOS Korean */
+        "Noto Sans CJK JP", "Noto Sans CJK KR",         /* Linux CJK */
+        sans-serif;
+    /* One mono stack for both scales (docs/design-monospace-roles.md §4, §6). No "SF Mono" by
+       name: it resolves only on Macs with Apple's developer download, so it made the developer's
+       view differ from every researcher's. WebKit reaches the system SF Mono via ui-monospace;
+       Chromium on a Mac has no ui-monospace and takes Menlo; Windows 11 Cascadia Mono, Windows 10
+       Consolas; Linux DejaVu. The generic is last and reached nowhere measured: it is Courier in
+       Chromium on a Mac and Courier New in Windows 10's Edge. */
+    --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --bn-font-editorial: Georgia, "Times New Roman", serif;
+
+    /* Font weight scale — tuned for variable fonts (Inter, SF Pro, Segoe UI Variable).
+       On static fonts (Win 10 Segoe UI), 370/420→400 and 490→400 — acceptable degradation. */
+    --bn-weight-light: 370;      /* subordinate text (sidebar nav links, secondary lists) */
+    --bn-weight-normal: 420;     /* body text, descriptions, quote content */
+    --bn-weight-emphasis: 490;   /* headings, labels, section titles */
+    --bn-weight-starred: 520;    /* starred quotes — pop above emphasis, below strong */
+    --bn-weight-semibold: 600;   /* a chosen word in a text-only switch (picker scope) */
+    --bn-weight-strong: 700;     /* delete buttons, page title, action glyphs */
+
+    /* Icon stroke = the stem of the text beside it, as a fraction of the font size
+       (docs/design-icon-system.md § Weight; measured on Inter and SF Pro, which agree
+       to 2%). A context set in a heavier weight sets --bn-icon-stem beside its
+       font-weight. No light value: the SPA's Inter is served 400..700, so 370 renders 400. */
+    --bn-icon-stem-normal: 0.092;
+    --bn-icon-stem-emphasis: 0.106;
+    --bn-icon-stem-starred: 0.111;
+    --bn-icon-stem-semibold: 0.127;
+    --bn-icon-stem-strong: 0.146;
+    --bn-icon-stem: var(--bn-icon-stem-normal);
+
+    /* Monospace weights — three values, chosen against measured rendering on every face the
+       stack reaches (docs/design-monospace-roles.md §6). 400–490 is Regular in Menlo, Consolas
+       and Cascadia Mono and varies only in SF Mono; Windows matches the nearest weight, so
+       Consolas turns Bold at 550 and Cascadia SemiBold at 500. */
+    --bn-weight-mono: 400;          /* every mono role at rest */
+    --bn-weight-mono-tag: 460;      /* tags, light appearance: SF Mono +9%, Regular elsewhere; 400 in dark (below) */
+    --bn-weight-mono-emphasis: 560; /* the one step up (a path that names the screen): Bold in Menlo and Consolas */
+
+    /* Typography scale — 8 stops, size + line-height pairs.
+       Line-height decreases as size increases (Bringhurst principle:
+       large letterforms provide visual anchoring, need less leading). */
+    --bn-text-micro:       0.6rem;      /* 9.6px  — delete ×, confidence badges */
+    --bn-text-micro-lh:    1.2;
+    --bn-text-badge:       0.72rem;     /* 11.5px — badges, group headers, tag counts */
+    --bn-text-badge-lh:    1.3;
+    --bn-text-caption:     0.75rem;     /* 12px   — footnotes, footer, modal footer, kbd */
+    --bn-text-caption-lh:  1.4;
+    --bn-text-label:       0.8125rem;   /* 13px   — toolbar, filters, context, timecodes (app voice) */
+    --bn-text-label-lh:    1.45;
+    --bn-text-body:        0.9375rem;   /* 15px   — quote text, transcript segments (participant voice) */
+    --bn-text-body-lh:     1.5;
+    --bn-text-heading:     1.125rem;    /* 18px   — section headings, h3, modal titles */
+    --bn-text-heading-lh:  1.3;
+    --bn-text-title:       1.375rem;    /* 22px   — page titles, h2, logotype */
+    --bn-text-title-lh:    1.25;
+    --bn-text-display:     1.75rem;     /* 28px   — report h1 */
+    --bn-text-display-lh:  1.2;
+
+    /* Signal card finding hierarchy. The title is a compact app heading;
+       the claim is the generous editorial statement beneath it. */
+    --bn-text-signal-title: 0.9375rem;
+    --bn-text-signal-title-lh: 1.5;
+    --bn-track-signal-title: 0;
+    --bn-weight-signal-title: var(--bn-weight-strong);
+    --bn-text-signal-claim: 1.29375rem;
+    --bn-text-signal-claim-lh: 1.4;
+    --bn-track-signal-claim: -0.005em;
+    --bn-weight-signal-claim: 500;
+}
+
+/* Tags drop to Regular in the dark appearance: light text on a dark tint already reads heavier,
+   and dark tags measure 6.2–9.3:1 against light's 3.1–5.2:1 (docs/design-monospace-roles.md).
+   font-weight cannot follow light-dark(), so the token follows the two scopes the palettes use. */
+[data-theme="dark"] {
+    --bn-weight-mono-tag: var(--bn-weight-mono);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bn-weight-mono-tag: var(--bn-weight-mono);
+    }
+}
+
+/* ════ bristlenose/theme/tokens-desktop.css — whole file, lines 1–71 ════ */
+/* Desktop typography overrides — SF Pro for macOS native feel.
+   Active when data-platform="desktop" is set on <html> AND the user hasn't
+   opted back to Inter. The macOS app sets data-platform via
+   BRISTLENOSE_PLATFORM=desktop; the Appearance ▸ Typography setting writes
+   BRISTLENOSE_TYPOGRAPHY, and "inter" makes the server emit
+   data-typography="inter" — which this block's :not() excludes, so the cascade
+   falls back to :root (Inter). On web/CLI neither var is set, so this never
+   matches: SF Pro is licensed for Apple platforms only, Inter ships everywhere.
+
+   SF Pro is a system font on macOS — no download needed.
+   SF Pro Text is optimised for body sizes (<20pt), SF Pro Display for headings (≥20pt).
+   -apple-system resolves to SF Pro automatically on macOS.
+
+   Scale — calibrated against the live macOS AppKit ladder via the Type Parity
+   Inspector (Debug ▸ Type Parity Inspector), macOS 26.4.1 @2x, Color LCD. Each
+   bn stop is width-matched to its measured native style (Δ ≈ 0px), so the labels
+   below are the *real* macOS styles (the old "Apple callout = 15px" label was
+   wrong — callout is 12pt):
+   - micro:   caption2     (10px)
+   - badge:   subheadline  (11px)
+   - caption: callout      (12px)
+   - label:   body         (13px)  — app voice
+   - body:    title3       (15px)  — participant voice (quotes + transcript)
+   - heading: title2       (17px)
+   - title:   title1       (22px)
+   - display: largeTitle   (26px)
+
+   Line-heights are Apple's absolute leadings expressed as size-relative ratios,
+   except body — loosened slightly by eye (1.4) for reading comfort. --bn-track-* carries Apple's per-size
+   tracking — empirically ≈0 across this range (only micro is non-zero), and
+   currently unconsumed (no letter-spacing wired yet). Sizes are kept in rem so
+   they still honour the user's root font-size; the px in each comment is the
+   value at the default 16px root (the condition this was calibrated under).
+   Re-true on a different scale/colour profile. Archive: tokens-desktop-v1.css */
+
+[data-platform="desktop"]:not([data-typography="inter"]) {
+    /* Font family — SF Pro via -apple-system, no Google Fonts needed */
+    --bn-font-body: -apple-system, "SF Pro Text", "SF Pro", system-ui,
+        "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+        sans-serif;
+    /* No --bn-font-mono override: the :root stack reaches the system SF Mono via ui-monospace. */
+
+    --bn-text-micro:       0.625rem;    /* 10px  — macOS caption2 */
+    --bn-text-micro-lh:    1.300;
+    --bn-track-micro:      0.013em;
+    --bn-text-badge:       0.6875rem;   /* 11px  — macOS subheadline */
+    --bn-text-badge-lh:    1.273;
+    --bn-track-badge:      0;
+    --bn-text-caption:     0.75rem;     /* 12px  — macOS callout */
+    --bn-text-caption-lh:  1.250;
+    --bn-track-caption:    0;
+    --bn-text-label:       0.8125rem;   /* 13px  — macOS body */
+    --bn-text-label-lh:    1.231;
+    --bn-track-label:      0;
+    --bn-text-body:        0.9375rem;   /* 15px  — macOS title3 */
+    --bn-text-body-lh:     1.4;         /* looser than title3's 1.333 — tuned by eye in the stress-bench for reading comfort (participant voice) */
+    --bn-track-body:       0;
+    --bn-text-heading:     1.0625rem;   /* 17px  — macOS title2 */
+    --bn-text-heading-lh:  1.294;
+    --bn-track-heading:    0;
+    --bn-text-title:       1.375rem;    /* 22px  — macOS title1 */
+    --bn-text-title-lh:    1.182;
+    --bn-track-title:      0;
+    --bn-text-display:     1.625rem;    /* 26px  — macOS largeTitle */
+    --bn-text-display-lh:  1.231;
+    --bn-track-display:    0;
+
+    /* Weight scale — SF Pro optical weights at same numeric values.
+       No change needed — Inter and SF Pro share the weight axis range. */
+}
+
+/* ════ bristlenose/theme/colors/palette-default.css — whole file, lines 1–177 ════ */
+/* palette-default — Bristlenose's standard blue/grey colour theme.
+   This is the web-mode default palette, loaded as :root fallback.
+   Tokens defined here are overridden by any active [data-color-theme] palette.
+
+   To create a new theme: copy this file, change the selector to
+   [data-color-theme="your-theme"], and remap every token.
+   See _contract.css for the full list of required tokens. */
+
+:root,
+[data-color-theme="default"] {
+    /* Colour palette */
+    --bn-colour-bg: #ffffff;
+    --bn-colour-text: #1a1a1a;
+    --bn-colour-muted: #6b7280;
+    --bn-colour-border: #e5e7eb;
+    --bn-colour-accent: #007aff;
+    --bn-colour-hover: #e8f0fe;
+    --bn-colour-inspector-bg: #f9f9fa;          /* Inspector chrome — Xcode Tahoe's flat inspector tint (~2% off white) */
+
+    /* Semantic surfaces */
+    --bn-colour-quote-bg: #f9fafb;
+    --bn-colour-paper: #f6f7f8;                 /* Transcript ground: a cool neutral, 1.07:1 under the sheet */
+    --bn-colour-sheet: #ffffff;                 /* A quote lifted off the paper */
+    --bn-colour-badge-bg-paper: #ebedf0;        /* Badges on the paper (#f3f4f6 vanishes there) */
+    --bn-colour-badge-bg: #f3f4f6;
+    --bn-colour-badge-text: #374151;
+    --bn-colour-user-tag-bg: #f3f4f6;
+    --bn-colour-user-tag-text: #4b5563;
+    --bn-colour-crop-bg: #fffbe6;
+    --bn-crop-handle-colour: #c4850a;
+    --bn-crop-handle-hover: #a06d08;
+    --bn-colour-active-bg: #f0fdf4;
+    --bn-colour-highlight: #fef08a;
+
+    /* Destructive action */
+    --bn-colour-negative: #dc2626;
+
+    /* Success and caution — the other two semantic kinds */
+    --bn-colour-positive: #16a34a;
+    --bn-colour-warning: #f59e0b;
+
+    /* Playback-sync glow */
+    --bn-glow-colour: rgba(0, 122, 255, 0.06);
+    --bn-glow-colour-strong: rgba(0, 122, 255, 0.11);
+
+    /* Minimap */
+    --bn-minimap-quote: #e5e7eb;
+    --bn-minimap-heading: #b0b5bd;
+    --bn-minimap-viewport-bg: rgba(0, 122, 255, 0.15);
+    --bn-minimap-viewport-border: rgba(0, 122, 255, 0.3);
+
+    /* Transcript coverage bar */
+    --bn-coverage-report: #93b4f4;
+    --bn-coverage-moderator: #d97706;
+    --bn-coverage-omitted: #d1d5db;
+
+    /* Group card background tints */
+    --bn-group-none: #f9fafb;
+
+    /* Micro histogram bar — neutral */
+    --bn-bar-none: #d1d5db;
+
+    /* Interactive elements */
+    --bn-colour-border-hover: #d1d5db;
+    --bn-colour-icon-idle: #c9ccd1;
+    --bn-colour-starred: #999;
+    --bn-colour-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Focus state */
+    --bn-focus-shadow: 0 3px 12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+    --bn-focus-ring: 0 0 0 2px rgba(0, 122, 255, 0.12);
+
+    /* Hover backgrounds */
+    --bn-hover-bg: rgba(0, 0, 0, 0.04);
+    --bn-hover-bg-subtle: rgba(0, 0, 0, 0.03);
+
+    /* Selection state */
+    --bn-selection-bg: #eef4fc;
+    --bn-selection-border: #007aff;
+    --bn-selection-bg-inactive: #e5e7eb;
+    --bn-selection-border-inactive: #9ca3af;
+    /* Sidebar nav selected-row capsule — NSColor unemphasizedSelectedContentBackgroundColor,
+       sampled (no canonical Apple hex; dynamic + vibrant composite). Re-sample at OS bumps. */
+    --bn-nav-selection-bg: #efefef;
+
+    /* Sidebar overlay */
+    --bn-overlay-shadow: 4px 0 16px rgba(0, 0, 0, 0.08);
+
+    /* Legacy aliases */
+    --bn-colour-suggestion: #007aff;
+    --bn-colour-suggestion-bg: #eff6ff;
+}
+
+/* Dark mode — uses light-dark() with the color-scheme property.
+   Browsers without light-dark() support (~13%) fall back to the
+   plain light values above. */
+
+@supports (color: light-dark(#000, #fff)) {
+    :root,
+    [data-color-theme="default"] {
+        /* Colour palette */
+        --bn-colour-bg:               light-dark(#ffffff, #111111);
+        --bn-colour-text:             light-dark(#1a1a1a, #e5e7eb);
+        --bn-colour-muted:            light-dark(#6b7280, #9ca3af);
+        --bn-colour-border:           light-dark(#e5e7eb, #2d2d2d);
+        --bn-colour-accent:           light-dark(#007aff, #0a84ff);
+        --bn-colour-hover:            light-dark(#e8f0fe, #1e293b);
+        --bn-colour-inspector-bg:     light-dark(#f9f9fa, #1c1c1e);   /* Inspector chrome — one step up from the #111 editor (Apple systemGray6 dark) */
+
+        /* Semantic surfaces */
+        --bn-colour-quote-bg:         light-dark(#f9fafb, #1a1a1a);
+        --bn-colour-paper:            light-dark(#f6f7f8, #111111);   /* Transcript ground; dark is the page itself */
+        --bn-colour-sheet:            light-dark(#ffffff, #1c1c1e);   /* A quote lifted: 1.07:1 / 1.11:1 off the paper */
+        --bn-colour-badge-bg-paper:   light-dark(#ebedf0, #252525);
+        --bn-colour-badge-bg:         light-dark(#f3f4f6, #252525);
+        --bn-colour-badge-text:       light-dark(#374151, #d1d5db);
+        --bn-colour-user-tag-bg:      light-dark(#f3f4f6, #252525);
+        --bn-colour-user-tag-text:    light-dark(#4b5563, #d1d5db);
+        --bn-colour-crop-bg:          light-dark(#fffbe6, #2a2614);
+        --bn-crop-handle-colour:      light-dark(#c4850a, #f0b830);
+        --bn-crop-handle-hover:       light-dark(#a06d08, #f5cc60);
+        --bn-colour-active-bg:        light-dark(#f0fdf4, #0f2918);
+        --bn-colour-highlight:        light-dark(#fef08a, #854d0e);
+        --bn-colour-cited-bg:         light-dark(#fef9c3, #3b2f05);
+
+        /* Playback-sync glow */
+        --bn-glow-colour:             light-dark(rgba(0, 122, 255, 0.06), rgba(10, 132, 255, 0.12));
+        --bn-glow-colour-strong:      light-dark(rgba(0, 122, 255, 0.11), rgba(10, 132, 255, 0.2));
+
+        /* Minimap */
+        --bn-minimap-quote:           light-dark(#e5e7eb, #333333);
+        --bn-minimap-heading:         light-dark(#b0b5bd, #555555);
+        --bn-minimap-viewport-bg:     light-dark(rgba(0, 122, 255, 0.15), rgba(10, 132, 255, 0.2));
+        --bn-minimap-viewport-border: light-dark(rgba(0, 122, 255, 0.3), rgba(10, 132, 255, 0.4));
+
+        /* Transcript coverage bar */
+        --bn-coverage-report:    light-dark(#93b4f4, #4a7ecf);
+        --bn-coverage-moderator: light-dark(#d97706, #fbbf24);
+        --bn-coverage-omitted:   light-dark(#d1d5db, #4b5563);
+
+        /* Group card — neutral */
+        --bn-group-none:      light-dark(#f9fafb, #1e1e1e);
+
+        /* Micro histogram bar — neutral */
+        --bn-bar-none:      light-dark(#d1d5db, #4b5563);
+
+        /* Destructive action */
+        --bn-colour-negative:         light-dark(#dc2626, #ef4444);
+
+        /* Success and caution */
+        --bn-colour-positive:         light-dark(#16a34a, #22c55e);
+        --bn-colour-warning:          light-dark(#f59e0b, #fbbf24);
+
+        /* Interactive elements */
+        --bn-colour-border-hover:     light-dark(#d1d5db, #4b5563);
+        --bn-colour-icon-idle:        light-dark(#c9ccd1, #595959);
+        --bn-colour-starred:          light-dark(#999, #ccc);
+        --bn-colour-shadow:           light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+
+        /* Focus and selection */
+        --bn-focus-ring:              0 0 0 2px light-dark(rgba(0, 122, 255, 0.12), rgba(10, 132, 255, 0.2));
+        --bn-selection-bg:            light-dark(#eef4fc, #1a2838);
+        --bn-selection-border:        light-dark(#007aff, #0a84ff);
+        --bn-selection-bg-inactive:     light-dark(#e5e7eb, #262626);
+        --bn-selection-border-inactive: light-dark(#9ca3af, #4b5563);
+        --bn-nav-selection-bg:          light-dark(#efefef, #2b2b2b);
+
+        /* Hover backgrounds */
+        --bn-hover-bg:                light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.06));
+        --bn-hover-bg-subtle:         light-dark(rgba(0,0,0,0.03), rgba(255,255,255,0.04));
+
+        /* Legacy aliases (deprecated) */
+        --bn-colour-suggestion:       light-dark(#007aff, #0a84ff);
+        --bn-colour-suggestion-bg:    light-dark(#eff6ff, #111d2e);
+    }
+}
+
+/* ── END verbatim theme CSS ── */
+
+/* ── mockup chrome and drawn native sidebar (not theme) ── */
+:root { color-scheme: light dark; }
+html { background: light-dark(#f4f4f5, #1c1c1e); }
+body { margin: 0; padding: 32px 24px 80px; color: var(--bn-colour-text);
+  background: light-dark(#f4f4f5, #1c1c1e); font-family: var(--bn-font-body);
+  font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; }
+h1.t { font-size: 26px; margin: 0 0 4px; }
+h2.s { font-size: 18px; margin: 44px 0 8px; }
+.lede { color: var(--bn-colour-muted); margin: 0 0 20px; max-width: 70ch; }
+.key { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 24px; font-size: 13px; }
+.key span { padding: 4px 10px; border-radius: 6px; }
+.key .k-art { background: light-dark(#fff, #2c2c2e); border: 1px solid var(--bn-colour-border); }
+.key .k-com { background: repeating-linear-gradient(135deg, transparent 0 6px, light-dark(#0001,#fff1) 6px 7px);
+  border-left: 3px solid var(--bn-colour-muted); font-family: var(--bn-font-mono); }
+
+.framebar { font: 12px var(--bn-font-mono); color: var(--bn-colour-muted); margin: 22px 0 6px; }
+.commentary { margin: 10px 0 0; padding: 10px 14px; border-left: 3px solid var(--bn-colour-muted);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, light-dark(#0001,#fff1) 6px 7px);
+  font-size: 13.5px; max-width: 80ch; }
+.commentary::before { content: "Commentary"; display: block; font: 11px var(--bn-font-mono);
+  text-transform: uppercase; letter-spacing: .06em; color: var(--bn-colour-muted); margin-bottom: 2px; }
+
+/* window */
+.win { display: flex; height: 400px; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--bn-colour-border); box-shadow: 0 8px 28px #0002;
+  background: light-dark(#fff, #1e1e20); }
+.side { width: 210px; flex: none; padding: 12px 8px; box-sizing: border-box;
+  background: light-dark(#e9e9eb, #2a2a2c); font: 13px/1.3 -apple-system, "SF Pro Text", system-ui, sans-serif; }
+.side.narrow { width: 100%; border-radius: 10px; }
+.traffic { display: flex; gap: 7px; padding: 2px 6px 14px; }
+.traffic i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; display: block; }
+.traffic i:nth-child(2) { background: #febc2e; } .traffic i:nth-child(3) { background: #28c840; }
+.lens, .prow { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; }
+.lens { height: 22px; }
+.ic { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.2; opacity: .8; }
+.lens .ic { color: light-dark(#0a6cf0, #5aa2ff); opacity: 1; }
+.lens.is-selected, .prow.is-selected { background: light-dark(#d2d2d6, #4a4a4e); }
+.lens.is-dim { opacity: .38; }
+.lens.is-dim .ic { color: currentColor; }
+.sec-h { font-size: 11px; font-weight: 600; color: var(--bn-colour-muted); padding: 14px 8px 4px; }
+.prow { align-items: flex-start; padding: 5px 8px; }
+.prow .ic { color: #2f7bf0; margin-top: 2px; }
+.ptext { min-width: 0; }
+.pname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prow.is-selected .pname { font-weight: 600; }
+.psub { font-size: 11px; color: var(--bn-colour-muted); white-space: nowrap; }
+.ring { margin-left: auto; width: 13px; height: 13px; border-radius: 50%; flex: none; margin-top: 3px;
+  border: 2px solid light-dark(#0001,#fff2); border-top-color: #2f7bf0; transform: rotate(40deg); }
+.psub.warn { color: var(--bn-colour-muted); }
+.psub.warn::before { content: "▲ "; color: #e8820c; }
+.shimmer { background: linear-gradient(90deg, var(--bn-colour-muted) 0 35%, light-dark(#111,#fff) 50%, var(--bn-colour-muted) 65% 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shim 2.7s linear infinite; }
+@keyframes shim { 0% { background-position: 100% 0; } 66.6% { background-position: -100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; color: var(--bn-colour-muted);
+  background: none; -webkit-background-clip: border-box; } }
+.listpane { width: 190px; flex: none; border-right: 1px solid var(--bn-colour-border);
+  background: light-dark(#fafafa, #232325); padding: 18px 14px; font: 13px system-ui; }
+.lp-h { color: var(--bn-colour-muted); }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tb { height: 44px; display: flex; flex-direction: column; justify-content: center; padding: 0 18px;
+  border-bottom: 1px solid var(--bn-colour-border); font: 13px/1.2 system-ui; }
+.tb span { color: var(--bn-colour-muted); font-size: 11px; }
+.page { flex: 1; padding: 24px 28px; }
+.ph { font-size: 24px; margin: 0; }
+.note { color: var(--bn-colour-muted); font-size: 13px; }
+
+.strips { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.strip { margin: 0; }
+.strip figcaption { font: 12px var(--bn-font-mono); color: var(--bn-colour-muted); margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--bn-colour-border); }
+th { font: 11px var(--bn-font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--bn-colour-muted); }
+code { font-family: var(--bn-font-mono); font-size: 12.5px; }
+@media (max-width: 760px) { .win { height: 360px; } .listpane { display: none; } .side { width: 170px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1 class="t">Signals lens readiness</h1>
+<p class="lede">Grey until the first report exists, with the status under the project name. Plan:
+<code>docs/design-signals-lens-readiness.md</code>. Nothing here is built.</p>
+<div class="key"><span class="k-art">Artefact: what would ship, in clean frames</span>
+<span class="k-com">Commentary: why, in hatched blocks</span></div>
+
+<h2 class="s">1. The sidebar row, four moments</h2>
+<div class="strips"><figure class="strip"><div class="side narrow">
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div></div></div>
+</div><figcaption>1 Resting, report ready</figcaption></figure>
+<figure class="strip"><div class="side narrow">
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens is-dim"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div><div class="psub "><span class="shimmer">Analysing · 4 of 8 · ~1 min left</span></div></div><i class="ring" aria-hidden="true"></i></div>
+</div><figcaption>2 A run in flight (shipped, with its ring)</figcaption></figure>
+<figure class="strip"><div class="side narrow">
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens is-dim"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div><div class="psub "><span class="shimmer">Picking up Signals…</span></div></div></div>
+</div><figcaption>3 Run ended, first report being prepared</figcaption></figure>
+<figure class="strip"><div class="side narrow">
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div></div></div>
+</div><figcaption>4 Report landed</figcaption></figure></div>
+<div class="commentary">Moment 3 is the new one. The lens is dim for the same reason it is dim during a run, the
+subtitle uses the shipped shimmer, and the hand-over from 2 to 3 should not pass through a resting subtitle
+(a native prior and a 2 second floor, section 3.3 of the plan). In 4 the lens lights and the subtitle is gone: nothing says "ready".</div>
+
+<h2 class="s">2. The window while the report is prepared</h2>
+<div class="framebar">Frame A · a browser, or a window the redirect has not reached: the reader is on Signals</div>
+<div class="win">
+<div class="side">
+<div class="traffic"><i></i><i></i><i></i></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens is-selected is-dim"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Talismanic</div><div class="psub warn">Partial completion</div></div></div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div><div class="psub "><span class="shimmer">Picking up Signals…</span></div></div></div>
+<div class="prow folder"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Client X</div></div></div>
+</div>
+<div class="listpane"><div class="lp-h">Signals</div></div>
+<div class="main"><div class="tb"><b>ikea research videos</b><span>Signals</span></div>
+<div class="page"></div></div>
+</div>
+<div class="commentary">The page body is empty: no cards, no sentiment fallback, no spinner, no sentence. The
+status lives in one place, under the project name. The page fills in by itself when the report lands (the
+shipped two second poll), and nothing jumps because nothing was there.</div>
+
+<div class="framebar">Frame B · the researcher is on Sessions while it is prepared</div>
+<div class="win">
+<div class="side">
+<div class="traffic"><i></i><i></i><i></i></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens is-dim"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Talismanic</div><div class="psub warn">Partial completion</div></div></div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div><div class="psub "><span class="shimmer">Picking up Signals…</span></div></div></div>
+<div class="prow folder"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Client X</div></div></div>
+</div>
+
+<div class="main"><div class="tb"><b>ikea research videos</b><span>8 sessions</span></div>
+<div class="page"><h1 class="ph">Sessions</h1></div></div>
+</div>
+<div class="commentary">Signals is dim and cannot be clicked. The View menu item and its shortcut are gated by
+the same availability, with no new Swift for that part.</div>
+
+<div class="framebar">Frame C · report landed (the page is today's page, not redrawn here)</div>
+<div class="win">
+<div class="side">
+<div class="traffic"><i></i><i></i><i></i></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2"/></svg><span>Project</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="6" cy="6" r="2"/><path d="M2.5 12.5c.5-2.5 2-3.5 3.5-3.5s3 1 3.5 3.5"/><circle cx="11.5" cy="6.5" r="1.6"/></svg><span>Sessions</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h4M8 4h6M2 8h12M2 12h8"/></svg><span>Quotes</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8.5 8 3h5v5l-5.500 5.500z"/><circle cx="10.500" cy="5.500" r=".8"/></svg><span>Codebooks</span></div>
+<div class="lens is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.500" y="2.500" width="3" height="3"/><rect x="6.500" y="2.500" width="3" height="3"/><rect x="10.500" y="2.500" width="3" height="3"/><rect x="2.500" y="6.500" width="3" height="3"/><rect x="6.500" y="6.500" width="3" height="3"/><rect x="10.500" y="6.500" width="3" height="3"/><rect x="2.500" y="10.500" width="3" height="3"/><rect x="6.500" y="10.500" width="3" height="3"/><rect x="10.500" y="10.500" width="3" height="3"/></svg><span>Signals</span></div>
+<div class="lens"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.500 3.500h11v7h-6l-3 2.500v-2.500h-2z"/></svg><span>Discussion</span></div>
+<div class="sec-h">Projects</div>
+<div class="prow"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Talismanic</div><div class="psub warn">Partial completion</div></div></div>
+<div class="prow is-selected"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">ikea research vide…</div></div></div>
+<div class="prow folder"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.500 14 5v6L8 14.500 2 11V5z"/></svg><div class="ptext"><div class="pname">Client X</div></div></div>
+</div>
+<div class="listpane"><div class="lp-h">Signals</div></div>
+<div class="main"><div class="tb"><b>ikea research videos</b><span>11 Signals</span></div>
+<div class="page"><h1 class="ph">Signals</h1><p class="note">The page as it is today once the report has landed.</p></div></div>
+</div>
+<div class="commentary">The lens lights, the subtitle clears. If the researcher was already on Signals, the
+cards appear in place. The bare sentiment cards seen on the first open (12 cards, no names) never show.</div>
+
+<h2 class="s">3. When it is grey and when it is not</h2>
+<table>
+<tr><th>Case</th><th>Signals lens</th><th>Sidebar status</th><th>Why</th></tr>
+<tr><td>Study with no stored report with a card (including an empty one), cloud model, build running or about to start</td><td><b>grey</b></td><td>Picking up Signals…</td><td>The case this plan is for.</td></tr>
+<tr><td>Study with an older stored report (format changed), rebuild running</td><td><b>lit</b></td><td>none</td><td>The old report keeps being served; nothing to hide.</td></tr>
+<tr><td>Study with a current report; a codebook apply or new interviews rebuild it</td><td><b>lit</b></td><td>none</td><td>Same: last good report stays.</td></tr>
+<tr><td>No cloud model (provider is local, or no key)</td><td><b>lit</b></td><td>none</td><td>No report will ever be built; grey for ever would lie.</td></tr>
+<tr><td>Build failed, or a card could not be written</td><td><b>lit</b></td><td>none</td><td>The flag clears when the attempt ends; the next open retries. No retry control.</td></tr>
+<tr><td>A run is in flight (first analysis)</td><td><b>grey (as shipped)</b></td><td>Analysing…</td><td>Signals is already withheld until the join barrier.</td></tr>
+<tr><td>Second window on the same project</td><td><b>grey in both</b></td><td>per window</td><td>Each window's own row shows the status.</td></tr>
+</table>
+
+<h2 class="s">4. String plan</h2>
+<table>
+<tr><th>Text</th><th>Source</th></tr>
+<tr><td>Signals, Sessions, Project, …</td><td>shipped lens names</td></tr>
+<tr><td>Analysing · 4 of 8 · ~1 min left</td><td>shipped ladder, <code>desktop.chrome.pipeline.analysing</code> and stage verbs</td></tr>
+<tr><td><b>Picking up Signals…</b></td><td><b>NEW, owner-written.</b> One key, 21 locales, to be approved. In-family alternatives: "Writing Signals…", "Building Signals…" (stage verbs name the work). Row budget about 22 characters: German and Finnish renderings would truncate.</td></tr>
+<tr><td>Partial completion</td><td>shipped</td></tr>
+</table>
+<div class="commentary">Drawn, not shipped: the sidebar glyphs are stand-ins for SF Symbols, and the sidebar
+colours are approximations of the system source list. Checked against the sidebar screenshots from the 30 Oct
+walk. The shimmer gate is running-only today; extending it here is an owner question. It stops under reduced motion.</div>
+</div>
+</body>
+</html>

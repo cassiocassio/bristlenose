@@ -719,18 +719,18 @@ class TestRemoveFramework:
         finally:
             db.close()
 
-    def test_remove_framework_deletes_the_jobs_stamps(self) -> None:
-        """An AutoCode stamp points at its job (RE#66), so the uninstall deletes
+    def test_remove_framework_deletes_the_jobs_register(self) -> None:
+        """A register row points at its job (RE#66), so the uninstall deletes
         it with the job, or the job's delete fails on the foreign key and the
         uninstall with it."""
         from datetime import datetime
 
         from bristlenose.server.models import (
             AutoCodeJob,
-            AutoCodeSessionStamp,
+            AutoCodeSentQuote,
             ProposedTag,
+            Quote,
         )
-        from bristlenose.server.models import Session as SessionModel
 
         app = create_app(project_dir=_FIXTURE_DIR, dev=True, db_url="sqlite://")
         tc = AuthTestClient(app)
@@ -741,10 +741,10 @@ class TestRemoveFramework:
                               completed_at=datetime(2026, 10, 20))
             db.add(job)
             db.flush()
-            for (sid,) in db.query(SessionModel.id).filter_by(project_id=1):
-                db.add(AutoCodeSessionStamp(job_id=job.id, session_id=sid))
+            for (qid,) in db.query(Quote.id).filter_by(project_id=1):
+                db.add(AutoCodeSentQuote(job_id=job.id, quote_id=qid))
             db.commit()
-            assert db.query(AutoCodeSessionStamp).count() > 0
+            assert db.query(AutoCodeSentQuote).count() > 0
         finally:
             db.close()
 
@@ -752,7 +752,7 @@ class TestRemoveFramework:
         assert resp.status_code == 200, resp.text
         db = app.state.db_factory()
         try:
-            assert db.query(AutoCodeSessionStamp).count() == 0
+            assert db.query(AutoCodeSentQuote).count() == 0
             assert db.query(ProposedTag).count() == 0
             assert db.query(AutoCodeJob).count() == 0
         finally:

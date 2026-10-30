@@ -66,7 +66,9 @@ def test_migrations_023_and_024_upgrade_an_existing_database() -> None:
 
     assert "signal_snapshots" in inspect(engine).get_table_names()
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "024"
+        # 025 is the AutoCode sent-quote register (ruling 4); this test pins that the
+        # chain from 022 runs, not which revision is the head.
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() == "025"
 
 
 def test_migration_024_adds_evidence_assertions_to_a_pre_024_cache_table() -> None:

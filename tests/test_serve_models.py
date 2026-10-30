@@ -98,7 +98,7 @@ class TestTableCreation:
         "signal_snapshots",
         "import_conflicts",
         "autocode_jobs",
-        "autocode_session_stamps",
+        "autocode_sent_quotes",
         "proposed_tags",
         "tag_prompts",
         "tag_prompt_decisions",

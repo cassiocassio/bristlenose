@@ -4,6 +4,10 @@ Until 022 one timestamp per codebook said which sessions it had coded: those
 first imported at or before ``AutoCodeJob.completed_at``. The backfill writes a
 stamp for exactly those, so an upgraded project's next re-apply sends what it
 would have sent before, and nothing it had already paid for.
+
+Migration 025 replaced the stamps with a register of sent quotes and dropped the
+table, so what these tests read is the register that comes out of the whole chain:
+a quote of a session 022 stamped is on it, and one of a session it did not is not.
 """
 
 from __future__ import annotations
@@ -30,9 +34,10 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
     db.close()
     with engine.connect() as conn:  # roll the fresh DB back to how 021 left it
         conn.connection.dbapi_connection.execute("PRAGMA foreign_keys=OFF")
-        conn.execute(sa.text("DROP TABLE autocode_session_stamps"))
+        conn.execute(sa.text("DROP TABLE autocode_sent_quotes"))
         conn.execute(sa.text("UPDATE alembic_version SET version_num = '021'"))
         sessions = {}
+        quotes = {}
         for sid, imported in (("s1", "2019-06-01 00:00:00"), ("s2", "2021-01-01 00:00:00"),
                               ("s3", None)):
             sessions[sid] = _insert(
@@ -41,6 +46,14 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
                 " duration_seconds, has_media, has_video, first_imported_at)"
                 " VALUES (1, :sid, 1, 0, 0, 0, :imported)",
                 sid=sid, imported=imported,
+            )
+            quotes[sid] = _insert(
+                conn,
+                "INSERT INTO quotes (project_id, session_id, participant_id,"
+                " start_timecode, end_timecode, text, verbatim_excerpt, topic_label,"
+                " quote_type, intensity, segment_index)"
+                " VALUES (1, :sid, 'p1', 1, 2, 'q', '', '', 'screen_specific', 1, -1)",
+                sid=sid,
             )
         applied = _insert(
             conn,
@@ -98,16 +111,16 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
 
     with engine.connect() as conn:
         rows = conn.execute(sa.text(
-            "SELECT job_id, session_id FROM autocode_session_stamps")).all()
+            "SELECT job_id, quote_id FROM autocode_sent_quotes")).all()
         completed = dict(conn.execute(sa.text(
             "SELECT id, completed_at FROM autocode_jobs")).all())
         version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
     # At or before the watermark, and the sessions with no import time, which the
     # watermark never selected: stamped. After it: owed. Never applied: nothing.
     assert sorted(rows) == sorted([
-        (applied, sessions["s1"]), (applied, sessions["s3"]),
-        (stopped_catch_up, sessions["s1"]), (stopped_catch_up, sessions["s3"]),
-        (coded_after_a_stop, sessions["s1"]), (coded_after_a_stop, sessions["s3"]),
+        (applied, quotes["s1"]), (applied, quotes["s3"]),
+        (stopped_catch_up, quotes["s1"]), (stopped_catch_up, quotes["s3"]),
+        (coded_after_a_stop, quotes["s1"]), (coded_after_a_stop, quotes["s3"]),
     ])
     # The stopped first apply is not applied (#65): nothing maintains it, and
     # Apply can retry it. The stopped catch-up keeps its job's time.
@@ -121,11 +134,14 @@ def test_stamps_backfill_from_the_watermark(tmp_path: Path) -> None:
 
 
 def test_a_fresh_database_upgrades_cleanly(tmp_path: Path) -> None:
-    """On a fresh DB ``create_all`` has made the table before 022 runs."""
+    """On a fresh DB ``create_all`` has made the register and never the stamps,
+    which 022 would create and 025 drop."""
     from bristlenose.server.db import init_db, run_migrations
 
     engine = sa.create_engine(f"sqlite:///{tmp_path / 'new.db'}")
     init_db(engine)
     run_migrations(engine)
     with engine.connect() as conn:
-        assert "autocode_session_stamps" in sa.inspect(conn).get_table_names()
+        tables = sa.inspect(conn).get_table_names()
+    assert "autocode_sent_quotes" in tables
+    assert "autocode_session_stamps" not in tables

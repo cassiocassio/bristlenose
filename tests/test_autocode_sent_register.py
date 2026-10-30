@@ -1,11 +1,14 @@
-"""AutoCode per-session stamps (RE#66, decisions #60–#67, 22 Oct 2026).
+"""AutoCode's register of sent quotes (RE#66, decisions #60–#67, 22 Oct 2026;
+ruling 4, 30 Oct 2026).
 
-A session counts as coded by a codebook only when every one of its quotes was
-sent in a batch that answered. Until then it is owed, and the next re-apply (a
-finished run's, or the catch-up on switching the codebook back on) codes its
-quotes that have no proposal yet. Before this, one watermark per codebook
-(``AutoCodeJob.completed_at``) said which sessions were done, and a pass where
-some batches failed moved it past them for good.
+A quote counts as coded by a codebook when it was sent in a batch that answered,
+whether or not the model tagged it. Until then it is owed, and the next re-apply
+(a finished run's, the catch-up on switching the codebook back on, or the one a
+quote starting to count schedules) sends it. Before this, one stamp per session
+said a session was done whatever it held, and before that one watermark per
+codebook (``AutoCodeJob.completed_at``) did, which a partial failure moved past
+the sessions it never coded. A "session is coded" below means every quote of it
+that counts is on the register.
 
 No LLM is called: ``LLMClient`` is patched.
 """
@@ -30,7 +33,7 @@ from bristlenose.server.codebook import get_template
 from bristlenose.server.db import Base, get_engine
 from bristlenose.server.models import (
     AutoCodeJob,
-    AutoCodeSessionStamp,
+    AutoCodeSentQuote,
     CodebookGroup,
     Project,
     ProjectCodebookGroup,
@@ -179,15 +182,15 @@ def _first_apply(factory, analyze: AsyncMock, framework: str = "garrett") -> Non
 
 
 def _stamped(factory, framework: str = "garrett") -> set[str]:
+    """The sessions the job has sent quotes from and owes nothing in."""
     db = factory()
     try:
+        job = db.query(AutoCodeJob).filter_by(framework_id=framework).one()
+        sent = ac.sent_quote_ids(db, job.id)
+        owed = {q.session_id for q in ac.owed_quotes(db, job)}
         return {
-            row[0]
-            for row in db.query(Session.session_id)
-            .join(AutoCodeSessionStamp, AutoCodeSessionStamp.session_id == Session.id)
-            .join(AutoCodeJob, AutoCodeJob.id == AutoCodeSessionStamp.job_id)
-            .filter(AutoCodeJob.framework_id == framework)
-        }
+            row[0] for row in db.query(Quote.session_id).filter(Quote.id.in_(sent))
+        } - owed
     finally:
         db.close()
 
@@ -214,8 +217,8 @@ def _count(factory, model) -> int:  # type: ignore[no-untyped-def]
         db.close()
 
 
-class TestSessionStamps:
-    def test_a_first_apply_stamps_the_sessions_it_coded(self, factory) -> None:
+class TestTheRegister:
+    def test_a_first_apply_registers_the_quotes_it_sent(self, factory) -> None:
         _session(factory, "s1", imported=_EARLY)
         _session(factory, "s2", imported=_EARLY)
         _first_apply(factory, _answer_all())
@@ -261,7 +264,7 @@ class TestSessionStamps:
         assert llm.prompts() == []
 
     def test_a_session_with_no_quotes_starts_no_catch_up(self, factory) -> None:
-        """An unstamped session with nothing to code is not owed: a catch-up chip
+        """A session with no quotes is not owed: a catch-up chip
         over it would say "Re-coded" over nothing."""
         from bristlenose.server.routes.data import _start_catch_ups
 
@@ -271,6 +274,52 @@ class TestSessionStamps:
         db = factory()
         try:
             assert _start_catch_ups(db, 1, ["garrett"]) == []
+        finally:
+            db.close()
+
+
+    def test_a_session_split_across_batches_registers_each_quote_on_its_own(
+        self, factory
+    ) -> None:
+        """The stamp was per session, so one failed batch left every quote of the
+        session unproven. The answered batch's quotes are on the register; only the
+        failed batch's are owed."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        _session(factory, "s2", n=4)  # two batches: q0-q1, q2-q3
+
+        async def second_batch_fails(**kw: object) -> AutoCodeBatchResult:
+            if "quote s2-2" in str(kw["user_prompt"]):
+                raise RuntimeError("rate limited")
+            return _result(2)
+
+        with _LLM(AsyncMock(side_effect=second_batch_fails)):
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        db = factory()
+        try:
+            owed = sorted(q.text for q in ac.owed_quotes(db, _job(factory)))
+        finally:
+            db.close()
+        assert owed == ["ok quote s2-2", "ok quote s2-3"]
+
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert len(llm.prompts()) == 1
+        assert "s2-2" in llm.prompts()[0] and "s2-0" not in llm.prompts()[0]
+
+    def test_putting_a_quote_on_the_register_twice_is_harmless(self, factory) -> None:
+        """(job, quote) is unique, and a duplicate raised at commit takes the
+        proposals it travels with."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        db = factory()
+        try:
+            job = _job(factory)
+            quote_ids = [q.id for q in db.query(Quote)]
+            ac.record_sent(db, job.id, quote_ids)
+            ac.record_sent(db, job.id, quote_ids)
+            db.commit()
+            assert db.query(AutoCodeSentQuote).count() == len(quote_ids)
         finally:
             db.close()
 
@@ -448,7 +497,7 @@ class TestReapplyWaitsOnlyOnItsOwnCatchUp:
         assert order == ["norman re-applied", "garrett catch-up ends", "garrett re-applied"]
 
 
-class TestRemovingWhatAStampPointsAt:
+class TestRemovingWhatARegisterRowPointsAt:
     def test_a_catch_up_whose_codebook_is_uninstalled_stops_sending(self, factory) -> None:
         """Its per-batch check read a missing job as "not stopped" and paid for
         every batch left, all of it rolled back at the end."""
@@ -495,7 +544,7 @@ class TestRemovingWhatAStampPointsAt:
     ) -> None:
         """An uninstall deletes the job while a re-apply codes: its finishing
         UPDATE touches no row, which read as a Stop, and the Stop's commit of
-        proposals and stamps against the deleted job failed on the foreign key
+        proposals and register rows against the deleted job failed on the foreign key
         and was logged as a failed re-apply."""
         _session(factory, "s1", imported=_EARLY)
         _first_apply(factory, _answer_all())
@@ -513,7 +562,7 @@ class TestRemovingWhatAStampPointsAt:
             assert asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings())) == 0
         assert "Re-apply failed" not in caplog.text
         assert _count(factory, ProposedTag) == 0
-        assert _count(factory, AutoCodeSessionStamp) == 0
+        assert _count(factory, AutoCodeSentQuote) == 0
         assert _count(factory, QuoteTag) == 0
 
 
@@ -665,13 +714,13 @@ class TestApplyKeepsANeverAppliedJobsWork:
 
     def test_a_fully_proposed_corpus_completes_without_a_call(self, factory) -> None:
         """The Stop landed on the last batch; and, as migration 022 leaves an
-        old stopped first apply, no stamps: proposed quotes are coded all the
-        same, and their sessions are stamped now."""
+        old stopped first apply, no register rows: proposed quotes are coded all
+        the same."""
         _session(factory, "s1")
         _session(factory, "s2")
         _stopped_first_apply(factory, stop_on="s2-0", tagged=2)
         db = factory()
-        db.query(AutoCodeSessionStamp).delete()
+        db.query(AutoCodeSentQuote).delete()
         db.commit()
         db.close()
 
@@ -684,16 +733,15 @@ class TestApplyKeepsANeverAppliedJobsWork:
         assert job.status == "completed" and job.completed_at is not None
         assert (job.total_quotes, job.processed_quotes, job.proposed_count) == (4, 4, 4)
 
-    def test_proposed_quotes_are_skipped_without_a_stamp(self, factory) -> None:
+    def test_proposed_quotes_are_skipped_without_a_register_row(self, factory) -> None:
         """Migration 022 un-applies an old stopped first apply before its backfill,
-        so its sessions carry no stamp: what has a proposal is still not sent,
-        and a session all of whose quotes have one is stamped by this pass."""
+        so its quotes are on no register: what has a proposal is still not sent."""
         _session(factory, "s1")
         _session(factory, "s2")
         _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
         _review(factory, {"s1-0": "denied"})
         db = factory()
-        db.query(AutoCodeSessionStamp).delete()
+        db.query(AutoCodeSentQuote).delete()
         db.commit()
         db.close()
 
@@ -781,29 +829,25 @@ class TestApplyWaitsForAStoppedRunner:
     def test_a_stop_while_nothing_is_left_to_send_stands(self, factory) -> None:
         _session(factory, "s1")
         _stopped_first_apply(factory, stop_on="s1-0", tagged=2)
-        real = ac._session_pks
+        real = ac.sent_quote_ids
 
-        def stop_meanwhile(*args: object) -> list[int]:
-            _set_status(factory, "cancelled")
+        def stop_meanwhile(*args: object) -> set[int]:
+            _set_status(factory, "cancelled")  # after the job began, before it finishes
             return real(*args)  # type: ignore[arg-type]
 
-        with patch.object(ac, "_session_pks", side_effect=stop_meanwhile):
+        with patch.object(ac, "sent_quote_ids", side_effect=stop_meanwhile):
             _apply(factory, _answer_all())
         job = _job(factory)
         assert (job.status, job.completed_at) == ("cancelled", None)
 
 
 class TestQuoteAddedToACodedSession:
-    """N89: the stamp says a session was coded, not which quotes it held. A quote
-    added to it afterwards (a re-run cut a new one) is in no batch and has no
-    proposal, and the session reads as done, so neither a re-apply nor the
-    catch-up on switching the codebook back on ever sends it."""
+    """N89: the per-session stamp said a session was coded, not which quotes it
+    held. A quote added to it afterwards (a re-run cut a new one) was in no batch
+    and had no proposal, and the session read as done, so neither a re-apply nor
+    the catch-up on switching the codebook back on ever sent it. The register is
+    per quote: it is owed."""
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="N89: owed_sessions() asks only whether a session has a stamp; the stamp "
-        "records no quote ids, so a quote added to a stamped session is never owed",
-    )
     def test_a_quote_added_to_a_coded_session_is_coded_by_the_next_re_apply(
         self, factory
     ) -> None:
@@ -828,8 +872,8 @@ class TestQuoteAddedToACodedSession:
         )
 
     def test_the_cost_gate_this_row_must_not_break(self, factory) -> None:
-        """A quote the model answered no tag for stays unsent in a coded session:
-        the stamp is what stops it being paid for twice."""
+        """A quote the model answered no tag for is on the register all the same:
+        that is what stops it being paid for twice."""
         _session(factory, "s1", imported=_EARLY)
         _first_apply(factory, AsyncMock(side_effect=lambda **_kw: _result(1)))  # tags q0 only
         with _LLM(_answer_all()) as llm:
@@ -918,7 +962,7 @@ class TestHiddenQuotesCountNowhere:
         assert "s2-1" not in "".join(_proposals(factory))
 
     def test_a_session_whose_every_quote_is_hidden_is_not_owed(self, factory) -> None:
-        """It is not stamped as coded either: unhide a quote and it is owed."""
+        """It is not registered as sent either: unhide a quote and it is owed."""
         _session(factory, "s1", imported=_EARLY)
         _first_apply(factory, _answer_all())
         _session(factory, "s2")
@@ -926,7 +970,7 @@ class TestHiddenQuotesCountNowhere:
         _hide(factory, "s2", 1)
         db = factory()
         try:
-            assert ac.owed_sessions(db, _job(factory)) == {}
+            assert ac.owed_quotes(db, _job(factory)) == []
         finally:
             db.close()
         with _LLM(_answer_all()) as llm:
@@ -938,12 +982,12 @@ class TestHiddenQuotesCountNowhere:
         db.query(QuoteState).filter_by(is_hidden=True).update({"is_hidden": False})
         db.commit()
         try:
-            assert list(ac.owed_sessions(db, _job(factory))) == ["s2"]
+            assert {q.session_id for q in ac.owed_quotes(db, _job(factory))} == {"s2"}
         finally:
             db.close()
 
-    def test_a_recoded_out_session_is_not_stamped_as_coded(self, factory) -> None:
-        """A re-apply that sends nothing for a session must not mark it done:
+    def test_a_recoded_out_session_is_not_registered_as_sent(self, factory) -> None:
+        """A re-apply that sends nothing for a session must not register it:
         undo the recode and its quotes are evidence again, still uncoded."""
         _session(factory, "s1", imported=_EARLY)
         _first_apply(factory, _answer_all())
@@ -951,7 +995,7 @@ class TestHiddenQuotesCountNowhere:
         _recode_out(factory, "s2")
         db = factory()
         try:
-            assert ac.owed_sessions(db, _job(factory)) == {}
+            assert ac.owed_quotes(db, _job(factory)) == []
         finally:
             db.close()
         with _LLM(_answer_all()) as llm:
@@ -1013,3 +1057,84 @@ class TestHiddenQuotesCountNowhere:
         db.commit()
         db.close()
         assert client.get("/api/projects/1/autocode/garrett/proposals").json()["total"] == 2
+
+
+# ── Ruling 4 (30 Oct 2026): a register of the quotes that were sent ──────────
+
+
+def _unhide_all(factory) -> None:
+    db = factory()
+    db.query(QuoteState).filter_by(is_hidden=True).update({"is_hidden": False})
+    db.commit()
+    db.close()
+
+
+def _tags(factory) -> list[tuple[str, str]]:
+    """``(quote text tail, QuoteTag.source)`` for every tag on a quote."""
+    db = factory()
+    try:
+        return sorted(
+            (text.split(" quote ")[1], source)
+            for text, source in db.query(Quote.text, QuoteTag.source)
+            .join(QuoteTag, QuoteTag.quote_id == Quote.id)
+        )
+    finally:
+        db.close()
+
+
+class TestAQuoteThatCountsAgainIsCodedWithoutAskingTheResearcher:
+    """N175's residue and N89, closed by one register: the quote was not sent, so
+    it is owed, and it is sent at the stored cutoff the moment it counts."""
+
+    def test_a_quote_hidden_at_apply_is_coded_when_it_is_unhidden(self, factory) -> None:
+        _session(factory, "s1", imported=_EARLY)
+        _hide(factory, "s1", 0)
+        _first_apply(factory, _answer_all())
+        assert _proposals(factory) == {"s1-1": "accepted"} or _proposals(factory) == {
+            "s1-1": "pending"
+        }
+
+        _unhide_all(factory)
+        with _LLM(_answer_all()) as llm:
+            accepted = asyncio.run(
+                reapply_to_new_quotes(factory, 1, "garrett", _settings(), track_status=True)
+            )
+        assert accepted == 1
+        assert "ok quote s1-0" in _sent(llm)
+        assert "ok quote s1-1" not in _sent(llm), "the quote that was sent is not sent again"
+        assert ("s1-0", "autocode") in _tags(factory)
+
+    def test_a_hidden_quote_is_sent_once_and_only_after_it_counts(self, factory) -> None:
+        _session(factory, "s1", imported=_EARLY)
+        _hide(factory, "s1", 0)
+        _first_apply(factory, _answer_all())
+        with _LLM(_answer_all()) as hidden:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert hidden.prompts() == [], "a quote that does not count is never sent"
+
+        _unhide_all(factory)
+        with _LLM(_answer_all()) as first:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        with _LLM(_answer_all()) as second:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert "ok quote s1-0" in _sent(first)
+        assert second.prompts() == [], "now on the register: not paid for twice"
+
+    def test_a_human_tag_on_the_quote_survives(self, factory) -> None:
+        _session(factory, "s1", imported=_EARLY)
+        q0 = _hide(factory, "s1", 0)
+        _first_apply(factory, _answer_all())
+        db = factory()
+        tag = db.query(TagDefinition).filter_by(name="user need").first()
+        assert tag is not None
+        db.add(QuoteTag(quote_id=q0, tag_definition_id=tag.id, source="human"))
+        db.commit()
+        db.close()
+
+        _unhide_all(factory)
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(
+                reapply_to_new_quotes(factory, 1, "garrett", _settings(), track_status=True)
+            )
+        assert "ok quote s1-0" in _sent(llm), "the catch-up reached the quote"
+        assert [t for t in _tags(factory) if t[0] == "s1-0"] == [("s1-0", "human")]

@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 from bristlenose.models import INAUDIBLE_TOKEN
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
-    AutoCodeSessionStamp,
+    AutoCodeSentQuote,
     ClusterQuote,
     CodebookGroup,
     DeletedBadge,
@@ -2894,6 +2894,11 @@ def _cleanup_stale_data(
         db.query(ProposedTag).filter(
             ProposedTag.quote_id.in_(stale_quote_ids)
         ).delete(synchronize_session="fetch")
+        # A register row says a codebook sent the quote (ruling 4); it goes with
+        # the quote, or the quote's delete fails on the foreign key.
+        db.query(AutoCodeSentQuote).filter(
+            AutoCodeSentQuote.quote_id.in_(stale_quote_ids)
+        ).delete(synchronize_session="fetch")
 
         # Delete join rows
         db.query(ClusterQuote).filter(
@@ -3006,11 +3011,6 @@ def _cleanup_stale_data(
         ).delete(synchronize_session="fetch")
         db.query(TopicBoundary).filter(
             TopicBoundary.session_id.in_(stale_session_db_ids)
-        ).delete(synchronize_session="fetch")
-        # An AutoCode stamp says a codebook coded the session (RE#66); it goes
-        # with it, or the session's delete fails on the foreign key.
-        db.query(AutoCodeSessionStamp).filter(
-            AutoCodeSessionStamp.session_id.in_(stale_session_db_ids)
         ).delete(synchronize_session="fetch")
 
         # SessionSpeaker + orphaned Person rows

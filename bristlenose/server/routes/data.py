@@ -1731,7 +1731,7 @@ def _start_catch_ups(
     mark their job "running" now.
 
     A framework catches up only if it has an applied job AND it owes at least one
-    session (a session with quotes and no stamp from the job; §4a). Setting the
+    quote (one that counts and is not on the job's register of sent quotes; §4a). Setting the
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
     where it would otherwise see the stale "completed" and resolve instantly. A
@@ -1740,7 +1740,7 @@ def _start_catch_ups(
     "running" with no task behind it is started again. Zeroes the catch-up's own
     counts, which the chip reads. Cheap: two indexed queries per framework, no LLM.
     """
-    from bristlenose.server.autocode import owed_sessions
+    from bristlenose.server.autocode import owed_quotes
     from bristlenose.server.models import AutoCodeJob
 
     started: list[str] = []
@@ -1761,7 +1761,7 @@ def _start_catch_ups(
             # while the switch is off, so an off-and-on during it leaves those
             # owed until the next run or switch-on.
             continue
-        if not owed_sessions(db, job):
+        if not owed_quotes(db, job):
             continue  # nothing owed → silent no-op
         job.status = "running"
         job.started_at = _now()

@@ -72,13 +72,24 @@ def _read_machine_id() -> str | None:
         return None
 
 
+# Zero-width joiner and non-joiner are format characters, but they are how family and
+# profession emoji are built and how Persian and Urdu words are spelt, so a Mac named
+# with them is shown, not blanked. Everything else invisible (bidi overrides, zero-width
+# space, word joiner) is refused.
+_JOINERS = frozenset({"\u200c", "\u200d"})
+
+
 def has_unsafe_display_character(text: str) -> bool:
-    """True for control and invisible format characters (bidi overrides, zero-width).
+    """True for control and invisible format characters (bidi overrides, zero-width space).
 
     A machine name read back from a synced file is shown in a refusal, so text
     that can reorder or hide what a person reads is refused, not displayed.
     """
-    return any(unicodedata.category(c) in ("Cc", "Cf") for c in text)
+    return any(
+        unicodedata.category(c) == "Cc"
+        or (unicodedata.category(c) == "Cf" and c not in _JOINERS)
+        for c in text
+    )
 
 
 def friendly_machine_name() -> str | None:

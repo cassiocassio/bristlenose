@@ -155,3 +155,9 @@ def test_a_display_name_with_invisible_or_control_characters_is_refused(monkeypa
     monkeypatch.setattr(identity.subprocess, "run", lambda *a, **k: SimpleNamespace(stdout=name + "\n"))
     assert identity.friendly_machine_name() is None
     assert not identity.has_unsafe_display_character("Cassio’s Mac Studio")
+
+
+@pytest.mark.parametrize("name", ["👨\u200d👩\u200d👧 Mac", "ایران\u200cمک"])
+def test_joiners_in_a_real_name_are_kept(name):
+    """Family emoji and Persian spelling need the joiners; refusing them blanks real names."""
+    assert not identity.has_unsafe_display_character(name)

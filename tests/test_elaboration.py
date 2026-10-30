@@ -752,3 +752,57 @@ class TestGenerateElaborations:
             result = await generate_elaborations([sig], "norman", settings, db, 1)
 
         assert "section|Home|Disco" not in result
+
+
+class TestCachedAssertionsAreFilteredElementWise:
+    """One unreadable cached assertion must not fail the project's elaboration."""
+
+    def _row(self, assertions_json: str):
+        from bristlenose.server.models import ElaborationCache
+
+        return ElaborationCache(
+            project_id=1, signal_key="section|Checkout|Friction", content_hash="h",
+            signal_name="Name", pattern="tension", elaboration="Claim. || Rest.",
+            evidence_assertions=assertions_json,
+        )
+
+    def _load(self, assertions_json: str, caplog):
+        from bristlenose.server.db import create_session_factory, get_engine, init_db
+        from bristlenose.server.elaboration import _load_cached
+        from bristlenose.server.models import Project
+
+        engine = get_engine("sqlite://")
+        init_db(engine)
+        db = create_session_factory(engine)()
+        try:
+            db.add(Project(name="P", slug="p", input_dir="/in", output_dir="/out"))
+            db.flush()
+            db.add(self._row(assertions_json))
+            db.commit()
+            with caplog.at_level("WARNING"):
+                return _load_cached(db, 1, [("section|Checkout|Friction", "h")])
+        finally:
+            db.close()
+
+    def test_a_readable_assertion_is_kept_and_an_unreadable_one_is_dropped_with_a_warning(
+        self, caplog,
+    ) -> None:
+        import json
+
+        good = {
+            "id": "ea_1", "ordinal": 0, "text": "t", "source_quote_id": "q_1",
+            "participant_id": "p1", "source_excerpt": "e", "intervention_fragment": None,
+        }
+        bad_missing_text = {k: v for k, v in good.items() if k != "text"}
+        bad_fragment = {**good, "id": "ea_2", "intervention_fragment": {"start": "x"}}
+        loaded = self._load(
+            json.dumps([good, bad_missing_text, bad_fragment, "not a dict", 7]), caplog,
+        )
+        assert [a["id"] for a in loaded["section|Checkout|Friction"].evidence_assertions] == ["ea_1"]
+        assert "Dropped 4 unreadable cached evidence assertion" in caplog.text
+
+    def test_the_headline_still_loads_when_every_assertion_is_unreadable(self, caplog) -> None:
+        loaded = self._load('[{"bad": true}]', caplog)
+        row = loaded["section|Checkout|Friction"]
+        assert row.signal_name == "Name" and row.evidence_assertions == []
+

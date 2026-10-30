@@ -7,8 +7,8 @@ defined in [README.md](README.md#lifecycle).
 to point at. `SUPERSEDED` and `ABANDONED` entries say *why* in a clause; that clause
 is what stops the same idea being proposed again.
 
-**All 240 register rows are classified** as of 30 Oct 2026 — 112 IMPLEMENTED ·
-36 SANDPIT · 21 SUPERSEDED · 26 PROPOSED · 7 PARKED · 1 ABANDONED ·
+**All 241 register rows are classified** as of 30 Oct 2026 — 112 IMPLEMENTED ·
+36 SANDPIT · 21 SUPERSEDED · 27 PROPOSED · 7 PARKED · 1 ABANDONED ·
 37 *unreviewed*. A new mockup
 should be added here when it lands, or it becomes the next backlog. Recount rather
 than adjust — a tally in prose is a tally nothing recomputes:
@@ -351,6 +351,7 @@ state is still evidenced, the day is not.
 | `signals-heading-hierarchy.html` | 21 Sep 2026 | PROPOSED 21 Sep 2026 · **IMPLEMENTED** 21 Sep 2026 in `b95bf62a` — **the answer was space, not type, and that is the whole point of keeping it.** The location heading and the card headline were byte-identical (`--bn-text-heading` / `--bn-weight-emphasis` / `--bn-colour-text`, measured 17px/490 on both), and eleven mechanisms were drawn over the shipped theme before one was picked. What shipped changed no type token at all. The rejections, so they are not re-proposed: **A** weight 490→420 is real but the faintest of the set (measured 3.63px on SF Pro at 17px, 1.91px on Inter at 18px); **B/F** muting the heading collides with the Codebooks navigator, where `--bn-colour-muted` means *this codebook is switched off*, and both lenses share the panel; **C** breaks the Quotes-lens `<h3>` size parity that `signals.css` states in writing; **D** borrows `h2`'s size without `h2`'s keyline; **E** uppercase was already rejected twice in shipped comments on cross-lens naming grounds; **G** `--bn-weight-starred` (520) is optically the same instance as 490 in SF Pro — measured +1.03px across a 28-character line, so there is no usable step up; **H** 700 is the page-title and destructive-verb weight; **K** the only “move the headline” option that reads needs a sixth weight token (Semibold ~600), which the ladder has no room for. Spec: the commit body |
 | `signals-sidebar-indent.html` | 21 Sep 2026 | PROPOSED 21 Sep 2026 · **IMPLEMENTED** 21 Sep 2026 in `b95bf62a` — the follow-on that picked the *value*, once the mechanism above was settled. Five indents over the real navigation (nine locations, thirteen rows, the shipped 280px panel); **each column measures itself on load**, so its costs cannot go stale the way a number in prose does. `--bn-space-md` (12px) shipped. Rejected: **14px**, the Mac app's own `indentationPerLevel` (`ProjectSidebarOutline.swift`, and `CloudImportOutlineView` repeats it) — indistinguishable from 12px in cost and appearance, and two pixels does not buy a sixth spacing token; **24px** (`--bn-space-lg`, the literal mirror of the card's own padding) costs eight of thirteen rows a second line and grows the panel two fifths. Also settles a question that will be asked again: the spacing ladder is **not** an 8px grid — 2.4 / 5.6 / 12 / 24 / 32, rem-round and roughly doubling, with no step between sm and md, and no macOS derivation (it predates the Mac app by five months) |
 | `signals-heatmap-sticky-pane.html` | 26 Sep 2026 | *unreviewed* |
+| `signals-follow-hide.html` | 30 Oct 2026 | PROPOSED 30 Oct 2026 — how a Signals card follows a researcher's hide: shown set refills from the remaining ranked quotes (shipped cap of 4), the "Show all N" count and the contribution cells derive from what remains, and a parked hidden-quotes control reuses the Quotes lens counter. Real theme CSS and shipped strings; behaviour not built, no owner approval yet. |
 
 ## type
 

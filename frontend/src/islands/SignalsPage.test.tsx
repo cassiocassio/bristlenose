@@ -393,12 +393,15 @@ describe("SignalsPage", () => {
     expect(screen.queryByText("Sentiment signals")).toBeNull();
     expect(screen.queryByText("Tag signals")).toBeNull();
 
-    const headings = [...document.querySelectorAll(".signals-codebook-heading")]
-      .map((n) => n.textContent);
-    expect(headings.length).toBeGreaterThan(0);
-    expect(headings).toContain("Checkout");
-    // Every card sits under one of those headings.
-    expect(document.querySelectorAll(".signal-cards").length).toBe(headings.length);
+    // Each page is one section or theme, and its title is that place, once.
+    const title = document.querySelector(".signals-center > .section-heading") as HTMLElement;
+    expect(title.textContent?.trim()).not.toBe("Signals");
+    expect(document.querySelectorAll(".signals-codebook-heading")).toHaveLength(0);
+    // One run of cards per place, each place a section of its own.
+    const places = [...document.querySelectorAll(".signal-compound-page")];
+    expect(places.length).toBeGreaterThan(0);
+    expect(places.map((n) => n.getAttribute("aria-label"))).toContain(title.textContent?.trim());
+    expect(document.querySelectorAll(".signal-cards").length).toBe(places.length);
   });
 
   // The flush-to-datum contract, cheap. e2e/tests/lens-datum.spec.ts is the
@@ -976,7 +979,7 @@ describe("SignalsPage", () => {
     });
 
     const link = document
-      .querySelector(".signals-codebook-heading a.signal-card-location-link") as HTMLElement;
+      .querySelector(".signals-center > .section-heading a.signal-card-location-link") as HTMLElement;
     expect(link).toBeTruthy();
 
     // Cmd+click (Mac) — should NOT intercept
@@ -998,7 +1001,7 @@ describe("SignalsPage", () => {
   // tells the researcher most was the one that could not hand them the quotes
   // — and no fixture in this file carried a signal_name, which is why nothing
   // caught it.
-  it("a location's heading is the link to the quotes lens, and the card carries none", async () => {
+  it("the page title is the place, it links to the quotes lens, and the card carries no link", async () => {
     mockFetchCodebookSignals(mockCbData);
     (window as unknown as Record<string, unknown>).switchToTab = vi.fn();
     (window as unknown as Record<string, unknown>).scrollToAnchor = vi.fn();
@@ -1008,8 +1011,8 @@ describe("SignalsPage", () => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
-    // The link lives on the heading, once per location — not once per card.
-    const heading = document.querySelector(".signals-codebook-heading") as HTMLElement;
+    // The link is the page's title, once: not once per card, and not a second heading.
+    const heading = document.querySelector(".signals-center > .section-heading") as HTMLElement;
     const link = heading.querySelector("a.signal-card-location-link") as HTMLElement;
     expect(link).toBeTruthy();
     expect(link.textContent).toBe("Checkout");
@@ -1047,7 +1050,7 @@ describe("SignalsPage", () => {
     });
 
     const link = document
-      .querySelector(".signals-codebook-heading a.signal-card-location-link") as HTMLElement;
+      .querySelector(".signals-center > .section-heading a.signal-card-location-link") as HTMLElement;
     for (const card of screen.getAllByTestId("bn-signal-card")) {
       expect(card.contains(link)).toBe(false);
     }
@@ -1221,7 +1224,7 @@ describe("SignalsPage", () => {
       expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
     });
 
-    const heading = document.querySelector(".signals-codebook-heading") as HTMLElement;
+    const heading = document.querySelector(".signals-center > .section-heading") as HTMLElement;
     const location = heading.textContent?.trim();
     expect(location).toBeTruthy();
 

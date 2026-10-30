@@ -166,7 +166,7 @@
     transition: background var(--bn-focus-dur) var(--bn-focus-ease);
 }
 
-.bn-focus-ready .signals-codebook-heading,
+.bn-focus-ready .signals-center > .section-heading,
 .bn-focus-ready .signal-card-location,
 .bn-focus-ready .signal-elaboration,
 .bn-focus-ready .signal-card-hero,
@@ -203,7 +203,7 @@
    evidence. Chosen over keeping them lit (docs/design-focus-mode-signals.md
    § 3): lit, the same key would privilege the machine's words here and the
    participants' words one lens over. */
-.bn-focus-mode .signals-codebook-heading,
+.bn-focus-mode .signals-center > .section-heading,
 .bn-focus-mode .signal-card-location,
 .bn-focus-mode .signal-elaboration {
     opacity: var(--bn-focus-heading-opacity);
@@ -258,8 +258,8 @@
 .bn-focus-mode .signal-card:focus-within .signal-card-location,
 .bn-focus-mode .signal-card:hover .signal-elaboration,
 .bn-focus-mode .signal-card:focus-within .signal-elaboration,
-.bn-focus-mode .signals-codebook-heading:hover,
-.bn-focus-mode .signals-codebook-heading:focus-within {
+.bn-focus-mode .signals-center > .section-heading:hover,
+.bn-focus-mode .signals-center > .section-heading:focus-within {
     opacity: 1;
 }
 
@@ -319,7 +319,7 @@
     }
 
     /* The Signals lens, same reasoning. */
-    .bn-focus-mode .signals-codebook-heading,
+    .bn-focus-mode .signals-center > .section-heading,
     .bn-focus-mode .signal-card-location,
     .bn-focus-mode .signal-elaboration,
     .bn-focus-mode .signal-card-hero,
@@ -357,7 +357,7 @@
     .bn-focus-ready .description,
     .bn-focus-ready .signal-card,
     .bn-focus-ready .signal-card-quotes,
-    .bn-focus-ready .signals-codebook-heading,
+    .bn-focus-ready .signals-center > .section-heading,
     .bn-focus-ready .signal-card-location,
     .bn-focus-ready .signal-elaboration,
     .bn-focus-ready .signal-card-hero,

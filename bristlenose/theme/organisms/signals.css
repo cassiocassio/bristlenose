@@ -546,26 +546,6 @@ button.signal-card-toggle {
     margin-bottom: var(--bn-space-xl);
 }
 
-/* The first one follows the lens's zone title, which already carries the
-   space beneath it — a second lead-in on top of that opens a gap no other
-   lens has. */
-.signals-center > .signals-codebook-heading:first-of-type {
-    margin-top: 0;
-}
-
-/* The location, named once. It is the same object the Quotes lens names with
-   an <h3>, and this heading LINKS to that one — so it takes the same token
-   rather than a smaller one. The sidebar stays at --bn-text-caption because
-   that is navigation; this is content. No bottom rule: the Quotes lens has
-   none, and the fused stack below already draws its own edge. */
-.signals-codebook-heading {
-    font-size: var(--bn-text-heading);
-    line-height: var(--bn-text-heading-lh);
-    font-weight: var(--bn-weight-emphasis);
-    color: var(--bn-colour-text);
-    max-width: var(--bn-max-width);
-    margin: var(--bn-space-lg) 0 var(--bn-space-sm);
-}
 
 .signals-heatmap-label {
     font-size: var(--bn-text-label);

@@ -1161,7 +1161,8 @@ function adaptSentimentMatrix(m: {
 // ── Main Component ─────────────────────────────────────────────────────
 
 /**
- * A location's heading, and the lens's only link to the Quotes lens.
+ * The page's title is its section or theme, and that title is the lens's only link to the
+ * Quotes lens. (Each page is one section or theme, so "Signals" says less than the place does.)
  *
  * The link used to sit on every card under this heading, which meant the same
  * destination repeated once per card and the location printed three times in a
@@ -1171,20 +1172,18 @@ function adaptSentimentMatrix(m: {
  * the group's durable id, so a section the researcher renamed is still found:
  * a slug of its name would point at whichever name the link was built from.
  */
-function LocationHeading({ location, anchor }: { location: string; anchor: string }) {
+function LocationTitleLink({ location, anchor }: { location: string; anchor: string }) {
   return (
-    <div className="signals-codebook-heading">
-      {/* The Quotes lens's own address for the group: it shows Sections & themes for the
-          visit whatever grouping was remembered (docs/design-transcript-gutter.md, "Arrival"). */}
-      <a
-        href={quotesHref(anchor)}
-        className="signal-card-location-link"
-        onClick={(e) => followInApp(e, quotesPath(anchor))}
-        {...placeProps(quotesPlace(quotesPath(anchor)))}
-      >
-        {location}
-      </a>
-    </div>
+    // The Quotes lens's own address for the group: it shows Sections & themes for the
+    // visit whatever grouping was remembered (docs/design-transcript-gutter.md, "Arrival").
+    <a
+      href={quotesHref(anchor)}
+      className="signal-card-location-link"
+      onClick={(e) => followInApp(e, quotesPath(anchor))}
+      {...placeProps(quotesPlace(quotesPath(anchor)))}
+    >
+      {location}
+    </a>
   );
 }
 
@@ -1590,11 +1589,9 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
         {/* ── Signal cards, in the navigation's order ────────────
              One run of locations, ranked by their strongest signal, cards
              ranked within. It used to be two flat grids split by KIND, so a
-             place appeared in both halves and nowhere as itself, and every
-             card repeated its location because nothing above it said where it
-             was. The heading is `.signals-codebook-heading` — the class the
-             lens already had for exactly this weight of statement; no new
-             heading style was invented for this. The heatmaps do not live in
+             place appeared in both halves and nowhere as itself. Each page is now
+             ONE place: the page's title is the section or theme (and links to its
+             quotes), so no heading repeats it above the cards. The heatmaps do not live in
              this column at all: they are InspectorPanel's, rendered below. */}
         {/* The lens's zone title, and its FLUSH-TO-DATUM enrolment.
             `.signals-center > .section-heading:first-of-type { margin-top: 0 }`
@@ -1605,7 +1602,13 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
             for a LENS title, which is why removing it took the datum with it.
             e2e/tests/lens-datum.spec.ts is the gate, and no unit test can see a
             CSS selector failing to match. */}
-        <SectionHeading>{t("signals.heading")}</SectionHeading>
+        <SectionHeading>
+          {activePlace ? (
+            <LocationTitleLink location={activePlace.location} anchor={activePlace.cards[0].anchor} />
+          ) : (
+            t("signals.heading")
+          )}
+        </SectionHeading>
         {sourceBreakdown && <SourceBanner breakdown={sourceBreakdown} />}
         {places.map(({ location, cards }) => (
           <section
@@ -1614,7 +1617,6 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
             hidden={location !== activePlace?.location}
             aria-label={location}
           >
-            <LocationHeading location={location} anchor={cards[0].anchor} />
             <div className="signal-cards">
               {cards.map((s) => (
                 <SignalCard

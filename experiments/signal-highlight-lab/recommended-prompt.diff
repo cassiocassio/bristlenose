@@ -1,0 +1,101 @@
+--- a/bristlenose/llm/prompts/signal-elaboration.md	2026-10-30 17:04:20
++++ b/bristlenose/llm/prompts/signal-elaboration.md	2026-10-30 17:05:01
+@@ -1,6 +1,6 @@
+ ---
+ id: signal-elaboration
+-version: 0.5.0
++version: 0.6.0
+ ---
+ # Signal Elaboration
+ 
+@@ -114,11 +114,21 @@
+ Write each assertion as one or two short sentences. **Never use an em dash, an en dash or a spaced hyphen to join clauses in an assertion**; use a full stop or a semicolon instead.
+ 
+ Each assertion **must contain one intervention fragment whenever its source
+-quote supports an actionable product/system cause**. This is not
+-the strongest emotional word. It is one contiguous, intelligible causal unit
+-which names the product/system property, behaviour or omission that explains
+-why this quote supports the signal.
++quote supports an actionable product/system cause**. The fragment is a pointer,
++not a summary: the card colours it, and a click on it jumps to the participant's
++quote. It is the shortest phrase that names the product/system property,
++behaviour or omission that explains why this quote supports the signal. Most of
++the assertion stays unmarked.
+ 
++**Keep it short.** At most 5 words, and never more than a quarter of the
++assertion's words. It is **one noun phrase or one verb phrase, never a clause
++and never a whole sentence**. Leave out the subject ("a participant"), verbs of
++reporting ("said", "found that", "expressed"), connecting words and the outcome
++that follows the cause. Keep a verb only when the noun phrase alone would not
++say what the product did. It must be characters that really appear in the
++assertion's `text`; the assertion paraphrases the participant, so the
++participant's own words are usually not in it.
++
+ Write the assertion in a compact cause-and-effect form so that the mechanism
+ is actually present in its text. Do not write only an outcome such as “a
+ participant was confused” and then return `null`: name what the product did or
+@@ -128,10 +138,16 @@
+   checkout would do.” → fragment: “Conflicting minimum-order figures”
+ - “The bag withheld delivery cost and timing until postcode entry, frustrating
+   a participant who needed both to decide.” → fragment: “withheld delivery
+-  cost and timing until postcode entry”
++  cost and timing”
+ - “Click-and-collect was not made clear, so a participant assumed delivery was
+   the only route.” → fragment: “was not made clear”
+ 
++Before you write each assertion's fragment, fill `quote_fragment`: copy, from the
++participant's quote, the shortest fragment (at most 5 words) that carries the
++evidence. Then choose the words in the assertion that say the same thing. This
++step is scratch work; it is not shown or stored. Do it first, because without it
++fragments run to half the sentence.
++
+ If a quote has no actionable product/system cause, omit the assertion entirely
+ rather than returning a cause-free assertion with a `null` fragment. Every
+ assertion returned should therefore normally include exactly one fragment.
+@@ -147,8 +163,7 @@
+ product/system cause. Prefer the
+ underlying mechanism over generic emotion, participant intention, a participant
+ mistake, or a later outcome. Do not select only an adjective or a tag word.
+-Keep the verb/relation needed to make the fragment intelligible. Return one
+-contiguous fragment or none; never two fragments.
++Return one contiguous fragment or none; never two fragments.
+ 
+ `source_quote_id` is the complete provenance pointer; do not return a second
+ copy of the quote or a `source_excerpt`. `start`, `end` and `text` must point
+--- a/bristlenose/llm/structured.py	2026-10-30 17:04:20
++++ b/bristlenose/llm/structured.py	2026-10-30 17:05:01
+@@ -294,7 +294,12 @@
+ 
+     start: int = Field(ge=0, description="0-based start offset in assertion_text")
+     end: int = Field(gt=0, description="Exclusive end offset in assertion_text")
+-    text: str = Field(description="Exact assertion_text substring from start to end")
++    text: str = Field(
++        description=(
++            "Exact assertion_text substring from start to end: the shortest noun or verb "
++            "phrase that names the mechanism, at most 5 words, never a clause"
++        )
++    )
+     rationale: str = Field(
+         description="One of: negative_actionable_cause, positive_enabling_cause"
+     )
+@@ -318,12 +323,19 @@
+             "Deprecated optional source hint. Provenance is the supplied "
+             "source_quote_id; the server derives the stored excerpt from that "
+             "canonical quote."
++        ),
++    )
++    quote_fragment: str = Field(
++        default="",
++        description=(
++            "Scratch step, written before intervention_fragment and never stored: the "
++            "shortest fragment (at most 5 words) of the source quote that carries the evidence"
+         ),
+     )
+     intervention_fragment: SignalEvidenceFragment | None = Field(
+         default=None,
+         description=(
+-            "One contiguous actionable product/system mechanism in text. Write evidence "
++            "One short contiguous actionable product/system mechanism in text. Write evidence "
+             "assertions only when this exists; null is allowed solely for a source with "
+             "no actionable mechanism, never merely because the assertion omitted it."
+         ),

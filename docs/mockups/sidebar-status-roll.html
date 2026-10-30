@@ -9,8 +9,8 @@
    REAL Bristlenose tokens, inlined verbatim from the shipped design system
    (bristlenose/theme/tokens.css + colors/palette-*.css), copied from
    codebook-library-states.html. The shimmer tokens and keyframes are copied
-   from tokens.css lines 315-321 and atoms/shimmer.css. Everything else in the
-   "bench" and "commentary" classes is mockup chrome, not product.
+   from tokens.css lines 315-321 and atoms/shimmer.css. Everything in the
+   "commentary", "bar" and "card strip" classes is mockup chrome, not product.
    ========================================================================= */
 :root {
   color-scheme: light dark;
@@ -63,75 +63,86 @@
 html,body { margin:0; padding:0; }
 body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body);
   font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
-.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+.wrap { max-width:1060px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
 h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 .eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
-.lede { color:var(--bn-colour-muted); max-width:68ch; margin:.3rem 0 1rem; }
-.key { display:flex; gap:.6rem; flex-wrap:wrap; margin:0 0 1.4rem; font-size:var(--bn-text-caption); font-family:var(--bn-font-mono); }
+.lede { color:var(--bn-colour-muted); max-width:70ch; margin:.3rem 0 1rem; }
+.key { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin:0 0 1.4rem; font-size:var(--bn-text-caption); font-family:var(--bn-font-mono); }
 .key span { padding:.2rem .6rem; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border); }
 .key .k-art { background:var(--bn-colour-quote-bg); }
 .key .k-com { background:repeating-linear-gradient(135deg, transparent 0 6px, var(--bn-colour-badge-bg) 6px 8px); }
+.key a { color:var(--bn-colour-accent); }
+h2.zone { font-weight:490; font-size:var(--bn-text-title); margin:2.2rem 0 .3rem; }
 
-/* ── COMMENTARY ZONE (not the product) ───────────────────────────────── */
+/* ── COMMENTARY ZONE (never the product) ─────────────────────────────── */
 .commentary { position:relative; margin:1.2rem 0 2rem; padding:1.1rem 1.4rem 1.2rem 1.5rem; border-left:4px solid var(--bn-colour-accent);
   background:repeating-linear-gradient(135deg, transparent 0 10px, var(--bn-colour-badge-bg) 10px 11px); border-radius:0 var(--bn-radius-lg) var(--bn-radius-lg) 0; }
 .commentary > .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-accent); margin-bottom:.4rem; }
 .commentary h2 { font-size:var(--bn-text-heading); font-weight:490; margin:1.3rem 0 .4rem; }
 .commentary h2:first-of-type { margin-top:.2rem; }
-.commentary p, .commentary li { font-size:var(--bn-text-label); max-width:78ch; }
-.commentary ul { padding-left:1.1rem; margin:.3rem 0; }
+.commentary p, .commentary li { font-size:var(--bn-text-label); max-width:80ch; }
+.commentary ul, .commentary ol { padding-left:1.2rem; margin:.3rem 0; }
 .commentary li { margin:.25rem 0; }
-.commentary .verdict { font-size:var(--bn-text-body); font-weight:490; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem .9rem; max-width:80ch; }
-.commentary table { border-collapse:collapse; width:100%; font-size:var(--bn-text-caption); background:var(--bn-colour-bg); }
+.commentary .verdict { font-size:var(--bn-text-body); font-weight:490; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem .9rem; max-width:82ch; }
+.commentary table { border-collapse:collapse; width:100%; font-size:var(--bn-text-caption); background:var(--bn-colour-bg); margin:.4rem 0; }
 .commentary th, .commentary td { text-align:left; vertical-align:top; padding:.4rem .55rem; border:1px solid var(--bn-colour-border); }
 .commentary th { font-weight:490; background:var(--bn-colour-quote-bg); }
 .commentary a { color:var(--bn-colour-accent); }
 .commentary code { font-family:var(--bn-font-mono); font-size:.92em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
 .st { font-family:var(--bn-font-mono); white-space:nowrap; }
+.pol-h { font-family:var(--bn-font-mono); font-weight:490; color:#b42318; }
+.pol-r { font-family:var(--bn-font-mono); font-weight:490; color:var(--bn-colour-accent); }
 
 /* ── BENCH CHROME (controls; not the product) ─────────────────────────── */
 .bar { position:relative; z-index:5; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
   padding:.6rem .8rem; display:flex; flex-wrap:wrap; gap:.55rem 1.2rem; align-items:center; margin:1rem 0; box-shadow:0 4px 14px var(--bn-colour-shadow); }
-@media (min-width:1100px) and (min-height:760px) { .bar { position:sticky; top:0; } }
 .grp { display:flex; gap:.3rem; align-items:center; flex-wrap:wrap; }
 .grp .lbl { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-right:.2rem; }
 .pbtn { font:inherit; font-size:var(--bn-text-caption); font-weight:490; padding:.2rem .6rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
   background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
 .pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
 .bar label { font-size:var(--bn-text-caption); display:flex; gap:.3rem; align-items:center; cursor:pointer; }
-.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.2rem 0 .8rem; max-width:90ch; }
+.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.2rem 0 .8rem; max-width:92ch; }
 .log { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.4rem .6rem; margin:.4rem 0 1rem; min-height:3.2em; }
 .log b { color:var(--bn-colour-text); font-weight:490; }
 .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
-.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem 1.2rem; }
-.fr { margin:0; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:1.1rem 1.2rem; }
+.card { display:flex; flex-direction:column; }
+.fr { margin:0; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg) var(--bn-radius-lg) 0 0; overflow:hidden; }
+.grid.plain .fr, .card .fr { }
 .chrome { display:flex; justify-content:space-between; gap:.6rem; padding:.3rem .6rem; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
   font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); border-bottom:1px solid var(--bn-colour-border); }
+.strip { flex:1; border:1px solid var(--bn-colour-border); border-top:none; border-radius:0 0 var(--bn-radius-lg) var(--bn-radius-lg); padding:.55rem .7rem .6rem;
+  background:repeating-linear-gradient(135deg, transparent 0 8px, var(--bn-colour-badge-bg) 8px 9px); font-size:var(--bn-text-caption); line-height:1.45; }
+.strip b { font-weight:490; }
+.strip .rid { font-family:var(--bn-font-mono); color:var(--bn-colour-accent); }
+.strip .h { font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); display:block; margin-top:.3rem; }
+.grid .plainfr .fr { border-radius:var(--bn-radius-lg); }
 
 /* ── ARTEFACT: the drawn sidebar rows. Stand-in glyphs; metrics follow ProjectCellSpec
       (32 pt single line, 1 pt title-to-subtitle, subtitle line below). ──────────── */
-.art { color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); padding:8px; }
+.art { position:relative; color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); padding:8px; }
 .sb { display:flex; flex-direction:column; gap:2px; }
-.row { display:flex; gap:6px; padding:0 8px 0 10px; border-radius:6px; }
+.row { display:flex; gap:6px; padding:0 8px 0 10px; border-radius:6px; align-items:flex-start; }
 .row.sel { background:var(--bn-colour-hover); }
 .ico { width:20px; flex:none; height:32px; display:flex; align-items:center; justify-content:center; }
 .ico i { width:11px; height:14px; border:1.5px solid var(--bn-colour-muted); border-radius:2px; display:block; }
 .col { width:var(--budget,22ch); font-size:11px; min-width:0; flex:none; }
 .t { height:32px; line-height:32px; font-size:13px; font-weight:490; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.subline { display:flex; align-items:flex-start; gap:4px; margin-top:1px; height:14px; color:var(--bn-colour-muted); }
+.subline { display:flex; gap:4px; margin-top:1px; height:14px; color:var(--bn-colour-muted); }
 .sub { position:relative; flex:1; min-width:0; height:14px; overflow:hidden; line-height:14px; }
-.ln { position:absolute; inset:0; line-height:14px; white-space:nowrap; transition:transform var(--d,0ms) cubic-bezier(.4,0,.2,1), opacity var(--d,0ms) ease; }
-.ln .tx { display:block; overflow:hidden; text-overflow:ellipsis; }
+.ln { position:absolute; inset:0; display:flex; gap:4px; align-items:flex-start; line-height:14px; white-space:nowrap;
+  transition:transform var(--d,0ms) cubic-bezier(.4,0,.2,1), opacity var(--d,0ms) ease; }
+.ln .tx { flex:1 1 auto; min-width:0; display:block; overflow:hidden; text-overflow:ellipsis; }
 .ln.in-roll  { transform:translateY(100%); opacity:0; }
 .ln.out-roll { transform:translateY(-100%); opacity:0; }
 .ln.in-fade, .ln.out-fade { opacity:0; }
-.cnt, .pip { flex:none; font-size:10px; line-height:14px; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
-.g { flex:none; color:#d98200; line-height:14px; }
-
-/* Iteration 2: the lens rows under the selected study (stand-ins; the lens name is its own key),
-   and the native-style hover tooltip. Signals is dim while its job runs, which is how "done" is shown. */
-.art { position:relative; }
+.g { flex:none; line-height:14px; }
+.g.e { color:#d92d20; } .g.w { color:#d98200; } .g.i { color:var(--bn-colour-accent); }
+.ring { flex:none; width:12px; height:12px; margin-top:10px; border:2px solid var(--bn-colour-accent); border-right-color:transparent; border-radius:50%; animation:bnspin 1s linear infinite; }
+.ring[hidden] { display:none; }
+@keyframes bnspin { to { transform:rotate(360deg); } }
 .lens { margin-top:6px; padding-top:6px; border-top:1px solid var(--bn-colour-border); display:flex; flex-direction:column; gap:1px; }
 .lrow { display:flex; gap:6px; padding:0 8px 0 10px; height:24px; align-items:center; font-size:13px; border-radius:6px; transition:opacity .3s ease; }
 .lrow .li { width:20px; flex:none; display:flex; justify-content:center; }
@@ -155,186 +166,194 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 }
 @keyframes bn-thinking-shimmer { 0% { background-position:100% 50%; } 66.67% { background-position:0% 50%; } 100% { background-position:0% 50%; } }
 .art .bn-thinking-shimmer { --bn-shimmer-base: var(--bn-colour-muted); --bn-shimmer-peak: light-dark(#fff, #111); }
-@media (prefers-reduced-motion: reduce) { .ln { transition-duration:0ms !important; } }
+@media (prefers-reduced-motion: reduce) { .ln { transition-duration:0ms !important; } .ring { animation:none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-<div class="eyebrow">Mockup · sidebar status line · proposal for the owner to judge</div>
-<h1>Two background jobs, one subtitle line</h1>
-<p class="lede">The bench below runs the real pair: <b>Screens</b> (hours) and <b>Picking up Signals…</b> (about 30 seconds). Four ways to show them, light and dark. Nothing here is wired to the app.</p>
-<div class="key"><span class="k-art">Plain panel = the drawn sidebar rows (what would ship)</span><span class="k-com">Hatched panel = commentary (never ships)</span><a href="#bench" style="color:var(--bn-colour-accent)">Jump to the bench ↓</a></div>
+<div class="eyebrow">Mockup · sidebar status line · iteration 3 · proposal for the owner to judge</div>
+<h1>One line, several jobs: when it holds, when it rolls</h1>
+<p class="lede">The sidebar row has one subtitle line. This page specifies a line that can roll between several things that are true at once, and lets you watch eight real situations play out. Nothing here is wired to the app.</p>
+<div class="key"><span class="k-art">Plain panel = the drawn sidebar row, what would ship</span><span class="k-com">Hatched panel = commentary, never ships</span><a href="#catalogue">Scenario catalogue ↓</a><a href="#bench">Free-play bench ↓</a></div>
 
-<!-- ═════════════════════ COMMENTARY: README ═════════════════════ -->
-<section class="commentary" aria-label="Commentary">
-<div class="tag">Commentary · README</div>
+<!-- ═════════════════════ COMMENTARY A: THE RULES ═════════════════════ -->
+<section class="commentary" aria-label="Commentary: the rules">
+<div class="tag">Commentary · the rules</div>
 
-<h2>Recommendation</h2>
-<p class="verdict">Ship the fixed order, which is already decided. Do not ship the count. Keep this page as a parked option for the day two <i>long</i> idle jobs overlap.</p>
+<h2>The idea in two tiers</h2>
+<p class="verdict">Every state that can appear on the line is flagged <span class="pol-h">holds</span> or <span class="pol-r">rolls</span>. If anything that holds is true, it owns the line, exactly as today. If nothing holds, the line rolls between the states that roll.</p>
 <ul>
-<li><b>Why not the roll now.</b> The pair overlaps for about 30 seconds, then Screens comes back by itself (readiness doc §8, decision 3). A roll buys 30 seconds of seeing Screens, at the price of motion on a line the researcher glances at all day.</li>
-<li><b>Why not borrow it.</b> You asked for prior art. I found no shipping product that rolls between concurrent jobs in one status line (table below). The verified convention is one ambient line plus a separate place that lists everything. A roll would be invention.</li>
-<li><b>Why not the count.</b> "+1" announces a second job that nothing can open. In this app a glyph or count earns a door or it is noise (<code>SubtitleGlyphAction</code>), and "absence is information". Of the four it makes the loudest promise for the least.</li>
-<li><b>Owner's lean (30 Oct):</b> the roll, 5 s dwell, pause on hover, shimmer kept, no count. If the roll goes ahead, the rules in the next section are what make it safe to read; the crossfade and count variants are kept under "Other variants" in the bench, not chosen.</li>
+<li><b>Owner's rules (30 Oct 2026):</b> the roll, 5 s dwell, pause on hover, shimmer kept, no count; errors displace everything; warnings and info may roll with progress; each state says whether it may be rolled away.</li>
+<li><b>My recommendation is unchanged:</b> the fixed order is the cheaper thing to ship and the overlap that prompted this is about 30 s. This page is the roll specified your way, so you can approve or reject it on what it does.</li>
+<li><b>What changes from today:</b> a persistent warning no longer hides progress for hours, since both are visible within one dwell. What does not change: errors, gesture acknowledgements and the run ladder.</li>
 </ul>
 
-<h2>Iteration 2: communication risks, and the UX answer</h2>
-<p>These are the ways the roll could mislead or fail the researcher, as opposed to the ways it could be hard to build. Each has a rule you can see in the bench. "Decided" means the rule follows an owner ruling already on record; "owner call" means I have proposed an answer you have not yet accepted; "open" means I have no answer yet.</p>
+<h2>The rules, and when each is triggered</h2>
 <table>
-<tr><th>Risk</th><th>UX answer</th><th>See it in the bench</th><th>Status</th></tr>
-<tr><td>A warning or error rolls away, or progress hides under it unseen</td><td>A state with a glyph never rolls: one fixed line, severity first. The tooltip lists everything running, in rank order. Today's tooltip says only the winner.</td><td>Pair "Warning + two jobs"; hover the row</td><td class="st">owner call. <b>Gap, open:</b> the tooltip is hover only, and the repo's own comment calls hover a rock to look under. Where hidden progress is listed while a warning holds the line is unanswered (the detail pane, if it exists for this).</td></tr>
-<tr><td>The researcher cannot tell anything else is running (no count)</td><td>The line does not say so. The tooltip lists every concurrent line, and the lens rows show the effect: Signals is dim while it builds. Absence is information.</td><td>"Screens + Signals", Signals dim</td><td class="st">decided (no count)</td></tr>
-<tr><td>"Is it finished?"</td><td>No finished message. The roll settles on the remaining line and the Signals lens row turns available. VoiceOver says nothing on finish, because the lens row's state change is the information.</td><td>Switch the Signals job off</td><td class="st">owner call</td></tr>
-<tr><td>The line reads as a promise</td><td>Rolled lines are present-tense activity or a count of work done, never an ETA or "soon". The run ladder with "~1 min left" is the run tier and never rolls.</td><td>"Run in flight" (fixed)</td><td class="st">decided (status line never promises)</td></tr>
-<tr><td>A truncated line is on screen for 5 s (German)</td><td>Hover pauses the roll and shows the full text in the tooltip. The real fix is a shorter German phrase, already an open item in the readiness doc.</td><td>"German at 22", hover</td><td class="st">partly open (the phrase)</td></tr>
-<tr><td>Two kinds of motion at once: roll and shimmer</td><td>The shimmer starts only once the line has settled, never while it is moving.</td><td>Watch "Picking up Signals…" enter</td><td class="st">owner call</td></tr>
-<tr><td>A status that flashes for under a second</td><td>The 2 s floor already on the gesture acknowledgements applies: a job that finishes sooner still shows for 2 s before it can roll out or disappear.</td><td>Toggle Signals on, then off at once</td><td class="st">decided in principle (the Signals plan names the floor)</td></tr>
-<tr><td>The ticker creeps to many lines</td><td>At most 3 lines roll. At 5 s that is already a 15 s cycle. Above 3, show the top-ranked line only and list the rest in the tooltip.</td><td>"Three jobs"</td><td class="st">owner call</td></tr>
-<tr><td>VoiceOver hears the roll</td><td>The row's accessibility value lists all lines once, statically. A line is spoken when it starts, never when it rolls, and nothing is spoken when it finishes.</td><td>The "VoiceOver hears" log</td><td class="st">owner call</td></tr>
-<tr><td>Reduce Motion changes what is communicated</td><td>It falls back to the fixed order. Nothing is lost, because the tooltip and lens rows carry the same facts.</td><td>"Simulate Reduce Motion"</td><td class="st">owner call (Apple's guidance leans to a dissolve for status motion)</td></tr>
-<tr><td>Which activities roll at all</td><td>Screens, Signals and the cloud batch, the long-running ones. The 2 s acknowledgements (Adding, Exporting) stay fixed and keep the line over them.</td><td>n/a</td><td class="st">owner call</td></tr>
-<tr><td>A second window shows a different status</td><td>Accepted: the Signals status is window-scoped (readiness decision 1).</td><td>n/a</td><td class="st">decided</td></tr>
+<tr><th>#</th><th>Rule</th><th>Triggered when</th><th>See card</th></tr>
+<tr><td class="st">R1</td><td><b>Holders first.</b> If any active state is flagged <span class="pol-h">holds</span>, the highest-ranked holder owns the line, fixed. Nothing rolls, and the rest wait in the tooltip. A holder beats a roller even where today's order ranks the roller higher (an acknowledgement must be seen).</td><td>An error-kind state, a gesture acknowledgement (adding, exporting), a run in flight, a copy with its cancel ring, a queued, stopped or partial run.</td><td class="st">3, 4, 5</td></tr>
+<tr><td class="st">R2</td><td><b>Rollers roll.</b> With no holder present and two or three <span class="pol-r">rolls</span> states, the line rolls between them in rank order.</td><td>Screens with Signals; a warning or info beside progress; the cloud batch beside either.</td><td class="st">1, 2</td></tr>
+<tr><td class="st">R3</td><td><b>Cap of three.</b> More than three rollers: the top-ranked one holds and the rest are in the tooltip. Rolling resumes when the count falls to three. (At 5 s, three lines is already a 15 s cycle.)</td><td>A fourth long state appears.</td><td class="st">6</td></tr>
+<tr><td class="st">R4</td><td><b>Entry and exit.</b> When a state starts, the line moves at once to the top-ranked state, one roll. When the state on screen ends, the line moves once to a survivor. When a state that is not on screen ends, nothing moves. A change of text inside a state (3 of 40 to 4 of 40) never rolls.</td><td>Any state starting or ending.</td><td class="st">1, 7</td></tr>
+<tr><td class="st">R5</td><td><b>Dwell and pause.</b> 5 s per line, a 0.32 s roll. Hovering the row pauses the roll; after about a second the tooltip lists every state running, in full, in rank order. Moving away starts a full dwell.</td><td>Always while rolling.</td><td class="st">all</td></tr>
+<tr><td class="st">R6</td><td><b>2 s floor.</b> A state that starts stays visible for at least 2 s, even if it ends sooner (the floor the gesture acknowledgements already have).</td><td>A short job: Signals on a small study.</td><td class="st">4, 7</td></tr>
+<tr><td class="st">R7</td><td><b>Glyph, door and ring travel with their line.</b> A warning or info glyph is part of its line and rolls with it. The ring belongs to the run, which holds, so a rolling row never has one. The glyph still opens its popover; hover pauses, so the click lands. Keyboard and VoiceOver reach it through the row's actions, not the moving line.</td><td>A warning or info state is on screen.</td><td class="st">2</td></tr>
+<tr><td class="st">R8</td><td><b>Reduce Motion.</b> No roll and no shimmer: the top-ranked state holds and changes by cut. The tooltip and lens rows carry the rest. (Apple's guidance would allow a dissolve; owner call.)</td><td>The system setting is on.</td><td class="st">8</td></tr>
+<tr><td class="st">R9</td><td><b>Quiet.</b> No count and no "finished" message: the lens row changing state is the confirmation. The row's accessibility value lists every state once and never changes on a roll. VoiceOver speaks a state when it starts, never on a roll or a finish.</td><td>Always.</td><td class="st">1, bench log</td></tr>
+</table>
+
+<h2>Which states hold and which roll</h2>
+<table>
+<tr><th>State (shipped wording)</th><th>Kind</th><th>Policy</th><th>Why</th></tr>
+<tr><td>Folder can't be found · Run failed · Can't be reached · Report out of date · a study that couldn't start</td><td>error</td><td class="pol-h">holds</td><td>G1: the project is unusable or the report is wrong. Displaces everything.</td></tr>
+<tr><td>Analysing · N of M · ~1 min left · Stopping… · Queued · Stopped · Transcribed</td><td>activity / info</td><td class="pol-h">holds</td><td>G3: the verb-led run ladder owns the ring and the shimmer; Stopped, Queued and Transcribed are the researcher's own act or queue. Owner call for the last three.</td></tr>
+<tr><td>Adding N interviews… · Exporting… · Copying · N% · Cancelling…</td><td>acknowledgement</td><td class="pol-h">holds</td><td>G2: a gesture answer that lives under one cycle, or carries a cancel ring.</td></tr>
+<tr><td>Screens · N of M</td><td>activity</td><td class="pol-r">rolls</td><td>Long-lived, not started by a gesture, cannot be stopped.</td></tr>
+<tr><td>Picking up Signals…</td><td>activity</td><td class="pol-r">rolls</td><td>Same. Shimmers once settled.</td></tr>
+<tr><td>3 of 4 (cloud batch)</td><td>activity</td><td class="pol-r">rolls</td><td>Long-lived, no per-row control. Owner call.</td></tr>
+<tr><td>Partial completion · Report couldn't be shown · N missing</td><td>warning</td><td class="pol-r">rolls</td><td>Your rule: visible within one dwell, glyph and door travel. Owner call for the report crash, which has the only door to its stack.</td></tr>
+<tr><td>+N unanalysed</td><td>info</td><td class="pol-r">rolls</td><td>Quiet news; never holds over progress.</td></tr>
+</table>
+<p><b>When someone adds a new state, ask in this order.</b> G1: does it make the project unusable or the report wrong? Holds. G2: did the researcher just press something and wait for an answer, or will it live under one cycle (about 15 s)? Holds. G3: does it carry a control on the row (a ring with cancel, a stop), or is it a run's verb ladder? Holds. Otherwise, if it is long-lived and ambient, it rolls. <b>When unsure, it holds</b>, because that is today's behaviour and cannot be worse than now. In code this is an exhaustive switch with no default, next to <code>glyphKind</code>, so a new variant cannot compile without the decision, and a table test pins every row.</p>
+</section>
+
+<!-- ═════════════════════ ARTEFACT: CATALOGUE ═════════════════════ -->
+<h2 class="zone" id="catalogue">Scenario catalogue</h2>
+<p class="note">Eight situations, each playing a short script on a loop (the frame bar shows the time and the rule in force). Hover a row to pause it and see the tooltip. Strings are shipped English or German; "Picking up Signals…" is the owner's draft. Glyphs and the lens rows are stand-ins; German "Signale werden vorbereitet…" is the readiness doc's example and the German run ladder is a stand-in.</p>
+<div class="bar" id="bar" role="group" aria-label="Controls"></div>
+<div class="grid" id="cards"></div>
+
+<!-- ═════════════════════ COMMENTARY B: EVIDENCE ═════════════════════ -->
+<section class="commentary" aria-label="Commentary: evidence and costs">
+<div class="tag">Commentary · evidence, communication risks, costs</div>
+
+<h2>Communication risks, and the rule that answers each</h2>
+<table>
+<tr><th>Risk</th><th>Answer</th><th>Status</th></tr>
+<tr><td>A warning or error rolls away, or progress hides under it unseen</td><td>Errors hold (R1). Warnings roll, so nothing is hidden for more than one dwell (R2). Hover lists everything (R5).</td><td class="st">decided (owner's rule)</td></tr>
+<tr><td>A moving glyph is a moving click target</td><td>The glyph travels with its line, hover pauses, and the popover is also reachable from the row's context menu and accessibility actions (R7).</td><td class="st">owner call; needs a hand check</td></tr>
+<tr><td>Nothing says something else is running</td><td>No count (owner). The tooltip lists it, and the lens rows show the effect (R5, R9).</td><td class="st">decided</td></tr>
+<tr><td>"Is it finished?"</td><td>No message. The roll settles, the lens row turns available, VoiceOver stays silent (R4, R9).</td><td class="st">owner call</td></tr>
+<tr><td>The line reads as a promise</td><td>Rolling lines are present-tense activity or a count of work done, never an ETA. The ETA ladder holds and is the run's (R1).</td><td class="st">decided</td></tr>
+<tr><td>A truncated line sits on screen 5 s (German)</td><td>Hover pauses and shows the full text (R5). The shorter German phrase is still an open item in the readiness doc.</td><td class="st">partly open</td></tr>
+<tr><td>Roll and shimmer together</td><td>The shimmer starts once the line has settled.</td><td class="st">owner call</td></tr>
+<tr><td>A status that flashes</td><td>2 s floor (R6).</td><td class="st">decided in principle</td></tr>
+<tr><td>The ticker creeps</td><td>Cap of three (R3).</td><td class="st">owner call</td></tr>
+<tr><td>VoiceOver hears the roll</td><td>Static value, speak at start only (R9).</td><td class="st">owner call; hand check</td></tr>
+<tr><td>Reduce Motion loses information</td><td>Top-ranked holds; tooltip and lens rows carry the rest (R8).</td><td class="st">owner call</td></tr>
+<tr><td>A second window shows a different status</td><td>Accepted: the Signals status is window-scoped (readiness decision 1).</td><td class="st">decided</td></tr>
 </table>
 
 <h2>Prior art: what I could and could not verify</h2>
-<p>Statuses: <span class="st">fetched</span> = I read the page this session; <span class="st">excerpt</span> = only a search excerpt; <span class="st">none</span> = nothing found. I have not run Xcode, Mail or Photos side by side for this; the owner can check Xcode in 30 seconds (build while it indexes).</p>
+<p>Statuses: <span class="st">fetched</span> = read this session; <span class="st">excerpt</span> = only a search excerpt; <span class="st">none</span> = nothing found. I found no shipping product that rolls between concurrent jobs in one status line. The verified convention is one ambient line plus a separate place that lists everything.</p>
 <table>
-<tr><th>Product</th><th>What it does with several tasks, lines changing, dwell, hover, count, Reduce Motion</th><th>Source</th><th>Status</th></tr>
-<tr><td>Xcode activity view</td><td>Apple says it shows progress of executing tasks, status messages and indicators. <b>Silent</b> on several tasks at once: nothing about cycling, dwell, a "+N" count or expanding. I half remember a stack or cycle but did not verify it, so I do not cite it.</td><td><a href="https://help.apple.com/xcode/mac/current/en.lproj/dev3d5b7ecc3.html">Xcode help, About the toolbar</a></td><td class="st">fetched, silent</td></tr>
-<tr><td>Mail (Mac)</td><td>Three places: the Activity window (Window ▸ Activity) to "monitor the progress"; a few activities at the bottom of the sidebar (downloading, a large download paused to save battery, with a resume button); account offline at the end of the Favorites bar. Silent on several at once. Forum posts describe one sidebar indicator whose wording and count change ("downloading" and "moving" messages); whether that is stacked or alternating is not stated.</td><td><a href="https://support.apple.com/en-us/guide/mail/mlhlp1099/13.0/mac/10.15">Mail help, Mail activity</a>; <a href="https://discussions.apple.com/thread/7341277">forum thread</a></td><td class="st">fetched / excerpt</td></tr>
-<tr><td>Photos (Mac)</td><td>A status area: item count, when last updated, a Pause/Resume control while updating, and a count of items that could not sync with a View door. One state at a time, a control, a door, no rotation described.</td><td><a href="https://support.apple.com/en-my/HT205409">Apple Support, library status</a></td><td class="st">excerpt</td></tr>
-<tr><td>Apple HIG, Progress indicators</td><td>Silent on concurrency. Transient indicators; keep them moving; "avoid labeling a spinning progress indicator" on macOS; text should be accurate and succinct. A third-party summary says "show the most relevant operation", which is not Apple's wording and I discount it.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/progress-indicators">HIG</a></td><td class="st">fetched</td></tr>
-<tr><td>Apple HIG, Motion</td><td>Gratuitous or excessive animation can distract; avoid motion on frequent interactions; make motion optional; do not make people wait for an animation. Reduce Motion is not named on the page.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/motion">HIG</a></td><td class="st">fetched</td></tr>
-<tr><td>Apple, reduced-motion criteria</td><td><b>What Reduce Motion should do:</b> decorative motion stops entirely; motion that carries a status change should not be removed, but replaced with something like "a dissolve, highlight fade, or color shift". So Apple's own answer for a status line is a crossfade, not a freeze.</td><td><a href="https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria">App Store Connect Help</a></td><td class="st">fetched</td></tr>
-<tr><td>WCAG 2.2.2 Pause, Stop, Hide</td><td>Auto-updating information that starts by itself and sits beside other content needs a way to pause, stop, hide or control the update frequency, unless essential. A rolling line is auto-updating. Hover-to-pause is mouse-only, so on its own it is not the mechanism the criterion asks for.</td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide">W3C Understanding 2.2.2</a></td><td class="st">fetched</td></tr>
-<tr><td>GitHub checks, Time Machine menu, Finder copy, Safari downloads, Music/Podcasts sync, iOS Mail status, Linear, Slack</td><td>Nothing usable. GitHub's status-check docs page was fetched and has no aggregate-line wording. The others returned no source for multi-task behaviour. <b>Not claimed either way.</b></td><td>n/a</td><td class="st">none</td></tr>
+<tr><th>Product</th><th>What it does with several tasks</th><th>Source</th><th>Status</th></tr>
+<tr><td>Xcode activity view</td><td>Shows progress of executing tasks, status messages and indicators. Silent on several at once: no cycling, count or expanding stated. I half remember a stack or cycle but did not verify it.</td><td><a href="https://help.apple.com/xcode/mac/current/en.lproj/dev3d5b7ecc3.html">Xcode help</a></td><td class="st">fetched, silent</td></tr>
+<tr><td>Mail (Mac)</td><td>An Activity window to monitor progress; a few activities at the bottom of the sidebar (downloading, a large download paused to save battery, with resume); account offline at the end of the Favorites bar. Silent on several at once.</td><td><a href="https://support.apple.com/en-us/guide/mail/mlhlp1099/13.0/mac/10.15">Mail help</a>; <a href="https://discussions.apple.com/thread/7341277">forum</a></td><td class="st">fetched / excerpt</td></tr>
+<tr><td>Photos (Mac)</td><td>One status area: item count, last update, Pause/Resume, a count of items that could not sync with a View door. No rotation described.</td><td><a href="https://support.apple.com/en-my/HT205409">Apple Support</a></td><td class="st">excerpt</td></tr>
+<tr><td>HIG, Progress indicators</td><td>Silent on concurrency. Keep indicators moving; avoid labelling a spinner on macOS; be accurate and succinct.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/progress-indicators">HIG</a></td><td class="st">fetched</td></tr>
+<tr><td>HIG, Motion</td><td>Gratuitous motion distracts; avoid motion on frequent interactions; make motion optional.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/motion">HIG</a></td><td class="st">fetched</td></tr>
+<tr><td>Apple, reduced-motion criteria</td><td>Decorative motion stops; motion that carries a status change is replaced by something like a dissolve, a highlight fade or a colour shift, not removed.</td><td><a href="https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria">App Store Connect Help</a></td><td class="st">fetched</td></tr>
+<tr><td>WCAG 2.2.2 Pause, Stop, Hide</td><td>Auto-updating information that starts by itself beside other content needs a way to pause, stop or hide it, unless essential. Hover-to-pause alone is mouse-only.</td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide">W3C</a></td><td class="st">fetched</td></tr>
+<tr><td>GitHub checks, Time Machine, Finder copy, Safari downloads, Music, iOS Mail, Linear, Slack</td><td>Nothing usable found. Not claimed either way.</td><td>n/a</td><td class="st">none</td></tr>
 </table>
 
 <h2>What the repo already says</h2>
 <ul>
-<li><b>Hard rule, <code>design-desktop-project-status.md</code> §5:</b> never put two conditions on one line; the detail pane is where the non-winners get room. One sanctioned exception composes (<code>.completedPartial</code>). A roll is two conditions on one line spread over time, so it amends the rule rather than fitting it.</li>
-<li><b>The idea is already named.</b> The comment on <code>SidebarSubtitleText.tooltip</code> calls "a cycling departure-board line that shows each condition in turn" the intended direction, and says not to grow the tooltip. I found no design doc behind it, so it is a direction, not a spec. The only shipped departure-board motion is the project-icon split-flap (<code>design-project-icons.md</code>, a decelerating flip), which is the nearest house vocabulary for a roll.</li>
-<li><b>Shimmer is <code>.running</code> only</b> today (<code>shimmerSubtitle</code>), behind "Show animation while analysing" and Reduce Motion. Readiness decision 5 extends it to the Signals line. The bench shimmers Signals, and the 2700 ms period against a 3 s dwell means each entrance shows about one sweep.</li>
-<li><b>Width.</b> About 22 characters at 240 pt. The running ladder and the German Signals phrase (27) both truncate; the full form is the tooltip. A count must sit outside the truncating text, as drawn.</li>
+<li><b>§5 of <code>design-desktop-project-status.md</code></b> says never two conditions on one line, with one sanctioned exception. This design keeps §5 for every holder and amends it only for rollers, where two conditions share a line in time, not in space.</li>
+<li>The comment on <code>SidebarSubtitleText.tooltip</code> names "a cycling departure-board line" as the intended direction, with no design doc behind it. The project-icon split-flap (<code>design-project-icons.md</code>) is the nearest house motion vocabulary.</li>
+<li>Shimmer is <code>.running</code> only today; readiness decision 5 extends it to Signals. About 22 characters fit at 240 pt.</li>
 </ul>
 
-<h2>Honest costs</h2>
+<h2>Costs and a native version</h2>
 <ul>
-<li><b>Attention.</b> A glance surface all day. The rule I used (roll only among idle activities, never over a glyph row) keeps the roll to the rare overlaps, but the overlap that triggers it is the very pair you named, right after every analysis.</li>
-<li><b>Battery.</b> One timer and two short layer animations per dwell, far less than the shimmer's continuous sweep. Not measured.</li>
-<li><b>VoiceOver and live regions.</b> A roll must be silent: the row's accessibility value lists both jobs once, statically, and an announcement fires only when the <i>set</i> of jobs changes. The bench log shows exactly that: flips are silent, starts and finishes speak.</li>
-<li><b>Two moving things.</b> Shimmer already means "the AI is thinking". A roll moves the whole line every few seconds while the shimmer sweeps within it. On the pair it is the shimmering Signals line that rolls in and out. Judge this in the bench by leaving the shimmer checkbox on.</li>
-<li><b>One job hidden at any instant.</b> Fixed order hides Screens for about 30 s with certainty. The roll shows each for most of the time but a glance can still catch the other one. For 30 s the fixed order is more honest; for hours the roll would be better.</li>
-<li><b>Counts tick mid-dwell.</b> "3 of 40" becomes "4 of 40" while visible. The bench updates text in place with no roll, as a native version must.</li>
-<li><b>It stops being a single-winner chain.</b> Today <code>ProjectSubtitle.resolve</code> returns one <code>SubtitleVariant</code> and every glyph, door and tooltip switch is exhaustive over it.</li>
-</ul>
-
-<h2>What a native version would take (not built)</h2>
-<ul>
-<li><b>Model.</b> A <code>resolveAll</code> beside <code>resolve</code> returning the ordered same-tier idle activities (and exactly one entry when anything has a glyph). Pure, table-testable: which line at which tick, settle on the survivor, jump to a newcomer. This part is cheap and testable.</li>
-<li><b>View.</b> The subtitle is an AppKit cell. A fixed-height clipping view holding two text layers; the roll is a <code>CATransition</code> push or a <code>CABasicAnimation</code> on position, the crossfade a layer opacity animation. SwiftUI's own text content transitions (a default crossfade; a digit roll for numbers) are the framework's version, from my memory of the API and unverified here.</li>
-<li><b>The sharp edge.</b> <code>ProjectSidebarOutline.update()</code> reloads the outline about once a second during a run, which would tear down an in-flight animation and restart the dwell every time. The roll clock has to live in the controller, keyed by project, not in the cell. The same hazard is already handled for inline rename (<code>editingNodeID</code>) and the icon reveal, so there is precedent, but it is the real cost.</li>
-<li><b>Gates.</b> Reduce Motion via <code>NSWorkspace.shared.accessibilityDisplayShouldReduceMotion</code> (already read for the shimmer); pause when the window is not key or the row is off screen; an <code>NSTrackingArea</code> for hover; a static <code>accessibilityValue</code>; <code>NSAccessibility</code> announcements on set changes only.</li>
-<li><b>Size.</b> Roughly one to two days with tests, plus a policy edit to §5. No new locale strings for the roll itself (the Signals key is its own work). Not an estimate I would defend to the hour.</li>
+<li><b>Size:</b> about 3 to 4 working days, a plausible range of 2.5 to 5, from reading the code, not from building it. The model and clock are easy; keeping an animation alive across outline reloads is the cost.</li>
+<li><b>Model:</b> <code>SubtitleVariant.rollPolicy</code> (exhaustive, no default, beside <code>glyphKind</code>), a <code>resolveAll</code> returning holders first then rollers, and a pure clock with an injected time source.</li>
+<li><b>Reload churn (the main risk):</b> <code>update()</code> calls a full <code>reloadData()</code>, which rebuilds cells. Keep the clock in the controller keyed by project and refresh a visible rollable row in place (<code>refreshRowsAroundRename</code> is the precedent). A throttle on count ticks is a reasonable add-on, not the fix. Measure how often <code>update()</code> fires while Screens reads before committing.</li>
+<li><b>Accessibility tests:</b> a pure "set before and after to announcement" function (a roll gives none); a seam on <code>NSAccessibility.post</code> counting posts over several cycles; the accessibility value byte-identical across a roll; then one by-hand VoiceOver pass.</li>
+<li><b>Process:</b> the R114 gate wants explicit owner approval of the mockup before any UX build, the beta policy says almost no new features (the board card says Could, post-launch), and the first merge would want a flag.</li>
 </ul>
 <p>The owner decides.</p>
 </section>
 
-<!-- ═════════════════════ BENCH ═════════════════════ -->
-<h2 id="bench" style="font-weight:490;font-size:var(--bn-text-title);margin:2rem 0 .2rem">Bench</h2>
-<p class="note">Strings: "Screens · N of M", "Analysing · 4 of 8 · ~1 min left" and "Partial completion" are shipped English. "Picking up Signals…" is the owner's draft (not yet a locale key). Deutsch: "Bildschirme · N von M" and "Teilweise abgeschlossen" are shipped; "Signale werden vorbereitet…" is the readiness doc's own 27-character example; the German run ladder is a stand-in. Glyphs are stand-ins. Lens names (Project, Sessions, Quotes, Codebook, Signals; German Projekt, Sitzungen, Zitate, Codebuch, Signale) are stand-in labels for the lens rows. "Three jobs" uses the shipped cloud-batch line "3 of 4". Hover a row for about a second to see the tooltip; in "a" it says only what the line says (today), in "b" it lists everything running.</p>
-
-<div class="bar" id="bar" role="group" aria-label="Bench controls"></div>
+<!-- ═════════════════════ ARTEFACT: BENCH ═════════════════════ -->
+<h2 class="zone" id="bench">Free-play bench</h2>
+<p class="note">Same engine as the catalogue, with job toggles. Frame "a" is today's single-winner line; "b" is the roll under the rules above. Toggle a job off to finish it; the floor and the roll rules apply.</p>
+<div class="bar" id="bar2" role="group" aria-label="Bench controls"></div>
 <div class="log" id="log" aria-hidden="true"></div>
 <div class="sr" id="live" role="status" aria-live="polite"></div>
 <div class="grid" id="grid"></div>
-<details style="margin-top:1.4rem"><summary style="cursor:pointer;font-size:var(--bn-text-label);color:var(--bn-colour-muted)">Other variants (crossfade, count): not chosen, kept for the record</summary>
+<details style="margin-top:1.4rem"><summary style="cursor:pointer;font-size:var(--bn-text-label);color:var(--bn-colour-muted)">Other variant (crossfade): not chosen, kept for the record</summary>
 <div class="grid" id="grid2" style="margin-top:.8rem"></div></details>
 </div>
 
 <script>
 (function(){
-  /* ── strings ───────────────────────────────────────────────────────── */
+  /* ── strings: all shipped, except where the page note says otherwise ── */
   var STR = {
-    en:{ screens:function(d,t){return 'Screens · '+d+' of '+t;}, signals:'Picking up Signals…', run:'Analysing · 4 of 8 · ~1 min left', partial:'Partial completion', title:'Kitchen redesign', other1:'Onboarding study', other2:'Checkout friction', batch:function(d,t){return d+' of '+t;}, lens:['Project','Sessions','Quotes','Codebook','Signals'] },
-    de:{ screens:function(d,t){return 'Bildschirme · '+d+' von '+t;}, signals:'Signale werden vorbereitet…', run:'Wird analysiert… · 4 von 8 · ca. 1 Min.', partial:'Teilweise abgeschlossen', title:'Küchenumbau', other1:'Onboarding-Studie', other2:'Checkout-Reibung', batch:function(d,t){return d+' von '+t;}, lens:['Projekt','Sitzungen','Zitate','Codebuch','Signale'] }
+    en:{ screens:function(d,t){return 'Screens · '+d+' of '+t;}, batch:function(d,t){return d+' of '+t;}, signals:'Picking up Signals…',
+         run:'Analysing · 4 of 8 · ~1 min left', partial:'Partial completion', adding:'Adding 3 interviews…', unanalysed:'+3 unanalysed', forked:'Report out of date',
+         title:'Kitchen redesign', other1:'Onboarding study', other2:'Checkout friction', lens:['Project','Sessions','Quotes','Codebook','Signals'] },
+    de:{ screens:function(d,t){return 'Bildschirme · '+d+' von '+t;}, batch:function(d,t){return d+' von '+t;}, signals:'Signale werden vorbereitet…',
+         run:'Wird analysiert… · 4 von 8 · ca. 1 Min.', partial:'Teilweise abgeschlossen', adding:'3 Interviews werden hinzugefügt…', unanalysed:'+3 unanalysiert', forked:'Bericht veraltet',
+         title:'Küchenumbau', other1:'Onboarding-Studie', other2:'Checkout-Reibung', lens:['Projekt','Sitzungen','Zitate','Codebuch','Signale'] }
   };
-  function allOn(){ return {signals:true, screens:true, batch:true, run:true, partial:true}; }
-  var SCEN = {
-    pair:   { name:'Screens + Signals', jobs:[
-      {id:'signals', label:'Signals build', rank:1, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
-      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
-    three:  { name:'Three jobs', jobs:[
-      {id:'signals', label:'Signals build', rank:1, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
-      {id:'batch', label:'Cloud batch', rank:2, kind:'activity', text:function(L){return L.batch(3,4);}},
-      {id:'screens', label:'Screens reading', rank:3, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
-    run:    { name:'Run in flight (Screens yields)', jobs:[
-      {id:'run', label:'Analysis run', rank:1, kind:'severe', shimmer:true, text:function(L){return L.run;}},
-      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
-    partial:{ name:'Warning + two jobs', jobs:[
-      {id:'partial', label:'Partial result', rank:1, kind:'severe', glyph:true, text:function(L){return L.partial;}},
-      {id:'signals', label:'Signals build', rank:2, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
-      {id:'screens', label:'Screens reading', rank:3, kind:'activity', text:function(L){return L.screens(done,40);}} ] }
+  var done = 3;
+  /* ── the state library: rank follows today's precedence; policy is the new flag ── */
+  var J = {
+    run:       {id:'run',       label:'Analysis run',      rank:20, kind:'activity', policy:'holds', shimmer:true, ring:true, text:function(L){return L.run;}},
+    adding:    {id:'adding',    label:'Adding interviews', rank:22, kind:'ack',      policy:'holds', text:function(L){return L.adding;}},
+    forked:    {id:'forked',    label:'Report out of date',rank:25, kind:'error',    policy:'holds', glyph:'e', text:function(L){return L.forked;}},
+    partial:   {id:'partial',   label:'Partial result',    rank:30, kind:'warning',  policy:'rolls', glyph:'w', text:function(L){return L.partial;}},
+    batch:     {id:'batch',     label:'Cloud batch',       rank:40, kind:'activity', policy:'rolls', text:function(L){return L.batch(3,4);}},
+    signals:   {id:'signals',   label:'Signals build',     rank:50, kind:'activity', policy:'rolls', shimmer:true, text:function(L){return L.signals;}},
+    screens:   {id:'screens',   label:'Screens reading',   rank:60, kind:'activity', policy:'rolls', text:function(L){return L.screens(done,40);}},
+    unanalysed:{id:'unanalysed',label:'+3 unanalysed',     rank:80, kind:'info',     policy:'rolls', glyph:'i', text:function(L){return L.unanalysed;}}
   };
-  var VARIANTS = [
-    {k:'fixed', name:'a · Fixed order (today)'},
-    {k:'roll',  name:'b · Vertical roll'},
-    {k:'fade',  name:'c · Crossfade', extra:true},
-    {k:'count', name:'d · Fixed order + count, no motion', extra:true}
-  ];
+  var GLYPH = {e:'✕', w:'⚠︎', i:'ⓘ'};
   var DUR = {roll:320, fade:260, 'fade-slow':900};
-
-  /* ── state ─────────────────────────────────────────────────────────── */
-  var st = { scen:'pair', lang:'en', dwell:5000, hover:true, pip:false, shimmer:true,
-             reduce: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches),
-             fallback:'fixed', budget:'22ch', on:allOn(), vis:allOn(), started:{} };
-  var FLOOR = 2000, CAP = 3;   /* the 2 s floor of the gesture acknowledgements; at most 3 rolling lines */
-  var done = 3, tickers = [], logLines = [];
-
+  var FLOOR = 2000, CAP = 3;
+  var st = { lang:'en', dwell:5000, hover:true, shimmer:true, budget:'22ch',
+             reduce: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), fallback:'fixed', scen:'pair', on:{}, vis:{}, started:{} };
   function L(){ return STR[st.lang]; }
-  function resolve(){
-    var jobs = allActive();
-    if(!jobs.length) return {lines:[], hidden:0, rollable:false, all:jobs};
-    /* A state with a glyph never rolls: one fixed line, severity first. */
-    if(jobs[0].kind==='severe') return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false, all:jobs};
-    /* Cap: beyond CAP lines the cycle is too long to read, so show the top-ranked line only. */
-    if(jobs.length>CAP) return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false, all:jobs};
-    return {lines:jobs, hidden:0, rollable:jobs.length>1, all:jobs};
-  }
-  function allActive(){ return SCEN[st.scen].jobs.filter(function(j){return st.vis[j.id];}).sort(function(a,b){return a.rank-b.rank;}); }
 
-  /* ── ticker: one per frame, owns its own dwell timer ───────────────── */
-  function Ticker(host, variant){
-    this.host=host; this.v=variant; this.sub=host.querySelector('.sub'); this.cnt=host.querySelector('.cnt');
-    this.pipEl=host.querySelector('.pip'); this.gl=host.querySelector('.g'); this.cur=null; this.curId=null;
-    this.timer=null; this.paused=false; this.flips=0; this.prev={}; this.res=null;
-    var self=this, area=host.closest('.fr');
-    area.addEventListener('mouseenter',function(){ if(st.hover){ self.paused=true; self.disarm(); } });
-    area.addEventListener('mouseleave',function(){ self.paused=false; self.arm(); });
-    /* native-style tooltip after about a second of hover */
-    var tip=host.closest('.art').querySelector('.tip'), tt=null;
-    host.addEventListener('mouseenter',function(){ clearTimeout(tt); tt=setTimeout(function(){ tip.textContent=self.tipText(); if(tip.textContent) tip.classList.add('on'); },700); });
-    host.addEventListener('mouseleave',function(){ clearTimeout(tt); tip.classList.remove('on'); });
+  /* ── R1 to R3: the resolver ──────────────────────────────────────────── */
+  function resolveJobs(jobs){
+    var all = jobs.slice().sort(function(a,b){return a.rank-b.rank;});
+    if(!all.length) return {lines:[], all:all, rollable:false, why:'none'};
+    var holders = all.filter(function(j){return j.policy==='holds';});
+    if(holders.length) return {lines:[holders[0]], all:all, rollable:false, why:'R1 holds'};
+    if(all.length>CAP) return {lines:[all[0]], all:all, rollable:false, why:'R3 cap'};
+    return {lines:all, all:all, rollable:all.length>1, why: all.length>1 ? 'R2 rolls' : 'single'};
   }
-  /* Today's tooltip says only the winner; the rolling variants list everything running, in rank order. */
+
+  /* ── a ticker owns one drawn row and its dwell timer ─────────────────── */
+  var tickers = [];
+  function Ticker(frame, variant, opts){
+    this.fr=frame; this.host=frame.querySelector('.row.sel'); this.v=variant; this.o=opts||{};
+    this.sub=frame.querySelector('.sub'); this.ring=frame.querySelector('.ring'); this.tip=frame.querySelector('.tip'); this.meta=frame.querySelector('.meta');
+    this.cur=null; this.curId=null; this.timer=null; this.paused=false; this.flips=0; this.prev={}; this.res=null; this.t0=Date.now();
+    var self=this, tt=null;
+    frame.addEventListener('mouseenter',function(){ if(st.hover){ self.paused=true; self.disarm(); } });
+    frame.addEventListener('mouseleave',function(){ self.paused=false; self.arm(); });
+    this.host.addEventListener('mouseenter',function(){ clearTimeout(tt); tt=setTimeout(function(){ self.tip.textContent=self.tipText(); if(self.tip.textContent) self.tip.classList.add('on'); },700); });
+    this.host.addEventListener('mouseleave',function(){ clearTimeout(tt); self.tip.classList.remove('on'); });
+    tickers.push(this);
+  }
+  Ticker.prototype.red=function(){ return this.o.reduce===undefined ? st.reduce : this.o.reduce; };
+  Ticker.prototype.mode=function(){ if(this.v==='fixed') return 'fixed'; if(this.red()) return st.fallback==='fade'?'fade-slow':'fixed'; return this.v; };
   Ticker.prototype.tipText=function(){
     var all=(this.res&&this.res.all)||[];
-    if(this.v==='fixed'||this.v==='count') return all.length?all[0].text(L()):'';
-    return all.map(function(j){return j.text(L());}).join('\n');
-  };
-  Ticker.prototype.mode=function(){
-    if(this.v==='fixed'||this.v==='count') return 'fixed';
-    if(st.reduce) return st.fallback==='fade' ? 'fade-slow' : 'fixed';
-    return this.v;
+    if(this.v==='fixed') return all.length?all[0].text(L()):'';   /* today: the winner only */
+    return all.map(function(j){return j.text(L());}).join('\n');   /* R5: everything running, in rank order */
   };
   Ticker.prototype.mk=function(job){
     var el=document.createElement('div'); el.className='ln'; el.dataset.job=job.id;
-    var tx=document.createElement('span'); tx.className='tx';
-    tx.textContent=job.text(L()); el.appendChild(tx); return el;
+    if(job.glyph){ var g=document.createElement('span'); g.className='g '+job.glyph; g.textContent=GLYPH[job.glyph]; el.appendChild(g); }   /* R7 */
+    var tx=document.createElement('span'); tx.className='tx'; tx.textContent=job.text(L()); el.appendChild(tx); return el;
   };
   Ticker.prototype.swap=function(job,how){
-    var el=this.mk(job), old=this.cur;
-    this.sub.appendChild(el);
+    var el=this.mk(job), old=this.cur; this.sub.appendChild(el);
     if(how==='cut'||!old){ if(old) old.remove(); }
     else {
       var kind = how==='roll' ? 'roll' : 'fade', d=DUR[how];
@@ -345,39 +364,32 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
       this.flips++;
     }
     this.cur=el; this.curId=job.id;
-    /* Rule: the shimmer starts only once the line has settled, never while it moves. */
-    if(job.shimmer&&st.shimmer){
-      var tx=el.firstChild, wait=(how==='cut'||!old)?0:DUR[how]+60;
-      var addShimmer=function(){ if(el.parentNode) tx.classList.add('bn-thinking-shimmer'); };
-      if(wait) setTimeout(addShimmer,wait); else addShimmer();
+    /* the shimmer starts only once the line has settled, and never under Reduce Motion */
+    if(job.shimmer && st.shimmer && !this.red()){
+      var tx=el.querySelector('.tx'), wait=(how==='cut'||!old)?0:DUR[how]+60;
+      var add=function(){ if(el.parentNode) tx.classList.add('bn-thinking-shimmer'); };
+      if(wait) setTimeout(add,wait); else add();
     }
   };
   Ticker.prototype.go=function(job,mode){
     if(!job){ this.sub.innerHTML=''; this.cur=null; this.curId=null; return; }
-    if(job.id===this.curId){ this.cur.firstChild.textContent=job.text(L()); return; } /* same job: text in place, no roll */
-    var how = !this.cur ? 'cut' : (mode==='fixed' ? 'cut' : mode);
-    this.swap(job,how);
+    if(job.id===this.curId){ this.cur.querySelector('.tx').textContent=job.text(L()); return; }   /* R4: same state, text in place, no roll */
+    this.swap(job, !this.cur ? 'cut' : (mode==='fixed' ? 'cut' : mode));
   };
   Ticker.prototype.sync=function(res){
-    this.res=res; var mode=this.mode(), roll = mode!=='fixed' && res.rollable, lines=res.lines, self=this, target;
-    var added = lines.some(function(j){return !self.prev[j.id];});
-    if(!lines.length) target=null;
+    this.res=res; var mode=this.mode(), lines=res.lines, all=res.all, self=this, target;
+    var roll = mode!=='fixed' && res.rollable;
+    if(!all.length) target=null;
+    else if(this.v==='fixed') target=all[0];                                   /* today: highest rank */
+    else if(mode==='fixed') target = res.why==='R1 holds' ? lines[0] : all[0];  /* R8: top-ranked holds */
     else if(!roll) target=lines[0];
-    else target = added ? lines[0] : (lines.filter(function(j){return j.id===self.curId;})[0] || lines[0]);
+    else { var added=lines.some(function(j){return !self.prev[j.id];});       /* R4 */
+           target = added ? lines[0] : (lines.filter(function(j){return j.id===self.curId;})[0] || lines[0]); }
     this.go(target,mode);
-    this.prev={}; lines.forEach(function(j){self.prev[j.id]=1;});
-    var showCount = this.v==='count' && res.hidden>0 || (this.v==='count' && !roll && lines.length>1);
-    var hidden = this.v==='count' ? (res.rollable ? lines.length-1 : res.hidden) : 0;
-    this.cnt.textContent = hidden>0 ? '+'+hidden : '';
-    var g = target && target.glyph; this.gl.hidden=!g; this.gl.textContent=g?'⚠︎':'';
-    this.paintPip();
-    this.host.querySelector('.subline').style.display = lines.length ? '' : 'none';
+    this.prev={}; lines.forEach(function(j){ self.prev[j.id]=1; });
+    this.ring.hidden = !(target && target.ring);
+    this.why = this.v==='fixed' ? 'today' : (mode==='fixed' && res.rollable ? 'R8 reduced' : res.why);
     if(roll) this.arm(); else this.disarm();
-  };
-  Ticker.prototype.paintPip=function(){
-    var show = st.pip && this.v!=='fixed' && this.v!=='count' && this.res && this.res.rollable;
-    var i = this.res ? this.res.lines.findIndex(function(j){return j.id===this.curId;}.bind(this)) : -1;
-    this.pipEl.textContent = show ? (i+1)+'/'+this.res.lines.length : '';
   };
   Ticker.prototype.arm=function(){
     if(this.timer||this.paused||!this.res||!this.res.rollable||this.mode()==='fixed') return;
@@ -387,96 +399,168 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
   Ticker.prototype.advance=function(){
     this.timer=null; var lines=this.res.lines; if(lines.length<2) return;
     var i=lines.findIndex(function(j){return j.id===this.curId;}.bind(this));
-    this.go(lines[(i+1)%lines.length], this.mode()); this.paintPip(); this.arm();
+    this.go(lines[(i+1)%lines.length], this.mode()); this.arm();
   };
-  Ticker.prototype.refreshText=function(){ if(this.cur){ var j=SCEN[st.scen].jobs.filter(function(x){return x.id===this.curId;}.bind(this))[0]; if(j) this.cur.firstChild.textContent=j.text(L()); } };
+  Ticker.prototype.refreshText=function(){
+    if(!this.cur) return; var j=J[this.curId]; if(j) this.cur.querySelector('.tx').textContent=j.text(L());
+  };
+  setInterval(function(){ tickers.forEach(function(t){
+    var h=Math.round(t.host.getBoundingClientRect().height);
+    t.meta.textContent = (t.card?'t '+Math.round((Date.now()-t.card.t0)/1000)+' s · ':'')+'rule: '+(t.why||'none')+' · flips '+t.flips+' · row '+h+' px';
+  }); },400);
+  var cTimer=setInterval(function(){ if(done<40){ done++; tickers.forEach(function(t){t.refreshText();}); } },2500);
 
-  /* ── build frames ──────────────────────────────────────────────────── */
-  function build(){
-    var grid=document.getElementById('grid'); grid.innerHTML=''; document.getElementById('grid2').innerHTML=''; tickers.forEach(function(t){t.disarm();}); tickers=[];
-    VARIANTS.forEach(function(v){
-      ['light','dark'].forEach(function(scheme){
-        var fr=document.createElement('figure'); fr.className='fr';
-        fr.innerHTML =
-          '<div class="chrome"><span>'+v.name+' · '+scheme+'</span><span class="meta">row <b class="h">-</b> px · flips <b class="f">0</b></span></div>'+
-          '<div class="art" style="color-scheme:'+scheme+';--budget:'+st.budget+'"><div class="sb">'+
-            '<div class="row sel" aria-label=""><div class="ico"><i></i></div><div class="col"><div class="t">'+L().title+'</div>'+
-              '<div class="subline" aria-hidden="true"><span class="g" hidden></span><div class="sub"></div><span class="pip"></span><span class="cnt"></span></div></div></div>'+
-            '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other1+'</div></div></div>'+
-            '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other2+'</div></div></div>'+
-          '</div><div class="lens" aria-hidden="true">'+L().lens.map(function(n,i){ return '<div class="lrow'+(i===4?' lsig':'')+'"><span class="li"><b></b></span>'+n+'</div>'; }).join('')+'</div><div class="tip"></div></div>';
-        (v.extra?document.getElementById('grid2'):grid).appendChild(fr);
-        var host=fr.querySelector('.row.sel'), t=new Ticker(host, v.k); t.frame=fr; tickers.push(t);
-        var mn=1e9, mx=0, hEl=fr.querySelector('.h');
-        new ResizeObserver(function(es){ var h=Math.round(es[0].target.getBoundingClientRect().height); mn=Math.min(mn,h); mx=Math.max(mx,h); hEl.textContent = h; }).observe(host);
-      });
-    });
-    syncAll();
+  /* ── frame builder (the drawn sidebar, light or dark) ────────────────── */
+  function frameHTML(title, scheme){
+    var T=L();
+    return '<div class="chrome"><span>'+title+'</span><span class="meta"></span></div>'+
+      '<div class="art" style="'+(scheme?'color-scheme:'+scheme+';':'')+'--budget:'+st.budget+'"><div class="sb">'+
+        '<div class="row sel"><div class="ico"><i></i></div><div class="col"><div class="t">'+T.title+'</div><div class="subline" aria-hidden="true"><div class="sub"></div></div></div><span class="ring" hidden></span></div>'+
+        '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+T.other1+'</div></div></div>'+
+        '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+T.other2+'</div></div></div>'+
+      '</div><div class="lens" aria-hidden="true">'+T.lens.map(function(n,i){ return '<div class="lrow'+(i===4?' lsig':'')+'"><span class="li"><b></b></span>'+n+'</div>'; }).join('')+'</div><div class="tip"></div></div>';
   }
-  function syncAll(){
-    var res=resolve(); var names=res.all.map(function(j){return j.text(L());});
-    var sigDim = SCEN[st.scen].jobs.some(function(j){return j.id==='signals';}) && st.vis.signals;
-    tickers.forEach(function(t){ t.sync(res); t.host.setAttribute('aria-label', L().title+', '+names.join(', '));
-      t.frame.querySelector('.lsig').classList.toggle('dim', sigDim); });
-  }
-  setInterval(function(){ tickers.forEach(function(t){ t.frame.querySelector('.f').textContent=t.flips; }); }, 400);
+  function setLens(fr,on){ fr.querySelector('.lsig').classList.toggle('dim', !!on); }
+  function ariaLabel(t,texts){ t.host.setAttribute('aria-label', L().title+', '+texts.join(', ')); }
 
-  /* ── announcements: only on a real change of the set, never on a roll ── */
+  /* ── the catalogue: scripted scenarios ───────────────────────────────── */
+  var CARDS = [
+    { n:1, title:'After an analysis: Signals builds while Screens reads', init:['screens'], steps:[[2000,'+signals'],[17000,'-signals']], loop:24000,
+      trigger:'Screens is reading in the background. At 2 s the first Signals report starts building. At 17 s it finishes.',
+      sees:'Screens alone. At 2 s the line rolls to "Picking up Signals…" at once and the shimmer starts once it settles. Then the two alternate every 5 s. When Signals ends the line settles on Screens, and the Signals lens row turns available. No message, no count; VoiceOver speaks the Signals line once, at the start.',
+      rules:'R2 R4 R5 R9' },
+    { n:2, title:'A warning beside progress', init:['partial','screens'], steps:[], loop:0,
+      trigger:'A run finished with some sessions failed (partial completion) and Screens is reading.',
+      sees:'"⚠ Partial completion" and "Screens · N of 40" alternate. The warning glyph rolls with its own line, so the progress line never carries a warning mark. Hover pauses the roll, so the glyph can be clicked to open its popover. Today the warning would hide Screens for hours.',
+      rules:'R2 R5 R7' },
+    { n:3, title:'An error displaces everything', init:['signals','screens'], steps:[[7000,'+forked'],[19000,'-forked']], loop:26000,
+      trigger:'Signals and Screens are rolling. At 7 s the report is found to be out of date (the forked database, an error). At 19 s it clears.',
+      sees:'The roll stops and the line holds "✕ Report out of date". Signals and Screens are not on the row, only in the tooltip. When the error clears the roll resumes.',
+      rules:'R1 R5' },
+    { n:4, title:'A gesture acknowledgement holds', init:['signals','screens'], steps:[[6000,'+adding'],[8600,'-adding']], loop:20000,
+      trigger:'The researcher drops 3 recordings on the study at 6 s. The acknowledgement lives about 2.6 s.',
+      sees:'The line moves to "Adding 3 interviews…" and holds for its whole life, ignoring the roll, so it cannot be skipped. It then yields and the roll carries on.',
+      rules:'R1 R6' },
+    { n:5, title:'A run in flight holds, with its ring', init:['run','screens'], steps:[], loop:0,
+      trigger:'An analysis is running and Screens would also be reading.',
+      sees:'The run ladder holds with its ring and shimmer; Screens yields, as it does today. The ladder is longer than the 22-character budget, so it truncates and the tooltip has the full text. Nothing rolls.',
+      rules:'R1' },
+    { n:6, title:'Four long jobs: the cap', init:['signals','batch','screens'], steps:[[13000,'+unanalysed'],[26000,'-unanalysed']], loop:34000,
+      trigger:'A cloud batch, Signals and Screens roll (a 15 s cycle, in that rank order). At 13 s new files arrive outside the app, a fourth state. At 26 s that clears.',
+      sees:'Three lines roll. When the fourth arrives the roll stops and holds the top-ranked line, here the cloud batch; the tooltip lists all four. When the count falls back to three the roll resumes.',
+      rules:'R2 R3 R5' },
+    { n:7, title:'A job that is over almost at once', init:['screens'], steps:[[3000,'+signals'],[3700,'-signals']], loop:12000,
+      trigger:'A small study: Signals starts at 3 s and is done at 3.7 s.',
+      sees:'The line moves to Signals and stays for 2 s, although the job ended after 0.7 s, then settles on Screens and the lens row turns available. No flash of text for a fraction of a second.',
+      rules:'R4 R6' },
+    { n:8, title:'Reduce Motion', init:['signals','screens'], steps:[[8000,'-signals'],[14000,'+signals']], loop:20000, reduce:true,
+      trigger:'The system Reduce Motion setting is on. The same two jobs; Signals ends at 8 s and returns at 14 s.',
+      sees:'No roll and no shimmer. The top-ranked state holds and changes by cut. The tooltip and the lens rows carry what the line does not. A slow dissolve is the alternative in the bench ("Reduce Motion falls back to").',
+      rules:'R8' }
+  ];
+  var cards = [];
+  function Card(spec){
+    this.s=spec; this.active={}; this.started={}; this.timers=[]; this.t0=Date.now();
+    var art=document.createElement('article'); art.className='card';
+    art.innerHTML='<figure class="fr">'+frameHTML(spec.n+' · '+spec.title, null)+'</figure>'+
+      '<div class="strip"><b>Trigger.</b> '+spec.trigger+'<span class="h">What the researcher sees</span>'+spec.sees+'<span class="h">Rules in force</span><span class="rid">'+spec.rules+'</span></div>';
+    document.getElementById('cards').appendChild(art);
+    this.fr=art.querySelector('.fr'); this.tk=new Ticker(this.fr,'roll',{reduce: spec.reduce ? true : undefined}); this.tk.card=this;
+  }
+  Card.prototype.reset=function(){
+    var self=this; this.timers.forEach(clearTimeout); this.timers=[]; this.active={}; this.started={}; this.t0=Date.now();
+    this.s.init.forEach(function(id){ self.active[id]=1; });
+    this.sync();
+    this.s.steps.forEach(function(s){ self.timers.push(setTimeout(function(){ self.apply(s[1]); }, s[0])); });
+    if(this.s.loop) this.timers.push(setTimeout(function(){ self.reset(); }, this.s.loop));
+  };
+  Card.prototype.apply=function(op){
+    var id=op.slice(1), self=this;
+    if(op[0]==='+'){ this.active[id]=1; this.started[id]=Date.now(); this.sync(); }
+    else { var wait=Math.max(0, FLOOR-(Date.now()-(this.started[id]||0)));   /* R6 */
+           this.timers.push(setTimeout(function(){ delete self.active[id]; self.sync(); }, wait)); }
+  };
+  Card.prototype.sync=function(){
+    var jobs=Object.keys(this.active).map(function(id){return J[id];}), res=resolveJobs(jobs);
+    this.tk.sync(res); setLens(this.fr, !!this.active.signals); ariaLabel(this.tk, res.all.map(function(j){return j.text(L());}));
+  };
+
+  /* ── the free-play bench ─────────────────────────────────────────────── */
+  var BSCEN = { pair:['signals','screens'], three:['signals','batch','screens'], warn:['partial','signals','screens'], error:['forked','signals','screens'], ack:['adding','signals','screens'], run:['run','screens'] };
+  var BNAMES = [['pair','Screens + Signals'],['three','Three jobs'],['warn','Warning + two jobs'],['error','Error + two jobs'],['ack','Acknowledgement + two jobs'],['run','Run + Screens']];
+  var VARIANTS = [ {k:'fixed', name:'a · Today: one winner'}, {k:'roll', name:'b · Vertical roll'}, {k:'fade', name:'c · Crossfade', extra:true} ];
+  var bench=[], logLines=[];
+  function benchIds(){ return BSCEN[st.scen].filter(function(id){return st.vis[id];}); }
+  function benchSync(){
+    var jobs=benchIds().map(function(id){return J[id];}), res=resolveJobs(jobs);
+    var sig = BSCEN[st.scen].indexOf('signals')>=0 && st.vis.signals;
+    bench.forEach(function(t){ t.sync(res); setLens(t.fr, sig); ariaLabel(t, res.all.map(function(j){return j.text(L());})); });
+  }
+  function resetBench(){ st.on={}; st.vis={}; st.started={}; Object.keys(J).forEach(function(k){ st.on[k]=true; st.vis[k]=true; }); }
+  function buildBench(){
+    bench.forEach(function(t){ var i=tickers.indexOf(t); if(i>=0) tickers.splice(i,1); t.disarm(); }); bench=[];
+    var g=document.getElementById('grid'), g2=document.getElementById('grid2'); g.innerHTML=''; g2.innerHTML='';
+    VARIANTS.forEach(function(v){ ['light','dark'].forEach(function(scheme){
+      var fr=document.createElement('figure'); fr.className='fr'; fr.style.borderRadius='8px'; fr.innerHTML=frameHTML(v.name+' · '+scheme, scheme);
+      (v.extra?g2:g).appendChild(fr); bench.push(new Ticker(fr, v.k)); }); });
+    benchSync();
+  }
   function announce(msg, silent){
     if(silent){ logLines.unshift('<b>silent:</b> '+msg+' finished. Nothing is spoken; the lens row changing state is the information.'); }
-    else { document.getElementById('live').textContent = msg; logLines.unshift('<b>VoiceOver hears:</b> '+msg); }
-    logLines=logLines.slice(0,3);
-    paintLog();
+    else { document.getElementById('live').textContent=msg; logLines.unshift('<b>VoiceOver hears:</b> '+msg); }
+    logLines=logLines.slice(0,3); paintLog();
   }
-  function paintLog(){ document.getElementById('log').innerHTML = (logLines.length?logLines.join('<br>'):'<b>VoiceOver hears:</b> nothing yet. A roll never speaks and neither does a finish; a job starting speaks its line.') + '<br>Rolls are silent: see the flips counter on each frame.'; }
+  function paintLog(){ document.getElementById('log').innerHTML=(logLines.length?logLines.join('<br>'):'<b>VoiceOver hears:</b> nothing yet. A roll never speaks and neither does a finish; a state starting speaks its line.')+'<br>Rolls are silent: see the flips counter on each frame.'; }
 
-  /* Screens counts up, text refreshed in place (no roll) */
-  var cTimer=null;
-  function startCount(){ clearInterval(cTimer); cTimer=setInterval(function(){ if(st.vis.screens && done<40){ done++; tickers.forEach(function(t){t.refreshText();}); } },2500); }
-
-  /* ── controls ──────────────────────────────────────────────────────── */
-  function seg(label, opts, get, set){
+  /* ── controls ────────────────────────────────────────────────────────── */
+  var parts=[];
+  function seg(bar,label,opts,get,set){
     var g=document.createElement('div'); g.className='grp'; g.innerHTML='<span class="lbl">'+label+'</span>';
-    opts.forEach(function(o){ var b=document.createElement('button'); b.className='pbtn'; b.textContent=o[1]; b.setAttribute('aria-pressed','false');
-      b.onclick=function(){ set(o[0]); paintBar(); }; b.dataset.v=o[0]; g.appendChild(b); });
-    g._get=get; return g;
+    opts.forEach(function(o){ var b=document.createElement('button'); b.className='pbtn'; b.textContent=o[1]; b.dataset.v=o[0];
+      b.onclick=function(){ set(o[0]); paintBar(); }; g.appendChild(b); });
+    g._get=get; bar.appendChild(g); parts.push(g); return g;
   }
-  function chk(label, get, set){
-    var l=document.createElement('label'); var c=document.createElement('input'); c.type='checkbox';
-    c.onchange=function(){ set(c.checked); paintBar(); }; l.appendChild(c); l.appendChild(document.createTextNode(label)); l._c=c; l._get=get; return l;
+  function chk(bar,label,get,set){
+    var l=document.createElement('label'), c=document.createElement('input'); c.type='checkbox';
+    c.onchange=function(){ set(c.checked); paintBar(); }; l.appendChild(c); l.appendChild(document.createTextNode(label)); l._c=c; l._get=get; bar.appendChild(l); parts.push(l);
   }
-  var bar=document.getElementById('bar'), parts=[];
-  function addp(p){ bar.appendChild(p); parts.push(p); }
-  addp(seg('Scenario',[['pair','Screens + Signals'],['three','Three jobs'],['run','Run in flight'],['partial','Warning + two jobs']], function(){return st.scen;}, function(v){ st.scen=v; st.on=allOn(); st.vis=allOn(); syncAll(); }));
-  var jobsGrp=document.createElement('div'); jobsGrp.className='grp'; jobsGrp.id='jobs'; bar.appendChild(jobsGrp);
-  addp(seg('Dwell',[[2000,'2 s'],[3000,'3 s'],[5000,'5 s']], function(){return st.dwell;}, function(v){ st.dwell=+v; tickers.forEach(function(t){t.disarm(); t.arm();}); }));
-  addp(chk('Pause on hover', function(){return st.hover;}, function(v){ st.hover=v; }));
-  addp(chk('Shimmer on Signals and run', function(){return st.shimmer;}, function(v){ st.shimmer=v; syncAllText(); }));
-  addp(chk('Simulate Reduce Motion', function(){return st.reduce;}, function(v){ st.reduce=v; document.documentElement.setAttribute('data-analysis-animation', v?'off':'on'); syncAll(); }));
-  addp(seg('Reduce Motion falls back to',[['fixed','Fixed order'],['fade','Slow crossfade']], function(){return st.fallback;}, function(v){ st.fallback=v; syncAll(); }));
-  addp(seg('Language',[['en','English'],['de','Deutsch']], function(){return st.lang;}, function(v){ st.lang=v; build(); }));
-  addp(seg('Width budget',[['18ch','18'],['22ch','22 (240 pt)'],['30ch','30']], function(){return st.budget;}, function(v){ st.budget=v; build(); }));
-  var rs=document.createElement('button'); rs.className='pbtn'; rs.textContent='Restart'; rs.onclick=function(){ done=3; st.on=allOn(); st.vis=allOn(); logLines=[]; paintLog(); build(); paintBar(); }; bar.appendChild(rs);
-  var de=document.createElement('button'); de.className='pbtn'; de.textContent='German at 22 (truncation check)'; de.onclick=function(){ st.lang='de'; st.budget='22ch'; build(); paintBar(); }; bar.appendChild(de);
+  function btn(bar,label,fn){ var b=document.createElement('button'); b.className='pbtn'; b.textContent=label; b.onclick=fn; bar.appendChild(b); return b; }
+  function rearm(){ tickers.forEach(function(t){ t.disarm(); t.arm(); }); }
+  function rebuildAll(){
+    document.getElementById('cards').innerHTML=''; tickers.length=0; cards.forEach(function(c){ c.timers.forEach(clearTimeout); }); cards=[];
+    CARDS.forEach(function(s){ var c=new Card(s); cards.push(c); c.reset(); });
+    buildBench();
+  }
 
-  function syncAllText(){ tickers.forEach(function(t){ if(t.cur){ var j=SCEN[st.scen].jobs.filter(function(x){return x.id===t.curId;})[0]; if(j){ var tx=t.cur.firstChild; tx.className='tx'+(j.shimmer&&st.shimmer?' bn-thinking-shimmer':''); } } }); }
+  var bar=document.getElementById('bar'), bar2=document.getElementById('bar2'), jobsGrp=document.createElement('div');
+  seg(bar,'Dwell',[[2000,'2 s'],[3000,'3 s'],[5000,'5 s']], function(){return st.dwell;}, function(v){ st.dwell=+v; rearm(); });
+  chk(bar,'Pause on hover', function(){return st.hover;}, function(v){ st.hover=v; });
+  chk(bar,'Shimmer on Signals and the run', function(){return st.shimmer;}, function(v){ st.shimmer=v; rebuildAll(); });
+  chk(bar,'Simulate Reduce Motion', function(){return st.reduce;}, function(v){ st.reduce=v; document.documentElement.setAttribute('data-analysis-animation', v?'off':'on'); rebuildAll(); });
+  seg(bar,'Reduce Motion falls back to',[['fixed','Fixed order'],['fade','Slow crossfade']], function(){return st.fallback;}, function(v){ st.fallback=v; rebuildAll(); });
+  seg(bar,'Language',[['en','English'],['de','Deutsch']], function(){return st.lang;}, function(v){ st.lang=v; rebuildAll(); });
+  seg(bar,'Width budget (characters at 240 pt: 22)',[['18ch','18'],['22ch','22'],['30ch','30']], function(){return st.budget;}, function(v){ st.budget=v; rebuildAll(); });
+  btn(bar,'Replay all', function(){ done=3; rebuildAll(); });
+  btn(bar,'German at 22 (truncation check)', function(){ st.lang='de'; st.budget='22ch'; rebuildAll(); paintBar(); });
+
+  seg(bar2,'Scenario',BNAMES, function(){return st.scen;}, function(v){ st.scen=v; resetBench(); benchSync(); });
+  jobsGrp.className='grp'; jobsGrp.id='jobs'; bar2.appendChild(jobsGrp);
+  btn(bar2,'Restart bench', function(){ done=3; logLines=[]; paintLog(); resetBench(); benchSync(); paintBar(); });
 
   function paintBar(){
     parts.forEach(function(p){
-      if(p._c){ p._c.checked = !!p._get(); }
-      else { Array.prototype.forEach.call(p.querySelectorAll('.pbtn'), function(b){ var on = String(p._get())===b.dataset.v; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); }
+      if(p._c){ p._c.checked=!!p._get(); }
+      else { Array.prototype.forEach.call(p.querySelectorAll('.pbtn'), function(b){ var on=String(p._get())===b.dataset.v; b.classList.toggle('on',on); }); }
     });
-    jobsGrp.innerHTML='<span class="lbl">Jobs (toggle one off = it finishes)</span>';
-    SCEN[st.scen].jobs.forEach(function(j){
-      var b=document.createElement('button'); b.className='pbtn'+(st.on[j.id]?' on':''); b.textContent=j.label+(st.on[j.id]?': running':': off'); b.setAttribute('aria-pressed',st.on[j.id]);
+    jobsGrp.innerHTML='<span class="lbl">States (toggle off = it finishes)</span>';
+    BSCEN[st.scen].forEach(function(id){
+      var j=J[id], b=document.createElement('button'); b.className='pbtn'+(st.on[id]?' on':'');
+      b.textContent=j.label+' ['+j.policy+']'+(st.on[id]?'':': off'); b.setAttribute('aria-pressed',!!st.on[id]);
       b.onclick=function(){
-        st.on[j.id]=!st.on[j.id];
-        if(st.on[j.id]){ st.started[j.id]=Date.now(); st.vis[j.id]=true; announce(j.text(L()), false); syncAll(); }
-        else {
-          /* the 2 s floor: a job that finishes sooner still shows until 2 s are up */
-          var wait=Math.max(0, FLOOR-(Date.now()-(st.started[j.id]||0)));
-          setTimeout(function(){ if(!st.on[j.id]){ st.vis[j.id]=false; announce(j.text(L()), true); syncAll(); } }, wait);
-        }
+        st.on[id]=!st.on[id];
+        if(st.on[id]){ st.started[id]=Date.now(); st.vis[id]=true; announce(j.text(L()), false); benchSync(); }
+        else { var wait=Math.max(0, FLOOR-(Date.now()-(st.started[id]||0)));   /* R6 */
+               setTimeout(function(){ if(!st.on[id]){ st.vis[id]=false; announce(j.text(L()), true); benchSync(); } }, wait); }
         paintBar();
       };
       jobsGrp.appendChild(b);
@@ -484,7 +568,7 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
   }
 
   document.documentElement.setAttribute('data-analysis-animation', st.reduce?'off':'on');
-  paintLog(); build(); paintBar(); startCount();
+  resetBench(); paintLog(); rebuildAll(); paintBar();
 })();
 </script>
 </body>

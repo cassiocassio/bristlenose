@@ -180,9 +180,11 @@ enum ReviewGalleryRegistry {
             title: "Error pattern · analysis engine failed to start",
             what: "Current native startup-failure pane. A sidecar startup failure only exists in the Mac shell; there is no web equivalent to manufacture.",
             commits: ["4e8cc854a"],
-            files: ["BootView.swift", "RouteError.tsx"],
+            files: ["BootView.swift"],
             section: .panesAndSheets,
             landed: "2026-10-29",
+            // The first two boot states are the failure panes this entry reviews;
+            // later rows are other boot phases and belong to their own entries.
             states: bootStates.prefix(2).map { row in
                 ReviewGalleryState(name: row.name) { ctx in
                     errorPatternBoot(row, ctx)

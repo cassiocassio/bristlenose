@@ -37,6 +37,29 @@ import Testing
         }
     }
 
+    /// The web specimens sit in a fixed-size frame, so the size check below
+    /// passes even for blank or broken markup. Check the markup itself: every
+    /// button must carry a quoted class and the action label as data, and none
+    /// may leave a Swift interpolation unexpanded.
+    @Test func webSpecimenMarkupIsWellFormed() {
+        let states: [ErrorPatternWebPreview.State] = [
+            .reportCrash, .reportCrashAfterRetry, .analysisFailed("quota"),
+            .analysisFailed("other"), .lens, .part, .notApplicable("n/a"),
+        ]
+        for state in states {
+            let html = ErrorPatternWebPreview.html(for: state)
+            #expect(!html.contains("\\("), "\(state) left an unexpanded interpolation")
+            #expect(!html.contains("class= "), "\(state) has an unquoted class that swallows onclick")
+            if html.contains("<button") {
+                #expect(html.contains("data-action=\""), "\(state) button has no action label")
+                #expect(html.contains("postMessage(this.dataset.action)"), "\(state) button posts no label")
+            }
+        }
+        let retry = ErrorPatternWebPreview.html(for: .analysisFailed("quota"))
+        #expect(retry.contains("data-action=\"Retry\""))
+        #expect(retry.contains("class=\"\""), "a primary button keeps an explicit empty class value")
+    }
+
     /// The test that catches a view whose initialiser changed, a fixture that
     /// no longer builds, or a state that draws nothing.
     @Test func everyStateBuildsAndDrawsAtARealSize() throws {

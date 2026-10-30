@@ -7,7 +7,9 @@ import SwiftUI
 /// `NSApp.appearance` is set from the user's Settings ▸ Appearance preference at
 /// launch and on every change, and every AppKit surface the app creates inherits
 /// it. Reach for the members below only to *read* the preference — never to
-/// re-apply it per surface.
+/// re-apply it per surface. The one sanctioned exception is
+/// `WindowAppearanceSynchronizer`, which keeps each main window in step with a
+/// change while the app is running.
 ///
 /// Why this exists: the preference (Automatic / Light / Dark) can disagree with
 /// the system's. Applying it per-window — `.preferredColorScheme` on a SwiftUI

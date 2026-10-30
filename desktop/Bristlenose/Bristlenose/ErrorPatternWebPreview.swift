@@ -42,17 +42,27 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         configuration.userContentController = content
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.setValue(false, forKey: "drawsBackground")
+        context.coordinator.loadedState = state
         webView.loadHTMLString(Self.html(for: state), baseURL: nil)
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onAction = onAction
+        // Reload only when the specimen changes: a button press updates the
+        // footer, and a reload on every SwiftUI update would lose hover and focus.
+        guard context.coordinator.loadedState != state else { return }
+        context.coordinator.loadedState = state
         webView.loadHTMLString(Self.html(for: state), baseURL: nil)
+    }
+
+    static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "review")
     }
 
     final class Coordinator: NSObject, WKScriptMessageHandler {
         var onAction: (String) -> Void
+        var loadedState: State?
 
         init(onAction: @escaping (String) -> Void) { self.onAction = onAction }
 
@@ -64,7 +74,8 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
         }
     }
 
-    private static func html(for state: State) -> String {
+    /// Internal so the registry tests can check the generated markup.
+    static func html(for state: State) -> String {
         let body: String
         switch state {
         case .reportCrash:
@@ -113,7 +124,10 @@ struct ErrorPatternWebPreview: NSViewRepresentable {
                                button: String, secondary: Bool = false, glyph: Bool = false) -> String {
         let detail = context.map { "<p class=context>\(escape($0))</p>" } ?? ""
         let mark = glyph ? "<div class=error-mark aria-hidden=true>⌧</div>" : ""
-        return "<div class=notice role=alert>\(mark)<p>\(escape(message))</p>\(detail)<button class=\(secondary ? "secondary" : "") onclick=\"window.webkit.messageHandlers.review.postMessage('\\(escape(button))')\">\(escape(button))</button></div>"
+        // The label travels in a data attribute, so no HTML-escaped text is ever
+        // parsed as JavaScript; the class is quoted so an empty value cannot
+        // swallow the onclick attribute.
+        return "<div class=notice role=alert>\(mark)<p>\(escape(message))</p>\(detail)<button class=\"\(secondary ? "secondary" : "")\" data-action=\"\(escape(button))\" onclick=\"window.webkit.messageHandlers.review.postMessage(this.dataset.action)\">\(escape(button))</button></div>"
     }
 
     private static func escape(_ text: String) -> String {

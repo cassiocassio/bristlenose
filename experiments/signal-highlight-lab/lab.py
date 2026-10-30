@@ -305,13 +305,60 @@ def report() -> None:
     write_viewer()
 
 
+VIEWER = r"""<!doctype html><meta charset=utf-8><title>Highlight lab: pick favourites</title>
+<style>
+body{font:15px/1.5 -apple-system,system-ui,sans-serif;max-width:56rem;margin:0 auto;padding:0 1rem 4rem}
+header{position:sticky;top:0;background:Canvas;padding:.6rem 0;border-bottom:1px solid #8884;z-index:2;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+header span{color:#777;font-size:13px} button{font:inherit;padding:.2rem .7rem}
+.card{margin:1.6rem 0 .3rem;font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.04em}
+.b{border:1px solid #8884;border-radius:8px;padding:.7rem .9rem;margin:.4rem 0}
+.q{color:#777;font-size:13px;margin-bottom:.5rem} label{display:flex;gap:.6rem;padding:.25rem .3rem;border-radius:5px;cursor:pointer}
+label:hover{background:#8881} input:checked+div{font-weight:600}
+mark{background:#ffd9b0;color:inherit;border-radius:2px;padding:0 1px}
+.v{color:#777;font-size:11px;margin-left:.5rem;font-weight:400} .hide .v{display:none}
+.none{color:#777;font-style:italic}
+@media(prefers-color-scheme:dark){mark{background:#7a4a1a}}
+</style>
+<header><b>Pick the one that reads best</b><span id=n></span>
+<label style="display:inline"><input type=checkbox id=rev> show variant names</label>
+<button id=copy>Copy picks as JSON</button><button id=dl>Download</button><button id=clr>Clear</button></header>
+<div id=app class=hide></div>
+<script>
+const DATA=__DATA__;
+const KEY="highlight-lab-picks-v1";
+let picks={};try{picks=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){}
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function seed(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h^=h<<13;h^=h>>>17;h^=h<<5;return((h>>>0)%1000)/1000}}
+let last="",html="";
+DATA.forEach(b=>{
+  if(b.card!==last){html+=`<div class=card>${esc(b.project)} · ${esc(b.card)}</div>`;last=b.card}
+  const r=seed(b.id),opts=b.options.map((o,i)=>[r(),i]).sort().map(x=>b.options[x[1]]);
+  html+=`<div class=b><div class=q>“${esc(b.quote)}”</div>`+opts.map((o,i)=>{
+    let body=esc(b.text);
+    if(o.text){const t=esc(o.text);body=body.replace(t,"<mark>"+t+"</mark>")}
+    else body=`<span class=none>${body} (no highlight)</span>`;
+    return `<label><input type=radio name="${b.key}" value="${i}" data-k="${b.key}" data-i="${b.options.indexOf(o)}"><div>${body}<span class=v>${o.variants.join(", ")}</span></div></label>`}).join("")+`</div>`});
+document.getElementById("app").innerHTML=html;
+function sync(){document.querySelectorAll("input[type=radio]").forEach(x=>x.checked=picks[x.dataset.k]==x.dataset.i);
+  document.getElementById("n").textContent=Object.keys(picks).length+" of "+DATA.length+" picked"}
+document.addEventListener("change",e=>{const x=e.target;if(x.dataset.k){picks[x.dataset.k]=x.dataset.i;try{localStorage.setItem(KEY,JSON.stringify(picks))}catch(_){};sync()}});
+document.getElementById("rev").onchange=e=>document.getElementById("app").classList.toggle("hide",!e.target.checked);
+function out(){return JSON.stringify(DATA.filter(b=>picks[b.key]!=null).map(b=>{const o=b.options[picks[b.key]];
+  return{key:b.key,project:b.project,card:b.card,bullet:b.text,quote:b.quote,chosen:o.text,chosen_by_variants:o.variants,
+  rejected:b.options.filter(x=>x!==o).map(x=>({text:x.text,variants:x.variants}))}}),null,1)}
+document.getElementById("copy").onclick=()=>navigator.clipboard.writeText(out()).then(()=>alert("Copied "+Object.keys(picks).length+" picks"));
+document.getElementById("dl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([out()],{type:"application/json"}));a.download="highlight-picks.json";a.click()};
+document.getElementById("clr").onclick=()=>{if(confirm("Clear all picks?")){picks={};try{localStorage.removeItem(KEY)}catch(_){};sync()}};
+sync();
+</script>"""
+
+
 def write_viewer() -> None:
     results = json.loads((DATA / "results.json").read_text())
-    parts = []
+    data = []
     for c in cards():
-        parts.append(f"<h2>{html.escape(c['project'])} · {html.escape(c['card'])}</h2>")
         for a in c["items"]:
-            parts.append(f"<div class=b><div class=q>“{html.escape(a['quote'])}”</div>")
+            groups: dict[str | None, list[str]] = {}
             for v in ORDER:
                 if v == "stored":
                     f = a["fragment"]; text = f["text"] if f else None
@@ -322,25 +369,17 @@ def write_viewer() -> None:
                     if p is None:
                         continue
                     text = p["highlight"]
-                body = html.escape(a["text"])
-                share = ""
-                if text and validate(a["text"], text):
-                    body = html.escape(a["text"]).replace(html.escape(text), f"<mark>{html.escape(text)}</mark>", 1)
-                    share = f"{words(text) / words(a['text']):.0%}"
-                elif text:
-                    share = "UNLOCATABLE"
-                parts.append(f"<div class=r><span class=v>{v}</span><span class=s>{share}</span>{body}</div>")
-            parts.append("</div>")
-    (DATA / "viewer.html").write_text(
-        "<!doctype html><meta charset=utf-8><title>Highlight lab</title><style>"
-        "body{font:15px/1.45 -apple-system,system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}"
-        ".b{border-top:1px solid #8884;padding:.7rem 0}.q{color:#777;font-size:13px;margin-bottom:.4rem}"
-        ".r{display:flex;gap:.6rem;padding:.12rem 0}.v{width:5.5rem;color:#777;font-size:12px;flex:none}"
-        ".s{width:4.2rem;color:#777;font-size:12px;flex:none;text-align:right}"
-        "mark{background:#ffd9b0;color:inherit;border-radius:2px;padding:0 1px}"
-        "@media(prefers-color-scheme:dark){body{background:#1c1c1e;color:#eee}mark{background:#7a4a1a}}"
-        "</style><h1>Old vs new highlights</h1>" + "".join(parts))
-    print("wrote", DATA / "viewer.html")
+                    if text and not validate(a["text"], text):
+                        continue                    # the product would drop it: not an option
+                groups.setdefault(text or None, []).append(v)
+            data.append({
+                "key": f"{c['key']}::{a['id']}", "project": c["project"], "card": c["card"],
+                "id": a["id"], "text": a["text"], "quote": a["quote"],
+                "options": [{"text": t, "variants": vs} for t, vs in groups.items()],
+            })
+    blob = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
+    (DATA / "viewer.html").write_text(VIEWER.replace("__DATA__", blob))
+    print("wrote", DATA / "viewer.html", f"({len(data)} bullets)")
 
 
 if __name__ == "__main__":

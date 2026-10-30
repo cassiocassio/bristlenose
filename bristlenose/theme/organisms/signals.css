@@ -313,26 +313,12 @@
     color: var(--bn-colour-muted);
 }
 
-/* Keep the current timecode gutter, but let each quote use the empty top-right
-   corner for its intensity so the participant's words retain the full measure. */
-.signal-card-quotes blockquote .quote-row {
-    display: block;
-}
-
-.signal-card-quotes blockquote .timecode {
-    float: left;
-    margin-right: var(--bn-space-md);
-}
-
-.signal-card-quotes blockquote .quote-body {
-    display: block;
-}
-
-.signal-card-quotes blockquote .quote-row::after {
-    content: "";
-    display: block;
-    clear: both;
-}
+/* A quote in a card is the Quotes lens's own row (organisms/blockquote.css): a flex row, the
+   timecode in a gutter on the baseline of the first line, the words hanging beside it. The
+   intensity circles are the first thing in the body, floated into its top-right corner, so the
+   words flow around them (owner, 30 Oct 2026). Before this the row was floated by hand, the
+   circles came after the text and drew at the bottom of the quote, and the timecode sat 3px
+   above the text's baseline. */
 
 /* Evidence contribution array — contribution strength, not participant identity. */
 .evidence-contribution-array {

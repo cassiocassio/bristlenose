@@ -16,6 +16,7 @@ import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWor
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading, TimecodeLink } from "../components";
+import { IntensityDots } from "../components/IntensityDots";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
 import {
   useInspectorStore,
@@ -889,6 +890,11 @@ function QuoteBlock({
           sessionId={quote.sessionId}
         />
         <span className="quote-body">
+          {/* First in the body, floated right (signals.css): the intensity sits in the top
+              right corner of the quote and the words flow around it. */}
+          <span className="intensity-dots" title={t("signals.intensityTooltip", { value: quote.intensity })}>
+            <IntensityDots value={quote.intensity} size="s" colour="var(--dot-colour, var(--bn-colour-muted))" />
+          </span>
           <span className="quote-text">{quote.text}</span>
           {!isContinuation && (
             <>{" "}
@@ -916,39 +922,8 @@ function QuoteBlock({
             />
           ))}
         </span>
-        <span className="intensity-dots" title={t("signals.intensityTooltip", { value: quote.intensity })}>
-          <IntensityDotsSvg value={quote.intensity} />
-        </span>
       </div>
     </blockquote>
-  );
-}
-
-function IntensityDotsSvg({ value }: { value: number }) {
-  const r = 5;
-  const cx0 = 7;
-  const gap = 16;
-  const w = cx0 + gap * 2 + r + 2;
-  const h = r * 2 + 2;
-  const colour = "var(--dot-colour, var(--bn-colour-muted))";
-
-  const dots: React.ReactNode[] = [];
-  for (let i = 0; i < 3; i++) {
-    const threshold = i + 1;
-    const x = cx0 + i * gap;
-    const y = r + 1;
-    if (value >= threshold) {
-      dots.push(<circle key={i} cx={x} cy={y} r={r} fill={colour} opacity={0.7} />);
-    } else {
-      dots.push(
-        <circle key={i} cx={x} cy={y} r={r} fill="none" stroke={colour} strokeWidth={1.2} opacity={0.35} />,
-      );
-    }
-  }
-  return (
-    <svg className="intensity-dots-svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
-      {dots}
-    </svg>
   );
 }
 

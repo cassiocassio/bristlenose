@@ -682,6 +682,21 @@ describe("SignalsPage", () => {
     expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
   });
 
+  it("puts the intensity circles first in the quote's body, small, so the words flow around them", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    const body = document.querySelector(".signal-card-quotes .quote-body") as HTMLElement;
+    // First in the body: a float placed after the text draws below it, not top right.
+    expect(body.firstElementChild?.classList.contains("intensity-dots")).toBe(true);
+    expect(body.querySelector("svg")?.getAttribute("data-size")).toBe("s");
+    // The chart's dots are the larger size.
+    fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
+    expect(screen.getAllByTestId("bn-metric-dots")[0].getAttribute("data-size")).toBe("m");
+  });
+
   it("names each metric in full, with the short name beside it for narrow cards", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);

@@ -303,7 +303,12 @@ class SignalEvidenceFragment(BaseModel):
 class SignalEvidenceAssertion(BaseModel):
     """One grounded participant playback for a signal-card narrative."""
 
-    text: str = Field(description="Short faithful playback of one participant's evidence")
+    text: str = Field(
+        description=(
+            "Short faithful playback of one participant's evidence, in one or two short "
+            "sentences, with no em dash, en dash or spaced hyphen joining clauses"
+        )
+    )
     source_quote_id: str = Field(
         description="Quote reference supplied in the signal input; do not invent one"
     )

@@ -806,3 +806,28 @@ class TestCachedAssertionsAreFilteredElementWise:
         row = loaded["section|Checkout|Friction"]
         assert row.signal_name == "Name" and row.evidence_assertions == []
 
+
+class TestPromptDashDiscipline:
+    """The explainer text read as machine-written because of em dashes (owner, 30 Oct 2026)."""
+
+    def _prompt(self) -> str:
+        from pathlib import Path
+
+        import bristlenose.llm as llm
+
+        return (Path(llm.__file__).parent / "prompts" / "signal-elaboration.md").read_text(
+            encoding="utf-8",
+        )
+
+    def test_the_prompt_does_not_model_the_habit_it_forbids(self) -> None:
+        prose = [
+            line for line in self._prompt().splitlines()
+            if "em dash" not in line and "en dash" not in line
+        ]
+        assert not [line for line in prose if "\u2014" in line]
+
+    def test_the_rule_covers_the_evidence_assertions_as_well_as_the_elaboration(self) -> None:
+        text = self._prompt()
+        step6 = text[text.index("Step 6"):]
+        assert "em dash" in step6 and "spaced hyphen" in step6
+

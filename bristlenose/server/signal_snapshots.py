@@ -32,7 +32,7 @@ _READ_WINDOW = 8
 # without changing SQLite.  On the next sidecar start, an older frozen report
 # is refreshed once if a cloud provider is available; offline readers keep the
 # last good report rather than receiving a blank lens or a maintenance task.
-SIGNAL_SNAPSHOT_PAYLOAD_VERSION = 4
+SIGNAL_SNAPSHOT_PAYLOAD_VERSION = 5
 
 
 def store_completed_snapshot(

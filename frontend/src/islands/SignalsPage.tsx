@@ -15,7 +15,7 @@
 import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Metric, PersonBadge, SectionHeading } from "../components";
+import { Badge, Metric, MetricLabel, PersonBadge, SectionHeading } from "../components";
 import { InspectorPanel, DimensionToggle, type InspectorSource } from "../components/InspectorPanel";
 import {
   useInspectorStore,
@@ -625,7 +625,7 @@ function SignalCard({
           />
           {workingOpen && (
             <div className="signal-card-metrics" data-testid="bn-signal-working">
-              <span className="metric-label" title={t("signals.signalTitle")}>{t("signals.signalLabel")}</span>
+              <MetricLabel label={t("signals.metricSignal")} shortLabel={t("signals.signalLabel")} title={t("signals.signalTitle")} />
               <span className="metric-value">{signal.compositeSignal.toFixed(2)}</span>
               <span className="metric-viz">
                 {siblingSignals && siblingSignals.length > 1 && signalIndex != null ? (
@@ -637,19 +637,22 @@ function SignalCard({
                 ) : null}
               </span>
               <Metric
-                label={t("signals.concLabel")}
+                label={t("signals.metricConc")}
+                shortLabel={t("signals.concLabel")}
                 title={t("signals.concTitle")}
                 displayValue={`${signal.concentration.toFixed(1)}×`}
                 viz={{ type: "bar", percentage: concPct }}
               />
               <Metric
-                label={t("signals.agreeLabel")}
+                label={t("signals.metricAgree")}
+                shortLabel={t("signals.agreeLabel")}
                 title={t("signals.agreeTitle")}
                 displayValue={signal.nEff.toFixed(1)}
                 viz={{ type: "bar", percentage: agreePct }}
               />
               <Metric
-                label={t("signals.intensityLabel")}
+                label={t("signals.metricIntensity")}
+                shortLabel={t("signals.intensityLabel")}
                 title={t("signals.intensityTitle")}
                 displayValue={signal.meanIntensity.toFixed(1)}
                 viz={{ type: "dots", value: signal.meanIntensity }}

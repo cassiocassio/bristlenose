@@ -636,6 +636,24 @@ describe("SignalsPage", () => {
     expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
   });
 
+  it("names each metric in full, with the short name beside it for narrow cards", async () => {
+    mockFetchCodebookSignals(mockCbData);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(2);
+    });
+    fireEvent.click(screen.getAllByTestId("bn-signal-hero")[0]);
+
+    const working = screen.getAllByTestId("bn-signal-working")[0];
+    const long = [...working.querySelectorAll(".metric-label-long")].map((n) => n.textContent);
+    const short = [...working.querySelectorAll(".metric-label-short")].map((n) => n.textContent);
+    expect(long).toEqual([
+      "Signal strength", "Concentration ratio", "Voices in agreement", "Emotional intensity",
+    ]);
+    // The short names are the ones the card used before; the card's container query picks one.
+    expect(short).toEqual(["Signal", "Conc.", "Agree.", "Intensity"]);
+  });
+
   it("the hero chip opens and closes the working", async () => {
     mockFetchCodebookSignals(mockCbData);
     render(<SignalsPage projectId="1" />);

@@ -12,7 +12,7 @@ export { Icon } from "./Icon";
 export type { IconName } from "./Icon";
 export { ExpandableTimecode } from "./ExpandableTimecode";
 export { JourneyChain } from "./JourneyChain";
-export { Metric } from "./Metric";
+export { Metric, MetricLabel } from "./Metric";
 export { MicroBar } from "./MicroBar";
 export { PersonBadge } from "./PersonBadge";
 export { ProposalZoneList } from "./ProposalZoneList";

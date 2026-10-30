@@ -24,6 +24,8 @@ export type MetricViz = MetricBarViz | MetricDotsViz | MetricNoneViz;
 
 interface MetricProps {
   label: string;
+  /** The short form, shown instead of `label` when the card is narrow (`signals.css`). */
+  shortLabel?: string;
   title?: string;
   displayValue: string;
   viz: MetricViz;
@@ -99,8 +101,39 @@ function IntensityDots({ value }: { value: number }) {
 // Metric
 // ---------------------------------------------------------------------------
 
+/**
+ * A metric's name in two lengths. The long one is the default; below the card's narrow width
+ * (`@container` in `signals.css`) the short one takes over. Both are in the markup and the one
+ * that is not shown is `display: none`, so assistive technology reads only the one on screen.
+ */
+export function MetricLabel({
+  label,
+  shortLabel,
+  title,
+  "data-testid": testId,
+}: {
+  label: string;
+  shortLabel?: string;
+  title?: string;
+  "data-testid"?: string;
+}) {
+  return (
+    <span className="metric-label" title={title} data-testid={testId}>
+      {shortLabel && shortLabel !== label ? (
+        <>
+          <span className="metric-label-long">{label}</span>
+          <span className="metric-label-short">{shortLabel}</span>
+        </>
+      ) : (
+        label
+      )}
+    </span>
+  );
+}
+
 export function Metric({
   label,
+  shortLabel,
   title,
   displayValue,
   viz,
@@ -108,9 +141,12 @@ export function Metric({
 }: MetricProps) {
   return (
     <>
-      <span className="metric-label" title={title} data-testid={testId ? `${testId}-label` : undefined}>
-        {label}
-      </span>
+      <MetricLabel
+        label={label}
+        shortLabel={shortLabel}
+        title={title}
+        data-testid={testId ? `${testId}-label` : undefined}
+      />
       <span className="metric-value" data-testid={testId ? `${testId}-value` : undefined}>
         {displayValue}
       </span>

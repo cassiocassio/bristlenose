@@ -170,6 +170,23 @@
     cursor: help;
 }
 
+/* The metric names come in two lengths ("Concentration ratio", "Conc."). The long one is the
+   default; the short one takes over when the card is narrow. The hidden one is display:none,
+   so a screen reader reads only the one on screen. */
+.metric-label-short {
+    display: none;
+}
+
+@container (max-width: 28rem) {
+    .metric-label-long {
+        display: none;
+    }
+
+    .metric-label-short {
+        display: inline;
+    }
+}
+
 /* Figures — values, counts and scores — set in the body face with tabular numerals, not mono:
    alignment without a change of voice, as SwiftUI's .monospacedDigit() does natively
    (docs/design-monospace-roles.md §4). Codes that happen to be digits stay mono. */

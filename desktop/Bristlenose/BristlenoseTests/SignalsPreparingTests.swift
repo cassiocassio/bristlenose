@@ -361,6 +361,59 @@ import Testing
         #expect(!b.isPreparingSignals)
     }
 
+    /// The status page has no SPA to confirm a prior, so an armed prior must not
+    /// outlive it: a run whose import failed lands on a status page.
+    @Test func aStatusPageClearsAnArmedPrior() {
+        let clock = Clock()
+        let b = bridge(clock)
+        b.armSignalsPreparing()
+        #expect(b.isPreparingSignals)
+        b.handleMessage(["type": "status-page", "outcome": "failed"])
+        #expect(!b.isPreparingSignals, "a page with no SPA kept saying the report was on its way")
+    }
+
+    /// A study with no cloud model posts "all lit" the moment the run's overlay
+    /// ends, which can be before the Mac has finished reading the run's end. The
+    /// prior is armed against the count at the run's START, so that early post
+    /// still speaks: it must not hold the line for the full ten seconds.
+    @Test func aPostThatLandedBeforeTheArmStillSpeaks() {
+        let clock = Clock()
+        let b = bridge(clock)
+        post(b, ["sessions": true, "quotes": true, "signals": true,
+                 "codebook": false, "project": false])
+        let atRunStart = b.lensAvailabilityPosts
+        post(b, [:])  // the finished run's shape, before the Mac read the run's end
+        b.armSignalsPreparing(postsAtRunStart: atRunStart)
+        #expect(!b.isPreparingSignals, "a bridge that had already said all lit was made to wait ten seconds")
+        // The same arm against the count at ARM time (the old behaviour) holds it.
+        let late = bridge(clock)
+        post(late, [:])
+        late.armSignalsPreparing()
+        #expect(late.isPreparingSignals)
+    }
+
+    /// Whether a study already had a report is what it was when its run began,
+    /// not whether any run ever ended: a transcribe-only or stopped first run
+    /// leaves no report, and the serve withholds the lens over the first one.
+    @Test func aStudyHadAReportOnlyIfItsLastRunEndedInOne() {
+        #expect(SignalsPreparing.hadReport(before: .ready(Date()), known: true))
+        #expect(SignalsPreparing.hadReport(
+            before: .completedPartial(summary: PipelineSummary()), known: true))
+        #expect(!SignalsPreparing.hadReport(before: .idle, known: true))
+        #expect(!SignalsPreparing.hadReport(before: .scanning, known: true))
+        #expect(!SignalsPreparing.hadReport(
+            before: .partial(kind: "transcribe-only", stagesComplete: []), known: true))
+        #expect(!SignalsPreparing.hadReport(
+            before: .stopped(stagesComplete: []), known: true))
+    }
+
+    /// Not knowing counts as having had one: a missed prior costs a collapse
+    /// and regrow, a wrong one says a thing that is not so.
+    @Test func notKnowingWhatTheStudyWasCountsAsHavingHadAReport() {
+        #expect(SignalsPreparing.hadReport(before: nil, known: false))
+        #expect(SignalsPreparing.hadReport(before: .idle, known: false))
+    }
+
     /// Export dims while Signals prepares, by the owner's decision: any
     /// withheld lens makes the report partial, and nothing here changed that.
     @Test func exportReportStillDimsWhileSignalsPrepares() {

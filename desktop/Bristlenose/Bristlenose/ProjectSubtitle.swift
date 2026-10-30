@@ -342,8 +342,10 @@ enum ProjectSubtitle {
     /// activities and the error-kind delta, and takes the line from the rest
     /// — `ReportCrash.outranks` plus the placement in `resolveIdle`. Preparing
     /// Signals (30 Oct 2026) sits just above screen reading (owner's call: it is
-    /// short-lived and Screens is long), so the missing-files warning waits a
-    /// few seconds behind it. Screen reading
+    /// short-lived and Screens is long), so the missing-files warning waits
+    /// behind it: seconds after a run, and as long as a codebook apply takes on
+    /// a study with no report yet (the server withholds the lens for the whole
+    /// job). Screen reading
     /// (14 Oct 2026) joins the idle tier after copying and the distress
     /// deltas (forked, missing), above the quiet `unanalysed` one.
     ///

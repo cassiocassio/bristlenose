@@ -65,6 +65,33 @@ struct SignalsPreparing: Equatable {
         }
     }
 
+    /// What a study was, and how many posts the bridge had made, when its run
+    /// began. A run's end cannot say whether the study already had a report, so
+    /// the window remembers what the study was before the run.
+    struct RunStart: Equatable {
+        var before: PipelineState?
+        var posts: Int
+    }
+
+    /// Whether a study that began a run from `state` already had a report: it
+    /// ended its last run to one (`.ready` or `.completedPartial`), which an
+    /// incremental Analyse, a re-analysis and a study analysed elsewhere and
+    /// opened here all have. A study that was idle, scanning, stopped, failed
+    /// or only transcribed has none: the serve withholds the lens over its first
+    /// one. Not knowing (the app opened mid-run) counts as "had one": a missed
+    /// prior costs a collapse and regrow, a wrong one says a thing that is not so.
+    /// A clean re-analysis sets the old report aside and is the one case this
+    /// misses.
+    static func hadReport(before state: PipelineState?, known: Bool) -> Bool {
+        guard known else { return true }
+        switch state {
+        case .ready, .completedPartial:
+            return true
+        default:
+            return false
+        }
+    }
+
     mutating func arm(now: Date, posts: Int) {
         armed = Armed(at: now, posts: posts)
     }

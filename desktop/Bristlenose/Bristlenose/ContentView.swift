@@ -300,6 +300,9 @@ struct ContentView: View {
     /// the last-used study, which is what that global is now for.
     @Binding var seed: WindowSeed?
 
+    /// What each study was, and the bridge's post count, when its run began
+    /// (SignalsPreparing.RunStart); dropped when the run ends.
+    @State private var signalsRunStarts: [UUID: SignalsPreparing.RunStart] = [:]
     @State private var selection: Set<SidebarSelection> = []
     /// Tracks whether the project list sidebar column is visible.
     /// Used to gate sidebar-specific toolbar items — if the user has hidden
@@ -1070,14 +1073,26 @@ struct ContentView: View {
             }
             // A first analysis ending here predicts the Signals report being
             // built, until this window's bridge says so (SignalsPreparing).
-            // Read before the baseline below is stamped: it is what says
-            // "first".
-            if let id = selectedProjectID,
-               SignalsPreparing.shouldArm(
-                   old: old[id], new: new[id],
-                   analysedBefore: projectIndex.projects
-                       .first(where: { $0.id == id })?.lastPipelineRunAt != nil) {
-                bridgeHandler.armSignalsPreparing()
+            // "First" is what the study was when the run began (it had no
+            // report), not the run stamp below, which any run outcome sets.
+            for (id, state) in new {
+                if case .running = state, signalsRunStarts[id] == nil {
+                    signalsRunStarts[id] = SignalsPreparing.RunStart(
+                        before: old[id], posts: bridgeHandler.lensAvailabilityPosts)
+                }
+            }
+            if let id = selectedProjectID {
+                let start = signalsRunStarts[id]
+                if SignalsPreparing.shouldArm(
+                    old: old[id], new: new[id],
+                    analysedBefore: SignalsPreparing.hadReport(
+                        before: start?.before, known: start != nil)) {
+                    bridgeHandler.armSignalsPreparing(postsAtRunStart: start?.posts)
+                }
+            }
+            for id in signalsRunStarts.keys {
+                if case .running = new[id] ?? .idle { continue }
+                signalsRunStarts[id] = nil
             }
             // Stamp the analysis baseline. Narrower than the rescan above — a
             // passive `.scanning` read must not open the F14 drift gate, since

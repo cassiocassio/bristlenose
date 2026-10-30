@@ -572,8 +572,12 @@ final class BridgeHandler: ObservableObject {
     var signalsClock: () -> Date = { Date() }
 
     /// A first analysis of the study this window shows has just ended.
-    func armSignalsPreparing() {
-        signalsPreparing.arm(now: signalsClock(), posts: lensAvailabilityPosts)
+    /// `postsAtRunStart` is the post count when the run began: any post since
+    /// then that describes a finished run is the bridge speaking, even one that
+    /// landed before the Mac finished reading the run's end (a study with no
+    /// cloud model posts "all lit" at once).
+    func armSignalsPreparing(postsAtRunStart: Int? = nil) {
+        signalsPreparing.arm(now: signalsClock(), posts: postsAtRunStart ?? lensAvailabilityPosts)
         refreshSignalsPreparing()
     }
 
@@ -1260,6 +1264,8 @@ final class BridgeHandler: ObservableObject {
             // A status page withholds nothing of its own; the SPA's last
             // `lens-availability` post no longer describes this document.
             lensReadiness = .all
+            // Nothing is going to confirm a prior on a page with no SPA.
+            signalsPreparing.clear()
             refreshSignalsPreparing()
 
         case "route-change":

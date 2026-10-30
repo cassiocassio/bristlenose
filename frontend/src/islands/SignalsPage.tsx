@@ -35,6 +35,7 @@ import {
   isFromSentimentLens,
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
+import { chipWords } from "../utils/signalChip";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { formatTimecode } from "../utils/format";
@@ -138,29 +139,9 @@ function SignalHero({
   const { t } = useTranslation("enums");
   const { t: tc } = useTranslation();
 
-  // The label is resolved server-side and arrives on the wire — a feeling, a
-  // direction, or "Mixed sentiments". `columnLabel` is the fallback for a
-  // response that predates it, and for the sentiment lens's own value cards.
-  const raw = signal.label || signal.columnLabel;
-
-  // A sentiment VALUE is translated and title-cased by `enums`. The two
-  // summary labels and the hedge are NOT members of that map — they are this
-  // design's own strings and carry their own keys in `common`.
-  //
-  // The old gate was `isSentiment`, which is true only on the fallback lens.
-  // The rendered card never took that path, so it never reached the
-  // translation at all and showed the raw group name, "Sentiment".
-  const isValue = signal.labelKind === "value" || isSentiment;
-  const SUMMARY: Record<string, string> = {
-    Positive: "signals.labelPositive",
-    Negative: "signals.labelNegative",
-    "Mixed sentiments": "signals.labelMixed",
-  };
-  const label = isValue
-    ? t(`sentiment.${raw}`, { defaultValue: raw })
-    : SUMMARY[raw]
-      ? tc(SUMMARY[raw], { defaultValue: raw })
-      : raw;
+  // The label is resolved server-side and arrives on the wire (a feeling, a direction, or
+  // "Mixed sentiments"), and the navigation resolves it the same way (`chipWords`).
+  const { raw, label, isValue } = chipWords(signal, isSentiment, t, tc);
 
   const classes = [
     "badge",

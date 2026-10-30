@@ -435,6 +435,7 @@
     "labelPositive": "Positif",
     "labelNegative": "N\u00e9gatif",
     "labelMixed": "Sentiments mitig\u00e9s",
+    "labelMixedShort": "Mitigé",
     "heading": "Signaux",
     "loadingData": "Chargement des signaux…",
     "noData": "Aucun signal pour l'instant. Exécutez le pipeline ou appliquez des étiquettes de la grille de codage pour en générer.",

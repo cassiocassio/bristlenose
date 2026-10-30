@@ -486,6 +486,7 @@
     "labelPositive": "Pozytywne",
     "labelNegative": "Negatywne",
     "labelMixed": "Mieszane odczucia",
+    "labelMixedShort": "Mieszane",
     "heading": "Sygnały",
     "loadingData": "Wczytywanie sygnałów…",
     "noData": "Nie ma jeszcze sygnałów. Uruchom potok lub zastosuj tagi z księgi kodów, aby wygenerować sygnały.",

@@ -620,6 +620,7 @@
  "common.signals.intensityTitle": "548dc1",
  "common.signals.intensityTooltip": "6b818b",
  "common.signals.labelMixed": "30146a",
+ "common.signals.labelMixedShort": "f340b6",
  "common.signals.labelNegative": "9f7bda",
  "common.signals.labelPositive": "14e9f4",
  "common.signals.loadingData": "aecf4e",

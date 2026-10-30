@@ -425,6 +425,7 @@
     "labelPositive": "\u80af\u5b9a\u7684",
     "labelNegative": "\u5426\u5b9a\u7684",
     "labelMixed": "\u8907\u5408\u7684\u306a\u611f\u60c5",
+    "labelMixedShort": "複合的",
     "heading": "シグナル",
     "loadingData": "シグナルを読み込み中…",
     "noData": "シグナルはまだありません。パイプラインを実行するか、コードブックタグを適用して生成してください。",

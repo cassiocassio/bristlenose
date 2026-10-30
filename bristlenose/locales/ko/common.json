@@ -411,6 +411,7 @@
     "labelPositive": "\uae0d\uc815\uc801",
     "labelNegative": "\ubd80\uc815\uc801",
     "labelMixed": "\ubcf5\ud569\uc801 \uac10\uc815",
+    "labelMixedShort": "복합적",
     "heading": "시그널",
     "loadingData": "시그널 로드 중…",
     "noData": "아직 시그널이 없습니다. 파이프라인을 실행하거나 코드북 태그를 적용하여 시그널을 생성하세요.",

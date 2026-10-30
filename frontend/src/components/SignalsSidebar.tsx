@@ -19,12 +19,14 @@
  */
 
 import { Fragment, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useSignalStore,
   setFocusedSignalKey,
 } from "../contexts/SignalStore";
 import { getGroupBg } from "../utils/colours";
-import { groupSignalsByLocation } from "../utils/signalDedup";
+import { chipWords } from "../utils/signalChip";
+import { groupSignalsByLocation, isFromSentimentLens } from "../utils/signalDedup";
 import type { UnifiedSignal } from "../utils/types";
 
 // ── Component ────────────────────────────────────────────────────────
@@ -70,12 +72,16 @@ interface SignalEntryProps {
 }
 
 function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
+  const { t: te } = useTranslation("enums");
+  const { t: tc } = useTranslation();
+  // The same words as the card's chip: "Frustration", not the codebook's name "Sentiment".
+  const chip = chipWords(signal, isFromSentimentLens(signal), te, tc, true);
   const badgeStyle = signal.colourSet
     ? { backgroundColor: getGroupBg(signal.colourSet) }
     : undefined;
   const badgeClass = signal.colourSet
     ? "badge"
-    : `badge badge-${signal.columnLabel}`;
+    : `badge badge-${chip.isValue ? chip.raw : signal.columnLabel}`;
 
   // A card with no elaborated name shows its group chip and nothing else. It
   // used to fall back to the location, which the heading above has already
@@ -109,7 +115,7 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
         </span>
       )}
       <span className={badgeClass} style={badgeStyle}>
-        {signal.columnLabel}
+        {chip.label}
       </span>
     </a>
   );

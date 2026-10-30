@@ -437,6 +437,7 @@
     "labelPositive": "Positive",
     "labelNegative": "Negative",
     "labelMixed": "Mixed sentiments",
+    "labelMixedShort": "Mixed",
     "heading": "Signals",
     "loadingData": "Loading signals…",
     "noData": "No signals yet. Run the pipeline or apply codebook tags to generate signals.",

@@ -435,6 +435,7 @@
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
     "labelMixed": "Gemischte Stimmung",
+    "labelMixedShort": "Gemischt",
     "heading": "Signale",
     "loadingData": "Signale werden geladen…",
     "noData": "Noch keine Signale. Führen Sie die Pipeline aus oder wenden Sie Codebuch-Tags an, um Signale zu generieren.",

@@ -435,6 +435,7 @@
     "labelPositive": "Positivo",
     "labelNegative": "Negativo",
     "labelMixed": "Sentimentos mistos",
+    "labelMixedShort": "Misto",
     "heading": "Sinais",
     "loadingData": "Carregando sinais…",
     "noData": "Ainda não há sinais. Execute o pipeline ou aplique etiquetas do livro de códigos para gerá-los.",

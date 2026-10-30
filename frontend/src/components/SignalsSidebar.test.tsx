@@ -144,4 +144,39 @@ describe("SignalsSidebar", () => {
     });
     window.removeEventListener("bn:signal-focus", handler);
   });
+
+  describe("what the tag says", () => {
+    const tagOf = () => document.querySelector(".signal-entry .badge")?.textContent;
+
+    it("names the feeling the card names, not the framework (\"Frustration\", not \"Sentiment\")", () => {
+      setSignals([
+        makeSignal({ key: "a", columnLabel: "Sentiment", codebookName: "Sentiment", label: "frustration", labelKind: "value" }),
+      ]);
+      render(<SignalsSidebar />);
+      expect(tagOf()).toBe("Frustration");
+    });
+
+    it("says the direction for a card that has one but no single feeling", () => {
+      setSignals([makeSignal({ key: "a", columnLabel: "Sentiment", codebookName: "Sentiment", label: "Negative", labelKind: "valence" })]);
+      render(<SignalsSidebar />);
+      expect(tagOf()).toBe("Negative");
+    });
+
+    it("says Mixed, short, for a card the chip calls Mixed sentiments", () => {
+      setSignals([makeSignal({ key: "a", columnLabel: "Sentiment", codebookName: "Sentiment", label: "Mixed sentiments", labelKind: "mixed" })]);
+      render(<SignalsSidebar />);
+      expect(tagOf()).toBe("Mixed");
+    });
+
+    it("keeps a codebook card's group name", () => {
+      setSignals([
+        makeSignal({
+          key: "a", columnLabel: "Needs and desires", codebookName: "Norman", colourSet: "ux",
+          label: "Needs and desires", labelKind: "group",
+        }),
+      ]);
+      render(<SignalsSidebar />);
+      expect(tagOf()).toBe("Needs and desires");
+    });
+  });
 });

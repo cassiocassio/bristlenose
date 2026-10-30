@@ -411,6 +411,7 @@
     "labelPositive": "\u6b63\u9762",
     "labelNegative": "\u8ca0\u9762",
     "labelMixed": "\u60c5\u7dd2\u5206\u6b67",
+    "labelMixedShort": "分歧",
     "heading": "訊號",
     "loadingData": "正在載入訊號⋯",
     "noData": "尚無訊號。請執行管線或套用編碼簿標籤以產生訊號。",

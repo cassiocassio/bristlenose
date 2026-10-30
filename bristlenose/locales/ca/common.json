@@ -435,6 +435,7 @@
     "labelPositive": "Positiu",
     "labelNegative": "Negatiu",
     "labelMixed": "Sentiments mixtos",
+    "labelMixedShort": "Mixt",
     "heading": "Senyals",
     "loadingData": "S'estan carregant els senyals…",
     "noData": "Encara no hi ha senyals. Executa el processament o aplica etiquetes del llibre de codis per generar-ne.",

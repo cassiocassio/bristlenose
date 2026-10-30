@@ -435,6 +435,7 @@
     "labelPositive": "Positiv",
     "labelNegative": "Negativ",
     "labelMixed": "Blandede f\u00f8lelser",
+    "labelMixedShort": "Blandet",
     "heading": "Signaler",
     "loadingData": "Indlæser signaler…",
     "noData": "Ingen signaler endnu. Kør pipelinen, eller anvend kodebogstags for at generere signaler.",

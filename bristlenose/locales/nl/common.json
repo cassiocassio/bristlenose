@@ -435,6 +435,7 @@
     "labelPositive": "Positief",
     "labelNegative": "Negatief",
     "labelMixed": "Gemengde gevoelens",
+    "labelMixedShort": "Gemengd",
     "heading": "Signalen",
     "loadingData": "Signalen laden…",
     "noData": "Nog geen signalen. Voer de pijplijn uit of pas codeboektags toe om signalen te genereren.",

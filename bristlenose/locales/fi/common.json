@@ -435,6 +435,7 @@
     "labelPositive": "My\u00f6nteinen",
     "labelNegative": "Kielteinen",
     "labelMixed": "Ristiriitaiset tunteet",
+    "labelMixedShort": "Ristiriitainen",
     "heading": "Signaalit",
     "loadingData": "Ladataan signaaleja…",
     "noData": "Ei vielä signaaleja. Suorita analyysi tai lisää koodikirjatunnisteita tuottaaksesi signaaleja.",

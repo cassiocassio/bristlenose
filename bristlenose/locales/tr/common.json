@@ -435,6 +435,7 @@
     "labelPositive": "Olumlu",
     "labelNegative": "Olumsuz",
     "labelMixed": "Kar\u0131\u015f\u0131k duygular",
+    "labelMixedShort": "Karışık",
     "heading": "Sinyaller",
     "loadingData": "Sinyaller yükleniyor…",
     "noData": "Henüz sinyal yok. Sinyal oluşturmak için işlem hattını çalıştırın veya kod kitabı etiketleri uygulayın.",

@@ -435,6 +435,7 @@
     "labelPositive": "Positivo",
     "labelNegative": "Negativo",
     "labelMixed": "Sentimenti contrastanti",
+    "labelMixedShort": "Contrastante",
     "heading": "Segnali",
     "loadingData": "Caricamento dei segnali…",
     "noData": "Nessun segnale per ora. Esegui la pipeline o applica i tag del libro dei codici per generarne.",

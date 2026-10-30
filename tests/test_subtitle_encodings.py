@@ -99,3 +99,52 @@ def test_a_non_western_legacy_file_is_refused_not_misread(
     path.write_bytes(text.encode(encoding))
     with pytest.raises(UnicodeDecodeError):
         read_text_any_encoding(path)
+
+
+# --- One stray invalid byte in an otherwise-UTF-8 file (ruling 5, #191) -------------
+
+_FRENCH = "J’ai trouvé ça très difficile à utiliser. Il faut être patient, déjà."
+
+
+def _utf8_with_a_stray_windows_quote(text: str) -> bytes:
+    """A UTF-8 file with one 0x92 (cp1252's right single quote) pasted in."""
+    return text.encode("utf-8") + b" \x92 fin."
+
+
+def test_a_utf8_file_with_one_stray_byte_stays_utf8() -> None:
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    text = decode_text_any_encoding(_utf8_with_a_stray_windows_quote(_FRENCH), "t.txt")
+    assert text.startswith(_FRENCH)  # every accent intact, not "trouvÃ©"
+    assert text.count("�") == 1  # the one bad byte, marked, not dropped
+
+
+def test_a_stray_byte_in_a_cjk_utf8_file_stays_utf8() -> None:
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    zh = "我觉得这个功能很难找到，而且不太直观。"
+    text = decode_text_any_encoding(zh.encode("utf-8") + b"\x92", "t.txt")
+    assert text.startswith(zh)  # the plausibility guard must not refuse UTF-8 text
+
+
+def test_a_real_windows_file_with_one_accent_is_still_windows_text() -> None:
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    data = "Anna: Un café, s'il vous plaît.".encode("cp1252")
+    assert decode_text_any_encoding(data, "t.txt") == "Anna: Un café, s'il vous plaît."
+
+
+def test_a_windows_file_with_one_valid_looking_pair_is_not_taken_for_utf8() -> None:
+    """One accidental C3 A9 pair beside many cp1252-only bytes stays Windows text."""
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    line = "Il a dit « déjà vu » à l’équipe, très étonné, après être resté là."
+    data = line.encode("cp1252") + b" \xc3\xa9"  # one pair that happens to be valid UTF-8
+    assert decode_text_any_encoding(data, "t.txt").startswith(line)
+
+
+def test_a_file_with_many_bad_bytes_is_not_taken_for_utf8() -> None:
+    from bristlenose.stages.s03_parse_subtitles import decode_text_any_encoding
+
+    data = "é".encode() + "été à la plage ça va très bien".encode("cp1252")
+    assert "été à la plage" in decode_text_any_encoding(data, "t.txt")

@@ -239,6 +239,17 @@ def decode_text_any_encoding(data: bytes, name: str) -> str:
         return data.decode("utf-8")
     except UnicodeDecodeError:
         pass
+    # A UTF-8 file with a few stray bytes (one smart quote pasted from a Windows
+    # tool) is still a UTF-8 file: read as 1252 every accent in it turns to
+    # mojibake. Real Windows text has almost no byte pairs that happen to be valid
+    # UTF-8, so valid multi-byte characters well outnumbering the bad bytes means
+    # UTF-8 (ruling 5, 30 Oct 2026).
+    utf8_text = data.decode("utf-8", errors="replace")
+    bad = utf8_text.count("\ufffd") - data.count("\ufffd".encode())
+    valid = sum(1 for c in utf8_text if ord(c) > 127 and c != "\ufffd")
+    if valid >= 1 and bad * 4 <= valid:
+        logger.warning("%s is UTF-8 with %d invalid byte(s); each replaced with U+FFFD", name, bad)
+        return utf8_text
     try:
         text = data.decode("cp1252")
     except UnicodeDecodeError:

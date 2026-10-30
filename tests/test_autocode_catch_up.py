@@ -630,6 +630,47 @@ class TestAKeyOrCreditFailure:
             assert cu._BLOCKED == {}
         assert model.batch_sizes()[applied + 2:] == [6], "the whole backlog in the last"
 
+    def test_the_hold_is_measured_on_a_clock_that_runs_while_the_mac_sleeps(self) -> None:
+        """``time.monotonic`` stops with the lid closed on a Mac: a 15-minute hold set
+        in the evening would still be running the next morning."""
+        import time as _time
+
+        assert cu._clock is _time.time
+
+    def test_attempts_for_one_codebook_never_overlap(self, tmp_path: Path) -> None:
+        """A second trigger that reaches ``_catch_up`` while another attempt for the same
+        codebook is anywhere between its check and its re-arming waits for all of it
+        (the ``live_reapply`` wait alone left a gap between a finished pass and the
+        attempt's own continuation)."""
+        import asyncio
+
+        app, _client = _app(tmp_path)
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+        db = app.state.db_factory()
+        db.query(QuoteState).delete()  # unhidden: the quote counts and is owed
+        db.commit()
+        db.close()
+
+        async def go() -> None:
+            lock = cu._LOCKS.setdefault((1, "garrett"), asyncio.Lock())
+            await lock.acquire()  # another attempt for this codebook is in progress
+            attempt = asyncio.ensure_future(cu._catch_up(app, 1, "garrett"))
+            for _ in range(30):
+                await asyncio.sleep(0.01)
+            assert not attempt.done()
+            assert len(model.prompts) == applied, "it must wait, not call the provider"
+            lock.release()
+            await attempt
+
+        with model:
+            asyncio.run(go())
+        assert len(model.prompts) == applied + 1
+
     def test_a_credit_failure_is_held_the_same_way(self, tmp_path: Path) -> None:
         app, client = _app(tmp_path)
         _more_quotes(app, 2)

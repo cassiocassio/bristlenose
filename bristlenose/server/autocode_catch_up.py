@@ -64,8 +64,11 @@ KEY_OR_CREDIT_KINDS = frozenset({"invalid_key", "out_of_credit"})
 #: No timer runs and nothing is spent without a trigger.
 HOLD_S = 15 * 60.0
 
-#: The clock the hold is measured on (monotonic seconds); a test replaces it.
-_clock = time.monotonic
+#: The clock the hold is measured on; a test replaces it. The wall clock, not
+#: ``time.monotonic``: on a Mac the monotonic clock stops while the lid is closed, so a
+#: hold set at 17:55 would have run for five of its fifteen minutes by the next morning.
+#: A wall-clock jump costs one early attempt or a longer hold, never a key or a spend.
+_clock = time.time
 
 
 class _Wait:
@@ -83,6 +86,10 @@ _WAITS: dict[int, _Wait] = {}
 _BLOCKED: dict[tuple[int, str], tuple[tuple[str, str, bool], float]] = {}
 #: Strong references: the loop holds a bare task weakly (server/CLAUDE.md).
 _FIRING: set[asyncio.Task[Any]] = set()
+#: One attempt at a time per ``(project, framework)``, from the check to the hold
+#: being set again. Without it a second trigger could slip between a finished pass
+#: and its continuation and make a second provider call for one lapse.
+_LOCKS: dict[tuple[int, str], asyncio.Lock] = {}
 
 
 #: ``load_settings()`` reads the credential store, which on the Mac is a subprocess per key,
@@ -130,9 +137,9 @@ def blocked(project_id: int, framework_id: str, settings: Any, job: AutoCodeJob)
     """Whether the last attempt failed for a key or credit reason and nothing has
     changed since: the state is the one it failed in, the job still says so, and
     ``HOLD_S`` has not passed. A pass that has worked since (any path) cleared the
-    job's failure and lifts it. A lapsed hold is left in place, not removed: the
-    attempt it allows ends by setting it again (or lifting it), so a second trigger
-    during that attempt does not start another."""
+    job's failure and lifts it. Two attempts for one codebook never overlap
+    (``_catch_up`` serialises them), so a second trigger during the attempt a lapsed
+    hold allows waits for it and then finds the hold set again."""
     key = (project_id, framework_id)
     held = _BLOCKED.get(key)
     if held is None:
@@ -266,6 +273,12 @@ async def _fire(app: Any, project_id: int) -> None:
 
 
 async def _catch_up(app: Any, project_id: int, framework_id: str) -> None:
+    lock = _LOCKS.setdefault((project_id, framework_id), asyncio.Lock())
+    async with lock:
+        await _catch_up_locked(app, project_id, framework_id)
+
+
+async def _catch_up_locked(app: Any, project_id: int, framework_id: str) -> None:
     from bristlenose.server.autocode import live_reapply
     from bristlenose.server.models import AutoCodeJob
     from bristlenose.server.routes.data import _start_catch_ups, launch_catch_up
@@ -331,5 +344,6 @@ def forget_everything() -> None:
             wait.handle.cancel()
     _WAITS.clear()
     _BLOCKED.clear()
+    _LOCKS.clear()
     global _settings_memo
     _settings_memo = None

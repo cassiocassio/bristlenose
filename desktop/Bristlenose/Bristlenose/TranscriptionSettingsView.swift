@@ -47,7 +47,7 @@ struct TranscriptionSettingsView: View {
                 modelSection
                 // Whisper downloads in the background from launch, so its
                 // Download Now / Stop / status row is here without the Apple
-                // choice too. Download Now is not held by the 20 GB floor.
+                // choice too. Download Now is not held by the 10 GB floor.
                 Section { WhisperStatusRow(download: whisperDownload) }
                     .task { await whisperDownload.refresh() }
             }

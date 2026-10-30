@@ -11,10 +11,12 @@ that MLX targets, so M1 through M4 Ultra (and beyond) all work the same way.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import logging
 import platform
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -266,15 +268,77 @@ def _get_system_memory_gb() -> float | None:
     return None
 
 
-def _check_mlx_available() -> bool:
-    """Check if mlx and mlx-whisper are installed and importable."""
+def module_installed(name: str) -> bool:
+    """Whether ``name`` is installed, without importing it.
+
+    ``import mlx_whisper`` creates the Metal device, and when that fails the process
+    dies on a native abort (SIGTRAP) that no ``except`` can catch. Whether Whisper is
+    on disk, and whether a run may start, must not depend on the GPU answering: found
+    on a clean macOS 15 guest, 30 Oct 2026, where it turned the launch probe, every
+    Retry and the ``run`` preflight into an instant crash. Stage 5 imports the module
+    when it transcribes, which is where a Mac that cannot start MLX should fail.
+    """
     try:
-        import mlx  # noqa: F401
-        import mlx_whisper  # noqa: F401
-        return True
-    except ImportError:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError) as exc:
+        # A module in sys.modules with no __spec__, or a broken parent package: the
+        # install is damaged, which is not the same as absent.
+        logger.warning("module_installed(%s): the import system cannot say: %s", name, exc)
         return False
 
+
+def _check_mlx_available() -> bool:
+    """Check if mlx and mlx-whisper are installed (not imported: see
+    :func:`module_installed`)."""
+    return module_installed("mlx") and module_installed("mlx_whisper")
+
+
+
+@dataclass(frozen=True)
+class MlxProbe:
+    """Whether MLX can start on this Mac, asked of a child process."""
+
+    ok: bool
+    detail: str = ""
+
+
+def _self_command() -> list[str]:
+    """Run this program again: the frozen sidecar re-executes itself (it has no ``python
+    -c``: its entry point rewrites unknown arguments to ``serve``), anything else runs the
+    package as a module."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable]
+    return [sys.executable, "-m", "bristlenose"]
+
+
+def probe_mlx_starts(timeout: float = 60.0) -> MlxProbe:
+    """Ask a CHILD process whether MLX starts (``doctor --mlx-probe``).
+
+    Importing MLX creates the Metal device, and where that fails the process dies on a
+    native abort that no ``except`` can catch (a macOS 26 build on macOS 15, 30 Oct 2026).
+    Run in-process that would kill the caller, so the question goes to a child and a
+    death by signal is the answer "no". A timeout or a child that cannot be launched is
+    *inconclusive* and passes: a cold first launch on a fresh Mac took 25 s to start the
+    sidecar at all, and a slow disk is not a broken GPU.
+    """
+    try:
+        proc = subprocess.run(
+            [*_self_command(), "doctor", "--mlx-probe"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=timeout, stdin=subprocess.DEVNULL,
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("probe_mlx_starts: no answer in %.0f s; not holding it against MLX", timeout)
+        return MlxProbe(ok=True)
+    except OSError as exc:
+        logger.warning("probe_mlx_starts: could not run the probe: %s", exc)
+        return MlxProbe(ok=True)
+    if proc.returncode == 0:
+        return MlxProbe(ok=True)
+    if proc.returncode < 0:
+        return MlxProbe(ok=False, detail=f"the probe was stopped by signal {-proc.returncode}")
+    tail = (proc.stderr or "").strip().splitlines()[-1:] or [f"exit {proc.returncode}"]
+    return MlxProbe(ok=False, detail=tail[0][:200])
 
 def _check_cuda_available() -> bool:
     """Check if CUDA is available via ctranslate2.

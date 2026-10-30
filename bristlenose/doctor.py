@@ -127,36 +127,42 @@ def check_backend() -> CheckResult:
     # excludes faster-whisper / ctranslate2 by design (see
     # docs/design-modularity.md), so probing them here would falsely fail.
     if is_apple_silicon:
-        try:
-            import mlx_whisper  # noqa: F401
-        except ImportError:
+        # Installed, not imported: importing mlx creates the Metal device, and a
+        # Mac where that fails dies on a native abort that no `except` catches,
+        # here, in `run`'s preflight, before any stage can say what happened.
+        # Stage 5 imports it when it transcribes (see utils.hardware.module_installed).
+        from bristlenose.utils.hardware import module_installed
+
+        if not module_installed("mlx_whisper"):
             # If faster-whisper isn't there either (sandboxed sidecar),
             # surface MLX as the missing dep so the fix-key points at
             # the right install path.
-            try:
-                import faster_whisper  # noqa: F401
-            except ImportError:
+            if not module_installed("faster_whisper"):
                 return CheckResult(
                     status=CheckStatus.FAIL,
                     label="Transcription",
                     detail="mlx-whisper not installed",
                     fix_key="mlx_not_installed",
                 )
-        except Exception as exc:
-            return CheckResult(
-                status=CheckStatus.FAIL,
-                label="Transcription",
-                detail=f"mlx-whisper failed to load: {exc}",
-                fix_key="backend_import_fail",
-            )
         else:
-            mlx_version = ""
-            try:
-                import mlx_whisper as _mlx
+            from importlib.metadata import PackageNotFoundError, version
 
-                mlx_version = getattr(_mlx, "__version__", "")
-            except Exception:
-                pass
+            # Installed is not started: ask a child process, because where MLX cannot
+            # start the failure is a native abort that would end this one.
+            from bristlenose.utils.hardware import probe_mlx_starts
+
+            started = probe_mlx_starts()
+            if not started.ok:
+                return CheckResult(
+                    status=CheckStatus.FAIL,
+                    label="Transcription",
+                    detail=f"mlx-whisper is installed but MLX cannot start on this Mac ({started.detail})",
+                    fix_key="mlx_cannot_start",
+                )
+            try:
+                mlx_version = version("mlx-whisper")
+            except PackageNotFoundError:
+                mlx_version = ""
             detail = (
                 f"mlx-whisper {mlx_version} (MLX)"
                 if mlx_version
@@ -226,13 +232,11 @@ def check_backend() -> CheckResult:
         _platform.system() == "Darwin" and _platform.machine() == "arm64"
     )
     if is_apple_silicon:
-        try:
-            import mlx_whisper  # noqa: F401
+        from bristlenose.utils.hardware import module_installed
 
+        if module_installed("mlx_whisper"):
             has_mlx = True
             accel = "MLX"
-        except ImportError:
-            pass
 
     parts = []
     if fw_version:

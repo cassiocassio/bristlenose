@@ -335,6 +335,22 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 6d. The sidecar's MLX is built for the app's floor, not the build host's
+#
+# 30 Oct 2026: the shipped sidecar carried MLX's macosx_26_0 wheels (minos 26.2) in
+# an app whose floor is macOS 15, and on a clean macOS 15 guest `import mlx_whisper`
+# aborted in Metal device creation: the Whisper probe, Retry and every run died.
+# See check-sidecar-mlx-floor.sh.
+# ---------------------------------------------------------------------------
+if "$(dirname "$0")/check-sidecar-mlx-floor.sh" "$APP/Contents/Resources/bristlenose-sidecar" \
+        >/dev/null 2>"$SCRATCH_MCP"; then
+    ok "sidecar MLX floor" "mlx + mlx-metal built for the app's floor"
+else
+    die "sidecar MLX floor" "check-sidecar-mlx-floor.sh refused it"
+    sed 's/^/        /' "$SCRATCH_MCP" >&2
+fi
+
+# ---------------------------------------------------------------------------
 # 7. Framework identifiers — ASC rejection #3, 14 Jul 2026
 #
 # sign-sidecar.sh passes --identifier from each framework's CFBundleIdentifier.

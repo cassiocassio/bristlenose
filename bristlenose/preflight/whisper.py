@@ -30,6 +30,7 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import shutil
 import sys
 import time
 from collections.abc import Callable, Iterator
@@ -370,6 +371,127 @@ def _native_download_progress() -> Iterator[type | None]:
         hf_tqdm.disable_progress_bars()
 
 
+#: Free space asked of the cache's volume over the model itself. The download peaks at
+#: its final size and no more (1,539 MiB for the default model, hf_xet cache empty,
+#: measured 30 Oct 2026), so this is only room for the filesystem and what else is
+#: writing, not scratch space.
+_DISK_HEADROOM_BYTES = 1_000_000_000
+
+
+def _cache_volume_free_bytes() -> tuple[int, Path] | None:
+    """Free bytes on the volume the model will be written to, and the path asked."""
+    path = _hf_cache_root()
+    while not path.exists() and path != path.parent:
+        path = path.parent
+    try:
+        return shutil.disk_usage(path).free, path
+    except OSError as exc:
+        logger.warning("ensure_disk_room: cannot read free space at %s: %s", path, exc)
+        return None
+
+
+def _download_lock_held(repo_id: str, blob: Path) -> bool:
+    """Whether another process is mid-download of ``blob``, by Hugging Face's own lock.
+
+    huggingface_hub holds ``<hub>/.locks/<repo dir>/<etag>.lock`` (an ``flock``) for the whole of
+    a file's download. A file's mtime is a poor witness of that: a writer whose connection has
+    stalled (hf_xet rides out ~15 s of it) or that is SIGSTOPped or asleep touches nothing, and a
+    sweep that took silence for death unlinked a live writer's file (found in review).
+    """
+    try:
+        import fcntl
+    except ImportError:  # Windows: no flock; the age rule alone decides
+        return False
+    repo_dir = _repo_cache_dir(repo_id)
+    lock = repo_dir.parent / ".locks" / repo_dir.name / f"{blob.name.split('.', 1)[0]}.lock"
+    try:
+        fd = os.open(lock, os.O_RDWR)
+    except OSError:
+        return False  # no lock file: nobody holds one
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return True
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        return False
+    finally:
+        os.close(fd)
+
+
+#: A partial this long untouched is nobody's: hf_xet writes a fresh ``.incomplete`` and
+#: renames it when the file is whole, and a writer touches it many times a second.
+_STALE_PARTIAL_S = 120.0
+
+
+#: After a fetch has SUCCEEDED the repo is whole, so a partial still lying there is nobody's:
+#: the shorter wait only has to clear a concurrent writer, which touches its file many times a
+#: second. Without this sweep an orphan younger than ``_STALE_PARTIAL_S`` when the retry began
+#: stayed for good, because the model was cached and no later fetch ever looked (measured on
+#: macOS 15 and 26 guests, 30 Oct 2026: 1,949 MB on disk for a 1,543 MB model).
+_SETTLED_PARTIAL_S = 20.0
+
+
+def discard_stale_partials(
+    repo_id: str, *, now: float | None = None, min_age_s: float | None = None
+) -> int:
+    """Delete the ``.incomplete`` blobs a dead download left behind; return bytes freed.
+
+    A restart does not resume and does not reclaim: killed at 635 MB, the next fetch
+    peaked at 2,174 MiB (the 1,539 MiB model plus the orphan) and the orphan stayed
+    (measured 30 Oct 2026). Each crashed or killed attempt therefore cost up to a model's
+    worth of disk, and Retry on a flaky line stacked them. Only files untouched for
+    :data:`_STALE_PARTIAL_S` go, so a fetch running in another process is left alone.
+    """
+    blobs = _repo_cache_dir(repo_id) / "blobs"
+    cutoff = (time.time() if now is None else now) - (
+        _STALE_PARTIAL_S if min_age_s is None else min_age_s
+    )
+    freed = 0
+    try:
+        for f in blobs.iterdir():
+            if not (f.is_file() and f.name.endswith(".incomplete")):
+                continue
+            try:
+                st = f.stat()
+                if st.st_mtime < cutoff and not _download_lock_held(repo_id, f):
+                    f.unlink()
+                    freed += st.st_size
+            except OSError as exc:
+                logger.warning("discard_stale_partials: could not remove %s: %s", f.name, exc)
+    except OSError:
+        return 0
+    if freed:
+        logger.info("discard_stale_partials: removed %d MB left by an earlier download", freed // 1_000_000)
+    return freed
+
+
+def ensure_disk_room(repo_id: str) -> None:
+    """Refuse a fetch the cache's volume cannot hold, before a byte is written.
+
+    Without this a full disk surfaced mid-download as hf_xet's own error, after the
+    time was spent. A repo we never measured gets no check rather than a wrong one,
+    and a volume that will not say is not an obstacle.
+
+    Raises:
+        PreflightAbortedError: ``Disk full: …`` (the Mac app classifies that wording
+            as a disk failure).
+    """
+    mb = _DOWNLOAD_MB.get(repo_id)
+    asked = _cache_volume_free_bytes()
+    if mb is None or asked is None:
+        return
+    free, _volume_path = asked
+    need = mb * 1_000_000 + _DISK_HEADROOM_BYTES
+    if free < need:
+        need_s, free_s = _format_mb(need // 1_000_000), _format_mb(free // 1_000_000)
+        if need_s == free_s:  # "needs ~2.6 GB and only ~2.6 GB is free" tells nobody anything
+            need_s, free_s = f"{need / 1e9:.2f} GB", f"{free / 1e9:.2f} GB"
+        raise PreflightAbortedError(
+            t("preflight.whisper.disk_full", need=need_s, free=free_s, where=_cache_root_display())
+        )
+
+
 def _print_banner(
     console: Console, repo_id: str, state: str
 ) -> None:
@@ -492,6 +614,11 @@ def preflight_whisper(
             return
         logger.info("preflight_whisper: the app's download ended without %s; fetching", repo_id)
 
+    # Ours to fetch (not the app's): the volume must hold it. After the wait above,
+    # because while the app is fetching, free space is already net of its partial file.
+    discard_stale_partials(repo_id)
+    ensure_disk_room(repo_id)
+
     # Option B: step aside, let HF Hub print natively.
     if status is not None:
         status.stop()
@@ -506,11 +633,21 @@ def preflight_whisper(
             )
         else:
             with _native_download_progress() as bar_class:
-                ensure_hf_model(repo_id, tqdm_class=bar_class)
+                _fetch_retrying_network_loss(
+                    lambda: ensure_hf_model(repo_id, tqdm_class=bar_class),
+                    repo_id,
+                    on_restart=lambda _attempt: console.print(
+                        f"  {cli_prefix(MessageKind.WARNING)} " + t("preflight.whisper.network_wait")
+                    ),
+                    on_answered=lambda _total: console.print(
+                        f"  {cli_prefix(MessageKind.INFO)} " + t("preflight.whisper.network_back")
+                    ),
+                )
     finally:
         if status is not None:
             status.start()
 
+    discard_stale_partials(repo_id, min_age_s=_SETTLED_PARTIAL_S)
     elapsed = time.perf_counter() - t0
     console.print(
         f"  {cli_prefix(MessageKind.SUCCESS)} "
@@ -537,7 +674,14 @@ def preflight_whisper(
 PROGRESS_INTERVAL_S = 0.25
 
 
-def _server_total_bytes(repo_id: str) -> int:
+#: A question to the Hub that gets no answer in this long is "no". huggingface_hub's own default
+#: is NO timeout at all, so a network that drops packets instead of refusing them (a VPN split
+#: tunnel, a captive portal that completes TCP and never replies) held the call for as long as
+#: macOS's connect timeout, about 75 s, per try (found in review, 30 Oct 2026).
+_HUB_ASK_TIMEOUT_S = 10.0
+
+
+def _server_total_bytes(repo_id: str, *, log_failure: bool = True) -> int:
     """The repo's size as the Hub reports it, or 0 when it cannot be asked.
 
     The sizes come from the server, not from ``_DOWNLOAD_MB`` (measured once,
@@ -548,10 +692,11 @@ def _server_total_bytes(repo_id: str) -> int:
     try:
         from huggingface_hub import HfApi
 
-        info = HfApi().model_info(repo_id, files_metadata=True)
+        info = HfApi().model_info(repo_id, files_metadata=True, timeout=_HUB_ASK_TIMEOUT_S)
         return int(sum((s.size or 0) for s in (info.siblings or [])))
     except Exception:  # noqa: BLE001 — a missing total is shown as unknown
-        logger.info("could not read %s's size from the Hub", repo_id, exc_info=True)
+        if log_failure:
+            logger.info("could not read %s's size from the Hub", repo_id, exc_info=True)
         return 0
 
 
@@ -660,6 +805,121 @@ def whisper_status_line(settings: BristlenoseSettings) -> str:
     return f"@whisper-status {state} {repo_id} {size}"
 
 
+# ── a network that comes back is not a failed download ──────────────────────────────────
+#
+# hf_xet does not resume, and a download dies when the connection does: an outage of about
+# 15 s (12 s survived, 18 s did not; macOS 15 and 26 guests, 30 Oct 2026) ended a 1.6 GB
+# fetch at whatever byte it had reached, and Retry started again from zero. A laptop that
+# changes Wi-Fi, wakes, or reconnects a VPN does that routinely. So the download job waits for
+# the Hub to answer and starts again by itself, quietly, a bounded number of times.
+
+#: Failures a returning network can cure, matched against the lowercased exception text.
+_NETWORK_FAILURE_MARKERS = (
+    "nodename nor servname", "name or service not known", "temporary failure in name resolution",
+    "network is unreachable", "network is down", "no route to host", "host is down",
+    "connection reset", "connection aborted", "connecttimeout", "readtimeout", "readerror",
+    "remoteprotocolerror", "incompleteread", "timed out", "broken pipe", "cached snapshot",
+    # A stream cut mid-transfer on the plain-HTTP path reads "[SSL: UNEXPECTED_EOF_WHILE_READING]":
+    # an outage in SSL's clothes, unlike a certificate failure, which "certificate" excludes.
+    "unexpected_eof", "eof occurred in violation",
+    "[errno 8]", "[errno 50]", "[errno 51]", "[errno 54]", "[errno 57]", "[errno 60]", "[errno 65]",
+    # hf_xet is Rust: its failures read differently from Python's, and OS errors arrive as
+    # "(os error 54)", never "[Errno 54]" (strings of hf_xet.abi3.so; found in review).
+    "connection closed before", "error decoding response body", "error sending request",
+    "dns error", "failed to lookup address", "operation timed out",
+    "(os error 50)", "(os error 51)", "(os error 54)", "(os error 57)", "(os error 60)",
+    "(os error 65)",
+    # The Hub itself having a bad minute: also cured by waiting. Words, not status digits,
+    # which would match a byte count or a hash in the text.
+    "too many requests", "service unavailable", "bad gateway", "gateway timeout",
+    "internal server error",
+)
+#: Waiting cures none of these, so they are never retried even when a network word is also in
+#: the text (a certificate failure arrives as "ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED]",
+#: and hf_xet's as "error sending request ... invalid peer certificate").
+_NOT_NETWORK_MARKERS = (
+    # A refused connection is an answer, not an outage: a dead proxy or a firewall says it at
+    # once and waiting will not change it (a dead proxy waited 5 minutes before this was added).
+    "connection refused", "[errno 61]", "(os error 61)",
+    "certificate", "invalid peer", "permission denied", "[errno 13]", "no space left",
+    "[errno 28]", "disk full", "read-only file system", "[errno 30]", "unauthorized", "forbidden",
+)
+_NETWORK_RETRY_ATTEMPTS = 5
+#: How long the job waits for the Hub to answer again before it gives the failure to the user.
+_NETWORK_WAIT_S = 300.0
+_NETWORK_POLL_S = 5.0
+_retry_sleep: Callable[[float], None] = time.sleep
+_retry_clock: Callable[[], float] = time.monotonic
+
+
+def is_network_failure(exc: BaseException) -> bool:
+    """Whether ``exc`` is a failure a network that comes back would cure."""
+    if os.environ.get("HF_HUB_OFFLINE", "").strip().lower() in ("1", "true", "yes", "on"):
+        return False  # offline on purpose: "cached snapshot ... incomplete" is the answer, not an outage
+    text = f"{type(exc).__name__}: {exc}".lower()
+    if any(m in text for m in _NOT_NETWORK_MARKERS):
+        return False
+    return any(m in text for m in _NETWORK_FAILURE_MARKERS)
+
+
+def _wait_until_reachable(repo_id: str, *, wait_s: float = _NETWORK_WAIT_S) -> int:
+    """Poll the Hub until it answers; return its size for the repo (bytes), or 0 if it never did.
+
+    Bounded by the clock, not by counting sleeps: each question can itself take up to
+    ``_HUB_ASK_TIMEOUT_S``. The gap between questions grows (5 s, then 7.5, 11 ... up to 30 s),
+    so a Hub that is answering "slow down" is asked a dozen times in five minutes, not sixty.
+    """
+    deadline = _retry_clock() + wait_s
+    gap = _NETWORK_POLL_S
+    while True:
+        total = _server_total_bytes(repo_id, log_failure=False)
+        if total > 0:
+            return total
+        if _retry_clock() >= deadline:
+            return 0
+        _retry_sleep(gap)
+        gap = min(30.0, gap * 1.5)
+
+
+def _fetch_retrying_network_loss(
+    fetch: Callable[[], object],
+    repo_id: str,
+    *,
+    on_restart: Callable[[int], None] = lambda _attempt: None,
+    on_answered: Callable[[int], None] = lambda _total: None,
+) -> None:
+    """Run ``fetch``; when it dies of a network failure, wait for the Hub and run it again.
+
+    Bounded: ``_NETWORK_RETRY_ATTEMPTS`` restarts, each after a wait of at most
+    ``_NETWORK_WAIT_S`` for the Hub to answer. Anything a returning network cannot cure is raised
+    at once. ``KeyboardInterrupt`` (the app's Stop) is not an ``Exception`` here and passes
+    through, including out of the waits.
+    """
+    from bristlenose.utils.package_install import PackageInstallError
+
+    attempt = 0
+    while True:
+        try:
+            fetch()
+            return
+        except PackageInstallError as exc:
+            if attempt >= _NETWORK_RETRY_ATTEMPTS or not is_network_failure(exc):
+                raise
+            attempt += 1
+            logger.warning(
+                "fetch: network failure (attempt %d of %d): %s",
+                attempt, _NETWORK_RETRY_ATTEMPTS, exc,
+            )
+            on_restart(attempt)
+            # Before the wait, not after: a Hub that is up but refusing (429) answers the wait's
+            # first question, so the spacing has to come first.
+            _retry_sleep(5.0 * attempt)
+            answered = _wait_until_reachable(repo_id)
+            if not answered:
+                raise
+            on_answered(answered)
+
+
 def fetch_with_progress_lines(
     settings: BristlenoseSettings,
     write: Any = None,
@@ -688,6 +948,8 @@ def fetch_with_progress_lines(
         out(f"@download-start {repo_id} 0")
         out("@download-done 0")
         return
+    discard_stale_partials(repo_id)
+    ensure_disk_room(repo_id)
     total = _server_total_bytes(repo_id)
     out(f"@download-start {repo_id} {total}")
 
@@ -734,8 +996,24 @@ def fetch_with_progress_lines(
     frozen = hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS
     hf_tqdm.HF_HUB_DISABLE_PROGRESS_BARS = None
     hf_tqdm.enable_progress_bars()
+    def _restart(_attempt: int) -> None:
+        # Back to zero on screen too: the bytes of the dead attempt are gone from disk, and a
+        # pill that kept claiming them would be lying.
+        for bar in list(bars.values()):
+            bar.close()
+        bars.clear()
+        out(f"@download 0 {total}")
+
+    def _answered(new_total: int) -> None:
+        # The size the Hub just gave, which an offline start never had.
+        nonlocal total
+        total = new_total
+
     try:
-        ensure_hf_model(repo_id, tqdm_class=_CountingBar)
+        _fetch_retrying_network_loss(
+            lambda: ensure_hf_model(repo_id, tqdm_class=_CountingBar),
+            repo_id, on_restart=_restart, on_answered=_answered,
+        )
     finally:
         for bar in list(bars.values()):
             bar.close()
@@ -747,6 +1025,7 @@ def fetch_with_progress_lines(
         from bristlenose.utils.package_install import PackageInstallError
 
         raise PackageInstallError(f"{repo_id} is not complete in the cache after the download")
+    discard_stale_partials(repo_id, min_age_s=_SETTLED_PARTIAL_S)
     out(f"@download-done {clock() - t0:.1f}")
 
 

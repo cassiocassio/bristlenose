@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import platform
+import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from bristlenose.utils.hardware import (
     _CACHE_TTL_SECONDS,
@@ -232,3 +236,118 @@ class TestDetectHardware:
         assert saved["chip_name"] == "Apple M2"
         assert saved["gpu_cores"] == 10
         assert saved["memory_gb"] == 16.0
+
+
+class TestModuleInstalled:
+    """`module_installed` answers from the import system without importing.
+
+    Importing mlx creates the Metal device; where that fails the process dies on a
+    native abort no `except` catches (clean macOS 15 guest, 30 Oct 2026).
+    """
+
+    def test_finds_an_installed_module_without_importing_it(self) -> None:
+        import sys
+
+        from bristlenose.utils.hardware import module_installed
+
+        sys.modules.pop("json.tool", None)
+        assert module_installed("json.tool") is True
+        assert "json.tool" not in sys.modules
+
+    def test_missing_module_is_false(self) -> None:
+        from bristlenose.utils.hardware import module_installed
+
+        assert module_installed("definitely_not_a_module_xyz") is False
+
+    def test_check_mlx_available_does_not_import_mlx(self) -> None:
+        import builtins
+        from unittest.mock import patch
+
+        from bristlenose.utils.hardware import _check_mlx_available
+
+        real_import = builtins.__import__
+
+        def guard(name: str, *args: object, **kwargs: object) -> object:
+            if name.split(".")[0] in {"mlx", "mlx_whisper"}:
+                raise AssertionError(f"imported {name}")
+            return real_import(name, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch("builtins.__import__", side_effect=guard):
+            assert isinstance(_check_mlx_available(), bool)
+
+
+class TestProbeMlxStarts:
+    """The question "can MLX start" goes to a child: where it cannot, the process dies on a
+    native abort that no except can catch (macOS 15 guest, 30 Oct 2026)."""
+
+    @staticmethod
+    def _run(returncode: int = 0, stderr: str = "", raises: Exception | None = None):
+        import subprocess
+        from unittest.mock import patch
+
+        from bristlenose.utils.hardware import probe_mlx_starts
+
+        def fake(cmd, **kwargs):
+            if raises is not None:
+                raise raises
+            return subprocess.CompletedProcess(cmd, returncode, stdout="", stderr=stderr)
+
+        with patch("bristlenose.utils.hardware.subprocess.run", side_effect=fake) as run:
+            return probe_mlx_starts(timeout=5), run
+
+    def test_a_clean_exit_is_a_yes(self) -> None:
+        probe, run = self._run(0)
+        assert probe.ok
+        assert run.call_args.args[0][-2:] == ["doctor", "--mlx-probe"]
+
+    def test_death_by_signal_is_a_no_that_names_the_signal(self) -> None:
+        probe, _ = self._run(-5)  # SIGTRAP: Metal device creation aborted
+        assert not probe.ok
+        assert "signal 5" in probe.detail
+
+    def test_a_python_error_is_a_no_with_its_last_line(self) -> None:
+        probe, _ = self._run(1, stderr="Traceback...\nRuntimeError: no Metal device\n")
+        assert not probe.ok
+        assert probe.detail == "RuntimeError: no Metal device"
+
+    def test_a_timeout_is_inconclusive_not_a_no(self) -> None:
+        """A cold first launch took 25 s to start the sidecar at all: slow is not broken."""
+        import subprocess
+
+        probe, _ = self._run(raises=subprocess.TimeoutExpired("x", 5))
+        assert probe.ok
+
+    def test_a_probe_that_cannot_launch_is_inconclusive(self) -> None:
+        probe, _ = self._run(raises=OSError("exec format error"))
+        assert probe.ok
+
+    def test_the_frozen_sidecar_reruns_itself_and_anything_else_runs_the_module(
+        self, monkeypatch
+    ) -> None:
+        import sys
+
+        from bristlenose.utils.hardware import _self_command
+
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        assert _self_command() == [sys.executable]
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        assert _self_command() == [sys.executable, "-m", "bristlenose"]
+
+    @pytest.mark.skipif(
+        sys.platform != "darwin" or platform.machine() != "arm64",
+        reason="needs MLX on Apple Silicon",
+    )
+    def test_the_real_probe_flag_runs_end_to_end(self) -> None:
+        """`doctor --mlx-probe` exists, is hidden, and answers on a Mac whose MLX starts."""
+        import subprocess
+
+        from bristlenose.utils.hardware import module_installed
+
+        if not module_installed("mlx"):
+            pytest.skip("mlx not installed in this environment")
+        done = subprocess.run(
+            [sys.executable, "-m", "bristlenose", "doctor", "--mlx-probe"],
+            capture_output=True, text=True, timeout=120,
+        )
+        assert done.returncode == 0, done.stderr
+        assert "@mlx-probe ok" in done.stdout

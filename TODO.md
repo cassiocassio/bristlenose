@@ -4,6 +4,50 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
+**30 Oct — Whisper first run on a clean Mac (Claude; UNCOMMITTED in the main checkout).**
+Plan and Fable review: `docs/private/plan-whisper-first-run-2026-10-30.md`. Found on clean Tart
+guests with the 0.43.0 DMG: macOS 15.7.7 sidecar SIGTRAPs in `mlx::core::metal::Device::Device()` 2 s
+after launch (red pill, Retry dies instantly); 26.6.2 and 27.0 fine. Cause: pip took MLX's
+`macosx_26_0` wheels (minos 26.2) on the macOS 27 build host for an app with a 15.0 floor. Proven by
+swapping only the MLX files for the `macosx_15_0` wheels in the same bundle (exits 0).
+Changed: `build-sidecar.sh` (`_pin_mlx_to_floor`, `_mlx_wheel_tags` in the deps fingerprint),
+`desktop/scripts/check-sidecar-mlx-floor.sh` (new gate, wired into build-sidecar / dmg / pkg
+checks), `utils/hardware.py` `module_installed` + `doctor.check_backend` (installed, not imported),
+`preflight/whisper.py` `ensure_disk_room` + `locales/en/preflight.json`, `WhisperDownloadModel`
+auto-start floor 20 GB -> 10 GB (+ test, SECURITY.md, three design docs). Tests: `test_sidecar_mlx_floor.py`,
+`test_whisper_disk_room.py`, `test_hardware.py`, `test_doctor.py`. Website branches (not deployed):
+`docs/install-whisper-requirements` (true now) and `after-pypi/0.43.1` (the 10 GB figure; hold).
+**Independent review of the diff (30 Oct, Fable + silent-failure-hunter, claude-side; fixes in the same tree):** no blockers.
+Fixed from review: gate read only the first `mlx-*.dist-info` (a stale one could decide), an unreadable binary made it exit
+silently, version compare normalised (`15` vs `15.0`), `module_installed` and the free-space read now log when they give up,
+wiring tests assert a live branching call, not a name. Found by measurement, not review: a killed/crashed download leaves its
+`.incomplete` behind and a restart does not reclaim it (635 MB orphan -> 2,174 MB peak), so Retry on a flaky line stacked
+partials: `discard_stale_partials` (untouched >120 s) now runs before every fetch. Both reviewers' HIGH: `doctor` said OK for a
+Mac whose MLX cannot start and the run then died by signal, classified "unknown": `doctor --mlx-probe` (hidden) is asked of a
+CHILD process by `check_backend` (crash = no, timeout = inconclusive), FAIL `mlx_cannot_start` + Swift `.whisper` pattern.
+Cost: one extra sidecar start (~1.1 s CPU; 9.5 s on a cold fresh guest) per run preflight. Not changed on purpose: the disk check
+still asks for the full model on a partial cache (measured: a restart needs it on top of the orphan).
+Still open from review: the download JOB's refusal ("Disk full") reaches `os_log` only, the pill says "failed" and Retry repeats
+it; `statvfs` free vs the app's `volumeAvailableCapacityForImportantUsage` (purgeable) can disagree, so a CLI fetch may refuse where
+Finder shows room (message now says "not counting space macOS can clear").
+**Synthetic matrix on clean Tart guests (macOS 15.7.7 / 26.6.2 / 27.0, real frozen sidecar, 30 Oct 2026):** harness `/private/tmp/claude-501/wl/bat.sh`
++ `osrun.sh` (scratch, not committed; the shape is in this paragraph). Found and fixed by running it, not by reading: a network outage over ~15 s
+(12 s survived, 18 s killed) ends the 1.6 GB download and Retry restarts from zero -> `_fetch_retrying_network_loss` (quiet wait-for-Hub + restart,
+bounded: 5 restarts, 300 s per wait, 10 s per Hub question); a killed download's partial stays and a restart peaks at model + orphan -> start sweep
+(>120 s) + settled sweep after success (>20 s), both skipping a partial whose HF flock is held (verified held during a real hf_xet download);
+"connection refused" (dead proxy) is not retried (waited 5 min before); the same helper now guards the terminal first run. Harness lessons, each
+cost a wrong conclusion: a non-interactive shell's `&` starts jobs with SIGINT IGNORED (fooled the SIGINT test AND three `test_package_install`
+Ctrl+C tests when pytest was launched as a background job: run pytest as an ordinary foreground tool call); expect's one-line `expect { ... }` form
+does not match (prep-base.sh says so); macOS allows 2 VMs at once; a fresh clone needs minutes before password login works.
+Reviewed by Fable in 4 rounds + silent-failure-hunter; round-4 had no blockers. Open: the app's download JOB still shows only "failed" with the reason
+in os_log; a captive-portal HTML page fails fast but with "Expecting value: line 1 column 1"; 407/403 portal pages are not retried; the per-run
+`--mlx-probe` cost; Apple speech and M5 not exercised; full Python = 9,228 passed, 2 failed (`test_no_improvised_icons`, another session's IntensityDots.tsx).
+Release-note candidate (patch): **Whisper never arrived on macOS 15.** The speech-model check crashed
+on Sequoia, so the toolbar showed a failed download that Retry could not clear. Fixed by building for
+macOS 15; the automatic download now starts with 10 GB free (was 20 GB), and a Mac too full for the model
+now says so before downloading. **Not done:** a non-MLX fallback; a child-process Metal probe; the 65
+bundle binaries with minos above 15 (Python is 26.0) run on 15 today; Apple speech on 26/27 untested.
+
 **30 Oct 2026 - Signal highlights: shorter, and at most two coloured bullets per card (Claude Sonnet 5.5; committed on local `main`, not pushed).** Owner ruling: "the shorter plus the budget". Prompt 0.6.0 (0.5.0 archived), `structured.py` descriptions, `_MAX_FRAGMENTS_PER_SIGNAL = 2` in `server/elaboration.py` (keeps the first two per signal, logs `fragment_budget`), `SIGNAL_SNAPSHOT_PAYLOAD_VERSION` 6. Commits: adoption `f68b59834` (its subject says "a quarter of the colour"; the measured drop is about half, 46% to 24% of the page), lab `3e7b8875e` to `3b2bb061b`. Method, the owner's 91 blind picks, every variant, spend ($3.45, 822 calls) and eight open items: `experiments/signal-highlight-lab/README.md`. **Effect on users:** every study re-runs its Signals narrative once at the next serve start when a cloud key is present (one paid batched call per study; headlines and claims are rewritten too, not only highlights); an existing report stays readable meanwhile. Verification: elaboration, snapshot and prompt tests 730 passed; two new budget tests (the first mutation-checked red, the second guards counting order and was not); ruff clean; full Python 9163 passed, 5 failed: `test_no_improvised_icons` x2 (frontend `IntensityDots.tsx` / `SignalsPage.tsx` from the other session's Signals commits, not touched here) and three Ctrl-C download tests that pass alone (load). No Swift or frontend run (none changed). Review: self-review only, no `/usual-suspects`. **Not done:** the joint check (Sonnet writing bullet and span together on a real project, about 0.30 GBP) before relying on it; the owner has not yet seen the adopted prompt's output; a small Haiku highlight step (best match to the owner's picks, not built); how strong the colour looks (CSS). Release-note candidate (improved): **Signal cards carry far less colour.** The highlighted words in each evidence bullet are now a short phrase that starts where the product did something and stops before the reaction, and at most two bullets per card are highlighted. Existing studies refresh once the next time the app starts with a cloud key.
 
 **30 Oct — Codex consolidation and canonical checkout transfer complete.** The

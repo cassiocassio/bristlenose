@@ -181,6 +181,16 @@ else
         fail "Apple speech helper" "$(printf '%s' "$SPEECH_OUT" | grep FAIL | head -1 | sed 's/^ *//')"
     fi
 
+    # The sidecar's MLX must be built for the app's floor (30 Oct 2026: the
+    # macosx_26_0 wheels aborted Metal device creation on a clean macOS 15).
+    if MLX_OUT="$("$(dirname "$0")/check-sidecar-mlx-floor.sh" \
+            "$INNER_APP/Contents/Resources/bristlenose-sidecar" 2>&1)"; then
+        pass "sidecar MLX floor" "mlx + mlx-metal built for the app's floor"
+    else
+        # The gate's own exit 2 (unreadable bundle) prints no FAIL line: fall back to its last line.
+        fail "sidecar MLX floor" "$(printf '%s' "$MLX_OUT" | { grep FAIL || tail -1; } | head -1 | sed 's/^ *//')"
+    fi
+
     # Assert the reason, not the word. `grep -q accepted` passes on any output
     # containing that substring; we want the specific verdict Gatekeeper gives
     # a notarised Developer-ID app. With the inner app unstapled (by design),

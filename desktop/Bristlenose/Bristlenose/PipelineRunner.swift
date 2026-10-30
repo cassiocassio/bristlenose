@@ -3219,7 +3219,7 @@ var args = ["run", project.path, "--no-serve"]
         // block — `bristlenose run` always prints "✓ Transcription mlx-whisper"
         // + "Whisper model … not cached", so bare "whisper"/"model" would match
         // healthy output. Match install/download/native-lib failures instead.
-        if matches(tail, #"packageinstallerror|snapshot_download|metallib|libjaccl|faster_whisper"#) {
+        if matches(tail, #"packageinstallerror|snapshot_download|metallib|libjaccl|faster_whisper|mlx cannot start"#) {
             return .whisper
         }
         return .unknown

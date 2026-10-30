@@ -10,11 +10,13 @@ Includes a comprehensive test grid covering all combinations of:
 
 from __future__ import annotations
 
+import builtins
 import json
 import os
 import sys
 from contextlib import ExitStack
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -203,6 +205,15 @@ class TestCheckFfmpeg:
 
 
 class TestCheckBackend:
+
+    @pytest.fixture(autouse=True)
+    def _mlx_starts(self):
+        """The child-process probe is its own subject (tests/test_hardware.py); here it
+        would start a real process on a real GPU, which these cases are not about."""
+        from bristlenose.utils.hardware import MlxProbe
+
+        with patch("bristlenose.utils.hardware.probe_mlx_starts", return_value=MlxProbe(ok=True)):
+            yield
     def test_backend_graceful_on_this_machine(self) -> None:
         """check_backend never raises — returns a valid CheckResult regardless."""
         with patch("platform.system", return_value="Linux"):
@@ -231,17 +242,8 @@ class TestCheckBackend:
 
     def test_apple_silicon_with_mlx(self) -> None:
         """macOS arm64 with MLX installed → OK, shows MLX accelerator."""
-        mock_fw = MagicMock(__version__="1.2.1")
-        mock_ct2 = MagicMock(__version__="4.6.3")
-        mock_ct2.get_cuda_device_count.return_value = 0
-        mock_mlx_whisper = MagicMock()
-
         with (
-            patch.dict(sys.modules, {
-                "faster_whisper": mock_fw,
-                "ctranslate2": mock_ct2,
-                "mlx_whisper": mock_mlx_whisper,
-            }),
+            patch("bristlenose.utils.hardware.module_installed", return_value=True),
             patch("platform.system", return_value="Darwin"),
             patch("platform.machine", return_value="arm64"),
             patch("shutil.which", return_value=None),
@@ -256,26 +258,111 @@ class TestCheckBackend:
         mock_ct2 = MagicMock(__version__="4.6.3")
         mock_ct2.get_cuda_device_count.return_value = 0
 
-        # Remove mlx_whisper from modules to simulate not installed
-        saved_mlx = sys.modules.pop("mlx_whisper", None)
-        try:
-            with (
-                patch.dict(sys.modules, {
-                    "faster_whisper": mock_fw,
-                    "ctranslate2": mock_ct2,
-                }),
-                patch("platform.system", return_value="Darwin"),
-                patch("platform.machine", return_value="arm64"),
-                patch("shutil.which", return_value=None),
-                patch("builtins.__import__", side_effect=_import_blocker("mlx_whisper")),
-            ):
-                result = check_backend()
-        finally:
-            if saved_mlx is not None:
-                sys.modules["mlx_whisper"] = saved_mlx
+        with (
+            patch.dict(sys.modules, {"faster_whisper": mock_fw, "ctranslate2": mock_ct2}),
+            patch(
+                "bristlenose.utils.hardware.module_installed",
+                side_effect=lambda name: name != "mlx_whisper",
+            ),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+            patch("shutil.which", return_value=None),
+        ):
+            result = check_backend()
         assert result.status == CheckStatus.WARN
         assert result.fix_key == "mlx_not_installed"
         assert "Apple Silicon" in result.detail
+
+    def test_installed_but_cannot_start_is_a_failure_with_the_reason(self) -> None:
+        """MLX present on disk, Metal absent: doctor must say so, in words, before a run
+        dies on a native abort that classifies as nothing."""
+        from bristlenose.utils.hardware import MlxProbe
+
+        with (
+            patch("bristlenose.utils.hardware.module_installed", return_value=True),
+            patch(
+                "bristlenose.utils.hardware.probe_mlx_starts",
+                return_value=MlxProbe(ok=False, detail="the probe was stopped by signal 5"),
+            ),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+            patch("shutil.which", return_value=None),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.FAIL
+        assert result.fix_key == "mlx_cannot_start"
+        assert "cannot start" in result.detail and "signal 5" in result.detail
+
+    def test_the_message_is_one_the_mac_app_classifies_as_a_speech_model_failure(self) -> None:
+        """categoriseFailure lowercases the output tail and matches the whisper pattern; read
+        that pattern from PipelineRunner.swift so the two cannot drift apart."""
+        import re
+        from pathlib import Path
+
+        from bristlenose.utils.hardware import MlxProbe
+
+        swift = (
+            Path(__file__).resolve().parent.parent
+            / "desktop" / "Bristlenose" / "Bristlenose" / "PipelineRunner.swift"
+        ).read_text(encoding="utf-8")
+        m = re.search(r'matches\(tail, #"([^"]*mlx cannot start[^"]*)"#\) \{\s*return \.whisper', swift) \
+            or re.search(r'if matches\(tail, #"([^"]*faster_whisper[^"]*)"#\)', swift)
+        assert m, "the .whisper classifier in PipelineRunner.swift moved; update this test"
+        with (
+            patch("bristlenose.utils.hardware.module_installed", return_value=True),
+            patch(
+                "bristlenose.utils.hardware.probe_mlx_starts",
+                return_value=MlxProbe(ok=False, detail="the probe was stopped by signal 5"),
+            ),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+            patch("shutil.which", return_value=None),
+        ):
+            detail = check_backend().detail
+        assert re.search(m.group(1), detail.lower())
+
+    def test_not_installed_is_not_probed(self) -> None:
+        """No MLX, no child process: the probe is for an install that might not start."""
+        mock_fw = MagicMock(__version__="1.2.1")
+        mock_ct2 = MagicMock(__version__="4.6.3")
+        mock_ct2.get_cuda_device_count.return_value = 0
+        with (
+            patch.dict(sys.modules, {"faster_whisper": mock_fw, "ctranslate2": mock_ct2}),
+            patch(
+                "bristlenose.utils.hardware.module_installed",
+                side_effect=lambda name: name != "mlx_whisper",
+            ),
+            patch("bristlenose.utils.hardware.probe_mlx_starts") as probe,
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+            patch("shutil.which", return_value=None),
+        ):
+            check_backend()
+        probe.assert_not_called()
+
+    def test_apple_silicon_never_imports_mlx(self) -> None:
+        """The check asks whether MLX is installed; it must not import it.
+
+        Importing mlx creates the Metal device, and where that fails the process
+        dies on a native abort that no `except` catches (clean macOS 15 guest,
+        30 Oct 2026): the preflight of every `run` would die with it.
+        """
+        real_import = builtins.__import__
+
+        def guard(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name.split(".")[0] in {"mlx", "mlx_whisper"}:
+                raise AssertionError(f"check_backend imported {name}")
+            return real_import(name, *args, **kwargs)
+
+        with (
+            patch("bristlenose.utils.hardware.module_installed", return_value=True),
+            patch("platform.system", return_value="Darwin"),
+            patch("platform.machine", return_value="arm64"),
+            patch("shutil.which", return_value=None),
+            patch("builtins.__import__", side_effect=guard),
+        ):
+            result = check_backend()
+        assert result.status == CheckStatus.OK
 
     def test_nvidia_gpu_with_cuda(self) -> None:
         """Linux x86_64 with NVIDIA GPU and working CUDA → OK."""

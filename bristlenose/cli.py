@@ -3420,6 +3420,15 @@ def doctor(
             help="Print '@whisper-status <cached|partial|missing> <repo>' and exit (the Mac app).",
         ),
     ] = False,
+    mlx_probe: Annotated[
+        bool,
+        typer.Option(
+            "--mlx-probe",
+            hidden=True,
+            help="Start MLX and run one tiny operation, then exit 0. Asked of a child "
+            "process by the transcription check: where MLX cannot start, this one dies.",
+        ),
+    ] = False,
 ) -> None:
     """Check dependencies, API keys, and system configuration.
 
@@ -3430,6 +3439,14 @@ def doctor(
     exits non-zero on any failure too, and is used by desktop/scripts/build-all.sh
     step 7a to catch BUG-3/4/5-class packaging bugs at build time.
     """
+    if mlx_probe:
+        # Deliberately an import and a kernel launch, in a process nobody else depends on:
+        # a Mac that cannot create the Metal device aborts here (SIGTRAP), not in a run.
+        import mlx.core as mx
+
+        mx.eval(mx.arange(4) + 1)
+        typer.echo("@mlx-probe ok")
+        return
     if whisper_status:
         # The one answer to "is Whisper on disk" (docs/design-apple-first-
         # transcription.md §3 D): the Mac app asks this rather than computing

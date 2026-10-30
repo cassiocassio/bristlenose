@@ -63,6 +63,20 @@ import Testing
         #expect(rate.minutesLeft(done: 1_000_000_000, total: 1_100_000_000) == 1)
     }
 
+    @Test func aRestartFromZeroForgetsTheDeadAttemptsEstimate() {
+        var rate = DownloadRate()
+        rate.add(time: 0, bytes: 0)
+        rate.add(time: 10, bytes: 1_000_000_000)  // 100 MB/s, nearly done
+        #expect(rate.minutesLeft(done: 1_000_000_000, total: 1_100_000_000) == 1)
+        // The network dropped; the job started again at zero.
+        rate.add(time: 40, bytes: 0)
+        #expect(rate.bytesPerSecond == nil, "a restart has no rate until its own window fills")
+        #expect(rate.shownMinutes == nil, "and no minutes left carried over from the dead attempt")
+        rate.add(time: 50, bytes: 100_000_000)  // 10 MB/s now
+        // 1.0 GB left at 10 MB/s: the fresh figure, not the held "1".
+        #expect(rate.minutesLeft(done: 100_000_000, total: 1_100_000_000) == 2)
+    }
+
     @Test func aLargeRiseIsShown() {
         var rate = DownloadRate()
         rate.add(time: 0, bytes: 0)
@@ -215,7 +229,7 @@ import Testing
 
 /// The download starts in the background from launch (owner, 18 and 22 Oct
 /// 2026): only after the AI disclosure, never over a remembered Stop, only for a
-/// model missing or partial, and only with 20 GB free (unknown starts).
+/// model missing or partial, and only with 10 GB free (unknown starts).
 @Suite struct WhisperAutoStartTests {
     typealias Model = WhisperDownloadModel
     let plenty: Int64 = 100_000_000_000
@@ -240,7 +254,7 @@ import Testing
 
     @Test func neverBelowTheFloorAndExactlyAtItIsEnough() {
         let floor = Model.autoStartFloorBytes
-        #expect(floor == 20_000_000_000)
+        #expect(floor == 10_000_000_000)
         #expect(!Model.shouldAutoStart(phase: .missing, freeBytes: floor - 1, stoppedByUser: false, hasConsent: true, runIsLive: false))
         #expect(Model.shouldAutoStart(phase: .missing, freeBytes: floor, stoppedByUser: false, hasConsent: true, runIsLive: false))
     }

@@ -176,6 +176,16 @@ def _fix_ffmpeg_missing(method: str) -> str:
     return "\n".join(lines)
 
 
+def _fix_mlx_cannot_start(method: str) -> str:
+    return (
+        "MLX is installed but cannot start on this Mac, so transcription cannot run here.\n"
+        "MLX needs the Mac's GPU (Metal), which a session with no login (over SSH, or screen\n"
+        "sharing before anyone has signed in) may not have: run bristlenose from a normal login\n"
+        "session on the Mac itself, and try again.\n"
+        "If it persists: github.com/cassiocassio/bristlenose/issues"
+    )
+
+
 def _fix_backend_import_fail(method: str) -> str:
     if method == "rpm":
         return (
@@ -646,6 +656,7 @@ def _fix_anyllm_not_ready(_method: str) -> str:
 _FIX_TABLE: dict[str, Callable[[str], str]] = {
     "ffmpeg_missing": _fix_ffmpeg_missing,
     "backend_import_fail": _fix_backend_import_fail,
+    "mlx_cannot_start": _fix_mlx_cannot_start,
     "api_key_missing_anthropic": _fix_api_key_missing_anthropic,
     "api_key_missing_openai": _fix_api_key_missing_openai,
     "api_key_invalid_anthropic": _fix_api_key_invalid_anthropic,

@@ -104,4 +104,17 @@ struct FailureCategoryPreflightSentenceTests {
         #expect(PipelineRunner.categoriseFailure(
             lines: [line], exitStatus: 2, provider: .claude) == expected)
     }
+
+    /// A Mac whose MLX is installed but cannot start (the Metal device will not create):
+    /// the setup check names it ("mlx-whisper is installed but MLX cannot start on this
+    /// Mac") and exits before the run begins. Before this it fell to `.unknown`, which
+    /// reads "stopped unexpectedly" for a cause the researcher can act on.
+    @Test("MLX that cannot start is a speech-model failure, not an unknown")
+    func mlxThatCannotStartIsWhisper() {
+        let lines = [
+            " ✗ Transcription   mlx-whisper is installed but MLX cannot start on this Mac "
+                + "(the probe was stopped by signal 5)",
+        ]
+        #expect(PipelineRunner.categoriseFailure(lines: lines, exitStatus: 1) == .whisper)
+    }
 }

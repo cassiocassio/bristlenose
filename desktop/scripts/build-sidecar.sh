@@ -190,9 +190,59 @@ done
 # kept the old venv and silently shipped without it (found in review, 4 Oct 2026).
 SIDECAR_EXTRAS="serve,apple,desktop,mcp,voice"
 
+# MLX is built per macOS. pip takes the newest tag the BUILD HOST accepts, so a macOS 27
+# build machine shipped the macosx_26_0 wheels (minos 26.2) in an app whose floor is 15.0,
+# and on a clean macOS 15.7.7 guest the first `import mlx_whisper` aborted in
+# mlx::core::metal::Device::Device() (30 Oct 2026): the launch probe, every Retry and `run`
+# died with it. Both packages are therefore re-fetched at the app's floor, at the version
+# the resolver chose. Same floor as check-deployment-floors.sh's EXPECT_APP.
+MLX_FLOOR_PLATFORM="macosx_15_0_arm64"
+
+# The wheel Tags the venv holds for mlx and mlx-metal. `pip freeze` carries versions only,
+# so without this an existing venv holding the 26 wheels fingerprints as unchanged and the
+# floor build would never apply on a warm machine.
+_mlx_wheel_tags() {
+    "$PYTHON" - <<'PYEOF'
+from importlib.metadata import PackageNotFoundError, distribution
+for name in ("mlx", "mlx-metal"):
+    try:
+        text = distribution(name).read_text("WHEEL") or ""
+    except PackageNotFoundError:
+        print(f"{name}=absent")
+        continue
+    print(name, *sorted(ln for ln in text.splitlines() if ln.startswith("Tag:")))
+PYEOF
+}
+
 _deps_fingerprint() {
-    { echo "extras=$SIDECAR_EXTRAS"; shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze --exclude-editable; } \
+    { echo "extras=$SIDECAR_EXTRAS"; echo "mlx_floor=$MLX_FLOOR_PLATFORM"; _mlx_wheel_tags
+      shasum -a 256 "$ROOT/pyproject.toml"; "$PYTHON" -m pip freeze --exclude-editable; } \
         | shasum -a 256 | cut -d ' ' -f1
+}
+
+# Replace mlx + mlx-metal with their MLX_FLOOR_PLATFORM wheels (same version). Fails the
+# build when either is missing from the index: a version with no floor wheel must stop the
+# release, not quietly ship the host's.
+_pin_mlx_to_floor() {
+    local ver tmp pyver abi
+    ver="$("$PYTHON" -c 'from importlib.metadata import version; print(version("mlx"))' 2>/dev/null)" \
+        || { echo "error: mlx is not installed in the sidecar venv (the 'apple' extra)." >&2; exit 1; }
+    tmp="$(mktemp -d)"
+    pyver="$("$PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+    abi="cp${pyver/./}"
+    _say "MLX $ver -> $MLX_FLOOR_PLATFORM wheels"
+    if ! "$PYTHON" -m pip download $cache_bypass --quiet --no-deps --only-binary=:all: \
+            --platform "$MLX_FLOOR_PLATFORM" --python-version "$pyver" \
+            --implementation cp --abi "$abi" "mlx==$ver" "mlx-metal==$ver" -d "$tmp"; then
+        echo "error: no $MLX_FLOOR_PLATFORM wheels for mlx==$ver / mlx-metal==$ver on the index." >&2
+        echo "       pip matches that exact tag. A release that publishes only an older (macosx_14_0)" >&2
+        echo "       and a newer (macosx_26_0) wheel needs MLX_FLOOR_PLATFORM lowered to that older tag," >&2
+        echo "       never the host's newer wheels: the app's floor is macOS 15." >&2
+        rm -rf "$tmp"; exit 1
+    fi
+    "$PYTHON" -m pip install $cache_bypass --quiet --force-reinstall --no-deps "$tmp"/*.whl \
+        || { rm -rf "$tmp"; exit 1; }
+    rm -rf "$tmp"
 }
 
 # ---------------------------------------------------------------------------
@@ -281,6 +331,7 @@ if [ "$need_v" = 1 ]; then
         { [ "$FORCE" = 1 ] || [ "$DEPS_ONLY" = 1 ]; } && cache_bypass="--no-cache-dir"
         "$SIDECAR_VENV/bin/pip" install $cache_bypass --quiet --upgrade pip
         "$SIDECAR_VENV/bin/pip" install $cache_bypass -e "$ROOT[$SIDECAR_EXTRAS]"
+        _pin_mlx_to_floor
         if ! "$PYTHON" -m PyInstaller --version >/dev/null 2>&1; then
             echo "error: PyInstaller not installed in fresh sidecar venv (check the 'desktop' extra)." >&2
             exit 1
@@ -397,6 +448,10 @@ fi
 if [ "$DRY_RUN" = 0 ]; then
     if ! "$PYTHON" "$DESKTOP_DIR/scripts/check-bundle-integrity.py" "$BUNDLE"; then
         echo "error: bundle integrity gate failed — see above. The bundle is NOT shippable." >&2
+        exit 1
+    fi
+    if ! "$DESKTOP_DIR/scripts/check-sidecar-mlx-floor.sh" "$BUNDLE"; then
+        echo "error: the bundle's MLX is newer than the app's floor — see above. NOT shippable." >&2
         exit 1
     fi
 fi

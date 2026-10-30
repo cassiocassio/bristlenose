@@ -75,6 +75,11 @@ struct DownloadRate: Equatable {
     }
 
     mutating func add(time: TimeInterval, bytes: Int64) {
+        // Bytes going BACK is a restart: the job waited out a dropped network and began the
+        // fetch again from zero (hf_xet does not resume). The dead attempt's samples and its
+        // minutes-left would otherwise survive into the new one: "About 1 minute" for a fresh
+        // 1.6 GB, held there by the hysteresis below.
+        if let last = samples.last, bytes < last.bytes { reset() }
         samples.append(Sample(time: time, bytes: bytes))
         // Keep one sample older than the window, so the span can reach it.
         while samples.count > 2, let second = samples.dropFirst().first,
@@ -217,7 +222,10 @@ final class WhisperDownloadModel: ObservableObject {
 
     /// Free space below which the app does not start the 1.6 GB on its own
     /// (owner, 18 Oct 2026: "rude"). Download Now in Settings is not held by it.
-    nonisolated static let autoStartFloorBytes: Int64 = 20_000_000_000
+    /// 20 GB until 30 Oct 2026, when it became 10: the download peaks at its final size,
+    /// 1,539 MB with no scratch space on top (measured), so 10 GB leaves about 8 for
+    /// projects and 20 was asking for a Mac the researcher was not using the room on.
+    nonisolated static let autoStartFloorBytes: Int64 = 10_000_000_000
 
     /// Whether the app starts the download by itself: only after the AI
     /// disclosure is acknowledged (owner, 22 Oct 2026), never over a Stop the

@@ -39,6 +39,8 @@ spaCy model now, and stage 7 fetches `en_core_web_lg` into the user cache there
 > sandbox-signed binary aborts with exit 133, which is how that gate sat dead
 > from 14 Jul 2026.
 
+> **30 Oct 2026 — the Apple Silicon transcription check asks whether MLX is installed, then asks a child process whether it starts; it never imports MLX itself.** Importing MLX creates the Metal device, and where that fails the process dies on a native abort (SIGTRAP) that no `except` catches. A macOS 26 MLX build on a macOS 15 guest did exactly that, so `check_backend` and the Whisper status probe now use `utils.hardware.module_installed` (`find_spec`), and `utils.hardware.probe_mlx_starts` runs the hidden `doctor --mlx-probe` in a child: a death by signal or an error is `FAIL mlx_cannot_start`, a timeout is inconclusive (a cold first launch took 25 s to start the sidecar at all). `backend_import_fail` is therefore no longer reachable for MLX on Apple Silicon.
+>
 > **Original banner, 2026-08-27:** Part 1 (doctor) and Part 3 (`--self-test`) are shipped as described. Part 2 (snap) is shipped and published, but **one of its central decisions reversed**: the doc argued for classic confinement, and the snap ships strict. That section is now marked superseded and kept for its reasoning — see "Decision: classic confinement — SUPERSEDED, ships strict". Every `snap install bristlenose --classic` in this doc was wrong and is corrected; `snap install snapcraft --classic` is untouched, because snapcraft itself genuinely is a classic snap.
 
 ## Changelog

@@ -319,7 +319,7 @@ async def start_autocode_job(
             )
 
         # A cancelled/failed job that was never applied (the only survivors of
-        # the guards above) is run again, keeping its proposals and stamps: the
+        # the guards above) is run again, keeping its proposals and register rows: the
         # job sends only what no pass has coded (#127). Until 22 Oct 2026 it was
         # deleted, and the quotes it had coded were paid for twice, with the
         # tags the researcher had denied back as pending. Its last failure goes.

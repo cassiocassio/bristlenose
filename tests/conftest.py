@@ -534,3 +534,12 @@ def no_scene_strip_thread(monkeypatch):
     the documented rollback flake (server/CLAUDE.md), so it is off for every test;
     tests/test_serve_scene_strips.py opts back in."""
     monkeypatch.setenv("BRISTLENOSE_SCENE_STRIPS", "0")
+
+
+@pytest.fixture(autouse=True)
+def fresh_machine_identity_cache(monkeypatch):
+    """machine_id() keeps a good answer for the life of the process. A test that reads it under
+    a patched platform or subprocess must not leave that answer for the next test."""
+    from bristlenose.utils import machine_identity
+
+    monkeypatch.setattr(machine_identity, "_cached", None)

@@ -11,12 +11,33 @@ import hashlib
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 from uuid import UUID
 
+_cached: str | None = None
+
 
 def machine_id() -> str | None:
-    """Return an OS-backed identity, or None when it cannot be established."""
+    """Return an OS-backed identity, or None when it cannot be established.
+
+    A good answer is kept for the life of the process, and a failure is retried
+    once and never kept. The value is written into a run's marker for its whole
+    life, so one slow ``ioreg`` under load must not leave the user's own live
+    run marked as unverifiable.
+    """
+    global _cached
+    if _cached is not None:
+        return _cached
+    for _ in range(2):
+        value = _read_machine_id()
+        if value is not None:
+            _cached = value
+            return value
+    return None
+
+
+def _read_machine_id() -> str | None:
     try:
         if sys.platform == "darwin":
             result = subprocess.run(
@@ -51,6 +72,15 @@ def machine_id() -> str | None:
         return None
 
 
+def has_unsafe_display_character(text: str) -> bool:
+    """True for control and invisible format characters (bidi overrides, zero-width).
+
+    A machine name read back from a synced file is shown in a refusal, so text
+    that can reorder or hide what a person reads is refused, not displayed.
+    """
+    return any(unicodedata.category(c) in ("Cc", "Cf") for c in text)
+
+
 def friendly_machine_name() -> str | None:
     """Apple's ComputerName for display only; never fall back to a DNS name."""
     if sys.platform != "darwin":
@@ -61,7 +91,7 @@ def friendly_machine_name() -> str | None:
             capture_output=True, text=True, encoding="utf-8", check=True, timeout=2,
         )
         name = result.stdout.strip()
-        if not name or len(name) > 256 or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        if not name or len(name) > 256 or has_unsafe_display_character(name):
             return None
         return name
     except (OSError, UnicodeError, subprocess.SubprocessError):

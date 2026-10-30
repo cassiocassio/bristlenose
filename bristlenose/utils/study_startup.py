@@ -13,7 +13,7 @@ from pathlib import Path
 from bristlenose.events import _parse_event_line, events_path
 from bristlenose.run_condition import RunStateEnum, read_condition, reduce_lines
 from bristlenose.run_lifecycle import _read_pid_file, pid_file_path
-from bristlenose.utils.machine_identity import machine_id
+from bristlenose.utils.machine_identity import has_unsafe_display_character, machine_id
 from bristlenose.utils.output_backup import backup_path_for
 
 # Native must distinguish a refusal even when pipe output has not drained.
@@ -123,7 +123,7 @@ def require_study_startup(output_dir: Path) -> None:
                 if marker and latest and marker.get("run_id") == latest.run_id:
                     candidate = marker.get("machine_name")
                     if (isinstance(candidate, str) and 0 < len(candidate) <= 256
-                            and not any(ord(c) < 32 or ord(c) == 127 for c in candidate)):
+                            and not has_unsafe_display_character(candidate)):
                         name = candidate
                     if latest.started_at is not None and len(latest.started_at) <= 64:
                         started = latest.started_at

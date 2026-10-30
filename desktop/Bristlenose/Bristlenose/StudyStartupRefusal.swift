@@ -51,7 +51,7 @@ struct StudyStartupRefusal: Equatable, Decodable, Sendable {
         guard reason == .foreign else { return AttributedString(localized("unknownBody", using: i18n)) }
         let name = machineName.flatMap { candidate -> String? in
             guard !candidate.isEmpty, candidate.count <= 256,
-                  !candidate.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+                  !candidate.unicodeScalars.contains(where: { $0.properties.generalCategory == .control || $0.properties.generalCategory == .format })
             else { return nil }
             return candidate
         }

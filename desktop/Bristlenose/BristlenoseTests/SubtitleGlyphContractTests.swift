@@ -36,6 +36,7 @@ import Testing
     enum VariantTag: CaseIterable {
         case cantFind, failed, failedDiagnostic, completedPartial, stopping
         case running, queued, stopped, partial, unreachable, addingInterviews, exportingReport
+        case preparingSignals
         case copying, importingBatch, readingScreens, copyCancelling, waitingForWhisper
         case ready, deltaOnly, placeholder, reportError
     }
@@ -54,6 +55,7 @@ import Testing
         .unreachable(reason: .timedOut),
         .addingInterviews(count: 3),
         .exportingReport,
+        .preparingSignals,
         .copying(fraction: 0.5),
         .importingBatch(done: 3, total: 4),
         .readingScreens(done: 0, total: 4),
@@ -139,6 +141,7 @@ import Testing
         let progress: [SubtitleVariant] = [
             .stopping, .running, .queued(position: 1), .stopped,
             .partial(transcribeOnly: true), .addingInterviews(count: 1), .exportingReport,
+            .preparingSignals,
             .copying(fraction: 0.5), .importingBatch(done: 1, total: 2),
             .readingScreens(done: 1, total: 2),
             .copyCancelling, .waitingForWhisper, .placeholder,
@@ -192,7 +195,8 @@ import Testing
         for variant in [SubtitleVariant.running, .stopping, .queued(position: 1),
                         .copying(fraction: 0.4), .importingBatch(done: 1, total: 2),
                         .readingScreens(done: 1, total: 2),
-                        .addingInterviews(count: 2), .copyCancelling, .placeholder] {
+                        .addingInterviews(count: 2), .preparingSignals,
+                        .copyCancelling, .placeholder] {
             #expect(variant.glyphKind == nil, "\(variant.tag) is progress, not news")
         }
     }
@@ -271,6 +275,7 @@ private extension SubtitleVariant {
         case .unreachable:      return .unreachable
         case .addingInterviews: return .addingInterviews
         case .exportingReport:  return .exportingReport
+        case .preparingSignals: return .preparingSignals
         case .copying:          return .copying
         case .importingBatch:   return .importingBatch
         case .readingScreens:   return .readingScreens

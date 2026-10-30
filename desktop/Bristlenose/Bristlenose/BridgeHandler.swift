@@ -69,6 +69,11 @@ final class BridgeHandler: ObservableObject {
     /// Which lenses the document withholds while a run is in progress
     /// (`lens-availability`); `.all` otherwise. See `LensReadiness`.
     @Published var lensReadiness: LensReadiness = .all
+    /// How many `lens-availability` messages this window has had, an unchanged
+    /// one included (the equality guard on `lensReadiness` swallows those). Only
+    /// ever rises, so "the bridge has spoken since" is a comparison. Not
+    /// published: `isPreparingSignals` carries what a view needs.
+    private(set) var lensAvailabilityPosts = 0
 
     /// Where the reader is within the current lens — a heading id, or nil for
     /// the top. Posted by `useAnchorReporter` on scroll-settle; persisted per
@@ -548,6 +553,42 @@ final class BridgeHandler: ObservableObject {
         reportExportFallback?.cancel()
         reportExportFallback = nil
         if isExportingReport { isExportingReport = false }
+    }
+
+    // MARK: - Picking up Signals
+
+    /// Whether the sidebar row of the study this window shows says "Picking up
+    /// Signals…" (`docs/design-signals-lens-readiness.md` §3.3): the Signals
+    /// lens is withheld while its first report is built, or a first analysis
+    /// has just ended and the bridge has not yet said so. Kept here, paired
+    /// with the study by `ContentView` as `reportCrash` and `isExportingReport`
+    /// are. The decision is `SignalsPreparing`.
+    @Published private(set) var isPreparingSignals = false
+
+    private var signalsPreparing = SignalsPreparing()
+    private var signalsPreparingWake: Task<Void, Never>?
+
+    /// A seam for tests: what time it is.
+    var signalsClock: () -> Date = { Date() }
+
+    /// A first analysis of the study this window shows has just ended.
+    func armSignalsPreparing() {
+        signalsPreparing.arm(now: signalsClock(), posts: lensAvailabilityPosts)
+        refreshSignalsPreparing()
+    }
+
+    private func refreshSignalsPreparing() {
+        signalsPreparingWake?.cancel()
+        signalsPreparingWake = nil
+        let verdict = signalsPreparing.evaluate(
+            readiness: lensReadiness, posts: lensAvailabilityPosts, now: signalsClock())
+        if verdict.show != isPreparingSignals { isPreparingSignals = verdict.show }
+        guard let wait = verdict.recheckAfter else { return }
+        signalsPreparingWake = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(wait))
+            guard !Task.isCancelled else { return }
+            self?.refreshSignalsPreparing()
+        }
     }
 
     /// Mirror the sole-selected study's run gates — Stop, Re-analyse, Locate's
@@ -1219,6 +1260,7 @@ final class BridgeHandler: ObservableObject {
             // A status page withholds nothing of its own; the SPA's last
             // `lens-availability` post no longer describes this document.
             lensReadiness = .all
+            refreshSignalsPreparing()
 
         case "route-change":
             if let url = body["url"] as? String {
@@ -1387,6 +1429,8 @@ final class BridgeHandler: ObservableObject {
             // on every change, and the rail and View menu rebuild on any assign.
             let readiness = LensReadiness(message: body["lenses"] as? [String: Any] ?? [:])
             if readiness != lensReadiness { lensReadiness = readiness }
+            lensAvailabilityPosts += 1
+            refreshSignalsPreparing()
             leaveWithheldLens()
 
         case "panel-state":
@@ -1588,6 +1632,9 @@ final class BridgeHandler: ObservableObject {
         reportExportSettled()
         // The next document says what it withholds; until then nothing is.
         lensReadiness = .all
+        // And "Picking up Signals…" was the old selection's.
+        signalsPreparing.clear()
+        refreshSignalsPreparing()
         pendingLensIntent = nil
         lensIntentReplayed = false
         currentPath = ""

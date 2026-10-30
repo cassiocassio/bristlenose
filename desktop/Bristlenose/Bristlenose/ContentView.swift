@@ -1068,6 +1068,17 @@ struct ContentView: View {
             for id in CompletionRescan.projectsLeavingAnalysis(old: old, new: new) {
                 scheduleCountRescan(projectID: id)
             }
+            // A first analysis ending here predicts the Signals report being
+            // built, until this window's bridge says so (SignalsPreparing).
+            // Read before the baseline below is stamped: it is what says
+            // "first".
+            if let id = selectedProjectID,
+               SignalsPreparing.shouldArm(
+                   old: old[id], new: new[id],
+                   analysedBefore: projectIndex.projects
+                       .first(where: { $0.id == id })?.lastPipelineRunAt != nil) {
+                bridgeHandler.armSignalsPreparing()
+            }
             // Stamp the analysis baseline. Narrower than the rescan above — a
             // passive `.scanning` read must not open the F14 drift gate, since
             // no analysis happened. Write-only field; see
@@ -3352,6 +3363,9 @@ struct ContentView: View {
                 // Export Report acts on this window's document, so the row
                 // is the sole-selected study's, paired as the crash is (#24).
                 exportingReportProjectID: bridgeHandler.isExportingReport ? selectedProject?.id : nil,
+                // The same pairing for the Signals report being built: the
+                // window's bridge says it, so only the study it shows.
+                preparingSignalsProjectID: bridgeHandler.isPreparingSignals ? selectedProject?.id : nil,
                 flashProjectID: dropTargetProjectID
             )
             // Run the list up under the toolbar, as a SwiftUI `List` sidebar

@@ -172,6 +172,10 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
     /// Kept by the window's `BridgeHandler`, paired with the study by
     /// `ContentView` as `reportCrash` is. Nil the rest of the time.
     var exportingReportProjectID: UUID? = nil
+    /// The study whose Signals report is being built, from this window's
+    /// bridge (`BridgeHandler.isPreparingSignals`), paired with the study by
+    /// `ContentView` as the two above are. Nil the rest of the time.
+    var preparingSignalsProjectID: UUID? = nil
     /// The study a drop just landed on, held for the 0.4 s acknowledgement
     /// `ContentView` times (a re-dropped analysed folder, a moved study, files
     /// already there). The SwiftUI row strokes it; this sidebar marks the row as
@@ -212,6 +216,7 @@ struct ProjectSidebarOutline: NSViewControllerRepresentable {
         controller.reportCrash = reportCrash
         controller.startupRefusals = startupRefusals
         controller.exportingReportProjectID = exportingReportProjectID
+        controller.preparingSignalsProjectID = preparingSignalsProjectID
         controller.noteAgentCalls(lastAgentCallAt)
         controller.onRemoveProject = onRemoveProject
         controller.onOpenInNewWindow = onOpenInNewWindow
@@ -298,6 +303,8 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     var startupRefusals: [UUID: StudyStartupRefusal] = [:]
     /// See the representable's `exportingReportProjectID`.
     var exportingReportProjectID: UUID?
+    /// See the representable's `preparingSignalsProjectID`.
+    var preparingSignalsProjectID: UUID?
     var canShowInFinder: (UUID) -> Bool = { _ in false }
     /// See the representable's `canShareWithAgents` / `mcpMounted`.
     var canShareWithAgents: (UUID) -> Bool = { _ in false }
@@ -2056,13 +2063,21 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     }
 
     /// Whether the status line should shimmer (design-motion §4.7.1): only a live
-    /// run (`.running`), and only when the "Show animation while analysing" toggle
+    /// run (`.running`) or the Signals report being built (`.preparingSignals`,
+    /// 30 Oct 2026: shimmer on a small status line means the AI is thinking, and
+    /// here it is), and only when the "Show animation while analysing" toggle
     /// is on AND Reduce Motion is off — the native twin of the web CSS two-gate.
     /// Off → the plain static subtitle label.
     private func shimmerSubtitle(for variant: SubtitleVariant) -> Bool {
-        guard variant == .running else { return false }
         let on = UserDefaults.standard.object(forKey: "showAnalysisAnimation") as? Bool ?? true
-        return on && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        return Self.shimmers(variant, animationOn: on,
+                             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    }
+
+    /// The gate itself, apart from the two reads it needs, so the table is testable.
+    static func shimmers(_ variant: SubtitleVariant, animationOn: Bool, reduceMotion: Bool) -> Bool {
+        guard variant == .running || variant == .preparingSignals else { return false }
+        return animationOn && !reduceMotion
     }
 
     /// The arbitrated subtitle state — mirrors `ProjectRow.subtitleVariant`
@@ -2076,6 +2091,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
             isStopping: liveData?.progress[id]?.isStopping ?? false,
             addingCount: pipelineRunner?.addingInterviews[id],
             exportingReport: exportingReportProjectID == id,
+            preparingSignals: preparingSignalsProjectID == id,
             copy: copyDisplay(for: project),
             importBatch: importBatchDisplay(for: project),
             screens: screenReading?.progress[id].map { (done: $0.done, total: $0.total) },

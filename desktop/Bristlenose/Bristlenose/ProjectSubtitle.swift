@@ -77,6 +77,14 @@ enum SubtitleVariant: Equatable {
     /// interviews…", and like it an idle-tier activity (decision #24, 22 Oct
     /// 2026). No ring: there is nothing to cancel before the panel.
     case exportingReport
+    /// The Signals lens is withheld because its first report is being built
+    /// (`docs/design-signals-lens-readiness.md` §3.3, 30 Oct 2026). Renders
+    /// "Picking up Signals…", an idle-tier activity: a background job the
+    /// researcher did not start by a gesture, seconds to a minute long. **No
+    /// ring** (it cannot be stopped, and a ring promises a stop that does not
+    /// exist), no glyph, no hint. Shimmers, behind the same preference as a
+    /// run's line, because the build is the AI thinking.
+    case preparingSignals
     /// A drag-import copy is landing files in THIS project. Carries the 0…1
     /// byte fraction; the view renders "Copying · N%" + a determinate ring
     /// (with hover-cancel) in the trailing slot — the row's *only* copy surface
@@ -205,8 +213,8 @@ extension SubtitleVariant {
             // delta is the same disagreement with a date in front of it.
             return delta == nil ? .none : .files
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
-             .copyCancelling, .waitingForWhisper, .placeholder:
+             .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
+             .readingScreens, .copyCancelling, .waitingForWhisper, .placeholder:
             return .none
         }
     }
@@ -267,8 +275,8 @@ extension SubtitleVariant {
             // picture and how it amends the `info` ruling.
             return .info
         case .stopping, .running, .queued, .stopped, .partial,
-             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
-             .copyCancelling, .waitingForWhisper, .ready, .placeholder:
+             .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
+             .readingScreens, .copyCancelling, .waitingForWhisper, .ready, .placeholder:
             // Progress, and states the researcher caused. `.stopped` and
             // `.partial` have an available act — resume, analyse — and still get
             // nothing, because the act is not the test. They already know.
@@ -328,11 +336,14 @@ enum ProjectSubtitle {
     /// §Precedence, §5):**
     /// `cantFind (availability) › failed › running › unreachable ›
     /// completedPartial › reportError › queued / stopped / partial ›
-    /// (idle: adding › exporting › batch › copying › forked › reportError › screens ›
-    /// missing › unanalysed › silence)`. The report crash (21 Oct 2026)
+    /// (idle: adding › exporting › batch › copying › forked › reportError ›
+    /// preparing Signals › screens › missing › unanalysed › silence)`. The report crash (21 Oct 2026)
     /// yields to the verb-led and cause-shaped states and to the idle
     /// activities and the error-kind delta, and takes the line from the rest
-    /// — `ReportCrash.outranks` plus the placement in `resolveIdle`. Screen reading
+    /// — `ReportCrash.outranks` plus the placement in `resolveIdle`. Preparing
+    /// Signals (30 Oct 2026) sits just above screen reading (owner's call: it is
+    /// short-lived and Screens is long), so the missing-files warning waits a
+    /// few seconds behind it. Screen reading
     /// (14 Oct 2026) joins the idle tier after copying and the distress
     /// deltas (forked, missing), above the quiet `unanalysed` one.
     ///
@@ -350,6 +361,7 @@ enum ProjectSubtitle {
         isStopping: Bool,
         addingCount: Int?,
         exportingReport: Bool = false,
+        preparingSignals: Bool = false,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)? = nil,
@@ -412,6 +424,7 @@ enum ProjectSubtitle {
             return resolveIdle(
                 addingCount: addingCount,
                 exportingReport: exportingReport,
+                preparingSignals: preparingSignals,
                 copy: copy,
                 importBatch: importBatch,
                 screens: screens,
@@ -439,6 +452,7 @@ enum ProjectSubtitle {
     private static func resolveIdle(
         addingCount: Int?,
         exportingReport: Bool,
+        preparingSignals: Bool,
         copy: CopyDisplay?,
         importBatch: (done: Int, total: Int)?,
         screens: (done: Int, total: Int)?,
@@ -491,6 +505,15 @@ enum ProjectSubtitle {
         if let reportCrash {
             return .reportError(reportCrash)
         }
+        // The first Signals report is being built (the window's bridge says the
+        // lens is withheld and no run is in flight, or the native prior for the
+        // moment a first run ends). Above screen reading by the owner's call:
+        // it lasts seconds and the screen read can last hours, so the other
+        // order would hide it entirely. It yields to everything above (the
+        // acts the researcher started, an error-kind delta, the crash) and,
+        // being short, it outranks the warning and info deltas for its few
+        // seconds, which come back when it ends.
+        if preparingSignals { return .preparingSignals }
         // Screen reading is the quietest activity: a background job the
         // researcher did not start by a gesture and cannot stop, so every act
         // they did start (an add, a batch, a copy) keeps the line over it, and

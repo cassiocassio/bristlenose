@@ -53,8 +53,8 @@ enum SidebarSubtitleText {
             // popover says it whole).
             return i18n.t("desktop.pipeline.diagnostic.header.reportError")
         case .stopping, .running, .queued, .stopped, .partial, .unreachable,
-             .addingInterviews, .exportingReport, .copying, .importingBatch, .readingScreens,
-             .copyCancelling, .waitingForWhisper:
+             .addingInterviews, .exportingReport, .preparingSignals, .copying, .importingBatch,
+             .readingScreens, .copyCancelling, .waitingForWhisper:
             return activityText(variant, progress: progress, separator: " · ", i18n: i18n)  // :255-259
         case .ready(let date, let delta):
             return readyText(date: date, delta: delta, i18n: i18n)           // :260-267
@@ -117,6 +117,8 @@ enum SidebarSubtitleText {
             return i18n.plural("desktop.chrome.addingInterviews", count: count)
         case .exportingReport:
             return i18n.t("common.export.exporting")
+        case .preparingSignals:
+            return i18n.t("desktop.chrome.pipeline.pickingUpSignals")
         case .copying(let fraction):
             let percent = min(100, max(0, Int((fraction * 100).rounded())))
             return i18n.t("desktop.chrome.pipeline.copying", ["percent": String(percent)])
@@ -222,6 +224,13 @@ enum SidebarSubtitleText {
            let ladder = activityText(variant, progress: progress,
                                      separator: " · ", i18n: i18n) {
             parts.append(ladder)
+        }
+        // "Picking up Signals…" in full: a long locale truncates on the row
+        // (German and Finnish are the long ones), and hover is where the whole
+        // sentence lives, as the ladder's is.
+        if case .preparingSignals = variant,
+           let line = activityText(variant, progress: nil, separator: " · ", i18n: i18n) {
+            parts.append(line)
         }
         // "Waiting for download" in full: the row's own line, said whole, as
         // the ladder above is — not a further condition.

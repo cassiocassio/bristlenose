@@ -35,6 +35,48 @@ _READ_WINDOW = 8
 SIGNAL_SNAPSHOT_PAYLOAD_VERSION = 5
 
 
+def snapshot_has_cards(snapshot: SignalSnapshot | None) -> bool:
+    """Whether a stored report has at least one card to show.
+
+    An empty analysis is a valid, complete snapshot (a study with no groups or
+    no quotes stores one at serve start), so "a snapshot row exists" does not
+    mean there is a report to read: the Signals lens is withheld while the first
+    one with cards is being built, and an empty row must not count as it.
+    """
+    if snapshot is None:
+        return False
+    payload = snapshot_payload(snapshot)
+    codebooks = payload.get("codebooks")
+    return isinstance(codebooks, list) and any(
+        isinstance(cb, dict) and cb.get("signals") for cb in codebooks
+    )
+
+
+def signals_preparing(state: Any) -> bool:
+    """A Signals report is being built now, or is about to be.
+
+    The startup repair (``initial_signal_snapshot_pending``) and every build
+    that follows a run, a codebook apply or a re-apply (``signals_preparing_count``)
+    count. Read by the condition endpoint (to withhold the lens) and by the
+    snapshot reader (to say a report is on its way).
+    """
+    return bool(getattr(state, "initial_signal_snapshot_pending", False)) or (
+        int(getattr(state, "signals_preparing_count", 0) or 0) > 0
+    )
+
+
+def begin_signals_preparing(state: Any) -> None:
+    """Note one more build in flight. Pair every call with ``end_signals_preparing``."""
+    state.signals_preparing_count = int(getattr(state, "signals_preparing_count", 0) or 0) + 1
+
+
+def end_signals_preparing(state: Any) -> None:
+    """Note one build over, whether it stored a report, skipped or failed."""
+    state.signals_preparing_count = max(
+        0, int(getattr(state, "signals_preparing_count", 0) or 0) - 1
+    )
+
+
 def store_completed_snapshot(
     db: Session,
     project_id: int,

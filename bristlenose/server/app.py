@@ -1398,6 +1398,19 @@ def _make_run_completed_handler(
             logger.exception("Auto re-apply after run_completed failed")
             return
 
+        # Signals is withheld until the report this run's quotes make has been
+        # written. The run's overlay ended above, which would light the lens at
+        # once, and the build only starts when the codebook re-apply has finished
+        # (which can take minutes), so the lens would light and then go dim.
+        # Note the build here, before the task exists, and end it in the task's
+        # finally. Not noted when there is no cloud model: nothing will be built.
+        from bristlenose.server.signal_snapshots import (
+            begin_signals_preparing,
+            end_signals_preparing,
+        )
+
+        begin_signals_preparing(app.state)
+
         async def _reapply_after_run() -> None:
             try:
                 await reapply
@@ -1415,6 +1428,8 @@ def _make_run_completed_handler(
                     snapshot_db.close()
             except Exception:
                 logger.exception("Auto re-apply or signal snapshot after run_completed failed")
+            finally:
+                end_signals_preparing(app.state)
 
         task = asyncio.create_task(_reapply_after_run())
         _REAPPLY_AFTER_RUN_TASKS.add(task)  # a bare task can be GC'd mid-flight

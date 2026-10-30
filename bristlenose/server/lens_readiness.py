@@ -41,8 +41,24 @@ class Progress:
     ended: bool = False
 
 
-def lens_readiness(progress: Progress | None) -> dict[str, bool]:
-    """Each lens id → whether it can be selected now."""
+def lens_readiness(
+    progress: Progress | None, *, signals_preparing: bool = False,
+) -> dict[str, bool]:
+    """Each lens id → whether it can be selected now.
+
+    ``signals_preparing``: the first Signals report is being built and none with
+    cards exists yet (the caller works that out; a rebuild over an existing report
+    never withholds the lens, because the old report keeps being served). It
+    withholds Signals whether or not a progressive run is in play, so the lens
+    does not light between a run's end and its report.
+    """
+    ready = _lens_readiness(progress)
+    if signals_preparing:
+        ready["signals"] = False
+    return ready
+
+
+def _lens_readiness(progress: Progress | None) -> dict[str, bool]:
     if progress is None:
         return dict.fromkeys(LENSES, True)
     return {

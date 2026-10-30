@@ -49,6 +49,8 @@ from bristlenose.server.signal_snapshots import (
     latest_completed_snapshot,
     quote_reference_for_row,
     signal_quote_record,
+    signals_preparing,
+    snapshot_has_cards,
     snapshot_payload,
     store_completed_snapshot,
 )
@@ -1098,7 +1100,7 @@ def get_stored_signal_snapshot(project_id: int, request: Request) -> StoredSigna
                 snapshot=None,
                 source=None,
                 computed_at=None,
-                pending=bool(getattr(request.app.state, "initial_signal_snapshot_pending", False)),
+                pending=signals_preparing(request.app.state),
             )
         # A hide made after the snapshot was built must show here too: keep only
         # what counts now. Filtering only removes, so this stays a read.
@@ -1109,6 +1111,9 @@ def get_stored_signal_snapshot(project_id: int, request: Request) -> StoredSigna
             snapshot=filter_snapshot_to_counted(snapshot_payload(snapshot), counted),
             source=snapshot.source,
             computed_at=snapshot.computed_at.isoformat(),
+            # An empty report (a study with nothing to show yet) is not the
+            # report: while the first one with cards is on its way, say so.
+            pending=signals_preparing(request.app.state) and not snapshot_has_cards(snapshot),
         )
     finally:
         db.close()

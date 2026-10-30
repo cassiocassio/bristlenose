@@ -108,6 +108,22 @@ def get_condition(project_id: int, request: Request) -> ConditionResponse:
     condition = current_condition(request.app, project_output_dir(project_dir))
     overlay = getattr(state, "import_overlay", None) or {}
     from bristlenose.server.lens_readiness import lens_readiness
+    from bristlenose.server.signal_snapshots import (
+        latest_completed_snapshot,
+        signals_preparing,
+        snapshot_has_cards,
+    )
+
+    # Signals is withheld while its first report with cards is being built.
+    # With a report to show (even an older one), the lens stays lit: a rebuild
+    # never takes away what is already readable.
+    withheld = False
+    if signals_preparing(state):
+        snapshot_db = state.db_factory()
+        try:
+            withheld = not snapshot_has_cards(latest_completed_snapshot(snapshot_db, project_id))
+        finally:
+            snapshot_db.close()
 
     return ConditionResponse(
         condition=condition.to_wire(),
@@ -115,5 +131,7 @@ def get_condition(project_id: int, request: Request) -> ConditionResponse:
         import_failed_run_id=overlay.get("failed_run_id"),
         policy=policy_from_env().value,
         data_version=getattr(state, "data_version", 0),
-        lenses=lens_readiness(getattr(state, "progress", None)),
+        lenses=lens_readiness(
+            getattr(state, "progress", None), signals_preparing=withheld,
+        ),
     )

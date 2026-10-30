@@ -365,13 +365,21 @@ async def start_autocode_job(
                 if completed is None:
                     return
                 from bristlenose.server.routes.signals import materialise_completed_signal_snapshot
-
-                await materialise_completed_signal_snapshot(
-                    snapshot_db,
-                    project_id,
-                    source="codebook_apply",
-                    project_dir=project_dir,
+                from bristlenose.server.signal_snapshots import (
+                    begin_signals_preparing,
+                    end_signals_preparing,
                 )
+
+                begin_signals_preparing(app.state)
+                try:
+                    await materialise_completed_signal_snapshot(
+                        snapshot_db,
+                        project_id,
+                        source="codebook_apply",
+                        project_dir=project_dir,
+                    )
+                finally:
+                    end_signals_preparing(app.state)
             except Exception:
                 # A completed codebook must remain completed if optional signal
                 # synthesis fails; retry happens on the next LLM-backed run.

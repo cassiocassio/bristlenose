@@ -266,8 +266,10 @@ cloud provider or paid pipeline operation was tested. No push/merge/release.
 
 ## Preserved future work
 
-The larger prototype remains on `codex/study-access-poc`, worktree
-`/Users/cassio/.codex/worktrees/study-access-poc/bristlenose`. Its design owner is
+The larger prototype remains parked at branch `codex/study-access-poc`
+(`e1f73c7136`). Its former worktree is no longer required: the complete source
+and bundle are preserved in the private recovery archive and the verified
+external consolidation copy. Its design owner is
 `docs/design-study-read-only.md`; implementation/evidence map is
 `docs/design-study-read-only-plan.md`; experiments are under
 `experiments/study-access-poc/` (README, FINDINGS, HANDOVER, RESEARCH).

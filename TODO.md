@@ -1,5 +1,25 @@
 # Bristlenose — Where I Left Off
 
+**30 Oct — Codex consolidation committed; checkout transfer in progress.** The clean
+integration checkout is
+`/Users/cassio/.codex/worktrees/integration-main/bristlenose`. Local `main` now
+contains `0b7eb11d5` (Zoom 30-day UTC/DST fix plus deterministic startup-probe
+verification) and `c84c26606` (parked multi-Mac design/mockup bundle and trued
+register). Full Python is green: **9,013 passed, 8 skipped, 133 deselected,
+6 xfailed**. Full native is green: **2,851 passed, 0 failed**. Mockup-register,
+Ruff, locale-key and staged-diff gates pass.
+
+The canonical `/Users/cassio/Code/bristlenose` checkout is still on
+`codex/signals-lens`; do not clean it broadly. Its 105-path inventory is fully
+preserved and verified, including a byte-identical external copy at
+`/Users/cassio/.codex/preservation/bristlenose-final-consolidation-2026-10-30`.
+Claude's organising session owned no edits and intentionally deleted only three
+untracked root strays (`the`, `with`, `uv.lock`). Next: detach the integration
+checkout to free `main`, restore/remove only inventoried paths,
+switch the canonical checkout to `main`, verify it clean, and retire only
+worktrees proven idle and preserved. `codex/study-access-poc` remains parked and
+unmerged by decision; the full source/bundle is preserved. No push or release.
+
 **30 Oct — sidebar Finder drops closed on local main.** Implementation 56b46608a
 landed via 5a7830935; test corrections c92bba10a and 5120928de. Final pinned
 Swift gate: 2,846 passed / zero failed; sidebar Python contracts: 44 passed.
@@ -916,4 +936,3 @@ Bristlenose has ~30 direct + transitive deps across Python, ML, LLM SDKs, and NL
 | `docs/design-sidebar.md` | Dual-sidebar layout (TOC left, Tags right) |
 | `docs/design-windows-port.md` | Windows status: the CLI on Windows, CI, what is unexercised |
 | `docs/design-winget.md` | winget plan (steps 1–6) and its decisions; `docs/release-winget.md` is the per-release procedure |
-

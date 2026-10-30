@@ -36,6 +36,11 @@ plus a second request that gradually changes its prose.
   from one input revision.
 - The latest complete snapshot remains readable without an LLM, without the
   internet, and while a successor is calculating or has failed.
+- The quote list follows the researcher's curation on read: quotes that no longer
+  count are filtered out of a complete snapshot (a hide, a recoded-out speaker, a
+  moved paragraph), and nothing is ever added. The exception to "one input
+  revision" is deliberate: a hide must show on the card and in the export now,
+  not at the next run.
 - Snapshot metadata records whether the current project inputs have changed
   since it was made. The first delivery may keep that state invisible in the
   lens; the API and model retain it so a quiet freshness treatment can be added
@@ -207,7 +212,7 @@ snapshot intact and can resume durable dirty work.
 | Codebook run/import completes | after `reapply_active_frameworks` completes | new/changed sessions × active groups | new quotes and tags are now stable |
 | Framework enabled/disabled or installed/uninstalled | after the database transaction | framework/project | changes eligible analytical vocabulary |
 | Tag proposal accepted or denied; manual tag change | after decision commit | quote × group(s) containing its tag | evidence and strength changed |
-| Quote hidden/unhidden, edited, or removed | after commit | quote × all active groups | alters eligible evidence |
+| Quote hidden/unhidden, edited, or removed | after commit | quote × all active groups | alters eligible evidence. **A read-time filter now follows a hide at once** (`docs/design-signals-follow-hide.md`); strength, ranking and the written card stay as built until a refresh, which is still deferred |
 | Section/theme or grouping edit | after commit | location/project | cards may move/merge/split |
 | Signal metric/template/prompt version change | at deploy/config migration | project | semantic output contract changed |
 
@@ -298,8 +303,13 @@ history, and tests for deletion, redaction and export classification.
 
 1. Disabling a framework removes it from subsequent snapshots and all active
 analysis callers agree on the same resolver result.
-2. With LLM/network unavailable, the reader returns the last complete snapshot
-unchanged; a page request does not initiate generation.
+2. With LLM/network unavailable, the reader returns the last complete snapshot;
+a page request does not initiate generation. The one thing it does to the
+stored snapshot is remove what no longer counts: a quote the researcher has
+hidden (or that has otherwise left the evidence) is filtered out on read, with
+its assertions and its share of the heatmap cell, and a card left with no quote
+is dropped. It never adds, recalculates or calls a model
+(`docs/design-signals-follow-hide.md`).
 3. A changed card cannot inherit an old narrative unless its evidence
 fingerprint matches exactly.
 4. A failed refresh cannot replace a complete snapshot.

@@ -1,8 +1,10 @@
 """Storage boundary for completed Signals-lens snapshots.
 
 The reader deliberately has no signal calculation or LLM dependency.  Writing
-is restricted to the LLM-backed codebook/new-interview lifecycle callers added
-in the next slice; hand curation does not call this module in v1.
+is restricted to the LLM-backed codebook/new-interview lifecycle callers; hand
+curation never writes here.  A researcher's hide does change what the reader
+returns, though: ``filter_snapshot_to_counted`` removes what no longer counts
+on every read (docs/design-signals-follow-hide.md), and only ever removes.
 """
 
 from __future__ import annotations

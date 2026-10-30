@@ -75,7 +75,12 @@ def test_the_drop_a_folder_pane_is_still_a_drop_site() -> None:
     text = _strip_comments(CONTENT_VIEW.read_text(encoding="utf-8"))
     pane = text.index('"desktop.welcome.dropFolderTitle"')
     drop = text.find(".dropDestination(for: URL.self)", pane)
-    assert drop != -1 and "noSelectionDropTargeted" in text[drop : drop + 400], (
+    assert drop != -1, "the empty pane lost its Finder drop destination"
+    _, end = _block_after(text, drop)
+    targeted = re.match(r"\s*isTargeted:\s*\{", text[end:])
+    assert targeted, "the empty pane lost its drop-target feedback closure"
+    begin, end = _block_after(text, end + targeted.start())
+    assert "noSelectionDropTargeted" in text[begin:end], (
         "the empty \"Drop a folder\" pane no longer has its Finder drop"
     )
 
@@ -109,9 +114,20 @@ def test_every_finder_drop_site_goes_through_a_shared_handler() -> None:
 
 def test_projects_are_created_from_a_drop_only_after_the_dedupe() -> None:
     text = _strip_comments(CONTENT_VIEW.read_text(encoding="utf-8"))
-    decide = re.search(r"func processDroppedURLs\(", text)
-    assert decide, "processDroppedURLs not found in ContentView.swift — renamed?"
-    begin, end = _block_after(text, decide.end())
+    # The public entry now resolves Finder contents off-main and passes its
+    # payload to an overload. Locate the overload that actually owns dedupe,
+    # rather than assuming the first declaration contains project creation.
+    decisions = [
+        _block_after(text, match.end())
+        for match in re.finditer(r"func processDroppedURLs\(", text)
+    ]
+    decisions = [
+        (begin, end) for begin, end in decisions
+        if "DroppedFolderState.classify(" in text[begin:end]
+        and "StudyDropMatch.resolve(" in text[begin:end]
+    ]
+    assert len(decisions) == 1, "expected one shared folder/identity dedupe owner"
+    begin, end = decisions[0]
 
     calls = [
         m.start()

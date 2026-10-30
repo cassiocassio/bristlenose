@@ -95,6 +95,7 @@ class TestTableCreation:
         "hidden_tag_groups",
         "screen_arrangements",
         "elaboration_caches",
+        "signal_snapshots",
         "import_conflicts",
         "autocode_jobs",
         "autocode_session_stamps",

@@ -28,7 +28,8 @@ from bristlenose.server.models import Session as SessionModel
 from bristlenose.server.models import SourceFile
 from bristlenose.utils import output_backup
 from tests.conftest import AuthTestClient
-from tests.test_serve_condition import _failed, _started
+from tests.test_serve_condition import _failed, _pid_file, _started
+from tests.test_serve_condition import known_local_identity as known_local_identity  # noqa: F401
 from tests.test_serve_event_watcher import _completed
 from tests.test_serve_importer import _make_quote, _write_pipeline_output, _write_transcript
 from tests.test_serve_importer import db as db  # noqa: F401 — the in-memory DB fixture
@@ -37,6 +38,12 @@ from tests.test_serve_participant_recode import _registry, _with_quotes
 from tests.test_serve_project_root import _app, _project, _rows, _sessions, _wait
 from tests.test_serve_project_root import _client as _polling_client
 from tests.test_serve_project_root import fast_watcher as fast_watcher  # noqa: F401
+
+
+def _admitted_local_attempt(out: Path) -> None:
+    """The serve may join a positively owned live local run, not an orphan gap."""
+    _started(out, "LOCAL")
+    _pid_file(out, "LOCAL", alive=True)
 
 
 def _lock(out: Path) -> None:
@@ -75,11 +82,12 @@ class TestTheStashCycle:
     """A serve that straddles ``--clean``'s stash and a failed run's restore
     ends up reading the report that is on disk, in one project row."""
 
-    def test_serve_while_the_output_is_stashed_then_restored(self, tmp_path: Path, fast_watcher) -> None:
-        """``run --clean`` moves the report aside; the Mac app (re)starts the serve in
-        that window on every Re-analyse; the run fails and ``restore`` puts the old
-        report back. The serve must end up reading it — one row, under the output
-        folder — not a second row beside an empty first."""
+    def test_ownerless_stashed_startup_refuses_until_restore(self, tmp_path: Path, fast_watcher) -> None:
+        """A fresh serve in the ownerless stash gap must refuse without writes.
+
+        After the owner restores its report, reopening reads one existing
+        project row rather than creating a second empty project.
+        """
         from bristlenose.utils import output_backup
 
         proj = _project(tmp_path)
@@ -87,15 +95,24 @@ class TestTheStashCycle:
         backup = output_backup.stash(out)
         assert backup is not None and not out.exists()
 
+        from bristlenose.utils.study_startup import StudyStartupRefusedError
+
+        before = {p.relative_to(proj): p.read_bytes() for p in proj.rglob("*") if p.is_file()}
+        with pytest.raises(StudyStartupRefusedError):
+            _app(proj, tmp_path)
+        assert before == {p.relative_to(proj): p.read_bytes()
+                          for p in proj.rglob("*") if p.is_file()}
+        assert not out.exists(), "uncertain startup must not create writable state"
+        # Once the owner settles the backup, a normal reopen can read it.
+        assert output_backup.restore(backup, out).report_is_back
         app = _app(proj, tmp_path)
         with _polling_client(app) as client:  # this module's _client builds an app
             db = out / ".bristlenose" / "bristlenose.db"
             assert db.exists(), "the database belongs under the output folder, created eagerly"
             assert not (proj / ".bristlenose").exists(), "litter at the project root"
 
-            # The run dies; its handler puts the previous report back (the serve's
-            # own eagerly-created tree is set aside as the failed run's).
-            assert output_backup.restore(backup, out).report_is_back
+            # The refused startup wrote nothing; the owner's settled report
+            # is readable after a normal reopen.
             assert _wait(lambda: _sessions(client)), (
                 "the report the SPA reads (project 1) stayed empty after the restore"
             )
@@ -123,9 +140,11 @@ class TestTheStashCycle:
         _failed(out, "X")
         backup = output_backup.stash(out)
         assert backup is not None
+        _admitted_local_attempt(out)
 
         with _polling_client(_app(proj, tmp_path)) as client:
             assert _sessions(client) == []
+            _failed(out, "LOCAL")
             assert output_backup.restore(backup, out).report_is_back
             assert _wait(lambda: _sessions(client)), (
                 "the serve kept answering from the database the restore set aside"
@@ -153,9 +172,11 @@ class TestTheStashCycle:
         _failed(out, "X")
         backup = output_backup.stash(out)
         assert backup is not None
+        _admitted_local_attempt(out)
         real_import = app_mod._import_on_startup
 
         def restore_during_import(*args, **kwargs) -> None:
+            _failed(out, "LOCAL")
             assert output_backup.restore(backup, out).report_is_back
             real_import(*args, **kwargs)
 
@@ -232,10 +253,12 @@ class TestTheStashCycle:
         out = proj / "bristlenose-output"
         backup = output_backup.stash(out)
         assert backup is not None
+        _admitted_local_attempt(out)
         real_import = app_mod._import_on_startup
 
         def import_then_restore(*args, **kwargs) -> None:
             real_import(*args, **kwargs)
+            _failed(out, "LOCAL")
             assert output_backup.restore(backup, out).report_is_back
 
         monkeypatch.setattr(app_mod, "_import_on_startup", import_then_restore)

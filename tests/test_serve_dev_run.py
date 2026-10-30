@@ -42,26 +42,29 @@ def _seed(internal: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    # Canonical event schema (bristlenose/events.py): discriminator is the
-    # `event` field (run_started/run_progress/run_completed); `kind` is the
-    # LEVEL ("run"), not the event name. An earlier fixture put the event name
-    # in `kind` — a shape the pipeline never writes — which let the schema bug
-    # in run_inspector.py pass undetected. Keep this in sync with events.py.
+    # Admission validates every record, not just the event discriminator.
+    # Use the same typed writer models as the pipeline.
+    from bristlenose.events import (
+        KindEnum,
+        Process,
+        RunCompletedEvent,
+        RunProgressEvent,
+        RunStartedEvent,
+    )
+
+    started = "2026-06-27T14:18:30Z"
+    ended = "2026-06-27T14:22:42Z"
+    records = [
+        RunStartedEvent(ts=started, run_id="r1", kind=KindEnum.RUN, started_at=started,
+                        process=Process(pid=1, start_time="fixture", hostname="fixture", user="test",
+                                        os="darwin-arm64", bristlenose_version="0", python_version="3.12")),
+        RunProgressEvent(ts=started, run_id="r1", kind=KindEnum.RUN, started_at=started,
+                         stage="quote_extraction", elapsed_seconds=0.0, stage_fraction=0.5),
+        RunCompletedEvent(ts=ended, run_id="r1", kind=KindEnum.RUN,
+                          started_at=started, ended_at=ended),
+    ]
     (internal / ri.JSONL_EVENTS).write_text(
-        "\n".join(
-            json.dumps(e)
-            for e in [
-                {"kind": "run", "event": "run_started", "run_id": "r1",
-                 "started_at": "2026-06-27T14:18:30Z",
-                 "process": {"os": "darwin-arm64"}},
-                {"kind": "run", "event": "run_progress", "run_id": "r1",
-                 "stage": "quote_extraction", "elapsed_seconds": 0.0, "stage_fraction": 0.5},
-                {"kind": "run", "event": "run_completed", "run_id": "r1",
-                 "ended_at": "2026-06-27T14:22:42Z"},
-            ]
-        )
-        + "\n",
-        encoding="utf-8",
+        "".join(record.model_dump_json() + "\n" for record in records), encoding="utf-8",
     )
 
 

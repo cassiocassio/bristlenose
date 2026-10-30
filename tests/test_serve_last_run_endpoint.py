@@ -234,16 +234,29 @@ async def _after_run_tasks() -> None:
         await asyncio.wait_for(asyncio.gather(*_REAPPLY_AFTER_RUN_TASKS), timeout=5)
 
 
+@pytest.fixture
+def cloud_snapshot_refresh(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Exercise cloud refresh sequencing without any provider/model calls."""
+    snapshots: list[int] = []
+    monkeypatch.setattr("bristlenose.server.elaboration._has_api_key", lambda _settings: True)
+
+    async def snapshot(_db, project_id, **_kwargs):
+        snapshots.append(project_id)
+
+    monkeypatch.setattr("bristlenose.server.routes.signals.materialise_completed_signal_snapshot", snapshot)
+    return snapshots
+
+
 @pytest.mark.asyncio
 async def test_handler_reapplies_active_codebooks(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, cloud_snapshot_refresh: list[int],
 ) -> None:
     """After re-import + publish, the handler re-applies already-applied
     codebooks to the newly-added quotes (delta). Spied via a fake re-apply."""
     project_dir = _seed_project(tmp_path)
     app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
     app.state.last_run = {}
-    app.state.settings = object()  # truthy → skips load_settings()
+    app.state.settings = SimpleNamespace(llm_provider="anthropic")
 
     called: dict[str, Any] = {}
 
@@ -262,12 +275,13 @@ async def test_handler_reapplies_active_codebooks(
     # last_run is published AND the re-apply was invoked for the project.
     assert app.state.last_run[1]["outcome"] == "completed"
     assert called.get("project_id") == 1
+    assert cloud_snapshot_refresh == [1]
     assert app.state.last_run[1]["completed_at"] == _TS
 
 
 @pytest.mark.asyncio
 async def test_handler_does_not_wait_for_the_re_apply(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, cloud_snapshot_refresh: list[int],
 ) -> None:
     """#67: the handler awaited the re-apply, and the watcher awaits the handler,
     so while a codebook re-applied (or waited on a live catch-up, with no limit)
@@ -276,7 +290,7 @@ async def test_handler_does_not_wait_for_the_re_apply(
     project_dir = _seed_project(tmp_path)
     app = create_app(project_dir=project_dir, dev=True, db_url="sqlite://")
     app.state.last_run = {}
-    app.state.settings = object()
+    app.state.settings = SimpleNamespace(llm_provider="anthropic")
     release = asyncio.Event()
     finished: list[int] = []
 
@@ -292,9 +306,11 @@ async def test_handler_does_not_wait_for_the_re_apply(
     await asyncio.wait_for(handler(_completed(new_run_id())), timeout=5)
     assert app.state.last_run[1]["outcome"] == "completed"
     assert finished == []
+    assert cloud_snapshot_refresh == []
     release.set()
     await _after_run_tasks()
     assert finished == [1]
+    assert cloud_snapshot_refresh == [1]
 
 
 # ---------------------------------------------------------------------------

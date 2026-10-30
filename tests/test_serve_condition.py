@@ -209,6 +209,14 @@ def test_status_page_carries_its_condition_and_refreshes(tmp_path: Path) -> None
     assert "setInterval(tick" in page
 
 
+@pytest.fixture(autouse=True)
+def known_local_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ownership is synthetic and stable; process liveness stays real."""
+    monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: "condition-test-machine")
+    monkeypatch.setattr("bristlenose.run_lifecycle.machine_id", lambda: "condition-test-machine")
+    monkeypatch.setattr("bristlenose.utils.machine_identity.machine_id", lambda: "condition-test-machine")
+
+
 def _pid_file(out: Path, run_id: str, *, alive: bool) -> None:
     """Point run.pid at this (live) process, or at a start time no process has."""
     import json as _json
@@ -222,7 +230,8 @@ def _pid_file(out: Path, run_id: str, *, alive: bool) -> None:
     assert not (alive and start is None), "process start time unavailable"
     path = pid_file_path(out)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_json.dumps({"pid": os.getpid(), "start_time": start, "run_id": run_id}), encoding="utf-8")
+    path.write_text(_json.dumps({"pid": os.getpid(), "start_time": start, "run_id": run_id,
+                                  "machine_id": "condition-test-machine"}), encoding="utf-8")
 
 
 def test_owner_dying_without_a_terminus_is_noticed(tmp_path: Path, fast_watcher) -> None:
@@ -245,10 +254,12 @@ def test_run_seen_before_its_pid_file_recovers(tmp_path: Path, fast_watcher) -> 
     still what an older CLI writes); a poll in that gap must not pin the run as
     stranded for its whole life."""
     out = tmp_path / "bristlenose-output"
-    _started(out, "A")
+    # An already-open serve can see the event/PID delivery gap. A fresh
+    # startup in that gap now correctly refuses rather than opening writers.
     app = _app(tmp_path, tmp_path)
     with AuthTestClient(app) as client:
-        assert _latest(client)["state"] == "stranded"
+        _started(out, "A")
+        assert _wait(lambda: (_latest(client) or {}).get("state") == "stranded")
         _pid_file(out, "A", alive=True)
         assert _latest(client)["state"] == "in_progress"
 

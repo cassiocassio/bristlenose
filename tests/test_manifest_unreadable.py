@@ -9,7 +9,6 @@ already read this way (`resume_manifest`); the manifest itself now is too.
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
@@ -68,6 +67,8 @@ class TestTheReader:
 
 @pytest.fixture
 def cli_to_pipeline(monkeypatch):
+    monkeypatch.setattr("bristlenose.cli._print_header", lambda *a, **k: None)
+    monkeypatch.setattr("bristlenose.cli._build_estimator", lambda *a, **k: (None, None))
     monkeypatch.setattr("bristlenose.config._populate_keys_from_keychain", lambda s: s)
     monkeypatch.setattr("bristlenose.cli._maybe_guide_provider_setup", lambda s: None)
     monkeypatch.setattr("bristlenose.cli._maybe_auto_doctor", lambda s, c: True)
@@ -111,9 +112,18 @@ class TestTheCommands:
         out.mkdir(parents=True)
         (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
         (out / ".bristlenose").mkdir()
-        (out / ".bristlenose" / "pipeline-events.jsonl").write_text(
-            json.dumps({"event": "run_completed", "run_id": "old"}) + "\n", encoding="utf-8",
+        from bristlenose.events import (
+            KindEnum,
+            RunCompletedEvent,
+            _now_iso,
+            append_event,
+            events_path,
         )
+
+        now = _now_iso()
+        append_event(events_path(out), RunCompletedEvent(
+            ts=now, run_id="old", kind=KindEnum.RUN, started_at=now, ended_at=now,
+        ))
         _corrupt(out)
         reached: list[Path] = []
 

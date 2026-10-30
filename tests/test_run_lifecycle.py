@@ -802,6 +802,7 @@ def test_concurrent_run_refused_when_pid_file_alive(tmp_path: Path, monkeypatch)
 
 def _spawn_lifecycle_subprocess(
     tmp_path: Path, body: str, *, preamble: str = "", env: dict[str, str] | None = None,
+    startup_checked: bool = False,
 ) -> subprocess.Popen:
     """Spawn a Python subprocess that enters run_lifecycle, then runs `body`.
 
@@ -811,6 +812,8 @@ def _spawn_lifecycle_subprocess(
 
     `preamble` runs after the imports and before the `with`, and is the hook
     for reaching into `_rl_mod` to widen a window inside lifecycle startup.
+    ``startup_checked`` is only for a caller that admitted the study before
+    arranging its own stash gap, matching the real CLI sequence.
     """
     repo_root = Path(__file__).parent.parent
     script = (
@@ -822,7 +825,8 @@ def _spawn_lifecycle_subprocess(
             from bristlenose.run_lifecycle import run_lifecycle
             import bristlenose.run_lifecycle as _rl_mod
             __PREAMBLE__
-            with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN):
+            with run_lifecycle(Path({str(tmp_path)!r}), KindEnum.RUN,
+                               _startup_checked={startup_checked!r}):
             __BODY__
         """)
         .replace("__PREAMBLE__", textwrap.dedent(preamble).strip("\n"))

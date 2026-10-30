@@ -197,10 +197,11 @@ class TestGetTagAnalysis:
                 "location", "source_type", "anchor", "group_name", "colour_set", "count",
                 "participants", "n_eff", "mean_intensity", "concentration",
                 "composite_signal", "confidence", "flag", "quotes",
-                "signal_name", "pattern", "elaboration",
+                "signal_name", "pattern", "elaboration", "evidence_assertions",
                 "label", "label_kind",
             }
             assert expected_keys == set(sig.keys())
+            assert isinstance(sig["evidence_assertions"], list)
 
     def test_a_sentiment_card_never_carries_the_framework_name(
         self, tagged_client: TestClient,

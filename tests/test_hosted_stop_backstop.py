@@ -460,6 +460,11 @@ def test_a_stuck_stop_puts_the_previous_report_back_before_it_exits(
     out = tmp_path / "study" / "bristlenose-output"
     out.mkdir(parents=True)
     (out / "bristlenose-report.html").write_text("old", encoding="utf-8")
+    from bristlenose.utils.study_startup import require_study_startup
+
+    # The real CLI admits before stashing, then carries that receipt through
+    # its own setup gap into the lifecycle. A backup alone grants no admission.
+    require_study_startup(out)
     backup = output_backup.stash(out)
     assert backup is not None
     out.mkdir()
@@ -469,7 +474,9 @@ def test_a_stuck_stop_puts_the_previous_report_back_before_it_exits(
         f"\n_rl_mod.set_backstop_settle(lambda: _ob.settle("
         f"Path({str(backup)!r}), Path({str(out)!r})))"
     )
-    proc = _spawn_lifecycle_subprocess(out, _stuck_body(sentinel), preamble=preamble, env=HOSTED)
+    proc = _spawn_lifecycle_subprocess(
+        out, _stuck_body(sentinel), preamble=preamble, env=HOSTED, startup_checked=True,
+    )
     f = events_path(out)
     try:
         _wait_for_run_started(f)

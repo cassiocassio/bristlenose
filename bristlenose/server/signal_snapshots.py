@@ -114,3 +114,86 @@ def quote_reference_for_row(quote: Quote) -> str:
     """The reference a snapshot holds for this database quote (payload v4 shape)."""
     return compute_quote_reference(signal_quote_record(quote))
 
+
+_MATRIX_BY_SOURCE = {"section": "section_matrix", "theme": "theme_matrix"}
+
+
+def filter_snapshot_to_counted(
+    payload: dict[str, Any], counted_refs: set[str] | frozenset[str],
+) -> dict[str, Any]:
+    """Remove what no longer counts from a decoded snapshot, in place, and return it.
+
+    A snapshot is built once and read many times; a hide made in between must not
+    leave the quote on its card, in the count, or in the HTML export. The filter
+    only removes, so the reader stays free of any signal calculation or LLM call
+    (docs/design-signals-follow-hide.md):
+
+    - a card keeps a quote only if its ``quote_id`` is in ``counted_refs``;
+    - an evidence assertion that cites a quote no longer counted is dropped, and
+      ``had_evidence_assertions`` records that the card had some, so the reader
+      does not fall back to prose that was written over every quote;
+    - ``participants`` and ``count`` follow the remaining quotes;
+    - a card left with no counted quote is dropped;
+    - the card's cell in its matrix loses each removed quote (count, participant
+      tally, one intensity, the row, column and grand totals).
+
+    Strength, concentration, ranking, headline and claim are left as calculated.
+    ``weighted_count`` is left too: it needs the quote's group weight, which the
+    payload does not carry. A quote that was already out of the evidence when the
+    snapshot was built is not in it, so nothing here can bring it back.
+    """
+    for codebook in payload.get("codebooks") or []:
+        kept_signals: list[dict[str, Any]] = []
+        for signal in codebook.get("signals") or []:
+            quotes = signal.get("quotes") or []
+            kept = [q for q in quotes if q.get("quote_id") in counted_refs]
+            removed = [q for q in quotes if q.get("quote_id") not in counted_refs]
+            if removed:
+                _subtract_from_matrix(codebook, signal, removed)
+            if quotes and not kept:
+                continue  # nothing visible supports this signal any more
+            if removed:
+                signal["quotes"] = kept
+                signal["count"] = len(kept)
+                signal["participants"] = sorted({
+                    q["participant_id"] for q in kept if q.get("participant_id")
+                })
+            assertions = signal.get("evidence_assertions") or []
+            surviving = [a for a in assertions if a.get("source_quote_id") in counted_refs]
+            if len(surviving) != len(assertions):
+                for ordinal, assertion in enumerate(surviving):
+                    assertion["ordinal"] = ordinal
+                signal["evidence_assertions"] = surviving
+                signal["had_evidence_assertions"] = True
+            kept_signals.append(signal)
+        codebook["signals"] = kept_signals
+    return payload
+
+
+def _subtract_from_matrix(
+    codebook: dict[str, Any], signal: dict[str, Any], removed: list[dict[str, Any]],
+) -> None:
+    """Take each removed quote out of the signal's cell and the matrix totals."""
+    matrix = codebook.get(_MATRIX_BY_SOURCE.get(signal.get("source_type"), ""))
+    row, col = signal.get("location"), signal.get("group_name")
+    if not matrix or row is None or col is None:
+        return
+    cell = (matrix.get("cells") or {}).get(f"{row}|{col}")
+    for quote in removed:
+        if cell is not None:
+            cell["count"] = max(0, cell.get("count", 0) - 1)
+            tally = cell.get("participants") or {}
+            pid = quote.get("participant_id")
+            if pid in tally:
+                tally[pid] -= 1
+                if tally[pid] <= 0:
+                    del tally[pid]
+            intensities = cell.get("intensities") or []
+            if quote.get("intensity") in intensities:
+                intensities.remove(quote["intensity"])
+        for totals, key in ((matrix.get("row_totals"), row), (matrix.get("col_totals"), col)):
+            if totals is not None and key in totals:
+                totals[key] = max(0, totals[key] - 1)
+        if "grand_total" in matrix:
+            matrix["grand_total"] = max(0, matrix["grand_total"] - 1)
+

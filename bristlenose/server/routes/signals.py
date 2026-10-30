@@ -45,7 +45,9 @@ from bristlenose.server import speaker_slots
 from bristlenose.server.active_codebooks import active_project_groups
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.signal_snapshots import (
+    filter_snapshot_to_counted,
     latest_completed_snapshot,
+    quote_reference_for_row,
     signal_quote_record,
     snapshot_payload,
     store_completed_snapshot,
@@ -1098,8 +1100,11 @@ def get_stored_signal_snapshot(project_id: int, request: Request) -> StoredSigna
                 computed_at=None,
                 pending=bool(getattr(request.app.state, "initial_signal_snapshot_pending", False)),
             )
+        # A hide made after the snapshot was built must show here too: keep only
+        # what counts now. Filtering only removes, so this stays a read.
+        counted = {quote_reference_for_row(q) for q in speaker_slots.analysis_quotes(db, project_id)}
         return StoredSignalSnapshotResponse(
-            snapshot=snapshot_payload(snapshot),
+            snapshot=filter_snapshot_to_counted(snapshot_payload(snapshot), counted),
             source=snapshot.source,
             computed_at=snapshot.computed_at.isoformat(),
         )

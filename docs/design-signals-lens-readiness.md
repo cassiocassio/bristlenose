@@ -1,6 +1,6 @@
 # Signals lens: grey until its report is ready
 
-Status: plan, 30 Oct 2026. Not built. Owner ask, from walking the new Signals page: do not show the bare, unfilled page at all. Show the Signals lens grey and unclickable, and show progress under the project name in the sidebar, as a run does.
+Status: built 30 Oct 2026 on `main`, local, not pushed (server `75179d809` and `3079045c6`, locales `4c2dc9a2f`, page `b5982c72a`, Mac row `fde55d8f2`); Fable review of each slice, fixes folded in. Not yet seen in the running app. Written as a plan first; the section 9 below records where the build departed from it. Owner ask, from walking the new Signals page: do not show the bare, unfilled page at all. Show the Signals lens grey and unclickable, and show progress under the project name in the sidebar, as a run does.
 
 ## 1. What the owner saw, and why
 
@@ -94,3 +94,14 @@ Also decided:
 3. **"Picking up Signals…" ranks above the Screens status** in the idle tier. The owner's reasoning: show Signals because it will not be around for long, and Screens will be. The Screens count returns when the build ends.
 
 Nothing open. Next: the owner's go to build, after the sidebar mockup is approved.
+
+## 9. As built, and where it departed from this plan (30 Oct 2026)
+
+- **A counter, not a boolean.** `signals_preparing_count` on `app.state` (begin and end calls), because a run can complete while a codebook apply is building. `signals_preparing(state)` ORs it with the startup repair's flag. Both feed `/condition` and `/signals/snapshot`.
+- **Where it is noted.** The `run_completed` handler (where the overlay ends, before the re-apply task), and the whole of a codebook apply (not only its report write), each ended in a `finally`. Never noted with no cloud model.
+- **The page keeps reading while withheld** and stays empty until one read since the lens lit has landed; it publishes nothing to the sidebar list or the titlebar subtitle while empty. (Found in review: a page already open when a build began never re-read.)
+- **The sentiment fallback was not deleted.** It stays whenever the lens is lit and the codebook path has no Sentiment group, which includes a study that will never have a report (no cloud model) and a study whose sentiment framework is switched off. Only the withheld state hides it. Section 3.2's "deleted, not hidden" is superseded by this.
+- **A failed or skipped build lights the lens over the live cards, not an empty page,** when the study has sentiment: the sentence in section 4.2 about an empty state holds only for a study with none.
+- **`Progress.joined` is never set by the server,** so during a progressive run the lens is withheld for the whole run, not until a join barrier; the run's end is the one place it is lit, which is why the fact is noted in the handler.
+- **Mac discriminator.** No new bridge message: the Mac shows the line when Signals is the only lens withheld and nothing is running (`unavailable == [.signals]`; a progressive run always withholds Project and Codebooks beside it). The hand-over from a run is a native prior with a 2 second floor and a 10 second limit, armed when a first analysis ends.
+- **Known limits.** The prior can show the line for a few seconds on a study with no cloud model (the Mac cannot tell that nothing will be built); the status is per window; the German phrase ("Signale sammeln…") is the shorter of two and a passive form would truncate; the count and the startup flag are process-wide, not per project.

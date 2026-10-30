@@ -806,19 +806,30 @@ function EvidenceAssertions({
             {before}
             {hasValidFragment && (
               // The words that picked the quote out: hover shows they can be pressed, and
-              // pressing flashes the quote they came from. A real button, so it takes focus
-              // and Enter / Space with no ARIA of its own.
-              <button
-                type="button"
+              // pressing flashes the quote they came from. NOT a <button>: a browser lays a
+              // button out as one unbreakable box even at display:inline, so a phrase that
+              // runs past the line jumped whole to the next one and stranded the words before
+              // it. A span with role="button" wraps like the text around it, and takes focus
+              // and Enter / Space through the handlers below.
+              <span
+                role="button"
+                tabIndex={0}
                 className="signal-evidence-highlight-button"
                 title={t("signals.showEvidenceSource", { participant: assertion.participant_id })}
                 onClick={(event) => {
                   event.stopPropagation();
                   reveal();
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    reveal();
+                  }
+                }}
               >
                 <mark className="signal-evidence-highlight">{fragment.text}</mark>
-              </button>
+              </span>
             )}
             {after}
             {" "}

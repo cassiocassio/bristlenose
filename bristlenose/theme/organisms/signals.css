@@ -892,15 +892,10 @@ button.signal-card-toggle {
 
 /* The highlighted words in an evidence bullet are a control: hover says they can be pressed,
    and pressing flashes the quote they came from (the same arrival flash as every link).
-   A real button around the mark, so it takes focus and Enter / Space with no ARIA. */
+   A span with role=button around the mark (not a <button>: a button is laid out as one
+   unbreakable box and would not wrap with the sentence). */
 .signal-evidence-highlight-button {
-    display: inline;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    font: inherit;
-    color: inherit;
-    text-align: inherit;
+    /* An inline span, so a long phrase wraps with the sentence it is in. */
     cursor: pointer;
 }
 

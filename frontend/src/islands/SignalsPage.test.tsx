@@ -511,6 +511,13 @@ describe("SignalsPage", () => {
     // tooltip says what pressing it does.
     const words = screen.getByRole("button", { name: highlighted });
     expect(words.getAttribute("title")).toBe("Participant p1; show source quote supporting this evidence");
+    // Not a <button>: a browser lays a button out as one unbreakable box, so a phrase longer
+    // than the rest of the line jumped whole to the next line and stranded the words before it.
+    expect(words.tagName).toBe("SPAN");
+    // Enter and Space press it, as they would a button.
+    quoteEl.removeAttribute("data-arrived");
+    fireEvent.keyDown(words, { key: "Enter" });
+    expect(quoteEl.hasAttribute("data-arrived")).toBe(true);
     fireEvent.click(words);
     expect(quoteEl.hasAttribute("data-arrived")).toBe(true);
     // No persistent state is left on anything: the flash is the whole cue.

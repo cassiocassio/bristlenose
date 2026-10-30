@@ -7,8 +7,9 @@ defined in [README.md](README.md#lifecycle).
 to point at. `SUPERSEDED` and `ABANDONED` entries say *why* in a clause; that clause
 is what stops the same idea being proposed again.
 
-**All 165 are classified** as of 20 Sep 2026 — 87 IMPLEMENTED · 34 SANDPIT ·
-20 SUPERSEDED · 14 PROPOSED · 6 PARKED · 1 ABANDONED · 3 *unreviewed*. A new mockup
+**All 240 register rows are classified** as of 30 Oct 2026 — 112 IMPLEMENTED ·
+36 SANDPIT · 21 SUPERSEDED · 26 PROPOSED · 7 PARKED · 1 ABANDONED ·
+37 *unreviewed*. A new mockup
 should be added here when it lands, or it becomes the next backlog. Recount rather
 than adjust — a tally in prose is a tally nothing recomputes:
 
@@ -33,6 +34,9 @@ state is still evidenced, the day is not.
 
 | File | Last edit | Lifecycle |
 | --- | --- | --- |
+| `multi-mac-draft-recovery.html` | 28 Oct 2026 | PROPOSED — recovery disclosure and copy separation within the existing status popover; the illustrated reader is not implemented or approved to ship. |
+| `multi-mac-study.html` | 27 Oct 2026 | PARKED — historical full N-Mac/version-choice exploration; not the sequential v1 build target and not shipped. |
+| `multi-mac-v1-guards.html` | 27 Oct 2026 | PROPOSED — reduced enforced-lock review aid; warning-only comparisons are historical and do not authorise release. The optional reader remains deferred and unshipped. |
 | `study-startup-refusal.html` | 28 Oct 2026 | PROPOSED — reuses native failure row/popover/unavailable patterns for reduced startup refusal; source review clean after accurate heading/details-toggle fixes. Visual inspection blocked by browser policy; owner approval pending. No production UX wiring. |
 
 ## analysis
@@ -113,8 +117,11 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `discussion-all-sessions.html` | 18 Oct 2026 | IMPLEMENTED 18 Oct 2026 — the all-sessions default, per-session measure/grid, quote-count thirds and drill-in ship in `DiscussionLens.tsx`; `design-discussion-lens-plan.md` names this mockup and commit `538a2869`, with review fixes through `1e173fc42`. |
 | `discussion-guide-tabs.html` | 4 Oct 2026 | IMPLEMENTED 4 Oct 2026 — the Discussion lens's guide tabs with and without a guide: “Normalised questions” and “Your guide” / “Add your guide”, the upload block, Summary or the guide's file name as a link that chooses another, the key at the top showing only the marks in view, a faint mid dot when no guide is uploaded. Built in `islands/discussion/DiscussionLens.tsx` |
 | `discussion-lens-layout.html` | 4 Oct 2026 | IMPLEMENTED 4 Oct 2026 — what gives way as the window narrows: the projects column first, then the guide narrows to 200 px, then folds when the conversation would drop under its 368 px floor; the toolbar's Discussion Guide button. Built as `islands/discussion/guidePanel.ts` with the shared `fitPanels` rule |
+| `discussion-quote-parity.html` | 19 Oct 2026 | PROPOSED 19 Oct 2026 · IMPLEMENTED 19 Oct 2026 — Discussion now uses the report's own `QuoteCard`; the decided parity behaviour ships in `7940adc77`. |
+| `discussion-selected-column.html` | 18 Oct 2026 | SANDPIT 18 Oct 2026 · IMPLEMENTED 18 Oct 2026 (variant D) — the chosen pale sliding accent wash behind the selected session's cells ships in `discussion.css` and `DiscussionLens.tsx` (`946b0c47d`). |
 | `edo-colour-palette.html` | 2 Jul 2026 | IMPLEMENTED — `theme/colors/palette-edo.css` ships |
 | `edo-theme-studio.html` | 2 Jul 2026 | SANDPIT — the Edo palette tuner; `colors/palette-edo.css` ships |
 | `edo-website-palettes.html` | 26 Sep 2026 | *unreviewed* |
@@ -172,9 +179,18 @@ state is still evidenced, the day is not.
 | `focus-mode-lab.html` | 4 Aug 2026 | SANDPIT — “Sandpit: real quote-card markup”; Focus Mode itself shipped in 0.24.0 |
 | `font-weight-tuner.html` | 22 Feb 2026 | SANDPIT — quote-pop vs UI-chrome weight tuner |
 | `grid-lanes-quotes.html` | 17 Jun 2026 | PROPOSED 17 Jun 2026 · IMPLEMENTED — the masonry bake-off. **It calls itself a throwaway and that is now wrong**: `display: grid-lanes` ships as progressive enhancement in `theme/organisms/responsive-grid.css`. *Its one linked stylesheet is a dead path (`/report/assets/…`), so it renders bare* |
+| `guest-walk-diff.html` | 20 Oct 2026 | SANDPIT — generated morning-page specimen for the working `experiments/guest-walk/` spike; productionisation and the wider QA journey remain proposed. |
 | `icloud-sync-architecture.html` | 13 Jul 2026 | PROPOSED 2026 · **PARKED** — its design doc opens “**Status: FUTURE MADNESS — parked, not planned**”. The iCloud references in Swift are iCloud *Keychain* (credential sync, settled 18 Aug 2026), a different thing |
 | `icon-system-side-by-side.html` | 15 Oct 2026 | PROPOSED 15 Oct 2026 · **IMPLEMENTED 16 Oct 2026** (phases 1–3, the seven picks taken at the reviewers' defaults; the "today" column is now the record of what was replaced, and the generator only rebuilds against a pre-migration tree, e.g. a worktree at `a8333739~`) — the review sheet for `docs/design-icon-system.md`: the improvised SVGs and Unicode chrome (lifted from source) against Lucide 1.49.0 and the SF Symbol for each concept, an ink strip of Lucide strokes beside Inter and SF Pro, live stroke/box/baseline sliders, and per-row picks and notes that export as Markdown. Built by `experiments/icon-system/build_mockup.py`; SF Symbol PNGs render locally into the gitignored `icon-system-sf/` |
 | `incremental-analysis-flows.html` | 7 Jul 2026 | IMPLEMENTED — “**Not the spec — the mockup is.**” Incremental analysis shipped in 0.20.0. (Its §7 “modal rejected as friction” rejects one *option inside* the file, not the file) |
+| `modal-crash-way-out.html` | 24 Oct 2026 | IMPLEMENTED 24 Oct 2026 — dialogs close through Escape or their own buttons and no longer close on backdrop clicks; exit-path fixes shipped across the affected modals in `ea96cd14c`. |
+| `palette-gallery.html` | 17 Oct 2026 | IMPLEMENTED 17 Oct 2026 — the gallery accompanied the shipped Catppuccin, Gruvbox, Rosé Pine and Solarized palettes, locale choices and appearance wiring in `32d17eaad`. |
+| `tag-hang-catalogue.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 — catalogue proposing hanging tag boxes across line-starting tag surfaces; the corresponding production CSS is absent. |
+| `transcript-edit-consequences.html` | 24 Oct 2026 | PROPOSED 24 Oct 2026 — surface-by-surface design exploration; `design-transcript-editing.md` records direct word editing as planned, not started. |
+| `transcript-quote-gutter.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 · IMPLEMENTED 17 Oct 2026 — the round-two direction for transcript-to-Quotes/Screens/Discussion marks, margin links and quote lifts; stages 1–3 are built. |
+| `transcript-quote-hooks.html` | 17 Oct 2026 | SANDPIT 16 Oct 2026 · SUPERSEDED 17 Oct 2026 by `transcript-quote-gutter.html` — round one's six undecided quote-finding treatments. |
+| `transcript-timeline-native-menu.html` | 18 Oct 2026 | PROPOSED 18 Oct 2026 · IMPLEMENTED 18 Oct 2026 — the embedded Mac caret raises a real `NSMenu`, with state/action bridge and tested menu builder (`bd3698ea6`, `7435256f4`). |
+| `transcript-timeline-toggle.html` | 17 Oct 2026 | PROPOSED 17 Oct 2026 · IMPLEMENTED 17 Oct 2026 — iteration two's split control and 2/3/5-lane chooser ship as `TimelineSplit.tsx` (`15aa12ad6`). |
 | `ingest-refusal-surfaces.html` | 19 Aug 2026 | IMPLEMENTED — ingest refusals surface as named reasons |
 | `journey-chain-stress-test.html` | 23 Feb 2026 | PROPOSED 23 Feb 2026 · IMPLEMENTED — journeys ship. *Linked theme CSS was repaired 3 Sep 2026 (see README); it rendered unstyled before that* |
 | `keycap-gallery.html` | 19 Jul 2026 | SANDPIT — keycap rendering gallery |
@@ -268,13 +284,18 @@ state is still evidenced, the day is not.
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `damaged-files-re17.html` | 22 Oct 2026 | PROPOSED 22 Oct 2026 · IMPLEMENTED 22 Oct 2026 — damaged manifests/projects register handling and disclosure ship with `DamagedFilesTests` (`7d048c3cd`); the last-good manifest copy remains parked. |
 | `pipeline-popover-rolling-log.html` | 22 Aug 2026 | PROPOSED 22 Aug 2026 — the deferred “Future direction” appendix of the popover doc: rolling logs / collapsing phase itinerary. Not built |
 | `pipeline-popover-sizing.html` | 22 Aug 2026 | IMPLEMENTED — `ProjectDiagnosticPopover` owns its own size, per this |
+| `report-crash-repeat.html` | 24 Oct 2026 | PROPOSED 24 Oct 2026 — owner-decided but not built: a whole-report crash that survives retry should offer the problem-report feedback journey. |
 
 ## provider
 
 | Mockup | Last edit | Lifecycle |
 |---|---|---|
+| `any-llm-cli-session.html` | 23 Oct 2026 | IMPLEMENTED 23 Oct 2026 — the built v1 CLI sessions for `design-any-llm.md`; configure/use/readiness/failure wording and the sixth-provider path ship, with review fixes in `64e9a6d59`. |
+| `any-llm-model-tradeoffs.html` | 23 Oct 2026 | SANDPIT — benchmark/decision instrument plotting thirteen same-study model runs against Sonnet's measured noise floor; it informs `design-any-llm-models.md`, not a product surface. |
+| `apple-first-first-run.html` | 19 Oct 2026 | PROPOSED 18 Oct 2026 · IMPLEMENTED 18 Oct 2026 · enabled by default 22 Oct 2026 — the Apple-first/Whisper-next first-run slice ships behind default-on kill switches; `design-apple-first-transcription.md` records remaining work. |
 | `provider-status-glyph-vocabulary.html` | 3 Sep 2026 | PROPOSED 7 Jun 2026 · SUPERSEDED 7 Jun 2026 by `LLMProvider.swift` — explored three treatments for the provider dot; a fourth shipped (colour + an always-visible localised label). Six `ProviderStatus` cases ship, this names five. The a11y reasoning stands |
 
 ## release-train
@@ -293,6 +314,7 @@ state is still evidenced, the day is not.
 | `sessions-popover-navigation.html` | 14 Aug 2026 | IMPLEMENTED — the native session switcher replaced the embedded left panel (0.25.0) |
 | `session-tapestry.html` | 6 Oct 2026 | *unreviewed* — first sketch of the session timeline (`experiments/session-tapestry/README.md`) |
 | `session-tapestry-scale.html` | 6 Oct 2026 | *unreviewed* — the session timeline's scale rule, from measured transcript rates (`experiments/session-tapestry/README.md`) |
+| `sessions-timeline-strip.html` | 17 Oct 2026 | IMPLEMENTED 17 Oct 2026 — the session timeline strip, motion and per-visit flags are documented as built (`c1ba9dcfc`) and ship through the session-tapestry implementation. |
 
 ## sidebar
 

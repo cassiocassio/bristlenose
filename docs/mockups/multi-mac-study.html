@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A study on several Macs — proposal</title><style>body{margin:0;padding:28px;max-width:1120px;margin-inline:auto;background:light-dark(#f8f8fa,#171719);color-scheme:light dark;}@media(max-width:600px){body{padding:10px;}}</style></head><body>
+<div id="bn-multi-mac">
+  <style>
+    #bn-multi-mac {color-scheme:light dark; --bn-bg:light-dark(#fff,#252527);--bn-side:light-dark(#f0f0f2,#303033);--bn-ink:light-dark(#202024,#f1f1f3);--bn-muted:light-dark(#64646c,#b3b3bb);--bn-line:light-dark(#dddde2,#48484e);--bn-accent:light-dark(#006bd6,#75b6ff);--bn-onaccent:light-dark(#fff,#162839);--bn-selected:light-dark(#dce9fa,#354a65);--bn-warn:light-dark(#875b09,#e6bd74); color:var(--bn-ink);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;}
+    #bn-multi-mac * {box-sizing:border-box;}
+    #bn-multi-mac .lifecycle {font:11px/1.5 ui-monospace,Menlo,monospace;color:var(--bn-muted);margin:0 0 12px;}
+    #bn-multi-mac button,#bn-multi-mac select {font:inherit;color:inherit;}
+    #bn-multi-mac .preview-controls {display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px;}
+    #bn-multi-mac .preview-controls label {display:grid;gap:4px;flex:1;min-width:180px;}
+    #bn-multi-mac select {padding:7px;border:1px solid var(--bn-line);border-radius:6px;background:var(--bn-bg);max-width:100%;}
+    #bn-multi-mac .window {position:relative;border:1px solid var(--bn-line);border-radius:12px;overflow:hidden;background:var(--bn-bg);}
+    #bn-multi-mac .titlebar {display:flex;align-items:center;gap:7px;min-height:48px;padding:10px 16px;border-bottom:1px solid var(--bn-line);background:var(--bn-side);}
+    #bn-multi-mac .traffic {width:10px;height:10px;border-radius:50%;background:var(--bn-muted);opacity:.45;flex:none;}
+    #bn-multi-mac .window-title {margin-left:12px;font-weight:500;flex:1;}
+    #bn-multi-mac .device {color:var(--bn-muted);}
+    #bn-multi-mac .body {display:grid;grid-template-columns:216px minmax(0,1fr);min-height:470px;}
+    #bn-multi-mac aside {padding:18px 10px;background:var(--bn-side);border-right:1px solid var(--bn-line);}
+    #bn-multi-mac .aside-label {color:var(--bn-muted);padding:0 10px 9px;}
+    #bn-multi-mac .study-row {padding:10px;border-radius:6px;margin:3px 0;}
+    #bn-multi-mac .study-row.selected {background:var(--bn-selected);}
+    #bn-multi-mac .study-name {font-weight:500;}
+    #bn-multi-mac .study-status {font-size:12px;color:var(--bn-muted);margin-top:3px;}
+    #bn-multi-mac .main {padding:25px 30px 30px;min-width:0;}
+    #bn-multi-mac .lensbar {display:flex;gap:18px;border-bottom:1px solid var(--bn-line);padding-bottom:12px;color:var(--bn-muted);}
+    #bn-multi-mac .lensbar span:first-child {color:var(--bn-ink);font-weight:500;}
+    #bn-multi-mac .statepane {max-width:510px;margin:35px auto 0;}
+    #bn-multi-mac h2 {font-size:19px;font-weight:500;line-height:1.3;margin:0 0 10px;}
+    #bn-multi-mac p {margin:0 0 12px;}
+    #bn-multi-mac .meta {color:var(--bn-muted);}
+    #bn-multi-mac .actions {display:flex;flex-wrap:wrap;gap:9px;margin:19px 0;}
+    #bn-multi-mac button {background:var(--bn-bg);border:1px solid var(--bn-line);border-radius:6px;padding:5px 12px;min-height:31px;}
+    #bn-multi-mac button.primary {background:var(--bn-accent);color:var(--bn-onaccent);border-color:transparent;}
+    #bn-multi-mac .report {margin-top:22px;max-width:530px;}
+    #bn-multi-mac .report-title {font-weight:500;margin-bottom:15px;}
+    #bn-multi-mac .quote {border-left:2px solid var(--bn-line);padding:1px 0 1px 16px;margin:17px 0;}
+    #bn-multi-mac .quote p {font-size:15px;margin-bottom:4px;}
+    #bn-multi-mac .quote small {font-size:12px;color:var(--bn-muted);}
+    #bn-multi-mac .notice {margin:12px 0;color:var(--bn-muted);min-height:20px;}
+    #bn-multi-mac .rule {border-top:1px solid var(--bn-line);margin:20px 0 13px;}
+    #bn-multi-mac .activity {height:3px;max-width:250px;background:var(--bn-line);margin:15px 0;}
+    #bn-multi-mac .activity span {display:block;height:100%;width:43%;background:var(--bn-accent);}
+    #bn-multi-mac .scrim {position:absolute;inset:0;background:light-dark(#0004,#0007);z-index:4;}
+    #bn-multi-mac .sheet {position:absolute;z-index:5;top:65px;left:50%;transform:translateX(-50%);width:min(460px,calc(100% - 28px));background:var(--bn-bg);color:var(--bn-ink);border:1px solid var(--bn-line);border-radius:12px;padding:25px;box-shadow:0 12px 45px #0003;}
+    #bn-multi-mac .sheet h2 {font-size:17px;}
+    #bn-multi-mac .version {display:block;padding:11px 0;border-bottom:1px solid var(--bn-line);}
+    #bn-multi-mac .version input {margin-right:8px;}
+    #bn-multi-mac .sheet .actions {justify-content:flex-end;margin-bottom:0;}
+    #bn-multi-mac [hidden] {display:none!important;}
+    #bn-multi-mac .scenario-caption {margin:13px 0 0;color:var(--bn-muted);}
+    #bn-multi-mac details {margin-top:12px;}
+    #bn-multi-mac summary {color:var(--bn-muted);}
+    #bn-multi-mac .coverage {display:grid;gap:1px;margin-top:12px;}
+    #bn-multi-mac .coverage button {text-align:left;border:0;border-radius:0;display:grid;grid-template-columns:minmax(130px,1fr) 2fr;gap:14px;padding:9px 0;background:transparent;border-bottom:1px solid var(--bn-line);}
+    #bn-multi-mac .coverage span {color:var(--bn-muted);}
+    @media(max-width:650px) {#bn-multi-mac .body {grid-template-columns:1fr;}#bn-multi-mac aside {border-right:0;border-bottom:1px solid var(--bn-line);padding:8px;}#bn-multi-mac .aside-label,#bn-multi-mac .study-row.other {display:none;}#bn-multi-mac .main {padding:22px 17px;}#bn-multi-mac .statepane {margin-top:20px;}#bn-multi-mac .coverage button {grid-template-columns:1fr;gap:2px;}}
+    @media(pointer:coarse) {#bn-multi-mac button {min-height:44px;}#bn-multi-mac select {font-size:16px;}}
+  </style>
+  <div class="lifecycle">PARKED · 27 Oct 2026 · historical full N-Mac/version-choice exploration · not the v1 build target · not shipped</div>
+  <div class="preview-controls">
+    <label>Situation<select id="bn-mm-scenario" aria-label="Situation"></select></label>
+    <label style="flex:0 1 210px">Looking at<select id="bn-mm-device" aria-label="Mac viewpoint"><option>Laptop Mac</option><option>Studio Mac</option><option>Office Mac</option></select></label>
+  </div>
+  <div class="window">
+    <div class="titlebar"><span class="traffic"></span><span class="traffic"></span><span class="traffic"></span><span class="window-title">Checkout study</span><span class="device" id="bn-mm-device-label">Laptop Mac</span></div>
+    <div class="body">
+      <aside aria-label="Studies"><div class="aside-label">Studies</div><div class="study-row selected"><div class="study-name">Checkout study</div><div class="study-status" id="bn-mm-sidebar"></div></div><div class="study-row other"><div class="study-name">Onboarding interviews</div><div class="study-status">12 sessions</div></div><div class="study-row other"><div class="study-name">Pricing research</div><div class="study-status">6 sessions</div></div></aside>
+      <div class="main"><div class="lensbar"><span>Project</span><span>Sessions</span><span>Quotes</span></div><section class="statepane" aria-labelledby="bn-mm-heading"><h2 id="bn-mm-heading"></h2><p id="bn-mm-copy"></p><p class="meta" id="bn-mm-meta"></p><div class="activity" id="bn-mm-progress" hidden aria-label="Illustrative local analysis progress"><span></span></div><div class="actions" id="bn-mm-actions"></div><div class="notice" id="bn-mm-notice" role="status" aria-live="polite"></div><div class="report" id="bn-mm-report" hidden><div class="rule"></div><div class="report-title" id="bn-mm-report-label">Previous report · 8 sessions</div><div class="quote"><p>“I thought I’d paid, but there was another confirmation screen.”</p><small>p3 · Checkout · 05:18</small></div><div class="quote"><p>“I went back because I couldn’t see where the delivery date was.”</p><small>p7 · Delivery · 12:42</small></div></div></section></div>
+    </div>
+    <div class="scrim" id="bn-mm-scrim" hidden></div>
+    <section class="sheet" id="bn-mm-sheet" role="dialog" aria-modal="true" aria-labelledby="bn-mm-sheet-title" hidden><h2 id="bn-mm-sheet-title"></h2><div id="bn-mm-sheet-content"></div><div class="actions" id="bn-mm-sheet-actions"></div></section>
+  </div>
+  <p class="scenario-caption" id="bn-mm-caption"></p>
+  <details><summary>All scenarios and their offered actions</summary><div class="coverage" id="bn-mm-coverage"></div></details>
+  <script>
+  (function(){
+    const root=document.getElementById('bn-multi-mac');
+    const el=id=>root.querySelector('#bn-mm-'+id);
+    const scenes=[
+      {id:'ready',group:'Ordinary use',label:'Ready to read or work',row:'8 sessions',title:'Checkout study',copy:'',meta:'8 sessions · 146 quotes',report:true,reportLabel:'Report · 8 sessions',actions:[['Analyse','analyse'],['Edit Report','edit'],['Export Report','export']],note:'No device limit. This Mac opens its verified report normally; it does not claim to know every other Mac’s current state.'},
+      {id:'editing',group:'Ordinary use',label:'Editing a report on this Mac',row:'Changes saved on this Mac',title:'Checkout study',copy:'',meta:'Your separate working version',report:true,reportLabel:'Your version · saved on this Mac',actions:[['Publish Version','publish'],['Export Report','export']],note:'All ordinary edits use the local workspace too. Publishing does not assert that another Mac received the result.'},
+      {id:'local',group:'Ordinary use',label:'Analysis running on this Mac',row:'Analysing · Extracting quotes',title:'Analysing on This Mac',copy:'Extracting quotes from session 4 of 8.',meta:'Started here at 10:00',progress:true,actions:[['Stop Analysis','stop'],['View Previous Report','previous']],note:'Stage and progress come from this Mac’s own process. Stopping affects this local attempt only.'},
+      {id:'remote',group:'Work started elsewhere',label:'Studio Mac started re-analysis',row:'Analysis started on Studio Mac',title:'Analysis started on Studio Mac',copy:'You can read the previous report here. To work on this Mac instead, start a separate version.',meta:'Started on Studio Mac at 10:00',actions:[['View Previous Report','previous'],['Work on This Mac…','work']],note:'A received start record is a fact. “Still analysing”, a remote percentage, and remote liveness are not established.'},
+      {id:'first',group:'Work started elsewhere',label:'First analysis elsewhere; no previous report',row:'Analysis started on Studio Mac',title:'Analysis started on Studio Mac',copy:'There is no saved report to show on this Mac. You can start a separate analysis here if you need to.',meta:'Started on Studio Mac at 10:00',noPrevious:true,actions:[['Work on This Mac…','work']],note:'No View Previous Report button when no verified previous report exists.'},
+      {id:'asleep',group:'Work started elsewhere',label:'Studio Mac sleeping or disconnected',row:'Analysis started on Studio Mac',title:'Analysis started on Studio Mac',copy:'You can read the previous report here. To work on this Mac instead, start a separate version.',meta:'Started on Studio Mac at 10:00',actions:[['View Previous Report','previous'],['Work on This Mac…','work']],note:'Identical to a live remote run. No timer expires its protection and no cloud-status guess appears.'},
+      {id:'remote-crash',group:'Work started elsewhere',label:'Studio Mac crashed; laptop cannot know',row:'Analysis started on Studio Mac',title:'Analysis started on Studio Mac',copy:'You can read the previous report here. To work on this Mac instead, start a separate version.',meta:'Started on Studio Mac at 10:00',actions:[['View Previous Report','previous'],['Work on This Mac…','work']],note:'The same bytes can describe a crash or an offline live run. Recovery creates separate work; it never deletes the original attempt.'},
+      {id:'several-starts',group:'Work started elsewhere',label:'Starts observed from several Macs',row:'Analysis started on 2 other Macs',title:'Analysis started on other Macs',copy:'Studio Mac and Office Mac each started an analysis. Work already started on either Mac will be kept.',meta:'Studio Mac · 10:00; Office Mac · 10:08',actions:[['View Previous Report','previous'],['Work on This Mac…','work']],note:'The same model covers N Macs. Display all observed attempts, with no “latest Mac wins” rule.'},
+      {id:'local-crash',group:'Interrupted or incomplete',label:'Analysis crashed on this Mac',row:'Analysis stopped unexpectedly',title:'Analysis stopped unexpectedly',copy:'The previous report is still available. You can retry the analysis on this Mac.',meta:'Started here at 10:00',actions:[['Retry','analyse'],['View Previous Report','previous']],note:'Only a locally owned process can be proven dead here. The interrupted local attempt and saved report are preserved.'},
+      {id:'stopped',group:'Interrupted or incomplete',label:'Analysis stopped on this Mac',row:'Analysis stopped',title:'Analysis stopped',copy:'Your previous report is still available. You can start the analysis again when you are ready.',meta:'Stopped here',actions:[['Analyse','analyse'],['View Previous Report','previous']],note:'A deliberate local stop closes only this attempt. It never creates a remote activity record or deletes a completed version.'},
+      {id:'remote-ended',group:'Interrupted or incomplete',label:'Failure or cancellation received from Studio Mac',row:'Analysis on Studio Mac did not finish',title:'Analysis on Studio Mac did not finish',copy:'The previous report is still available. You can analyse this study on this Mac.',meta:'Studio Mac reported that analysis ended',actions:[['Analyse on This Mac','analyse'],['View Previous Report','previous']],note:'This wording requires a matching terminal record from the originating attempt. Silence is insufficient.'},
+      {id:'unavailable',group:'Interrupted or incomplete',label:'Completion received; report cannot be opened',row:'Newer version couldn’t be opened',title:'This version couldn’t be opened',copy:'Your previous report is still available.',meta:'Report from Studio Mac',actions:[['Retry','retry'],['View Previous Report','previous']],note:'A completion record may arrive before its files. Perform bounded reads; on failure keep the previous report. No “Waiting for iCloud” state.'},
+      {id:'unavailable-first',group:'Interrupted or incomplete',label:'Completion received; no readable report yet',row:'Report couldn’t be opened',title:'This version couldn’t be opened',copy:'Bristlenose could not open the report on this Mac.',meta:'Report from Studio Mac',noPrevious:true,actions:[['Retry','retry']],note:'Never open a partially copied database or infer a reason from missing files.'},
+      {id:'update',group:'New or concurrent work',label:'New complete report arrives while reading',row:'8 sessions',title:'New version available',copy:'Studio Mac published a newer report. Your current report stays open until you choose to change it.',meta:'Report published on Studio Mac at 10:26',report:true,reportLabel:'Current report · 8 sessions',actions:[['View New Version','new'],['Keep Reading','keep']],note:'No view jump during reading, selection or typing. Only a verified descendant is offered as newer; timestamps do not establish lineage.'},
+      {id:'versions',group:'New or concurrent work',label:'Other report arrives after local edits',row:'Two versions',title:'Two versions of this study',copy:'This Mac and Studio Mac have different changes. Both versions have been kept.',meta:'Your work has not been replaced',report:true,reportLabel:'Your version · Laptop Mac',actions:[['View Versions…','versions'],['Keep Working Here','edit']],note:'V1 does not silently merge edits or choose by clock time. Selecting a version changes this Mac’s view and never deletes the other version.'},
+      {id:'race',group:'New or concurrent work',label:'Two Macs started before seeing each other',row:'Another Mac also started analysis',title:'Another Mac also started analysis',copy:'Studio Mac started an analysis too. You can stop this analysis or let it finish. Both results will be kept.',meta:'Running here since 10:00 · Studio Mac started at 10:00',progress:true,actions:[['Stop This Analysis','stop'],['Keep Analysing','continue']],note:'A shared start marker cannot prevent this offline race. Separate workspaces and unique revision names prevent overwrites; duplicate AI cost can still occur.'},
+      {id:'late',group:'New or concurrent work',label:'Original Mac finishes after recovery here',row:'Two versions',title:'Two versions of this study',copy:'Studio Mac finished its analysis after you started work here. Both versions have been kept.',meta:'Neither analysis was overwritten',actions:[['View Versions…','versions'],['Keep Working Here','edit']],note:'Recovery was separate work, not a takeover. The original result is valid history, not stale work to delete.'},
+      {id:'many',group:'New or concurrent work',label:'Three or more complete versions',row:'3 versions',title:'Several versions of this study',copy:'Laptop Mac, Studio Mac and Office Mac each have a version. All three have been kept.',meta:'Choose which version to use on this Mac',actions:[['View Versions…','versions']],note:'Any number of heads can be listed. Machine labels may repeat; identity and revision IDs remain distinct underneath.'},
+      {id:'offline',group:'Ordinary use',label:'No connection; saved report opens',row:'8 sessions',title:'Checkout study',copy:'',meta:'8 sessions · 146 quotes',report:true,reportLabel:'Report saved on this Mac',actions:[['Analyse','analyse'],['Edit Report','edit'],['Export Report','export']],note:'No online check or cloud badge is needed to read saved work. A new run may later fail normally if its AI provider or source files are unavailable.'},
+      {id:'unknown',group:'Safety and compatibility',label:'Activity or machine identity unreadable',row:'Study activity couldn’t be checked',title:'Study activity couldn’t be checked',copy:'You can read the saved report. Retry before starting analysis or editing this study.',meta:'No existing work has been changed',actions:[['Retry','check'],['View Saved Report','previous']],note:'Unknown is not “no other writer”. Keep the last verified report and do not perform destructive recovery.'},
+      {id:'save',group:'Safety and compatibility',label:'Local save fails',row:'Latest changes not saved',title:'Your latest changes couldn’t be saved',copy:'Keep this study open while you retry. Your changes are still in this window.',meta:'Last saved on this Mac at 10:12',report:true,reportLabel:'Current draft · not saved',actions:[['Retry Save','save']],note:'An unsaved draft must not be labelled saved or safe to close. Never promise local durability after a failed disk write.'},
+      {id:'publish',group:'Safety and compatibility',label:'Local save succeeds; publishing fails',row:'Changes saved on this Mac',title:'This version couldn’t be published',copy:'Your changes are saved on this Mac. You can keep working and try again.',meta:'Previous published reports are unchanged',report:true,reportLabel:'Your version · saved locally',actions:[['Retry','publish'],['Keep Working Here','edit']],note:'Saved locally and available elsewhere are different facts. This state is an ordinary failed write, not a narrative about a sync provider.'},
+      {id:'legacy',group:'Safety and compatibility',label:'Study needs a newer app / legacy writer',row:'Newer Bristlenose required',title:'This study needs a newer Bristlenose',copy:'Update Bristlenose before editing or analysing this study.',meta:'The saved compatible report can still be viewed',actions:[['Update Bristlenose','upgrade'],['View Saved Report','previous']],note:'Migration needs its own measured plan. A new marker does not protect against an old app that still writes the old mutable database.'},
+      {id:'windows',group:'Ordinary use',label:'Two windows on the same Mac',row:'Analysing · Extracting quotes',title:'Analysing on This Mac',copy:'Extracting quotes from session 4 of 8.',meta:'This window follows the same analysis as your other window',progress:true,actions:[['Stop Analysis','stop'],['View Previous Report','previous']],note:'One local writer and shared local operation state. A second window is not another computer.'},
+      {id:'renamed',group:'Ordinary use',label:'Computer renamed since analysis began',row:'Analysing · Extracting quotes',title:'Analysing on This Mac',copy:'Extracting quotes from session 4 of 8.',meta:'Started here at 10:00',progress:true,actions:[['Stop Analysis','stop'],['View Previous Report','previous']],note:'Identity stays stable when the display name changes. A rename cannot turn local work into an abandoned foreign run.'}
+    ];
+    const picker=el('scenario'), device=el('device');
+    const saved=window.openai?.widgetState;
+    let current=scenes.some(s=>s.id===saved?.modelContent?.scenario)?saved.modelContent.scenario:'remote';
+    let showReport=false, notice='', sheetKind='';
+    const devices=['Laptop Mac','Studio Mac','Office Mac'];
+    if(devices.includes(saved?.privateContent?.device))device.value=saved.privateContent.device;
+    let lastGroup='';let group;
+    scenes.forEach(s=>{if(s.group!==lastGroup){group=document.createElement('optgroup');group.label=s.group;picker.append(group);lastGroup=s.group;}const opt=document.createElement('option');opt.value=s.id;opt.textContent=s.label;group.append(opt);});
+    const scene=()=>scenes.find(s=>s.id===current);
+    const others=()=>devices.filter(d=>d!==device.value);
+    const other=()=>others()[0];
+    const words=t=>t.replace(/Laptop Mac|Studio Mac|Office Mac/g,name=>({'Laptop Mac':device.value,'Studio Mac':others()[0],'Office Mac':others()[1]})[name]);
+    function persist(){window.openai?.setWidgetState?.({modelContent:{scenario:current},privateContent:{device:device.value}})?.catch(()=>{});}
+    function button(label,action,primary){const b=document.createElement('button');b.type='button';b.textContent=label;if(primary)b.className='primary';b.onclick=action;return b;}
+    function closeSheet(){el('sheet').hidden=true;el('scrim').hidden=true;sheetKind='';root.querySelector('#bn-mm-actions button')?.focus();}
+    function render(){
+      const s=scene();picker.value=current;
+      el('device-label').textContent=device.value;
+      el('sidebar').textContent=words(s.row);
+      el('heading').textContent=words(s.title);
+      el('copy').textContent=words(s.copy);el('copy').hidden=!s.copy;
+      el('meta').textContent=words(s.meta);
+      el('progress').hidden=!s.progress;
+      el('report').hidden=!(s.report||showReport);
+      el('report-label').textContent=words(s.reportLabel||(showReport?'Previous report · 8 sessions':'Report · 8 sessions'));
+      el('notice').textContent=notice;
+      el('caption').textContent=s.note;
+      el('actions').replaceChildren(...s.actions.map(([label,id],i)=>button(words(label),()=>act(id),i===0)));
+    }
+    function select(id){closeSheet();current=id;showReport=false;notice='';render();persist();}
+    function act(action){
+      if(action==='work'){openSheet('work');return;}
+      if(action==='versions'){openSheet('versions');return;}
+      if(action==='previous'){showReport=true;notice='Viewing the saved report. Changes are unavailable in this view.';}
+      if(action==='analyse'){select('local');return;}
+      if(action==='stop'){const next=current==='race'?'remote':'stopped';select(next);notice='Analysis stopped on this Mac. The previous report is available.';}
+      if(action==='continue'){notice='Analysis continues on this Mac. Other results will be kept.';}
+      if(action==='keep'){notice='Your current report stays open.';}
+      if(action==='new'){select('ready');notice='Opened the report published on '+other()+'.';}
+      if(action==='edit'){select('editing');notice='Editing your separate local version. Changes are saved on this Mac.';}
+      if(action==='export'){notice='Export uses the saved report open on this Mac.';}
+      if(action==='retry'){select('ready');notice='In this preview, Retry opens the now-readable version.';}
+      if(action==='check'){select('remote');notice='In this preview, the activity record can now be read.';}
+      if(action==='save'){select('ready');notice='In this preview, your changes are now saved on this Mac.';}
+      if(action==='publish'){select('ready');notice='In this preview, this version is now published. Receipt on other Macs is not asserted.';}
+      if(action==='upgrade'){notice='Update Bristlenose on this Mac. No study files are changed by this preview.';}
+      render();persist();
+    }
+    function openSheet(kind){
+      sheetKind=kind;el('sheet-title').textContent=kind==='work'?'Work on this Mac?':'Choose a version to use here';
+      const c=el('sheet-content');c.replaceChildren();
+      if(kind==='work'){
+        const p=document.createElement('p');p.textContent='Analysis started on '+other()+'. Bristlenose can’t check whether it is still running there.';c.append(p);
+        const q=document.createElement('p');q.textContent=scene().noPrevious?'A separate analysis will start from the recordings in this study. Both results will be kept.':'Work here will start from the saved report on this Mac. Both versions will be kept.';c.append(q);
+        const r=document.createElement('p');r.className='meta';r.textContent='Analysing again may use additional AI credits.';c.append(r);
+      }else{
+        const n=current==='many'?3:2;
+        [device.value,...others()].slice(0,n).forEach((name,i)=>{const label=document.createElement('label');label.className='version';const radio=document.createElement('input');radio.type='radio';radio.name='bn-mm-version';radio.value=name;radio.checked=i===0;label.append(radio,document.createTextNode(name+' · '+(i===0?'your edits, 10:24':i===1?'analysis finished, 10:26':'separate analysis, 10:31')));c.append(label);});
+        const p=document.createElement('p');p.className='meta';p.style.marginTop='13px';p.textContent='This changes the version open on this Mac. Every other version is kept. Changes are not merged.';c.append(p);
+      }
+      const cancel=button('Cancel',closeSheet,false);
+      const confirm=button(kind==='work'?'Work on This Mac':'Use This Version',()=>{
+        const selected=root.querySelector('input[name="bn-mm-version"]:checked')?.value;
+        closeSheet();select(kind==='work'?'local':'ready');
+        notice=kind==='work'?'Separate work started here. No command was sent to the other Mac.':'Opened '+selected+'’s version here. Other versions are kept.';render();
+      },true);
+      el('sheet-actions').replaceChildren(cancel,confirm);el('scrim').hidden=false;el('sheet').hidden=false;cancel.focus();
+    }
+    picker.onchange=()=>select(picker.value);
+    device.onchange=()=>{closeSheet();render();persist();};
+    el('sheet').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeSheet();}if(e.key==='Tab'){const nodes=[...el('sheet').querySelectorAll('button,input')];const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+    el('coverage').replaceChildren(...scenes.map(s=>{const b=button('',()=>select(s.id),false);const name=document.createElement('strong');name.style.fontWeight='500';name.textContent=s.label;const options=document.createElement('span');options.textContent=s.actions.map(a=>a[0]).join(' · ');b.append(name,options);return b;}));
+    window.addEventListener('openai:set_globals',e=>{const w=e.detail?.globals?.widgetState;if(scenes.some(s=>s.id===w?.modelContent?.scenario)){current=w.modelContent.scenario;if(devices.includes(w?.privateContent?.device))device.value=w.privateContent.device;closeSheet();showReport=false;notice='';render();}});
+    render();
+  })();
+  </script>
+</div>
+
+</body></html>

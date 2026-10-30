@@ -92,6 +92,13 @@ final class LocateFlow {
     /// alert button) can reuse the same check.
     nonisolated static func folderLooksAnalysed(url: URL) -> Bool {
         let outputDir = url.appendingPathComponent(outputMarker, isDirectory: true)
+        // Stat each parent first: probing through a dataless (cloud-only)
+        // directory can itself ask File Provider to fetch it, and every caller
+        // of this check — not only the Finder-drop resolver — must be safe.
+        let state = outputDir.appendingPathComponent(".bristlenose", isDirectory: true)
+        for parent in [url, outputDir, state] where CopyMachinery.isDataless(parent) {
+            return false
+        }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: outputDir.path, isDirectory: &isDir),
               isDir.boolValue else { return false }

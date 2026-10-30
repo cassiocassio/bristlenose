@@ -224,6 +224,10 @@ struct StudyStartupProbeTests {
         defer { observation.cancel() }
         var admitted = false
         manager.recheckStudyStartup(projectPath: "/tmp/bn-shared-startup") { admitted = true }
+        // The probe must really have started, or the superseded case would pass
+        // vacuously (admitted == false either way). This test is @MainActor and
+        // has not suspended, so the flag is reliably set here.
+        #expect(manager.startupProbeIsRunning)
         if superseded { manager.instance.generation += 1 }
         // The full suite runs many process-heavy tests in parallel. This is
         // scheduler allowance, not the product's probe deadline (30 seconds):

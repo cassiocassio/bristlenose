@@ -86,6 +86,20 @@ struct SidebarFinderDropTests {
         #expect(!probedMarker)
     }
 
+    @Test func aCloudOnlyFileIsAnOrdinaryLeafNotAReasonToRefuseTheFolder() throws {
+        let root = try directory("Interviews")
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+        let evicted = root.appendingPathComponent("session-1.mov")
+        let other = root.appendingPathComponent("brief.pdf")
+        try Data().write(to: evicted)
+        try Data().write(to: other)
+        // Only files are cloud-only here; the folder itself is local.
+        let result = SidebarFinderDrop.resolve([root], acceptedExtensions: ["mov"],
+            folderLooksAnalysed: { _ in false },
+            isDataless: { $0 == evicted || $0 == other })
+        #expect(result == .source)
+    }
+
     @Test func aDeepHierarchyStopsRatherThanWalkingWithoutBound() throws {
         let root = try directory("Deep")
         defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
@@ -112,7 +126,7 @@ struct SidebarFinderDropTests {
             folderLooksAnalysed: { _ in false }) == .irrelevant)
     }
 
-    @Test func aPopulatedProjectCanRefuseADirectOrShallowNestedProjectEarly() throws {
+    @Test func hoverRefusesADirectBNProjectButNotAWrapperAroundOne() throws {
         let root = try directory("Wrapper")
         defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
         let project = root.appendingPathComponent("Existing study", isDirectory: true)

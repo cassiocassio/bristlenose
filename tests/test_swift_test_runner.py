@@ -42,6 +42,9 @@ if "build-for-testing" in sys.argv:
 leg = "pool" if "-only-testing:BristlenoseTests/PoolStarvationTimeoutTests" in sys.argv else "general"
 with open(os.environ["CALLS"], "a") as log:
     log.write(leg + "\\n")
+skips_pool = "-skip-testing:BristlenoseTests/PoolStarvationTimeoutTests" in sys.argv
+with open(os.environ["CALLS"] + ".skips", "a") as log:
+    log.write(leg + " skips_pool=" + str(skips_pool) + "\\n")
 mode = os.environ["MODE"]
 if mode == leg + "_crash":
     sys.exit(70)
@@ -66,6 +69,12 @@ sys.exit(65 if verdict == "failed" else 0)
              "BN_RELEASE_RUN": "fixture-run"},
     )
     assert calls.read_text().splitlines() == ["general", "pool"]
+    # The general process must leave the pool suite to its own process: dropping
+    # the skip flag would run it twice and bring back the contention the split
+    # exists to remove, with every other assertion here still green.
+    assert (tmp_path / "calls.skips").read_text().splitlines() == [
+        "general skips_pool=True", "pool skips_pool=False",
+    ]
     assert (result.returncode == 0) is green, result.stdout + result.stderr
     assert stamp.exists() is green
     if green:

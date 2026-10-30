@@ -2483,6 +2483,10 @@ struct ContentView: View {
         looseURLs: [URL], suggestedName: String,
         intoFolder folderID: UUID? = nil, relocating relocateID: UUID? = nil
     ) {
+        // One copy at a time. Refuse before the sheet: once the researcher has
+        // named a folder, the directory and an empty study row would be created
+        // and the copy then refused, leaving both behind with no message.
+        guard copyMachinery.inFlight == nil else { return }
         let panel = NSSavePanel()
         panel.nameFieldStringValue = suggestedName
         panel.directoryURL = ProjectFolderDefaults.suggestedDirectory()

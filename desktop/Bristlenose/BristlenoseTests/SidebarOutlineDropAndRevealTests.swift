@@ -138,7 +138,7 @@ struct SidebarOutlineDropAndRevealTests {
     /// highlight and the native prohibited cursor before release. Limit this
     /// to direct projects by design — any directory inspection belongs
     /// to `SidebarFinderDrop.resolve` after a drop, not to validateDrop.
-    @Test func aStudyRefusesADirectOrShallowWrappedBNProjectDuringTheDrag() throws {
+    @Test func aStudyRefusesADirectBNProjectDuringTheDragButAcceptsAWrapper() throws {
         let rig = OutlineRig(); defer { rig.cleanup() }
         let study = rig.index.addProject(name: "Target", path: rig.tempDir.path)
         let imported = rig.tempDir.appendingPathComponent("Imported", isDirectory: true)

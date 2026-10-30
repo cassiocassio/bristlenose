@@ -73,7 +73,7 @@ struct StudyFinderDropTests {
     /// A populated project is not a merge target. SwiftUI cannot change its
     /// hover cursor on the supported macOS floor, but release must still
     /// refuse a direct project; wrappers are classified off-main after release.
-    @MainActor @Test func aFreeStudyRefusesADirectOrShallowWrappedBNProject() throws {
+    @MainActor @Test func aFreeStudyRefusesADirectBNProjectButAcceptsAWrapper() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("BristlenoseTests-study-drop-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }

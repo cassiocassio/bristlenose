@@ -22,12 +22,7 @@ enum SidebarFinderDrop {
     /// Stat each parent before probing the canonical marker. Probing through
     /// a dataless output directory can itself ask File Provider to fetch it.
     static func locallyLooksAnalysed(_ url: URL) -> Bool {
-        let output = url.appendingPathComponent(LocateFlow.outputMarker, isDirectory: true)
-        let state = output.appendingPathComponent(".bristlenose", isDirectory: true)
-        for parent in [url, output, state] {
-            if CopyMachinery.isDataless(parent) { return false }
-        }
-        return LocateFlow.folderLooksAnalysed(url: url)
+        LocateFlow.folderLooksAnalysed(url: url)
     }
 
     /// A cheap, conservative admission check.  It intentionally does not walk
@@ -69,7 +64,10 @@ enum SidebarFinderDrop {
             guard !exceededLimit else { return }
             // Listing a cloud-only directory can materialise it indefinitely.
             // Refuse the batch before looking inside, including nested folders.
-            guard !isDataless(url) else { exceededLimit = true; return }
+            // A cloud-only *file* is an ordinary leaf: its name and extension
+            // are enough to classify it, a stat never fetches it, and the copy
+            // or scan reports it honestly later (docs/design-cloud-files.md).
+            guard !(url.hasDirectoryPath && isDataless(url)) else { exceededLimit = true; return }
             let canonical = url.resolvingSymlinksInPath().standardizedFileURL.path
             guard seen.insert(canonical).inserted else { return }
             entries += 1

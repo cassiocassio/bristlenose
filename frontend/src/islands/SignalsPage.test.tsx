@@ -1,4 +1,5 @@
 import { resetSignalWorkingStore } from "../contexts/SignalWorkingStore";
+import { featureFlags, resetFeatureFlags } from "../utils/featureFlags";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { SignalsPage } from "./SignalsPage";
@@ -225,6 +226,7 @@ let fetchMock: any;
 
 beforeEach(() => {
     resetSignalWorkingStore();
+    resetFeatureFlags();
   resetSignalStore();
   resetInspectorStore();
   fetchMock = vi.fn();
@@ -635,6 +637,23 @@ describe("SignalsPage", () => {
     expect(screen.getAllByTestId("bn-signal-hero")[0].textContent).toContain("0.46");
     expect(screen.queryByText("2.5×")).toBeNull();
     expect(screen.queryAllByTestId("bn-signal-working")).toHaveLength(0);
+  });
+
+  it("does not draw the folded readings line while it is parked", async () => {
+    const dup: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const a = dup.codebooks[0].signals[0];
+    const b = JSON.parse(JSON.stringify(a));
+    b.group_name = "Conceptual model";
+    b.composite_signal = a.composite_signal / 2;
+    dup.codebooks[0].signals.push(b);
+    dup.codebooks[0].columns.push("Conceptual model");
+    mockFetchCodebookSignals(dup);
+    render(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByTestId("bn-signal-alternates")).toBeNull();
+    expect(screen.queryByText("Also read as")).toBeNull();
   });
 
   it("opens the working on every card at once, and keeps it open when the page is left and returned to", async () => {
@@ -1326,6 +1345,8 @@ describe("SignalsPage", () => {
 
 
   it("a folded reading carries its own claim, not just its name", async () => {
+    // Parked (featureFlags.signalAlternateReadings): the behaviour is still specified here.
+    featureFlags.signalAlternateReadings = true;
     // Storing a field and never reading it is what this change removed three
     // of. The folded card's claim is the thing that made it worth keeping.
     const dup: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));

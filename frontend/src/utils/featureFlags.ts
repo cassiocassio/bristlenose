@@ -137,6 +137,18 @@ export interface FeatureFlags {
    * `docs/design-miro-bridge.md` § Enhancement: clip links in stickies.
    */
   boardClipLinks: boolean;
+
+  /**
+   * "Also read as ..." under a Signals card: the cards at the same place that cited
+   * nearly the same quotes (60% or more) and were folded into this one, named in a line
+   * with their own claim as the tooltip.
+   *
+   * Parked 30 Oct 2026 by the owner: one more line of voice on an already difficult page.
+   * Folding itself is unchanged (the weaker card still folds into the stronger and does
+   * not draw twice); only the line that names what was folded is withheld, and `alternates`
+   * stays on the signal. Design doc: `docs/design-signal-card.md` item H.
+   */
+  signalAlternateReadings: boolean;
 }
 
 /** The shipped state. Change these to flip a feature back on. */
@@ -149,6 +161,7 @@ const DEFAULTS: FeatureFlags = {
   screensQuoteCount: false,
   figjamExport: false,
   boardClipLinks: false,
+  signalAlternateReadings: false,
 };
 
 export const featureFlags: FeatureFlags = { ...DEFAULTS };

@@ -36,6 +36,7 @@ import {
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
 import { markArrived } from "../utils/arrival";
+import { featureFlags } from "../utils/featureFlags";
 import { chipWords, signalAccent } from "../utils/signalChip";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
@@ -693,7 +694,7 @@ function SignalCard({
               attention twice for one answer. They are NOT deleted: the
               vocabulary survives here, and a researcher can see this place was
               also read that way. */}
-          {signal.alternates?.length ? (
+          {featureFlags.signalAlternateReadings && signal.alternates?.length ? (
             <div className="signal-card-alternates" data-testid="bn-signal-alternates">
               {t("signals.alsoReadAs")}{" "}
               {signal.alternates.map((alt, i) => (

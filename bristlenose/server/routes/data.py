@@ -21,6 +21,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
+from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
@@ -489,7 +490,7 @@ def put_session_speaker(
     speaker_code: str,
     request: Request,
     data: SpeakerNameEdit,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Name, confirm or pick one session's speaker.
 
     ``speaker_code`` is the **slot** code — the transcript's own token in this
@@ -550,7 +551,9 @@ def put_session_speaker(
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
             sync_role_pins(db, project_id, session_id)
-            return {"status": "ok"}
+            # A swap can return a speaker to the evidence: name the codebooks that will
+            # code their quotes, as the hide route does.
+            return _answer_ok(note_quotes_counting(request.app, project_id))
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
         left: set[int | None] = set()
@@ -698,9 +701,20 @@ def put_session_speaker(
         speaker_slots.renumber(db, project_id)
         db.commit()
         sync_role_pins(db, project_id, session_id)
+        if recodes:  # a recode back in counts again
+            return _answer_ok(note_quotes_counting(request.app, project_id))
         return {"status": "ok"}
     finally:
         db.close()
+
+
+def _answer_ok(catch_up: list[dict[str, str]]) -> dict[str, Any]:
+    """``{"status": "ok"}``, naming the codebooks that will code quotes that count
+    again (only when there are some, so the answer is what it was)."""
+    answer: dict[str, Any] = {"status": "ok"}
+    if catch_up:
+        answer["catchUp"] = catch_up
+    return answer
 
 
 def sync_role_pins(db: Session, project_id: int, session_id: str) -> None:
@@ -1197,16 +1211,20 @@ def put_hidden(
                 hidden_db_ids.add(quote.id)
 
         # Update or create QuoteState rows for all project quotes
+        restored = False
         for qid in _quote_ids_for_project(db, project_id):
             qs = db.query(QuoteState).filter_by(quote_id=qid).first()
             should_hide = qid in hidden_db_ids
             if qs:
+                restored = restored or (qs.is_hidden and not should_hide)
                 qs.is_hidden = should_hide
                 qs.hidden_at = _now() if should_hide else None
             elif should_hide:
                 db.add(QuoteState(quote_id=qid, is_hidden=True, hidden_at=_now()))
 
         db.commit()
+        if restored:
+            note_quotes_counting(request.app, project_id)  # a quote counts again
         return {"status": "ok"}
     finally:
         db.close()
@@ -1228,6 +1246,7 @@ def patch_hidden(
     try:
         _check_project(db, project_id)
         unresolved: list[str] = []  # quotes the server no longer has
+        restored = False  # a hidden quote that counts again
         for dom_id, is_hidden in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
@@ -1238,10 +1257,16 @@ def patch_hidden(
             else:
                 qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
             if qs:
+                restored = restored or (qs.is_hidden and not is_hidden)
                 qs.is_hidden = is_hidden
                 qs.hidden_at = _now() if is_hidden else None
         db.commit()
-        return {"status": "ok", "unresolved": unresolved}
+        # A quote that counts again is owed to every codebook that never sent it
+        # (ruling 4): the codebooks that will code it are named, so the page can
+        # look for the catch-up and show its tags when it ends.
+        answer = _answer_ok(note_quotes_counting(request.app, project_id) if restored else [])
+        answer["unresolved"] = unresolved
+        return answer
     finally:
         db.close()
 
@@ -1690,6 +1715,14 @@ def _schedule_catch_up(
     was never applied or owes nothing. Fire-and-forget — never
     blocks or fails the PUT.
     """
+    launch_catch_up(request.app, project_id, framework_id)
+
+
+def launch_catch_up(app: Any, project_id: int, framework_id: str) -> None:
+    """Start the delta re-apply task for ``framework_id`` and register it as the
+    one coding it. Shared by the switch-on catch-up and the one a quote counting
+    again schedules (``autocode_catch_up``). The caller has set the job "running"
+    (``_start_catch_ups``)."""
     import asyncio
     import logging
 
@@ -1697,8 +1730,8 @@ def _schedule_catch_up(
     from bristlenose.server.autocode import reapply_to_new_quotes
 
     logger = logging.getLogger(__name__)
-    db_factory = request.app.state.db_factory
-    settings = getattr(request.app.state, "settings", None) or load_settings()
+    db_factory = app.state.db_factory
+    settings = getattr(app.state, "settings", None) or load_settings()
 
     async def _run() -> None:
         try:
@@ -1731,7 +1764,7 @@ def _start_catch_ups(
     mark their job "running" now.
 
     A framework catches up only if it has an applied job AND it owes at least one
-    session (a session with quotes and no stamp from the job; §4a). Setting the
+    quote (one that counts and is not on the job's register of sent quotes; §4a). Setting the
     job "running" here — synchronously, before the async delta starts — means the
     frontend activity chip's first poll already sees "running", closing the race
     where it would otherwise see the stale "completed" and resolve instantly. A
@@ -1740,7 +1773,7 @@ def _start_catch_ups(
     "running" with no task behind it is started again. Zeroes the catch-up's own
     counts, which the chip reads. Cheap: two indexed queries per framework, no LLM.
     """
-    from bristlenose.server.autocode import owed_sessions
+    from bristlenose.server.autocode import owed_quotes
     from bristlenose.server.models import AutoCodeJob
 
     started: list[str] = []
@@ -1761,7 +1794,7 @@ def _start_catch_ups(
             # while the switch is off, so an off-and-on during it leaves those
             # owed until the next run or switch-on.
             continue
-        if not owed_sessions(db, job):
+        if not owed_quotes(db, job):
             continue  # nothing owed → silent no-op
         job.status = "running"
         job.started_at = _now()

@@ -949,7 +949,7 @@ def remove_framework(
         # reversible one, and it already preserves everything.
         #
         # The project-scoped rows go unconditionally.
-        # With the job go its proposals and its session stamps.
+        # With the job go its proposals and its register of sent quotes.
         from bristlenose.server.autocode import delete_jobs
 
         delete_jobs(db, [

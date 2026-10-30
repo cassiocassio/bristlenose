@@ -151,7 +151,29 @@ async function apiPost<T>(path: string, body: unknown, signal?: AbortSignal): Pr
     signal,
   });
   if (!resp.ok) throw await httpError("POST", path, resp);
-  return resp.json() as Promise<T>;
+  const answer = (await resp.json()) as T;
+  announceCatchUp(answer); // a paragraph moved back
+  return answer;
+}
+
+/** A pass the server will run by itself: the codebook, and its job's start when it was armed. */
+export interface CatchUpArmed {
+  framework_id: string;
+  title: string;
+  started_at: string;
+}
+
+/**
+ * A write can hand quotes to a codebook that never saw them (an unhide, a speaker recoded back in,
+ * a paragraph moved back): the server codes them a few seconds on, by itself, and names the
+ * codebooks in the answer. Tell the shell, which looks for each pass so its tags appear without a
+ * reload (`watchForCatchUp`).
+ */
+export function announceCatchUp(answer: unknown): void {
+  const named = (answer as { catchUp?: unknown } | null)?.catchUp;
+  if (Array.isArray(named) && named.length > 0) {
+    window.dispatchEvent(new CustomEvent<CatchUpArmed[]>("bn:catch-up-armed", { detail: named }));
+  }
 }
 
 /** Split a transcript paragraph in two at a word boundary (design-transcript-
@@ -195,6 +217,11 @@ async function apiDelete(path: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!resp.ok) throw await httpError("DELETE", path, resp);
+  try {
+    announceCatchUp(await resp.json()); // a paragraph move undone
+  } catch {
+    // No body to read: nothing was named.
+  }
 }
 
 async function apiDeleteJson<T>(path: string): Promise<T> {
@@ -240,6 +267,13 @@ function sendWrite(
       // background sync is fully silent (DB never written, UI diverges on reload —
       // the dropped-auth-token masquerade). Surface it so it's at least greppable.
       if (!resp.ok) throw await httpError(method, path, resp);
+      if (method === "PUT") {
+        try {
+          announceCatchUp(await resp.json()); // a speaker recoded back in
+        } catch {
+          // No body to read: nothing was named.
+        }
+      }
       if (method === "PATCH") {
         // A curation PATCH names back the quotes it could not place (a re-run
         // removed them). Nothing was written for those: refuse, so the store
@@ -249,7 +283,8 @@ function sendWrite(
         const answer = (await resp.json().catch((e: unknown) => {
           console.warn(`${method} ${path}: answer unreadable, taken as placed`, e);
           return null;
-        })) as { unresolved?: unknown } | null;
+        })) as { unresolved?: unknown; catchUp?: unknown } | null;
+        announceCatchUp(answer);
         const unresolved = Array.isArray(answer?.unresolved) ? (answer.unresolved as string[]) : [];
         if (unresolved.length > 0) {
           throw Object.assign(new Error(`${method} ${path}: no such quote`), {

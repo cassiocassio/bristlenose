@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 from bristlenose.server.app import create_app
 from bristlenose.server.models import (
     AutoCodeJob,
-    AutoCodeSessionStamp,
+    AutoCodeSentQuote,
     CodebookGroup,
     Quote,
     QuoteTag,
@@ -398,9 +398,9 @@ def test_r1_tags_autocode_reapplied_survive_the_next_tag_gesture(tmp_path: Path)
                           completed_at=now, applied_upper_threshold=0.7)
         db.add(job)
         db.flush()
-        # An applied job has stamped the sessions it coded (RE#66); only s2 is owed.
-        for (sid,) in db.query(SessionModel.id).filter_by(project_id=1):
-            db.add(AutoCodeSessionStamp(job_id=job.id, session_id=sid))
+        # An applied job has sent the quotes it coded (RE#66); only s2's are owed.
+        for (qid,) in db.query(Quote.id).filter_by(project_id=1):
+            db.add(AutoCodeSentQuote(job_id=job.id, quote_id=qid))
         db.add(SessionModel(project_id=1, session_id="s2", session_number=2,
                             first_imported_at=now + timedelta(days=1)))
         for i in range(2):

@@ -194,10 +194,11 @@ async def run_autocode_job(
     errors gracefully — the caller does not await this.
 
     A job that a Stop or a failure left never applied keeps what it coded when
-    Apply runs it again (#127): only quotes with no proposal on the job, in
-    sessions it has not stamped, are sent, so nothing is paid for twice and a tag
-    the researcher denied stays denied. A first apply has neither, and sends
-    every quote; one with nothing left to send completes without an LLM call.
+    Apply runs it again (#127): only quotes that count and are not on the job's
+    register of sent quotes are sent, so nothing is paid for twice and a tag
+    the researcher denied stays denied. A first apply has an empty register, and
+    sends every quote that counts; one with nothing left to send completes
+    without an LLM call.
 
     When ``project_dir`` is provided, telemetry contextvars are bound for
     the duration of the job so per-call rows land in
@@ -210,11 +211,9 @@ async def run_autocode_job(
     from bristlenose.server.codebook import get_template
     from bristlenose.server.models import (
         AutoCodeJob,
-        AutoCodeSessionStamp,
         ProposedTag,
         TagDefinition,
     )
-    from bristlenose.server.models import Session as SessionModel
     from bristlenose.server.speaker_slots import analysis_quotes
 
     # Bind telemetry context for the duration of the job. ``project_dir``
@@ -266,26 +265,15 @@ async def run_autocode_job(
             db.commit()
             return
 
-        # What a Stop or a failure left this job is kept (#127): a quote with a
-        # proposal on it, or in a session it stamped, was paid for, and sending
-        # it again paid twice and brought tags the researcher denied back as
-        # pending. Until 22 Oct 2026 Apply deleted the job and sent everything.
-        stamped = {
-            row[0]
-            for row in db.query(SessionModel.session_id)
-            .join(AutoCodeSessionStamp, AutoCodeSessionStamp.session_id == SessionModel.id)
-            .filter(AutoCodeSessionStamp.job_id == job.id)
-        }
+        # What a Stop or a failure left this job is kept (#127): a quote on its
+        # register of sent quotes, or with a proposal on it, was paid for, and
+        # sending it again paid twice and brought tags the researcher denied back
+        # as pending. Until 22 Oct 2026 Apply deleted the job and sent everything.
+        sent_ids = sent_quote_ids(db, job.id)
         proposed_ids = {
             row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job.id)
         }
-        to_send = [
-            q for q in quotes_rows if q.session_id not in stamped and q.id not in proposed_ids
-        ]
-        # An unstamped session with nothing left to send was coded already.
-        done_already = {q.session_id for q in quotes_rows if q.session_id not in stamped} - {
-            q.session_id for q in to_send
-        }
+        to_send = [q for q in quotes_rows if q.id not in sent_ids]
         already_done = len(quotes_rows) - len(to_send)
         kept_proposals = len(proposed_ids)
         kept_tokens = (job.input_tokens or 0, job.output_tokens or 0)
@@ -293,7 +281,6 @@ async def run_autocode_job(
         job.total_quotes = len(quotes_rows)
         job.processed_quotes = already_done
         if not to_send:
-            stamp_sessions(db, job.id, _session_pks(db, project_id, done_already))
             job.proposed_count = kept_proposals
             db.flush()
             db.expire(job, ["status"])
@@ -390,7 +377,7 @@ async def run_autocode_job(
             async with semaphore:
                 # Cancellation checkpoint — check DB before starting LLM call.
                 # None = not sent, which neither answered nor failed: its
-                # sessions stay unstamped (RE#66).
+                # quotes stay off the register, so they stay owed (RE#66).
                 cancel_db = db_factory()
                 try:
                     cancel_job = (
@@ -527,12 +514,10 @@ async def run_autocode_job(
         for proposal in best_by_quote.values():
             db.add(proposal)
             proposed_count += 1
-        # The sessions this pass coded, in the same transaction as their
-        # proposals; a session in a batch that failed or was never sent stays
-        # owed, and the next re-apply codes it (RE#66).
-        stamp_sessions(db, job_id, _session_pks(
-            db, project_id, done_already | _sessions_answered(batches, batch_results),
-        ))
+        # The quotes this pass sent, in the same transaction as their proposals;
+        # one in a batch that failed or was never sent stays owed, and the next
+        # re-apply sends it (RE#66).
+        record_sent(db, job_id, _answered_quote_ids(batches, batch_results))
 
         logger.info(
             "AutoCode job finished: %d proposals from %d quotes (%d batch errors)",
@@ -580,7 +565,7 @@ async def run_autocode_job(
         # `reapply_active_frameworks`' ever-applied set and every re-apply; its
         # presence is how `reconcile_orphaned_jobs` tells an initial-apply orphan
         # from an interrupted catch-up; and Apply refuses a job that has it. Which
-        # sessions are coded is the stamps' job, not this one's (RE#66).
+        # quotes are coded is the register's job, not this one's (RE#66).
         #
         # So setting it on a job that coded nothing is worse than cosmetic: the
         # framework would join the maintained set having applied nothing, and
@@ -589,8 +574,8 @@ async def run_autocode_job(
         # retry codes what no pass has coded yet (#127).
         #
         # A genuine partial sets it: some quotes really were coded, and the
-        # sessions in its failed batches carry no stamp, so the next re-apply
-        # codes them.
+        # ones in its failed batches are not on the register, so the next
+        # re-apply sends them.
         if not nothing_landed:
             job.completed_at = datetime.now(timezone.utc)
         db.commit()
@@ -631,6 +616,11 @@ async def run_autocode_job(
 # threshold (mirrors the review dialog's DEFAULT_UPPER = 0.70).
 DEFAULT_ACCEPT_THRESHOLD = 0.70
 
+# Default lower cutoff when a framework was applied without one stored (mirrors
+# the review dialog's DEFAULT_LOWER = 0.30 in
+# frontend/src/components/ThresholdReviewModal.tsx).
+DEFAULT_DENY_THRESHOLD = 0.30
+
 #: The review dialog's cutoffs sit on a 0.05 grid (``frontend/src/utils/confidenceStep.ts``).
 CONFIDENCE_STEPS_PER_UNIT = 20
 
@@ -652,84 +642,87 @@ def snap_cutoff(value: float) -> float:
     return steps / CONFIDENCE_STEPS_PER_UNIT
 
 
-def _sessions_answered(
+def _answered_quote_ids(
     batches: list[list[QuoteBatchItem]], results: list[Any],
-) -> set[str]:
-    """The sessions whose every quote sent in this pass was in a batch that
-    answered. A batch that failed (an exception) or was never sent (None) leaves
-    each of its sessions owed, wherever else that session's quotes went."""
-    answered: set[str] = set()
-    missed: set[str] = set()
+) -> set[int]:
+    """The quotes this pass sent in a batch that answered. A batch that failed (an
+    exception) or was never sent (None) leaves each of its quotes owed."""
+    answered: set[int] = set()
     for batch, result in zip(batches, results, strict=True):
-        ok = result is not None and not isinstance(result, BaseException)
-        (answered if ok else missed).update(item.session_id for item in batch)
-    return answered - missed
+        if result is not None and not isinstance(result, BaseException):
+            answered.update(item.db_id for item in batch)
+    return answered
 
 
-def _session_pks(db: SASession, project_id: int, session_ids: set[str]) -> list[int]:
-    """Session row ids for a project's ``"s1"``-style session ids."""
-    from bristlenose.server.models import Session as SessionModel
+def sent_quote_ids(db: SASession, job_id: int) -> set[int]:
+    """The quotes ``job_id`` has paid for: its register, and any quote it holds a
+    proposal on (a proposal is a quote that was sent, whatever wrote it)."""
+    from bristlenose.server.models import AutoCodeSentQuote, ProposedTag
 
-    if not session_ids:
-        return []
-    return [
+    sent = {
         row[0]
-        for row in db.query(SessionModel.id).filter(
-            SessionModel.project_id == project_id,
-            SessionModel.session_id.in_(sorted(session_ids)),
+        for row in db.query(AutoCodeSentQuote.quote_id).filter(
+            AutoCodeSentQuote.job_id == job_id
         )
-    ]
+    }
+    sent.update(
+        row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job_id)
+    )
+    return sent
 
 
-def stamp_sessions(db: SASession, job_id: int, session_pks: Iterable[int]) -> None:
-    """Record the sessions ``job_id`` has coded. Uncommitted: the caller commits
-    them with the proposals they stand for."""
-    from bristlenose.server.models import AutoCodeSessionStamp
+def record_sent(db: SASession, job_id: int, quote_ids: Iterable[int]) -> None:
+    """Put ``quote_ids`` on ``job_id``'s register. Uncommitted: the caller commits
+    them with the proposals they stand for. A quote already on it is skipped: the
+    (job, quote) key is unique, and a duplicate would fail the commit and take
+    the proposals it travels with."""
+    from bristlenose.server.models import AutoCodeSentQuote
 
-    for pk in session_pks:
-        db.add(AutoCodeSessionStamp(job_id=job_id, session_id=pk))
+    wanted = set(quote_ids)
+    if not wanted:
+        return
+    already = {
+        row[0]
+        for row in db.query(AutoCodeSentQuote.quote_id).filter(
+            AutoCodeSentQuote.job_id == job_id
+        )
+    }
+    for quote_id in sorted(wanted - already):
+        db.add(AutoCodeSentQuote(job_id=job_id, quote_id=quote_id))
 
 
-def owed_sessions(db: SASession, job: AutoCodeJob) -> dict[str, int]:
-    """The sessions ``job`` still owes, ``{"s1": Session.id}``: a session with at
-    least one quote that counts and no stamp from this job (RE#66).
+def owed_quotes(
+    db: SASession, job: AutoCodeJob, counted: list[Any] | None = None,
+) -> list[Any]:
+    """The quotes ``job`` still owes: those that count and are not on its register
+    (RE#66, ruling 4).
 
-    This replaced the watermark (``first_imported_at > completed_at``), which a
-    partial failure moved past the sessions it never coded. A session with no
-    quotes is not owed: nothing would be sent, and a catch-up chip over it would
-    say "Re-coded" over nothing. Nor is one whose quotes are all hidden or
-    recoded out (``analysis_quotes``, the predicate the passes send by): it
-    must not be stamped as coded when nothing was sent, or unhiding a quote
-    later would find it done (N175).
+    This replaced the per-session stamp, which said a session was done whatever it
+    held. The unit is the quote: one added to a coded session (N89) and one that
+    was hidden or recoded out when the codebook ran (N175) are owed, and one the
+    model answered no tag for is not. ``analysis_quotes`` is the predicate the
+    passes send by, so a quote that does not count is never owed, and cannot be
+    marked as sent having gone nowhere. A catch-up chip over nothing would say
+    "Re-coded" over nothing, so no quotes owed means nothing to start.
+
+    ``counted`` is ``analysis_quotes`` for the project when the caller has it
+    already (it is the same list for every codebook).
     """
-    from sqlalchemy import select
-
-    from bristlenose.server.models import AutoCodeSessionStamp
-    from bristlenose.server.models import Session as SessionModel
     from bristlenose.server.speaker_slots import analysis_quotes
 
-    stamped = select(AutoCodeSessionStamp.session_id).where(
-        AutoCodeSessionStamp.job_id == job.id
-    )
-    counted_sessions = {q.session_id for q in analysis_quotes(db, job.project_id)}
-    return {
-        row[0]: row[1]
-        for row in db.query(SessionModel.session_id, SessionModel.id).filter(
-            SessionModel.project_id == job.project_id,
-            SessionModel.id.not_in(stamped),
-        )
-        if row[0] in counted_sessions
-    }
+    sent = sent_quote_ids(db, job.id)
+    quotes = counted if counted is not None else analysis_quotes(db, job.project_id)
+    return [q for q in quotes if q.id not in sent]
 
 
 def delete_jobs(db: SASession, job_ids: list[int]) -> None:
-    """Delete AutoCode jobs with their proposals and stamps (uncommitted): an
+    """Delete AutoCode jobs with their proposals and registers (uncommitted): an
     uninstall. Apply on a never-applied job keeps it (#127)."""
-    from bristlenose.server.models import AutoCodeJob, AutoCodeSessionStamp, ProposedTag
+    from bristlenose.server.models import AutoCodeJob, AutoCodeSentQuote, ProposedTag
 
     if not job_ids:
         return
-    for model in (AutoCodeSessionStamp, ProposedTag):
+    for model in (AutoCodeSentQuote, ProposedTag):
         db.query(model).filter(model.job_id.in_(job_ids)).delete(synchronize_session=False)
     db.query(AutoCodeJob).filter(AutoCodeJob.id.in_(job_ids)).delete(
         synchronize_session=False
@@ -823,7 +816,7 @@ def _clear_failure_once_owed_nothing(db: SASession, job: AutoCodeJob) -> None:
 
     from bristlenose.server.models import AutoCodeJob
 
-    if owed_sessions(db, job):
+    if owed_quotes(db, job):
         return
     db.query(AutoCodeJob).filter(
         AutoCodeJob.id == job.id,
@@ -862,7 +855,7 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
       set an applied job ``running`` and was cut off before it finished → mark
       ``failed``, unclassified, so a chip still polling a restarted serve says
       "Tagging failed." rather than "Re-coded" over nothing (#63, RE#66). It wrote
-      no stamp, so its sessions are still owed and the next run or re-enable
+      no register rows, so its quotes are still owed and the next run or re-enable
       codes them; ``completed_at`` keeps the codebook maintained, and Apply
       refuses an applied job, so ``failed`` no longer invites a re-Apply that
       would delete the original proposals. Until 22 Oct 2026 this restored
@@ -885,7 +878,7 @@ def reconcile_orphaned_jobs(db: SASession, project_id: int | None = None) -> int
     for job in query.all():
         if job.completed_at is not None:
             # Catch-up orphan: applied, but this catch-up never finished. Its
-            # sessions carry no stamp, so they are owed whatever this says.
+            # quotes are not on the register, so they are owed whatever this says.
             job.status = "failed"
             job.failure_kind = ""
             job.error_message = (
@@ -914,16 +907,17 @@ async def reapply_to_new_quotes(
     settings: BristlenoseSettings,
     track_status: bool = False,
 ) -> int:
-    """Re-apply an already-applied framework to the sessions it still owes.
+    """Re-apply an already-applied framework to the quotes it still owes.
 
-    Codes ONLY the delta — the quotes of sessions with no stamp from the
-    framework's job (``owed_sessions``) that have no proposal on it yet — and
-    auto-accepts at the researcher's stored cutoff, with no review modal.
-    Existing quotes and human tags are never touched (the accept is
-    non-clobbering). A session is stamped when every quote sent from it was in a
-    batch that answered; one in a batch that failed, or that a Stop or a switch
-    turned off never sent, stays owed for the next re-apply (RE#66). Returns the
-    number of new QuoteTags created (0 if there's nothing to do).
+    Codes ONLY the delta — the quotes that count and are not on the framework's
+    register of sent quotes (``owed_quotes``): a new session's, a quote added to
+    a coded session, one hidden or recoded out until now — and auto-accepts at
+    the researcher's stored cutoff, with no review modal. Existing quotes and
+    human tags are never touched (the accept is non-clobbering). A quote goes on
+    the register when it was in a batch that answered, whether or not the model
+    tagged it; one in a batch that failed, or that a Stop or a switch turned off
+    never sent, stays owed for the next re-apply (RE#66). Returns the number of
+    new QuoteTags created (0 if there's nothing to do).
 
     Safe no-op when the framework was never applied (no completed job) — so it
     can be fired unconditionally per linked framework after a re-run.
@@ -953,7 +947,6 @@ async def reapply_to_new_quotes(
         QuoteTag,
         TagDefinition,
     )
-    from bristlenose.server.speaker_slots import analysis_quotes
 
     db = db_factory()
     failed = False
@@ -982,40 +975,36 @@ async def reapply_to_new_quotes(
         # A cutoff stored by a build whose slider drifted (0.7000000000000001) is the
         # cutoff its label says: compare at two decimals (N188).
         threshold = round(threshold, 2)
+        # The lower line the researcher set (or the dialog's default when Apply
+        # never stored one), snapped the same way. The catch-up applies the review
+        # dialog's three bands, not two: at or above ``threshold`` is accepted,
+        # strictly below ``lower_threshold`` is denied (a denial cannot be undone in
+        # the UI), and the band between stays pending for the review, as in a first
+        # apply (#207: "the same thresholds that were in place at the last AutoCode").
+        lower_threshold = job.applied_lower_threshold
+        if lower_threshold is None:
+            lower_threshold = DEFAULT_DENY_THRESHOLD
+        lower_threshold = round(lower_threshold, 2)
 
-        # Delta = the quotes of the sessions this job still owes (RE#66). A stamp
-        # is per session and written once, so (a) a clean/full re-run of coded
-        # sessions doesn't mark them new, and (b) a quote the LLM simply didn't
-        # tag in a stamped session is never re-sent (in an owed one it is: the
-        # stamp is a cost gate, §4a). Within an owed session, a quote that
-        # already has a proposal on this job is skipped: a stopped or partial
-        # pass coded it, and a second proposal would break (job, quote).
+        # Delta = the quotes this job still owes (RE#66, ruling 4): those that
+        # count (as in the first apply, N175) and are not on its register. The
+        # register is per quote and written when a batch answers, so (a) a clean
+        # or full re-run of coded sessions doesn't mark them new, (b) a quote the
+        # LLM simply didn't tag is never re-sent, the register being the cost
+        # gate (§4a), and (c) a quote that did not count when the codebook ran, or
+        # that a re-run added to a coded session, is sent now. A quote that
+        # already has a proposal on this job is on the register too: a stopped or
+        # partial pass coded it, and a second proposal would break (job, quote).
         # ``completed_at`` is "applied at least once"; never applied, nothing to do.
         if job.completed_at is None:
             return 0
-        owed = owed_sessions(db, job)
-        if not owed:
+        new_quotes = owed_quotes(db, job)
+        if not new_quotes:
             # Nothing owed may still follow a Stop that landed on the last batch,
             # or a failed catch-up whose sessions a re-import withdrew (#61).
             if not track_status:
                 _clear_failure_once_owed_nothing(db, job)
                 db.commit()
-            return 0
-        proposed = {
-            row[0] for row in db.query(ProposedTag.quote_id).filter(ProposedTag.job_id == job_id)
-        }
-        # Quotes that count only, as in the first apply (N175).
-        new_quotes = [
-            q for q in analysis_quotes(db, project_id)
-            if q.session_id in owed and q.id not in proposed
-        ]
-        # An owed session with nothing left to send was coded already.
-        done_already = set(owed) - {q.session_id for q in new_quotes}
-        if not new_quotes:
-            stamp_sessions(db, job_id, [owed[sid] for sid in done_already])
-            if not track_status:
-                _clear_failure_once_owed_nothing(db, job)
-            db.commit()
             return 0
 
         batch_items = [
@@ -1110,7 +1099,7 @@ async def reapply_to_new_quotes(
                         (batch[a.quote_index].db_id, tag_def_id, a.confidence, a.rationale)
                     )
                 if result.assignments and not out:
-                    # Its sessions are stamped all the same: the batch answered.
+                    # Its quotes are on the register all the same: the batch answered.
                     # Said, because a tag rename the sync missed looks like this.
                     logger.warning(
                         "Re-apply %s: a batch answered %d assignments and none named "
@@ -1122,7 +1111,7 @@ async def reapply_to_new_quotes(
             *(_batch(b) for b in batches), return_exceptions=True
         )
         # Every batch failing coded nothing: a failure, through the except below.
-        # No session is stamped, so the next catch-up or run codes them. Recorded
+        # No quote is registered, so the next catch-up or run codes them. Recorded
         # as "completed", the chip said done (R12 review).
         # Uninstalled while it coded: nothing to keep, and nothing failed. Storing
         # against the deleted job hit the foreign key, which was logged as a
@@ -1141,7 +1130,7 @@ async def reapply_to_new_quotes(
                 for item in b
             })
             logger.warning(
-                "Re-apply %s: %d of %d batches failed; sessions still owed: %s",
+                "Re-apply %s: %d of %d batches failed; sessions with quotes still owed: %s",
                 framework_id, len(failures), len(results), ", ".join(missed),
             )
         if failures and len(failures) == len(results):
@@ -1163,7 +1152,7 @@ async def reapply_to_new_quotes(
         # ProposedTag unique constraint is (job_id, quote_id) — one tag per quote
         # per job — so an LLM that returns two assignments for the same quote would
         # otherwise raise IntegrityError at commit, rolling back the ENTIRE re-apply
-        # including its stamps. The same sessions would then be re-selected and
+        # including its register rows. The same quotes would then be re-selected and
         # re-fail on every subsequent run, forever, silently. Deduping here keeps
         # the collision from ever forming.
         best_by_quote: dict[int, tuple[int, int, float, str]] = {}
@@ -1179,7 +1168,15 @@ async def reapply_to_new_quotes(
                     best_by_quote[quote_id] = (quote_id, tag_def_id, confidence, rationale)
 
         for quote_id, tag_def_id, confidence, rationale in best_by_quote.values():
-            is_accept = confidence >= threshold
+            # The dialog's inequalities exactly (ThresholdReviewModal.tsx and the
+            # accept-all / deny-all routes): ``>= upper`` accepts, ``< lower`` denies.
+            if confidence >= threshold:
+                status, reviewed_at = "accepted", now
+            elif confidence < lower_threshold:
+                status, reviewed_at = "denied", now
+            else:
+                status, reviewed_at = "pending", None
+            is_accept = status == "accepted"
             # Record the proposal on the existing job — audit trail, and it
             # marks the quote as "seen" so a later re-apply won't re-code it.
             db.add(
@@ -1189,8 +1186,8 @@ async def reapply_to_new_quotes(
                     tag_definition_id=tag_def_id,
                     confidence=confidence,
                     rationale=rationale,
-                    status="accepted" if is_accept else "denied",
-                    reviewed_at=now,
+                    status=status,
+                    reviewed_at=reviewed_at,
                 )
             )
             new_proposed += 1
@@ -1212,10 +1209,9 @@ async def reapply_to_new_quotes(
                     )
                     accepted += 1
 
-        # The sessions this pass coded, with the proposals they stand for; the
-        # rest stay owed (RE#66).
-        coded = done_already | _sessions_answered(batches, list(results))
-        stamp_sessions(db, job_id, [owed[sid] for sid in sorted(coded)])
+        # The quotes this pass sent, with the proposals they stand for; the rest
+        # stay owed (RE#66).
+        record_sent(db, job_id, _answered_quote_ids(batches, list(results)))
 
         # Sent, not selected: a Stop or a switch-off leaves batches unsent, and
         # counting them over-reported the denominator.
@@ -1244,7 +1240,7 @@ async def reapply_to_new_quotes(
             # over (an ORM assignment reloaded the job and replaced it).
             finish = finish.filter(AutoCodeJob.status != "cancelled")
         if finish.update(values, synchronize_session=False) == 0:
-            # Stopped (#60): what answered is kept, with its stamps, and the job
+            # Stopped (#60): what answered is kept, with its register rows, and the job
             # stays cancelled. What the Stop never sent stays owed, so the next
             # catch-up or run codes it. Until 22 Oct 2026 a Stop kept nothing,
             # and the batches already paid for were sent again.
@@ -1260,12 +1256,14 @@ async def reapply_to_new_quotes(
             _clear_failure_once_owed_nothing(db, job)
         db.commit()
         logger.info(
-            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
+            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f "
+            "(denied below %.2f, pending between)",
             framework_id,
             len(batch_items),
             new_proposed,
             accepted,
             threshold,
+            lower_threshold,
         )
         return accepted
 

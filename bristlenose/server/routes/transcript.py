@@ -7,12 +7,14 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots, transcript_layout
+from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.journey import derive_journeys
@@ -468,6 +470,8 @@ class ReassignBody(BaseModel):
 
 class LayoutEditResult(BaseModel):
     id: int
+    #: The codebooks that will code a quote this edit returned to the evidence.
+    catchUp: list[dict[str, str]] = []  # noqa: N815 — the wire name the page reads
 
 
 def _layout_session(db: Session, project_id: int, session_id: str) -> SessionModel:
@@ -557,6 +561,7 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
         ))
         if creates:
             _reserve_code(db, project_id, session_id, slot)
+        result.catchUp = note_quotes_counting(request.app, project_id)  # moved back: counts again
         return result
     finally:
         db.close()
@@ -613,7 +618,7 @@ def _reserve_code(db: Session, project_id: int, session_id: str, code: str) -> N
 
 @router.delete("/projects/{project_id}/transcripts/{session_id}/layout-edits/{edit_id}")
 def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
-                     request: Request) -> dict[str, str]:
+                     request: Request) -> dict[str, Any]:
     """Take a split, join or reassignment back: forget it, then rebuild the session's
     paragraphs from the transcript and make the edits that remain."""
     from bristlenose.server.importer import rebuild_session_paragraphs
@@ -623,7 +628,8 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         edit = db.query(TranscriptLayoutEdit).filter_by(id=edit_id, session_id=sess.id).first()
         if edit is None:
             raise HTTPException(status_code=404, detail="Edit not found")
-        made = edit.speaker_code if edit.kind == "speaker" and edit.token == 1 else None
+        was_a_move = edit.kind == "speaker"
+        made = edit.speaker_code if was_a_move and edit.token == 1 else None
         db.delete(edit)
         db.flush()
         project = db.get(Project, project_id)
@@ -632,6 +638,10 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         if made is not None:
             _drop_unused_slot(db, sess, made)
         db.commit()
+        if was_a_move:  # the move is undone: its quotes count again
+            catch_up = note_quotes_counting(request.app, project_id)
+            if catch_up:
+                return {"status": "ok", "catchUp": catch_up}
         return {"status": "ok"}
     finally:
         db.close()

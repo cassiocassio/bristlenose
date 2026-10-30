@@ -1273,7 +1273,7 @@ class TestReapplyToNewQuotes:
         self._apply_original(project_id, framework_id, db_factory, threshold=0.7)
         self._add_quotes(db_factory, project_id, 2)
 
-        # LLM tags the new quotes at 0.5 — below the 0.7 cutoff → denied.
+        # LLM tags the new quotes at 0.5 — below the 0.7 cutoff → not tagged.
         with _patch_llm(
             AsyncMock(return_value=_make_batch_result(2, "user need", 0.5))
         ):
@@ -1317,10 +1317,11 @@ class TestReapplyToNewQuotes:
         finally:
             db.close()
 
-    def test_drifted_stored_cutoff_still_denies_below_it(
+    def test_drifted_stored_cutoff_still_withholds_below_it(
         self, project_with_garrett
     ) -> None:
-        """The tolerance is for float drift only: 0.65 stays under a 0.70 cutoff."""
+        """The tolerance is for float drift only: 0.65 stays under a 0.70 cutoff
+        (tentative, so pending: it is not tagged)."""
         project_id, framework_id, db_factory = project_with_garrett
         self._apply_original(
             project_id, framework_id, db_factory, threshold=0.7000000000000001
@@ -1337,6 +1338,137 @@ class TestReapplyToNewQuotes:
             )
 
         assert accepted == 0
+
+    # -- the three bands (ruling 4, #207: "the same thresholds") ---------------
+    #
+    # The review dialog accepts at or above the upper line, denies BELOW the lower
+    # line and leaves the band between pending for a later look; a denial cannot be
+    # undone in the UI. The catch-up applies the same three bands.
+
+    def _catch_up_bands(
+        self, project_with_garrett, confidences, *, upper=0.7, lower=None,
+        track_status=False,
+    ) -> list[str]:
+        """Apply once with the stored lines, add one late quote per confidence, run
+        the catch-up, and return each late quote's proposal status in order."""
+        project_id, framework_id, db_factory = project_with_garrett
+        self._apply_original(project_id, framework_id, db_factory, threshold=upper)
+        if lower is not None:
+            db = db_factory()
+            try:
+                job = db.query(AutoCodeJob).filter_by(
+                    project_id=project_id, framework_id=framework_id
+                ).one()
+                job.applied_lower_threshold = lower
+                db.commit()
+            finally:
+                db.close()
+        self._add_quotes(db_factory, project_id, len(confidences))
+        result = AutoCodeBatchResult(assignments=[
+            AutoCodeTagAssignment(
+                quote_index=i, tag_name="user need", confidence=c, rationale="r"
+            )
+            for i, c in enumerate(confidences)
+        ])
+        with _patch_llm(AsyncMock(return_value=result)):
+            asyncio.run(reapply_to_new_quotes(
+                db_factory, project_id, framework_id, _mock_settings(),
+                track_status=track_status,
+            ))
+        db = db_factory()
+        try:
+            rows = (
+                db.query(ProposedTag.status, ProposedTag.reviewed_at)
+                .join(Quote, Quote.id == ProposedTag.quote_id)
+                .filter(Quote.session_id == "s2")
+                .order_by(Quote.id)
+                .all()
+            )
+            self._last_rows = rows
+            self._tags = db.query(QuoteTag).count()
+            return [r[0] for r in rows]
+        finally:
+            db.close()
+
+    def test_a_late_quote_lands_in_the_band_its_confidence_names(
+        self, project_with_garrett
+    ) -> None:
+        """Upper 0.70, lower 0.30: 0.90 accepted, 0.50 pending, 0.20 denied."""
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.90, 0.50, 0.20], upper=0.7, lower=0.3
+        )
+        assert statuses == ["accepted", "pending", "denied"]
+        # Only the accepted one is tagged; the pending one waits for the review,
+        # undated, as in a first apply.
+        assert self._tags == 1
+        assert [r[1] is not None for r in self._last_rows] == [True, False, True]
+
+    @pytest.mark.parametrize("track_status", [False, True], ids=["post-run", "gesture"])
+    def test_the_post_run_pass_and_the_gesture_pass_apply_the_same_bands(
+        self, project_with_garrett, track_status
+    ) -> None:
+        """``track_status`` is the gesture's pass (it owns the chip); False is the
+        run's own re-apply. Same function, same answer."""
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.90, 0.70, 0.50, 0.30, 0.29], lower=0.3,
+            track_status=track_status,
+        )
+        assert statuses == ["accepted", "accepted", "pending", "pending", "denied"]
+
+    def test_an_old_job_with_no_stored_lower_uses_the_dialogs_default_lower(
+        self, project_with_garrett
+    ) -> None:
+        """No ``applied_lower_threshold`` (Apply was never pressed, or an old build
+        stored none): the dialog's own 0.30 draws the lower line."""
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.65, 0.31, 0.29, 0.10], upper=0.7, lower=None
+        )
+        assert statuses == ["pending", "pending", "denied", "denied"]
+
+    def test_a_stored_lower_other_than_the_default_is_the_one_used(
+        self, project_with_garrett
+    ) -> None:
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.45, 0.35], upper=0.8, lower=0.4
+        )
+        assert statuses == ["pending", "denied"]
+
+    def test_a_quote_exactly_on_a_line_follows_the_dialogs_inequality(
+        self, project_with_garrett
+    ) -> None:
+        """The dialog and the bulk routes accept at ``>= upper`` and deny at
+        ``< lower``: a quote exactly on the lower line is tentative, not denied."""
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.70, 0.30], upper=0.7, lower=0.3
+        )
+        assert statuses == ["accepted", "pending"]
+
+    def test_drifted_stored_lines_are_compared_at_two_decimals(
+        self, project_with_garrett
+    ) -> None:
+        """N188 for the lower line too: a stored 0.30000000000000004 is 0.30."""
+        statuses = self._catch_up_bands(
+            project_with_garrett, [0.30, 0.29],
+            upper=0.7000000000000001, lower=0.30000000000000004,
+        )
+        assert statuses == ["pending", "denied"]
+
+    def test_a_pending_catch_up_proposal_is_never_applied_by_itself(
+        self, project_with_garrett
+    ) -> None:
+        """Pending is the review's: the job counts it as proposed and tags nothing."""
+        project_id, framework_id, db_factory = project_with_garrett
+        statuses = self._catch_up_bands(project_with_garrett, [0.5], lower=0.3)
+        assert statuses == ["pending"]
+        assert self._tags == 0
+        db = db_factory()
+        try:
+            job = db.query(AutoCodeJob).filter_by(
+                project_id=project_id, framework_id=framework_id
+            ).one()
+            assert job.proposed_count == 10 + 1
+        finally:
+            db.close()
 
     def test_no_new_quotes_is_noop(self, project_with_garrett) -> None:
         project_id, framework_id, db_factory = project_with_garrett

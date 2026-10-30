@@ -36,7 +36,7 @@ import {
 } from "../utils/signalDedup";
 import { reportHref } from "../utils/reportHref";
 import { markArrived } from "../utils/arrival";
-import { chipWords } from "../utils/signalChip";
+import { chipWords, signalAccent } from "../utils/signalChip";
 import { followInApp, quotesHref, quotesPath } from "../utils/quotesLink";
 import { getBarColour, getGroupBg, getTagBg } from "../utils/colours";
 import { detectSequences, type SequenceMeta } from "../utils/sequences";
@@ -500,11 +500,7 @@ function SignalCard({
     : signal.colourSet
       ? getGroupBg(signal.colourSet)
       : "var(--bn-colour-accent)";
-  const selectionAccent = isSentiment
-    ? accentVar
-    : signal.colourSet
-      ? getBarColour(signal.colourSet)
-      : "var(--bn-colour-accent)";
+  const selectionAccent = signalAccent(signal, isSentiment);
 
   const concPct = Math.min(100, Math.max(0, (signal.concentration / 5) * 100));
   const agreePct = signal.nEff > 0 && allPids.length > 0
@@ -577,8 +573,9 @@ function SignalCard({
       style={{
         "--bn-signal-accent": selectionAccent,
         "--bn-signal-accent-wash": `color-mix(in srgb, ${selectionAccent} 10%, var(--bn-colour-bg))`,
-        "--bn-signal-accent-keyline": `color-mix(in srgb, ${selectionAccent} 40%, var(--bn-colour-bg))`,
-        "--bn-signal-accent-ink": `color-mix(in srgb, ${selectionAccent} 72%, var(--bn-colour-text))`,
+        // The keyline round the selected card is the signal ink (derived in signals.css), the
+        // same colour as the chip's words and the highlighted reason.
+        "--bn-signal-accent-keyline": "var(--bn-signal-accent-ink)",
         "--bn-signal-accent-highlight": `color-mix(in srgb, ${selectionAccent} 18%, var(--bn-colour-bg))`,
         "--card-accent": selectionAccent,
         "--signal-card-selected-bg": "var(--bn-signal-accent-wash)",

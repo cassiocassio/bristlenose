@@ -8,6 +8,7 @@
  * ways (owner, 30 Oct 2026).
  */
 import type { TFunction } from "i18next";
+import { getBarColour } from "./colours";
 import type { UnifiedSignal } from "./types";
 
 const SUMMARY_KEYS: Record<string, { long: string; short?: string }> = {
@@ -46,4 +47,13 @@ export function chipWords(
       ? tc(short && summary.short ? summary.short : summary.long, { defaultValue: raw })
       : raw;
   return { raw, label, isValue };
+}
+
+/**
+ * The hue a signal carries: the colour the card's keyline, hover tint and ink are all derived
+ * from (`signals.css`), and the one the navigation's mini tag takes so the two match.
+ */
+export function signalAccent(signal: UnifiedSignal, isSentiment: boolean): string {
+  if (isSentiment) return `var(--bn-sentiment-${signal.columnLabel})`;
+  return signal.colourSet ? getBarColour(signal.colourSet) : "var(--bn-colour-accent)";
 }

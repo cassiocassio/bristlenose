@@ -53,7 +53,42 @@
 /* A shadow is a detached-object affordance. On a fused card it draws into the
    seam and reads as a rendering fault, so hover is a tint. */
 .signal-card:hover {
-    background: var(--bn-colour-hover);
+    background: var(--bn-signal-accent-hover, var(--bn-colour-hover));
+}
+
+/* ONE signal ink, and the hover tint, derived from the signal's own hue (`--bn-signal-accent`,
+   set on the card by SignalCard and on a navigation row by SignalEntry), so the chip's words,
+   the selected card's keyline, the highlighted reason in an evidence bullet and the navigation's
+   mini tag are one colour and the eye joins them (owner, 30 Oct 2026).
+
+   The fallback is the old mix of the hue into the text colour. Where relative colour syntax
+   exists, the ink is the hue pulled to a fixed lightness with its chroma lifted 1.8x (capped at
+   0.2): dark and strong on a light page, light and strong on a dark one. Lightness 0.42 / 0.82
+   was measured (30 Oct 2026) against every codebook and sentiment hue on the card, the pale
+   highlight and the sidebar, light and dark: the worst contrast is 5.5:1 / 6.3:1, so AA holds
+   with room to spare. Hover is the hue at the shipped hover densities (--bn-hover-bg is 4% on a
+   light page, 6% on a dark one), below the selected wash (10%). */
+.signal-card,
+.signal-entry {
+    --bn-signal-accent-ink: color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 72%, var(--bn-colour-text));
+    --bn-signal-accent-hover: light-dark(
+        color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 4%, var(--bn-colour-bg)),
+        color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 6%, var(--bn-colour-bg))
+    );
+}
+
+@supports (color: oklch(from red l c h)) {
+    .signal-card,
+    .signal-entry {
+        --bn-signal-accent-ink: light-dark(
+            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.42 min(calc(c * 1.8), 0.2) h),
+            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.82 min(calc(c * 1.8), 0.2) h)
+        );
+    }
+}
+
+.signal-card .signal-card-hero {
+    color: var(--bn-signal-accent-ink, inherit);
 }
 
 /* Selected signal card — a restrained tint derived from the signal's group or
@@ -66,10 +101,6 @@
 /* One card-local analytical hue connects the selected keyline to the card's
    classification and its attributable evidence. The values are assigned once
    by SignalCard; individual descendants must not pick their own palette. */
-.signal-card.bn-selected .signal-card-hero {
-    color: var(--bn-signal-accent-ink, inherit);
-}
-
 .signal-card.bn-selected .signal-card-hero:hover {
     border-color: var(--bn-signal-accent-keyline, var(--bn-colour-border-hover));
 }

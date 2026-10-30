@@ -25,7 +25,7 @@ import {
   setFocusedSignalKey,
 } from "../contexts/SignalStore";
 import { getGroupBg } from "../utils/colours";
-import { chipWords } from "../utils/signalChip";
+import { chipWords, signalAccent } from "../utils/signalChip";
 import { groupSignalsByLocation, isFromSentimentLens } from "../utils/signalDedup";
 import type { UnifiedSignal } from "../utils/types";
 
@@ -96,6 +96,8 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
     // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a
       className={`signal-entry${active ? " active" : ""}`}
+      // The same hue as the card: the tag's words take the card's signal ink.
+      style={{ "--bn-signal-accent": signalAccent(signal, isFromSentimentLens(signal)) } as React.CSSProperties}
       role="button"
       tabIndex={0}
       onClick={(e) => {

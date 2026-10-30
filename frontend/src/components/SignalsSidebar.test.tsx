@@ -168,6 +168,24 @@ describe("SignalsSidebar", () => {
       expect(tagOf()).toBe("Mixed");
     });
 
+    it("carries the card's hue, so the tag's ink matches the chip's", () => {
+      setSignals([
+        makeSignal({
+          key: "a", columnLabel: "Needs and desires", codebookName: "Norman", colourSet: "emo",
+          label: "Needs and desires", labelKind: "group",
+        }),
+        makeSignal({
+          key: "b", location: "Other", columnLabel: "Sentiment", codebookName: "Sentiment",
+          label: "frustration", labelKind: "value",
+        }),
+      ]);
+      render(<SignalsSidebar />);
+      const [codebook, sentiment] = [...document.querySelectorAll<HTMLElement>(".signal-entry")];
+      expect(codebook.style.getPropertyValue("--bn-signal-accent")).toBe("var(--bn-bar-emo)");
+      // A sentiment card that is not the fallback lens takes its colour set's bar, as the card does.
+      expect(sentiment.style.getPropertyValue("--bn-signal-accent")).toBeTruthy();
+    });
+
     it("keeps a codebook card's group name", () => {
       setSignals([
         makeSignal({

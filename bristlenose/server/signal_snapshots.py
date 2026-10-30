@@ -14,7 +14,9 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from bristlenose.server.models import SignalSnapshot
+from bristlenose.server.elaboration import compute_quote_reference
+from bristlenose.server.models import Quote, SignalSnapshot
+from bristlenose.signals.generic_detect import QuoteRecord
 
 logger = logging.getLogger(__name__)
 
@@ -84,3 +86,31 @@ def snapshot_payload(snapshot: SignalSnapshot) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"Signal snapshot {snapshot.id} payload is not an object")
     return payload
+
+
+def signal_quote_record(quote: Quote, tag_names: list[str] | None = None) -> QuoteRecord:
+    """The record the Signals route builds from a database quote.
+
+    This is the single place it is built, so the reference stored in every
+    snapshot (``quote_id``, an assertion's ``source_quote_id``) and the one
+    derived from a row later cannot drift apart. The shape is deliberate and
+    frozen in snapshot payload v4: no segment index and no ordinal, so those
+    are the dataclass defaults (-1 and 0) whatever the row holds. The chat
+    lens and MCP build theirs with the row's real values
+    (``grounding.py``); the two are not unified, because that would change
+    every stored reference and every elaboration cache key.
+    """
+    return QuoteRecord(
+        text=quote.text,
+        participant_id=quote.participant_id,
+        session_id=quote.session_id,
+        start_seconds=quote.start_timecode,
+        intensity=quote.intensity,
+        tag_names=tag_names if tag_names is not None else [],
+    )
+
+
+def quote_reference_for_row(quote: Quote) -> str:
+    """The reference a snapshot holds for this database quote (payload v4 shape)."""
+    return compute_quote_reference(signal_quote_record(quote))
+

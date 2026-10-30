@@ -46,6 +46,7 @@ from bristlenose.server.active_codebooks import active_project_groups
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.signal_snapshots import (
     latest_completed_snapshot,
+    signal_quote_record,
     snapshot_payload,
     store_completed_snapshot,
 )
@@ -885,14 +886,7 @@ def _compute_group_analysis(
 
         for gname, weight in group_weights.items():
             tag_names_for_quote = quote_tag_names.get(qid, {}).get(gname, [])
-            qr = QuoteRecord(
-                text=q.text,
-                participant_id=q.participant_id,
-                session_id=q.session_id,
-                start_seconds=q.start_timecode,
-                intensity=q.intensity,
-                tag_names=tag_names_for_quote,
-            )
+            qr = signal_quote_record(q, tag_names_for_quote)
 
             if section_label:
                 section_contributions.append(

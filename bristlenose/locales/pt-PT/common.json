@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Feito com Bristlenose",
-    "reportIssue": "Comunicar um problema",
     "giveFeedback": "Enviar comentários",
     "version": "{{version}}",
     "reportBug": "Comunicar um erro",
@@ -426,8 +425,8 @@
     "sent": "Comentários enviados – obrigado!",
     "copiedToClipboard": "Copiado para a área de transferência – cole num e-mail ou issue.",
     "copyFailed": "Não foi possível copiar — envie os comentários manualmente.",
-    "sendFailed": "Não foi possível enviar os seus comentários. Foram copiados para a área de transferência: cole-os numa nova issue no GitHub.",
-    "sendFailedNotCopied": "Não foi possível enviar os seus comentários nem copiá-los para a área de transferência. Copie a mensagem para uma nova issue no GitHub."
+    "sendFailed": "Não foi possível enviar os seus comentários. Foram copiados para a área de transferência. Tente novamente mais tarde.",
+    "sendFailedNotCopied": "Não foi possível enviar os seus comentários nem copiá-los para a área de transferência. Tente novamente mais tarde."
   },
 
   "signals": {

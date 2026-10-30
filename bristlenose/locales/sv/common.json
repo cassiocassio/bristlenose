@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Byggt med Bristlenose",
-    "reportIssue": "Rapportera ett problem",
     "giveFeedback": "Lämna feedback",
     "version": "{{version}}",
     "reportBug": "Rapportera ett fel",
@@ -426,8 +425,8 @@
     "sent": "Feedback skickad – tack!",
     "copiedToClipboard": "Kopierat till urklipp – klistra in i ett mejl eller ärende.",
     "copyFailed": "Kunde inte kopiera — skicka feedback manuellt.",
-    "sendFailed": "Din feedback kunde inte skickas. Den är kopierad till urklipp: klistra in den i ett nytt ärende på GitHub.",
-    "sendFailedNotCopied": "Din feedback kunde varken skickas eller kopieras till urklipp. Kopiera ditt meddelande till ett nytt ärende på GitHub."
+    "sendFailed": "Din feedback kunde inte skickas. Den är kopierad till urklipp. Försök igen senare.",
+    "sendFailedNotCopied": "Din feedback kunde varken skickas eller kopieras till urklipp. Försök igen senare."
   },
 
   "signals": {

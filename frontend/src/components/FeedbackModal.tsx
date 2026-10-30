@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Dialog } from "./Dialog";
 import { PanelErrorBoundary } from "./PanelErrorBoundary";
 import { toast } from "../utils/toast";
-import { DEFAULT_GITHUB_ISSUES_URL, type HealthResponse } from "../utils/health";
+import type { HealthResponse } from "../utils/health";
 
 /**
  * Which journey brought the person to the form (`docs/design-feedback-native.md`
@@ -301,14 +301,7 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
               </div>
               {failure && (
                 <p className="bn-export-error" role="alert">
-                  {t(failure)}{" "}
-                  <a
-                    href={health.links.github_issues_url || DEFAULT_GITHUB_ISSUES_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {t("footer.reportIssue")}
-                  </a>
+                  {t(failure)}
                 </p>
               )}
               <p className="bn-modal-footer">

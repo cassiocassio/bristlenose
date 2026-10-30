@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Créé avec Bristlenose",
-    "reportIssue": "Signaler un problème",
     "giveFeedback": "Donner votre avis",
     "version": "{{version}}",
     "reportBug": "Signaler un bug",
@@ -426,8 +425,8 @@
     "sent": "Commentaires envoyés – merci !",
     "copiedToClipboard": "Copié dans le presse-papiers – collez dans un e-mail ou une issue.",
     "copyFailed": "Impossible de copier — veuillez envoyer vos commentaires manuellement.",
-    "sendFailed": "Impossible d’envoyer vos commentaires. Ils sont copiés dans le presse-papiers : collez-les dans une nouvelle issue sur GitHub.",
-    "sendFailedNotCopied": "Impossible d’envoyer vos commentaires ou de les copier dans le presse-papiers. Copiez votre message dans une nouvelle issue sur GitHub."
+    "sendFailed": "Impossible d’envoyer vos commentaires. Ils sont copiés dans le presse-papiers. Réessayez plus tard.",
+    "sendFailedNotCopied": "Impossible d’envoyer vos commentaires ou de les copier dans le presse-papiers. Réessayez plus tard."
   },
 
   "signals": {

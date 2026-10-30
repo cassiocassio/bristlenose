@@ -1039,7 +1039,6 @@ class TestFeedbackFormExecutes:
                 details=None, outcome="failed",
             ),
             feedback_url="https://example.com/feedback",
-            github_issues_url="https://example.com/issues/new",
         )
         scripts = [
             s for s in re.findall(r"<script>(.*?)</script>", html, re.S)
@@ -1085,16 +1084,16 @@ class TestFeedbackFormExecutes:
         assert o["lineShown"] is False
         assert o["copied"] == 0
 
-    def test_the_line_names_where_to_paste(self) -> None:
+    def test_the_line_points_nowhere(self) -> None:
+        """Ruling 6: the form says anonymous; a public issue link is not that."""
         html = render_page(
             StatusInfo(kind=MessageKind.ERROR, short="x", long=None,
                        details=None, outcome="failed"),
-            github_issues_url="https://example.com/issues/new",
         )
         line = re.search(r'<p class="bn-export-error" id="bn-fb-error".*?</p>', html, re.S)
         assert line is not None
-        assert 'href="https://example.com/issues/new"' in line.group(0)
-        assert t("common.footer.reportIssue") in line.group(0)
+        assert "<a " not in line.group(0)
+        assert "github" not in line.group(0).lower()
 
 
 # ---------------------------------------------------------------------------

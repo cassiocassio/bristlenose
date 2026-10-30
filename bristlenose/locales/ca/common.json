@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Fet amb el Bristlenose",
-    "reportIssue": "Informa d'un problema",
     "giveFeedback": "Envia comentaris",
     "version": "{{version}}",
     "reportBug": "Informa d'un error",
@@ -426,8 +425,8 @@
     "sent": "Comentaris enviats. Gràcies!",
     "copiedToClipboard": "S'ha copiat al porta-retalls: enganxa-ho en un correu o en una incidència.",
     "copyFailed": "No s'ha pogut copiar — envia els comentaris manualment.",
-    "sendFailed": "No s'han pogut enviar els comentaris. S'han copiat al porta-retalls: enganxa'ls en una incidència nova a GitHub.",
-    "sendFailedNotCopied": "No s'han pogut enviar els comentaris ni copiar-los al porta-retalls. Copia el missatge en una incidència nova a GitHub."
+    "sendFailed": "No s’han pogut enviar els comentaris. S’han copiat al porta-retalls. Torna-ho a provar més tard.",
+    "sendFailedNotCopied": "No s’han pogut enviar els comentaris ni copiar-los al porta-retalls. Torna-ho a provar més tard."
   },
 
   "signals": {

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { FeedbackModal } from "./FeedbackModal";
 import type { HealthResponse } from "../utils/health";
 import { toast } from "../utils/toast";
@@ -211,16 +211,16 @@ describe("FeedbackModal", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    // R80: the form says the send failed and where to paste the copy, and
-    // keeps the text; it does not close behind a "Copied to clipboard" toast.
+    // Ruling 6: the form says the send failed and that the copy is on the
+    // clipboard, points nowhere (the form says anonymous; a public issue is not),
+    // and keeps the text; it does not close behind a "Copied to clipboard" toast.
     const alert = await screen.findByRole("alert");
     expect(writeText).toHaveBeenCalledOnce();
     expect(alert.textContent).toContain(
-      "Couldn’t send your feedback. It’s copied to the clipboard: paste it into a new issue on GitHub.",
+      "Couldn’t send your feedback. It’s copied to the clipboard. Try again later.",
     );
-    const link = screen.getByRole("link", { name: "Report an issue" });
-    expect(link.getAttribute("href")).toBe("https://example.com/issues/new");
-    expect(link.getAttribute("target")).toBe("_blank");
+    expect(alert.textContent).not.toContain("GitHub");
+    expect(within(alert).queryByRole("link")).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
     expect(vi.mocked(toast)).not.toHaveBeenCalled();
     expect((screen.getByLabelText("Help us improve") as HTMLTextAreaElement).value).toBe(
@@ -282,8 +282,10 @@ describe("FeedbackModal", () => {
 
       const alert = await screen.findByRole("alert");
       expect(alert.textContent).toContain(
-        "Couldn’t send your feedback or copy it to the clipboard.",
+        "Couldn’t send your feedback or copy it to the clipboard. Try again later.",
       );
+      expect(alert.textContent).not.toContain("GitHub");
+      expect(within(alert).queryByRole("link")).toBeNull();
       expect(vi.mocked(toast)).not.toHaveBeenCalled();
       expect(fetchSpy).toHaveBeenCalledOnce();
       expect(onClose).not.toHaveBeenCalled();

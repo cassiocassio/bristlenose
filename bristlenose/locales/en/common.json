@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Built with Bristlenose",
-    "reportIssue": "Report an issue",
     "giveFeedback": "Give feedback",
     "version": "{{version}}",
     "reportBug": "Report a bug",
@@ -428,8 +427,8 @@
     "sent": "Feedback sent — thank you!",
     "copiedToClipboard": "Copied to clipboard — paste into an email or issue.",
     "copyFailed": "Could not copy — please submit feedback manually.",
-    "sendFailed": "Couldn’t send your feedback. It’s copied to the clipboard: paste it into a new issue on GitHub.",
-    "sendFailedNotCopied": "Couldn’t send your feedback or copy it to the clipboard. Copy your message into a new issue on GitHub."
+    "sendFailed": "Couldn’t send your feedback. It’s copied to the clipboard. Try again later.",
+    "sendFailedNotCopied": "Couldn’t send your feedback or copy it to the clipboard. Try again later."
   },
 
   "signals": {

@@ -509,17 +509,16 @@ _FEEDBACK_SUBMISSION_SWIFT = (
 class TestFeedbackURLContract:
     """`FeedbackEndpoint` mirrors the defaults in `routes/health.py`.
 
-    The sheet POSTs to `defaultURL` when it has no serve, and a failed send
-    tells the researcher to paste into `issuesURL` (R80). Neither reads
-    `/api/health` for these, so a change on one side alone would send
-    feedback, or the researcher, somewhere else with nothing to say so.
+    The sheet POSTs to `defaultURL` when it has no serve and does not read
+    `/api/health` for it, so a change on one side alone would send feedback
+    somewhere else with nothing to say so. (A failed send used to also link to a
+    public `issuesURL`; ruling 6 removed it, since the form says anonymous.)
     """
 
     @pytest.mark.parametrize(
         ("swift_name", "python_name"),
         [
             ("defaultURL", "DEFAULT_FEEDBACK_URL"),
-            ("issuesURL", "DEFAULT_GITHUB_ISSUES_URL"),
         ],
     )
     def test_swift_constant_equals_python_default(

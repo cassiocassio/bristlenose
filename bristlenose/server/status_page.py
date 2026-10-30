@@ -515,9 +515,9 @@ _FEEDBACK_SENTIMENTS = [
 # {"ok": true}); anything else falls back to the clipboard. Config (endpoint
 # URL, version, localised strings) arrives via window.__BN_FB__.
 # While the POST is out, Send is disabled and reads "Sending…". A send that
-# fails keeps the form and its text open and says so in it, with where to
-# paste the copy (the GitHub issues link), like the React modal and the Mac
-# sheet (R80). Closing the form drops a send still out (`gen`), so it never
+# fails keeps the form and its text open and says so in it, pointing nowhere
+# (the form says anonymous, and the only place was a public issue), like the
+# React modal and the Mac sheet (R80, ruling 6). Closing the form drops a send still out (`gen`), so it never
 # writes the clipboard or shows a line after the person has gone.
 _FEEDBACK_SCRIPT = """<script>
 (function () {
@@ -655,7 +655,7 @@ _FEEDBACK_SCRIPT = """<script>
 
 
 def _build_feedback_html(
-    feedback_url: str, feedback_enabled: bool, version: str, github_issues_url: str
+    feedback_url: str, feedback_enabled: bool, version: str
 ) -> tuple[str, str]:
     """Build the (footer trigger, hidden overlay + script) HTML for feedback.
 
@@ -709,12 +709,9 @@ def _build_feedback_html(
         f'{html.escape(t("common.feedback.send"))}</button>'
         "</div>"
         # The failure line (R80): filled and shown by the script on a failed
-        # send, with the place to paste the copy.
+        # send. It points nowhere (ruling 6).
         '<p class="bn-export-error" id="bn-fb-error" role="alert" hidden>'
-        '<span id="bn-fb-error-text"></span> '
-        f'<a href="{html.escape(github_issues_url, quote=True)}" target="_blank" '
-        'rel="noopener noreferrer">'
-        f'{html.escape(t("common.footer.reportIssue"))}</a></p>'
+        '<span id="bn-fb-error-text"></span></p>'
         f'<p class="bn-modal-footer">{html.escape(t("common.feedback.anonymous"))}</p>'
         "</div></div>"
         f"<script>window.__BN_FB__ = {config};</script>"
@@ -728,7 +725,6 @@ def render_page(
     *,
     feedback_url: str = "https://bristlenose.app/feedback.php",
     feedback_enabled: bool = True,
-    github_issues_url: str = "https://github.com/cassiocassio/bristlenose/issues/new",
     help_url: str = "https://bristlenose.app/docs/",
     version: str = "",
     html_root_attrs: str = "",
@@ -750,7 +746,7 @@ def render_page(
             '</details>'
         )
     feedback_trigger, feedback_overlay = _build_feedback_html(
-        feedback_url, feedback_enabled and status.footer, version, github_issues_url
+        feedback_url, feedback_enabled and status.footer, version
     )
     footer_block = ""
     if status.footer:

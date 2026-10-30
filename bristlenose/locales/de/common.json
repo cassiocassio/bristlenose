@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Erstellt mit Bristlenose",
-    "reportIssue": "Problem melden",
     "giveFeedback": "Feedback geben",
     "version": "{{version}}",
     "reportBug": "Fehler melden",
@@ -426,8 +425,8 @@
     "sent": "Feedback gesendet – vielen Dank!",
     "copiedToClipboard": "In die Zwischenablage kopiert – in eine E-Mail oder ein Issue einfügen.",
     "copyFailed": "Kopieren nicht möglich — bitte Feedback manuell einreichen.",
-    "sendFailed": "Ihr Feedback konnte nicht gesendet werden. Es liegt in der Zwischenablage: Fügen Sie es in ein neues Issue auf GitHub ein.",
-    "sendFailedNotCopied": "Ihr Feedback konnte weder gesendet noch in die Zwischenablage kopiert werden. Kopieren Sie Ihre Nachricht in ein neues Issue auf GitHub."
+    "sendFailed": "Ihr Feedback konnte nicht gesendet werden. Es liegt in der Zwischenablage. Versuchen Sie es später erneut.",
+    "sendFailedNotCopied": "Ihr Feedback konnte weder gesendet noch in die Zwischenablage kopiert werden. Versuchen Sie es später erneut."
   },
 
   "signals": {

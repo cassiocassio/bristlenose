@@ -265,7 +265,6 @@
   },
   "footer": {
     "builtWith": "Vytvořeno pomocí Bristlenose",
-    "reportIssue": "Nahlásit problém",
     "giveFeedback": "Poskytnout zpětnou vazbu",
     "version": "{{version}}",
     "reportBug": "Nahlásit chybu",
@@ -469,8 +468,8 @@
     "sent": "Zpětná vazba odeslána – děkujeme!",
     "copiedToClipboard": "Zkopírováno do schránky – vložte do e-mailu nebo hlášení.",
     "copyFailed": "Nepodařilo se zkopírovat — odešlete zpětnou vazbu ručně.",
-    "sendFailed": "Zpětnou vazbu se nepodařilo odeslat. Je zkopírovaná ve schránce: vložte ji do nového hlášení na GitHubu.",
-    "sendFailedNotCopied": "Zpětnou vazbu se nepodařilo odeslat ani zkopírovat do schránky. Zkopírujte zprávu do nového hlášení na GitHubu."
+    "sendFailed": "Zpětnou vazbu se nepodařilo odeslat. Je zkopírovaná ve schránce. Zkuste to později.",
+    "sendFailedNotCopied": "Zpětnou vazbu se nepodařilo odeslat ani zkopírovat do schránky. Zkuste to později."
   },
 
   "signals": {

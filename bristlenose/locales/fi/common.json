@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Tehty Bristlenosella",
-    "reportIssue": "Ilmoita ongelmasta",
     "giveFeedback": "Anna palautetta",
     "version": "{{version}}",
     "reportBug": "Ilmoita virheestä",
@@ -426,8 +425,8 @@
     "sent": "Palaute lähetetty – kiitos!",
     "copiedToClipboard": "Kopioitu leikepöydälle – liitä sähköpostiin tai ilmoitukseen.",
     "copyFailed": "Kopiointi ei onnistunut — lähetä palaute manuaalisesti.",
-    "sendFailed": "Palautteen lähettäminen ei onnistunut. Se on kopioitu leikepöydälle: liitä se uuteen ilmoitukseen GitHubissa.",
-    "sendFailedNotCopied": "Palautteen lähettäminen tai kopioiminen leikepöydälle ei onnistunut. Kopioi viestisi uuteen ilmoitukseen GitHubissa."
+    "sendFailed": "Palautteen lähettäminen ei onnistunut. Se on kopioitu leikepöydälle. Yritä myöhemmin uudelleen.",
+    "sendFailedNotCopied": "Palautteen lähettäminen tai kopioiminen leikepöydälle ei onnistunut. Yritä myöhemmin uudelleen."
   },
 
   "signals": {

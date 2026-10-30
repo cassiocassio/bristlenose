@@ -239,7 +239,6 @@
   },
   "footer": {
     "builtWith": "Gemaakt met Bristlenose",
-    "reportIssue": "Probleem melden",
     "giveFeedback": "Feedback geven",
     "version": "{{version}}",
     "reportBug": "Bug melden",
@@ -426,8 +425,8 @@
     "sent": "Feedback verstuurd — bedankt!",
     "copiedToClipboard": "Gekopieerd naar klembord — plak in een e-mail of issue.",
     "copyFailed": "Kon niet kopiëren — dien de feedback handmatig in.",
-    "sendFailed": "Je feedback kon niet worden verstuurd. Hij staat op het klembord: plak hem in een nieuw issue op GitHub.",
-    "sendFailedNotCopied": "Je feedback kon niet worden verstuurd of naar het klembord worden gekopieerd. Kopieer je bericht naar een nieuw issue op GitHub."
+    "sendFailed": "Je feedback kon niet worden verstuurd. Hij staat op het klembord. Probeer het later opnieuw.",
+    "sendFailedNotCopied": "Je feedback kon niet worden verstuurd of naar het klembord worden gekopieerd. Probeer het later opnieuw."
   },
 
   "signals": {

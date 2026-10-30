@@ -148,7 +148,6 @@ final class FeedbackSheetModel: ObservableObject {
     func t(_ key: String) -> String { i18n.t("common.feedback.\(key)") }
     func label(_ rating: FeedbackRating) -> String { i18n.t("common.feedback.\(rating.labelKey)") }
     var cancelLabel: String { i18n.t("common.buttons.cancel") }
-    var reportIssueLabel: String { i18n.t("common.footer.reportIssue") }
 
     /// Prefer the server's version (parity with the web payload, which sends
     /// `health.version`); fall back to the app bundle when health didn't answer.
@@ -299,17 +298,14 @@ struct FeedbackSheet: View {
             } else {
                 form
                 if let failure = model.failure {
-                    // Above the buttons, like MiroSheet's error line, and with
-                    // the place to paste the copy as a link (R80).
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(failure)
-                            .font(.callout)
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Link(model.reportIssueLabel, destination: FeedbackEndpoint.issuesURL)
-                            .font(.callout)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Above the buttons, like MiroSheet's error line. No link:
+                    // the form says anonymous, and the only place to paste the
+                    // copy was a public issue tracker (ruling 6).
+                    Text(failure)
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
 

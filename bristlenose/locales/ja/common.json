@@ -234,7 +234,6 @@
   },
   "footer": {
     "builtWith": "Bristlenose で作成",
-    "reportIssue": "問題を報告",
     "giveFeedback": "フィードバックを送る",
     "version": "{{version}}",
     "reportBug": "バグを報告",
@@ -416,8 +415,8 @@
     "sent": "フィードバックを送信しました — ありがとうございます!",
     "copiedToClipboard": "クリップボードにコピーしました — メールや Issue に貼り付けてください。",
     "copyFailed": "コピーできませんでした — フィードバックは手動で送信してください。",
-    "sendFailed": "フィードバックを送信できませんでした。クリップボードにコピーしたので、GitHub の新しい Issue に貼り付けてください。",
-    "sendFailedNotCopied": "フィードバックを送信できず、クリップボードにもコピーできませんでした。メッセージを GitHub の新しい Issue にコピーしてください。"
+    "sendFailed": "フィードバックを送信できませんでした。クリップボードにコピーしました。後でもう一度お試しください。",
+    "sendFailedNotCopied": "フィードバックを送信できず、クリップボードにもコピーできませんでした。後でもう一度お試しください。"
   },
 
   "signals": {

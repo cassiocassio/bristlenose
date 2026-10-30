@@ -167,9 +167,13 @@ def _dom(app: Any, text: str | None = None, *, like: str | None = None) -> list[
         db.close()
 
 
-def _apply(app: Any, model: _Model, framework: str, *, cutoff: float = 0.7) -> None:
+def _apply(
+    app: Any, model: _Model, framework: str, *, cutoff: float = 0.7,
+    lower: float | None = None,
+) -> None:
     """Apply a codebook as the route does (a pending job, then the runner), and
-    store the cutoff the review would have: ``accept-all`` writes it."""
+    store the cutoffs the review would have: ``accept-all`` writes the upper,
+    ``deny-all`` the lower (not stored at all when ``lower`` is None)."""
     factory = app.state.db_factory
     db = factory()
     db.add(AutoCodeJob(project_id=1, framework_id=framework, status="pending"))
@@ -181,7 +185,7 @@ def _apply(app: Any, model: _Model, framework: str, *, cutoff: float = 0.7) -> N
         asyncio.run(run_autocode_job(factory, 1, framework, app.state.settings))
     db = factory()
     db.query(AutoCodeJob).filter_by(framework_id=framework).update(
-        {"applied_upper_threshold": cutoff}
+        {"applied_upper_threshold": cutoff, "applied_lower_threshold": lower}
     )
     db.commit()
     db.close()
@@ -287,27 +291,43 @@ class TestHideApplyUnhide:
             assert client.put(f"{_P}/hidden", json={}).status_code == 200
             _wait(lambda: "autocode" in _tag_sources(app, text), "the tag to appear")
 
-    def test_below_the_cutoff_the_proposal_is_recorded_not_tagged(self, tmp_path: Path) -> None:
-        """As for any late quote (``reapply_to_new_quotes``): under the stored
-        cutoff there is a proposal and no tag."""
+    @pytest.mark.parametrize(
+        ("confidence", "lower", "expected"),
+        [
+            (0.90, 0.3, "accepted"),
+            (0.50, 0.3, "pending"),   # between the lines: the review's to decide
+            (0.50, None, "pending"),  # no lower stored: the dialog's 0.30
+            (0.20, 0.3, "denied"),
+            (0.20, None, "denied"),
+            (0.30, 0.3, "pending"),   # on the lower line: the dialog denies strictly below
+        ],
+    )
+    def test_the_late_quote_lands_in_the_band_the_review_would_give_it(
+        self, tmp_path: Path, confidence: float, lower: float | None, expected: str
+    ) -> None:
+        """The same three bands as the review dialog, from the unhide's own pass: only
+        the accepted proposal tags the quote; a pending one waits, undated, for the
+        review, and a denied one is closed."""
         app, client = _app(tmp_path)
         text = _first_quote_text(app)
         dom = _dom(app, text)
         _hide_in_db(app, dom)
-        model = _Model(confidence=0.55)
-        _apply(app, model, "garrett", cutoff=0.7)
+        model = _Model(confidence=confidence)
+        _apply(app, model, "garrett", cutoff=0.7, lower=lower)
         applied = len(model.prompts)
         with model, client:
             _hide(client, dom, False)
             _wait(lambda: len(model.prompts) == applied + 1, "the catch-up call")
             _quiet()
-        assert _tag_sources(app, text) == []
+        assert _tag_sources(app, text) == (["autocode"] if expected == "accepted" else [])
         db = app.state.db_factory()
         try:
-            assert db.query(ProposedTag).join(Quote, Quote.id == ProposedTag.quote_id).filter(
-                Quote.text == text).count() == 1
+            rows = db.query(ProposedTag.status, ProposedTag.reviewed_at).join(
+                Quote, Quote.id == ProposedTag.quote_id).filter(Quote.text == text).all()
         finally:
             db.close()
+        assert [r[0] for r in rows] == [expected]
+        assert (rows[0][1] is None) == (expected == "pending")
 
     def test_a_human_tag_on_the_quote_survives(self, tmp_path: Path) -> None:
         from bristlenose.server.models import TagDefinition

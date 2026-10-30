@@ -616,6 +616,11 @@ async def run_autocode_job(
 # threshold (mirrors the review dialog's DEFAULT_UPPER = 0.70).
 DEFAULT_ACCEPT_THRESHOLD = 0.70
 
+# Default lower cutoff when a framework was applied without one stored (mirrors
+# the review dialog's DEFAULT_LOWER = 0.30 in
+# frontend/src/components/ThresholdReviewModal.tsx).
+DEFAULT_DENY_THRESHOLD = 0.30
+
 #: The review dialog's cutoffs sit on a 0.05 grid (``frontend/src/utils/confidenceStep.ts``).
 CONFIDENCE_STEPS_PER_UNIT = 20
 
@@ -970,6 +975,16 @@ async def reapply_to_new_quotes(
         # A cutoff stored by a build whose slider drifted (0.7000000000000001) is the
         # cutoff its label says: compare at two decimals (N188).
         threshold = round(threshold, 2)
+        # The lower line the researcher set (or the dialog's default when Apply
+        # never stored one), snapped the same way. The catch-up applies the review
+        # dialog's three bands, not two: at or above ``threshold`` is accepted,
+        # strictly below ``lower_threshold`` is denied (a denial cannot be undone in
+        # the UI), and the band between stays pending for the review, as in a first
+        # apply (#207: "the same thresholds that were in place at the last AutoCode").
+        lower_threshold = job.applied_lower_threshold
+        if lower_threshold is None:
+            lower_threshold = DEFAULT_DENY_THRESHOLD
+        lower_threshold = round(lower_threshold, 2)
 
         # Delta = the quotes this job still owes (RE#66, ruling 4): those that
         # count (as in the first apply, N175) and are not on its register. The
@@ -1153,7 +1168,15 @@ async def reapply_to_new_quotes(
                     best_by_quote[quote_id] = (quote_id, tag_def_id, confidence, rationale)
 
         for quote_id, tag_def_id, confidence, rationale in best_by_quote.values():
-            is_accept = confidence >= threshold
+            # The dialog's inequalities exactly (ThresholdReviewModal.tsx and the
+            # accept-all / deny-all routes): ``>= upper`` accepts, ``< lower`` denies.
+            if confidence >= threshold:
+                status, reviewed_at = "accepted", now
+            elif confidence < lower_threshold:
+                status, reviewed_at = "denied", now
+            else:
+                status, reviewed_at = "pending", None
+            is_accept = status == "accepted"
             # Record the proposal on the existing job — audit trail, and it
             # marks the quote as "seen" so a later re-apply won't re-code it.
             db.add(
@@ -1163,8 +1186,8 @@ async def reapply_to_new_quotes(
                     tag_definition_id=tag_def_id,
                     confidence=confidence,
                     rationale=rationale,
-                    status="accepted" if is_accept else "denied",
-                    reviewed_at=now,
+                    status=status,
+                    reviewed_at=reviewed_at,
                 )
             )
             new_proposed += 1
@@ -1233,12 +1256,14 @@ async def reapply_to_new_quotes(
             _clear_failure_once_owed_nothing(db, job)
         db.commit()
         logger.info(
-            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f",
+            "Re-apply %s: %d new quotes, %d proposals, %d auto-accepted at >=%.2f "
+            "(denied below %.2f, pending between)",
             framework_id,
             len(batch_items),
             new_proposed,
             accepted,
             threshold,
+            lower_threshold,
         )
         return accepted
 

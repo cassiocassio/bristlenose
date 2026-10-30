@@ -933,6 +933,11 @@ struct ContentView: View {
             #endif
         }
         .preferredColorScheme(colorScheme)
+        // `.preferredColorScheme` carries Dark through the SwiftUI tree (and
+        // therefore the report and SwiftUI popovers), but Tahoe's unified
+        // AppKit toolbar can otherwise retain the system appearance on an
+        // already-open window. Keep the native window chrome on the same axis.
+        .background(WindowAppearanceSynchronizer(appearance: AppAppearance.current))
         // Report chrome follows *this* window's key state. Was two
         // `NSWindow.did{Become,Resign}Key` observers with a TODO on them: they
         // fire for any window in the app — Settings, the video pop-out — so a

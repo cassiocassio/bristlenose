@@ -135,4 +135,28 @@ import Testing
         AppAppearance.apply()
         #expect(NSApp.appearance == nil)
     }
+
+    /// `NSApp.appearance` sets the default for a new surface, but Tahoe's
+    /// already-mounted unified toolbar can keep the system appearance while
+    /// its SwiftUI content changes scheme. The synchronizer is the narrow
+    /// bridge that applies the same preference to that existing window.
+    @Test func windowSynchronizerKeepsExistingWindowChromeInStep() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        let view = WindowAppearanceSynchronizer.AppearanceView(
+            appearance: NSAppearance(named: .darkAqua)
+        )
+        window.contentView = view
+        #expect(window.appearance?.name == .darkAqua)
+
+        view.sync(to: NSAppearance(named: .aqua))
+        #expect(window.appearance?.name == .aqua)
+
+        view.sync(to: nil)
+        #expect(window.appearance == nil)
+    }
 }

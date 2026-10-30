@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" data-color-theme="default">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sidebar status roll · Bristlenose mockups</title>
+<style>
+/* ============================================================================
+   REAL Bristlenose tokens, inlined verbatim from the shipped design system
+   (bristlenose/theme/tokens.css + colors/palette-*.css), copied from
+   codebook-library-states.html. The shimmer tokens and keyframes are copied
+   from tokens.css lines 315-321 and atoms/shimmer.css. Everything else in the
+   "bench" and "commentary" classes is mockup chrome, not product.
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+  --bn-font-body: "Inter", "Segoe UI Variable", system-ui, -apple-system, sans-serif;
+  --bn-font-mono: ui-monospace, Menlo, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+  --bn-text-micro:.6rem; --bn-text-badge:.72rem; --bn-text-caption:.75rem;
+  --bn-text-label:.8125rem; --bn-text-body:.9375rem; --bn-text-heading:1.125rem;
+  --bn-text-title:1.375rem; --bn-text-display:1.75rem;
+  --bn-weight-normal:420; --bn-weight-emphasis:490; --bn-weight-strong:700;
+  --bn-space-xs:.15rem; --bn-space-sm:.35rem; --bn-space-md:.75rem;
+  --bn-space-lg:1.5rem; --bn-space-xl:2rem;
+  --bn-radius-sm:3px; --bn-radius-md:6px; --bn-radius-lg:8px; --bn-radius-pill:999px;
+  --bn-shimmer-contrast: 5%;
+  --bn-shimmer-band: 34%;
+  --bn-shimmer-angle: 100deg;
+  --bn-shimmer-sweep: 1800ms;
+  --bn-shimmer-gap: 900ms;
+  --bn-shimmer-period: 2700ms;
+  --bn-shimmer-easing: ease-in-out;
+}
+:root, [data-color-theme="default"] {
+  --bn-colour-bg:          light-dark(#ffffff, #111111);
+  --bn-colour-text:        light-dark(#1a1a1a, #e5e7eb);
+  --bn-colour-muted:       light-dark(#6b7280, #9ca3af);
+  --bn-colour-border:      light-dark(#e5e7eb, #2d2d2d);
+  --bn-colour-accent:      light-dark(#007aff, #0a84ff);
+  --bn-colour-hover:       light-dark(#e8f0fe, #1e293b);
+  --bn-colour-quote-bg:    light-dark(#f9fafb, #1a1a1a);
+  --bn-colour-badge-bg:    light-dark(#f3f4f6, #252525);
+  --bn-colour-badge-text:  light-dark(#374151, #d1d5db);
+  --bn-colour-border-hover:light-dark(#d1d5db, #3a3a3a);
+  --bn-colour-shadow:      light-dark(rgba(0,0,0,0.1), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c7ccd1, #3a3f45);
+}
+[data-color-theme="edo"] {
+  --bn-colour-bg:          light-dark(#fdfbf7, #1a1816);
+  --bn-colour-text:        light-dark(#1b2230, #e8e3d6);
+  --bn-colour-muted:       light-dark(#4a698a, #7ba8a0);
+  --bn-colour-border:      light-dark(#d4c9a8, #2d2820);
+  --bn-colour-accent:      light-dark(#0f5c9e, #4d9fe0);
+  --bn-colour-hover:       light-dark(#ede5d1, #252118);
+  --bn-colour-quote-bg:    light-dark(#f0e9d8, #211e18);
+  --bn-colour-badge-bg:    light-dark(#e8dfc9, #2d2820);
+  --bn-colour-badge-text:  light-dark(#2d3654, #c4b898);
+  --bn-colour-border-hover:light-dark(#b8ad91, #4a4030);
+  --bn-colour-shadow:      light-dark(rgba(30,20,10,0.12), rgba(0,0,0,0.4));
+  --bn-off-track:          light-dark(#c9bd9c, #4a4030);
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body { background:var(--bn-colour-bg); color:var(--bn-colour-text); font-family:var(--bn-font-body);
+  font-size:var(--bn-text-body); line-height:1.5; -webkit-font-smoothing:antialiased; }
+.wrap { max-width:1040px; margin:0 auto; padding:clamp(1.25rem,3vw,3rem) clamp(1rem,3vw,2rem) 6rem; }
+h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
+.eyebrow { font-size:var(--bn-text-caption); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-muted); font-weight:490; }
+.lede { color:var(--bn-colour-muted); max-width:68ch; margin:.3rem 0 1rem; }
+.key { display:flex; gap:.6rem; flex-wrap:wrap; margin:0 0 1.4rem; font-size:var(--bn-text-caption); font-family:var(--bn-font-mono); }
+.key span { padding:.2rem .6rem; border-radius:var(--bn-radius-sm); border:1px solid var(--bn-colour-border); }
+.key .k-art { background:var(--bn-colour-quote-bg); }
+.key .k-com { background:repeating-linear-gradient(135deg, transparent 0 6px, var(--bn-colour-badge-bg) 6px 8px); }
+
+/* ── COMMENTARY ZONE (not the product) ───────────────────────────────── */
+.commentary { position:relative; margin:1.2rem 0 2rem; padding:1.1rem 1.4rem 1.2rem 1.5rem; border-left:4px solid var(--bn-colour-accent);
+  background:repeating-linear-gradient(135deg, transparent 0 10px, var(--bn-colour-badge-bg) 10px 11px); border-radius:0 var(--bn-radius-lg) var(--bn-radius-lg) 0; }
+.commentary > .tag { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); letter-spacing:.08em; text-transform:uppercase; color:var(--bn-colour-accent); margin-bottom:.4rem; }
+.commentary h2 { font-size:var(--bn-text-heading); font-weight:490; margin:1.3rem 0 .4rem; }
+.commentary h2:first-of-type { margin-top:.2rem; }
+.commentary p, .commentary li { font-size:var(--bn-text-label); max-width:78ch; }
+.commentary ul { padding-left:1.1rem; margin:.3rem 0; }
+.commentary li { margin:.25rem 0; }
+.commentary .verdict { font-size:var(--bn-text-body); font-weight:490; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.7rem .9rem; max-width:80ch; }
+.commentary table { border-collapse:collapse; width:100%; font-size:var(--bn-text-caption); background:var(--bn-colour-bg); }
+.commentary th, .commentary td { text-align:left; vertical-align:top; padding:.4rem .55rem; border:1px solid var(--bn-colour-border); }
+.commentary th { font-weight:490; background:var(--bn-colour-quote-bg); }
+.commentary a { color:var(--bn-colour-accent); }
+.commentary code { font-family:var(--bn-font-mono); font-size:.92em; background:var(--bn-colour-badge-bg); padding:0 .25rem; border-radius:var(--bn-radius-sm); }
+.st { font-family:var(--bn-font-mono); white-space:nowrap; }
+
+/* ── BENCH CHROME (controls; not the product) ─────────────────────────── */
+.bar { position:relative; z-index:5; background:var(--bn-colour-bg); border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg);
+  padding:.6rem .8rem; display:flex; flex-wrap:wrap; gap:.55rem 1.2rem; align-items:center; margin:1rem 0; box-shadow:0 4px 14px var(--bn-colour-shadow); }
+@media (min-width:1100px) and (min-height:760px) { .bar { position:sticky; top:0; } }
+.grp { display:flex; gap:.3rem; align-items:center; flex-wrap:wrap; }
+.grp .lbl { font-size:var(--bn-text-micro); text-transform:uppercase; letter-spacing:.06em; color:var(--bn-colour-muted); margin-right:.2rem; }
+.pbtn { font:inherit; font-size:var(--bn-text-caption); font-weight:490; padding:.2rem .6rem; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-pill);
+  background:var(--bn-colour-bg); color:var(--bn-colour-text); cursor:pointer; }
+.pbtn.on { background:var(--bn-colour-accent); border-color:var(--bn-colour-accent); color:#fff; }
+.bar label { font-size:var(--bn-text-caption); display:flex; gap:.3rem; align-items:center; cursor:pointer; }
+.note { font-size:var(--bn-text-caption); color:var(--bn-colour-muted); margin:.2rem 0 .8rem; max-width:90ch; }
+.log { font-family:var(--bn-font-mono); font-size:var(--bn-text-badge); color:var(--bn-colour-muted); border:1px dashed var(--bn-colour-border); border-radius:var(--bn-radius-md); padding:.4rem .6rem; margin:.4rem 0 1rem; min-height:3.2em; }
+.log b { color:var(--bn-colour-text); font-weight:490; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem 1.2rem; }
+.fr { margin:0; border:1px solid var(--bn-colour-border); border-radius:var(--bn-radius-lg); overflow:hidden; }
+.chrome { display:flex; justify-content:space-between; gap:.6rem; padding:.3rem .6rem; background:var(--bn-colour-badge-bg); color:var(--bn-colour-badge-text);
+  font-family:var(--bn-font-mono); font-size:var(--bn-text-micro); border-bottom:1px solid var(--bn-colour-border); }
+
+/* ── ARTEFACT: the drawn sidebar rows. Stand-in glyphs; metrics follow ProjectCellSpec
+      (32 pt single line, 1 pt title-to-subtitle, subtitle line below). ──────────── */
+.art { color:var(--bn-colour-text); background:var(--bn-colour-quote-bg); padding:8px; }
+.sb { display:flex; flex-direction:column; gap:2px; }
+.row { display:flex; gap:6px; padding:0 8px 0 10px; border-radius:6px; }
+.row.sel { background:var(--bn-colour-hover); }
+.ico { width:20px; flex:none; height:32px; display:flex; align-items:center; justify-content:center; }
+.ico i { width:11px; height:14px; border:1.5px solid var(--bn-colour-muted); border-radius:2px; display:block; }
+.col { width:var(--budget,22ch); font-size:11px; min-width:0; flex:none; }
+.t { height:32px; line-height:32px; font-size:13px; font-weight:490; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.subline { display:flex; align-items:flex-start; gap:4px; margin-top:1px; height:14px; color:var(--bn-colour-muted); }
+.sub { position:relative; flex:1; min-width:0; height:14px; overflow:hidden; line-height:14px; }
+.ln { position:absolute; inset:0; line-height:14px; white-space:nowrap; transition:transform var(--d,0ms) cubic-bezier(.4,0,.2,1), opacity var(--d,0ms) ease; }
+.ln .tx { display:block; overflow:hidden; text-overflow:ellipsis; }
+.ln.in-roll  { transform:translateY(100%); opacity:0; }
+.ln.out-roll { transform:translateY(-100%); opacity:0; }
+.ln.in-fade, .ln.out-fade { opacity:0; }
+.cnt, .pip { flex:none; font-size:10px; line-height:14px; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
+.g { flex:none; color:#d98200; line-height:14px; }
+
+/* Shimmer atom, verbatim from atoms/shimmer.css (both gates intact) */
+.bn-thinking-shimmer { --_shimmer-base: var(--bn-shimmer-base, currentColor);
+  --_shimmer-peak: color-mix(in srgb, var(--_shimmer-base), var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)); }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-analysis-animation="off"]) .bn-thinking-shimmer {
+    background-image: linear-gradient(var(--bn-shimmer-angle), var(--_shimmer-base) 0%, var(--_shimmer-base) calc(50% - var(--bn-shimmer-band) / 6),
+      var(--_shimmer-peak) 50%, var(--_shimmer-base) calc(50% + var(--bn-shimmer-band) / 6), var(--_shimmer-base) 100%);
+    background-size: 300% 100%; background-repeat: no-repeat; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    animation: bn-thinking-shimmer var(--bn-shimmer-period) var(--bn-shimmer-easing) infinite; }
+}
+@keyframes bn-thinking-shimmer { 0% { background-position:100% 50%; } 66.67% { background-position:0% 50%; } 100% { background-position:0% 50%; } }
+.art .bn-thinking-shimmer { --bn-shimmer-base: var(--bn-colour-muted); --bn-shimmer-peak: light-dark(#fff, #111); }
+@media (prefers-reduced-motion: reduce) { .ln { transition-duration:0ms !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="eyebrow">Mockup · sidebar status line · proposal for the owner to judge</div>
+<h1>Two background jobs, one subtitle line</h1>
+<p class="lede">The bench below runs the real pair: <b>Screens</b> (hours) and <b>Picking up Signals…</b> (about 30 seconds). Four ways to show them, light and dark. Nothing here is wired to the app.</p>
+<div class="key"><span class="k-art">Plain panel = the drawn sidebar rows (what would ship)</span><span class="k-com">Hatched panel = commentary (never ships)</span><a href="#bench" style="color:var(--bn-colour-accent)">Jump to the bench ↓</a></div>
+
+<!-- ═════════════════════ COMMENTARY: README ═════════════════════ -->
+<section class="commentary" aria-label="Commentary">
+<div class="tag">Commentary · README</div>
+
+<h2>Recommendation</h2>
+<p class="verdict">Ship the fixed order, which is already decided. Do not ship the count. Keep this page as a parked option for the day two <i>long</i> idle jobs overlap.</p>
+<ul>
+<li><b>Why not the roll now.</b> The pair overlaps for about 30 seconds, then Screens comes back by itself (readiness doc §8, decision 3). A roll buys 30 seconds of seeing Screens, at the price of motion on a line the researcher glances at all day.</li>
+<li><b>Why not borrow it.</b> You asked for prior art. I found no shipping product that rolls between concurrent jobs in one status line (table below). The verified convention is one ambient line plus a separate place that lists everything. A roll would be invention.</li>
+<li><b>Why not the count.</b> "+1" announces a second job that nothing can open. In this app a glyph or count earns a door or it is noise (<code>SubtitleGlyphAction</code>), and "absence is information". Of the four it makes the loudest promise for the least.</li>
+<li><b>If you build it anyway:</b> crossfade, not roll; 4 s dwell; only among same-tier idle activities; never over a row that has a glyph; Reduce Motion falls back to the fixed order. Bench setting "Reduce Motion falls back to" shows both fallbacks.</li>
+</ul>
+
+<h2>Prior art: what I could and could not verify</h2>
+<p>Statuses: <span class="st">fetched</span> = I read the page this session; <span class="st">excerpt</span> = only a search excerpt; <span class="st">none</span> = nothing found. I have not run Xcode, Mail or Photos side by side for this; the owner can check Xcode in 30 seconds (build while it indexes).</p>
+<table>
+<tr><th>Product</th><th>What it does with several tasks, lines changing, dwell, hover, count, Reduce Motion</th><th>Source</th><th>Status</th></tr>
+<tr><td>Xcode activity view</td><td>Apple says it shows progress of executing tasks, status messages and indicators. <b>Silent</b> on several tasks at once: nothing about cycling, dwell, a "+N" count or expanding. I half remember a stack or cycle but did not verify it, so I do not cite it.</td><td><a href="https://help.apple.com/xcode/mac/current/en.lproj/dev3d5b7ecc3.html">Xcode help, About the toolbar</a></td><td class="st">fetched, silent</td></tr>
+<tr><td>Mail (Mac)</td><td>Three places: the Activity window (Window ▸ Activity) to "monitor the progress"; a few activities at the bottom of the sidebar (downloading, a large download paused to save battery, with a resume button); account offline at the end of the Favorites bar. Silent on several at once. Forum posts describe one sidebar indicator whose wording and count change ("downloading" and "moving" messages); whether that is stacked or alternating is not stated.</td><td><a href="https://support.apple.com/en-us/guide/mail/mlhlp1099/13.0/mac/10.15">Mail help, Mail activity</a>; <a href="https://discussions.apple.com/thread/7341277">forum thread</a></td><td class="st">fetched / excerpt</td></tr>
+<tr><td>Photos (Mac)</td><td>A status area: item count, when last updated, a Pause/Resume control while updating, and a count of items that could not sync with a View door. One state at a time, a control, a door, no rotation described.</td><td><a href="https://support.apple.com/en-my/HT205409">Apple Support, library status</a></td><td class="st">excerpt</td></tr>
+<tr><td>Apple HIG, Progress indicators</td><td>Silent on concurrency. Transient indicators; keep them moving; "avoid labeling a spinning progress indicator" on macOS; text should be accurate and succinct. A third-party summary says "show the most relevant operation", which is not Apple's wording and I discount it.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/progress-indicators">HIG</a></td><td class="st">fetched</td></tr>
+<tr><td>Apple HIG, Motion</td><td>Gratuitous or excessive animation can distract; avoid motion on frequent interactions; make motion optional; do not make people wait for an animation. Reduce Motion is not named on the page.</td><td><a href="https://developer.apple.com/design/human-interface-guidelines/motion">HIG</a></td><td class="st">fetched</td></tr>
+<tr><td>Apple, reduced-motion criteria</td><td><b>What Reduce Motion should do:</b> decorative motion stops entirely; motion that carries a status change should not be removed, but replaced with something like "a dissolve, highlight fade, or color shift". So Apple's own answer for a status line is a crossfade, not a freeze.</td><td><a href="https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria">App Store Connect Help</a></td><td class="st">fetched</td></tr>
+<tr><td>WCAG 2.2.2 Pause, Stop, Hide</td><td>Auto-updating information that starts by itself and sits beside other content needs a way to pause, stop, hide or control the update frequency, unless essential. A rolling line is auto-updating. Hover-to-pause is mouse-only, so on its own it is not the mechanism the criterion asks for.</td><td><a href="https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide">W3C Understanding 2.2.2</a></td><td class="st">fetched</td></tr>
+<tr><td>GitHub checks, Time Machine menu, Finder copy, Safari downloads, Music/Podcasts sync, iOS Mail status, Linear, Slack</td><td>Nothing usable. GitHub's status-check docs page was fetched and has no aggregate-line wording. The others returned no source for multi-task behaviour. <b>Not claimed either way.</b></td><td>n/a</td><td class="st">none</td></tr>
+</table>
+
+<h2>What the repo already says</h2>
+<ul>
+<li><b>Hard rule, <code>design-desktop-project-status.md</code> §5:</b> never put two conditions on one line; the detail pane is where the non-winners get room. One sanctioned exception composes (<code>.completedPartial</code>). A roll is two conditions on one line spread over time, so it amends the rule rather than fitting it.</li>
+<li><b>The idea is already named.</b> The comment on <code>SidebarSubtitleText.tooltip</code> calls "a cycling departure-board line that shows each condition in turn" the intended direction, and says not to grow the tooltip. I found no design doc behind it, so it is a direction, not a spec. The only shipped departure-board motion is the project-icon split-flap (<code>design-project-icons.md</code>, a decelerating flip), which is the nearest house vocabulary for a roll.</li>
+<li><b>Shimmer is <code>.running</code> only</b> today (<code>shimmerSubtitle</code>), behind "Show animation while analysing" and Reduce Motion. Readiness decision 5 extends it to the Signals line. The bench shimmers Signals, and the 2700 ms period against a 3 s dwell means each entrance shows about one sweep.</li>
+<li><b>Width.</b> About 22 characters at 240 pt. The running ladder and the German Signals phrase (27) both truncate; the full form is the tooltip. A count must sit outside the truncating text, as drawn.</li>
+</ul>
+
+<h2>Honest costs</h2>
+<ul>
+<li><b>Attention.</b> A glance surface all day. The rule I used (roll only among idle activities, never over a glyph row) keeps the roll to the rare overlaps, but the overlap that triggers it is the very pair you named, right after every analysis.</li>
+<li><b>Battery.</b> One timer and two short layer animations per dwell, far less than the shimmer's continuous sweep. Not measured.</li>
+<li><b>VoiceOver and live regions.</b> A roll must be silent: the row's accessibility value lists both jobs once, statically, and an announcement fires only when the <i>set</i> of jobs changes. The bench log shows exactly that: flips are silent, starts and finishes speak.</li>
+<li><b>Two moving things.</b> Shimmer already means "the AI is thinking". A roll moves the whole line every few seconds while the shimmer sweeps within it. On the pair it is the shimmering Signals line that rolls in and out. Judge this in the bench by leaving the shimmer checkbox on.</li>
+<li><b>One job hidden at any instant.</b> Fixed order hides Screens for about 30 s with certainty. The roll shows each for most of the time but a glance can still catch the other one. For 30 s the fixed order is more honest; for hours the roll would be better.</li>
+<li><b>Counts tick mid-dwell.</b> "3 of 40" becomes "4 of 40" while visible. The bench updates text in place with no roll, as a native version must.</li>
+<li><b>It stops being a single-winner chain.</b> Today <code>ProjectSubtitle.resolve</code> returns one <code>SubtitleVariant</code> and every glyph, door and tooltip switch is exhaustive over it.</li>
+</ul>
+
+<h2>What a native version would take (not built)</h2>
+<ul>
+<li><b>Model.</b> A <code>resolveAll</code> beside <code>resolve</code> returning the ordered same-tier idle activities (and exactly one entry when anything has a glyph). Pure, table-testable: which line at which tick, settle on the survivor, jump to a newcomer. This part is cheap and testable.</li>
+<li><b>View.</b> The subtitle is an AppKit cell. A fixed-height clipping view holding two text layers; the roll is a <code>CATransition</code> push or a <code>CABasicAnimation</code> on position, the crossfade a layer opacity animation. SwiftUI's own text content transitions (a default crossfade; a digit roll for numbers) are the framework's version, from my memory of the API and unverified here.</li>
+<li><b>The sharp edge.</b> <code>ProjectSidebarOutline.update()</code> reloads the outline about once a second during a run, which would tear down an in-flight animation and restart the dwell every time. The roll clock has to live in the controller, keyed by project, not in the cell. The same hazard is already handled for inline rename (<code>editingNodeID</code>) and the icon reveal, so there is precedent, but it is the real cost.</li>
+<li><b>Gates.</b> Reduce Motion via <code>NSWorkspace.shared.accessibilityDisplayShouldReduceMotion</code> (already read for the shimmer); pause when the window is not key or the row is off screen; an <code>NSTrackingArea</code> for hover; a static <code>accessibilityValue</code>; <code>NSAccessibility</code> announcements on set changes only.</li>
+<li><b>Size.</b> Roughly one to two days with tests, plus a policy edit to §5. No new locale strings for the roll itself (the Signals key is its own work). Not an estimate I would defend to the hour.</li>
+</ul>
+<p>The owner decides.</p>
+</section>
+
+<!-- ═════════════════════ BENCH ═════════════════════ -->
+<h2 id="bench" style="font-weight:490;font-size:var(--bn-text-title);margin:2rem 0 .2rem">Bench</h2>
+<p class="note">Strings: "Screens · N of M", "Analysing · 4 of 8 · ~1 min left" and "Partial completion" are shipped English. "Picking up Signals…" is the owner's draft (not yet a locale key). Deutsch: "Bildschirme · N von M" and "Teilweise abgeschlossen" are shipped; "Signale werden vorbereitet…" is the readiness doc's own 27-character example; the German run ladder is a stand-in. Glyphs are stand-ins.</p>
+
+<div class="bar" id="bar" role="group" aria-label="Bench controls"></div>
+<div class="log" id="log" aria-hidden="true"></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+<div class="grid" id="grid"></div>
+</div>
+
+<script>
+(function(){
+  /* ── strings ───────────────────────────────────────────────────────── */
+  var STR = {
+    en:{ screens:function(d,t){return 'Screens · '+d+' of '+t;}, signals:'Picking up Signals…', run:'Analysing · 4 of 8 · ~1 min left', partial:'Partial completion', title:'Kitchen redesign', other1:'Onboarding study', other2:'Checkout friction' },
+    de:{ screens:function(d,t){return 'Bildschirme · '+d+' von '+t;}, signals:'Signale werden vorbereitet…', run:'Wird analysiert… · 4 von 8 · ca. 1 Min.', partial:'Teilweise abgeschlossen', title:'Küchenumbau', other1:'Onboarding-Studie', other2:'Checkout-Reibung' }
+  };
+  var SCEN = {
+    pair:   { name:'Screens + Signals', jobs:[
+      {id:'signals', label:'Signals build', rank:1, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
+      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
+    run:    { name:'Run in flight (Screens yields)', jobs:[
+      {id:'run', label:'Analysis run', rank:1, kind:'severe', shimmer:true, text:function(L){return L.run;}},
+      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
+    partial:{ name:'Partial completion (warning wins)', jobs:[
+      {id:'partial', label:'Partial result', rank:1, kind:'severe', glyph:true, text:function(L){return L.partial;}},
+      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] }
+  };
+  var VARIANTS = [
+    {k:'fixed', name:'a · Fixed order (today)'},
+    {k:'roll',  name:'b · Vertical roll'},
+    {k:'fade',  name:'c · Crossfade'},
+    {k:'count', name:'d · Fixed order + count, no motion'}
+  ];
+  var DUR = {roll:320, fade:260, 'fade-slow':900};
+
+  /* ── state ─────────────────────────────────────────────────────────── */
+  var st = { scen:'pair', lang:'en', dwell:3000, hover:true, pip:false, shimmer:true,
+             reduce: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches),
+             fallback:'fixed', budget:'22ch', on:{signals:true, screens:true, run:true, partial:true} };
+  var done = 3, tickers = [], logLines = [];
+
+  function L(){ return STR[st.lang]; }
+  function resolve(){
+    var jobs = SCEN[st.scen].jobs.filter(function(j){return st.on[j.id];}).sort(function(a,b){return a.rank-b.rank;});
+    if(!jobs.length) return {lines:[], hidden:0, rollable:false};
+    if(jobs[0].kind==='severe') return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false};
+    return {lines:jobs, hidden:0, rollable:jobs.length>1};
+  }
+
+  /* ── ticker: one per frame, owns its own dwell timer ───────────────── */
+  function Ticker(host, variant){
+    this.host=host; this.v=variant; this.sub=host.querySelector('.sub'); this.cnt=host.querySelector('.cnt');
+    this.pipEl=host.querySelector('.pip'); this.gl=host.querySelector('.g'); this.cur=null; this.curId=null;
+    this.timer=null; this.paused=false; this.flips=0; this.prev={}; this.res=null;
+    var self=this, area=host.closest('.fr');
+    area.addEventListener('mouseenter',function(){ if(st.hover){ self.paused=true; self.disarm(); } });
+    area.addEventListener('mouseleave',function(){ self.paused=false; self.arm(); });
+  }
+  Ticker.prototype.mode=function(){
+    if(this.v==='fixed'||this.v==='count') return 'fixed';
+    if(st.reduce) return st.fallback==='fade' ? 'fade-slow' : 'fixed';
+    return this.v;
+  };
+  Ticker.prototype.mk=function(job){
+    var el=document.createElement('div'); el.className='ln'; el.dataset.job=job.id;
+    var tx=document.createElement('span'); tx.className='tx'+(job.shimmer&&st.shimmer?' bn-thinking-shimmer':'');
+    tx.textContent=job.text(L()); el.appendChild(tx); return el;
+  };
+  Ticker.prototype.swap=function(job,how){
+    var el=this.mk(job), old=this.cur;
+    this.sub.appendChild(el);
+    if(how==='cut'||!old){ if(old) old.remove(); }
+    else {
+      var kind = how==='roll' ? 'roll' : 'fade', d=DUR[how];
+      el.style.setProperty('--d',d+'ms'); old.style.setProperty('--d',d+'ms');
+      el.classList.add('in-'+kind); void el.offsetWidth; el.classList.remove('in-'+kind);
+      old.classList.add('out-'+kind);
+      setTimeout(function(o){return function(){o.remove();};}(old), d+80);
+      this.flips++;
+    }
+    this.cur=el; this.curId=job.id;
+  };
+  Ticker.prototype.go=function(job,mode){
+    if(!job){ this.sub.innerHTML=''; this.cur=null; this.curId=null; return; }
+    if(job.id===this.curId){ this.cur.firstChild.textContent=job.text(L()); return; } /* same job: text in place, no roll */
+    var how = !this.cur ? 'cut' : (mode==='fixed' ? 'cut' : mode);
+    this.swap(job,how);
+  };
+  Ticker.prototype.sync=function(res){
+    this.res=res; var mode=this.mode(), roll = mode!=='fixed' && res.rollable, lines=res.lines, self=this, target;
+    var added = lines.some(function(j){return !self.prev[j.id];});
+    if(!lines.length) target=null;
+    else if(!roll) target=lines[0];
+    else target = added ? lines[0] : (lines.filter(function(j){return j.id===self.curId;})[0] || lines[0]);
+    this.go(target,mode);
+    this.prev={}; lines.forEach(function(j){self.prev[j.id]=1;});
+    var showCount = this.v==='count' && res.hidden>0 || (this.v==='count' && !roll && lines.length>1);
+    var hidden = this.v==='count' ? (res.rollable ? lines.length-1 : res.hidden) : 0;
+    this.cnt.textContent = hidden>0 ? '+'+hidden : '';
+    var g = target && target.glyph; this.gl.hidden=!g; this.gl.textContent=g?'⚠︎':'';
+    this.paintPip();
+    this.host.querySelector('.subline').style.display = lines.length ? '' : 'none';
+    if(roll) this.arm(); else this.disarm();
+  };
+  Ticker.prototype.paintPip=function(){
+    var show = st.pip && this.v!=='fixed' && this.v!=='count' && this.res && this.res.rollable;
+    var i = this.res ? this.res.lines.findIndex(function(j){return j.id===this.curId;}.bind(this)) : -1;
+    this.pipEl.textContent = show ? (i+1)+'/'+this.res.lines.length : '';
+  };
+  Ticker.prototype.arm=function(){
+    if(this.timer||this.paused||!this.res||!this.res.rollable||this.mode()==='fixed') return;
+    var self=this; this.timer=setTimeout(function(){ self.advance(); }, st.dwell);
+  };
+  Ticker.prototype.disarm=function(){ clearTimeout(this.timer); this.timer=null; };
+  Ticker.prototype.advance=function(){
+    this.timer=null; var lines=this.res.lines; if(lines.length<2) return;
+    var i=lines.findIndex(function(j){return j.id===this.curId;}.bind(this));
+    this.go(lines[(i+1)%lines.length], this.mode()); this.paintPip(); this.arm();
+  };
+  Ticker.prototype.refreshText=function(){ if(this.cur){ var j=SCEN[st.scen].jobs.filter(function(x){return x.id===this.curId;}.bind(this))[0]; if(j) this.cur.firstChild.textContent=j.text(L()); } };
+
+  /* ── build frames ──────────────────────────────────────────────────── */
+  function build(){
+    var grid=document.getElementById('grid'); grid.innerHTML=''; tickers.forEach(function(t){t.disarm();}); tickers=[];
+    VARIANTS.forEach(function(v){
+      ['light','dark'].forEach(function(scheme){
+        var fr=document.createElement('figure'); fr.className='fr';
+        fr.innerHTML =
+          '<div class="chrome"><span>'+v.name+' · '+scheme+'</span><span class="meta">row <b class="h">-</b> px · flips <b class="f">0</b></span></div>'+
+          '<div class="art" style="color-scheme:'+scheme+';--budget:'+st.budget+'"><div class="sb">'+
+            '<div class="row sel" aria-label=""><div class="ico"><i></i></div><div class="col"><div class="t">'+L().title+'</div>'+
+              '<div class="subline" aria-hidden="true"><span class="g" hidden></span><div class="sub"></div><span class="pip"></span><span class="cnt"></span></div></div></div>'+
+            '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other1+'</div></div></div>'+
+            '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other2+'</div></div></div>'+
+          '</div></div>';
+        grid.appendChild(fr);
+        var host=fr.querySelector('.row.sel'), t=new Ticker(host, v.k); t.frame=fr; tickers.push(t);
+        var mn=1e9, mx=0, hEl=fr.querySelector('.h');
+        new ResizeObserver(function(es){ var h=Math.round(es[0].target.getBoundingClientRect().height); mn=Math.min(mn,h); mx=Math.max(mx,h); hEl.textContent = h; }).observe(host);
+      });
+    });
+    syncAll();
+  }
+  function syncAll(){
+    var res=resolve(); var names=res.lines.map(function(j){return j.text(L());}).concat(res.hidden?['(+'+res.hidden+' hidden)']:[]);
+    tickers.forEach(function(t){ t.sync(res); t.host.setAttribute('aria-label', L().title+', '+names.join(', ')); });
+  }
+  setInterval(function(){ tickers.forEach(function(t){ t.frame.querySelector('.f').textContent=t.flips; }); }, 400);
+
+  /* ── announcements: only on a real change of the set, never on a roll ── */
+  function announce(msg){
+    document.getElementById('live').textContent = msg;
+    logLines.unshift('<b>VoiceOver hears:</b> '+msg); logLines=logLines.slice(0,3);
+    paintLog();
+  }
+  function paintLog(){ document.getElementById('log').innerHTML = (logLines.length?logLines.join('<br>'):'<b>VoiceOver hears:</b> nothing yet. A roll never speaks; a job starting or finishing does.') + '<br>Rolls are silent: see the flips counter on each frame.'; }
+
+  /* Screens counts up, text refreshed in place (no roll) */
+  var cTimer=null;
+  function startCount(){ clearInterval(cTimer); cTimer=setInterval(function(){ if(st.on.screens && done<40){ done++; tickers.forEach(function(t){t.refreshText();}); } },2500); }
+
+  /* ── controls ──────────────────────────────────────────────────────── */
+  function seg(label, opts, get, set){
+    var g=document.createElement('div'); g.className='grp'; g.innerHTML='<span class="lbl">'+label+'</span>';
+    opts.forEach(function(o){ var b=document.createElement('button'); b.className='pbtn'; b.textContent=o[1]; b.setAttribute('aria-pressed','false');
+      b.onclick=function(){ set(o[0]); paintBar(); }; b.dataset.v=o[0]; g.appendChild(b); });
+    g._get=get; return g;
+  }
+  function chk(label, get, set){
+    var l=document.createElement('label'); var c=document.createElement('input'); c.type='checkbox';
+    c.onchange=function(){ set(c.checked); paintBar(); }; l.appendChild(c); l.appendChild(document.createTextNode(label)); l._c=c; l._get=get; return l;
+  }
+  var bar=document.getElementById('bar'), parts=[];
+  function addp(p){ bar.appendChild(p); parts.push(p); }
+  addp(seg('Pair',[['pair','Screens + Signals'],['run','Run in flight'],['partial','Partial']], function(){return st.scen;}, function(v){ st.scen=v; st.on={signals:true,screens:true,run:true,partial:true}; syncAll(); }));
+  var jobsGrp=document.createElement('div'); jobsGrp.className='grp'; jobsGrp.id='jobs'; bar.appendChild(jobsGrp);
+  addp(seg('Dwell',[[2000,'2 s'],[3000,'3 s'],[5000,'5 s']], function(){return st.dwell;}, function(v){ st.dwell=+v; tickers.forEach(function(t){t.disarm(); t.arm();}); }));
+  addp(chk('Pause on hover', function(){return st.hover;}, function(v){ st.hover=v; }));
+  addp(chk('n/N pip on roll and fade', function(){return st.pip;}, function(v){ st.pip=v; tickers.forEach(function(t){t.paintPip();}); }));
+  addp(chk('Shimmer on Signals and run', function(){return st.shimmer;}, function(v){ st.shimmer=v; syncAllText(); }));
+  addp(chk('Simulate Reduce Motion', function(){return st.reduce;}, function(v){ st.reduce=v; document.documentElement.setAttribute('data-analysis-animation', v?'off':'on'); syncAll(); }));
+  addp(seg('Reduce Motion falls back to',[['fixed','Fixed order'],['fade','Slow crossfade']], function(){return st.fallback;}, function(v){ st.fallback=v; syncAll(); }));
+  addp(seg('Language',[['en','English'],['de','Deutsch']], function(){return st.lang;}, function(v){ st.lang=v; build(); }));
+  addp(seg('Width budget',[['18ch','18'],['22ch','22 (240 pt)'],['30ch','30']], function(){return st.budget;}, function(v){ st.budget=v; build(); }));
+  var rs=document.createElement('button'); rs.className='pbtn'; rs.textContent='Restart'; rs.onclick=function(){ done=3; st.on={signals:true,screens:true,run:true,partial:true}; logLines=[]; paintLog(); build(); paintBar(); }; bar.appendChild(rs);
+  var de=document.createElement('button'); de.className='pbtn'; de.textContent='German at 22 (truncation check)'; de.onclick=function(){ st.lang='de'; st.budget='22ch'; build(); paintBar(); }; bar.appendChild(de);
+
+  function syncAllText(){ tickers.forEach(function(t){ if(t.cur){ var j=SCEN[st.scen].jobs.filter(function(x){return x.id===t.curId;})[0]; if(j){ var tx=t.cur.firstChild; tx.className='tx'+(j.shimmer&&st.shimmer?' bn-thinking-shimmer':''); } } }); }
+
+  function paintBar(){
+    parts.forEach(function(p){
+      if(p._c){ p._c.checked = !!p._get(); }
+      else { Array.prototype.forEach.call(p.querySelectorAll('.pbtn'), function(b){ var on = String(p._get())===b.dataset.v; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); }
+    });
+    jobsGrp.innerHTML='<span class="lbl">Jobs (toggle one off = it finishes)</span>';
+    SCEN[st.scen].jobs.forEach(function(j){
+      var b=document.createElement('button'); b.className='pbtn'+(st.on[j.id]?' on':''); b.textContent=j.label+(st.on[j.id]?': running':': off'); b.setAttribute('aria-pressed',st.on[j.id]);
+      b.onclick=function(){
+        st.on[j.id]=!st.on[j.id];
+        announce(j.text(L())+(st.on[j.id]?' started':' finished'));
+        syncAll(); paintBar();
+      };
+      jobsGrp.appendChild(b);
+    });
+  }
+
+  document.documentElement.setAttribute('data-analysis-animation', st.reduce?'off':'on');
+  paintLog(); build(); paintBar(); startCount();
+})();
+</script>
+</body>
+</html>

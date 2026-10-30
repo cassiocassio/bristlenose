@@ -326,6 +326,7 @@ state is still evidenced, the day is not.
 | `sidebar-all-tabs-v3.html` | 18 Mar 2026 | PROPOSED 18 Mar 2026 · SUPERSEDED 19 Mar 2026 by `sidebar-all-tabs-v4.html` — third iteration |
 | `sidebar-all-tabs-v4.html` | 19 Mar 2026 | PROPOSED 19 Mar 2026 · IMPLEMENTED — last of four iterations. *Linked theme CSS repaired 3 Sep 2026* |
 | `sidebar-seam-window-edge.html` | 2 Sep 2026 | IMPLEMENTED — cited from `SeamLabView.swift`’s own source comment; the seam lab ships |
+| `sidebar-status-roll.html` | 30 Oct 2026 | PROPOSED 30 Oct 2026 — one subtitle line that rolls or crossfades between two concurrent idle jobs (Screens + Signals), with a prior-art table and costs; recommendation is to keep the fixed order, so this stays a parked option. Not built, owner decision pending |
 | `sidebar-status-vocabulary.html` | 27 Aug 2026 | IMPLEMENTED — `ProjectCellSpec` / `ProjectSubtitle` carry this vocabulary |
 | `sidebar-tidyup-before-after.html` | 14 Aug 2026 | SANDPIT — a before/after comparison of the sidebar tidy-up |
 

@@ -568,10 +568,15 @@ struct ZoomListWindow: Equatable {
         guard interval.duration > 0 else {
             return [ZoomListWindow(start: interval.start, end: interval.end)]
         }
+        // Zoom receives UTC calendar dates below. Add days in that same
+        // calendar so a daylight-saving transition cannot make a 29-day local
+        // interval span 31 inclusive UTC dates.
+        var utcCalendar = calendar
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
         var windows: [ZoomListWindow] = []
         var cursor = interval.start
         while cursor < interval.end {
-            let next = calendar.date(byAdding: .day, value: monthDays, to: cursor) ?? interval.end
+            let next = utcCalendar.date(byAdding: .day, value: monthDays, to: cursor) ?? interval.end
             windows.append(ZoomListWindow(start: cursor, end: min(next, interval.end)))
             cursor = next
         }

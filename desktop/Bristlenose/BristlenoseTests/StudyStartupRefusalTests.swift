@@ -208,11 +208,11 @@ struct StartupRefusalOutputTests {
 struct StudyStartupProbeTests {
     @Test("Shared-server Retry never publishes a boot state or replaces the live process",
           arguments: [false, true])
-    func preservesSharedServer(superseded: Bool) async throws {
-        let executable = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try "#!/bin/sh\nexit 0\n".write(to: executable, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
-        defer { try? FileManager.default.removeItem(at: executable) }
+    func preservesSharedServer(superseded: Bool) async {
+        // Use the system's no-op executable rather than synthesising a script.
+        // This test is about ServeManager's generation/identity boundary; the
+        // probe's script/process result mapping is covered independently below.
+        let executable = URL(fileURLWithPath: "/usr/bin/true")
         let manager = ServeManager(resolvedMode: .success(.devSidecar(path: executable)))
         let liveProcess = Process()
         manager.instance.process = liveProcess
@@ -225,8 +225,15 @@ struct StudyStartupProbeTests {
         var admitted = false
         manager.recheckStudyStartup(projectPath: "/tmp/bn-shared-startup") { admitted = true }
         if superseded { manager.instance.generation += 1 }
-        let deadline = Date().addingTimeInterval(3)
-        while Date() < deadline && !admitted { try? await Task.sleep(for: .milliseconds(10)) }
+        // The full suite runs many process-heavy tests in parallel. This is
+        // scheduler allowance, not the product's probe deadline (30 seconds):
+        // on a saturated runner an immediate `exit 0` has taken 6.6 seconds to
+        // deliver its termination handler back to the main actor.
+        let deadline = Date().addingTimeInterval(15)
+        while Date() < deadline && manager.startupProbeIsRunning {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(!manager.startupProbeIsRunning)
         #expect(admitted == !superseded)
         #expect(transitions == 0) // Both windows retain the same .running branch/WebViews.
         #expect(manager.instance.process === liveProcess)

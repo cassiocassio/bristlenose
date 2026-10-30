@@ -92,6 +92,11 @@ final class ServeManager: ObservableObject {
     private var startupRecheckSucceeded: (() -> Void)?
     private var startupProbe: StudyStartupProbe?
 
+    /// Test-visible completion fact for the bounded Retry check. Waiting on the
+    /// admission callback is insufficient when a superseded probe must finish
+    /// without admitting anything.
+    var startupProbeIsRunning: Bool { startupProbe != nil }
+
     func recheckStudyStartup(projectPath: String, onAdmitted: @escaping () -> Void) {
         if case .starting = state { return }
         if case .running = state, let currentProjectPath,

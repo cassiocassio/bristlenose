@@ -222,6 +222,30 @@ struct ZoomListWindowTests {
         }
     }
 
+    @Test("DST transitions cannot widen a chunk past 30 UTC dates", arguments: DSTCase.all)
+    private func daylightSavingTransitions(testCase: DSTCase) {
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = TimeZone(identifier: testCase.timeZoneName)!
+        let start = ISO8601DateFormatter().date(from: testCase.start)!
+        let end = local.date(byAdding: .day, value: 75, to: start)!
+        let chunks = ZoomListWindow.chunks(
+            covering: DateInterval(start: start, end: end),
+            calendar: local
+        )
+
+        #expect(chunks.first?.start == start)
+        #expect(chunks.last?.end == end)
+        for (a, b) in zip(chunks, chunks.dropFirst()) {
+            #expect(a.end == b.start)
+        }
+        for chunk in chunks {
+            let from = Self.utcDay(from: chunk.fromString)
+            let to = Self.utcDay(from: chunk.toString)
+            let dates = Self.utc.dateComponents([.day], from: from, to: to).day! + 1
+            #expect(dates <= 30, "\(chunk.fromString)…\(chunk.toString) is \(dates) dates")
+        }
+    }
+
     @Test("Chunks are contiguous and leave no gap")
     func noGaps() {
         let end = Date()
@@ -250,6 +274,33 @@ struct ZoomListWindowTests {
                                     end: Date(timeIntervalSince1970: 86_400))
         #expect(window.fromString == "1970-01-01")
         #expect(window.toString == "1970-01-02")
+    }
+
+    private static var utc: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }
+
+    private static func utcDay(from string: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = utc.timeZone
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.date(from: string)!
+    }
+
+    private struct DSTCase: CustomTestStringConvertible, Sendable {
+        let timeZoneName: String
+        let start: String
+
+        var testDescription: String { timeZoneName }
+
+        static let all = [
+            DSTCase(timeZoneName: "Europe/London", start: "2026-09-26T23:00:00Z"),
+            DSTCase(timeZoneName: "America/New_York", start: "2026-10-03T23:00:00Z"),
+            DSTCase(timeZoneName: "Australia/Sydney", start: "2026-03-06T23:00:00Z"),
+        ]
     }
 }
 

@@ -246,7 +246,7 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
   var DUR = {roll:320, fade:260, 'fade-slow':900};
 
   /* ── state ─────────────────────────────────────────────────────────── */
-  var st = { scen:'pair', lang:'en', dwell:3000, hover:true, pip:false, shimmer:true,
+  var st = { scen:'pair', lang:'en', dwell:5000, hover:true, pip:false, shimmer:true,
              reduce: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches),
              fallback:'fixed', budget:'22ch', on:{signals:true, screens:true, run:true, partial:true} };
   var done = 3, tickers = [], logLines = [];

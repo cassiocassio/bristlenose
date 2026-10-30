@@ -266,6 +266,7 @@ function adaptCodebookSignals(data: CodebookSignalsListResponse): UnifiedSignal[
         pattern: s.pattern ?? null,
         elaboration: s.elaboration ?? null,
         evidenceAssertions: s.evidence_assertions ?? [],
+        hadEvidenceAssertions: s.had_evidence_assertions ?? false,
       });
     }
   }
@@ -544,13 +545,13 @@ function SignalCard({
     [signal],
   );
   const shownIds = new Set(visibleQuotes);
-  const hiddenQuotes = signal.quotes.filter((q) => !shownIds.has(q));
+  const collapsedQuotes = signal.quotes.filter((q) => !shownIds.has(q));
 
   // Sequences are a property of what is DRAWN, not of the whole set: two
   // quotes 10s apart are only a run if both are on screen. Computed over the
   // visible list and the hidden list separately for that reason.
   const sequenceMetas = useMemo(() => detectSequences(visibleQuotes), [visibleQuotes]);
-  const hiddenMetas = useMemo(() => detectSequences(hiddenQuotes), [hiddenQuotes]);
+  const hiddenMetas = useMemo(() => detectSequences(collapsedQuotes), [collapsedQuotes]);
 
   // Fix: useEffect ensures expanded class is applied before maxHeight is set,
   // so both opacity and maxHeight transitions work together.
@@ -683,7 +684,7 @@ function SignalCard({
               className="signal-elaboration bn-lead-para"
               data-testid="signal-elaboration"
             >
-              {assertions.length > 0 && narrative ? (
+              {(assertions.length > 0 || signal.hadEvidenceAssertions) && narrative ? (
                 <p className="bn-lead-claim"><strong>{narrative.lead}</strong></p>
               ) : renderLead(signal.elaboration)}
             </div>
@@ -744,7 +745,7 @@ function SignalCard({
           ref={expansionRef}
           style={{ maxHeight: expanded ? undefined : 0 }}
         >
-          {hiddenQuotes.map((q, i) => (
+          {collapsedQuotes.map((q, i) => (
             <QuoteBlock
               key={i + 1}
               quote={q}
@@ -759,14 +760,14 @@ function SignalCard({
       </div>
 
       <div className="signal-card-footer">
-        {hiddenQuotes.length > 0 ? (
+        {collapsedQuotes.length > 0 ? (
           <button
             type="button"
             className="signal-card-link signal-card-toggle"
             onClick={toggleExpand}
             data-testid="bn-signal-toggle"
           >
-            {expanded ? t("signals.hide") : t("signals.showAllQuotes", { count: signal.quotes.length })}
+            {expanded ? t("signals.showFewer") : t("signals.showAllQuotes", { count: signal.quotes.length })}
           </button>
         ) : (
           <span className="signal-card-link" style={{ visibility: "hidden" }}>

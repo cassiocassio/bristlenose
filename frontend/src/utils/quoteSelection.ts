@@ -103,7 +103,11 @@ export function selectQuotes(
   const byForce = (a: UnifiedQuote, b: UnifiedQuote) => b.intensity - a.intensity;
 
   const ranked = [...pool].sort(byForce);
-  const dissenters = [...others].sort(byForce);
+  // When nothing supports the label the pool IS every quote, and so is `others`:
+  // the strongest quote would be picked twice, once as support and once as the
+  // dissenter. A dissenter must come from outside the pool. Reachable once a
+  // hide removes every quote that carried the card's label.
+  const dissenters = supporting.length ? [...others].sort(byForce) : [];
 
   const picked = ranked.slice(0, cap - 1);
   let dissenting: UnifiedQuote | null = null;

@@ -513,7 +513,38 @@ describe("SignalsPage", () => {
     const toggle = screen.getAllByTestId("bn-signal-toggle")[0];
     expect(toggle.textContent).toContain("Show all 5 quotes");
     fireEvent.click(toggle);
-    expect(toggle.textContent).toContain("Hide");
+    // "Hide" is the researcher's word for a quote they set aside; this link only collapses.
+    expect(toggle.textContent).toContain("Show fewer");
+    expect(toggle.textContent).not.toContain("Hide");
+  });
+
+  it("keeps the claim alone, not the summary paragraph, when every cited quote has stopped counting", async () => {
+    const filtered: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const signal = filtered.codebooks[0].signals[0];
+    signal.elaboration = "Checkout delays interrupt purchase intent. || Participants wait for a response before continuing.";
+    // The server has dropped the only assertion because its quote was hidden.
+    signal.evidence_assertions = [];
+    (signal as { had_evidence_assertions?: boolean }).had_evidence_assertions = true;
+    mockFetchCodebookSignals(filtered);
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Checkout delays interrupt purchase intent.")).toBeTruthy();
+    });
+    expect(screen.queryByText("Participants wait for a response before continuing.")).toBeNull();
+  });
+
+  it("still shows the whole narrative when a card never had evidence assertions", async () => {
+    const plain: CodebookSignalsListResponse = JSON.parse(JSON.stringify(mockCbData));
+    const signal = plain.codebooks[0].signals[0];
+    signal.elaboration = "Checkout delays interrupt purchase intent. || Participants wait for a response before continuing.";
+    signal.evidence_assertions = [];
+    mockFetchCodebookSignals(plain);
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Participants wait for a response before continuing.")).toBeTruthy();
+    });
   });
 
   it("reveals an overflow source quote when an evidence citation focuses it", async () => {

@@ -460,7 +460,7 @@
     "voice_one": "{{count}} stem",
     "voice_other": "{{count}} stemmen",
     "more": "+{{count}} meer",
-    "hide": "Verberg",
+    "showFewer": "Toon minder",
     "showAllQuotes": "Toon alle {{count}} citaten →",
     "oneQuote": "1 citaat",
     "signalLabel": "Signaal",

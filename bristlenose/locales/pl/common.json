@@ -513,7 +513,7 @@
     "voice_many": "{{count}} głosów",
     "voice_other": "{{count}} głosów",
     "more": "+{{count}} więcej",
-    "hide": "Ukryj",
+    "showFewer": "Pokaż mniej",
     "showAllQuotes": "Pokaż wszystkie cytaty ({{count}}) →",
     "oneQuote": "1 cytat",
     "signalLabel": "Sygnał",

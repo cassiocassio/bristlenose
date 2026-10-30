@@ -462,7 +462,7 @@
     "voice_one": "{{count}} voice",
     "voice_other": "{{count}} voices",
     "more": "+{{count}} more",
-    "hide": "Hide",
+    "showFewer": "Show fewer",
     "showAllQuotes": "Show all {{count}} quotes →",
     "oneQuote": "1 quote",
     "signalLabel": "Signal",

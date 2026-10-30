@@ -460,7 +460,7 @@
     "voice_one": "{{count}} stemme",
     "voice_other": "{{count}} stemmer",
     "more": "+{{count}} til",
-    "hide": "Skjul",
+    "showFewer": "Vis færre",
     "showAllQuotes": "Vis alle {{count}} sitater →",
     "oneQuote": "1 sitat",
     "signalLabel": "Signal",

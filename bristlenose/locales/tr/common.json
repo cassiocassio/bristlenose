@@ -460,7 +460,7 @@
     "voice_one": "{{count}} ses",
     "voice_other": "{{count}} ses",
     "more": "+{{count}} daha",
-    "hide": "Gizle",
+    "showFewer": "Daha az göster",
     "showAllQuotes": "Tüm {{count}} alıntıyı göster →",
     "oneQuote": "1 alıntı",
     "signalLabel": "Sinyal",

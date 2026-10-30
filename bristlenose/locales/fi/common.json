@@ -460,7 +460,7 @@
     "voice_one": "{{count}} ääni",
     "voice_other": "{{count}} ääntä",
     "more": "+{{count}} lisää",
-    "hide": "Piilota",
+    "showFewer": "Näytä vähemmän",
     "showAllQuotes": "Näytä kaikki {{count}} sitaattia →",
     "oneQuote": "1 sitaatti",
     "signalLabel": "Signaali",

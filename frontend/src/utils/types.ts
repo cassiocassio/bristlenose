@@ -552,6 +552,10 @@ export interface TagSignal {
   pattern?: string | null;
   elaboration?: string | null;
   evidence_assertions?: SignalEvidenceAssertion[];
+  /** True when every assertion was filtered out because the quotes they cite stopped
+   * counting (a hide): the card then shows the claim alone, not the summary paragraph
+   * that was written over every quote. */
+  had_evidence_assertions?: boolean;
 }
 
 export interface SignalMatrixCell {
@@ -830,6 +834,7 @@ export interface UnifiedSignal {
   pattern?: string | null;
   elaboration?: string | null;
   evidenceAssertions?: SignalEvidenceAssertion[];
+  hadEvidenceAssertions?: boolean;
   /** The chip's words, resolved server-side. Falls back to `columnLabel`. */
   label?: string;
   labelKind?: "value" | "valence" | "mixed" | "group";

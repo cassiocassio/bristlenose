@@ -505,7 +505,7 @@
     "voice_many": "{{count}} hlasu",
     "voice_other": "{{count}} hlasů",
     "more": "+{{count}} dalších",
-    "hide": "Skrýt",
+    "showFewer": "Zobrazit méně",
     "showAllQuotes": "Zobrazit všech {{count}} citátů →",
     "oneQuote": "1 citát",
     "signalLabel": "Signál",

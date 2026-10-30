@@ -133,3 +133,21 @@ describe("what 'supports the finding' means on each kind of card", () => {
     expect(shown.find((x) => x.text === "p1@10")).toBeUndefined();
   });
 });
+
+describe("selectQuotes when nothing carries the card's label", () => {
+  it("never shows one quote twice (a hide can remove every quote that carried the label)", () => {
+    // A value card for "frustration" whose remaining quotes are all tagged something else.
+    const quotes = [
+      q("p1", 1, 3, ["confusion"]),
+      q("p2", 2, 2, ["confusion"]),
+      q("p3", 3, 2, ["doubt"]),
+      q("p4", 4, 1, ["doubt"]),
+      q("p5", 5, 1, ["doubt"]),
+      q("p6", 6, 1, ["doubt"]),
+    ];
+    const { shown } = selectQuotes(card(quotes, { label: "frustration", labelKind: "value" }), 4);
+    expect(shown).toHaveLength(4);
+    expect(new Set(shown).size).toBe(4);
+  });
+});
+

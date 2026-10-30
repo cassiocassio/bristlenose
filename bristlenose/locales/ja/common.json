@@ -450,7 +450,7 @@
     "voice_one": "{{count}} 名の声",
     "voice_other": "{{count}} 名の声",
     "more": "+{{count}} 件",
-    "hide": "非表示",
+    "showFewer": "表示を減らす",
     "showAllQuotes": "{{count}} 件の発言をすべて表示 →",
     "oneQuote": "1 件の発言",
     "signalLabel": "シグナル",

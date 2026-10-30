@@ -460,7 +460,7 @@
     "voice_one": "{{count}} veu",
     "voice_other": "{{count}} veus",
     "more": "+{{count}} més",
-    "hide": "Oculta",
+    "showFewer": "Mostra'n menys",
     "showAllQuotes": "Mostra les {{count}} cites →",
     "oneQuote": "1 cita",
     "signalLabel": "Senyal",

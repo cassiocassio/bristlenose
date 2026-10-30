@@ -513,7 +513,7 @@
     "voice_many": "{{count}} голосів",
     "voice_other": "{{count}} голосів",
     "more": "+{{count}} ще",
-    "hide": "Приховати",
+    "showFewer": "Показати менше",
     "showAllQuotes": "Показати всі {{count}} цитат →",
     "oneQuote": "1 цитата",
     "signalLabel": "Сигнал",

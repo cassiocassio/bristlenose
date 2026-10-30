@@ -435,7 +435,7 @@
     "conc": "집중",
     "voice_other": "{{count}}개 목소리",
     "more": "+{{count}}개 더",
-    "hide": "숨기기",
+    "showFewer": "간략히 보기",
     "showAllQuotes": "{{count}}개 인용문 모두 보기 →",
     "oneQuote": "인용문 1개",
     "signalLabel": "시그널",

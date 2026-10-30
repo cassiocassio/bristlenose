@@ -435,7 +435,7 @@
     "conc": "集中",
     "voice_other": "{{count}} 個聲音",
     "more": "+{{count}} 更多",
-    "hide": "隱藏",
+    "showFewer": "顯示較少",
     "showAllQuotes": "顯示全部 {{count}} 則引述 →",
     "oneQuote": "1 則引述",
     "signalLabel": "訊號",

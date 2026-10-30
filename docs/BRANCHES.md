@@ -1,5 +1,9 @@
 # Active Feature Branches
 
+**Sidebar close-out updated:** 30 Oct 2026. The merged sidebar Finder-drop
+worktree is archived with its directory/runtime and branch reference preserved;
+see its Completed Branches entry and docs/sidebar-finder-drop-closeout.md.
+
 This document tracks active feature branches to help multiple Claude sessions coordinate without conflicts.
 
 **Updated:** 4 Sep 2026, third pass (PR #85 closed; `security-txt`, two orphaned remotes and **seven leaked checkpoint tags** deleted from origin; the pre-push guard landed — `scripts/git-hooks/pre-push`, every ref, native. See the third-pass paragraph under § *4 Sep 2026*.) Prior: 4 Sep 2026, second pass (**the content triage** — 17 local branches → 11, and the first **remote** deletions: 9 gone. Landed the anonymisation-export-boundary correction off `quirky-ellis` as `62944027` after re-verifying every `file:line` — 8 of 10 had rotted in 13 days. Deleted four superseded locals and nine absorbed remotes; removed both stale agent worktrees. Full record + what deliberately stays: § *4 Sep 2026 — the content triage the sweep deferred*.) Prior: 4 Sep 2026 (closed `drag-push` — the last feature worktree. Its branch tip was already merged into `main` (0 unique commits), but the worktree carried **six months of uncommitted rail-drag animation work** that existed nowhere else; committed at `7105fb47` and tagged `archive/drag-push` before removal, so the branch and its 1.6 GB worktree are gone and nothing was lost. **No feature worktree now exists.**) Prior: 22 Aug 2026 (no branch opened or closed — the worktree table was **measured** against `git worktree list` and the disk, and four of its five rows were wrong; see the note under the table. Also documents the `.claude/worktrees/` agent-session worktrees, which this file has never tracked.) Prior: 14 Jul 2026 (closed `testflight-prep` — merged to main `ed5ef885`; the TF-prep sandbox/HR/arm64/MAS-signing work that DELIVERED Bristlenose 0.20.0 (2068) to TestFlight internal testing on 14 Jul. Worktree detached + tagged orange on disk with a stale marker; local branch deleted; remote never pushed. Also carried the inert build-script report tooling.) Prior: 9 Jul 2026 (closed three worktrees: `slavic` — merged to main 3 Jul `37e6f559`, machine-seeded/native-review-pending is a content gate not a branch one; `curation-persistence` — merged 7 Jul `c4152e13`, post-merge work continued on main; `native-experiment` — spike discarded, "possible but expensive", postmortem + mockup rescued to main `03a260d3`, history at tag `archive/native-experiment`. All worktrees detached + kept on disk with stale markers, local branches deleted, none were on remote.) Prior: 6 Jul 2026 (opened `native-experiment` — spike worktree for an experimental, lens-by-lens conversion of the UI to native macOS, inspired by Gruber's 2018 *Electron and the Decline of Native Apps*; a learning exercise, not a committed migration.) Prior: 6 Jul 2026 (opened `curation-persistence` — feature worktree for the incremental-analysis persistence layer: freeze marked quotes, membership-based section identity, best-effort themes. Plan: `docs/design-curation-persistence-plan.md`.) Prior: 3 Jul 2026 (closed `spike` branch — merged to main; worktree detached + tagged orange on disk, local branch deleted. Translucent titlebar/toolbar proof-of-concept for macOS 26 Tahoe.) Prior: 3 Jul 2026 (closed `fi` branch — merged to main `3e193fa8` + registration re-added `92033192`; worktree detached + kept on disk, local branch deleted. Machine-seeded Finnish locale, native review pending.) Prior: 3 Jul 2026 (closed `nl` branch — merged to main `88961b7a`; worktree detached + tagged orange on disk, local branch deleted. Review-pending; machine-seeded Dutch locale.) Prior: 3 Jul 2026 (opened `nl` + `fi` locale branches — Dutch (high/high pick) + Finnish (completes the Nordics), each with a native reviewer lined up; both share the 9 enrolment sites with `slavic`, so merge sequentially.) Prior: 2 Jul 2026 (closed `gemini-provider` — dead-model fix landed on main independently as `c73259b8`; branch was 17 days stale so a real merge would have regressed the `f159feca` retired-Claude-model bumps + `.outOfCredit` provider status. Nothing to salvage.) Prior: 30 Jun 2026 (`zh-hant-pair` merged to main + closed; worktree detached + tagged orange on disk, local branch deleted.)
@@ -260,6 +264,25 @@ Cloud-session `claude/<adjective>-<noun>-<hash>` branches that have been verifie
 ---
 
 ## Completed Branches (for reference)
+
+### `codex/sidebar-drag-separated` — merged and archived 30 Oct 2026
+
+Finder project imports, empty New Project adoption, folder-target routing and
+quiet structural refusals. Implementation 56b46608a reached main via 5a7830935;
+test corrections c92bba10a and 5120928de. Scoped close-out committed at 141ca165a.
+Official pinned Swift gate: 2,846 passed / zero failed; sidebar Python contracts:
+44 passed. The broader Python gate remains red and is assigned to recovery;
+this archive does not claim a release-wide green sign-off.
+
+Worktree Git registration retired after clean/merged checks. Directory and
+ignored runtime preserved at
+`/Users/cassio/.codex/worktrees/integration-sidebar-drag/bristlenose`, with
+`_Stale - Merged by Codex 30-Oct-26.txt` and a truthful private close-out record.
+Local branch reference kept; no remote branch deletion, push or release.
+The clean main checkout was used under owner authorization so the dirty shared
+Signals checkout was not switched or reset. Evidence/limits:
+`docs/sidebar-finder-drop-closeout.md`.
+
 
 ### `testflight-prep` — merged 14 Jul 2026 (`ed5ef885`)
 

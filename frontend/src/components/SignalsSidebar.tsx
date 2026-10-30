@@ -76,10 +76,11 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
   const { t: tc } = useTranslation();
   // The same words as the card's chip: "Frustration", not the codebook's name "Sentiment".
   const chip = chipWords(signal, isFromSentimentLens(signal), te, tc, true);
-  const badgeStyle = signal.colourSet
+  // A named feeling takes its own pale fill (.badge-<value>); a codebook group its group tint.
+  const badgeStyle = signal.colourSet && !chip.isValue
     ? { backgroundColor: getGroupBg(signal.colourSet) }
     : undefined;
-  const badgeClass = signal.colourSet
+  const badgeClass = signal.colourSet && !chip.isValue
     ? "badge"
     : `badge badge-${chip.isValue ? chip.raw : signal.columnLabel}`;
 

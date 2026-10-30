@@ -62,29 +62,29 @@
    mini tag are one colour and the eye joins them (owner, 30 Oct 2026).
 
    The fallback is the old mix of the hue into the text colour. Where relative colour syntax
-   exists, the ink is the hue pulled to a fixed lightness with its chroma lifted 1.8x (capped at
-   0.2): dark and strong on a light page, light and strong on a dark one. Lightness 0.42 / 0.82
-   was measured (30 Oct 2026) against every codebook and sentiment hue on the card, the pale
-   highlight and the sidebar, light and dark: the worst contrast is 5.5:1 / 6.3:1, so AA holds
-   with room to spare. Hover is the INK at 4% (light) / 5% (dark): the system hover's 4% of black
-   draws a colour distance of about 18 on white, and 4% of the pastel hue drew only 6 to 8, which
-   no one could see (reviewed 30 Oct 2026); 4% of the ink draws 11 to 15 and 5% on dark 14 to 17,
-   below the selected wash (10% of the hue, 15 to 19) for every colour set. */
+   exists, the ink is the hue pulled to a fixed lightness (0.42 on a light page, 0.82 on a dark
+   one) with its chroma lifted 1.8x and CAPPED at 0.085 / 0.08, which keeps every hue inside
+   sRGB. The first cap, 0.2, was far outside it: a browser clips the out-of-range channels, so
+   the oranges (frustration, confusion, surprise) collapsed to (156,0,0), a danger red, in the
+   light appearance (re-measured 30 Oct 2026). At the cap, frustration is a dark orange-brown
+   (117,58,35). Contrast was measured against every codebook and sentiment hue on the card, the
+   pale highlight, the chip fill and the sidebar, light and dark: AA holds with room to spare.
+   Hover is the INK at 4%: the system hover's 4% of black draws a colour distance of about 18 on
+   white, and 4% of the pastel hue drew only 6 to 8, which no one could see; 4% of the ink draws
+   11 to 15, below the selected wash (10% of the hue, 14 to 19) for every colour set, light and
+   dark (a 5% dark hover measured above the selected wash for the sentiment set). */
 .signal-card,
 .signal-entry {
     --bn-signal-accent-ink: color-mix(in srgb, var(--bn-signal-accent, var(--bn-colour-accent)) 72%, var(--bn-colour-text));
-    --bn-signal-accent-hover: light-dark(
-        color-mix(in srgb, var(--bn-signal-accent-ink) 4%, var(--bn-colour-bg)),
-        color-mix(in srgb, var(--bn-signal-accent-ink) 5%, var(--bn-colour-bg))
-    );
+    --bn-signal-accent-hover: color-mix(in srgb, var(--bn-signal-accent-ink) 4%, var(--bn-colour-bg));
 }
 
 @supports (color: oklch(from red l c h)) {
     .signal-card,
     .signal-entry {
         --bn-signal-accent-ink: light-dark(
-            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.42 min(calc(c * 1.8), 0.2) h),
-            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.82 min(calc(c * 1.8), 0.2) h)
+            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.42 min(calc(c * 1.8), 0.085) h),
+            oklch(from var(--bn-signal-accent, var(--bn-colour-accent)) 0.82 min(calc(c * 1.8), 0.08) h)
         );
     }
 }

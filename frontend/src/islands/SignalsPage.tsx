@@ -152,8 +152,10 @@ function SignalHero({
   ]
     .filter(Boolean)
     .join(" ");
+  // A card that names one feeling takes that feeling's own pale fill (.badge-<value>), not the
+  // sentiment codebook's one teal under words in the feeling's colour.
   const style =
-    !isSentiment && signal.colourSet
+    !isSentiment && !isValue && signal.colourSet
       ? { backgroundColor: getGroupBg(signal.colourSet) }
       : undefined;
 

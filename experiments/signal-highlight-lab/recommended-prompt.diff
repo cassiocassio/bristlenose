@@ -1,5 +1,5 @@
 --- a/bristlenose/llm/prompts/signal-elaboration.md	2026-10-30 17:04:20
-+++ b/bristlenose/llm/prompts/signal-elaboration.md	2026-10-30 17:45:04
++++ b/bristlenose/llm/prompts/signal-elaboration.md	2026-10-30 18:12:40
 @@ -1,6 +1,6 @@
  ---
  id: signal-elaboration
@@ -8,37 +8,47 @@
  ---
  # Signal Elaboration
  
-@@ -114,11 +114,25 @@
+@@ -113,12 +113,34 @@
+ 
  Write each assertion as one or two short sentences. **Never use an em dash, an en dash or a spaced hyphen to join clauses in an assertion**; use a full stop or a semicolon instead.
  
- Each assertion **must contain one intervention fragment whenever its source
+-Each assertion **must contain one intervention fragment whenever its source
 -quote supports an actionable product/system cause**. This is not
 -the strongest emotional word. It is one contiguous, intelligible causal unit
 -which names the product/system property, behaviour or omission that explains
 -why this quote supports the signal.
-+quote supports an actionable product/system cause**. The fragment is a pointer,
-+not a summary: the card colours it, and a click on it jumps to the participant's
-+quote. It is the shortest span that works as a small, self-contained claim about
-+the product: what it did or failed to do, with the specific thing it was done to
-+and, if it matters, when or where. Most of the assertion stays unmarked.
++**Colour is a budget.** The card colours the fragment, and a card whose every line
++is coloured has no pointer left. Give a fragment to **at most two assertions per
++signal**: the ones whose evidence most directly shows the claim you wrote in Step 5,
++and whose source quote supports an actionable product/system cause. For every other
++assertion return no fragment (`null`); the assertion itself stays.
  
++The fragment is a pointer, not a summary: the card colours it, and a click on it
++jumps to the participant's quote. It is the shortest span that works as a small,
++self-contained claim about the product: what it did or failed to do, with the
++specific thing it was done to and, if it matters, when or where. Most of the
++assertion stays unmarked.
++
 +**Where it starts and ends is what makes it readable.**
 +
-+- **Length:** 6 to 9 words, and never more than a third of the assertion's words.
-+  On a very short assertion it may be most of it.
-+- **Start** where the product's behaviour begins: not at "a participant", and not
-+  at a verb of reporting ("said", "found that", "expressed").
++- **Length:** aim for 5 to 7 words, never more than 10, and normally no more than a
++  quarter of the assertion's words. On a very short assertion it may be most of it.
++  Go below 5 words only when the short span is a complete thing that stands alone
++  ("Conflicting minimum-order figures"); if cutting a word would leave a phrase that
++  points at nothing, keep the word.
++- **Start** where the product's behaviour begins: not at "a participant", and not at
++  a verb of reporting ("said", "found that", "expressed").
 +- **End** before the outcome or reaction that follows the cause ("leaving ...",
-+  "causing ...", "which ...", "so ...").
++  "causing ...", "which ...", "so ..."). Keep a trailing "until ..." or "for ..." only
++  when it says why or where and the claim does not already.
 +- A feeling word on its own is never the fragment.
-+- It must be characters that really appear in the assertion's `text`. The
-+  assertion paraphrases the participant, so the participant's own words are
-+  usually not in it.
++- It must be characters that really appear in the assertion's `text`. The assertion
++  paraphrases the participant, so the participant's own words are usually not in it.
 +
  Write the assertion in a compact cause-and-effect form so that the mechanism
  is actually present in its text. Do not write only an outcome such as “a
  participant was confused” and then return `null`: name what the product did or
-@@ -130,7 +144,7 @@
+@@ -130,11 +152,11 @@
    a participant who needed both to decide.” → fragment: “withheld delivery
    cost and timing until postcode entry”
  - “Click-and-collect was not made clear, so a participant assumed delivery was
@@ -46,8 +56,14 @@
 +  the only route.” → fragment: “Click-and-collect was not made clear”
  
  If a quote has no actionable product/system cause, omit the assertion entirely
- rather than returning a cause-free assertion with a `null` fragment. Every
-@@ -147,8 +161,7 @@
+-rather than returning a cause-free assertion with a `null` fragment. Every
+-assertion returned should therefore normally include exactly one fragment.
++rather than returning a cause-free assertion with a `null` fragment. Of the
++assertions you do return, at most two carry a fragment, as above.
+ 
+ Use this counterfactual test:
+ 
+@@ -147,13 +169,13 @@
  product/system cause. Prefer the
  underlying mechanism over generic emotion, participant intention, a participant
  mistake, or a later outcome. Do not select only an adjective or a tag word.
@@ -57,8 +73,15 @@
  
  `source_quote_id` is the complete provenance pointer; do not return a second
  copy of the quote or a `source_excerpt`. `start`, `end` and `text` must point
+ exactly at the fragment inside the assertion's `text`; omit
+-`intervention_fragment` when no actionable source-grounded mechanism exists.
++`intervention_fragment` when no actionable source-grounded mechanism exists, and
++on every assertion beyond the two that carry the colour budget.
+ 
+ ## User
+ 
 --- a/bristlenose/llm/structured.py	2026-10-30 17:04:20
-+++ b/bristlenose/llm/structured.py	2026-10-30 17:45:04
++++ b/bristlenose/llm/structured.py	2026-10-30 18:12:40
 @@ -294,7 +294,12 @@
  
      start: int = Field(ge=0, description="0-based start offset in assertion_text")
@@ -67,18 +90,22 @@
 +    text: str = Field(
 +        description=(
 +            "Exact assertion_text substring from start to end: a small claim about the "
-+            "product, 6 to 9 words, starting at its behaviour and ending before the outcome"
++            "product, 5 to 7 words, starting at its behaviour and ending before the outcome"
 +        )
 +    )
      rationale: str = Field(
          description="One of: negative_actionable_cause, positive_enabling_cause"
      )
-@@ -323,7 +328,7 @@
+@@ -323,9 +328,9 @@
      intervention_fragment: SignalEvidenceFragment | None = Field(
          default=None,
          description=(
 -            "One contiguous actionable product/system mechanism in text. Write evidence "
-+            "One short contiguous actionable product/system mechanism in text. Write evidence "
-             "assertions only when this exists; null is allowed solely for a source with "
-             "no actionable mechanism, never merely because the assertion omitted it."
+-            "assertions only when this exists; null is allowed solely for a source with "
+-            "no actionable mechanism, never merely because the assertion omitted it."
++            "One short contiguous actionable product/system mechanism in text. At most "
++            "two assertions per signal carry one (the colour budget); null on the others "
++            "and on a source with no actionable mechanism."
          ),
+     )
+ 

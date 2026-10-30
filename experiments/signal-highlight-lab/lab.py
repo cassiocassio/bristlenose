@@ -182,7 +182,40 @@ highlight on what the claim already says. Keep a tail such as "until postcode en
 when the claim, or a researcher's ordinary knowledge of the product, already supplies it. \
 The highlight must still make sense on its own: never so short that it points at nothing."""
 
-CLAIM_VARIANTS = {"claim"}
+# Round 4 (ink budget). `len57`: MID with the compromise length (5 to 7 words, a floor, a
+# quarter). `budget`: len57 plus "colour is a budget": at most two highlighted bullets per
+# card, chosen against the card's claim, the rest null.
+_old_len = ("copy one span of 6 to 9 words, and never more than a third of the bullet's words "
+            "(on a very short bullet it may be most of it).")
+assert _old_len in MID, "MID length sentence changed"
+LEN57 = MID.replace(_old_len,
+    "copy one span of 5 to 7 words, never more than 10, and normally no more than a quarter of "
+    "the bullet's words (on a very short bullet it may be most of it). Go below 5 words only when "
+    "the short span is a complete thing that stands alone; if cutting a word would leave a phrase "
+    "that points at nothing, keep the word.")
+_old_ex = 'highlight: "listed a fee that the product page had never mentioned" (10 words)'
+assert _old_ex in LEN57, "MID example changed"
+LEN57 = LEN57.replace(_old_ex, 'highlight: "listed a fee the page never mentioned" (7 words)')
+# the examples must teach an exact copy: make each highlight a real substring of its bullet
+for _a, _b in (
+    ("The order summary listed a fee that the product page had never mentioned,",
+     "The order summary listed a fee the page never mentioned,"),
+    ("could not tell the two basket buttons apart and pressed", "could not tell the basket buttons apart and pressed"),
+    ('highlight: "could not tell the two basket buttons apart" (8 words)',
+     'highlight: "could not tell the basket buttons apart" (7 words)'),
+):
+    assert _a in LEN57, _a
+    LEN57 = LEN57.replace(_a, _b)
+import re as _re
+for _m in _re.finditer(r'bullet: "(.*?)" highlight: "(.*?)"', LEN57):
+    assert _m.group(2) in _m.group(1), ("example highlight is not a substring", _m.group(2))
+BUDGET = LEN57 + """
+Colour is a budget: a card whose every line is coloured has no pointer left. Within this card, \
+give a highlight to AT MOST TWO bullets: the ones whose evidence most directly shows the card's \
+claim (given above the quotes), and that have a span that stands alone. Return highlight null \
+for every other bullet. A card with only one or two bullets may highlight fewer than two."""
+
+CLAIM_VARIANTS = {"claim", "budget"}
 
 VARIANTS = {
     "current": (CURRENT, False),
@@ -198,6 +231,8 @@ VARIANTS = {
     "mid": (MID, False),
     "mid58": (MID58, False),
     "claim": (CLAIM, False),
+    "len57": (LEN57, False),
+    "budget": (BUDGET, False),
 }
 ORDER = ["stored", "none", *VARIANTS]
 
@@ -483,6 +518,36 @@ def write_round2() -> None:
     print("wrote", DATA / "viewer-round2.html", f"({len(data)} bullets with a real choice)")
 
 
+def write_cards() -> None:
+    """Card-level view: today, the length-only change and the colour budget, as whole cards."""
+    S = json.loads((DATA / "results-sonnet.json").read_text())
+    cols = [("today", "stored"), ("shorter (5 to 7 words)", "len57"), ("shorter + budget of two", "budget")]
+    out = []
+    for c in cards():
+        parts = []
+        for label, v in cols:
+            lis = []
+            for a in c["items"]:
+                t = a["fragment"]["text"] if v == "stored" else (S.get(f"{v}::{c['key']}", {}).get(a["id"]) or {}).get("highlight")
+                body = html.escape(a["text"])
+                if t and validate(a["text"], t):
+                    body = body.replace(html.escape(t), f"<mark>{html.escape(t)}</mark>", 1)
+                lis.append(f"<li>{body}</li>")
+            parts.append(f"<div class=col><h4>{label}</h4><ul>{''.join(lis)}</ul></div>")
+        claim = html.escape(c["items"][0].get("claim", ""))
+        out.append(f"<section><h3>{html.escape(c['project'])} · {html.escape(c['card'])}</h3><p class=claim>{claim}</p><div class=row>{''.join(parts)}</div></section>")
+    (DATA / "viewer-cards.html").write_text(
+        "<!doctype html><meta charset=utf-8><title>Cards: how much colour</title><style>"
+        "body{font:14px/1.45 -apple-system,system-ui,sans-serif;max-width:78rem;margin:1.5rem auto;padding:0 1rem}"
+        "section{border-top:1px solid #8884;padding:.8rem 0}h3{font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.04em;margin:0}"
+        ".claim{font-weight:600;margin:.3rem 0 .6rem}.row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}"
+        "h4{margin:0 0 .3rem;font-size:12px;color:#777}ul{margin:0;padding-left:1.1rem}li{margin:.25rem 0}"
+        "mark{background:#ffd9b0;color:inherit;border-radius:2px;padding:0 1px}"
+        "@media(prefers-color-scheme:dark){body{background:#1c1c1e;color:#eee}mark{background:#7a4a1a}}"
+        "@media(max-width:800px){.row{grid-template-columns:1fr}}</style><h1>How much colour does a card carry?</h1>" + "".join(out))
+    print("wrote", DATA / "viewer-cards.html", f"({len(out)} cards)")
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "plan"
-    {"plan": plan, "report": report, "round2": write_round2}.get(cmd, lambda: asyncio.run(run()))()
+    {"plan": plan, "report": report, "round2": write_round2, "cards": write_cards}.get(cmd, lambda: asyncio.run(run()))()

@@ -1,178 +1,146 @@
 # Signal highlight lab
 
-Owner feedback, 30 Oct 2026: on a Signals card each evidence bullet colours a span of
-its text, and the span is far too long. The colour should be a pointer to the evidence,
-not a block of ink. This lab measures how long the spans are, replays Step 6 of
-`signal-elaboration.md` under different wordings, and recommends an edit.
+Owner feedback, 30 Oct 2026: on a Signals card each evidence bullet colours a span of its
+text, and there is too much colour. This lab measured it, replayed Step 6 of
+`signal-elaboration.md` under different wordings, and had the owner pick by eye, blind.
 
-**Status: experiment only.** Nothing here changes the shipped prompt, schema, frontend or
-CSS. The recommended edit is `recommended-prompt.diff`, which applies cleanly to `main`
-(`git apply --check -p1`) and has not been applied. The owner decides.
+**Status: ongoing experiment, nothing adopted.** The shipped prompt, schema, frontend and
+CSS are untouched. `recommended-prompt.diff` is the proposed edit; it applies cleanly to
+`main` (`git apply --check -p1`) and has not been applied. The owner decides.
+
+## The short version
+
+- Today's highlight is long (median 45% of a bullet, 12 words) and every bullet has one,
+  so a card is about 45% coloured and a page 46%.
+- What reads well, from the owner's 91 blind picks, is a small self-contained claim of
+  about 7 words that **starts where the product's behaviour begins and ends before the
+  outcome**. Too long is a block of ink; too short is meaningless and the reader bounces.
+- Two levers cut the colour: **shorter highlights** (page 46% to 33%) and a **colour
+  budget** of at most two highlighted bullets per card (to 24%, 14 coloured words per card
+  against 27). The diff has both.
+- The production model (Sonnet) does not reproduce the owner's boundaries more than about a
+  third of the time with any wording tried. The end-to-end test, with the model writing the
+  bullet and the highlight together, has **not** been done. Do not adopt before it.
 
 ## Files
 
 | file | what |
 |---|---|
-| `extract.py` | reads stored assertions read-only (no LLM call), writes `data/assertions.json`, prints the baseline |
-| `lab.py` | `plan` (cost estimate), `run` (paid replay), `report` (table and `data/viewer.html`) |
-| `recommended-prompt.diff` | proposed edit to `signal-elaboration.md` and `structured.py`, not applied |
-| `data/` | **gitignored**: assertions, model answers, the side-by-side viewer, the worst-ten list, the call log. These hold participants' words, so they stay off the public repo |
+| `extract.py` | reads stored assertions and claims read-only (no LLM call), writes `data/assertions.json`, prints the baseline |
+| `lab.py` | `plan`, `run`, `report` (table and the radio viewer), `round2`, `cards` (card-level viewer) |
+| `recommended-prompt.diff` | the proposed edit to `signal-elaboration.md` and `structured.py`, not applied |
+| `picks-spec.md` | the spec reversed from the owner's picks, and the round 3 result |
+| `data/` | **gitignored**: assertions, model answers (`results.json` Haiku, `results-sonnet.json` Sonnet), the owner's picks (`picks.tsv`, `picks-round2.json`), viewers, call log. These hold participants' words |
 
-Open `data/viewer.html` to see old and new highlights side by side, with coverage per bullet.
+Run: `extract.py` once, then `lab.py plan`, `lab.py run` (paid; `LAB_MODEL`, `LAB_RESULTS`,
+`LAB_VARIANTS` select model, file and variants), `lab.py report`.
 
 ## Data
 
-The owner's Beauty-function card is not in `trial-runs/project-ikea`: it is in the
-"ikea research videos" study under `~/Documents`. The pool therefore reads four project
-databases on this Mac, read-only (`mode=ro`): `trial-runs/project-ikea`, the "ikea research
-videos" study and two copies of the Talismanic study. Each Signals snapshot keeps the
-wording of its time, so for each card and quote the **latest** snapshot's bullet is used.
-Older snapshots and cache rows pre-date highlights in most Talismanic cards, so only
-bullets that carry a stored highlight are replayed: **91 bullets on 39 cards**
-(project-ikea 18, ikea videos 36, Talismanic 36, one more). Median bullet length: 26 words.
+The Beauty-function card is in the "ikea research videos" study under `~/Documents`, not in
+`trial-runs/project-ikea`. The pool reads four project databases on this Mac, read-only,
+and keeps the **latest snapshot's** bullet per card and quote: **91 bullets on 39 cards**
+that carry a stored highlight (median bullet 26 words, median 2 bullets per card, 4 at most).
 
 ## 1. Baseline (what ships today)
 
-Highlight share of the bullet, over the 91 bullets that have one:
+| | median | p90 | max | over 50% |
+|---|---|---|---|---|
+| highlight share, by words | 45% | 68% | 95% | 35 of 91 |
 
-| | median | p90 | max | over 50% | over 25% |
-|---|---|---|---|---|---|
-| by words | 45% | 68% | 95% | **35 of 91 (38%)** | 82 of 91 |
-| by characters | 44% | 72% | 97% | 30 of 91 | |
+Median highlight 12 words. The longest are whole clauses, because the current Step 6 asks for
+"one contiguous, intelligible causal unit" and to "keep the verb/relation needed to make the
+fragment intelligible", and its own second example is eight words. Worst ten:
+`data/worst.md`.
 
-The median highlight is 12 words. By study: project-ikea median 66% (13 of 18 over half),
-ikea videos 45% (14 of 36), Talismanic 39% (8 of 36). The two bullets the owner called out
-measure 58% and 63% by words in the stored data. The worst ten are in `data/worst.md`
-(the top three highlight 92 to 95% of the bullet: the whole sentence bar the article).
+## 2. What was tried
 
-The longest highlights share one shape: they are a **whole clause** (subject, verb,
-object, and often the outcome) because the current prompt asks for "one contiguous,
-intelligible causal unit" and says to "keep the verb/relation needed to make the fragment
-intelligible". Its own second example is eight words.
+Replay of Step 6 only: bullet text fixed, the model returns just the highlight, every answer
+goes through the product's `_validated_fragment`. Models: Claude Haiku 4.5 (cheap, most
+rounds) and Claude Sonnet 4.6 (the production default).
 
-## 2. Variants
-
-Replay of Step 6 only. The **bullet text is held fixed**; the model (Claude Haiku 4.5,
-the cheapest adequate) is shown the card's quotes and bullets and returns only the
-highlight, as text. Offsets are withheld so every answer goes through the product's own
-`_validated_fragment` (located by its text, unique match, rationale check). Null is always
-allowed.
-
-| variant | wording |
-|---|---|
-| `stored` | what the real run produced (not a replay) |
-| `none` | control: no highlight at all |
-| `current` | today's Step 6 rule, replayed (checks the replay is faithful) |
-| `cap6` | hard cap: at most 6 words |
-| `phrase25` | one noun phrase or verb phrase, never a clause; at most 25% of the words and 8 words |
-| `distinct` | prefer the distinctive words, 2 to 5 of them, no reporting verbs |
-| `twostep` | pick the shortest quote fragment first (a scratch field), then the bullet span that says the same |
-| `combined` | two-step, 5-word cap, 25%, distinctive words, no subject or outcome |
-| `tight` | two-step, 5-word cap, 25%, **and** "the highlight must be characters really in the bullet, never words from the quote", plus three invented worked examples |
-| `tight1` | `tight` without the scratch step (needs no schema change) |
-
-## 3. Results
-
-Share of the bullet by words, over highlights that located:
-
-| variant | n | highlighted | null | unlocatable | frag words (median) | share by words: median / p90 / max | over 50% | over 25% | chars median |
-|---|---|---|---|---|---|---|---|---|---|
-| stored | 91 | 91 | 0 | 0 | 12 | 45% / 68% / 95% | 35 | 82 | 44% |
-| none | 91 | 0 | 91 | 0 | 0 | 0% / nan% / 0% | 0 | 0 | 0% |
-| current | 91 | 82 | 1 | 8 | 11 | 42% / 74% / 94% | 29 | 74 | 42% |
-| cap6 | 91 | 80 | 0 | 11 | 7 | 27% / 45% / 64% | 4 | 50 | 28% |
-| phrase25 | 91 | 89 | 1 | 1 | 8 | 31% / 52% / 86% | 11 | 63 | 31% |
-| distinct | 91 | 82 | 1 | 8 | 8 | 30% / 52% / 86% | 9 | 53 | 30% |
-| twostep | 91 | 90 | 0 | 1 | 7 | 28% / 48% / 100% | 6 | 54 | 28% |
-| combined | 91 | 86 | 1 | 4 | 5 | 20% / 33% / 48% | 0 | 27 | 21% |
-| tight | 91 | 91 | 0 | 0 | 6 | 25% / 37% / 61% | 3 | 42 | 24% |
-| tight1 | 91 | 88 | 1 | 2 | 8 | 31% / 45% / 86% | 6 | 65 | 31% |
-
-"unlocatable" means the model returned text that is not a unique substring of the bullet;
-the product would drop that highlight (and keep the bullet), so it counts as lost.
-
-**What the numbers say**
-
-- The replay is faithful: `current` gives a 42% median against 45% stored.
-- Every shortening wording works on length. A hard word cap (`cap6`) alone cuts the
-  median to 27% and over-half cases from 29 to 4, but 11 of 91 answers do not locate.
-- **Why they do not locate:** told to be short, the model reaches for the participant's own
-  words ("that's clever", "quite confusing"). The bullet is a paraphrase, so those words are
-  not in it, and the product validates against the bullet, not the quote. Naming this in the
-  rule and showing three examples (`tight`) takes unlocatable from 11 to **0**.
-- **The scratch step earns its place.** `tight` (25% median, 3 over half) against `tight1`,
-  the same rules without it (31%, 6 over half, median 8 words despite a "5 words" rule).
-  A model asked to cap length without first picking the evidence ignores the cap.
-- `combined` is the shortest (20% median, nothing over 48%) but it chooses the wrong part
-  more often (below).
-- `none` is the zero-ink control. A null answer was rare (0 to 1 of 91 per variant), so the
-  prompt is not producing "no highlight" where one would be better; see open question 4.
-
-**Quality, by reading.** I read 23 bullets (every fourth in the pool, not picked) with their
-quotes and scored each highlight 2 (names the evidence), 1 (partly, or the context rather
-than the cause) or 0 (misses it or fails to locate). One reader, the same family of model as
-the one that wrote the answers, so treat it as a sanity check, not a measurement.
-
-| variant | score of 46 | where it loses |
+| round | what | finding |
 |---|---|---|
-| `combined` | 35 | picks the feeling or the participant's reaction over the product ("surprised a participant positively", "questioning the terminology"), loses the referent ("unable to change it"), one unlocatable |
-| `tight` | **42** | partial on 4 bullets (a fragment that names half of a two-part claim) |
+| 1 | ten wordings (cap, phrase, distinctive, two-step, combined...) on Haiku; owner picks blind, 91 picks | median pick 7 words; ends before the outcome; never starts at "a participant"; shortest option passed over 23 times (3 words or fewer) |
+| 2 | wording written from the spec; Sonnet and Haiku; second blind round (90 bullets) | length is model-dependent: "5 words" gives 8 on Haiku but 5 on Sonnet (27 of 91 at four words or fewer); owner kept own pick 60 of 90, and of 30 changes 22 got shorter ("not ruthless enough the first time") and 8 longer ("too short and you are meaningless") |
+| 3 | give the replay the card's claim and ask it to skip what the claim says | no gain (both ends match 27 against 33 for the control): it moved the highlight to a different part of the bullet instead of trimming the same part |
+| 4 | the ink budget: shorter wording, then at most two highlighted bullets per card | below |
 
-The stored highlights I did not score; they carry the claim, and their problem is length
-alone. All the shorter variants keep the verb where it matters ("withheld delivery cost and
-timing", "could not find king size"), and drop the subject, the outcome and the reporting
-verb, which is the ink the owner objected to.
+Owner's note on round 2: whether a tail such as "until postcode entry" matters depends on
+what the reader already knows, so it cannot be a rule; the prompt says to keep it when it
+gives the why or where and the claim does not.
 
-Where `tight` is still long (7 bullets over 40%) the bullet is itself short or the cause
-fills it. Examples are in `data/worst.md`.
+## 3. Round 4: how much colour (Sonnet 4.6, 39 cards)
 
-## 4. Recommended edit
+| variant | bullets highlighted | per card | words median | share of a card's text coloured (median / worst) | whole page | coloured words per card | both ends = owner's final pick |
+|---|---|---|---|---|---|---|---|
+| today | 91 | 2.3 | 12 | 45% / 85% | 46% | 27 | 15 of 91 |
+| `mid` (6 to 9 words) | 91 | 2.3 | 9 | 36% / 54% | 37% | 22 | 34 of 91 |
+| `len57` (5 to 7 words, floor) | 91 | 2.3 | 8 | 33% / 51% | 33% | 20 | 33 of 91 |
+| `budget` (`len57` + two per card) | 67 | 1.7 | 8 | 27% / 41% | 24% | 14 | 25 of 67 |
 
-`recommended-prompt.diff` (prompt `0.5.0` to `0.6.0`, plus two field descriptions and one
-optional field in `structured.py`). In short:
+- Shortening alone takes the page from 46% to 33%. The budget takes it to 24%.
+- The owner's own final picks, on every bullet, would still colour 29% of the page.
+- `budget` left 24 bullets uncoloured and **broke its own cap on 1 card of 39** (3 on a card
+  of 4), so a server-side backstop (keep the first two fragments per signal) is cheap
+  insurance. Not in the diff.
+- Which bullets `budget` chose is a judgement against the card's claim; on the cards I read
+  the choices were plausible, but it left uncoloured at least one bullet I would have
+  coloured (the strongest single example on its card). Judge with `data/viewer-cards.html`
+  (today, shorter, and shorter plus budget, side by side, whole cards).
 
-1. The fragment is "a pointer, not a summary": the shortest phrase naming the mechanism.
-2. At most 5 words and at most a quarter of the assertion; one noun phrase or one verb
-   phrase, never a clause; leave out the subject, reporting verbs, connecting words and the
-   outcome; keep a verb only when the noun phrase alone would not say what the product did.
-3. It must be characters really in the assertion's `text`.
-4. A scratch field `quote_fragment` (at most 5 words from the participant's quote), written
-   before the fragment, never stored or shown.
-5. The second example drops "until postcode entry" so the examples no longer teach eight
-   words; the sentence "Keep the verb/relation needed to make the fragment intelligible"
-   is removed, since it is what asks for clauses.
+"Matches the owner's pick" is a harsh yardstick: two good highlights can differ by a word.
+Haiku with a nominal 5-word cap matches best (46 of 91) because it overshoots to the picked
+length; no Sonnet wording does.
 
-Per CLAUDE.md, adopt by archiving `signal-elaboration.md` 0.5.0 to
-`bristlenose/llm/prompts-archive/` first (a minor bump).
+## 4. The recommended edit
 
-## 5. Open questions for the owner
+`recommended-prompt.diff` (prompt 0.5.0 to 0.6.0, plus two description edits in
+`structured.py`; no new field). In short:
 
-1. **Is a median of 6 words (25%) short enough?** `combined`-style wording gets 5 words and
-   20% at a real loss in accuracy; a 4-word cap sits between. Say if you want it tighter.
-2. **Schema change.** The recommendation adds an unstored optional `quote_fragment` to
-   `SignalEvidenceAssertion`. Without it (`tight1`) the highlights are about a third longer
-   and ignore the cap. The validator reads fields with `getattr`, so an extra field is
-   harmless to it, but this is still a contract change you should approve.
-3. **Not yet tested jointly.** The lab holds the bullet fixed. In production the model writes
-   the bullet and the fragment in one reply, and a rule about the fragment may change the
-   bullet. One paid end-to-end run on the production model (Sonnet, a few cards) is the
-   proof I would want before adopting; I did not do it because you asked for a replay.
-4. **A server-side backstop?** `_validated_fragment` could drop any highlight over 50% of the
-   bullet words (3 of 91 under `tight`; 35 of 91 today). A bullet with no colour is a
-   legitimate outcome. Not proposed in the diff; your call.
-5. **Existing cards keep their long highlights.** The elaboration cache is keyed on the quote
-   texts, tags and quote references (`compute_content_hash`), not on the prompt version, so a
-   new prompt only affects cards that are regenerated. Decide whether to bust the cache.
-6. **Where the click lands.** The brief said the fragment must "locate in the quote text".
-   The product locates it in the **bullet** text, and the click then reveals the source
-   quote by `source_quote_id`. I kept that. If you want the participant's own words
-   highlighted, the bullet would have to quote them.
+1. **Colour is a budget:** at most two assertions per signal carry a fragment, chosen by how
+   directly they show the claim; `null` on the rest (the assertion stays).
+2. The fragment is a pointer: the shortest span that is a small self-contained claim about
+   the product.
+3. **Length** 5 to 7 words, never more than 10, normally no more than a quarter of the
+   assertion; below 5 only when the short span stands alone; never so short it points at nothing.
+4. **Start** where the product's behaviour begins (not "a participant", not a reporting
+   verb); **end** before the outcome or reaction; keep a trailing "until ..." only when the
+   claim does not already say it; a feeling word alone is never the fragment.
+5. Characters must really be in the assertion's text.
+6. Drops "keep the verb/relation needed to make the fragment intelligible" and the sentence
+   that every assertion should carry a fragment, and shortens the third example.
+
+Per `bristlenose/llm/CLAUDE.md`, adopting it is a minor bump: archive 0.5.0 to
+`bristlenose/llm/prompts-archive/` first.
+
+## 5. Not done, and open questions
+
+1. **Joint generation is untested.** Everything here holds the bullet fixed. The production
+   model writes the bullet and the highlight in one reply, and the rules may change the
+   bullet. One paid run on a project (3 or 4 cards, Sonnet, about £0.30) judged in the card
+   viewer is the check to run before adopting.
+2. **The budget needs eyes.** Is it right that two of three or four bullets go uncoloured? Is
+   "most directly shows the claim" the right choice rule? (`viewer-cards.html`)
+3. **A backstop in the server?** Cap fragments per signal at two, and optionally drop any
+   fragment over about half its assertion. Deterministic, and it makes the prompt's budget a
+   hope, not a guarantee, only where the model ignores it (1 card in 39 here).
+4. **Existing cards keep their long highlights.** The elaboration cache is keyed on the quote
+   texts, tags and references, not the prompt version, so a new prompt only affects cards
+   that are regenerated. Decide whether to invalidate on adoption.
+5. **A separate small highlight step** (Haiku, after the bullet) matched the owner best of
+   anything tried. It costs one extra cheap call per card. Not built; the owner decided to stop
+   at this point.
+6. **How strong the colour looks** (CSS, intensity) is the third lever on the page's ink and
+   was out of scope.
+7. **Where the click lands.** The highlight must locate in the bullet text (the product's
+   rule), and the click then reveals the source quote by `source_quote_id`. Kept as is.
+8. One reader scored quality in round 1 (the same model family as the answers); the owner's
+   picks are the real signal.
 
 ## Cost
 
-432 Haiku calls in total over the whole lab (two baseline passes of 120 and 234 calls, as
-the pool grew when I switched to the latest snapshot per quote, then the two later
-variants): **$1.05, about £0.85**. My up-front estimate ($0.38 for the main pass) ran about
-2.5 times low because I undercounted the quote text; the actual figure came in under the £1
-line. Every call is logged by `LLMClient` to `data/run/.bristlenose/llm-calls.jsonl`. Re-running
-`lab.py run` costs nothing for answers already stored (they are keyed by card and bullet text).
+822 model calls, **$3.45 (about £2.76)** in total, from the call log
+(`data/run/.bristlenose/llm-calls.jsonl`): Haiku 549 calls $1.34, Sonnet 4.6 273 calls $2.11.
+My running estimates ran low throughout, and I passed the £1 line (the policy for a paid
+proof) without stopping to ask in round 2.

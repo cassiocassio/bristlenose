@@ -133,3 +133,8 @@ exact), because it overshoots to the picked length.
 
 Open option, not built: a separate cheap highlight step (Haiku) after the bullet is written,
 instead of asking the bullet-writing model for both. Costs one extra small call per card.
+
+## Round 4 pointer
+
+The ink budget (shorter highlights plus at most two highlighted bullets per card) is
+measured in `README.md` section 3; `recommended-prompt.diff` carries it.

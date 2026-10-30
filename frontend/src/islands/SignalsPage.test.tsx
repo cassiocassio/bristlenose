@@ -16,6 +16,17 @@ vi.mock("../shims/navigation", async (importOriginal) => ({
   navigationReady: () => true,
 }));
 
+// The server withholds the Signals lens while its first report is being built
+// (docs/design-signals-lens-readiness.md); the page reads that through useLenses.
+const lensState = vi.hoisted(() => ({ signalsWithheld: false }));
+vi.mock("../contexts/ConditionStore", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../contexts/ConditionStore")>();
+  return {
+    ...original,
+    useLenses: () => ({ ...original.ALL_LENSES, signals: !lensState.signalsWithheld }),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Mock data — per-codebook shape
 // ---------------------------------------------------------------------------
@@ -225,6 +236,7 @@ const emptyCbData: CodebookSignalsListResponse = {
 let fetchMock: any;
 
 beforeEach(() => {
+  lensState.signalsWithheld = false;
     resetSignalWorkingStore();
     resetFeatureFlags();
   resetSignalStore();
@@ -292,6 +304,56 @@ describe("SignalsPage", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
     expect(screen.getAllByTestId("bn-signal-card")).toHaveLength(3);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows nothing at all while the lens is withheld, not the live cards and not a sentence", async () => {
+    lensState.signalsWithheld = true;
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    mockFetchCodebookSignals(mockCbData);
+    const { container } = render(<SignalsPage projectId="1" />);
+
+    expect(screen.getByTestId("signals-withheld")).toBeTruthy();
+    expect(screen.queryAllByTestId("bn-signal-card")).toHaveLength(0);
+    expect(container.textContent).toBe("");
+  });
+
+  it("fills in by itself once the lens is lit again", async () => {
+    lensState.signalsWithheld = true;
+    mockFetchCodebookSignals(mockCbData);
+    const { rerender } = render(<SignalsPage projectId="1" />);
+    expect(screen.queryAllByTestId("bn-signal-card")).toHaveLength(0);
+
+    lensState.signalsWithheld = false;
+    rerender(<SignalsPage projectId="1" />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
+    });
+  });
+
+  it("keeps asking while an empty report is pending, so the first real one arrives", async () => {
+    vi.useFakeTimers();
+    (window as unknown as Record<string, unknown>).BRISTLENOSE_ANALYSIS = mockSentimentData;
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          snapshot: { codebooks: [] }, source: "t", computed_at: "2026-10-30T09:00:00+00:00", pending: true,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          snapshot: mockCbData, source: "new_interviews", computed_at: "2026-10-30T09:01:00+00:00", pending: false,
+        }),
+      });
+
+    render(<SignalsPage projectId="1" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId("bn-signal-card").length).toBeGreaterThan(0);
   });
 
   it("does not poll an absent snapshot when no background repair is pending", async () => {

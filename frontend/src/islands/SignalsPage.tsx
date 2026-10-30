@@ -12,6 +12,7 @@
  * the vanilla JS analysis.js so all styling carries over.
  */
 
+import { useLenses } from "../contexts/ConditionStore";
 import { toggleSignalWorking, useSignalWorkingOpen } from "../contexts/SignalWorkingStore";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -1214,7 +1215,7 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
           // researcher did not ask to manage.  Once it lands, this open lens
           // quietly receives it; a completed or offline/error response never
           // becomes a polling loop.
-          if (data.snapshot === null && data.pending) {
+          if (data.pending) {
             retry = window.setTimeout(readSnapshot, INITIAL_SNAPSHOT_POLL_MS);
           }
         })
@@ -1232,6 +1233,8 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     };
   }, [projectId]);
 
+  // The server withholds Signals while its first report is being built.
+  const signalsWithheld = !useLenses().signals;
   const hasSentiment = sentimentData !== null && sentimentData.signals.length > 0;
   const hasTags = cbData !== null && cbData.codebooks.some((cb) => cb.signals.length > 0);
 
@@ -1531,6 +1534,15 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     sentimentPids, hasTags, cbData, tagAllPids, signalKeys, signalMap,
     handleCellClick, isDark, t,
   ]);
+
+  // The first report is being built: the lens is withheld (the nav is dim and
+  // the Mac's sidebar says so under the project name), so there is nothing true
+  // to show yet. No cards, no live sentiment fallback, no spinner and no
+  // sentence, not even the no-data one: the page fills in by itself when the
+  // report lands (the snapshot poll above keeps asking while it is pending).
+  if (signalsWithheld) {
+    return <div data-testid="signals-withheld" aria-busy="true" />;
+  }
 
   // Still loading
   if (!hasSentiment && !hasTags && !tagLoaded) {

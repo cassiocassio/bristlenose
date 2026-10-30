@@ -316,3 +316,18 @@ struct StudyStartupRefusalPipelineTests {
         return result
     }
 }
+
+@Suite struct StudyStartupDisplayNameTests {
+    @Test func bidiOverridesAndZeroWidthSpaceAreRefused() {
+        for scalar: Unicode.Scalar in ["\u{202E}", "\u{200B}", "\u{2066}", "\u{07}", "\u{7F}"] {
+            #expect(StudyStartupRefusal.isUnsafeDisplayScalar(scalar), "U+\(String(scalar.value, radix: 16)) should be refused")
+        }
+    }
+
+    @Test func joinersAndOrdinaryCharactersAreKept() {
+        for scalar: Unicode.Scalar in ["\u{200D}", "\u{200C}", "a", "é", "’", "👨"] {
+            #expect(!StudyStartupRefusal.isUnsafeDisplayScalar(scalar))
+        }
+    }
+}
+

@@ -19,8 +19,10 @@ enum SidebarFinderDrop {
     static let maximumDepth = 8
     static let maximumEntries = 1_024
 
-    /// Stat each parent before probing the canonical marker. Probing through
-    /// a dataless output directory can itself ask File Provider to fetch it.
+    /// The Finder drop's name for the analysed-folder check. The guard that stats each
+    /// parent first (probing through a dataless output directory can itself ask File
+    /// Provider to fetch it) now lives in `LocateFlow.folderLooksAnalysed`, so every
+    /// caller has it.
     static func locallyLooksAnalysed(_ url: URL) -> Bool {
         LocateFlow.folderLooksAnalysed(url: url)
     }

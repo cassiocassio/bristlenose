@@ -46,12 +46,23 @@ struct StudyStartupRefusal: Equatable, Decodable, Sendable {
         localized("consequence", using: i18n)
     }
 
+    /// Control and invisible format scalars (bidi overrides, zero-width space) are
+    /// refused in a name read back from a synced file. The joiners that build family
+    /// emoji and spell Persian words stay: a real Mac name should not be blanked.
+    static func isUnsafeDisplayScalar(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.properties.generalCategory {
+        case .control: return true
+        case .format: return scalar != "\u{200C}" && scalar != "\u{200D}"
+        default: return false
+        }
+    }
+
     @MainActor
     func detail(using i18n: I18n, now: Date = Date()) -> AttributedString {
         guard reason == .foreign else { return AttributedString(localized("unknownBody", using: i18n)) }
         let name = machineName.flatMap { candidate -> String? in
             guard !candidate.isEmpty, candidate.count <= 256,
-                  !candidate.unicodeScalars.contains(where: { $0.properties.generalCategory == .control || $0.properties.generalCategory == .format })
+                  !candidate.unicodeScalars.contains(where: { Self.isUnsafeDisplayScalar($0) })
             else { return nil }
             return candidate
         }

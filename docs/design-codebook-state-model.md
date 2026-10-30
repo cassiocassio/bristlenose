@@ -307,7 +307,7 @@ starts nothing, so a catch-up chip never says "Re-coded" over nothing.
 `completed_at` means only "applied at least once": it gates maintenance, it is how the
 startup sweep tells the two orphans apart, and Apply refuses a job that has it.
 
-**A quote that does not count is never sent, and is not marked sent.** A hidden quote
+**A quote that does not count is not sent while it does not count, and is not marked sent.** A hidden quote
 is discounted evidence and a recoded speaker's quotes have left the evidence (N175,
 25 Oct 2026): neither is sent while it does not count, and neither is on the register.
 So when it counts again it is owed, and it is coded. Until 30 Oct 2026 the per-session

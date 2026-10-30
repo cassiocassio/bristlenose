@@ -21,6 +21,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from bristlenose.server.autocode import _REAPPLY_IN_FLIGHT, live_reapply, register_reapply
+from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import parse_quote_dom_id, quote_dom_id
 from bristlenose.server.models import (
     _LEGACY_UNGROUPED_NAME,
@@ -550,6 +551,7 @@ def put_session_speaker(
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
             sync_role_pins(db, project_id, session_id)
+            note_quotes_counting(request.app, project_id)  # a swap can return a speaker
             return {"status": "ok"}
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
@@ -698,6 +700,8 @@ def put_session_speaker(
         speaker_slots.renumber(db, project_id)
         db.commit()
         sync_role_pins(db, project_id, session_id)
+        if recodes:
+            note_quotes_counting(request.app, project_id)  # a recode back in counts again
         return {"status": "ok"}
     finally:
         db.close()
@@ -1197,16 +1201,20 @@ def put_hidden(
                 hidden_db_ids.add(quote.id)
 
         # Update or create QuoteState rows for all project quotes
+        restored = False
         for qid in _quote_ids_for_project(db, project_id):
             qs = db.query(QuoteState).filter_by(quote_id=qid).first()
             should_hide = qid in hidden_db_ids
             if qs:
+                restored = restored or (qs.is_hidden and not should_hide)
                 qs.is_hidden = should_hide
                 qs.hidden_at = _now() if should_hide else None
             elif should_hide:
                 db.add(QuoteState(quote_id=qid, is_hidden=True, hidden_at=_now()))
 
         db.commit()
+        if restored:
+            note_quotes_counting(request.app, project_id)  # a quote counts again
         return {"status": "ok"}
     finally:
         db.close()
@@ -1228,6 +1236,7 @@ def patch_hidden(
     try:
         _check_project(db, project_id)
         unresolved: list[str] = []  # quotes the server no longer has
+        restored = False  # a hidden quote that counts again
         for dom_id, is_hidden in data.items():
             quote = _resolve_quote(db, project_id, dom_id)
             if not quote:
@@ -1238,10 +1247,18 @@ def patch_hidden(
             else:
                 qs = db.query(QuoteState).filter_by(quote_id=quote.id).first()
             if qs:
+                restored = restored or (qs.is_hidden and not is_hidden)
                 qs.is_hidden = is_hidden
                 qs.hidden_at = _now() if is_hidden else None
         db.commit()
-        return {"status": "ok", "unresolved": unresolved}
+        # A quote that counts again is owed to every codebook that never sent it
+        # (ruling 4): the codebooks that will code it are named, so the page can
+        # look for the catch-up and show its tags when it ends.
+        answer: dict[str, Any] = {"status": "ok", "unresolved": unresolved}
+        catch_up = note_quotes_counting(request.app, project_id) if restored else []
+        if catch_up:  # named only when there is one, as the writes below answer
+            answer["catchUp"] = catch_up
+        return answer
     finally:
         db.close()
 
@@ -1690,6 +1707,14 @@ def _schedule_catch_up(
     was never applied or owes nothing. Fire-and-forget — never
     blocks or fails the PUT.
     """
+    launch_catch_up(request.app, project_id, framework_id)
+
+
+def launch_catch_up(app: Any, project_id: int, framework_id: str) -> None:
+    """Start the delta re-apply task for ``framework_id`` and register it as the
+    one coding it. Shared by the switch-on catch-up and the one a quote counting
+    again schedules (``autocode_catch_up``). The caller has set the job "running"
+    (``_start_catch_ups``)."""
     import asyncio
     import logging
 
@@ -1697,8 +1722,8 @@ def _schedule_catch_up(
     from bristlenose.server.autocode import reapply_to_new_quotes
 
     logger = logging.getLogger(__name__)
-    db_factory = request.app.state.db_factory
-    settings = getattr(request.app.state, "settings", None) or load_settings()
+    db_factory = app.state.db_factory
+    settings = getattr(app.state, "settings", None) or load_settings()
 
     async def _run() -> None:
         try:

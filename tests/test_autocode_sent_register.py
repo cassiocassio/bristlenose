@@ -307,6 +307,18 @@ class TestTheRegister:
         assert len(llm.prompts()) == 1
         assert "s2-2" in llm.prompts()[0] and "s2-0" not in llm.prompts()[0]
 
+    def test_a_quote_a_catch_up_got_no_tag_for_is_not_sent_again(self, factory) -> None:
+        """The register is written by the re-apply too, not only the first apply:
+        an answered batch that tagged one quote of two still paid for both."""
+        _session(factory, "s1", imported=_EARLY)
+        _first_apply(factory, _answer_all())
+        _session(factory, "s2")
+        with _LLM(AsyncMock(side_effect=lambda **_kw: _result(1))):  # tags q0 only
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        with _LLM(_answer_all()) as llm:
+            asyncio.run(reapply_to_new_quotes(factory, 1, "garrett", _settings()))
+        assert llm.prompts() == []
+
     def test_putting_a_quote_on_the_register_twice_is_harmless(self, factory) -> None:
         """(job, quote) is unique, and a duplicate raised at commit takes the
         proposals it travels with."""

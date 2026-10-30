@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from bristlenose.server import speaker_slots, transcript_layout
+from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.heading_names import HeadingNames, section_anchor, theme_anchor
 from bristlenose.server.journey import derive_journeys
@@ -557,6 +558,7 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
         ))
         if creates:
             _reserve_code(db, project_id, session_id, slot)
+        note_quotes_counting(request.app, project_id)  # a paragraph moved back counts again
         return result
     finally:
         db.close()
@@ -623,7 +625,8 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         edit = db.query(TranscriptLayoutEdit).filter_by(id=edit_id, session_id=sess.id).first()
         if edit is None:
             raise HTTPException(status_code=404, detail="Edit not found")
-        made = edit.speaker_code if edit.kind == "speaker" and edit.token == 1 else None
+        was_a_move = edit.kind == "speaker"
+        made = edit.speaker_code if was_a_move and edit.token == 1 else None
         db.delete(edit)
         db.flush()
         project = db.get(Project, project_id)
@@ -632,6 +635,8 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         if made is not None:
             _drop_unused_slot(db, sess, made)
         db.commit()
+        if was_a_move:
+            note_quotes_counting(request.app, project_id)  # the move is undone
         return {"status": "ok"}
     finally:
         db.close()

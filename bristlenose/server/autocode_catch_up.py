@@ -22,22 +22,27 @@ first time. While the last attempt failed for a key or credit reason
 (``invalid_key``, ``out_of_credit``) further triggers do not call the provider
 again until the key or provider state has changed, then one pass codes the whole
 backlog. "State" is the provider, the model and whether a key is set, never the
-key: no key value is read, kept or logged here. It is held in this process, so a
-serve restart (which the Mac does when a key is saved) is a change too. A
-provider with no key is not tried at all (as ``app.py`` skips the run's re-apply)
-and writes nothing to the job.
+key: no key value is kept or logged here. It is held in this process, so a serve
+restart (which the Mac does when a key is saved) is a change too, and only while
+the job still says it failed that way, so any later pass that works lifts it.
+Topping up credit changes none of these: an out-of-credit codebook is tried again
+after a restart or a change of provider or model, not before. A provider with no key
+is not tried at all (as ``app.py`` skips the run's re-apply) and writes nothing to
+the job.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session as SASession
 
     from bristlenose.config import BristlenoseSettings
+    from bristlenose.server.models import AutoCodeJob
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +73,27 @@ _BLOCKED: dict[tuple[int, str], tuple[str, str, bool]] = {}
 _FIRING: set[asyncio.Task[Any]] = set()
 
 
+#: ``load_settings()`` reads the credential store, which on the Mac is a subprocess per key,
+#: and a route asks on every unhide: the answer is kept this long. A serve built with settings
+#: (tests, an embedding) is not asked at all.
+_SETTINGS_TTL_S = 30.0
+_settings_memo: tuple[int, float, Any] | None = None  # (id of the app, when, settings)
+
+
 def _settings(app: Any) -> BristlenoseSettings:
+    global _settings_memo
+    injected = getattr(app.state, "settings", None)
+    if injected is not None:
+        return injected  # type: ignore[no-any-return]
+    now = time.monotonic()
+    memo = _settings_memo
+    if memo is not None and memo[0] == id(app) and now - memo[1] < _SETTINGS_TTL_S:
+        return memo[2]  # type: ignore[no-any-return]
     from bristlenose.config import load_settings
 
-    return getattr(app.state, "settings", None) or load_settings()
+    loaded = load_settings()
+    _settings_memo = (id(app), now, loaded)
+    return loaded
 
 
 def cloud_ready(settings: Any) -> bool:
@@ -92,35 +114,51 @@ def signature(settings: Any) -> tuple[str, str, bool]:
     )
 
 
-def blocked(project_id: int, framework_id: str, settings: Any) -> bool:
+def blocked(project_id: int, framework_id: str, settings: Any, job: AutoCodeJob) -> bool:
     """Whether the last attempt failed for a key or credit reason and nothing has
-    changed since."""
-    held = _BLOCKED.get((project_id, framework_id))
-    return held is not None and held == signature(settings)
+    changed since: the state is the one it failed in, and the job still says so.
+    A pass that has worked since (any path) cleared the job's failure and lifts it."""
+    key = (project_id, framework_id)
+    held = _BLOCKED.get(key)
+    if held is None:
+        return False
+    if job.status != "failed" or job.failure_kind not in KEY_OR_CREDIT_KINDS:
+        del _BLOCKED[key]
+        return False
+    return held == signature(settings)
 
 
-def eligible_frameworks(db: SASession, project_id: int, settings: Any) -> list[str]:
+def _eligible_jobs(db: SASession, project_id: int, app: Any) -> list[AutoCodeJob]:
     """The codebooks a pass would code something for now: applied at least once,
     still installed and switched on, owing a quote that counts, not held back by
-    a key or credit failure, and a cloud provider that has a key."""
+    a key or credit failure, and a cloud provider that has a key.
+
+    The cheap questions first, since a route asks on every unhide: which codebooks
+    were applied and are on (a project with none stops here), then the settings, then
+    one read of the quotes that count, shared by every codebook."""
     from bristlenose.server.autocode import _maintained_framework_ids, owed_quotes
     from bristlenose.server.models import AutoCodeJob
+    from bristlenose.server.speaker_slots import analysis_quotes
 
-    if not cloud_ready(settings):
-        return []
     maintained = _maintained_framework_ids(db, project_id)
-    jobs = (
-        db.query(AutoCodeJob)
+    jobs = [
+        job
+        for job in db.query(AutoCodeJob)
         .filter(AutoCodeJob.project_id == project_id, AutoCodeJob.completed_at.isnot(None))
         .order_by(AutoCodeJob.id)
-        .all()
-    )
-    return [
-        job.framework_id
-        for job in jobs
         if job.framework_id in maintained
-        and not blocked(project_id, job.framework_id, settings)
-        and owed_quotes(db, job)
+    ]
+    if not jobs:
+        return []
+    settings = _settings(app)
+    if not cloud_ready(settings):
+        return []
+    counted = analysis_quotes(db, project_id)
+    return [
+        job
+        for job in jobs
+        if not blocked(project_id, job.framework_id, settings, job)
+        and owed_quotes(db, job, counted)
     ]
 
 
@@ -129,28 +167,31 @@ def note_quotes_counting(app: Any, project_id: int) -> list[dict[str, str]]:
 
     Called by a route after its commit, from a worker thread. Arms the debounced
     pass when some codebook has something to code, and answers which, as
-    ``[{"framework_id", "title"}]``, so the page can look for the pass. Never
-    raises: the write is done, and an owed quote waits.
+    ``[{"framework_id", "title", "started_at"}]``: ``started_at`` is the job's start
+    now, so the page can tell the pass this write causes from an earlier one, which
+    ``/autocode/jobs`` could not show it when it ended in a second. Never raises: the
+    write is done, and an owed quote waits.
     """
     try:
         from bristlenose.server.codebook import get_template
 
         db = app.state.db_factory()
         try:
-            frameworks = eligible_frameworks(db, project_id, _settings(app))
+            jobs = _eligible_jobs(db, project_id, app)
+            armed = [
+                {
+                    "framework_id": job.framework_id,
+                    "title": template.title if (template := get_template(job.framework_id))
+                    else job.framework_id,
+                    "started_at": job.started_at.isoformat() if job.started_at else "",
+                }
+                for job in jobs
+            ]
         finally:
             db.close()
-        if not frameworks:
-            return []
-        _arm_on_the_loop(app, project_id)
-        out = []
-        for framework_id in frameworks:
-            template = get_template(framework_id)
-            out.append({
-                "framework_id": framework_id,
-                "title": template.title if template else framework_id,
-            })
-        return out
+        if armed:
+            _arm_on_the_loop(app, project_id)
+        return armed
     except Exception:
         logger.exception("Could not schedule the AutoCode catch-up for project %d", project_id)
         return []
@@ -192,21 +233,23 @@ async def _fire(app: Any, project_id: int) -> None:
     """One pass per codebook that has something to code. What counts is read now,
     not when the timer started: a quote hidden again in the wait is not owed."""
     try:
-        settings = _settings(app)
         db = app.state.db_factory()
         try:
-            frameworks = eligible_frameworks(db, project_id, settings)
+            frameworks = [job.framework_id for job in _eligible_jobs(db, project_id, app)]
         finally:
             db.close()
-        for framework_id in frameworks:
-            await _catch_up(app, project_id, framework_id, settings)
     except Exception:
-        logger.exception("AutoCode catch-up after a quote counted again failed")
+        logger.exception("AutoCode catch-up after a quote counted again could not start")
+        return
+    for framework_id in frameworks:
+        try:
+            await _catch_up(app, project_id, framework_id)
+        except Exception:
+            # One codebook's failure does not stop the next.
+            logger.exception("AutoCode catch-up %s after a quote counted again failed", framework_id)
 
 
-async def _catch_up(
-    app: Any, project_id: int, framework_id: str, settings: Any,
-) -> None:
+async def _catch_up(app: Any, project_id: int, framework_id: str) -> None:
     from bristlenose.server.autocode import live_reapply
     from bristlenose.server.models import AutoCodeJob
     from bristlenose.server.routes.data import _start_catch_ups, launch_catch_up
@@ -217,6 +260,10 @@ async def _catch_up(
         await asyncio.wait({running})
     db = app.state.db_factory()
     try:
+        # Its turn may be minutes after the list was made (the codebooks go one at a
+        # time): it may have been switched off since, or held, or owe nothing now.
+        if framework_id not in [j.framework_id for j in _eligible_jobs(db, project_id, app)]:
+            return
         started = _start_catch_ups(db, project_id, [framework_id])
     finally:
         db.close()
@@ -252,7 +299,7 @@ async def _catch_up(
         db.close()
     key = (project_id, framework_id)
     if status == "failed" and kind in KEY_OR_CREDIT_KINDS:
-        _BLOCKED[key] = signature(settings)
+        _BLOCKED[key] = signature(_settings(app))
         logger.info(
             "AutoCode catch-up %s failed (%s); no more attempts until the provider "
             "or key changes", framework_id, kind,
@@ -268,3 +315,5 @@ def forget_everything() -> None:
             wait.handle.cancel()
     _WAITS.clear()
     _BLOCKED.clear()
+    global _settings_memo
+    _settings_memo = None

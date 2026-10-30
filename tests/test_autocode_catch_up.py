@@ -49,17 +49,23 @@ class _Model:
     def __init__(self, confidence: float = 0.85) -> None:
         self.confidence = confidence
         self.fail: str | None = None
+        #: With ``fail``, only the calls whose prompt carries this (a codebook's title).
+        self.fail_only: str | None = None
         self.prompts: list[str] = []
 
     async def analyze(self, **kw: Any) -> AutoCodeBatchResult:
         prompt = str(kw["user_prompt"])
         self.prompts.append(prompt)
-        if self.fail is not None:
+        if self.fail is not None and (self.fail_only is None or self.fail_only in prompt):
             raise RuntimeError(self.fail)
         n = len(re.findall(r"^\d+\. \[", prompt, re.M))
+        tag = "user need"  # garrett's; another codebook is answered in its own first tag
+        for fw, title in _TITLES.items():
+            if fw != "garrett" and title in prompt:
+                tag = get_template(fw).groups[0].tags[0].name  # type: ignore[union-attr]
         return AutoCodeBatchResult(assignments=[
             AutoCodeTagAssignment(
-                quote_index=i, tag_name="user need", confidence=self.confidence, rationale="r",
+                quote_index=i, tag_name=tag, confidence=self.confidence, rationale="r",
             )
             for i in range(n)
         ])
@@ -246,7 +252,10 @@ class TestHideApplyUnhide:
 
         with model, client:
             answer = _hide(client, dom, False)
-            assert answer["catchUp"] == [{"framework_id": "garrett", "title": _TITLES["garrett"]}]
+            assert [(c["framework_id"], c["title"]) for c in answer["catchUp"]] == [
+                ("garrett", _TITLES["garrett"])
+            ]
+            assert answer["catchUp"][0]["started_at"], "the job's start now, for the page to compare"
             _wait(lambda: "autocode" in _tag_sources(app, text), "the tag to appear")
 
         later = model.prompts[sent_at_apply:]
@@ -287,9 +296,10 @@ class TestHideApplyUnhide:
         _hide_in_db(app, dom)
         model = _Model(confidence=0.55)
         _apply(app, model, "garrett", cutoff=0.7)
+        applied = len(model.prompts)
         with model, client:
             _hide(client, dom, False)
-            _wait(lambda: len(model.prompts) == 1, "the catch-up call")
+            _wait(lambda: len(model.prompts) == applied + 1, "the catch-up call")
             _quiet()
         assert _tag_sources(app, text) == []
         db = app.state.db_factory()
@@ -314,9 +324,10 @@ class TestHideApplyUnhide:
         db.add(QuoteTag(quote_id=quote.id, tag_definition_id=tag.id, source="human"))
         db.commit()
         db.close()
+        applied = len(model.prompts)
         with model, client:
             _hide(client, dom, False)
-            _wait(lambda: len(model.prompts) == 1, "the catch-up call")
+            _wait(lambda: len(model.prompts) == applied + 1, "the catch-up call")
             _quiet()
         assert _tag_sources(app, text) == ["human"]
 
@@ -346,7 +357,8 @@ class TestTheDebounce:
 
         with model, client, patch("bristlenose.server.autocode.reapply_to_new_quotes", spy):
             for dom in burst:  # thirty gestures, each its own request
-                _hide(client, [dom], False)
+                named = _hide(client, [dom], False)["catchUp"]
+            assert sorted(c["framework_id"] for c in named) == ["garrett", "norman"]
             _wait(lambda: len(model.prompts) - applied >= 4, "both codebooks to code them")
             _quiet()
 
@@ -385,10 +397,14 @@ class TestTheDebounce:
                 db.close()
             assert owed == ["burst quote 1"], "still owed, sent the moment it counts again"
 
-    def test_each_gesture_restarts_the_wait(self, tmp_path: Path) -> None:
-        """Three unhides 0.12 s apart, each inside the 0.2 s wait the last one
-        started, though the third comes after the first one's wait would have ended:
-        one call carrying all three."""
+    def test_each_gesture_restarts_the_wait(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Three unhides 0.35 s apart, each inside the 0.6 s wait the last one started,
+        though the third comes after the first one's wait would have ended: one call
+        carrying all three. (Wide gaps: a loaded machine delays a request by a good
+        fraction of a second.)"""
+        monkeypatch.setattr(cu, "DEBOUNCE_S", 0.6)
         app, client = _app(tmp_path)
         _more_quotes(app, 3)
         doms = _dom(app, like="burst quote")
@@ -399,9 +415,9 @@ class TestTheDebounce:
         with model, client:
             for dom in doms:
                 _hide(client, [dom], False)
-                time.sleep(0.12)
+                time.sleep(0.35)
             _wait(lambda: len(model.prompts) > applied, "the pass")
-            _quiet(0.8)
+            _quiet(1.2)
         assert model.batch_sizes()[applied:] == [3]
 
     def test_the_cap_stops_a_long_burst_pushing_the_pass_back_for_ever(
@@ -568,8 +584,8 @@ class TestAKeyOrCreditFailure:
             _hide(client, doms[:1], False)
             _wait(lambda: self_job(app).status == "failed", "the failure")
             assert self_job(app).failure_kind == "rate_limited"
-            assert _hide(client, doms[1:], False)["catchUp"] == [
-                {"framework_id": "garrett", "title": _TITLES["garrett"]}
+            assert [c["framework_id"] for c in _hide(client, doms[1:], False)["catchUp"]] == [
+                "garrett"
             ]
             _wait(lambda: len(model.prompts) - applied == 2, "the second attempt")
             _wait(lambda: self_job(app).status == "failed" and cu._BLOCKED == {}, "it to end")
@@ -611,6 +627,7 @@ class TestARecodeBackIn:
             back = client.put(f"{_P}/sessions/s1/speakers/p1",
                               json={"kind": "participant", "confirmed": True})
             assert back.status_code == 200, back.text
+            assert [c["framework_id"] for c in back.json()["catchUp"]] == ["garrett"]
             _wait(lambda: "autocode" in _tag_sources(app, "Quote from p1"), "the tag to appear")
         assert len(model.prompts) - applied == 1
         assert "Quote from p1" in model.prompts[applied]
@@ -642,5 +659,171 @@ class TestAParagraphMovedBack:
         with model, client:
             undone = client.delete(f"{_P}/transcripts/s1/layout-edits/{moved.json()['id']}")
             assert undone.status_code == 200, undone.text
+            assert [c["framework_id"] for c in undone.json()["catchUp"]] == ["garrett"]
             _wait(lambda: "autocode" in _tag_sources(app, "Quote from p1"), "the tag to appear")
         assert len(model.prompts) - applied == 1
+
+    def test_moving_it_back_by_hand_does_too(self, tmp_path: Path) -> None:
+        from tests.test_serve_participant_recode import _with_quotes
+
+        client = _file_client(_with_quotes(tmp_path), tmp_path)
+        app = client.app  # type: ignore[attr-defined]
+        app.state.settings = _settings()
+        assert client.post(
+            f"{_P}/codebook/import-template", json={"template_id": "garrett"}
+        ).status_code == 200
+        words = "Thanks for having me, it is"
+        away = client.post(f"{_P}/transcripts/s1/reassign",
+                           json={"position": 1, "verify": words, "new": "moderator"})
+        assert away.status_code == 200, away.text
+        assert away.json()["catchUp"] == [], "moved away: nothing newly owed"
+        model = _Model()
+        _apply(app, model, "garrett")
+        with model, client:
+            back = client.post(f"{_P}/transcripts/s1/reassign",
+                               json={"position": 1, "verify": words, "slot": "p1"})
+            assert back.status_code == 200, back.text
+            assert [c["framework_id"] for c in back.json()["catchUp"]] == ["garrett"]
+            _wait(lambda: "autocode" in _tag_sources(app, "Quote from p1"), "the tag to appear")
+
+
+class TestTheCodebooksTakeTurns:
+    def test_one_failing_does_not_stop_the_next(self, tmp_path: Path) -> None:
+        app, client = _app(tmp_path, ("garrett", "norman"))
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        _apply(app, model, "norman")
+        model.fail, model.fail_only = "rate limit exceeded", _TITLES["garrett"]
+        with model, client:
+            _hide(client, dom, False)
+            _wait(lambda: "autocode" in _tag_sources(app, text), "norman to code it")
+        assert self_job(app).status == "failed"
+
+    def test_one_that_cannot_start_does_not_stop_the_next_and_is_not_left_running(
+        self, tmp_path: Path
+    ) -> None:
+        import bristlenose.server.routes.data as data_routes
+
+        app, client = _app(tmp_path, ("garrett", "norman"))
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        _apply(app, model, "norman")
+        real = data_routes.launch_catch_up
+
+        def launch(app_: Any, project_id: int, framework_id: str) -> None:
+            if framework_id == "garrett":
+                raise RuntimeError("could not start")
+            real(app_, project_id, framework_id)
+
+        with model, client, patch.object(data_routes, "launch_catch_up", launch):
+            _hide(client, dom, False)
+            _wait(lambda: "autocode" in _tag_sources(app, text), "norman to code it")
+        assert self_job(app).status == "completed", "not left 'running' with no task behind it"
+
+    def test_a_codebook_switched_off_while_it_waits_its_turn_is_not_coded(
+        self, tmp_path: Path
+    ) -> None:
+        """The codebooks go one at a time, so norman's turn can come minutes after the
+        list was made; off means off still."""
+        import threading
+
+        app, client = _app(tmp_path, ("garrett", "norman"))
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        _apply(app, model, "norman")
+        applied = len(model.prompts)
+
+        gate, out = threading.Event(), threading.Event()
+        real = model.analyze
+
+        async def slow(**kw: Any) -> AutoCodeBatchResult:
+            import asyncio
+
+            if _TITLES["garrett"] in str(kw["user_prompt"]):  # garrett codes first
+                out.set()
+                await asyncio.get_running_loop().run_in_executor(None, gate.wait)
+            return await real(**kw)
+
+        model.analyze = slow  # type: ignore[method-assign]
+        try:
+            with model, client:
+                _hide(client, dom, False)
+                _wait(out.is_set, "garrett to be out with its call")
+                off = client.put(f"{_P}/framework-states", json={"norman": False})
+                assert off.status_code == 200, off.text
+                gate.set()
+                _wait(lambda: "autocode" in _tag_sources(app, text), "garrett to finish")
+                _quiet(1.0)
+        finally:
+            gate.set()  # never leave a thread waiting for ever
+        assert not any(_TITLES["norman"] in p for p in model.prompts[applied:]), "off means off"
+
+
+class TestAQuoteUnhiddenWhileTheFirstApplyRuns:
+    def test_it_is_coded_when_the_apply_ends(self, tmp_path: Path) -> None:
+        """The job is not applied until it ends, so the unhide armed nothing; the
+        quote was not in its batches. The end of the apply asks again."""
+        import threading
+
+        app, client = _app(tmp_path)
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        gate, out = threading.Event(), threading.Event()
+        model = _Model()
+        real = model.analyze
+
+        async def slow(**kw: Any) -> AutoCodeBatchResult:
+            import asyncio
+
+            if not gate.is_set():
+                out.set()
+                await asyncio.get_running_loop().run_in_executor(None, gate.wait)
+            return await real(**kw)
+
+        model.analyze = slow  # type: ignore[method-assign]
+        try:
+            with model, client, patch("bristlenose.server.routes.autocode.load_settings",
+                                      return_value=app.state.settings):
+                started = client.post(f"{_P}/autocode/garrett")
+                assert started.status_code == 200, started.text
+                _wait(out.is_set, "the apply to be out with its call")
+                assert _hide(client, dom, False)["catchUp"] == [], "not applied: nothing to arm"
+                gate.set()
+                _wait(lambda: "autocode" in _tag_sources(app, text), "the quote to be coded")
+        finally:
+            gate.set()
+        assert text in "".join(model.prompts[1:])
+
+
+class TestAHoldIsLiftedByAnyPassThatWorks:
+    def test_a_switch_on_catch_up_that_succeeds_frees_the_codebook(self, tmp_path: Path) -> None:
+        app, client = _app(tmp_path)
+        _more_quotes(app, 3)
+        doms = _dom(app, like="burst quote")
+        _hide_in_db(app, doms)
+        model = _Model()
+        _apply(app, model, "garrett")
+        model.fail = "api key not valid"
+        with model, client:
+            _hide(client, doms[:1], False)
+            _wait(lambda: self_job(app).status == "failed", "the failure")
+            assert _hide(client, doms[1:2], False)["catchUp"] == [], "held"
+
+            model.fail = None  # the key was mended some other way: off and on again
+            assert client.put(f"{_P}/framework-states", json={"garrett": False}).status_code == 200
+            on = client.put(f"{_P}/framework-states", json={"garrett": True}).json()
+            assert on["catchUp"] == ["garrett"]
+            _wait(lambda: self_job(app).status == "completed", "the switch-on catch-up")
+
+            hide_again = _hide(client, doms[2:], False)
+        assert [c["framework_id"] for c in hide_again["catchUp"]] == ["garrett"]

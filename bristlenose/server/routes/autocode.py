@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from bristlenose.config import load_settings
 from bristlenose.server.autocode import run_autocode_job, snap_cutoff
+from bristlenose.server.autocode_catch_up import note_quotes_counting
 from bristlenose.server.codebook import get_template
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
@@ -343,11 +344,17 @@ async def start_autocode_job(
         # "running"). Discard on completion.
         db_factory = request.app.state.db_factory
         project_dir = request.app.state.project_dir
+        app = request.app
+
         async def _run_and_snapshot() -> None:
             await run_autocode_job(
                 db_factory, project_id, framework_id, settings,
                 project_dir=project_dir,
             )
+            # A quote that began to count while this ran (an unhide, a recode back in)
+            # was not in its batches and, the job not yet applied then, armed nothing:
+            # the codebook owes it now, so ask (ruling 4).
+            note_quotes_counting(app, project_id)
             snapshot_db = db_factory()
             try:
                 completed = snapshot_db.query(AutoCodeJob).filter_by(

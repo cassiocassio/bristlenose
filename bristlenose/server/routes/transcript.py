@@ -7,6 +7,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -469,6 +470,8 @@ class ReassignBody(BaseModel):
 
 class LayoutEditResult(BaseModel):
     id: int
+    #: The codebooks that will code a quote this edit returned to the evidence.
+    catchUp: list[dict[str, str]] = []  # noqa: N815 — the wire name the page reads
 
 
 def _layout_session(db: Session, project_id: int, session_id: str) -> SessionModel:
@@ -558,7 +561,7 @@ def reassign_paragraph(project_id: int, session_id: str, body: ReassignBody,
         ))
         if creates:
             _reserve_code(db, project_id, session_id, slot)
-        note_quotes_counting(request.app, project_id)  # a paragraph moved back counts again
+        result.catchUp = note_quotes_counting(request.app, project_id)  # moved back: counts again
         return result
     finally:
         db.close()
@@ -615,7 +618,7 @@ def _reserve_code(db: Session, project_id: int, session_id: str, code: str) -> N
 
 @router.delete("/projects/{project_id}/transcripts/{session_id}/layout-edits/{edit_id}")
 def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
-                     request: Request) -> dict[str, str]:
+                     request: Request) -> dict[str, Any]:
     """Take a split, join or reassignment back: forget it, then rebuild the session's
     paragraphs from the transcript and make the edits that remain."""
     from bristlenose.server.importer import rebuild_session_paragraphs
@@ -635,8 +638,10 @@ def undo_layout_edit(project_id: int, session_id: str, edit_id: int,
         if made is not None:
             _drop_unused_slot(db, sess, made)
         db.commit()
-        if was_a_move:
-            note_quotes_counting(request.app, project_id)  # the move is undone
+        if was_a_move:  # the move is undone: its quotes count again
+            catch_up = note_quotes_counting(request.app, project_id)
+            if catch_up:
+                return {"status": "ok", "catchUp": catch_up}
         return {"status": "ok"}
     finally:
         db.close()

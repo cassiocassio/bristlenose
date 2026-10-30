@@ -686,7 +686,9 @@ def record_sent(db: SASession, job_id: int, quote_ids: Iterable[int]) -> None:
         db.add(AutoCodeSentQuote(job_id=job_id, quote_id=quote_id))
 
 
-def owed_quotes(db: SASession, job: AutoCodeJob) -> list[Any]:
+def owed_quotes(
+    db: SASession, job: AutoCodeJob, counted: list[Any] | None = None,
+) -> list[Any]:
     """The quotes ``job`` still owes: those that count and are not on its register
     (RE#66, ruling 4).
 
@@ -697,11 +699,15 @@ def owed_quotes(db: SASession, job: AutoCodeJob) -> list[Any]:
     passes send by, so a quote that does not count is never owed, and cannot be
     marked as sent having gone nowhere. A catch-up chip over nothing would say
     "Re-coded" over nothing, so no quotes owed means nothing to start.
+
+    ``counted`` is ``analysis_quotes`` for the project when the caller has it
+    already (it is the same list for every codebook).
     """
     from bristlenose.server.speaker_slots import analysis_quotes
 
     sent = sent_quote_ids(db, job.id)
-    return [q for q in analysis_quotes(db, job.project_id) if q.id not in sent]
+    quotes = counted if counted is not None else analysis_quotes(db, job.project_id)
+    return [q for q in quotes if q.id not in sent]
 
 
 def delete_jobs(db: SASession, job_ids: list[int]) -> None:
@@ -1109,7 +1115,7 @@ async def reapply_to_new_quotes(
                 for item in b
             })
             logger.warning(
-                "Re-apply %s: %d of %d batches failed; sessions still owed: %s",
+                "Re-apply %s: %d of %d batches failed; sessions with quotes still owed: %s",
                 framework_id, len(failures), len(results), ", ".join(missed),
             )
         if failures and len(failures) == len(results):

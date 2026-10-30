@@ -490,7 +490,7 @@ def put_session_speaker(
     speaker_code: str,
     request: Request,
     data: SpeakerNameEdit,
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Name, confirm or pick one session's speaker.
 
     ``speaker_code`` is the **slot** code — the transcript's own token in this
@@ -551,8 +551,9 @@ def put_session_speaker(
         if data.swap_with is not None:
             _swap(db, project_id, session_id, sp, data.swap_with)
             sync_role_pins(db, project_id, session_id)
-            note_quotes_counting(request.app, project_id)  # a swap can return a speaker
-            return {"status": "ok"}
+            # A swap can return a speaker to the evidence: name the codebooks that will
+            # code their quotes, as the hide route does.
+            return _answer_ok(note_quotes_counting(request.app, project_id))
         person = slot.person
         named = data.full_name is not None or data.short_name is not None
         left: set[int | None] = set()
@@ -700,11 +701,20 @@ def put_session_speaker(
         speaker_slots.renumber(db, project_id)
         db.commit()
         sync_role_pins(db, project_id, session_id)
-        if recodes:
-            note_quotes_counting(request.app, project_id)  # a recode back in counts again
+        if recodes:  # a recode back in counts again
+            return _answer_ok(note_quotes_counting(request.app, project_id))
         return {"status": "ok"}
     finally:
         db.close()
+
+
+def _answer_ok(catch_up: list[dict[str, str]]) -> dict[str, Any]:
+    """``{"status": "ok"}``, naming the codebooks that will code quotes that count
+    again (only when there are some, so the answer is what it was)."""
+    answer: dict[str, Any] = {"status": "ok"}
+    if catch_up:
+        answer["catchUp"] = catch_up
+    return answer
 
 
 def sync_role_pins(db: Session, project_id: int, session_id: str) -> None:
@@ -1254,10 +1264,8 @@ def patch_hidden(
         # A quote that counts again is owed to every codebook that never sent it
         # (ruling 4): the codebooks that will code it are named, so the page can
         # look for the catch-up and show its tags when it ends.
-        answer: dict[str, Any] = {"status": "ok", "unresolved": unresolved}
-        catch_up = note_quotes_counting(request.app, project_id) if restored else []
-        if catch_up:  # named only when there is one, as the writes below answer
-            answer["catchUp"] = catch_up
+        answer = _answer_ok(note_quotes_counting(request.app, project_id) if restored else [])
+        answer["unresolved"] = unresolved
         return answer
     finally:
         db.close()

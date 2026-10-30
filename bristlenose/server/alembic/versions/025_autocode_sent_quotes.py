@@ -21,12 +21,15 @@ Backfill, from what the database can still say:
 A quote the model declined to tag in a stamped session is on the register (the
 stamp covered it): marking it owed would pay for every coded session again.
 
-Two residuals, said so. A quote has no first-import time, so one added to a
-stamped session before this upgrade cannot be told from one that was sent, and is
+Residuals, said so. A quote has no first-import time, so one added to a stamped
+session before this upgrade cannot be told from one that was sent, and is
 backfilled as sent: N89 is closed from here on, not for what it already did. A
 quote moved off its participant one paragraph at a time
 (``speaker_slots._moved_quotes``) is not recoverable in SQL and is backfilled as
-sent, which it was before the move.
+sent, which is true only if the move came after the codebook ran (one moved
+before, since 25 Oct 2026, is never coded after the undo). A quote the model
+declined to tag and that was hidden after coding is left off with the others
+hidden now, so unhiding it sends it again: one quote's cost, paid twice.
 
 Guarded per the Alembic discipline: ``upgrade()`` runs on a fresh DB too, where
 ``create_all()`` has already made the new table and never made the old one.

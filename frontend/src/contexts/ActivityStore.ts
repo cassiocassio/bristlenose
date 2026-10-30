@@ -10,7 +10,13 @@
 
 import { useSyncExternalStore } from "react";
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
-import { getClipExtractionStatus, getScreensExportStatus, listAutoCodeJobs } from "../utils/api";
+import type { CatchUpArmed } from "../utils/api";
+import {
+  getAutoCodeStatus,
+  getClipExtractionStatus,
+  getScreensExportStatus,
+  listAutoCodeJobs,
+} from "../utils/api";
 import { isExportMode } from "../utils/exportData";
 
 export interface ActivityJobEntry {
@@ -325,43 +331,60 @@ function adoptCatchUp(run: { framework_id: string; title: string }): boolean {
 
 // ── A quote that counts again (ruling 4) ─────────────────────────────────
 
-/** How often, and for how long after the last unhide, to look for the catch-up the server starts
- *  by itself: its wait is 10 s from the last unhide, 60 s at most, and the pass follows. */
+/** How often, and for how long after the last write that armed one, to look for the catch-up the
+ *  server starts by itself: its wait is 10 s from the last gesture, 60 s at most, and the pass
+ *  follows. */
 const WATCH_EVERY_MS = 3_000;
 const WATCH_FOR_MS = 90_000;
+/** The codebooks a pass is expected from, each with its job's start when the write armed it. */
+const watched = new Map<string, CatchUpArmed>();
 let watching: ReturnType<typeof setInterval> | null = null;
 let watchUntil = 0;
 
+function stopWatching(): void {
+  if (watching !== null) clearInterval(watching);
+  watching = null;
+}
+
 /**
- * An unhide can hand a quote to a codebook that never saw it; the server then codes it a few
- * seconds on, with no request from the page, so nothing would tell the page its tags had arrived.
- * Look for the pass in `/autocode/jobs` and give it the catch-up chip, whose completion refreshes
- * the lenses (`bn:tags-changed`). A pass this window never sees (it ended between two looks) still
- * leaves the lenses refreshed once the watch runs out. Another unhide while watching lengthens it.
+ * A write can hand quotes to codebooks that never saw them (an unhide); the server then codes them a
+ * few seconds on, with no request from the page, so nothing would tell the page its tags had arrived.
+ * Each codebook it names has a job whose start moves when the pass begins, so a changed start means
+ * the pass has begun, whether it is still running or ended in a second (a refused key does). The pass
+ * gets the catch-up chip, which says how it ended and refreshes the lenses (`bn:tags-changed`). One
+ * never seen (the page missed it, or none came) still leaves the lenses refreshed once the watch
+ * runs out. Another write that arms one lengthens the watch.
  */
-export function watchForCatchUp(): void {
+export function watchForCatchUp(armed: CatchUpArmed[]): void {
   if (isExportMode()) return;
+  for (const a of armed) if (!watched.has(a.framework_id)) watched.set(a.framework_id, a);
+  if (watched.size === 0) return;
   watchUntil = Date.now() + WATCH_FOR_MS;
   if (watching !== null) return;
-  watching = setInterval(() => {
-    const stop = () => {
-      if (watching !== null) clearInterval(watching);
-      watching = null;
-    };
-    listAutoCodeJobs()
-      .then((r) => {
-        let found = false;
-        for (const run of r?.jobs ?? []) if (run.completed_at && adoptCatchUp(run)) found = true;
-        if (found) stop();
-      })
-      .catch(() => undefined) // the next look is the retry
-      .finally(() => {
-        if (watching !== null && Date.now() > watchUntil) {
-          stop();
-          document.dispatchEvent(new CustomEvent("bn:tags-changed"));
-        }
+  watching = setInterval(lookForCatchUps, WATCH_EVERY_MS);
+}
+
+function lookForCatchUps(): void {
+  const expected = [...watched.values()];
+  void Promise.allSettled(expected.map((a) => getAutoCodeStatus(a.framework_id))).then((reads) => {
+    reads.forEach((read, i) => {
+      const a = expected[i];
+      if (read.status !== "fulfilled" || !read.value || read.value.started_at === a.started_at) return;
+      // The earlier chip for this codebook, finished or not, is the earlier pass's.
+      for (const [id, j] of jobs) if (j.type === "catchup" && j.frameworkId === a.framework_id) removeJob(id);
+      addJob(newJobId(`catchup:${a.framework_id}:found`), {
+        type: "catchup", frameworkId: a.framework_id, frameworkTitle: a.title,
       });
-  }, WATCH_EVERY_MS);
+      watched.delete(a.framework_id);
+    });
+    if (watched.size === 0) {
+      stopWatching();
+    } else if (Date.now() > watchUntil) {
+      stopWatching();
+      watched.clear();
+      document.dispatchEvent(new CustomEvent("bn:tags-changed"));
+    }
+  });
 }
 
 /** Reset for tests. `keepSession` stands for a reload: the page's memory goes, the window's
@@ -369,8 +392,8 @@ export function watchForCatchUp(): void {
 export function resetActivityStore({ keepSession = false }: { keepSession?: boolean } = {}): void {
   jobs = new Map();
   snapshot = jobs;
-  if (watching !== null) clearInterval(watching);
-  watching = null;
+  stopWatching();
+  watched.clear();
   rehydratedProjectId = null;
   storageKey = null;
   carriedIds = new Set();

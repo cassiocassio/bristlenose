@@ -266,21 +266,14 @@ describe("A quote that counts again", () => {
     resetActivityStore();
     vi.mocked(globalThis.fetch).mockImplementation(async (input) => {
       const url = String(input);
-      const body = url.includes("/autocode/jobs")
+      const body = url.includes("/autocode/norman/status")
         ? {
-            jobs: passStarted
-              ? [{
-                  framework_id: "norman", title: "Norman", status: "running",
-                  completed_at: "2026-10-20T10:00:00Z",
-                }]
-              : [],
+            status: "completed", processed_quotes: 40, total_quotes: 40,
+            catch_up_total: 1, catch_up_processed: 1,
+            // The job's start moves when the pass the unhide caused begins.
+            started_at: passStarted ? "2026-10-30T10:00:10Z" : "2026-10-30T10:00:00Z",
+            completed_at: "2026-10-30T10:01:00Z",
           }
-        : url.includes("/autocode/norman/status")
-          ? {
-              status: "completed", processed_quotes: 40, total_quotes: 40,
-              catch_up_total: 1, catch_up_processed: 1,
-              started_at: "2026-10-30T10:00:00Z", completed_at: "2026-10-30T10:01:00Z",
-            }
           : url.includes("/quotes")
             ? { sections: [], themes: [], total_quotes: 0, total_hidden: 0, total_starred: 0, has_moderator: false }
             : url.includes("/sessions")
@@ -304,7 +297,11 @@ describe("A quote that counts again", () => {
       renderRoute("/report/sessions/");
       await act(async () => { await vi.advanceTimersByTimeAsync(500); });
       heard.mockClear();
-      act(() => { window.dispatchEvent(new CustomEvent("bn:catch-up-armed")); });
+      act(() => {
+        window.dispatchEvent(new CustomEvent("bn:catch-up-armed", {
+          detail: [{ framework_id: "norman", title: "Norman", started_at: "2026-10-30T10:00:00Z" }],
+        }));
+      });
       await act(async () => { await vi.advanceTimersByTimeAsync(3_500); });
       expect(heard).not.toHaveBeenCalled(); // nothing has run yet
       passStarted = true;

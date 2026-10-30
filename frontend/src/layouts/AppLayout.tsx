@@ -55,6 +55,7 @@ import {
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
 import { useSubtitlePrefs } from "../utils/subtitlePrefs";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
+import type { CatchUpArmed } from "../utils/api";
 import {
   cancelAutoCode,
   cancelClipExtraction,
@@ -323,8 +324,9 @@ function AppShell() {
   // An unhide that hands a quote to a codebook starts a pass the server runs by itself a few seconds
   // on; the chip for it is found, not given, so its tags appear without a reload.
   useEffect(() => {
-    window.addEventListener("bn:catch-up-armed", watchForCatchUp);
-    return () => window.removeEventListener("bn:catch-up-armed", watchForCatchUp);
+    const onArmed = (e: Event) => watchForCatchUp((e as CustomEvent<CatchUpArmed[]>).detail ?? []);
+    window.addEventListener("bn:catch-up-armed", onArmed);
+    return () => window.removeEventListener("bn:catch-up-armed", onArmed);
   }, []);
 
   // Push the focused quote to native so the Quotes menu's focus-gated items

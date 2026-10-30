@@ -6,7 +6,9 @@ import {
   getAutoCodeStatus,
   getClipExtractionStatus,
   getScreensExportStatus,
+  deleteParagraphEdit,
   patchHidden,
+  postParagraphReassign,
   patchStarred,
   patchTags,
   putFrameworkStates,
@@ -284,35 +286,47 @@ describe("a curation write that the server could not place", () => {
 });
 
 /**
- * An unhide can hand a quote to a codebook that never saw it. The server then codes it a few
- * seconds on, on its own, and says so in the write's answer: the page must hear it to look for
- * the pass, or its tags arrive unannounced (ruling 4).
+ * A write can hand quotes to a codebook that never saw them (an unhide, a speaker recoded back in, a
+ * paragraph moved back). The server then codes them a few seconds on, on its own, and names the
+ * codebooks in the write's answer: the page must hear it to look for the pass, or its tags arrive
+ * unannounced (ruling 4).
  */
-describe("an unhide the server will code", () => {
-  it("tells the shell to look for the catch-up", async () => {
+describe("a write the server will code the quotes of", () => {
+  const named = [{ framework_id: "garrett", title: "Garrett", started_at: "T0" }];
+
+  async function heardFrom(write: () => Promise<unknown>): Promise<unknown[]> {
     const heard = vi.fn();
     window.addEventListener("bn:catch-up-armed", heard);
     try {
-      fetchMock.mockResolvedValue(answer(200, {
-        status: "ok", unresolved: [], catchUp: [{ framework_id: "garrett", title: "Garrett" }],
-      }));
-      await patchHidden({ "q-p1-10": false });
-      expect(heard).toHaveBeenCalledTimes(1);
+      await write();
+      return heard.mock.calls.map((c) => (c[0] as CustomEvent).detail);
     } finally {
       window.removeEventListener("bn:catch-up-armed", heard);
     }
+  }
+
+  it("tells the shell which codebooks, for an unhide", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [], catchUp: named }));
+    expect(await heardFrom(() => patchHidden({ "q-p1-10": false }))).toEqual([named]);
   });
 
-  it("says nothing when no codebook will code it", async () => {
-    const heard = vi.fn();
-    window.addEventListener("bn:catch-up-armed", heard);
-    try {
-      fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
-      await patchHidden({ "q-p1-10": false });
-      expect(heard).not.toHaveBeenCalled();
-    } finally {
-      window.removeEventListener("bn:catch-up-armed", heard);
-    }
+  it("tells it for a speaker recoded back in", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", catchUp: named }));
+    expect(await heardFrom(() => sendPut("/sessions/s1/speakers/p1", { kind: "participant" }))).toEqual([named]);
+  });
+
+  it("tells it for a paragraph moved back (a POST) and one undone (a DELETE)", async () => {
+    fetchMock.mockResolvedValue(answer(200, { id: 1, catchUp: named }));
+    expect(await heardFrom(() => postParagraphReassign("s1", 1, "words", { slot: "p1" }))).toEqual([named]);
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", catchUp: named }));
+    expect(await heardFrom(() => deleteParagraphEdit("s1", 1))).toEqual([named]);
+  });
+
+  it("says nothing when no codebook will code them", async () => {
+    fetchMock.mockResolvedValue(answer(200, { status: "ok", unresolved: [] }));
+    expect(await heardFrom(() => patchHidden({ "q-p1-10": false }))).toEqual([]);
+    fetchMock.mockResolvedValue(answer(200, { id: 1, catchUp: [] }));
+    expect(await heardFrom(() => postParagraphReassign("s1", 1, "words", { slot: "p1" }))).toEqual([]);
   });
 });
 

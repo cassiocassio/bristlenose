@@ -112,11 +112,26 @@ proposals with confidence + rationale).
   before the Stop has not answered): that is `ALREADY_RUNNING` too, judged by the
   task (`_AUTOCODE_LIVE`), never the row, or two runners sent the same quotes.
 - **Denied proposals are kept for telemetry, on the retry path too (#127, 22 Oct
-  2026).** Apply on a never-applied job keeps its proposals and stamps and sends
-  only quotes with no proposal on the job, in sessions it has not stamped
+  2026).** Apply on a never-applied job keeps its proposals and its register of
+  sent quotes and sends only the quotes that count and are not on it
   (`run_autocode_job`), so nothing is paid for twice and a denied tag stays denied;
   one with nothing left to send completes without an LLM call. Until then the
   retry deleted the job, every `ProposedTag` with it, and sent the whole corpus.
+- **The register of sent quotes, and a quote that counts again (ruling 4, 30 Oct
+  2026).** A codebook remembers which *quotes* it sent (`autocode_sent_quotes`,
+  migration 025), not which sessions it coded (the per-session stamp of 22 Oct,
+  RE#66, was the wrong grain and is gone). A quote the model declined to tag is on
+  the register and is never paid for twice. A hidden quote, or a recoded
+  speaker's, is not sent *while it does not count* (N175), and it is not on the
+  register, so when it counts again (unhide, recoded back in, a paragraph move
+  undone) it is owed and is coded: after a 10 s wait restarted by each gesture
+  (60 s at most), one call per codebook, 25 quotes a batch, at the cutoff the Apply
+  stored, with no review and no human tag touched. A quote added to a coded session
+  is owed the same way (N89). Nothing runs at serve start for owed quotes alone.
+  Failure is quiet: the quote stays owed, and after a key or credit failure no
+  further unhide calls the provider until its provider, model or has-key state
+  changes. Mechanism and the page's side: `bristlenose/server/CLAUDE.md` § AutoCode;
+  the rule: `docs/design-codebook-state-model.md` §4a.
 - **Cloud-only**: Prompt weight ~14K-17K tokens per call. Ollama excluded (4K
   context can't fit taxonomy + quotes) — 503 `PROVIDER_LOCAL`.
 - **Background task**: First feature to call LLMs from serve mode. Uses

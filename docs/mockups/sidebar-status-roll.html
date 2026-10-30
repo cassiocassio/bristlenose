@@ -129,6 +129,19 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 .cnt, .pip { flex:none; font-size:10px; line-height:14px; color:var(--bn-colour-muted); font-variant-numeric:tabular-nums; }
 .g { flex:none; color:#d98200; line-height:14px; }
 
+/* Iteration 2: the lens rows under the selected study (stand-ins; the lens name is its own key),
+   and the native-style hover tooltip. Signals is dim while its job runs, which is how "done" is shown. */
+.art { position:relative; }
+.lens { margin-top:6px; padding-top:6px; border-top:1px solid var(--bn-colour-border); display:flex; flex-direction:column; gap:1px; }
+.lrow { display:flex; gap:6px; padding:0 8px 0 10px; height:24px; align-items:center; font-size:13px; border-radius:6px; transition:opacity .3s ease; }
+.lrow .li { width:20px; flex:none; display:flex; justify-content:center; }
+.lrow .li b { width:11px; height:11px; border-radius:3px; border:1.5px solid var(--bn-colour-muted); display:block; }
+.lrow.dim { opacity:.4; }
+.tip { position:absolute; z-index:4; left:36px; top:54px; max-width:calc(100% - 46px); background:light-dark(#f6f6f6,#2b2b2b);
+  border:1px solid var(--bn-colour-border-hover); border-radius:4px; padding:3px 7px; font-size:11px; line-height:15px;
+  box-shadow:0 2px 6px var(--bn-colour-shadow); white-space:pre-line; opacity:0; pointer-events:none; transition:opacity .12s ease; }
+.tip.on { opacity:1; }
+
 /* Shimmer atom, verbatim from atoms/shimmer.css (both gates intact) */
 .bn-thinking-shimmer { --_shimmer-base: var(--bn-shimmer-base, currentColor);
   --_shimmer-peak: color-mix(in srgb, var(--_shimmer-base), var(--bn-shimmer-peak, #fff) var(--bn-shimmer-contrast)); }
@@ -162,8 +175,26 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 <li><b>Why not the roll now.</b> The pair overlaps for about 30 seconds, then Screens comes back by itself (readiness doc §8, decision 3). A roll buys 30 seconds of seeing Screens, at the price of motion on a line the researcher glances at all day.</li>
 <li><b>Why not borrow it.</b> You asked for prior art. I found no shipping product that rolls between concurrent jobs in one status line (table below). The verified convention is one ambient line plus a separate place that lists everything. A roll would be invention.</li>
 <li><b>Why not the count.</b> "+1" announces a second job that nothing can open. In this app a glyph or count earns a door or it is noise (<code>SubtitleGlyphAction</code>), and "absence is information". Of the four it makes the loudest promise for the least.</li>
-<li><b>If you build it anyway:</b> crossfade, not roll; 4 s dwell; only among same-tier idle activities; never over a row that has a glyph; Reduce Motion falls back to the fixed order. Bench setting "Reduce Motion falls back to" shows both fallbacks.</li>
+<li><b>Owner's lean (30 Oct):</b> the roll, 5 s dwell, pause on hover, shimmer kept, no count. If the roll goes ahead, the rules in the next section are what make it safe to read; the crossfade and count variants are kept under "Other variants" in the bench, not chosen.</li>
 </ul>
+
+<h2>Iteration 2: communication risks, and the UX answer</h2>
+<p>These are the ways the roll could mislead or fail the researcher, as opposed to the ways it could be hard to build. Each has a rule you can see in the bench. "Decided" means the rule follows an owner ruling already on record; "owner call" means I have proposed an answer you have not yet accepted; "open" means I have no answer yet.</p>
+<table>
+<tr><th>Risk</th><th>UX answer</th><th>See it in the bench</th><th>Status</th></tr>
+<tr><td>A warning or error rolls away, or progress hides under it unseen</td><td>A state with a glyph never rolls: one fixed line, severity first. The tooltip lists everything running, in rank order. Today's tooltip says only the winner.</td><td>Pair "Warning + two jobs"; hover the row</td><td class="st">owner call. <b>Gap, open:</b> the tooltip is hover only, and the repo's own comment calls hover a rock to look under. Where hidden progress is listed while a warning holds the line is unanswered (the detail pane, if it exists for this).</td></tr>
+<tr><td>The researcher cannot tell anything else is running (no count)</td><td>The line does not say so. The tooltip lists every concurrent line, and the lens rows show the effect: Signals is dim while it builds. Absence is information.</td><td>"Screens + Signals", Signals dim</td><td class="st">decided (no count)</td></tr>
+<tr><td>"Is it finished?"</td><td>No finished message. The roll settles on the remaining line and the Signals lens row turns available. VoiceOver says nothing on finish, because the lens row's state change is the information.</td><td>Switch the Signals job off</td><td class="st">owner call</td></tr>
+<tr><td>The line reads as a promise</td><td>Rolled lines are present-tense activity or a count of work done, never an ETA or "soon". The run ladder with "~1 min left" is the run tier and never rolls.</td><td>"Run in flight" (fixed)</td><td class="st">decided (status line never promises)</td></tr>
+<tr><td>A truncated line is on screen for 5 s (German)</td><td>Hover pauses the roll and shows the full text in the tooltip. The real fix is a shorter German phrase, already an open item in the readiness doc.</td><td>"German at 22", hover</td><td class="st">partly open (the phrase)</td></tr>
+<tr><td>Two kinds of motion at once: roll and shimmer</td><td>The shimmer starts only once the line has settled, never while it is moving.</td><td>Watch "Picking up Signals…" enter</td><td class="st">owner call</td></tr>
+<tr><td>A status that flashes for under a second</td><td>The 2 s floor already on the gesture acknowledgements applies: a job that finishes sooner still shows for 2 s before it can roll out or disappear.</td><td>Toggle Signals on, then off at once</td><td class="st">decided in principle (the Signals plan names the floor)</td></tr>
+<tr><td>The ticker creeps to many lines</td><td>At most 3 lines roll. At 5 s that is already a 15 s cycle. Above 3, show the top-ranked line only and list the rest in the tooltip.</td><td>"Three jobs"</td><td class="st">owner call</td></tr>
+<tr><td>VoiceOver hears the roll</td><td>The row's accessibility value lists all lines once, statically. A line is spoken when it starts, never when it rolls, and nothing is spoken when it finishes.</td><td>The "VoiceOver hears" log</td><td class="st">owner call</td></tr>
+<tr><td>Reduce Motion changes what is communicated</td><td>It falls back to the fixed order. Nothing is lost, because the tooltip and lens rows carry the same facts.</td><td>"Simulate Reduce Motion"</td><td class="st">owner call (Apple's guidance leans to a dissolve for status motion)</td></tr>
+<tr><td>Which activities roll at all</td><td>Screens, Signals and the cloud batch, the long-running ones. The 2 s acknowledgements (Adding, Exporting) stay fixed and keep the line over them.</td><td>n/a</td><td class="st">owner call</td></tr>
+<tr><td>A second window shows a different status</td><td>Accepted: the Signals status is window-scoped (readiness decision 1).</td><td>n/a</td><td class="st">decided</td></tr>
+</table>
 
 <h2>Prior art: what I could and could not verify</h2>
 <p>Statuses: <span class="st">fetched</span> = I read the page this session; <span class="st">excerpt</span> = only a search excerpt; <span class="st">none</span> = nothing found. I have not run Xcode, Mail or Photos side by side for this; the owner can check Xcode in 30 seconds (build while it indexes).</p>
@@ -211,53 +242,66 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 
 <!-- ═════════════════════ BENCH ═════════════════════ -->
 <h2 id="bench" style="font-weight:490;font-size:var(--bn-text-title);margin:2rem 0 .2rem">Bench</h2>
-<p class="note">Strings: "Screens · N of M", "Analysing · 4 of 8 · ~1 min left" and "Partial completion" are shipped English. "Picking up Signals…" is the owner's draft (not yet a locale key). Deutsch: "Bildschirme · N von M" and "Teilweise abgeschlossen" are shipped; "Signale werden vorbereitet…" is the readiness doc's own 27-character example; the German run ladder is a stand-in. Glyphs are stand-ins.</p>
+<p class="note">Strings: "Screens · N of M", "Analysing · 4 of 8 · ~1 min left" and "Partial completion" are shipped English. "Picking up Signals…" is the owner's draft (not yet a locale key). Deutsch: "Bildschirme · N von M" and "Teilweise abgeschlossen" are shipped; "Signale werden vorbereitet…" is the readiness doc's own 27-character example; the German run ladder is a stand-in. Glyphs are stand-ins. Lens names (Project, Sessions, Quotes, Codebook, Signals; German Projekt, Sitzungen, Zitate, Codebuch, Signale) are stand-in labels for the lens rows. "Three jobs" uses the shipped cloud-batch line "3 of 4". Hover a row for about a second to see the tooltip; in "a" it says only what the line says (today), in "b" it lists everything running.</p>
 
 <div class="bar" id="bar" role="group" aria-label="Bench controls"></div>
 <div class="log" id="log" aria-hidden="true"></div>
 <div class="sr" id="live" role="status" aria-live="polite"></div>
 <div class="grid" id="grid"></div>
+<details style="margin-top:1.4rem"><summary style="cursor:pointer;font-size:var(--bn-text-label);color:var(--bn-colour-muted)">Other variants (crossfade, count): not chosen, kept for the record</summary>
+<div class="grid" id="grid2" style="margin-top:.8rem"></div></details>
 </div>
 
 <script>
 (function(){
   /* ── strings ───────────────────────────────────────────────────────── */
   var STR = {
-    en:{ screens:function(d,t){return 'Screens · '+d+' of '+t;}, signals:'Picking up Signals…', run:'Analysing · 4 of 8 · ~1 min left', partial:'Partial completion', title:'Kitchen redesign', other1:'Onboarding study', other2:'Checkout friction' },
-    de:{ screens:function(d,t){return 'Bildschirme · '+d+' von '+t;}, signals:'Signale werden vorbereitet…', run:'Wird analysiert… · 4 von 8 · ca. 1 Min.', partial:'Teilweise abgeschlossen', title:'Küchenumbau', other1:'Onboarding-Studie', other2:'Checkout-Reibung' }
+    en:{ screens:function(d,t){return 'Screens · '+d+' of '+t;}, signals:'Picking up Signals…', run:'Analysing · 4 of 8 · ~1 min left', partial:'Partial completion', title:'Kitchen redesign', other1:'Onboarding study', other2:'Checkout friction', batch:function(d,t){return d+' of '+t;}, lens:['Project','Sessions','Quotes','Codebook','Signals'] },
+    de:{ screens:function(d,t){return 'Bildschirme · '+d+' von '+t;}, signals:'Signale werden vorbereitet…', run:'Wird analysiert… · 4 von 8 · ca. 1 Min.', partial:'Teilweise abgeschlossen', title:'Küchenumbau', other1:'Onboarding-Studie', other2:'Checkout-Reibung', batch:function(d,t){return d+' von '+t;}, lens:['Projekt','Sitzungen','Zitate','Codebuch','Signale'] }
   };
+  function allOn(){ return {signals:true, screens:true, batch:true, run:true, partial:true}; }
   var SCEN = {
     pair:   { name:'Screens + Signals', jobs:[
       {id:'signals', label:'Signals build', rank:1, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
       {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
+    three:  { name:'Three jobs', jobs:[
+      {id:'signals', label:'Signals build', rank:1, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
+      {id:'batch', label:'Cloud batch', rank:2, kind:'activity', text:function(L){return L.batch(3,4);}},
+      {id:'screens', label:'Screens reading', rank:3, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
     run:    { name:'Run in flight (Screens yields)', jobs:[
       {id:'run', label:'Analysis run', rank:1, kind:'severe', shimmer:true, text:function(L){return L.run;}},
       {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] },
-    partial:{ name:'Partial completion (warning wins)', jobs:[
+    partial:{ name:'Warning + two jobs', jobs:[
       {id:'partial', label:'Partial result', rank:1, kind:'severe', glyph:true, text:function(L){return L.partial;}},
-      {id:'screens', label:'Screens reading', rank:2, kind:'activity', text:function(L){return L.screens(done,40);}} ] }
+      {id:'signals', label:'Signals build', rank:2, kind:'activity', shimmer:true, text:function(L){return L.signals;}},
+      {id:'screens', label:'Screens reading', rank:3, kind:'activity', text:function(L){return L.screens(done,40);}} ] }
   };
   var VARIANTS = [
     {k:'fixed', name:'a · Fixed order (today)'},
     {k:'roll',  name:'b · Vertical roll'},
-    {k:'fade',  name:'c · Crossfade'},
-    {k:'count', name:'d · Fixed order + count, no motion'}
+    {k:'fade',  name:'c · Crossfade', extra:true},
+    {k:'count', name:'d · Fixed order + count, no motion', extra:true}
   ];
   var DUR = {roll:320, fade:260, 'fade-slow':900};
 
   /* ── state ─────────────────────────────────────────────────────────── */
   var st = { scen:'pair', lang:'en', dwell:5000, hover:true, pip:false, shimmer:true,
              reduce: !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches),
-             fallback:'fixed', budget:'22ch', on:{signals:true, screens:true, run:true, partial:true} };
+             fallback:'fixed', budget:'22ch', on:allOn(), vis:allOn(), started:{} };
+  var FLOOR = 2000, CAP = 3;   /* the 2 s floor of the gesture acknowledgements; at most 3 rolling lines */
   var done = 3, tickers = [], logLines = [];
 
   function L(){ return STR[st.lang]; }
   function resolve(){
-    var jobs = SCEN[st.scen].jobs.filter(function(j){return st.on[j.id];}).sort(function(a,b){return a.rank-b.rank;});
-    if(!jobs.length) return {lines:[], hidden:0, rollable:false};
-    if(jobs[0].kind==='severe') return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false};
-    return {lines:jobs, hidden:0, rollable:jobs.length>1};
+    var jobs = allActive();
+    if(!jobs.length) return {lines:[], hidden:0, rollable:false, all:jobs};
+    /* A state with a glyph never rolls: one fixed line, severity first. */
+    if(jobs[0].kind==='severe') return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false, all:jobs};
+    /* Cap: beyond CAP lines the cycle is too long to read, so show the top-ranked line only. */
+    if(jobs.length>CAP) return {lines:[jobs[0]], hidden:jobs.length-1, rollable:false, all:jobs};
+    return {lines:jobs, hidden:0, rollable:jobs.length>1, all:jobs};
   }
+  function allActive(){ return SCEN[st.scen].jobs.filter(function(j){return st.vis[j.id];}).sort(function(a,b){return a.rank-b.rank;}); }
 
   /* ── ticker: one per frame, owns its own dwell timer ───────────────── */
   function Ticker(host, variant){
@@ -267,7 +311,17 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
     var self=this, area=host.closest('.fr');
     area.addEventListener('mouseenter',function(){ if(st.hover){ self.paused=true; self.disarm(); } });
     area.addEventListener('mouseleave',function(){ self.paused=false; self.arm(); });
+    /* native-style tooltip after about a second of hover */
+    var tip=host.closest('.art').querySelector('.tip'), tt=null;
+    host.addEventListener('mouseenter',function(){ clearTimeout(tt); tt=setTimeout(function(){ tip.textContent=self.tipText(); if(tip.textContent) tip.classList.add('on'); },700); });
+    host.addEventListener('mouseleave',function(){ clearTimeout(tt); tip.classList.remove('on'); });
   }
+  /* Today's tooltip says only the winner; the rolling variants list everything running, in rank order. */
+  Ticker.prototype.tipText=function(){
+    var all=(this.res&&this.res.all)||[];
+    if(this.v==='fixed'||this.v==='count') return all.length?all[0].text(L()):'';
+    return all.map(function(j){return j.text(L());}).join('\n');
+  };
   Ticker.prototype.mode=function(){
     if(this.v==='fixed'||this.v==='count') return 'fixed';
     if(st.reduce) return st.fallback==='fade' ? 'fade-slow' : 'fixed';
@@ -275,7 +329,7 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
   };
   Ticker.prototype.mk=function(job){
     var el=document.createElement('div'); el.className='ln'; el.dataset.job=job.id;
-    var tx=document.createElement('span'); tx.className='tx'+(job.shimmer&&st.shimmer?' bn-thinking-shimmer':'');
+    var tx=document.createElement('span'); tx.className='tx';
     tx.textContent=job.text(L()); el.appendChild(tx); return el;
   };
   Ticker.prototype.swap=function(job,how){
@@ -291,6 +345,12 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
       this.flips++;
     }
     this.cur=el; this.curId=job.id;
+    /* Rule: the shimmer starts only once the line has settled, never while it moves. */
+    if(job.shimmer&&st.shimmer){
+      var tx=el.firstChild, wait=(how==='cut'||!old)?0:DUR[how]+60;
+      var addShimmer=function(){ if(el.parentNode) tx.classList.add('bn-thinking-shimmer'); };
+      if(wait) setTimeout(addShimmer,wait); else addShimmer();
+    }
   };
   Ticker.prototype.go=function(job,mode){
     if(!job){ this.sub.innerHTML=''; this.cur=null; this.curId=null; return; }
@@ -333,7 +393,7 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
 
   /* ── build frames ──────────────────────────────────────────────────── */
   function build(){
-    var grid=document.getElementById('grid'); grid.innerHTML=''; tickers.forEach(function(t){t.disarm();}); tickers=[];
+    var grid=document.getElementById('grid'); grid.innerHTML=''; document.getElementById('grid2').innerHTML=''; tickers.forEach(function(t){t.disarm();}); tickers=[];
     VARIANTS.forEach(function(v){
       ['light','dark'].forEach(function(scheme){
         var fr=document.createElement('figure'); fr.className='fr';
@@ -344,8 +404,8 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
               '<div class="subline" aria-hidden="true"><span class="g" hidden></span><div class="sub"></div><span class="pip"></span><span class="cnt"></span></div></div></div>'+
             '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other1+'</div></div></div>'+
             '<div class="row"><div class="ico"><i></i></div><div class="col"><div class="t">'+L().other2+'</div></div></div>'+
-          '</div></div>';
-        grid.appendChild(fr);
+          '</div><div class="lens" aria-hidden="true">'+L().lens.map(function(n,i){ return '<div class="lrow'+(i===4?' lsig':'')+'"><span class="li"><b></b></span>'+n+'</div>'; }).join('')+'</div><div class="tip"></div></div>';
+        (v.extra?document.getElementById('grid2'):grid).appendChild(fr);
         var host=fr.querySelector('.row.sel'), t=new Ticker(host, v.k); t.frame=fr; tickers.push(t);
         var mn=1e9, mx=0, hEl=fr.querySelector('.h');
         new ResizeObserver(function(es){ var h=Math.round(es[0].target.getBoundingClientRect().height); mn=Math.min(mn,h); mx=Math.max(mx,h); hEl.textContent = h; }).observe(host);
@@ -354,22 +414,25 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
     syncAll();
   }
   function syncAll(){
-    var res=resolve(); var names=res.lines.map(function(j){return j.text(L());}).concat(res.hidden?['(+'+res.hidden+' hidden)']:[]);
-    tickers.forEach(function(t){ t.sync(res); t.host.setAttribute('aria-label', L().title+', '+names.join(', ')); });
+    var res=resolve(); var names=res.all.map(function(j){return j.text(L());});
+    var sigDim = SCEN[st.scen].jobs.some(function(j){return j.id==='signals';}) && st.vis.signals;
+    tickers.forEach(function(t){ t.sync(res); t.host.setAttribute('aria-label', L().title+', '+names.join(', '));
+      t.frame.querySelector('.lsig').classList.toggle('dim', sigDim); });
   }
   setInterval(function(){ tickers.forEach(function(t){ t.frame.querySelector('.f').textContent=t.flips; }); }, 400);
 
   /* ── announcements: only on a real change of the set, never on a roll ── */
-  function announce(msg){
-    document.getElementById('live').textContent = msg;
-    logLines.unshift('<b>VoiceOver hears:</b> '+msg); logLines=logLines.slice(0,3);
+  function announce(msg, silent){
+    if(silent){ logLines.unshift('<b>silent:</b> '+msg+' finished. Nothing is spoken; the lens row changing state is the information.'); }
+    else { document.getElementById('live').textContent = msg; logLines.unshift('<b>VoiceOver hears:</b> '+msg); }
+    logLines=logLines.slice(0,3);
     paintLog();
   }
-  function paintLog(){ document.getElementById('log').innerHTML = (logLines.length?logLines.join('<br>'):'<b>VoiceOver hears:</b> nothing yet. A roll never speaks; a job starting or finishing does.') + '<br>Rolls are silent: see the flips counter on each frame.'; }
+  function paintLog(){ document.getElementById('log').innerHTML = (logLines.length?logLines.join('<br>'):'<b>VoiceOver hears:</b> nothing yet. A roll never speaks and neither does a finish; a job starting speaks its line.') + '<br>Rolls are silent: see the flips counter on each frame.'; }
 
   /* Screens counts up, text refreshed in place (no roll) */
   var cTimer=null;
-  function startCount(){ clearInterval(cTimer); cTimer=setInterval(function(){ if(st.on.screens && done<40){ done++; tickers.forEach(function(t){t.refreshText();}); } },2500); }
+  function startCount(){ clearInterval(cTimer); cTimer=setInterval(function(){ if(st.vis.screens && done<40){ done++; tickers.forEach(function(t){t.refreshText();}); } },2500); }
 
   /* ── controls ──────────────────────────────────────────────────────── */
   function seg(label, opts, get, set){
@@ -384,17 +447,16 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
   }
   var bar=document.getElementById('bar'), parts=[];
   function addp(p){ bar.appendChild(p); parts.push(p); }
-  addp(seg('Pair',[['pair','Screens + Signals'],['run','Run in flight'],['partial','Partial']], function(){return st.scen;}, function(v){ st.scen=v; st.on={signals:true,screens:true,run:true,partial:true}; syncAll(); }));
+  addp(seg('Scenario',[['pair','Screens + Signals'],['three','Three jobs'],['run','Run in flight'],['partial','Warning + two jobs']], function(){return st.scen;}, function(v){ st.scen=v; st.on=allOn(); st.vis=allOn(); syncAll(); }));
   var jobsGrp=document.createElement('div'); jobsGrp.className='grp'; jobsGrp.id='jobs'; bar.appendChild(jobsGrp);
   addp(seg('Dwell',[[2000,'2 s'],[3000,'3 s'],[5000,'5 s']], function(){return st.dwell;}, function(v){ st.dwell=+v; tickers.forEach(function(t){t.disarm(); t.arm();}); }));
   addp(chk('Pause on hover', function(){return st.hover;}, function(v){ st.hover=v; }));
-  addp(chk('n/N pip on roll and fade', function(){return st.pip;}, function(v){ st.pip=v; tickers.forEach(function(t){t.paintPip();}); }));
   addp(chk('Shimmer on Signals and run', function(){return st.shimmer;}, function(v){ st.shimmer=v; syncAllText(); }));
   addp(chk('Simulate Reduce Motion', function(){return st.reduce;}, function(v){ st.reduce=v; document.documentElement.setAttribute('data-analysis-animation', v?'off':'on'); syncAll(); }));
   addp(seg('Reduce Motion falls back to',[['fixed','Fixed order'],['fade','Slow crossfade']], function(){return st.fallback;}, function(v){ st.fallback=v; syncAll(); }));
   addp(seg('Language',[['en','English'],['de','Deutsch']], function(){return st.lang;}, function(v){ st.lang=v; build(); }));
   addp(seg('Width budget',[['18ch','18'],['22ch','22 (240 pt)'],['30ch','30']], function(){return st.budget;}, function(v){ st.budget=v; build(); }));
-  var rs=document.createElement('button'); rs.className='pbtn'; rs.textContent='Restart'; rs.onclick=function(){ done=3; st.on={signals:true,screens:true,run:true,partial:true}; logLines=[]; paintLog(); build(); paintBar(); }; bar.appendChild(rs);
+  var rs=document.createElement('button'); rs.className='pbtn'; rs.textContent='Restart'; rs.onclick=function(){ done=3; st.on=allOn(); st.vis=allOn(); logLines=[]; paintLog(); build(); paintBar(); }; bar.appendChild(rs);
   var de=document.createElement('button'); de.className='pbtn'; de.textContent='German at 22 (truncation check)'; de.onclick=function(){ st.lang='de'; st.budget='22ch'; build(); paintBar(); }; bar.appendChild(de);
 
   function syncAllText(){ tickers.forEach(function(t){ if(t.cur){ var j=SCEN[st.scen].jobs.filter(function(x){return x.id===t.curId;})[0]; if(j){ var tx=t.cur.firstChild; tx.className='tx'+(j.shimmer&&st.shimmer?' bn-thinking-shimmer':''); } } }); }
@@ -409,8 +471,13 @@ h1 { font-size:clamp(1.5rem,4vw,2rem); margin:.3rem 0 .4rem; font-weight:490; }
       var b=document.createElement('button'); b.className='pbtn'+(st.on[j.id]?' on':''); b.textContent=j.label+(st.on[j.id]?': running':': off'); b.setAttribute('aria-pressed',st.on[j.id]);
       b.onclick=function(){
         st.on[j.id]=!st.on[j.id];
-        announce(j.text(L())+(st.on[j.id]?' started':' finished'));
-        syncAll(); paintBar();
+        if(st.on[j.id]){ st.started[j.id]=Date.now(); st.vis[j.id]=true; announce(j.text(L()), false); syncAll(); }
+        else {
+          /* the 2 s floor: a job that finishes sooner still shows until 2 s are up */
+          var wait=Math.max(0, FLOOR-(Date.now()-(st.started[j.id]||0)));
+          setTimeout(function(){ if(!st.on[j.id]){ st.vis[j.id]=false; announce(j.text(L()), true); syncAll(); } }, wait);
+        }
+        paintBar();
       };
       jobsGrp.appendChild(b);
     });

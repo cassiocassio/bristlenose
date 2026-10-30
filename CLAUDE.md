@@ -494,9 +494,9 @@ The PreferencesFile incident (keyboard-navigation branch, Feb 2026) was caused b
 - On pickup, read this guidance, TODO, the relevant decision record and recent git history; inspect the working tree before editing. One agent owns a ruling's edits at a time in the shared checkout. Re-read files before changing them; preserve unrelated edits and stage only owned paths.
 - Respect `.claude/current-task.json`, workflow logs, review receipts and end-session sentinels as workflow state: do not overwrite another session's active task or mark a workflow completed unless its required steps actually ran. Claude auto-memory is supplementary; an agreed decision must also live in the shared project records.
 
-**30 Oct Codex consolidation checkpoint (checkout transfer still in progress):** use the clean
-`/Users/cassio/.codex/worktrees/integration-main/bristlenose` checkout for the
-closeout. Local `main` there now contains `0b7eb11d5` (Zoom UTC/DST range fix
+**30 Oct Codex consolidation complete:** the canonical checkout
+`/Users/cassio/Code/bristlenose` is clean on local `main`. It contains
+`0b7eb11d5` (Zoom UTC/DST range fix
 and deterministic startup-probe completion verification) and `c84c26606`
 (parked multi-Mac designs/mockups and trued register). Full Python gate on the
 resulting tree: **9,013 passed, 8 skipped, 133 deselected, 6 expected failures**;
@@ -504,17 +504,16 @@ full native gate: **2,851 passed, 0 failed**. Mockup register, whole-repo Ruff,
 locale-key and staged-diff checks pass. `frontend/node_modules` is a generated
 untracked symlink and must not be committed.
 
-The canonical checkout `/Users/cassio/Code/bristlenose` remains deliberately
-untouched on `codex/signals-lens` at `4e8cc854a`. Its former 105 dirty/untracked
+The canonical checkout's former 105 dirty/untracked
 paths were classified and checksum/mode-verified against the private snapshot;
 all three private preservation trees were also copied byte-for-byte outside the
 repository to
 `/Users/cassio/.codex/preservation/bristlenose-final-consolidation-2026-10-30`.
 Claude's organising session reports no owned edits or commits; it deliberately
-removed only the untracked root debris `the`, `with` and `uv.lock`. Do not use
-`git clean`, broad deletion or hard reset. Next, free the `main` branch,
-restore/remove only the explicitly inventoried paths, switch
-the canonical checkout to `main`, and retain ignored private records.
+removed only the untracked root debris `the`, `with` and `uv.lock`. The explicit
+cleanup restored 42 tracked paths and removed 16 preserved untracked files;
+ignored private records remain. The redundant integration worktree, spent
+Signals branch and eight other fully merged Codex branches were retired.
 
 The larger reader/handover implementation remains intentionally **unmerged** at
 `codex/study-access-poc` (`e1f73c7136`). Its design/mockup records are now staged
@@ -522,7 +521,10 @@ as parked supporting material; its full source and bundle are preserved in the
 private recovery archive and the external preservation copy. It is the deferred
 study reader prototype, not the About-page animation work. The Claude scratch
 worktree on `reliability/ruling-4-sent-register` is clean and still potentially
-Claude-owned; do not retire it without establishing that it is idle. No push,
+Claude-owned; do not retire it without establishing that it is idle. Two stale
+app attachments (`study-access-poc`, `study-recovery-guard`) are already
+unregistered directories, not Git worktrees; app archival could not verify this
+chat's old primary checkout, so their directories were left intact. No push,
 tag, release or public changelog update is authorised.
 
 When the user signals end of session, **run `/end-session`** — the skill handles verify, document, commit, and close-out. See `.claude/skills/end-session/SKILL.md` for the full checklist.

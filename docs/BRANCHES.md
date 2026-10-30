@@ -917,7 +917,7 @@ above.
 
 `codex/study-recovery-guard` and `codex/sidebar-status-separated` are ancestors of local main. Integration5a7830935; final recovery-fixture/evidence merge014c04685. Combined main gate 2846native/0fail;343Python/2xfail. No push or release. Feature worktrees/branches and dirty shared originals are retained; no close-branch archival has run. Deferred study-access-poc remains separate. Exact paths/receipts: private handoff and design-study-recovery-guard.md.
 
-### 30 October consolidation — commits complete; checkout transfer in progress
+### 30 October consolidation — complete
 
 The clean integration checkout's local `main` now includes `0b7eb11d5` (Zoom
 UTC/DST range fix and deterministic startup-probe verification) and `c84c26606`
@@ -925,14 +925,15 @@ UTC/DST range fix and deterministic startup-probe verification) and `c84c26606`
 (9,013 passed, 8 skipped, 133 deselected, 6 expected failures); full native is
 green (2,851 passed, 0 failed). No push, tag or release.
 
-The canonical checkout remains on `codex/signals-lens` until the staged work is
-committed and `main` can be transferred safely. Its 105 classified paths are
+The canonical checkout is clean on `main`. Its former 105 classified paths are
 checksum/mode-verified against the private snapshot. The preservation trees are
 also copied byte-for-byte outside the checkout at
 `/Users/cassio/.codex/preservation/bristlenose-final-consolidation-2026-10-30`.
-Use the explicit inventory for cleanup; never `git clean` or hard-reset this
-checkout. Claude's organising session reports no owned changes and deliberately
-removed only the untracked root debris `the`, `with` and `uv.lock`.
+The explicit cleanup restored 42 tracked paths and removed 16 preserved
+untracked files; ignored private records remain. Claude's organising session
+reported no owned changes and deliberately removed only the untracked root
+debris `the`, `with` and `uv.lock`. The redundant integration worktree, spent
+Signals branch and eight other fully merged Codex branches were retired.
 
 `codex/study-access-poc` (`e1f73c7136`) remains deliberately unmerged. Its design
 and mockup records are retained as parked supporting material while the full
@@ -940,3 +941,7 @@ prototype source and bundle remain in the private recovery archive and external
 preservation copy. It is the deferred study-reader/handover prototype, not the
 About-page animation work. The Claude scratch worktree on
 `reliability/ruling-4-sent-register` remains untouched pending proof it is idle.
+The app still lists stale `study-access-poc` and `study-recovery-guard`
+attachments, but those directories are already unregistered and are not Git
+worktrees. App archival could not verify this chat's former primary checkout, so
+their directories were left intact rather than deleted outside the safeguard.

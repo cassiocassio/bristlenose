@@ -55,7 +55,35 @@ def db_url_for_project(project_dir: Path) -> str:
 
     db_path = project_output_dir(project_dir) / ".bristlenose" / "bristlenose.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
+    if not db_path.exists():
+        _note_stray_database(db_path)
     return sqlite_url(db_path)
+
+
+def _note_stray_database(db_path: Path) -> None:
+    """Say, once, where an earlier version put this study's database (N197).
+
+    A path with a ``?`` in it was parsed as a URL, so the database ended at the
+    first ``?`` and lived in a stray file beside the folder. The study now opens
+    its own empty database and that file is left alone: it may have been shared
+    by every study under the folder, so adopting it could show one study another's
+    work (ruling 7, 31 Oct 2026). Only the log says where it is, and only on the
+    open that creates the study's database.
+    """
+    stray = Path(str(db_path).split("?", 1)[0])
+    if not stray.is_file():
+        return
+    try:
+        with stray.open("rb") as f:
+            is_database = f.read(16) == b"SQLite format 3\x00"
+    except OSError:
+        return
+    if is_database:
+        logger.warning(
+            "An earlier version kept this study's data in %s, which this version no longer "
+            "reads; the study opened with an empty database and that file was left alone",
+            stray,
+        )
 
 
 def get_engine(db_url: str | None = None) -> Engine:

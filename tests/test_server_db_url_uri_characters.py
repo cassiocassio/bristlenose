@@ -141,3 +141,75 @@ def test_the_dev_info_names_the_database_as_it_is_on_disk(tmp_path: Path) -> Non
     app = create_app(project_dir=FIXTURE, dev=True, db_url=sqlite_url(db))
     info = AuthTestClient(app).get("/api/dev/info").json()
     assert info["db_path"] == str(db)
+
+
+# --- The old stray file is named in the log, once (ruling 7, A) ---------------------
+
+_SQLITE_HEADER = b"SQLite format 3\x00" + b"\x00" * 84
+
+_needs_question_mark = pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows forbids '?' in a file name"
+)
+
+
+def _stray_for(tmp_path: Path) -> Path:
+    """Where the old writer put the database of ``Who? Inc/Study A``: beside the folder."""
+    return tmp_path / "Who"
+
+
+@_needs_question_mark
+def test_a_study_that_used_to_write_a_stray_file_says_where_it_is(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    stray = _stray_for(tmp_path)
+    stray.write_bytes(_SQLITE_HEADER)
+    study = tmp_path / "Who? Inc" / "Study A"
+    study.mkdir(parents=True)
+
+    with caplog.at_level("WARNING", logger="bristlenose.server.db"):
+        db_url_for_project(study)
+
+    (record,) = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert str(stray) in record.getMessage()
+    assert "\n" not in record.getMessage()
+    assert stray.read_bytes() == _SQLITE_HEADER, "the stray file is never adopted or touched"
+
+
+@_needs_question_mark
+def test_the_note_is_made_once_not_on_every_open(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    _stray_for(tmp_path).write_bytes(_SQLITE_HEADER)
+    study = tmp_path / "Who? Inc" / "Study A"
+    study.mkdir(parents=True)
+    engine = get_engine(db_url_for_project(study))
+    init_db(engine)
+    engine.dispose()
+
+    caplog.clear()
+    with caplog.at_level("WARNING", logger="bristlenose.server.db"):
+        db_url_for_project(study)
+    assert [r for r in caplog.records if r.levelname == "WARNING"] == []
+
+
+@_needs_question_mark
+def test_a_file_that_is_not_a_database_is_not_reported(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    _stray_for(tmp_path).write_text("meeting notes")
+    study = tmp_path / "Who? Inc" / "Study A"
+    study.mkdir(parents=True)
+    with caplog.at_level("WARNING", logger="bristlenose.server.db"):
+        db_url_for_project(study)
+    assert [r for r in caplog.records if r.levelname == "WARNING"] == []
+
+
+def test_a_study_with_an_ordinary_name_is_never_reported(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    (tmp_path / "plain").write_bytes(_SQLITE_HEADER)
+    study = tmp_path / "plain study"
+    study.mkdir()
+    with caplog.at_level("WARNING", logger="bristlenose.server.db"):
+        db_url_for_project(study)
+    assert [r for r in caplog.records if r.levelname == "WARNING"] == []

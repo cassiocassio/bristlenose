@@ -36,6 +36,15 @@
     border-top: none;
 }
 
+/* ...except on the selected card, whose keyline goes all the way round (owner,
+   31 Oct 2026). Its top edge is drawn over the hairline it shares with the card
+   above, pulled up by exactly one border so nothing shifts when selection moves. */
+.signal-card.bn-selected:not(:first-child) {
+    border-top: 1px solid var(--signal-card-selected-border, var(--bn-selection-border));
+    margin-top: -1px;
+    z-index: 1;
+}
+
 .signal-card {
     border: 1px solid var(--bn-colour-border);
     /* Pane tier (lg) — these are the largest cards in the app; sm (3px) read

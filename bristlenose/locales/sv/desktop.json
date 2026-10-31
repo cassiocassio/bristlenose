@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "\u00d6ppna f\u00f6r agenter: {{projects}}",
     "emptyTitle": "Inga projekt delas med agenter",
     "emptyHint": "Markera ett projekt och v\u00e4lj sedan \u201dProject\u201d \u25b8 {{command}}.",
+    "accessOffNote": "Agentåtkomst är avstängd för det här projektet. Välj ”Project” ▸ {{command}} innan du ansluter en agent.",
     "sessionScopeNote": "\u201dSenast fr\u00e5gad\u201d kommer ih\u00e5g bara medan projektet \u00e4r \u00f6ppet.",
     "projects_one": "{{count}} projekt",
     "projects_other": "{{count}} projekt",

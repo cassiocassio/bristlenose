@@ -196,3 +196,42 @@ struct AgentProjectRegisterTests {
         #expect(label == "Acme Study, Never")
     }
 }
+
+// MARK: - The pasted config under a project with Agent Access off (ruling 8b)
+
+@Suite("AgentProjectRegister.frontedAccessIsOff")
+struct FrontedAccessIsOffTests {
+
+    private func project(_ id: UUID, access: Bool) -> Project {
+        Project(id: id, name: "p", path: "/tmp/p", agentAccess: access)
+    }
+
+    @Test("the fronted project with access off carries the note")
+    func frontedOffShowsTheNote() {
+        let id = UUID()
+        #expect(AgentProjectRegister.frontedAccessIsOff(
+            fronted: id, projects: [project(id, access: false)]))
+    }
+
+    @Test("the fronted project with access on does not")
+    func frontedOnShowsNothing() {
+        let id = UUID()
+        #expect(!AgentProjectRegister.frontedAccessIsOff(
+            fronted: id, projects: [project(id, access: true)]))
+    }
+
+    @Test("it asks the fronted project, not some other one that is off")
+    func otherProjectsDoNotCount() {
+        let fronted = UUID(), other = UUID()
+        #expect(!AgentProjectRegister.frontedAccessIsOff(
+            fronted: fronted,
+            projects: [project(fronted, access: true), project(other, access: false)]))
+    }
+
+    @Test("no fronted project, or one the index does not know, says nothing")
+    func unknownIsNotOff() {
+        #expect(!AgentProjectRegister.frontedAccessIsOff(fronted: nil, projects: []))
+        #expect(!AgentProjectRegister.frontedAccessIsOff(
+            fronted: UUID(), projects: [project(UUID(), access: false)]))
+    }
+}

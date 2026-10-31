@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "Arac\u0131lara a\u00e7\u0131k: {{projects}}",
     "emptyTitle": "Arac\u0131larla payla\u015f\u0131lan proje yok",
     "emptyHint": "Bir proje se\u00e7in, sonra \u201cProject\u201d \u25b8 {{command}} \u00f6\u011fesini se\u00e7in.",
+    "accessOffNote": "Bu proje için Ajan Erişimi kapalı. Bir ajan bağlamadan önce “Project” ▸ {{command}} öğesini seçin.",
     "sessionScopeNote": "\u201cSon sorulma\u201d yaln\u0131zca proje a\u00e7\u0131kken hat\u0131rlan\u0131r.",
     "projects_one": "{{count}} proje",
     "projects_other": "{{count}} proje",

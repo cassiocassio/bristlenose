@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "\u00c5pne for agenter: {{projects}}",
     "emptyTitle": "Ingen prosjekter deles med agenter",
     "emptyHint": "Merk et prosjekt, og velg deretter \u00abProject\u00bb \u25b8 {{command}}.",
+    "accessOffNote": "Agenttilgang er slått av for dette prosjektet. Velg «Project» ▸ {{command}} før du kobler til en agent.",
     "sessionScopeNote": "\u00abSist spurt\u00bb huskes bare mens prosjektet er \u00e5pent.",
     "projects_one": "{{count}} prosjekt",
     "projects_other": "{{count}} prosjekter",

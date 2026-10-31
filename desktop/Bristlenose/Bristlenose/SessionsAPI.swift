@@ -124,6 +124,9 @@ struct SessionsAPI {
         let session_date: String?
         let duration_seconds: Double?
         let speakers: [WireSpeaker]?
+        /// "readable" or a not-yet state ("waiting", ...). Absent means readable,
+        /// as the web grid reads it (`sess.state ?? "readable"`).
+        let state: String?
     }
 
     private struct WireSpeaker: Decodable {
@@ -169,8 +172,7 @@ struct SessionsAPI {
                 return await publish(outcome, requestPort: port, provider: provider)
             }
             if http.statusCode == 200 {
-                let wire = try JSONDecoder().decode(Wire.self, from: data)
-                let sessions = wire.sessions.map(convert)
+                let sessions = try decodeSessions(data)
                 outcome = sessions.isEmpty ? .empty : .loaded(sessions)
             } else {
                 // API1: the middleware's detail string is what distinguishes
@@ -237,6 +239,17 @@ struct SessionsAPI {
         let prefix = String(decoding: data.prefix(120), as: UTF8.self)
             .filter { $0.isASCII && !$0.isNewline }
         return prefix.isEmpty ? "<empty body>" : prefix
+    }
+
+    /// The switcher's rows from a `/sessions` body. A session that has not been
+    /// read yet (during a first analysis) is left out, not listed: choosing it
+    /// opens "no longer in the report", a dead page (ruling 8a, 31 Oct 2026). The
+    /// switcher fills as sessions are read; an empty list is the existing
+    /// "no sessions" state.
+    static func decodeSessions(_ data: Data) throws -> [SessionsPopoverSpec.Session] {
+        try JSONDecoder().decode(Wire.self, from: data).sessions
+            .filter { ($0.state ?? "readable") == "readable" }
+            .map(convert)
     }
 
     /// Participants only. Moderators and observers are deliberately dropped:

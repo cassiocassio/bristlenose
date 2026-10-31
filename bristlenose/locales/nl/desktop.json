@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "Open voor agenten: {{projects}}",
     "emptyTitle": "Er worden geen projecten gedeeld met agenten",
     "emptyHint": "Selecteer een project en kies vervolgens \u201cProject\u201d \u25b8 {{command}}.",
+    "accessOffNote": "Agenttoegang is uitgeschakeld voor dit project. Kies “Project” ▸ {{command}} voordat je een agent verbindt.",
     "sessionScopeNote": "\u201cLaatst gevraagd\u201d wordt alleen onthouden zolang het project geopend is.",
     "projects_one": "{{count}} project",
     "projects_other": "{{count}} projecten",

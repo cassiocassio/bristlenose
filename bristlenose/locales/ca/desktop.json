@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "Oberts als agents: {{projects}}",
     "emptyTitle": "No hi ha cap projecte compartit amb agents",
     "emptyHint": "Selecciona un projecte i tria Project \u25b8 {{command}}.",
+    "accessOffNote": "L'accés d'agents està desactivat per a aquest projecte. Tria Project ▸ {{command}} abans de connectar un agent.",
     "sessionScopeNote": "\u00abDarrera consulta\u00bb nom\u00e9s es recorda mentre el projecte est\u00e0 obert.",
     "projects_one": "{{count}} projecte",
     "projects_other": "{{count}} projectes",

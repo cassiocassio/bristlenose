@@ -1113,6 +1113,7 @@
     "rollupProjectsOnly": "Otev\u0159en\u00e9 agent\u016fm: {{projects}}",
     "emptyTitle": "\u017d\u00e1dn\u00e9 projekty nejsou sd\u00edleny s agenty",
     "emptyHint": "Vyberte projekt a zvolte \u201eProject\u201c \u25b8 {{command}}.",
+    "accessOffNote": "Přístup agentů je pro tento projekt vypnutý. Před připojením agenta zvolte „Project“ ▸ {{command}}.",
     "sessionScopeNote": "\u201ePosledn\u00ed dotaz\u201c se pamatuje jen po dobu, kdy je projekt otev\u0159en\u00fd.",
     "projects_one": "{{count}} projekt",
     "projects_few": "{{count}} projekty",

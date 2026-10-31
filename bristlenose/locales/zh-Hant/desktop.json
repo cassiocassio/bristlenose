@@ -1039,6 +1039,7 @@
     "rollupProjectsOnly": "\u5df2\u5c0d\u4ee3\u7406\u7a0b\u5f0f\u958b\u653e\uff1a{{projects}}",
     "emptyTitle": "\u6c92\u6709\u5c08\u6848\u5206\u4eab\u7d66\u4ee3\u7406\u7a0b\u5f0f",
     "emptyHint": "\u9078\u53d6\u5c08\u6848\uff0c\u7136\u5f8c\u9078\u64c7\u300cProject\u300d\u25b8\u300c{{command}}\u300d\u3002",
+    "accessOffNote": "此專案的代理存取已關閉。連接代理前，請選擇「Project」▸「{{command}}」。",
     "sessionScopeNote": "\u300c\u6700\u5f8c\u8a62\u554f\u300d\u50c5\u5728\u5c08\u6848\u958b\u555f\u671f\u9593\u8a18\u4f4f\u3002",
     "projects_other": "{{count}} \u500b\u5c08\u6848",
     "header": "\u4ee3\u7406\u7a0b\u5f0f\u53ea\u6703\u770b\u5230\u958b\u555f\u4e2d\u7684\u5c08\u6848",

@@ -1114,6 +1114,7 @@
     "rollupProjectsOnly": "Otwarte dla agent\u00f3w: {{projects}}",
     "emptyTitle": "\u017badne projekty nie s\u0105 udost\u0119pnione agentom",
     "emptyHint": "Wybierz projekt, a nast\u0119pnie wybierz \u201eProject\u201d \u25b8 {{command}}.",
+    "accessOffNote": "Dostęp agentów jest wyłączony dla tego projektu. Przed podłączeniem agenta wybierz „Project” ▸ {{command}}.",
     "sessionScopeNote": "\u201eOstatnie pytanie\u201d jest pami\u0119tane tylko wtedy, gdy projekt jest otwarty.",
     "projects_one": "{{count}} projekt",
     "projects_few": "{{count}} projekty",

@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "Abiertos a los agentes: {{projects}}",
     "emptyTitle": "No hay proyectos compartidos con agentes",
     "emptyHint": "Selecciona un proyecto y elige Project \u25b8 {{command}}.",
+    "accessOffNote": "El acceso de agentes está desactivado para este proyecto. Elige Project ▸ {{command}} antes de conectar un agente.",
     "sessionScopeNote": "\u00ab\u00daltima consulta\u00bb solo se recuerda mientras el proyecto est\u00e1 abierto.",
     "projects_one": "{{count}} proyecto",
     "projects_other": "{{count}} proyectos",

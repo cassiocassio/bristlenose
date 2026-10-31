@@ -1272,6 +1272,17 @@ struct MCPAgentsSettingsView: View {
                 Spacer()
                 copyButton(live: true)
             }
+            if AgentProjectRegister.frontedAccessIsOff(
+                fronted: serveFleet.frontedProject, projects: projectIndex.projects) {
+                // The config is live but an agent using it is refused until
+                // access is on; say so (ruling 8b).
+                Text(i18n.t("desktop.mcpAgents.accessOffNote", [
+                    "command": i18n.t("desktop.menu.project.turnOnAgentAccess"),
+                ]))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if workNote { chatGPTWorkNote }
         }
     }

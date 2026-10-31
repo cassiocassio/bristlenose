@@ -177,3 +177,18 @@ enum AgentProjectRegister {
                 live.filter { $0.sessions == nil }.count)
     }
 }
+
+extension AgentProjectRegister {
+    /// Whether the pane's pasted config needs the "Agent Access is off" note
+    /// (ruling 8b, 31 Oct 2026). Every study starts with access off, and the
+    /// server then refuses an agent that uses the address with a sentence that
+    /// blames a closed window. The config stays copyable, because it works the
+    /// moment access is turned on (port and token do not change), so the pane
+    /// says why it will not work yet. An unknown project says nothing: absence is
+    /// information, and "off" is a claim.
+    static func frontedAccessIsOff(fronted: UUID?, projects: [Project]) -> Bool {
+        guard let fronted, let project = projects.first(where: { $0.id == fronted })
+        else { return false }
+        return !project.agentAccess
+    }
+}

@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "F\u00fcr Agenten ge\u00f6ffnet: {{projects}}",
     "emptyTitle": "Keine Projekte f\u00fcr Agenten freigegeben",
     "emptyHint": "W\u00e4hle ein Projekt aus und dann \u201eProject\u201c \u25b8 {{command}}.",
+    "accessOffNote": "Der Agentenzugriff ist für dieses Projekt ausgeschaltet. Wähle „Project“ ▸ {{command}}, bevor du einen Agenten verbindest.",
     "sessionScopeNote": "\u201eLetzte Anfrage\u201c wird nur gespeichert, solange das Projekt ge\u00f6ffnet ist.",
     "projects_one": "{{count}} Projekt",
     "projects_other": "{{count}} Projekte",

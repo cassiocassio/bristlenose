@@ -1064,6 +1064,7 @@
     "rollupProjectsOnly": "Avoinna agenteille: {{projects}}",
     "emptyTitle": "Yht\u00e4\u00e4n projektia ei ole jaettu agenteille",
     "emptyHint": "Valitse projekti ja valitse sitten \u201dProject\u201d \u25b8 {{command}}.",
+    "accessOffNote": "Agenttien käyttöoikeus on pois päältä tässä projektissa. Valitse ”Project” ▸ {{command}} ennen kuin yhdistät agentin.",
     "sessionScopeNote": "\u201dViimeksi kysytty\u201d muistetaan vain, kun projekti on auki.",
     "projects_one": "{{count}} projekti",
     "projects_other": "{{count}} projektia",

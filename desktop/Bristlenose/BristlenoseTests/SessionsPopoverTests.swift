@@ -540,3 +540,39 @@ private final class PortFlipper {
         #expect(committed == 1)
     }
 }
+
+// MARK: - A first analysis lists only the sessions that can be opened (ruling 8a)
+
+@Suite("SessionsAPI.decodeSessions")
+struct SessionsDecodeReadableTests {
+
+    private func body(_ rows: [(id: String, n: Int, state: String?)]) -> Data {
+        let items = rows.map { r -> String in
+            let state = r.state.map { ",\"state\":\"\($0)\"" } ?? ""
+            return "{\"session_id\":\"\(r.id)\",\"session_number\":\(r.n)\(state)}"
+        }
+        return Data("{\"sessions\":[\(items.joined(separator: ","))]}".utf8)
+    }
+
+    @Test("a session not yet read is left out of the switcher")
+    func unreadIsOmitted() throws {
+        let sessions = try SessionsAPI.decodeSessions(body([
+            (id: "s1", n: 1, state: "readable"),
+            (id: "s2", n: 2, state: "readable"),
+            (id: "s3", n: 3, state: "waiting"),
+        ]))
+        #expect(sessions.map(\.sessionID) == ["s1", "s2"])
+    }
+
+    @Test("a server that sends no state means readable, as the web grid reads it")
+    func absentStateIsReadable() throws {
+        let sessions = try SessionsAPI.decodeSessions(body([(id: "s1", n: 1, state: nil)]))
+        #expect(sessions.map(\.sessionID) == ["s1"])
+    }
+
+    @Test("every session unread is an empty list, not a failure")
+    func allUnreadIsEmpty() throws {
+        let sessions = try SessionsAPI.decodeSessions(body([(id: "s1", n: 1, state: "waiting")]))
+        #expect(sessions.isEmpty)
+    }
+}

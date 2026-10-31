@@ -1069,6 +1069,7 @@
     "rollupProjectsOnly": "Open to agents: {{projects}}",
     "emptyTitle": "No projects are shared with agents",
     "emptyHint": "Select a project, then choose Project \u25b8 {{command}}.",
+    "accessOffNote": "Agent Access is off for this project. Choose Project ▸ {{command}} before connecting an agent.",
     "sessionScopeNote": "Last asked is remembered only while a project is open.",
     "projects_one": "{{count}} project",
     "projects_other": "{{count}} projects",

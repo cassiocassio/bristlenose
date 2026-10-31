@@ -361,6 +361,19 @@ import Testing
         #expect(!b.isPreparingSignals)
     }
 
+    /// The hand-over's whole point: a run's two-line row does not collapse to one
+    /// line and grow again. The height decision is `ProjectCellSpec`'s, so pin it
+    /// there: the line is a two-line row at the same height as the run's, and only
+    /// the placeholder (nothing to say) is shorter.
+    @Test func thePreparingRowIsAsTallAsTheRunsRowSoTheHandOverDoesNotJump() {
+        #expect(ProjectCellSpec.isTwoLine(.preparingSignals))
+        #expect(ProjectCellSpec.isTwoLine(.running))
+        #expect(ProjectCellSpec.rowHeight(twoLine: ProjectCellSpec.isTwoLine(.preparingSignals))
+                == ProjectCellSpec.rowHeight(twoLine: ProjectCellSpec.isTwoLine(.running)))
+        #expect(!ProjectCellSpec.isTwoLine(.placeholder))
+        #expect(ProjectCellSpec.rowHeight(twoLine: false) < ProjectCellSpec.rowHeight(twoLine: true))
+    }
+
     /// The status page has no SPA to confirm a prior, so an armed prior must not
     /// outlive it: a run whose import failed lands on a status page.
     @Test func aStatusPageClearsAnArmedPrior() {

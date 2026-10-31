@@ -581,6 +581,7 @@ function SignalCard({
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={`signal-card${expanded ? " expanded" : ""}${isFocused ? " bn-selected" : ""}`}
+      aria-current={isFocused ? "true" : undefined}
       style={{
         "--bn-signal-accent": selectionAccent,
         "--bn-signal-accent-wash": `color-mix(in srgb, ${selectionAccent} 10%, var(--bn-colour-bg))`,

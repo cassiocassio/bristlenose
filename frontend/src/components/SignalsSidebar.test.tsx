@@ -124,6 +124,9 @@ describe("SignalsSidebar", () => {
     const rows = [...document.querySelectorAll(".signal-entry")];
     expect(rows[0].classList.contains("active")).toBe(true);
     expect(rows[1].classList.contains("active")).toBe(false);
+    // And said to assistive technology: the list row is the keyboard path to selection.
+    expect(rows[0].getAttribute("aria-current")).toBe("true");
+    expect(rows[1].hasAttribute("aria-current")).toBe(false);
   });
 
   // The wire contract: the card column listens for this and scrolls. Nothing

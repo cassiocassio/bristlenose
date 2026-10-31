@@ -884,6 +884,9 @@ describe("SignalsPage", () => {
       expect(second.classList.contains("bn-selected")).toBe(false);
       fireEvent.click(second);
       expect(second.classList.contains("bn-selected")).toBe(true);
+      // Selection is said to assistive technology too, on the card as on its list row.
+      expect(second.getAttribute("aria-current")).toBe("true");
+      expect(screen.getAllByTestId("bn-signal-card")[0].hasAttribute("aria-current")).toBe(false);
       expect(screen.getAllByTestId("bn-signal-card")[0].classList.contains("bn-selected")).toBe(false);
       expect(rec.scrolled).toHaveLength(0);
     } finally {

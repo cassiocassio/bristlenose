@@ -97,6 +97,7 @@ function SignalEntry({ signal, active, onClick }: SignalEntryProps) {
     // eslint-disable-next-line jsx-a11y/anchor-is-valid
     <a
       className={`signal-entry${active ? " active" : ""}`}
+      aria-current={active ? "true" : undefined}
       // The same hue as the card: the tag's words take the card's signal ink.
       style={{ "--bn-signal-accent": signalAccent(signal, isFromSentimentLens(signal)) } as React.CSSProperties}
       role="button"

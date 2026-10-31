@@ -457,6 +457,7 @@
         "duplicate_recording": "Un second enregistrement pour cet entretien — l'autre a été utilisé.",
         "duplicate_transcript": "Une seconde copie de la transcription de cet entretien — l'autre a été utilisée.",
         "no_lines": "Aucune ligne dans cette transcription — il n'y a rien à analyser.",
+        "notes_only": "Aucune transcription dans ce document — uniquement des notes de réunion.",
         "added_after_analysis": "Ajouté après l'analyse de cet entretien — l'entretien garde les fichiers à partir desquels il a été analysé."
       }
     }

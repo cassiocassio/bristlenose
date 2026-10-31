@@ -185,6 +185,12 @@ class UnusableReason(str, Enum):
     #: ``UNSUPPORTED_FORMAT`` (the format is one we read) — RE#20, decision
     #: #80, 22 Oct 2026.
     NO_LINES = "no_lines"
+    #: A Google Meet "Notes by Gemini" document that holds no timed transcript:
+    #: Gemini's summary, not what anyone said. Read as untimed paragraphs its
+    #: sentences became quotes nobody said (decision #183, ruling 9, 31 Oct 2026).
+    #: Judged by Meet's dated filename tail plus "nothing in it is timed", never
+    #: by the localised tab headings.
+    NOTES_ONLY = "notes_only"
     #: A file that joined a session after the session was analysed — a
     #: ``.vtt`` dropped beside an analysed recording, a track added to an
     #: analysed Zoom folder. Set aside so the analysis keeps the files it was

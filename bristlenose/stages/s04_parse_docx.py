@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 #: pipeline folds it into the transcribe stage's input fingerprint, so a
 #: .docx session is re-parsed on the next run rather than served from a cache
 #: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
-DOCX_PARSER_VERSION = 4
+DOCX_PARSER_VERSION = 5
 
 # Teams speaker heading: "Martin Storey   0:04" — the name, a run of ordinary
 # spaces, then M:SS or H:MM:SS, as the first line of its paragraph.
@@ -174,13 +174,19 @@ def _parse_docx(path: Path) -> list[TranscriptSegment]:
     # No timecode evidence at all — e.g. a transcription agency's Word file, or
     # a hand-typed one. Untimed paragraphs are the honest reading of that.
     #
-    # KNOWN GAP: a Google Meet Doc whose Transcript tab is empty is also
-    # untimed, and lands here — so its Gemini summary would be ingested as
-    # speech. Closing that needs either the localised "📝 Notes" heading (the
-    # fragility this parser deliberately avoids) or refusing every untimed
-    # .docx, which would also reject legitimate agency transcripts. Left open
-    # pending a product decision; the timed case above is the one observed in
-    # the field.
+    # Except for a Google Meet Doc whose Transcript tab is empty: it is untimed
+    # too, and its Gemini summary would be ingested as speech. It is told apart
+    # by Meet's dated filename tail, which says nothing in the document and is not
+    # localised the way its tab headings are (ruling 9, 31 Oct 2026). Nothing is
+    # read from it; the pipeline names it as `notes_only`. A renamed Meet Doc
+    # still gets through, and an agency file named like a Meet export would be
+    # refused: both accepted.
+    from bristlenose.stages.s01_ingest import is_meet_notes_name
+
+    if is_meet_notes_name(path.name):
+        logger.warning("Meet notes with no timed transcript, not read: %s", path.name)
+        return []
+
     logger.info("Parsing as plain text (no timecodes): %s", path.name)
     return _parse_plain_paragraphs(lines)
 

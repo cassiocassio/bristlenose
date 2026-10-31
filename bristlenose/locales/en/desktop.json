@@ -458,6 +458,7 @@
         "duplicate_recording": "A second recording for this session — the other one was used.",
         "duplicate_transcript": "A second copy of this session's transcript — the other one was used.",
         "no_lines": "No lines in this transcript — there is nothing to analyse.",
+        "notes_only": "No transcript in this document — only meeting notes.",
         "added_after_analysis": "Added after this session was analysed — the session keeps the files it was analysed from."
       }
     }

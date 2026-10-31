@@ -457,6 +457,7 @@
         "duplicate_recording": "Una seconda registrazione per questa sessione — è stata usata l'altra.",
         "duplicate_transcript": "Una seconda copia della trascrizione di questa sessione — è stata usata l'altra.",
         "no_lines": "Nessuna riga in questa trascrizione — non c'è nulla da analizzare.",
+        "notes_only": "Nessuna trascrizione in questo documento — solo appunti della riunione.",
         "added_after_analysis": "Aggiunto dopo l'analisi di questa sessione — la sessione mantiene i file da cui è stata analizzata."
       }
     }

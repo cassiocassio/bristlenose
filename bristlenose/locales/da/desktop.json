@@ -457,6 +457,7 @@
         "duplicate_recording": "En anden optagelse til denne session — den anden blev brugt.",
         "duplicate_transcript": "En anden kopi af denne sessions transskription — den anden blev brugt.",
         "no_lines": "Ingen linjer i denne transskription — der er intet at analysere.",
+        "notes_only": "Intet transskript i dette dokument — kun mødenoter.",
         "added_after_analysis": "Tilføjet efter at denne session blev analyseret — sessionen beholder de filer, den blev analyseret ud fra."
       }
     }

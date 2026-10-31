@@ -457,6 +457,7 @@
         "duplicate_recording": "Uma segunda gravação para esta sessão — foi usada a outra.",
         "duplicate_transcript": "Uma segunda cópia da transcrição desta sessão — foi usada a outra.",
         "no_lines": "Nenhuma linha nesta transcrição — não há nada para analisar.",
+        "notes_only": "Nenhuma transcrição neste documento — apenas notas da reunião.",
         "added_after_analysis": "Adicionado depois de esta sessão ter sido analisada — a sessão mantém os ficheiros a partir dos quais foi analisada."
       }
     }

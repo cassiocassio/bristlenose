@@ -558,6 +558,16 @@ def _normalise_stem(stem: str) -> str:
     return stem.strip()
 
 
+def is_meet_notes_name(filename: str) -> bool:
+    """Whether *filename* carries Google Meet's dated tail ("<title> - <date> <time> - <kind>").
+
+    Only the structure is matched: the kind ("Notes by Gemini", "Recording") is
+    localised per tenant and is never read. Used with "nothing in it is timed" to
+    tell a Meet notes document from an untimed agency transcript (ruling 9).
+    """
+    return bool(_GMEET_TAIL_RE.search(Path(filename).stem))
+
+
 def _is_zoom_local_dir(dir_name: str) -> bool:
     """Return True if *dir_name* matches the Zoom local recording folder pattern."""
     return bool(_ZOOM_LOCAL_DIR_RE.match(dir_name))

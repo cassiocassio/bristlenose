@@ -5122,6 +5122,7 @@ class Pipeline:
         """
         import time
 
+        from bristlenose.stages.s01_ingest import is_meet_notes_name
         from bristlenose.stages.s03_parse_subtitles import (
             empty_subtitle_reason,
             parse_subtitle_file,
@@ -5215,6 +5216,19 @@ class Pipeline:
                     parse_failures.append(refusal_stage_failure(
                         source_file=chosen.file.path.name, reason=empty,
                         stage="s03_parse_subtitles", session_id=session.session_id,
+                    ))
+                elif (
+                    session.audio_path is None
+                    and chosen.file.file_type == FileType.DOCX
+                    and is_meet_notes_name(chosen.file.path.name)
+                ):
+                    # A Meet notes Doc with no timed transcript reads as nothing
+                    # (s04 returns no segments): said as that, not as a recording
+                    # in which nothing was said (ruling 9).
+                    parse_failures.append(refusal_stage_failure(
+                        source_file=chosen.file.path.name,
+                        reason=UnusableReason.NOTES_ONLY,
+                        stage="s04_parse_docx", session_id=session.session_id,
                     ))
                 for other in superseded:
                     # Stated, never silent: the researcher dropped this file in

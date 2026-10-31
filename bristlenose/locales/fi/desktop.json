@@ -457,6 +457,7 @@
         "duplicate_recording": "Toinen tallenne tälle istunnolle — toista käytettiin.",
         "duplicate_transcript": "Toinen kopio tämän istunnon litteroinnista — toista käytettiin.",
         "no_lines": "Tässä litteroinnissa ei ole rivejä — analysoitavaa ei ole.",
+        "notes_only": "Tässä asiakirjassa ei ole litterointia — vain kokousmuistiinpanot.",
         "added_after_analysis": "Lisätty tämän istunnon analysoinnin jälkeen — istunto säilyttää tiedostot, joista se analysoitiin."
       }
     }

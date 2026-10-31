@@ -43,7 +43,7 @@ def _docx(tmp_path: Path, name: str, paragraphs: list[str]) -> Path:
     return path
 
 
-def _gather(path: Path):
+def _gather(path: Path, audio_path: Path | None = None):
     from bristlenose.config import BristlenoseSettings
     from bristlenose.pipeline import Pipeline
 
@@ -51,7 +51,7 @@ def _gather(path: Path):
                   size_bytes=path.stat().st_size)
     session = InputSession(
         session_id="s1", session_number=1, participant_id="p1", participant_number=1,
-        files=[f], has_existing_transcript=True, session_date=_T0,
+        files=[f], has_existing_transcript=True, session_date=_T0, audio_path=audio_path,
     )
     pipeline = Pipeline(BristlenoseSettings(skip_transcription=True))
     return asyncio.run(pipeline._gather_all_segments([session]))
@@ -99,3 +99,19 @@ def test_a_meet_document_that_does_hold_a_timed_transcript_is_still_read(
     assert outcome.failed == []
     assert list(segments) == ["s1"]
     assert all("summary" not in s.text for s in segments["s1"])
+
+
+def test_the_realistic_case_the_notes_document_beside_its_recording_is_refused_too(
+    tmp_path: Path,
+) -> None:
+    """The Doc is dropped next to its .mp4, so the session HAS a recording (stage 2 sets
+    audio_path). The refusal must be stated all the same: it was once guarded on there being
+    none, so in the very case the ruling exists for the Doc vanished with no row at all.
+    """
+    recording = tmp_path / "Checkout call - 2026_10_20 14_00 GMT - Recording.mp4"
+    recording.write_bytes(b"\x00" * 16)
+    segments, outcome = _gather(_docx(tmp_path, _MEET_NAME, _NOTES), audio_path=recording)
+    assert segments == {}
+    (failure,) = outcome.failed
+    assert failure.cause.reason == UnusableReason.NOTES_ONLY
+    assert failure.source_file == _MEET_NAME

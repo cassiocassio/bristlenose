@@ -5217,14 +5217,14 @@ class Pipeline:
                         source_file=chosen.file.path.name, reason=empty,
                         stage="s03_parse_subtitles", session_id=session.session_id,
                     ))
-                elif (
-                    session.audio_path is None
-                    and chosen.file.file_type == FileType.DOCX
-                    and is_meet_notes_name(chosen.file.path.name)
+                elif chosen.file.file_type == FileType.DOCX and is_meet_notes_name(
+                    chosen.file.path.name
                 ):
                     # A Meet notes Doc with no timed transcript reads as nothing
                     # (s04 returns no segments): said as that, not as a recording
-                    # in which nothing was said (ruling 9).
+                    # in which nothing was said (ruling 9). Whether or not a
+                    # recording sits beside it: the realistic case is the Doc
+                    # dropped next to its .mp4, whose audio_path stage 2 sets.
                     parse_failures.append(refusal_stage_failure(
                         source_file=chosen.file.path.name,
                         reason=UnusableReason.NOTES_ONLY,

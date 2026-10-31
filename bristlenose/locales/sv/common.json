@@ -423,7 +423,6 @@
     "sending": "Skickar…",
     "anonymous": "Anonymt – endast ditt betyg, ditt meddelande och Bristlenose-versionen delas.",
     "sent": "Feedback skickad – tack!",
-    "copiedToClipboard": "Kopierat till urklipp – klistra in i ett mejl eller ärende.",
     "copyFailed": "Kunde inte kopiera — skicka feedback manuellt.",
     "sendFailed": "Din feedback kunde inte skickas. Den är kopierad till urklipp. Försök igen senare.",
     "sendFailedNotCopied": "Din feedback kunde varken skickas eller kopieras till urklipp. Försök igen senare."

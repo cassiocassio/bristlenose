@@ -80,8 +80,9 @@ def _note_stray_database(db_path: Path) -> None:
         return
     if is_database:
         logger.warning(
-            "An earlier version kept this study's data in %s, which this version no longer "
-            "reads; the study opened with an empty database and that file was left alone",
+            "An earlier version kept the data of studies under this folder in %s, which this "
+            "version no longer reads; this study opened with an empty database and that file "
+            "was left alone",
             stray,
         )
 

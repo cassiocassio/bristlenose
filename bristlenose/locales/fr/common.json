@@ -423,7 +423,6 @@
     "sending": "Envoi en cours…",
     "anonymous": "Anonyme – seuls votre évaluation, votre message et la version de Bristlenose sont partagés.",
     "sent": "Commentaires envoyés – merci !",
-    "copiedToClipboard": "Copié dans le presse-papiers – collez dans un e-mail ou une issue.",
     "copyFailed": "Impossible de copier — veuillez envoyer vos commentaires manuellement.",
     "sendFailed": "Impossible d’envoyer vos commentaires. Ils sont copiés dans le presse-papiers. Réessayez plus tard.",
     "sendFailedNotCopied": "Impossible d’envoyer vos commentaires ou de les copier dans le presse-papiers. Réessayez plus tard."

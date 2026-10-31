@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 #: pipeline folds it into the transcribe stage's input fingerprint, so a
 #: .docx session is re-parsed on the next run rather than served from a cache
 #: the old parser wrote. Sibling of ``SUBTITLE_PARSER_VERSION`` in s03.
-DOCX_PARSER_VERSION = 5
+DOCX_PARSER_VERSION = 4
 
 # Teams speaker heading: "Martin Storey   0:04" — the name, a run of ordinary
 # spaces, then M:SS or H:MM:SS, as the first line of its paragraph.

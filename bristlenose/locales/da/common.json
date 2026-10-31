@@ -423,7 +423,6 @@
     "sending": "Sender …",
     "anonymous": "Anonymt – kun din vurdering, din besked og Bristlenose-versionen deles.",
     "sent": "Feedback sendt – tak!",
-    "copiedToClipboard": "Kopieret til udklipsholder – indsæt i en e-mail eller et issue.",
     "copyFailed": "Kunne ikke kopiere — send venligst feedback manuelt.",
     "sendFailed": "Din feedback kunne ikke sendes. Den er kopieret til udklipsholderen. Prøv igen senere.",
     "sendFailedNotCopied": "Din feedback kunne hverken sendes eller kopieres til udklipsholderen. Prøv igen senere."

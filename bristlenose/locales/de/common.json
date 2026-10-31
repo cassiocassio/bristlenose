@@ -423,7 +423,6 @@
     "sending": "Wird gesendet…",
     "anonymous": "Anonym – nur Ihre Bewertung, Ihre Nachricht und die Bristlenose-Version werden geteilt.",
     "sent": "Feedback gesendet – vielen Dank!",
-    "copiedToClipboard": "In die Zwischenablage kopiert – in eine E-Mail oder ein Issue einfügen.",
     "copyFailed": "Kopieren nicht möglich — bitte Feedback manuell einreichen.",
     "sendFailed": "Ihr Feedback konnte nicht gesendet werden. Es liegt in der Zwischenablage. Versuchen Sie es später erneut.",
     "sendFailedNotCopied": "Ihr Feedback konnte weder gesendet noch in die Zwischenablage kopiert werden. Versuchen Sie es später erneut."

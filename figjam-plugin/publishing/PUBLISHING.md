@@ -72,7 +72,7 @@ because Figma does not publish its field limits.
 > **How to use it**
 > 1. In Bristlenose, choose Export › Send to FigJam… and save the board file.
 > 2. Open a FigJam board and run the Bristlenose plugin.
-> 3. Choose the file, or drop it on the plugin's window.
+> 3. Choose the file, drop it on the plugin's window, or paste it.
 >
 > One undo removes everything the plugin drew.
 >

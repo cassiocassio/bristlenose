@@ -154,10 +154,15 @@ def page_for(
         return _OUTCOME_FOR_STATE[latest.state]
     if report is not None and policy == ReportPolicy.LAST_GOOD_REPORT:
         return None
-    if report is not None and latest.state == RunStateEnum.CANCELLED:
+    if report is not None and latest.state in (RunStateEnum.CANCELLED, RunStateEnum.FAILED):
         # A Stop leaves the earlier report as it was, so that report is what
         # shows; the row says Stopped (owner, 24 Oct 2026,
-        # docs/mockups/detail-pane-states.html Q4: D4-B for cancelled runs only).
+        # docs/mockups/detail-pane-states.html Q4: D4-B for cancelled runs).
+        # A failed run is the same: it produced nothing, so the earlier report is
+        # in place or was put back, and "Last run failed." over a complete report
+        # was a failure shown over a good one (ruling 11, owner, 31 Oct 2026).
+        # With no report the failure page is all there is and still shows. The
+        # failure stays in the log and on the row.
         return None
     return _OUTCOME_FOR_STATE[latest.state]
 

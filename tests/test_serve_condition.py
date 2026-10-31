@@ -107,8 +107,11 @@ def test_failure_while_serve_is_up_reaches_the_page(tmp_path: Path, fast_watcher
         _failed(out, "B")
         assert _wait(lambda: (_latest(client) or {}).get("state") == "failed")
         page = client.get("/report/").text
-        assert "The analysis didn’t finish" in page
-        assert "no credit" in page
+        # Ruling 11 (owner, 31 Oct 2026): a failed re-run produced nothing, so the
+        # report that is on disk is what shows; the failure stays in the condition
+        # (asserted above) and on the row. It used to be the failure page.
+        assert 'id="bn-app-root"' in page
+        assert "The analysis didn’t finish" not in page
         # /last-run is the data version: still the report that is on disk.
         assert client.get("/api/projects/1/last-run").json()["run_id"] == "A"
 

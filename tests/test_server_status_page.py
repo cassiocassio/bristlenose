@@ -470,17 +470,24 @@ class TestDetectStatus:
         ), out)
         assert detect_status(out, _cond(out)) is None
 
-    @pytest.mark.parametrize("policy,expect", [
-        (ReportPolicy.LATEST_ATTEMPT, "failed"),
-        (ReportPolicy.LAST_GOOD_REPORT, None),
-    ])
-    def test_policy_decides_a_failed_rerun_over_a_report(
-        self, tmp_path: Path, policy: ReportPolicy, expect: str | None,
+    @pytest.mark.parametrize("policy", list(ReportPolicy))
+    def test_a_failed_rerun_over_a_report_shows_the_report(
+        self, tmp_path: Path, policy: ReportPolicy,
     ) -> None:
+        """Ruling 11 (owner, 31 Oct 2026, D4-B for failed runs): a failed re-run
+        produced nothing, so the earlier report is restored and is what shows,
+        whatever the policy; the failure stays in the log. Until then the page
+        said "Last run failed." over a complete, good report."""
         _completed(tmp_path, "A")
         _seed_failed(tmp_path)
-        info = detect_status(tmp_path, _cond(tmp_path), policy=policy)
-        assert (info.outcome if info else None) == expect
+        assert detect_status(tmp_path, _cond(tmp_path), policy=policy) is None
+
+    def test_a_failed_first_analysis_still_says_so(self, tmp_path: Path) -> None:
+        """No report to show: the failure page is all there is, under either policy."""
+        _seed_failed(tmp_path)
+        for policy in ReportPolicy:
+            info = detect_status(tmp_path, _cond(tmp_path), policy=policy)
+            assert info is not None and info.outcome == "failed"
 
     # -- docs/mockups/detail-pane-states.html (owner, 24 Oct 2026) -----------
 

@@ -1690,6 +1690,10 @@ def _install_event_watcher(
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
         app.state.scene_strips.start()
         app.state.screen_text.start()
+        # A key saved since quotes were owed codes them (the Mac restarts the serve on a key save).
+        from bristlenose.server.autocode_catch_up import resume_after_key
+
+        resume_after_key(app)
         initial_signals = _schedule_missing_signal_snapshot(
             app, session_factory, project_dir,
         )

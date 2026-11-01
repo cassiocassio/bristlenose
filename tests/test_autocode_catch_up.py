@@ -542,6 +542,83 @@ class TestWithoutAKey:
         assert model.batch_sizes()[applied:] == [6], "the whole backlog in one pass"
 
 
+class TestSavingAKeyStartsIt:
+    """The Mac restarts the serve when a key is saved; a write that found quotes owed and
+    no key left word (``AWAITING_KEY``), and the next start with a key codes them (owner,
+    1 Nov 2026). An ordinary start spends nothing."""
+
+    @staticmethod
+    def _marker(app: Any) -> Path:
+        from bristlenose.output_paths import project_output_dir
+
+        return project_output_dir(app.state.project_dir) / ".bristlenose" / cu.AWAITING_KEY
+
+    @staticmethod
+    def _restart(app: Any, tmp_path: Path, key: str) -> tuple[Any, AuthTestClient]:
+        """A new serve over the same study and database, as the Mac's restart makes."""
+        cu.forget_everything()
+        again = create_app(
+            project_dir=app.state.project_dir, dev=True, db_url=f"sqlite:///{tmp_path / 'bn.db'}",
+        )
+        again.state.settings = _settings(key=key)
+        return again, AuthTestClient(again)
+
+    def _owed_with_no_key(self, tmp_path: Path) -> tuple[Any, _Model, str, int]:
+        app, client = _app(tmp_path)
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+        app.state.settings = _settings(key="")
+        with model, client:
+            assert _hide(client, dom, False)["catchUp"] == []
+        return app, model, text, applied
+
+    def test_a_write_with_no_key_leaves_word(self, tmp_path: Path) -> None:
+        app, _, _, _ = self._owed_with_no_key(tmp_path)
+        assert self._marker(app).exists()
+
+    def test_the_start_after_a_key_is_saved_codes_what_was_owed(self, tmp_path: Path) -> None:
+        app, model, text, applied = self._owed_with_no_key(tmp_path)
+        again, client = self._restart(app, tmp_path, key="test-key")
+        with model, client:
+            _wait(lambda: "autocode" in _tag_sources(again, text), "the owed quote to be coded")
+        assert len(model.prompts) == applied + 1, "one call, for the one owed quote"
+        assert not self._marker(app).exists(), "the word is used up"
+
+    def test_a_start_with_no_key_keeps_the_word(self, tmp_path: Path) -> None:
+        app, model, _, applied = self._owed_with_no_key(tmp_path)
+        again, client = self._restart(app, tmp_path, key="")
+        with model, client:
+            _quiet(1.0)
+        assert len(model.prompts) == applied, "no call without a key"
+        assert self._marker(app).exists(), "waits for the start that has one"
+
+    def test_an_ordinary_start_with_owed_quotes_and_no_word_spends_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        app, client = _app(tmp_path)
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+        db = app.state.db_factory()  # unhidden outside the routes: owed, and no word left
+        try:
+            db.query(QuoteState).delete()
+            db.commit()
+        finally:
+            db.close()
+        assert not self._marker(app).exists()
+        again, client = self._restart(app, tmp_path, key="test-key")
+        with model, client:
+            _quiet(1.0)
+        assert len(model.prompts) == applied, "owed quotes alone spend nothing at start"
+
+
 class TestAKeyOrCreditFailure:
     def test_it_is_tried_once_then_not_again_until_the_provider_state_changes(
         self, tmp_path: Path

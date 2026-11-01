@@ -31,6 +31,14 @@ after that makes one attempt, and a failure for the same reason holds for anothe
 period. Nothing runs on a timer; with no trigger, nothing is spent. A provider with no
 key is not tried at all (as ``app.py`` skips the run's re-apply) and writes nothing to
 the job.
+
+**Saving a key starts it (owner, 1 Nov 2026).** A write that made quotes count while no
+key was set leaves a marker file (``AWAITING_KEY``) in the study's ``.bristlenose``
+folder. The Mac restarts the serve when a key is saved, and ``resume_after_key`` (the
+lifespan's startup) arms one pass when it finds the marker and a key: the owed quotes
+are coded without another gesture. The marker is only ever written by a write that
+found something owed and no key, so an ordinary launch never spends; the fire-time
+check is still the authority on what is owed, so a stale marker costs nothing.
 """
 
 from __future__ import annotations
@@ -38,6 +46,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -63,6 +72,9 @@ KEY_OR_CREDIT_KINDS = frozenset({"invalid_key", "out_of_credit"})
 #: it makes ONE attempt, and a failure for the same reason holds for another period.
 #: No timer runs and nothing is spent without a trigger.
 HOLD_S = 15 * 60.0
+
+#: A write made quotes count while no key was set; the next serve start with a key codes them.
+AWAITING_KEY = "autocode-awaiting-key"
 
 #: The clock the hold is measured on; a test replaces it. The wall clock, not
 #: ``time.monotonic``: on a Mac the monotonic clock stops while the lid is closed, so a
@@ -151,7 +163,9 @@ def blocked(project_id: int, framework_id: str, settings: Any, job: AutoCodeJob)
     return state == signature(settings) and _clock() - since < HOLD_S
 
 
-def _eligible_jobs(db: SASession, project_id: int, app: Any) -> list[AutoCodeJob]:
+def _eligible_jobs(
+    db: SASession, project_id: int, app: Any, *, need_key: bool = True,
+) -> list[AutoCodeJob]:
     """The codebooks a pass would code something for now: applied at least once,
     still installed and switched on, owing a quote that counts, not held back by
     a key or credit failure, and a cloud provider that has a key.
@@ -174,7 +188,7 @@ def _eligible_jobs(db: SASession, project_id: int, app: Any) -> list[AutoCodeJob
     if not jobs:
         return []
     settings = _settings(app)
-    if not cloud_ready(settings):
+    if need_key and not cloud_ready(settings):
         return []
     counted = analysis_quotes(db, project_id)
     return [
@@ -210,6 +224,11 @@ def note_quotes_counting(app: Any, project_id: int) -> list[dict[str, str]]:
                 }
                 for job in jobs
             ]
+            # Cheap question first: a project with no codebook applied reads no settings.
+            if not jobs and _eligible_jobs(db, project_id, app, need_key=False) and not (
+                cloud_ready(_settings(app))
+            ):
+                _note_waiting_for_key(app)
         finally:
             db.close()
         if armed:
@@ -218,6 +237,46 @@ def note_quotes_counting(app: Any, project_id: int) -> list[dict[str, str]]:
     except Exception:
         logger.exception("Could not schedule the AutoCode catch-up for project %d", project_id)
         return []
+
+
+def _marker(app: Any) -> Path | None:
+    project_dir = getattr(app.state, "project_dir", None)
+    if project_dir is None:
+        return None
+    from bristlenose.output_paths import project_output_dir
+
+    return project_output_dir(project_dir) / ".bristlenose" / AWAITING_KEY
+
+
+def _note_waiting_for_key(app: Any) -> None:
+    """Something is owed and there is no key: leave word for the next start that has one."""
+    marker = _marker(app)
+    if marker is None:
+        return
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(time.strftime("%Y-%m-%dT%H:%M:%S%z") + "\n", encoding="utf-8")
+    except OSError:
+        logger.warning("Could not note that the AutoCode catch-up is waiting for a key",
+                       exc_info=True)
+
+
+def resume_after_key(app: Any, project_id: int = 1) -> bool:
+    """At serve start: if a write found quotes owed and no key, and there is a key now,
+    arm one pass (the Mac restarts the serve when a key is saved). On the event loop.
+    Answers whether it armed one; never raises."""
+    try:
+        marker = _marker(app)
+        if marker is None or not marker.exists():
+            return False
+        if not cloud_ready(_settings(app)):
+            return False  # still no key: the word stays for the start that has one
+        marker.unlink(missing_ok=True)
+        _arm(app, project_id)
+        return True
+    except Exception:
+        logger.exception("Could not resume the AutoCode catch-up after a key was saved")
+        return False
 
 
 def _arm_on_the_loop(app: Any, project_id: int) -> None:

@@ -483,6 +483,47 @@ describe("arrangement storage", () => {
     expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.5) });
   });
 
+  // RE#14 (22 Oct 2026, line 489 of the plan), on the rule of decision #15: what is drawn is what the
+  // server holds. A save that fails puts the board back and says so (sendPut toasts the failure).
+  it("says whether the server took a change", async () => {
+    server([]);
+    await loadArrangements("1");
+    expect(await setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) })).toBe(true);
+    vi.mocked(sendPut).mockRejectedValueOnce(new Error("500"));
+    expect(await setArrangement("1", "url:/x", "s1", { a: edge("L", 0.5) })).toBe(false);
+  });
+
+  it("puts the board back to what it was when a save fails", async () => {
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } }]);
+    await loadArrangements("1");
+    vi.mocked(sendPut).mockRejectedValueOnce(new Error("500"));
+    const saved = setArrangement("1", "url:/x", "s1", { a: edge("L", 0.9) });
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.9) }); // drawn at once
+    expect(await saved).toBe(false);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("puts Tidy back too: an arrangement that could not be cleared is still there", async () => {
+    server([{ screen_key: "url:/x", session_id: "s1", cards: { a: edge("L", 0.3) } }]);
+    await loadArrangements("1");
+    vi.mocked(sendPut).mockRejectedValueOnce(new Error("500"));
+    expect(await setArrangement("1", "url:/x", "s1", null)).toBe(false);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.3) });
+  });
+
+  it("leaves a newer change alone when an older save fails", async () => {
+    server([]);
+    await loadArrangements("1");
+    let fail!: (e: Error) => void;
+    vi.mocked(sendPut).mockImplementationOnce(() => new Promise<void>((_, reject) => (fail = reject)));
+    const first = setArrangement("1", "url:/x", "s1", { a: edge("L", 0.3) });
+    setArrangement("1", "url:/x", "s1", { a: edge("L", 0.6) }); // made while the first is in flight
+    await flush();
+    fail(new Error("500"));
+    expect(await first).toBe(false);
+    expect(arrangementFor("1", "url:/x", "s1")).toEqual({ a: edge("L", 0.6) });
+  });
+
   it("splits a version key at its last bar, so a screen key may hold one", async () => {
     localStorage.setItem("bristlenose-screens-arrangements-1", JSON.stringify({ "title:A | B|s3": { a: edge("L", 0.3) } }));
     server([]);

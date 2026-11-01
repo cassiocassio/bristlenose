@@ -606,14 +606,31 @@ function persist(projectId: string, screenKey: string, sessionId: string, cards:
   return next;
 }
 
-function commit(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): void {
-  const a = { ...all(projectId) };
+/**
+ * Draw a change at once, send it, and say whether the server took it. A save that fails puts the
+ * board back to what it was (decision #15, as the quote store does): what is drawn is what the
+ * server holds, and `sendPut` has already told the researcher why. If a newer change was made
+ * while this one was in flight it is left alone; that one's own save answers for itself. (A chain
+ * of failures puts back the value drawn before each, which is the last one that was kept.)
+ */
+function commit(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): Promise<boolean> {
   const key = versionKey(screenKey, sessionId);
+  const before = all(projectId)[key] ?? null;
+  const a = { ...all(projectId) };
   if (cards === null) delete a[key];
   else a[key] = cards;
   memory.set(projectId, a);
   changed();
-  persist(projectId, screenKey, sessionId, cards);
+  return persist(projectId, screenKey, sessionId, cards).then((ok) => {
+    if (!ok && (all(projectId)[key] ?? null) === cards) {
+      const back = { ...all(projectId) };
+      if (before === null) delete back[key];
+      else back[key] = before;
+      memory.set(projectId, back);
+      changed();
+    }
+    return ok;
+  });
 }
 
 /** The arrangement of one version, or null while it is automatic. A pure read. */
@@ -646,8 +663,8 @@ export function migrateArrangement(projectId: string, screenKey: string, session
 
 /** Replace one version's arrangement: null returns it to automatic (Tidy); a saved copy puts it
  *  back (undo). */
-export function setArrangement(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): void {
-  commit(projectId, screenKey, sessionId, cards);
+export function setArrangement(projectId: string, screenKey: string, sessionId: string, cards: Arrangement | null): Promise<boolean> {
+  return commit(projectId, screenKey, sessionId, cards);
 }
 
 /** The highest stacking order of any placed card, so a card moved by hand comes out on top. */

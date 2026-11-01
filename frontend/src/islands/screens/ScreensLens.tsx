@@ -38,7 +38,7 @@ import { unhideQuotes, useQuotesStore } from "../../contexts/QuotesContext";
 import { CONTENT_FLOOR_PX } from "../../contexts/SidebarStore";
 import { useProjectId } from "../../hooks/useProjectId";
 import { announce } from "../../utils/announce";
-import { pushUndo } from "../../contexts/UndoStore";
+import { pushArrangementUndo } from "./arrangementUndo";
 import { apiGet } from "../../utils/api";
 import { formatTimecode } from "../../utils/format";
 import { installLiveResizeWatch, isLiveResizing, subscribeLiveResize } from "../../utils/liveResize";
@@ -1209,17 +1209,19 @@ function ScreenBoard(props: BoardProps) {
     [projectId, screen.key, tab.session_id, arrangeVersion],
   );
   const custom = arrangement !== null;
-  const write = (cards: Arrangement | null) => setArrangement(projectId, screen.key, tab.session_id, cards);
+  const write = (cards: Arrangement | null): Promise<boolean> => setArrangement(projectId, screen.key, tab.session_id, cards);
   const vkey = versionKey(screen.key, tab.session_id);
   // One undoable change to this version's arrangement. Undone or redone while another screen or
   // version is showing, it shows this one first, so the change is seen.
-  const undoable = (action: "moveQuote" | "tidy", before: Arrangement | null, after: Arrangement | null) => {
+  // `saved` is the act's own save: if it fails the entry is withdrawn. An undo or redo whose save
+  // fails throws, so the undo store keeps the act where it was instead of pretending it moved.
+  const undoable = (action: "moveQuote" | "tidy", before: Arrangement | null, after: Arrangement | null, saved: Promise<boolean>) => {
     const key = screen.key, sid = tab.session_id, reveal = props.reveal;
-    const put = (a: Arrangement | null) => {
+    const put = async (a: Arrangement | null) => {
       reveal(key, sid);
-      setArrangement(projectId, key, sid, a);
+      if (!(await setArrangement(projectId, key, sid, a))) throw new Error("the arrangement could not be saved");
     };
-    pushUndo({ action, undo: () => put(before), redo: () => put(after) });
+    pushArrangementUndo({ action, undo: () => put(before), redo: () => put(after) }, saved);
   };
 
   // ── A live window resize: hold still, scale as one, settle once (utils/liveResize.ts) ──
@@ -1628,8 +1630,8 @@ function ScreenBoard(props: BoardProps) {
     if (q === p) return false;
     const after: Arrangement = { ...base, [dom]: q };
     quiet.current = true;
-    write(after);
-    undoable("moveQuote", before, after);
+    const saved = write(after);
+    undoable("moveQuote", before, after, saved);
     announce(i18n.t("screens.quoteMoved"));
     return true;
   };
@@ -1790,8 +1792,8 @@ function ScreenBoard(props: BoardProps) {
         [dom]: intentFromRect({ left, top, width: r.width, height: r.height }, shotBox(), z),
       };
       quiet.current = true;
-      write(after);
-      undoable("moveQuote", before, after);
+      const saved = write(after);
+      undoable("moveQuote", before, after, saved);
       setDrag(null);
       // The card just put down is the one in front, and focused.
       setTouched(dom);
@@ -1862,9 +1864,9 @@ function ScreenBoard(props: BoardProps) {
     const active = document.activeElement;
     const lens = stageRef.current?.closest(".screens-lens");
     const keepFocus = active instanceof Element && !!active.closest(".screens-arrangement, .screens-menu");
-    write(null);
+    const saved = write(null);
     if (keepFocus) requestAnimationFrame(() => focusLensHeading(lens));
-    undoable("tidy", before, null);
+    undoable("tidy", before, null, saved);
     announce(i18n.t("screens.arrangementAutomatic"));
   };
   // Return to automatic, on one card of a custom board: back to where Tidy would put it — a linked
@@ -1876,8 +1878,8 @@ function ScreenBoard(props: BoardProps) {
     const after: Arrangement = { ...before };
     if (pinByDom.has(dom)) after[dom] = autoSpots()(dom, before[dom].z);
     else delete after[dom];
-    write(after);
-    undoable("moveQuote", before, after);
+    const saved = write(after);
+    undoable("moveQuote", before, after, saved);
   };
   // View ▸ Tidy on the Mac enables only while this version is custom: say so on mount and on every
   // change, and say "not custom" when the board goes (the Mac's mirror would otherwise keep the last

@@ -103,3 +103,29 @@ struct PlaceholderDropTests {
         #expect(PlaceholderDrop.resolve(folder: folder, placeholder: placeholder.id, in: index) == .adopt)
     }
 }
+
+@Suite("Placeholder name")
+struct PlaceholderNameTests {
+
+    @Test func theDefaultName_isDefault() {
+        #expect(PlaceholderName.isDefault("New Project", base: "New Project"))
+    }
+
+    @Test func theNumberedDefaults_areDefault() {
+        #expect(PlaceholderName.isDefault("New Project 2", base: "New Project"))
+        #expect(PlaceholderName.isDefault("New Project 17", base: "New Project"))
+    }
+
+    @Test func aTypedName_isNotDefault() {
+        #expect(!PlaceholderName.isDefault("Acme interviews", base: "New Project"))
+        #expect(!PlaceholderName.isDefault("New Project Acme", base: "New Project"))
+        #expect(!PlaceholderName.isDefault("New Project 1", base: "New Project"), "uniqueName starts at 2")
+        #expect(!PlaceholderName.isDefault("New Project 2 final", base: "New Project"))
+        #expect(!PlaceholderName.isDefault("", base: "New Project"))
+    }
+
+    @Test func aNameFromAnotherLanguage_readsAsTyped() {
+        #expect(!PlaceholderName.isDefault("Neues Projekt", base: "New Project"))
+    }
+}
+

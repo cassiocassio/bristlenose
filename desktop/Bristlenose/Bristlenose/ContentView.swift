@@ -2902,7 +2902,12 @@ struct ContentView: View {
                 return
             }
             projectIndex.relocateProject(id: id, newPath: folder.path)
-            projectIndex.renameProject(id: id, newName: folder.lastPathComponent)
+            // Only a row still called by its placeholder name takes the folder's: a name the
+            // researcher typed stays (ruling 10).
+            if let current = projectIndex.projects.first(where: { $0.id == id })?.name,
+               PlaceholderName.isDefault(current, base: i18n.t("desktop.chrome.newProject")) {
+                projectIndex.renameProject(id: id, newName: folder.lastPathComponent)
+            }
             projectIndex.captureStudyID(id: id, folder: folder)
             selection = [.project(id)]
             if let imported = projectIndex.projects.first(where: { $0.id == id }) {

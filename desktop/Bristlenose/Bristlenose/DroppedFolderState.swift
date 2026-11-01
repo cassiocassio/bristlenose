@@ -54,3 +54,20 @@ enum PlaceholderDrop: Equatable {
         return .adopt
     }
 }
+
+/// Whether a row still carries the name Bristlenose gave a new project, so a drop
+/// that adopts an analysed study may name the row for its folder, and a name the
+/// researcher typed is left alone (ruling 10, 31 Oct 2026: the row's name is
+/// Bristlenose's own thing and never follows the folder). The default is the
+/// localised "New Project", with the " 2", " 3" suffix `ProjectIndex.uniqueName`
+/// adds when one already exists. A name that no longer matches the current language
+/// reads as typed, which is the safe direction.
+enum PlaceholderName {
+    static func isDefault(_ name: String, base: String) -> Bool {
+        if name == base { return true }
+        guard name.hasPrefix(base + " "),
+              let number = Int(name.dropFirst(base.count + 1))
+        else { return false }
+        return number >= 2
+    }
+}

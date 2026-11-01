@@ -111,6 +111,26 @@ for manual tags, and priority for them when scanning a page, is a likely future 
   label list per group. So the risk is confined to the tagging gesture, removal, undo and the
   client's name-keyed map above, plus any export that writes tag names as text (a CSV column
   cannot tell two "frustration"s apart; nobody counts those by hand except an academic).
+- **Sentiments are special-cased, and any tag design must carry the exceptions** (maintainer,
+  1 Nov 2026; verified in code). The sentiment framework (`framework_id == "sentiment"`, its
+  group literally named "Sentiment", displayed as "Emotional & Cognitive Signals") is
+  machine-authored: `_auto_import_sentiment_framework` links it to **every** project on import
+  and the pipeline auto-tags it from quote extraction, so it is on by default on every run.
+  It is the one tag family that **never counts as researcher commitment**: it is excluded from
+  the pin predicate and from minting a durable id (`_is_sentiment_tag`, mirrored in
+  `importer._pinned_quote_ids`). In Signals its unit is the **sentiment value, not the group**:
+  the original `/signals/sentiment` matrix has the sentiments themselves as columns, and in the
+  group-based endpoints the "Sentiment" group's card is relabelled from what its quotes actually
+  say (`sentiment_label`), because the group name is the framework talking rather than the
+  finding. Every other codebook's unit is the group. The same name-lookup bug is already on
+  record for sentiments: the docstring of `_is_sentiment_tag` notes that a hand-typed
+  "frustration" or "delight" resolves by name to the machine's sentiment tag, arrives as
+  `human`, and would have minted a spurious pin; the code patched that symptom and not the
+  cause. So the clash is not hypothetical, it is the first thing a researcher types.
+  Consequences for the design: (a) resolve by identity so a typed "frustration" is the
+  researcher's own tag unless they pick the sentiment one; (b) sentiments keep their exemptions
+  (never pinned, never "manual") whatever the origin model becomes; (c) a shared library must
+  not let a subscribed tag be mistaken for, or merged into, a sentiment.
 - **Root cause, one level up:** the whole stack identifies a tag by its name; the data model
   already identifies it by row. The fix that lasts carries the tag's identity (definition id)
   through add, remove, undo, de-duplication and the suggestion list, and uses a name only to

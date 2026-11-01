@@ -45,7 +45,7 @@ import {
   denyProposal,
   toastSaveFailed,
 } from "../utils/api";
-import type { ApiError } from "../utils/api";
+import type { ApiError, CurationDelta } from "../utils/api";
 import { announce } from "../utils/announce";
 import i18n from "../i18n";
 import { isExportMode } from "../utils/exportData";
@@ -517,11 +517,30 @@ function withEdit(key: string, text: string | undefined): Updater {
   };
 }
 
+/** The tag's row when it has one the server knows: a tag made up on the page has none yet. */
+const rowOf = (tag: TagResponse): number | undefined =>
+  tag.id != null && tag.id > 0 ? tag.id : undefined;
+
+/** Whether two tags on a quote are the same tag: by row when both carry one (two tags can share
+ *  a name, N146), else by name, which is the best a just-typed tag allows. */
+function sameTag(a: TagResponse, b: TagResponse): boolean {
+  const ra = rowOf(a);
+  const rb = rowOf(b);
+  return ra != null && rb != null ? ra === rb : a.name.toLowerCase() === b.name.toLowerCase();
+}
+
+/** The delta that adds this tag: by row when it has one, else by name. */
+const addDelta = (tag: TagResponse): CurationDelta =>
+  rowOf(tag) != null ? { add_ids: [rowOf(tag)!] } : { add: [tag.name] };
+
+/** The delta that removes this tag, and only it when it has a row. */
+const removeDelta = (tag: TagResponse): CurationDelta =>
+  rowOf(tag) != null ? { remove_ids: [rowOf(tag)!] } : { remove: [tag.name] };
+
 function withTag(id: string, tag: TagResponse, index: number, on: boolean): Updater {
-  const lower = tag.name.toLowerCase();
   return (s) => {
     const list = s.tags[id] || [];
-    const has = list.some((t) => t.name.toLowerCase() === lower);
+    const has = list.some((t) => sameTag(t, tag));
     if (has === on) return s;
     const tags = { ...s.tags };
     if (on) {
@@ -529,7 +548,7 @@ function withTag(id: string, tag: TagResponse, index: number, on: boolean): Upda
       next.splice(Math.min(index, next.length), 0, tag);
       tags[id] = next;
     } else {
-      const kept = list.filter((t) => t.name.toLowerCase() !== lower);
+      const kept = list.filter((t) => !sameTag(t, tag));
       if (kept.length > 0) tags[id] = kept;
       else delete tags[id];
     }
@@ -583,7 +602,7 @@ const flagChange = (key: "starred" | "hidden", id: string, on: boolean): Change 
 });
 
 const tagChange = (id: string, tag: TagResponse, index: number, on: boolean): Change => ({
-  key: `tags:${id}:${tag.name.toLowerCase()}`,
+  key: `tags:${id}:${rowOf(tag) ?? tag.name.toLowerCase()}`,
   id,
   before: withTag(id, tag, index, !on),
   after: withTag(id, tag, index, on),
@@ -876,9 +895,8 @@ function writeTagAdd(domIds: string[], tag: TagResponse, record = true): Promise
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return LANDED;
-  const lower = tag.name.toLowerCase();
   const targets = [...new Set(domIds)].filter(
-    (id) => !(state.tags[id] || []).some((t) => t.name.toLowerCase() === lower),
+    (id) => !(state.tags[id] || []).some((t) => sameTag(t, tag)),
   );
   if (targets.length === 0) return LANDED;
   setState((prev) => {
@@ -887,7 +905,7 @@ function writeTagAdd(domIds: string[], tag: TagResponse, record = true): Promise
     return { ...prev, tags };
   });
   const written = send(
-    patchTags(each(targets, { add: [tag.name] })),
+    patchTags(each(targets, addDelta(tag))),
     targets.map((id) => tagChange(id, tag, Infinity, true)),
   );
   lastUsedTag = tag;
@@ -896,62 +914,72 @@ function writeTagAdd(domIds: string[], tag: TagResponse, record = true): Promise
     recordGesture(
       "addTag",
       written,
-      () => removeTagFromQuotes(targets, tag.name),
+      () => removeTagFromQuotes(targets, tag),
       () => writeTagAdd(targets, tag, false),
     );
   }
   return written;
 }
 
-/** Remove a tag by name from several quotes in one write. Undo's inverse of
- *  `addTagToQuotes`; not a gesture of its own, so it records nothing. */
-function removeTagFromQuotes(domIds: string[], tagName: string): Promise<Landed> {
+/** Remove a tag from several quotes in one write. Undo's inverse of `addTagToQuotes`;
+ *  not a gesture of its own, so it records nothing. */
+function removeTagFromQuotes(domIds: string[], tag: TagResponse): Promise<Landed> {
   if (isExportMode()) return LANDED;
-  const targets = domIds.filter((id) => (state.tags[id] || []).some((t) => t.name === tagName));
+  const targets = domIds.filter((id) => (state.tags[id] || []).some((t) => sameTag(t, tag)));
   if (targets.length === 0) return LANDED;
   const removed: Record<string, { tag: TagResponse; index: number }> = {};
   for (const id of targets) {
     const list = state.tags[id] || [];
-    const index = list.findIndex((t) => t.name === tagName);
+    const index = list.findIndex((t) => sameTag(t, tag));
     removed[id] = { tag: list[index], index };
   }
   setState((prev) => {
     const tags = { ...prev.tags };
     for (const id of targets) {
-      tags[id] = (tags[id] || []).filter((t) => t.name !== tagName);
+      tags[id] = (tags[id] || []).filter((t) => !sameTag(t, tag));
       if (tags[id].length === 0) delete tags[id];
     }
     return { ...prev, tags };
   });
   const written = send(
-    patchTags(each(targets, { remove: [tagName] })),
+    patchTags(each(targets, removeDelta(tag))),
     targets.map((id) => tagChange(id, removed[id].tag, removed[id].index, false)),
   );
-  announce(i18n.t("announce.tagRemoved", { name: tagName }));
+  announce(i18n.t("announce.tagRemoved", { name: tag.name }));
   return written;
 }
 
-export function removeTag(domId: string, tagName: string, record = true): void {
-  void writeTagRemove(domId, tagName, record);
+/** Remove the tag the × points at. `tagId` is its row: with it, only that tag goes, even when
+ *  another on the quote has the same name; without it (a tag typed since the last read) the name
+ *  is all there is. */
+export function removeTag(domId: string, tagName: string, record = true, tagId?: number): void {
+  void writeTagRemove(domId, tagName, record, tagId);
 }
 
 /** `removeTag`, resolving with what landed. */
-function writeTagRemove(domId: string, tagName: string, record = true): Promise<Landed> {
+function writeTagRemove(
+  domId: string,
+  tagName: string,
+  record = true,
+  tagId?: number,
+): Promise<Landed> {
   // Read-only in an exported report — mutations have no server to persist to,
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return LANDED;
   const existing = state.tags[domId] || [];
-  const index = existing.findIndex((t) => t.name === tagName);
+  const pointedAt = (t: TagResponse) =>
+    tagId != null && tagId > 0 ? t.id === tagId : t.name === tagName;
+  const index = existing.findIndex(pointedAt);
   if (index < 0) return LANDED;
   const removed = existing[index];
   setState((prev) => {
     const tags = { ...prev.tags };
-    tags[domId] = (tags[domId] || []).filter((t) => t.name !== tagName);
+    tags[domId] = (tags[domId] || []).filter((t) => !pointedAt(t));
     if (tags[domId].length === 0) delete tags[domId];
     return { ...prev, tags };
   });
   const written = send(
-    patchTags({ [domId]: { remove: [tagName] } }),
+    patchTags({ [domId]: removeDelta(removed) }),
     [tagChange(domId, removed, index, false)],
   );
   announce(i18n.t("announce.tagRemoved", { name: tagName }));
@@ -960,7 +988,7 @@ function writeTagRemove(domId: string, tagName: string, record = true): Promise<
       "removeTag",
       written,
       () => restoreTag(domId, removed, index),
-      () => writeTagRemove(domId, tagName, false),
+      () => writeTagRemove(domId, tagName, false, tagId),
     );
   }
   return written;
@@ -971,7 +999,7 @@ function writeTagRemove(domId: string, tagName: string, record = true): Promise<
 function restoreTag(domId: string, tag: TagResponse, index: number): Promise<Landed> {
   if (isExportMode()) return LANDED;
   const existing = state.tags[domId] || [];
-  if (existing.some((t) => t.name.toLowerCase() === tag.name.toLowerCase())) return LANDED;
+  if (existing.some((t) => sameTag(t, tag))) return LANDED;
   setState((prev) => {
     const tags = { ...prev.tags };
     const list = [...(tags[domId] || [])];
@@ -981,7 +1009,7 @@ function restoreTag(domId: string, tag: TagResponse, index: number): Promise<Lan
   });
   const asApplied = tag.source && tag.source !== "human" ? { source: tag.source } : {};
   const written = send(
-    patchTags({ [domId]: { add: [tag.name], ...asApplied } }),
+    patchTags({ [domId]: { ...addDelta(tag), ...asApplied } }),
     [tagChange(domId, tag, index, true)],
   );
   announce(i18n.t("announce.tagAdded", { name: tag.name }));

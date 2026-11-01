@@ -234,23 +234,29 @@ function ChevronIcon() {
 // ── Tag lookup helper ─────────────────────────────────────────────────────
 
 interface FoundTag {
+  id?: number;
   name: string;
   codebook_group: string;
   colour_set: string;
   colour_index: number;
 }
 
-/** Look up a tag by name in the codebook, returning colour metadata. */
+/** Look up a tag in the codebook, returning colour metadata. The row clicked is found by its id;
+ *  a name alone (no id known) finds the first tag of that name. */
 function findTagInCodebook(
   codebook: CodebookResponse | null,
   tagName: string,
+  tagId?: number,
 ): FoundTag | null {
   if (!codebook) return null;
   const lower = tagName.toLowerCase();
   for (const group of codebook.groups) {
     for (const tag of group.tags) {
-      if (tag.name.toLowerCase() === lower) {
+      if (tagId != null ? tag.id === tagId : tag.name.toLowerCase() === lower) {
         return {
+          // A tag only the page knows about (typed since the codebook was read) has a made-up
+          // negative id here; it has no row to name yet.
+          id: tag.id > 0 ? tag.id : undefined,
           name: tag.name,
           codebook_group: group.name,
           colour_set: group.colour_set,
@@ -500,14 +506,15 @@ export function TagSidebar() {
   }, [allTagNames]);
 
   const handleSidebarAssign = useCallback(
-    (tagName: string) => {
+    (tagName: string, tagId?: number) => {
       if (selectedIds.size === 0) return;
       const targets = Array.from(selectedIds);
 
-      const found = findTagInCodebook(mergedCodebook, tagName);
+      const found = findTagInCodebook(mergedCodebook, tagName, tagId);
       if (!found) return;
 
       const payload: TagResponse = {
+        id: found.id,
         name: found.name,
         codebook_group: found.codebook_group,
         colour_set: found.colour_set,

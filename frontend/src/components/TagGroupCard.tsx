@@ -35,8 +35,9 @@ interface TagGroupCardProps {
    *  Used for single-group frameworks where the framework disclosure
    *  already provides collapse + eye toggle, making the group header redundant. */
   hideGroupHeader?: boolean;
-  /** Called when a tag badge is clicked to assign the tag to selected quotes. */
-  onAssign?: (tagName: string) => void;
+  /** Called when a tag badge is clicked to assign the tag to selected quotes. `tagId` is this
+   *  row's tag: two tags in different groups can share a name. */
+  onAssign?: (tagName: string, tagId?: number) => void;
   /** Whether quotes are selected (enables assign interaction on badges). */
   assignActive?: boolean;
   /** Set of tag names whose sidebar badges should flash. */
@@ -130,7 +131,7 @@ export function TagGroupCard({
                   badgeBg={getTagBg(colourSet, tag.colour_index)}
                   barColour={barColour}
                   onToggle={onToggleTag}
-                  onAssign={onAssign}
+                  onAssign={onAssign ? (name) => onAssign(name, tag.id) : undefined}
                   assignActive={assignActive}
                   flashing={flashingTags?.has(tag.name)}
                   onSoloClick={onSoloClick}

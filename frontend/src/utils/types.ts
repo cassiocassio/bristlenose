@@ -93,6 +93,9 @@ export interface DashboardResponse {
 // ---------------------------------------------------------------------------
 
 export interface TagResponse {
+  /** The tag's row. A name is not an identity: two tags in a project can share one (N146).
+   *  Absent on a tag the page has just typed, until the next read. */
+  id?: number;
   name: string;
   codebook_group: string;
   colour_set: string;

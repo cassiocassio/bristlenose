@@ -358,6 +358,10 @@ export function toastSaveFailed(err: unknown): void {
 export interface CurationDelta {
   add?: string[];
   remove?: string[];
+  /** Tags only: the same change by tag identity, for a tag picked from a list or one a badge's
+   *  × points at (two tags can share a name). A removal by id takes only that tag. */
+  add_ids?: number[];
+  remove_ids?: number[];
   /** Tags only: how the added tags were applied, when an undo puts a removed
    *  one back (`QuoteTag.source`). Absent, the server records "human". */
   source?: string;

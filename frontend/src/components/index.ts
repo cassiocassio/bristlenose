@@ -19,7 +19,7 @@ export { ProposalZoneList } from "./ProposalZoneList";
 export { Selector } from "./Selector";
 export { Sparkline } from "./Sparkline";
 export { TagInput } from "./TagInput";
-export type { TagVocabularyGroup } from "./TagInput";
+export type { TagVocabularyGroup, TagPick } from "./TagInput";
 export { SectionHeading } from "./SectionHeading";
 export { ThresholdReviewModal } from "./ThresholdReviewModal";
 export { Thumbnail } from "./Thumbnail";

@@ -27,6 +27,7 @@ import { groupAnchor } from "../utils/quoteGroups";
 import { QuoteGroup } from "./QuoteGroup";
 import { handoverClass, useLensRead } from "../hooks/useLensRead";
 import { SectionHeading } from "../components";
+import { buildTagVocabulary } from "../utils/tagVocabulary";
 
 interface QuoteThemesProps {
   projectId: string;
@@ -69,9 +70,7 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
       initHeadingEdits(json.sections, json.themes);
       if (!cb) return;
       const map: Record<string, TagGroupInfo> = {};
-      const groups: TagVocabularyGroup[] = [];
       for (const g of cb.groups) {
-        const tags: { name: string; colourIndex: number }[] = [];
         for (const tag of g.tags) {
           map[tag.name.toLowerCase()] = {
             group: g.name,
@@ -79,13 +78,11 @@ export function QuoteThemes({ projectId, refreshKey = 0 }: QuoteThemesProps) {
             colour_index: tag.colour_index,
             frameworkId: g.framework_id,
           };
-          tags.push({ name: tag.name, colourIndex: tag.colour_index });
         }
-        groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
       }
       setCodebookTagNames(cb.all_tag_names);
       setTagGroupMap(map);
-      setGroupedVocabulary(groups);
+      setGroupedVocabulary(buildTagVocabulary(cb.groups));
     },
     // The wire string is for the console (the hook logs it); the lens says it in its own words (R86).
     onError: (err) => setError(err instanceof Error && err.message ? err.message : "read failed"),

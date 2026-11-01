@@ -11,7 +11,7 @@
 import { useState, useCallback, useRef, useMemo, useReducer, useLayoutEffect, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Counter, EditableText } from "../components";
-import type { TagVocabularyGroup } from "../components";
+import type { TagVocabularyGroup, TagPick } from "../components";
 import type { CounterItem } from "../components/Counter";
 import type {
   ModeratorQuestionResponse,
@@ -567,15 +567,18 @@ export function QuoteGroup({
   );
 
   const handleTagAdd = useCallback(
-    (domId: string, tagName: string) => {
+    (domId: string, tagName: string, pick?: TagPick) => {
       const ci = tagColourMap[tagName];
       const gi = tagGroupMap[tagName.toLowerCase()];
-      const groupName = gi?.group ?? "Uncategorised";
+      // A tag chosen from the list is that row, with its own group and colour; a typed name is
+      // looked up by name, as before, and the server decides which tag of that name it means.
+      const groupName = pick?.groupName ?? gi?.group ?? "Uncategorised";
       const tagPayload = {
+        id: pick?.id,
         name: tagName,
         codebook_group: groupName,
-        colour_set: ci?.colour_set ?? gi?.colour_set ?? "",
-        colour_index: ci?.colour_index ?? gi?.colour_index ?? 0,
+        colour_set: pick?.colourSet ?? ci?.colour_set ?? gi?.colour_set ?? "",
+        colour_index: pick?.colourIndex ?? ci?.colour_index ?? gi?.colour_index ?? 0,
         source: "human" as const,
       };
 
@@ -610,8 +613,8 @@ export function QuoteGroup({
   );
 
   const handleTagRemove = useCallback(
-    (domId: string, tagName: string) => {
-      removeTag(domId, tagName);
+    (domId: string, tagName: string, tagId?: number) => {
+      removeTag(domId, tagName, true, tagId);
     },
     [],
   );

@@ -25,7 +25,7 @@ import {
   TimecodeLink,
   Toggle,
 } from "../components";
-import type { TagVocabularyGroup } from "../components";
+import type { TagVocabularyGroup, TagPick } from "../components";
 import type { ModeratorQuestionResponse, ProposedTagBrief, QuoteResponse, TranscriptSegmentResponse } from "../utils/types";
 import { formatTimecode } from "../utils/format";
 import { getTagBg } from "../utils/colours";
@@ -65,7 +65,7 @@ interface QuoteCardProps {
   isStarred: boolean;
   isHidden: boolean;
   /** Tags currently on this quote (user-added, visible after hidden-group filter). */
-  userTags: { name: string; codebook_group: string; colour_set: string; colour_index: number }[];
+  userTags: { id?: number; name: string; codebook_group: string; colour_set: string; colour_index: number }[];
   /** All tag names on this quote (including hidden groups) — used for TagInput exclude filter. */
   allTagNames: string[];
   /** Lowercased tag names whose codebook groups are currently hidden (eye-toggled off). */
@@ -112,8 +112,10 @@ interface QuoteCardProps {
   onToggleStar: (domId: string, newState: boolean) => void;
   onToggleHide: (domId: string, newState: boolean) => void;
   onEditCommit: (domId: string, newText: string) => void;
-  onTagAdd: (domId: string, tagName: string) => void;
-  onTagRemove: (domId: string, tagName: string) => void;
+  /** `pick` is the tag chosen from the list, as the row it is (two tags can share a name). */
+  onTagAdd: (domId: string, tagName: string, pick?: TagPick) => void;
+  /** `tagId` is the tag the × points at; a removal that carries it takes only that tag. */
+  onTagRemove: (domId: string, tagName: string, tagId?: number) => void;
   onBadgeDelete: (domId: string, sentiment: string) => void;
   onBadgeRestore: (domId: string) => void;
   onProposedAccept: (proposalId: number, tagName: string) => void;
@@ -451,18 +453,20 @@ export function QuoteCard({
   // ── Tag handlers ────────────────────────────────────────────────────
 
   const handleTagCommit = useCallback(
-    (tagName: string) => {
+    (tagName: string, pick?: TagPick) => {
       if (disabledTagNames?.has(tagName.toLowerCase())) return;
       setIsTagInputOpen(false);
-      onTagAdd(domId, tagName);
+      if (pick) onTagAdd(domId, tagName, pick);
+      else onTagAdd(domId, tagName);
     },
     [domId, onTagAdd, disabledTagNames],
   );
 
   const handleTagCommitAndReopen = useCallback(
-    (tagName: string) => {
+    (tagName: string, pick?: TagPick) => {
       if (disabledTagNames?.has(tagName.toLowerCase())) return;
-      onTagAdd(domId, tagName);
+      if (pick) onTagAdd(domId, tagName, pick);
+      else onTagAdd(domId, tagName);
       setIsTagInputOpen(false);
       requestAnimationFrame(() => setIsTagInputOpen(true));
     },
@@ -782,12 +786,12 @@ export function QuoteCard({
             )}
             {userTags.map((tag) => (
               <Badge
-                key={tag.name}
+                key={`${tag.id ?? ""}:${tag.name}`}
                 text={tag.name}
                 variant="user"
                 colour={tag.colour_set ? getTagBg(tag.colour_set, tag.colour_index) : undefined}
                 className={flashingTags.has(`${domId}:${tag.name}`) ? "badge-accept-flash" : undefined}
-                onDelete={() => onTagRemove(domId, tag.name)}
+                onDelete={() => (tag.id != null ? onTagRemove(domId, tag.name, tag.id) : onTagRemove(domId, tag.name))}
                 data-testid={`bn-quote-${domId}-badge-${tag.name}`}
               />
             ))}

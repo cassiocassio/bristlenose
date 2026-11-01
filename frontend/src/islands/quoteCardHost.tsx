@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CounterItem } from "../components/Counter";
-import type { TagVocabularyGroup } from "../components/TagInput";
+import type { TagVocabularyGroup, TagPick } from "../components/TagInput";
 import { useFocus } from "../contexts/FocusContext";
 import { useLastRun } from "../contexts/LastRunStore";
 import { useLensRead } from "../hooks/useLensRead";
@@ -43,6 +43,7 @@ import type { SearchTerm } from "../utils/searchMatch";
 import { deriveTagVisibility, isBadgeHidden, type TagGroupMeta } from "../utils/tagVisibility";
 import type { QuoteResponse, QuotesListResponse } from "../utils/types";
 import { QuoteCard } from "./QuoteCard";
+import { buildTagVocabulary } from "../utils/tagVocabulary";
 
 interface TagInfo extends TagGroupMeta {
   colour_set: string;
@@ -105,19 +106,15 @@ export function useReportQuotes(lens: string): ReportQuotes {
       if (!cb) return;
       setVocabulary(cb.all_tag_names);
       const info: Record<string, TagInfo> = {};
-      const groups: TagVocabularyGroup[] = [];
       for (const g of cb.groups) {
-        const tags: { name: string; colourIndex: number }[] = [];
         for (const tg of g.tags) {
           info[tg.name.toLowerCase()] = {
             group: g.name, frameworkId: g.framework_id, colour_set: g.colour_set, colour_index: tg.colour_index,
           };
-          tags.push({ name: tg.name, colourIndex: tg.colour_index });
         }
-        groups.push({ groupName: g.name, colourSet: g.colour_set, tags });
       }
       setTagInfo(info);
-      setGroupedVocabulary(groups);
+      setGroupedVocabulary(buildTagVocabulary(cb.groups));
     },
     onError: (_e, kind) => {
       if (kind === "first") setFailed(true);
@@ -186,14 +183,15 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
     [targets, selectedIds, clearSelection],
   );
   const onTagAdd = useCallback(
-    (domId: string, name: string) => {
+    (domId: string, name: string, pick?: TagPick) => {
       const info = tagInfo[name.toLowerCase()];
-      const group = info?.group ?? "Uncategorised";
+      const group = pick?.groupName ?? info?.group ?? "Uncategorised";
       addTagToQuotes(targets(domId), {
+        id: pick?.id,
         name,
         codebook_group: group,
-        colour_set: info?.colour_set ?? "",
-        colour_index: info?.colour_index ?? 0,
+        colour_set: pick?.colourSet ?? info?.colour_set ?? "",
+        colour_index: pick?.colourIndex ?? info?.colour_index ?? 0,
         source: "human",
       });
       // As on the Quotes lens: a tag picked from an eye-hidden group un-hides the group, or the
@@ -201,6 +199,10 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
       if (hiddenTagGroups.has(group)) toggleTagGroupHidden(group);
     },
     [tagInfo, targets, hiddenTagGroups],
+  );
+  const onTagRemove = useCallback(
+    (domId: string, name: string, tagId?: number) => removeTag(domId, name, true, tagId),
+    [],
   );
   const onProposedAccept = useCallback(
     (domId: string, proposalId: number, name: string) => {
@@ -256,7 +258,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         onToggleHide={onToggleHide}
         onEditCommit={commitEdit}
         onTagAdd={onTagAdd}
-        onTagRemove={removeTag}
+        onTagRemove={onTagRemove}
         onBadgeDelete={deleteBadge}
         onBadgeRestore={restoreBadges}
         onProposedAccept={(pid, name) => onProposedAccept(id, pid, name)}
@@ -269,7 +271,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
         highlight={opts.highlight}
       />
     );
-  }, [store, vis, vocabulary, groupedVocabulary, hasModerator, onToggleStar, onToggleHide, onTagAdd, onProposedAccept]);
+  }, [store, vis, vocabulary, groupedVocabulary, hasModerator, onToggleStar, onToggleHide, onTagAdd, onTagRemove, onProposedAccept]);
 
   /** The hidden-quotes Counter's rows for these quotes. */
   const { byId } = host;

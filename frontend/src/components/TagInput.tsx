@@ -11,7 +11,18 @@ const EyeClosedIcon = (
 export interface TagVocabularyGroup {
   groupName: string;
   colourSet: string;
-  tags: { name: string; colourIndex: number }[];
+  /** The codebook the group came from; null is the researcher's own. Absent in older callers. */
+  frameworkId?: string | null;
+  /** `id` is the tag's row: a pick commits it, because two tags can share a name (N146). */
+  tags: { name: string; colourIndex: number; id?: number }[];
+}
+
+/** The tag a researcher chose from the list, as the row it is. */
+export interface TagPick {
+  id: number;
+  groupName: string;
+  colourSet: string;
+  colourIndex: number;
 }
 
 /** A single row in the filtered suggestion list (either a group header or a tag). */
@@ -23,6 +34,8 @@ interface SuggestRow {
   tagName?: string;
   /** Colour index within the group (only for type=tag). */
   colourIndex?: number;
+  /** The tag's row (only for type=tag, when the vocabulary carries it). */
+  tagId?: number;
 }
 
 interface TagInputProps {
@@ -35,17 +48,28 @@ interface TagInputProps {
   /** Lowercased tag names whose codebook groups are currently hidden (eye-toggled off). */
   hiddenTags?: Set<string>;
   /** Called when user commits a tag (Enter, suggestion click, blur with non-empty). */
-  onCommit: (tagName: string) => void;
+  onCommit: (tagName: string, pick?: TagPick) => void;
   /** Called when user cancels (Escape, blur with empty). */
   onCancel: () => void;
   /** Called on Tab commit — consumer handles unmount→remount for rapid entry. */
-  onCommitAndReopen?: (tagName: string) => void;
+  onCommitAndReopen?: (tagName: string, pick?: TagPick) => void;
   /** Placeholder text. */
   placeholder?: string;
   /** Maximum suggestions shown in dropdown. */
   maxSuggestions?: number;
   className?: string;
   "data-testid"?: string;
+}
+
+/** Call a commit with the pick only when there is one, so a caller that ignores picks sees the
+ *  one-argument call it always did. */
+function commitWith(
+  commit: (name: string, pick?: TagPick) => void,
+  name: string,
+  pick: TagPick | undefined,
+): void {
+  if (pick) commit(name, pick);
+  else commit(name);
 }
 
 export function TagInput({
@@ -108,6 +132,16 @@ export function TagInput({
     if (!val) return [];
     const excSet = new Set((exclude ?? []).map((e) => e.toLowerCase()));
 
+    // A name two tags share still lists both when it is typed whole, so the researcher can
+    // choose between them; a name only one tag has is the typed text itself and is not repeated.
+    const sharedNames = new Map<string, number>();
+    for (const group of groupedVocabulary) {
+      for (const t of group.tags) {
+        const lower = t.name.toLowerCase();
+        sharedNames.set(lower, (sharedNames.get(lower) ?? 0) + 1);
+      }
+    }
+
     const rows: SuggestRow[] = [];
     let tagCount = 0;
 
@@ -118,7 +152,8 @@ export function TagInput({
         const lower = t.name.toLowerCase();
         // Show tag if: tag name matches OR group name matches (show all tags in group).
         const matches = lower.includes(val) || groupNameMatches;
-        return matches && lower !== val && !excSet.has(lower);
+        const isTypedWhole = lower === val && (sharedNames.get(lower) ?? 0) > 1;
+        return matches && (lower !== val || isTypedWhole) && !excSet.has(lower);
       });
 
       if (matchingTags.length === 0) continue;
@@ -141,6 +176,7 @@ export function TagInput({
           colourSet: group.colourSet,
           tagName: t.name,
           colourIndex: t.colourIndex,
+          tagId: t.id,
         });
         tagCount++;
       }
@@ -157,12 +193,13 @@ export function TagInput({
       .filter((i) => i >= 0);
   }, [suggestRows]);
 
-  // Map suggestIndex to the tag name at that position.
-  const selectedTagName = useMemo(() => {
+  // Map suggestIndex to the tag at that position.
+  const selectedRow = useMemo(() => {
     if (suggestIndex < 0 || suggestIndex >= suggestRows.length) return null;
     const row = suggestRows[suggestIndex];
-    return row.type === "tag" ? row.tagName ?? null : null;
+    return row.type === "tag" ? row : null;
   }, [suggestIndex, suggestRows]);
+  const selectedTagName = selectedRow?.tagName ?? null;
 
   // True when what is typed is, already, the full name of an existing tag.
   // Suggestions drop that exact row (below), so without this the ghost would
@@ -224,6 +261,33 @@ export function TagInput({
     return inputValue.trim();
   }, [inputValue, ghostText, selectedTagName]);
 
+  // The tag a committed value means. An arrowed row is that row's tag. A typed (or ghost-completed)
+  // whole name is the researcher's own tag of that name if they have one: the vocabulary lists their
+  // groups first, and the machine-authored sentiment tags are never the answer to a typed name
+  // (the server resolves it the same way). Nothing found: no pick, and the server decides.
+  const pickFor = useCallback(
+    (name: string): TagPick | undefined => {
+      if (selectedRow && selectedRow.tagName === name && selectedRow.tagId != null) {
+        return {
+          id: selectedRow.tagId,
+          groupName: selectedRow.groupName,
+          colourSet: selectedRow.colourSet,
+          colourIndex: selectedRow.colourIndex ?? 0,
+        };
+      }
+      const lower = name.toLowerCase();
+      for (const g of groupedVocabulary ?? []) {
+        if (g.frameworkId === "sentiment") continue;
+        const t = g.tags.find((x) => x.name.toLowerCase() === lower && x.id != null);
+        if (t) {
+          return { id: t.id!, groupName: g.groupName, colourSet: g.colourSet, colourIndex: t.colourIndex };
+        }
+      }
+      return undefined;
+    },
+    [selectedRow, groupedVocabulary],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const selCount = selectableIndices.length;
@@ -258,7 +322,7 @@ export function TagInput({
         e.stopPropagation();
         const val = resolveValue();
         if (val) {
-          onCommit(val);
+          commitWith(onCommit, val, pickFor(val));
         } else {
           onCancel();
         }
@@ -267,9 +331,9 @@ export function TagInput({
         const val = resolveValue();
         if (val) {
           if (onCommitAndReopen) {
-            onCommitAndReopen(val);
+            commitWith(onCommitAndReopen, val, pickFor(val));
           } else {
-            onCommit(val);
+            commitWith(onCommit, val, pickFor(val));
           }
         } else {
           onCancel();
@@ -279,7 +343,7 @@ export function TagInput({
         onCancel();
       }
     },
-    [selectableIndices, ghostText, inputValue, resolveValue, onCommit, onCancel, onCommitAndReopen],
+    [selectableIndices, ghostText, inputValue, resolveValue, pickFor, onCommit, onCancel, onCommitAndReopen],
   );
 
   const handleBlur = useCallback(() => {
@@ -287,17 +351,17 @@ export function TagInput({
       if (!mountedRef.current) return;
       const val = inputValue.trim();
       if (val) {
-        onCommit(val);
+        commitWith(onCommit, val, pickFor(val));
       } else {
         onCancel();
       }
     }, 150);
-  }, [inputValue, onCommit, onCancel]);
+  }, [inputValue, pickFor, onCommit, onCancel]);
 
   const handleSuggestionClick = useCallback(
-    (name: string) => (e: React.MouseEvent) => {
+    (name: string, pick?: TagPick) => (e: React.MouseEvent) => {
       e.preventDefault();
-      onCommit(name);
+      commitWith(onCommit, name, pick);
     },
     [onCommit],
   );
@@ -356,7 +420,17 @@ export function TagInput({
               <div
                 key={`${row.groupName}:${tagName}`}
                 className={`tag-suggest-item${isActive ? " active" : ""}`}
-                onMouseDown={handleSuggestionClick(tagName)}
+                onMouseDown={handleSuggestionClick(
+                  tagName,
+                  row.tagId != null
+                    ? {
+                        id: row.tagId,
+                        groupName: row.groupName,
+                        colourSet: row.colourSet,
+                        colourIndex: row.colourIndex ?? 0,
+                      }
+                    : undefined,
+                )}
                 data-group={row.groupName || undefined}
               >
                 <span

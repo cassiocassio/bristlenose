@@ -47,6 +47,9 @@ _FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
 #: One-way by construction: nothing maps FROM a code we ship.
 _LOCALE_ALIASES: dict[str, str] = {"no": "nb", "nn": "nb"}
 
+#: Shipped locales by their lower-cased spelling, so ``PT-br`` finds ``pt-BR``.
+_SUPPORTED_BY_FOLD: dict[str, str] = {code.lower(): code for code in SUPPORTED_LOCALES}
+
 
 def canonical_locale(code: str) -> str:
     """The supported locale a requested code should display in, or ``en``.
@@ -56,13 +59,24 @@ def canonical_locale(code: str) -> str:
     why an alias could not be added in one place — and why ``_FALLBACK_CHAINS``,
     which sits *after* the gate, could never have fixed it.
 
-    Region-tagged forms (``nb-NO``) are deliberately out of scope: Python's
-    ingress is a hand-typed ``--lang`` and a ``?locale=`` the SPA sets from its
-    own canonical list, so bare codes are what actually arrive here. The browser
-    side does the BCP 47 work, in ``frontend/src/i18n/LocaleStore.ts``.
+    The spelling is forgiven, the language is not guessed (N154, owner ruling 1 Nov
+    2026): case is ignored (``FR``, ``PT-br``), an encoding or modifier is dropped
+    (``fr_FR.UTF-8``, ``de_DE@euro``), ``_`` reads as ``-``, and a code that is not
+    shipped loses its trailing subtags until one is (``fr-FR`` → ``fr``, ``zh-Hant-TW`` →
+    ``zh-Hant``, ``nb-NO`` → ``nb``, ``no-NO`` → ``no`` → ``nb``). A bare code that is
+    ambiguous between shipped locales (``pt``, ``zh``) stays English, and so does anything
+    unknown: a typed value is never echoed, only looked up.
     """
-    resolved = _LOCALE_ALIASES.get(code, code)
-    return resolved if resolved in SUPPORTED_LOCALES else "en"
+    folded = code.strip().split(".", 1)[0].split("@", 1)[0].replace("_", "-").lower()
+    parts = folded.split("-")
+    while parts and parts != [""]:
+        key = "-".join(parts)
+        key = _LOCALE_ALIASES.get(key, key)
+        if key in _SUPPORTED_BY_FOLD:
+            return _SUPPORTED_BY_FOLD[key]
+        parts.pop()
+    return "en"
+
 
 #: Locales that ship ONLY the namespaces they override, inheriting the rest.
 #: An absent namespace file is how a fork inherits — it is the design, never a

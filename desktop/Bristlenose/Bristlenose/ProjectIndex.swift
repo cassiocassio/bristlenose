@@ -674,8 +674,10 @@ final class ProjectIndex: ObservableObject {
     /// means the project is gone, the value was already there, or the write did
     /// not land. In that last case the flag is put back to what the file says
     /// (a study that was shared stays shown as shared, and the handshake is not
-    /// told it went off), and `.bristlenoseAgentAccessNotSaved` is posted so the
-    /// app can say so once. The caller never has to guess what is on disk.
+    /// told it went off), and `.bristlenoseAgentAccessNotSaved` is posted. The
+    /// app shows no alert for it (the sidebar already reads the restored flag, and
+    /// the cause is in the log); the post is the seam a quieter signal would hook.
+    /// The caller never has to guess what is on disk.
     @discardableResult
     func setAgentAccess(id: UUID, enabled: Bool) -> Bool {
         guard let index = projects.firstIndex(where: { $0.id == id }),

@@ -34,7 +34,7 @@ def _tokens(text: str) -> list[str]:
 def test_the_app_holds_observer_tokens() -> None:
     # Guards the guard: if the declarations are renamed, the checks below must not go vacuous.
     tokens = _tokens(_APP.read_text(encoding="utf-8"))
-    assert {"prefsFanOut", "agentAccessFanOut", "agentAccessNotSavedObserver"} <= set(tokens)
+    assert {"prefsFanOut", "agentAccessFanOut"} <= set(tokens)
 
 
 def test_every_observer_token_is_assigned_once_per_process() -> None:

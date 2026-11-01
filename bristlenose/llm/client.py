@@ -443,15 +443,19 @@ def is_content_blocked(exc: BaseException) -> bool:
             codes.append(val)
     body = getattr(exc, "body", None)
     if isinstance(body, dict):
+        # The openai SDK unwraps the response's `error` before it builds the exception
+        # (`_make_status_error`), so `body` is usually the error dict itself; an SDK that
+        # keeps the wrapper is read the same way.
         err = body.get("error")
-        if isinstance(err, dict):
-            for key in ("code", "type"):
-                val = err.get(key)
-                if isinstance(val, str):
-                    codes.append(val)
-            inner = err.get("innererror")
-            if isinstance(inner, dict) and isinstance(inner.get("code"), str):
-                codes.append(inner["code"])
+        if not isinstance(err, dict):
+            err = body
+        for key in ("code", "type"):
+            val = err.get(key)
+            if isinstance(val, str):
+                codes.append(val)
+        inner = err.get("innererror")
+        if isinstance(inner, dict) and isinstance(inner.get("code"), str):
+            codes.append(inner["code"])
     return any(c in ("content_filter", "ResponsibleAIPolicyViolation") for c in codes)
 
 

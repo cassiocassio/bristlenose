@@ -136,15 +136,25 @@ class TestEachProviderNamesAnBlock:
             await _ask(client)
 
 
-class _AzureBadRequestError(Exception):
-    """An openai.BadRequestError as Azure's content filter sends it (status 400, code set)."""
+def _azure_400(code: str, inner_code: str | None = None) -> Exception:
+    """A real ``openai.BadRequestError`` as the SDK builds one from Azure's content-filter 400.
 
-    status_code = 400
+    Azure sends ``{"error": {"code": ..., "innererror": {"code": ...}}}``; the SDK's
+    ``_make_status_error`` unwraps ``error`` first (openai 3.26), so ``exc.body`` is the inner
+    dict and ``exc.code`` is read from it. A fake that kept the ``error`` wrapper pinned a
+    branch no real error reaches and left the one that fires unpinned.
+    """
+    import httpx
+    import openai
 
-    def __init__(self, code: str) -> None:
-        super().__init__("Error code: 400 - the response was filtered")
-        self.code = code
-        self.body = {"error": {"code": code, "message": "filtered"}}
+    body: dict[str, object] = {"code": code, "message": "filtered"}
+    if inner_code is not None:
+        body["innererror"] = {"code": inner_code, "content_filter_result": {}}
+    response = httpx.Response(400, request=httpx.Request("POST", "https://x.openai.azure.com/"))
+    exc = openai.BadRequestError(
+        "Error code: 400 - the response was filtered", response=response, body=body)
+    assert exc.body is body and exc.code == code  # the shape the test relies on
+    return exc
 
 
 class TestTheCauseNamesIt:
@@ -155,15 +165,19 @@ class TestTheCauseNamesIt:
         assert "declined" in cause.message and "quote_extraction" in cause.message
 
     def test_azures_own_400_with_the_content_filter_code_says_so(self) -> None:
-        exc = _AzureBadRequestError("content_filter")
+        exc = _azure_400("content_filter", inner_code="ResponsibleAIPolicyViolation")
         assert is_content_blocked(exc)
         cause = _build_cause(exc, stage="quote_extraction", provider="azure", http_status=400)
         assert cause.category is CauseCategoryEnum.API_REQUEST
         assert "declined" in cause.message
         assert cause.code == "400"
 
+    def test_a_400_whose_only_filter_signal_is_the_inner_error_still_says_so(self) -> None:
+        # The policy name lives in `innererror`, under the unwrapped body the SDK hands over.
+        assert is_content_blocked(_azure_400("BadRequest", inner_code="ResponsibleAIPolicyViolation"))
+
     def test_any_other_400_still_reads_as_a_plain_failure(self) -> None:
-        exc = _AzureBadRequestError("invalid_request_error")
+        exc = _azure_400("invalid_request_error")
         assert not is_content_blocked(exc)
         cause = _build_cause(exc, stage="quote_extraction", provider="azure", http_status=400)
         assert "declined" not in cause.message

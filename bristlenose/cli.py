@@ -2265,8 +2265,13 @@ def _start_server(
     open_browser: bool = True,
     dev: bool = False,
     verbose: bool = False,
+    announce_after_bind: bool = False,
 ) -> None:
     """Start the FastAPI server (blocking).  Used by both serve() and run().
+
+    ``announce_after_bind`` (``serve``, N148): print the Report and MCP lines, and open the
+    browser, only once the fixed port is really bound, instead of the caller printing them
+    first.
 
     Two paths:
 
@@ -2301,6 +2306,11 @@ def _start_server(
 
     if port == 0:
         _serve_dynamic_port(project_dir, dev=dev, verbose=verbose)
+        return
+    if announce_after_bind:
+        _serve_dynamic_port(
+            project_dir, dev=dev, verbose=verbose, port=port, open_browser=open_browser,
+        )
         return
 
     report_url = f"http://127.0.0.1:{port}/report/"
@@ -2393,13 +2403,19 @@ def _serve_dynamic_port(
     *,
     dev: bool,
     verbose: bool,
+    port: int = 0,
+    open_browser: bool = False,
 ) -> None:
-    """Bind to a kernel-assigned port and print it after the socket is ready.
+    """Bind, then print the ``Report:`` and MCP lines once the socket is ready.
 
     Used when the caller passed ``--port 0`` (the desktop host does this
     so it can never collide with a slow-dying orphan sidecar — every
     launch gets a fresh port). Prints the ``Report:`` line *after* bind
     so the URL the host reads is the one actually accepting connections.
+
+    ``port != 0`` (``bristlenose serve`` on its stable port, N148): the same, so a port
+    another study is already serving prints no link, opens no browser, and ends with
+    uvicorn's own refusal instead of a Report line for a server that never came up.
     """
     import asyncio
 
@@ -2409,7 +2425,7 @@ def _serve_dynamic_port(
     config = uvicorn.Config(
         app_instance,
         host="127.0.0.1",
-        port=0,
+        port=port,
         log_level="info" if verbose else "warning",
     )
     server = uvicorn.Server(config)
@@ -2424,15 +2440,20 @@ def _serve_dynamic_port(
         # see a started server in 10s, something else is wrong (e.g.
         # lifespan failed). Surface by letting serve_task raise.
         for _ in range(200):  # 200 * 50ms = 10s
+            # Defensive: uvicorn ends a refused bind with SystemExit, which already stops this
+            # loop; a task that finished some other way must not wait out the 10 s bound.
+            if serve_task.done():
+                break
             if server.started and server.servers and server.servers[0].sockets:
                 break
             await asyncio.sleep(0.05)
         if server.started and server.servers and server.servers[0].sockets:
             actual_port = server.servers[0].sockets[0].getsockname()[1]
-            console.print(
-                f"\n  Report: [bold cyan]http://127.0.0.1:{actual_port}/report/[/bold cyan]\n"
-            )
+            report_url = f"http://127.0.0.1:{actual_port}/report/"
+            console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]\n")
             _print_mcp_connect(actual_port)
+            if open_browser:
+                _schedule_browser_open(report_url, delay_sec=0.0)
         await serve_task
 
     asyncio.run(_run())
@@ -2527,12 +2548,12 @@ def serve(
             "uvicorn reload spawns workers that need a fixed port."
         )
         raise typer.Exit(1)
-    if port != 0:
+    if port != 0 and dev:
+        # Dev (uvicorn reload) cannot print after a bind it does not make: the lines go first.
         report_url = f"http://127.0.0.1:{port}/report/"
         console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]")
         _print_mcp_connect(port)
-        if dev:
-            console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
+        console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
         console.print()
 
     if dev:
@@ -2614,6 +2635,7 @@ def serve(
             port=port,
             open_browser=open_browser,
             verbose=verbose,
+            announce_after_bind=True,
         )
 
 

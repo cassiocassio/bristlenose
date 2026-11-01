@@ -50,7 +50,10 @@ def test_serve_starts_during_a_first_analysis_with_partial_intermediate(
     )
 
     assert result.exit_code == 0, result.output
-    assert started == [(project, {"port": 8199, "open_browser": False, "verbose": False})]
+    assert started == [(
+        project,
+        {"port": 8199, "open_browser": False, "verbose": False, "announce_after_bind": True},
+    )]
     assert rendered == []
 
 

@@ -207,6 +207,8 @@ test that fails before them: install UXR after the researcher has "trust" on 5 q
 
 ## 5. Questions for the maintainer
 
+_Answered 1 Nov 2026 (B's calls): re-homing is silent (§5.1); the Uncategorised floor stays out of Signals by design; a same-named tag in a hidden group is left alone; same-named codebook tags fold into the researcher's one tag; only hand-applied tags are kept on uninstall (accepted suggestions go). The remaining questions below (scope, visual priority) are unchanged._
+
 1. **Re-homing in B.** When a codebook with a same-named tag is removed, do the researcher's
    applications move to a same-named tag in their own group (created if absent), or to a
    visible "kept from <codebook>" group? (Recommendation: their own group, silently; they

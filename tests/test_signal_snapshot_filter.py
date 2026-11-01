@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import copy
 from collections import Counter
+from pathlib import Path
 from typing import Any
+
+import pytest
 
 from bristlenose.server.models import Quote, QuoteState
 from bristlenose.server.signal_snapshots import (
@@ -287,7 +290,16 @@ def _exported_snapshot(client) -> dict[str, Any]:
     return data["endpoints"]["/signals/snapshot"]["snapshot"]
 
 
-def test_an_export_made_after_a_hide_does_not_carry_the_hidden_quote_in_signals() -> None:
+def test_an_export_made_after_a_hide_does_not_carry_the_hidden_quote_in_signals(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # CI builds no frontend and the export route needs a bundle to inline: a stub one stands
+    # in (the pattern of test_serve_export_filename.py). Never a skipif.
+    from bristlenose.server.routes import export as export_mod
+
+    (tmp_path / "app.js").write_text("// stub", encoding="utf-8")
+    (tmp_path / "app.css").write_text("/* stub */", encoding="utf-8")
+    monkeypatch.setattr(export_mod, "_EXPORT_STATIC_DIR", tmp_path)
     client = _stored_project()
     row = _a_card_quote_row(client)
     texts = lambda snap: {  # noqa: E731

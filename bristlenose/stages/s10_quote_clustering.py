@@ -119,21 +119,37 @@ async def cluster_by_screen(
 
     omitted = [q for i, q in enumerate(screen_quotes) if i not in placed]
     if omitted:
-        # Sections named for the quote's own topic, after the model's: the same
-        # grouping the stage uses when the model fails outright. Counts only in the
+        # An omitted quote whose own topic names a section the model made joins that
+        # section (one "Checkout", never two); the rest get a section named for their
+        # topic after the model's, as when the model fails outright. Counts only in the
         # log; a quote's words never are.
         logger.warning(
             "Screen clustering left %d of %d quotes unplaced; placed by topic",
             len(omitted), len(screen_quotes),
         )
+        by_name: dict[str, ScreenCluster] = {}
+        for c in clusters:
+            by_name.setdefault(_same_name(c.screen_label), c)
+        strays: list[ExtractedQuote] = []
+        for q in omitted:
+            home = by_name.get(_same_name(q.topic_label))
+            if home is not None:
+                home.quotes.append(q)
+            else:
+                strays.append(q)
         after = max((c.display_order for c in clusters), default=0)
-        for extra in _fallback_clustering(omitted):
+        for extra in _fallback_clustering(strays):
             extra.display_order = after + extra.display_order
             clusters.append(extra)
 
     logger.info("Created %d screen clusters", len(clusters))
     outcome.succeeded = 1
     return clusters, outcome
+
+
+def _same_name(label: str) -> str:
+    """A section's name for matching: case and surrounding space do not make a second one."""
+    return " ".join(label.split()).casefold()
 
 
 def _fallback_clustering(quotes: list[ExtractedQuote]) -> list[ScreenCluster]:

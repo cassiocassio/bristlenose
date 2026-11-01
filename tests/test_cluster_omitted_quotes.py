@@ -114,3 +114,28 @@ def test_nothing_omitted_changes_nothing() -> None:
     ])
     themes, _ = asyncio.run(group_by_theme(quotes, _client(reply)))
     assert [t.theme_label for t in themes] == ["A", "B"], "no stray Uncategorised group"
+
+
+def test_an_omitted_screen_quote_joins_the_model_section_of_the_same_name() -> None:
+    """One 'Checkout', not two: a quote the model left out whose own topic names a section
+    the model made goes into that section (matched ignoring case and surrounding space)."""
+    from bristlenose.stages.s10_quote_clustering import cluster_by_screen
+
+    quotes = [
+        _quote(0, "Checkout", QuoteType.SCREEN_SPECIFIC),
+        _quote(1, "Checkout", QuoteType.SCREEN_SPECIFIC),
+        _quote(2, " checkout ", QuoteType.SCREEN_SPECIFIC),
+        _quote(3, "Login", QuoteType.SCREEN_SPECIFIC),
+    ]
+    reply = ScreenClusteringResult(clusters=[
+        ScreenClusterItem(screen_label="Checkout", description="the pay step", display_order=1,
+                          quote_indices=[0]),
+    ])
+    clusters, _ = asyncio.run(cluster_by_screen(quotes, _client(reply)))
+    assert sorted(_texts(clusters)) == sorted(q.text for q in quotes), "no quote may be lost"
+    labels = [c.screen_label.strip().casefold() for c in clusters]
+    assert labels.count("checkout") == 1, "a second Checkout section must not appear"
+    checkout = clusters[0]
+    assert checkout.description == "the pay step", "the model's section keeps its description"
+    assert [q.text for q in checkout.quotes] == [quotes[0].text, quotes[1].text, quotes[2].text]
+    assert [c.screen_label for c in clusters[1:]] == ["Login"], "an unmatched topic still gets one"

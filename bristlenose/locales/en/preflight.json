@@ -36,7 +36,7 @@
     "rejected_invalid_key": "Your {provider_display} API key was rejected (HTTP 401).\nCheck the key at {keys_url}\nand re-run.",
     "no_credit": "Your {provider_display} account has no API credit available.\nTop up at {billing_url}\n({minimum_note})\nand re-run.",
     "model_unavailable": "The requested model is not available for your {provider_display} account. Check available models at {console_url} and either enable the model or set `BRISTLENOSE_LLM_MODEL` to one your account can use.",
-    "rate_limit": "{provider_display} is rate-limiting this account. Wait a minute and re-run, or reduce `llm_concurrency` in your bristlenose.toml.",
+    "rate_limit": "{provider_display} is rate-limiting this account. Wait a minute and re-run, or lower BRISTLENOSE_LLM_CONCURRENCY (default 3).",
     "generic": "Provider says: {message}.\nIf this looks like a credit-balance issue, top up at the provider's billing console and re-run.",
     "anyllm_invalid_key": "{provider_display} rejected the API key.\nProvider says: {message}",
     "anyllm_store_new_key": "Store a new one: bristlenose configure any-llm",

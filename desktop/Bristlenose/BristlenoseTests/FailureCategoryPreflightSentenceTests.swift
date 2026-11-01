@@ -18,8 +18,8 @@ import Testing
 struct FailureCategoryPreflightSentenceTests {
 
     private static let rateLimit =
-        " is rate-limiting this account. Wait a minute and re-run, or reduce "
-        + "`llm_concurrency` in your bristlenose.toml."
+        " is rate-limiting this account. Wait a minute and re-run, or lower "
+        + "BRISTLENOSE_LLM_CONCURRENCY (default 3)."
 
     @Test("Every provider's rate-limit refusal is a quota",
           arguments: [
@@ -84,8 +84,8 @@ struct FailureCategoryPreflightSentenceTests {
     @Test("A rate-limit sentence wrapped at 80 columns, as Rich prints it, is still a quota")
     func wrappedRateLimitRefusal() {
         #expect(PipelineRunner.categoriseFailure(
-            lines: ["✗ Claude is rate-limiting this account. Wait a minute and re-run, or reduce",
-                    "`llm_concurrency` in your bristlenose.toml."],
+            lines: ["✗ Claude is rate-limiting this account. Wait a minute and re-run, or lower",
+                    "BRISTLENOSE_LLM_CONCURRENCY (default 3)."],
             exitStatus: 2, provider: .claude) == .quota)
     }
 

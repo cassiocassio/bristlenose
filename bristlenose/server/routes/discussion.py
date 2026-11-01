@@ -74,18 +74,24 @@ class _ReportQuote:
         self.dom_id, self.text, self.edit = dom_id, text, edit
 
 
-def _report_quotes(db: Session, project_id: int) -> dict[tuple[str, str, float], _ReportQuote]:
-    """(session, participant, start rounded to 0.01 s) → the report's quote."""
+def _report_quotes(
+    db: Session, project_id: int,
+) -> dict[tuple[str, str, float], list[_ReportQuote]]:
+    """(session, participant, start rounded to 0.01 s) → the report's quotes there.
+
+    A list, not one row: stage 9 can cut two quotes from one paragraph with the same start
+    (the R86 pair, ordinal 0 and 1), and keying them as one dropped the other from the lens
+    without a word (N174)."""
     rows = speaker_slots.evidence_quotes(db, project_id)
     edited: dict[int, str] = {}
     for e in (db.query(QuoteEdit).join(Quote, QuoteEdit.quote_id == Quote.id)
               .filter(Quote.project_id == project_id).order_by(QuoteEdit.edited_at).all()):
         edited[e.quote_id] = e.edited_text  # the latest edit wins
-    return {
-        (q.session_id, q.participant_id, round(q.start_timecode, 2)):
-            _ReportQuote(_quote_dom_id(q), q.text, edited.get(q.id))
-        for q in rows
-    }
+    out: dict[tuple[str, str, float], list[_ReportQuote]] = {}
+    for q in rows:
+        out.setdefault((q.session_id, q.participant_id, round(q.start_timecode, 2)), []).append(
+            _ReportQuote(_quote_dom_id(q), q.text, edited.get(q.id)))
+    return out
 
 
 def _key(q: dict[str, Any]) -> tuple[str, str, float]:
@@ -93,17 +99,20 @@ def _key(q: dict[str, Any]) -> tuple[str, str, float]:
 
 
 def _as_the_report_shows_them(
-    quotes: list[dict[str, Any]], report: dict[tuple[str, str, float], _ReportQuote],
+    quotes: list[dict[str, Any]], report: dict[tuple[str, str, float], list[_ReportQuote]],
 ) -> tuple[list[dict[str, Any]], int]:
     """The record's quotes as the Quotes lens shows them, and how many the
     report does not hold.
 
     Two quotes can share a key — the model gives whole-second timecodes — and
-    the report keeps one row per key, so a shared key is matched by its text:
-    hiding or editing one quote must never touch the other (silent-failure
-    review, 3 Oct 2026: 24 collisions in 308 quotes on a real project). A quote
-    the report does not hold — never clustered or themed — is left out, as
-    Quotes leaves it out, so nothing appears here that Quotes cannot hide.
+    the report holds a row for each (the R86 ordinal), so a key with more than one
+    quote or row is matched by text, never by position: hiding or editing one
+    quote must never touch the other (silent-failure review, 3 Oct 2026: 24
+    collisions in 308 quotes on a real project; N174, 1 Nov 2026: the lens used to
+    show one of such a pair). A record quote matching none of the rows at its key is
+    counted, not guessed at. A quote the report does not hold — never clustered or
+    themed — is left out, as Quotes leaves it out, so nothing appears here that
+    Quotes cannot hide.
 
     A report id goes to one record quote only: the id is the start's whole
     second, so two rows a fraction apart, or a record quote listed twice, would
@@ -117,13 +126,21 @@ def _as_the_report_shows_them(
     absent = 0
     given: set[str] = set()
     for q in quotes:
-        row = report.get(_key(q))
-        if row is None:
+        rows = report.get(_key(q))
+        if not rows:
             absent += 1
             continue
-        if shared[_key(q)] > 1 and q.get("text") != row.text:
-            absent += 1  # the report's row at this key is a different quote
-            continue
+        if len(rows) == 1 and shared[_key(q)] == 1:
+            row = rows[0]  # one quote, one row: the key is enough
+        else:
+            # Several quotes or several rows at this key: the words say which, and a row
+            # already given to another record quote is not given twice.
+            row = next(
+                (r for r in rows if r.dom_id not in given and r.text == q.get("text")), None,
+            )
+            if row is None:
+                absent += 1  # no row at this key is this quote
+                continue
         if row.dom_id in given:
             absent += 1
             continue

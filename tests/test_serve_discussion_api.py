@@ -217,3 +217,90 @@ def test_a_report_id_goes_to_one_record_quote(project):
     ids = [q["dom_id"] for q in served["quotes"]]
     assert len(ids) == len(set(ids)) == len(quotes)
     assert served["stats"]["quotes_not_in_report"] == 1
+
+
+# ---------------------------------------------------------------------------
+# N174: two quotes one participant starts in the same moment (the R86 pair)
+# ---------------------------------------------------------------------------
+
+_TWIN = "but the price is wrong"
+
+
+def _with_a_twin(client, quotes):
+    """The report holds a second row at the first quote's start (ordinal 1), as stage 9 makes
+    from one paragraph; the record lists both. Returns (start, record-ready quotes)."""
+    s, p, t, text = quotes[0]
+    db = client.app.state.db_factory()
+    try:
+        db.add(Quote(
+            project_id=1, session_id=s, participant_id=p, start_timecode=t,
+            end_timecode=t + 1.0, text=_TWIN, quote_type="screen_specific", topic_label="T",
+            ordinal=1,
+        ))
+        db.commit()
+    finally:
+        db.close()
+    return t, quotes + [(s, p, t, _TWIN)]
+
+
+def test_a_pair_starting_together_shows_both_quotes(project):
+    """The report keeps both rows since R86; the lens used to key them as one and drop the
+    other without a word (24 such pairs in 308 quotes on a real project)."""
+    intermediate, client, quotes = project
+    t, listed = _with_a_twin(client, quotes)
+    _write(intermediate, _record(listed))
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    here = [q for q in served["quotes"] if q["sec"] == t]
+    assert sorted(q["text"] for q in here) == sorted([quotes[0][3], _TWIN])
+    ids = {q["text"]: q["dom_id"] for q in here}
+    assert ids[quotes[0][3]] == f"q-p1-{int(t)}"
+    assert ids[_TWIN] == f"q-p1-{int(t)}-1"
+    assert "quotes_not_in_report" not in served.get("stats", {})
+
+
+def test_the_pair_is_matched_by_text_whatever_order_the_record_lists_it(project):
+    intermediate, client, quotes = project
+    t, listed = _with_a_twin(client, quotes)
+    record = _record(listed)
+    record["quotes"].reverse()
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    ids = {q["text"]: q["dom_id"] for q in served["quotes"] if q["sec"] == t}
+    assert ids == {quotes[0][3]: f"q-p1-{int(t)}", _TWIN: f"q-p1-{int(t)}-1"}
+
+
+def test_a_record_that_lists_only_the_second_of_the_pair_gets_its_own_row(project):
+    intermediate, client, quotes = project
+    t, listed = _with_a_twin(client, quotes)
+    record = _record(listed)
+    record["quotes"] = [q for q in record["quotes"] if q["text"] != quotes[0][3]]
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    here = [q for q in served["quotes"] if q["sec"] == t]
+    assert [(q["text"], q["dom_id"]) for q in here] == [(_TWIN, f"q-p1-{int(t)}-1")]
+
+
+def test_a_pair_member_the_record_words_differently_is_counted_not_guessed(project):
+    """Two rows at a key and a record quote matching neither: no guess which it is."""
+    intermediate, client, quotes = project
+    t, listed = _with_a_twin(client, quotes)
+    record = _record(listed)
+    record["quotes"].append(dict(record["quotes"][0], text="words from neither row"))
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    assert all(q["text"] != "words from neither row" for q in served["quotes"])
+    assert served["stats"]["quotes_not_in_report"] == 1
+
+
+def test_a_look_alike_listed_first_does_not_take_the_only_row_at_the_key(project):
+    """One report row, two record quotes at its key: the one with the row's own words gets
+    it whichever is listed first, and the other is counted (never the row's id)."""
+    intermediate, client, quotes = project
+    s, p, t, text = quotes[0]
+    record = _record(quotes)
+    record["quotes"].insert(0, dict(record["quotes"][0], text="a different quote, same second"))
+    _write(intermediate, record)
+    served = client.get("/api/projects/1/discussion").json()["record"]
+    here = [(q["text"], q["dom_id"]) for q in served["quotes"] if q["sec"] == t]
+    assert here == [(text, f"q-{p}-{int(t)}")]
+    assert served["stats"]["quotes_not_in_report"] == 1

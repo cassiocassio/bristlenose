@@ -47,7 +47,7 @@ from bristlenose.discussion.models import (
     SessionState,
     SpineOut,
 )
-from bristlenose.discussion.moderator import MIN_WORDS, moderator_turns
+from bristlenose.discussion.moderator import is_askable_length, moderator_turns
 from bristlenose.events import StageFailure, StageOutcome
 from bristlenose.llm import telemetry as _llm_telemetry
 from bristlenose.llm.boundary import wrap_untrusted
@@ -247,7 +247,7 @@ async def run_discussion(
             turn = st.Turn(tid, sid, seg.start_time, seg.text.strip())
             speaker_of[tid] = seg.speaker_code or mt.code
             every.setdefault(sid, []).append(turn)
-            if mt.reliable and len(turn.text.split()) >= MIN_WORDS:
+            if mt.reliable and is_askable_length(turn.text):
                 askable.setdefault(sid, []).append(turn)
         participants = sorted({s.speaker_code for s in t.segments
                                if s.speaker_role == SpeakerRole.PARTICIPANT and s.speaker_code})
@@ -364,7 +364,7 @@ async def run_discussion(
             # never read as chat: a turn we could not classify, including every
             # askable-length turn of a session whose moderator we could not trust
             unread = (x.id in turns or x.id in failed_turns
-                      or (state_of.get(sid) != "ok" and len(x.text.split()) >= MIN_WORDS))
+                      or (state_of.get(sid) != "ok" and is_askable_length(x.text)))
             kind = kind_of.get(x.id, "unclassified" if unread else "chat")
             record.turns.append(RecordTurn(id=x.id, session=sid, sec=x.sec, time=format_timecode(x.sec),
                                            text=x.text, kind=kind, item=item_of.get(x.id),  # type: ignore[arg-type]

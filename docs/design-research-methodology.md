@@ -70,7 +70,7 @@ Every substantive participant utterance — anything revealing experience, opini
 
 **Think-aloud narration is data.** When a participant reads menu items aloud, describes clicks, or narrates their path ("Home textiles and rugs. Bedding. Duvets."), this shows the user journey through the interface. Short navigational sequences are bundled into a single quote capturing the path taken. Only truly empty utterances ("Okay", "Right" with no navigational or emotional content) are skipped.
 
-**Minimum quote length:** 5 words (hardcoded in `quote_extraction.py`). Below this threshold, utterances rarely carry enough meaning to stand alone as a quote. Very short meaningful reactions ("I hate this") are 3 words but typically occur mid-sentence and get captured as part of a longer thought.
+**Minimum quote length:** 5 words (`min_quote_words` in `s09_quote_extraction.py`), measured by reading length (`s06.reading_length`: a space-separated word is 1, an unspaced character is 0.4, so about 12 Japanese or Chinese characters is five words; spaced languages are unchanged, N167, 1 Nov 2026). Below this threshold, utterances rarely carry enough meaning to stand alone as a quote. Very short meaningful reactions ("I hate this") are 3 words but typically occur mid-sentence and get captured as part of a longer thought.
 
 ### Editorial cleanup — "dignity without distortion"
 

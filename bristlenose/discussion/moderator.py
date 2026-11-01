@@ -34,8 +34,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from bristlenose.models import FullTranscript, SpeakerRole, TranscriptSegment
+from bristlenose.stages.s06_merge_transcript import reading_length
 
 MIN_WORDS = 3  # shorter moderator turns ("yeah", "great") are never questions
+
+
+def is_askable_length(text: str) -> bool:
+    """Long enough to be a question: ``MIN_WORDS`` by reading length, so an unspaced Japanese
+    or Chinese turn counts its characters (0.4 of a word each) instead of the pieces between
+    spaces (N167). Spaced text is unchanged."""
+    return reading_length(text) >= MIN_WORDS
 
 # Over-attribution: a moderator who speaks for more than half the session's
 # words is implausible in an interview.
@@ -93,7 +101,7 @@ def moderator_turns(transcript: FullTranscript, *, whole_split: bool = False) ->
     segs = transcript.segments
     mod = [s for s in segs if is_moderator(s)]
     code = next((s.speaker_code for s in mod if s.speaker_code), "")
-    askable = [s for s in mod if len(s.text.split()) >= MIN_WORDS]
+    askable = [s for s in mod if is_askable_length(s.text)]
     if not askable:
         return ModeratorTurns([], code, False, "no_moderator")
 

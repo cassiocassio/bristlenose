@@ -35,6 +35,7 @@ from bristlenose.models import (
     TranscriptSegment,
 )
 from bristlenose.run_lifecycle import _build_cause
+from bristlenose.stages.s06_merge_transcript import reading_length
 from bristlenose.stages.timecode_guard import repair_timecode, timecode_ceiling
 from bristlenose.utils.text import apply_smart_quotes
 from bristlenose.utils.timecodes import format_timecode_prompt, parse_model_timecode
@@ -444,10 +445,12 @@ async def _extract_one_pass(
             journey_stage = JourneyStage.OTHER
 
         # Skip very short quotes
-        word_count = len(item.text.split())
+        # By reading length, so an unspaced Japanese or Chinese quote counts its characters
+        # (0.4 of a word each) and not the pieces between spaces (N167).
+        word_count = reading_length(item.text)
         if word_count < min_quote_words:
             logger.debug(
-                "Skipping short quote (%d words): %s",
+                "Skipping short quote (%.1f words): %s",
                 word_count,
                 item.text[:50],
             )

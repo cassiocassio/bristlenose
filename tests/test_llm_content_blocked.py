@@ -135,6 +135,23 @@ class TestEachProviderNamesAnBlock:
         with pytest.raises(ContentBlockedError):
             await _ask(client)
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("reason", ["MODEL_ARMOR", "JAILBREAK"])
+    async def test_gemini_filters_that_block_a_prompt_are_named_too(self, reason: str) -> None:
+        # BlockedReason also has MODEL_ARMOR and JAILBREAK: filters, so a refusal, not an
+        # "Empty response". RECITATION (a copy of a source) and OTHER are deliberately not.
+        client = LLMClient(_settings(
+            llm_provider="google", google_api_key="g", llm_model="gemini-3.8-flash"))
+        client._google_client = SimpleNamespace(aio=SimpleNamespace(models=SimpleNamespace(
+            generate_content=AsyncMock(return_value=SimpleNamespace(
+                text=None, candidates=[],
+                prompt_feedback=SimpleNamespace(block_reason=SimpleNamespace(name=reason)),
+                usage_metadata=SimpleNamespace(prompt_token_count=10, candidates_token_count=0),
+            )),
+        )))
+        with pytest.raises(ContentBlockedError):
+            await _ask(client)
+
 
 def _azure_400(code: str, inner_code: str | None = None) -> Exception:
     """A real ``openai.BadRequestError`` as the SDK builds one from Azure's content-filter 400.

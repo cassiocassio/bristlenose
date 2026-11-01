@@ -425,8 +425,12 @@ class ContentBlockedError(RuntimeError):
     """
 
 
-#: Finish and block reasons Gemini gives when it declined for the content.
-_GEMINI_BLOCKS = frozenset({"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"})
+#: Finish and block reasons Gemini gives when it declined for the content. ``MODEL_ARMOR`` and
+#: ``JAILBREAK`` are prompt filters (``BlockedReason``). ``RECITATION`` (it would have copied a
+#: source) and ``OTHER`` are not a content decision, so they stay an ordinary empty reply.
+_GEMINI_BLOCKS = frozenset({
+    "SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "MODEL_ARMOR", "JAILBREAK",
+})
 
 
 def is_content_blocked(exc: BaseException) -> bool:

@@ -1482,10 +1482,6 @@ def run(
         bool,
         typer.Option("--retain-pii", help="Retain PII in transcripts (default behaviour)."),
     ] = False,
-    config: Annotated[
-        Path | None,
-        typer.Option("--config", "-c", help="Path to bristlenose.toml config file."),
-    ] = None,
     no_serve: Annotated[
         bool,
         typer.Option(

@@ -1,4 +1,4 @@
-"""Application settings loaded from environment variables, .env, or bristlenose.toml."""
+"""Application settings loaded from environment variables or a .env file."""
 
 from __future__ import annotations
 

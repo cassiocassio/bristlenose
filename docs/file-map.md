@@ -8,7 +8,7 @@ Quick reference for finding things in the bristlenose codebase.
 |------|------|
 | `bristlenose/__init__.py` | Version — **single source of truth** (`__version__`) |
 | `bristlenose/cli.py` | Typer CLI entry point |
-| `bristlenose/config.py` | Pydantic settings (env vars, .env, bristlenose.toml) |
+| `bristlenose/config.py` | Pydantic settings (env vars, .env) |
 | `bristlenose/models.py` | Data models and enums |
 | `bristlenose/pipeline.py` | Pipeline orchestrator |
 | `bristlenose/people.py` | People file: load, compute, merge, write, display names, name extraction, short name heuristic |

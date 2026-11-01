@@ -272,9 +272,6 @@ Retain PII in transcripts (default behaviour). Mutually exclusive with
 .BR \-\-skip\-transcription
 Skip audio transcription (use existing transcripts).
 .TP
-.BR \-c ", " \-\-config " " \fIPATH\fR
-Path to a \fIbristlenose.toml\fR config file.
-.TP
 .BR \-\-clean
 Start afresh. The previous report is replaced once the fresh analysis has
 produced a session. Until then it is kept at
@@ -755,9 +752,6 @@ Environment variables file, searched upward from the current directory.
 .TP
 .I .env.example
 Template with all available configuration variables.
-.TP
-.I bristlenose.toml
-Optional TOML configuration file.
 .TP
 .I ~/Library/Application Support/Bristlenose/state.json \fR(macOS)
 .TQ

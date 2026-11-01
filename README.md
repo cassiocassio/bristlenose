@@ -319,7 +319,7 @@ Full reference for every command, option, and exit code: `man bristlenose`, or [
 
 ### Configuration
 
-Via `.env` file, environment variables (prefix `BRISTLENOSE_`), or `bristlenose.toml`. See `.env.example` for all options.
+Via a `.env` file or environment variables (prefix `BRISTLENOSE_`). See `.env.example` for all options.
 
 ### Hardware
 

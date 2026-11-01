@@ -95,7 +95,7 @@ When the macOS app window loses focus, `.bn-window-inactive` is added to `<html>
 Uses CSS `light-dark()` function (supported in all major browsers since mid-2024, ~87%+ global). No JS involved. The cascade:
 
 1. **OS/browser preference** → `color-scheme: light dark` on `:root` respects `prefers-color-scheme` automatically
-2. **User override** → `color_scheme` in `bristlenose.toml` (or `BRISTLENOSE_COLOR_SCHEME` env var). Values: `"auto"` (default), `"light"`, `"dark"`
+2. **User override** → `BRISTLENOSE_COLOR_SCHEME` env var (or `.env`). Values: `"auto"` (default), `"light"`, `"dark"`
 3. **HTML attribute** → when config is `"light"` or `"dark"`, `render/report.py` emits `<html data-theme="light|dark">` which forces `color-scheme` via CSS selector
 4. **Print** → always light (forced by `color-scheme: light` in `print.css`)
 

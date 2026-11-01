@@ -57,7 +57,7 @@ the layout below.
 ```
 bristlenose/          # main package
   cli.py              # Typer CLI (run, transcribe, analyze, render, serve, status, doctor)
-  config.py           # Pydantic settings (env vars, .env, bristlenose.toml)
+  config.py           # Pydantic settings (env vars, .env)
   doctor.py           # Doctor check logic (7 checks, run_all, run_preflight)
   doctor_fixes.py     # Install-method-aware fix instructions
   models.py           # Pydantic data models (quotes, themes, enums)

@@ -249,23 +249,35 @@ class TestPatchTags:
         assert {"autocode", "pipeline", "codebook-builder"} <= set(written), written
         assert set(written) <= allowed, {v: w for v, w in written.items() if v not in allowed}
 
-    def test_a_sentiment_named_tag_does_not_pin(self, client: TestClient) -> None:
+    def _sentiment_tag(self, client: TestClient) -> tuple[int, str]:
         db = client.app.state.db_factory()  # type: ignore[attr-defined]
         try:
-            names = [
-                td.name
-                for td in db.query(TagDefinition)
+            row = (
+                db.query(TagDefinition.id, TagDefinition.name)
                 .join(CodebookGroup, TagDefinition.codebook_group_id == CodebookGroup.id)
                 .filter(CodebookGroup.framework_id == "sentiment")
-                .all()
-            ]
+                .first()
+            )
         finally:
             db.close()
         # The smoke fixture is committed, so no sentiment tags is a fixture
         # regression to fail on, not an environment to skip in.
-        assert names, "smoke fixture has no sentiment framework tags"
-        client.patch(f"{_P}/tags", json={"q-p1-46": {"add": [names[0]]}})
+        assert row, "smoke fixture has no sentiment framework tags"
+        return row[0], row[1]
+
+    def test_a_sentiment_tag_picked_by_id_does_not_pin(self, client: TestClient) -> None:
+        td_id, _ = self._sentiment_tag(client)
+        client.patch(f"{_P}/tags", json={"q-p1-46": {"add_ids": [td_id]}})
         assert _quote(client, "p1", 46).durable_id is None
+
+    def test_a_typed_sentiment_name_is_the_researchers_own_tag_and_pins(
+        self, client: TestClient,
+    ) -> None:
+        # N146: a typed name never lands on the machine's sentiment tag; it makes the
+        # researcher's own, which is their commitment and so pins like any hand-made tag.
+        _, name = self._sentiment_tag(client)
+        client.patch(f"{_P}/tags", json={"q-p1-46": {"add": [name]}})
+        assert _quote(client, "p1", 46).durable_id is not None
 
 
 # ---------------------------------------------------------------------------

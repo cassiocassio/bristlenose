@@ -138,6 +138,12 @@ class TagDelta(BaseModel):
 
     add: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     remove: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+    # The same change by tag identity (N146): a tag picked from a list, or the one a
+    # badge's × points at, is named by its row, because two tags can share a name. A
+    # removal by id takes only that tag; by name it still takes every same-named tag on
+    # the quote (the legacy path). An id this project has no tag for is ignored.
+    add_ids: list[int] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
+    remove_ids: list[int] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     # How the added tags were applied. A gesture adds by hand; an undo of a
     # removal puts the tag back as it was, so an accepted suggestion comes back
     # autocode and pins nothing (decision #14). The four values QuoteTag holds.
@@ -264,6 +270,45 @@ def _is_sentiment_tag(db: Session, tag_definition_id: int) -> bool:
             .scalar()
         )
     return framework_id == "sentiment"
+
+
+def _name_resolver(db: Session) -> dict[str, int]:
+    """Which tag a TYPED name means: lower-cased name -> definition id (N146).
+
+    A name is only how a tag is typed; the tag is its row. When several share a
+    name, the researcher's own wins (a group with no framework: their hand-made tags
+    and the Uncategorised floor, oldest first), then a codebook's (oldest first). The
+    machine-authored sentiment tags are never the answer to a typed name, so a typed
+    "frustration" makes the researcher's own tag instead of landing on the sentiment
+    one (the first thing a researcher types, ``_is_sentiment_tag``'s docstring); the
+    sentiment tag is reached only by its id. Last-wins by name, the old rule, let a
+    codebook installed after the researcher's own "trust" take their tagging.
+    """
+    rows = (
+        db.query(TagDefinition.id, TagDefinition.name, CodebookGroup.framework_id)
+        .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
+        .order_by(TagDefinition.id)
+        .all()
+    )
+    manual: dict[str, int] = {}
+    framework: dict[str, int] = {}
+    for td_id, name, framework_id in rows:
+        key = name.lower()
+        if framework_id is None:
+            manual.setdefault(key, td_id)
+        elif framework_id != "sentiment":
+            framework.setdefault(key, td_id)
+    return {**framework, **manual}
+
+
+def _known_tag_ids(db: Session, ids: list[int]) -> set[int]:
+    """The ids among ``ids`` that name a tag definition in this project's database."""
+    if not ids:
+        return set()
+    return {
+        row[0]
+        for row in db.query(TagDefinition.id).filter(TagDefinition.id.in_(ids)).all()
+    }
 
 
 def _session_ids_for_project(db: Session, project_id: int) -> list[int]:
@@ -1029,10 +1074,8 @@ def put_tags(
     try:
         _check_project(db, project_id)
 
-        # Cache tag definitions by lowercased name -> id
-        tag_defs: dict[str, int] = {}
-        for td in db.query(TagDefinition).all():
-            tag_defs[td.name.lower()] = td.id
+        # A typed name -> the tag it means (the researcher's own first, N146)
+        tag_defs = _name_resolver(db)
 
         # Clear existing user tags for this project's quotes, then re-insert.
         # Snapshot provenance before delete so it survives the bulk-replace.
@@ -1107,9 +1150,7 @@ def patch_tags(
         _check_project(db, project_id)
         unresolved: list[str] = []  # quotes the server no longer has
 
-        tag_defs: dict[str, int] = {}
-        for td in db.query(TagDefinition).all():
-            tag_defs[td.name.lower()] = td.id
+        tag_defs = _name_resolver(db)
         uncategorised: CodebookGroup | None = None
 
         for dom_id, delta in data.items():
@@ -1117,22 +1158,24 @@ def patch_tags(
             if not quote:
                 unresolved.append(dom_id)
                 continue
-            if delta.remove:
-                # By name across every definition: two codebooks can hold the
-                # same name, and the quote may carry either one.
+            if delta.remove or delta.remove_ids:
+                # By id takes only the tag pointed at. By name (a caller that holds
+                # no id) it takes every same-named definition on the quote.
                 names = {n.lower() for n in delta.remove}
+                ids = set(delta.remove_ids)
                 gone = [
                     qt.id
                     for qt, td_name in db.query(QuoteTag, TagDefinition.name)
                     .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
                     .filter(QuoteTag.quote_id == quote.id)
                     .all()
-                    if td_name.lower() in names
+                    if td_name.lower() in names or qt.tag_definition_id in ids
                 ]
                 if gone:
                     db.query(QuoteTag).filter(QuoteTag.id.in_(gone)).delete(
                         synchronize_session=False
                     )
+            add_td_ids: list[int] = sorted(_known_tag_ids(db, delta.add_ids))
             for tag_name in delta.add:
                 td_id = tag_defs.get(tag_name.lower())
                 if td_id is None:
@@ -1143,6 +1186,8 @@ def patch_tags(
                     db.flush()
                     td_id = td.id
                     tag_defs[tag_name.lower()] = td_id
+                add_td_ids.append(td_id)
+            for td_id in add_td_ids:
                 if db.query(QuoteTag).filter_by(
                     quote_id=quote.id, tag_definition_id=td_id
                 ).first():

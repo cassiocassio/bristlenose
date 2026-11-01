@@ -47,6 +47,7 @@ router = APIRouter(prefix="/api")
 
 
 class TagResponse(BaseModel):
+    id: int | None = None
     name: str
     codebook_group: str
     colour_set: str
@@ -307,6 +308,7 @@ def get_transcript(
                 cidx = td_ids.index(td_id) if td_id in td_ids else 0
                 tags_map.setdefault(qt.quote_id, []).append(
                     TagResponse(
+                        id=td_id,
                         name=tag_name,
                         codebook_group=group_name,
                         colour_set=colour_set,

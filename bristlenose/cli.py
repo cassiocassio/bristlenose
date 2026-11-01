@@ -1877,8 +1877,7 @@ def run(
 
     # Legacy path: pipeline ran cleanly but produced zero usable quotes
     # (silent audio, no spoken content). Not an abandon — just empty input.
-    llm_ran = getattr(result, "llm_calls", 0) > 0
-    pipeline_errored = llm_ran and getattr(result, "total_quotes", 0) == 0
+    pipeline_errored = _ran_but_found_nothing(result)
 
     # Every recording Apple's first-run model sent on to Whisper (the wrong
     # language for the one it assumed) is waiting, not empty: the next run once

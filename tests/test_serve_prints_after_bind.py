@@ -109,3 +109,28 @@ def test_the_report_line_keeps_the_text_the_host_parses(
     monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: None)
     result = CliRunner().invoke(cli.app, ["serve", str(project), "--port", "8186", "--no-open"])
     assert "Report: http://127.0.0.1:8186/report/" in result.output
+
+
+def test_a_server_that_ends_before_it_starts_does_not_wait_out_the_bound(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # uvicorn ends a refused bind or a failed lifespan with SystemExit, which stops the wait
+    # by itself; a serve() that returns without ever starting (should_exit set before
+    # startup) must end the wait too, not run the 10 s bound down and then print nothing.
+    class FakeServer:
+        def __init__(self, config: Any) -> None:
+            self.config = config
+            self.started = False
+            self.servers: list[Any] = []
+
+        async def serve(self) -> None:
+            return None
+
+    monkeypatch.setattr("uvicorn.Server", FakeServer)
+    monkeypatch.setattr(cli, "_create_admitted_app", lambda *a, **k: object())
+    monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: None)
+    started = time.monotonic()
+    result = CliRunner().invoke(cli.app, ["serve", str(project), "--port", "8185", "--no-open"])
+    elapsed = time.monotonic() - started
+    assert elapsed < 5, "the wait ran its 10 s bound down after the server had already ended"
+    assert "Report:" not in result.output

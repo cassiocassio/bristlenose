@@ -1057,14 +1057,20 @@ describe("TranscriptPage — new data while it is open (progressive lenses)", ()
   });
 
   it("scrolls to the link again on a later visit by it", async () => {
-    mockedGetTranscript.mockResolvedValue(mockData);
+    mockedGetTranscript
+      .mockResolvedValueOnce(mockData)
+      .mockResolvedValueOnce({ ...mockData, session_id: "s2",
+        segments: [{ ...mockData.segments[0], text: "Session two speaking." }] })
+      .mockResolvedValue(mockData);
     window.location.hash = "#t-26";
     const view = render(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => expect(scrolledInto).toContain("t-26"));
     window.location.hash = "";
     view.rerender(<TranscriptPage projectId="1" sessionId="s2" />);
-    await waitFor(() => expect(mockedGetTranscript).toHaveBeenCalledTimes(2));
-    await new Promise((r) => setTimeout(r, 20));
+    // The effect that forgets the link runs once session two has rendered with no hash;
+    // setting the hash before then leaves the link remembered (a fixed wait raced it).
+    await waitFor(() => expect(screen.getByText("Session two speaking.")).toBeTruthy());
+    await act(async () => {});
     window.location.hash = "#t-26";
     view.rerender(<TranscriptPage projectId="1" sessionId="s1" />);
     await waitFor(() => expect(scrolledInto.filter((id) => id === "t-26")).toHaveLength(2));

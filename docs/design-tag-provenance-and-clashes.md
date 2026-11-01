@@ -34,6 +34,14 @@ for manual tags, and priority for them when scanning a page, is a likely future 
    deadline, and a clash is usually disentangled by context (this quote came from the CX
    person, not a user). The group can appear on demand (a tooltip) or when a researcher is
    choosing between two same-named tags, and nowhere else.
+   The group is also **the unit Signals measure**: a quote contributes once per group (the
+   matrix columns are groups, `routes/signals.py`, `signals/generic_matrix.py`), on the premise
+   that a group's tags overlap enough in meaning to belong to one discussion. So the name-lookup
+   bug is not only a tagging nuisance: when a typed "trust" lands on a codebook's "trust", the
+   quote silently counts toward that codebook's group in Signals instead of the researcher's own,
+   and moving or merging a tag across groups changes the signal, not just a label. Group
+   membership is part of the methodology, which is the strongest argument for resolving by
+   identity and for never merging same-named tags unasked.
 3. **Manual outranks auto, always.** An auto tag cannot overwrite, shadow or remove a manual
    one; removing auto content cannot strip manual work. Auto content is cheap to add and
    cheap to discard; manual content is expensive and kept.

@@ -1,5 +1,5 @@
 ---
-status: proposal. §2 (what the code does) is measured; §4 and §5 are for the maintainer to rule on. Nothing here is built.
+status: A is built (1 Nov 2026, §3 below). §2 (what the code does) is measured as it was before A; B, C, D and E are proposals and nothing in them is built.
 last-trued: 2026-11-01
 trued-against: HEAD@main on 2026-11-01
 ---
@@ -144,11 +144,37 @@ different mechanism and would leave the loss in place.)
 
 | | What | Fixes | Cost |
 |---|---|---|---|
-| **A. Resolve by identity, manual first** | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss inside a project | small to medium: the id must travel through the client (§2a) |
+| **A. Resolve by identity, manual first** (**built 1 Nov 2026**, see "As built") | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss inside a project | small to medium: the id must travel through the client (§2a) |
 | **B. Uninstall protects manual work** | Removing a codebook deletes only its **auto** applications. Applications the researcher made are kept, re-homed to a same-named tag in the researcher's own group (created if absent). | the stripped tagging | small; a decision on re-homing |
 | **C. Make clashes discoverable, and merging a choice** | Colour stays the default signal. The group is available on demand (a tooltip on the badge) and in the tag picker when two same-named tags are offered. At install or in the codebook, a "looks like a tag you have" list with a merge the researcher chooses. No rename on install, no standing group labels. | confusion, duplicates | small design; new words only for the merge |
 | **D. Origin as a first-class scope** | Replace "framework id or none" with an origin: project, folder, global, framework. Identity stays the row; scope decides visibility and deletion. Builds the folder codebook and global library the brief anticipates. | the roadmap | a migration and a design doc of its own |
 | **E. Manual tags look different** | A distinct style, and priority in scanning, from `source` and group origin. | scanning | visual design; data already supports it |
+
+### As built: A (1 Nov 2026, N146)
+
+- **Server (`routes/data.py`).** `_name_resolver` answers what a TYPED name means: the researcher's
+  own tag first (a group with no `framework_id`: their hand-made tags and the Uncategorised floor,
+  oldest first), then a codebook's (oldest first), and never a sentiment tag, so a typed
+  "frustration" makes the researcher's own tag; the sentiment tag is reached only by its id.
+  `PATCH /tags` takes `add_ids` and `remove_ids` beside the name lists (an unknown id is ignored);
+  a removal by id takes only that tag, a removal by name still takes every same-named tag on the
+  quote (the legacy path, kept for callers with no id). `put_tags` resolves a name the same way.
+  A quote's tags (`/quotes`, `/transcripts`) carry their `id`. A sentiment tag applied by id still
+  mints nothing (the pin predicate's exemption is untouched); a typed name that collides with a
+  sentiment label is now the researcher's own tag, so it does mint and pin, as any hand-made tag.
+- **Client.** `TagInput` commits `(name, pick)`: the row chosen from the list, or, for a typed
+  whole name, the researcher's own tag of that name when the vocabulary has one (sentiment rows
+  skipped). A name two tags share lists both rows (a name only one tag has is still not repeated
+  back). `buildTagVocabulary` (`utils/tagVocabulary.ts`) carries each tag's id and each group's
+  `framework_id` and lists the researcher's own groups first. The quotes store de-duplicates, adds,
+  removes and undoes by the row when a tag has one (`sameTag`), else by name, which is all a tag
+  typed since the last read has; a made-up negative id (the sidebar's `mergePendingTags`) is never
+  sent. The sidebar's click-to-assign names the row clicked.
+- **Not done, on purpose.** The client's `tagGroupMap` is still keyed by lower-cased name (it
+  serves group visibility and the eye, where two same-named tags in different groups remain
+  ambiguous); the picker's `exclude` is still by name, so a quote that has one "trust" is not
+  offered the other from the picker; CSV and other exports still write names. B (uninstall keeps
+  the researcher's applications) is not built and waits on the re-homing answer in §5.1.
 
 **Rejected:** refusing at install (does not stop the loss); rename on install, "trust (UXR)"
 (a new naming rule, new copy, a migration for installed rows, and it hides that two tags

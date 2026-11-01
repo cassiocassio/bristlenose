@@ -24,7 +24,13 @@ from bristlenose.server.importer import (
     _pinned_quote_ids,
     import_project,
 )
-from bristlenose.server.models import ClusterQuote, HeadingEdit, Quote, QuoteState
+from bristlenose.server.models import (
+    ClusterQuote,
+    HeadingEdit,
+    Quote,
+    QuoteState,
+    TagDefinition,
+)
 from tests.conftest import AuthTestClient
 from tests.server_fixtures import cluster as _cluster
 from tests.server_fixtures import dom_id as _dom
@@ -189,14 +195,7 @@ class TestPinPredicate:
         finally:
             db.close()
 
-    def test_human_tag_colliding_with_a_sentiment_label_does_not_mint(
-        self, tmp_path: Path
-    ) -> None:
-        """Regression (mint/pin drift): a hand-typed tag whose name collides
-        with a sentiment label ("confusion") resolves by name to the sentiment
-        TagDefinition and arrives source="human".  It must NOT mint a
-        durable_id / frozen_form — the mint site mirrors the pin predicate's
-        sentiment exclusion, so minted-and-pinned stay in lockstep."""
+    def _app_with_a_sentiment_tag(self, tmp_path: Path):  # type: ignore[no-untyped-def]
         clusters = [
             _cluster(
                 "Dashboard",
@@ -210,10 +209,27 @@ class TestPinPredicate:
         ]
         _write_intermediate(tmp_path, clusters)
         app = create_app(project_dir=tmp_path, dev=True, db_url="sqlite://")
-        client: TestClient = AuthTestClient(app)
+        return app, AuthTestClient(app)
 
-        # Hand-apply that same "confusion" name to quote B (a genuine human PUT).
-        client.put("/api/projects/1/tags", json={_dom("p1", 20): ["confusion"]})
+    def test_human_applied_sentiment_tag_does_not_mint(self, tmp_path: Path) -> None:
+        """Regression (mint/pin drift): a sentiment-framework tag applied by hand
+        (picked from the list, so by its id) arrives source="human".  It must NOT
+        mint a durable_id / frozen_form: the mint site mirrors the pin predicate's
+        sentiment exclusion, so minted-and-pinned stay in lockstep."""
+        app, client = self._app_with_a_sentiment_tag(tmp_path)
+
+        db = app.state.db_factory()
+        try:
+            sentiment_id = (
+                db.query(TagDefinition.id)
+                .filter(TagDefinition.name == "confusion")
+                .scalar()
+            )
+        finally:
+            db.close()
+        client.patch(
+            "/api/projects/1/tags", json={_dom("p1", 20): {"add_ids": [sentiment_id]}}
+        )
 
         db = app.state.db_factory()
         try:
@@ -221,6 +237,25 @@ class TestPinPredicate:
             assert b.durable_id is None, "a sentiment-framework tag must not mint"
             assert b.frozen_form is None
             assert _pinned_quote_ids(db, 1) == set()
+        finally:
+            db.close()
+
+    def test_typed_name_colliding_with_a_sentiment_label_is_the_researchers_own(
+        self, tmp_path: Path
+    ) -> None:
+        """N146: a typed "confusion" no longer resolves by name to the machine's
+        sentiment tag.  It is the researcher's own tag, which is their commitment:
+        it mints, and the pin predicate pins it, in lockstep."""
+        app, client = self._app_with_a_sentiment_tag(tmp_path)
+
+        client.put("/api/projects/1/tags", json={_dom("p1", 20): ["confusion"]})
+
+        db = app.state.db_factory()
+        try:
+            b = _quote_at(db, 20)
+            assert b.durable_id is not None
+            assert b.frozen_form is not None
+            assert _pinned_quote_ids(db, 1) == {b.id}
         finally:
             db.close()
 

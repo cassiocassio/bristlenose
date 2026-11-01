@@ -1043,10 +1043,15 @@ class TestRemoveFrameworkImpact:
                 .all()
             )
             if len(quotes) >= 2 and len(tag_defs) >= 2:
-                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[0].id))
-                db.add(QuoteTag(quote_id=quotes[1].id, tag_definition_id=tag_defs[0].id))
+                # The codebook's own applications (AutoCode's): what the researcher applied
+                # by hand is kept on uninstall (N146 B), so it is not counted as a loss.
+                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[0].id,
+                                source="autocode"))
+                db.add(QuoteTag(quote_id=quotes[1].id, tag_definition_id=tag_defs[0].id,
+                                source="autocode"))
                 # Same quote tagged with second tag — should count as 1 distinct
-                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[1].id))
+                db.add(QuoteTag(quote_id=quotes[0].id, tag_definition_id=tag_defs[1].id,
+                                source="autocode"))
                 db.commit()
         finally:
             db.close()
@@ -1228,10 +1233,12 @@ class TestFrameworkRemovalIsProjectScoped:
 
             mine = db.query(Quote).filter_by(project_id=1).first()
             assert mine is not None
-            db.add(QuoteTag(quote_id=mine.id, tag_definition_id=td.id, source="human"))
+            # The codebook's own applications: what a researcher applied by hand is kept on
+            # uninstall (N146 B).
+            db.add(QuoteTag(quote_id=mine.id, tag_definition_id=td.id, source="autocode"))
             db.add(
                 QuoteTag(
-                    quote_id=other_quote.id, tag_definition_id=td.id, source="human"
+                    quote_id=other_quote.id, tag_definition_id=td.id, source="autocode"
                 )
             )
             db.commit()

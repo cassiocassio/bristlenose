@@ -484,7 +484,9 @@ def test_r3_an_uninstalled_codebooks_tag_does_not_come_back(tmp_path: Path) -> N
     client = _smoke_copy(tmp_path)
     r = client.post(f"{_P}/codebook/import-template", json={"template_id": "garrett"})
     assert r.status_code == 200, r.text
-    client.patch(f"{_P}/tags", json={"q-p1-26": {"add": ["user need"]}})
+    # The codebook's own application (AutoCode's); what the researcher applied by hand is
+    # kept on uninstall (N146 B, tests/test_tag_identity.py).
+    client.patch(f"{_P}/tags", json={"q-p1-26": {"add": ["user need"], "source": "autocode"}})
     r = client.delete(f"{_P}/codebook/remove-framework/garrett")
     assert r.status_code == 200, r.text
 

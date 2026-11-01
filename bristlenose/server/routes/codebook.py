@@ -850,11 +850,74 @@ class RemoveFrameworkInfo(BaseModel):
     has_autocode: bool = False
 
 
+def _rehome_human_applications(
+    db: Session, project_id: int, framework_id: str, tag_def_ids: list[int],
+) -> None:
+    """Keep what the researcher themselves applied when a codebook goes (N146 B).
+
+    A codebook's tags are cheap to add and cheap to lose; a tag a researcher put on a
+    quote by hand is their work and outranks anything the machine did. So every
+    application of one of these tags that is the researcher's (``source == "human"``)
+    moves to a tag of the same name in the researcher's own groups, made in
+    Uncategorised if they have none, before the codebook's rows are deleted. The
+    codebook's own applications (AutoCode, the builder) go with it, as before.
+
+    The machine-authored sentiment framework is exempt: a human-applied sentiment tag
+    is not researcher commitment (``_is_sentiment_tag``) and has no tag of the same
+    name to move to, so it goes like the rest.
+    """
+    if framework_id == "sentiment" or not tag_def_ids:
+        return
+    project_quote_ids = db.query(Quote.id).filter_by(project_id=project_id)
+    mine = (
+        db.query(QuoteTag, TagDefinition.name)
+        .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+        .filter(
+            QuoteTag.tag_definition_id.in_(tag_def_ids),
+            QuoteTag.source == "human",
+            QuoteTag.quote_id.in_(project_quote_ids),
+        )
+        .all()
+    )
+    if not mine:
+        return
+    # The researcher's own tag of each name: oldest in a group with no framework.
+    own: dict[str, int] = {}
+    for td_id, name in (
+        db.query(TagDefinition.id, TagDefinition.name)
+        .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
+        .filter(CodebookGroup.framework_id.is_(None))
+        .order_by(TagDefinition.id)
+        .all()
+    ):
+        own.setdefault(name.lower(), td_id)
+    floor: CodebookGroup | None = None
+    for qt, name in mine:
+        target = own.get(name.lower())
+        if target is None:
+            if floor is None:
+                floor = _get_or_create_uncategorised(db)
+            td = TagDefinition(name=name, codebook_group_id=floor.id)
+            db.add(td)
+            db.flush()
+            target = own[name.lower()] = td.id
+        # insert-or-ignore: the quote may already carry the researcher's own tag
+        if not db.query(QuoteTag).filter_by(
+            quote_id=qt.quote_id, tag_definition_id=target
+        ).first():
+            db.add(QuoteTag(quote_id=qt.quote_id, tag_definition_id=target, source="human"))
+    db.flush()
+
+
 @router.delete("/projects/{project_id}/codebook/remove-framework/{framework_id}")
 def remove_framework(
     project_id: int, framework_id: str, request: Request,
 ) -> CodebookResponse:
     """Uninstall a framework from this project. Nothing is kept for a restore.
+
+    **Except the researcher's own work (N146 B):** an application of one of its tags
+    that the researcher made by hand moves to a tag of the same name in their own
+    groups first (``_rehome_human_applications``).
 
     Deletes this project's quote-tag associations, its project links, its
     enable/disable opinion, and its AutoCode job with the proposals under it.
@@ -901,6 +964,8 @@ def remove_framework(
             .all()
         )
         tag_def_ids = [td.id for td in tag_defs]
+
+        _rehome_human_applications(db, project_id, framework_id, tag_def_ids)
 
         # Delete quote-tag associations (tags removed from quotes as expected).
         #
@@ -1032,14 +1097,14 @@ def remove_framework_impact(
             # the loss — and a confirmation whose number is wrong is worse than
             # none, because it is the number the researcher decides on.
             project_quote_ids = db.query(Quote.id).filter_by(project_id=project_id)
-            quote_count = (
-                db.query(func.count(func.distinct(QuoteTag.quote_id)))
-                .filter(
-                    QuoteTag.tag_definition_id.in_(tag_def_ids),
-                    QuoteTag.quote_id.in_(project_quote_ids),
-                )
-                .scalar()
-            ) or 0
+            counted = db.query(func.count(func.distinct(QuoteTag.quote_id))).filter(
+                QuoteTag.tag_definition_id.in_(tag_def_ids),
+                QuoteTag.quote_id.in_(project_quote_ids),
+            )
+            if framework_id != "sentiment":
+                # What the researcher applied by hand is kept (N146 B), so it is not a loss.
+                counted = counted.filter(QuoteTag.source != "human")
+            quote_count = counted.scalar() or 0
 
         has_autocode = (
             db.query(AutoCodeJob)

@@ -164,3 +164,67 @@ def test_a_quotes_tags_carry_their_ids() -> None:
         if t["name"] == "trust"
     ]
     assert tags and tags[0]["id"] == mine
+
+
+# ---------------------------------------------------------------------------
+# B: uninstalling a codebook keeps what the researcher applied by hand
+# ---------------------------------------------------------------------------
+
+
+def _uninstall_uxr(tc) -> None:
+    assert tc.delete("/api/projects/1/codebook/remove-framework/uxr").status_code == 200
+
+
+def _tags_of(app, quote_id: int) -> list[tuple[str, str | None, str]]:
+    """(name, group's framework, source) of each non-sentiment tag on the quote."""
+    db = app.state.db_factory()
+    try:
+        rows = (
+            db.query(TagDefinition.name, CodebookGroup.framework_id, QuoteTag.source)
+            .join(QuoteTag, QuoteTag.tag_definition_id == TagDefinition.id)
+            .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
+            .filter(QuoteTag.quote_id == quote_id)
+            .all()
+        )
+        # The quote's own pipeline sentiment tag is not what these tests are about.
+        return [(n, f, s) for n, f, s in rows if f != "sentiment"]
+    finally:
+        db.close()
+
+
+def test_uninstalling_keeps_the_researchers_own_application_in_their_own_tag() -> None:
+    app, tc = _app()
+    theirs = _install_uxr_and_find_its_trust(app, tc)
+    qid, dom = _first_quote(app)
+    # The researcher picked the codebook's tag themselves.
+    tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [theirs]}})
+    _uninstall_uxr(tc)
+    assert _tags_of(app, qid) == [("trust", None, "human")]
+
+
+def test_uninstalling_re_homes_onto_the_researchers_existing_tag_of_that_name() -> None:
+    app, tc = _app()
+    mine = _make_own_trust(app)
+    theirs = _install_uxr_and_find_its_trust(app, tc)
+    qid, dom = _first_quote(app)
+    tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [mine, theirs]}})
+    _uninstall_uxr(tc)
+    assert _defs_on(app, qid, "trust") == {mine}, "kept once, on their own tag, not duplicated"
+
+
+def test_uninstalling_still_removes_the_codebooks_own_applications() -> None:
+    app, tc = _app()
+    theirs = _install_uxr_and_find_its_trust(app, tc)
+    qid, dom = _first_quote(app)
+    tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [theirs], "source": "autocode"}})
+    _uninstall_uxr(tc)
+    assert _tags_of(app, qid) == []
+
+
+def test_the_uninstall_impact_does_not_count_what_is_kept() -> None:
+    app, tc = _app()
+    theirs = _install_uxr_and_find_its_trust(app, tc)
+    qid, dom = _first_quote(app)
+    tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [theirs]}})
+    impact = tc.get("/api/projects/1/codebook/remove-framework/uxr/impact").json()
+    assert impact["quote_count"] == 0

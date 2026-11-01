@@ -244,7 +244,7 @@ struct BristlenoseApp: App {
                     // act with a visible control — never fronting a window,
                     // which would silently re-point an external agent at a
                     // different study because someone pressed Cmd-backtick.
-                    // Once per process, like the alert below: this closure runs
+                    // Once per process: this closure runs
                     // for every main window that appears, and an observer per
                     // window ran one Agent Access change as N syncs.
                     if agentAccessFanOut == nil {

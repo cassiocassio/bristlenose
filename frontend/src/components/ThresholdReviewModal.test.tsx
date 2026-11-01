@@ -370,7 +370,34 @@ describe("ThresholdReviewModal", () => {
       }
     });
 
-    it("leaves uncounted, and says so, when it was decided the other way", async () => {
+    // N33 (owner, 1 Nov 2026): a click the server says was decided the other way
+    // elsewhere leaves, says so, and is counted where it actually landed.
+    it.each([
+      ["deny", "proposal_accepted", /1 accepted/i, /excluded/i],
+      ["accept", "proposal_denied", /1 excluded/i, /accepted/i],
+    ] as const)(
+      "a %s that was decided the other way leaves, says so, and counts where it landed",
+      async (action, reason, counted, notCounted) => {
+        vi.useFakeTimers();
+        try {
+          const refused = Object.assign(new Error("409"), { status: 409, reason });
+          mockDenyProposal.mockRejectedValue(refused);
+          mockAcceptProposal.mockRejectedValue(refused);
+          await renderModal();
+          click(action);
+          await act(async () => { vi.advanceTimersByTime(300); });
+          expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
+          expect(toastSaveFailed).toHaveBeenCalledTimes(1);
+          const subtitle = screen.getByTestId("bn-threshold-subtitle").textContent ?? "";
+          expect(subtitle).toMatch(counted);
+          expect(subtitle).not.toMatch(notCounted);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("counts where it landed when the answer arrives before the row has left", async () => {
       vi.useFakeTimers();
       try {
         mockDenyProposal.mockRejectedValue(
@@ -378,10 +405,45 @@ describe("ThresholdReviewModal", () => {
         );
         await renderModal();
         click("deny");
+        await act(async () => {}); // the answer is in before the 200 ms slide ends
+        await act(async () => { vi.advanceTimersByTime(300); });
+        const subtitle = screen.getByTestId("bn-threshold-subtitle").textContent ?? "";
+        expect(subtitle).toMatch(/1 accepted/i);
+        expect(subtitle).not.toMatch(/excluded/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("counts where it landed when the answer arrives after the row has left", async () => {
+      vi.useFakeTimers();
+      try {
+        let refuse: (e: unknown) => void = () => {};
+        mockDenyProposal.mockImplementation(() => new Promise((_, r) => { refuse = r; }));
+        await renderModal();
+        click("deny");
+        await act(async () => { vi.advanceTimersByTime(300); });
+        await act(async () => {
+          refuse(Object.assign(new Error("409"), { status: 409, reason: "proposal_accepted" }));
+        });
+        const subtitle = screen.getByTestId("bn-threshold-subtitle").textContent ?? "";
+        expect(subtitle).toMatch(/1 accepted/i);
+        expect(subtitle).not.toMatch(/excluded/i);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("a suggestion that is gone (404) leaves uncounted", async () => {
+      vi.useFakeTimers();
+      try {
+        mockDenyProposal.mockRejectedValue(Object.assign(new Error("404"), { status: 404 }));
+        await renderModal();
+        click("deny");
         await act(async () => { vi.advanceTimersByTime(300); });
         expect(screen.queryByTestId("bn-proposal-row-1")).not.toBeInTheDocument();
-        expect(toastSaveFailed).toHaveBeenCalledTimes(1);
-        expect(screen.getByTestId("bn-threshold-subtitle").textContent).not.toMatch(/excluded/i);
+        const subtitle = screen.getByTestId("bn-threshold-subtitle").textContent ?? "";
+        expect(subtitle).not.toMatch(/excluded|accepted/i);
       } finally {
         vi.useRealTimers();
       }

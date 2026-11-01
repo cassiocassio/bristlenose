@@ -139,11 +139,13 @@ export function ThresholdReviewModal({
   // Per-row accept and deny call the API at once and slide the row out. One
   // that fails said nothing and left as if saved (R5): now it says so and the
   // row comes back. A row the server says was decided already leaves either
-  // way, counted only when it went the way this click asked.
+  // way, counted where it actually landed: under this click's bucket when it
+  // went the way the click asked, under the other bucket when it was decided
+  // the other way elsewhere (N33), and in neither when it is gone (404).
   //
   // `opening` moves each time the modal opens and re-reads its counts, so an
   // answer from an earlier opening still says so but changes no row or count.
-  const outcome = useRef(new Map<number, "landed" | "back" | "gone">());
+  const outcome = useRef(new Map<number, "landed" | "back" | "gone" | "other">());
   const left = useRef(new Set<number>());
   const review = useCallback(
     (
@@ -151,18 +153,20 @@ export function ThresholdReviewModal({
       call: (id: number) => Promise<unknown>,
       same: string,
       count: React.Dispatch<React.SetStateAction<number>>,
+      other: React.Dispatch<React.SetStateAction<number>>,
     ) => {
       if (isExportMode()) return; // no server in an exported report
       const mine = opening.current;
       outcome.current.delete(proposalId);
       left.current.delete(proposalId);
       setRemoving((prev) => new Set(prev).add(proposalId));
-      const settle = (o: "landed" | "back" | "gone") => {
+      const settle = (o: "landed" | "back" | "gone" | "other") => {
         if (opening.current !== mine) return;
         outcome.current.set(proposalId, o);
         if (!left.current.has(proposalId)) return; // the timer applies it
         if (o === "back") setRemoved((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
         if (o !== "landed") count((prev) => prev - 1);
+        if (o === "other") other((prev) => prev + 1);
       };
       call(proposalId).then(
         () => settle("landed"),
@@ -170,7 +174,8 @@ export function ThresholdReviewModal({
           console.error("Review proposal failed:", err);
           if (err?.reason === same) return settle("landed");
           toastSaveFailed(err);
-          settle(reviewedElsewhere(err) ? "gone" : "back");
+          const decidedElsewhere = !!err?.reason?.startsWith("proposal_");
+          settle(decidedElsewhere ? "other" : reviewedElsewhere(err) ? "gone" : "back");
         },
       );
       setTimeout(() => {
@@ -180,19 +185,20 @@ export function ThresholdReviewModal({
         setRemoving((prev) => { const n = new Set(prev); n.delete(proposalId); return n; });
         if (o === "back") return;
         setRemoved((prev) => new Set(prev).add(proposalId));
-        if (o !== "gone") count((prev) => prev + 1);
+        if (o === "other") other((prev) => prev + 1);
+        else if (o !== "gone") count((prev) => prev + 1);
       }, 200);
     },
     [],
   );
 
   const handleAccept = useCallback(
-    (proposalId: number) => review(proposalId, acceptProposal, "proposal_accepted", setAcceptedCount),
+    (proposalId: number) => review(proposalId, acceptProposal, "proposal_accepted", setAcceptedCount, setDeniedCount),
     [review],
   );
 
   const handleDeny = useCallback(
-    (proposalId: number) => review(proposalId, denyProposal, "proposal_denied", setDeniedCount),
+    (proposalId: number) => review(proposalId, denyProposal, "proposal_denied", setDeniedCount, setAcceptedCount),
     [review],
   );
 

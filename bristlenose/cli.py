@@ -999,6 +999,13 @@ def _partial_sessions(summary: object) -> str:
     return f"{done} of {count_noun(total, 'session')} analysed"
 
 
+def _ran_but_found_nothing(result: object) -> bool:
+    """The model was called and no quote came out: the summary's "Finished with errors"
+    case, and what ``analyze`` exits 1 for (N151, owner ruling 1 Nov 2026). One predicate, so
+    the line printed and the code returned cannot disagree."""
+    return getattr(result, "llm_calls", 0) > 0 and getattr(result, "total_quotes", 0) == 0
+
+
 def _print_pipeline_summary(
     result: object,
     *,
@@ -1069,9 +1076,7 @@ def _print_pipeline_summary(
     p_warning = getattr(result, "pipeline_warning", "") or (
         _partial_sessions(getattr(result, "summary", None)) if sessions_line else ""
     )
-    llm_ran = getattr(result, "llm_calls", 0) > 0
-    no_quotes = getattr(result, "total_quotes", 0) == 0
-    has_errors = llm_ran and no_quotes
+    has_errors = _ran_but_found_nothing(result)
 
     if has_errors and not quiet_errors:
         time_str = f" in {_format_duration(elapsed)}" if elapsed else ""
@@ -2202,6 +2207,9 @@ def analyze(
         raise typer.Exit(1) from exc
 
     _print_pipeline_summary(result)
+    if _ran_but_found_nothing(result):
+        # The summary has said "Finished with errors"; a script reads the code, not the line.
+        raise typer.Exit(1)
 
 
 # British English alias for analyze

@@ -33,12 +33,16 @@ key is not tried at all (as ``app.py`` skips the run's re-apply) and writes noth
 the job.
 
 **Saving a key starts it (owner, 1 Nov 2026).** A write that made quotes count while no
-key was set leaves a marker file (``AWAITING_KEY``) in the study's ``.bristlenose``
-folder. The Mac restarts the serve when a key is saved, and ``resume_after_key`` (the
-lifespan's startup) arms one pass when it finds the marker and a key: the owed quotes
-are coded without another gesture. The marker is only ever written by a write that
-found something owed and no key, so an ordinary launch never spends; the fire-time
-check is still the authority on what is owed, so a stale marker costs nothing.
+key was set, or a pass that failed for a key or credit reason, leaves a marker file
+(``AWAITING_KEY``) in the study's ``.bristlenose`` folder. The Mac restarts the serve
+when a key is saved, and ``resume_after_key`` (the lifespan's startup) arms one pass when
+it finds the marker and a key: the owed quotes are coded without another gesture. The
+marker is only ever written in those two cases, so an ordinary launch never spends. It
+is a trigger for whatever is owed at that start (the fire-time check is the authority),
+not a list of the quotes owed when it was written, so a stale marker can code a backlog
+the researcher had forgotten, once. A study shared through a cloud folder carries the
+marker to the colleague's serve, which honours it with their own key. A key that stays
+wrong costs one failed call per serve restart, which spends nothing.
 """
 
 from __future__ import annotations
@@ -168,7 +172,8 @@ def _eligible_jobs(
 ) -> list[AutoCodeJob]:
     """The codebooks a pass would code something for now: applied at least once,
     still installed and switched on, owing a quote that counts, not held back by
-    a key or credit failure, and a cloud provider that has a key.
+    a key or credit failure, and (unless ``need_key`` is off) a cloud provider that has
+    a key.
 
     The cheap questions first, since a route asks on every unhide: which codebooks
     were applied and are on (a project with none stops here), then the settings, then
@@ -388,6 +393,9 @@ async def _catch_up_locked(app: Any, project_id: int, framework_id: str) -> None
     key = (project_id, framework_id)
     if status == "failed" and kind in KEY_OR_CREDIT_KINDS:
         _BLOCKED[key] = (signature(_settings(app)), _clock())
+        # A key mended or credit added restarts the Mac's serve; word is left so that
+        # start makes one attempt, as it does for a key that was absent.
+        _note_waiting_for_key(app)
         logger.info(
             "AutoCode catch-up %s failed (%s); no more attempts until the provider "
             "or key changes, or %d minutes pass", framework_id, kind, int(HOLD_S // 60),

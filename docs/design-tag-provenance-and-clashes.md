@@ -156,7 +156,7 @@ different mechanism and would leave the loss in place.)
   own tag first (a group with no `framework_id`: their hand-made tags and the Uncategorised floor,
   oldest first), then a codebook's (oldest first), and never a sentiment tag, so a typed
   "frustration" makes the researcher's own tag; the sentiment tag is reached only by its id.
-  `PATCH /tags` takes `add_ids` and `remove_ids` beside the name lists (an unknown id is ignored);
+  `PATCH /tags` takes `add_ids` and `remove_ids` beside the name lists (an unknown `add_ids` entry refuses the request, see the review fixes below);
   a removal by id takes only that tag, a removal by name still takes every same-named tag on the
   quote (the legacy path, kept for callers with no id). `put_tags` resolves a name the same way.
   A quote's tags (`/quotes`, `/transcripts`) carry their `id`. A sentiment tag applied by id still
@@ -174,7 +174,7 @@ different mechanism and would leave the loss in place.)
   application of its tags that the researcher made by hand (`QuoteTag.source == "human"`) moves to a tag of
   the same name in the researcher's own groups (oldest; made in Uncategorised if there is none). AutoCode's
   and the builder's applications go with the codebook, as before; the sentiment framework is exempt. Re-homing
-  is silent (the recommendation in §5.1; the owner had not answered). The uninstall impact count no longer
+  is silent (the recommendation in §5.1, confirmed by the owner on 1 Nov 2026). The uninstall impact count no longer
   counts quotes whose tagging is kept. Known consequences, from review: re-homed tags sit in the
   Uncategorised floor, which Signals and the assistant surfaces filter out, so they stop counting toward the
   codebook's group; if the researcher's same-named tag lives only in an eye-hidden group the kept badges are

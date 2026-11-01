@@ -141,7 +141,8 @@ class TagDelta(BaseModel):
     # The same change by tag identity (N146): a tag picked from a list, or the one a
     # badge's × points at, is named by its row, because two tags can share a name. A
     # removal by id takes only that tag; by name it still takes every same-named tag on
-    # the quote (the legacy path). An id this project has no tag for is ignored.
+    # the quote (the legacy path). An ADD of an id this project has no tag for refuses the
+    # whole request (404, nothing written); an unknown id to remove is harmless.
     add_ids: list[int] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     remove_ids: list[int] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     # How the added tags were applied. A gesture adds by hand; an undo of a
@@ -1081,19 +1082,24 @@ def put_tags(
         # Snapshot provenance before delete so it survives the bulk-replace.
         quote_ids = _quote_ids_for_project(db, project_id)
         existing_sources: dict[tuple[int, int], str] = {}
-        # The tag each quote already carries under each name: a round trip of the map GET
-        # returns (names only) keeps the very tags it came from, including the machine's
-        # sentiment tags, which a typed name never resolves to.
-        existing_by_name: dict[tuple[int, str], int] = {}
+        # The tags each quote already carries under each name, in the order the map GET
+        # lists them: a round trip of that map (names only) keeps the very tags it came
+        # from, including the machine's sentiment tags, which a typed name never resolves
+        # to. A quote can carry two tags of one name (the researcher's "frustration"
+        # beside the pipeline's), so each occurrence of the name consumes one row.
+        existing_by_name: dict[tuple[int, str], list[int]] = {}
         if quote_ids:
             for qt, td_name in (
                 db.query(QuoteTag, TagDefinition.name)
                 .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
                 .filter(QuoteTag.quote_id.in_(quote_ids))
+                .order_by(QuoteTag.id)
                 .all()
             ):
                 existing_sources[(qt.quote_id, qt.tag_definition_id)] = qt.source
-                existing_by_name.setdefault((qt.quote_id, td_name.lower()), qt.tag_definition_id)
+                existing_by_name.setdefault((qt.quote_id, td_name.lower()), []).append(
+                    qt.tag_definition_id
+                )
             db.query(QuoteTag).filter(QuoteTag.quote_id.in_(quote_ids)).delete(
                 synchronize_session=False
             )
@@ -1106,9 +1112,8 @@ def put_tags(
                 continue
             seen_td_ids: set[int] = set()
             for tag_name in tag_names:
-                td_id = existing_by_name.get((quote.id, tag_name.lower()))
-                if td_id is None:
-                    td_id = tag_defs.get(tag_name.lower())
+                carried = existing_by_name.get((quote.id, tag_name.lower()))
+                td_id = carried.pop(0) if carried else tag_defs.get(tag_name.lower())
                 if td_id is None:
                     if uncategorised is None:
                         uncategorised = _get_or_create_uncategorised(db)
@@ -1182,16 +1187,24 @@ def patch_tags(
                 continue
             if delta.remove or delta.remove_ids:
                 # By id takes only the tag pointed at. By name (a caller that holds
-                # no id) it takes every same-named definition on the quote.
+                # no id: a tag typed since the last read) it takes every same-named
+                # definition on the quote EXCEPT the machine's sentiment tag, which a
+                # typed name never means (``_name_resolver``) and so cannot be pointing
+                # at: a typed "frustration" sits beside the pipeline's, and its × must
+                # not take both.
                 names = {n.lower() for n in delta.remove}
                 ids = set(delta.remove_ids)
                 gone = [
                     qt.id
-                    for qt, td_name in db.query(QuoteTag, TagDefinition.name)
+                    for qt, td_name, fw in db.query(
+                        QuoteTag, TagDefinition.name, CodebookGroup.framework_id
+                    )
                     .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+                    .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
                     .filter(QuoteTag.quote_id == quote.id)
                     .all()
-                    if td_name.lower() in names or qt.tag_definition_id in ids
+                    if (td_name.lower() in names and fw != "sentiment")
+                    or qt.tag_definition_id in ids
                 ]
                 if gone:
                     db.query(QuoteTag).filter(QuoteTag.id.in_(gone)).delete(

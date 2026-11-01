@@ -618,6 +618,28 @@ class TestSavingAKeyStartsIt:
             _quiet(1.0)
         assert len(model.prompts) == applied, "owed quotes alone spend nothing at start"
 
+    def test_a_bad_key_that_is_replaced_starts_it_too(self, tmp_path: Path) -> None:
+        app, client = _app(tmp_path)
+        text = _first_quote_text(app)
+        dom = _dom(app, text)
+        _hide_in_db(app, dom)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+        model.fail = "api key not valid"
+        with model, client:
+            _hide(client, dom, False)
+            _wait(lambda: self_job(app).status == "failed", "the failure to be recorded")
+        assert self_job(app).failure_kind == "invalid_key"
+        assert self._marker(app).exists(), "word is left for the start that has a better key"
+
+        model.fail = None
+        again, client2 = self._restart(app, tmp_path, key="a-better-key")
+        with model, client2:
+            _wait(lambda: "autocode" in _tag_sources(again, text), "the owed quote to be coded")
+        assert len(model.prompts) == applied + 2, "the failed attempt, then the retry"
+        assert not self._marker(app).exists()
+
 
 class TestAKeyOrCreditFailure:
     def test_it_is_tried_once_then_not_again_until_the_provider_state_changes(

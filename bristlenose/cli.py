@@ -195,12 +195,17 @@ def _exit_startup_refusal(exc: StudyStartupRefusedError) -> NoReturn:
 def _create_admitted_app(project_dir: Path | None, dev: bool, verbose: bool) -> FastAPI:
     """Keep a second factory-level refusal on the same native/CLI error path."""
     from bristlenose.server.app import create_app
+    from bristlenose.server.db import StudyIsNewerError
     from bristlenose.utils.study_startup import StudyStartupRefusedError
 
     try:
         return create_app(project_dir=project_dir, dev=dev, verbose=verbose)
     except StudyStartupRefusedError as exc:
         _exit_startup_refusal(exc)
+    except StudyIsNewerError:
+        # An older build on a newer study (N147): one line, not Alembic's traceback.
+        _say(MessageKind.ERROR, "This study was opened by a newer Bristlenose. Update to open it.")
+        raise typer.Exit(2) from None
 
 
 def _say(kind: MessageKind, message: str, *, indent: str = "") -> None:

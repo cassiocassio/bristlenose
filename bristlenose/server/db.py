@@ -143,6 +143,15 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
     return sessionmaker(bind=engine)
 
 
+class StudyIsNewerError(RuntimeError):
+    """The study's database was migrated by a newer Bristlenose than this one.
+
+    Alembic cannot find the revision the database is stamped at, because this build
+    does not ship it. Opening it would mean guessing at a schema we have not seen,
+    so it is refused (N147, 1 Nov 2026). Carries no path and no study content.
+    """
+
+
 def run_migrations(engine: Engine) -> None:
     """Run Alembic migrations. Handles fresh, pre-Alembic, and managed DBs.
 
@@ -155,6 +164,7 @@ def run_migrations(engine: Engine) -> None:
     """
     from alembic import command
     from alembic.config import Config
+    from alembic.util.exc import CommandError
 
     alembic_cfg = Config()
     alembic_cfg.set_main_option(
@@ -185,8 +195,16 @@ def run_migrations(engine: Engine) -> None:
         trans = connection.begin()
         try:
             if has_alembic:
-                # Already managed — upgrade to head
-                command.upgrade(alembic_cfg, "head")
+                # Already managed — upgrade to head. A revision this build does
+                # not ship means a newer Bristlenose migrated it: say so by name.
+                try:
+                    command.upgrade(alembic_cfg, "head")
+                except CommandError as exc:
+                    if "locate revision" in str(exc):
+                        raise StudyIsNewerError(
+                            "This study's database is from a newer Bristlenose."
+                        ) from exc
+                    raise
             elif tables:
                 # Pre-Alembic DB: tables exist from create_all() + old _migrate_schema()
                 command.stamp(alembic_cfg, "001")

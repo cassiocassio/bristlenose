@@ -1212,3 +1212,47 @@ def test_every_manifest_write_records_the_reported_model() -> None:
         assert values, module.__name__
         wrong = [v for v in values if v.strip() not in ("reported_model(self.settings)", "model")]
         assert wrong == [], (module.__name__, wrong)
+
+
+# ---------------------------------------------------------------------------
+# N170: the cost estimate prices the sessions that will be analysed, not the whole study
+# ---------------------------------------------------------------------------
+
+
+def _estimates(tmp_path: Path, mode: str, n: int) -> list[int]:
+    """The session counts the pre-run estimate was asked to price on this run."""
+    asked: list[int] = []
+
+    def _fake(model, n_sessions, run_dir=None):
+        asked.append(n_sessions)
+        return 0.5
+
+    with patch("bristlenose.llm.pricing.estimate_pipeline_cost", new=_fake):
+        _drive(tmp_path, mode, n, {})
+    return asked
+
+
+def test_the_estimate_prices_only_the_new_session_on_an_incremental_run(tmp_path: Path) -> None:
+    # Adding one interview to a 2-session study used to price all 3 (30 sessions: $2.35 for $0.11).
+    assert _estimates(tmp_path, "run", 2) == [2]
+    assert _estimates(tmp_path, "run", 3) == [1]
+
+
+def test_an_unchanged_study_prices_no_sessions(tmp_path: Path) -> None:
+    _estimates(tmp_path, "run", 2)
+    assert _estimates(tmp_path, "run", 2) == [0]
+
+
+def test_analyze_prices_only_the_new_session_too(tmp_path: Path) -> None:
+    _drive(tmp_path, "run", 2, {})
+    # A third interview arrives as a transcript beside the run's own.
+    transcripts = tmp_path / "output" / "transcripts-raw"
+    (transcripts / "s3.txt").write_text(
+        (transcripts / "s2.txt").read_text(encoding="utf-8").replace("s2", "s3"),
+        encoding="utf-8",
+    )
+    assert _estimates(tmp_path, "analyze", 3) == [1]
+
+
+def test_a_first_run_still_prices_every_session(tmp_path: Path) -> None:
+    assert _estimates(tmp_path, "run", 4) == [4]

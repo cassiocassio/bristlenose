@@ -56,6 +56,7 @@ from bristlenose.manifest import (
     mark_stage_running,
     release_resume,
     resume_manifest,
+    sessions_still_to_analyse,
     set_aside_unreadable,
     write_manifest,
 )
@@ -2876,14 +2877,18 @@ class Pipeline:
             # ── Cost estimate before LLM stages ──────────────────────
             from bristlenose.llm.pricing import estimate_pipeline_cost
 
+            # The sessions the LLM stages will work on, not every session in the study (N170).
+            _n_to_price = sessions_still_to_analyse(
+                _prev_manifest, [s.session_id for s in sessions],
+            )
             est = estimate_pipeline_cost(
-                self.settings.llm_model, len(sessions),
+                self.settings.llm_model, _n_to_price,
                 run_dir=output_dir / ".bristlenose",
             )
             if est is not None:
                 console.print(
                     f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                    f" for {count_noun(len(sessions), 'session')}"
+                    f" for {count_noun(_n_to_price, 'session')}"
                     f" ({self.settings.llm_model})[/dim]\n"
                 )
 
@@ -4609,14 +4614,18 @@ class Pipeline:
 
         from bristlenose.llm.pricing import estimate_pipeline_cost
 
+        _n_to_price = sessions_still_to_analyse(
+            load_manifest(output_dir) if output_dir.exists() else None,
+            [t.session_id for t in clean_transcripts],
+        )
         est = estimate_pipeline_cost(
-            self.settings.llm_model, len(clean_transcripts),
+            self.settings.llm_model, _n_to_price,
             run_dir=output_dir / ".bristlenose",
         )
         if est is not None:
             console.print(
                 f"  [dim]Estimated LLM cost: ~${est:.2f}"
-                f" for {count_noun(len(clean_transcripts), 'session')}"
+                f" for {count_noun(_n_to_price, 'session')}"
                 f" ({self.settings.llm_model})[/dim]\n"
             )
         else:

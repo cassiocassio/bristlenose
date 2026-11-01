@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -583,6 +584,25 @@ def _derive_stage_status(record: StageRecord) -> StageStatus:
     if any(s == StageStatus.COMPLETE for s in statuses):
         return StageStatus.PARTIAL
     return StageStatus.PENDING
+
+
+def sessions_still_to_analyse(
+    manifest: PipelineManifest | None,
+    session_ids: Iterable[str],
+) -> int:
+    """How many of these sessions the LLM stages will have to run for: those the manifest does
+    not record as through quote extraction (N170).
+
+    The pre-run cost estimate used to price every session in the study, so adding one interview
+    to thirty printed the price of thirty (about $2.35 for about $0.11). The per-session caches
+    are decided stage by stage, later, from fingerprints that need upstream output the estimate
+    cannot wait for; the manifest's own record is the nearest answer, and the same one that
+    decides what is skipped for a transcript that has not changed. A session whose transcript was
+    edited since still reads as done here, so the figure is the cost of the new work, not a quote.
+    No manifest (a first run) is every session.
+    """
+    done = get_completed_session_ids(manifest, STAGE_QUOTE_EXTRACTION)
+    return sum(1 for sid in session_ids if sid not in done)
 
 
 def get_completed_session_ids(

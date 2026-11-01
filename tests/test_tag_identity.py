@@ -310,17 +310,24 @@ def _tags_of_all(app, quote_id: int) -> list[tuple[str, str | None, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Still open: a manual tag definition is instance-wide, and deleting it has no project filter
+# Latent: delete_tag has no project filter. Not reachable today (one study, one database)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.xfail(
     strict=True,
-    reason="N146: delete_tag removes every QuoteTag of a shared definition with no project filter",
+    reason=(
+        "latent, not reachable today: a study is one database with one project "
+        "(design-project-identity section 4), so no shipped path shares a tag between "
+        "projects. delete_tag still has no project filter, so multi-project serve "
+        "(design-multi-project) must add one before a database holds two projects; when it "
+        "does, this passes and the strict marker asks for its removal"
+    ),
 )
 def test_deleting_a_tag_in_one_project_leaves_another_projects_tagging_alone() -> None:
-    # Restored from the reproductions file eb8e0071f deleted: the fix for A did not touch this,
-    # and a strict xfail keeps the bug pinned by a failing witness rather than a paragraph.
+    # A hazard of the schema, not of the product: the setup below adds a second Project to one
+    # database, which nothing shipped does (3873f1fde withdrew the claim that it is reachable).
+    # Kept as the witness for the filter that multi-project serve will need.
     app, tc = _app()
     db = app.state.db_factory()
     try:

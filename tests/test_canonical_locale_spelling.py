@@ -30,6 +30,11 @@ from bristlenose.i18n import SUPPORTED_LOCALES, canonical_locale, get_locale, se
         ("zh-hant", "zh-Hant"),
         ("ZH-HANT-HK", "zh-Hant-HK"),
         ("zh-Hant-TW", "zh-Hant"),
+        # What macOS puts in LANG for Traditional Chinese: unambiguous, so named (not guessed).
+        ("zh-TW", "zh-Hant"),
+        ("zh_TW.UTF-8", "zh-Hant"),
+        ("zh-HK", "zh-Hant-HK"),
+        ("ZH_hk", "zh-Hant-HK"),
         ("nb-NO", "nb"),
         ("no", "nb"),
         ("no-NO", "nb"),
@@ -48,7 +53,7 @@ def test_every_shipped_code_still_means_itself(typed: str) -> None:
 
 @pytest.mark.parametrize(
     "typed",
-    ["pt", "zh", "zh-TW", "zz", "xx-YY", "", "-", "C", "POSIX", "zz\nINJECT", "../../etc"],
+    ["pt", "zh", "zh-CN", "zz", "xx-YY", "", "-", "C", "POSIX", "zz\nINJECT", "../../etc"],
 )
 def test_what_is_ambiguous_or_unknown_stays_english_and_is_never_echoed(typed: str) -> None:
     # `pt` and `zh` are ambiguous between shipped locales: guessing one would be a choice

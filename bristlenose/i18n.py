@@ -44,8 +44,16 @@ _FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
 #: because Apple's matcher does CLDR language matching rather than a prefix
 #: strip (measured — ``docs/design-locale-negotiation.md`` §1).
 #:
-#: One-way by construction: nothing maps FROM a code we ship.
-_LOCALE_ALIASES: dict[str, str] = {"no": "nb", "nn": "nb"}
+#: One-way by construction: nothing maps FROM a code we ship. Values are lower-cased,
+#: because they are looked up in ``_SUPPORTED_BY_FOLD``.
+_LOCALE_ALIASES: dict[str, str] = {
+    "no": "nb",
+    "nn": "nb",
+    # Traditional Chinese as the OS spells it: Taiwan reads as ``zh-Hant`` and Hong Kong as
+    # ``zh-Hant-HK``. Named because each is unambiguous; bare ``zh`` and ``zh-CN`` are not.
+    "zh-tw": "zh-hant",
+    "zh-hk": "zh-hant-hk",
+}
 
 #: Shipped locales by their lower-cased spelling, so ``PT-br`` finds ``pt-BR``.
 _SUPPORTED_BY_FOLD: dict[str, str] = {code.lower(): code for code in SUPPORTED_LOCALES}

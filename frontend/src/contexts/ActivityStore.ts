@@ -401,9 +401,14 @@ export function resetActivityStore({ keepSession = false }: { keepSession?: bool
   persistWarned = false;
   if (!keepSession) {
     try {
-      for (const key of Object.keys(sessionStorage)) {
-        if (key.startsWith(STORAGE_PREFIX)) sessionStorage.removeItem(key);
+      // By index, not `Object.keys`: the test setup's in-memory Storage (jsdom under Node 25+
+      // ships none) lists its methods there and no keys, so one test's chips reached the next.
+      const ours: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith(STORAGE_PREFIX)) ours.push(key);
       }
+      for (const key of ours) sessionStorage.removeItem(key);
     } catch {
       // No session storage to clear.
     }

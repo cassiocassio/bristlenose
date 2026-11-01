@@ -22,6 +22,7 @@
  */
 
 import type { TFunction } from "i18next";
+import i18n from "../i18n";
 import { startClipExtraction, startScreensExport } from "./api";
 import { addJob, getJobs, newJobId, removeJob } from "../contexts/ActivityStore";
 import { toast } from "./toast";
@@ -135,6 +136,8 @@ export function saveQuotesSpreadsheet(
   const params = new URLSearchParams({
     quote_ids: ids.join(","),
     col_headers: buildQuoteColHeaders(t),
+    // The sentiments are written in the report's language, as the headings are.
+    lang: i18n.language,
   });
   if (anonymise) params.set("anonymise", "true");
   const a = document.createElement("a");

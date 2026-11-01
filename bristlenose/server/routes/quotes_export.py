@@ -1,8 +1,8 @@
 """Quotes export endpoints — CSV and XLSX downloads.
 
 Both endpoints share the extraction layer in ``export_core.py``.
-Column headers are passed from the frontend via ``Accept-Language`` or
-a ``lang`` query parameter; the server returns English headers by default.
+Column headers are passed from the frontend as ``col_headers`` (the server returns English
+headers by default); the report's language arrives as ``lang`` and names the sentiments in it.
 """
 
 from __future__ import annotations
@@ -79,7 +79,22 @@ def _parse_headers(headers: str | None) -> list[str]:
     return list(_DEFAULT_HEADERS)
 
 
-def _quote_to_row(q: ExportableQuote) -> list[str]:
+def _sentiment_word(lang: str | None, key: str) -> str:
+    """The sentiment in the report's language, from the words the report already shows
+    (``enums.json``). English, no language and a language we lack keep the key as written
+    before (N177); the Starred column's "Yes" is still English."""
+    if not key or not lang:
+        return key
+    from bristlenose.i18n import canonical_locale, t_in
+
+    locale = canonical_locale(lang)
+    if locale == "en":
+        return key
+    word = t_in(locale, f"enums.sentiment.{key}")
+    return key if word == f"enums.sentiment.{key}" else word
+
+
+def _quote_to_row(q: ExportableQuote, lang: str | None = None) -> list[str]:
     """Convert an ExportableQuote to a list of string cell values."""
     return [
         q.text,
@@ -87,7 +102,7 @@ def _quote_to_row(q: ExportableQuote) -> list[str]:
         q.participant_name,
         q.section,
         q.theme,
-        q.sentiment,
+        _sentiment_word(lang, q.sentiment),
         q.tags,
         "Yes" if q.starred else "",
         q.timecode,
@@ -109,6 +124,7 @@ async def export_quotes_csv(
     anonymise: bool = Query(False),
     headers: str | None = Query(None, alias="col_headers",
                                 description="Comma-separated translated column headers"),
+    lang: str | None = Query(None, description="The report's language, for the sentiment words"),
 ) -> Response:
     """Export quotes as CSV with UTF-8 BOM."""
     db = _get_db(request)
@@ -128,7 +144,7 @@ async def export_quotes_csv(
         writer = csv.writer(buf)
         writer.writerow(col_headers)
         for q in quotes:
-            writer.writerow(csv_safe(v) for v in _quote_to_row(q))
+            writer.writerow(csv_safe(v) for v in _quote_to_row(q, lang))
 
         filename = f"{safe_filename(project.name)}-quotes.csv"
         return Response(
@@ -155,6 +171,7 @@ async def export_quotes_xlsx(
     anonymise: bool = Query(False),
     headers: str | None = Query(None, alias="col_headers",
                                 description="Comma-separated translated column headers"),
+    lang: str | None = Query(None, description="The report's language, for the sentiment words"),
 ) -> Response:
     """Export quotes as XLSX with frozen header row and auto-filter."""
     db = _get_db(request)
@@ -187,7 +204,7 @@ async def export_quotes_xlsx(
         # against formula injection (CWE-1236) if the .xlsx is reopened in a
         # spreadsheet app that evaluates leading =/+/-/@ cells.
         for row_idx, q in enumerate(quotes, start=2):
-            for col_idx, value in enumerate(_quote_to_row(q), start=1):
+            for col_idx, value in enumerate(_quote_to_row(q, lang), start=1):
                 # The workbook's XML cannot hold a control character (a form feed
                 # pasted from a PDF): saving raised, and the route answered 500.
                 # Strip first, then guard: the guard looks at the first character,
@@ -208,7 +225,7 @@ async def export_quotes_xlsx(
         for col_idx, header in enumerate(col_headers, start=1):
             max_width = len(header)
             for q in quotes[:100]:  # Sample first 100 rows
-                row = _quote_to_row(q)
+                row = _quote_to_row(q, lang)
                 val = row[col_idx - 1]
                 max_width = max(max_width, min(len(val), 60))
             col_letter = chr(ord("A") + col_idx - 1)

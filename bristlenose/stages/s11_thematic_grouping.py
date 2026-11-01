@@ -88,14 +88,17 @@ async def group_by_theme(
         ))
         return _fallback_grouping(context_quotes), outcome
 
-    # Convert LLM output to domain models
+    # Convert LLM output to domain models. A quote the model puts in two themes
+    # keeps its first placement, and one it leaves out of every theme goes to the
+    # Uncategorised group below rather than vanishing (N143, decided 1 Nov 2026).
     themes: list[ThemeGroup] = []
+    placed: set[int] = set()
     for item in result.themes:
-        theme_quotes = [
-            context_quotes[i]
-            for i in item.quote_indices
-            if 0 <= i < len(context_quotes)
-        ]
+        theme_quotes = []
+        for i in item.quote_indices:
+            if 0 <= i < len(context_quotes) and i not in placed:
+                placed.add(i)
+                theme_quotes.append(context_quotes[i])
 
         if not theme_quotes:
             continue
@@ -118,6 +121,13 @@ async def group_by_theme(
     for t in themes:
         if len(t.quotes) < min_theme_quotes:
             weak_quotes.extend(t.quotes)
+    omitted = [q for i, q in enumerate(context_quotes) if i not in placed]
+    if omitted:
+        logger.warning(
+            "Thematic grouping left %d of %d quotes unplaced; moved to 'Uncategorised'",
+            len(omitted), len(context_quotes),
+        )
+        weak_quotes.extend(omitted)
 
     if weak_quotes:
         # Deduplicate (safety net — LLM should assign each quote once,

@@ -90,14 +90,17 @@ async def cluster_by_screen(
         # to decide whether to abandon.
         return _fallback_clustering(screen_quotes), outcome
 
-    # Convert LLM output to domain models
+    # Convert LLM output to domain models. A quote the model puts in two sections
+    # keeps its first placement (a quote shows once), and a quote it leaves out of
+    # every section is placed below rather than lost (N143, decided 1 Nov 2026).
     clusters: list[ScreenCluster] = []
+    placed: set[int] = set()
     for item in result.clusters:
-        cluster_quotes = [
-            screen_quotes[i]
-            for i in item.quote_indices
-            if 0 <= i < len(screen_quotes)
-        ]
+        cluster_quotes = []
+        for i in item.quote_indices:
+            if 0 <= i < len(screen_quotes) and i not in placed:
+                placed.add(i)
+                cluster_quotes.append(screen_quotes[i])
 
         if not cluster_quotes:
             continue
@@ -113,6 +116,20 @@ async def cluster_by_screen(
 
     # Sort by display order
     clusters.sort(key=lambda c: c.display_order)
+
+    omitted = [q for i, q in enumerate(screen_quotes) if i not in placed]
+    if omitted:
+        # Sections named for the quote's own topic, after the model's: the same
+        # grouping the stage uses when the model fails outright. Counts only in the
+        # log; a quote's words never are.
+        logger.warning(
+            "Screen clustering left %d of %d quotes unplaced; placed by topic",
+            len(omitted), len(screen_quotes),
+        )
+        after = max((c.display_order for c in clusters), default=0)
+        for extra in _fallback_clustering(omitted):
+            extra.display_order = after + extra.display_order
+            clusters.append(extra)
 
     logger.info("Created %d screen clusters", len(clusters))
     outcome.succeeded = 1

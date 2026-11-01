@@ -179,7 +179,7 @@ The exclusivity is enforced at three levels:
 
 1. **Quote type separation (Stage 9 → Stages 10/11)**: `extract_quotes()` classifies every quote as `QuoteType.SCREEN_SPECIFIC` or `QuoteType.GENERAL_CONTEXT`. Stage 10 (`quote_clustering.py`) filters to `SCREEN_SPECIFIC` only; stage 11 (`thematic_grouping.py`) filters to `GENERAL_CONTEXT` only. A quote cannot appear in both a screen cluster and a theme group.
 
-2. **Within screen clusters (Stage 10)**: The LLM prompt in `prompts.py` says "Assign each quote to exactly one screen cluster." The structured output schema (`ScreenClusterItem.quote_indices`) enforces this at the index level.
+2. **Within screen clusters (Stage 10)**: The LLM prompt in `prompts.py` says "Assign each quote to exactly one screen cluster." The schema does NOT enforce it (`ScreenClusterItem.quote_indices` is a plain list of ints), so the stage does: a quote the model places twice keeps its first placement, and a quote it leaves out of every section is placed by its own topic label after the model's sections rather than lost (N143, 1 Nov 2026; stage 11 puts such quotes in the Uncategorised group). Pinned by `tests/test_cluster_omitted_quotes.py`.
 
 3. **Within theme groups (Stage 11)**: The LLM prompt says "Assign each quote to exactly one theme (even when it could fit several, pick the strongest fit — the researcher will reassign if needed)." The schema description on `ThemeGroupItem.quote_indices` reinforces this. A safety-net dedup in `thematic_grouping.py` catches LLM violations when weak themes are folded into "Uncategorised."
 

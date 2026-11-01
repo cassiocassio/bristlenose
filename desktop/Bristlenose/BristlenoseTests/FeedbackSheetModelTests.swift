@@ -26,6 +26,23 @@ import Testing
 
     /// The sheet Bristlenose suggests after a failure: what went wrong is
     /// already in the message, with a blank line under it to type on.
+    @Test func theMessageStopsAt2000CharactersNotBytes() {
+        let model = FeedbackSheetModel(config: .serverless, i18n: I18n(), mode: .feedback)
+        // 2500 CJK characters are 7500 bytes: counted in bytes this would stop near 666.
+        model.message = String(repeating: "录", count: 2500)
+        #expect(model.message.unicodeScalars.count == 2000)
+        // Emoji beyond the BMP count once each, and the cut never splits one.
+        model.message = String(repeating: "😀", count: 2100)
+        #expect(model.message.unicodeScalars.count == 2000)
+        #expect(model.message.allSatisfy { $0 == "😀" })
+    }
+
+    @Test func aMessageUnderTheLimitIsLeftAlone() {
+        let model = FeedbackSheetModel(config: .serverless, i18n: I18n(), mode: .feedback)
+        model.message = "short and fine"
+        #expect(model.message == "short and fine")
+    }
+
     @Test func aProblemReportStartsWithWhatWentWrong() {
         let model = FeedbackSheetModel(
             config: .serverless, i18n: I18n(), mode: .problem(initialMessage: "It broke."))

@@ -11,8 +11,9 @@ import SwiftUI
 /// separately refused by `ServeManager.start()`'s guard, so the window behind
 /// these modals comes up empty. Feedback reuses the existing native
 /// `FeedbackSheet` with a serve-free `FeedbackConfig` (it can't read
-/// `/api/health` — there's no serve). Send failures are silent (the sheet's own
-/// clipboard fallback); there is deliberately no error dialog. English-only:
+/// `/api/health` — there's no serve). A failed send is not silent: the sheet stays
+/// open and says it is on the clipboard (R80); there is deliberately no separate
+/// error dialog. English-only:
 /// ephemeral alpha-only chrome.
 ///
 /// A single `route` enum drives all three modals so the alert→sheet handoff is

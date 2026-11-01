@@ -274,6 +274,10 @@ export function FeedbackModal({ open, onClose, health, mode = FEEDBACK }: Feedba
                 className="feedback-textarea"
                 placeholder={t("feedback.placeholder")}
                 rows={3}
+                // 2000 characters, decided 24 Oct 2026: what a person typing
+                // expects. UTF-16 units never undercount code points, so this
+                // cannot let more than 2000 through.
+                maxLength={2000}
                 value={message}
                 onChange={(e) => {
                   setMessage(e.target.value);

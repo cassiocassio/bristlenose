@@ -63,7 +63,18 @@ final class FeedbackSheetModel: ObservableObject {
     // An edit after a failed send takes the failure line away: it describes
     // the text as it was sent, so "it's on the clipboard" stops being true.
     @Published var rating: FeedbackRating? { didSet { failure = nil } }
-    @Published var message: String = "" { didSet { failure = nil } }
+    /// The longest message a person can send: 2000 characters (decided 24 Oct 2026),
+    /// counted in Unicode scalars so no form lets more than 2000 code points
+    /// through (the web forms' `maxlength` counts UTF-16 units, which is never fewer).
+    static let messageLimit = 2000
+    @Published var message: String = "" {
+        didSet {
+            failure = nil
+            if message.unicodeScalars.count > Self.messageLimit {
+                message = String(String.UnicodeScalarView(message.unicodeScalars.prefix(Self.messageLimit)))
+            }
+        }
+    }
     @Published private(set) var config: FeedbackConfig = .unavailable
     /// The sentence a failed send leaves in the sheet: it wasn't sent, where
     /// the copy is, and where to paste it (R80). Nil until a send fails;

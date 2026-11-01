@@ -704,7 +704,7 @@ def _build_feedback_html(
         f'<div class="feedback-sentiments" id="bn-fb-sentiments">{sentiments}</div>'
         f'<label class="feedback-label" for="bn-fb-message">'
         f'{html.escape(t("common.feedback.helpUsImprove"))}</label>'
-        '<textarea class="feedback-textarea" id="bn-fb-message" rows="3" '
+        '<textarea class="feedback-textarea" id="bn-fb-message" rows="3" maxlength="2000" '
         f'placeholder="{html.escape(t("common.feedback.placeholder"), quote=True)}">'
         "</textarea>"
         '<div class="feedback-actions">'

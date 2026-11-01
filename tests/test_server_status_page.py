@@ -1091,6 +1091,18 @@ class TestFeedbackFormExecutes:
         assert o["lineShown"] is False
         assert o["copied"] == 0
 
+    def test_the_message_field_stops_at_2000_characters(self) -> None:
+        """Decided 24 Oct 2026: 2000 CHARACTERS, what a person typing expects. The server
+        used to cut at 2000 bytes and still answer ok, so ~660 CJK characters were
+        silently shortened. The form stops typing at the limit instead."""
+        html = render_page(
+            StatusInfo(kind=MessageKind.ERROR, short="x", long=None,
+                       details=None, outcome="failed"),
+        )
+        field = re.search(r'<textarea[^>]*id="bn-fb-message"[^>]*>', html)
+        assert field is not None
+        assert 'maxlength="2000"' in field.group(0)
+
     def test_the_line_points_nowhere(self) -> None:
         """Ruling 6: the form says anonymous; a public issue link is not that."""
         html = render_page(

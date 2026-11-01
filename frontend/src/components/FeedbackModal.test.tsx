@@ -194,6 +194,13 @@ describe("FeedbackModal", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("stops the message at 2000 characters", () => {
+    render(<FeedbackModal open={true} onClose={vi.fn()} health={HEALTH} />);
+    fireEvent.click(screen.getByRole("button", { name: /Needs work/ }));
+    const textarea = screen.getByLabelText("Help us improve") as HTMLTextAreaElement;
+    expect(textarea.maxLength).toBe(2000);
+  });
+
   it("falls back to clipboard when POST fails", async () => {
     const onClose = vi.fn();
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));

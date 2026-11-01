@@ -58,6 +58,36 @@ for manual tags, and priority for them when scanning a page, is a likely future 
 - **Uninstalling a framework deletes its tags and their `QuoteTag` rows** (decision D20,
   option A). Combined with the name resolution, that deletes the researcher's work.
 
+### 2a. Added 1 Nov 2026 after the maintainer's follow-up questions (traced in code, not run)
+
+- **Manual tags are library-wide definitions, not project-scoped.** A tag typed straight onto a
+  quote is created in the single "Uncategorised" group (`_get_or_create_uncategorised(db)`
+  takes no project and finds the group by name), which is then linked to each project. The
+  same lookup spans the library, so typing "trust" in project B reuses the definition made in
+  project A. Only the *applications* (`QuoteTag`) are per quote, hence per project.
+  `delete_tag` removes every `QuoteTag` of a definition with **no project filter**, so deleting
+  a shared tag in one project would strip it from the others. **Reproduce this first with two
+  projects**; if it holds it is a cross-project loss and outranks everything else here.
+- **The tag input discards the choice the dropdown shows.** The suggestion rows carry group
+  headers and colours, but `onCommit(tagName: string)` receives only the name; Enter on a typed
+  "trust", on a ghost completion, or on an arrowed row all commit the same string. When the whole
+  word is typed the exact-match row is not even listed (`lower !== val`), so your own "trust" is
+  absent from the list while longer siblings show.
+- **Suggestion order is the codebook's, with Uncategorised last, by design for the codebook
+  panel** (the floor sits at the bottom). It was not chosen for suggestions: manual-first is
+  neither luck nor design, it is simply not a rule yet.
+- **Removal is by name, in two places.** The client sends `remove: ["trust"]` and `patch_tags`
+  deletes every `QuoteTag` on that quote with that name, so clicking × on one "trust" removes
+  the other. The badge colour is truthful (each tag a quote carries is sent with its own
+  `codebook_group`, `colour_set`, `colour_index` and `source`), but the × and undo do not use it.
+- **The client's tag-to-group map is keyed by lower-cased name** (`QuoteSections` and its
+  siblings), so with two "trust" tags the last group read wins that entry. Anything derived from
+  it (hiding a group by its eye, a group's colour for a bare name) cannot tell them apart.
+- **Root cause, one level up:** the whole stack identifies a tag by its name; the data model
+  already identifies it by row. The fix that lasts carries the tag's identity (definition id)
+  through add, remove, undo, de-duplication and the suggestion list, and uses a name only to
+  create a tag that does not exist yet.
+
 **The defect is therefore name-based resolution and uninstall semantics, not the absence of
 provenance.** (The first recommendation, refusing a clashing tag at install, addresses a
 different mechanism and would leave the loss in place.)
@@ -66,7 +96,7 @@ different mechanism and would leave the loss in place.)
 
 | | What | Fixes | Cost |
 |---|---|---|---|
-| **A. Resolve by identity, manual first** | A tagging gesture resolves to the researcher's own groups first, and by the specific tag row when picked from the tag picker. Never silently to a framework tag by name. Removal removes the tag pointed at. | the loss and the cross-project bleed | small; no screens, no words |
+| **A. Resolve by identity, manual first** | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss and the cross-project bleed | small to medium: the id must travel through the client (§2a) |
 | **B. Uninstall protects manual work** | Removing a codebook deletes only its **auto** applications. Applications the researcher made are kept, re-homed to a same-named tag in the researcher's own group (created if absent). | the stripped tagging | small; a decision on re-homing |
 | **C. Make clashes visible, and merging a choice** | Where leaf names collide, show the group beside the name. At install or in the codebook, list "looks like a tag you have" with a merge the researcher chooses. No rename on install. | confusion, duplicates | design; new words |
 | **D. Origin as a first-class scope** | Replace "framework id or none" with an origin: project, folder, global, framework. Identity stays the row; scope decides visibility and deletion. Builds the folder codebook and global library the brief anticipates. | the roadmap | a migration and a design doc of its own |

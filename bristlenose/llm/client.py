@@ -413,6 +413,57 @@ class TruncatedResponseError(RuntimeError):
         self.model_cap = model_cap
 
 
+class ContentBlockedError(RuntimeError):
+    """The provider declined to answer for this text: a content filter, a refusal or a
+    safety block (N168).
+
+    Sensitive interviews (health, on Azure especially) hit these. Each provider said it
+    differently ("No structured output found", "Empty response from OpenAI", a bare 400), so
+    the failure read as "rejected" or "unknown". The message is bristlenose-authored and never
+    carries the provider's words: a refusal can quote the prompt. The failed session is
+    retried on the next Analyse as before.
+    """
+
+
+#: Finish and block reasons Gemini gives when it declined for the content.
+_GEMINI_BLOCKS = frozenset({"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"})
+
+
+def is_content_blocked(exc: BaseException) -> bool:
+    """Whether this failure is a provider's content filter or refusal: our own
+    :class:`ContentBlockedError`, or an SDK error whose structured code says so (Azure's
+    400 ``content_filter`` / ``ResponsibleAIPolicyViolation``). Structured fields only, never
+    the message text."""
+    if isinstance(exc, ContentBlockedError):
+        return True
+    codes: list[str] = []
+    for attr in ("code", "type"):
+        val = getattr(exc, attr, None)
+        if isinstance(val, str):
+            codes.append(val)
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error")
+        if isinstance(err, dict):
+            for key in ("code", "type"):
+                val = err.get(key)
+                if isinstance(val, str):
+                    codes.append(val)
+            inner = err.get("innererror")
+            if isinstance(inner, dict) and isinstance(inner.get("code"), str):
+                codes.append(inner["code"])
+    return any(c in ("content_filter", "ResponsibleAIPolicyViolation") for c in codes)
+
+
+def _raise_if_declined(choice: object, name: str) -> None:
+    """An OpenAI-shaped choice the model declined: ``finish_reason == "content_filter"``, or a
+    refusal in place of an answer (strict structured output returns ``refusal`` text and no
+    content). An empty reply with neither stays an ordinary empty reply."""
+    refusal = getattr(getattr(choice, "message", None), "refusal", None)
+    if getattr(choice, "finish_reason", None) == "content_filter" or refusal:
+        raise ContentBlockedError(f"{name} declined this text (content filter or refusal).")
+
+
 class UnreadableReplyError(RuntimeError):
     """A reply any-llm could not read as a chat completion.
 
@@ -954,6 +1005,8 @@ class LLMClient:
                     provider="anthropic", model=request_model,
                 )
 
+        if response.stop_reason == "refusal":
+            raise ContentBlockedError("Claude declined this text (stop_reason=refusal).")
         raise RuntimeError("No structured output found in Anthropic response")
 
     async def _analyze_openai(
@@ -1082,6 +1135,7 @@ class LLMClient:
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
+        _raise_if_declined(response.choices[0], "ChatGPT")
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from OpenAI")
@@ -1224,6 +1278,7 @@ class LLMClient:
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
+        _raise_if_declined(response.choices[0], "Azure OpenAI")
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from Azure OpenAI")
@@ -1357,6 +1412,10 @@ class LLMClient:
         )
 
         if not response.text:
+            feedback = getattr(response, "prompt_feedback", None)
+            block = getattr(getattr(feedback, "block_reason", None), "name", None)
+            if finish_reason in _GEMINI_BLOCKS or block in _GEMINI_BLOCKS:
+                raise ContentBlockedError("Gemini declined this text (safety block).")
             raise RuntimeError("Empty response from Gemini")
 
         data = json.loads(response.text)
@@ -1814,7 +1873,7 @@ class LLMClient:
                 raise truncated()
             if choice.finish_reason == "content_filter" or getattr(choice.message, "refusal", None):
                 record("error", response)
-                raise RuntimeError(
+                raise ContentBlockedError(
                     f"{name} declined the request (provider=anyllm, model={model}, "
                     f"finish_reason={choice.finish_reason})."
                 )

@@ -763,6 +763,13 @@ def categorise_exception(exc: BaseException, *, provider: str | None = None) -> 
     return Cause(category=CauseCategoryEnum.UNKNOWN, message=msg)
 
 
+def _is_content_blocked(exc: BaseException) -> bool:
+    # Local import: client.py stays off this module's load path (as the arms above).
+    from bristlenose.llm.client import is_content_blocked
+
+    return is_content_blocked(exc)
+
+
 def _build_cause(
     exc: BaseException,
     *,
@@ -791,6 +798,10 @@ def _build_cause(
     HTTP status independently of the message.
     """
     category = categorise_exception(exc, provider=provider).category
+    if _is_content_blocked(exc):
+        # A provider's filter or refusal is "the provider declined this request", whatever the
+        # status or lack of one made of it (N168); `unknown` told the researcher nothing.
+        category = CauseCategoryEnum.API_REQUEST
     if (
         category is CauseCategoryEnum.NETWORK
         and provider == "anyllm"
@@ -837,6 +848,15 @@ def _build_cause(
             f"{stage} exceeded the model's output limit. Switch to a model "
             "with a larger output capacity (BRISTLENOSE_LLM_MODEL, or `bristlenose use`)."
         )
+    elif _is_content_blocked(exc):
+        # The provider's content filter or a refusal declined this session's text (N168). A
+        # constant, never the provider's words (a refusal can quote the prompt). Under the
+        # category the failure already had; the session retries on the next Analyse.
+        parts = [f"{stage} failed: the provider declined this session's text"]
+        parts.append("(content filter or refusal)")
+        if provider:
+            parts.append(f"on {provider}")
+        message = " ".join(parts)
     else:
         parts = [f"{stage} failed: {exc.__class__.__name__}"]
         if provider:

@@ -5132,6 +5132,7 @@ class Pipeline:
             ParsedTranscriptFile,
             choose_transcript,
         )
+        from bristlenose.utils.fs import CloudFetchTimeoutError, ensure_materialised
 
         session_segments: dict[str, list[TranscriptSegment]] = {}
         parse_failures: list[StageFailure] = []
@@ -5190,7 +5191,23 @@ class Pipeline:
                 else:
                     continue
                 try:
+                    # A transcript offloaded to iCloud or OneDrive is fetched with
+                    # a bound first: an unbounded read of a placeholder blocks with
+                    # no limit under the sandbox (docs/design-cloud-files.md). It
+                    # either arrives, or it is the same retryable cloud_fetch
+                    # failure a recording gets, and the next run reads it again.
+                    await asyncio.to_thread(ensure_materialised, f.path)
                     parsed = parse(f)
+                except CloudFetchTimeoutError as exc:
+                    logger.warning(
+                        "%s: %s — not downloaded in time, skipping this file, "
+                        "the run continues. (%s)",
+                        session.session_id, f.path.name, exc,
+                    )
+                    parse_failures.append(cloud_fetch_failure(
+                        source_file=f.path.name, stage=stage, session_id=session.session_id,
+                    ))
+                    continue
                 except Exception as exc:
                     _record_parse_failure(session.session_id, f, stage, exc)
                     continue

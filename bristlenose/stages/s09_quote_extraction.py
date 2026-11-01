@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections.abc import Callable
 from typing import Literal
 
@@ -118,6 +119,43 @@ def _resolve_segment_index(
         return seg.segment_index
 
     return -1
+
+
+_PARTICIPANT_CODE = re.compile(r"p\d+$")
+
+
+def _credited_participant(
+    transcript: PiiCleanTranscript, start: float, end: float,
+) -> str:
+    """Whose quote this is, in a session with more than one participant (N166).
+
+    Every quote used to be credited to the session's first participant code, so in a pair or a
+    carer with their own code the second showed no quotes and Signals counted one voice. The
+    rule, as the owner set it (1 Nov 2026): the participant turn the quote overlaps; when it
+    overlaps two, the later one, since in an exchange the first turn is usually the question
+    and the second the answer (a quote that starts in a moderator's question therefore goes to
+    whoever answers it). A turn that merely ends as the quote begins, or begins as it ends, is
+    not overlapped. A session with one participant, a transcript with no timecodes, or a quote
+    over no participant turn keeps the session's primary code, as before.
+    """
+    codes = {seg.speaker_code for seg in transcript.segments
+             if _PARTICIPANT_CODE.match(seg.speaker_code)}
+    if len(codes) < 2:
+        return transcript.participant_id
+    if all(seg.start_time == 0.0 for seg in transcript.segments):
+        return transcript.participant_id  # no timecodes to say who spoke when
+    hi = max(end, start)
+    credited = ""
+    for seg in transcript.segments:
+        if seg.speaker_code not in codes:
+            continue
+        overlaps = (
+            seg.start_time <= start < seg.end_time if hi == start
+            else seg.end_time > start and seg.start_time < hi
+        )
+        if overlaps:
+            credited = seg.speaker_code  # the last one overlapped is the answer
+    return credited or transcript.participant_id
 
 
 async def extract_quotes(
@@ -421,7 +459,7 @@ async def _extract_one_pass(
         quotes.append(
             ExtractedQuote(
                 session_id=transcript.session_id,
-                participant_id=transcript.participant_id,
+                participant_id=_credited_participant(transcript, start_tc, end_tc),
                 start_timecode=start_tc,
                 end_timecode=end_tc,
                 text=text,

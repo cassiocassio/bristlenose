@@ -13,11 +13,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from bristlenose.server.app import create_app
 from bristlenose.server.grounding import quote_dom_id
 from bristlenose.server.models import (
     UNCATEGORISED_GROUP_NAME,
     CodebookGroup,
+    Project,
     Quote,
     QuoteTag,
     TagDefinition,
@@ -243,16 +246,109 @@ def test_a_put_round_trip_keeps_the_sentiment_tags_it_came_from() -> None:
     assert _tags_of_all(app, qid) == before
 
 
+def _quote_with_sentiment(app, name: str) -> tuple[int, str]:
+    """A fixture quote whose pipeline sentiment tag is ``name``."""
+    db = app.state.db_factory()
+    try:
+        q = (
+            db.query(Quote)
+            .join(QuoteTag, QuoteTag.quote_id == Quote.id)
+            .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+            .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
+            .filter(
+                Quote.project_id == 1,
+                CodebookGroup.framework_id == "sentiment",
+                TagDefinition.name == name,
+            )
+            .order_by(Quote.id)
+            .first()
+        )
+        assert q is not None, f"the smoke fixture has a quote with sentiment {name!r}"
+        return q.id, quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
+    finally:
+        db.close()
+
+
+def test_removing_a_typed_tag_by_name_leaves_the_machines_sentiment_tag() -> None:
+    # A typed "frustration" is the researcher's own tag, beside the pipeline's sentiment
+    # "frustration" on the same quote. Until the next read the typed tag has no id, so its ×
+    # removes by name; that must take the typed tag only, never the machine's.
+    app, tc = _app()
+    qid, dom = _quote_with_sentiment(app, "frustration")
+    tc.patch("/api/projects/1/tags", json={dom: {"add": ["frustration"]}})
+    assert len(_defs_on(app, qid, "frustration")) == 2
+    tc.patch("/api/projects/1/tags", json={dom: {"remove": ["frustration"]}})
+    assert _tags_of_all(app, qid) == [("frustration", "sentiment", "pipeline")]
+
+
+def test_a_put_round_trip_keeps_two_same_named_tags_on_one_quote() -> None:
+    app, tc = _app()
+    qid, dom = _quote_with_sentiment(app, "frustration")
+    tc.patch("/api/projects/1/tags", json={dom: {"add": ["frustration"]}})
+    before = _tags_of_all(app, qid)
+    assert len(before) == 2
+    snapshot = tc.get("/api/projects/1/tags").json()
+    assert snapshot[dom].count("frustration") == 2, "the map carries both occurrences"
+    assert tc.put("/api/projects/1/tags", json=snapshot).status_code == 200
+    assert _tags_of_all(app, qid) == before
+
+
 def _tags_of_all(app, quote_id: int) -> list[tuple[str, str | None, str]]:
     db = app.state.db_factory()
     try:
-        return sorted(
-            (n, f, s)
-            for n, f, s in db.query(TagDefinition.name, CodebookGroup.framework_id, QuoteTag.source)
+        rows = (
+            db.query(TagDefinition.name, CodebookGroup.framework_id, QuoteTag.source)
             .join(QuoteTag, QuoteTag.tag_definition_id == TagDefinition.id)
             .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
             .filter(QuoteTag.quote_id == quote_id)
             .all()
         )
+        # Two same-named rows sort on the framework, which is None for the researcher's own.
+        return sorted(((n, f, s) for n, f, s in rows), key=lambda r: (r[0], r[1] or "", r[2]))
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Still open: a manual tag definition is instance-wide, and deleting it has no project filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="N146: delete_tag removes every QuoteTag of a shared definition with no project filter",
+)
+def test_deleting_a_tag_in_one_project_leaves_another_projects_tagging_alone() -> None:
+    # Restored from the reproductions file eb8e0071f deleted: the fix for A did not touch this,
+    # and a strict xfail keeps the bug pinned by a failing witness rather than a paragraph.
+    app, tc = _app()
+    db = app.state.db_factory()
+    try:
+        other = Project(name="Other", input_dir="/tmp/o", output_dir="/tmp/o/out")
+        db.add(other)
+        db.flush()
+        theirs = Quote(
+            project_id=other.id, session_id="s1", participant_id="p1", start_timecode=1.0,
+            end_timecode=2.0, text="their quote", quote_type="general_context",
+        )
+        db.add(theirs)
+        floor = db.query(CodebookGroup).filter_by(name=UNCATEGORISED_GROUP_NAME).one()
+        trust = TagDefinition(name="trust", codebook_group_id=floor.id)
+        db.add(trust)
+        db.flush()
+        mine = db.query(Quote).filter_by(project_id=1).order_by(Quote.id).first()
+        db.add(QuoteTag(quote_id=mine.id, tag_definition_id=trust.id))
+        db.add(QuoteTag(quote_id=theirs.id, tag_definition_id=trust.id))
+        db.commit()
+        trust_id, theirs_id = trust.id, theirs.id
+    finally:
+        db.close()
+
+    tc.delete(f"/api/projects/1/codebook/tags/{trust_id}")
+
+    db = app.state.db_factory()
+    try:
+        left = db.query(QuoteTag).filter_by(quote_id=theirs_id).count()
+    finally:
+        db.close()
+    assert left == 1, "the other project's quote lost its tag when this project deleted 'trust'"

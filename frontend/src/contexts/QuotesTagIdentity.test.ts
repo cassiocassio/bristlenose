@@ -131,6 +131,23 @@ describe("sentiment tags and accepted suggestions", () => {
     expect(getQuotesSnapshot().tags.q1).toHaveLength(2);
   });
 
+  it("a × on a typed tag with no row yet leaves the machine's same-named tag", () => {
+    const machine: TagResponse = {
+      id: 1, name: "frustration", codebook_group: "Sentiment", colour_set: "emo", colour_index: 0,
+      source: "pipeline",
+    };
+    initFromQuotes([quote("q1", [machine])]);
+    addTagToQuotes(["q1"], {
+      name: "frustration", codebook_group: "Uncategorised", colour_set: "", colour_index: 0,
+      source: "human",
+    });
+    patchTagsMock.mockClear();
+    // The typed badge has no id until the next read, so its × removes by name.
+    removeTag("q1", "frustration");
+    expect(patchTagsMock).toHaveBeenCalledWith({ q1: { remove: ["frustration"] } });
+    expect(idsOn("q1")).toEqual([1]);
+  });
+
   it("an accepted suggestion is its own row beside the researcher's same-named tag", () => {
     initFromQuotes([quote("q1", [mine])]);
     acceptProposedTag("q1", 55, { ...theirs, source: "autocode" });

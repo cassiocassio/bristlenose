@@ -972,8 +972,13 @@ function writeTagRemove(
   // and a control that responds then silently discards on reload is a lie.
   if (isExportMode()) return LANDED;
   const existing = state.tags[domId] || [];
+  // With no id the × is on a tag typed since the last read, and a typed name never means the
+  // machine's sentiment tag (the one with a row and source "pipeline"): a typed "frustration"
+  // sits beside the pipeline's, and its × must not find the machine's row first.
   const pointedAt = (t: TagResponse) =>
-    tagId != null && tagId > 0 ? t.id === tagId : t.name === tagName;
+    tagId != null && tagId > 0
+      ? t.id === tagId
+      : t.name === tagName && !(rowOf(t) != null && t.source === "pipeline");
   const index = existing.findIndex(pointedAt);
   if (index < 0) return LANDED;
   const removed = existing[index];

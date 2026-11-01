@@ -4,6 +4,18 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
+**1 Nov — Agent Access save-failure alert removed (Claude; committed `c344fdcd3`, `a672d2715`, not pushed).**
+Owner's ruling: the bare app-modal "Couldn't save your change." (observer in `BristlenoseApp.swift`, fired by
+`.bristlenoseAgentAccessNotSaved`) is gone; the sidebar already shows the restored flag and the cause stays in the log
+(`project-index`: "agent access write did not persist"). The notification is still posted (`AgentAccessWriteTests` pin it).
+Files: `BristlenoseApp.swift`, `ProjectIndex.swift` (comment), `tests/test_desktop_app_observers_once.py`.
+Verified at `a672d2715`: ruff clean, pytest 9338 passed / 6 xfailed, `test-swift.sh` 2905 passed / 0 failed.
+Review: self-review of the diff only (found and fixed a stale "like the alert below" comment); no independent reviewer ran.
+Found on the way: the Swift failure tests were putting this real alert on screen in the test host (four runs on 1 Nov).
+**Open, owner's call:** a failed Turn Off now says nothing, so the researcher sees the antenna stay and no more. Whether
+that needs a quiet mark (never a modal) is a mockup under the R114 UX gate. Card on the board (Todo, Broken, Must) and
+`100days.md` §2 Must carry it. Release-note candidate: none (a failed save shows no alert).
+
 **30 Oct — Whisper first run on a clean Mac (Claude; committed 4ba513387, not pushed).**
 Plan and Fable review: `docs/private/plan-whisper-first-run-2026-10-30.md`. Found on clean Tart
 guests with the 0.43.0 DMG: macOS 15.7.7 sidecar SIGTRAPs in `mlx::core::metal::Device::Device()` 2 s

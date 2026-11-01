@@ -134,3 +134,42 @@ def test_a_server_that_ends_before_it_starts_does_not_wait_out_the_bound(
     elapsed = time.monotonic() - started
     assert elapsed < 5, "the wait ran its 10 s bound down after the server had already ended"
     assert "Report:" not in result.output
+
+
+def test_a_slow_start_still_prints_its_lines_once_it_is_bound(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A lifespan slower than the old 10 s bound used to leave the server running and the
+    # researcher with no Report line and no browser. The wait now lasts as long as the server
+    # task does, and still prints only once the port is really bound. Time runs 100x faster
+    # here: the fake server takes 120 "seconds" to bind.
+    import asyncio
+
+    real_sleep = asyncio.sleep
+    events: list[str] = []
+
+    async def fast_sleep(delay: float, *a: Any, **k: Any) -> None:
+        await real_sleep(delay / 100)
+
+    class FakeServer:
+        def __init__(self, config: Any) -> None:
+            self.config = config
+            self.started = False
+            self.servers: list[Any] = []
+
+        async def serve(self) -> None:
+            await asyncio.sleep(120)
+            sock = SimpleNamespace(getsockname=lambda: ("127.0.0.1", self.config.port))
+            self.servers = [SimpleNamespace(sockets=[sock])]
+            self.started = True
+            events.append("bound")
+            await asyncio.sleep(1)
+
+    monkeypatch.setattr(asyncio, "sleep", fast_sleep)
+    monkeypatch.setattr("uvicorn.Server", FakeServer)
+    monkeypatch.setattr(cli, "_create_admitted_app", lambda *a, **k: object())
+    monkeypatch.setattr(cli, "_print_mcp_connect", lambda port: events.append("mcp-block"))
+    result = CliRunner().invoke(cli.app, ["serve", str(project), "--port", "8184", "--no-open"])
+    assert result.exit_code == 0, result.output
+    assert "Report: http://127.0.0.1:8184/report/" in result.output
+    assert events == ["bound", "mcp-block"]

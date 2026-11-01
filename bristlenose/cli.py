@@ -2431,14 +2431,12 @@ def _serve_dynamic_port(
         # after the lifespan startup completes, by which point
         # ``server.servers[0].sockets`` is populated.
         serve_task = asyncio.create_task(server.serve())
-        # Bounded wait — kernel bind on loopback is instant; if we don't
-        # see a started server in 10s, something else is wrong (e.g.
-        # lifespan failed). Surface by letting serve_task raise.
-        for _ in range(200):  # 200 * 50ms = 10s
-            # Defensive: uvicorn ends a refused bind with SystemExit, which already stops this
-            # loop; a task that finished some other way must not wait out the 10 s bound.
-            if serve_task.done():
-                break
+        # Wait for the bind for as long as the server task lives. uvicorn opens the socket only
+        # after the lifespan has started, so a slow lifespan is a late bind, not a missing one:
+        # a bound server is announced however long it took (a fixed 10 s bound used to leave a
+        # running server with no Report line and no browser). A refused bind or a failed
+        # lifespan ends the task (SystemExit), which ends this wait with it.
+        while not serve_task.done():
             if server.started and server.servers and server.servers[0].sockets:
                 break
             await asyncio.sleep(0.05)

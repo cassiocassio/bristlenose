@@ -39,7 +39,14 @@ for manual tags, and priority for them when scanning a page, is a likely future 
    cheap to discard; manual content is expensive and kept.
 4. **Similar is a suggestion, not an action.** "These look alike, merge?" is offered, never
    done automatically.
-5. **Scope is separate from identity.** Where a tag lives (this project, a folder of projects,
+5. **Subscribed means linked, like a Figma symbol (maintainer, 1 Nov 2026).** A tag a project
+   takes from a shared library is a reference to one row, not a copy. Rename "moan" to "gripe"
+   while working in another project and it changes everywhere it is used; the link can be
+   **detached** as a conscious act, after which that project's tag is its own row. A rename is
+   therefore an edit to one row, never a find-and-replace on names, which is the practical reason
+   identity is the row. Detach is one-way and must say so. (Library design is v1+; this records
+   the requirement so the identity work in §3 A is built to carry it.)
+6. **Scope is separate from identity.** Where a tag lives (this project, a folder of projects,
    the global library, a framework template) decides who sees it and who can delete it, not
    what it is.
 

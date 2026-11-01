@@ -28,7 +28,12 @@ for manual tags, and priority for them when scanning a page, is a likely future 
 
 1. **Identity is the tag's row, never its name.** A tag is (group, name). Two tags may share a
    leaf name; the app never merges them unasked.
-2. **Groups carry meaning.** Where two tags share a leaf name the group is shown beside it.
+2. **Groups carry meaning, and the default stays quiet.** The group is data (it is what makes
+   two same-named tags different tags, and what Signals count). Showing it is *not* the default:
+   today the colour is enough, extra visual weight is usually a mistake for a researcher on a
+   deadline, and a clash is usually disentangled by context (this quote came from the CX
+   person, not a user). The group can appear on demand (a tooltip) or when a researcher is
+   choosing between two same-named tags, and nowhere else.
 3. **Manual outranks auto, always.** An auto tag cannot overwrite, shadow or remove a manual
    one; removing auto content cannot strip manual work. Auto content is cheap to add and
    cheap to discard; manual content is expensive and kept.
@@ -40,17 +45,19 @@ for manual tags, and priority for them when scanning a page, is a likely future 
 
 ## 2. What the code does today (measured 1 Nov 2026)
 
-- **Tag definitions are shared by every project** (`TagDefinition`, instance-scoped). A tag
-  belongs to a `CodebookGroup`; a group has a `framework_id` (the template it came from, such
-  as `uxr`) or none (the researcher's own). Projects activate groups through
+- **A tag belongs to a `CodebookGroup`; a group has a `framework_id`** (the template it came
+  from, such as `uxr`) or none (the researcher's own). Projects activate groups through
   `ProjectCodebookGroup`. So the provenance of a tag already exists: group, then
-  `framework_id`.
+  `framework_id`. **The schema calls these tables "instance-scoped", but each project has its
+  own database file** (`db_url_for_project`, `<output>/.bristlenose/bristlenose.db`; the instance
+  database is "unused today", `design-multi-project.md`), so in the shipped product every tag,
+  manual or framework, lives in one project's database and is that project's alone.
 - **Each application of a tag has a source.** `QuoteTag.source` is `human` or `autocode`.
   So "manual versus auto" already exists per application.
 - **A tagging gesture resolves the tag by NAME, over every tag in the library.**
   `patch_tags` (`routes/data.py`) builds `{name.lower(): id}` from all `TagDefinition` rows;
   the last row with a given name wins. Installing UXR after you made "trust" can make your
-  gesture land on UXR's "trust". It also spans other projects' tags.
+  gesture land on UXR's "trust". (Within that project's database; other projects are not in it.)
 - **Removing a tag removes by name too:** every `QuoteTag` on the quote whose tag has that name,
   so removing your "trust" also removes a same-named auto tag on that quote.
 - **Installing a framework does no clash check.** `import_template` creates the framework's
@@ -60,14 +67,14 @@ for manual tags, and priority for them when scanning a page, is a likely future 
 
 ### 2a. Added 1 Nov 2026 after the maintainer's follow-up questions (traced in code, not run)
 
-- **Manual tags are library-wide definitions, not project-scoped.** A tag typed straight onto a
-  quote is created in the single "Uncategorised" group (`_get_or_create_uncategorised(db)`
-  takes no project and finds the group by name), which is then linked to each project. The
-  same lookup spans the library, so typing "trust" in project B reuses the definition made in
-  project A. Only the *applications* (`QuoteTag`) are per quote, hence per project.
-  `delete_tag` removes every `QuoteTag` of a definition with **no project filter**, so deleting
-  a shared tag in one project would strip it from the others. **Reproduce this first with two
-  projects**; if it holds it is a cross-project loss and outranks everything else here.
+- **Manual tags are project-scoped in practice** (corrected 1 Nov 2026; the maintainer's
+  screenshots showed project-ikea's "bad bad" absent from Talismanic). A tag typed onto a quote
+  is created in the project's own "Uncategorised" group, in that project's own database. An
+  earlier version of this section said manual tags were shared across the whole library and that
+  `delete_tag` could strip another project's tagging; that was read from a schema that can hold
+  many projects, not from the product, which never puts two in one database. The cross-project
+  reproduction was built, found unreachable, and withdrawn. **The loss is inside one project:**
+  the name lookup, the removal by name and the uninstall below.
 - **The tag input discards the choice the dropdown shows.** The suggestion rows carry group
   headers and colours, but `onCommit(tagName: string)` receives only the name; Enter on a typed
   "trust", on a ghost completion, or on an arrowed row all commit the same string. When the whole
@@ -83,6 +90,12 @@ for manual tags, and priority for them when scanning a page, is a likely future 
 - **The client's tag-to-group map is keyed by lower-cased name** (`QuoteSections` and its
   siblings), so with two "trust" tags the last group read wins that entry. Anything derived from
   it (hiding a group by its eye, a group's colour for a bare name) cannot tell them apart.
+- **Signals already treat same-named tags in different groups as different.** The matrix is
+  built from each applied tag's definition id, mapped to its group, and the columns are the
+  groups (`routes/signals.py`, the tag-definition-to-group map); names are carried only as a
+  label list per group. So the risk is confined to the tagging gesture, removal, undo and the
+  client's name-keyed map above, plus any export that writes tag names as text (a CSV column
+  cannot tell two "frustration"s apart; nobody counts those by hand except an academic).
 - **Root cause, one level up:** the whole stack identifies a tag by its name; the data model
   already identifies it by row. The fix that lasts carries the tag's identity (definition id)
   through add, remove, undo, de-duplication and the suggestion list, and uses a name only to
@@ -96,9 +109,9 @@ different mechanism and would leave the loss in place.)
 
 | | What | Fixes | Cost |
 |---|---|---|---|
-| **A. Resolve by identity, manual first** | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss and the cross-project bleed | small to medium: the id must travel through the client (§2a) |
+| **A. Resolve by identity, manual first** | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss inside a project | small to medium: the id must travel through the client (§2a) |
 | **B. Uninstall protects manual work** | Removing a codebook deletes only its **auto** applications. Applications the researcher made are kept, re-homed to a same-named tag in the researcher's own group (created if absent). | the stripped tagging | small; a decision on re-homing |
-| **C. Make clashes visible, and merging a choice** | Where leaf names collide, show the group beside the name. At install or in the codebook, list "looks like a tag you have" with a merge the researcher chooses. No rename on install. | confusion, duplicates | design; new words |
+| **C. Make clashes discoverable, and merging a choice** | Colour stays the default signal. The group is available on demand (a tooltip on the badge) and in the tag picker when two same-named tags are offered. At install or in the codebook, a "looks like a tag you have" list with a merge the researcher chooses. No rename on install, no standing group labels. | confusion, duplicates | small design; new words only for the merge |
 | **D. Origin as a first-class scope** | Replace "framework id or none" with an origin: project, folder, global, framework. Identity stays the row; scope decides visibility and deletion. Builds the folder codebook and global library the brief anticipates. | the roadmap | a migration and a design doc of its own |
 | **E. Manual tags look different** | A distinct style, and priority in scanning, from `source` and group origin. | scanning | visual design; data already supports it |
 

@@ -4,6 +4,7 @@
  */
 import type { QuoteResponse, TagResponse } from "../utils/types";
 import {
+  acceptProposedTag,
   addTagToQuotes,
   getQuotesSnapshot,
   initFromQuotes,
@@ -114,3 +115,30 @@ describe("a tag with a row is added, removed and undone by the row", () => {
     expect(patchTagsMock).toHaveBeenCalledWith({ q1: { add: ["new"] } });
   });
 });
+
+describe("sentiment tags and accepted suggestions", () => {
+  it("a typed sentiment name is the researcher's own tag, not 'already there'", () => {
+    const machine: TagResponse = {
+      id: 1, name: "frustration", codebook_group: "Sentiment", colour_set: "emo", colour_index: 0,
+      source: "pipeline",
+    };
+    initFromQuotes([quote("q1", [machine])]);
+    addTagToQuotes(["q1"], {
+      name: "frustration", codebook_group: "Uncategorised", colour_set: "", colour_index: 0,
+      source: "human",
+    });
+    expect(patchTagsMock).toHaveBeenCalledWith({ q1: { add: ["frustration"] } });
+    expect(getQuotesSnapshot().tags.q1).toHaveLength(2);
+  });
+
+  it("an accepted suggestion is its own row beside the researcher's same-named tag", () => {
+    initFromQuotes([quote("q1", [mine])]);
+    acceptProposedTag("q1", 55, { ...theirs, source: "autocode" });
+    expect(idsOn("q1")).toEqual([7, 9]);
+    patchTagsMock.mockClear();
+    removeTag("q1", "trust", true, 7);
+    expect(patchTagsMock).toHaveBeenCalledWith({ q1: { remove_ids: [7] } });
+    expect(idsOn("q1")).toEqual([9]);
+  });
+});
+

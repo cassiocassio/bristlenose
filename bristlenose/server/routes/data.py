@@ -134,7 +134,7 @@ _BadgeName = Annotated[str, Field(min_length=1, max_length=50)]  # DeletedBadge.
 
 
 class TagDelta(BaseModel):
-    """One quote's change of tags, by name: what the gesture added and removed."""
+    """One quote's change of tags: what the gesture added and removed, by name or by tag id."""
 
     add: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
     remove: list[_TagName] = Field(default_factory=list, max_length=_MAX_DELTA_OPS)
@@ -254,11 +254,11 @@ def _is_sentiment_tag(db: Session, tag_definition_id: int) -> bool:
     framework — the one tag family that never counts as researcher commitment.
 
     Mirrors the sentiment exclusion in ``importer._pinned_quote_ids`` so the
-    mint site and the pin predicate cannot drift.  Without it, a hand-typed tag
-    whose name collides with a sentiment label ("frustration", "delight")
-    resolves by name to the sentiment ``TagDefinition`` (``put_tags`` matches on
-    lowercased name), arrives as ``source="human"``, and would mint a spurious
-    ``durable_id`` / ``frozen_form`` on a quote the pin predicate refuses to pin.
+    mint site and the pin predicate cannot drift.  A sentiment tag applied by
+    hand (picked by its id) arrives as ``source="human"`` and would otherwise
+    mint a spurious ``durable_id`` / ``frozen_form`` on a quote the pin predicate
+    refuses to pin.  (A hand-TYPED sentiment name no longer reaches this tag: a
+    typed name never resolves to a sentiment definition, ``_name_resolver``.)
     """
     # no_autoflush: called mid-``put_tags`` after a QuoteTag is ``db.add``ed
     # but before flush; letting autoflush fire emits a spurious SAWarning.
@@ -1081,9 +1081,19 @@ def put_tags(
         # Snapshot provenance before delete so it survives the bulk-replace.
         quote_ids = _quote_ids_for_project(db, project_id)
         existing_sources: dict[tuple[int, int], str] = {}
+        # The tag each quote already carries under each name: a round trip of the map GET
+        # returns (names only) keeps the very tags it came from, including the machine's
+        # sentiment tags, which a typed name never resolves to.
+        existing_by_name: dict[tuple[int, str], int] = {}
         if quote_ids:
-            for qt in db.query(QuoteTag).filter(QuoteTag.quote_id.in_(quote_ids)).all():
+            for qt, td_name in (
+                db.query(QuoteTag, TagDefinition.name)
+                .join(TagDefinition, TagDefinition.id == QuoteTag.tag_definition_id)
+                .filter(QuoteTag.quote_id.in_(quote_ids))
+                .all()
+            ):
                 existing_sources[(qt.quote_id, qt.tag_definition_id)] = qt.source
+                existing_by_name.setdefault((qt.quote_id, td_name.lower()), qt.tag_definition_id)
             db.query(QuoteTag).filter(QuoteTag.quote_id.in_(quote_ids)).delete(
                 synchronize_session=False
             )
@@ -1096,7 +1106,9 @@ def put_tags(
                 continue
             seen_td_ids: set[int] = set()
             for tag_name in tag_names:
-                td_id = tag_defs.get(tag_name.lower())
+                td_id = existing_by_name.get((quote.id, tag_name.lower()))
+                if td_id is None:
+                    td_id = tag_defs.get(tag_name.lower())
                 if td_id is None:
                     if uncategorised is None:
                         uncategorised = _get_or_create_uncategorised(db)
@@ -1133,7 +1145,13 @@ def patch_tags(
     request: Request,
     data: dict[str, TagDelta],
 ) -> dict[str, Any]:
-    """Add and remove tags by name on the quotes named, and touch nothing else.
+    """Add and remove tags on the quotes named, and touch nothing else.
+
+    By name (``add`` / ``remove``) or by tag identity (``add_ids`` / ``remove_ids``, N146):
+    two tags in a project can share a name, so a tag picked from a list or pointed at by a
+    badge's × is named by its row. An ``add_ids`` entry this project has no tag for refuses
+    the whole request (404, nothing written), so the client takes the change back rather
+    than draw a tag that does not exist (an undo after the codebook was uninstalled).
 
     The SPA's write. ``PUT`` deletes every tag of the project and re-inserts
     the body, so it erased what the client didn't hold: AutoCode tags
@@ -1149,6 +1167,10 @@ def patch_tags(
     try:
         _check_project(db, project_id)
         unresolved: list[str] = []  # quotes the server no longer has
+
+        wanted = {i for delta in data.values() for i in delta.add_ids}
+        if wanted - _known_tag_ids(db, list(wanted)):
+            raise HTTPException(status_code=404, detail="Tag not found")
 
         tag_defs = _name_resolver(db)
         uncategorised: CodebookGroup | None = None

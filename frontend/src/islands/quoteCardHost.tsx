@@ -184,7 +184,10 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
   );
   const onTagAdd = useCallback(
     (domId: string, name: string, pick?: TagPick) => {
-      const info = tagInfo[name.toLowerCase()];
+      // A typed name is never the machine's sentiment tag: the server makes the researcher's own
+      // (Uncategorised), so the sentiment group's colours and eye are not borrowed for it.
+      const known = tagInfo[name.toLowerCase()];
+      const info = !pick && known?.frameworkId === "sentiment" ? undefined : known;
       const group = pick?.groupName ?? info?.group ?? "Uncategorised";
       addTagToQuotes(targets(domId), {
         id: pick?.id,
@@ -208,6 +211,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
     (domId: string, proposalId: number, name: string) => {
       const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
       acceptProposedTag(domId, proposalId, {
+        id: pt?.tag_definition_id ?? undefined,
         name,
         codebook_group: pt?.group_name ?? "Uncategorised",
         colour_set: pt?.colour_set ?? "",

@@ -1,5 +1,5 @@
 ---
-status: A is built (1 Nov 2026, §3 below). §2 (what the code does) is measured as it was before A; B, C, D and E are proposals and nothing in them is built.
+status: A and B are built (1 Nov 2026, "As built" in §3). §2 (what the code does) is measured as it was before them; C, D and E are proposals and nothing in them is built.
 last-trued: 2026-11-01
 trued-against: HEAD@main on 2026-11-01
 ---
@@ -145,7 +145,7 @@ different mechanism and would leave the loss in place.)
 | | What | Fixes | Cost |
 |---|---|---|---|
 | **A. Resolve by identity, manual first** (**built 1 Nov 2026**, see "As built") | A tagging gesture resolves to the researcher's own groups first; a tag picked from the list is committed by its row, not its name; typing a whole name and pressing Return means the manual one if there is one; the manual tag is listed first. Removal and undo remove the tag pointed at. | the loss inside a project | small to medium: the id must travel through the client (§2a) |
-| **B. Uninstall protects manual work** | Removing a codebook deletes only its **auto** applications. Applications the researcher made are kept, re-homed to a same-named tag in the researcher's own group (created if absent). | the stripped tagging | small; a decision on re-homing |
+| **B. Uninstall protects manual work** (**built 1 Nov 2026**) | Removing a codebook deletes only its **auto** applications. Applications the researcher made are kept, re-homed to a same-named tag in the researcher's own group (created if absent). | the stripped tagging | small; a decision on re-homing |
 | **C. Make clashes discoverable, and merging a choice** | Colour stays the default signal. The group is available on demand (a tooltip on the badge) and in the tag picker when two same-named tags are offered. At install or in the codebook, a "looks like a tag you have" list with a merge the researcher chooses. No rename on install, no standing group labels. | confusion, duplicates | small design; new words only for the merge |
 | **D. Origin as a first-class scope** | Replace "framework id or none" with an origin: project, folder, global, framework. Identity stays the row; scope decides visibility and deletion. Builds the folder codebook and global library the brief anticipates. | the roadmap | a migration and a design doc of its own |
 | **E. Manual tags look different** | A distinct style, and priority in scanning, from `source` and group origin. | scanning | visual design; data already supports it |
@@ -170,11 +170,28 @@ different mechanism and would leave the loss in place.)
   removes and undoes by the row when a tag has one (`sameTag`), else by name, which is all a tag
   typed since the last read has; a made-up negative id (the sidebar's `mergePendingTags`) is never
   sent. The sidebar's click-to-assign names the row clicked.
+- **B (`routes/codebook.py` `_rehome_human_applications`).** Before a codebook's rows are deleted, every
+  application of its tags that the researcher made by hand (`QuoteTag.source == "human"`) moves to a tag of
+  the same name in the researcher's own groups (oldest; made in Uncategorised if there is none). AutoCode's
+  and the builder's applications go with the codebook, as before; the sentiment framework is exempt. Re-homing
+  is silent (the recommendation in §5.1; the owner had not answered). The uninstall impact count no longer
+  counts quotes whose tagging is kept. Known consequences, from review: re-homed tags sit in the
+  Uncategorised floor, which Signals and the assistant surfaces filter out, so they stop counting toward the
+  codebook's group; if the researcher's same-named tag lives only in an eye-hidden group the kept badges are
+  hidden with it; two codebook tags of one name fold into one tag; rows written before provenance existed
+  default to `human`, so an old AutoCode accept is kept as if manual.
+- **Review fixes (same day).** A `PUT /tags` round trip keeps the tag each quote already carries under a name
+  (it used to turn sentiment applications into hand-made tags and pin the quote); an `add_ids` entry this
+  project has no tag for refuses the request (404, nothing written) so the client takes an undo back instead
+  of drawing a tag that does not exist; proposals carry `tag_definition_id`, so accepting a suggestion is the
+  same tag as a badge; a typed sentiment name on a quote that already carries the sentiment tag is added (the
+  machine's tag, source `pipeline`, never counts as "already there") and is drawn in Uncategorised, not in the
+  Sentiment group's colours.
 - **Not done, on purpose.** The client's `tagGroupMap` is still keyed by lower-cased name (it
   serves group visibility and the eye, where two same-named tags in different groups remain
   ambiguous); the picker's `exclude` is still by name, so a quote that has one "trust" is not
-  offered the other from the picker; CSV and other exports still write names. B (uninstall keeps
-  the researcher's applications) is not built and waits on the re-homing answer in §5.1.
+  offered the other from the picker; CSV and other exports still write names; the "switched-off codebook"
+  refusal in `QuoteCard.handleTagCommit` still goes by name (it already did).
 
 **Rejected:** refusing at install (does not stop the loss); rename on install, "trust (UXR)"
 (a new naming rule, new copy, a migration for installed rows, and it hides that two tags

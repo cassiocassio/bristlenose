@@ -926,7 +926,8 @@ def remove_framework(
     deleting them because this project let go would strip the framework from
     every other study that still has it.
 
-    **Nothing is preserved.** See D20 in ``docs/design-codebook-v2.md``: the
+    **Nothing of the codebook's own is preserved** (the researcher's hand-made
+    applications are, above). See D20 in ``docs/design-codebook-v2.md``: the
     "instant restore" the old branch promised had already stopped being true,
     and disable — which does preserve — is the reversible verb.
     """

@@ -105,6 +105,8 @@ export interface TagResponse {
 
 export interface ProposedTagBrief {
   id: number;
+  /** The tag the proposal would apply, as its row (the same tag as a badge on the card). */
+  tag_definition_id?: number | null;
   tag_name: string;
   group_name: string;
   colour_set: string;

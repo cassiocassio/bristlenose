@@ -526,7 +526,11 @@ const rowOf = (tag: TagResponse): number | undefined =>
 function sameTag(a: TagResponse, b: TagResponse): boolean {
   const ra = rowOf(a);
   const rb = rowOf(b);
-  return ra != null && rb != null ? ra === rb : a.name.toLowerCase() === b.name.toLowerCase();
+  if (ra != null && rb != null) return ra === rb;
+  // A tag with no row yet is a typed one, and a typed name never means the machine's sentiment
+  // tag (source "pipeline", the only tags the pipeline applies): it makes the researcher's own.
+  const machine = (ra != null && a.source === "pipeline") || (rb != null && b.source === "pipeline");
+  return !machine && a.name.toLowerCase() === b.name.toLowerCase();
 }
 
 /** The delta that adds this tag: by row when it has one, else by name. */
@@ -589,6 +593,7 @@ export function reviewedElsewhere(err: ApiError | null | undefined): boolean {
 /** The tag an accepted suggestion becomes, as the quote card builds it. */
 function tagOf(proposal: ProposedTagBrief): TagResponse {
   return {
+    id: proposal.tag_definition_id ?? undefined,
     name: proposal.tag_name,
     codebook_group: proposal.group_name,
     colour_set: proposal.colour_set,
@@ -1078,9 +1083,7 @@ export function acceptProposedTag(
   const proposal = offered[index];
   // A suggestion can name a tag the quote already has (the server allows it):
   // then the accept adds nothing, and a failure must not take that tag away.
-  const had = (state.tags[domId] || []).some(
-    (t) => t.name.toLowerCase() === tag.name.toLowerCase(),
-  );
+  const had = (state.tags[domId] || []).some((t) => sameTag(t, tag));
   setState((prev) => {
     const proposedTags = { ...prev.proposedTags };
     proposedTags[domId] = (proposedTags[domId] || []).filter((p) => p.id !== proposalId);

@@ -142,11 +142,14 @@ def test_a_tag_removed_by_id_leaves_the_same_named_other_one() -> None:
     assert _defs_on(app, qid, "trust") == {mine}
 
 
-def test_an_unknown_id_is_ignored_not_an_error() -> None:
+def test_an_unknown_id_refuses_the_request_and_writes_nothing() -> None:
     app, tc = _app()
     qid, dom = _first_quote(app)
-    resp = tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [999999]}})
-    assert resp.status_code == 200
+    mine = _make_own_trust(app)
+    # One stale id refuses the whole request, so the client takes the change back (an undo
+    # after the codebook was uninstalled must not draw a tag that does not exist).
+    resp = tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [mine, 999999]}})
+    assert resp.status_code == 404
     assert _defs_on(app, qid, "trust") == set()
 
 
@@ -228,3 +231,28 @@ def test_the_uninstall_impact_does_not_count_what_is_kept() -> None:
     tc.patch("/api/projects/1/tags", json={dom: {"add_ids": [theirs]}})
     impact = tc.get("/api/projects/1/codebook/remove-framework/uxr/impact").json()
     assert impact["quote_count"] == 0
+
+
+def test_a_put_round_trip_keeps_the_sentiment_tags_it_came_from() -> None:
+    app, tc = _app()
+    qid, _ = _first_quote(app)
+    before = _tags_of_all(app, qid)
+    assert any(f == "sentiment" for _, f, _ in before), "the fixture quote has a sentiment tag"
+    snapshot = tc.get("/api/projects/1/tags").json()
+    assert tc.put("/api/projects/1/tags", json=snapshot).status_code == 200
+    assert _tags_of_all(app, qid) == before
+
+
+def _tags_of_all(app, quote_id: int) -> list[tuple[str, str | None, str]]:
+    db = app.state.db_factory()
+    try:
+        return sorted(
+            (n, f, s)
+            for n, f, s in db.query(TagDefinition.name, CodebookGroup.framework_id, QuoteTag.source)
+            .join(QuoteTag, QuoteTag.tag_definition_id == TagDefinition.id)
+            .join(CodebookGroup, CodebookGroup.id == TagDefinition.codebook_group_id)
+            .filter(QuoteTag.quote_id == quote_id)
+            .all()
+        )
+    finally:
+        db.close()

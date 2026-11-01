@@ -54,6 +54,9 @@ class ProposedTagBrief(BaseModel):
     """A pending AutoCode tag proposal on a quote."""
 
     id: int
+    # The tag the proposal would apply: its row, so accepting one is the same tag as a badge
+    # on the card (two tags can share a name).
+    tag_definition_id: int | None = None
     tag_name: str
     group_name: str
     colour_set: str
@@ -354,6 +357,7 @@ def _load_researcher_state(
             proposed_map.setdefault(pt.quote_id, []).append(
                 ProposedTagBrief(
                     id=pt.id,
+                    tag_definition_id=td_id,
                     tag_name=tag_name,
                     group_name=group_name,
                     colour_set=colour_set,

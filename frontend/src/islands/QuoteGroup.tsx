@@ -568,8 +568,12 @@ export function QuoteGroup({
 
   const handleTagAdd = useCallback(
     (domId: string, tagName: string, pick?: TagPick) => {
-      const ci = tagColourMap[tagName];
-      const gi = tagGroupMap[tagName.toLowerCase()];
+      // A typed name is never the machine's sentiment tag (the server makes the researcher's own,
+      // in Uncategorised), so the sentiment group's colours and eye are not borrowed for it.
+      const known = tagGroupMap[tagName.toLowerCase()];
+      const typedSentiment = !pick && known?.frameworkId === "sentiment";
+      const ci = typedSentiment ? undefined : tagColourMap[tagName];
+      const gi = typedSentiment ? undefined : known;
       // A tag chosen from the list is that row, with its own group and colour; a typed name is
       // looked up by name, as before, and the server decides which tag of that name it means.
       const groupName = pick?.groupName ?? gi?.group ?? "Uncategorised";
@@ -640,6 +644,7 @@ export function QuoteGroup({
       // Find the proposal to carry its colour into the accepted tag.
       const pt = (store.proposedTags[domId] || []).find((p) => p.id === proposalId);
       acceptProposedTag(domId, proposalId, {
+        id: pt?.tag_definition_id ?? undefined,
         name: tagName,
         codebook_group: pt?.group_name ?? "Uncategorised",
         colour_set: pt?.colour_set ?? "",

@@ -38,6 +38,13 @@ router = APIRouter(prefix="/api")
 # ``_CATCH_UP_TASKS`` in routes/data.py. Discard on completion.
 _AUTOCODE_TASKS: set[asyncio.Task[Any]] = set()
 
+#: One row of the proposals query in get_proposals, in the order it selects: the proposal;
+#: the quote's text, participant, session, start and ordinal; the tag's name, id and group
+#: id; the group's name and colour set. Positional reads below index into this, so a column
+#: added to the query is added here too (the ordinal's arrival in R86 shifted the group id
+#: from 7 to 8 and the colour_index lookup read tag ids as group ids until 2 Nov 2026).
+_ProposalRow = tuple[ProposedTag, str, str, str, float, int, str, int, int, str, str]
+
 # The runner each (project, framework) has in flight. A Stop sets the row
 # "cancelled" at once, but the batch already sent still answers and its runner
 # goes on until it reads the Stop; an Apply in between started a second runner on
@@ -584,10 +591,12 @@ def get_proposals(
             .all()
         )
         counted = _counted_quote_ids(db, project_id)
-        proposals = [row for row in proposals if row[0].quote_id in counted]
+        rows: list[_ProposalRow] = [
+            tuple(row) for row in proposals if row[0].quote_id in counted
+        ]
 
         # Build colour_index lookup: position of each tag within its group
-        group_ids = {row[7] for row in proposals}  # codebook_group_id
+        group_ids = {row[8] for row in rows}  # TagDefinition.codebook_group_id
         group_td_order: dict[int, list[int]] = {}
         for gid in group_ids:
             tds = (
@@ -621,7 +630,7 @@ def get_proposals(
                 status=p.status,
             )
             for p, quote_text, participant_id, session_id, start_tc, ordinal,
-                tag_name, td_id, cg_id, group_name, colour_set in proposals
+                tag_name, td_id, cg_id, group_name, colour_set in rows
         ]
 
         return ProposalsResponse(proposals=items, total=len(items))

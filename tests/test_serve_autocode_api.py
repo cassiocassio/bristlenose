@@ -812,6 +812,32 @@ class TestGetProposals:
         assert "rationale" in p
         assert "status" in p
 
+    def test_colour_index_is_the_tags_position_in_its_group(
+        self, client_with_completed_job: TestClient,
+    ) -> None:
+        """A proposal's colour is its tag's place among its group's tags.
+
+        The proposals query grew a column (the quote's ordinal, R86) and the
+        positional read of the group id was not moved with it, so the lookup
+        was keyed by tag ids and every proposal drew colour 0.
+        """
+        resp = client_with_completed_job.get("/api/projects/1/autocode/garrett/proposals")
+        proposals = resp.json()["proposals"]
+        assert proposals
+        db = client_with_completed_job.app.state.db_factory()  # type: ignore[attr-defined]
+        try:
+            for p in proposals:
+                td = db.get(TagDefinition, p["tag_definition_id"])
+                siblings = [
+                    row.id for row in db.query(TagDefinition)
+                    .filter_by(codebook_group_id=td.codebook_group_id)
+                    .order_by(TagDefinition.id)
+                ]
+                assert p["colour_index"] == siblings.index(td.id)
+        finally:
+            db.close()
+        assert any(p["colour_index"] > 0 for p in proposals)
+
     def test_proposals_sorted_by_confidence_desc(
         self, client_with_completed_job: TestClient
     ) -> None:

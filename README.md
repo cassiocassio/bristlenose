@@ -417,6 +417,107 @@ Edit `bristlenose/__init__.py` (the single source of truth for version), commit,
 
 ## Changelog
 
+**0.44.0** — _2 Nov 2026_
+
+Whisper now arrives on macOS 15, the Signals lens waits for its first report instead of showing half-empty cards, and tags, AutoCode, imports and the Mac app's sidebar lose a long list of edge-case failures.
+
+**New**
+
+- **Signals waits until its first report exists.** In the Mac app the lens is greyed out and the sidebar reads "Picking up Signals…" under the project name while the report is built, instead of cards with no names or text that filled in a moment later. It opens as soon as the report lands.
+- **A study another Mac was still analysing says so, and nothing is overwritten.** Opening it shows "Started on another Mac" and why it can't be viewed here, with Retry. Before, opening it could put the previous report over that Mac's unfinished analysis. This protects against that overwrite only; it is not editing the same study on two Macs.
+
+**Improved**
+
+- **Signals highlights are shorter, and a card shows at most two.** A highlight is now a few words that start where the behaviour begins, so a card carries about half the colour it did. Each study's Signals text is rewritten once the next time it opens with a cloud key set, which costs one model call per study; the old report stays readable meanwhile.
+- **A click on a Signals card selects it**, as its row in the list does, and the list scrolls the first card of a page to the top of the page. The speaker badge on a bullet or quote opens the transcript, the highlighted words flash the quote they came from, and the timecode plays the video.
+- **Signals cards read more clearly.**
+  - The chart is open on every card or closed on every card.
+  - Its metrics have full names: "Signal strength", "Concentration ratio", "Voices in agreement", "Emotional intensity". Narrow cards keep the short ones.
+  - A quote in a card is the Quotes lens's own row.
+  - Each signal has one strong ink for its chip, selected edge and highlighted reason.
+  - The page is titled by the section or theme it shows.
+  - The card's selection edge goes all the way round, and the selected card and its list row are both announced as current by screen readers.
+- **AutoCode only sends quotes that count.** A hidden quote, or one from a speaker you recoded out of participants, is left out of the pass, the review, Accept all and Deny all, and is coded when it counts again. Saving an AI key codes quotes you unhid while there was no key.
+- **Local models (Ollama) answer in the right shape far more often.** Bristlenose now asks for the structured format the model supports, and a retry says which fields were wrong instead of resending the same request. A model that writes timecodes in brackets no longer puts its quotes at 0:00, and `bristlenose status -v` names the model that ran.
+- **Uninstalling a codebook keeps the tags you applied by hand.** They move to a tag of the same name in your own groups, and the confirmation no longer counts them as lost.
+- **The CLI says more plainly what happened.**
+  - `--lang FR`, `fr-FR` and `fr_FR.UTF-8` all mean French, and `zh-TW` and `zh-HK` mean Traditional Chinese.
+  - `analyze` that extracts no quotes exits 1.
+  - `serve` prints its Report and MCP lines only after the port is bound.
+  - `status` shows the last run on this machine's clock.
+- **The Mac app's Settings ▸ MCP Agents** keeps when an agent last asked about a study after its window has closed, and says when Agent Access is off.
+- **A provider's content filter or refusal is named as one.** A reply that Claude, ChatGPT, Azure OpenAI or Gemini declined for its content used to read as "rejected" or "unknown". The session still fails and is tried again at the next Analyse.
+- **The cost estimate prices the sessions that will be analysed,** not every session in the study.
+- **A quotes spreadsheet names its sentiments in the report's language.**
+- **Quote length in Japanese and Chinese is measured by reading length, not by spaces.**
+
+**Fixed**
+
+_Whisper, models and keys_
+
+- **Whisper never arrived on macOS 15.** The speech-model check crashed on Sequoia, so the toolbar showed a failed download that Retry could not clear. The app now ships MLX built for macOS 15. The automatic download starts with 10 GB free (was 20 GB), and a Mac too full for the model says so before downloading.
+- **A dropped network killed the Whisper download, which then began again from zero.** It now waits for the connection and resumes, and clears the leftover partial files.
+- **A local-model download that failed in Ollama (a full disk, an unknown model) showed as finished.** It now reads as failed, with Ollama's own sentence.
+- **A Gemini key Google rejected read as "HTTP 400".** It now reads as rejected, and a key revoked after a green check no longer stays green.
+- **A model id containing 401 or 429 was read as a key or quota problem on the Mac.** A retired model now reads as unavailable.
+- **On Linux, `configure` said "not saved" every time when `secret-tool` was installed but no desktop keyring was running.** The key now goes to the config file, and a refused keyring write ends in a message instead of a traceback.
+- **On Linux, a running analysis was taken for dead after a time-zone difference or a stepped clock.**
+
+_Tags and codebooks_
+
+- **A tag you typed could land on a codebook's or the machine's sentiment tag of the same name.** A typed name is your own tag first, a picked row is added by its id, and the × and undo take only the tag pointed at.
+- **Switching off a codebook hid the badges of another codebook's group of the same name.**
+- **Typing an existing tag's full name and pressing return applied a longer tag that starts with it.** A stray space no longer splices a letter into a completed tag.
+- **The codebook lens's window title showed a stale tag count** after a tag was made on a quote card.
+- **A quote counted as unhidden was not coded until the next full pass.** Quotes that count again are now picked up in a catch-up pass, and a refused key still shows its chip.
+
+_Quotes, transcripts and imports_
+
+- **A quote the model left out of every section or theme was missing from the report while the run said Done.** It is now placed in Uncategorised, or in a section named for its topic, and a quote placed twice shows once.
+- **A Google Meet notes document with no transcript in it was analysed as speech.** It is now listed under Not analysed: "No transcript in this document — only meeting notes."
+- **Teams recordings didn't pick up their calendar meeting** (attendees, scheduled time, title). They do, and a recording takes the meeting it overlapped, not the next booking.
+- **A transcript that was UTF-8 apart from one pasted Windows character read as Windows text,** turning every accent to mojibake. A Windows-1252 or UTF-16 transcript also opened an empty report. Both now read correctly, and so do discussion guides saved that way.
+- **A transcript still in iCloud Drive or OneDrive could stall a run with no limit.** It now fails as "Wasn't downloaded to this Mac in time", and the next run reads it again.
+- **A recording that outlasted ffmpeg's time limit stopped the whole run as unknown.** It is now named as unreadable and the run goes on. An empty audio file is named as empty up front, and a recording stage 2 sets aside is no longer reported a second time.
+- **"Speaker 10" and "Unknown Speaker" counted as participants' names.**
+- **A recording with a # or ? in its name didn't play,** and sidebar counts went blank for a study in such a folder. A study in a folder with a ? or a percent escape now keeps its database inside the study. A study that earlier versions kept in a stray file beside such a folder opens empty, and the log names that file.
+- **Timecodes on quotes from sessions that arrived after the report opened did nothing until a reload.** The hidden-quotes list's timecode no longer jumps the page to the top.
+- **An anonymised report named a participant on quotes in the Uncategorised floor and the unjoined bucket.**
+- **An omitted screen quote made a second section with the same name as the model's.** It joins the model's section.
+- **In a session with two participants, a quote could go to the wrong one.** It now goes to whoever spoke it. A study changes only when it is re-analysed, and a quote that moves to the other participant then starts again without its star, tags or edits.
+- **The Discussion lens showed only one of two quotes that start together.** It shows both.
+- **The review modal miscounted a suggestion decided the other way elsewhere.** It is counted where it landed.
+- **Every AutoCode proposal badge was drawn in the same colour.** Each now takes its tag's own colour within its group.
+
+_Exports and feedback_
+
+- **A control character in a quote stopped the spreadsheet export, and one in front of `=`, `+`, `-` or `@` reached the sheet as a live formula.** A study named "History" or with a colon in its name also failed to save. All now export.
+- **A feedback message was cut at 2,000 bytes without saying so.** It now stops at 2,000 characters. A failed anonymous send no longer points to a public GitHub issue; it says the text is copied and to try again later.
+
+_Mac app_
+
+- **⌘Z and ⌘⌫ pressed while typing in the Quotes search box or a rename acted on the report or the study.** They now edit the text.
+- **A folder already in the sidebar, dropped on the new-project placeholder, became a second row.** It now selects the existing row and starts its analysis. Dropping an analysed study onto a project you named keeps your name.
+- **Undoing a removal could put a study into a folder deleted meanwhile,** leaving it on no row.
+- **Turning Agent Access off didn't report a save that failed,** and a study answered with real names after Anonymise was switched on until its window was clicked. Both are fixed, and a failed Agent Access save no longer raises a bare "Couldn't save your change" alert.
+- **The Sessions switcher listed sessions not yet read during a first analysis,** and choosing one opened "no longer in the report".
+- **A failed Re-analyse showed "Last run failed" over the earlier good report.** It now shows the report, as a Stopped run does.
+- **A Screens board move that failed to save stayed drawn as if kept,** with an Undo that did nothing. It is put back.
+- **A study opened in an older Bristlenose after a newer one had updated it gave a traceback.** It now says "This study was opened by a newer Bristlenose. Update to open it."
+- **A study's startup warnings vanished on switching studies.** Those the app has confirmed now stay.
+
+_CLI_
+
+- **A second `serve` while another report was running printed a link to the other study.**
+- **A study folder with a space in its name made the delete hint in `status` point at a different folder,** and one with a bracketed word lost it from the status lines.
+- **The first run after an install asked for ffmpeg and Whisper when transcription was switched off.**
+- **The "could not start server" message raised a markup error** for some folder names.
+- **On Intel Macs, installing the command line could fail while building `cryptography`.** The install now picks a version that has a prebuilt wheel there.
+
+**Removed**
+
+- **`bristlenose run --config`.** The option was never read. The documentation no longer promises a `bristlenose.toml`, and the rate-limit message names the environment variable that works.
+
 **0.43.0** — _24 Oct 2026_
 
 The reliability burn-down: in five days well over a hundred ways for Bristlenose to fail, lose work or stay quiet were found and closed. Analyses stop, resume and fail honestly; changes that don't save say so and take themselves back; a crash in one part of the report leaves the rest working; and a failure that survives its retry offers to send a problem report.

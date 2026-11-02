@@ -167,6 +167,49 @@ class TestReportAssetsStillServed:
         assert client.get("/report/assets/bristlenose-theme.css").status_code == 200
 
 
+class TestLogoIsThePackages:
+    """The header and footer logos come from the running version, never the
+    study's ``assets/`` folder.
+
+    The static render used to copy them there, and until 28 Oct 2026 serve
+    re-rendered at startup, so every served study had a copy. Serve no longer
+    renders (``4e8cc854a``), so a study whose render never ran — a first
+    analysis still under way, a transcribe-only study, a run that failed before
+    its render stage — had no logo file, and the SPA's ``<img>`` 404'd: a broken
+    image in the header of every page. Same rule the theme CSS follows since
+    17 Oct 2026: the running version's, served live.
+    """
+
+    _LOGOS = ("bristlenose-logo.png", "bristlenose-logo-dark.png")
+
+    @staticmethod
+    def _package_logo(name: str) -> bytes:
+        from bristlenose.stages.s12_render.theme_assets import _LOGO_DARK_PATH, _LOGO_PATH
+
+        return (_LOGO_DARK_PATH if "dark" in name else _LOGO_PATH).read_bytes()
+
+    @pytest.mark.parametrize("name", _LOGOS)
+    def test_served_bytes_are_the_packages_not_the_studys_copy(
+        self, client: TestClient, name: str
+    ) -> None:
+        resp = client.get(f"/report/assets/{name}")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "image/png"
+        assert resp.content == self._package_logo(name)
+        assert resp.content != b"\x89PNG fake"
+
+    @pytest.mark.parametrize("name", _LOGOS)
+    def test_a_study_with_no_baked_logo_still_has_one(
+        self, client: TestClient, name: str
+    ) -> None:
+        assets = Path(client.app.state.project_dir) / "bristlenose-output" / "assets"
+        for logo in self._LOGOS:
+            (assets / logo).unlink(missing_ok=True)
+        resp = client.get(f"/report/assets/{name}")
+        assert resp.status_code == 200
+        assert resp.content == self._package_logo(name)
+
+
 class TestMediaPrivateFilesRefused:
     """``/media/`` serves the whole project dir and allows ``.txt`` — the same key."""
 

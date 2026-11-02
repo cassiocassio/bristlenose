@@ -1595,30 +1595,36 @@ export function SignalsPage({ projectId }: SignalsPageProps) {
     return <div data-testid="signals-withheld" aria-busy="true" />;
   }
 
-  // Still loading
+  // Still loading. In the lens's own pane, so the heading sits on the datum
+  // (`.signals-center > .section-heading:first-of-type`): a bare <div> here put
+  // the lens 40px low in exactly the state a study with no report yet shows.
   if (!hasSentiment && !hasTags && !tagLoaded) {
     return (
-      <div>
-        <SectionHeading>{t("signals.heading")}</SectionHeading>
-        <p className="description" style={{ opacity: 0.5 }}>
-          {t("signals.loadingData")}
-        </p>
+      <div className="signals-layout">
+        <div className="signals-center">
+          <SectionHeading>{t("signals.heading")}</SectionHeading>
+          <p className="description" style={{ opacity: 0.5 }}>
+            {t("signals.loadingData")}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!hasSentiment && !hasTags) {
     return (
-      <div>
-        <SectionHeading>{t("signals.heading")}</SectionHeading>
-        <p className="description">
-          {t("signals.noData")}
-        </p>
-        {tagError && (
-          <p style={{ color: "var(--bn-colour-danger, #c00)", fontSize: "var(--bn-text-label)" }}>
-            {t("signals.tagError", { error: tagError })}
+      <div className="signals-layout">
+        <div className="signals-center">
+          <SectionHeading>{t("signals.heading")}</SectionHeading>
+          <p className="description">
+            {t("signals.noData")}
           </p>
-        )}
+          {tagError && (
+            <p style={{ color: "var(--bn-colour-danger, #c00)", fontSize: "var(--bn-text-label)" }}>
+              {t("signals.tagError", { error: tagError })}
+            </p>
+          )}
+        </div>
       </div>
     );
   }

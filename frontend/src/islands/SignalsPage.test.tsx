@@ -527,6 +527,26 @@ describe("SignalsPage", () => {
     expect(pane!.firstElementChild!.classList.contains("section-heading")).toBe(true);
   });
 
+  // The empty states are enrolled too. A study with no Signals report yet (no
+  // cloud model, or a first report not built) rendered the "no data" sentence
+  // under a heading in a bare <div>, so the lens opened 40px low in exactly the
+  // state a researcher without a cloud key sees every time (2 Nov 2026).
+  it("keeps the no-data state enrolled in the flush-to-datum system", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ snapshot: null, source: null, computed_at: null, pending: false }),
+    });
+    render(<SignalsPage projectId="1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No signals yet\./)).toBeTruthy();
+    });
+
+    const pane = document.querySelector(".signals-center");
+    expect(pane).toBeTruthy();
+    expect(pane!.firstElementChild!.classList.contains("section-heading")).toBe(true);
+  });
+
   it("the sidebar list and the rendered cards are the same set", async () => {
     // The 1:1 invariant: every nav row lands on a card, and no card is
     // unreachable. It used to hold by ACCIDENT — MAX_SIGNALS sliced one list

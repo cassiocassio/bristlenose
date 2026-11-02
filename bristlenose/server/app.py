@@ -672,6 +672,34 @@ def _player_page_response() -> Response:
     )
 
 
+#: The header and footer logos the SPA asks for, by the name it asks with.
+#: Served from the package like the theme CSS, never from the study's
+#: ``assets/`` copy: serve stopped re-rendering at startup on 28 Oct 2026, so a
+#: study whose render never ran (a first analysis under way, a transcribe-only
+#: study, a run that failed before its render stage) had no copy and showed a
+#: broken image in the header of every page.
+def _logo_response(dark: bool) -> FileResponse:
+    from bristlenose.stages.s12_render.theme_assets import _LOGO_DARK_PATH, _LOGO_PATH
+
+    return FileResponse(
+        _LOGO_DARK_PATH if dark else _LOGO_PATH,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+def _mount_live_logos(app: FastAPI) -> None:
+    """Register the two logo routes ahead of a ``/report/{path}`` catch-all."""
+
+    @app.get("/report/assets/bristlenose-logo.png")
+    def serve_logo() -> FileResponse:
+        return _logo_response(dark=False)
+
+    @app.get("/report/assets/bristlenose-logo-dark.png")
+    def serve_logo_dark() -> FileResponse:
+        return _logo_response(dark=True)
+
+
 def _report_asset_path(resolved_assets: Path, path: str) -> Path | None:
     """Map a ``/report/<path>`` request onto ``<output_dir>/assets/``, or ``None``."""
     head, _, rest = path.partition("/")
@@ -1015,6 +1043,8 @@ def _mount_dev_report(app: FastAPI, output_dir: Path) -> None:
     def serve_live_player_dev() -> Response:
         return _player_page_response()
 
+    _mount_live_logos(app)
+
     @app.get("/report")
     def redirect_report_to_slash() -> RedirectResponse:
         return RedirectResponse("/report/", status_code=301)
@@ -1134,6 +1164,8 @@ def _mount_prod_report(app: FastAPI, output_dir: Path, *, dev: bool = False) -> 
     @app.get("/report/assets/bristlenose-player.html")
     def serve_live_player() -> Response:
         return _player_page_response()
+
+    _mount_live_logos(app)
 
     # Theme CSS: always the running version's, never the copy the static
     # render baked into `<output_dir>/assets/` at analysis time. That copy is

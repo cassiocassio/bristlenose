@@ -2069,9 +2069,17 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// is on AND Reduce Motion is off — the native twin of the web CSS two-gate.
     /// Off → the plain static subtitle label.
     private func shimmerSubtitle(for variant: SubtitleVariant) -> Bool {
-        let on = UserDefaults.standard.object(forKey: "showAnalysisAnimation") as? Bool ?? true
-        return Self.shimmers(variant, animationOn: on,
-                             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        let env = shimmerEnvironment()
+        return Self.shimmers(variant, animationOn: env.animationOn, reduceMotion: env.reduceMotion)
+    }
+
+    /// The two environment reads behind that gate, injectable so a test that
+    /// draws the real cell can set the state it assumes. The GitHub macOS
+    /// runners have Reduce Motion on, where the shipped gate rightly draws a
+    /// plain label — nothing to measure, and it read as a regression (1 Nov 2026).
+    var shimmerEnvironment: () -> (animationOn: Bool, reduceMotion: Bool) = {
+        (UserDefaults.standard.object(forKey: "showAnalysisAnimation") as? Bool ?? true,
+         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
     }
 
     /// The gate itself, apart from the two reads it needs, so the table is testable.

@@ -61,8 +61,15 @@ struct PoolStarvationTimeoutTests {
     }
 
     /// Control: a few stuck reads leave threads free, and the timeout fires.
+    /// "Few" is relative to the pool, which is one thread per core: the GitHub
+    /// macOS runners have 3, so a fixed 2 blockers plus the read under test
+    /// saturated it there and the control failed as the known issue does
+    /// (1 Nov 2026). At most half the pool is held here, counting that read.
     @Test func aTimedReadGivesUpWhenOnlyAFewReadsAreStuck() {
-        #expect(Self.timeoutFires(amongStuckReads: 2), "a 0.3 s timeout had not fired after 3 s")
+        let cores = ProcessInfo.processInfo.activeProcessorCount
+        let blockers = max(0, cores / 2 - 1)
+        #expect(Self.timeoutFires(amongStuckReads: blockers),
+                "a 0.3 s timeout had not fired after 3 s with \(blockers + 1) of \(cores) pool threads stuck")
     }
 
     @Test func aTimedReadStillGivesUpWhileDeadReadsHoldEveryPoolThread() {

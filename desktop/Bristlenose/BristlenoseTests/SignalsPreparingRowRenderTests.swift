@@ -42,6 +42,10 @@ import Testing
         let controller = SidebarOutlineController()
         controller.projectIndex = index
         controller.i18n = i18n
+        // The shimmer gate is pinned by SignalsPreparingTests; here it is set to the
+        // state this test assumes, since the GitHub macOS runners have Reduce Motion
+        // on and the real read then (rightly) hosts no ShimmerText.
+        controller.shimmerEnvironment = { (animationOn: true, reduceMotion: false) }
         _ = controller.view
         controller.view.frame = NSRect(x: 0, y: 0, width: 240, height: 400)
         controller.preparingSignalsProjectID = preparing ? project.id : nil

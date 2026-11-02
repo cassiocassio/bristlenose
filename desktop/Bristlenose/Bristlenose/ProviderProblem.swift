@@ -79,6 +79,11 @@ struct ProviderProblemRecord: Codable, Equatable {
     var firstSeen: Date
     var lastRefusal: Date
     var dismissed: Bool
+    /// The fingerprint of the key the refusal was about. A record is about one
+    /// key: when the key in use changes, the record is no longer true of
+    /// anything, whatever a Settings check says about the new one. Optional so a
+    /// record written before this field existed still decodes.
+    var keyFingerprint: String? = nil
 }
 
 enum ProviderProblemRules {
@@ -103,10 +108,12 @@ enum ProviderProblemRules {
     /// the two cannot drift.
     static func isNews(
         refusalOf condition: ProviderProblemCondition, provider: String, explicit: Bool,
-        existing: ProviderProblemRecord?
+        keyFingerprint: String? = nil, existing: ProviderProblemRecord?
     ) -> Bool {
         guard let existing, existing.provider == provider, existing.condition == condition
         else { return true }
+        // The same refusal, but about a different key: a different matter.
+        if let was = existing.keyFingerprint, let now = keyFingerprint, was != now { return true }
         return explicit
     }
 
@@ -124,14 +131,16 @@ enum ProviderProblemRules {
         refusalOf condition: ProviderProblemCondition,
         provider: String,
         explicit: Bool,
+        keyFingerprint: String? = nil,
         to existing: ProviderProblemRecord?,
         now: Date
     ) -> ProviderProblemRecord {
         let fresh = ProviderProblemRecord(
             provider: provider, condition: condition,
-            firstSeen: now, lastRefusal: now, dismissed: false)
+            firstSeen: now, lastRefusal: now, dismissed: false, keyFingerprint: keyFingerprint)
         guard let existing,
-              !isNews(refusalOf: condition, provider: provider, explicit: explicit, existing: existing)
+              !isNews(refusalOf: condition, provider: provider, explicit: explicit,
+                      keyFingerprint: keyFingerprint, existing: existing)
         else { return fresh }
         var kept = existing
         kept.lastRefusal = now
@@ -241,6 +250,9 @@ struct ProviderProblemPresentation: Equatable {
 extension LLMProvider {
     /// Whether a Settings validation of this provider's key is a call that fails
     /// on an empty account. Claude's is a billed one-token request, so it sees
-    /// the credit refusal; ChatGPT's is a free model list and cannot.
+    /// the credit refusal. ChatGPT's, Gemini's and Azure's are free list calls and
+    /// cannot (the Python classifier can still call a bare 402 "out of credit" for
+    /// any of them, so a record is reachable for each). Deliberately all four, not
+    /// a side effect of the one-liner.
     var settingsCheckSeesCredit: Bool { self == .claude }
 }

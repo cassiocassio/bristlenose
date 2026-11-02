@@ -3048,7 +3048,16 @@ var args = ["run", project.path, "--no-serve"]
         if let condition = ProviderProblemCondition.fromRun(
             category: category, structured: derived != nil && ownedAndTimed
         ) {
-            recordRefusal(condition, activeProvider, runKeyFingerprint)
+            // The run's own provider, or nobody: a run started with none recorded
+            // (the app's default was unset and Python chose its own) must not blame
+            // whichever provider Settings holds when it exits.
+            if let runProvider {
+                recordRefusal(condition, runProvider, runKeyFingerprint)
+            } else {
+                Self.logger.notice(
+                    "run refused (\(condition.rawValue, privacy: .public)) but its provider was not recorded at spawn — pill not raised project=\(projectID.uuidString, privacy: .public)"
+                )
+            }
         } else if category == .auth {
             Self.logger.info(
                 "run failed on auth but the cause is not this attempt's own structured one — pill not raised project=\(projectID.uuidString, privacy: .public) structured=\(derived != nil, privacy: .public) ownedAndTimed=\(ownedAndTimed, privacy: .public)"

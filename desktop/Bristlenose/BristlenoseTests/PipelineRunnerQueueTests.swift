@@ -583,9 +583,9 @@ struct PipelineRunnerQueueTests {
 
     /// A run's events log with a failed terminus carrying `category`, begun now
     /// so it is this attempt's own (an older terminus is rightly ignored).
-    private func writeFailedRun(in p: Project, category: String) throws {
+    private func writeFailedRun(in p: Project, category: String, startedAt: Date = Date()) throws {
         let dir = try dotBristlenose(p)
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = ISO8601DateFormatter().string(from: startedAt)
         let lines = [
             #"{"schema_version":5,"ts":"\#(now)","event":"run_started","run_id":"rf","kind":"run","started_at":"\#(now)"}"#,
             #"{"schema_version":5,"ts":"\#(now)","event":"run_failed","run_id":"rf","kind":"run","started_at":"\#(now)","ended_at":"\#(now)","outcome":"failed","cause":{"category":"\#(category)","message":"refused"}}"#,
@@ -640,6 +640,37 @@ struct PipelineRunnerQueueTests {
         await until({ if case .failed(_, let c) = rig.runner.state[a.id] { return c == .auth }; return false })
 
         #expect(rig.refusals.isEmpty, "a stderr guess lit the app-wide pill")
+    }
+
+    /// The events log is append-only, so an attempt that failed before writing a
+    /// terminus finds a previous run's `auth` cause at the tail. It is not this
+    /// attempt's, and an app-wide pill must not light for it.
+    @Test func aStaleStructuredCauseDoesNotTellThePill() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "auth", startedAt: Date().addingTimeInterval(-3 * 3600))
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.isEmpty, "an earlier run's cause lit the pill for this one")
+    }
+
+    /// A run with no provider on record at spawn (the app's default was unset)
+    /// is not blamed on whichever provider Settings holds when it exits.
+    @Test func aRunWhoseProviderWasNotRecordedTellsThePillNothing() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        rig.providerNow = nil
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        rig.providerNow = .chatGPT   // activated while the run went on
+        try writeFailedRun(in: a, category: "auth")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.isEmpty, "a run was blamed on the provider active at exit")
     }
 
     @Test func aRunFailingForSomethingElseTellsThePillNothing() async throws {

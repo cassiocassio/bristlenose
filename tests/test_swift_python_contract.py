@@ -567,7 +567,7 @@ class TestPlayerPathContract:
 _PROVIDER_PROBLEM_SWIFT = (
     _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "ProviderProblem.swift"
 )
-_KIND_CASE_RE = re.compile(r'case\s+"([a-z_]+)"\s*:\s*return\s+\.(\w+)')
+_KIND_CASE_RE = re.compile(r'case\s+"([a-z0-9_]+)"\s*:\s*return\s+\.(\w+)')
 
 
 def _swift_failure_kinds() -> dict[str, str]:

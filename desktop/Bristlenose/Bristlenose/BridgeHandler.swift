@@ -1563,6 +1563,12 @@ final class BridgeHandler: ObservableObject {
                 Self.log.notice(
                     "llm-failure \(condition.rawValue, privacy: .public) provider=\(raw, privacy: .public) recorded=\(recorded, privacy: .public)"
                 )
+            } else {
+                // Not acted on by design (a rate limit, an outage), or a `kind` the
+                // page no longer sends: say which, so a renamed field is not silence.
+                Self.log.info(
+                    "llm-failure kind=\(body["kind"] as? String ?? "none", privacy: .public) not acted on"
+                )
             }
 
         case "report-error":

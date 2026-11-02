@@ -108,6 +108,25 @@ struct ProviderProblemRefusalTests {
         #expect(news(.outOfCredit, "openai", explicit: false, existing: record(.outOfCredit)))
     }
 
+    @Test func theSameRefusalAboutADifferentKeyIsNews() {
+        var known = record(.outOfCredit)
+        known.keyFingerprint = "key-a"
+        func news(_ fp: String?) -> Bool {
+            ProviderProblemRules.isNews(refusalOf: .outOfCredit, provider: "anthropic", explicit: false,
+                                        keyFingerprint: fp, existing: known)
+        }
+        #expect(!news("key-a"))
+        #expect(news("key-b"), "a different key's refusal was taken for a repeat")
+        #expect(!news(nil), "an unknown key must not be taken for a different one")
+    }
+
+    /// A record written before it carried the key's fingerprint still decodes.
+    @Test func aRecordWithoutAFingerprintStillDecodes() throws {
+        let json = #"{"provider":"anthropic","condition":"outOfCredit","firstSeen":0,"lastRefusal":0,"dismissed":false}"#
+        let r = try JSONDecoder().decode(ProviderProblemRecord.self, from: Data(json.utf8))
+        #expect(r.keyFingerprint == nil)
+    }
+
     /// ChatGPT's Settings check is a free model list that returns 200 for a
     /// bankrupt key, so a good result there is not a cure.
     @Test func aGoodCheckDoesNotCureCreditWhereTheCheckCannotSeeCredit() {
@@ -460,6 +479,41 @@ struct ProviderProblemModelTests {
         }
     }
 
+    /// ChatGPT's Settings check validates a pasted key on the spot and cannot see
+    /// credit, so it says "fine" for the new key as it did for the old empty one.
+    /// Only the key's identity can tell the two apart.
+    @Test func aNewFundedChatGPTKeyClearsCreditEvenThoughItsCheckCannotSeeCredit() async {
+        await withRig(active: .chatGPT) { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit, provider: .chatGPT)
+            model.refresh()
+            #expect(model.presented != nil)
+            rig.keys[.chatGPT] = "sk-openai-a-funded-key-9988776655"
+            LLMValidator.recordVerdict(provider: .chatGPT, key: rig.keys[.chatGPT]!, status: .online)
+            model.refresh()
+            #expect(model.presented == nil, "the pill kept saying no credit over a different key")
+            #expect(ProviderProblemModel.load(from: rig.defaults) == nil)
+        }
+    }
+
+    @Test func aRecordedRefusalCarriesTheKeyItWasAbout() async {
+        await withRig { rig in
+            refuse(rig, .keyRejected)
+            #expect(ProviderProblemModel.load(from: rig.defaults)?.keyFingerprint
+                    == LLMValidator.keyFingerprint(key))
+        }
+    }
+
+    /// A refusal on a provider that is not the active one is kept, but nothing is
+    /// on screen for it, so nothing is spoken either.
+    @Test func aRefusalThatWillNotBeShownIsNotAnnounced() async {
+        await withRig(active: .claude) { rig in
+            #expect(refuse(rig, .outOfCredit, provider: .chatGPT))
+            #expect(rig.announced.isEmpty, "spoke about a pill that is not on screen")
+            #expect(ProviderProblemModel.load(from: rig.defaults)?.provider == "openai")
+        }
+    }
+
     @Test func anotherActiveProviderHidesItWithoutForgettingIt() async {
         await withRig { rig in
             let model = rig.model()
@@ -571,6 +625,18 @@ struct ProviderProblemModelTests {
                 provider: .chatGPT, defaults: rig.defaults, keyFor: { rig.keys[$0] }, center: rig.center)
             await settle { model.presented == nil }
             #expect(model.presented == nil)
+        }
+    }
+
+    @Test func aSuccessfulRunClearsTheRecordEvenWhenTheKeyCannotBeRead() async {
+        await withRig { rig in
+            let model = rig.model()
+            refuse(rig, .keyRejected)
+            model.refresh()
+            ProviderProblemModel.noteRunSucceeded(
+                provider: .claude, defaults: rig.defaults, keyFor: { _ in nil }, center: rig.center)
+            #expect(ProviderProblemModel.load(from: rig.defaults) == nil,
+                    "a run that worked left the refusal standing because the Keychain would not answer")
         }
     }
 

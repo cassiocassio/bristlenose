@@ -1,7 +1,7 @@
 ---
 status: partial
 last-trued: 2026-11-02
-trued-against: db481e43c (slice 1: key rejected and out of credit, after review)
+trued-against: slice 1 after two review rounds (key rejected and out of credit)
 ---
 
 # The provider-problem pill
@@ -44,10 +44,11 @@ once that session has written it). The switch-provider pull-down is a Could in t
 | A rejected key counts from a run **only when the category came from the structured cause**. | The stderr fallback matches `401` and `authentication` anywhere in the tail, a guess that has mislabelled failures before. |
 | The pill is **held to the key's cached verdict**; a new key or a good re-validation clears it and the record, and a run that made an LLM call clears the record whatever the verdict says. | One source of truth with Settings. A run that worked now clears a rejected-key verdict too (it used to clear only out-of-credit): a working call contradicts it. |
 | **Except:** a good Settings check does not cure *out of credit* for ChatGPT. | ChatGPT's check is a free model-list request that returns 200 for a bankrupt key. Without this, opening Settings wiped the pill and the hidden state, and the next AutoCode refusal brought it back loud. Only Claude's check (a billed call) can see an empty account. |
-| A refusal belongs to **the key the call used**: a run's key is fingerprinted at spawn, and a refusal that arrives after the key was replaced is dropped and logged. | Stamping `.invalid` over a fresh, working key would put a false red on the pill and the Settings dot. |
+| A refusal from a **run** belongs to the key and provider the run was started with: both are captured at spawn, a refusal that arrives after the key was replaced is dropped and logged, and a run with no provider on record raises nothing. | Stamping `.invalid` over a fresh, working key would put a false red on the pill and the Settings dot; blaming whichever provider Settings holds at exit would blame the wrong one. |
+| The record stores **the fingerprint of the key it was about**, and is dropped when the key in use changes. | A pasted key is validated on the spot, so a new key always has a verdict. For ChatGPT, whose check cannot see credit, only the key's identity tells a new funded key from the old empty one. |
 | A key the Keychain **would not read** hides the pill but keeps the record. | "Could not read" and "gone" both look like nil; a different key later clears the record anyway. |
 | A rejected key counts only from a **structured cause that is this attempt's own**: not the stderr guess, and not a reconnected run or one with no spawn time. | `terminusIsCurrentAttempt` answers yes for every unknown, which is right for showing a cause and wrong for lighting an app-wide pill. |
-| A new refusal is **announced to VoiceOver once, by the model**, high priority for an error. Not from the view. | The pill is in every window and would announce once per window, and again at every launch for a restored record. |
+| A new refusal is **announced to VoiceOver once, by the model**, high priority for an error, and only when that provider is the active one. Not from the view. | The pill is in every window and would announce once per window, and again at every launch for a restored record; and a pill that is not on screen is not spoken about. |
 | Every path that declines to record a refusal **logs why** (`provider-problem` category). | A pill that silently never appears is worse than one that is wrong loudly. |
 | ✕ hides it. The same condition again from something **incidental** stays hidden; a refused **run**, or a changed condition or provider, brings it back loud. | Months of edits on an empty account must not bring it back each time. |
 | The stage is evaluated at launch, on app activation, on a recorded refusal and on a prefs change. **No timer.** | Nothing may change while someone is looking at the toolbar. |
@@ -69,6 +70,14 @@ once that session has written it). The switch-provider pull-down is a Could in t
 - **Nothing clears it from a successful incidental call** (an AutoCode job after a
   top-up): only a run that worked, a good Settings check where it can see credit,
   or a new key.
+- **The report-call path cannot check the key.** An `llm-failure` posted by a serve
+  that was started before a key change is stamped on the key held now (the posting
+  serve's spawn-time key is not known to the app). Narrow: it needs a second window
+  whose serve is not fronted, a key replaced and an in-flight job refused. Closing it
+  means keeping the key's fingerprint on each `ServeInstance` and passing it here.
+- **The invisible ✕ is still focusable** while its opacity is 0: Tab can land on it,
+  which is the keyboard route that reveals it. VoiceOver users have the pill's own
+  "Hide" action as well, so it is a second route, not the only one. Not a bug.
 - **A changed verdict between the two refusals** (out of credit, then key rejected)
   clears the record rather than rewording it; the next refusal starts afresh.
 

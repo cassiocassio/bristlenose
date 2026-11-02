@@ -75,6 +75,9 @@ final class ProviderProblemModel: ObservableObject {
     private let keyFor: (LLMProvider) -> String?
     private let center: NotificationCenter
     private var observers: [NSObjectProtocol] = []
+    /// So the "no readable key" line is written when that starts, not at every
+    /// refresh (which runs on each app activation and prefs change).
+    private var loggedNoReadableKey = false
 
     static let recordKey = "providerProblemRecord"
 
@@ -152,7 +155,21 @@ final class ProviderProblemModel: ObservableObject {
         // the same here, and only one of them means the record is stale. Say
         // nothing, keep it; a different key later fails `holds` and clears it.
         guard let key = keyFor(provider) else {
-            Self.log.info("no readable key for \(provider.rawValue, privacy: .public): showing nothing, keeping the record")
+            if !loggedNoReadableKey {
+                Self.log.info("no readable key for \(provider.rawValue, privacy: .public): showing nothing, keeping the record")
+                loggedNoReadableKey = true
+            }
+            presented = nil
+            return
+        }
+        loggedNoReadableKey = false
+        // A record is about one key. A different key now (pasted in Settings, which
+        // validates it on the spot) makes it untrue of anything, whatever the new
+        // key's own check says, and that matters most where a good check cannot see
+        // credit: there only this tells a new funded key from the old empty one.
+        if let was = record.keyFingerprint, was != LLMValidator.keyFingerprint(key) {
+            Self.log.info("\(record.condition.rawValue, privacy: .public) on \(provider.rawValue, privacy: .public) was about a key that has been replaced: cleared")
+            Self.clear(in: defaults)
             presented = nil
             return
         }
@@ -257,16 +274,26 @@ final class ProviderProblemModel: ObservableObject {
         }
         LLMValidator.recordVerdict(provider: provider, key: key, status: condition.verdict.status)
         let existing = load(from: defaults)
+        let fingerprint = LLMValidator.keyFingerprint(key)
         let news = ProviderProblemRules.isNews(
-            refusalOf: condition, provider: provider.rawValue, explicit: explicit, existing: existing)
+            refusalOf: condition, provider: provider.rawValue, explicit: explicit,
+            keyFingerprint: fingerprint, existing: existing)
         save(ProviderProblemRules.applying(
             refusalOf: condition, provider: provider.rawValue, explicit: explicit,
-            to: existing, now: now), to: defaults)
+            keyFingerprint: fingerprint, to: existing, now: now), to: defaults)
         center.post(name: .bristlenoseProviderProblemChanged, object: nil)
-        // News is the first of its kind, a changed condition or provider, or a
-        // refused run. An incidental repeat is not, and nor is a record restored
-        // at launch (which never passes through here).
-        if news { announce(condition, provider) }
+        // News is the first of its kind, a changed condition, provider or key, or
+        // a refused run. An incidental repeat is not, and nor is a record restored
+        // at launch (which never passes through here). Said only when the pill will
+        // show it: a refusal for a provider that is not the active one is kept but
+        // is not on screen, so it is not spoken either.
+        if news {
+            if activeProvider() == provider {
+                announce(condition, provider)
+            } else {
+                log.info("\(what, privacy: .public) on \(provider.rawValue, privacy: .public) is news but that provider is not active: recorded, not announced")
+            }
+        }
         return true
     }
 
@@ -281,7 +308,16 @@ final class ProviderProblemModel: ObservableObject {
         keyFor: (LLMProvider) -> String? = ProviderProblemModel.liveKey,
         center: NotificationCenter = .default
     ) {
-        guard provider.needsAPIKey, let key = keyFor(provider) else { return }
+        guard provider.needsAPIKey else { return }
+        guard let key = keyFor(provider) else {
+            // A run that worked proves any refusal on record stale, and clearing the
+            // record needs no key. The verdict cannot be touched without one.
+            let hadRecord = load(from: defaults)?.provider == provider.rawValue
+            if hadRecord { clear(in: defaults) }
+            log.notice("a run worked on \(provider.rawValue, privacy: .public) but its key could not be read: record \(hadRecord ? "cleared" : "absent"), verdict left as it is")
+            if hadRecord { center.post(name: .bristlenoseProviderProblemChanged, object: nil) }
+            return
+        }
         let clearedVerdict = clearAfterSuccessfulRun(provider: provider, key: key)
         let hadRecord = load(from: defaults)?.provider == provider.rawValue
         if hadRecord { clear(in: defaults) }

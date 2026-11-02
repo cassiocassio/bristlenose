@@ -85,7 +85,7 @@ class SessionInput:
     quotes: list[dict[str, Any]]  # dom_id, start, end, text
 
 
-def _on(e: dict, t: float, slack: float = 0.0) -> bool:
+def _on(e: dict[str, Any], t: float, slack: float = 0.0) -> bool:
     return any(r[0] - slack <= t <= r[1] + slack for r in e["runs"])
 
 
@@ -112,7 +112,10 @@ def content_crop(index: dict[str, Any]) -> list[float]:
     xs0.sort()
     xs1.sort()
     ys1.sort()
-    q = lambda v, p: v[min(len(v) - 1, max(0, int(p * (len(v) - 1))))]  # noqa: E731
+
+    def q(v: list[float], p: float) -> float:
+        return v[min(len(v) - 1, max(0, int(p * (len(v) - 1))))]
+
     x0, x1, y1 = q(xs0, 0.02) - 0.02, q(xs1, 0.98) + 0.02, q(ys1, 0.99) + 0.02
     return [round(max(0.0, x0), 4), round(top, 4), round(min(1.0, x1), 4), round(min(1.0, y1), 4)]
 
@@ -132,7 +135,7 @@ def visits_of(index: dict[str, Any]) -> list[Visit]:
             titles.append((e, tt, title_suffix(e["text"])))
     # Only titles carrying the session's dominant site suffix, counted by distinct titles: a
     # bookmark has a title's shape and chained unrelated pages together (measured).
-    by_sfx: dict[str, set] = defaultdict(set)
+    by_sfx: dict[str, set[str]] = defaultdict(set)
     for _, tt, sx in titles:
         by_sfx[sx].add(tt)
     sfx = max(by_sfx, key=lambda k: len(by_sfx[k]), default=None)
@@ -176,8 +179,8 @@ def _good(phrase: str) -> bool:
     return True
 
 
-def match(spoken: str, lines: list[dict], rare: set[str],
-          tokens: dict[int, list[str]] | None = None) -> tuple[str, dict] | None:
+def match(spoken: str, lines: list[dict[str, Any]], rare: set[str],
+          tokens: dict[int, list[str]] | None = None) -> tuple[str, dict[str, Any]] | None:
     """The best on-screen line for *spoken*: the longest shared run of words (2+, one a content
     word), else one rare 6+ letter word; ties go to the larger line. None when nothing matches.
 
@@ -185,7 +188,7 @@ def match(spoken: str, lines: list[dict], rare: set[str],
     same lines folds each line once."""
     s = fold(spoken).split()
     sset = set(s)
-    best: tuple[str, dict] | None = None
+    best: tuple[str, dict[str, Any]] | None = None
     best_rank = (0, 0.0)
     for ln in lines:
         t = tokens[id(ln)] if tokens is not None and id(ln) in tokens else fold(ln["text"]).split()
@@ -221,7 +224,7 @@ def match(spoken: str, lines: list[dict], rare: set[str],
 # ── Across sessions ──────────────────────────────────────────────────────
 
 
-def _heading(lines: list[dict], top: float, bottom: float) -> str:
+def _heading(lines: list[dict[str, Any]], top: float, bottom: float) -> str:
     """The page's own heading: the tallest line of words in the top half of the page."""
     cands = []
     for ln in lines:
@@ -237,6 +240,8 @@ def _heading(lines: list[dict], top: float, bottom: float) -> str:
 
 
 Linker = Callable[[list[dict[str, Any]]], list[dict[str, Any]]]
+#: A quote pinned to a line: the quote, then the matched phrase and the line it is on.
+Pin = tuple[dict[str, Any], tuple[str, dict[str, Any]]]
 
 
 def _session_tabs(
@@ -249,7 +254,7 @@ def _session_tabs(
     crop = content_crop(idx)
     top = crop[1]
     # Furniture: sticky, or on screen during visits to FURNITURE_SCREENS or more screens.
-    seen: dict[str, set] = defaultdict(set)
+    seen: dict[str, set[str]] = defaultdict(set)
     for e in idx["episodes"]:
         for v in visits:
             if any(r[0] <= v.t1 + every and r[1] >= v.t0 for r in e["runs"]):
@@ -268,15 +273,15 @@ def _session_tabs(
     rare = {w for w, c in freq.items() if c <= 3}
     # Memoised: a still is chosen by asking what is on screen at each candidate several times, and
     # an hour of browsing has thousands of lines (measured 3 s a session unmemoised, 14 Oct 2026).
-    on_at: dict[float, list[dict]] = {}
+    on_at: dict[float, list[dict[str, Any]]] = {}
 
-    def lines_at(t: float) -> list[dict]:
+    def lines_at(t: float) -> list[dict[str, Any]]:
         # Exactly what the still shows: a line seen up to a sample before is not on it.
         if t not in on_at:
             on_at[t] = [e for e in content if _on(e, t, 0.05)]
         return on_at[t]
 
-    def screen_of(q: dict) -> str | None:
+    def screen_of(q: dict[str, Any]) -> str | None:
         best, score = None, 0.0
         for v in visits:
             ov = min(q["end"] + WINDOW, v.t1 + every) - max(q["start"] - WINDOW, v.t0)
@@ -284,9 +289,9 @@ def _session_tabs(
                 best, score = v.key, ov
         return best
 
-    pinned_at: dict[tuple[str, float], list[tuple[dict, tuple[str, dict]]]] = {}
+    pinned_at: dict[tuple[str, float], list[Pin]] = {}
 
-    def pins_at(t: float, qs: list[dict], key: str) -> list[tuple[dict, tuple[str, dict]]]:
+    def pins_at(t: float, qs: list[dict[str, Any]], key: str) -> list[Pin]:
         if (key, t) not in pinned_at:
             ls = lines_at(t)
             pinned_at[(key, t)] = [(q, m) for q in qs if (m := match(q["text"], ls, rare, tokens))]
@@ -298,7 +303,7 @@ def _session_tabs(
         return [round((b[0] - crop[0]) / w, 4), round((b[1] - crop[1]) / h, 4),
                 round(b[2] / w, 4), round(b[3] / h, 4)]
 
-    by_screen: dict[str, list[dict]] = defaultdict(list)
+    by_screen: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for q in s.quotes:
         k = screen_of(q)
         if k:
@@ -306,7 +311,7 @@ def _session_tabs(
     tabs: dict[str, dict[str, Any]] = {}
     extra: dict[str, tuple[list[dict[str, Any]], Linker]] = {}
 
-    def pin_dicts(found: list[tuple[dict, tuple[str, dict]]]) -> list[dict[str, Any]]:
+    def pin_dicts(found: list[Pin]) -> list[dict[str, Any]]:
         return [{"dom_id": q["dom_id"], "box": to_crop(m[1]["box"]), "phrase": m[0], "line": m[1]["text"]}
                 for q, m in found]
 
@@ -323,7 +328,10 @@ def _session_tabs(
         # lines seen on this screen (a loading page has few), the one pinning the most quotes.
         most = max(len(lines_at(t)) for t in cands)
         drawn = [t for t in cands if len(lines_at(t)) >= 0.6 * most]
-        still = max(drawn, key=lambda t, qs=qs, k=key: (len(pins_at(t, qs, k)), len(lines_at(t))))
+        def pinning(t: float, qs: list[dict[str, Any]] = qs, k: str = key) -> tuple[int, int]:
+            return len(pins_at(t, qs, k)), len(lines_at(t))
+
+        still = max(drawn, key=pinning)
         pins = pins_at(still, qs, key)
         pinned = {q["dom_id"] for q, _ in pins}
         tabs[key] = {
@@ -360,7 +368,7 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
     for s in sessions:
         visits = visits_of(s.index)
         # A title seen with two or more addresses in one session is chrome (a bookmark), not a title.
-        urls_per_title: dict[str, set] = defaultdict(set)
+        urls_per_title: dict[str, set[str]] = defaultdict(set)
         for v in visits:
             for a in v.aliases:
                 if a.startswith("title:"):
@@ -376,7 +384,7 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
             find(al[0])
         per[s.session_id] = {"s": s, "visits": visits}
 
-    names: dict[str, Counter] = defaultdict(Counter)
+    names: dict[str, Counter[str]] = defaultdict(Counter)
     for d in per.values():
         for v in d["visits"]:
             for a in v.aliases:
@@ -392,7 +400,7 @@ def derive_screens(sessions: Iterable[SessionInput]) -> list[dict[str, Any]]:
     said: dict[str, list[dict[str, Any]]] = defaultdict(list)
     linkers: dict[str, list[tuple[dict[str, Any], Linker]]] = defaultdict(list)
     for d in per.values():
-        visits: list[Visit] = d["visits"]
+        visits = d["visits"]
         for v in visits:
             v.key = find(sorted(v.aliases)[0])
         tabs, extra = _session_tabs(d["s"], visits)

@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-_CACHE: dict[tuple, list[dict[str, Any]]] = {}
+_CACHE: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
 #: Whether the indexes show any screen, by their identity (the first part of ``_CACHE``'s key). Not
 #: keyed on the quotes: they place and pin on screens, they never make or remove one.
 _HAS_SCREENS: dict[tuple[Any, ...], bool] = {}
@@ -247,7 +247,7 @@ def derive_project_screens(
 
     quotes = speaker_slots.evidence_quotes(db, project_id)
     by_session: dict[str, list[dict[str, Any]]] = {}
-    codes: dict[str, Counter] = {}
+    codes: dict[str, Counter[str]] = {}
     for q in quotes:
         dom_id = quote_dom_id(q.participant_id, q.start_timecode, q.ordinal)
         owner[dom_id] = q.session_id

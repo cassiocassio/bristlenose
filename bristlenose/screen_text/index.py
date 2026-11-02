@@ -37,7 +37,7 @@ from typing import Any
 
 from bristlenose.screen_text import INDEX_VERSION
 from bristlenose.screen_text.address import minimise, url_norm
-from bristlenose.screen_text.engine import Frame, ScreenTextEngine
+from bristlenose.screen_text.engine import Frame, Line, ScreenTextEngine
 from bristlenose.utils.bundled_binary import binary_command
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,10 @@ def sample_frames(video: Path, every: float = EVERY, should_stop: Callable[[], b
             # showinfo writes the frame's line before the frame leaves the filter graph, but the
             # two pipes are read independently: wait briefly for the matching time.
             with got_time:
-                got_time.wait_for(lambda n=n: len(times) > n or not reader.is_alive(), timeout=10)
+                def time_ready(n: int = n) -> bool:
+                    return len(times) > n or not reader.is_alive()
+
+                got_time.wait_for(time_ready, timeout=10)
                 if len(times) <= n:
                     raise RuntimeError(f"no time for frame {n}")
                 t = times[n]
@@ -178,12 +181,12 @@ def _place(box: list[float]) -> tuple[int, int]:
 
 def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float = EVERY) -> dict[str, Any]:
     """Read every frame and build the index record (without its cache key)."""
-    samples: list[tuple[float, dict[str, dict]]] = []
+    samples: list[tuple[float, dict[str, Line]]] = []
     size = [0, 0]
     raw = 0
     for fr in frames:
         size = [fr.width, fr.height]
-        keep: dict[str, dict] = {}
+        keep: dict[str, Line] = {}
         lines = engine.recognize(fr)
         raw += len(lines)
         for ln in lines:
@@ -198,7 +201,7 @@ def index_frames(frames: Iterator[Frame], engine: ScreenTextEngine, every: float
         for f in k:
             freq[f] = freq.get(f, 0) + 1
     sticky = {f for f, c in freq.items() if dense and c / len(dense) >= STICKY}
-    episodes: dict[tuple[str, tuple[int, int]], dict] = {}
+    episodes: dict[tuple[str, tuple[int, int]], dict[str, Any]] = {}
     for t, k in samples:
         for f, ln in k.items():
             if f in sticky and url_norm(ln["text"]) is None:

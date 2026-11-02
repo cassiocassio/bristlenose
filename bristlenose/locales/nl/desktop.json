@@ -1003,6 +1003,20 @@
     "addFunds": "Voeg tegoed toe\u2026",
     "switchProvider": "Wissel van provider\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · sleutel geweigerd",
+      "body": "Voeg een nieuwe sleutel toe in Instellingen."
+    },
+    "openSettings": "Open Instellingen…",
+    "hide": "Verberg de melding van {{provider}}",
+    "hideTooltip": "Verberg",
+    "hint": "Toont details en acties",
+    "kind": {
+      "error": "Fout",
+      "warning": "Waarschuwing"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sessie",
     "sessions_other": "{{count}} sessies",

@@ -1003,6 +1003,20 @@
     "addFunds": "Lis\u00e4\u00e4 varoja\u2026",
     "switchProvider": "Vaihda palveluntarjoajaa\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · avain hylätty",
+      "body": "Lisää uusi avain Asetuksissa."
+    },
+    "openSettings": "Avaa Asetukset…",
+    "hide": "Piilota palvelun {{provider}} ilmoitus",
+    "hideTooltip": "Piilota",
+    "hint": "Näyttää tiedot ja toiminnot",
+    "kind": {
+      "error": "Virhe",
+      "warning": "Varoitus"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} istunto",
     "sessions_other": "{{count}} istuntoa",

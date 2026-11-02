@@ -1003,6 +1003,20 @@
     "addFunds": "Afegeix fons…",
     "switchProvider": "Canvia de proveïdor…"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · clau rebutjada",
+      "body": "Afegeix una clau nova a Configuració."
+    },
+    "openSettings": "Obre Configuració…",
+    "hide": "Oculta l’avís de {{provider}}",
+    "hideTooltip": "Oculta",
+    "hint": "Mostra detalls i accions",
+    "kind": {
+      "error": "Error",
+      "warning": "Advertència"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sessió",
     "sessions_other": "{{count}} sessions",

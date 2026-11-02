@@ -1003,6 +1003,20 @@
     "addFunds": "A\u00f1adir fondos\u2026",
     "switchProvider": "Cambiar de proveedor\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · clave rechazada",
+      "body": "Añade una clave nueva en Ajustes."
+    },
+    "openSettings": "Abrir Ajustes…",
+    "hide": "Ocultar el aviso de {{provider}}",
+    "hideTooltip": "Ocultar",
+    "hint": "Muestra detalles y acciones",
+    "kind": {
+      "error": "Error",
+      "warning": "Advertencia"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sesi\u00f3n",
     "sessions_other": "{{count}} sesiones",

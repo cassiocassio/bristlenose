@@ -1003,6 +1003,20 @@
     "addFunds": "Aggiungi fondi\u2026",
     "switchProvider": "Cambia provider\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · chiave rifiutata",
+      "body": "Aggiungi una nuova chiave in Impostazioni."
+    },
+    "openSettings": "Apri Impostazioni…",
+    "hide": "Nascondi l’avviso di {{provider}}",
+    "hideTooltip": "Nascondi",
+    "hint": "Mostra dettagli e azioni",
+    "kind": {
+      "error": "Errore",
+      "warning": "Avviso"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sessione",
     "sessions_other": "{{count}} sessioni",

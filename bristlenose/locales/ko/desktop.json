@@ -981,6 +981,20 @@
     "addFunds": "\ud06c\ub808\ub527 \ucd94\uac00\u2026",
     "switchProvider": "\uc81c\uacf5\uc5c5\uccb4 \uc804\ud658\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · 키 거부됨",
+      "body": "설정에서 새 키를 추가하세요."
+    },
+    "openSettings": "설정 열기…",
+    "hide": "{{provider}} 알림 숨기기",
+    "hideTooltip": "숨기기",
+    "hint": "세부 정보와 동작을 표시합니다",
+    "kind": {
+      "error": "오류",
+      "warning": "경고"
+    }
+  },
   "connectAgent": {
     "sessions_other": "\uc138\uc158 {{count}}\uac1c",
     "quotes_other": "\uc778\uc6a9\ubb38 {{count}}\uac1c",

@@ -1003,6 +1003,20 @@
     "addFunds": "Adicionar fundos\u2026",
     "switchProvider": "Mudar de fornecedor\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · chave rejeitada",
+      "body": "Adicione uma nova chave em Definições."
+    },
+    "openSettings": "Abrir Definições…",
+    "hide": "Ocultar aviso de {{provider}}",
+    "hideTooltip": "Ocultar",
+    "hint": "Mostra detalhes e ações",
+    "kind": {
+      "error": "Erro",
+      "warning": "Aviso"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sess\u00e3o",
     "sessions_other": "{{count}} sess\u00f5es",

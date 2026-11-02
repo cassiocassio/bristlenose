@@ -1003,6 +1003,20 @@
     "addFunds": "Ajouter des fonds\u2026",
     "switchProvider": "Changer de fournisseur\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · clé refusée",
+      "body": "Ajoutez une nouvelle clé dans Réglages."
+    },
+    "openSettings": "Ouvrir les Réglages…",
+    "hide": "Masquer l’avis {{provider}}",
+    "hideTooltip": "Masquer",
+    "hint": "Affiche les détails et les actions",
+    "kind": {
+      "error": "Erreur",
+      "warning": "Avertissement"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} entretien",
     "sessions_other": "{{count}} entretiens",

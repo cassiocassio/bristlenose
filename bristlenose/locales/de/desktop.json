@@ -1003,6 +1003,20 @@
     "addFunds": "Guthaben aufladen\u2026",
     "switchProvider": "Anbieter wechseln\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · Schlüssel abgelehnt",
+      "body": "Fügen Sie in den Einstellungen einen neuen Schlüssel hinzu."
+    },
+    "openSettings": "Einstellungen öffnen…",
+    "hide": "Hinweis zu {{provider}} ausblenden",
+    "hideTooltip": "Ausblenden",
+    "hint": "Zeigt Details und Aktionen",
+    "kind": {
+      "error": "Fehler",
+      "warning": "Warnung"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} Interview",
     "sessions_other": "{{count}} Interviews",

@@ -262,9 +262,9 @@ private struct DebugMenuContent: View {
     @ObservedObject var serveManager: ServeManager
     /// "Grid Specimen" navigates the report SPA (no native window scene).
     @ObservedObject var bridgeHandler: BridgeHandler
-    /// Prototype pill state — a singleton, so the menu and the toolbar item
-    /// share it without touching the app's environment-object wiring.
-    @ObservedObject private var providerProblem = ProviderProblemPrototype.shared
+    /// The pill's state — a singleton, so the menu and the toolbar item share it
+    /// without touching the app's environment-object wiring.
+    @ObservedObject private var providerProblem = ProviderProblemModel.shared
     @Environment(\.openWindow) private var openWindow
     @FocusedValue(\.windowCommands) private var windowCommands
 
@@ -352,37 +352,23 @@ private struct DebugMenuContent: View {
             Button("Hide pill (idle)") { ollamaDownload.cancel() }
         }
 
-        // PROTOTYPE: one title-bar pill for provider problems, beside the
-        // shipped pills. `ProviderProblemPrototype.swift`; design argument in
-        // docs/mockups/provider-problem-surface.html. Pick a condition and a
-        // stage; both are remembered so you can step through the life of it.
-        Menu("Provider problem pill (prototype)") {
-            ForEach(ProviderProblemPrototype.Condition.allCases) { c in
-                Button((providerProblem.condition == c ? "✓ " : "") + c.menuLabel) {
-                    providerProblem.condition = c
+        // The provider-problem pill, forced into any look without running a
+        // provider dry (`ProviderProblemModel.debugForced`; the real state is
+        // untouched and wins again when this is cleared).
+        Menu("Provider problem pill") {
+            ForEach(ProviderProblemCondition.allCases, id: \.self) { c in
+                Button((providerProblem.debugForced?.condition == c ? "✓ " : "") + c.debugLabel) {
+                    providerProblem.debugForce(condition: c)
                 }
             }
             Divider()
-            ForEach(ProviderProblemPrototype.Stage.allCases) { s in
-                Button((providerProblem.stage == s ? "✓ " : "") + s.menuLabel) {
-                    if providerProblem.condition == nil { providerProblem.condition = .outOfCredit }
-                    providerProblem.stage = s
+            ForEach([ProviderProblemStage.loud, .settled, .collapsed], id: \.self) { st in
+                Button((providerProblem.debugForced?.stage == st ? "✓ " : "") + st.debugLabel) {
+                    providerProblem.debugForce(stage: st)
                 }
             }
             Divider()
-            ForEach(ProviderProblemPrototype.DismissStyle.allCases) { v in
-                Button((providerProblem.dismissStyle == v ? "✓ " : "") + v.menuLabel) {
-                    providerProblem.dismissStyle = v
-                }
-            }
-            Divider()
-            ForEach(ProviderProblemPrototype.SlotStyle.allCases) { v in
-                Button((providerProblem.slot == v ? "✓ " : "") + v.menuLabel) {
-                    providerProblem.slot = v
-                }
-            }
-            Divider()
-            Button("Hide pill") { providerProblem.hide() }
+            Button("Back to the real state") { providerProblem.debugForced = nil }
         }
     }
 

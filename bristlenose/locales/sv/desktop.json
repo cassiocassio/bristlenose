@@ -1003,6 +1003,20 @@
     "addFunds": "Fyll p\u00e5 saldo\u2026",
     "switchProvider": "Byt leverant\u00f6r\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · nyckel avvisad",
+      "body": "Lägg till en ny nyckel i Inställningar."
+    },
+    "openSettings": "Öppna Inställningar…",
+    "hide": "Dölj meddelandet från {{provider}}",
+    "hideTooltip": "Dölj",
+    "hint": "Visar detaljer och åtgärder",
+    "kind": {
+      "error": "Fel",
+      "warning": "Varning"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",

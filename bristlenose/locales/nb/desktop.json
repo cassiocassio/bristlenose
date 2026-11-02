@@ -1003,6 +1003,20 @@
     "addFunds": "Legg til midler\u2026",
     "switchProvider": "Bytt leverand\u00f8r\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · nøkkel avvist",
+      "body": "Legg til en ny nøkkel i Innstillinger."
+    },
+    "openSettings": "Åpne Innstillinger…",
+    "hide": "Skjul varselet fra {{provider}}",
+    "hideTooltip": "Skjul",
+    "hint": "Viser detaljer og handlinger",
+    "kind": {
+      "error": "Feil",
+      "warning": "Advarsel"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} \u00f8kt",
     "sessions_other": "{{count}} \u00f8kter",

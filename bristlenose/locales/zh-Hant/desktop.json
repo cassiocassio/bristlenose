@@ -981,6 +981,20 @@
     "addFunds": "\u52a0\u503c\u22ef",
     "switchProvider": "\u5207\u63db\u4f9b\u61c9\u5546\u22ef"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · 金鑰遭拒",
+      "body": "請在「設定」中加入新的金鑰。"
+    },
+    "openSettings": "開啟「設定」⋯",
+    "hide": "隱藏 {{provider}} 通知",
+    "hideTooltip": "隱藏",
+    "hint": "顯示詳細資訊與動作",
+    "kind": {
+      "error": "錯誤",
+      "warning": "警告"
+    }
+  },
   "connectAgent": {
     "sessions_other": "{{count}} \u5834\u6b21",
     "quotes_other": "{{count}} \u5247\u5f15\u8ff0",

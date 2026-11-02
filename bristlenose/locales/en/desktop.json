@@ -1008,6 +1008,20 @@
     "addFunds": "Add funds…",
     "switchProvider": "Switch provider…"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · key rejected",
+      "body": "Add a new key in Settings."
+    },
+    "openSettings": "Open Settings…",
+    "hide": "Hide {{provider}} notice",
+    "hideTooltip": "Hide",
+    "hint": "Shows details and actions",
+    "kind": {
+      "error": "Error",
+      "warning": "Warning"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessions",

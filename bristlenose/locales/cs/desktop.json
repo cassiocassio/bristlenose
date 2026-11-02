@@ -1046,6 +1046,20 @@
     "addFunds": "P\u0159idat prost\u0159edky\u2026",
     "switchProvider": "Zm\u011bnit poskytovatele\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · klíč odmítnut",
+      "body": "Přidejte nový klíč v Nastavení."
+    },
+    "openSettings": "Otevřít Nastavení…",
+    "hide": "Skrýt oznámení {{provider}}",
+    "hideTooltip": "Skrýt",
+    "hint": "Zobrazí podrobnosti a akce",
+    "kind": {
+      "error": "Chyba",
+      "warning": "Varování"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sezen\u00ed",
     "sessions_few": "{{count}} sezen\u00ed",

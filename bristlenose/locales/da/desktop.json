@@ -1003,6 +1003,20 @@
     "addFunds": "Tilf\u00f8j midler\u2026",
     "switchProvider": "Skift udbyder\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · nøgle afvist",
+      "body": "Tilføj en ny nøgle i Indstillinger."
+    },
+    "openSettings": "Åbn Indstillinger…",
+    "hide": "Skjul meddelelsen fra {{provider}}",
+    "hideTooltip": "Skjul",
+    "hint": "Viser detaljer og handlinger",
+    "kind": {
+      "error": "Fejl",
+      "warning": "Advarsel"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} session",
     "sessions_other": "{{count}} sessioner",

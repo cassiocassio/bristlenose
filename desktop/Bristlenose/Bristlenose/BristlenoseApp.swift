@@ -135,9 +135,6 @@ struct BristlenoseApp: App {
     // Ambient local-model pull (Beat 3). Owned at app level so the download
     // survives the consent sheet's dismissal and surfaces in the toolbar pill.
     @StateObject private var ollamaDownload = OllamaDownloadModel()
-    // App-global out-of-credit state for the active provider; drives the
-    // sibling `.status` toolbar pill (OutOfCreditPill).
-    @StateObject private var outOfCredit = OutOfCreditModel()
     @StateObject private var i18n: I18n = {
         let i = I18n()
         if let dir = I18n.findLocalesDirectory() {
@@ -182,7 +179,6 @@ struct BristlenoseApp: App {
                 // `EnvironmentObject.error()` the first time the body reads it.
                 .environmentObject(cloudImport)
                 .environmentObject(ollamaDownload)
-                .environmentObject(outOfCredit)
                 .environmentObject(i18n)
                 .onAppear {
                     // The AppKit Settings window is built lazily on first open;

@@ -699,7 +699,7 @@ final class PipelineRunner: ObservableObject {
     ///   - signalTarget: where a run's signals go, given its pid.
     ///   - activeProvider: the provider a run is spawned with.
     ///   - noteRunSucceeded: what a finished run that made an LLM call does to
-    ///     its provider's out-of-credit verdict.
+    ///     its provider's refusal verdicts (out of credit, key rejected).
     ///   - sidecarLookup: where the sidecar is. Nil, the app's, resolves it
     ///     from the bundle, and only when no `launcher` is passed; a test passes
     ///     one beside its launcher to reach a failed lookup (R28).
@@ -730,7 +730,7 @@ final class PipelineRunner: ObservableObject {
             UserDefaults.standard.string(forKey: "activeProvider").flatMap(LLMProvider.init(rawValue:))
         },
         noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = {
-            OutOfCreditModel.noteRunSucceeded(provider: $0)
+            ProviderProblemModel.noteRunSucceeded(provider: $0)
         },
         sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
         outputDrainLimit: Duration = .seconds(2),
@@ -3009,13 +3009,16 @@ var args = ["run", project.path, "--no-serve"]
                 project: project, outcome: outcome, category: category, lines: lines
             )
         }
-        // Light the app-global out-of-credit pill immediately on a real run
-        // that failed on billing (the pill reads LLMValidator's verdict cache,
-        // which a run 402 wouldn't otherwise touch until Settings re-validates).
-        // Keyed on the distinct billing category, and attributed to the run's
-        // provider — a transient rate-limit (.quota) can't false-alarm.
-        if category == .outOfCredit {
-            OutOfCreditModel.recordActiveProviderOutOfCredit(provider: activeProvider)
+        // Tell the app-global provider-problem pill about a refusal this run met:
+        // billing, or a rejected key. Both are things the researcher asked for
+        // (`explicit`). Keyed on the distinct categories and attributed to the
+        // run's provider, so a transient rate limit (.quota) can't false-alarm.
+        // A rejected key counts only from the run's structured cause
+        // (`derived != nil`): the stderr fallback's `401` match is a guess.
+        if let condition = ProviderProblemCondition.fromRun(
+            category: category, structured: derived != nil
+        ) {
+            ProviderProblemModel.recordRefusal(condition, provider: activeProvider, explicit: true)
         }
         return .failed(summary, category: category)
     }

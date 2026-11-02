@@ -1047,6 +1047,20 @@
     "addFunds": "Dodaj \u015brodki\u2026",
     "switchProvider": "Zmie\u0144 dostawc\u0119\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · klucz odrzucony",
+      "body": "Dodaj nowy klucz w Ustawieniach."
+    },
+    "openSettings": "Otwórz Ustawienia…",
+    "hide": "Ukryj powiadomienie {{provider}}",
+    "hideTooltip": "Ukryj",
+    "hint": "Pokazuje szczegóły i działania",
+    "kind": {
+      "error": "Błąd",
+      "warning": "Ostrzeżenie"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} sesja",
     "sessions_few": "{{count}} sesje",

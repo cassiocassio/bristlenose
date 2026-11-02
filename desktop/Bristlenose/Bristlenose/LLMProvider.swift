@@ -305,11 +305,11 @@ extension Notification.Name {
     /// the web layer via `bridgeHandler.setColorPalette()` — a live runtime
     /// data-color-theme swap, so (unlike prefs) it does NOT restart the sidecar.
     static let bristlenosePaletteChanged = Notification.Name("bristlenosePaletteChanged")
-    /// Posted when the active provider's out-of-credit state may have changed
-    /// (e.g. a run failed on billing → verdict recorded). `OutOfCreditModel`
-    /// listens and re-reads. Distinct from `bristlenosePrefsChanged` so the
-    /// pill can refresh WITHOUT triggering a serve restart.
-    static let bristlenoseOutOfCreditChanged = Notification.Name("bristlenoseOutOfCreditChanged")
+    /// Posted when a provider refusal was recorded (a run or a report call was
+    /// refused for a rejected key or no credit). `ProviderProblemModel` listens
+    /// and re-reads. Distinct from `bristlenosePrefsChanged` so the pill can
+    /// refresh WITHOUT triggering a serve restart.
+    static let bristlenoseProviderProblemChanged = Notification.Name("bristlenoseProviderProblemChanged")
     /// Posted when feedback is requested but the SPA isn't mounted (the status
     /// page): the status-page bridge (`project-action: open-feedback`) and Help ▸
     /// Send Feedback's bridge-probe fallback both post this. ContentView owns the

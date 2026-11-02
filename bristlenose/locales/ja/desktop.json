@@ -981,6 +981,20 @@
     "addFunds": "\u30af\u30ec\u30b8\u30c3\u30c8\u3092\u8ffd\u52a0\u2026",
     "switchProvider": "\u30d7\u30ed\u30d0\u30a4\u30c0\u3092\u5207\u308a\u66ff\u3048\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · キーが拒否されました",
+      "body": "設定で新しいキーを追加してください。"
+    },
+    "openSettings": "設定を開く…",
+    "hide": "{{provider}} の通知を非表示",
+    "hideTooltip": "非表示",
+    "hint": "詳細と操作を表示します",
+    "kind": {
+      "error": "エラー",
+      "warning": "警告"
+    }
+  },
   "connectAgent": {
     "sessions_other": "\u30bb\u30c3\u30b7\u30e7\u30f3 {{count}} \u4ef6",
     "quotes_other": "\u767a\u8a00 {{count}} \u4ef6",

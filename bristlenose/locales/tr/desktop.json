@@ -1003,6 +1003,20 @@
     "addFunds": "Bakiye ekle\u2026",
     "switchProvider": "Sa\u011flay\u0131c\u0131 de\u011fi\u015ftir\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · anahtar reddedildi",
+      "body": "Ayarlar'da yeni bir anahtar ekleyin."
+    },
+    "openSettings": "Ayarlar'ı Aç…",
+    "hide": "{{provider}} bildirimini gizle",
+    "hideTooltip": "Gizle",
+    "hint": "Ayrıntıları ve eylemleri gösterir",
+    "kind": {
+      "error": "Hata",
+      "warning": "Uyarı"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} oturum",
     "sessions_other": "{{count}} oturum",

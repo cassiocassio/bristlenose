@@ -1047,6 +1047,20 @@
     "addFunds": "\u041f\u043e\u043f\u043e\u0432\u043d\u0438\u0442\u0438 \u0440\u0430\u0445\u0443\u043d\u043e\u043a\u2026",
     "switchProvider": "\u0417\u043c\u0456\u043d\u0438\u0442\u0438 \u043f\u043e\u0441\u0442\u0430\u0447\u0430\u043b\u044c\u043d\u0438\u043a\u0430\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · ключ відхилено",
+      "body": "Додайте новий ключ у Параметрах."
+    },
+    "openSettings": "Відкрити Параметри…",
+    "hide": "Сховати сповіщення {{provider}}",
+    "hideTooltip": "Сховати",
+    "hint": "Показує подробиці та дії",
+    "kind": {
+      "error": "Помилка",
+      "warning": "Попередження"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} \u0441\u0435\u0441\u0456\u044f",
     "sessions_few": "{{count}} \u0441\u0435\u0441\u0456\u0457",

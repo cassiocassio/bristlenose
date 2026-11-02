@@ -1531,29 +1531,32 @@ final class BridgeHandler: ObservableObject {
             }
 
         case "llm-failure":
-            // An LLM call inside the sidecar died. `OutOfCreditModel` was fed
-            // from `PipelineRunner.deriveFailureState` alone — the pipeline
-            // path — so an AutoCode job that emptied the account lit nothing:
-            // no pill, and Settings still showing the provider green until it
-            // next revalidated. The report chip said so and the app did not.
+            // An LLM call inside the sidecar died. The pill was fed from the
+            // pipeline path alone (`PipelineRunner.deriveFailureState`), so an
+            // AutoCode job that emptied the account lit nothing: no pill, and
+            // Settings still showing the provider green until it next
+            // revalidated. The report chip said so and the app did not.
             //
-            // Only billing is acted on, deliberately. A rate limit is
-            // transient and clears itself, and `LLMValidator`'s verdict cache
-            // is sticky — recording one would leave a durable amber for a
-            // condition that resolved in seconds.
+            // Only a refusal that is the provider's answer is acted on: no
+            // credit, or a rejected key. A rate limit is transient and clears
+            // itself, and the verdict cache is sticky, so recording one would
+            // leave a durable amber for a condition that resolved in seconds. A
+            // call inside the report is not something the researcher asked for
+            // as a run is, so it is not `explicit`: it will not bring back a
+            // pill they hid.
             //
-            // `"out_of_credit"` is `LLMFailureKind.OUT_OF_CREDIT` in
-            // `bristlenose/llm/failure_classifier.py`, a *different* Python
-            // enum from the `CauseCategoryEnum` `CauseCategory` mirrors —
-            // they agree on this one string by convention, not by contract,
-            // so this compares the literal rather than borrowing that type.
-            if body["kind"] as? String == "out_of_credit",
+            // The kind strings are `LLMFailureKind` in
+            // `bristlenose/llm/failure_classifier.py`, a *different* Python enum
+            // from the `CauseCategoryEnum` `CauseCategory` mirrors; they agree
+            // on these by convention, not by contract, so the literals are
+            // compared (`ProviderProblemCondition.fromLLMFailureKind`).
+            if let condition = ProviderProblemCondition.fromLLMFailureKind(body["kind"] as? String),
                let raw = body["provider"] as? String,
                let provider = LLMProvider(rawValue: raw) {
                 Self.log.notice(
-                    "llm-failure out_of_credit provider=\(raw, privacy: .public) — recording verdict"
+                    "llm-failure \(condition.rawValue, privacy: .public) provider=\(raw, privacy: .public) — recording"
                 )
-                OutOfCreditModel.recordActiveProviderOutOfCredit(provider: provider)
+                ProviderProblemModel.recordRefusal(condition, provider: provider, explicit: false)
             }
 
         case "report-error":

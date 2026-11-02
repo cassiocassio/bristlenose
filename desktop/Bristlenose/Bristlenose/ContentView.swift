@@ -269,7 +269,6 @@ struct ContentView: View {
     /// the import window is closed.
     @EnvironmentObject var cloudImport: CloudImportCoordinator
     @EnvironmentObject var ollamaDownload: OllamaDownloadModel
-    @EnvironmentObject var outOfCredit: OutOfCreditModel
     @EnvironmentObject var i18n: I18n
     @AppStorage("appearance") private var appearance: String = "auto"
     @AppStorage("showAnalysisAnimation") private var showAnalysisAnimation = true
@@ -3214,8 +3213,8 @@ struct ContentView: View {
         // popover) AND copy-in-flight (ring + hover-× Cancel, "Copying · N%")
         // are per-project, so they ride the row. The toolbar `.status` zone is
         // reserved for genuinely app-global concerns — now a multi-pill shelf
-        // sharing the `StatusPill` envelope: Ollama model-download, provider
-        // out-of-credit, and the alpha-expiry notice. (Per-project vs app-global
+        // sharing the `StatusPill` envelope: Ollama model-download, the
+        // provider-problem pill, and the alpha-expiry notice. (Per-project vs app-global
         // is the placement axis: `docs/design-desktop-project-status.md` §4.)
         //
         // All three opt out of macOS 26's shared toolbar-item background
@@ -3233,10 +3232,12 @@ struct ContentView: View {
             WhisperDownloadPill(model: WhisperDownloadModel.shared)
         }
         .withoutSharedBackground()
-        // Sibling app-global pill: the active cloud provider is out of credit.
-        // Cloud-only, so it never co-occurs with the Ollama (local) pill above.
+        // Sibling app-global pill: the active cloud provider is refusing us (key
+        // rejected, or out of credit), lit by a refused call and held to the
+        // key's verdict. Cloud-only, so it never co-occurs with the Ollama
+        // (local) pill above.
         ToolbarItem(placement: .status) {
-            OutOfCreditPill(model: outOfCredit)
+            ProviderProblemPill(model: ProviderProblemModel.shared)
         }
         .withoutSharedBackground()
         // Sibling app-global pill: an expiring `.dmg` alpha build in its final
@@ -3246,14 +3247,6 @@ struct ContentView: View {
             AlphaExpiryPill()
         }
         .withoutSharedBackground()
-        #if DEBUG
-        // PROTOTYPE (DEBUG only): one pill for provider problems, driven from
-        // Diagnostics ▸ Provider problem pill. `ProviderProblemPrototype.swift`.
-        ToolbarItem(placement: .status) {
-            ProviderProblemPill(model: ProviderProblemPrototype.shared)
-        }
-        .withoutSharedBackground()
-        #endif
     }
 
     // MARK: - Sidebar

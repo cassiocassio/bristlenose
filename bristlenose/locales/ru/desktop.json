@@ -1047,6 +1047,20 @@
     "addFunds": "\u041f\u043e\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0441\u0447\u0451\u0442\u2026",
     "switchProvider": "\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0440\u043e\u0432\u0430\u0439\u0434\u0435\u0440\u0430\u2026"
   },
+  "providerProblem": {
+    "keyRejected": {
+      "pill": "{{provider}} · ключ отклонён",
+      "body": "Добавьте новый ключ в Настройках."
+    },
+    "openSettings": "Открыть Настройки…",
+    "hide": "Скрыть уведомление {{provider}}",
+    "hideTooltip": "Скрыть",
+    "hint": "Показывает сведения и действия",
+    "kind": {
+      "error": "Ошибка",
+      "warning": "Предупреждение"
+    }
+  },
   "connectAgent": {
     "sessions_one": "{{count}} \u0441\u0435\u0441\u0441\u0438\u044f",
     "sessions_few": "{{count}} \u0441\u0435\u0441\u0441\u0438\u0438",

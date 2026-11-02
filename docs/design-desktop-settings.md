@@ -361,7 +361,7 @@ Status is orthogonal to active selection. Providers don't expose balance, free-t
 >   and the offline three-bucket grey ("worked before" vs "never configured" vs
 >   "not set up").
 > - 🟡 **Half-shipped:** the `NSApplication.didBecomeActive` refocus-recheck for
->   credit top-ups exists — on the **out-of-credit pill** (`OutOfCreditModel.swift`),
+>   credit top-ups exists — on the **provider-problem pill** (`ProviderProblemModel.swift`; `OutOfCreditModel.swift` before 2 Nov 2026),
 >   which re-reads on return because a top-up happens in the browser and the fix
 >   lands out-of-band. The **Settings board** does not do it; opening this pane
 >   after topping up still waits on the 60s cache TTL.

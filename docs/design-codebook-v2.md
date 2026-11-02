@@ -2563,7 +2563,7 @@ _Partly addressed, 15 Oct 2026, through a channel this section did not list._
 Since 3 Sep (commit "a job whose every batch failed is a failed job") the
 activity chip posts an `llm-failure` message over the bridge when a job fails
 (`ActivityChipStack.tsx` → `postLLMFailure` → `BridgeHandler.swift`). The Mac
-acts only on `out_of_credit`, by lighting the out-of-credit pill. It does not
+acts only on `out_of_credit` and `invalid_key` (since 2 Nov 2026), by recording a refusal that lights the provider-problem pill. It does not
 reach the row glyph or the popover, so D24's requirement is still unmet, and it
 fires only while the SPA that started the job is open.
 

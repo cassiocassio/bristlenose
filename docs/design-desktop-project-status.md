@@ -423,8 +423,9 @@ Not a clean "Swift vs Python" line; it's *who detects/owns the state*:
 
    Two amendments as of Jul 2026, both worth knowing before you trust the "only renders" framing:
    - **A verdict can now mutate app-global Swift state.** On `cause.category == out_of_credit`,
-     `PipelineRunner.deriveFailureState` calls `OutOfCreditModel.recordActiveProviderOutOfCredit`,
-     which writes a *sticky* verdict into `LLMValidator`'s cache and lights the app-global pill. Still
+     `PipelineRunner.deriveFailureState` calls `ProviderProblemModel.recordRefusal` (since 2 Nov 2026;
+     `OutOfCreditModel` before it), which writes a *sticky* verdict into `LLMValidator`'s cache and
+     lights the app-global pill. Still
      Python's call — Swift doesn't decide it's a billing failure — but the render is no longer
      side-effect-free. It's the one place a run's verdict escapes its own project's row.
    - **The stderr fallback does re-derive.** When a run crashes before writing a terminus event there
@@ -474,8 +475,9 @@ convention to *finish*: one indicator, on the row the bytes land in.
 > ("the `.status` pill zone is now app-global only (the Ollama download)") read as *one* pill; three
 > now mount there, each its own `ToolbarItem(placement: .status)` sharing the
 > [`StatusPill`](../desktop/Bristlenose/Bristlenose/StatusPill.swift) envelope (capsule + bottom-anchored
-> light-dismiss popover): **Ollama model-download**, **provider out-of-credit**
-> ([`OutOfCreditPill.swift`](../desktop/Bristlenose/Bristlenose/OutOfCreditPill.swift) — the "provider
+> light-dismiss popover): **Ollama model-download**, **provider problem**
+> ([`ProviderProblemPill.swift`](../desktop/Bristlenose/Bristlenose/ProviderProblemPill.swift), which on
+> 2 Nov 2026 replaced `OutOfCreditPill` and now also covers a rejected key — the "provider
 > online/offline" case above, now shipped rather than hypothetical), and **alpha-expiry**. The axis
 > itself is unchanged and still correct: per-project → the row; app-global → `.status`. What's new is
 > that the zone hosts several, so **ordering / contention is now an open question** — only pairwise

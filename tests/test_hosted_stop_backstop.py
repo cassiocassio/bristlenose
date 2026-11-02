@@ -46,11 +46,19 @@ def _termini(f: Path) -> list[object]:
 
 
 def _stuck_body(sentinel: Path) -> str:
-    """Pause, then never finish unwinding, as a pool joining a stalled download."""
+    """Pause, then never finish unwinding, as a pool joining a stalled download.
+
+    The sentinel is written INSIDE the try. Written before it, a signal landing
+    in the gap between the write and `pause()` (a descheduled child on a loaded
+    runner) raised KeyboardInterrupt outside the try: the lifecycle's normal
+    path wrote run_cancelled and re-raised, Python re-killed itself with SIGINT,
+    and the test saw -2 instead of the backstop's 130 (CI, 2 Nov 2026). Inside
+    the try, any signal after the sentinel is observable falls into the finally.
+    """
     return f"""
         import signal, threading
-        Path({str(sentinel)!r}).write_text("ready")
         try:
+            Path({str(sentinel)!r}).write_text("ready")
             signal.pause()
         finally:
             threading.Event().wait()
@@ -270,8 +278,8 @@ def test_the_backstop_waits_for_a_restore_under_way(tmp_path: Path) -> None:
     marker = tmp_path / "restored"
     body = f"""
         import signal, time
-        Path({str(sentinel)!r}).write_text("ready")
         try:
+            Path({str(sentinel)!r}).write_text("ready")
             signal.pause()
         finally:
             with _rl_mod.holding_exit():
@@ -419,8 +427,8 @@ def test_a_stop_whose_unwind_outlasts_the_old_ladder_is_recorded_stopped(
     unwind = 0.75 * rl._HOSTED_STOP_GRACE_S * _LADDER_SCALE
     body = f"""
         import signal, threading
-        Path({{sentinel!r}}).write_text("ready")
         try:
+            Path({{sentinel!r}}).write_text("ready")
             signal.pause()
         finally:
             threading.Event().wait({unwind})
@@ -435,8 +443,8 @@ def test_a_stop_that_never_unwinds_is_recorded_by_the_backstop_not_killed(
 ) -> None:
     code, termini = _stop_with_the_ladder(tmp_path, """
         import signal, threading
-        Path({sentinel!r}).write_text("ready")
         try:
+            Path({sentinel!r}).write_text("ready")
             signal.pause()
         finally:
             threading.Event().wait()

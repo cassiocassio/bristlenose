@@ -67,6 +67,40 @@ or the averages will slowly describe how fast the maintainer answers questions.
 
 ---
 
+## 0.44.0 — 2 Nov 2026 · Tier 1 (minor — Signals waits for its first report; "Started on another Mac"; shorter Signals highlights; Whisper on macOS 15; a long list of tag, AutoCode, import and sidebar fixes)
+
+**What shipped.** 303 commits since 0.43.0 (CHANGELOG: 2 New, 8 Improved, 39 Fixed, 1 Removed). Headline: Whisper arrives on macOS 15 (the MLX wheels were built for macOS 26), the Signals lens is withheld until its first report exists ("Picking up Signals…" in the sidebar), a study another Mac was still analysing is refused with an explanation instead of overwritten, and Signals highlights are shorter, at most two per card. **Run by an unattended Claude session** on the owner's "cut a release … keep going until the end", from the evening of 1 Nov to 08:20 GMT on Monday 2 Nov; the owner topped up the Claude API credit mid-run (the one thing the session could not do) and said "run the release". The weekday rule (tag after 21:00 London on a working day) was overridden by the owner's explicit instruction at 06:50; the tag went at 07:39 GMT.
+
+**Before the run: six hours of fixes.** The first strict CI on 63 never-pushed commits (and 300 since the tag) found what no local run on the Mac could, and each was fixed before any irreversible act. Every item below was found by CI or by an independent reviewer, none by the Mac suite:
+
+| found by | what | real product bug? | fix |
+|---|---|---|---|
+| mypy hard gate (48) | one off-by-one column in the AutoCode proposals query since 21 Oct: every proposal badge drew colour 0 | yes | `e3c9db884` |
+| Python 3.10 leg | SQLAlchemy 2.0.x does not percent-escape `?` in a sqlite URL: a study in `Who? Inc/` went into a stray `Who` database (3.10 resolves 2.0.55; pyproject floors 2.0) | yes | `593d2c358` |
+| Windows leg | the stale-partial sweep of the Whisper download could not see a held lock (`fcntl`): a live download's partial could be deleted; then, in review, the same on a filesystem without flock | yes | `0223fa1e2`, `a8d9fc138` |
+| e2e | `4e8cc854a` (28 Oct, serve without startup render) left studies without `assets/bristlenose-logo.png`: a broken logo in serve mode, hidden on the Mac by stale baked copies and in CI by the re-render it removed; and the Signals no-data heading sat outside its layout container | yes (both unreleased) | `e1567ba67` |
+| macos-26 Mac Build | a dropped second Export press cancelled its download, which WebKit reported as -1005 under load, and the app alerted "could not be saved" (shipped in 0.43.0) | yes | `e5f618a87` |
+| macOS 3.10 leg | a hybrid sqlite file (one database's main file with another's `-wal`/`-shm`) when a failed re-analyse's restore landed inside the serve's connection binding | yes | `642f49a7d`, bounded by `b69878b5f` |
+| N166 review | a chunk of a long pair session holding only the second participant's turns credited the first | yes | `8e582eaab` |
+| N168 review | Azure content-filter detection read the body one level too deep and could never fire | yes | `6712b2f18` |
+| N146 review | × on a typed tag also deleted the machine's same-named sentiment tag | yes | `f4092dad0` |
+| CI environment drift | pytest 9.2.0 (27 Oct) `monkeypatch.setattr` no longer restores attributes on Starlette's `State`; openai 3.42.1 broke on a test's `sys.modules.pop`; Node 26 on the Mac vs the pinned 24 | no (tests) | `be88d34bd`, `934a63398` |
+| slow-runner timing | five Swift tests, two debounce tests, the hosted-stop backstop test, a vitest unhandled React error after teardown | no (tests) | `c4044cad6`, `cf2c7caec`, `0e4c54e6d`, `dc3a315db`, `99090c2a1`, `681b2b8f8`, `37d1f16ba` |
+| Windows tests | `bash` is WSL's, no `shasum`, `/` separators, `?` in folder names, a live-database move | no (tests) | `0223fa1e2`, `934a63398`, `3644aed5f` |
+| dependency majors | cryptography 50 has no Intel-Mac wheel (also true of 0.43.0 installs): capped `<49` on Intel Macs only | yes (CLI install on Intel) | `def69566f` |
+
+Also before the run: the locale check (7 `studyStartup` keys × 20 locales, `2fd90b56d`), the ratchet (two new skip sites folded, one gate given its proof; no ceiling raised), the CHANGELOG and README entries (`3bfbe1f28`, with the Export line added once the macos-26 bug was known).
+
+**Run times (measured, GMT, 2 Nov).** Preflight 208 s · inventory 3 s · bump + commit 1 s · push main 2 s · build the app 561 s · build the dmg 711 s · strict CI gate 1,784 s (macOS queue) · TestFlight upload 540 s · publish the dmg 226 s · tag push 1 s at 07:39 · `release.yml` green and PyPI 200 by 08:19 (40 min after the tag). TestFlight build **6058**. Website deployed from a clean worktree of its HEAD after `after-pypi/0.44.0` landed (`ca48063`). Verified 8 of 9 at 08:2x; the 9th (website) went green after the deploy; snap read `channel-map: 0.44.0` at 07:40 and rate-limited later probes (HTTP 429, our own loop).
+
+**The stop that mattered.** The run could not start until the Claude API key had credit: the `providers live` preflight row reported "credit balance is too low" (0/3 Claude models; ChatGPT and Gemini passed) from 1 Nov 23:55 until the owner topped up at ~06:50. The row has no override and the session did not bypass it: Claude is the default provider, `llm/client.py` changed this window, and 0.43.0's lesson (anthropic 2.2.0 would have 400'd every default Claude call while every test mocked the transport) is what the row exists for. A live-provider spend (the Signals highlight lab, $3.45) is the likely drain.
+
+**Tricky things.** (1) `gh run view --log` refuses until the whole run finishes, so a finished job's failure is unreadable for 30-40 minutes behind the macOS queue: `gh api repos/<r>/actions/jobs/<id>/logs` serves a finished job's log at once. (2) `test-swift.sh` does not print the xcresult's second failure message: two Mac Build "fixes" were wrong because the alert text (`-1005`) lived only in the xcresult. (3) CI that "went green" at one push failed the next on a different test: a population of timing-sensitive tests, not a single flake; the first Swift fixes trimmed a margin, the later ones spent a budget of looks instead of seconds. (4) A background `pytest` ignores SIGINT, so three Ctrl-C tests fail when pytest is launched as a background job. (5) Node 26 makes `localStorage` undefined in vitest; the 1 Aug polyfill turned 160 loud failures into one quiet leak. (6) The strict CI run is tied to a sha: once the driver bumps and dispatches, nothing may be committed (a fix needs `BN_RELEASE_FREEZE_OK=1` and a rebuild). (7) `release.sh run` stops at preflight on the dirty-tree row for another session's uncommitted doc: the session committed it as found rather than stash it.
+
+**Owed.** Winget (a follower; no PR for 0.44.0 yet). The Agent Access save-failure is silent since the alert was removed (owner call; R114 mockup gate). N166: a moved quote loses its curation on Re-analyse (owner call). Telemetry records refusals as `ok`; whether a content block counts toward stage 9's early-stop (both in 100days). Intel Macs: still a CLI target? Native check of the new "Started on another Mac" strings (tr, fi, ko, ja/zh-Hant, fr/ca/it/pt). A separate session was asked to study why platform bugs reach CI late and whether pushing daily would have helped (`docs/design-platform-feedback-loop.md`). The full step log is `docs/private/release-0.44.0-log.md`.
+
+---
+
 ## 0.43.0 — 24 Oct 2026 · Tier 1 (minor — problem reports, right-click menus, Apple speech while Whisper downloads, any-llm in the CLI; the reliability burn-down)
 
 **What shipped.** The week's reliability burn-down (about 150 Fixed lines, untrimmed by the

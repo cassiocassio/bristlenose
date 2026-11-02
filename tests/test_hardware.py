@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
-import platform
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from bristlenose.utils.hardware import (
     _CACHE_TTL_SECONDS,
@@ -333,21 +332,35 @@ class TestProbeMlxStarts:
         monkeypatch.delattr(sys, "frozen", raising=False)
         assert _self_command() == [sys.executable, "-m", "bristlenose"]
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin" or platform.machine() != "arm64",
-        reason="needs MLX on Apple Silicon",
-    )
-    def test_the_real_probe_flag_runs_end_to_end(self) -> None:
-        """`doctor --mlx-probe` exists, is hidden, and answers on a Mac whose MLX starts."""
-        import subprocess
+    @staticmethod
+    def _probe_with_stub_mlx(tmp_path: Path, core_py: str) -> subprocess.CompletedProcess[str]:
+        """Run `doctor --mlx-probe` in a child whose `mlx.core` is the stub given.
 
-        from bristlenose.utils.hardware import module_installed
-
-        if not module_installed("mlx"):
-            pytest.skip("mlx not installed in this environment")
-        done = subprocess.run(
+        A stub on PYTHONPATH shadows any real mlx, so this runs the same on a Linux CI
+        box and on the Mac: the flag's wiring is under test, not Metal.
+        """
+        pkg = tmp_path / "mlx"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "core.py").write_text(core_py, encoding="utf-8")
+        env = {**os.environ, "PYTHONPATH": str(tmp_path)}
+        return subprocess.run(
             [sys.executable, "-m", "bristlenose", "doctor", "--mlx-probe"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=120, env=env,
+        )
+
+    def test_the_probe_flag_imports_mlx_core_runs_one_op_and_answers(self, tmp_path: Path) -> None:
+        """`doctor --mlx-probe` exists, imports mlx.core, evaluates one op and prints its line."""
+        done = self._probe_with_stub_mlx(
+            tmp_path, "def arange(n):\n    return n\n\ndef eval(*args):\n    pass\n"
         )
         assert done.returncode == 0, done.stderr
         assert "@mlx-probe ok" in done.stdout
+
+    def test_the_probe_flag_dies_with_mlx_rather_than_answering(self, tmp_path: Path) -> None:
+        """Where MLX cannot start the child dies: no ok line, and a non-zero exit."""
+        done = self._probe_with_stub_mlx(
+            tmp_path, "import os\n\ndef arange(n):\n    return n\n\ndef eval(*args):\n    os.abort()\n"
+        )
+        assert done.returncode != 0
+        assert "@mlx-probe ok" not in done.stdout

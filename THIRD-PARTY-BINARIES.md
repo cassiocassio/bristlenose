@@ -101,7 +101,7 @@ procurement; under-listing would be a compliance risk.
 | `annotated-doc` | 0.0.5 | MIT | <https://github.com/fastapi/annotated-doc> |
 | `annotated-types` | 0.8.0 | MIT | <https://github.com/annotated-types/annotated-types> |
 | `anthropic` | 1.17.0 | MIT License | <https://github.com/anthropics/anthropic-sdk-python> |
-| `anyio` | 4.15.1 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
+| `anyio` | 4.16.0 | MIT | <https://anyio.readthedocs.io/en/stable/versionhistory.html> |
 | `attrs` | 26.1.0 | MIT | <https://www.attrs.org/en/stable/changelog.html> |
 | `av` | 18.1.0 | BSD-3-Clause | <https://pyav.basswood.io> |
 | `blis` | 1.3.4 | BSD License | <https://github.com/explosion/cython-blis> |
@@ -120,7 +120,7 @@ procurement; under-listing would be a compliance risk.
 | `docstring_parser` | 0.18.0 | MIT License | <https://github.com/rr-/docstring_parser> |
 | `et_xmlfile` | 2.0.0 | MIT License | <https://foss.heptapod.net/openpyxl/et_xmlfile> |
 | `fastapi` | 0.162.0 | MIT | <https://github.com/fastapi/fastapi> |
-| `filelock` | 4.2.4 | MIT | <https://github.com/tox-dev/py-filelock> |
+| `filelock` | 4.2.6 | MIT | <https://github.com/tox-dev/filelock> |
 | `flatbuffers` | 25.12.19 | Apache Software License | <https://google.github.io/flatbuffers/> |
 | `fsspec` | 2026.9.0 | BSD-3-Clause | <https://github.com/fsspec/filesystem_spec> |
 | `google-auth` | 2.62.0 | Apache Software License | <https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth> |
@@ -160,7 +160,7 @@ procurement; under-listing would be a compliance risk.
 | `numba` | 0.68.1 | BSD License | <https://numba.pydata.org> |
 | `numpy` | 2.4.6 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | <https://numpy.org> |
 | `onnxruntime` | 1.31.1 | MIT License | <https://onnxruntime.ai> |
-| `openai` | 3.41.0 | Apache-2.0 | <https://github.com/openai/openai-python> |
+| `openai` | 3.42.1 | Apache-2.0 | <https://github.com/openai/openai-python> |
 | `openpyxl` | 3.1.5 | MIT License | <https://openpyxl.readthedocs.io> |
 | `opentelemetry-api` | 1.45.2 | Apache-2.0 | <https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api> |
 | `packaging` | 26.3 | Apache-2.0 OR BSD-2-Clause | <https://github.com/pypa/packaging> |
@@ -183,7 +183,7 @@ procurement; under-listing would be a compliance risk.
 | `pysrt` | 1.1.2 | GPL-3.0-or-later | <https://github.com/byroot/pysrt> |
 | `python-docx` | 1.2.0 | MIT License | <https://github.com/python-openxml/python-docx> |
 | `python-dotenv` | 1.2.4 | BSD-3-Clause | <https://github.com/theskumar/python-dotenv> |
-| `python-multipart` | 0.0.32 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
+| `python-multipart` | 0.0.33 | Apache-2.0 | <https://github.com/Kludex/python-multipart> |
 | `PyYAML` | 6.0.3 | MIT License | <https://pyyaml.org/> |
 | `referencing` | 0.37.0 | MIT | <https://github.com/python-jsonschema/referencing> |
 | `regex` | 2026.9.29 | Apache-2.0 AND CNRI-Python | <https://github.com/mrabarnett/mrab-regex> |
@@ -220,7 +220,7 @@ procurement; under-listing would be a compliance risk.
 | `watchfiles` | 1.3.0 | MIT License | <https://github.com/samuelcolvin/watchfiles> |
 | `weasel` | 1.0.1 | MIT License | <https://github.com/explosion/weasel/> |
 | `websockets` | 16.1.1 | BSD-3-Clause | <https://github.com/python-websockets/websockets> |
-| `webvtt-py` | 0.6.0 | MIT License | <https://github.com/glut23/webvtt-py> |
+| `webvtt-py` | 0.7.0 | MIT | <https://github.com/glut23/webvtt-py> |
 | `wrapt` | 2.5.2 | BSD-2-Clause | <https://github.com/GrahamDumpleton/wrapt> |
 | `WTForms` | 3.2.2 | BSD License | <https://wtforms.readthedocs.io> |
 <!-- END AUTO: python-wheels -->

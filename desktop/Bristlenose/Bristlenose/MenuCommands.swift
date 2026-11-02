@@ -370,6 +370,12 @@ private struct DebugMenuContent: View {
                 }
             }
             Divider()
+            ForEach(ProviderProblemPrototype.SlotStyle.allCases) { v in
+                Button((providerProblem.slot == v ? "✓ " : "") + v.menuLabel) {
+                    providerProblem.slot = v
+                }
+            }
+            Divider()
             Button("Hide pill") { providerProblem.hide() }
         }
     }

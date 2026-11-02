@@ -6,6 +6,9 @@ import { _resetEmbeddedCache } from "./utils/embedded";
 import { closeToc, openTocPush, resetSidebarStore } from "./contexts/SidebarStore";
 import { resetQuoteGroupingSlot } from "./contexts/QuoteGroupingSlot";
 import { activityStorageKey, addJob, resetActivityStore } from "./contexts/ActivityStore";
+import { resetConditionStore } from "./contexts/ConditionStore";
+import { resetLastRunStore } from "./contexts/LastRunStore";
+import { _resetToast } from "./utils/toast";
 import { act } from "@testing-library/react";
 import i18n, { ensureLocaleLoaded } from "./i18n";
 
@@ -45,6 +48,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Nothing of React's may outlive a test here. The shell and the lenses start module
+  // pollers (timers no unmount stops), and a toast renders into Bristlenose's own root,
+  // which testing-library's cleanup never unmounts: left mounted after the file's last
+  // test, its fade-in frame and dismiss timer commit on, and a commit the scheduler
+  // yields on reads `window` after vitest has torn the environment down — the
+  // "window is not defined" at react-dom's passive-effects task that failed CI on
+  // 1 Nov 2026 (run 41378462262), green locally because the yield needs a slow runner.
+  act(() => _resetToast());
+  resetConditionStore();
+  resetLastRunStore();
   vi.restoreAllMocks();
   delete (window as unknown as Record<string, unknown>).BRISTLENOSE_API_BASE;
   delete (window as unknown as Record<string, unknown>).__BRISTLENOSE_EMBEDDED__;

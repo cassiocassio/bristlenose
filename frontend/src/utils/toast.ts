@@ -37,6 +37,20 @@ function dismiss(): void {
 }
 
 /**
+ * Unmount the toast root and drop its container (tests). The root is Bristlenose's
+ * own, so testing-library's cleanup never sees it: a toast left mounted at the end
+ * of a file keeps committing (its fade-in frame, its dismiss timer) after the last
+ * test, and a commit the scheduler yields on reads `window` after vitest has torn
+ * the environment down. Call inside `act()`.
+ */
+export function _resetToast(): void {
+  root?.unmount();
+  root = null;
+  container?.remove();
+  container = null;
+}
+
+/**
  * Show a toast notification. Only one visible at a time.
  *
  * @param message  Text to display

@@ -1125,7 +1125,7 @@ def _print_pipeline_summary(
 
 
 def _print_pipeline_failure(
-    cause: object, input_dir: Path, settings: object, command: str = "run",
+    cause: object, input_dir: Path, settings: BristlenoseSettings, command: str = "run",
 ) -> None:
     """Print a researcher-facing failure banner from a structured Cause.
 
@@ -2936,12 +2936,12 @@ def _warn_dotenv_override(var: str, chosen: str) -> None:
             winner = (str(path), value)  # last file wins, as pydantic-settings reads them
     if winner is None:
         return
-    path, value = winner
+    source, value = winner
     normalised = aliases.get(value.lower(), value.lower()) if var.endswith("PROVIDER") else value
     if normalised != chosen:
         _say(
             MessageKind.WARNING,
-            f"{escape(path)} sets {var}={escape(value)}, which overrides this choice "
+            f"{escape(source)} sets {var}={escape(value)}, which overrides this choice "
             "for runs that read that file. Remove the line to make this stick.",
         )
 

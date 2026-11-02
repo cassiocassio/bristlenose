@@ -138,10 +138,16 @@ def _credited_participant(
     whoever answers it). A turn that merely ends as the quote begins, or begins as it ends, is
     not overlapped. A session with one participant, a transcript with no timecodes, or a quote
     over no participant turn keeps the session's primary code, as before.
+
+    ``transcript`` may be a chunk of the session (``_split_transcript``): a subset of its
+    turns under the session's primary code. So one participant code here is not one
+    participant in the session, and the overlap is read whenever any code is present: a
+    chunk holding only the second participant's turns still credits them. With one code
+    the answer is that code or the primary, which for a whole session is the same thing.
     """
     codes = {seg.speaker_code for seg in transcript.segments
              if _PARTICIPANT_CODE.match(seg.speaker_code)}
-    if len(codes) < 2:
+    if not codes:
         return transcript.participant_id
     if all(seg.start_time == 0.0 for seg in transcript.segments):
         return transcript.participant_id  # no timecodes to say who spoke when

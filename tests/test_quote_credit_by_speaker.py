@@ -116,6 +116,48 @@ async def test_a_quote_over_no_participant_turn_keeps_the_primary_code() -> None
 
 
 @pytest.mark.asyncio
+async def test_a_chunk_holding_only_the_second_participant_still_credits_them() -> None:
+    """A long pair session is split into chunks (truncation, or the pass deadline), and a
+    chunk is a copy of the transcript holding a subset of its turns with the session's
+    primary code. A chunk that holds only p2's turns must still credit p2 — the one-code
+    shortcut used to hand the whole chunk back to p1, which is the N166 bug again on exactly
+    the sessions long enough to split."""
+    from bristlenose.llm.client import TruncatedResponseError
+
+    # Six turns; the index-halves split (10% overlap) gives a right chunk of m1, m1, p2, p2.
+    layout = [
+        (0.0, 10.0, "p1"), (10.0, 20.0, "p1"), (20.0, 30.0, "m1"),
+        (30.0, 40.0, "m1"), (40.0, 50.0, "p2"), (50.0, 60.0, "p2"),
+    ]
+    calls = {"n": 0}
+
+    async def analyze(system_prompt, user_prompt, response_model, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:  # the whole session: cut off at the output cap, so split
+            raise TruncatedResponseError(
+                "cut", provider="openai", model="m", requested_max_tokens=1, model_cap=1,
+            )
+        if "spoken by p2" not in user_prompt:
+            return QuoteExtractionResult(quotes=[])
+        return QuoteExtractionResult(quotes=[ExtractedQuoteItem(
+            start_timecode="00:00:45", end_timecode="00:00:55", text=_TEXT,
+            verbatim_excerpt="did not expect the price", topic_label="Price",
+            quote_type="screen_specific",
+        )])
+
+    client = AsyncMock()
+    client.provider = "openai"
+    client.analyze = analyze
+    quotes, _ = await extract_quotes(
+        [_transcript(layout)],
+        [SessionTopicMap(participant_id="p1", session_id="s1", boundaries=[])],
+        client, concurrency=1,
+    )
+    assert calls["n"] == 3  # the whole session, then each half
+    assert [q.participant_id for q in quotes] == ["p2"]
+
+
+@pytest.mark.asyncio
 async def test_a_transcript_with_no_timecodes_keeps_the_primary_code() -> None:
     # Every segment starts at 0.0 (a transcript with no times): who spoke when is unknowable.
     layout = [(0.0, 50.0, "p1"), (0.0, 50.0, "p2")]

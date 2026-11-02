@@ -287,14 +287,19 @@ def test_no_fsync_per_call_does_not_corrupt(tmp_path: Path) -> None:
     assert len(rows) == 10
 
 
-def test_telemetry_module_does_not_import_provider_sdks() -> None:
+def test_telemetry_module_does_not_import_provider_sdks(monkeypatch) -> None:
     # Lazy-import discipline: importing telemetry must not pull anthropic
     # / openai / google.
     import importlib
     import sys
 
+    # Removed for the test only, never for the worker: a bare pop left the
+    # next `import openai` building a fresh package whose cached `openai.lib`
+    # submodule was never re-attached as an attribute, and the openai 3.42
+    # SDK's `openai.lib._chat_completion_resources` lookup then raised
+    # AttributeError in whichever test ran next (0.44.0 strict CI, Windows).
     for mod in ("anthropic", "openai", "google", "google.genai"):
-        sys.modules.pop(mod, None)
+        monkeypatch.delitem(sys.modules, mod, raising=False)
     importlib.import_module("bristlenose.llm.telemetry")
     for mod in ("anthropic", "openai", "google.genai"):
         assert mod not in sys.modules, f"{mod} pulled in by telemetry import"

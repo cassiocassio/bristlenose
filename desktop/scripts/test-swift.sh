@@ -78,6 +78,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 STAMP="$SCRIPT_DIR/../build/swift-green.stamp"
 
+# macOS has `shasum` (Perl) and no `sha256sum`; Git Bash on Windows, where the
+# runner's own test runs, has `sha256sum` (coreutils) and no `shasum`. Under
+# `pipefail` a missing hasher failed tree_fingerprint and `set -e` ended the
+# script before xcodebuild ran (0.44.0 strict CI). Both print `<hex>  <name>`.
+if command -v shasum >/dev/null 2>&1; then SHA256=(shasum -a 256); else SHA256=(sha256sum); fi
+
 # The working tree's identity: what the suite compiled and read (the test bundle
 # also copies bristlenose/locales in, so desktop/ alone is too narrow). Empty when
 # git cannot answer, and an empty fingerprint never matches and is never written.
@@ -86,8 +92,8 @@ tree_fingerprint() {
   head=$(git -C "$REPO_ROOT" rev-parse --verify HEAD 2>/dev/null) || return 0
   { printf '%s\n' "$head"
     git -C "$REPO_ROOT" diff HEAD --binary 2>/dev/null
-    ( cd "$REPO_ROOT" && git ls-files -o --exclude-standard -z | xargs -0 shasum -a 256 -- 2>/dev/null ) || true
-  } | shasum -a 256 | cut -c1-64
+    ( cd "$REPO_ROOT" && git ls-files -o --exclude-standard -z | xargs -0 "${SHA256[@]}" -- 2>/dev/null ) || true
+  } | "${SHA256[@]}" | cut -c1-64
 }
 
 if [ "$GREEN_HERE" -eq 1 ]; then

@@ -1,6 +1,11 @@
 {
   "_policy": "A gate whose red nobody has seen is unproven, not passing. Automated proofs are derived from the test-<name> naming convention; this file records the ones that convention cannot see. Enforced by scripts/check-gate-proofs.py; the unproven COUNT is held by the ratchet metric `gates_without_proof`.",
   "declared": {
+    "check-sidecar-mlx-floor": {
+      "evidence": "with newer() mutated to always answer false, 5 of 19 fail (the host-built macosx_26_0 tag, a newer binary under a floor tag, a newer tag over a floor binary, the stale dist-info, and the floor-without-a-minor case); restored by reverse patch, 19 passed. Not covered: the gate's own caller line in build-sidecar.sh is pinned by text, not by running the build",
+      "how": "tests/test_sidecar_mlx_floor.py, which builds synthetic bundles holding real Mach-O files (cc -mmacosx-version-min) and drives the script at both verdicts and exit 2; the compare was mutated locally, then restored",
+      "observed": "2026-11-02"
+    },
     "check-speech-helper": {
       "evidence": "a Debug build's Contents/Helpers/bristlenose-speech passes (1 ok, exit 0). A copy re-signed ad hoc with Hardened Runtime, the right identifier, and app-sandbox + inherit + network.client exits 1 naming only 'unexpected com.apple.security.network.client'. /bin/ls fails all six checks",
       "how": "manual: copies of a Debug build's helper, the original and one with a single entitlement widened, run through desktop/scripts/check-speech-helper.sh",

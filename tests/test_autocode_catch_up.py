@@ -354,10 +354,17 @@ class TestHideApplyUnhide:
 
 class TestTheDebounce:
     def test_a_burst_of_thirty_unhides_is_one_pass_per_codebook_in_batches_of_25(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Thirty gestures, each its own request, under a wait no stall can outrun; then
+        the last gesture is given the short wait. Under the 0.2 s window one request held
+        for a quarter of a second (a loaded CI runner's commit) fired the timer inside
+        the burst, and the gestures after it armed a second pass per codebook (CI, 2 Nov
+        2026). That the wait restarts per gesture is ``test_each_gesture_restarts_the_wait``'s."""
         import bristlenose.server.autocode as ac
 
+        monkeypatch.setattr(cu, "DEBOUNCE_S", 60.0)
+        monkeypatch.setattr(cu, "CAP_S", 60.0)
         app, client = _app(tmp_path, ("garrett", "norman"))
         _more_quotes(app, 30)
         burst = _dom(app, like="burst quote")
@@ -379,6 +386,8 @@ class TestTheDebounce:
             for dom in burst:  # thirty gestures, each its own request
                 named = _hide(client, [dom], False)["catchUp"]
             assert sorted(c["framework_id"] for c in named) == ["garrett", "norman"]
+            monkeypatch.setattr(cu, "DEBOUNCE_S", 0.2)
+            client.portal.call(cu._arm, app, 1)  # the last gesture again, with the short wait
             _wait(lambda: len(model.prompts) - applied >= 4, "both codebooks to code them")
             _quiet()
 

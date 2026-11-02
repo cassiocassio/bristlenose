@@ -393,8 +393,15 @@ struct ExportSaveFlowTests {
         // The dropped press leaves the first export alone: its anonymised copy
         // lands where the one panel chose, and nothing asks again or alerts.
         rig.serve.release()
+        // Wait for the file, a second panel or an alert — the outcomes asserted
+        // below — never for the coordinator to let the export go: on the
+        // macos-26 runner that cleared before report.html could be read, and
+        // 300 ms later it still could not (mac-build bea8f48e and 3bfbe1f28;
+        // `aPressWhileTheAnonymisedCopyIsFetchedAsksNothing`, the same flow
+        // waiting on the file, was green there). An export that ends with none of the three runs to
+        // the suite's limit, which is the red it deserves.
         await rig.untilTimeLimit {
-            rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.coordinator.hasPendingReportExport
+            rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.alerts.isEmpty
         }
         try? await Task.sleep(for: .milliseconds(300))
         #expect(rig.saved == "<html>ANONYMISED</html>", "the export in flight never landed")

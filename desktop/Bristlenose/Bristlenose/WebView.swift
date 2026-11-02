@@ -692,8 +692,10 @@ struct WebView: NSViewRepresentable {
             pendingRequestURL[ObjectIdentifier(download)] = requestURL
         }
 
-        /// Whether an Export Report is in flight. For tests: the file lands
-        /// before WebKit says the download has finished.
+        /// Whether an Export Report is in flight. For tests — and not a sign
+        /// the saved file can be read yet: on the macos-26 runner this went
+        /// false before `report.html` was readable (mac-build 3bfbe1f28,
+        /// 2 Nov 2026), so a test waits on the file itself.
         @MainActor var hasPendingReportExport: Bool { pendingReportExport != nil }
 
         /// The download is over, one way or another: an export behind it may go.

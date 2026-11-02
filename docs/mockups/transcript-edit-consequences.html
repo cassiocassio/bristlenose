@@ -97,8 +97,10 @@ main{max-width:1500px;margin:0 auto;padding:16px 24px 48px}
 .empty{color:var(--muted);font-style:italic;font-size:13px}
 
 /* commentary: hatched, mono label, left rule */
-.ledger{border-left:3px solid var(--muted);background:
-  repeating-linear-gradient(135deg, var(--hatch) 0 8px, transparent 8px 16px), var(--bg);
+/* Commentary: hatching only in a band round the edge; the text sits on plain page colour. */
+.ledger{border:7px solid transparent;border-left:3px solid var(--muted);
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,
+    repeating-linear-gradient(135deg, var(--hatch) 0 5px, transparent 5px 10px) border-box;
   border-radius:0 10px 10px 0;padding:10px 12px}
 .ledger table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--bg);border-radius:6px;overflow:hidden}
 .ledger td{padding:5px 8px;border-top:1px solid var(--border);vertical-align:top}

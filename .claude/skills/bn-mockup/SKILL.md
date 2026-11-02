@@ -50,7 +50,7 @@ Set `<html data-color-theme="default">`, `color-scheme: light dark`, and theme e
 **Non-negotiable when reviewing a design:** the reader must tell "what ships" from "why it works" at a glance.
 
 - **Artefact zone** = the real pixels, in a clean frame (a light "screenshot" chrome bar is fine). **No prose, no callouts, no labels that wouldn't appear in the product.** If a caption explains the pixel, it does not belong here.
-- **Commentary zone** = a *visually distinct* block (hatched/tinted background, a mono "Commentary" label, a left rule) placed below/beside — deliberately not-the-product.
+- **Commentary zone** = a *visually distinct* block (a hatched band round its edge, a mono "Commentary" label, a left rule) placed below/beside — deliberately not-the-product. **Hatching goes only in the edge band, never behind text:** stripes under prose are hard to read (owner, 2 Nov 2026). The shape: `border: 7px solid transparent; border-left: 3px solid <rule>; background: linear-gradient(<page>, <page>) padding-box, repeating-linear-gradient(135deg, <hatch> 0 5px, transparent 5px 10px) border-box`.
 - Put a small **key** at the top naming the two zones. For before/after comparisons, label the frame chrome ("before"/"after"), never the UI inside it.
 
 ### 5. Don't reinvent — check first

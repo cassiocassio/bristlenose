@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quote and transcript disagree</title>
 <!--
-  bn-accurate mockup, generated 02 Nov 2026 at HEAD 6c861707b by a script that inlines:
+  bn-accurate mockup, generated 02 Nov 2026 at HEAD 1c1fbda11 by a script that inlines:
    1. bristlenose.stages.s12_render.theme_assets.get_default_css() — the shipped theme, as serve loads it
    2. frontend/src/islands/transcript/transcript-gutter.css — lines 1–261
    3. MOCKUP CHROME and MOCKUP-NEW blocks, written for this page (the proposal is in MOCKUP-NEW only).
@@ -15321,8 +15321,10 @@ html, body { background: var(--bn-colour-bg); }
 .frame-body { padding: 12px 14px; }
 .frame-body .quote-group { margin: 0; }
 .quote-group .quote-card { content-visibility: visible; }
-.com { border-left: 3px solid var(--bn-colour-muted); padding: 10px 14px; border-radius: 0 10px 10px 0;
-  background: repeating-linear-gradient(135deg, var(--mk-hatch) 0 8px, transparent 8px 16px), var(--bn-colour-bg); font-size: 13.5px; }
+/* Commentary: hatching only in a band round the edge; the text sits on plain page colour. */
+.com { border: 7px solid transparent; border-left: 3px solid var(--bn-colour-muted); padding: 10px 14px; border-radius: 0 10px 10px 0;
+  background: linear-gradient(var(--bn-colour-bg), var(--bn-colour-bg)) padding-box,
+              repeating-linear-gradient(135deg, var(--mk-hatch) 0 5px, transparent 5px 10px) border-box; font-size: 13.5px; }
 .com > .lbl { font-family: var(--bn-font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--bn-colour-muted); margin: 0 0 4px; }
 .com ul { margin: 4px 0 0; padding-left: 18px; } .com li { margin: 0 0 5px; }
 .com p { margin: 4px 0; }

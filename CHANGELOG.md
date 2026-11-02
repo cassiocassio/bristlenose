@@ -88,6 +88,7 @@ _Mac app_
 - **The Sessions switcher listed sessions not yet read during a first analysis,** and choosing one opened "no longer in the report".
 - **A failed Re-analyse showed "Last run failed" over the earlier good report.** It now shows the report, as a Stopped run does.
 - **A Screens board move that failed to save stayed drawn as if kept,** with an Undo that did nothing. It is put back.
+- **A second press of Export Report while the first was still saving could raise a false "The export could not be saved" alert.** The extra press is now dropped quietly, as intended, and the first export still lands.
 - **A study opened in an older Bristlenose after a newer one had updated it gave a traceback.** It now says "This study was opened by a newer Bristlenose. Update to open it."
 - **A study's startup warnings vanished on switching studies.** Those the app has confirmed now stay.
 

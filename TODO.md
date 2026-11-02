@@ -4,14 +4,13 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
-**2 Nov 2026 — Provider-problem pill, slice 1: key rejected and out of credit (Claude Sonnet 5.5; committed on local `main` `a918521a7`, `f44862886`, `db481e43c`, not pushed).**
+**2 Nov 2026 — Provider-problem pill, slice 1: key rejected and out of credit (Claude Sonnet 5.5; committed on local `main` `a918521a7`, `db481e43c`, `bf3e69c7b` and docs, not pushed).**
 One title-bar pill replaces the out-of-credit pill and the DEBUG prototype: `ProviderProblem.swift` (pure rules), `ProviderProblemModel.swift` (state, persistence, recording),
 `ProviderProblemPill.swift` (view); as-built record and the judgement calls made on the owner's behalf in `docs/design-provider-problem-pill.md`; design argument in
 `docs/mockups/provider-problem-surface.html`. A refused run or report call lights it (a stored verdict from Settings no longer does); the x hides it; it is held to the key's
-verdict. Reviewed by four Fable agents (code, silent failure, Mac-native, test placement) and fixed; five of the fixes mutation-proved. NOT seen running in the app: the hover
+verdict. Reviewed in two rounds by Fable agents (code, silent failure, Mac-native, test placement), fixed, and re-checked; twelve of the fixes mutation-proved; Swift 2967 passed / 0 failed, Python 9417 passed (three timing-flaky `test_package_install` Ctrl-C tests failed under load and pass alone). **Open:** the report-call (AutoCode) path cannot check which key a refused call used. NOT seen running in the app: the hover
 reveal, the fade, the centred `.status` placement, the VoiceOver announcement, macOS 15. The Diagnostics menu (Provider problem pill) forces any look.
-**Owed:** native review of the eight new `desktop.providerProblem.*` keys in 20 locales (drafted by Claude); slice 2 (network diagnosis and the ladder) is a separate session,
-brief at `docs/design-provider-problem-diagnosis.md` when written; slice 3 (switch-provider pull-down) is a Could in `100days.md` §8. The sidecar-fingerprint cost keeps a stale
+**Owed:** native review of the eight new `desktop.providerProblem.*` keys in 20 locales (drafted by Claude); slice 2 (network diagnosis and the ladder) was briefed and probed by a separate session (`docs/design-provider-problem-diagnosis.md`, `experiments/provider-reachability/`, `d1a15a819`); slice 3 (switch-provider pull-down) is a Could in `100days.md` §8. The sidecar-fingerprint cost keeps a stale
 `OutOfCreditModel` comment in `frontend/src/shims/bridge.ts` unfixed. Release-note candidate: **The title bar now says when your AI provider has rejected your key**, not only when
 credit has run out, and it no longer stays lit for months over work that never needed the provider: it fades to a small mark after a day and a click on its x hides it.
 

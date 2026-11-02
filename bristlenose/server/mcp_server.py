@@ -509,9 +509,9 @@ def _tool_get_project_overview(db: Any, project_id: int, last_run: dict[str, Any
         .all()
     )
     themes = db.query(ThemeGroup).filter_by(project_id=project_id).order_by(ThemeGroup.id).all()
-    names = HeadingNames.load(db, project_id)
-    sections = _counts(ClusterQuote, "cluster_id", {c.id: names.section(c) for c in clusters})
-    theme_rows = _counts(ThemeQuote, "theme_id", {t.id: names.theme(t) for t in themes})
+    headings = HeadingNames.load(db, project_id)
+    sections = _counts(ClusterQuote, "cluster_id", {c.id: headings.section(c) for c in clusters})
+    theme_rows = _counts(ThemeQuote, "theme_id", {t.id: headings.theme(t) for t in themes})
 
     groups, enabled = _applied_frameworks(db, project_id)
     tag_counts: dict[int, int] = {}

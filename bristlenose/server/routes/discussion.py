@@ -130,6 +130,7 @@ def _as_the_report_shows_them(
         if not rows:
             absent += 1
             continue
+        row: _ReportQuote | None
         if len(rows) == 1 and shared[_key(q)] == 1:
             row = rows[0]  # one quote, one row: the key is enough
         else:

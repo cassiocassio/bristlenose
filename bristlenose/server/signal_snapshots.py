@@ -13,7 +13,7 @@ import json
 import logging
 from collections import Counter
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypeGuard
 
 from sqlalchemy.orm import Session
 
@@ -219,7 +219,9 @@ def filter_snapshot_to_counted(
     return payload
 
 
-def _is_counted(ref: object, counted_refs: Mapping[str, int] | set[str] | frozenset[str]) -> bool:
+def _is_counted(
+    ref: object, counted_refs: Mapping[str, int] | set[str] | frozenset[str],
+) -> TypeGuard[str]:
     """Whether a reference still counts; a malformed (non-string) reference does not."""
     if not isinstance(ref, str) or not ref:
         return False
@@ -255,7 +257,7 @@ def _subtract_from_matrix(
     codebook: dict[str, Any], signal: dict[str, Any], removed: list[dict[str, Any]],
 ) -> None:
     """Take each removed quote out of the signal's cell and the matrix totals."""
-    matrix = codebook.get(_MATRIX_BY_SOURCE.get(signal.get("source_type"), ""))
+    matrix = codebook.get(_MATRIX_BY_SOURCE.get(signal.get("source_type") or "", ""))
     row, col = signal.get("location"), signal.get("group_name")
     if not matrix or row is None or col is None:
         return

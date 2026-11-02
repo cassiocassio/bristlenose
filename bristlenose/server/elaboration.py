@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -445,7 +446,7 @@ def _validated_fragment(fragment: object, text: str) -> dict[str, Any] | None:
 
 
 def _validated_evidence_assertions(
-    candidates: list[object],
+    candidates: Sequence[object],
     signal: TagSignal,
 ) -> list[dict[str, Any]]:
     """Return only attributable, structurally valid assertion records.

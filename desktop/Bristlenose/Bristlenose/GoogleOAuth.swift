@@ -50,7 +50,16 @@ enum GoogleScopes {
     /// The meeting list and the attendee roster. **Sensitive**: verification
     /// (review, justification, demo video), weeks of latency, but no
     /// third-party security assessment and no fee.
-    static let calendar = "https://www.googleapis.com/auth/calendar.events.readonly"
+    ///
+    /// **`owned`, the narrower of the two event scopes.** Google's consent
+    /// line for it reads "See the events on Google calendars you own", where
+    /// `calendar.events.readonly` reads "View events on all your calendars".
+    /// We read only `calendars/primary`, which the user owns, and an
+    /// invitation to someone else's meeting is an event on that calendar too:
+    /// measured 2 Nov 2026 in OAuth Playground, both scopes returned the same
+    /// rows, an invited-only Meet included. A grant made under the old scope
+    /// keeps working; the next sign-in asks for this one.
+    static let calendar = "https://www.googleapis.com/auth/calendar.events.owned.readonly"
 
     /// Meet conference records: recordings metadata, **transcripts**,
     /// transcript entries and participants. **Sensitive**, same tier as

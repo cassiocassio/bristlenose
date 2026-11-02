@@ -283,6 +283,17 @@ struct GoogleScopeTests {
         #expect(GoogleScopes.meetReadonly.hasSuffix("meetings.space.readonly"))
         #expect(GoogleScopes.requested.allSatisfy { !$0.hasSuffix("meetings.space.created") })
     }
+
+    @Test("The Calendar scope is the owned one, and the listing grant asks for it")
+    func calendarIsOwnedReadonly() {
+        // The verification submission names this exact scope, and Data Access
+        // in Google Cloud must list it, so a change here is a change there.
+        // Owned still sees invitations: they are events on the user's own
+        // calendar (measured 2 Nov 2026, the comment on `GoogleScopes.calendar`).
+        #expect(GoogleScopes.calendar
+                == "https://www.googleapis.com/auth/calendar.events.owned.readonly")
+        #expect(GoogleScopes.requested.contains(GoogleScopes.calendar))
+    }
 }
 
 // MARK: - OAuth configuration

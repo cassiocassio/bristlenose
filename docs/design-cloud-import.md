@@ -378,7 +378,8 @@ trued-against: HEAD@main 2878f68e
      - **There IS a gate, and it is the free one — corrected.** An earlier
        version of this entry said that on `drive.file` there was no Google gate
        at all, having read only the Drive half. Import does not use
-       `drive.file` alone: the listing needs `calendar.events.readonly` and the
+       `drive.file` alone: the listing needs a Calendar events scope
+       (`calendar.events.owned.readonly` since 2 Nov 2026) and the
        Meet conference-records scope, and **both are sensitive**
        (`GoogleScopes` says so in its own doc comments). Google requires
        verification for *sensitive **or** restricted* scopes, so verification
@@ -692,7 +693,7 @@ Three artifacts, not one — and **they do not share a gate**. The 28 Jul versio
 |---|---|---|---|---|
 | **Teams** | Free: the title is in the recording filename (§6). `Calendars.Read` — **admin consent required since Nov 2025** ⚠️see below | `Files.Read` — no admin consent ✓verified | `Calendars.Read` — **admin consent required since Nov 2025** ⚠️see below | `OnlineMeetingTranscript.Read.All` — **admin consent required, even delegated** ✓verified |
 | **Zoom** | `cloud_recording:read:list_user_recordings` — user-managed, no admin ✓verified. ~~**Pro plan or higher**~~ _17 Oct 2026, live:_ a free Basic account grants the `cloud_recording:*` scopes; **Pro or higher is needed to have recordings** to list | same call returns `download_url`; **no download scope exists** — the same bearer authorises it ✓verified | **none ✓verified** — the list call carries no attendees at all; a roster needs a report endpoint behind an admin scope | **same call returns the VTT** ✓verified — speaker names as a `Name:` cue prefix, ~~**English only, every plan**~~ _17 Oct 2026:_ in the host's chosen language (English by default, 19 offered), and only when the account's "Create audio transcript" setting is on |
-| **Meet** | `calendar.events.readonly` — sensitive ✓verified. **Business Standard or higher** ✓verified | `drive.file` + Picker — **non-sensitive** ✓verified. (`drive.meet.readonly` — restricted → CASA ✓verified, and refused) | `calendar.events.readonly` `attendees[]`, or `meetings.space.readonly` — sensitive ✓verified | **descoped from v1** ✓verified — not a file; a tab inside a Gemini Doc (below) |
+| **Meet** | `calendar.events.owned.readonly` — sensitive ⚠️unverified for this scope (every Calendar scope is reported sensitive; Data Access shows the tier) (_2 Nov 2026: narrowed from `calendar.events.readonly`; an invited meeting is an event on your own calendar, so both return the same rows, measured in OAuth Playground_). **Business Standard or higher** ✓verified | `drive.file` + Picker — **non-sensitive** ✓verified. (`drive.meet.readonly` — restricted → CASA ✓verified, and refused) | `calendar.events.owned.readonly` `attendees[]`, or `meetings.space.readonly` — sensitive ✓verified | **descoped from v1** ✓verified — not a file; a tab inside a Gemini Doc (below) |
 
 > **⚠️ Correction, 17 Aug 2026 — `Calendars.Read` is admin-gated, and the ✓verified above was a false positive from our own tenant.**
 >
@@ -1498,7 +1499,7 @@ Service (Zoom Marks clause) and `brand.zoom.com`.
 
 - One OAuth app registration before any third party has to say yes; three by the end. ~~**None of the three exists yet**~~ — **two of three now exist** (Entra 15 Aug, Google Cloud 18 Aug `2cb58cf6`); ~~Zoom's is unstarted and parked.~~ **All three exist as of 17 Oct 2026** — Zoom's is a Marketplace General App with Development credentials only. **The gate moved rather than closing.** Registration is no longer what stands between us and a third party saying yes — *verification* is, and it is a different, slower animal on each platform:
   - **Microsoft Publisher Verification** — free, and "verified in minutes" once the business-identity check clears; that check is the slow part. It gates consent from tenants other than our own, so Teams import is not broken today, it is un-shippable to anyone else.
-  - **Google sensitive-scope verification** — also free (no assessment, no assessor, no fee) but **weeks** of review, justification and a demo video, because the listing needs `calendar.events.readonly` and the Meet conference-records scope and both are sensitive (`5cf82309`).
+  - **Google sensitive-scope verification** — also free (no assessment, no assessor, no fee) but **weeks** of review, justification and a demo video, because the listing needs a Calendar events scope (`calendar.events.owned.readonly` since 2 Nov 2026, narrowed from `calendar.events.readonly`) and the Meet conference-records scope and both are sensitive (`5cf82309`).
 
   - **Zoom app review** — _added 17 Oct 2026._ Not submitted. Until it clears, the Development credentials sign in the owner's own account and may fail for anyone else. The review asks for a technical design document, scope minimisation, OWASP Top 10 testing and manual penetration testing (§5).
 

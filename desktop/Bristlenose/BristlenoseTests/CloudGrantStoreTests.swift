@@ -26,7 +26,7 @@ struct CloudGrantStoreTests {
         -> GoogleTokens {
         GoogleTokens(accessToken: access, refreshToken: refresh,
                      expiresAt: Date().addingTimeInterval(expiresIn),
-                     granted: ["https://www.googleapis.com/auth/calendar.events.readonly"])
+                     granted: ["https://www.googleapis.com/auth/calendar.events.owned.readonly"])
     }
 
     @Test("Every field survives the round trip")

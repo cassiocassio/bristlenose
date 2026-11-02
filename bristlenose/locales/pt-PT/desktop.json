@@ -1287,7 +1287,10 @@
     "failedTitle": "O Whisper não foi transferido",
     "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio fraco, pessoas a falar ao mesmo tempo e grupos maiores.",
     "stop": "Parar transferência",
-    "stopNote": "Da próxima vez, recomeça do início."
+    "stopNote": "Da próxima vez, recomeça do início.",
+    "causeDisk": "Este Mac não tem espaço livre suficiente.",
+    "causeNetwork": "A ligação caiu e não voltou.",
+    "causeCertificate": "O certificado de segurança desta rede não foi considerado fidedigno."
   },
   "studyStartup": {
     "foreignTitle": "Iniciada noutro Mac",

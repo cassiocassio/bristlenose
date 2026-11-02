@@ -1243,7 +1243,10 @@
     "failedTitle": "Whisper 未能下載",
     "why": "供你之後的錄音使用。Whisper 更能應付音質不佳、多人同時說話和較大群組的錄音。",
     "stop": "停止下載",
-    "stopNote": "下次會從頭開始。"
+    "stopNote": "下次會從頭開始。",
+    "causeDisk": "這部 Mac 的可用空間不足。",
+    "causeNetwork": "連線中斷後沒有恢復。",
+    "causeCertificate": "此網路的安全性憑證未受信任。"
   },
   "studyStartup": {
     "foreignTitle": "已在另一部 Mac 上開始",

@@ -56,6 +56,12 @@ does not match (prep-base.sh says so); macOS allows 2 VMs at once; a fresh clone
 Reviewed by Fable in 4 rounds + silent-failure-hunter; round-4 had no blockers. Open: the app's download JOB still shows only "failed" with the reason
 in os_log; a captive-portal HTML page fails fast but with "Expecting value: line 1 column 1"; 407/403 portal pages are not retried; the per-run
 `--mlx-probe` cost; Apple speech and M5 not exercised; full Python = 9,228 passed, 2 failed (`test_no_improvised_icons`, another session's IntensityDots.tsx).
+**Download-failure reason (2 Nov 2026, Claude, committed with this note):** the pill popover and the Settings row now say WHY a Whisper download failed
+when it is one of three a researcher can act on (disk full, the connection dropped and did not come back, a security certificate not trusted), in place
+of "The download didn't finish." (unrecognised causes keep the old line; nothing new on screen, no layout change). `WhisperFailureCause.classify` reads
+the last stderr lines; `tests/test_whisper_failure_cause.py` pins every Python retry marker, the real Disk full message and the three locale keys
+(`desktop.modelDownload.cause{Disk,Network,Certificate}`, all 21 languages). NOT seen rendered in the app: the Whisper `debugApply` harness has no menu
+entry. Release-note candidate: **A failed Whisper download now says why** (disk full, the connection, a certificate), where it only said it failed.
 Release-note candidate (patch): **Whisper never arrived on macOS 15.** The speech-model check crashed
 on Sequoia, so the toolbar showed a failed download that Retry could not clear. Fixed by building for
 macOS 15; the automatic download now starts with 10 GB free (was 20 GB), and a Mac too full for the model

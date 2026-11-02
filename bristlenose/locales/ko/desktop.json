@@ -1243,7 +1243,10 @@
     "failedTitle": "Whisper를 다운로드하지 못했습니다",
     "why": "다음 녹음을 위해서입니다. Whisper는 음질이 나쁜 오디오, 여러 사람이 겹쳐 말하는 경우, 큰 그룹에 더 강합니다.",
     "stop": "다운로드 중지",
-    "stopNote": "다음에는 처음부터 다시 시작합니다."
+    "stopNote": "다음에는 처음부터 다시 시작합니다.",
+    "causeDisk": "이 Mac의 여유 공간이 부족합니다.",
+    "causeNetwork": "연결이 끊어졌고 다시 연결되지 않았습니다.",
+    "causeCertificate": "이 네트워크의 보안 인증서를 신뢰할 수 없습니다."
   },
   "studyStartup": {
     "foreignTitle": "다른 Mac에서 시작됨",

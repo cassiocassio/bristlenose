@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper wurde nicht geladen",
     "why": "Für Ihre nächsten Aufnahmen. Whisper kommt besser mit schlechtem Ton, durcheinander sprechenden Personen und größeren Gruppen zurecht.",
     "stop": "Download stoppen",
-    "stopNote": "Beginnt beim nächsten Mal wieder von vorn."
+    "stopNote": "Beginnt beim nächsten Mal wieder von vorn.",
+    "causeDisk": "Auf diesem Mac ist nicht genug Speicherplatz frei.",
+    "causeNetwork": "Die Verbindung wurde unterbrochen und kam nicht zurück.",
+    "causeCertificate": "Das Sicherheitszertifikat dieses Netzwerks wurde nicht als vertrauenswürdig eingestuft."
   },
   "studyStartup": {
     "foreignTitle": "Auf einem anderen Mac gestartet",

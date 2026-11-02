@@ -185,7 +185,7 @@ private struct WhisperStatusRow: View {
                     ]))
                     .foregroundStyle(.secondary)
                 case .failed:
-                    Text(i18n.t("desktop.transcriptionSettings.whisperFailed"))
+                    Text(i18n.t(WhisperFailureCause.lineKey(for: download.failureCause)))
                         .foregroundStyle(.secondary)
                     Button(i18n.t("common.buttons.retry")) { download.downloadNow() }
                 case .missing, .partial:

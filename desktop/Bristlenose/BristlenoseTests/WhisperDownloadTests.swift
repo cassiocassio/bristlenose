@@ -296,3 +296,55 @@ import Testing
         #expect(!BristlenoseFlags.appleSpeech(in: d))
     }
 }
+
+// MARK: - Why a download failed
+
+/// The messages are the ones the real sidecar wrote on clean macOS 15, 26 and 27 guests
+/// (30 Oct 2026), not invented ones.
+@Suite struct WhisperFailureCauseTests {
+    private func cause(_ line: String) -> WhisperFailureCause? {
+        WhisperFailureCause.classify([line])
+    }
+
+    @Test func aFullDiskIsNamedWhetherCaughtBeforeOrDuringTheDownload() {
+        #expect(cause("Disk full: the Whisper model needs ~2.6 GB and only ~1.8 GB is free there, "
+                      + "not counting space macOS can clear (~/.cache/huggingface/hub). "
+                      + "Free some space and try again.") == .disk)
+        #expect(cause("huggingface_hub snapshot_download 'mlx-community/whisper-large-v3-turbo' "
+                      + "failed: [Errno 28] No space left on device") == .disk)
+    }
+
+    @Test func aDroppedConnectionIsNamed() {
+        #expect(cause("huggingface_hub snapshot_download 'x' failed: "
+                      + "[Errno 8] nodename nor servname provided, or not known") == .network)
+        #expect(cause("snapshot_download 'x' failed: Connection reset by peer (os error 54)") == .network)
+        #expect(cause("The cached snapshot for 'x' (revision 'main') is incomplete: "
+                      + "1 file(s) are missing") == .network)
+    }
+
+    @Test func aCertificateIsNotMistakenForADroppedConnection() {
+        // Arrives wrapped in "ConnectError", which is a network word.
+        #expect(cause("huggingface_hub snapshot_download 'x' failed: Got: ConnectError: "
+                      + "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+                      + "self-signed certificate in certificate chain (_ssl.c:1010)") == .certificate)
+    }
+
+    @Test func aFullDiskWinsOverAWordInTheSamePath() {
+        // "huggingface" paths carry no network word, but order is the contract: disk, certificate, network.
+        #expect(WhisperFailureCause.classify([
+            "[Errno 28] No space left on device", "error sending request",
+        ]) == .disk)
+    }
+
+    @Test func whatItCannotReadItLeavesAlone() {
+        #expect(cause("snapshot_download 'x' failed: [Errno 13] Permission denied: '/Users/a/ro/hf'") == nil)
+        #expect(cause("snapshot_download 'x' failed: Got: ConnectError: [Errno 61] Connection refused") == nil)
+        #expect(cause("Expecting value: line 1 column 1 (char 0)") == nil)
+        #expect(WhisperFailureCause.classify([]) == nil)
+    }
+
+    @Test func theLineShownIsTheCauseWhenThereIsOneAndTheOldSentenceWhenThereIsNot() {
+        #expect(WhisperFailureCause.lineKey(for: .disk) == "desktop.modelDownload.causeDisk")
+        #expect(WhisperFailureCause.lineKey(for: nil) == "desktop.transcriptionSettings.whisperFailed")
+    }
+}

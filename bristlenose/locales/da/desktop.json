@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper blev ikke hentet",
     "why": "Til dine næste optagelser. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, og større grupper bedre.",
     "stop": "Stop download",
-    "stopNote": "Starter forfra næste gang."
+    "stopNote": "Starter forfra næste gang.",
+    "causeDisk": "Denne Mac har ikke nok ledig plads.",
+    "causeNetwork": "Forbindelsen blev afbrudt og kom ikke tilbage.",
+    "causeCertificate": "Netværkets sikkerhedscertifikat blev ikke godkendt."
   },
   "studyStartup": {
     "foreignTitle": "Startet på en anden Mac",

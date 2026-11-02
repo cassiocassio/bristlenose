@@ -54,6 +54,49 @@ enum WhisperDownloadLine: Equatable {
     }
 }
 
+// MARK: - Why a download failed (pure)
+
+/// The three failures a researcher can do something about, read off the last lines the download
+/// job wrote to stderr. Anything else stays "The download didn't finish." with nothing added: an
+/// unrecognised reason is not guessed at, and a raw Python sentence is not shown to a researcher.
+///
+/// The patterns are lowercase regexes over the joined tail. Python's own wording is the source
+/// (`bristlenose/preflight/whisper.py`: `ensure_disk_room`'s "Disk full: …", and the exceptions
+/// `huggingface_hub` and hf_xet raise), and `tests/test_whisper_failure_cause.py` pins that every
+/// network marker the Python retry loop waits on is recognised here too. Checked in this order:
+/// a certificate failure arrives wrapped in "ConnectError", a network word.
+enum WhisperFailureCause: Equatable {
+    case disk, network, certificate
+
+    static let diskPattern = #"no space left|enospc|disk full|\[errno 28\]"#
+    static let certificatePattern = #"certificate|invalid peer"#
+    static let networkPattern =
+        #"nodename nor servname|name or service not known|temporary failure in name resolution|network is unreachable|network is down|no route to host|host is down|connection reset|connection aborted|connection closed before|connecttimeout|readtimeout|readerror|remoteprotocolerror|incompleteread|timed out|broken pipe|cached snapshot|unexpected_eof|eof occurred in violation|error decoding response body|error sending request|dns error|failed to lookup address|operation timed out|too many requests|service unavailable|bad gateway|gateway timeout|internal server error|\[errno (8|50|51|54|57|60|65)\]|\(os error (50|51|54|57|60|65)\)"#
+
+    static func classify(_ lines: [String]) -> WhisperFailureCause? {
+        let text = lines.joined(separator: " ").lowercased()
+        func has(_ pattern: String) -> Bool { text.range(of: pattern, options: .regularExpression) != nil }
+        if has(diskPattern) { return .disk }
+        if has(certificatePattern) { return .certificate }
+        if has(networkPattern) { return .network }
+        return nil
+    }
+
+    /// Whole keys, not built from parts, so a grep for the key finds this and the locale files.
+    var key: String {
+        switch self {
+        case .disk: return "desktop.modelDownload.causeDisk"
+        case .network: return "desktop.modelDownload.causeNetwork"
+        case .certificate: return "desktop.modelDownload.causeCertificate"
+        }
+    }
+
+    /// The line a failed download shows: its cause when it has one, else the plain statement.
+    static func lineKey(for cause: WhisperFailureCause?) -> String {
+        cause?.key ?? "desktop.transcriptionSettings.whisperFailed"
+    }
+}
+
 // MARK: - Rate and time left (pure)
 
 /// Throughput over a sliding window, and minutes left that don't jitter.
@@ -145,6 +188,8 @@ final class WhisperDownloadModel: ObservableObject {
     @Published private(set) var bytesOnDisk: Int64 = 0
     @Published private(set) var bytesPerSecond: Double?
     @Published private(set) var minutesLeft: Int?
+    /// Why the last download failed, when it is one of the three a researcher can act on.
+    @Published private(set) var failureCause: WhisperFailureCause?
 
     /// Shown while bytes move, and after a failure (with Retry), so a row
     /// "Waiting for Whisper" is never left with nothing anywhere saying why
@@ -311,6 +356,7 @@ final class WhisperDownloadModel: ObservableObject {
         }
         stopRequested = false
         stderrTail = []
+        failureCause = nil
         rate.reset()
         doneBytes = 0
         totalBytes = 0
@@ -377,6 +423,7 @@ final class WhisperDownloadModel: ObservableObject {
             phase = .failed
             return false
         }
+        failureCause = nil  // a failed probe is not the last download's failure
         let answer = await Self.askStatus(binary: binary, mode: mode)
         guard process == nil else { return false }  // a download started meanwhile
         guard let line = answer.line,
@@ -501,6 +548,7 @@ final class WhisperDownloadModel: ObservableObject {
         } else {
             Self.logger.error(
                 "whisper download exited \(status, privacy: .public): \(self.stderrTail.joined(separator: " | "), privacy: .public)")
+            failureCause = WhisperFailureCause.classify(stderrTail)
             phase = .failed
         }
     }

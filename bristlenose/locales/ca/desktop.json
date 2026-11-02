@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper no s'ha baixat",
     "why": "Per a les properes gravacions. Whisper es defensa millor amb àudio dolent, gent que parla alhora i grups més grans.",
     "stop": "Atura la baixada",
-    "stopNote": "La propera vegada torna a començar des del principi."
+    "stopNote": "La propera vegada torna a començar des del principi.",
+    "causeDisk": "Aquest Mac no té prou espai lliure.",
+    "causeNetwork": "La connexió s'ha perdut i no ha tornat.",
+    "causeCertificate": "El certificat de seguretat d'aquesta xarxa no s'ha considerat de confiança."
   },
   "studyStartup": {
     "foreignTitle": "Iniciada en un altre Mac",

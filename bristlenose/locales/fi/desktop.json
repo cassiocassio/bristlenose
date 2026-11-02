@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisperin lataus epäonnistui",
     "why": "Seuraavia tallenteitasi varten. Whisper selviää paremmin huonosta äänestä, päällekkäisestä puheesta ja suuremmista ryhmistä.",
     "stop": "Pysäytä lataus",
-    "stopNote": "Alkaa ensi kerralla alusta."
+    "stopNote": "Alkaa ensi kerralla alusta.",
+    "causeDisk": "Tällä Macilla ei ole tarpeeksi vapaata tilaa.",
+    "causeNetwork": "Yhteys katkesi eikä palannut.",
+    "causeCertificate": "Tämän verkon suojaussertifikaattiin ei luotettu."
   },
   "studyStartup": {
     "foreignTitle": "Käynnistetty toisella Macilla",

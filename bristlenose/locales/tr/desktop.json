@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper indirilemedi",
     "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
     "stop": "İndirmeyi Durdur",
-    "stopNote": "Bir sonraki sefer baştan başlar."
+    "stopNote": "Bir sonraki sefer baştan başlar.",
+    "causeDisk": "Bu Mac'te yeterli boş alan yok.",
+    "causeNetwork": "Bağlantı koptu ve geri gelmedi.",
+    "causeCertificate": "Bu ağın güvenlik sertifikasına güvenilmedi."
   },
   "studyStartup": {
     "foreignTitle": "Başka bir Mac’te başlatıldı",

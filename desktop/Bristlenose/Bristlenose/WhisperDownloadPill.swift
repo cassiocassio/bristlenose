@@ -76,7 +76,7 @@ struct WhisperDownloadDetail: View {
             if model.phase == .failed {
                 Text(i18n.t("desktop.modelDownload.failedTitle"))
                     .font(.system(.callout).weight(.semibold))
-                Text(i18n.t("desktop.transcriptionSettings.whisperFailed"))
+                Text(i18n.t(WhisperFailureCause.lineKey(for: model.failureCause)))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

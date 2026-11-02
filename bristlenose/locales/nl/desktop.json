@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper is niet gedownload",
     "why": "Voor je volgende opnamen. Whisper kan beter overweg met slechte audio, mensen die door elkaar praten en grotere groepen.",
     "stop": "Download stoppen",
-    "stopNote": "Begint de volgende keer opnieuw vanaf het begin."
+    "stopNote": "Begint de volgende keer opnieuw vanaf het begin.",
+    "causeDisk": "Deze Mac heeft niet genoeg vrije ruimte.",
+    "causeNetwork": "De verbinding viel weg en kwam niet terug.",
+    "causeCertificate": "Het beveiligingscertificaat van dit netwerk werd niet vertrouwd."
   },
   "studyStartup": {
     "foreignTitle": "Gestart op een andere Mac",

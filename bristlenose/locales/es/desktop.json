@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper no se ha descargado",
     "why": "Para tus próximas grabaciones. Whisper se las arregla mejor con mal audio, gente que habla a la vez y grupos más grandes.",
     "stop": "Detener la descarga",
-    "stopNote": "La próxima vez empieza de nuevo desde el principio."
+    "stopNote": "La próxima vez empieza de nuevo desde el principio.",
+    "causeDisk": "Este Mac no tiene espacio libre suficiente.",
+    "causeNetwork": "Se perdió la conexión y no volvió.",
+    "causeCertificate": "El certificado de seguridad de esta red no se consideró de confianza."
   },
   "studyStartup": {
     "foreignTitle": "Iniciado en otro Mac",

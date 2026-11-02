@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper n'a pas été téléchargé",
     "why": "Pour vos prochains enregistrements. Whisper gère mieux un son médiocre, les personnes qui parlent en même temps et les groupes plus nombreux.",
     "stop": "Arrêter le téléchargement",
-    "stopNote": "Reprendra depuis le début la prochaine fois."
+    "stopNote": "Reprendra depuis le début la prochaine fois.",
+    "causeDisk": "Ce Mac n'a pas assez d'espace libre.",
+    "causeNetwork": "La connexion a été coupée et n'est pas revenue.",
+    "causeCertificate": "Le certificat de sécurité de ce réseau n'a pas été jugé fiable."
   },
   "studyStartup": {
     "foreignTitle": "Lancée sur un autre Mac",

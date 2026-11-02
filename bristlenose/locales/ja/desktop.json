@@ -1243,7 +1243,10 @@
     "failedTitle": "Whisper をダウンロードできませんでした",
     "why": "次の録音のために。Whisper は、音質の悪い音声、話し声の重なり、大人数の会話にも強いモデルです。",
     "stop": "ダウンロードを停止",
-    "stopNote": "次回は最初からやり直しになります。"
+    "stopNote": "次回は最初からやり直しになります。",
+    "causeDisk": "この Mac の空き容量が足りません。",
+    "causeNetwork": "接続が切れ、戻りませんでした。",
+    "causeCertificate": "このネットワークのセキュリティ証明書は信頼されませんでした。"
   },
   "studyStartup": {
     "foreignTitle": "別の Mac で開始されました",

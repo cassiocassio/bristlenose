@@ -1375,7 +1375,10 @@
     "failedTitle": "Nie pobrano Whispera",
     "why": "Do Twoich kolejnych nagrań. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami i większymi grupami.",
     "stop": "Zatrzymaj pobieranie",
-    "stopNote": "Następnym razem zacznie się od początku."
+    "stopNote": "Następnym razem zacznie się od początku.",
+    "causeDisk": "Ten Mac nie ma dość wolnego miejsca.",
+    "causeNetwork": "Połączenie zostało przerwane i nie wróciło.",
+    "causeCertificate": "Certyfikat bezpieczeństwa tej sieci nie został uznany za zaufany."
   },
   "studyStartup": {
     "foreignTitle": "Rozpoczęta na innym Macu",

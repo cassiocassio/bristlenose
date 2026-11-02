@@ -1292,7 +1292,10 @@
     "failedTitle": "Whisper didn't download",
     "why": "For your next recordings. Whisper copes better with poor audio, people talking over each other and larger groups.",
     "stop": "Stop Download",
-    "stopNote": "Starts again from the beginning next time."
+    "stopNote": "Starts again from the beginning next time.",
+    "causeDisk": "This Mac doesn't have enough free space for it.",
+    "causeNetwork": "The connection dropped and didn't come back.",
+    "causeCertificate": "This network's security certificate wasn't trusted."
   },
   "studyStartup": {
     "foreignTitle": "Started on another Mac",

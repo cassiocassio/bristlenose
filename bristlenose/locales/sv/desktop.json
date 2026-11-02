@@ -1287,7 +1287,10 @@
     "failedTitle": "Whisper laddades inte ned",
     "why": "För dina nästa inspelningar. Whisper klarar dåligt ljud, människor som pratar i munnen på varandra och större grupper bättre.",
     "stop": "Stoppa nedladdningen",
-    "stopNote": "Börjar om från början nästa gång."
+    "stopNote": "Börjar om från början nästa gång.",
+    "causeDisk": "Den här Macen har inte tillräckligt med ledigt utrymme.",
+    "causeNetwork": "Anslutningen bröts och kom inte tillbaka.",
+    "causeCertificate": "Nätverkets säkerhetscertifikat godkändes inte."
   },
   "studyStartup": {
     "foreignTitle": "Startad på en annan Mac",

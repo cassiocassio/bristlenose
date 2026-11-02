@@ -1356,7 +1356,10 @@
     "failedTitle": "Whisper se nestáhl",
     "why": "Pro vaše další nahrávky. Whisper si lépe poradí se špatným zvukem, se souběžnou řečí a s většími skupinami.",
     "stop": "Zastavit stahování",
-    "stopNote": "Příště začne znovu od začátku."
+    "stopNote": "Příště začne znovu od začátku.",
+    "causeDisk": "Tento Mac nemá dost volného místa.",
+    "causeNetwork": "Připojení se přerušilo a už se neobnovilo.",
+    "causeCertificate": "Bezpečnostní certifikát této sítě nebyl považován za důvěryhodný."
   },
   "studyStartup": {
     "foreignTitle": "Spuštěno na jiném Macu",

@@ -223,34 +223,16 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
 - For editorial notes: what "who" says in a one-researcher app, and the word cap's level.
 - `design-delete-and-bin.md`'s own calls: the words, glyph or row, Empty Bin, the empty-again rule.
 - From the consequences mockup (24 Oct 2026):
-  - **Parked, 24 Oct 2026: mock up the flag of decision 6** — how loud it is, which surfaces show
-    it, and how it meets the earlier analysis. A restored "not" under a reworded quote: the quote
-    goes on feeding sentiment, signals, exports and agents. Brief for the mockup (`bn-mockup`,
-    bn-accurate; generate the CSS from `stages/s12_render/theme_assets.get_default_css()` so the
-    quote cards are the real ones, and wrap cards in `.quote-group` with `content-visibility:
-    visible`):
-    - **Nothing on a quote card warns today.** Siblings to reuse: the `warning` kind of
-      `bristlenose/ui_kinds.py` (⚠, `--bn-colour-warning`, "recoverable / partial", today only
-      whole-run states; `docs/design-pipeline-diagnostic-popover.md`), the dashed AutoCode
-      suggestion badge with accept/deny (`atoms/badge.css` `.badge-proposed`, the one "needs your
-      decision" state on a card), the gutter mark's `data-hidden` state
-      (`frontend/src/islands/transcript/GutterEntry.tsx`, `transcript-gutter.css`), and a new
-      `viewMode` beside All and Starred (`frontend/src/utils/filter.ts`, `ViewSwitcher.tsx`).
-      Signal cards draw quotes with the same `blockquote .quote-row` markup
-      (`SignalsPage.tsx` `QuoteBlock`, `organisms/signals.css`). The Dashboard has no to-review
-      tile today.
-    - **Loudness, three variants:** a glyph on the card; an inline "the transcript now says …"
-      line with the two wordings; or the quote held out of the counts, like a hidden quote, until
-      the researcher acts.
-    - **Surfaces to draw:** quote card and Quotes lens filter; transcript gutter mark; the quote in
-      a signal card; Dashboard; exports (does an export carry or stop on it?); chat and MCP (does
-      the model get told the transcript disagrees?); the Mac sidebar (probably not: it is per
-      quote, not per run).
-    - **Meeting the earlier analysis:** while flagged, the quote's sentiment and tags were made on
-      the old words (count it or not?); "use the transcript's words" rewrites the quote's edit and
-      is then a meaning change (2b: re-score, card rewrite under decision 21, session owed);
-      "keep my wording" records that the researcher looked, and the flag goes; a re-read session
-      keeps the researcher's wording (decision 6), so the flag survives it; Re-analyse clears it.
+  - **The flag of decision 6, mocked up 2 Nov 2026:** `docs/mockups/quote-transcript-disagree-flag.html`
+    (bn-accurate, the shipped theme inlined). Proposed there: the transcript's words shown inline
+    on the quote card with two choices, "Use the transcript's words" and "Keep my wording"
+    (variant B); a "Quotes to review" view beside All and Starred; the warning glyph on the
+    transcript's gutter mark and on the quote in a signal card; nothing on the Dashboard or the
+    Mac sidebar; exports ship the researcher's wording; the chat lens and MCP are told the
+    transcript disagrees. Its §4 table walks the flag through every later act (choose, undo,
+    a re-read, Re-analyse). Five owner questions open there: loudness (A glyph, B inline, C held
+    out of the counts), whether a flagged quote keeps counting, exports, agents, and whether
+    "Keep my wording" asks for a reason.
   - A partial strike on a starred quote: the re-cut quote may cover too little of the starred span
     for the ≥70% overlap rule to carry the star. Re-cut at once keeping the star, or teach the carry
     about strikes.

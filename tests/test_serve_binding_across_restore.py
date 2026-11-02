@@ -27,12 +27,26 @@ import pytest
 
 from bristlenose.server import db as server_db
 from bristlenose.utils import output_backup
-from tests.test_lifecycle_scenarios import _client, _db, _star, _starred
+from tests.test_lifecycle_scenarios import (
+    _MOVES_AN_OPEN_DATABASE,
+    _client,
+    _db,
+    _star,
+    _starred,
+)
 from tests.test_serve_condition import _failed, _started
 from tests.test_serve_project_root import _app, _project, _rows, _sessions, _wait
 from tests.test_serve_project_root import fast_watcher as fast_watcher  # noqa: F401
 
+try:
+    import fcntl  # noqa: F401
 
+    _HAS_FLOCK = True
+except ImportError:  # Windows: binding() degrades to no lock, exactly as _settling does
+    _HAS_FLOCK = False
+
+
+@_MOVES_AN_OPEN_DATABASE
 def test_a_restore_waits_for_a_connection_mid_binding(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fast_watcher,  # noqa: F811
 ) -> None:
@@ -84,6 +98,7 @@ def test_a_restore_waits_for_a_connection_mid_binding(
         assert _wait(lambda: _starred(client)), "a failed re-analyse lost the researcher's star"
 
 
+@_MOVES_AN_OPEN_DATABASE
 def test_a_failed_heal_is_retried_after_the_restore(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fast_watcher,  # noqa: F811
 ) -> None:
@@ -141,6 +156,11 @@ def test_binding_waits_for_an_exclusive_hold_in_another_thread(tmp_path: Path) -
         target=lambda: (output_backup.binding(out).__enter__(), entered.set()), daemon=True,
     )
     binder.start()
+    if not _HAS_FLOCK:  # no fcntl: the documented degrade is "no lock", so it never waits
+        assert entered.wait(3), "without flock a binding must pass at once, as _settling does"
+        release.set()
+        holder.join(5)
+        return
     assert not entered.wait(0.3), "a binding entered while another thread held the lock"
     release.set()
     assert entered.wait(5)
@@ -182,6 +202,9 @@ def test_binding_gives_up_on_a_hold_that_does_not_end(
         finally:
             release.set()
     holder.join(5)
+    if not _HAS_FLOCK:  # nothing to give up on: it never waited, so it logs nothing
+        assert not any("held the settle lock" in r.getMessage() for r in caplog.records)
+        return
     assert any("held the settle lock" in r.getMessage() for r in caplog.records)
 
 

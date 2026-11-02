@@ -29,6 +29,14 @@ private final class FakeServe: @unchecked Sendable {
     private var held: [() -> Void] = []
     private var released = false
     private(set) var requested: [URL] = []
+    /// What became of each connection, in order: its request's query once
+    /// read, and every state after `.ready`. For a red on a runner this
+    /// machine cannot imitate: macos-26 failed `aPressDroppedAfterThePanel…`
+    /// with the anonymised copy lost to NSURLErrorDomain -1005 (mac-build on
+    /// 0e4c54e6d, 2 Nov 2026), and nothing recorded which connection went,
+    /// or whether the dropped press's request ever reached this server.
+    private(set) var connectionEvents: [String] = []
+    private var connections = 0
     /// Fires once the listener is ready, or has failed (which leaves `port` at 0).
     let listening = MainSignal()
 
@@ -46,34 +54,64 @@ private final class FakeServe: @unchecked Sendable {
             }
         }
         listener.newConnectionHandler = { [weak self] connection in
-            connection.start(queue: .main)
-            connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in
-                guard let self else { connection.cancel(); return }
-                let request = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                let target = request.components(separatedBy: " ").dropFirst().first ?? "/"
-                let url = URL(string: "http://127.0.0.1\(target)")!
-                self.requested.append(url)
-                let code = self.status(url)
-                let anonymised = url.query?.contains("anonymise=true") == true
-                let body = code == 200
-                    ? (anonymised ? "<html>ANONYMISED</html>" : "<html>NAMED</html>")
-                    : #"{"detail":"Export build missing"}"#
-                var head = "HTTP/1.1 \(code) \(code == 200 ? "OK" : "Error")\r\n"
-                head += "Content-Type: \(code == 200 ? "text/html" : "application/json")\r\n"
-                if code == 200 { head += "Content-Disposition: attachment; filename=\"report.html\"\r\n" }
-                head += "Content-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n"
-                let answer = {
-                    connection.send(content: Data((head + body).utf8),
-                                    completion: .contentProcessed { _ in connection.cancel() })
-                }
-                if self.hold(url), !self.released {
-                    self.held.append(answer)
-                } else {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + self.delay(url), execute: answer)
+            guard let self else { connection.cancel(); return }
+            connections += 1
+            let n = connections
+            var label = "#\(n)"
+            // Main queue, like the listener: the array is read there too.
+            connection.stateUpdateHandler = { [weak self] state in
+                switch state {
+                case .ready: break
+                default: self?.connectionEvents.append("\(label) \(state)")
                 }
             }
+            connection.start(queue: .main)
+            // Read to the end of the request head before answering: a head
+            // split across two reads parsed as `/` and was answered at once,
+            // named, whatever the test meant to hold.
+            var pending = Data()
+            func readMore() {
+                connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, complete, error in
+                    guard let self else { connection.cancel(); return }
+                    if let data { pending.append(data) }
+                    let request = String(decoding: pending, as: UTF8.self)
+                    if !request.contains("\r\n\r\n"), !complete, error == nil, pending.count < 65_536 {
+                        readMore(); return
+                    }
+                    let url = self.answer(request, on: connection)
+                    label += " \(url.query ?? "(no request read)")"
+                }
+            }
+            readMore()
         }
         listener.start(queue: .main)
+    }
+
+    /// Answer one request: at once, after `delay`, or held until `release()`.
+    @discardableResult
+    private func answer(_ request: String, on connection: NWConnection) -> URL {
+        let target = request.components(separatedBy: " ").dropFirst().first ?? "/"
+        let url = URL(string: "http://127.0.0.1\(target)")!
+        requested.append(url)
+        let code = status(url)
+        let anonymised = url.query?.contains("anonymise=true") == true
+        let body = code == 200
+            ? (anonymised ? "<html>ANONYMISED</html>" : "<html>NAMED</html>")
+            : #"{"detail":"Export build missing"}"#
+        var head = "HTTP/1.1 \(code) \(code == 200 ? "OK" : "Error")\r\n"
+        head += "Content-Type: \(code == 200 ? "text/html" : "application/json")\r\n"
+        if code == 200 { head += "Content-Disposition: attachment; filename=\"report.html\"\r\n" }
+        head += "Content-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n"
+        let answer = {
+            connection.send(content: Data((head + body).utf8),
+                            completion: .contentProcessed { _ in connection.cancel() })
+        }
+        if hold(url), !released {
+            held.append(answer)
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay(url), execute: answer)
+        }
+        return url
     }
 
     var port: UInt16 { listener.port?.rawValue ?? 0 }
@@ -403,7 +441,21 @@ struct ExportSaveFlowTests {
         try await rig.export()
         await rig.until({ !bridge.isExportingReport }, looks: 250)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
-        #expect(rig.coordinator.hasPendingReportExport, "precondition: the first export is still in flight")
+        // The dropped press's own outcome, judged before the first export is
+        // let go: its download is cancelled by the app, so give that cancel
+        // time to land, then nothing may have asked or alerted, and the first
+        // export must still be in flight. Judged apart from the landing below
+        // because the macos-26 runner lost the first export to NSURLErrorDomain
+        // -1005 (connection lost) after a dropped press (mac-build on
+        // 0e4c54e6d, 2 Nov 2026), and one red covering both could not say
+        // whether the dropped press's own download had failed, or the first
+        // export's connection went when the dropped one was cancelled.
+        try? await Task.sleep(for: .milliseconds(300))
+        let served = "server saw \(rig.serve.requested.map { $0.query ?? "?" }), connections \(rig.serve.connectionEvents)"
+        #expect(rig.panels == 1, "the dropped press put up a save panel")
+        #expect(rig.alerts.isEmpty, "the dropped press's own download failed: \(rig.alertsSaid); \(served)")
+        #expect(rig.coordinator.hasPendingReportExport,
+                "precondition: the first export is still in flight (alerts: \(rig.alertsSaid); \(served))")
         // The dropped press leaves the first export alone: its anonymised copy
         // lands where the one panel chose, and nothing asks again or alerts.
         rig.serve.release()
@@ -416,17 +468,19 @@ struct ExportSaveFlowTests {
         // and the file was judged 300 ms later (41376061190, where the alert
         // was the red's second message, unread by the fix before this one).
         // An export that never reaches both runs to the suite's limit, which
-        // is the red it deserves, and the red below says what the alert said.
+        // is the red it deserves, and the red below says what the alert said
+        // and what the server saw of each connection.
         await rig.untilTimeLimit {
             !rig.coordinator.hasPendingReportExport
                 && (rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.alerts.isEmpty)
         }
         // Give a late panel or alert time to land, so a pass is not a race.
         try? await Task.sleep(for: .milliseconds(300))
+        let servedAfter = "server saw \(rig.serve.requested.map { $0.query ?? "?" }), connections \(rig.serve.connectionEvents)"
         #expect(rig.saved == "<html>ANONYMISED</html>",
-                "the export in flight never landed (alerts: \(rig.alertsSaid), panels: \(rig.panels))")
+                "the export in flight never landed (alerts: \(rig.alertsSaid), panels: \(rig.panels); \(servedAfter))")
         #expect(rig.panels == 1, "the dropped press put up a save panel")
-        #expect(rig.alerts.isEmpty, "a dropped press is not a failure: \(rig.alertsSaid)")
+        #expect(rig.alerts.isEmpty, "a dropped press is not a failure: \(rig.alertsSaid); \(servedAfter)")
     }
 
     /// A second press before the panel is dropped too, but the first export

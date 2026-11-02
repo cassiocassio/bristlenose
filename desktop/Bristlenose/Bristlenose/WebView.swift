@@ -369,6 +369,15 @@ struct WebView: NSViewRepresentable {
         /// press in that time put up a second save panel (R76).
         @MainActor private var pendingReportExport: WKDownload?
 
+        /// Downloads this coordinator cancelled itself (a dropped second
+        /// press). Their failure is not news, whatever error it carries: a
+        /// cancel while the connection was still being made comes back as
+        /// NSURLErrorNetworkConnectionLost (-1005), not -999, and read as a
+        /// failed save, "The export could not be saved" went up for a press
+        /// that was meant to do nothing (macos-26 runner, 2 Nov 2026; seen
+        /// locally under the full suite's main-actor load).
+        @MainActor private var droppedDownloads: Set<ObjectIdentifier> = []
+
         /// The pending export has not reached its save panel yet, so the
         /// row's "Exporting…" is its own (#24). False for an anonymised
         /// refetch, whose panel has already been answered.
@@ -676,6 +685,7 @@ struct WebView: NSViewRepresentable {
             if Self.isHTMLReportURL(requestURL) {
                 if pendingReportExport != nil {
                     log.notice("export: Export Report pressed again while one is pending — dropped")
+                    droppedDownloads.insert(ObjectIdentifier(download))
                     download.cancel { _ in }
                     // Past its panel, the pending export says nothing on the
                     // row, so this press's "Exporting…" goes with its
@@ -891,11 +901,12 @@ struct WebView: NSViewRepresentable {
                 self.reportExportEnded(download)
                 self.chosenDestination.removeValue(forKey: ObjectIdentifier(download))
                 self.pendingRequestURL.removeValue(forKey: ObjectIdentifier(download))
-            }
-            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
-                return  // user-initiated cancel
-            }
-            Task { @MainActor in
+                // A download we dropped ourselves ends quietly, whatever the
+                // code: -999 after its connection was up, -1005 before.
+                if self.droppedDownloads.remove(ObjectIdentifier(download)) != nil { return }
+                if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                    return  // user-initiated cancel
+                }
                 let alert = NSAlert()
                 alert.messageText = self.i18n.t("common.export.saveFailedAlert")
                 alert.informativeText = error.localizedDescription

@@ -451,6 +451,56 @@ describe("a window's chips across a reload", () => {
     expect(kinds()).toEqual(["clips:restored"]);
   });
 
+  // N87 (owner, 1 Nov 2026): the AutoCode and catch-up chips have the same rule as an export's. A
+  // finished chip this window carried cannot stand for a run the server is still working on, so
+  // the newer run's chip replaces it rather than sitting beside it.
+  it.each([
+    ["autocode", "garrett", { framework_id: "garrett", title: "Garrett", status: "running", completed_at: null }],
+    ["catchup", "morville", { framework_id: "morville", title: "Morville", status: "running", completed_at: "2026-10-20T10:00:00" }],
+  ] as const)("a carried finished %s chip makes way for the newer run the server is working on",
+    async (type, fid, run) => {
+      await rehydrateActivityJobs("1");
+      addJob(`${type}:${fid}:1`, { type, frameworkId: fid, frameworkTitle: fid });
+      settleJob(`${type}:${fid}:1`, done);
+      autocode.mockResolvedValue({ jobs: [run] } as never);
+      await reload();
+      expect(kinds()).toEqual([`${type}:${fid}:restored`]);
+      expect(byKind(`${type}:${fid}:restored`)?.outcome).toBeUndefined();
+    });
+
+  it("a carried finished chip stays when the server has nothing running for its codebook", async () => {
+    await rehydrateActivityJobs("1");
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    settleJob("autocode:garrett:1", done);
+    autocode.mockResolvedValue({
+      jobs: [{ framework_id: "norman", title: "Norman", status: "running", completed_at: null }],
+    } as never);
+    await reload();
+    expect(kinds()).toEqual(["autocode:garrett:1", "autocode:norman:restored"]);
+  });
+
+  it("a chip finished on this page stays when the read that names a run began before it ended", async () => {
+    let answer!: (v: unknown) => void;
+    autocode.mockReturnValue(new Promise((r) => (answer = r)) as never);
+    const pending = rehydrateActivityJobs("1");
+    addJob("autocode:garrett:7", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    settleJob("autocode:garrett:7", done);
+    answer({ jobs: [{ framework_id: "garrett", title: "Garrett", status: "running", completed_at: null }] });
+    await pending;
+    expect(getJobs().get("autocode:garrett:7")?.outcome?.status).toBe("completed");
+  });
+
+  it("a carried finished chip for another kind of work on the codebook stays", async () => {
+    await rehydrateActivityJobs("1");
+    addJob("autocode:garrett:1", { type: "autocode", frameworkId: "garrett", frameworkTitle: "Garrett" });
+    settleJob("autocode:garrett:1", done);
+    autocode.mockResolvedValue({
+      jobs: [{ framework_id: "garrett", title: "Garrett", status: "running", completed_at: "2026-10-20T10:00:00" }],
+    } as never);
+    await reload();
+    expect(kinds()).toEqual(["autocode:garrett:1", "catchup:garrett:restored"]);
+  });
+
   it("does not take a carried chip that claims to have ended running", async () => {
     sessionStorage.setItem(key(), JSON.stringify([
       ["clips:1", { type: "clips", frameworkId: "", frameworkTitle: "", outcome: { ...done, status: "running" } }],

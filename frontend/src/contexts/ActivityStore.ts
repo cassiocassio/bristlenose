@@ -308,6 +308,7 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
         continue;
       }
       if (hasJob((j) => j.type === "autocode" && j.frameworkId === run.framework_id)) continue;
+      supersedeCarried("autocode", run.framework_id);
       addJob(newJobId(`autocode:${run.framework_id}:restored`), {
         type: "autocode",
         frameworkId: run.framework_id,
@@ -318,9 +319,20 @@ export function rehydrateActivityJobs(projectId: string): Promise<void> {
   }).catch((err: unknown) => console.warn("Activity: restoring the chips on load failed", err));
 }
 
+/** A finished chip this window carried across the reload cannot stand for a run the server is
+ *  still working on: that run began after it ended, so the newer run's chip replaces it (N87). Only
+ *  carried chips: one finished on this page may have ended after the server read began (the same
+ *  reason `hasJob` skips a finished chip). */
+function supersedeCarried(type: ActivityJobEntry["type"], frameworkId: string): void {
+  for (const [id, j] of jobs) {
+    if (carriedIds.has(id) && j.outcome && j.type === type && j.frameworkId === frameworkId) removeJob(id);
+  }
+}
+
 /** A catch-up the server is running gets a chip, unless this window has one for its codebook. */
 function adoptCatchUp(run: { framework_id: string; title: string }): boolean {
   if (hasJob((j) => j.type === "catchup" && j.frameworkId === run.framework_id)) return false;
+  supersedeCarried("catchup", run.framework_id);
   addJob(newJobId(`catchup:${run.framework_id}:restored`), {
     type: "catchup",
     frameworkId: run.framework_id,

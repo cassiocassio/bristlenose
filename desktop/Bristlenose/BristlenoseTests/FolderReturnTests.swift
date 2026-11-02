@@ -18,18 +18,15 @@ import Testing
         return (root, ProjectIndex(fileURL: root.appendingPathComponent("projects.json")))
     }
 
-    /// The queue suite's ceiling (30 s). A return reaches the row through
-    /// main-actor hops (sync, scan, apply), and under the full suite the main
-    /// actor is saturated: the 5 s ceiling ran out with the scan still queued
-    /// (21 Oct 2026, reproduced beside 40 tests holding it 100 ms at a time).
-    /// A green wait returns as soon as its condition holds.
-    private func until(
-        _ condition: () -> Bool, seconds: Double = PipelineRunnerQueueTests.patience
-    ) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+    /// The queue suite's wait, a budget of looks. A return reaches the row
+    /// through main-actor hops (sync, scan, apply), and under the full suite
+    /// the main actor is saturated: a 5 s ceiling ran out with the scan still
+    /// queued (21 Oct 2026, reproduced beside 40 tests holding it 100 ms at a
+    /// time), and on the runners a 30 s one is spent the same way (see
+    /// `PipelineRunnerQueueTests.patienceLooks`). A green wait returns at the
+    /// first look that finds its condition.
+    private func until(_ condition: () -> Bool) async {
+        await PipelineRunnerQueueTests.until(condition)
     }
 
     private static func remove(_ p: Project) {

@@ -33,11 +33,13 @@ import Testing
         return (root, ProjectIndex(fileURL: root.appendingPathComponent("projects.json")))
     }
 
-    private func until(_ condition: () -> Bool, seconds: Double = 5) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+    /// The queue tests' wait: a budget of looks, not seconds. This suite had
+    /// its own 5 s clock, which the macos-15 runner spent entirely while the
+    /// main actor was somebody else's — the test ran 18 s, the run's end was
+    /// still being read when the clock ran out, and `PipelineRunnerQueueTests`'
+    /// identical twin passed in 19 s beside it (mac-build 41376061190).
+    private func until(_ condition: () -> Bool) async {
+        await PipelineRunnerQueueTests.until(condition)
     }
 
     // MARK: - The decision

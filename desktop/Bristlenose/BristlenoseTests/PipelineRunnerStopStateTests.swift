@@ -11,11 +11,13 @@ struct PipelineRunnerStopStateTests {
 
     private typealias Rig = PipelineRunnerQueueTests.Rig
 
-    private func until(_ condition: () -> Bool, seconds: Double = 5) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+    /// The queue tests' wait, a budget of looks rather than a clock the
+    /// runner's main actor can spend for the test (see `patienceLooks`). This
+    /// suite's own 5 s clock ran out on the macos-26 runner with the stopped
+    /// run's end still being read: two reds, the row still "running" and the
+    /// queue not yet moved on (mac-build 41373488054, 2 Nov 2026).
+    private func until(_ condition: () -> Bool) async {
+        await PipelineRunnerQueueTests.until(condition)
     }
 
     /// What the CLI leaves when SIGINT stops it: a manifest with the stages

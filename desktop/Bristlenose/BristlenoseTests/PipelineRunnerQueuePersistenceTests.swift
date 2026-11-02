@@ -38,11 +38,8 @@ struct PipelineRunnerQueuePersistenceTests {
         store.saved?.entries.map(\.projectID) ?? []
     }
 
-    private func until(_ condition: () -> Bool, seconds: Double = PipelineRunnerQueueTests.patience) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(10))
-        }
+    private func until(_ condition: () -> Bool) async {
+        await PipelineRunnerQueueTests.until(condition)
     }
 
     // MARK: - Kept as it changes

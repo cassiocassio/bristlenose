@@ -290,10 +290,9 @@ struct StudyStartupRefusalPipelineTests {
             + #"{"reason":"foreign_unfinished","machine_name":"Studio","started_at":null}"#)
         if stopFirst { rig.runner.cancel(project: project) }
         launch.exit(.exited(code: StudyStartupRefusal.exitCode))
-        let deadline = Date().addingTimeInterval(PipelineRunnerQueueTests.patience)
-        while Date() < deadline {
-            if case .failed(let message, _) = rig.runner.state[project.id], message.startupRefusal != nil { break }
-            try? await Task.sleep(for: .milliseconds(10))
+        await PipelineRunnerQueueTests.until {
+            if case .failed(let message, _) = rig.runner.state[project.id] { return message.startupRefusal != nil }
+            return false
         }
         guard case .failed(let message, _) = rig.runner.state[project.id] else {
             Issue.record("Refusal was replaced by old ready/stopped state")

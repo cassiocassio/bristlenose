@@ -143,16 +143,23 @@ private final class ExportRig {
         }
     }
 
-    /// How long a wait for something that must happen may take. The full
+    /// How many looks a wait for something that must happen may take, 20 ms
+    /// apart: 30 s of looking on an idle Mac. Looks, not seconds: the full
     /// suite runs hundreds of main-actor tests beside these, and every step of
-    /// an export is a main-actor hop: an 8 s ceiling failed in the full suite
-    /// on 20 Oct 2026 and beside a 15 s main-thread hold. A green wait returns
-    /// as soon as its condition holds.
-    nonisolated static let patience: Double = 30
+    /// an export is a main-actor hop. An 8 s ceiling failed in the full suite
+    /// on 20 Oct 2026 and beside a 15 s main-thread hold; on the macos-26
+    /// runner `aGoodExportIsSavedWhereChosen` took 29.6 s of a 30 s clock
+    /// (mac-build 41376061190, 2 Nov 2026), a 20 ms sleep returning seconds
+    /// late with the export's own next hop queued behind it. A look is spent
+    /// only when the test gets to look, so a starved main actor costs time,
+    /// never the verdict. A green wait returns at the first look that finds
+    /// its condition.
+    nonisolated static let patienceLooks = 1_500
 
-    func until(_ condition: () -> Bool, seconds: Double = patience) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
+    func until(_ condition: () -> Bool, looks: Int = patienceLooks) async {
+        var left = looks
+        while !condition(), left > 0 {
+            left -= 1
             try? await Task.sleep(for: .milliseconds(20))
         }
     }
@@ -175,6 +182,11 @@ private final class ExportRig {
     }
 
     var saved: String? { try? String(contentsOf: destination, encoding: .utf8) }
+
+    /// What each alert said, for a red: `rig.alerts` alone printed as
+    /// `[<NSAlert: 0x…>]`, which named no download and no error (mac-build
+    /// 41376061190, 2 Nov 2026).
+    var alertsSaid: [String] { alerts.map { "\($0.messageText): \($0.informativeText)" } }
 
     func cleanup() {
         serve.stop()
@@ -347,8 +359,9 @@ struct ExportSaveFlowTests {
         bridge.reportExportStartPatience = .milliseconds(100)
         bridge.reportExportPressed()
         #expect(bridge.isExportingReport)
-        let deadline = Date().addingTimeInterval(ExportRig.patience)
-        while bridge.isExportingReport, Date() < deadline {
+        var looks = ExportRig.patienceLooks
+        while bridge.isExportingReport, looks > 0 {
+            looks -= 1
             try? await Task.sleep(for: .milliseconds(20))
         }
         #expect(!bridge.isExportingReport, "Exporting… stayed up with no export behind it")
@@ -388,25 +401,32 @@ struct ExportSaveFlowTests {
         #expect(bridge.reportExportPressed())
         #expect(bridge.isExportingReport, "the second press said nothing, so its going proves nothing")
         try await rig.export()
-        await rig.until({ !bridge.isExportingReport }, seconds: 5)
+        await rig.until({ !bridge.isExportingReport }, looks: 250)
         #expect(!bridge.isExportingReport, "a dropped press kept Exporting… up")
+        #expect(rig.coordinator.hasPendingReportExport, "precondition: the first export is still in flight")
         // The dropped press leaves the first export alone: its anonymised copy
         // lands where the one panel chose, and nothing asks again or alerts.
         rig.serve.release()
-        // Wait for the file, a second panel or an alert — the outcomes asserted
-        // below — never for the coordinator to let the export go: on the
-        // macos-26 runner that cleared before report.html could be read, and
-        // 300 ms later it still could not (mac-build bea8f48e and 3bfbe1f28;
-        // `aPressWhileTheAnonymisedCopyIsFetchedAsksNothing`, the same flow
-        // waiting on the file, was green there). An export that ends with none of the three runs to
-        // the suite's limit, which is the red it deserves.
+        // Wait for the export in flight to end AND for one of the outcomes
+        // asserted below — the file, a second panel or an alert — then judge.
+        // Neither alone is the end state, and the macos-26 runner has shown
+        // both halves (2 Nov 2026): waiting on the export ending, the file was
+        // not readable 300 ms later, with no panel and no alert (mac-build
+        // bea8f48e, 3bfbe1f28); waiting on the outcomes, an alert came first
+        // and the file was judged 300 ms later (41376061190, where the alert
+        // was the red's second message, unread by the fix before this one).
+        // An export that never reaches both runs to the suite's limit, which
+        // is the red it deserves, and the red below says what the alert said.
         await rig.untilTimeLimit {
-            rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.alerts.isEmpty
+            !rig.coordinator.hasPendingReportExport
+                && (rig.saved == "<html>ANONYMISED</html>" || rig.panels > 1 || !rig.alerts.isEmpty)
         }
+        // Give a late panel or alert time to land, so a pass is not a race.
         try? await Task.sleep(for: .milliseconds(300))
-        #expect(rig.saved == "<html>ANONYMISED</html>", "the export in flight never landed")
+        #expect(rig.saved == "<html>ANONYMISED</html>",
+                "the export in flight never landed (alerts: \(rig.alertsSaid), panels: \(rig.panels))")
         #expect(rig.panels == 1, "the dropped press put up a save panel")
-        #expect(rig.alerts.isEmpty, "a dropped press is not a failure")
+        #expect(rig.alerts.isEmpty, "a dropped press is not a failure: \(rig.alertsSaid)")
     }
 
     /// A second press before the panel is dropped too, but the first export
@@ -437,8 +457,9 @@ struct ExportSaveFlowTests {
         bridge.webView = webView
         bridge.menuAction("exportReport")
         #expect(bridge.isExportingReport, "the press through menuAction said nothing")
-        let deadline = Date().addingTimeInterval(ExportRig.patience)
-        while bridge.isExportingReport, Date() < deadline {
+        var looks = ExportRig.patienceLooks
+        while bridge.isExportingReport, looks > 0 {
+            looks -= 1
             try? await Task.sleep(for: .milliseconds(20))
         }
         #expect(!bridge.isExportingReport, "a press whose script failed kept Exporting… up")

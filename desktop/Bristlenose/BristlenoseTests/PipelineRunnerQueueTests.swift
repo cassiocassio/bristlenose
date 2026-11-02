@@ -175,19 +175,33 @@ struct PipelineRunnerQueueTests {
             .write(to: dir.appendingPathComponent(EventLogReader.filename))
     }
 
-    /// How long a wait for something that must happen may take. Every step
-    /// the runner takes is a main-actor hop, and the full suite runs hundreds
-    /// of main-actor tests beside these: on a 4-core guest the main actor was
-    /// held for seconds at a time, and 3 s ceilings failed 30 tests together
-    /// (20 Oct 2026, guest matrix). A green wait returns as soon as its
-    /// condition holds, so the ceiling costs nothing unless the test is red.
-    static let patience: Double = 30
+    /// How many looks a wait for something that must happen may take, 10 ms
+    /// apart: 30 s of looking on an idle Mac. The budget is looks, not
+    /// seconds. Every step the runner takes is a main-actor hop, and the full
+    /// suite runs hundreds of main-actor tests beside these: on a 4-core guest
+    /// the main actor was held for seconds at a time, and 3 s ceilings failed
+    /// 30 tests together (20 Oct 2026, guest matrix); on the GitHub runners a
+    /// 10 ms sleep came back 13 s later with the runner's own next hop still
+    /// queued behind it, so `aQueuedStudyWhoseFolderWentIsSkipped` passed in
+    /// 19 s and its `SpawnRefusalTests` twin, on a 5 s clock, failed at 18 s
+    /// (mac-build 41376061190, 2 Nov 2026). A clock spends the budget while
+    /// the test cannot look; a look is spent only when it does, so a starved
+    /// main actor costs the test time, never its verdict. A green wait returns
+    /// at the first look that finds its condition.
+    static let patienceLooks = 3_000
 
-    private func until(_ condition: () -> Bool, seconds: Double = patience) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
+    /// Wait for `condition`, looking at most `looks` times. Shared by the
+    /// suites that drive the runner through `Rig`.
+    static func until(_ condition: () -> Bool, looks: Int = patienceLooks) async {
+        var left = looks
+        while !condition(), left > 0 {
+            left -= 1
             try? await Task.sleep(for: .milliseconds(10))
         }
+    }
+
+    private func until(_ condition: () -> Bool, looks: Int = patienceLooks) async {
+        await Self.until(condition, looks: looks)
     }
 
     // MARK: - R18

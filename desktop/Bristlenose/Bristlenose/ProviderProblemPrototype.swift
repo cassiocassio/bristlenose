@@ -51,23 +51,46 @@ final class ProviderProblemPrototype: ObservableObject {
         }
     }
 
-    /// Where the hover-revealed × lives. Space is reserved either way, so the
+    /// How much room the pill keeps for the hover-revealed ×. The × overlays the
+    /// pill's trailing end and the end of the text fades out beneath it, so the
     /// pill never changes size under the pointer (it would shift the glyph and
-    /// its neighbours in the centred `.status` zone).
+    /// its neighbours in the centred `.status` zone). Less room = a neater pill
+    /// at rest and more of the text faded when the × shows.
     enum SlotStyle: String, CaseIterable, Identifiable {
-        case trailing, symmetric
+        case none, half, full
+        var id: String { rawValue }
+        var points: CGFloat {
+            switch self {
+            case .none: 0
+            case .half: 6
+            case .full: 14
+            }
+        }
+        var menuLabel: String {
+            switch self {
+            case .none: "Reserve no room for ×"
+            case .half: "Reserve half the room for ×"
+            case .full: "Reserve the full room for ×"
+            }
+        }
+    }
+
+    /// Two looks for the ×, to compare natively.
+    enum DismissStyle: String, CaseIterable, Identifiable {
+        case plain, disc
         var id: String { rawValue }
         var menuLabel: String {
             switch self {
-            case .trailing: "× slot on the right only"
-            case .symmetric: "× slot, balanced on both sides"
+            case .plain: "× like Safari’s tabs (small, bare)"
+            case .disc: "× like Mail’s banner (grey disc)"
             }
         }
     }
 
     @Published var condition: Condition?
     @Published var stage: Stage = .first
-    @Published var slot: SlotStyle = .trailing
+    @Published var slot: SlotStyle = .half
+    @Published var dismissStyle: DismissStyle = .plain
 
     /// `BRISTLENOSE_DEBUG_PROVIDER_PILL=outOfCredit` or `keyRejected:collapsed`.
     private init() {
@@ -93,8 +116,20 @@ struct ProviderProblemPill: View {
     @FocusState private var dismissFocused: Bool
 
     private let provider = LLMProvider.claude
-    /// Width kept free for the × (a `.mini` bordered circle is about 18 pt).
-    private static let dismissSlot: CGFloat = 20
+    /// The × target is 20 pt with an 18 pt hover circle. Inset 1 pt, the circle's
+    /// centre is 11 pt from the edge: concentric with the capsule's rounded end
+    /// (a 22 pt-high pill has an 11 pt cap radius), so the circle sits neatly in it.
+    private static let dismissSize: CGFloat = 20
+    private static let dismissInset: CGFloat = 1
+    /// While the × is showing, the last `clear` points of the label are fully
+    /// clear and the `fade` points before them fade out, so the type never touches
+    /// the ×. The disc is 18 pt and lands on the end of the text, so it needs more
+    /// (tuned from a screenshot, 2 Nov 2026). The bare × is a thin ~9 pt glyph that
+    /// starts about where the text ends: a short soft edge is enough, and the word
+    /// stays legible ("Claude", not "Claud").
+    private var fadeShape: (fade: CGFloat, clear: CGFloat) {
+        model.dismissStyle == .disc ? (14, 6) : (8, 0)
+    }
 
     var body: some View {
         if let condition = model.condition {
@@ -104,10 +139,10 @@ struct ProviderProblemPill: View {
             // toolbar symbol needs no border of its own). Nothing is drawn round it,
             // so the target is padded instead (22 × 20), never left at glyph size.
             let collapsed = model.stage == .collapsed
+            // Safari's tab ×: there on any mouseover into the pill, and on keyboard
+            // focus (never hover-only).
+            let shown = !collapsed && (hovering || dismissFocused)
             HStack(spacing: 6) {
-                if !collapsed && model.slot == .symmetric {
-                    Color.clear.frame(width: Self.dismissSlot, height: 1)
-                }
                 Button {
                     showingDetail.toggle()
                 } label: {
@@ -123,6 +158,7 @@ struct ProviderProblemPill: View {
                         }
                     }
                     .frame(minWidth: collapsed ? 22 : nil, minHeight: collapsed ? 20 : nil)
+                    .mask { fadeMask(fading: shown && model.slot != .full) }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -131,19 +167,9 @@ struct ProviderProblemPill: View {
                 .popover(isPresented: $showingDetail, arrowEdge: .bottom) {
                     detail(condition)
                 }
-                if !collapsed {
-                    // Safari's tab ×: there on any mouseover into the pill, and on
-                    // keyboard focus (never hover-only). The slot is always there.
-                    let shown = hovering || dismissFocused
-                    dismissButton
-                        .focused($dismissFocused)
-                        .opacity(shown ? 1 : 0)
-                        .allowsHitTesting(shown)
-                        .frame(width: Self.dismissSlot, height: Self.dismissSlot)
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: shown)
-                }
             }
-            .padding(.horizontal, collapsed ? 0 : 10)
+            .padding(.leading, collapsed ? 0 : 10)
+            .padding(.trailing, collapsed ? 0 : 10 + model.slot.points)
             .padding(.vertical, collapsed ? 0 : 4)
             .background {
                 if !collapsed {
@@ -156,6 +182,17 @@ struct ProviderProblemPill: View {
                                      lineWidth: loud ? 1 : 0.5)
                 }
             }
+            .overlay(alignment: .trailing) {
+                if !collapsed {
+                    dismissButton
+                        .focused($dismissFocused)
+                        .opacity(shown ? 1 : 0)
+                        .allowsHitTesting(shown)
+                        .frame(width: Self.dismissSize, height: Self.dismissSize)
+                        .padding(.trailing, Self.dismissInset)
+                }
+            }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: shown)
             .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: model.stage)
             .onHover { hovering = $0 }
             .help(pillText(condition))
@@ -163,6 +200,20 @@ struct ProviderProblemPill: View {
     }
 
     // MARK: - Dismiss
+
+    /// Opaque, except the end of the label fades to clear while
+    /// the × is showing, so the × appears to sit over a softened end of the text.
+    private func fadeMask(fading: Bool) -> some View {
+        HStack(spacing: 0) {
+            Rectangle()
+            LinearGradient(colors: [.black, fading ? .clear : .black],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: fadeShape.fade)
+            Rectangle()
+                .fill(fading ? Color.clear : Color.black)
+                .frame(width: fadeShape.clear)
+        }
+    }
     // Mail's "This message is from a mailing list." banner is the first-party
     // precedent: a grey circular × beside the action, a separate target. Stock
     // SwiftUI draws that (`.bordered` + `.circle` border shape, macOS 14+); on 26
@@ -171,12 +222,17 @@ struct ProviderProblemPill: View {
 
     @ViewBuilder
     private var dismissButton: some View {
-        if #available(macOS 26.0, *) {
-            Button(role: .close) { model.hide() } label: { Image(systemName: "xmark") }
-                .providerDismissStyle(provider.displayName)
-        } else {
-            Button { model.hide() } label: { Image(systemName: "xmark") }
-                .providerDismissStyle(provider.displayName)
+        switch model.dismissStyle {
+        case .plain:
+            PlainDismissButton(label: "Hide \(provider.displayName) notice") { model.hide() }
+        case .disc:
+            if #available(macOS 26.0, *) {
+                Button(role: .close) { model.hide() } label: { Image(systemName: "xmark") }
+                    .providerDismissStyle(provider.displayName)
+            } else {
+                Button { model.hide() } label: { Image(systemName: "xmark") }
+                    .providerDismissStyle(provider.displayName)
+            }
         }
     }
 
@@ -281,6 +337,30 @@ struct ProviderProblemPill: View {
         case .networkBlocks, .providerOutage:
             EmptyView()
         }
+    }
+}
+
+/// Safari's tab ×, as seen: a thin grey cross about 9 pt, no disc; a soft circle
+/// only under the pointer, and a 20 pt target round a glyph that small.
+private struct PlainDismissButton: View {
+    let label: String
+    let action: () -> Void
+    @State private var over = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(over ? Color.primary : Color.secondary)
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.secondary.opacity(over ? 0.18 : 0)))
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { over = $0 }
+        .help("Hide")
+        .accessibilityLabel(label)
     }
 }
 

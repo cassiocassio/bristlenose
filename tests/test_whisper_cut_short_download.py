@@ -115,7 +115,7 @@ _SCRIPT = textwrap.dedent(
 
 def _run(tmp_path: Path, mode: str) -> dict:
     script = tmp_path / "fake_hub.py"
-    script.write_text(_SCRIPT)
+    script.write_text(_SCRIPT, encoding="utf-8")
     env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path),
            "BRISTLENOSE_SKIP_PREFLIGHT": "1",
            "PYTHONPATH": str(Path(__file__).resolve().parents[1])}

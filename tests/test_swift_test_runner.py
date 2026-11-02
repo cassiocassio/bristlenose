@@ -54,7 +54,7 @@ def test_both_processes_required_for_receipt(tmp_path, mode, green):
     scripts = root / "desktop/scripts"
     scripts.mkdir(parents=True)
     (root / "desktop/Bristlenose").mkdir()
-    (root / ".gitignore").write_text("desktop/build/\n")
+    (root / ".gitignore").write_text("desktop/build/\n", encoding="utf-8")
     script = scripts / "test-swift.sh"
     shutil.copyfile(Path(__file__).resolve().parents[1] / "desktop/scripts/test-swift.sh", script)
     for args in [
@@ -67,16 +67,16 @@ def test_both_processes_required_for_receipt(tmp_path, mode, green):
     binaries = tmp_path / "bin"
     binaries.mkdir()
     fake_py = binaries / "xcodebuild.py"
-    fake_py.write_text(_FAKE_XCODEBUILD)
+    fake_py.write_text(_FAKE_XCODEBUILD, encoding="utf-8")
     fake = binaries / "xcodebuild"
-    fake.write_text('#!/bin/sh\nexec "$FAKE_PYTHON" "$FAKE_XCODEBUILD" "$@"\n')
+    fake.write_text('#!/bin/sh\nexec "$FAKE_PYTHON" "$FAKE_XCODEBUILD" "$@"\n', encoding="utf-8")
     fake.chmod(0o755)
     xcrun = binaries / "xcrun"
-    xcrun.write_text("#!/bin/sh\nprintf '%s\\n' '{\"testFailures\":[]}'\n")
+    xcrun.write_text("#!/bin/sh\nprintf '%s\\n' '{\"testFailures\":[]}'\n", encoding="utf-8")
     xcrun.chmod(0o755)
     stamp = root / "desktop/build/swift-green.stamp"
     stamp.parent.mkdir()
-    stamp.write_text("stale receipt must never survive a failed run")
+    stamp.write_text("stale receipt must never survive a failed run", encoding="utf-8")
     calls = tmp_path / "calls"
     result = subprocess.run(
         [_BASH, str(script)], capture_output=True, text=True,
@@ -86,14 +86,14 @@ def test_both_processes_required_for_receipt(tmp_path, mode, green):
              "FAKE_PYTHON": sys.executable, "FAKE_XCODEBUILD": str(fake_py)},
     )
     assert calls.exists(), f"the fake xcodebuild never ran:\n{result.stdout}{result.stderr}"
-    assert calls.read_text().splitlines() == ["general", "pool"]
+    assert calls.read_text(encoding="utf-8").splitlines() == ["general", "pool"]
     # The general process must leave the pool suite to its own process: dropping
     # the skip flag would run it twice and bring back the contention the split
     # exists to remove, with every other assertion here still green.
-    assert (tmp_path / "calls.skips").read_text().splitlines() == [
+    assert (tmp_path / "calls.skips").read_text(encoding="utf-8").splitlines() == [
         "general skips_pool=True", "pool skips_pool=False",
     ]
     assert (result.returncode == 0) is green, result.stdout + result.stderr
     assert stamp.exists() is green
     if green:
-        assert stamp.read_text().startswith("run=fixture-run sha=")
+        assert stamp.read_text(encoding="utf-8").startswith("run=fixture-run sha=")

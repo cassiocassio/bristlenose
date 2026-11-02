@@ -42,7 +42,7 @@ def seed(out: Path, *, owner="local", completed=False):
         ),
     )
     pid_file_path(out).write_text(
-        json.dumps({"run_id": "attempt", "machine_id": owner, "pid": 99000, "start_time": "dead"})
+        json.dumps({"run_id": "attempt", "machine_id": owner, "pid": 99000, "start_time": "dead"}), encoding="utf-8"
     )
     if completed:
         append_event(
@@ -113,11 +113,11 @@ def test_uncertain_unfinished_ownership_refuses(tmp_path, monkeypatch, problem):
     if problem == "missing":
         path.unlink()
     elif problem == "bad-json":
-        path.write_text("{")
+        path.write_text("{", encoding="utf-8")
     elif problem == "bad-unicode":
         path.write_bytes(b"\xff")
     elif problem == "wrong-run":
-        path.write_text(json.dumps({"run_id": "different", "machine_id": "local"}))
+        path.write_text(json.dumps({"run_id": "different", "machine_id": "local"}), encoding="utf-8")
     else:
         monkeypatch.setattr("bristlenose.utils.study_startup.machine_id", lambda: None)
     before = tree(tmp_path)
@@ -136,13 +136,13 @@ def test_new_folder_is_not_created(tmp_path):
 )
 def test_uninterpretable_history_is_not_a_clean_start(tmp_path, history):
     events_path(tmp_path).parent.mkdir()
-    events_path(tmp_path).write_text(history)
+    events_path(tmp_path).write_text(history, encoding="utf-8")
     assert startup_refusal(tmp_path) is StartupRefusal.UNVERIFIED_UNFINISHED
 
 
 def test_orphan_marker_refuses(tmp_path):
     pid_file_path(tmp_path).parent.mkdir()
-    pid_file_path(tmp_path).write_text("{}")
+    pid_file_path(tmp_path).write_text("{}", encoding="utf-8")
     assert startup_refusal(tmp_path) is StartupRefusal.UNVERIFIED_UNFINISHED
 
 
@@ -158,7 +158,7 @@ def test_unreadable_condition_refuses(tmp_path, monkeypatch):
 def test_reanalysis_startup_gap_is_not_a_clean_start(tmp_path, new_output_exists):
     out = tmp_path / "output"
     backup_path_for(out).mkdir()
-    (backup_path_for(out) / "old-report.html").write_text("saved")
+    (backup_path_for(out) / "old-report.html").write_text("saved", encoding="utf-8")
     if new_output_exists:
         out.mkdir()
     before = tree(tmp_path)
@@ -190,7 +190,7 @@ def test_symlinked_marker_is_not_ownership(tmp_path):
 def test_old_completion_does_not_hide_damaged_or_unknown_new_history(tmp_path, tail):
     seed(tmp_path, completed=True)
     pid_file_path(tmp_path).unlink()
-    with events_path(tmp_path).open("a") as log:
+    with events_path(tmp_path).open("a", encoding="utf-8") as log:
         log.write(tail)
     before = tree(tmp_path)
     assert startup_refusal(tmp_path) is StartupRefusal.UNVERIFIED_UNFINISHED
@@ -210,9 +210,9 @@ def test_old_completion_does_not_hide_damaged_or_unknown_new_history(tmp_path, t
 )
 def test_local_unfinished_requires_usable_process_marker(tmp_path, key, value):
     seed(tmp_path)
-    marker = json.loads(pid_file_path(tmp_path).read_text())
+    marker = json.loads(pid_file_path(tmp_path).read_text(encoding="utf-8"))
     marker[key] = value
-    pid_file_path(tmp_path).write_text(json.dumps(marker))
+    pid_file_path(tmp_path).write_text(json.dumps(marker), encoding="utf-8")
     assert startup_refusal(tmp_path) is StartupRefusal.UNVERIFIED_UNFINISHED
 
 
@@ -228,7 +228,7 @@ def test_real_cli_refuses_before_any_protected_write(tmp_path, command, owner):
     out = root / "bristlenose-output"
     seed(out, owner=owner)
     backup_path_for(out).mkdir()
-    (backup_path_for(out) / "old.html").write_text("previous report")
+    (backup_path_for(out) / "old.html").write_text("previous report", encoding="utf-8")
     inputs = root
     args = [command]
     if command in {"analyze", "analyse"}:
@@ -279,9 +279,9 @@ def test_refusal_carries_optional_display_metadata_without_changing_authority(tm
     from bristlenose.utils.study_startup import StudyStartupRefusedError, require_study_startup
     seed(tmp_path, owner="foreign")
     path = pid_file_path(tmp_path)
-    marker = json.loads(path.read_text())
+    marker = json.loads(path.read_text(encoding="utf-8"))
     marker["machine_name"] = "Cassio’s Mac Studio"
-    path.write_text(json.dumps(marker))
+    path.write_text(json.dumps(marker), encoding="utf-8")
     before = tree(tmp_path)
     with pytest.raises(StudyStartupRefusedError) as caught:
         require_study_startup(tmp_path)
@@ -321,7 +321,7 @@ def test_native_refusal_exit_code_matches_python_contract():
     import re
 
     from bristlenose.utils.study_startup import STUDY_STARTUP_REFUSAL_EXIT_CODE
-    swift = (Path(__file__).resolve().parents[1] / "desktop/Bristlenose/Bristlenose/StudyStartupRefusal.swift").read_text()
+    swift = (Path(__file__).resolve().parents[1] / "desktop/Bristlenose/Bristlenose/StudyStartupRefusal.swift").read_text(encoding="utf-8")
     match = re.search(r"static let exitCode: Int32 = (\d+)", swift)
     assert match is not None
     assert int(match.group(1)) == STUDY_STARTUP_REFUSAL_EXIT_CODE

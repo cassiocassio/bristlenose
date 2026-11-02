@@ -387,6 +387,7 @@ class TestTheDebounce:
                 named = _hide(client, [dom], False)["catchUp"]
             assert sorted(c["framework_id"] for c in named) == ["garrett", "norman"]
             monkeypatch.setattr(cu, "DEBOUNCE_S", 0.2)
+            assert client.portal is not None  # ``with client:`` opened the loop's portal
             client.portal.call(cu._arm, app, 1)  # the last gesture again, with the short wait
             _wait(lambda: len(model.prompts) - applied >= 4, "both codebooks to code them")
             _quiet()

@@ -343,11 +343,18 @@ def create_app(
     # a rebound page is same-origin to the browser. See LoopbackHostMiddleware.
     app.add_middleware(LoopbackHostMiddleware)
 
-    # Per-project DB: derive path from project_dir unless explicitly overridden
+    # Per-project DB: derive path from project_dir unless explicitly overridden.
+    # A study's own database binds its connections under the study folder's
+    # settle lock, so a run swapping the output folder cannot land between a
+    # connection's main file and its write-ahead log (db.get_engine).
+    study_output_dir: Path | None = None
     if db_url is None and project_dir is not None:
-        db_url = db_url_for_project(project_dir)
+        from bristlenose.output_paths import project_output_dir
 
-    engine = get_engine(db_url)
+        db_url = db_url_for_project(project_dir)
+        study_output_dir = project_output_dir(project_dir)
+
+    engine = get_engine(db_url, study_output_dir=study_output_dir)
     init_db(engine)
     # What the pool is attached to is what is on disk NOW, before anything else
     # runs: read after the startup import, a restore landing during it was
@@ -1581,7 +1588,10 @@ def _install_event_watcher(
     if engine is not None and engine.url.database not in (None, "", ":memory:"):
         db_file = Path(engine.url.database)
 
-    attached = {"files": attached_at_connect}
+    # None: a heal failed, so what the pool holds is unknown until the next heal.
+    attached: dict[str, tuple[tuple[int, int] | None, ...] | None] = {
+        "files": attached_at_connect,
+    }
 
     async def _reattach_if_moved() -> None:
         # The log first, and on every change: the moved copy is deleted when the
@@ -1617,7 +1627,11 @@ def _install_event_watcher(
             try:
                 await asyncio.to_thread(ensure_schema, engine)
             except Exception:
-                # Left unrecorded, so the next change to the log tries again.
+                # Recorded as unknown, so the next change to the log tries again
+                # whatever it finds. Left as it was, a restore that followed put
+                # the original inodes back, equal to the stale record, and the
+                # pool stayed on the tree the failed heal had opened (2 Nov 2026).
+                attached["files"] = None
                 logger.exception("could not reattach the database after the output folder moved")
                 return
             healed = _attached_files(project_dir, engine)

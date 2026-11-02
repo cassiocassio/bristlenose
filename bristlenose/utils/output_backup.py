@@ -93,6 +93,7 @@ import logging
 import os
 import re
 import shutil
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -143,7 +144,55 @@ class RestoreOutcome(enum.Enum):
 
 
 #: This process's hold on each study folder's settle lock: path -> [fd, depth].
+#: key → [fd, depth, ident of the thread that took it]
 _settle_holds: dict[str, list[int]] = {}
+
+
+def _settle_key(output_dir: Path) -> str:
+    return str(output_dir.parent.absolute())
+
+
+@contextlib.contextmanager
+def binding(output_dir: Path) -> Iterator[None]:
+    """Hold the settle lock SHARED while a database connection binds to its files.
+
+    SQLite opens a database's main file, its ``-wal`` and its ``-shm`` by path, at
+    three instants: the connect, the write that turns on WAL, the first read. A
+    connection the report server opened while a failed run's ``restore`` swapped
+    the output folder held the run's empty database as its main file and the
+    restored report's write-ahead log as its log, and the schema it then created
+    went into that log — so every reader of the restored report, the Mac's raw one
+    included, found a hybrid: ``no such table: screen_clusters`` under a project
+    row, then ``database disk image is malformed`` (macOS CI, 2 Nov 2026;
+    ``tests/test_serve_binding_across_restore.py``). Shared, so connections bind in
+    parallel; the swaps hold it exclusive, so a bind sees one tree, before the swap
+    or after it. Its own descriptor, never ``_settling``'s, whose re-entrancy is per
+    process: an exclusive hold in another thread must block this one. The thread
+    that holds it exclusive passes, or it would wait on itself.
+    """
+    try:
+        import fcntl
+    except ImportError:
+        yield
+        return
+    key = _settle_key(output_dir)
+    held = _settle_holds.get(key)
+    if held is not None and held[2] == threading.get_ident():
+        yield
+        return
+    try:
+        fd = os.open(key, os.O_RDONLY)
+    except OSError:
+        yield
+        return
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH)
+        except OSError as exc:
+            logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
+        yield
+    finally:
+        os.close(fd)
 
 
 @contextlib.contextmanager
@@ -165,7 +214,7 @@ def _settling(output_dir: Path) -> Iterator[None]:
     except ImportError:
         yield
         return
-    key = str(output_dir.parent.absolute())
+    key = _settle_key(output_dir)
     held = _settle_holds.get(key)
     if held is not None:
         held[1] += 1
@@ -189,7 +238,7 @@ def _settling(output_dir: Path) -> Iterator[None]:
         logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
         yield
         return
-    _settle_holds[key] = [fd, 1]
+    _settle_holds[key] = [fd, 1, threading.get_ident()]
     try:
         yield
     finally:
@@ -376,13 +425,15 @@ def restore(backup: Path | None, output_dir: Path) -> RestoreOutcome:
 
     Holds the exit (``run_lifecycle.holding_exit``) throughout: a hosted run's
     backstop that exited between the two renames would leave the report set
-    aside until the next run.
+    aside until the next run. And the settle lock, as every other swap does: a
+    report server binding a connection (``binding``) must see the tree before
+    the renames or after them, never between.
     """
     if backup is None or not backup.exists():
         return RestoreOutcome.NOTHING_TO_DO
     from bristlenose.run_lifecycle import holding_exit
 
-    with holding_exit():
+    with holding_exit(), _settling(output_dir):
         return _restore(backup, output_dir)
 
 

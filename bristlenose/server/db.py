@@ -94,13 +94,21 @@ def _note_stray_database(db_path: Path) -> None:
         )
 
 
-def get_engine(db_url: str | URL | None = None) -> Engine:
+def get_engine(
+    db_url: str | URL | None = None, *, study_output_dir: Path | None = None,
+) -> Engine:
     """Create a SQLAlchemy engine.
 
     Args:
         db_url: Database URL, a string or the ``URL`` ``sqlite_url`` builds.
                 Defaults to the standard SQLite path.
                 Pass "sqlite://" for an in-memory database (tests).
+        study_output_dir: When the database is a study's own (``db_url_for_project``),
+                the output folder it lives in. Each connection then binds to its
+                files under the folder's settle lock, shared, so a run's ``stash``
+                or ``restore`` — which hold it exclusive — never swaps the folder
+                between a connection's main file and its write-ahead log
+                (``output_backup.binding``).
     """
     url = db_url or _default_db_url()
     # In-memory SQLite needs StaticPool so all connections share the
@@ -111,7 +119,34 @@ def get_engine(db_url: str | URL | None = None) -> Engine:
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
-    return create_engine(url, connect_args={"check_same_thread": False})
+    engine = create_engine(url, connect_args={"check_same_thread": False})
+    if study_output_dir is not None:
+        _bind_under_settle_lock(engine, study_output_dir)
+    return engine
+
+
+_BOUND = "bristlenose_bound"
+
+
+def _bind_under_settle_lock(engine: Engine, output_dir: Path) -> None:
+    """Open each of ``engine``'s connections, pragmas and a first read included,
+    under the shared settle lock. The read is what opens the ``-wal`` and ``-shm``
+    on a fresh file — there the WAL pragma writes page 1 through a rollback
+    journal and opens neither (measured 2 Nov 2026) — so the connection leaves
+    the lock bound to one tree's three files. The ``connect`` listener below sees
+    the mark and does not run the pragmas again."""
+
+    @event.listens_for(engine, "do_connect")
+    def _connect(dialect, connection_record, cargs, cparams):  # type: ignore[no-untyped-def]
+        from bristlenose.utils.output_backup import binding
+
+        with binding(output_dir):
+            dbapi_connection = dialect.connect(*cargs, **cparams)
+            _set_sqlite_pragma(dbapi_connection, None)
+            dbapi_connection.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchall()
+        if connection_record is not None:
+            connection_record.info[_BOUND] = True
+        return dbapi_connection
 
 
 @event.listens_for(Engine, "connect")
@@ -129,6 +164,8 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):  # type: ignore[no-
     lock instead of erroring; the writes finish in milliseconds, so contention just
     resolves. Applies to every connection (the event fires on each connect).
     """
+    if connection_record is not None and connection_record.info.get(_BOUND):
+        return  # already run, under the settle lock (_bind_under_settle_lock)
     cursor = dbapi_connection.cursor()
     # The timeout first: ``journal_mode=WAL`` takes a write lock, and a connection
     # opened while ``init_db`` is creating a replaced database's schema (the

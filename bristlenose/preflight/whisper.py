@@ -404,19 +404,48 @@ def _download_lock_held(repo_id: str, blob: Path) -> bool:
     answered "not held" wherever ``fcntl`` is missing, i.e. on Windows, where the age rule
     alone then decided and a stalled writer's partial could go.
     """
-    from filelock import FileLock, Timeout  # huggingface_hub's own dependency
-
     repo_dir = _repo_cache_dir(repo_id)
     lock = repo_dir.parent / ".locks" / repo_dir.name / f"{blob.name.split('.', 1)[0]}.lock"
     if not lock.is_file():
         return False  # no lock file: nobody holds one (and the probe must not create one)
+    try:
+        import filelock
+
+        lock_descriptor = filelock.lock_descriptor
+        unlock_descriptor = filelock.unlock_descriptor
+    except (ImportError, AttributeError):  # an older filelock: probe through FileLock below
+        lock_descriptor = unlock_descriptor = None  # type: ignore[assignment]
+    if lock_descriptor is not None and unlock_descriptor is not None:
+        # The same one-byte native lock FileLock takes, on a descriptor we open ourselves:
+        # it never creates, truncates, unlinks or falls back to a soft lock, so probing a
+        # live writer's lock cannot disturb it. Anything we cannot answer keeps the partial
+        # (a filesystem without flock raises ENOSYS; an unreadable file fails to open).
+        try:
+            fd = os.open(lock, os.O_RDWR)
+        except OSError:
+            return True
+        try:
+            try:
+                got = lock_descriptor(fd, blocking=False)
+            except OSError:
+                return True
+            if got:
+                unlock_descriptor(fd)
+                return False
+            return True
+        finally:
+            os.close(fd)
+    from filelock import FileLock, SoftFileLock, Timeout  # older filelock: the path lock
+
     probe = FileLock(str(lock), timeout=0)
+    if isinstance(probe, SoftFileLock):
+        return True  # a lock that IS the file's existence: the file being there is the answer
     try:
         probe.acquire()
     except Timeout:
         return True
     except OSError:
-        return False  # unreadable lock file: the age rule alone decides, as before
+        return True
     probe.release()
     return False
 

@@ -348,3 +348,49 @@ def test_the_backoff_comes_before_the_wait_for_the_hub(monkeypatch) -> None:
     monkeypatch.setattr(whisper, "_wait_until_reachable", lambda *_a, **_k: order.append("wait") or 1000)
     job.run()
     assert order == ["sleep 5", "wait"]
+
+
+def test_a_filesystem_without_flock_does_not_lose_the_writers_partial(monkeypatch, tmp_path) -> None:
+    """Where flock is missing (some network mounts) filelock's path lock falls back to a soft
+    lock that IS the file's existence, and probing that unlinks the writer's lock file and
+    reports 'not held'. The probe is a plain native lock on our own descriptor, which cannot
+    do that; and when the native lock is not there to ask (ENOSYS) the partial is kept."""
+    import errno
+
+    import filelock
+
+    hub, repo = _repo_with_blobs(monkeypatch, tmp_path)
+    _old(repo / "blobs" / "abc123.deadbeef.incomplete")
+    lockdir = hub / ".locks" / repo.name
+    lockdir.mkdir(parents=True)
+    lock = lockdir / "abc123.lock"
+    lock.write_text("")
+
+    def no_flock(fd, **_kw):
+        raise OSError(errno.ENOSYS, "no flock here")
+
+    monkeypatch.setattr(filelock, "lock_descriptor", no_flock)
+    assert whisper.discard_stale_partials(REPO, min_age_s=0) == 0
+    assert (repo / "blobs" / "abc123.deadbeef.incomplete").exists()
+    assert lock.exists(), "the probe must not remove the writer's lock file"
+
+
+def test_a_lock_file_that_cannot_be_opened_keeps_the_partial(monkeypatch, tmp_path) -> None:
+    """Not knowing is not proof the writer is gone: an unopenable lock file keeps the partial."""
+    hub, repo = _repo_with_blobs(monkeypatch, tmp_path)
+    _old(repo / "blobs" / "abc123.deadbeef.incomplete")
+    lockdir = hub / ".locks" / repo.name
+    lockdir.mkdir(parents=True)
+    (lockdir / "abc123.lock").write_text("")
+    import os
+
+    real_open = os.open
+
+    def deny_locks(path, *a, **k):
+        if str(path).endswith(".lock"):
+            raise PermissionError("denied")
+        return real_open(path, *a, **k)
+
+    monkeypatch.setattr(whisper.os, "open", deny_locks)
+    assert whisper.discard_stale_partials(REPO, min_age_s=0) == 0
+    assert (repo / "blobs" / "abc123.deadbeef.incomplete").exists()

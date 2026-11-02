@@ -150,7 +150,10 @@ their study. The boot pane's sentence ends with the engine's last five output
 lines (`{{details}}`), which can name a study folder; the prefill drops them
 (`BootView.problemReportMessage`). The crash pane's is `labels.reportError`, then
 the error's name and message and the route (`describeError`), the line its
-popover caption already shows.
+popover caption already shows. That message is the error's own, so an API
+error's `detail` could in principle name a path; the popover caption already
+shows the same line, and that precedent stands, with no test pinning it
+(owner, 2 Nov 2026).
 
 **A problem report is not a substitute for recovery.** Offer Retry only when a
 fresh attempt is credible; offer the real fix when the person can take one.

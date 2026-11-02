@@ -312,22 +312,23 @@ def _old(path, size: int = 5000) -> None:
 
 def test_a_partial_whose_download_lock_is_held_survives_however_old(monkeypatch, tmp_path) -> None:
     """hf_xet rides out ~15 s of silence and a SIGSTOPped or sleeping writer touches nothing:
-    mtime is no witness. huggingface_hub holds an flock for the whole download; that is."""
-    import fcntl
-    import os
+    mtime is no witness. huggingface_hub holds a FileLock for the whole download; that is.
+
+    The holder is the Hub's own lock class (flock on POSIX, a byte-range lock on Windows),
+    so this runs wherever the Hub downloads; a raw fcntl.flock here could not."""
+    from filelock import FileLock
 
     hub, repo = _repo_with_blobs(monkeypatch, tmp_path)
     _old(repo / "blobs" / "abc123.deadbeef.incomplete")
     lockdir = hub / ".locks" / repo.name
     lockdir.mkdir(parents=True)
-    fd = os.open(lockdir / "abc123.lock", os.O_RDWR | os.O_CREAT)
-    fcntl.flock(fd, fcntl.LOCK_EX)
+    holder = FileLock(str(lockdir / "abc123.lock"))
+    holder.acquire()
     try:
         assert whisper.discard_stale_partials(REPO, min_age_s=0) == 0
         assert (repo / "blobs" / "abc123.deadbeef.incomplete").exists()
     finally:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+        holder.release()
     # Released: now it is an orphan like any other.
     assert whisper.discard_stale_partials(REPO, min_age_s=0) == 5000
 

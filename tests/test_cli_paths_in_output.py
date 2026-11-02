@@ -49,8 +49,10 @@ def test_status_names_a_folder_with_markup_in_its_name_and_prints_a_command_that
     )
     assert result.exit_code == 1
     text = " ".join(result.output.split())
-    assert f"No pipeline data found in {name}." in text
-    assert _run_command(text) == ["bristlenose", "run", name]
+    # The folder is named as the platform spells the path (`notes [\] x` on Windows).
+    spelt = str(Path(name))
+    assert f"No pipeline data found in {spelt}." in text
+    assert _run_command(text) == ["bristlenose", "run", spelt]
 
 
 @pytest.mark.parametrize("name", _NAMES)
@@ -114,7 +116,7 @@ def test_the_server_failed_fallback_names_the_error_and_the_file_whatever_the_fo
     cli._say_server_not_started(OSError(f"cannot bind [draft] {name}"), report)
     text = " ".join(capsys.readouterr().out.split())
     assert f"Could not start server: cannot bind [draft] {name}" in text
-    assert f"Report: {name}/report.html" in text
+    assert f"Report: {Path(name) / 'report.html'}" in text  # `\` on Windows
 
 
 @pytest.mark.parametrize("name", ["Acme onboarding", "Acme [draft]", "a]b c"])

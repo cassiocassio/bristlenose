@@ -393,30 +393,32 @@ def _cache_volume_free_bytes() -> tuple[int, Path] | None:
 def _download_lock_held(repo_id: str, blob: Path) -> bool:
     """Whether another process is mid-download of ``blob``, by Hugging Face's own lock.
 
-    huggingface_hub holds ``<hub>/.locks/<repo dir>/<etag>.lock`` (an ``flock``) for the whole of
-    a file's download. A file's mtime is a poor witness of that: a writer whose connection has
-    stalled (hf_xet rides out ~15 s of it) or that is SIGSTOPped or asleep touches nothing, and a
-    sweep that took silence for death unlinked a live writer's file (found in review).
+    huggingface_hub holds ``<hub>/.locks/<repo dir>/<etag>.lock`` (a ``filelock.FileLock``:
+    ``flock`` on POSIX, a byte-range lock on Windows) for the whole of a file's download. A
+    file's mtime is a poor witness of that: a writer whose connection has stalled (hf_xet rides
+    out ~15 s of it) or that is SIGSTOPped or asleep touches nothing, and a sweep that took
+    silence for death unlinked a live writer's file (found in review).
+
+    The probe is the same ``FileLock`` the Hub takes, tried once, so it answers on every
+    platform the Hub downloads on. Until 2 Nov 2026 it was a raw ``fcntl.flock`` that
+    answered "not held" wherever ``fcntl`` is missing, i.e. on Windows, where the age rule
+    alone then decided and a stalled writer's partial could go.
     """
-    try:
-        import fcntl
-    except ImportError:  # Windows: no flock; the age rule alone decides
-        return False
+    from filelock import FileLock, Timeout  # huggingface_hub's own dependency
+
     repo_dir = _repo_cache_dir(repo_id)
     lock = repo_dir.parent / ".locks" / repo_dir.name / f"{blob.name.split('.', 1)[0]}.lock"
+    if not lock.is_file():
+        return False  # no lock file: nobody holds one (and the probe must not create one)
+    probe = FileLock(str(lock), timeout=0)
     try:
-        fd = os.open(lock, os.O_RDWR)
+        probe.acquire()
+    except Timeout:
+        return True
     except OSError:
-        return False  # no lock file: nobody holds one
-    try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            return True
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        return False
-    finally:
-        os.close(fd)
+        return False  # unreadable lock file: the age rule alone decides, as before
+    probe.release()
+    return False
 
 
 #: A partial this long untouched is nobody's: hf_xet writes a fresh ``.incomplete`` and

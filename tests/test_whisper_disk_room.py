@@ -37,8 +37,9 @@ def test_a_volume_too_small_for_the_model_refuses(monkeypatch) -> None:
         whisper.ensure_disk_room(REPO)
     msg = str(err.value)
     assert "~2.6 GB" in msg and "~700 MB" in msg and "Disk full" in msg
-    # It names where the model will be written, not the nearest folder that exists.
-    assert "huggingface/hub" in msg
+    # It names where the model will be written, not the nearest folder that exists,
+    # spelt with the platform's own separator (`~\.cache\huggingface\hub` on Windows).
+    assert os.path.join("huggingface", "hub") in msg
 
 
 def test_exactly_enough_goes_ahead(monkeypatch) -> None:

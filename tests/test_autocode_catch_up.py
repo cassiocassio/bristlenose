@@ -430,11 +430,13 @@ class TestTheDebounce:
     def test_each_gesture_restarts_the_wait(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Three unhides 0.35 s apart, each inside the 0.6 s wait the last one started,
-        though the third comes after the first one's wait would have ended: one call
-        carrying all three. (Wide gaps: a loaded machine delays a request by a good
-        fraction of a second.)"""
-        monkeypatch.setattr(cu, "DEBOUNCE_S", 0.6)
+        """Each gesture cancels the wait the last one started and starts its own, so a burst
+        is one call carrying all three. Pinned on the timers themselves, under a wait no stall
+        can outrun, not on wall-clock gaps: three requests 0.35 s apart inside a 0.6 s window
+        split into two calls whenever a loaded machine delayed one by a quarter second (CI,
+        2 Nov 2026, the same class as the thirty-unhide test)."""
+        monkeypatch.setattr(cu, "DEBOUNCE_S", 60.0)
+        monkeypatch.setattr(cu, "CAP_S", 600.0)
         app, client = _app(tmp_path)
         _more_quotes(app, 3)
         doms = _dom(app, like="burst quote")
@@ -442,10 +444,20 @@ class TestTheDebounce:
         model = _Model()
         _apply(app, model, "garrett")
         applied = len(model.prompts)
+        handles: list[Any] = []
         with model, client:
             for dom in doms:
                 _hide(client, [dom], False)
-                time.sleep(0.35)
+                handle = cu._WAITS[1].handle
+                assert handle is not None, "the gesture started a wait"
+                if handles:
+                    assert handles[-1].cancelled(), "the earlier wait was cancelled"
+                    assert handle is not handles[-1], "and a new one started"
+                handles.append(handle)
+            assert len(model.prompts) == applied, "nothing fired inside the burst"
+            monkeypatch.setattr(cu, "DEBOUNCE_S", 0.2)
+            assert client.portal is not None  # ``with client:`` opened the loop's portal
+            client.portal.call(cu._arm, app, 1)  # the last gesture again, with the short wait
             _wait(lambda: len(model.prompts) > applied, "the pass")
             _quiet(1.2)
         assert model.batch_sizes()[applied:] == [3]

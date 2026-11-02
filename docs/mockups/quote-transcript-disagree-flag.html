@@ -15490,7 +15490,8 @@ html, body { background: var(--bn-colour-bg); }
 <tr><td><b>Analyse re-reads the session</b> (owed for another reason)</td><td>The researcher's edit still wins (decision 6).</td><td>Re-scored by the model on the corrected transcript, but the card shows the edit, so they can still disagree.</td><td>From the re-read.</td><td>Stays on until the researcher chooses.</td></tr>
 <tr><td><b>Re-analyse</b></td><td>Gone with every edit (decision 12).</td><td>Fresh, from the transcript without its corrections, which go too.</td><td>Fresh.</td><td>Gone. The word list re-offers the correction (decision 22), which can flag nothing, since no quote is edited yet.</td></tr></table></div>
 
-<h2>5. Questions for the owner</h2>
+<div class="com ask" style="margin-top:36px"><p class="lbl">Decided 2 Nov 2026 (owner)</p><p><b>A, the glyph, with the detail in a popover; and the edit is applied, not flagged.</b> The analysis re-runs for the quote about 30 seconds after the last edit, with a shimmer while it runs; a trivial result settles with no glyph; a strong one shows the glyph, whose popover reads “⚠ Transcript edit changed analysis” with a green and red diff and <b>Undo Edit</b> / <b>Keep changes</b>. The quote takes the corrected transcript's words. B, C, “Keep my wording” and §4's flagged rows are superseded; questions 2–5 below fell away with them. Record: decision 26 of <code>docs/design-transcript-editing.md</code>.</p></div>
+<h2>5. Questions for the owner (as asked)</h2>
 <div class="com ask"><ol>
 <li><b>Loudness.</b> A glyph (A), the transcript's words inline with two choices (B, proposed), or B and held out of the counts (C)?</li>
 <li><b>Counts while flagged.</b> Does the quote keep counting toward signals, sentiment bars and the Dashboard until the researcher chooses (proposed), or count nowhere, like a hidden quote?</li>

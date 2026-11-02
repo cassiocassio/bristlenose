@@ -15,7 +15,8 @@ trued-against: HEAD@main on 2026-10-24
 ## Where this stands (24 Oct 2026, planned)
 
 Start planning here. This section lists what is built, what is decided, the order of work and what
-is still open. Each item points to the section or doc that holds the detail. Decisions 11 to 25 and
+is still open. Each item points to the section or doc that holds the detail. Decision 26 (2 Nov 2026)
+changes how 6, 13 and 21 play out; read it with them. Decisions 11 to 25 and
 the revision of 6 were made with the owner on 24 Oct 2026, in a planning session that wrote no
 product code. Decisions 21 to 24, and the plan's corrections layer, came from playing edits through
 every surface: `docs/mockups/transcript-edit-consequences.html` (Findings, and the "Play-out: 1 + 20"
@@ -75,6 +76,9 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
    range of step 1 tells the two apart without a model). Telling a correction
    from tidying in a quote edit is step 2b's judgement. This replaces the open single-word
    carry-back question ([Quote edits win, one way](#quote-edits-win-one-way-owner-17-oct-2026)).
+   _2 Nov 2026, decision 26:_ in that reworded case the newer transcript edit wins. The quote takes
+   the corrected transcript's words for its kept span (the tidy goes), and the analysis follows;
+   there is no standing "disagrees" flag and no "Keep my wording".
 7. **Names, brands, places and technical terms are corrected study-wide.** The tool finds every
    candidate and shows each in context. The researcher accepts them all or goes one by one; there is
    no blind replace-all. Accepted words become the study's word list, which can later feed Whisper's
@@ -109,6 +113,9 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
 
     Which is which, and what each one re-runs, is measured before it is built: a corpus of plausible
     edits, a way to tell their kinds apart, and a rule per kind (step 2b).
+    _2 Nov 2026, decision 26:_ an edit is judged by what it changed, not by its kind. The quote is
+    re-analysed after the edit and the before and after compared; a corpus still tests where
+    "changed" starts.
 14. **A caret in the words owns the keyboard.** Single keys are text there, as in any document.
     Clicks on margins, timecodes and badges stop placing the caret, so the page's shortcuts
     (`[` `]` `/` `?` `m`) keep working from them.
@@ -136,7 +143,9 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
     words.** A card's headline and pattern are cached on a hash of its quotes' text
     (`elaboration.py:86`), so any change would otherwise re-pay the model: four calls for one
     spelling fix in the play-out. A meaning change rewrites the card, once step 2b can tell the two
-    apart; until then only the old-words check applies.
+    apart; until then only the old-words check applies. _2 Nov 2026:_ "meaning change" is now read
+    from the consequences (decision 26): a card is rewritten when a quote's sentiment or tags change
+    or a quote joins or leaves it.
 22. **When a new interview is analysed, the word list offers its known wrong forms at once**
     ("BBC: 4 to review in this session"), through the same review as find and replace, before it
     ever feeds Whisper. Never applied without review (decision 7). The same mishearings recur, and
@@ -159,6 +168,35 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
     band moves it in or out; that is right), exports, chat and MCP. Section and theme names are the
     same: just more text, so a correction changes a name the model wrote and never one the
     researcher renamed (a heading edit). A correction to a name is a correction, not a heading edit.
+26. **Ask forgiveness, not permission: the edit stands, and the analysis follows it** (owner, 2 Nov
+    2026, reviewing `docs/mockups/quote-transcript-disagree-flag.html`). Assume the researcher
+    knew what they were doing.
+    - **When:** about 30 seconds after the last edit ("5 s is too short, easy to regret; a minute is
+      a long time in user attention"). An undo inside the window cancels it, and edits inside it go
+      into one pass; a find-and-replace batch is one pass.
+    - **What runs:** the edited quotes only, for their sentiment and tags; signal-card counts follow
+      (arithmetic), and a card is rewritten under decision 21.
+    - **While it runs:** the shimmer (`atoms/shimmer.css`) on the quote's words in the transcript,
+      on its gutter mark, on its quote card and on any signal card it sits in.
+    - **Trivial result:** the shimmer settles and nothing else shows (sentiment, tags and signal-card
+      membership unchanged).
+    - **Strong result:** the warning glyph (`ui_kinds` `warning`, `Icon` `warning`) on the quote card,
+      the transcript's gutter mark and the quote in a signal card. Clicking it opens a popover:
+      "⚠ Transcript edit changed analysis", the before and after as a diff in highlighter-pen green
+      and red, with removed words also struck through and added words underlined (red and green is
+      the pair colour-blind readers confuse), and two buttons: **Undo Edit** (secondary: takes back
+      the transcript edit and everything it set moving, as ⌘Z does, named to match the Edit menu)
+      and **Keep changes** (primary).
+    - **The glyph stays until the popover is opened once**; opening it counts as seen, whichever
+      button is pressed, or none. Ignoring it means the changes stand. The "Quotes to review" view
+      lists the unopened ones.
+    - **When the newer transcript edit contradicts the researcher's earlier quote tidy**, the quote
+      takes the corrected transcript's words for its kept span and the tidy goes; the diff shows the
+      old tidy struck and the new words added.
+
+    This replaces the mockup's variants B and C, its "Keep my wording", and its open questions on
+    counting while flagged, exports and agents: once the edit is applied there is no standing
+    disagreement to count, export or explain.
 
 **Order of work.** Each step names what it needs from the steps before it.
 
@@ -192,11 +230,11 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
    composition. Typing over a redaction token (`[NAME]`) is refused: a name typed there would
    re-identify a redacted study through every export and agent; names go through the people layer
    (decision 7). Needs from 1: a place to land, each quote's range, and the corrections layer.
-3. **(2b) What an edit sets moving.** Research first, then build (decision 13): the corpus of
-   plausible edits, both transcript and quote side; how to tell a factual correction from a meaning
-   change, and a correction from tidying; and per kind, whether the session becomes owed work for
-   the next Analyse (the sibling is a speaker recode, `10af9e8f`), re-tagged, or left alone. Needs
-   from 2a: real corrections to classify.
+3. **(2b) What an edit sets moving.** Since decision 26, built on consequences: the 30-second
+   window, the per-quote re-analysis, the before-and-after comparison, the shimmer, and the glyph
+   and popover. The corpus of plausible edits (transcript and quote side) now tests where "changed"
+   starts, rather than training a classifier. Telling a correction from tidying in a quote-side
+   edit (decision 6) still needs a judgement. Needs from 2a: real corrections.
 4. **(3) Find and replace across the study.** Each accepted candidate is a 2a correction, so it
    flows to quotes and its consequences follow 2b. v1 finds text variants (decision 20). People and
    places go through the people layer. The batch is one act, one Undo entry. The word list and its
@@ -223,16 +261,12 @@ tab, one correction then a study-wide replace). Building waits: the beta is a re
 - For editorial notes: what "who" says in a one-researcher app, and the word cap's level.
 - `design-delete-and-bin.md`'s own calls: the words, glyph or row, Empty Bin, the empty-again rule.
 - From the consequences mockup (24 Oct 2026):
-  - **The flag of decision 6, mocked up 2 Nov 2026:** `docs/mockups/quote-transcript-disagree-flag.html`
-    (bn-accurate, the shipped theme inlined). Proposed there: the transcript's words shown inline
-    on the quote card with two choices, "Use the transcript's words" and "Keep my wording"
-    (variant B); a "Quotes to review" view beside All and Starred; the warning glyph on the
-    transcript's gutter mark and on the quote in a signal card; nothing on the Dashboard or the
-    Mac sidebar; exports ship the researcher's wording; the chat lens and MCP are told the
-    transcript disagrees. Its §4 table walks the flag through every later act (choose, undo,
-    a re-read, Re-analyse). Five owner questions open there: loudness (A glyph, B inline, C held
-    out of the counts), whether a flagged quote keeps counting, exports, agents, and whether
-    "Keep my wording" asks for a reason.
+  - **The flag of decision 6, mocked up and decided 2 Nov 2026:**
+    `docs/mockups/quote-transcript-disagree-flag.html`. Owner's review: glyph only (variant A), the
+    detail in a popover, the edit applied and the analysis following it (decision 26). Still to
+    mock up: the shimmer and the popover with its diff. Kept from the mockup: the glyph on the
+    gutter mark and the signal-card quote, the "Quotes to review" view, nothing on the Dashboard or
+    the Mac sidebar.
   - A partial strike on a starred quote: the re-cut quote may cover too little of the starred span
     for the ≥70% overlap rule to carry the star. Re-cut at once keeping the star, or teach the carry
     about strikes.

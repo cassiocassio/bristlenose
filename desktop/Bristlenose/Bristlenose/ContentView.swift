@@ -3246,6 +3246,14 @@ struct ContentView: View {
             AlphaExpiryPill()
         }
         .withoutSharedBackground()
+        #if DEBUG
+        // PROTOTYPE (DEBUG only): one pill for provider problems, driven from
+        // Diagnostics ▸ Provider problem pill. `ProviderProblemPrototype.swift`.
+        ToolbarItem(placement: .status) {
+            ProviderProblemPill(model: ProviderProblemPrototype.shared)
+        }
+        .withoutSharedBackground()
+        #endif
     }
 
     // MARK: - Sidebar

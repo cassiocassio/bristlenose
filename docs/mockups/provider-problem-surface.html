@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Provider problem surface — Bristlenose</title>
+<style>
+  :root{
+    --ink:#1d1d1f; --dim:#6e6e73; --faint:#8e8e93; --line:#d2d2d7; --panel:#f5f5f7; --card:#fff; --page:#fbfbfd;
+    --amber:#e08a00; --red:#d70015; --blue:#0a66ff; --sel:rgba(10,102,255,.13);
+    --mono:ui-monospace,Menlo,"Cascadia Mono",Consolas,monospace;
+    --sys:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--ink:#f5f5f7;--dim:#a1a1a6;--faint:#8e8e93;--line:#3a3a3c;--panel:#232326;--card:#2c2c2e;--page:#161617;--amber:#ff9f0a;--red:#ff453a;--sel:rgba(10,132,255,.25);}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--ink);font:14px/1.5 var(--sys);padding:0 24px 90px}
+  .wrap{max-width:1040px;margin:0 auto}
+  h1{font-size:26px;letter-spacing:-.015em;margin:40px 0 4px}
+  h2{font-size:19px;margin:46px 0 4px;letter-spacing:-.01em}
+  h2 i{font-style:normal;color:var(--faint);margin-right:8px}
+  p{margin:6px 0}
+  code{font-family:var(--mono);font-size:12px;background:var(--panel);padding:1px 5px;border-radius:4px}
+  .lede{color:var(--dim);max-width:70ch}
+
+  /* ── zones ── */
+  .key{display:flex;gap:14px;flex-wrap:wrap;margin:16px 0 4px;font-size:12px;color:var(--dim)}
+  .key span{display:inline-flex;align-items:center;gap:7px}
+  .sw-art{width:22px;height:14px;border:1px solid var(--line);background:var(--card);border-radius:3px}
+  .sw-com{width:22px;height:14px;border:3px solid transparent;border-left:3px solid var(--blue);
+    background:linear-gradient(var(--page),var(--page)) padding-box,repeating-linear-gradient(135deg,var(--line) 0 4px,transparent 4px 8px) border-box}
+  .com{border:7px solid transparent;border-left:3px solid var(--blue);margin:14px 0;font-size:13px;color:var(--dim);
+    background:linear-gradient(var(--page),var(--page)) padding-box,repeating-linear-gradient(135deg,var(--line) 0 5px,transparent 5px 10px) border-box}
+  .com .in{padding:6px 10px}
+  .com .tag{font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:4px}
+  .com b{color:var(--ink)}
+  .com ul{margin:6px 0;padding-left:18px}.com li{margin:3px 0}
+  .com table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0}
+  .com th,.com td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  .com th{color:var(--faint);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+
+  /* ── artefact frames ── */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:820px){.grid3,.grid2{grid-template-columns:1fr}}
+  .frame{border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+  .fbar{font:11px var(--mono);color:var(--faint);padding:5px 10px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;justify-content:space-between;gap:8px}
+  .fbar em{font-style:normal;color:var(--amber)}
+  .fbody{padding:12px}
+
+  /* mac chrome */
+  .win{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card);font-size:11.5px}
+  .tb{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);border-bottom:1px solid var(--line);min-height:34px}
+  .lights{display:flex;gap:5px}.lights i{width:9px;height:9px;border-radius:50%;display:block}
+  .lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+  .ttl{font-weight:600;margin-left:6px}.sub{color:var(--faint);margin-left:5px;font-weight:400}
+  .sp{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--faint);flex:none}
+  .tb .ttl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .srch{width:54px;height:15px;border-radius:8px;background:var(--line);opacity:.55}
+  .wb{display:flex;min-height:150px}
+  .sb{width:200px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  .sb .lbl{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 2px}
+  .row{display:flex;align-items:center;gap:7px;margin:1px 6px;padding:5px 7px;border-radius:6px;color:var(--dim)}
+  .row.sel{background:var(--sel);color:var(--ink)}
+  .row .st{display:flex;flex-direction:column;line-height:1.25}
+  .row .st small{font-size:10px;color:var(--faint)}
+  .g{width:14px;height:14px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff}
+  .g.err{background:var(--red)}.d{width:8px;height:8px;border-radius:50%;flex:none;background:var(--faint);opacity:.5}
+  .fill{flex:1}
+  .det{flex:1;padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .ph{height:8px;border-radius:4px;background:var(--line);opacity:.6}
+  .w40{width:40%}.w60{width:60%}.w80{width:80%}.w90{width:90%}
+  .quote{border:1px solid var(--line);border-radius:7px;padding:8px 9px;display:flex;flex-direction:column;gap:6px}
+  .badge{align-self:flex-start;font:10px var(--mono);background:var(--panel);padding:1px 6px;border-radius:4px;color:var(--dim)}
+
+  /* the pill — StatusPill envelope: secondary 0.08 fill, 0.25 stroke, 10×4, caption medium */
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:500;white-space:nowrap;
+    background:color-mix(in srgb,var(--faint) 12%,transparent);border:.5px solid color-mix(in srgb,var(--faint) 40%,transparent);color:var(--ink)}
+  .pill .dot{width:7px;height:7px;border-radius:50%}
+  .dot.amb{background:var(--amber)}.dot.red{background:var(--red)}
+  .pop{border:1px solid var(--line);border-radius:10px;background:var(--card);padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:12px}
+  .pop b{display:block;font-size:12.5px;margin-bottom:3px}
+  .pop p{color:var(--dim);margin:2px 0 0}
+  .pop .btns{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+  .btn{font-size:11px;font-weight:500;border-radius:6px;padding:2px 9px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  .btn.def{background:var(--blue);border-color:var(--blue);color:#fff}
+  .tip{width:10px;height:10px;background:var(--card);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg);margin:0 auto -6px;position:relative;z-index:1}
+  .anchor{display:flex;flex-direction:column;align-items:flex-end;padding-right:10px}
+
+  /* sidebar footer — plain text, caption2, bug at right */
+  .foot{display:flex;align-items:center;gap:6px;padding:6px 10px 6px 16px;font-size:10px;color:var(--dim);margin-top:auto}
+  .foot .ver{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .foot .bug{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;color:var(--dim)}
+  .foot .stat{display:inline-flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+  .foot .stat .dot{width:6px;height:6px;border-radius:50%;flex:none}
+  .stale{border:1px solid var(--line);border-radius:7px;padding:8px 9px;display:flex;flex-direction:column;gap:6px}
+  .stale .note{font-size:10.5px;color:var(--dim);display:flex;gap:6px;align-items:center}
+  .cols{display:grid;grid-template-columns:1fr;gap:12px}
+
+  /* life-of-the-pill forms */
+  .pill.loud{border:1px solid var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent);font-weight:600}
+  .pill .x{margin-left:2px;width:13px;height:13px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:var(--faint);background:color-mix(in srgb,var(--faint) 22%,transparent)}
+  .gp{width:26px;height:22px;border-radius:99px;display:inline-flex;align-items:center;justify-content:center;position:relative;
+    background:color-mix(in srgb,var(--faint) 12%,transparent);border:.5px solid color-mix(in srgb,var(--faint) 40%,transparent);color:var(--dim)}
+  .gp svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .gp .pd{position:absolute;right:2px;top:2px;width:6px;height:6px;border-radius:50%;border:1px solid var(--panel)}
+  .tt{font-size:10.5px;background:var(--card);border:1px solid var(--line);border-radius:5px;padding:2px 7px;box-shadow:0 4px 12px rgba(0,0,0,.12);white-space:nowrap;color:var(--ink)}
+  .stages{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:620px){.stages{grid-template-columns:1fr}}
+  .stage .ttl{white-space:nowrap}
+  .stage .slot{display:flex;justify-content:flex-end;min-height:30px;align-items:center}
+  .stage .under{display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-top:6px}
+  .kg{width:13px;height:13px;flex:none;display:inline-block}
+  .win .tb{position:relative}
+  .win .tb .mid{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px}
+  .setrow{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:4px 2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Provider problem — where does it show?</h1>
+<p class="lede">Three conditions (key rejected, can’t reach the provider, out of credit) and three places they could surface. The Mac app, Tahoe chrome, light/dark follows the system. The title-bar pill also exists as a DEBUG-only native prototype (Diagnostics ▸ Provider problem pill), because toolbar placement and resizing can only be judged native.</p>
+<div class="key">
+  <span><i class="sw-art"></i> Artefact — what the app would draw</span>
+  <span><i class="sw-com"></i> Commentary — not the product</span>
+  <span>Frame bars flag <em style="font-style:normal;color:var(--amber)">proposed wording</em> that is not a shipped locale key</span>
+</div>
+
+<!-- ═════════ A ═════════ -->
+<h2><i>A</i>One pill in the title bar</h2>
+<p class="lede">The existing out-of-credit pill, generalised. Same envelope, same <code>.status</code> zone; the dot colour and label change with the condition.</p>
+
+<div class="grid3">
+  <div class="frame"><div class="fbar"><span>key rejected</span><em>label proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>Claude · invalid key</span></div></div></div>
+    <div class="anchor"><div class="tip"></div></div>
+    <div class="pop"><b>Your Claude key was rejected.</b>
+      <div class="btns"><span class="btn">Switch provider…</span><span class="btn def">Open Settings…</span></div></div>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>can’t reach</span><em>label proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · unavailable</span></div></div></div>
+    <div class="anchor"><div class="tip"></div></div>
+    <div class="pop"><b>Couldn’t reach Claude. Check your connection.</b></div>
+  </div></div>
+
+  <div class="frame"><div class="fbar"><span>out of credit</span><em>shipped</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · no credit</span></div></div></div>
+    <div class="anchor"><div class="tip"></div></div>
+    <div class="pop"><b>Claude is out of credit</b><p>Add credit to run new analysis or coding.</p>
+      <div class="btns"><span class="btn">Switch provider…</span><span class="btn def">Add funds…</span></div></div>
+  </div></div>
+</div>
+
+<p style="margin-top:20px;font-size:13px;color:var(--dim)">The person who tags by hand for months — same project, same dead key:</p>
+<div class="grid2">
+  <div class="frame"><div class="fbar"><span>A · key rejected, nothing has asked for it</span></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea<span class="sub">163 Quotes</span></span><div class="sp"><span class="srch"></span></div></div>
+    <div class="wb"><div class="sb"><div class="lbl">Projects</div><div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div></div>
+      <div class="det"><div class="quote"><div class="ph w90"></div><div class="ph w60"></div><span class="badge">pricing</span></div><div class="quote"><div class="ph w80"></div><div class="ph w40"></div><span class="badge">trust</span></div></div></div></div>
+  </div></div>
+  <div class="frame"><div class="fbar"><span>A′ · after an edit needed a call and it was refused</span><em>label proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea<span class="sub">163 Quotes</span></span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>Claude · invalid key</span><span class="srch"></span></div></div>
+    <div class="wb"><div class="sb"><div class="lbl">Projects</div><div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div></div>
+      <div class="det"><div class="quote"><div class="ph w90"></div><div class="ph w60"></div><span class="badge">pricing</span></div><div class="quote"><div class="ph w80"></div><div class="ph w40"></div><span class="badge">trust</span></div></div></div></div>
+  </div></div>
+</div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · A</div>
+  <ul>
+    <li><b>The trigger decides whether this is useful or a nag.</b> Today the out-of-credit pill lights from a sticky <i>verdict</i> (Settings validation or a failed run) and stays until a top-up and a successful run. For the hand-tagger that is a pill present for months over work that never needed the provider. A′ is the alternative: the pill appears when a call was <i>refused</i>, not when a verdict is merely known.</li>
+    <li><b>The glyph is the existing <code>MessageKind</code>, not a new one.</b> Rejected key is <b>error</b> (<code>xmark.circle.fill</code>, red; <code>.invalid</code> is red everywhere else); credit and unreachable are <b>warning</b> (<code>exclamationmark.triangle.fill</code>, amber). The words say which. This replaces the amber dot the shipped out-of-credit pill uses, a documented decision to reverse.</li>
+    <li><b>“Unavailable” has no source of truth.</b> It is a failed observation: the sticky cache the pill reads deliberately doesn’t store it. A pill for it needs new state, and it would sit lit for anyone on a train.</li>
+    <li><b>Visible on Welcome and in Settings;</b> one fix clears every project at once.</li>
+  </ul></div></div>
+
+<!-- ═════════ B ═════════ -->
+<h2><i>B</i>Sidebar footer, bottom left</h2>
+<p class="lede">Next to the version and the bug. The footer is plain secondary text by design (<code>SidebarFooter.swift</code>: not a capsule, not selectable).</p>
+
+<div class="grid3">
+  <div class="frame"><div class="fbar"><span>key rejected</span><em>wording proposed</em></div><div class="fbody"><div class="win"><div class="wb" style="min-height:96px"><div class="sb" style="width:100%;border:0">
+    <div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div>
+    <div class="foot"><span class="ver">0.44.0 beta</span><span class="stat"><span class="dot red" style="background:var(--red)"></span>Claude key rejected</span><span class="fill"></span><span class="bug">🐞︎</span></div></div></div></div></div></div>
+
+  <div class="frame"><div class="fbar"><span>can’t reach</span><em>wording proposed</em></div><div class="fbody"><div class="win"><div class="wb" style="min-height:96px"><div class="sb" style="width:100%;border:0">
+    <div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div>
+    <div class="foot"><span class="ver">0.44.0 beta</span><span class="stat"><span class="dot" style="background:var(--amber)"></span>Claude unavailable</span><span class="fill"></span><span class="bug">🐞︎</span></div></div></div></div></div></div>
+
+  <div class="frame"><div class="fbar"><span>out of credit</span><em>wording proposed</em></div><div class="fbody"><div class="win"><div class="wb" style="min-height:96px"><div class="sb" style="width:100%;border:0">
+    <div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div>
+    <div class="foot"><span class="ver">0.44.0 beta</span><span class="stat"><span class="dot" style="background:var(--amber)"></span>Claude · no credit</span><span class="fill"></span><span class="bug">🐞︎</span></div></div></div></div></div></div>
+</div>
+
+<div class="grid2" style="margin-top:16px">
+  <div class="frame"><div class="fbar"><span>B · sidebar collapsed (⌥⌘S)</span></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea<span class="sub">163 Quotes</span></span></div>
+    <div class="wb"><div class="det"><div class="quote"><div class="ph w90"></div><div class="ph w60"></div><span class="badge">pricing</span></div><div class="quote"><div class="ph w80"></div><div class="ph w40"></div><span class="badge">trust</span></div></div></div></div>
+  </div></div>
+  <div class="frame"><div class="fbar"><span>B · App Store build, beta word gone</span><em>wording proposed</em></div><div class="fbody"><div class="win"><div class="wb" style="min-height:96px"><div class="sb" style="width:100%;border:0">
+    <div class="row sel"><span class="d"></span>project-ikea</div><div class="row"><span class="d"></span>fishkeeping</div>
+    <div class="foot"><span class="stat"><span class="dot" style="background:var(--red)"></span>Claude key rejected</span><span class="fill"></span><span class="bug">🐞︎</span></div></div></div></div></div></div>
+</div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · B</div>
+  <ul>
+    <li><b>It is the quiet standing marker.</b> Small, secondary, never competing with the work. For a dead key that is allowed to sit for months, that is arguably the right volume.</li>
+    <li><b>It disappears with the sidebar.</b> Hide the sidebar and the condition is gone; the first frame in the second row. Fine for a quiet marker, poor for something blocking.</li>
+    <li><b>The footer is a sidebar-width strip.</b> At the 200 pt minimum, version + status + bug leaves about 100 pt, so the status truncates (the first row is already tight).</li>
+    <li><b>Neighbours.</b> It sits beside Send Feedback and the beta word. The latter is compile-time and goes before the App Store build, which leaves status + bug alone. The code comments also say the plain-text footer was chosen <i>because</i> a capsule read as one of the app’s clickable status pills; a status here has no popover to open, so the fix path is Settings only.</li>
+  </ul></div></div>
+
+<!-- ═════════ C ═════════ -->
+<h2><i>C</i>Nothing global — the consequence stays where the call was made</h2>
+<p class="lede">Shipped today for runs: the row says “Run failed”, its popover says why. Three conditions, same row.</p>
+
+<div class="grid3">
+  <div class="frame"><div class="fbar"><span>key rejected</span><em>shipped</em></div><div class="fbody"><div class="win"><div class="sb" style="width:100%;border:0;padding-bottom:6px">
+    <div class="row sel"><span class="g err">✕</span><div class="st"><span>project-ikea</span><small>Run failed</small></div></div><div class="row"><span class="d"></span>fishkeeping</div></div></div>
+    <div class="anchor" style="align-items:flex-start;padding-left:24px;margin-top:4px"><div class="tip"></div></div>
+    <div class="pop"><b>Run failed</b><p>Your Claude key was rejected.</p><p style="font-size:11px;color:var(--faint)">Category: Provider key issue</p></div></div></div>
+
+  <div class="frame"><div class="fbar"><span>can’t reach</span><em>shipped</em></div><div class="fbody"><div class="win"><div class="sb" style="width:100%;border:0;padding-bottom:6px">
+    <div class="row sel"><span class="g err">✕</span><div class="st"><span>project-ikea</span><small>Run failed</small></div></div><div class="row"><span class="d"></span>fishkeeping</div></div></div>
+    <div class="anchor" style="align-items:flex-start;padding-left:24px;margin-top:4px"><div class="tip"></div></div>
+    <div class="pop"><b>Run failed</b><p>Couldn’t reach Claude. Check your connection.</p><p style="font-size:11px;color:var(--faint)">Category: Network error</p></div></div></div>
+
+  <div class="frame"><div class="fbar"><span>out of credit</span><em>shipped</em></div><div class="fbody"><div class="win"><div class="sb" style="width:100%;border:0;padding-bottom:6px">
+    <div class="row sel"><span class="g err">✕</span><div class="st"><span>project-ikea</span><small>Run failed</small></div></div><div class="row"><span class="d"></span>fishkeeping</div></div></div>
+    <div class="anchor" style="align-items:flex-start;padding-left:24px;margin-top:4px"><div class="tip"></div></div>
+    <div class="pop"><b>Run failed</b><p>Claude is out of credit.</p><p style="font-size:11px;color:var(--faint)">Category: Out of credit</p></div></div></div>
+</div>
+
+<p style="margin-top:20px;font-size:13px;color:var(--dim)">The incidental call has no row to land on. The Signals lens, one card whose refresh was refused:</p>
+<div class="frame" style="max-width:520px"><div class="fbar"><span>C′ · in-place consequence at the point of need</span><em>new element · wording proposed</em></div><div class="fbody">
+  <div class="stale"><div class="ph w60"></div><div class="ph w90"></div>
+    <div class="note"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>Not updated — Claude key rejected</div></div>
+</div></div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · C</div>
+  <ul>
+    <li><b>Zero nag, and it matches the hand-tagger.</b> A dead key shows nothing until something actually needs it. No chrome to maintain, no state to clear.</li>
+    <li><b>Coverage stops at the analyse row.</b> The row exists for runs. A signal-card update or a transcript edit that needs “a few cents” has no row, so a refused call is silent unless it grows its own in-place note (C′). That is a new element on each surface that makes such calls, and I haven’t audited how many there are or which report a refusal over the bridge. The only failure the app currently turns into state is a billing one.</li>
+    <li><b>One fix, many failures.</b> With N projects a dead key is N “Run failed” rows, each found by trying. The row also says only “Run failed”; the cause is one click away.</li>
+    <li><b>It finds out late.</b> Someone who drops in eight recordings learns their key is dead when the run starts, not before.</li>
+  </ul></div></div>
+
+<!-- ═════════ forms of the pill ═════════ -->
+<h2><i>D</i>The forms the pill can take — loud once, then it recedes</h2>
+<p class="lede">Out of credit, drawn with the shipped wording. The same pill in four stages, each a title bar with the toolbar's own spacing. The proposed treatments are flagged in each bar.</p>
+
+<div class="stages">
+  <div class="frame stage"><div class="fbar"><span>1 · first refusal</span><em>treatment proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">ikea</span><div class="sp"><span class="pill loud"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · no credit</span></div></div></div>
+    <div class="stale" style="margin-top:10px"><div class="ph w60"></div><div class="ph w90"></div><div class="note"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="0"/></svg>Claude is out of credit</div></div>
+  </div></div>
+
+  <div class="frame stage"><div class="fbar"><span>2 · settled, with ✕</span><em>✕ proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · no credit<span class="x">✕</span></span></div></div></div>
+  </div></div>
+
+  <div class="frame stage"><div class="fbar"><span>3 · a day later, glyph only</span><em>proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg></span></div></div></div>
+    <div class="under"><span class="tt">Claude · no credit</span></div>
+  </div></div>
+
+  <div class="frame stage"><div class="fbar"><span>4 · clicked, expanded</span><em>“Hide” proposed</em></div><div class="fbody">
+    <div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">ikea</span><div class="sp"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg></span></div></div></div>
+    <div class="anchor"><div class="tip"></div></div>
+    <div class="pop"><b>Claude is out of credit</b><p>Add credit to run new analysis or coding.</p>
+      <div class="btns"><span class="btn">Hide</span><span class="btn">Switch provider…</span><span class="btn def">Add funds…</span></div></div>
+  </div></div>
+</div>
+
+<p style="margin-top:20px;font-size:13px;color:var(--dim)">Same glyph at every stage, and for every condition of the same kind. Only the words drop away:</p>
+<div class="frame" style="max-width:640px"><div class="fbar"><span>expanded → collapsed, per condition</span><em>no-credit wording shipped · the others proposed</em></div><div class="fbody" style="display:grid;grid-template-columns:auto auto auto;justify-content:start;gap:10px 18px;align-items:center;font-size:11.5px">
+  <span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg>Claude · Invalid key</span><span style="color:var(--faint)">→</span><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+  <span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · Unavailable</span><span style="color:var(--faint)">→</span><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg></span>
+  <span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg>Claude · no credit</span><span style="color:var(--faint)">→</span><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg></span>
+</div></div>
+
+<p style="margin-top:20px;font-size:13px;color:var(--dim)">The traffic-light question, at toolbar scale. The collapsed pill sits where <code>.status</code> puts it (the centre, on macOS 26), with the window controls at the leading edge:</p>
+<div class="grid2">
+  <div class="frame"><div class="fbar"><span>collapsed warning</span></div><div class="fbody"><div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="mid"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--amber)"><path d="M8 1.6l7 12.4H1z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r=".9" fill="#fff"/></svg></span></div><div class="sp"><span class="srch"></span></div></div></div></div></div>
+  <div class="frame"><div class="fbar"><span>collapsed error</span></div><div class="fbody"><div class="win"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span class="ttl">project-ikea</span><div class="mid"><span class="pill"><svg class="kg" viewBox="0 0 16 16" style="color:var(--red)"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/></svg></span></div><div class="sp"><span class="srch"></span></div></div></div></div></div>
+</div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · what the HIG says (fetched 2 Nov 2026 from Apple’s DocC JSON)</div>
+<table>
+  <tr><th>Idea</th><th>HIG</th><th>Reads as</th></tr>
+  <tr><td><b>Loud once, quiet after</b></td><td><i>Feedback</i>: match the significance of the information to the way it’s delivered; “display status information in a passive way so that people can view it when they need it”.</td><td>Supports a passive pill. Prominence belongs to the <i>first occurrence</i> and in place, not to a permanent loud chrome.</td></tr>
+  <tr><td>Where the first telling goes</td><td><i>Writing</i>: show an error “as close to the problem as possible”, avoid blame. <i>Alerts</i>: avoid an alert for information that isn’t actionable; Mail’s answer to an unavailable server is “an indicator that people can choose to learn more”.</td><td>Stage 1 is the in-place note plus the full-label pill. Not an alert, not a modal. An alert only if a researcher-started action was blocked outright.</td></tr>
+  <tr><td>Popover as the resolve surface</td><td><i>Popovers</i>: “Avoid using a popover to show a warning. People can miss a popover or accidentally close it.” A Close button only “for confirmation and guidance”.</td><td><b>A mismatch with what ships.</b> The out-of-credit popover carries a status and two actions, not a data-loss warning, which is the HIG’s case for an alert. Fine if the first telling is in place (stage 1); not fine if the popover is the only telling.</td></tr>
+  <tr><td>Expanding a condensed view</td><td><i>Popovers</i>: for “condensed and expanded views of the same information”, animate the change so it doesn’t read as a new popover.</td><td>Stages 3 → 4 is that case. Animate it, and honour Reduce Motion.</td></tr>
+  <tr><td>A day, as a timer</td><td><i>Accessibility</i>: “Minimize use of time-boxed interface elements… Prefer dismissing views with an explicit action.” <i>Offering help</i>: tips at “once every 24 hours” (a cadence, not a collapse).</td><td>A live timer changing the toolbar while someone looks at it is the thing to avoid. Evaluate the 24 hours at launch and on window activation, never mid-glance. Nothing is removed by collapsing, so the content stays one click away.</td></tr>
+  <tr><td>Glyph-only</td><td><i>Buttons</i>: macOS shows a tooltip on hover; tooltips 60–75 characters, “context-sensitive… different text for a control’s different states”.</td><td>The collapsed pill needs a state-specific tooltip; its accessibility label stays the full text. The glyph is the kind’s own and doesn’t change on collapse, so a collapsed pill is recognisably yesterday’s.</td></tr>
+  <tr><td>Same colour, different meaning</td><td><i>Color</i>: “Avoid using the same color to mean different things.”</td><td>An amber or red <i>disc</i> in the title bar echoes the minimise and close controls, which is why the lamp works in a Settings list and not here. A triangle isn’t a disc. The red error glyph is a disc, but inside a capsule it isn’t the bare window control; check it at real size.</td></tr>
+  <tr><td>Don’t look like a count</td><td><i>Notifications</i>: “Avoid creating a custom image or component that mimics the appearance or behavior of a badge.”</td><td>The coloured dot sits on the glyph; no number, ever.</td></tr>
+  <tr><td>Reachable when hidden</td><td><i>Toolbars</i>: “Make every toolbar item available as a command in the menu bar… people can customize or hide” the toolbar. Reduce tinted toolbar controls.</td><td>Needs a menu twin so the condition can’t be lost to a hidden toolbar or the <code>»</code> overflow. The stage-1 tint is the one place this runs against the grain.</td></tr>
+  <tr><td>Footer, option B</td><td><i>Sidebars</i>: “Avoid putting critical information or actions at the bottom of a sidebar. People often relocate a window in a way that hides its bottom edge.”</td><td>Counts against B directly.</td></tr>
+</table></div></div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · how it behaves, and the calls that are yours</div>
+<ul>
+  <li><b>No ✕ convention for a toolbar pill in the HIG.</b> The closest are system notification banners and tip popovers, which both give people a dismiss and say to “make it easy to dismiss”. A trailing ✕ is a reasonable invention; it is not a precedent.</li>
+  <li><b>✕ has to be a separate hit target.</b> <code>StatusPill</code> is one <code>Button</code> that toggles the popover, so a nested ✕ needs its own target beside it. Right-click “Dismiss” isn’t available on a toolbar item (macOS swallows it for Customize Toolbar; already a gotcha in <code>desktop/CLAUDE.md</code>). So the accessible dismiss is the <b>Hide</b> button in the popover (fourth frame), with ✕ as the pointer shortcut. A hover-only ✕ would be unreachable by keyboard and VoiceOver.</li>
+  <li><b>Dismissed doesn’t mean forgotten.</b> Hide removes the pill; the Settings dot still says “Out of credit”, and the menu twin still opens it.</li>
+  <li><b>When does it come back loud?</b> The risk in your own rule: a month of transcript edits on empty credit means a month of refused calls, and if each one re-lights the full pill, that is the nag again. Suggested rule: a refusal re-expands the pill only when the <i>condition changed</i> (credit → key rejected) or the call was an explicit AI action such as Analyse or Autocode. An incidental refusal on an already-acknowledged condition gets its in-place note and nothing in the title bar.</li>
+  <li><b>Clearing.</b> A successful call, a re-validated key, or a top-up removes it at any stage. App-wide state, so hiding it in one window hides it in all.</li>
+  <li><b>Not checked.</b> The exact SF Symbols (the glyphs here are drawn to suggest them), the ✕’s hit-target size, and how a glyph-only item behaves in macOS 26 toolbar overflow.</li>
+</ul></div></div>
+
+<!-- ═════════ comparison ═════════ -->
+<h2><i>·</i>Side by side</h2>
+<div class="com"><div class="in"><div class="tag">Commentary · comparison</div>
+<table>
+  <tr><th></th><th>A · title-bar pill</th><th>B · footer</th><th>C · consequence in place</th></tr>
+  <tr><td>Hand-tagger, dead key for months</td><td>Nags if verdict-triggered; fine if blocked-call-triggered (A′)</td><td>Quiet, correct volume</td><td>Silent until needed; incidental calls need C′</td></tr>
+  <tr><td>About to analyse</td><td>Seen before they start</td><td>Seen if the sidebar is open</td><td>Seen only after the run fails</td></tr>
+  <tr><td>Many projects</td><td>One fix clears all</td><td>One fix clears all</td><td>One failure per project</td></tr>
+  <tr><td>Reachable with sidebar hidden</td><td>Yes</td><td>No</td><td>Yes, in place</td></tr>
+  <tr><td>New engineering</td><td>Verdict for <code>invalid</code> (small); none for unreachable</td><td>New view in a deliberately plain footer</td><td>A note on each non-run surface</td></tr>
+  <tr><td>Strings proposed</td><td>2 pill labels, 1 button</td><td>3 status phrases</td><td>1–2 (per surface)</td></tr>
+</table>
+<p><b>Where I land (for you to overrule).</b> They aren’t exclusive. C′ is the primary for the hand-tagger, because that is where the person meets the problem. Add one pill (A′) for the two sticky conditions, key rejected and out of credit, lit by a <i>refused call</i> rather than a stored verdict, so it is the way to fix it and not a months-long reminder. Leave “can’t reach” on C only: it has no source of truth and clears itself. I would not use the footer.</p>
+<p><b>The open call is the persistence rule</b> for the pill that already ships: should out-of-credit also stop showing on a stored verdict alone?</p>
+</div></div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · strings</div>
+<table>
+  <tr><th>Text</th><th>Status</th></tr>
+  <tr><td>Claude · no credit, Claude is out of credit, Add credit to run new analysis or coding., Add funds…, Switch provider…</td><td>shipped (<code>desktop.outOfCredit.*</code>)</td></tr>
+  <tr><td>Your Claude key was rejected., Couldn’t reach Claude. Check your connection., Run failed, Category: …</td><td>shipped (<code>pipeline.failure.*</code>, <code>pipeline.diagnostic.*</code>)</td></tr>
+  <tr><td>Claude · invalid key, Claude · unavailable</td><td>proposed — built from <code>llmSettings.status.invalid / unavailable</code></td></tr>
+  <tr><td>Open Settings…</td><td>proposed</td></tr>
+  <tr><td>Claude key rejected, Claude unavailable (footer)</td><td>proposed</td></tr>
+  <tr><td>Not updated — Claude key rejected</td><td>proposed, wording not drafted</td></tr>
+</table></div></div>
+
+</div>
+</body>
+</html>

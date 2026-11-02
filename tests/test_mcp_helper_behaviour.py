@@ -138,11 +138,39 @@ def serve(
         thread.join(timeout=10)
 
 
+_UNSET = object()
+
+
+@pytest.fixture()
+def set_state(serve: _Serve) -> Any:
+    """Set an ``app.state`` attribute for one case and put it back afterwards.
+
+    Not ``monkeypatch.setattr``: starlette's ``State`` keeps its attributes in
+    ``_state``, not ``__dict__``, and pytest 9.2 reads the old value from
+    ``__dict__`` (#10644), so its undo DELETED ``mcp_mounted`` for every later
+    case on the worker — "built without agent support" from a mounted serve,
+    and a KeyError tearing down the case after (CI, 2 Nov 2026).
+    """
+    saved: dict[str, Any] = {}
+
+    def _set(name: str, value: Any) -> None:
+        if name not in saved:
+            saved[name] = getattr(serve.app.state, name, _UNSET)
+        setattr(serve.app.state, name, value)
+
+    yield _set
+    for name, old in saved.items():
+        if old is _UNSET:
+            delattr(serve.app.state, name)
+        else:
+            setattr(serve.app.state, name, old)
+
+
 @pytest.fixture(autouse=True)
-def _reset_serve(serve: _Serve, monkeypatch: pytest.MonkeyPatch) -> None:
+def _reset_serve(set_state: Any) -> None:
     # Each case starts from an in-scope, mounted serve; a case that changes
-    # the serve's state uses monkeypatch, so it is undone for the next one.
-    monkeypatch.setattr(serve.app.state, "agent_readable", True, raising=False)
+    # the serve's state uses set_state, so it is undone for the next one.
+    set_state("agent_readable", True)
 
 
 # ---------------------------------------------------------------------------
@@ -398,14 +426,15 @@ def test_a_token_carrying_a_header_break_does_not_crash_or_inject(serve: _Serve,
     assert "Beds" not in text or "credential" in text
 
 
-def test_out_of_scope_is_refused_by_the_serve(serve: _Serve, hs_path: Path, run, monkeypatch) -> None:
-    monkeypatch.setattr(serve.app.state, "agent_readable", False, raising=False)
+def test_out_of_scope_is_refused_by_the_serve(serve: _Serve, hs_path: Path, run, set_state) -> None:
+    set_state("agent_readable", False)
     _write(hs_path, [serve.entry()])
     assert "out of scope" in run().call("get_project_overview")
 
 
-def test_a_build_without_mcp_says_so(serve: _Serve, hs_path: Path, run, monkeypatch) -> None:
-    monkeypatch.setattr(serve.app.state, "mcp_mounted", False)
+def test_a_build_without_mcp_says_so(serve: _Serve, hs_path: Path, run, set_state) -> None:
+    assert serve.app.state.mcp_mounted is True, "the fixture serve mounts MCP"
+    set_state("mcp_mounted", False)
     _write(hs_path, [serve.entry()])
     assert "built without agent support" in run().call("get_project_overview")
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -118,9 +119,11 @@ class TestRecordingNamesWithReservedCharacters:
     in a file or folder name started a fragment and a ``?`` a query. The browser
     requested the cut-off path, got a 403, and every timecode opened on nothing."""
 
+    # Windows forbids "?" in a file name, so the recording whose name has one cannot
+    # exist there; its "%3F" spelling stands in, which proves the encoding half only.
     NAMES = [
         "Participant #3.mp4",
-        "Round #1/P?2 call.mov",
+        "Round #1/P?2 call.mov" if sys.platform != "win32" else "Round #1/P%3F2 call.mov",
         "100% done.mp4",
         "50%41 off.mp4",  # a literal %41, which an unencoded path reads as "A"
         "Café 你好.m4a",

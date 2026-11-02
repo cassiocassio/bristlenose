@@ -81,7 +81,8 @@ def test_the_readers_agree_with_the_writer_on_the_file(tmp_path: Path, folder: s
 # by nature. On Windows the "%3F" spelling stands in, which proves only that two
 # studies under an encoded parent keep their own files (the decode half; the sharing
 # half is not reproducible there). Chosen over a skipif to keep the skip ratchet.
-SHARED_PARENTS = ["Who%3F Inc" if sys.platform == "win32" else "Who? Inc"]
+QUESTION_PARENT = "Who%3F Inc" if sys.platform == "win32" else "Who? Inc"
+SHARED_PARENTS = [QUESTION_PARENT]
 
 
 @pytest.mark.parametrize("parent", SHARED_PARENTS)
@@ -122,12 +123,12 @@ def test_two_studies_under_one_folder_do_not_share_a_database(
 def test_the_default_database_path_is_escaped_too(tmp_path: Path, monkeypatch) -> None:
     from bristlenose.server import db as server_db
 
-    monkeypatch.setattr(server_db, "_CONFIG_DIR", tmp_path / "Who? Inc" / "cfg%20dir")
+    config_dir = tmp_path / QUESTION_PARENT / "cfg%20dir"
+    monkeypatch.setattr(server_db, "_CONFIG_DIR", config_dir)
     engine = get_engine(server_db._default_db_url())
     init_db(engine)
     engine.dispose()
-    here = tmp_path / "Who? Inc" / "cfg%20dir" / "bristlenose.db"
-    assert os.path.samefile(engine.url.database, here)
+    assert os.path.samefile(engine.url.database, config_dir / "bristlenose.db")
 
 
 def test_the_dev_info_names_the_database_as_it_is_on_disk(tmp_path: Path) -> None:
@@ -136,7 +137,7 @@ def test_the_dev_info_names_the_database_as_it_is_on_disk(tmp_path: Path) -> Non
     from bristlenose.server.db import sqlite_url
     from tests.conftest import AuthTestClient
 
-    db = tmp_path / "Who? Inc" / "bristlenose.db"
+    db = tmp_path / QUESTION_PARENT / "bristlenose.db"
     db.parent.mkdir()
     app = create_app(project_dir=FIXTURE, dev=True, db_url=sqlite_url(db))
     info = AuthTestClient(app).get("/api/dev/info").json()

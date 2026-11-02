@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import make_url
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
 from bristlenose.server.journey import derive_journeys
@@ -276,7 +277,7 @@ def dev_info(request: Request) -> dict[str, object]:
     """System info for the About tab developer section."""
     from bristlenose.server.db import Base
 
-    db_url: str = getattr(request.app.state, "db_url", "")
+    db_url: str | URL = getattr(request.app.state, "db_url", "")
     db_path = (make_url(db_url).database if db_url else None) or "(in-memory)"
 
     return {
@@ -339,7 +340,7 @@ def _build_run_payload(request: Request) -> dict[str, object]:
     internal_dir = run_inspector.resolve_internal_dir(_Path(project_dir))
     config_dir = _Path.home() / ".config" / "bristlenose"
 
-    db_url: str = getattr(request.app.state, "db_url", "")
+    db_url: str | URL = getattr(request.app.state, "db_url", "")
     db_path = (make_url(db_url).database if db_url else None) or "(in-memory)"
 
     # Best-effort project name from the DB; fall back to the folder name.

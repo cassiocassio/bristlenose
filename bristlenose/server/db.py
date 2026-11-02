@@ -20,28 +20,35 @@ class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
 
 
-def _default_db_url() -> str:
+def _default_db_url() -> URL:
     """Fallback DB URL when no project directory is available."""
     _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     db_path = _CONFIG_DIR / "bristlenose.db"
     return sqlite_url(db_path)
 
 
-def sqlite_url(db_path: Path) -> str:
-    """A SQLAlchemy URL for a SQLite file, with the path escaped.
+def sqlite_url(db_path: Path) -> URL:
+    """A SQLAlchemy URL for a SQLite file, carrying the path as it is on disk.
 
     ``f"sqlite:///{path}"`` is parsed as a URL: SQLAlchemy ends the database at
     the first ``?`` and percent-decodes the rest, so a study under ``Who? Inc/``
     kept its database in a stray file named ``Who`` beside the folder (shared with
     every other study under it) and ``Interview%20recordings`` could not be
-    opened at all. ``URL.create`` escapes both; ``#`` and a bare ``%`` were
-    always safe. ``curation_counts`` and the Mac's readers escape the same
+    opened at all. ``URL.create`` holds the path verbatim; ``#`` and a bare ``%``
+    were always safe. ``curation_counts`` and the Mac's readers escape the same
     path with ``as_uri()``, so every reader names one file (N197).
+
+    The URL is returned as an object, never rendered to a string: only
+    SQLAlchemy 2.1 percent-escapes the database when rendering and unescapes it
+    when parsing. On 2.0 (what Python 3.10 installs, since 2.1 needs 3.11) a
+    string does neither, so no spelling of a ``?`` path survives the round trip
+    and the rendered form put the database back in the stray file (strict CI,
+    2 Nov 2026).
     """
-    return URL.create("sqlite", database=str(db_path)).render_as_string(hide_password=False)
+    return URL.create("sqlite", database=str(db_path))
 
 
-def db_url_for_project(project_dir: Path) -> str:
+def db_url_for_project(project_dir: Path) -> URL:
     """Return the SQLite URL for a per-project database.
 
     The DB lives at ``<output_dir>/.bristlenose/bristlenose.db`` so each
@@ -87,11 +94,12 @@ def _note_stray_database(db_path: Path) -> None:
         )
 
 
-def get_engine(db_url: str | None = None) -> Engine:
+def get_engine(db_url: str | URL | None = None) -> Engine:
     """Create a SQLAlchemy engine.
 
     Args:
-        db_url: Database URL. Defaults to the standard SQLite path.
+        db_url: Database URL, a string or the ``URL`` ``sqlite_url`` builds.
+                Defaults to the standard SQLite path.
                 Pass "sqlite://" for an in-memory database (tests).
     """
     url = db_url or _default_db_url()

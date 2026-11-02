@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import URL, Engine
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
@@ -158,7 +158,7 @@ def _schedule_missing_signal_snapshot(
 def create_app(
     project_dir: Path | None = None,
     dev: bool = False,
-    db_url: str | None = None,
+    db_url: str | URL | None = None,
     verbose: bool = False,
 ) -> FastAPI:
     """Create and configure the FastAPI application.

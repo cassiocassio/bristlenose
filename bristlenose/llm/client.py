@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     import openai
     from anthropic.types import MessageParam, ToolChoiceToolParam, ToolParam
     from google import genai
+    from openai.types.chat import ChatCompletionMessageParam
+    from openai.types.chat.completion_create_params import ResponseFormat
 
 from bristlenose.config import BristlenoseSettings
 from bristlenose.llm import telemetry
@@ -1484,17 +1486,17 @@ class LLMClient:
         params = request_params(
             "local", model, max_tokens, self.settings.llm_temperature
         )
-        schema_format = {
+        schema_format: ResponseFormat = {
             "type": "json_schema",
             "json_schema": {"name": response_model.__name__, "schema": schema},
         }
-        base_messages = [
+        base_messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": system_prompt + schema_instruction},
             {"role": "user", "content": user_prompt},
         ]
         messages = base_messages
 
-        async def call(fmt: dict[str, Any]) -> Any:
+        async def call(fmt: ResponseFormat) -> Any:
             return await client.chat.completions.create(
                 model=model,
                 max_tokens=params["max_tokens"],

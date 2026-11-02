@@ -268,7 +268,9 @@ class BoardProgress:
         for kind, stat in self._rates.items():
             kept = _stat(profile.get(kind)) or WelfordStat()
             profile[kind] = _merge(kept, stat).to_dict()
-        profiles = loaded.get("profiles") if isinstance(loaded.get("profiles"), dict) else {}
+        profiles = loaded.get("profiles")
+        if not isinstance(profiles, dict):
+            profiles = {}
         save_timing_data({"version": 1, "profiles": {**profiles, HISTORY_PROFILE: profile}},
                          folder, HISTORY_FILENAME)
 

@@ -1038,7 +1038,9 @@ def _with_whisper_fallback(apple_fn: TranscribeFn, settings: BristlenoseSettings
     whisper_fn: list[TranscribeFn] = []
     broken: list[str] = []
 
-    def whisper_or_defer(audio_path: Path, on_segment: Any, reason: str, code: str) -> Any:
+    def whisper_or_defer(
+        audio_path: Path, on_segment: FileSegmentCallback | None, reason: str, code: str,
+    ) -> tuple[list[TranscriptSegment], str | None]:
         if whisper_is_on_disk(settings):
             if not whisper_fn:
                 hw = detect_hardware()

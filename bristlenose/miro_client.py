@@ -290,7 +290,8 @@ def _find_frame(token: str, board_id: str, title: str, x: float, y: float,
         if not isinstance(page, dict):
             # Not knowing is not "absent": retrying the POST on a misread could make two.
             raise MiroError(f"GET /boards/{board_id}/items -> unexpected body")
-        for item in page.get("data", []):
+        items: list[dict[str, Any]] = page.get("data", [])
+        for item in items:
             pos = item.get("position") or {}
             if ((item.get("data") or {}).get("title") == title
                     and abs(float(pos.get("x", 1e9)) - x) < 1 and abs(float(pos.get("y", 1e9)) - y) < 1):

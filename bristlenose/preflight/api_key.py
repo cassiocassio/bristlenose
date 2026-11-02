@@ -714,7 +714,9 @@ def _validate_anyllm(
             # The gateway took the key and passed the request on; the model's
             # host refused it. Saying "this key" sends the researcher the wrong
             # way (OpenRouter walk, 23 Oct 2026).
-            bucket = "upstream_busy" if kind is LLMFailureKind.RATE_LIMITED else "upstream_failed"
+            bucket: str | None = (
+                "upstream_busy" if kind is LLMFailureKind.RATE_LIMITED else "upstream_failed"
+            )
             return ValidationResult(
                 ok=False, error_class=bucket, raw_message=str(exc), host=up[0],
             )

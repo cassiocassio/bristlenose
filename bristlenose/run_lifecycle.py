@@ -217,7 +217,7 @@ def _handled_signals() -> list[int]:
     (R122). Under ``nohup`` it is ignored and stays ignored: that run is meant
     to outlive the terminal. Windows has no SIGHUP.
     """
-    sigs = [signal.SIGINT, signal.SIGTERM]
+    sigs: list[int] = [signal.SIGINT, signal.SIGTERM]
     hup = getattr(signal, "SIGHUP", None)
     if hup is not None and signal.getsignal(hup) is not signal.SIG_IGN:
         sigs.append(hup)

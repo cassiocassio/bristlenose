@@ -396,7 +396,7 @@ def _parse_vtt(path: Path) -> list[TranscriptSegment]:
 
     segments: list[TranscriptSegment] = []
 
-    for caption in vtt:
+    for caption in vtt.captions:
         start = _vtt_timestamp_to_seconds(caption.start)
         end = _vtt_timestamp_to_seconds(caption.end)
         raw = caption.raw_text or caption.text

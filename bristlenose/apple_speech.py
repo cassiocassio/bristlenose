@@ -342,6 +342,8 @@ class _Run:
 
 def _word_time(w: dict[str, Any], key: str) -> float | None:
     value = w.get(key)
+    if value is None:
+        return None
     try:
         f = float(value)
     except (TypeError, ValueError):

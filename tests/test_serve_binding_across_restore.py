@@ -147,6 +147,44 @@ def test_binding_waits_for_an_exclusive_hold_in_another_thread(tmp_path: Path) -
     holder.join(5)
 
 
+def test_binding_gives_up_on_a_hold_that_does_not_end(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A swap that never finishes (a run stopped mid-rmtree, a folder on a hung
+    share) must not freeze every new connection of the report server for ever:
+    past the bound the connection binds without the lock, as every version
+    before 2 Nov 2026 did, and says so."""
+    import logging
+
+    out = tmp_path / "study" / "bristlenose-output"
+    out.mkdir(parents=True)
+    monkeypatch.setattr(output_backup, "_BINDING_WAIT_S", 0.3)
+    held = threading.Event()
+    release = threading.Event()
+
+    def hold() -> None:
+        with output_backup._settling(out):
+            held.set()
+            release.wait(10)
+
+    holder = threading.Thread(target=hold, daemon=True)
+    holder.start()
+    assert held.wait(5)
+
+    entered = threading.Event()
+    binder = threading.Thread(
+        target=lambda: (output_backup.binding(out).__enter__(), entered.set()), daemon=True,
+    )
+    with caplog.at_level(logging.ERROR, logger="bristlenose.utils.output_backup"):
+        binder.start()
+        try:
+            assert entered.wait(3), "a binding waited for ever on a hold that never ended"
+        finally:
+            release.set()
+    holder.join(5)
+    assert any("held the settle lock" in r.getMessage() for r in caplog.records)
+
+
 def test_binding_passes_for_the_thread_that_holds_the_lock(tmp_path: Path) -> None:
     out = tmp_path / "study" / "bristlenose-output"
     out.mkdir(parents=True)

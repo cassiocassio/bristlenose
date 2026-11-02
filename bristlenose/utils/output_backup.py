@@ -94,6 +94,7 @@ import os
 import re
 import shutil
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -152,6 +153,17 @@ def _settle_key(output_dir: Path) -> str:
     return str(output_dir.parent.absolute())
 
 
+#: How long a connection waits for a swap to finish before it binds without the
+#: lock. A swap's renames are instant; what holds the lock for long is the
+#: ``rmtree`` beside them (a stash drops the WAV cache first, a settle deletes
+#: the report set aside after), seconds at most on a local disk. Past this the
+#: holder is stuck — a run stopped mid-delete, a folder on a hung share — and a
+#: report server whose every new connection waits on it has stopped answering.
+#: Binding without the lock is what every version before 2 Nov 2026 did.
+_BINDING_WAIT_S = 60.0
+_BINDING_POLL_S = 0.02
+
+
 @contextlib.contextmanager
 def binding(output_dir: Path) -> Iterator[None]:
     """Hold the settle lock SHARED while a database connection binds to its files.
@@ -186,10 +198,22 @@ def binding(output_dir: Path) -> Iterator[None]:
         yield
         return
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_SH)
-        except OSError as exc:
-            logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
+        deadline = time.monotonic() + _BINDING_WAIT_S
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    logger.error(
+                        "output_backup: a swap of %s has held the settle lock for %.0f s; "
+                        "binding this connection without it", key, _BINDING_WAIT_S,
+                    )
+                    break
+                time.sleep(_BINDING_POLL_S)
+            except OSError as exc:
+                logger.warning("output_backup: no settle lock on %s (%s)", key, exc)
+                break
         yield
     finally:
         os.close(fd)

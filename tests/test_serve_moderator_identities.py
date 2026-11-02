@@ -50,29 +50,29 @@ def _project(
     out = tmp_path / "bristlenose-output"
     inter = out / ".bristlenose" / "intermediate"
     inter.mkdir(parents=True, exist_ok=True)
-    (inter / "metadata.json").write_text('{"project_name": "Identities"}')
-    (inter / "screen_clusters.json").write_text("[]")
-    (inter / "theme_groups.json").write_text("[]")
+    (inter / "metadata.json").write_text('{"project_name": "Identities"}', encoding="utf-8")
+    (inter / "screen_clusters.json").write_text("[]", encoding="utf-8")
+    (inter / "theme_groups.json").write_text("[]", encoding="utf-8")
     raw = out / "transcripts-raw"
     raw.mkdir(exist_ok=True)
     for sid, pid, day in sessions:
-        (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day))
+        (raw / f"{sid}.txt").write_text(_TRANSCRIPT.format(sid=sid, pid=pid, day=day), encoding="utf-8")
     participants = {
         pid: {"computed": {"participant_id": pid, "session_id": sid},
               "editable": {"full_name": f"Person {pid}", "short_name": pid.upper(), "role": ""}}
         for sid, pid, _ in sessions
     }
-    (out / "people.yaml").write_text(yaml.safe_dump({"participants": participants}))
+    (out / "people.yaml").write_text(yaml.safe_dump({"participants": participants}), encoding="utf-8")
     payload: dict = {"version": 2, "sessions": names}
     if stats is not None:
         payload["stats"] = stats
-    (inter / "session-speakers.json").write_text(json.dumps(payload))
+    (inter / "session-speakers.json").write_text(json.dumps(payload), encoding="utf-8")
     return tmp_path
 
 
 def _write_names(tmp_path: Path, names: dict) -> None:
     path = tmp_path / "bristlenose-output" / ".bristlenose" / "intermediate"
-    (path / "session-speakers.json").write_text(json.dumps({"version": 2, "sessions": names}))
+    (path / "session-speakers.json").write_text(json.dumps({"version": 2, "sessions": names}), encoding="utf-8")
 
 
 def _client(project_dir: Path) -> TestClient:
@@ -507,7 +507,7 @@ class TestReconcileSlots:
 
     def _move_tag(self, tmp_path: Path, sid: str, new: str) -> None:
         path = tmp_path / "bristlenose-output" / "transcripts-raw" / f"{sid}.txt"
-        path.write_text(path.read_text().replace("[m1]", f"[{new}]"))
+        path.write_text(path.read_text(encoding="utf-8").replace("[m1]", f"[{new}]"), encoding="utf-8")
 
     def test_a_tag_that_moves_takes_its_slot_with_no_ghost(self, tmp_path: Path) -> None:
         project = _project(tmp_path, _TWO)

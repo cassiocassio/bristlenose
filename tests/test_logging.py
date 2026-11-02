@@ -169,14 +169,14 @@ class TestFollowTheLogFile:
         # What the run does straight after its stash: its own log, before the
         # serve notices. The serve must tell it from the one it holds open.
         (out / ".bristlenose").mkdir(parents=True)
-        (out / ".bristlenose" / "bristlenose.log").write_text("the run's first line\n")
+        (out / ".bristlenose" / "bristlenose.log").write_text("the run's first line\n", encoding="utf-8")
 
         assert reopen_log_file(out) is True
         log.info("after the stash")
         for h in logging.getLogger().handlers:
             h.flush()
-        here = (out / ".bristlenose" / "bristlenose.log").read_text()
-        moved = (stash / ".bristlenose" / "bristlenose.log").read_text()
+        here = (out / ".bristlenose" / "bristlenose.log").read_text(encoding="utf-8")
+        moved = (stash / ".bristlenose" / "bristlenose.log").read_text(encoding="utf-8")
         assert "after the stash" in here
         assert "the run's first line" in here, "the run's own lines were overwritten"
         assert "after the stash" not in moved
@@ -192,7 +192,7 @@ class TestFollowTheLogFile:
         bn_logging.setup_logging(output_dir=out)
         out.rename(tmp_path / "set-aside")
         (out / ".bristlenose").mkdir(parents=True)
-        (out / ".bristlenose" / "bristlenose.log").write_text("")
+        (out / ".bristlenose" / "bristlenose.log").write_text("", encoding="utf-8")
         real = bn_logging._file_handler
 
         def refuse(_output_dir: Path) -> logging.Handler:

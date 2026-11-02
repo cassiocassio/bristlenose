@@ -487,8 +487,8 @@ class TestImportIncompleteOutput:
     ) -> None:
         """Empty lists are the pipeline saying "no quotes" — that is honoured."""
         self._seed_state(db, project_dir)
-        (self._intermediate(project_dir) / "screen_clusters.json").write_text("[]")
-        (self._intermediate(project_dir) / "theme_groups.json").write_text("[]")
+        (self._intermediate(project_dir) / "screen_clusters.json").write_text("[]", encoding="utf-8")
+        (self._intermediate(project_dir) / "theme_groups.json").write_text("[]", encoding="utf-8")
 
         import_project(db, project_dir)
 

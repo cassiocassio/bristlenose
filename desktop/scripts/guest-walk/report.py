@@ -79,7 +79,7 @@ def menus(path: Path) -> dict[str, dict]:
     if not path.exists():
         return {}
     out = {}
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         d = json.loads(line)
         out[d["path"]] = d
     return out
@@ -103,7 +103,7 @@ def menu_diff(a: dict[str, dict], b: dict[str, dict]) -> list[str]:
 
 def verdict_of(d: Path) -> str:
     v = d / "verdict.txt"
-    return v.read_text().strip() if v.exists() else "NO VERDICT (the walk left no verdict file)"
+    return v.read_text(encoding="utf-8").strip() if v.exists() else "NO VERDICT (the walk left no verdict file)"
 
 
 def main() -> int:
@@ -259,7 +259,7 @@ const a=document.getElementById('all'),c=document.getElementById('chg');
 a.onclick=()=>{{document.body.classList.remove('only-changed');a.setAttribute('aria-pressed','true');c.setAttribute('aria-pressed','false')}};
 c.onclick=()=>{{document.body.classList.add('only-changed');c.setAttribute('aria-pressed','true');a.setAttribute('aria-pressed','false')}};
 </script></body></html>"""
-    (out / "index.html").write_text(page)
+    (out / "index.html").write_text(page, encoding="utf-8")
     print(f"{head}  ->  {out / 'index.html'}")
     return 0
 

@@ -457,7 +457,7 @@ class TestMayOrderByStart:
     def test_a_project_with_a_registry_may(self, tmp_path: Path) -> None:
         (tmp_path / "transcripts-raw").mkdir()
         registry_path(tmp_path).parent.mkdir(parents=True)
-        registry_path(tmp_path).write_text("{}")
+        registry_path(tmp_path).write_text("{}", encoding="utf-8")
         assert _may_order_by_start(tmp_path) is True
 
     def test_a_pre_registry_project_may_not(self, tmp_path: Path) -> None:
@@ -509,7 +509,7 @@ class TestSettleStarts:
         path.write_text(json.dumps({
             "version": 2, "sessions": {"k": "s1"}, "speakers": {},
             "starts": {"s1": {"utc": "not a date", "source": "container"}, "bogus": 3},
-        }))
+        }), encoding="utf-8")
         reg = SessionRegistry.load(tmp_path)
         assert reg.sessions == {"k": "s1"} and reg.starts == {}
 

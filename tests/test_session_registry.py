@@ -807,9 +807,9 @@ class TestContentKeys:
         reg.apply(_ingest([a]), tmp_path)
         reg.save()
         # Evicted, and its name key lost (as a v2 registry upgraded mid-way would).
-        data = json.loads(registry_path(out).read_text())
+        data = json.loads(registry_path(out).read_text(encoding="utf-8"))
         data["sessions"] = {k: v for k, v in data["sessions"].items() if k.startswith("fp:")}
-        registry_path(out).write_text(json.dumps(data))
+        registry_path(out).write_text(json.dumps(data), encoding="utf-8")
         import bristlenose.session_registry as sr
 
         monkeypatch.setattr(sr, "_fingerprint", lambda _p: None)
@@ -848,12 +848,12 @@ class TestContentKeys:
         path = registry_path(out)
         path.parent.mkdir(parents=True)
         path.write_text(json.dumps({"version": 2, "sessions": {"stem:a": "s7"},
-                                    "speakers": {}, "participants_issued": 0}))
+                                    "speakers": {}, "participants_issued": 0}), encoding="utf-8")
         reg = SessionRegistry.load(out)
         sessions = reg.apply(_ingest([a]), tmp_path)
         reg.save()
         assert [x.session_id for x in sessions] == ["s7"]
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         assert data["version"] == 3
         assert any(k.startswith("fp:v1:") and v == "s7" for k, v in data["sessions"].items())
 
@@ -979,10 +979,10 @@ class TestDuplicateRecordings:
         assert [s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)] == ["s1", "s2"]
         reg.save()
         # What a pre-fold registry holds for the copy: its name, no content key.
-        data = json.loads(registry_path(out).read_text())
+        data = json.loads(registry_path(out).read_text(encoding="utf-8"))
         data["sessions"] = {k: v for k, v in data["sessions"].items()
                             if not (k.startswith("fp:") and v == "s2")}
-        registry_path(out).write_text(json.dumps(data))
+        registry_path(out).write_text(json.dumps(data), encoding="utf-8")
         b.path.write_bytes(a.path.read_bytes())
         b.size_bytes = a.size_bytes
 
@@ -992,7 +992,7 @@ class TestDuplicateRecordings:
         reg.save()
         assert [s.session_id for s in folded] == ["s1"]
         assert any("s2" in m and "retired" in m for m in said), said
-        keys = json.loads(registry_path(out).read_text())["sessions"]
+        keys = json.loads(registry_path(out).read_text(encoding="utf-8"))["sessions"]
         assert "stem:p3 (1)" not in keys and keys.get("retired:s2") == "s2"
 
         a.path.unlink()
@@ -1071,10 +1071,10 @@ class TestDuplicateRecordings:
         reg = SessionRegistry.load(out)
         assert [s.session_id for s in reg.apply(_ingest([a, b]), tmp_path)] == ["s1", "s2"]
         reg.save()
-        data = json.loads(registry_path(out).read_text())
+        data = json.loads(registry_path(out).read_text(encoding="utf-8"))
         data["sessions"] = {k: v for k, v in data["sessions"].items()
                             if not (k.startswith("fp:") and v == "s2")}
-        registry_path(out).write_text(json.dumps(data))
+        registry_path(out).write_text(json.dumps(data), encoding="utf-8")
         b.path.write_bytes(a.path.read_bytes())
         b.size_bytes = a.size_bytes
 
@@ -1082,7 +1082,7 @@ class TestDuplicateRecordings:
         folded = reg.apply(_ingest([a, b]), tmp_path)
         reg.save()
         assert [s.session_id for s in folded] == ["s1"]
-        keys = json.loads(registry_path(out).read_text())["sessions"]
+        keys = json.loads(registry_path(out).read_text(encoding="utf-8"))["sessions"]
         assert "stem:ann (1)" not in keys and keys.get("retired:s2") == "s2"
 
         a.path.unlink()

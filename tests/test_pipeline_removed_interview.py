@@ -137,6 +137,6 @@ class TestExportedScreensOfARemovedInterview:
         screens = tmp_path / "screens"
         screens.mkdir()
         (screens / "p2-01.jpg").write_text("x", encoding="utf-8")
-        (screens / ".screens_manifest.json").write_text(json.dumps({"files": ["p2-01.jpg"]}))
+        (screens / ".screens_manifest.json").write_text(json.dumps({"files": ["p2-01.jpg"]}), encoding="utf-8")
         assert prune_stale_session_files(tmp_path, ["s1"]) == []
         assert (screens / "p2-01.jpg").exists()

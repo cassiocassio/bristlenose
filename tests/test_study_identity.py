@@ -29,7 +29,7 @@ def test_the_first_toucher_mints_and_every_later_read_agrees(tmp_path: Path) -> 
     first = study_marker.read_or_mint(out, minted_by="serve")
     assert first is not None and str(uuid.UUID(first)) == first
     assert study_marker.read_or_mint(out, minted_by="run") == first
-    data = json.loads(study_marker.marker_path(out).read_text())
+    data = json.loads(study_marker.marker_path(out).read_text(encoding="utf-8"))
     assert data["minted_by"] == "serve" and data["schema"] == 1
 
 
@@ -94,9 +94,9 @@ def test_a_marker_this_release_cannot_read_is_never_minted_over(tmp_path: Path) 
     out = tmp_path / "bristlenose-output"
     path = study_marker.marker_path(out)
     path.parent.mkdir(parents=True)
-    path.write_text('{"schema": 99, "study_id": "x"}')
+    path.write_text('{"schema": 99, "study_id": "x"}', encoding="utf-8")
     assert study_marker.read_or_mint(out, minted_by="serve") is None
-    assert json.loads(path.read_text())["schema"] == 99
+    assert json.loads(path.read_text(encoding="utf-8"))["schema"] == 99
 
 
 def test_a_marker_refuses_an_id_that_is_not_a_uuid(tmp_path: Path) -> None:
@@ -281,7 +281,7 @@ def test_the_swift_writer_shape_reads(tmp_path: Path) -> None:
     path.write_text(json.dumps({
         "copied_from": original, "minted_at": "2026-10-15T10:00:00Z",
         "minted_by": "app", "schema": 1, "study_id": fresh,
-    }, indent=2, sort_keys=True))
+    }, indent=2, sort_keys=True), encoding="utf-8")
     assert study_marker.read(out) == fresh
 
 

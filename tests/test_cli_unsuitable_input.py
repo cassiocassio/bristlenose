@@ -17,13 +17,9 @@ from bristlenose import cli
 
 
 @pytest.fixture()
-def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    home = tmp_path / "home"
-    home.mkdir()
-    (home / "interview.mp3").write_bytes(b"\x00")
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
-    return home
+def home(fake_home: Path) -> Path:
+    (fake_home / "interview.mp3").write_bytes(b"\x00")
+    return fake_home
 
 
 @pytest.mark.parametrize("command", ["run", "transcribe"])
@@ -62,7 +58,7 @@ def test_analyze_refuses_a_home_folder_by_name_without_a_traceback(
 ) -> None:
     folder = (home / argument).resolve()
     folder.mkdir(exist_ok=True)
-    (folder / "s1.txt").write_text("[00:00] p1: hello\n")
+    (folder / "s1.txt").write_text("[00:00] p1: hello\n", encoding="utf-8")
     before = sorted(p.relative_to(tmp_path) for p in tmp_path.rglob("*"))
 
     result = CliRunner().invoke(cli.app, ["analyze", str(folder)])

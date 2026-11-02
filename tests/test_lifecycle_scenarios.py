@@ -242,7 +242,7 @@ def server_starting_inside_a_runs_start_up_is_left_alone(proj: Path, tmp: Path) 
     out = proj / "bristlenose-output"
     assert output_backup.stash(out) is not None
     (out / ".bristlenose").mkdir(parents=True)
-    (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n")
+    (out / ".bristlenose" / "bristlenose.log").write_text("run starting\n", encoding="utf-8")
     _refused_open_preserves(proj, tmp)
     assert output_backup.backup_path_for(out).exists(), (
         "the server reclaimed a backup during a run's start-up"

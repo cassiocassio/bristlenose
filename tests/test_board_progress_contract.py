@@ -18,13 +18,13 @@ _ROOT = Path(__file__).resolve().parent.parent
 
 
 def _swift_fields() -> set[str]:
-    text = (_ROOT / "desktop/Bristlenose/Bristlenose/MiroBoardBuild.swift").read_text()
+    text = (_ROOT / "desktop/Bristlenose/Bristlenose/MiroBoardBuild.swift").read_text(encoding="utf-8")
     body = text.split("struct MiroBoardBuild", 1)[1].split("}", 1)[0]
     return set(re.findall(r"^\s*let (\w+):", body, re.M))
 
 
 def _ts_fields() -> set[str]:
-    text = (_ROOT / "frontend/src/utils/types.ts").read_text()
+    text = (_ROOT / "frontend/src/utils/types.ts").read_text(encoding="utf-8")
     body = text.split("export interface MiroBoardBuild {", 1)[1].split("}", 1)[0]
     return set(re.findall(r"^\s*(\w+):", body, re.M))
 

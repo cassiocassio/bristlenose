@@ -366,15 +366,13 @@ class TestModel:
         monkeypatch.delenv(voice.VOICE_MODEL_ENV, raising=False)
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path))
 
-    def test_in_the_mac_app_the_model_lives_in_library_caches(self, tmp_path, monkeypatch) -> None:
+    def test_in_the_mac_app_the_model_lives_in_library_caches(self, fake_home, monkeypatch) -> None:
         import sys
 
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", "1")
-        monkeypatch.setenv("HOME", str(tmp_path))
-        monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
         assert voice.voice_model_cache_path() == (
-            tmp_path / "Library" / "Caches" / "bristlenose" / "models" / voice.VOICE_MODEL_NAME)
+            fake_home / "Library" / "Caches" / "bristlenose" / "models" / voice.VOICE_MODEL_NAME)
 
     def test_cache_path_honours_snap_and_xdg(self, tmp_path, monkeypatch) -> None:
         monkeypatch.delenv("_BRISTLENOSE_HOSTED_BY_DESKTOP", raising=False)

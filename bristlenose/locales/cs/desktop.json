@@ -1357,5 +1357,14 @@
     "why": "Pro vaše další nahrávky. Whisper si lépe poradí se špatným zvukem, se souběžnou řečí a s většími skupinami.",
     "stop": "Zastavit stahování",
     "stopNote": "Příště začne znovu od začátku."
+  },
+  "studyStartup": {
+    "foreignTitle": "Spuštěno na jiném Macu",
+    "unknownTitle": "Aktivita nepotvrzena",
+    "foreignBody": "Analýza byla spuštěna na {{detail}}.",
+    "unknownBody": "Byla nalezena nedokončená analýza, ale Mac, který ji spustil, se nepodařilo ověřit.",
+    "consequence": "Tuto studii zde nelze zobrazit ani upravovat.",
+    "anotherMac": "jiném Macu",
+    "todayAt": "dnes v {{time}}"
   }
 }

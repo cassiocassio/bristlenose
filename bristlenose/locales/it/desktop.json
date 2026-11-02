@@ -1288,5 +1288,14 @@
     "why": "Per le tue prossime registrazioni. Whisper se la cava meglio con audio scadente, persone che parlano insieme e gruppi più numerosi.",
     "stop": "Interrompi il download",
     "stopNote": "La prossima volta ricomincia dall'inizio."
+  },
+  "studyStartup": {
+    "foreignTitle": "Avviata su un altro Mac",
+    "unknownTitle": "Attività non confermata",
+    "foreignBody": "L'analisi è stata avviata su {{detail}}.",
+    "unknownBody": "È stata trovata un'analisi non completata, ma non è stato possibile verificare il Mac che l'ha avviata.",
+    "consequence": "Questo studio non può essere visualizzato né modificato qui.",
+    "anotherMac": "un altro Mac",
+    "todayAt": "oggi alle {{time}}"
   }
 }

@@ -1376,5 +1376,14 @@
     "why": "Do Twoich kolejnych nagrań. Whisper lepiej radzi sobie ze słabym dźwiękiem, nakładającymi się wypowiedziami i większymi grupami.",
     "stop": "Zatrzymaj pobieranie",
     "stopNote": "Następnym razem zacznie się od początku."
+  },
+  "studyStartup": {
+    "foreignTitle": "Rozpoczęta na innym Macu",
+    "unknownTitle": "Aktywność niepotwierdzona",
+    "foreignBody": "Analiza została rozpoczęta na {{detail}}.",
+    "unknownBody": "Znaleziono nieukończoną analizę, ale nie udało się zweryfikować Maca, który ją rozpoczął.",
+    "consequence": "Tego badania nie można tu wyświetlić ani edytować.",
+    "anotherMac": "innym Macu",
+    "todayAt": "dziś o {{time}}"
   }
 }

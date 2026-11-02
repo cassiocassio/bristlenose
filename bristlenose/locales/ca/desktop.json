@@ -1288,5 +1288,14 @@
     "why": "Per a les properes gravacions. Whisper es defensa millor amb àudio dolent, gent que parla alhora i grups més grans.",
     "stop": "Atura la baixada",
     "stopNote": "La propera vegada torna a començar des del principi."
+  },
+  "studyStartup": {
+    "foreignTitle": "Iniciada en un altre Mac",
+    "unknownTitle": "Activitat no confirmada",
+    "foreignBody": "L'anàlisi s'ha iniciat en {{detail}}.",
+    "unknownBody": "S'ha trobat una anàlisi sense acabar, però no s'ha pogut verificar el Mac que la va iniciar.",
+    "consequence": "Aquest estudi no es pot veure ni editar aquí.",
+    "anotherMac": "un altre Mac",
+    "todayAt": "avui a les {{time}}"
   }
 }

@@ -1288,5 +1288,14 @@
     "why": "Seuraavia tallenteitasi varten. Whisper selviää paremmin huonosta äänestä, päällekkäisestä puheesta ja suuremmista ryhmistä.",
     "stop": "Pysäytä lataus",
     "stopNote": "Alkaa ensi kerralla alusta."
+  },
+  "studyStartup": {
+    "foreignTitle": "Käynnistetty toisella Macilla",
+    "unknownTitle": "Toimintaa ei vahvistettu",
+    "foreignBody": "Analyysi käynnistettiin {{detail}}.",
+    "unknownBody": "Löytyi keskeneräinen analyysi, mutta sen käynnistänyttä Macia ei voitu vahvistaa.",
+    "consequence": "Tätä tutkimusta ei voi katsella eikä muokata tässä.",
+    "anotherMac": "toisella Macilla",
+    "todayAt": "tänään klo {{time}}"
   }
 }

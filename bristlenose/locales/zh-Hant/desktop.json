@@ -1244,5 +1244,14 @@
     "why": "供你之後的錄音使用。Whisper 更能應付音質不佳、多人同時說話和較大群組的錄音。",
     "stop": "停止下載",
     "stopNote": "下次會從頭開始。"
+  },
+  "studyStartup": {
+    "foreignTitle": "已在另一部 Mac 上開始",
+    "unknownTitle": "活動未經確認",
+    "foreignBody": "分析已在 {{detail}} 開始。",
+    "unknownBody": "找到一項未完成的分析，但無法確認啟動它的 Mac。",
+    "consequence": "這個研究無法在這裡檢視或編輯。",
+    "anotherMac": "另一部 Mac",
+    "todayAt": "今天 {{time}}"
   }
 }

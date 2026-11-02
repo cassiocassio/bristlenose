@@ -1244,5 +1244,14 @@
     "why": "다음 녹음을 위해서입니다. Whisper는 음질이 나쁜 오디오, 여러 사람이 겹쳐 말하는 경우, 큰 그룹에 더 강합니다.",
     "stop": "다운로드 중지",
     "stopNote": "다음에는 처음부터 다시 시작합니다."
+  },
+  "studyStartup": {
+    "foreignTitle": "다른 Mac에서 시작됨",
+    "unknownTitle": "활동이 확인되지 않음",
+    "foreignBody": "{{detail}}에서 분석이 시작되었습니다.",
+    "unknownBody": "완료되지 않은 분석이 발견되었지만, 분석을 시작한 Mac을 확인할 수 없습니다.",
+    "consequence": "이 연구는 여기에서 보거나 편집할 수 없습니다.",
+    "anotherMac": "다른 Mac",
+    "todayAt": "오늘 {{time}}"
   }
 }

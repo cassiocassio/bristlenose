@@ -1288,5 +1288,14 @@
     "why": "Voor je volgende opnamen. Whisper kan beter overweg met slechte audio, mensen die door elkaar praten en grotere groepen.",
     "stop": "Download stoppen",
     "stopNote": "Begint de volgende keer opnieuw vanaf het begin."
+  },
+  "studyStartup": {
+    "foreignTitle": "Gestart op een andere Mac",
+    "unknownTitle": "Activiteit niet bevestigd",
+    "foreignBody": "De analyse is gestart op {{detail}}.",
+    "unknownBody": "Er is een onvoltooide analyse gevonden, maar de Mac die deze heeft gestart kon niet worden geverifieerd.",
+    "consequence": "Dit onderzoek kan hier niet worden bekeken of bewerkt.",
+    "anotherMac": "een andere Mac",
+    "todayAt": "vandaag om {{time}}"
   }
 }

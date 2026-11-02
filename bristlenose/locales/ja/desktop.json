@@ -1244,5 +1244,14 @@
     "why": "次の録音のために。Whisper は、音質の悪い音声、話し声の重なり、大人数の会話にも強いモデルです。",
     "stop": "ダウンロードを停止",
     "stopNote": "次回は最初からやり直しになります。"
+  },
+  "studyStartup": {
+    "foreignTitle": "別の Mac で開始されました",
+    "unknownTitle": "アクティビティを確認できません",
+    "foreignBody": "分析は {{detail}} で開始されました。",
+    "unknownBody": "未完了の分析が見つかりましたが、それを開始した Mac を確認できませんでした。",
+    "consequence": "この調査は、ここでは表示も編集もできません。",
+    "anotherMac": "別の Mac",
+    "todayAt": "今日 {{time}}"
   }
 }

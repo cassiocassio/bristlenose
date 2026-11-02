@@ -1288,5 +1288,14 @@
     "why": "Para as suas próximas gravações. O Whisper lida melhor com áudio ruim, pessoas falando ao mesmo tempo e grupos maiores.",
     "stop": "Parar download",
     "stopNote": "Da próxima vez, recomeça do início."
+  },
+  "studyStartup": {
+    "foreignTitle": "Iniciada em outro Mac",
+    "unknownTitle": "Atividade não confirmada",
+    "foreignBody": "A análise foi iniciada em {{detail}}.",
+    "unknownBody": "Uma análise inacabada foi encontrada, mas não foi possível verificar o Mac que a iniciou.",
+    "consequence": "Este estudo não pode ser visualizado nem editado aqui.",
+    "anotherMac": "outro Mac",
+    "todayAt": "hoje às {{time}}"
   }
 }

@@ -1288,5 +1288,14 @@
     "why": "Sonraki kayıtlarınız için. Whisper, kötü sesle, aynı anda konuşan kişilerle ve daha büyük gruplarla daha iyi başa çıkar.",
     "stop": "İndirmeyi Durdur",
     "stopNote": "Bir sonraki sefer baştan başlar."
+  },
+  "studyStartup": {
+    "foreignTitle": "Başka bir Mac’te başlatıldı",
+    "unknownTitle": "Etkinlik doğrulanmadı",
+    "foreignBody": "Analiz şurada başlatıldı: {{detail}}.",
+    "unknownBody": "Tamamlanmamış bir analiz bulundu ancak onu başlatan Mac doğrulanamadı.",
+    "consequence": "Bu çalışma burada görüntülenemez veya düzenlenemez.",
+    "anotherMac": "başka bir Mac",
+    "todayAt": "bugün saat {{time}}"
   }
 }

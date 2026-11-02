@@ -1288,5 +1288,14 @@
     "why": "Pour vos prochains enregistrements. Whisper gère mieux un son médiocre, les personnes qui parlent en même temps et les groupes plus nombreux.",
     "stop": "Arrêter le téléchargement",
     "stopNote": "Reprendra depuis le début la prochaine fois."
+  },
+  "studyStartup": {
+    "foreignTitle": "Lancée sur un autre Mac",
+    "unknownTitle": "Activité non confirmée",
+    "foreignBody": "L’analyse a été lancée sur {{detail}}.",
+    "unknownBody": "Une analyse inachevée a été trouvée, mais le Mac qui l’a lancée n’a pas pu être vérifié.",
+    "consequence": "Cette étude ne peut pas être consultée ni modifiée ici.",
+    "anotherMac": "un autre Mac",
+    "todayAt": "aujourd’hui à {{time}}"
   }
 }

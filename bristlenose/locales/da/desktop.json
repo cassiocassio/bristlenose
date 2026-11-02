@@ -1288,5 +1288,14 @@
     "why": "Til dine næste optagelser. Whisper klarer dårlig lyd, folk der taler i munden på hinanden, og større grupper bedre.",
     "stop": "Stop download",
     "stopNote": "Starter forfra næste gang."
+  },
+  "studyStartup": {
+    "foreignTitle": "Startet på en anden Mac",
+    "unknownTitle": "Aktivitet ikke bekræftet",
+    "foreignBody": "Analysen blev startet på {{detail}}.",
+    "unknownBody": "Der blev fundet en ufærdig analyse, men den Mac, der startede den, kunne ikke bekræftes.",
+    "consequence": "Dette studie kan ikke vises eller redigeres her.",
+    "anotherMac": "en anden Mac",
+    "todayAt": "i dag kl. {{time}}"
   }
 }

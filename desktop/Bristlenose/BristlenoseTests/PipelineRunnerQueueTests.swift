@@ -73,6 +73,11 @@ struct PipelineRunnerQueueTests {
         var consented = true
         /// Providers whose out-of-credit verdict a finished run cleared.
         var noted: [LLMProvider] = []
+        /// What refused runs told the provider-problem pill: the condition, the
+        /// run's provider, and the fingerprint of the key it was started with.
+        var refusals: [(condition: ProviderProblemCondition, provider: LLMProvider?, fingerprint: String?)] = []
+        /// The fingerprint of the key a run would be started with now.
+        var fingerprintNow: String? = "fp-a"
         let root: URL
         let index: ProjectIndex
         var runner: PipelineRunner!
@@ -128,6 +133,8 @@ struct PipelineRunnerQueueTests {
                 signalTarget: { -$0 },
                 activeProvider: { [weak self] in self?.providerNow },
                 noteRunSucceeded: { [weak self] in self?.noted.append($0) },
+                recordRefusal: { [weak self] c, p, f in self?.refusals.append((c, p, f)) },
+                runKeyFingerprint: { [weak self] _ in self?.fingerprintNow },
                 sidecarLookup: lookup,
                 outputDrainLimit: drainLimit,
                 foreignRunPollInterval: foreignPoll,
@@ -570,6 +577,81 @@ struct PipelineRunnerQueueTests {
             Issue.record("expected .ready, got \(String(describing: rig.runner.state[a.id]))"); return
         }
         #expect(rig.noted == [.claude])
+    }
+
+    // MARK: - The provider-problem pill hears of a refused run
+
+    /// A run's events log with a failed terminus carrying `category`, begun now
+    /// so it is this attempt's own (an older terminus is rightly ignored).
+    private func writeFailedRun(in p: Project, category: String) throws {
+        let dir = try dotBristlenose(p)
+        let now = ISO8601DateFormatter().string(from: Date())
+        let lines = [
+            #"{"schema_version":5,"ts":"\#(now)","event":"run_started","run_id":"rf","kind":"run","started_at":"\#(now)"}"#,
+            #"{"schema_version":5,"ts":"\#(now)","event":"run_failed","run_id":"rf","kind":"run","started_at":"\#(now)","ended_at":"\#(now)","outcome":"failed","cause":{"category":"\#(category)","message":"refused"}}"#,
+        ]
+        try Data((lines.joined(separator: "\n") + "\n").utf8)
+            .write(to: dir.appendingPathComponent(EventLogReader.filename))
+    }
+
+    @Test func aRunRefusedForARejectedKeyTellsThePillWithItsOwnProviderAndKey() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        // Switched, and the key replaced, while the run went on: the refusal is
+        // about the provider and the key the run was started with.
+        rig.providerNow = .chatGPT
+        rig.fingerprintNow = "fp-b"
+        try writeFailedRun(in: a, category: "auth")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.count == 1)
+        #expect(rig.refusals.first?.condition == .keyRejected)
+        #expect(rig.refusals.first?.provider == .claude, "blamed the provider active now, not the run's")
+        #expect(rig.refusals.first?.fingerprint == "fp-a", "carried the key now held, not the run's")
+    }
+
+    @Test func aRunRefusedForNoCreditTellsThePill() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "out_of_credit")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.map(\.condition) == [.outOfCredit])
+    }
+
+    /// With no structured cause the category is read off stderr, and a `401`
+    /// anywhere in the tail is a guess that must not light an app-wide pill.
+    @Test func aStderrGuessAtARejectedKeyDoesNotTellThePill() async {
+        let rig = Rig(drainLimit: .seconds(30)); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+
+        let run = rig.launches[0]
+        run.exit(.exited(code: 1), pipeStaysOpen: true)
+        try? await Task.sleep(for: .milliseconds(100))
+        run.lines.yield("anthropic.AuthenticationError: Error code: 401 - invalid api key")
+        run.lines.finish()
+        await until({ if case .failed(_, let c) = rig.runner.state[a.id] { return c == .auth }; return false })
+
+        #expect(rig.refusals.isEmpty, "a stderr guess lit the app-wide pill")
+    }
+
+    @Test func aRunFailingForSomethingElseTellsThePillNothing() async throws {
+        let rig = Rig(); defer { rig.cleanUp() }
+        let a = rig.project("A")
+        rig.runner.start(project: a)
+        try writeFailedRun(in: a, category: "network")
+
+        rig.launches[0].exit(.exited(code: 1))
+        await until({ if case .failed = rig.runner.state[a.id] { return true }; return false })
+
+        #expect(rig.refusals.isEmpty)
     }
 
     /// Reads of the end state, counted across the threads they run on.

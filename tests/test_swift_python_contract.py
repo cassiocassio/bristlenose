@@ -553,3 +553,57 @@ class TestPlayerPathContract:
         served = re.search(r'player_url="([^"]+)"', sessions.read_text(encoding="utf-8"))
         assert served is not None, "routes/sessions.py no longer sets player_url as a literal"
         assert swift.group(1) == served.group(1)
+
+
+# ── The failure kinds the Mac acts on ────────────────────────────────────────
+#
+# The sidecar posts `llm-failure` over the bridge with a `kind` that is an
+# `LLMFailureKind` value; the Mac turns two of them into the title-bar provider
+# problem pill (`ProviderProblemCondition.fromLLMFailureKind`). The two enums are
+# unrelated types that "agree by convention", so a rename on the Python side
+# would leave the pill dark while every test stays green: the Swift test pins the
+# literals, the vitest pins what the SPA posts, and nothing joined the ends.
+
+_PROVIDER_PROBLEM_SWIFT = (
+    _REPO_ROOT / "desktop" / "Bristlenose" / "Bristlenose" / "ProviderProblem.swift"
+)
+_KIND_CASE_RE = re.compile(r'case\s+"([a-z_]+)"\s*:\s*return\s+\.(\w+)')
+
+
+def _swift_failure_kinds() -> dict[str, str]:
+    text = _PROVIDER_PROBLEM_SWIFT.read_text(encoding="utf-8")
+    start = text.index("static func fromLLMFailureKind")
+    body = text[start : text.index("\n    }\n", start)]
+    kinds = dict(_KIND_CASE_RE.findall(body))
+    assert kinds, (
+        "ProviderProblem.swift's fromLLMFailureKind no longer has `case \"kind\": "
+        "return .condition` arms; if it was restructured, update this test's regex "
+        "and confirm the strings still match LLMFailureKind."
+    )
+    return kinds
+
+
+class TestLLMFailureKindContract:
+    """`ProviderProblemCondition.fromLLMFailureKind` ↔ `LLMFailureKind`."""
+
+    def test_every_kind_the_mac_acts_on_is_a_real_failure_kind(self) -> None:
+        from bristlenose.llm.failure_classifier import LLMFailureKind
+
+        real = {k.value for k in LLMFailureKind}
+        for raw in _swift_failure_kinds():
+            assert raw in real, (
+                f"the Mac acts on {raw!r}, which is not an LLMFailureKind value any "
+                "more; the title-bar pill would never light for it"
+            )
+
+    def test_the_mac_acts_on_billing_and_a_rejected_key_only(self) -> None:
+        from bristlenose.llm.failure_classifier import LLMFailureKind
+
+        assert set(_swift_failure_kinds()) == {
+            LLMFailureKind.OUT_OF_CREDIT.value,
+            LLMFailureKind.INVALID_KEY.value,
+        }, (
+            "the set of kinds that raise the provider-problem pill changed: a rate "
+            "limit or an outage must not (the verdict cache is sticky), so widening "
+            "it is a decision, not a rename"
+        )

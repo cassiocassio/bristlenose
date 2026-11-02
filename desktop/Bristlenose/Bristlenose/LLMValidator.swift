@@ -571,6 +571,13 @@ enum LLMValidator {
     /// same key we last validated?" Storing 16 hex chars (8 bytes) is plenty
     /// for that (single-entry-per-provider cache, not a hash table) and
     /// avoids putting the full digest in UserDefaults.
+    /// A fingerprint of a credential, not the credential: lets a caller ask "is
+    /// this still the key it was?" (a refusal recorded against the key a run
+    /// used, not whichever key Settings holds when the run exits).
+    static func keyFingerprint(_ key: String) -> String {
+        hash(key.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     private static func hash(_ key: String) -> String {
         let digest = SHA256.hash(data: Data(key.utf8))
         return digest.prefix(8).map { String(format: "%02x", $0) }.joined()

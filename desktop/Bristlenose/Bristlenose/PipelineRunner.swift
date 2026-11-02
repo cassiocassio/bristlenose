@@ -614,6 +614,13 @@ final class PipelineRunner: ObservableObject {
     private let signalTarget: (pid_t) -> pid_t
     private let activeProvider: @MainActor () -> LLMProvider?
     private let noteRunSucceeded: @MainActor (LLMProvider) -> Void
+    /// What a run refused by its provider tells the app-global pill: the
+    /// condition, the run's provider, and the fingerprint of the key the run
+    /// was started with (nil when unknown). Always `explicit`: a run is
+    /// something the researcher asked for. A test passes a recorder.
+    private let recordRefusal: @MainActor (ProviderProblemCondition, LLMProvider?, String?) -> Void
+    /// The fingerprint of the key a run is about to be started with.
+    private let runKeyFingerprint: @MainActor (LLMProvider) -> String?
     private let sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)?
     private let outputDrainLimit: Duration
     private let foreignRunPollInterval: Duration
@@ -654,6 +661,9 @@ final class PipelineRunner: ObservableObject {
     /// for an attached orphan. A finished run clears an out-of-credit verdict
     /// on this one, not on whichever is active when it ends (R40).
     private var runProviders: [UUID: LLMProvider] = [:]
+    /// The key each owned run was started with, as a fingerprint. A refusal that
+    /// arrives after the key was replaced is not about the new key.
+    private var runKeyFingerprints: [UUID: String] = [:]
     /// For an attached run: the terminus already newest in its events log when
     /// it was attached, i.e. a previous run's. Its tokens are not this run's.
     private var orphanPriorTerminus: [UUID: String] = [:]
@@ -700,6 +710,9 @@ final class PipelineRunner: ObservableObject {
     ///   - activeProvider: the provider a run is spawned with.
     ///   - noteRunSucceeded: what a finished run that made an LLM call does to
     ///     its provider's refusal verdicts (out of credit, key rejected).
+    ///   - recordRefusal: what a run refused for a rejected key or no credit
+    ///     tells the provider-problem pill.
+    ///   - runKeyFingerprint: the key a run is started with, as a fingerprint.
     ///   - sidecarLookup: where the sidecar is. Nil, the app's, resolves it
     ///     from the bundle, and only when no `launcher` is passed; a test passes
     ///     one beside its launcher to reach a failed lookup (R28).
@@ -732,6 +745,12 @@ final class PipelineRunner: ObservableObject {
         noteRunSucceeded: @escaping @MainActor (LLMProvider) -> Void = {
             ProviderProblemModel.noteRunSucceeded(provider: $0)
         },
+        recordRefusal: @escaping @MainActor (ProviderProblemCondition, LLMProvider?, String?) -> Void = {
+            ProviderProblemModel.recordRefusal($0, provider: $1, explicit: true, keyFingerprint: $2)
+        },
+        runKeyFingerprint: @escaping @MainActor (LLMProvider) -> String? = {
+            ProviderProblemModel.liveKeyFingerprint($0)
+        },
         sidecarLookup: (@MainActor () -> Result<SidecarMode, SidecarResolveError>)? = nil,
         outputDrainLimit: Duration = .seconds(2),
         foreignRunPollInterval: Duration = .seconds(2),
@@ -763,6 +782,8 @@ final class PipelineRunner: ObservableObject {
         self.signalTarget = signalTarget
         self.activeProvider = activeProvider
         self.noteRunSucceeded = noteRunSucceeded
+        self.recordRefusal = recordRefusal
+        self.runKeyFingerprint = runKeyFingerprint
         Self.logger.info("PipelineRunner initialised")
         // Whisper landed: every project with a session deferred to it (Apple's
         // first-run model, the wrong language) runs again, and the per-session
@@ -1546,13 +1567,13 @@ final class PipelineRunner: ObservableObject {
         guard let project else { return }
         guard let provider else {
             Self.logger.info(
-                "run finished with its provider not on record project=\(project.id.uuidString, privacy: .public) — credit verdict left as it is"
+                "run finished with its provider not on record project=\(project.id.uuidString, privacy: .public) — provider verdicts left as they are"
             )
             return
         }
         guard Self.runUsedAnLLM(terminus: terminus, priorRunId: priorRunId) else {
             Self.logger.info(
-                "run finished with no LLM call on record project=\(project.id.uuidString, privacy: .public) — credit verdict left as it is"
+                "run finished with no LLM call on record project=\(project.id.uuidString, privacy: .public) — provider verdicts left as they are"
             )
             return
         }
@@ -2361,6 +2382,7 @@ final class PipelineRunner: ObservableObject {
         cancellationRequested = false
         let provider = activeProvider()
         runProviders[project.id] = provider
+        runKeyFingerprints[project.id] = provider.flatMap(runKeyFingerprint)
         beginSpawnedRun(project)
         startProgressPoll(for: project, generation: gen)
 
@@ -2410,6 +2432,7 @@ final class PipelineRunner: ObservableObject {
             progressPollTasks[projectID]?.cancel()
             progressPollTasks[projectID] = nil
             runProviders[projectID] = nil
+            runKeyFingerprints[projectID] = nil
             state[projectID] = .failed(
                 // `localizedDescription` is Foundation's, already in the user's
                 // language — it passes through as a variable rather than being
@@ -2654,6 +2677,7 @@ var args = ["run", project.path, "--no-serve"]
             Self.removePIDFile(for: project)
         }
         let provider = runProviders.removeValue(forKey: projectID)
+        let keyFingerprint = runKeyFingerprints.removeValue(forKey: projectID)
         currentRun = nil
         // Not cancelled: a failed run's verdict waits below for its last lines
         // (R25), and anything later still reaches the popover's output.
@@ -2788,7 +2812,8 @@ var args = ["run", project.path, "--no-serve"]
             leftBehind?.cancel()
             state[projectID] = deriveFailureState(
                 projectID: projectID, project: project,
-                outcome: outcome, lines: lines
+                outcome: outcome, lines: lines,
+                runProvider: provider, runKeyFingerprint: keyFingerprint
             )
         }
 
@@ -2944,7 +2969,8 @@ var args = ["run", project.path, "--no-serve"]
     /// original "log-tail also looks bad" path can share this logic.
     private func deriveFailureState(
         projectID: UUID, project: Project?,
-        outcome: ProcessOutcome, lines: [String]
+        outcome: ProcessOutcome, lines: [String],
+        runProvider: LLMProvider? = nil, runKeyFingerprint: String? = nil
     ) -> PipelineState {
         // Same number every branch here has always used; `outcome` carries the
         // extra fact of whether it is an exit code or a signal, for the logs.
@@ -2971,11 +2997,10 @@ var args = ["run", project.path, "--no-serve"]
                 attachedFromOrphan: liveProgress?.attachedFromOrphan ?? false
             )
         }
-        // The run used whatever provider was active when it spawned; unless the
-        // user switched since exit (rare, and harmless), that's still the live
-        // `activeProvider`. Same source `overlayAPIKeys` reads at spawn time.
-        let activeProvider = UserDefaults.standard.string(forKey: "activeProvider")
-            .flatMap(LLMProvider.init(rawValue:))
+        // The provider the run was started with; failing that (a reconnected run
+        // has no record of it), the one active now. Same source `overlayAPIKeys`
+        // reads at spawn time.
+        let activeProvider = runProvider ?? self.activeProvider()
         let category: PipelineFailureCategory
         let summary: FailureMessage
         if let (cat, msg) = derived {
@@ -3013,12 +3038,21 @@ var args = ["run", project.path, "--no-serve"]
         // billing, or a rejected key. Both are things the researcher asked for
         // (`explicit`). Keyed on the distinct categories and attributed to the
         // run's provider, so a transient rate limit (.quota) can't false-alarm.
-        // A rejected key counts only from the run's structured cause
-        // (`derived != nil`): the stderr fallback's `401` match is a guess.
+        // A rejected key counts only from a structured cause that is this
+        // attempt's own, not the stderr fallback's `401` guess. `derived` alone is
+        // not enough: `terminusIsCurrentAttempt` answers "yes" for every unknown
+        // (no spawn time, no stamp, a reconnected run), which is right for showing
+        // a cause and wrong for lighting an app-wide pill, so the run must also be
+        // one this app spawned and timed.
+        let ownedAndTimed = liveProgress != nil && !(liveProgress?.attachedFromOrphan ?? false)
         if let condition = ProviderProblemCondition.fromRun(
-            category: category, structured: derived != nil
+            category: category, structured: derived != nil && ownedAndTimed
         ) {
-            ProviderProblemModel.recordRefusal(condition, provider: activeProvider, explicit: true)
+            recordRefusal(condition, activeProvider, runKeyFingerprint)
+        } else if category == .auth {
+            Self.logger.info(
+                "run failed on auth but the cause is not this attempt's own structured one — pill not raised project=\(projectID.uuidString, privacy: .public) structured=\(derived != nil, privacy: .public) ownedAndTimed=\(ownedAndTimed, privacy: .public)"
+            )
         }
         return .failed(summary, category: category)
     }

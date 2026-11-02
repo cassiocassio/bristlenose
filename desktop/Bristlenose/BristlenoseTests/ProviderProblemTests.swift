@@ -95,6 +95,32 @@ struct ProviderProblemRefusalTests {
         #expect(r.provider == "openai" && !r.dismissed)
     }
 
+    @Test func newsIsTheFirstOfItsKindAChangeOrARefusedRunNeverAnIncidentalRepeat() {
+        func news(_ c: ProviderProblemCondition, _ provider: String = "anthropic", explicit: Bool,
+                  existing: ProviderProblemRecord?) -> Bool {
+            ProviderProblemRules.isNews(refusalOf: c, provider: provider, explicit: explicit, existing: existing)
+        }
+        #expect(news(.outOfCredit, explicit: false, existing: nil))
+        #expect(!news(.outOfCredit, explicit: false, existing: record(.outOfCredit)))
+        #expect(!news(.outOfCredit, explicit: false, existing: record(.outOfCredit, dismissed: true)))
+        #expect(news(.outOfCredit, explicit: true, existing: record(.outOfCredit)))
+        #expect(news(.keyRejected, explicit: false, existing: record(.outOfCredit)))
+        #expect(news(.outOfCredit, "openai", explicit: false, existing: record(.outOfCredit)))
+    }
+
+    /// ChatGPT's Settings check is a free model list that returns 200 for a
+    /// bankrupt key, so a good result there is not a cure.
+    @Test func aGoodCheckDoesNotCureCreditWhereTheCheckCannotSeeCredit() {
+        let r = record(.outOfCredit)
+        #expect(ProviderProblemRules.holds(r, verdictForItsKey: .ok, settingsCheckSeesCredit: false))
+        #expect(!ProviderProblemRules.holds(r, verdictForItsKey: .ok, settingsCheckSeesCredit: true))
+        // ...but it does cure a rejected key, which every check can see.
+        #expect(!ProviderProblemRules.holds(record(.keyRejected), verdictForItsKey: .ok,
+                                            settingsCheckSeesCredit: false))
+        #expect(LLMProvider.claude.settingsCheckSeesCredit)
+        #expect(!LLMProvider.chatGPT.settingsCheckSeesCredit)
+    }
+
     @Test func aRecordHoldsOnlyWhileTheKeysVerdictStillSaysSo() {
         let r = record(.keyRejected)
         #expect(ProviderProblemRules.holds(r, verdictForItsKey: .invalid))
@@ -177,18 +203,26 @@ struct ProviderProblemPresentationTests {
 }
 
 /// The model, with a private defaults suite, a fixed clock and a fake key store.
+///
+/// `.serialized` and the swap of `LLMValidator.verdictStore` (process-global):
+/// two tests interleaving would restore each other's throwaway store. Not
+/// `async`-safe if a test here ever suspends while another suite swaps it too;
+/// `LLMValidatorTests` swaps it the same way and is not serialised.
 @MainActor
-@Suite("ProviderProblemModel")
+@Suite("ProviderProblemModel", .serialized)
 struct ProviderProblemModelTests {
     private let key = "sk-ant-test-key-1234567890"
 
     /// A reference type, so the model's closures see the clock, the active
-    /// provider and the keys as the test changes them.
+    /// provider and the keys as the test changes them. One notification centre
+    /// is shared by the model and `refuse`, so the model's observer is proven.
     @MainActor private final class Rig {
         let defaults: UserDefaults
+        let center = NotificationCenter()
         var clock = t0
         var active: LLMProvider?
         var keys: [LLMProvider: String]
+        var announced: [(ProviderProblemCondition, LLMProvider)] = []
         init(defaults: UserDefaults, active: LLMProvider?, keys: [LLMProvider: String]) {
             self.defaults = defaults
             self.active = active
@@ -199,16 +233,14 @@ struct ProviderProblemModelTests {
                 defaults: defaults, now: { [unowned self] in self.clock },
                 activeProvider: { [unowned self] in self.active },
                 keyFor: { [unowned self] in self.keys[$0] },
-                observing: NotificationCenter())
+                observing: center)
         }
     }
 
-    /// Same isolation as `LLMValidatorTests`: a private verdict store and a
-    /// private defaults suite per test.
     private func withRig(
         active: LLMProvider? = .claude, keys: [LLMProvider: String]? = nil,
-        _ body: (Rig) -> Void
-    ) {
+        _ body: (Rig) async -> Void
+    ) async {
         let suiteName = "ProviderProblemModelTests-\(UUID().uuidString)"
         let suite = UserDefaults(suiteName: suiteName)!
         let verdicts = UserDefaults(suiteName: suiteName + "-verdicts")!
@@ -219,20 +251,35 @@ struct ProviderProblemModelTests {
             suite.removePersistentDomain(forName: suiteName)
             verdicts.removePersistentDomain(forName: suiteName + "-verdicts")
         }
-        body(Rig(defaults: suite, active: active,
-                 keys: keys ?? [.claude: key, .chatGPT: "sk-openai-test-key-123456"]))
+        await body(Rig(defaults: suite, active: active,
+                       keys: keys ?? [.claude: key, .chatGPT: "sk-openai-test-key-123456",
+                                      .ollama: "not-a-key"]))
     }
 
+    @discardableResult
     private func refuse(_ rig: Rig, _ condition: ProviderProblemCondition,
-                        provider: LLMProvider = .claude, explicit: Bool = true) {
+                        provider: LLMProvider = .claude, explicit: Bool = true,
+                        fingerprint: String? = nil) -> Bool {
         ProviderProblemModel.recordRefusal(
-            condition, provider: provider, explicit: explicit, defaults: rig.defaults,
-            now: rig.clock, activeProvider: { rig.active }, keyFor: { rig.keys[$0] },
-            center: NotificationCenter())
+            condition, provider: provider, explicit: explicit, keyFingerprint: fingerprint,
+            defaults: rig.defaults, now: rig.clock,
+            activeProvider: { rig.active }, keyFor: { rig.keys[$0] }, center: rig.center,
+            announce: { rig.announced.append(($0, $1)) })
     }
 
-    @Test func aRefusedCallLightsItAndWritesTheVerdictSettingsShows() {
-        withRig { rig in
+    /// Looks at a condition 10 ms apart, as the runner tests do: a look is spent
+    /// only when it happens, so a starved main actor costs time, never the verdict.
+    private func settle(_ looks: Int = 300, _ condition: () -> Bool) async {
+        for _ in 0..<looks {
+            if condition() { return }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    // MARK: - Lighting it
+
+    @Test func aRefusedCallLightsItAndWritesTheVerdictSettingsShows() async {
+        await withRig { rig in
             let model = rig.model()
             #expect(model.presented == nil)
             refuse(rig, .keyRejected)
@@ -243,10 +290,32 @@ struct ProviderProblemModelTests {
         }
     }
 
+    /// The notification is how a refusal reaches a model that is already running:
+    /// no manual refresh. The negative twin settles as long.
+    @Test func aRecordedRefusalReachesARunningModelThroughTheNotification() async {
+        await withRig { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit)
+            await settle { model.presented != nil }
+            #expect(model.presented?.condition == .outOfCredit, "the model never heard the refusal")
+        }
+    }
+
+    @Test func aModelThatWasNotToldDoesNotChangeItsMind() async {
+        await withRig { rig in
+            let model = rig.model()
+            // Written straight to the store, with no notification.
+            ProviderProblemModel.save(record(.outOfCredit), to: rig.defaults)
+            LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
+            await settle(30) { model.presented != nil }
+            #expect(model.presented == nil)
+        }
+    }
+
     /// The shipped bug this replaces: a verdict recorded by Settings validation
     /// lit the pill for months over work that never needed the provider.
-    @Test func aStoredVerdictAloneDoesNotLightIt() {
-        withRig { rig in
+    @Test func aStoredVerdictAloneDoesNotLightIt() async {
+        await withRig { rig in
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .invalid)
             let model = rig.model()
@@ -255,16 +324,49 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func aLocalProviderNeverShows() {
-        withRig(active: .ollama, keys: [:]) { rig in
-            refuse(rig, .outOfCredit, provider: .ollama)
-            let model = rig.model()
-            #expect(model.presented == nil)
+    // MARK: - Declining to record, and saying so
+
+    @Test func aLocalProviderNeverShowsAndIsNotRecorded() async {
+        await withRig(active: .ollama) { rig in
+            // Given a "key" so that only the provider check can be what stops it.
+            #expect(rig.keys[.ollama] != nil)
+            #expect(refuse(rig, .outOfCredit, provider: .ollama) == false)
+            #expect(ProviderProblemModel.load(from: rig.defaults) == nil)
+            #expect(rig.announced.isEmpty)
         }
     }
 
-    @Test func theXHidesItAndAnIncidentalRepeatKeepsItHidden() {
-        withRig { rig in
+    @Test func aRefusalWithNoProviderOrNoKeyIsNotRecorded() async {
+        await withRig(active: nil, keys: [:]) { rig in
+            #expect(ProviderProblemModel.recordRefusal(
+                .keyRejected, explicit: true, defaults: rig.defaults, now: rig.clock,
+                activeProvider: { nil }, keyFor: { _ in nil }, center: rig.center,
+                announce: { rig.announced.append(($0, $1)) }) == false, "no active provider")
+            #expect(refuse(rig, .keyRejected) == false, "no readable key")
+            #expect(ProviderProblemModel.load(from: rig.defaults) == nil)
+        }
+    }
+
+    /// A run was started with one key; Settings now holds another. The refusal is
+    /// not about the new key, and stamping `.invalid` over it would put a false red
+    /// on the pill and the Settings dot.
+    @Test func aRefusalForAKeyThatWasReplacedIsNotRecorded() async {
+        await withRig { rig in
+            let used = LLMValidator.keyFingerprint(key)
+            rig.keys[.claude] = "sk-ant-a-different-key-0987654321"
+            #expect(refuse(rig, .keyRejected, fingerprint: used) == false)
+            #expect(LLMValidator.cachedVerdict(provider: .claude, key: rig.keys[.claude]!) == nil,
+                    "stamped a verdict on a key that was never tried")
+            #expect(ProviderProblemModel.load(from: rig.defaults) == nil)
+            // The key the run really used is recorded.
+            #expect(refuse(rig, .keyRejected, fingerprint: LLMValidator.keyFingerprint(rig.keys[.claude]!)))
+        }
+    }
+
+    // MARK: - Hiding it
+
+    @Test func theXHidesItAndAnIncidentalRepeatKeepsItHidden() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .outOfCredit)
             model.refresh()
@@ -281,8 +383,22 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func aNewKeyClearsItAndTheRecord() {
-        withRig { rig in
+    @Test func dismissingWithNothingStoredStillLeavesPillAndStoreAgreeing() async {
+        await withRig { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit)
+            model.refresh()
+            #expect(model.presented != nil)
+            ProviderProblemModel.clear(in: rig.defaults)   // cleared between draw and click
+            model.dismiss()
+            #expect(model.presented == nil, "a ✕ on a pill with no record left it on screen")
+        }
+    }
+
+    // MARK: - Clearing it
+
+    @Test func aNewKeyClearsItAndTheRecord() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .keyRejected)
             model.refresh()
@@ -294,8 +410,27 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func aGoodRevalidationClearsIt() {
-        withRig { rig in
+    /// "Could not read" and "gone" both arrive as nil. Only one of them means the
+    /// record is stale; a transient Keychain refusal must not delete it.
+    @Test func aKeyThatCannotBeReadHidesItButKeepsTheRecord() async {
+        await withRig { rig in
+            let model = rig.model()
+            refuse(rig, .keyRejected)
+            model.refresh()
+            let readable = rig.keys[.claude]
+            rig.keys[.claude] = nil
+            model.refresh()
+            #expect(model.presented == nil)
+            #expect(ProviderProblemModel.load(from: rig.defaults) != nil,
+                    "one refused Keychain read erased a live refusal")
+            rig.keys[.claude] = readable
+            model.refresh()
+            #expect(model.presented?.condition == .keyRejected)
+        }
+    }
+
+    @Test func aGoodRevalidationClearsIt() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .outOfCredit)
             model.refresh()
@@ -305,8 +440,28 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func anotherActiveProviderHidesItWithoutForgettingIt() {
-        withRig { rig in
+    /// ChatGPT's Settings check is unbilled and says "fine" for a bankrupt key:
+    /// opening Settings must not wipe the pill, nor the hidden state that stops
+    /// the next incidental refusal from bringing it back loud.
+    @Test func aGoodSettingsCheckDoesNotCureChatGPTsCredit() async {
+        await withRig(active: .chatGPT) { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit, provider: .chatGPT)
+            model.refresh()
+            model.dismiss()
+            LLMValidator.recordVerdict(provider: .chatGPT, key: rig.keys[.chatGPT]!, status: .online)
+            model.refresh()
+            #expect(ProviderProblemModel.load(from: rig.defaults)?.dismissed == true,
+                    "a Settings visit forgot that it was hidden")
+            rig.clock = t0.addingTimeInterval(3600)
+            refuse(rig, .outOfCredit, provider: .chatGPT, explicit: false)
+            model.refresh()
+            #expect(model.presented == nil, "the account is still empty and it was hidden")
+        }
+    }
+
+    @Test func anotherActiveProviderHidesItWithoutForgettingIt() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .outOfCredit)
             model.refresh()
@@ -320,8 +475,8 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func theStageMovesOnWhenItIsRefreshedNotBefore() {
-        withRig { rig in
+    @Test func theStageMovesOnWhenItIsRefreshedNotBefore() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .outOfCredit)
             model.refresh()
@@ -333,14 +488,69 @@ struct ProviderProblemModelTests {
         }
     }
 
-    @Test func aSuccessfulRunClearsBothVerdictsAndTheRecord() {
-        withRig { rig in
+    // MARK: - Across a relaunch
+
+    @Test func aRelaunchedModelFindsTheRefusalWhereItWas() async {
+        await withRig { rig in
+            refuse(rig, .keyRejected)
+            let relaunched = rig.model()
+            #expect(relaunched.presented == .init(provider: .claude, condition: .keyRejected, stage: .loud))
+            #expect(ProviderProblemModel.load(from: rig.defaults)?.firstSeen == t0,
+                    "the refusal's date did not survive the round trip")
+        }
+    }
+
+    @Test func aRelaunchedModelKeepsAHiddenPillHidden() async {
+        await withRig { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit)
+            model.refresh()
+            model.dismiss()
+            #expect(rig.model().presented == nil)
+        }
+    }
+
+    /// A later build changes the record's shape: the old one must not fail to
+    /// decode forever, silently.
+    @Test func aRecordThatNoLongerDecodesIsDroppedNotKept() async {
+        await withRig { rig in
+            rig.defaults.set(Data(#"{"provider":"anthropic","condition":"outOfCredit"}"#.utf8),
+                             forKey: ProviderProblemModel.recordKey)
+            #expect(rig.model().presented == nil)
+            #expect(rig.defaults.data(forKey: ProviderProblemModel.recordKey) == nil)
+        }
+    }
+
+    // MARK: - Announcing it
+
+    /// Once, where a refusal becomes news; never for an incidental repeat, and
+    /// never from a record that was merely restored at launch.
+    @Test func aRefusalIsAnnouncedWhenItIsNewsAndNotWhenItRepeats() async {
+        await withRig { rig in
+            refuse(rig, .keyRejected)
+            #expect(rig.announced.map(\.0) == [.keyRejected])
+            refuse(rig, .keyRejected, explicit: false)
+            #expect(rig.announced.count == 1, "an incidental repeat spoke again")
+            rig.clock = t0.addingTimeInterval(60)
+            refuse(rig, .keyRejected, explicit: true)
+            #expect(rig.announced.count == 2, "a refused run is news")
+            refuse(rig, .outOfCredit, explicit: false)
+            #expect(rig.announced.map(\.0) == [.keyRejected, .keyRejected, .outOfCredit],
+                    "a changed condition is news even when incidental")
+            _ = rig.model()
+            #expect(rig.announced.count == 3, "restoring a record at launch announced it again")
+        }
+    }
+
+    // MARK: - A run that worked
+
+    @Test func aSuccessfulRunClearsBothVerdictsAndTheRecord() async {
+        await withRig { rig in
             let model = rig.model()
             refuse(rig, .keyRejected)
             model.refresh()
             ProviderProblemModel.noteRunSucceeded(
-                provider: .claude, defaults: rig.defaults, keyFor: { rig.keys[$0] },
-                center: NotificationCenter())
+                provider: .claude, defaults: rig.defaults, keyFor: { rig.keys[$0] }, center: rig.center)
             model.refresh()
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == nil)
             #expect(model.presented == nil)
@@ -348,10 +558,26 @@ struct ProviderProblemModelTests {
         }
     }
 
+    /// ChatGPT's verdict was overwritten with "fine" by a Settings visit while the
+    /// account stayed empty, so the verdict cannot be the witness that a run worked.
+    @Test func aSuccessfulRunClearsTheRecordEvenWhenTheVerdictSaysFine() async {
+        await withRig(active: .chatGPT) { rig in
+            let model = rig.model()
+            refuse(rig, .outOfCredit, provider: .chatGPT)
+            LLMValidator.recordVerdict(provider: .chatGPT, key: rig.keys[.chatGPT]!, status: .online)
+            model.refresh()
+            #expect(model.presented != nil, "precondition: the good check left it standing")
+            ProviderProblemModel.noteRunSucceeded(
+                provider: .chatGPT, defaults: rig.defaults, keyFor: { rig.keys[$0] }, center: rig.center)
+            await settle { model.presented == nil }
+            #expect(model.presented == nil)
+        }
+    }
+
     // Ported from OutOfCreditModelTests (R40): the pill stayed lit after a top-up
     // and a successful run, because its verdict was sticky and nothing cleared it.
-    @Test func aSuccessfulRunClearsOutOfCredit() {
-        withRig { rig in
+    @Test func aSuccessfulRunClearsOutOfCredit() async {
+        await withRig { rig in
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .outOfCredit)
             #expect(ProviderProblemModel.clearAfterSuccessfulRun(provider: .claude, key: key))
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == nil,
@@ -360,16 +586,16 @@ struct ProviderProblemModelTests {
     }
 
     /// A run that made an LLM call with this key proves it is not rejected.
-    @Test func aSuccessfulRunClearsARejectedKeyToo() {
-        withRig { rig in
+    @Test func aSuccessfulRunClearsARejectedKeyToo() async {
+        await withRig { rig in
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .invalid)
             #expect(ProviderProblemModel.clearAfterSuccessfulRun(provider: .claude, key: key))
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == nil)
         }
     }
 
-    @Test func aSuccessfulRunLeavesAGoodVerdictAlone() {
-        withRig { rig in
+    @Test func aSuccessfulRunLeavesAGoodVerdictAlone() async {
+        await withRig { rig in
             LLMValidator.recordVerdict(provider: .claude, key: key, status: .online)
             #expect(!ProviderProblemModel.clearAfterSuccessfulRun(provider: .claude, key: key))
             #expect(LLMValidator.cachedVerdict(provider: .claude, key: key) == .ok)

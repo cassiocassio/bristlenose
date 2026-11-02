@@ -3,7 +3,7 @@ import SwiftUI
 
 /// App-global toolbar pill: an expiring `.dmg` alpha build is in its final week.
 ///
-/// Sibling to `OllamaDownloadPill` / `OutOfCreditPill` — shares the `StatusPill`
+/// Sibling to `OllamaDownloadPill` / `ProviderProblemPill` — shares the `StatusPill`
 /// envelope, lives in the `.status` zone. Silent until the last 7 days (absence
 /// is information) and absent entirely off the `.developerID` channel, because
 /// `AlphaBuild.daysRemaining()` returns nil everywhere else. The hourglass goes

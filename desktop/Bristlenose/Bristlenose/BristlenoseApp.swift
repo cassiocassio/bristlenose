@@ -190,6 +190,10 @@ struct BristlenoseApp: App {
                     // fully translated app. Takes effect next launch.
                     I18n.adoptChosenLanguageForAppKit()
                     SettingsWindow.shared.i18n = i18n
+                    // The provider-problem pill announces a new refusal to
+                    // VoiceOver from the model (once, not once per window), so the
+                    // model needs the translator. Idempotent across windows.
+                    ProviderProblemModel.shared.i18n = i18n
                     // Dock-icon click with no project window open — see
                     // `AppDelegate.applicationShouldHandleReopen`.
                     appDelegate.openProjectWindow = { openWindow(id: "main") }

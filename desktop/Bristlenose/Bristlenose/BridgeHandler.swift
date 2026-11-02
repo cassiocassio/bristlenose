@@ -1550,13 +1550,19 @@ final class BridgeHandler: ObservableObject {
             // from the `CauseCategoryEnum` `CauseCategory` mirrors; they agree
             // on these by convention, not by contract, so the literals are
             // compared (`ProviderProblemCondition.fromLLMFailureKind`).
-            if let condition = ProviderProblemCondition.fromLLMFailureKind(body["kind"] as? String),
-               let raw = body["provider"] as? String,
-               let provider = LLMProvider(rawValue: raw) {
+            if let condition = ProviderProblemCondition.fromLLMFailureKind(body["kind"] as? String) {
+                let raw = body["provider"] as? String
+                guard let raw, let provider = LLMProvider(rawValue: raw) else {
+                    Self.log.notice(
+                        "llm-failure \(condition.rawValue, privacy: .public) with a provider this build cannot read (\(body["provider"] as? String ?? "none", privacy: .public)): not recorded"
+                    )
+                    return
+                }
+                let recorded = ProviderProblemModel.recordRefusal(
+                    condition, provider: provider, explicit: false)
                 Self.log.notice(
-                    "llm-failure \(condition.rawValue, privacy: .public) provider=\(raw, privacy: .public) — recording"
+                    "llm-failure \(condition.rawValue, privacy: .public) provider=\(raw, privacy: .public) recorded=\(recorded, privacy: .public)"
                 )
-                ProviderProblemModel.recordRefusal(condition, provider: provider, explicit: false)
             }
 
         case "report-error":

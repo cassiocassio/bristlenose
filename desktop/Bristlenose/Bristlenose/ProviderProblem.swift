@@ -45,6 +45,11 @@ enum ProviderProblemCondition: String, Codable, Equatable, CaseIterable {
     /// matches `401` and `authentication` anywhere in the tail, which is a guess
     /// (it once called a preflight line a failed transcription), and a guess
     /// must not light a pill that sits over every project.
+    ///
+    /// Billing is admitted from stderr as well, deliberately and not by oversight:
+    /// its patterns are provider-specific strings (`insufficient_quota`, "credit
+    /// balance is too low") and the run's own preflight sentence, which is itself
+    /// a refused call. The asymmetry is the specificity of the patterns.
     static func fromRun(category: PipelineFailureCategory, structured: Bool)
         -> ProviderProblemCondition? {
         switch category {
@@ -91,6 +96,20 @@ enum ProviderProblemRules {
         return .collapsed
     }
 
+    /// Whether a refusal is news, which is when it is announced to VoiceOver:
+    /// the first of its kind, a different condition or provider, or a refused run.
+    /// An incidental repeat of what is already known is not. The same test as
+    /// `applying` uses to decide the record starts afresh, kept in one place so
+    /// the two cannot drift.
+    static func isNews(
+        refusalOf condition: ProviderProblemCondition, provider: String, explicit: Bool,
+        existing: ProviderProblemRecord?
+    ) -> Bool {
+        guard let existing, existing.provider == provider, existing.condition == condition
+        else { return true }
+        return explicit
+    }
+
     /// The record after a refusal.
     ///
     /// - A different provider or condition is news: a fresh, loud record.
@@ -112,10 +131,8 @@ enum ProviderProblemRules {
             provider: provider, condition: condition,
             firstSeen: now, lastRefusal: now, dismissed: false)
         guard let existing,
-              existing.provider == provider,
-              existing.condition == condition
+              !isNews(refusalOf: condition, provider: provider, explicit: explicit, existing: existing)
         else { return fresh }
-        if explicit { return fresh }
         var kept = existing
         kept.lastRefusal = now
         return kept
@@ -123,11 +140,21 @@ enum ProviderProblemRules {
 
     /// Whether the record is still true of the key in use: the key's cached
     /// verdict must still say what the record says. A new key (no verdict for
-    /// it), a re-validation that came back good, or a run that worked all make
-    /// it false.
+    /// it) or a re-validation that came back good makes it false; so does a run
+    /// that worked (`ProviderProblemModel.noteRunSucceeded` drops the record).
+    ///
+    /// **One exception:** a good result does not cure *out of credit* for a
+    /// provider whose Settings check cannot see credit. ChatGPT's check is a
+    /// free model-list request that returns 200 for a bankrupt key, so opening
+    /// Settings would otherwise wipe the pill (and the hidden state) with the
+    /// account still empty. There only a run that worked is a cure.
     static func holds(_ record: ProviderProblemRecord,
-                      verdictForItsKey verdict: LLMValidator.CachedVerdict?) -> Bool {
-        verdict == record.condition.verdict
+                      verdictForItsKey verdict: LLMValidator.CachedVerdict?,
+                      settingsCheckSeesCredit: Bool = true) -> Bool {
+        if verdict == .ok, record.condition == .outOfCredit, !settingsCheckSeesCredit {
+            return true
+        }
+        return verdict == record.condition.verdict
     }
 }
 
@@ -168,6 +195,23 @@ struct ProviderProblemPresentation: Equatable {
         }
     }
 
+    /// The pill's words, in the researcher's language.
+    @MainActor
+    func pillText(provider: String, i18n: I18n) -> String {
+        usesPrintfProviderFormat
+            ? String(format: i18n.t(pillKey), provider)
+            : i18n.t(pillKey, ["provider": provider])
+    }
+
+    /// Line 1 of the popover: the state. Also what is announced and what
+    /// VoiceOver reads as the pill's label.
+    @MainActor
+    func title(provider: String, i18n: I18n) -> String {
+        usesPrintfProviderFormat
+            ? String(format: i18n.t(titleKey), provider)
+            : i18n.t(titleKey, ["provider": provider])
+    }
+
     var usesPrintfProviderFormat: Bool {
         switch condition {
         case .outOfCredit: return true
@@ -192,4 +236,11 @@ struct ProviderProblemPresentation: Equatable {
         case .keyRejected: return [.openSettings]
         }
     }
+}
+
+extension LLMProvider {
+    /// Whether a Settings validation of this provider's key is a call that fails
+    /// on an empty account. Claude's is a billed one-token request, so it sees
+    /// the credit refusal; ChatGPT's is a free model list and cannot.
+    var settingsCheckSeesCredit: Bool { self == .claude }
 }

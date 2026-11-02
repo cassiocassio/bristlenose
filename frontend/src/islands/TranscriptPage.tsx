@@ -479,8 +479,11 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   useEffect(() => () => resetParagraphScope(), [sessionId]);
   // The browser's own input events — typing, dictation, autocorrect, a context
   // menu's delete — never edit a paragraph. Native, not React's onBeforeInput,
-  // which is a keypress polyfill and misses most of them.
-  useEffect(() => {
+  // which is a keypress polyfill and misses most of them. A layout effect, so
+  // the guard is on the host in the same commit that makes it editable: a
+  // passive effect lands a scheduler tick later, and in that tick the host
+  // took input (seen as a CI-only failure of the "typing is refused" test).
+  useLayoutEffect(() => {
     const body = bodyRef.current;
     if (!body || !paragraphEditing) return;
     // Only the paragraphs' text: the islands hold real inputs (the speaker

@@ -8,7 +8,7 @@
  *
  * The review (2026-07-07, finding H2) flagged three false-greens this spec must NOT
  * inherit — all closed here:
- *  1. Stale server on :8484 → wrong project. Closed by the identity guard (first test,
+ *  1. Stale server on :8150 → wrong project. Closed by the identity guard (first test,
  *     serial mode): project_name must be "Smoke Test" or the whole file aborts.
  *  2. "Clean" over a page that never mounted the SPA is vacuous. Closed by asserting
  *     `#bn-app-root` has children (waitForPageReady) BEFORE sampling for cleanliness.

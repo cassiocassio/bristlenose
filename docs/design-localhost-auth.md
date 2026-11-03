@@ -93,7 +93,7 @@ longer sets `Content-Type` itself), not "all six"; the test helper is
 
 ## Context
 
-Bristlenose's serve mode API (`bristlenose serve`) listens on `127.0.0.1:8150-9149` with **zero authentication**. CORS blocks cross-origin browser requests, but any local process (malware, clipboard monitors, collab tools) can `curl http://127.0.0.1:8484/api/projects/1/quotes` and exfiltrate participant names, quotes, themes, and sentiment data. This is flagged as **must-fix before distribution** in the launch checklist.
+Bristlenose's serve mode API (`bristlenose serve`) listens on `127.0.0.1:8150-9149` with **zero authentication**. CORS blocks cross-origin browser requests, but any local process (malware, clipboard monitors, collab tools) can `curl http://127.0.0.1:8150/api/projects/1/quotes` and exfiltrate participant names, quotes, themes, and sentiment data. This is flagged as **must-fix before distribution** in the launch checklist.
 
 **What this is**: a defence-in-depth speed bump against opportunistic local-process scraping. It is **not** an authentication boundary — a determined attacker with same-user privileges can still read the token from the HTML response or the SQLite file directly. The real security boundary is OS process isolation. This token stops lazy one-liner attacks (`curl localhost:8484/api/...`), which is the right level of protection for same-machine IPC.
 

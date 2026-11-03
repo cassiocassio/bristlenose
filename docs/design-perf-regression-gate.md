@@ -240,7 +240,7 @@ test('server identity guard — smoke-test fixture', async ({ page, baseURL }) =
 });
 ```
 
-This catches the exact failure we hit during baseline measurement — a stale `bristlenose serve` on port 8484 serving a different project (353 quotes instead of 4). Fails immediately with a clear message instead of producing silently wrong metrics.
+This catches the exact failure we hit during baseline measurement — a stale `bristlenose serve` on port 8150 serving a different project (353 quotes instead of 4). Fails immediately with a clear message instead of producing silently wrong metrics.
 
 ### How thresholds work
 

@@ -4,6 +4,9 @@
 every known Claude/Codex session, merge result, parked item, stash, preservation
 copy and remaining worktree after the 30 October consolidation.
 
+**3 Nov 2026 — `bristlenose serve` default port 8150 → 8484 (Claude Sonnet 5.5; committed on local `main` `62f8cc65f`, `55bdebe32` and a follow-up, not pushed).**
+Owner ask (memorable, distinctive; IANA-unassigned; Grist, the one common claimant, is mostly a French public-sector deployment, not a researcher's `localhost`). `_DEFAULT_PORT` in `cli.py`; `app.py`, `vite.config.ts`, `SettingsModal.tsx` and the e2e config carry their own copy. Reviewed by a Fable agent; its fixes made: dated measurements and the `8150-9149` history restored. **Owed:** the website's `docs-src/cli.md` and `connect-an-agent.md` still say 8150, so they go on an `after-pypi/<version>` branch, not a deploy now; `experiments/icon-system/capture_icons.mjs` still defaults to 8150. Owner call: existing users are not a concern, bookmarked links and pasted agent configs on 8150 simply stop working. Bump: no capability added, a default changed. Release-note candidate: **The report now opens at `http://127.0.0.1:8484/report/`**, where it was 8150; bookmarks and any agent config pasted from the old address need the new one.
+
 **2 Nov 2026 — Provider-problem pill, slice 1: key rejected and out of credit (Claude Sonnet 5.5; committed on local `main` `a918521a7`, `db481e43c`, `bf3e69c7b` and docs, not pushed).**
 One title-bar pill replaces the out-of-credit pill and the DEBUG prototype: `ProviderProblem.swift` (pure rules), `ProviderProblemModel.swift` (state, persistence, recording),
 `ProviderProblemPill.swift` (view); as-built record and the judgement calls made on the owner's behalf in `docs/design-provider-problem-pill.md`; design argument in

@@ -2225,6 +2225,8 @@ def render(ctx: typer.Context) -> None:
     raise typer.Exit(2)
 
 
+# 8484: a pair that halves (8-4-8-4), unassigned by IANA, and clear of the 8080/8888
+# crowd. server/app.py, vite.config.ts and the e2e config carry their own copy.
 _DEFAULT_PORT = 8484
 
 

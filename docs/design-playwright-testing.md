@@ -9,7 +9,7 @@ _Layers 1–3 implemented (3 Mar 2026)._
 > **Layer 4 shipped 7 Jul 2026** as `e2e/tests/lenses-load-clean.spec.ts`, which
 > does what §4 specifies — visits all five lenses and asserts each mounts. It
 > also closes three false-greens §4's sketch would have inherited: a stale server
-> on :8484 serving the wrong project (an identity guard aborts the file unless
+> on :8150 serving the wrong project (an identity guard aborts the file unless
 > `project_name` is "Smoke Test"), "clean" asserted over a page that never
 > mounted (`#bn-app-root` must have children first), and an in-browser `fetch`
 > that silently 401s. Read that file before extending this one — its header

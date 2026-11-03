@@ -84,7 +84,7 @@ When the tag sidebar runs in a separate WKWebView (Tag Inspector or popout windo
 
 **Spike run: 28 Mar 2026, macOS 26.1 Tahoe, M2 Max.**
 
-Both WKWebViews load `http://127.0.0.1:8484/report/` from a running `bristlenose serve` instance.
+Both WKWebViews load `http://127.0.0.1:8150/report/` from a running `bristlenose serve` instance.
 Test JS injected via `WKUserScript(.atDocumentEnd)`. Spike code: `desktop/testtest/`.
 
 | Question | Data store | Process pool | BroadcastChannel | localStorage |

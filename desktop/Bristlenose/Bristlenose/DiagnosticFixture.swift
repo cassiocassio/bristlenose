@@ -95,7 +95,9 @@ enum DiagnosticFixture {
         }
 
         let summary = scenario.summary
-        if summary.totalFailureCount == 0 {
+        // Nothing failed AND nothing was left out: a clean run. A run that only left quotes
+        // out has no failure but reads as done with warnings (owner, 3 Nov 2026).
+        if summary.totalFailureCount == 0 && summary.leftOutCount == 0 {
             logger.info("clean scenario; no override")
             return .clean
         }
@@ -160,6 +162,18 @@ enum DiagnosticFixture {
                 topics: StageOutcome(attempted: 3, succeeded: 3, durationMs: 41_000, failed: []),
                 quotes: StageOutcome(attempted: 3, succeeded: 3, durationMs: 82_000, failed: []),
                 themes: nil)
+        ),
+
+        // A run with no failure at all that left a quote out of s2's reply: the Mac reads it
+        // as done with warnings and the popover names the session (owner, 3 Nov 2026).
+        "run_completed_quotes_left_out": FixtureScenario(
+            event: .runCompleted,
+            summary: PipelineSummary(
+                transcripts: StageOutcome(attempted: 3, succeeded: 3, durationMs: 412_000, failed: []),
+                topics: StageOutcome(attempted: 3, succeeded: 3, durationMs: 41_000, failed: []),
+                quotes: StageOutcome(attempted: 3, succeeded: 3, durationMs: 82_000, failed: []),
+                themes: StageOutcome(attempted: 1, succeeded: 1, durationMs: 14_000, failed: []),
+                quotesLeftOut: ["s2": 1, "s3": 3])
         ),
 
         "run_failed_abandoned": FixtureScenario(

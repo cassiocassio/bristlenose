@@ -735,7 +735,7 @@ def _mount_media_route(app: FastAPI, project_dir: Path) -> None:
 
 def _print_dev_urls() -> None:
     """Print all dev-mode URLs on startup (Cmd-clickable in iTerm)."""
-    port = int(os.environ.get("_BRISTLENOSE_PORT", "8150"))
+    port = int(os.environ.get("_BRISTLENOSE_PORT", "8484"))
     b = f"http://localhost:{port}"
     # One record per line: the log formatter escapes newlines inside a message.
     for line in (

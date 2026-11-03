@@ -29,8 +29,8 @@ export default defineConfig({
     cors: true,
     origin: "http://localhost:5173",
     proxy: {
-      "/api": "http://localhost:8150",
-      "/report": "http://localhost:8150",
+      "/api": "http://localhost:8484",
+      "/report": "http://localhost:8484",
     },
   },
   build: {

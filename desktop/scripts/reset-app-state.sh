@@ -140,7 +140,7 @@ cat <<'EOF'
   Safari:  Develop > Empty Caches, then Settings > Privacy > Manage Website Data
            > search "localhost" > Remove
   Chrome:  DevTools (⌥⌘I) > Application > Storage > Clear site data
-           on http://localhost:8150 and http://localhost:5173
+           on http://localhost:8484 and http://localhost:5173
   Firefox: Settings > Privacy > Cookies and Site Data > Manage Data > localhost
 
 === Not touched (by design) ===

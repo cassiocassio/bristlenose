@@ -9,7 +9,7 @@
         "cd /Users/cassio/Code/bristlenose && .venv/bin/bristlenose serve trial-runs/project-ikea"
       ],
       "autoPort": false,
-      "port": 8150
+      "port": 8484
     },
     {
       "name": "docs-site",

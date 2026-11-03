@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'path';
 
-const PORT = parseInt(process.env.BN_E2E_PORT ?? '8150', 10);
+const PORT = parseInt(process.env.BN_E2E_PORT ?? '8484', 10);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 // Resolve paths relative to this config file (which lives in e2e/)

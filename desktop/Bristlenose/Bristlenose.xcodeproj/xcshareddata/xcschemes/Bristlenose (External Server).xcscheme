@@ -53,7 +53,7 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "BRISTLENOSE_DEV_EXTERNAL_PORT"
-            value = "8150"
+            value = "8484"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>

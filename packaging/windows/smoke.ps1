@@ -89,7 +89,7 @@ try {
     }
 
     Check "serve /report/" {
-        # A leftover server on the port would answer for ours (the stale-:8150
+        # A leftover server on the port would answer for ours (the stale-:8484
         # trap in CLAUDE.md), so the port must be free, and the answer must name
         # this fixture's project through our own token.
         if (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue) {

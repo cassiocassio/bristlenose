@@ -56,7 +56,7 @@ def is_loopback_host(host: str) -> bool:
     """True iff a ``Host`` header names loopback, on any port.
 
     Parses the bracketed IPv6 form itself: Starlette's TrustedHostMiddleware
-    splits on the first ``:``, so ``[::1]:8150`` reads as ``[`` there.
+    splits on the first ``:``, so ``[::1]:8484`` reads as ``[`` there.
     """
     if host.startswith("["):
         end = host.find("]")
@@ -73,7 +73,7 @@ def is_loopback_host(host: str) -> bool:
 class LoopbackHostMiddleware:
     """Refuse any request whose ``Host`` is not loopback — the DNS-rebinding gate.
 
-    A rebinding page (``http://rebind.attacker.example:8150`` re-resolved to
+    A rebinding page (``http://rebind.attacker.example:8484`` re-resolved to
     127.0.0.1) is same-origin with serve as far as the browser knows, so CORS
     never fires and ``/report/`` would hand it the auth token in the SPA HTML
     plus the auth cookie. The ``Host`` header still carries the attacker's

@@ -75,7 +75,7 @@ async function waitForZoneTitle(page: Page): Promise<void> {
   await page.waitForSelector('.section-heading', { timeout: 8_000 });
 }
 
-// A stale `bristlenose serve` on :8150 is reused outside CI (reuseExistingServer),
+// A stale `bristlenose serve` on :8484 is reused outside CI (reuseExistingServer),
 // so without this the file could measure a different project and report a
 // confident green. Same guard lenses-load-clean.spec.ts carries.
 test('server identity guard — smoke-test fixture', async ({ page, baseURL }) => {

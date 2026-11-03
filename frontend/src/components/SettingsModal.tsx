@@ -242,7 +242,7 @@ const CONFIG_DATA: SettingCategory[] = [
     id: "server",
     labelKey: "configReference.categories.server",
     settings: [
-      { labelKey: "configReference.settings.server.serverPort", envVar: "_BRISTLENOSE_PORT", default: "8150", file: "cli.py", filePath: "bristlenose/cli.py" },
+      { labelKey: "configReference.settings.server.serverPort", envVar: "_BRISTLENOSE_PORT", default: "8484", file: "cli.py", filePath: "bristlenose/cli.py" },
       { labelKey: "configReference.settings.server.miroAccessToken", envVar: "BRISTLENOSE_MIRO_ACCESS_TOKEN", default: "(not set)", file: ".env", filePath: "bristlenose/config.py", sensitive: true },
     ],
   },

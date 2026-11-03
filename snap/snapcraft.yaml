@@ -42,7 +42,7 @@ apps:
       # All auto-connect except removable-media (needs `snap connect`).
       - home             # recordings + output under $HOME (non-hidden; hidden-in-subdir OK)
       - network          # LLM APIs, model downloads, and localhost Ollama
-      - network-bind     # `bristlenose serve` binds 127.0.0.1:8150
+      - network-bind     # `bristlenose serve` binds 127.0.0.1:8484
       - removable-media  # recordings on USB / external drives (/media, /run/media, /mnt)
     environment:
       LANG: C.UTF-8

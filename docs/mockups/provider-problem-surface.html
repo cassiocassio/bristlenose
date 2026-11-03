@@ -392,6 +392,70 @@
   <li><b>It costs requests the pill doesn’t.</b> The pill needs a diagnosis only after a refused call. The ladder adds the control probe, a DNS check and the keyless provider request, run once at that moment, never on a timer.</li>
 </ul></div></div>
 
+<!-- ═════════ G ═════════ -->
+<h2><i>G</i>Where in the title bar — the pill as the first trailing item <span class="decided">proposal · not built</span></h2>
+<p class="lede">The owner’s layout, reading from the right edge: Search, then the actions group, then the status pill(s) on their own. Drawn here only to agree the order; whether it holds is a native question (see the commentary underneath). Nothing in the toolbar code has been changed.</p>
+
+<style>
+  .g-win .tb{gap:6px}
+  .g-win .ttl{flex:none}
+  .g-win .gap{flex:1;min-width:6px}
+  .g-cap{display:inline-flex;align-items:center;gap:2px;padding:2px 5px;border-radius:99px;border:.5px solid color-mix(in srgb,var(--faint) 45%,transparent);background:color-mix(in srgb,var(--faint) 10%,transparent);color:var(--dim);font-size:11px;white-space:nowrap}
+  .g-cap span{padding:0 4px}
+  .g-hole{border:1px dashed var(--line);border-radius:99px;padding:2px 8px;font-size:10px;color:var(--faint)}
+  .g-ov{display:inline-flex;align-items:center;padding:2px 7px;border-radius:99px;border:.5px solid color-mix(in srgb,var(--faint) 45%,transparent);color:var(--dim);font-size:11px}
+  .g-sr{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;border:.5px solid color-mix(in srgb,var(--faint) 45%,transparent);color:var(--faint);font-size:10.5px}
+  .g-lab{font:10.5px var(--mono);color:var(--faint);margin:10px 0 3px}
+  .g-merged{padding:2px 5px;border-radius:99px;border:.5px solid color-mix(in srgb,var(--faint) 45%,transparent);background:color-mix(in srgb,var(--faint) 10%,transparent);display:inline-flex;align-items:center;gap:6px;color:var(--dim);font-size:11px}
+</style>
+
+<div class="frame g-win"><div class="fbar"><span>Quotes · wide window · macOS 26</span><span>artefact</span></div><div class="fbody">
+  <div class="win"><div class="tb">
+    <span class="lights"><i></i><i></i><i></i></span><span class="ttl">Ikea study</span><span class="sub">16 Sessions</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><path d="M8 1.8 15 14H1z" fill="var(--amber)"/></svg>Claude · no credit</span>
+    <span class="g-cap"><span>☰</span><span>▤</span><span>⬆</span></span>
+    <span class="g-sr">⌕ Search</span>
+  </div></div>
+  <div class="g-lab">same, project lens (no left-panel toggle, no Search)</div>
+  <div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Ikea study</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><path d="M8 1.8 15 14H1z" fill="var(--amber)"/></svg>Claude · no credit</span>
+    <span class="g-cap"><span>⬆</span></span></div></div>
+  <div class="g-lab">Welcome window (no project: no actions group, no Search)</div>
+  <div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Bristlenose</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="var(--red)"/></svg>Claude · key rejected</span></div></div>
+  <div class="g-lab">two pills (rare; the plan is to merge them later)</div>
+  <div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Ikea study</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="var(--red)"/></svg>Claude · key rejected</span>
+    <span class="pill">Whisper model…</span>
+    <span class="g-cap"><span>☰</span><span>▤</span><span>⬆</span></span><span class="g-sr">⌕</span></div></div>
+  <div class="g-lab">narrowing: today every equal-priority item folds from the right, so the order of loss is Search, then the actions, then the pill, unless priorities are set</div>
+  <div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Ikea study</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><path d="M8 1.8 15 14H1z" fill="var(--amber)"/></svg>Claude · no credit</span><span class="g-ov">»</span></div></div>
+</div></div>
+
+<div class="frame g-win" style="margin-top:14px"><div class="fbar"><span>The same row on macOS 15 · Sequoia</span><span>artefact</span></div><div class="fbody">
+  <div class="win"><div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="ttl">Ikea study</span><span class="gap"></span>
+    <span class="pill"><svg class="kg" viewBox="0 0 16 16"><path d="M8 1.8 15 14H1z" fill="var(--amber)"/></svg>Claude · no credit</span>
+    <span style="color:var(--dim);font-size:11px;white-space:nowrap">☰ &nbsp;▤ &nbsp;⬆</span><span style="color:var(--faint);font-size:11px">⌕ Search</span></div></div>
+  <p style="font-size:11px;color:var(--faint);margin:6px 2px 0">No shared glass on 15: items are plain buttons in a row, so there is no capsule to fuse into and no spacer type to separate them.</p>
+</div></div>
+
+<div class="com"><div class="in"><div class="tag">Commentary · what is known, what is not</div>
+<table>
+  <tr><th>Question</th><th>Answer</th><th>Source</th></tr>
+  <tr><td>Where does <code>.status</code> put an item on macOS?</td><td>The <b>centre</b> of the toolbar. Informational, “not an action”. It folds into <code>»</code> like anything else.</td><td>Apple DocC <code>ToolbarItemPlacement.status</code>; measured 3 Oct 2026 (project notes)</td></tr>
+  <tr><td>Where does <code>.primaryAction</code> put one?</td><td>Apple’s page says the <b>leading</b> edge on macOS. The app uses it for the <b>trailing</b> actions and that is what is measured on 26. <b>This disagrees with the docs and I have not resolved it.</b> I would not rely on either text for 15; it needs looking at on a Sequoia guest.</td><td>DocC <code>primaryAction</code> vs <code>desktop/CLAUDE.md</code> (Toolbar)</td></tr>
+  <tr><td>Can a SwiftUI item say “fold me last”?</td><td>No. <code>visibilityPriority</code> exists on <code>NSToolbarItem</code> only; the app sets it through the <code>ToolbarItemPriority</code> probe, re-applied on resize and every rebuild. Search already uses it (<code>.user</code>).</td><td>desktop/CLAUDE.md gotcha; <code>QuotesToolbarControls.swift</code></td></tr>
+  <tr><td>Separating the pill from the actions capsule</td><td>On 26, <code>ToolbarSpacer(.fixed)</code> between them (the app already does this before Search, <code>searchSeparator</code>), plus <code>withoutSharedBackground()</code> on the pill so the glass does not draw a second capsule round it. On 15 the spacer type does not exist and the question does not arise.</td><td>DocC <code>ToolbarSpacer</code> (26.0+); house helper in <code>StatusPill.swift</code></td></tr>
+  <tr><td>HIG limits that bear on this</td><td>Aim for at most <b>three groups</b> (pill, actions, search is exactly three); trailing edge “remain visible at all window sizes”; the system adds the overflow menu, do not add one; avoid layouts that overflow by default.</td><td>HIG Toolbars</td></tr>
+  <tr><td>A pill that hides itself</td><td>When there is no problem the item is empty. An empty <code>ToolbarItem</code> can still leave a gap or a stray capsule, so “only there when there is a problem” may need the item to be <b>added and removed</b> from the builder rather than draw nothing. That is a toolbar rebuild, and a rebuild is what loses the priority probe.</td><td>Not measured. Reasoned from the rebuild gotcha</td></tr>
+  <tr><td>Does the pill fuse with the actions capsule?</td><td>Unknown. Adjacent items share a glass capsule unless split; whether a hidden-background item next to a capsule stays out of it, I have not seen.</td><td>Not measured</td></tr>
+  <tr><td>Will the pill survive a narrow window?</td><td>Not in the draw above: it folds first-from-the-right, so it would outlast Search and the actions only by sitting left of them, which is the opposite of “important enough to keep”. If it should outlast them, it needs a priority above theirs; if it should go first, it is already right.</td><td>Reasoned; my read of the fold rule</td></tr>
+</table>
+<p><b>What I have not done.</b> No native measurement: I could not open a window from this shell, and the guests were not up. Nothing here has been seen on a Sequoia or a Tahoe toolbar. Before any build I would want, on the 15.7.3 and 26.6.2 guests and on 27: (1) where <code>.primaryAction</code> and <code>.status</code> land, (2) the order items fold at 940 pt and below, (3) the empty-pill gap, (4) fuse or no fuse beside the actions capsule.</p>
+<p><b>Decision for you.</b> The centre (today) is safe and measured, but it is the place that folds into <code>»</code> and sits under the title. The trailing slot is where you want it and is the more fragile one. A DEBUG switch in Diagnostics that moves only the pill between the two would let you judge it on this machine without changing the shipping toolbar.</p>
+</div></div>
+
 <!-- ═════════ comparison ═════════ -->
 <h2><i>·</i>Side by side</h2>
 <div class="com"><div class="in"><div class="tag">Commentary · comparison</div>

@@ -684,3 +684,103 @@ def test_a_resumed_run_still_says_what_the_first_run_left_out(
     second = run_once()
     assert "s1" not in asked, "the cached session was asked again; the test is not about a resume"
     assert "1 unusable quote left out (s1)" in second
+
+
+def test_the_readable_chain_records_the_count_when_it_delivers_a_session(tmp_path: Path):
+    """The third writer of a stage-9 record (owner call 48): the chain analyses a session
+    while transcription goes on, and stage 9 later takes it from there as cached."""
+    from unittest.mock import MagicMock
+
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        quotes_left_out_by_session,
+    )
+    from bristlenose.readable_chain import ChainAnalysis
+
+    manifest = create_manifest("t", "x")
+    settings = MagicMock(llm_provider="anthropic", llm_model="m", project_name="t",
+                         min_quote_words=3, write_intermediate=True)
+    chain = ChainAnalysis(
+        settings=settings, llm_client=MagicMock(), manifest=manifest, output_dir=tmp_path,
+        clean=lambda t: t, topic_fingerprint=lambda t: "tf", quote_fingerprint=lambda t, m: "qf",
+        concurrency=1,
+    )
+    chain.quote_drops["s1"] = 2
+    chain.quotes["s1"] = ([], "qf")
+    chain._deliver_quotes("s1", "qf")
+    assert quotes_left_out_by_session(manifest, STAGE_QUOTE_EXTRACTION, {"s1"}) == {"s1": 2}
+
+
+def test_analyze_records_the_count_over_the_runs_record(tmp_path: Path):
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        quotes_left_out_by_session,
+    )
+    from bristlenose.pipeline import _record_analyzed_stage
+
+    manifest = create_manifest("t", "x")
+    out = tmp_path / "extracted_quotes.json"
+    out.write_text('[{"session_id": "s1"}]', encoding="utf-8")
+    _record_analyzed_stage(
+        manifest, STAGE_QUOTE_EXTRACTION, tmp_path, [out],
+        session_ids=["s1", "s2"], outcome=_failed("s2"), fingerprints={"s1": "f1", "s2": "f2"},
+        input_hashes={"analyzed_transcripts": "k"}, provider="anyllm", model="m",
+        left_out={"s1": 3, "s2": 5},
+    )
+    assert quotes_left_out_by_session(manifest, STAGE_QUOTE_EXTRACTION, {"s1", "s2"}) == {"s1": 3}
+
+
+def test_analyze_into_a_project_records_what_it_left_out(tmp_path: Path, monkeypatch):
+    """The caller, not only the helper: ``run_analysis_only`` hands the drops it collected
+    to the recorder, so the next ``run`` can say so (owner call 48)."""
+    from unittest.mock import MagicMock, patch
+
+    import bristlenose.pipeline as p
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        load_manifest,
+        quotes_left_out_by_session,
+        write_manifest,
+    )
+
+    tx = tmp_path / "transcripts"
+    tx.mkdir()
+    for sid in ("s1", "s10"):
+        (tx / f"{sid}.txt").write_text(
+            f"# Transcript: {sid}\n# Source: {sid}.wav\n# Date: 2026-10-23\n"
+            f"# Duration: 00:00:10\n\n[00:00] [m1] Hello.\n[00:05] [p{sid[1:]}] Hi there.\n",
+            encoding="utf-8",
+        )
+    out = tmp_path / "out"
+    write_manifest(create_manifest("t", "x"), out)
+    settings = MagicMock(
+        project_name="t", llm_provider="anthropic", llm_model="claude-sonnet-4-6",
+        write_intermediate=True, llm_concurrency=1, min_quote_words=3, pii_enabled=False,
+    )
+
+    async def topics(ts, _client, **_kw):
+        return ([SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
+                                 boundaries=[]) for t in ts],
+                StageOutcome(attempted=len(ts), succeeded=len(ts)))
+
+    def llm(_settings):
+        client = AsyncMock()
+        client.provider = "anthropic"
+        return client
+
+    monkeypatch.setattr(p, "_print_warn", lambda msg, link="": None)
+    quotes, stop = _fake_extract_quotes("stop after stage 9")
+    with (
+        patch("bristlenose.llm.client.LLMClient", side_effect=llm),
+        patch("bristlenose.stages.s08_topic_segmentation.segment_topics", new=topics),
+        patch("bristlenose.stages.s09_quote_extraction.extract_quotes", new=quotes),
+        patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=stop),
+        patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=stop),
+        pytest.raises(RuntimeError, match="stop after stage 9"),
+    ):
+        asyncio.run(p.Pipeline(settings).run_analysis_only(tx, out))
+    recorded = load_manifest(out)
+    assert quotes_left_out_by_session(recorded, STAGE_QUOTE_EXTRACTION, {"s1", "s10"}) == {"s10": 1}

@@ -655,7 +655,7 @@ adjudicator): 16 findings resolved across 10 commits (`1c3563c0`…`d76550a4`),
 ```sh
 .venv/bin/python -m pytest tests/test_miro_board.py   # layout engine
 cd frontend && npm run build                           # SPA (rebuilds static)
-.venv/bin/bristlenose serve --dev trial-runs/<project> # open http://localhost:8150/report/
+.venv/bin/bristlenose serve --dev trial-runs/<project> # open http://localhost:8484/report/
 ```
 Then: Quotes tab → Export ▾ → **Send to Miro…**. Paste a token (Miro dev dashboard
 → app → install → copy token) — the setup walkthrough is published at

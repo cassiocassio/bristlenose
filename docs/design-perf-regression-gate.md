@@ -68,7 +68,7 @@ A CI job that runs on every PR, fails on regressions, passes in under 60 seconds
 
 Measured on macOS, Chromium, `_BRISTLENOSE_AUTH_TOKEN=test-token`, Playwright `evaluate`. Fixture: 1 session (`s1`), 4 quotes, 2 speakers (`m1`, `p1`).
 
-**Gotcha: stale server on port 8150.** The Playwright config uses `reuseExistingServer: !process.env.CI` — if a previous `bristlenose serve` is still running locally, measurements will be against the wrong dataset. Always kill stale servers before measuring: `lsof -i :8150` then `kill <pid>`.
+**Gotcha: stale server on port 8484.** The Playwright config uses `reuseExistingServer: !process.env.CI` — if a previous `bristlenose serve` is still running locally, measurements will be against the wrong dataset. Always kill stale servers before measuring: `lsof -i :8484` then `kill <pid>`.
 
 ### DOM node counts
 
@@ -159,7 +159,7 @@ Re-measure and update thresholds when:
 
 The perf-gate runs in its **own workflow** (`perf.yml`), against its own server
 on the smoke fixture. Server identity guard (first test, serial mode) catches
-stale servers on 8150 before wrong metrics are recorded.
+stale servers on 8484 before wrong metrics are recorded.
 
 > _Superseded 20 May 2026._ This read *"runs inside the existing E2E suite — no
 > separate job, no orchestrator script, no separate port"*, which contradicted
@@ -240,7 +240,7 @@ test('server identity guard — smoke-test fixture', async ({ page, baseURL }) =
 });
 ```
 
-This catches the exact failure we hit during baseline measurement — a stale `bristlenose serve` on port 8150 serving a different project (353 quotes instead of 4). Fails immediately with a clear message instead of producing silently wrong metrics.
+This catches the exact failure we hit during baseline measurement — a stale `bristlenose serve` on port 8484 serving a different project (353 quotes instead of 4). Fails immediately with a clear message instead of producing silently wrong metrics.
 
 ### How thresholds work
 

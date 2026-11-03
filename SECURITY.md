@@ -223,7 +223,7 @@ Moderator and observer names (m1, m2, o1) are not stripped. The boundary is **pa
 
 **MCP endpoint (`/mcp/`):** present when the `bristlenose[mcp]` extra is installed (always, in the macOS app's bundled sidecar); the auth prefix is enforced even when it isn't (fail closed). When the desktop injects a scoped MCP token, `/mcp` validates against that token alone and it opens nothing else; without one (the CLI), `/mcp` accepts the single server token. Bearer-only — the browser auth cookie deliberately does not authenticate it. The MCP SDK's DNS-rebinding protection is active (loopback-only allowed hosts and origins). Tools are read-only and take no filesystem paths (pinned by an input-schema test); participant names follow the project's Anonymise switch (codes-only when it is on), and the only path to the persons table is grounding's gated resolver.
 
-**What this protects against:** Opportunistic API scraping by unrelated local processes. A process that doesn't know the token cannot call `curl http://127.0.0.1:8150/api/projects/1/quotes` — the request returns 401.
+**What this protects against:** Opportunistic API scraping by unrelated local processes. A process that doesn't know the token cannot call `curl http://127.0.0.1:8484/api/projects/1/quotes` — the request returns 401.
 
 **What this does not protect against:** A determined attacker with same-user privileges who fetches the HTML first, extracts the token, and then calls the API. The token is a defence-in-depth speed bump, not an authentication boundary. The real security boundary is OS-level process isolation. This is the standard approach for localhost development servers (VS Code, JupyterLab, Electron apps).
 

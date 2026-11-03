@@ -219,7 +219,7 @@ the URL-safety contract in both languages, the prototype render sweep
 .venv/bin/bristlenose serve --dev trial-runs/project-ikea
 ```
 
-Open `http://localhost:8150/report/`, then **Codebook** and **Codebook v2** in
+Open `http://localhost:8484/report/`, then **Codebook** and **Codebook v2** in
 two tabs on the same project. The four Indicative items are decidable here and
 nowhere else:
 

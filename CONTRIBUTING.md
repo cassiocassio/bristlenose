@@ -230,7 +230,7 @@ The interactive serve-mode experience is a React + TypeScript SPA in `frontend/`
 ```bash
 cd frontend
 npm install           # install dependencies
-npm run dev           # Vite dev server (proxies API to FastAPI on :8150)
+npm run dev           # Vite dev server (proxies API to FastAPI on :8484)
 npm test              # Vitest (635 tests)
 npm run build         # tsc type-check + Vite production build → dist/
 ```

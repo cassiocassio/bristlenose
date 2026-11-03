@@ -502,7 +502,7 @@ What the repo actually supports, checked 29 Sep 2026:
   (`design-windows-port.md`).
 - **The agent path there** is the CLI's: with the `mcp` extra, `bristlenose
   serve` prints the MCP address and an `Authorization` header
-  (`_print_mcp_connect`, `cli.py:1712`). Port 8150 is stable and the token
+  (`_print_mcp_connect`, `cli.py:1712`). Port 8484 is stable and the token
   changes on every restart. There's no container, no handshake file and no
   permission step. An agent connects over HTTP to `127.0.0.1`.
 

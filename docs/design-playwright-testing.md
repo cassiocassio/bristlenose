@@ -9,7 +9,7 @@ _Layers 1–3 implemented (3 Mar 2026)._
 > **Layer 4 shipped 7 Jul 2026** as `e2e/tests/lenses-load-clean.spec.ts`, which
 > does what §4 specifies — visits all five lenses and asserts each mounts. It
 > also closes three false-greens §4's sketch would have inherited: a stale server
-> on :8150 serving the wrong project (an identity guard aborts the file unless
+> on :8484 serving the wrong project (an identity guard aborts the file unless
 > `project_name` is "Smoke Test"), "clean" asserted over a page that never
 > mounted (`#bn-app-root` must have children first), and an in-browser `fetch`
 > that silently 401s. Read that file before extending this one — its header
@@ -53,7 +53,7 @@ cd e2e && npm run test:headed
 
 # Against an already-running server (faster iteration)
 # Terminal 1:
-bristlenose serve tests/fixtures/smoke-test/input --port 8150 --no-open
+bristlenose serve tests/fixtures/smoke-test/input --port 8484 --no-open
 # Terminal 2:
 cd e2e && npm test
 
@@ -124,41 +124,41 @@ Assert expected DOM structure exists — not pixel-perfect, just "is the content
 
 ```ts
 test('dashboard has stats and session table', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/');
+  await page.goto('http://127.0.0.1:8484/report/');
   await expect(page.getByText('sessions')).toBeVisible();
   await expect(page.getByText('quotes')).toBeVisible();
   await expect(page.getByRole('table')).toBeVisible();
 });
 
 test('quotes page has sections and themes headings', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/quotes/');
+  await page.goto('http://127.0.0.1:8484/report/quotes/');
   await expect(page.getByRole('heading', { name: 'Sections' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Themes' })).toBeVisible();
 });
 
 test('session transcript has segments', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/sessions/s1');
+  await page.goto('http://127.0.0.1:8484/report/sessions/s1');
   const segments = page.locator('.transcript-segment');
   expect(await segments.count()).toBeGreaterThan(5);
 });
 
 test('codebook page loads groups', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/codebook/');
+  await page.goto('http://127.0.0.1:8484/report/codebook/');
   await expect(page.getByRole('heading', { name: 'Codebook' })).toBeVisible();
 });
 
 test('analysis page has signal cards', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/signals/');
+  await page.goto('http://127.0.0.1:8484/report/signals/');
   await expect(page.getByText('Signal')).toBeVisible();
 });
 
 test('settings page has appearance toggle', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/settings/');
+  await page.goto('http://127.0.0.1:8484/report/settings/');
   await expect(page.getByText('Application appearance')).toBeVisible();
 });
 
 test('export modal opens and closes', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/');
+  await page.goto('http://127.0.0.1:8484/report/');
   await page.getByRole('button', { name: 'Export' }).click();
   await expect(page.getByText('Export report')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel' }).click();
@@ -166,7 +166,7 @@ test('export modal opens and closes', async ({ page }) => {
 });
 
 test('help modal opens via ? button', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/');
+  await page.goto('http://127.0.0.1:8484/report/');
   await page.getByRole('button', { name: /for Help/ }).click();
   await expect(page.getByText('Keyboard Shortcuts')).toBeVisible();
 });
@@ -180,13 +180,13 @@ Use Playwright's `toHaveScreenshot()` for pixel-diff against baselines. Only for
 
 ```ts
 test('dashboard layout', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/');
+  await page.goto('http://127.0.0.1:8484/report/');
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveScreenshot('dashboard.png', { maxDiffPixels: 100 });
 });
 
 test('quotes layout', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8150/report/quotes/');
+  await page.goto('http://127.0.0.1:8484/report/quotes/');
   await page.waitForLoadState('networkidle');
   await expect(page).toHaveScreenshot('quotes.png', { maxDiffPixels: 100 });
 });
@@ -237,7 +237,7 @@ e2e/
 
 **`webServer` auto-start.** `playwright.config.ts` starts `bristlenose serve` pointing at the fixture. Locally it uses `.venv/bin/bristlenose` (resolved via `__dirname`); in CI it uses the bare `bristlenose` command (on PATH via `pip install -e`). `reuseExistingServer: !process.env.CI` lets you run against an already-running server during development.
 
-**Port.** Default 8150, overridable via `BN_E2E_PORT` env var.
+**Port.** Default 8484, overridable via `BN_E2E_PORT` env var.
 
 **Serial execution.** `workers: 1` — all test files share one server instance. Total runtime ~32 seconds including server startup.
 
@@ -249,7 +249,7 @@ The `e2e` job in `.github/workflows/ci.yml` runs after the Python and frontend j
 
 - **Test data**: smoke-test fixture (`tests/fixtures/smoke-test/input/`). Committed, stable, sufficient for route navigation. Known bugs that need richer data are `test.fixme()` stubs
 - **Session discovery**: dynamic — fetched from `/api/projects/1/sessions` at test time
-- **Port**: configurable via `BN_E2E_PORT` env var, default 8150
+- **Port**: configurable via `BN_E2E_PORT` env var, default 8484
 
 ## Known bugs (from 1 Mar 2026 QA session)
 

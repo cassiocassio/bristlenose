@@ -128,7 +128,7 @@ CLI output: Cargo/uv-style checkmark lines with per-stage timing. Time estimatio
 - **Deleting or renaming can orphan a contract**: a deleted component's tests may have been the only witness to a wire contract or helper; an inverted default can orphan what a test really pins; a renamed map key leaves string-literal callers on a working fallback (grep the key as a string, test the destination); a one-line fix can land on the wrong arm of a ternary (re-read the hunk).
 - **A harness or audit covers only what it reaches**: a cross-check guarantees up to the function it asserts against; before calling a doc path dead, read the sentence (past tense or a proposal heading is fine).
 - **Mocking and timing**: `patch.dict(sys.modules)` around `detect_hardware()` aborts on Apple Silicon, and a mocked package makes submodule imports order-dependent (run touched files alone); `interrupt_main()` doesn't wake a blocked wait (use `signal.pthread_kill`); a lock probed from a helper thread is released in that thread (conftest restores the run's signal handlers after each test); a path-loaded `@dataclass` module goes into `sys.modules` first; a timeout that keeps needing doubling is a hang.
-- **E2E**: check `lsof -i :8150` for a stale serve; Node-side `fetch()` needs the bearer token; don't trust `networkidle`; assert `res.ok` inside `page.evaluate`; every suppression is registered in `e2e/ALLOWLIST.md`.
+- **E2E**: check `lsof -i :8484` for a stale serve; Node-side `fetch()` needs the bearer token; don't trust `networkidle`; assert `res.ok` inside `page.evaluate`; every suppression is registered in `e2e/ALLOWLIST.md`.
 - **CI**: the pytest job has no built frontend (monkeypatch `_STATIC_DIR`); CI runs on `main` pushes and PRs only; the smoke fixture's committed `pipeline-events.jsonl` is a contract; `gen-test-inventory.py` in a scratch worktree writes `"tests": null`; Presidio slow tests need `en_core_web_lg`.
 - **Lint**: Ruff F401 reports but never auto-fixes; delete a mis-targeted mypy `# type: ignore`, never re-target it; `from __future__ import annotations` doesn't satisfy F821.
 
@@ -300,11 +300,11 @@ See `docs/BRANCHES.md` for any active worktrees and the parked set.
 - **Self-check at end of task**: fewer unnecessary changes in the diff than last time? clarifying questions asked *before* implementing rather than after a wrong turn? no rewrite mid-task because the first pass was overcomplicated? If any of those is "no," that's the lesson for next time
 - Commit messages: short, descriptive, lowercase (e.g., "fix tag suggest offering tags the quote already has")
 - **Human QA after each task**: when you finish a task, suggest only the checks a human needs to do that automated tests can't cover (visual regression, browser interaction, UX feel). Skip this for pure data/logic work where unit tests are sufficient. Include copy-pasteable commands to make it easy (e.g. server start command, URL to open). Don't duplicate what pytest already covers
-- **NEVER use Claude Code preview tools (`preview_start`, `preview_screenshot`, `preview_snapshot`, `preview_eval`, etc.) for QA.** They consistently fail for Bristlenose — wrong port, missing Vite HMR, white-on-white rendering, incomplete React mount. Every attempt wastes time. Bristlenose needs the full stack (Vite dev server on 5173 + FastAPI serve on 8150) running together. For QA, tell the user to run the full stack in their own browser:
+- **NEVER use Claude Code preview tools (`preview_start`, `preview_screenshot`, `preview_snapshot`, `preview_eval`, etc.) for QA.** They consistently fail for Bristlenose — wrong port, missing Vite HMR, white-on-white rendering, incomplete React mount. Every attempt wastes time. Bristlenose needs the full stack (Vite dev server on 5173 + FastAPI serve on 8484) running together. For QA, tell the user to run the full stack in their own browser:
   ```
   .venv/bin/bristlenose serve --dev trial-runs/project-ikea
   ```
-  `--dev` auto-starts Vite on :5173 as a subprocess (cleaned up on exit). Then open http://localhost:8150/report/. For worktrees: use the port from `.claude/launch.json`
+  `--dev` auto-starts Vite on :5173 as a subprocess (cleaned up on exit). Then open http://localhost:8484/report/. For worktrees: use the port from `.claude/launch.json`
 
 ### Release timing (evening releases)
 

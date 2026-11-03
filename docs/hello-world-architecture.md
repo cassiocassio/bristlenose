@@ -1549,7 +1549,7 @@ def get_quotes(project_id: int, db: Session = Depends(_get_db)):
 
 ### 9.1 What the User Sees
 
-When the researcher opens `http://localhost:8150/report/`, they see:
+When the researcher opens `http://localhost:8484/report/`, they see:
 
 1. **Tab bar** at the top: Project | Sessions | Quotes | Codebook | Analysis | Settings | About
 2. **Project tab** (default): Dashboard with summary stats, featured quotes, navigation
@@ -2075,8 +2075,8 @@ export default defineConfig({
     server: {
         port: 5173,
         proxy: {
-            "/api": "http://localhost:8150",      // Proxy API calls to FastAPI
-            "/report": "http://localhost:8150",   // Proxy report files
+            "/api": "http://localhost:8484",      // Proxy API calls to FastAPI
+            "/report": "http://localhost:8484",   // Proxy report files
         },
     },
 });
@@ -2086,8 +2086,8 @@ export default defineConfig({
 ```bash
 bristlenose serve --dev hello-world-study/
 # → --dev starts Vite on :5173 itself, as a subprocess, and cleans it up on exit
-# → open http://localhost:8150/report/ (not :5173 — the FastAPI page loads the
-#   Vite client and src/main.tsx from :5173, so HMR works through :8150)
+# → open http://localhost:8484/report/ (not :5173 — the FastAPI page loads the
+#   Vite client and src/main.tsx from :5173, so HMR works through :8484)
 ```
 Run `npm run dev` by hand only if you want Vite without the server.
 

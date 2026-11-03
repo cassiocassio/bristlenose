@@ -48,7 +48,7 @@ bash .claude/skills/_shared/wflog.sh close-feature gate pass
 Surface only the checks a human must do that tests can't — visual regression, browser interaction, UX feel. Give copy-paste commands, e.g.:
 
 ```
-.venv/bin/bristlenose serve --dev trial-runs/project-ikea   # then open http://localhost:8150/report/
+.venv/bin/bristlenose serve --dev trial-runs/project-ikea   # then open http://localhost:8484/report/
 ```
 
 **Never** use the Claude Code preview tools for Bristlenose QA — they are documented to fail (wrong port, no Vite HMR, white-on-white). For a small diff, a proportionate review (`silent-failure-hunter` + `code-review`) is enough; offer the full `/usual-suspects` only for structural or convention-touching change. Log `bash .claude/skills/_shared/wflog.sh close-feature qa "<surfaced>"`.

@@ -61,7 +61,7 @@ Where Bristlenose is expected to run, and what each target implies for deps, pac
 - No `ollama` → local-LLM path is unavailable. Hosted providers (Claude, ChatGPT, Gemini) work if you set an API key
 - Git fetches go through a proxy (`CCR_TEST_GITPROXY=1`, origin on `127.0.0.1`) — transparent for normal use
 
-**Browser preview of served HTML:** unknown from inside the VM. The Claude Code-in-assistant "preview" tools (`preview_start` etc.) are explicitly banned for Bristlenose (see CLAUDE.md — they fail consistently). Whether the Claude Code *web client* on iPad offers a port-forwarding pane (à la Codespaces) is a UI-side question, not testable from here. If it does, `bristlenose serve --host 0.0.0.0 --port 8150` would be the target. Worth a manual experiment next time you're on iPad.
+**Browser preview of served HTML:** unknown from inside the VM. The Claude Code-in-assistant "preview" tools (`preview_start` etc.) are explicitly banned for Bristlenose (see CLAUDE.md — they fail consistently). Whether the Claude Code *web client* on iPad offers a port-forwarding pane (à la Codespaces) is a UI-side question, not testable from here. If it does, `bristlenose serve --host 0.0.0.0 --port 8484` would be the target. Worth a manual experiment next time you're on iPad.
 
 ### 4. Fedora x86_64 (verified 27 Aug 2026)
 

@@ -142,7 +142,7 @@ When given code to review (diff, file paths, or description):
   on startup (crash recovery via `lsof -ti :8150-9149` + `kill`). Flag missing
   cleanup or SIGKILL instead of SIGINT (SIGINT lets Uvicorn release the port)
 - **Port binding** — serve must bind to `127.0.0.1`, never `0.0.0.0`. Port
-  allocation: `8150 + djb2(projectPath) % 1000`. Flag non-localhost binding
+  allocation: `8484 + djb2(projectPath) % 1000`. Flag non-localhost binding
 - **Settings interception** — `project-action: open-settings` must open native
   Settings scene, not the web modal. Flag settings actions that stay in WKWebView
 - **Hardcoded secrets in Swift source** — API keys, tokens, ASC `.p8` private

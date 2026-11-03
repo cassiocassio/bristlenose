@@ -333,7 +333,7 @@ Read-only (incl. `can_export=False`) removes the mutation *and* bulk-exfil risk.
 **Localhost binding alone did *not* remove the remote risk**, although this doc
 said it did until 28 Sep 2026. Under DNS rebinding, a web page on an attacker's
 domain whose name re-resolves to 127.0.0.1 is same-origin with the serve. A
-security review measured it: with `Host: rebind.attacker.example:8150`, `/admin`
+security review measured it: with `Host: rebind.attacker.example:8484`, `/admin`
 returned `Person.full_name`. The remote risk is closed by
 `LoopbackHostMiddleware` (`server/middleware.py`, outermost in `create_app`),
 which answers 400 to any `Host` other than 127.0.0.1, localhost or [::1]

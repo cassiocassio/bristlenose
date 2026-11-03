@@ -469,7 +469,7 @@ Two layers in total:
 1. **Clean quit**: `.onReceive(NSApplication.willTerminateNotification)` on the root View calls `serveManager.stop()` (SIGINT). Sidecar shuts down within milliseconds.
 2. **Crash recovery (host SIGKILLed by Xcode stop button, force-quit, OOM)**: sidecar's parent-death watcher detects reparenting within 2s and SIGTERMs itself. The next host launch uses `bind(0)`, so even if the orphan is mid-shutdown, the new sidecar gets a different kernel-assigned port. Result: silent recovery, no UI surface.
 
-**Why bind(0) instead of a deterministic per-project port:** the desktop host doesn't need port stability across launches (WKWebView gets injected with whatever URL the sidecar reports, every time). CLI users keep the deterministic 8150 default for bookmark-and-reload. Decoupling the two contracts removed ~150 lines of djb2-port-walker + libproc-cleanup scaffolding (Apr 2026, A6 redesign).
+**Why bind(0) instead of a deterministic per-project port:** the desktop host doesn't need port stability across launches (WKWebView gets injected with whatever URL the sidecar reports, every time). CLI users keep the deterministic 8484 default for bookmark-and-reload. Decoupling the two contracts removed ~150 lines of djb2-port-walker + libproc-cleanup scaffolding (Apr 2026, A6 redesign).
 
 **Side effects of the redesign:**
 - Sidecar prints `Report: http://127.0.0.1:NNNN/report/` *after* socket bind (kernel-assigned port). `ServeManager.handleLine(_:)` parses the port from this URL via `reportPortRegex`.
@@ -567,7 +567,7 @@ read-only `/mcp/` endpoint. Native surface since the extension shipped
   skips `applicationWillTerminate`, serve teardown, and the handshake's
   delete-on-stop, so none of those run in a Cmd-R session either. To test any
   of it: `open -n <built>.app`, arrange windows, **⌘Q the app itself**, then
-  `open` again. Same family as the stale-server-on-8150 trap in the root
+  `open` again. Same family as the stale-server-on-8484 trap in the root
   `CLAUDE.md` — a check that reports confidently while measuring something else.
 
 - **The antenna badge means exposure, not activity** (§5a-bis).
@@ -790,7 +790,7 @@ Process pool sharing is optional — separate pools do not break BroadcastChanne
 
 **Desktop:** the host passes `--port 0` to the sidecar; the kernel assigns a free port via `bind(0)`. `ServeManager.handleLine(_:)` parses the port from the sidecar's `Report: http://127.0.0.1:NNNN/report/` stdout line (printed *after* socket bind). Every host launch gets a fresh port — no contention with slow-dying orphans, no port-walking retry loop, no need for a deterministic-port table.
 
-**CLI:** `bristlenose serve` defaults to port 8150 for backwards compatibility (CLI users bookmark `http://127.0.0.1:8150/report/` and reload after re-running the pipeline). Pass `--port 0` to opt into kernel assignment if you need it.
+**CLI:** `bristlenose serve` defaults to port 8484, a fixed number so the link is stable (CLI users bookmark `http://127.0.0.1:8484/report/` and reload after re-running the pipeline). Pass `--port 0` to opt into kernel assignment if you need it.
 
 The deterministic djb2-per-project allocation was removed in Apr 2026 (A6 redesign) — it only mattered for orphan-cleanup, which the sidecar now handles itself.
 
@@ -871,12 +871,12 @@ After Track C C1 lands, three shared Xcode schemes map to three sidecar resoluti
 | Scheme | Env vars it sets | Mode | Purpose | Failure mode |
 |---|---|---|---|---|
 | **Bristlenose** (default) | _(none)_ | `bundled` | What TestFlight ships. Spawns the sidecar at `Bundle.main.resourceURL/bristlenose-sidecar/bristlenose-sidecar`. Exercises the full shipping flow end-to-end. | Debug + bundle missing → `.failed` state + SwiftUI error card with "set `BRISTLENOSE_DEV_SIDECAR_PATH` or run `desktop/scripts/build-sidecar.sh`". Release + bundle missing → `.failed` + "installation corrupted" + Reveal in Finder. |
-| **Bristlenose (External Server)** | `BRISTLENOSE_DEV_EXTERNAL_PORT=8150` | `external` | Fast CSS/React iteration. Start `bristlenose serve --dev trial-runs/project-ikea` in a terminal, then Cmd+R. App connects to the external server — no subprocess. Live CSS endpoint re-reads on every request; Vite HMR pushes React changes. | App can't reach `127.0.0.1:<port>` → standard connection error + retry. Terminal server missing → same. |
+| **Bristlenose (External Server)** | `BRISTLENOSE_DEV_EXTERNAL_PORT=8484` | `external` | Fast CSS/React iteration. Start `bristlenose serve --dev trial-runs/project-ikea` in a terminal, then Cmd+R. App connects to the external server — no subprocess. Live CSS endpoint re-reads on every request; Vite HMR pushes React changes. | App can't reach `127.0.0.1:<port>` → standard connection error + retry. Terminal server missing → same. |
 | **Bristlenose (Dev Sidecar)** | `BRISTLENOSE_DEV_SIDECAR_PATH=/Users/cassio/Code/bristlenose/.venv/bin/bristlenose` | `devSidecar` | Swift spawns the exact binary you point at — usually your dev venv. Iterate on Python + test the full ServeManager subprocess flow without a PyInstaller rebuild. `Logger.warning` fires on mode resolution so a poisoned env var is visible. | Path invalid (non-existent, directory, non-executable) → `fatalError` with the resolved path (Debug only; never in Release because the env-var read is `#if DEBUG`-guarded). |
 
 **Both env vars set simultaneously** → `ServeManager.init()` fails with "Both dev env vars set — pick one." Catches configuration mistakes at launch rather than on first project click.
 
-**Mode logging.** `ServeManager` uses `Logger(subsystem: "app.bristlenose", category: "serve")` and emits one line at startup: `Mode: external-server, port=8150` / `Mode: dev-sidecar, path=/Users/.../bristlenose` / `Mode: bundled, path=/Applications/.../bristlenose-sidecar`. Shows up in Xcode console, Console.app, and `log stream --predicate 'subsystem == "app.bristlenose"'` in Terminal. Release builds get automatic privacy redaction.
+**Mode logging.** `ServeManager` uses `Logger(subsystem: "app.bristlenose", category: "serve")` and emits one line at startup: `Mode: external-server, port=8484` / `Mode: dev-sidecar, path=/Users/.../bristlenose` / `Mode: bundled, path=/Applications/.../bristlenose-sidecar`. Shows up in Xcode console, Console.app, and `log stream --predicate 'subsystem == "app.bristlenose"'` in Terminal. Release builds get automatic privacy redaction.
 
 **Swap schemes via the dropdown** next to the Run button in Xcode. To set your own env-var value inside a scheme: Product → Scheme → Edit Scheme → Run → Arguments → Environment Variables. For personal paths (e.g. a non-default venv location), edit the scheme's env-var value directly — the schemes are checked into `xcshareddata/xcschemes/` so the default values are shared, but personal overrides stay local until you commit them.
 

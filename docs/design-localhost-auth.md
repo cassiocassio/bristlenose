@@ -85,7 +85,7 @@ An absent header passes, because WebKit sends none on the export download
 navigation (measured). Pinned by `tests/test_serve_auth.py::TestCookieIsForOwnNavigationsOnly`.
 
 **Smaller drift in the plan below, not banner-marked:** the port range is
-8150–8159 on the CLI (`_find_open_port`) and `--port 0` from the desktop, not
+8484–8493 on the CLI (`_find_open_port`) and `--port 0` from the desktop, not
 8150–9149; `authHeaders(extra?)` serves every helper in `api.ts` (~40, and no
 longer sets `Content-Type` itself), not "all six"; the test helper is
 `AuthTestClient` + `LOOPBACK_BASE_URL` in `tests/conftest.py`, not an
@@ -93,9 +93,9 @@ longer sets `Content-Type` itself), not "all six"; the test helper is
 
 ## Context
 
-Bristlenose's serve mode API (`bristlenose serve`) listens on `127.0.0.1:8150-9149` with **zero authentication**. CORS blocks cross-origin browser requests, but any local process (malware, clipboard monitors, collab tools) can `curl http://127.0.0.1:8150/api/projects/1/quotes` and exfiltrate participant names, quotes, themes, and sentiment data. This is flagged as **must-fix before distribution** in the launch checklist.
+Bristlenose's serve mode API (`bristlenose serve`) listens on `127.0.0.1:8150-9149` with **zero authentication**. CORS blocks cross-origin browser requests, but any local process (malware, clipboard monitors, collab tools) can `curl http://127.0.0.1:8484/api/projects/1/quotes` and exfiltrate participant names, quotes, themes, and sentiment data. This is flagged as **must-fix before distribution** in the launch checklist.
 
-**What this is**: a defence-in-depth speed bump against opportunistic local-process scraping. It is **not** an authentication boundary — a determined attacker with same-user privileges can still read the token from the HTML response or the SQLite file directly. The real security boundary is OS process isolation. This token stops lazy one-liner attacks (`curl localhost:8150/api/...`), which is the right level of protection for same-machine IPC.
+**What this is**: a defence-in-depth speed bump against opportunistic local-process scraping. It is **not** an authentication boundary — a determined attacker with same-user privileges can still read the token from the HTML response or the SQLite file directly. The real security boundary is OS process isolation. This token stops lazy one-liner attacks (`curl localhost:8484/api/...`), which is the right level of protection for same-machine IPC.
 
 ## Threat model
 
@@ -271,10 +271,10 @@ Token stashed in `os.environ["_BRISTLENOSE_AUTH_TOKEN"]` (follows `_BRISTLENOSE_
 
 1. `pytest tests/` — all existing + new tests pass
 2. Manual: `bristlenose serve trial-runs/project-ikea` → browser loads, API works (token in HTML)
-3. Manual: `curl http://127.0.0.1:8150/api/projects/1/quotes` → 401
-4. Manual: `curl http://127.0.0.1:8150/api/health` → 200 (exempt)
-5. Manual: `curl http://127.0.0.1:8150/media/interviews/video.mp4` → 401
-6. Manual: `curl -H "Authorization: Bearer <token>" http://127.0.0.1:8150/api/projects/1/quotes` → 200
+3. Manual: `curl http://127.0.0.1:8484/api/projects/1/quotes` → 401
+4. Manual: `curl http://127.0.0.1:8484/api/health` → 200 (exempt)
+5. Manual: `curl http://127.0.0.1:8484/media/interviews/video.mp4` → 401
+6. Manual: `curl -H "Authorization: Bearer <token>" http://127.0.0.1:8484/api/projects/1/quotes` → 200
 7. `cd frontend && npm test` — api.ts auth header tests pass
 8. `ruff check .` — clean
 9. Desktop: Xcode build + run → WKWebView loads, API calls succeed, token in stdout log

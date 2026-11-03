@@ -348,8 +348,8 @@ motivating bug broke):
    shape-only invariants above.
 
 4. **Known flakes to design around** — all documented:
-   - Playwright `reuseExistingServer` + a stale `serve` on port 8150 →
-     wrong measurements. Use fresh ports / check `lsof -i :8150`.
+   - Playwright `reuseExistingServer` + a stale `serve` on port 8484 →
+     wrong measurements. Use fresh ports / check `lsof -i :8484`.
    - The smoke fixture's `RunCompletedEvent` terminus contract (a fixture
      without it never mounts the SPA).
    - Concurrent `xcodebuild test` teardown hangs across worktrees — run Xcode

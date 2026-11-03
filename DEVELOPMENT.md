@@ -40,7 +40,7 @@ Done. You can now run the pipeline or the dev server.
 .venv/bin/bristlenose serve path/to/interviews/ --dev
 ```
 
-`--dev` starts FastAPI on `:8150` with auto-reload AND spawns Vite on `:5173` for React HMR. Theme CSS is served live from source files (no render step needed). Ctrl-C kills both.
+`--dev` starts FastAPI on `:8484` with auto-reload AND spawns Vite on `:5173` for React HMR. Theme CSS is served live from source files (no render step needed). Ctrl-C kills both.
 
 ## Testing
 

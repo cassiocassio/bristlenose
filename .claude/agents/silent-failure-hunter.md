@@ -33,7 +33,7 @@ try/except (Python), try/catch (TS), error callbacks, fallback/default-on-failur
 - **In-browser `fetch()` in `page.evaluate` that can 401 silently.** A dropped auth token becomes ~1ms latency + a ~50-byte error body and reads as *excellent* performance. Require `expect(res.ok).toBe(true)` inside the evaluate AND a payload-size floor (`expect(sizeBytes).toBeGreaterThan(500_000)` when real ≈ 1.6 MB).
 - **Node-side `fetch()` without the bearer token** — Playwright's `extraHTTPHeaders` only applies to browser contexts; Node fixtures get 401'd. Must read `_BRISTLENOSE_AUTH_TOKEN` and pass `authHeaders()`.
 - **`waitForLoadState('networkidle')`** — fires on a 500ms idle window, can beat deferred `useEffect` mounts on slow CI; missed nodes look like a pass. Demand the `waitForPageReady()` pattern (networkidle → `#bn-app-root` children → DOM-count stable across two polls).
-- **`reuseExistingServer: !CI` picking up a stale server on :8150** — silently measures the wrong project (353 quotes vs the 4 in the fixture). Require the server-identity guard (`project_name === "Smoke Test"`) and/or a `lsof -i :8150` check.
+- **`reuseExistingServer: !CI` picking up a stale server on :8484** — silently measures the wrong project (353 quotes vs the 4 in the fixture). Require the server-identity guard (`project_name === "Smoke Test"`) and/or a `lsof -i :8484` check.
 - **Smoke fixtures missing a `RunCompletedEvent`** in `pipeline-events.jsonl` — the status page silently intercepts and the SPA never mounts; tests fail on an absent `#bn-app-root` for a non-obvious reason. Any new serve-against-fixture test must include a terminus event.
 
 **Serialization / output:**

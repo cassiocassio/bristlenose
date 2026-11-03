@@ -1064,7 +1064,7 @@ First run downloads the Whisper model (~1.6 GB). Expect ~2 min on arm64 CPU,
 
 ```bash
 bristlenose serve ~/test-interviews/
-# Open http://127.0.0.1:8150/report/ in browser
+# Open http://127.0.0.1:8484/report/ in browser
 ```
 
 Verify: React SPA loads (not static HTML fallback), sidebars visible,

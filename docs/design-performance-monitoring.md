@@ -92,7 +92,7 @@ Before the dedicated `perf-gate` job, the spec ran inside the `e2e` job but fail
 - **API latency is warn-only.** Runner variance too high for hard gates.
 - **Perf-gate is chromium-only.** Determinism > cross-browser coverage; WebKit peculiarities are noise at these scales.
 - **History is artifact-only.** No CI-to-branch write. Offline analysis via `scripts/perf-history.sh` against the downloaded artifact.
-- **Three separate ports:** 8150 (E2E smoke + perf-gate), ephemeral (stress), no port for FOSSDA (pipeline run).
+- **Three separate ports:** 8484 (E2E smoke + perf-gate), ephemeral (stress), no port for FOSSDA (pipeline run).
 - **Auth:** `_BRISTLENOSE_AUTH_TOKEN=test-token` env var — injected at job level in `ci.yml`, passed via Playwright `extraHTTPHeaders` and shell scripts.
 
 ## Cross-references

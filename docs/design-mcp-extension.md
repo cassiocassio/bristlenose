@@ -1273,14 +1273,14 @@ fact; it should name the moment and the remedy, per HIG `foundations/writing.md`
 **Be exact about which half moves, because the two channels invert.** In the
 desktop app the address is kernel-assigned (`--port 0`) so the port changes
 every launch, while the token is durable per project from the Keychain. On the
-CLI it is the other way round: `serve` defaults to port 8150 (stable, for
+CLI it is the other way round: `serve` defaults to port 8484 (stable, for
 bookmark-and-reload) and the token is a fresh `secrets.token_urlsafe(32)` per
 start. So:
 
 | | Address | Token |
 |---|---|---|
 | Desktop app | changes every launch | stable (data-protection Keychain, non-synchronizable, account = SHA-256 of the project path — `MCPTokenStore`) |
-| CLI `serve` | stable (8150) | changes every restart |
+| CLI `serve` | stable (8484) | changes every restart |
 
 The Generic MCP tab lives in the desktop sheet, so desktop semantics apply and
 "the port changes, the token doesn't" is the accurate line. The website's

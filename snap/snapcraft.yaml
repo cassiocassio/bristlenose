@@ -10,12 +10,31 @@ source-code: https://github.com/cassiocassio/bristlenose
 issues: https://github.com/cassiocassio/bristlenose/issues
 contact: martin@cassiocassio.co.uk
 
-summary: User-research transcription and quote extraction engine
+summary: Turn interview recordings into a browsable report of quotes and themes
 description: |
-  Bristlenose takes a folder of interview recordings and produces a
-  browsable HTML report with extracted quotes, themes, sentiment,
-  friction points, and user journeys. Everything runs locally.
-  LLM calls go to Anthropic or OpenAI APIs.
+  Point Bristlenose at a folder of interview recordings (video, audio, or
+  transcripts from Zoom, Teams or Google Meet). It transcribes them,
+  identifies moderators and participants, extracts verbatim quotes, and groups
+  them by screen and theme. Filler words are stripped; emotion and strong
+  language are kept.
+
+  The result is a report you open in your browser. Click a timecode to watch
+  that moment of the video. Star and tag quotes, edit transcription errors,
+  filter, and export to CSV for Miro, spreadsheets or other boards. Sentiment
+  is tagged automatically to help you find frustration and delight, and a
+  summary of unused quotes lets you check nothing important was trimmed.
+
+  Transcription runs on your machine. The thematic analysis is sent to a
+  language model you choose, using your own account: Claude, ChatGPT, Gemini
+  or Azure OpenAI. A local model through Ollama is supported too, but it is
+  slower and wants a capable machine. Expect about $0.40 per hour of
+  interview audio with Claude; provider costs vary.
+
+  Recordings in your home directory work straight away. For a USB stick or
+  external drive, run: sudo snap connect bristlenose:removable-media
+
+  Free and open source (AGPL-3.0), built by a practising user researcher.
+  Beta software, without warranty. All feedback welcome.
 
 apps:
   bristlenose:

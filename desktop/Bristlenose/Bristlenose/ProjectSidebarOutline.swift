@@ -248,6 +248,26 @@ final class SidebarOutlineView: NSOutlineView {
     /// Returns true if the key was handled (rename began); false to fall through.
     var onCommandReturn: (() -> Bool)?
 
+    /// This window's live resize, start (`true`) and end (`false`). Scoped to the
+    /// window the view is in, so another window's drag never holds this sidebar.
+    var onLiveResize: ((Bool) -> Void)?
+    private var liveResizeObservers: [NSObjectProtocol] = []
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        liveResizeObservers.forEach(NotificationCenter.default.removeObserver)
+        liveResizeObservers = []
+        guard let window else { return }
+        for (name, live) in [(NSWindow.willStartLiveResizeNotification, true),
+                             (NSWindow.didEndLiveResizeNotification, false)] {
+            liveResizeObservers.append(NotificationCenter.default.addObserver(
+                forName: name, object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.onLiveResize?(live) }
+            })
+        }
+    }
+
     override func keyDown(with event: NSEvent) {
         // 36 = Return, 76 = keypad Enter.
         if (event.keyCode == 36 || event.keyCode == 76), onCommandReturn?() == true {
@@ -355,6 +375,10 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
     /// animation that makes a reorder feel native. `update()` still *stores* the fresh
     /// tree while suppressed; `reloadReleaseWork` reloads against it once the slide ends.
     private var reloadSuppressed = false
+    /// The window is being resized right now (`SidebarOutlineView.onLiveResize`),
+    /// and whether `update()` skipped a reload meanwhile.
+    private var liveResizing = false
+    private var reloadOwedAfterResize = false
 
     /// Lifts `reloadSuppressed` when the drop animation settles. Held so a second drop
     /// mid-animation cancels the first release rather than lifting the guard early.
@@ -536,6 +560,7 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // Return / Enter on a selected row begins rename (the Finder idiom — in
         // this sidebar selection already "opens", so Return is free to mean rename).
         outlineView.onCommandReturn = { [weak self] in self?.beginRenameSelected() ?? false }
+        outlineView.onLiveResize = { [weak self] live in self?.liveResizeChanged(live) }
 
         // Slow-second-click rename (Photos' sidebar idiom: click an already-selected
         // album, pause, click again → rename). Note the action fires for EVERY click
@@ -625,7 +650,27 @@ final class SidebarOutlineController: NSViewController, NSOutlineViewDataSource,
         // order is ahead of the tree. The release work item reloads against whatever
         // tree landed while suppressed.
         guard !reloadSuppressed else { return }
+        // A window drag republishes this view on every frame (ContentView re-reads
+        // the split widths), and a reload rebuilds every visible row's cell. Hold
+        // still while the window is being resized and reload once when it stops
+        // (`liveResizeChanged`). The tree and selection are stored above, and the
+        // cells read the rest live, so that one reload shows everything.
+        guard !liveResizing else {
+            reloadOwedAfterResize = true
+            return
+        }
 
+        reloadAndRestore()
+    }
+
+    /// The window's live resize started or ended. On the end, pay the one reload
+    /// `update()` held back, unless a rename or a drop slide has the table (each
+    /// of those reloads on its own release).
+    private func liveResizeChanged(_ live: Bool) {
+        liveResizing = live
+        guard !live, reloadOwedAfterResize else { return }
+        reloadOwedAfterResize = false
+        guard editingNodeID == nil, !reloadSuppressed else { return }
         reloadAndRestore()
     }
 

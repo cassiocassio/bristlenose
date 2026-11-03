@@ -638,6 +638,7 @@ final class BridgeHandler: ObservableObject {
     /// safe today — not an invariant of `weak` itself.
     weak var webView: WKWebView? {
         didSet {
+            lastToolbarInset = nil
             let live = webView != nil
             if hasChannel != live { hasChannel = live }
         }
@@ -1119,6 +1120,9 @@ final class BridgeHandler: ObservableObject {
     /// safeAreaInset (what AppKit hands SwiftUI's `.ignoresSafeArea` machinery)
     /// and take the larger — but subtract the WebView's own applied inset either
     /// way, so the residual stays correct across the transition.
+    /// The residual last pushed to the page, so an unchanged one is not pushed again.
+    private var lastToolbarInset: CGFloat?
+
     func syncToolbarInset() {
         guard let webView, let window = webView.window else { return }
         let frameDelta = window.frame.height - window.contentLayoutRect.height
@@ -1130,6 +1134,12 @@ final class BridgeHandler: ObservableObject {
         // pad. Today toolbarRegion == this inset → residual 0.
         let nativeInset = webView.safeAreaInsets.top
         let residual = max(0, toolbarRegion - nativeInset)
+        // Every frame of a window drag lands here (`didResizeNotification`), and the
+        // residual is almost always unchanged: don't cross to the web process for
+        // the same number. A new document starts with no inset, so `ready` and a new
+        // web view forget what was sent.
+        guard residual != lastToolbarInset else { return }
+        lastToolbarInset = residual
         Task {
             try? await webView.callAsyncJavaScript(
                 "window.__bristlenose?.setToolbarInset?.(inset)",
@@ -1246,6 +1256,7 @@ final class BridgeHandler: ObservableObject {
             }
             syncAnalysisAnimation()
             syncLocale()
+            lastToolbarInset = nil
             syncToolbarInset()
             syncProjectsColumnFolded()
             webView?.window?.makeFirstResponder(webView)

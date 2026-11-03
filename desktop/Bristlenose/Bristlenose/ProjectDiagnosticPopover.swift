@@ -317,27 +317,10 @@ struct ProjectDiagnosticPopover: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The quotes a run left out, one row per session: the shipped warning glyph, the session
-    /// id as the failure rows show it, and the count. Not a failure bucket (the session is in
-    /// the report), so no `(n/m)` and no reason column.
+    /// The quotes a run left out, one row per session: see `LeftOutRows`.
     @ViewBuilder
     private func leftOutGrid(_ rows: [(sessionID: String, count: Int)]) -> some View {
-        Grid(alignment: .topLeading, horizontalSpacing: 6, verticalSpacing: 4) {
-            ForEach(Array(rows.enumerated()), id: \.0) { _, row in
-                GridRow {
-                    Image(systemName: MessageKind.warning.symbolName)
-                        .foregroundStyle(MessageKind.warning.tint)
-                        .font(.footnote)
-                    Text(row.sessionID)
-                        .font(.system(.footnote, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    Text(Self.leftOutText(count: row.count, i18n: i18n))
-                        .font(.footnote)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        }
+        LeftOutRows(rows: rows, i18n: i18n)
     }
 
     /// "1 quote left out" / "3 quotes left out", through the locale's own plural forms.
@@ -801,5 +784,32 @@ struct ProjectDiagnosticPopover: View {
         return lines
             .joined(separator: "\n")
             .replacingOccurrences(of: projectPath, with: "<project>")
+    }
+}
+
+/// The rows under a done-with-warnings run's popover headline: the shipped warning glyph, the
+/// session id as the failure rows show it, and the count. Not a failure bucket (the session is
+/// in the report), so no `(n/m)` and no reason column. Its own view so a test can render it.
+struct LeftOutRows: View {
+    let rows: [(sessionID: String, count: Int)]
+    let i18n: I18n
+
+    var body: some View {
+        Grid(alignment: .topLeading, horizontalSpacing: 6, verticalSpacing: 4) {
+            ForEach(Array(rows.enumerated()), id: \.0) { _, row in
+                GridRow {
+                    Image(systemName: MessageKind.warning.symbolName)
+                        .foregroundStyle(MessageKind.warning.tint)
+                        .font(.footnote)
+                    Text(row.sessionID)
+                        .font(.system(.footnote, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Text(ProjectDiagnosticPopover.leftOutText(count: row.count, i18n: i18n))
+                        .font(.footnote)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
     }
 }

@@ -55,4 +55,38 @@ import Testing
         #expect(ProjectDiagnosticPopover.leftOutText(count: 5, i18n: ru) == "Пропущено 5 цитат")
         #expect(ProjectDiagnosticPopover.leftOutText(count: 21, i18n: ru) == "Пропущена 21 цитата")
     }
+
+    /// The whole popover, as `NSPopover` would draw it, for a run that only left quotes out:
+    /// headline, glyph and rows together. Attached to the result bundle.
+    @Test func theWholePopoverDrawsForARunThatOnlyLeftQuotesOut() throws {
+        let i18n = I18n()
+        i18n.configure(localesDirectory: try #require(I18n.findLocalesDirectory()))
+        i18n.setLocale("en")
+        var summary = PipelineSummary(
+            transcripts: StageOutcome(attempted: 3, succeeded: 3, durationMs: 412_000, failed: []),
+            topics: StageOutcome(attempted: 3, succeeded: 3, durationMs: 41_000, failed: []),
+            quotes: StageOutcome(attempted: 3, succeeded: 3, durationMs: 82_000, failed: []),
+            themes: StageOutcome(attempted: 1, succeeded: 1, durationMs: 14_000, failed: []))
+        summary.quotesLeftOut = ["s2": 1, "s3": 3]
+        let project = Project(id: UUID(), name: "Talismanic", path: "/tmp/talismanic")
+        let view = ProjectDiagnosticPopover(
+            project: project, state: .completedPartial(summary: summary), liveData: PipelineLiveData()
+        ).environmentObject(i18n)
+        let host = NSHostingView(rootView: view)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 300),
+                              styleMask: [.borderless], backing: .buffered, defer: false)
+        window.appearance = NSAppearance(named: .aqua)
+        window.contentView = host
+        host.layoutSubtreeIfNeeded()
+        let size = host.fittingSize
+        window.setContentSize(size)
+        host.frame = NSRect(origin: .zero, size: size)
+        host.layoutSubtreeIfNeeded()
+        let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+        host.cacheDisplay(in: host.bounds, to: rep)
+        Attachment.record(try #require(rep.representation(using: .png, properties: [:])),
+                          named: "popover-quotes-left-out.png")
+        withExtendedLifetime(i18n) {}
+        #expect(size.height > 80)
+    }
 }

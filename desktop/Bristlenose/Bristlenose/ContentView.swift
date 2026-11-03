@@ -257,6 +257,13 @@ struct ContentView: View {
     /// front one. Both windows still point at the *same* sidecar — this is the
     /// half of multi-window that needs no serve rework.
     @StateObject private var bridgeHandler = BridgeHandler()
+    #if DEBUG
+    /// Diagnostics ▸ Provider problem pill ▸ "Pill in the trailing group": moves
+    /// only the provider-problem pill out of the centre `.status` shelf to the
+    /// head of the trailing actions. Off by default, DEBUG-only; to revert the
+    /// experiment delete every `debugPillTrailing` / `trailingPill` mention.
+    @AppStorage("BristlenoseDebugPillTrailing") private var debugPillTrailing = false
+    #endif
     @EnvironmentObject var projectIndex: ProjectIndex
     @EnvironmentObject var pipelineRunner: PipelineRunner
     /// This window's toasts. Each window owns its store and draws only it: there was
@@ -3110,8 +3117,24 @@ struct ContentView: View {
         }
     }
 
+    /// DEBUG experiment: the provider-problem pill as the first trailing item,
+    /// split from the actions capsule by a fixed spacer on 26. Empty in release.
+    @ToolbarContentBuilder
+    private var trailingPill: some ToolbarContent {
+        #if DEBUG
+        if debugPillTrailing {
+            ToolbarItem(placement: .primaryAction) {
+                ProviderProblemPill(model: ProviderProblemModel.shared)
+            }
+            .withoutSharedBackground()
+            searchSeparator
+        }
+        #endif
+    }
+
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
+        trailingPill
         // Report-only actions — hidden when the lens surface can't act, on the
         // same availability truth as the lens rows. Covers the old cases (a
         // never-run project no longer shows a Search field + Export button
@@ -3236,10 +3259,19 @@ struct ContentView: View {
         // rejected, or out of credit), lit by a refused call and held to the
         // key's verdict. Cloud-only, so it never co-occurs with the Ollama
         // (local) pill above.
+        #if DEBUG
+        if !debugPillTrailing {
+            ToolbarItem(placement: .status) {
+                ProviderProblemPill(model: ProviderProblemModel.shared)
+            }
+            .withoutSharedBackground()
+        }
+        #else
         ToolbarItem(placement: .status) {
             ProviderProblemPill(model: ProviderProblemModel.shared)
         }
         .withoutSharedBackground()
+        #endif
         // Sibling app-global pill: an expiring `.dmg` alpha build in its final
         // week. Self-gates (nil off the .developerID channel / outside the last
         // 7 days), so it renders nothing on App Store / TestFlight / CLI builds.

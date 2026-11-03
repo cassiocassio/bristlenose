@@ -265,6 +265,7 @@ private struct DebugMenuContent: View {
     /// The pill's state — a singleton, so the menu and the toolbar item share it
     /// without touching the app's environment-object wiring.
     @ObservedObject private var providerProblem = ProviderProblemModel.shared
+    @AppStorage("BristlenoseDebugPillTrailing") private var debugPillTrailing = false
     @Environment(\.openWindow) private var openWindow
     @FocusedValue(\.windowCommands) private var windowCommands
 
@@ -367,6 +368,8 @@ private struct DebugMenuContent: View {
                     providerProblem.debugForce(stage: st)
                 }
             }
+            Divider()
+            Toggle("Pill in the trailing group (toolbar experiment)", isOn: $debugPillTrailing)
             Divider()
             Button("Back to the real state") { providerProblem.debugForced = nil }
         }

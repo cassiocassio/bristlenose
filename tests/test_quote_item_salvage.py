@@ -285,9 +285,9 @@ def test_sessions_with_no_quotes_are_named_in_session_order():
 
     assert _quote_shortfall(_failed("s10", "s6", "s1"), {}) == ("no quotes from s1, s6, s10", "")
     assert _quote_shortfall(_failed(), {"s3": 1, "s10": 2}) == (
-        "", "3 incomplete quotes left out (s3, s10)",
+        "", "3 unusable quotes left out (s3, s10)",
     )
-    assert _quote_shortfall(_failed(), {"s3": 1})[1] == "1 incomplete quote left out (s3)"
+    assert _quote_shortfall(_failed(), {"s3": 1})[1] == "1 unusable quote left out (s3)"
 
 
 def test_a_long_list_of_sessions_is_cut_with_a_count():
@@ -308,7 +308,7 @@ def test_the_step_names_the_empty_sessions_then_what_was_left_out(monkeypatch):
     )
     assert printed == [
         "No quotes from s1, s6 — the model's reply didn't fit the expected format",
-        "1 incomplete quote left out (s10)",
+        "1 unusable quote left out (s10)",
     ]
 
 
@@ -317,7 +317,7 @@ def test_the_summary_line_puts_empty_sessions_first():
 
     assert _summary_warning(_failed("s1"), {"s10": 1}, ["e"], "anyllm") == "no quotes from s1"
     assert _summary_warning(_failed(), {"s10": 1}, [], "anyllm") == (
-        "1 incomplete quote left out (s10)"
+        "1 unusable quote left out (s10)"
     )
     # Topic segmentation's error, when that is all there is.
     assert _summary_warning(_failed(), {}, ["topics failed"], "anyllm") == "topics failed"
@@ -400,7 +400,7 @@ def test_analyze_prints_the_shortfall_under_stage_9(tmp_path: Path, monkeypatch)
         asyncio.run(p.Pipeline(settings).run_analysis_only(tx, tmp_path / "out"))
     assert printed == [
         "No quotes from s1 — the model's reply didn't fit the expected format",
-        "1 incomplete quote left out (s10)",
+        "1 unusable quote left out (s10)",
     ]
 
 
@@ -448,7 +448,7 @@ def test_run_prints_the_shortfall_under_stage_9(tmp_path: Path, monkeypatch):
         asyncio.run(p.Pipeline(settings).run(input_dir, output_dir))
     assert printed[-2:] == [
         "No quotes from s1 — the model's reply didn't fit the expected format",
-        "1 incomplete quote left out (s10)",
+        "1 unusable quote left out (s10)",
     ]
 
 

@@ -1630,7 +1630,7 @@ def _quote_shortfall(outcome: StageOutcome, dropped: dict[str, int]) -> tuple[st
     left_out = ""
     if total := sum(dropped.values()):
         left_out = (
-            f"{count_noun(total, 'incomplete quote')} left out ({_session_list(dropped)})"
+            f"{count_noun(total, 'unusable quote')} left out ({_session_list(dropped)})"
         )
     return no_quotes, left_out
 

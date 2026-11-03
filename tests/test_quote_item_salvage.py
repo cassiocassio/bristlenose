@@ -653,9 +653,13 @@ def test_a_resumed_run_still_says_what_the_first_run_left_out(
     async def stop_here(*_a, **_kw):
         raise RuntimeError("stop after stage 9")
 
+    warned_steps: list[str] = []
+
     def run_once(stop: str = "stop after stage 9") -> list[str]:
         printed: list[str] = []
+        warned_steps.clear()
         monkeypatch.setattr(p, "_print_warn", lambda msg, link="": printed.append(msg))
+        monkeypatch.setattr(p, "_print_warn_step", lambda msg, *_a, **_k: warned_steps.append(msg))
         with (
             patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
             patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
@@ -684,6 +688,8 @@ def test_a_resumed_run_still_says_what_the_first_run_left_out(
     second = run_once()
     assert "s1" not in asked, "the cached session was asked again; the test is not about a resume"
     assert "1 unusable quote left out (s1)" in second
+    # Said, but not a warning of this run: nothing was left out THIS time.
+    assert not [w for w in warned_steps if "quote" in w]
 
 
 def test_the_readable_chain_records_the_count_when_it_delivers_a_session(tmp_path: Path):

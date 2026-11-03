@@ -3582,6 +3582,11 @@ class Pipeline:
             # ── Stage 9: Quote extraction ────────────────────────────
             _quote_errors: list[str] = []
             _quote_drops: dict[str, int] = {}
+            #: Left out by an EARLIER run, read back from the manifest for sessions served
+            #: from cache. Printed so a resume still says it, but never counted as this
+            #: run's warning: otherwise one salvaged quote would hold the study at "Done
+            #: with warnings" on every unchanged re-run, with nothing the researcher can do.
+            _cached_quote_drops: dict[str, int] = {}
             _eq_path = intermediate / "extracted_quotes.json"
             # Quotes depend on the transcripts as well as the topic map. With
             # only the map watched, a changed transcript whose boundaries came
@@ -3643,11 +3648,11 @@ class Pipeline:
                     {t.session_id for t in clean_transcripts}, _quote_session_fps,
                 )
                 # What the run that did the extraction said (owner call 48).
-                _quote_drops.update(quotes_left_out_by_session(
+                _cached_quote_drops.update(quotes_left_out_by_session(
                     _prev_manifest, STAGE_QUOTE_EXTRACTION,
                     {t.session_id for t in clean_transcripts},
                 ))
-                if _left_out_line := _quote_shortfall(StageOutcome(), _quote_drops)[1]:
+                if _left_out_line := _quote_shortfall(StageOutcome(), _cached_quote_drops)[1]:
                     _print_warn(_left_out_line)
             else:
                 self._stage_runs(STAGE_QUOTES)
@@ -3689,7 +3694,7 @@ class Pipeline:
                 # A session served from the cache was salvaged by an earlier run;
                 # that run said so, and this one must not read as if nothing was left
                 # out (owner call 48).
-                _quote_drops.update(quotes_left_out_by_session(
+                _cached_quote_drops.update(quotes_left_out_by_session(
                     _prev_manifest, STAGE_QUOTE_EXTRACTION,
                     _cached_quote_sids - set(_chain_quote_fps),
                 ))
@@ -3820,8 +3825,8 @@ class Pipeline:
                 )
                 self._emit_remaining(STAGE_QUOTES, _quotes_elapsed)
                 _print_quote_shortfall(
-                    _fresh_quote_outcome, _quote_drops, _quote_errors,
-                    self.settings.llm_provider,
+                    _fresh_quote_outcome, {**_cached_quote_drops, **_quote_drops},
+                    _quote_errors, self.settings.llm_provider,
                 )
             # ── Quote outcome rollup + abandon check ───────────────────
             # MUST run BEFORE mark_stage_complete: if we mark the stage

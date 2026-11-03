@@ -364,10 +364,6 @@ jobs:
           echo "::endgroup::"
           exit $rc
 
-  # The FigJam plugin (figjam-plugin/) is its own npm project: it ships to Figma
-  # Community, not in the wheel or the app, so no other job installs it. Its
-  # tests read tests/fixtures/figjam-board-v1.json, which pytest generates, so
-  # this is the half of the board-file contract that the plugin keeps.
   any-llm-library:
     # The real any-llm, which the `test` matrix never installs (3.10 cannot: the
     # library needs 3.11+) and which the shape tests in tests/test_anyllm.py skip
@@ -397,6 +393,10 @@ jobs:
       - name: any-llm tests, real library
         run: pytest --tb=short -q tests/test_anyllm.py
 
+  # The FigJam plugin (figjam-plugin/) is its own npm project: it ships to Figma
+  # Community, not in the wheel or the app, so no other job installs it. Its
+  # tests read tests/fixtures/figjam-board-v1.json, which pytest generates, so
+  # this is the half of the board-file contract that the plugin keeps.
   figjam-plugin:
     runs-on: ubuntu-latest
     timeout-minutes: 10

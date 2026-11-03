@@ -1219,6 +1219,11 @@ def test_the_real_converted_error_reads_like_the_fake_one(
     fake = _openrouter(status, body)
     converted = convert_exception(fake.original_exception, "openrouter")  # type: ignore[attr-defined]
 
+    # The preflight branches on the class name (ModelNotFoundError), and the real library
+    # wraps the SDK error it was given; a fake that drifts on either is caught here.
+    assert converted.original_exception is fake.original_exception  # type: ignore[attr-defined]
+    if isinstance(fake, ModelNotFoundError):
+        assert type(converted).__name__ == "ModelNotFoundError"
     assert anyllm.classify(converted) == anyllm.classify(fake)
     assert anyllm.upstream(converted) == anyllm.upstream(fake)
     assert (host is None) == (anyllm.upstream(converted) is None)
@@ -1653,6 +1658,7 @@ def test_the_host_behind_a_gateway_is_read_from_its_error() -> None:
     busy = _openrouter(429, _SHARED_POOL_429)
     assert anyllm.upstream(busy) == ("Mistral", "upstream_provider_shared_pool")
     assert anyllm.upstream(_openrouter(401, _BAD_KEY)) is None
+    assert anyllm.upstream(Exception("401 bad key")) is None  # no wrapped error, no body
 
 
 def test_the_same_key_twice_is_not_a_shadow(

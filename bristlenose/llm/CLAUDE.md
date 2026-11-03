@@ -84,7 +84,7 @@ API keys are stored securely in the system keychain. Uses native CLI tools — n
 - **Telemetry:** rows keyed on the request model (`provider:model`), never priced
 - **Log a caught LLM error as `failure_summary(exc)`, never `%s` of it** (all providers): pydantic's text quotes the reply, and a provider's error string is its whole body (OpenRouter's moderation 403 carries `metadata.flagged_input`, the transcript). It reads the body through `original_exception`, never `__context__`. A no-leak test needs a short value: pydantic abbreviates a long `input_value`, so a long one passes with the leak in place
 - **Rich:** lines that print a model string turn the highlighter off (`anthropic:claude` reads as IPv6) and escape install commands (`[any-llm]` reads as a style tag)
-- **Tests:** `tests/test_anyllm.py` uses a fake `any_llm` shaped like 1.27; CI never installs the real one. The real library is asked by the manual walk and `scripts/check-providers-live.py`
+- **Tests:** `tests/test_anyllm.py` uses a fake `any_llm` shaped like 1.27; the `test` matrix never installs the real one, but the `any-llm-library` CI job does and runs the shape tests (class shape, error shape against the real `convert_exception`, thinking off, no telemetry, no network on import). Live calls are asked by the manual walk and `scripts/check-providers-live.py`
 
 ## LLM concurrency
 

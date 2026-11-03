@@ -241,6 +241,16 @@ class TestARefusedCallIsRecordedAsAnError:
         assert outcomes == ["error"]
 
     @pytest.mark.asyncio
+    async def test_a_gemini_blocked_prompt_is_an_error_row_too(self) -> None:
+        client = _gemini(None, "STOP")
+        client._google_client.aio.models.generate_content.return_value.prompt_feedback = (
+            SimpleNamespace(block_reason=SimpleNamespace(name="PROHIBITED_CONTENT")))
+        outcomes = _recording(client)
+        with pytest.raises(ContentBlockedError):
+            await _ask(client)
+        assert outcomes == ["error"]
+
+    @pytest.mark.asyncio
     async def test_a_claude_reply_that_carries_its_answer_is_still_ok(self) -> None:
         """A refusal stop_reason with the tool answer present is read as the answer, as before."""
         answer = SimpleNamespace(type="tool_use", name="structured_output", input={"quotes": []})

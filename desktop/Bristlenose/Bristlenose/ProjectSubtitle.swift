@@ -357,6 +357,17 @@ enum ProjectSubtitle {
     /// "can't reach the folder" is the only honest line. Copying sits *below* the verb-led pipeline
     /// states (you can't run and copy at once in practice) but *above* the
     /// resting date/delta — an active import outranks "last analysed N days ago".
+    /// The count a done-with-warnings row says, or nil for "Partial completion". Only a run
+    /// that lost sessions says how many; a run with no failure that only left quotes out has
+    /// every session in the report, so it says "3 of 3 sessions analysed" beside the warning
+    /// glyph rather than calling a complete run partial. The row and the popover headline
+    /// both read this, so they cannot disagree.
+    static func completedPartialAnalysed(_ summary: PipelineSummary) -> SessionsAnalysed? {
+        guard let analysed = summary.sessionsAnalysed else { return nil }
+        if summary.totalFailureCount == 0, summary.leftOutCount > 0 { return analysed }
+        return analysed.done < analysed.total ? analysed : nil
+    }
+
     static func resolve(
         availability: ProjectAvailability,
         pipelineState: PipelineState?,
@@ -399,8 +410,7 @@ enum ProjectSubtitle {
             if !failures.isEmpty, failures.allSatisfy({ $0.cause.category == .deferred }) {
                 return .waitingForWhisper
             }
-            let analysed = summary.sessionsAnalysed
-            return .completedPartial(analysed: analysed.flatMap { $0.done < $0.total ? $0 : nil })
+            return .completedPartial(analysed: completedPartialAnalysed(summary))
         case .running:
             // Stopping outranks progress — acknowledge the Stop click.
             return isStopping ? .stopping : .running

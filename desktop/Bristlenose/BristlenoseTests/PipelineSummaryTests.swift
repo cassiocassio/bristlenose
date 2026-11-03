@@ -205,6 +205,31 @@ struct PipelineSummaryTests {
         )
         #expect(text.contains("Quotes left out"))
         #expect(text.contains("s2  1"))
+        // Nothing failed, so it is not "Partial completion" and names no failure category.
+        #expect(text.contains("Outcome: Done with warnings"))
+        #expect(!text.contains("Dominant category"))
+    }
+
+    @Test func aRunWithRealFailuresStillSaysPartialAndNamesTheCategory() {
+        var summary = makeSummary(failures: [(.network, 1)])
+        summary.quotesLeftOut = ["s2": 1]
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
+            summary: summary, projectName: "P", projectPath: "/x", abandoned: false
+        )
+        #expect(text.contains("Outcome: Partial completion"))
+        #expect(text.contains("Dominant category: network"))
+    }
+
+    @Test func aRunThatOnlyLeftQuotesOutSaysHowManySessionsAreInTheReport() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_quotes_left_out"))
+        // 3 of 3, not nil: nil is the "Partial completion" header, which would call a
+        // complete run partial. The row and the popover headline both read this.
+        #expect(ProjectSubtitle.completedPartialAnalysed(summary) == SessionsAnalysed(done: 3, total: 3))
+    }
+
+    @Test func aRunThatLostSessionsStillSaysHowMany() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_partial"))
+        #expect(ProjectSubtitle.completedPartialAnalysed(summary) == SessionsAnalysed(done: 3, total: 5))
     }
 
     @Test func fixtureRunFailedAbandonedDominantIsAuth() throws {

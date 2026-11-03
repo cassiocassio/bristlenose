@@ -167,8 +167,11 @@ struct ProjectDiagnosticPopover: View {
         case .failed(let message, _):
             return message.startupRefusal?.headline(using: i18n)
                 ?? i18n.t("desktop.pipeline.status.headline.failed")
-        case .completedPartial:
-            return i18n.t("desktop.pipeline.diagnostic.header.completed_partial")
+        case .completedPartial(let summary):
+            // The row's text, so the two cannot disagree: for a run that only left quotes
+            // out it is "3 of 3 sessions analysed", not "Partial completion".
+            return SidebarSubtitleText.completedPartialText(
+                ProjectSubtitle.completedPartialAnalysed(summary), i18n: i18n)
         case .failedWithDiagnostic:
             return i18n.t("desktop.pipeline.diagnostic.header.failed")
         case .unreachable(let reason):
@@ -712,9 +715,13 @@ struct ProjectDiagnosticPopover: View {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         lines.append("Bristlenose \(appVersion) (\(build)) on \(os)")
         lines.append("Project: \(projectName)")
-        lines.append("Outcome: \(abandoned ? "Run failed" : "Partial completion")")
-        // Raw snake_case enum value is the triager-greppable form; do NOT humanise.
-        lines.append("Dominant category: \(summary.dominantCategory().rawValue)")
+        let onlyLeftOut = !abandoned && summary.totalFailureCount == 0 && summary.leftOutCount > 0
+        lines.append("Outcome: \(abandoned ? "Run failed" : onlyLeftOut ? "Done with warnings" : "Partial completion")")
+        // Raw snake_case enum value is the triager-greppable form; do NOT humanise. A run
+        // that only left quotes out failed at nothing, so it names no category.
+        if !onlyLeftOut {
+            lines.append("Dominant category: \(summary.dominantCategory().rawValue)")
+        }
         lines.append("")
         for (name, outcome) in summary.allBuckets where !outcome.failed.isEmpty {
             // `durationMs` is nil when the stage didn't run (all cache hits, or

@@ -3117,11 +3117,12 @@ struct ContentView: View {
         }
     }
 
+    #if DEBUG
     /// DEBUG experiment: the provider-problem pill as the first trailing item,
-    /// split from the actions capsule by a fixed spacer on 26. Empty in release.
+    /// split from the actions capsule by a fixed spacer on 26. Defined only in
+    /// Debug: a builder body that is empty in Release does not compile.
     @ToolbarContentBuilder
     private var trailingPill: some ToolbarContent {
-        #if DEBUG
         if debugPillTrailing {
             ToolbarItem(placement: .primaryAction) {
                 ProviderProblemPill(model: ProviderProblemModel.shared)
@@ -3129,12 +3130,14 @@ struct ContentView: View {
             .withoutSharedBackground()
             searchSeparator
         }
-        #endif
     }
+    #endif
 
     @ToolbarContentBuilder
     private var toolbarTrailing: some ToolbarContent {
+        #if DEBUG
         trailingPill
+        #endif
         // Report-only actions — hidden when the lens surface can't act, on the
         // same availability truth as the lens rows. Covers the old cases (a
         // never-run project no longer shows a Search field + Export button

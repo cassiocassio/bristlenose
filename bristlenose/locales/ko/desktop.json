@@ -419,6 +419,7 @@
         "completed_partial": "{{project}} \ubd84\uc11d\uc774 \uc2e4\ud328\uc640 \ud568\uaed8 \uc644\ub8cc\ub428"
       },
       "partialSessions_other": "세션 {{total}}개 중 {{done}}개 분석됨",
+      "quotesLeftOut_other": "인용문 {{count}}개 제외됨",
       "noStructuredCause": "\uc790\uc138\ud55c \uc6d0\uc778\uc774 \uae30\ub85d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.",
       "reportError": "이 보고서를 여는 동안 Bristlenose에 예기치 않은 문제가 발생했습니다.",
       "overflow_other": "\u2026 \uc678 {{count}}\uac1c \uc2e4\ud328 \uc0dd\ub7b5\ub428",

@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} di {{total}} sessione analizzata",
       "partialSessions_other": "{{done}} di {{total}} sessioni analizzate",
+      "quotesLeftOut_one": "{{count}} citazione omessa",
+      "quotesLeftOut_other": "{{count}} citazioni omesse",
       "noStructuredCause": "Causa dettagliata non rilevata.",
       "reportError": "Bristlenose ha riscontrato un problema imprevisto nell'aprire questo report.",
       "overflow_one": "… e {{count}} altro errore troncato",

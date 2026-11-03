@@ -677,15 +677,23 @@ def test_a_resumed_run_still_says_what_the_first_run_left_out(
             patch.object(p.Pipeline, "_readable_chain", return_value=None),
             pytest.raises(RuntimeError, match=stop),
         ):
-            asyncio.run(p.Pipeline(settings).run(input_dir, output_dir))
+            pipeline = p.Pipeline(settings)
+            pipelines.append(pipeline)
+            asyncio.run(pipeline.run(input_dir, output_dir))
         return printed
 
+    pipelines: list = []
     first = run_once("crash after delivering" if crash["now"] else "stop after stage 9")
     if not crash["now"]:
         assert "1 unusable quote left out (s1)" in first
+        # The Mac reads this from the run's summary (owner, 3 Nov 2026): this run's drops.
+        assert pipelines[0]._summary.quotes_left_out == {"s1": 1}
     crash["now"] = False
     asked.clear()
     second = run_once()
+    # A session served from cache was said at its own run: nothing left out THIS time,
+    # so the summary does not hold the study at "Done with warnings" on every re-run.
+    assert pipelines[-1]._summary.quotes_left_out is None
     assert "s1" not in asked, "the cached session was asked again; the test is not about a resume"
     assert "1 unusable quote left out (s1)" in second
     # Said, but not a warning of this run: nothing was left out THIS time.

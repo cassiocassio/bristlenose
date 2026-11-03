@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} af {{total}} session analyseret",
       "partialSessions_other": "{{done}} af {{total}} sessioner analyseret",
+      "quotesLeftOut_one": "{{count}} citat udeladt",
+      "quotesLeftOut_other": "{{count}} citater udeladt",
       "noStructuredCause": "Detaljeret årsag ikke registreret.",
       "reportError": "Bristlenose stødte på et uventet problem under åbning af denne rapport.",
       "overflow_one": "… og {{count}} yderligere fejl blev afkortet",

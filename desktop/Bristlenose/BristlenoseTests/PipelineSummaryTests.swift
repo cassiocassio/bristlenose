@@ -60,6 +60,7 @@ struct PipelineSummaryTests {
             "run_completed_partial_truncated": SessionsAnalysed(done: 4, total: 18),
             "run_completed_clean": SessionsAnalysed(done: 3, total: 3),
             "run_completed_deferred_overflow": SessionsAnalysed(done: 3, total: 15),
+            "run_completed_quotes_left_out": SessionsAnalysed(done: 3, total: 3),
         ]
         var got: [String: SessionsAnalysed] = [:]
         for (name, scenario) in try loadScenarios() {
@@ -160,6 +161,50 @@ struct PipelineSummaryTests {
         let summary = try decodeSummary(from: scenario)
         #expect(summary.totalFailureCount == 2)
         #expect(summary.dominantCategory() == .missingBinary)
+    }
+
+    // MARK: - Quotes left out (owner, 3 Nov 2026)
+
+    @Test func fixtureQuotesLeftOutIsCountedAndIsNotAFailure() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_quotes_left_out"))
+        #expect(summary.leftOutCount == 1)
+        #expect(summary.leftOutBySession.map(\.sessionID) == ["s2"])
+        // Not a failure: the session is in the report and in no `failed` list.
+        #expect(summary.totalFailureCount == 0)
+    }
+
+    @Test func aCleanRunHasNothingLeftOut() throws {
+        let summary = try decodeSummary(from: try requireScenario("run_completed_clean"))
+        #expect(summary.quotesLeftOut == nil)
+        #expect(summary.leftOutCount == 0)
+        #expect(summary.leftOutBySession.isEmpty)
+    }
+
+    @Test func leftOutSessionsSortInSessionOrderAndDropZeros() {
+        var summary = makeSummary(failures: [])
+        summary.quotesLeftOut = ["s10": 2, "s2": 1, "s3": 0]
+        #expect(summary.leftOutBySession.map(\.sessionID) == ["s2", "s10"])
+        #expect(summary.leftOutBySession.map(\.count) == [1, 2])
+        #expect(summary.leftOutCount == 3)
+    }
+
+    @Test func leftOutRoundTripsThroughTheWireKey() throws {
+        var summary = makeSummary(failures: [])
+        summary.quotesLeftOut = ["s1": 4]
+        let data = try JSONEncoder().encode(summary)
+        let text = String(decoding: data, as: UTF8.self)
+        #expect(text.contains("\"quotes_left_out\""))
+        #expect(try JSONDecoder().decode(PipelineSummary.self, from: data).quotesLeftOut == ["s1": 4])
+    }
+
+    @Test func theCopiedDiagnosticNamesWhatWasLeftOut() {
+        var summary = makeSummary(failures: [])
+        summary.quotesLeftOut = ["s2": 1]
+        let text = ProjectDiagnosticPopover.formatDiagnosticPlaintext(
+            summary: summary, projectName: "P", projectPath: "/x", abandoned: false
+        )
+        #expect(text.contains("Quotes left out"))
+        #expect(text.contains("s2  1"))
     }
 
     @Test func fixtureRunFailedAbandonedDominantIsAuth() throws {

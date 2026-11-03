@@ -419,6 +419,7 @@
         "completed_partial": "{{project}} 的分析已完成，但有失敗"
       },
       "partialSessions_other": "已分析 {{total}} 場中的 {{done}} 場",
+      "quotesLeftOut_other": "已略過 {{count}} 則引述",
       "noStructuredCause": "未擷取到詳細原因。",
       "reportError": "Bristlenose 開啟這份報告時發生未預期的問題。",
       "overflow_other": "⋯另有 {{count}} 則失敗被截斷",

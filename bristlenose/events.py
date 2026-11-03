@@ -380,6 +380,12 @@ class PipelineSummary(BaseModel):
     # docs/private/handoffs/incremental-ux-glue.md.
     new_sessions: int | None = None
     reflow_scope: ReflowScopeEnum | None = None
+    # Quotes the model got wrong in THIS run's replies and the session went on without
+    # (``salvage_items``): session id -> count. None when none were left out. Not a
+    # failure (the session is in the report), so it is not in any ``failed`` list; the
+    # Mac reads it to say "Done with warnings" as the CLI does (owner, 3 Nov 2026).
+    # Ids and counts only, like the failure entries beside it.
+    quotes_left_out: dict[str, int] | None = None
 
 
 def sessions_analysed(summary: PipelineSummary | None) -> tuple[int, int] | None:

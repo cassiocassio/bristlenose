@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{total}} oturumdan {{done}} tanesi analiz edildi",
       "partialSessions_other": "{{total}} oturumdan {{done}} tanesi analiz edildi",
+      "quotesLeftOut_one": "{{count}} alıntı dışarıda bırakıldı",
+      "quotesLeftOut_other": "{{count}} alıntı dışarıda bırakıldı",
       "noStructuredCause": "Ayrıntılı neden yakalanmadı.",
       "reportError": "Bristlenose bu raporu açarken beklenmeyen bir sorunla karşılaştı.",
       "overflow_one": "… ve {{count}} hata daha kesildi",

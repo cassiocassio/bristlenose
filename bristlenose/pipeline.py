@@ -3847,6 +3847,11 @@ class Pipeline:
                     if _quotes_elapsed is not None else None
                 ),
             )
+            # This run's drops only (a session served from cache was said at its own
+            # run): the Mac reads it to say "Done with warnings", as the CLI does.
+            self._summary.quotes_left_out = {
+                sid: n for sid, n in _quote_drops.items() if n
+            } or None
             if (
                 self._summary.quotes.attempted > 0
                 and self._summary.quotes.succeeded == 0
@@ -4718,6 +4723,9 @@ class Pipeline:
             self._summary.quotes = _quote_outcome_a.model_copy(update={
                 "duration_ms": int((time.perf_counter() - t0) * 1000),
             })
+            self._summary.quotes_left_out = {
+                sid: n for sid, n in _quote_drops_a.items() if n
+            } or None
             if (
                 _quote_outcome_a.attempted > 0
                 and _quote_outcome_a.succeeded == 0

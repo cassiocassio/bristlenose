@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} av {{total}} økt analysert",
       "partialSessions_other": "{{done}} av {{total}} økter analysert",
+      "quotesLeftOut_one": "{{count}} sitat utelatt",
+      "quotesLeftOut_other": "{{count}} sitater utelatt",
       "noStructuredCause": "Detaljert årsak ble ikke registrert.",
       "reportError": "Bristlenose fikk et uventet problem da denne rapporten skulle åpnes.",
       "overflow_one": "… og {{count}} feil til ble avkortet",

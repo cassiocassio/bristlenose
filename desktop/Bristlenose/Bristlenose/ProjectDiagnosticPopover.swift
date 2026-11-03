@@ -307,8 +307,39 @@ struct ProjectDiagnosticPopover: View {
             ForEach(Array(buckets.enumerated()), id: \.offset) { _, bucket in
                 bucketGrid(name: bucket.name, outcome: bucket.outcome)
             }
+            if !summary.leftOutBySession.isEmpty {
+                leftOutGrid(summary.leftOutBySession)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The quotes a run left out, one row per session: the shipped warning glyph, the session
+    /// id as the failure rows show it, and the count. Not a failure bucket (the session is in
+    /// the report), so no `(n/m)` and no reason column.
+    @ViewBuilder
+    private func leftOutGrid(_ rows: [(sessionID: String, count: Int)]) -> some View {
+        Grid(alignment: .topLeading, horizontalSpacing: 6, verticalSpacing: 4) {
+            ForEach(Array(rows.enumerated()), id: \.0) { _, row in
+                GridRow {
+                    Image(systemName: MessageKind.warning.symbolName)
+                        .foregroundStyle(MessageKind.warning.tint)
+                        .font(.footnote)
+                    Text(row.sessionID)
+                        .font(.system(.footnote, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Text(Self.leftOutText(count: row.count, i18n: i18n))
+                        .font(.footnote)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    /// "1 quote left out" / "3 quotes left out", through the locale's own plural forms.
+    static func leftOutText(count: Int, i18n: I18n) -> String {
+        i18n.plural("desktop.pipeline.diagnostic.quotesLeftOut", count: count)
     }
 
     @ViewBuilder
@@ -719,6 +750,14 @@ struct ProjectDiagnosticPopover: View {
                     let message = failure.cause.message ?? ""
                     lines.append("  \(Self.kind(for: failure).glyph) \(who)  \(category)  \(message)")
                 }
+            }
+            lines.append("")
+        }
+        if !summary.leftOutBySession.isEmpty {
+            // English, like the rest of the paste: ids and counts only.
+            lines.append("Quotes left out (not failures; the session is in the report):")
+            for row in summary.leftOutBySession {
+                lines.append("  \(MessageKind.warning.glyph) \(row.sessionID)  \(row.count)")
             }
             lines.append("")
         }

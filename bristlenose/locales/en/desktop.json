@@ -441,6 +441,8 @@
       },
       "partialSessions_one": "{{done}} of {{total}} session analysed",
       "partialSessions_other": "{{done}} of {{total}} sessions analysed",
+      "quotesLeftOut_one": "{{count}} quote left out",
+      "quotesLeftOut_other": "{{count}} quotes left out",
       "noStructuredCause": "Detailed cause not captured.",
       "reportError": "Bristlenose hit an unexpected problem while opening this report.",
       "overflow_one": "… and {{count}} more failure truncated",

@@ -521,6 +521,31 @@ struct EventLogReaderTests {
         #expect(summary.totalFailureCount == 2)
     }
 
+    @Test func deriveStateRunCompletedWithOnlyQuotesLeftOutMapsToCompletedPartial() {
+        // No failure anywhere, so `totalFailureCount` is 0; the run still reads as done with
+        // warnings because the model's reply left a quote out (owner, 3 Nov 2026).
+        let summary = """
+        {"transcripts":null,"topics":null,"quotes":{"attempted":2,"succeeded":2,"duration_ms":100,"failed":[]},"themes":null,"quotes_left_out":{"s2":1}}
+        """
+        let completed = """
+        {"schema_version":1,"ts":"2026-04-25T09:05:00Z","event":"run_completed","run_id":"01H","kind":"run","started_at":"2026-04-25T09:00:00Z","ended_at":"2026-04-25T09:05:00Z","outcome":"completed","cause":null,"summary":\(summary)}
+        """
+        let dir = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        writeEventLog(in: dir, lines: [runStartedLine(), completed])
+        let result = EventLogReader.deriveState(
+            eventsURL: dir.appendingPathComponent(EventLogReader.filename),
+            pidURL: dir.appendingPathComponent(EventLogReader.pidFilename),
+            stagesComplete: [],
+        )
+        guard case .completedPartial(let got) = result else {
+            Issue.record("expected .completedPartial, got \(String(describing: result))")
+            return
+        }
+        #expect(got.totalFailureCount == 0)
+        #expect(got.leftOutCount == 1)
+    }
+
     @Test func deriveStateRunCompletedWithNilSummaryStaysReady() {
         // Pre-v5 logs and v5 logs from clean transcribe-then-analyze runs
         // carry no `summary` (or null). Must keep mapping to `.ready` so the

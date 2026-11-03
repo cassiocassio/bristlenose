@@ -345,7 +345,9 @@ enum EventLogReader {
         // v5 path: `run_completed` with a summary that carries any session
         // failure → `.completedPartial` (a report was written but degraded).
         // Zero failures (or no summary at all) keeps the existing `.ready`.
-        if let summary = event.summary, summary.totalFailureCount > 0 {
+        // A quote the model got wrong and the stage went on without is not a failure but
+        // is said the same way (owner, 3 Nov 2026): the CLI calls it "Done with warnings".
+        if let summary = event.summary, summary.totalFailureCount > 0 || summary.leftOutCount > 0 {
             return .completedPartial(summary: summary)
         }
         // For .ready we want a Date — parse `ended_at` if available.

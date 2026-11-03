@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} von {{total}} Interview analysiert",
       "partialSessions_other": "{{done}} von {{total}} Interviews analysiert",
+      "quotesLeftOut_one": "{{count}} Zitat ausgelassen",
+      "quotesLeftOut_other": "{{count}} Zitate ausgelassen",
       "noStructuredCause": "Detaillierte Ursache nicht erfasst.",
       "reportError": "Bristlenose ist beim Öffnen dieses Berichts auf ein unerwartetes Problem gestoßen.",
       "overflow_one": "… und {{count}} weiterer Fehler gekürzt",

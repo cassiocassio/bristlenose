@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "Entretiens analysés : {{done}} sur {{total}}",
       "partialSessions_other": "Entretiens analysés : {{done}} sur {{total}}",
+      "quotesLeftOut_one": "{{count}} verbatim omis",
+      "quotesLeftOut_other": "{{count}} verbatims omis",
       "noStructuredCause": "Cause d\u00e9taill\u00e9e non enregistr\u00e9e.",
       "reportError": "Bristlenose a rencontré un problème inattendu en ouvrant ce rapport.",
       "overflow_one": "\u2026 et {{count}} autre \u00e9chec tronqu\u00e9",

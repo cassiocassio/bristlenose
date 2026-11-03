@@ -818,8 +818,8 @@ def _load_contract() -> dict:
 def test_contract_fixture_present_and_versioned():
     """The fixture exists and declares its schema version. Lock-step bump."""
     contract = _load_contract()
-    assert contract["version"] == 8, (
-        "Contract schema version drifted. If the fixture moved to v9, audit "
+    assert contract["version"] == 9, (
+        "Contract schema version drifted. If the fixture moved to v10, audit "
         "every consumer (Python events.py, Swift PipelineSummary.swift) and "
         "update tests on both sides."
     )
@@ -834,6 +834,7 @@ def test_contract_fixture_present_and_versioned():
     "run_failed_abandoned_at_topics",
     "run_completed_partial_truncated",
     "run_completed_clean",
+    "run_completed_quotes_left_out",
 ])
 def test_contract_scenarios_round_trip(scenario_name: str):
     """Each fixture scenario decodes into the right event model and re-encodes
@@ -1029,6 +1030,7 @@ SESSIONS_ANALYSED_BY_SCENARIO = {
         "run_completed_cached_stage": None,
         "run_completed_partial_refusals": None,
         "run_completed_deferred_overflow": (3, 15),
+        "run_completed_quotes_left_out": (3, 3),
 }
 
 
@@ -1098,3 +1100,17 @@ def test_more_real_failures_than_the_cap_still_read_unknown() -> None:
     failures.append(_failure("s13", CauseCategoryEnum.DEFERRED))
     capped = _truncate_failed(StageOutcome(attempted=13, succeeded=0, failed=failures))
     assert capped.failed[-1].cause.category == CauseCategoryEnum.UNKNOWN
+
+
+def test_the_left_out_count_survives_the_wire_and_is_absent_when_empty():
+    """``quotes_left_out`` is the Mac's only way to know a quote was left out of a run's
+    reply, and it is optional so every older reader and every clean run is unchanged."""
+    contract = _load_contract()
+    parsed = RunCompletedEvent.model_validate(contract["scenarios"]["run_completed_quotes_left_out"])
+    assert parsed.summary is not None
+    assert parsed.summary.quotes_left_out == {"s2": 1}
+    clean = RunCompletedEvent.model_validate(contract["scenarios"]["run_completed_clean"])
+    assert clean.summary is not None and clean.summary.quotes_left_out is None
+    # nothing in any failed list: a left-out quote is not a failure
+    assert all(not b.failed for b in (parsed.summary.transcripts, parsed.summary.quotes,
+                                      parsed.summary.topics, parsed.summary.themes) if b)

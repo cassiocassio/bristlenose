@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} de {{total}} sessió analitzada",
       "partialSessions_other": "{{done}} de {{total}} sessions analitzades",
+      "quotesLeftOut_one": "{{count}} cita omesa",
+      "quotesLeftOut_other": "{{count}} cites omeses",
       "noStructuredCause": "No s'ha capturat la causa detallada.",
       "reportError": "Bristlenose ha tingut un problema inesperat en obrir aquest informe.",
       "overflow_one": "… i {{count}} error més truncat",

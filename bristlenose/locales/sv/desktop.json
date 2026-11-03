@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} av {{total}} session analyserad",
       "partialSessions_other": "{{done}} av {{total}} sessioner analyserade",
+      "quotesLeftOut_one": "{{count}} citat utelämnat",
+      "quotesLeftOut_other": "{{count}} citat utelämnade",
       "noStructuredCause": "Detaljerad orsak fångades inte.",
       "reportError": "Bristlenose fick ett oväntat problem när den här rapporten öppnades.",
       "overflow_one": "… och {{count}} till fel avkortat",

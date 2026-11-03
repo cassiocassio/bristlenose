@@ -21,6 +21,32 @@ struct PipelineSummary: Codable, Equatable {
     var topics: StageOutcome?
     var quotes: StageOutcome?
     var themes: StageOutcome?
+    /// Quotes the model got wrong in THIS run's replies, per session id, and the stage went
+    /// on without (Python `PipelineSummary.quotes_left_out`, schema v9). Optional, so an
+    /// older sidecar and every clean run decode unchanged. **Not a failure**: the session is
+    /// in the report, so it is in no `failed` list and not in `totalFailureCount`; it is
+    /// counted by `leftOutCount`, which also makes the run read as `.completedPartial`
+    /// (owner, 3 Nov 2026: "Done with warnings", as the CLI says).
+    var quotesLeftOut: [String: Int]?
+
+    enum CodingKeys: String, CodingKey {
+        case ingest, transcripts, topics, quotes, themes
+        case quotesLeftOut = "quotes_left_out"
+    }
+
+    /// Quotes left out across every session of this run.
+    var leftOutCount: Int {
+        (quotesLeftOut ?? [:]).values.filter { $0 > 0 }.reduce(0, +)
+    }
+
+    /// The sessions with something left out, in session order (`s2` before `s10`), for the
+    /// popover and the plaintext copy. Zero counts are dropped.
+    var leftOutBySession: [(sessionID: String, count: Int)] {
+        (quotesLeftOut ?? [:])
+            .filter { $0.value > 0 }
+            .sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }
+            .map { (sessionID: $0.key, count: $0.value) }
+    }
 
     /// All buckets in spec-order. Used by callers walking failures across the
     /// whole summary (dominant-category counting, plaintext rendering).

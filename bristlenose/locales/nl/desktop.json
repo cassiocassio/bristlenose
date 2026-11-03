@@ -440,6 +440,8 @@
       },
       "partialSessions_one": "{{done}} van {{total}} sessie geanalyseerd",
       "partialSessions_other": "{{done}} van {{total}} sessies geanalyseerd",
+      "quotesLeftOut_one": "{{count}} citaat weggelaten",
+      "quotesLeftOut_other": "{{count}} citaten weggelaten",
       "noStructuredCause": "Gedetailleerde oorzaak niet vastgelegd.",
       "reportError": "Bristlenose ondervond een onverwacht probleem bij het openen van dit rapport.",
       "overflow_one": "… en {{count}} andere fout afgekapt",

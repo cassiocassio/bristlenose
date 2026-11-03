@@ -78,6 +78,16 @@ Key helpers: `OutputPaths` in `output_paths.py` (consistent path construction), 
 - **Raw agent-review output stays private; conclusions go public.** A fan-out review produces findings nobody has verified, and some are security-shaped ("bypasses the allowlist", "leaves token-bearing temp files"). Committing them to this public repo would publish unverified vulnerability reports. Keep raw findings in the maintainer's private notes, and publish the method, the results and the verified fixes (11 Oct 2026, `experiments/skills-research/README.md` § Files).
 - **Gitignored (private)**: `docs/private/`, `trial-runs/` — contain names, contacts, strategy, pricing, legal drafts, and value judgements that don't belong on the public repo. Local-only, backed up by a separate code-backup script, never committed to git. Do not suggest `git add -f` for files here. Conceptually these belong in the founder-only private repo and migrate there at TestFlight cutover (see `project_private_docs_migration_plan.md` memory).
 
+## Seams — what is true in more than one language
+
+A value or name that Python, TypeScript and Swift must all agree on is **declared once and checked everywhere else by a test**. Before grepping for such a thing, look here; before adding one, join an existing mechanism rather than inventing a fourth. No values are written in this section, on purpose: a number copied into prose is one more copy to go stale.
+
+- **Declared in Python, text copies elsewhere** (the serve port): `bristlenose/ports.py` is the source; `tests/test_default_port.py` pins every file that cannot import it and sweeps code for a copy nobody listed. A new copy of the port goes in its `MIRRORS`, or it imports the constant.
+- **A contract in data, asserted from both languages**: `tests/fixtures/*-contract.json`, read by pytest and vitest (formats in `docs/design-shared-formats.md`). Change the JSON and both sides must follow.
+- **Parity tests that read the other language's source**: `tests/test_*parity*.py` and `tests/test_swift_contract_parity.py`. `_BRISTLENOSE_*` environment names are one: Swift may only set what Python reads (`tests/test_env_name_parity.py`).
+- **Derived from the running thing**: `tests/test_serve_export_coverage.py` (routes from `app.openapi()`), `tests/test_entitlements_split.py` (signing), `desktop/scripts/check-*.sh` (Swift-side floors and bundle contents; each needs a caller in `build-all.sh` or CI to count).
+- **Not covered, by design**: the website repo's docs. `docs-src/cli.md` and the connect-an-agent page carry CLI facts this repo cannot pin; a CLI change lists them as owed (see Boundaries).
+
 ## Deployment targets
 
 Bristlenose runs on three targets: macOS arm64 (primary dev), Linux x86_64 via GitHub Actions CI (release pipeline), and — newly — Claude Code Cloud VMs (ephemeral Ubuntu x86_64,  but reachable when the user picks Cloud in the picker). Cloud is useful for code/test/lint/frontend-build work, **not** for pipeline runs on private interview data. See `docs/design-deployment-targets.md for the audit checklist and use-case boundary table.

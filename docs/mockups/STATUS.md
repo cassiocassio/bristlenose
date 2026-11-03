@@ -233,7 +233,7 @@ state is still evidenced, the day is not.
 | `quote-card-layout-lab.html` | 15 Oct 2026 | *unreviewed* — added by `89efd0a9`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-grouping-control-lab.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-grouping-sidebar.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
-| `quotes-left-out-mac.html` | 3 Nov 2026 | PROPOSED 3 Nov 2026 — what the Mac could show when a session's quotes were left out (none / row note / popover line); for owner approval under the R114 UX gate, nothing built |
+| `quotes-left-out-mac.html` | 3 Nov 2026 | IMPLEMENTED 3 Nov 2026 — option C (a popover line) with the owner's choice that a left-out quote counts as Done with warnings; `10521b7f1`, unreleased. Options A and B not taken |
 | `quotes-spatial-arrow-nav.html` | 4 Aug 2026 | IMPLEMENTED — `utils/spatialNav.ts` ships (0.25.0) |
 | `reanalyse-sheet-pixels.html` | 22 Aug 2026 | IMPLEMENTED — the re-analyse sheet ships on the Mac |
 | `release-machine-paths.html` | 23 Aug 2026 | IMPLEMENTED — “companion mockup” to `design-release-machine.md`; `scripts/release.sh` ships |

@@ -24,6 +24,7 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
 from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from bristlenose.ports import DEFAULT_SERVE_PORT
 from bristlenose.run_condition import Condition
 from bristlenose.server.db import create_session_factory, db_url_for_project, get_engine, init_db
 from bristlenose.server.middleware import (
@@ -735,7 +736,7 @@ def _mount_media_route(app: FastAPI, project_dir: Path) -> None:
 
 def _print_dev_urls() -> None:
     """Print all dev-mode URLs on startup (Cmd-clickable in iTerm)."""
-    port = int(os.environ.get("_BRISTLENOSE_PORT", "8484"))
+    port = int(os.environ.get("_BRISTLENOSE_PORT", str(DEFAULT_SERVE_PORT)))
     b = f"http://localhost:{port}"
     # One record per line: the log formatter escapes newlines inside a message.
     for line in (

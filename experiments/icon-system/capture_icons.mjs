@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const [OUT, LUCIDE, BASE = "http://127.0.0.1:8150"] = process.argv.slice(2);
+const [OUT, LUCIDE, BASE = "http://127.0.0.1:8484"] = process.argv.slice(2);
 if (!OUT || !LUCIDE) { console.error("usage: node capture_icons.mjs <out> <lucide icons dir> [base]"); process.exit(2); }
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const mapPath = [path.join(HERE, "icon-map.json"), path.join(HERE, "../experiments/icon-system/icon-map.json")]

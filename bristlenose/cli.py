@@ -18,6 +18,7 @@ from bristlenose.cost import compute_run_cost
 from bristlenose.events import CauseCategoryEnum, KindEnum, PipelineAbandonedError
 from bristlenose.i18n import SUPPORTED_LOCALES as _I18N_LOCALES
 from bristlenose.i18n import set_locale as _set_locale
+from bristlenose.ports import DEFAULT_SERVE_PORT, PORT_SCAN_ATTEMPTS
 from bristlenose.preflight import PreflightAbortedError
 from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
@@ -1121,7 +1122,7 @@ def _print_pipeline_summary(
         console.print(f"\n  Report:  [bold cyan]{serve_url}[/bold cyan]")
         from urllib.parse import urlparse
 
-        _print_mcp_connect(urlparse(serve_url).port or _DEFAULT_PORT)
+        _print_mcp_connect(urlparse(serve_url).port or DEFAULT_SERVE_PORT)
 
 
 def _print_pipeline_failure(
@@ -1924,12 +1925,13 @@ def run(
         port = _find_open_port()
     except RuntimeError:
         _print_pipeline_summary(result)
-        _say(MessageKind.WARNING, f"No available port ({_DEFAULT_PORT}–{_DEFAULT_PORT + 9})", indent="  ")
+        last = DEFAULT_SERVE_PORT + PORT_SCAN_ATTEMPTS - 1
+        _say(MessageKind.WARNING, f"No available port ({DEFAULT_SERVE_PORT}–{last})", indent="  ")
         return
 
     serve_url = f"http://127.0.0.1:{port}/report/"
-    if port != _DEFAULT_PORT:
-        console.print(f"  [dim]Port {_DEFAULT_PORT} in use, trying {port}… ok[/dim]")
+    if port != DEFAULT_SERVE_PORT:
+        console.print(f"  [dim]Port {DEFAULT_SERVE_PORT} in use, trying {port}… ok[/dim]")
     _print_pipeline_summary(result, serve_url=serve_url)
     if dev:
         console.print("  [dim]Dev mode: responsive playground enabled[/dim]")
@@ -2225,12 +2227,9 @@ def render(ctx: typer.Context) -> None:
     raise typer.Exit(2)
 
 
-# 8484: a pair that halves (8-4-8-4), unassigned by IANA, and clear of the 8080/8888
-# crowd. server/app.py, vite.config.ts and the e2e config carry their own copy.
-_DEFAULT_PORT = 8484
-
-
-def _find_open_port(start: int = _DEFAULT_PORT, attempts: int = 10) -> int:
+def _find_open_port(
+    start: int = DEFAULT_SERVE_PORT, attempts: int = PORT_SCAN_ATTEMPTS
+) -> int:
     """Find an available port starting from *start*.
 
     Tries *attempts* consecutive ports.  Raises RuntimeError if all are taken.
@@ -2478,7 +2477,7 @@ def serve(
     port: Annotated[
         int,
         typer.Option("--port", "-p", help="Port to serve on."),
-    ] = _DEFAULT_PORT,
+    ] = DEFAULT_SERVE_PORT,
     dev: Annotated[
         bool,
         typer.Option("--dev", help="Development mode: auto-reload on Python changes."),

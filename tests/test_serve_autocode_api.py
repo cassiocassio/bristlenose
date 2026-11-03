@@ -245,6 +245,35 @@ class TestStartAutoCodeJob:
         assert resp.status_code == 503
         assert "api key" in resp.json()["detail"].lower()
 
+    @pytest.mark.parametrize(
+        ("status", "reason"),
+        [
+            ("no-model", "provider_ambiguous"),   # finding 13: not a missing KEY
+            ("bad-model", "provider_ambiguous"),
+            ("not-installed", "provider_ambiguous"),
+            ("no-key", "no_api_key"),             # the one case "add an API key" is right
+        ],
+    )
+    def test_any_llm_refusal_names_what_is_actually_missing(
+        self, client_with_garrett: TestClient, status: str, reason: str
+    ) -> None:
+        """Through any-llm a refusal can be a missing model or add-on, not only a key; the
+        old single answer ("Add an API key in Settings first") sent the researcher to the
+        wrong place. Existing wording only: nothing new on screen."""
+        from bristlenose.llm.anyllm import Readiness
+
+        with (
+            patch("bristlenose.server.routes.autocode.load_settings") as mock_ls,
+            patch("bristlenose.llm.anyllm.readiness", return_value=Readiness(status=status)),
+        ):
+            settings = MagicMock()
+            settings.llm_provider = "anyllm"
+            mock_ls.return_value = settings
+            resp = client_with_garrett.post("/api/projects/1/autocode/garrett")
+
+        assert resp.status_code == 503
+        assert resp.json()["reason"] == reason
+
     def test_refusals_name_themselves_on_the_wire(
         self, client_with_garrett: TestClient
     ) -> None:

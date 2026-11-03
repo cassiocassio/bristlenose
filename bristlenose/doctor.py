@@ -681,12 +681,41 @@ def check_anyllm() -> CheckResult:
     reachable = ["openrouter", "deepseek"]  # ride on the openai SDK we ship
     if importlib.util.find_spec("mistralai") is not None:
         reachable.insert(0, "mistral")
-    return CheckResult(
-        status=CheckStatus.OK,
-        label="any-llm",
-        detail=f"{anyllm.installed_version()} · "
-        + ", ".join(anyllm.display_name(p) for p in reachable),
-    )
+    version = anyllm.installed_version()
+    detail = f"{version} · " + ", ".join(anyllm.display_name(p) for p in reachable)
+    drift = _anyllm_environment_drift(version)
+    if drift:
+        return CheckResult(
+            status=CheckStatus.WARN, label="any-llm", detail=f"{detail} · {drift}",
+        )
+    return CheckResult(status=CheckStatus.OK, label="any-llm", detail=detail)
+
+
+def _anyllm_environment_drift(version: str | None) -> str:
+    """What a shared environment did to either side, or ``""`` (review finding 14).
+
+    any-llm moves about three releases a week and 1.27.1 onward caps ``anthropic<1``, so a
+    later ``pip install`` in the same environment can quietly swap either library for one
+    this code was not written against. Said here, in the row that names the version.
+    """
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as installed
+
+    from bristlenose.llm import anyllm
+
+    notes: list[str] = []
+    if version and version != anyllm.SUPPORTED_VERSION:
+        notes.append(
+            f"written for {anyllm.SUPPORTED_VERSION}; reinstall with "
+            f"{anyllm.install_hint()}"
+        )
+    try:
+        major = int(installed("anthropic").split(".")[0])
+    except (PackageNotFoundError, ValueError):
+        major = None
+    if major is not None and major < 1:
+        notes.append("the Claude library (anthropic) is older than 1.0, which Bristlenose needs")
+    return "; ".join(notes)
 
 
 def check_local_provider(settings: BristlenoseSettings) -> CheckResult:

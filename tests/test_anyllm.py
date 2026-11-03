@@ -839,6 +839,57 @@ def test_doctor_rows(fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch)
     assert check_anyllm().status is CheckStatus.SKIP  # optional, so never a FAIL
 
 
+def test_the_supported_version_is_the_one_pyproject_pins() -> None:
+    """``anyllm.SUPPORTED_VERSION`` is a copy of the extra's exact pin; doctor compares the
+    installed library with it, so a bump of one without the other would warn on every
+    correct install (or never warn)."""
+    import re
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    pin = re.search(r'"any-llm-sdk\[mistral\]==([0-9.]+)"', text)
+    assert pin is not None
+    assert anyllm.SUPPORTED_VERSION == pin.group(1)
+
+
+@pytest.mark.parametrize(
+    ("any_llm_version", "anthropic_version", "expect"),
+    [
+        ("1.27.0", "1.5.0", "ok"),
+        ("1.40.1", "1.5.0", "warn"),   # a newer library than the one the code was written for
+        ("1.27.0", "0.77.0", "warn"),  # a later pip install pulled anthropic below the floor
+        ("1.27.0", None, "ok"),        # no anthropic installed: nothing to conflict with
+    ],
+)
+def test_doctor_warns_when_a_shared_environment_moved_either_side(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch,
+    any_llm_version: str, anthropic_version: str | None, expect: str,
+) -> None:
+    """Finding 14: pip in a shared environment moves either library with only a warning of
+    its own. Doctor says so, in the row that names the version."""
+    from importlib import metadata
+
+    from bristlenose.doctor import CheckStatus, check_anyllm
+
+    real_version = metadata.version
+
+    def fake_version(name: str) -> str:
+        if name == "anthropic":
+            if anthropic_version is None:
+                raise metadata.PackageNotFoundError(name)
+            return anthropic_version
+        return real_version(name)
+
+    monkeypatch.setattr(anyllm, "installed_version", lambda: any_llm_version)
+    monkeypatch.setattr(metadata, "version", fake_version)
+    row = check_anyllm()
+    assert row.status.value == expect, row.detail
+    if expect == "warn":
+        assert any_llm_version in row.detail or "anthropic" in row.detail
+    else:
+        assert row.status is CheckStatus.OK
+
+
 @pytest.mark.parametrize("gate", ["desktop", "explicit-model"])
 def test_the_azure_model_copy_keeps_its_gates(monkeypatch: pytest.MonkeyPatch, gate: str) -> None:
     """CLI only (desktop Azure runs don't move in the reliability phase), and an

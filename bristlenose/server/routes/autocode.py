@@ -318,6 +318,22 @@ async def start_autocode_job(
             )
 
         if not _has_api_key(settings):
+            if settings.llm_provider == "anyllm":
+                # Through any-llm "not ready" is not always a missing key: a model not
+                # chosen, one that is malformed, or the add-on not installed. "Add an API
+                # key" sent the researcher to the wrong place (review finding 13); the
+                # existing "choose a provider" wording is the nearest true one, and
+                # nothing new is added to the screen.
+                from bristlenose.llm import anyllm
+
+                ready = anyllm.readiness(settings)  # type: ignore[arg-type]
+                if ready.status != "no-key":
+                    lines = anyllm.explain(ready)
+                    raise RefusalError(
+                        503,
+                        RefusalReason.PROVIDER_AMBIGUOUS,
+                        lines[0] if lines else f"any-llm is not ready ({ready.status}).",
+                    )
             raise RefusalError(
                 503,
                 RefusalReason.NO_API_KEY,

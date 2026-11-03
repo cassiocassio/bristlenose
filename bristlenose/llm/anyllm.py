@@ -33,6 +33,10 @@ logger = logging.getLogger(__name__)
 #: The distribution the extra installs. Checked by name because an unrelated
 #: package called ``anyllm`` exists on PyPI.
 DISTRIBUTION = "any-llm-sdk"
+#: The version the code was written and tested against: the extra's exact pin in
+#: pyproject.toml (``tests/test_anyllm.py`` holds the two together). ``doctor`` compares
+#: the installed library with it, because pip in a shared environment can move either side.
+SUPPORTED_VERSION = "1.27.0"
 
 #: Inner providers any-llm offers that Bristlenose already builds in, mapped to
 #: the name ``bristlenose configure`` / ``use`` takes and the product name. The

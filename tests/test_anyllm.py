@@ -1140,7 +1140,21 @@ class _AnyLLMError(Exception):
         self.retry_after = None
 
 
-class ModelNotFoundError(_AnyLLMError):  # named as any-llm names it (preflight reads it)
+# Named as any-llm names them: the preflight reads ModelNotFoundError, and
+# test_the_real_converted_error_reads_like_the_fake_one holds each to the real class.
+class ModelNotFoundError(_AnyLLMError):
+    pass
+
+
+class RateLimitError(_AnyLLMError):
+    pass
+
+
+class UpstreamProviderError(_AnyLLMError):
+    pass
+
+
+class AuthenticationError(_AnyLLMError):
     pass
 
 
@@ -1155,7 +1169,9 @@ def _openrouter(status: int, error: dict[str, Any]) -> BaseException:
     request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
     response = httpx.Response(status, json={"error": error}, request=request)
     sdk = sdk_class(f"Error code: {status} - {{'error': {error!r}}}", response=response, body=error)
-    return (ModelNotFoundError if status == 404 else _AnyLLMError)(sdk, status)
+    unified = {404: ModelNotFoundError, 429: RateLimitError, 502: UpstreamProviderError,
+               401: AuthenticationError}[status]
+    return unified(sdk, status)
 
 
 _HOST_404 = {  # free Nemotron: the id is listed, NVIDIA's endpoint is not there
@@ -1222,8 +1238,7 @@ def test_the_real_converted_error_reads_like_the_fake_one(
     # The preflight branches on the class name (ModelNotFoundError), and the real library
     # wraps the SDK error it was given; a fake that drifts on either is caught here.
     assert converted.original_exception is fake.original_exception  # type: ignore[attr-defined]
-    if isinstance(fake, ModelNotFoundError):
-        assert type(converted).__name__ == "ModelNotFoundError"
+    assert type(converted).__name__ == type(fake).__name__
     assert anyllm.classify(converted) == anyllm.classify(fake)
     assert anyllm.upstream(converted) == anyllm.upstream(fake)
     assert (host is None) == (anyllm.upstream(converted) is None)

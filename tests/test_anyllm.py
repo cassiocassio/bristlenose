@@ -1205,6 +1205,26 @@ OPENROUTER_MODEL = "openrouter:mistralai/mistral-large-2512"
 
 
 @pytest.mark.parametrize(("status", "body", "bucket", "host"), _OPENROUTER_CASES)
+def test_the_real_converted_error_reads_like_the_fake_one(
+    status: int, body: dict[str, Any], bucket: str, host: str | None
+) -> None:
+    """Finding 60: ``_AnyLLMError`` is our guess at what 1.27's ``convert_exception``
+    returns. Wrap the same SDK error with the real function and require the same
+    answers from the classifier and from ``upstream``. Skipped where any-llm is not
+    installed; the ``any-llm-library`` CI job installs it, so it runs there."""
+    real = pytest.importorskip("any_llm")
+    assert hasattr(real, "__file__"), "a fake any_llm leaked into sys.modules"
+    from any_llm.utils.exception_handler import convert_exception
+
+    fake = _openrouter(status, body)
+    converted = convert_exception(fake.original_exception, "openrouter")  # type: ignore[attr-defined]
+
+    assert anyllm.classify(converted) == anyllm.classify(fake)
+    assert anyllm.upstream(converted) == anyllm.upstream(fake)
+    assert (host is None) == (anyllm.upstream(converted) is None)
+
+
+@pytest.mark.parametrize(("status", "body", "bucket", "host"), _OPENROUTER_CASES)
 def test_the_preflight_tells_the_models_host_from_the_key(
     fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch,
     status: int, body: dict[str, Any], bucket: str, host: str | None,
@@ -1621,3 +1641,42 @@ def test_the_newer_python_hint_keeps_what_is_installed(monkeypatch: pytest.Monke
     monkeypatch.setattr(install_channel, "installed_extras", lambda: ["voice"])
     hint = " ".join(anyllm.explain(anyllm.Readiness("old-python", model=MODEL)))
     assert 'pipx install --force --python python3.12 "bristlenose[any-llm,voice]"' in hint
+
+
+# ---------------------------------------------------------------------------
+# From the real-account walks (23 Oct 2026): a gateway's host, a key given twice,
+# and the pipeline table's "(current)" badge under a provider:model id.
+# ---------------------------------------------------------------------------
+
+
+def test_the_host_behind_a_gateway_is_read_from_its_error() -> None:
+    busy = _openrouter(429, _SHARED_POOL_429)
+    assert anyllm.upstream(busy) == ("Mistral", "upstream_provider_shared_pool")
+    assert anyllm.upstream(_openrouter(401, _BAD_KEY)) is None
+
+
+def test_the_same_key_twice_is_not_a_shadow(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MISTRAL_API_KEY", "sk-same")
+    model = "mistral:mistral-large-latest"
+    assert anyllm.readiness_for_model(model, api_key="sk-same").shadowed_by == ""
+    assert anyllm.readiness_for_model(model, api_key="sk-other").shadowed_by == "MISTRAL_API_KEY"
+
+
+def test_a_long_model_name_keeps_its_badge_indented() -> None:
+    from bristlenose.pipeline_view import cli as pipeline_cli
+    from bristlenose.pipeline_view.render import ModelAvailability, StageSelection
+
+    row = ModelAvailability(
+        provider_id="anyllm", provider_display="any-llm",
+        model_id="mistral:mistral-small-latest", display="mistral:mistral-small-latest",
+        available=True,
+    )
+    sel = StageSelection(
+        id="quote_extraction", name="Quote extraction", kind="llm", chosen="any-llm",
+        notes="", chosen_id="anyllm", chosen_model_id="mistral:mistral-small-latest",
+        available=True, alternatives=[row],
+    )
+    name = pipeline_cli._provider_block([row], sel)[1][0]
+    assert name.endswith("\n      (current)")

@@ -8,11 +8,11 @@
         "runner": "pytest",
         "source": "tests/",
         "suite": "pytest",
-        "tests": 7659
+        "tests": 9575
       },
       {
         "basis": "test files",
-        "files": 181,
+        "files": 214,
         "kind": "frontend unit",
         "runner": "vitest",
         "source": "frontend/src/**/*.test.*",
@@ -21,7 +21,7 @@
       },
       {
         "basis": "test files",
-        "files": 1,
+        "files": 3,
         "kind": "figjam plugin unit",
         "runner": "vitest",
         "source": "figjam-plugin/src/**/*.test.*",
@@ -30,12 +30,12 @@
       },
       {
         "basis": "declared \u2014 a floor; parameterised cases expand at runtime",
-        "files": 167,
+        "files": 231,
         "kind": "swift unit",
         "runner": "xcodebuild",
         "source": "desktop/Bristlenose/BristlenoseTests/",
         "suite": "BristlenoseTests",
-        "tests": 1961
+        "tests": 2764
       },
       {
         "basis": "spec files",
@@ -338,6 +338,21 @@
             "id": "release-suites",
             "job_colour": "hard",
             "notable_steps": [],
+            "runs_on": "ubuntu-latest"
+          },
+          {
+            "calls": null,
+            "id": "any-llm-library",
+            "job_colour": "hard",
+            "notable_steps": [
+              {
+                "colour": "hard",
+                "is_gate": false,
+                "name": "any-llm tests, real library",
+                "piped": false,
+                "runs_tests": true
+              }
+            ],
             "runs_on": "ubuntu-latest"
           },
           {

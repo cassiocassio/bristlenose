@@ -368,6 +368,35 @@ jobs:
   # Community, not in the wheel or the app, so no other job installs it. Its
   # tests read tests/fixtures/figjam-board-v1.json, which pytest generates, so
   # this is the half of the board-file contract that the plugin keeps.
+  any-llm-library:
+    # The real any-llm, which the `test` matrix never installs (3.10 cannot: the
+    # library needs 3.11+) and which the shape tests in tests/test_anyllm.py skip
+    # without. They hold what the fake any_llm there assumes about the library
+    # (class shape, exceptions, `reasoning_effort="none"`, no telemetry package,
+    # no network on import) and the pin is exact, so a bump that changes one of
+    # them fails here instead of in a user's `--llm any-llm` run. The install IS
+    # the guard against a silent skip: if the extra will not install, this job is
+    # red; if it installs, `importorskip` cannot skip. Review finding 60.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,any-llm]"
+
+      - name: any-llm tests, real library
+        run: pytest --tb=short -q tests/test_anyllm.py
+
   figjam-plugin:
     runs-on: ubuntu-latest
     timeout-minutes: 10

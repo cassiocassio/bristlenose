@@ -9,10 +9,10 @@
 
 | suite | kind | size | what the number counts | source |
 |---|---|---|---|---|
-| `pytest` | python unit/integration | 7659 | collected (expands parametrize — authoritative) | `tests/` |
-| `vitest` | frontend unit | 181 files | test files | `frontend/src/**/*.test.*` |
-| `figjam-plugin` | figjam plugin unit | 1 files | test files | `figjam-plugin/src/**/*.test.*` |
-| `BristlenoseTests` | swift unit | 1961 in 167 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
+| `pytest` | python unit/integration | 9575 | collected (expands parametrize — authoritative) | `tests/` |
+| `vitest` | frontend unit | 214 files | test files | `frontend/src/**/*.test.*` |
+| `figjam-plugin` | figjam plugin unit | 3 files | test files | `figjam-plugin/src/**/*.test.*` |
+| `BristlenoseTests` | swift unit | 2764 in 231 files | declared — a floor; parameterised cases expand at runtime | `desktop/Bristlenose/BristlenoseTests/` |
 | `playwright` | browser e2e | 10 files | spec files | `e2e/tests/ (console.spec.ts, export-file-url.spec.ts, lens-datum.spec.ts, lenses-load-clean.spec.ts, links.spec.ts, network.spec.ts, perf-gate.spec.ts, perf-stress.spec.ts, search.spec.ts, windows-scaling.spec.ts)` |
 
 **Ingest formats: 27** (audio 10, docx 1, subtitle_srt 1, subtitle_vtt 1, video 14) — from `models.ALL_EXTENSIONS`. Do not restate this number in prose; link here. It was simultaneously 16 and 27 in two docs on 2 Sep 2026, one of which named the other as its single source.
@@ -35,6 +35,8 @@
     - Windows checks — runs tests, **hard**
     - Run tests — runs tests, **hard**
   - `release-suites` · on `ubuntu-latest`
+  - `any-llm-library` · on `ubuntu-latest`
+    - any-llm tests, real library — runs tests, **hard**
   - `figjam-plugin` · on `ubuntu-latest`
     - Plugin tests (Vitest) — runs tests, **hard**
   - `frontend-lint-type-test` · on `ubuntu-latest`

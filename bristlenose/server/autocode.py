@@ -1047,17 +1047,18 @@ async def reapply_to_new_quotes(
 
         def _halted() -> bool:
             """Read fresh before each batch. A catch-up's Stop sets its job
-            "cancelled" (R12 wave 6); a run's re-apply has no Stop, but its
-            codebook can be switched off while it codes ("off means off", #62).
-            Either way an uninstall ends it: the job is gone, or the codebook no
-            longer linked, and every batch after it was paid for and rolled back."""
+            "cancelled" (R12 wave 6), and any re-apply, a catch-up included, ends
+            when its codebook is switched off while it codes ("off means off", #62,
+            N93: the catch-up read only the Stop, and went on paying after a
+            switch-off). An uninstall ends it too: the job is gone, or the codebook
+            no longer linked, and every batch after it was paid for and rolled back."""
             check = db_factory()
             try:
                 j = check.get(AutoCodeJob, job_id)
                 if j is None:
                     return True
-                if track_status:
-                    return j.status == "cancelled"
+                if track_status and j.status == "cancelled":
+                    return True
                 return framework_id not in _maintained_framework_ids(check, project_id)
             finally:
                 check.close()

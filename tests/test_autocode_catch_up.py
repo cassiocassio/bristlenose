@@ -1007,6 +1007,61 @@ class TestTheCodebooksTakeTurns:
         assert not any(_TITLES["norman"] in p for p in model.prompts[applied:]), "off means off"
 
 
+class TestACatchUpWhoseCodebookIsSwitchedOffMidWay:
+    """N93: the catch-up read only a Stop before each batch, so a codebook switched off while it
+    coded went on sending (and paying for) every batch after the switch ("off means off", #62)."""
+
+    def test_the_batches_after_the_switch_are_not_sent_and_stay_owed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import threading
+
+        import bristlenose.server.autocode as ac
+
+        monkeypatch.setattr(ac, "BATCH_SIZE", 1)
+        app, client = _app(tmp_path)
+        _more_quotes(app, 3)
+        burst = _dom(app, like="burst quote")
+        _hide_in_db(app, burst)
+        model = _Model()
+        _apply(app, model, "garrett")
+        applied = len(model.prompts)
+        texts = ("burst quote 0", "burst quote 1", "burst quote 2")
+
+        gate, out = threading.Event(), threading.Event()
+        real = model.analyze
+
+        async def slow(**kw: Any) -> AutoCodeBatchResult:
+            import asyncio
+
+            if len(model.prompts) == applied:  # the first batch of the catch-up
+                out.set()
+                await asyncio.get_running_loop().run_in_executor(None, gate.wait)
+            return await real(**kw)
+
+        model.analyze = slow  # type: ignore[method-assign]
+        try:
+            with model, client:
+                _hide(client, burst, False)
+                _wait(out.is_set, "the first batch to be out")
+                off = client.put(f"{_P}/framework-states", json={"garrett": False})
+                assert off.status_code == 200, off.text
+                gate.set()
+                _quiet(1.5)
+                assert len(model.prompts) - applied == 1, "only the batch already out was paid for"
+                assert self_job(app).status == "completed", "not left 'running' with no task behind it"
+                assert sum(1 for t in texts if _tag_sources(app, t)) == 1, "the others were never sent"
+
+                # Switched back on, it codes what was left owed, and only that.
+                on = client.put(f"{_P}/framework-states", json={"garrett": True}).json()
+                assert on["catchUp"] == ["garrett"]
+                _wait(lambda: all(_tag_sources(app, t) for t in texts), "the rest to be coded")
+                _quiet()
+        finally:
+            gate.set()
+        assert len(model.prompts) - applied == 3, "each quote was sent once, none twice"
+
+
 class TestAQuoteUnhiddenWhileTheFirstApplyRuns:
     def test_it_is_coded_when_the_apply_ends(self, tmp_path: Path) -> None:
         """The job is not applied until it ends, so the unhide armed nothing; the

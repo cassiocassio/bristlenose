@@ -81,6 +81,22 @@ once that session has written it). The switch-provider pull-down is a Could in t
 - **A changed verdict between the two refusals** (out of credit, then key rejected)
   clears the record rather than rewording it; the next refusal starts afresh.
 
+## Placement experiment (3 Nov 2026)
+
+The pill ships in the centre `.status` shelf. A DEBUG-only switch (Diagnostics ▸
+Provider problem pill ▸ "Pill in the trailing group", `c213f6749`, fixed for
+Release in `683d6a249`) moves only the pill to the head of the trailing
+actions, split by the fixed spacer on 26. Off by default; revert with
+`git revert c213f6749 683d6a249`. Owner's intent: the pill is status, not a tool,
+so it sits leftmost of the right-hand apparatus and never inside the actions
+capsule or between them and Search. **Seen on macOS 27 (owner screenshots):** it
+lands there on all six lenses, clear of the capsule; narrowing folds Star/Tags,
+then Export and Search, then the pill last. **Not seen:** the gap when the pill
+hides, macOS 15, macOS 26. Whether it ships is not decided. The mockup's section G
+holds the layout and what Apple's pages say (`.primaryAction` is documented as the
+*leading* edge on macOS; the app measures trailing). Search sometimes losing the
+fold exists without the pill and is filed P3 in `100days.md`.
+
 ## Owed
 
 - **Native review of 20 locales.** The eight new `desktop.providerProblem.*` keys

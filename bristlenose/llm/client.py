@@ -474,6 +474,15 @@ def _raise_if_declined(choice: object, name: str) -> None:
         raise ContentBlockedError(f"{name} declined this text (content filter or refusal).")
 
 
+def _declined(choice: object, name: str) -> ContentBlockedError | None:
+    """:func:`_raise_if_declined` as a value, so the call is recorded before it is raised."""
+    try:
+        _raise_if_declined(choice, name)
+    except ContentBlockedError as exc:
+        return exc
+    return None
+
+
 class UnreadableReplyError(RuntimeError):
     """A reply any-llm could not read as a chat completion.
 
@@ -988,12 +997,17 @@ class LLMClient:
                 model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
+        # A refusal with no answer in it is not a successful call: record it as an error so
+        # the cohort baselines (which keep only `ok` rows) do not take it for a typical one.
+        refused = response.stop_reason == "refusal" and not any(
+            block.type == "tool_use" and block.name == tool_name for block in response.content
+        )
         self._record_call(
             request_model=request_model,
             response_model=response_model_str,
             input_chars=input_chars,
             elapsed_ms=elapsed_ms,
-            outcome="ok",
+            outcome="error" if refused else "ok",
             prompt_template=prompt_template,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -1137,15 +1151,17 @@ class LLMClient:
                 model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
+        declined = _declined(response.choices[0], "ChatGPT")
         self._record_call(
             request_model=request_model, response_model=response_model_str,
             input_chars=input_chars, elapsed_ms=elapsed_ms,
-            outcome="ok", prompt_template=prompt_template,
+            outcome="error" if declined is not None else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
-        _raise_if_declined(response.choices[0], "ChatGPT")
+        if declined is not None:
+            raise declined
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from OpenAI")
@@ -1280,15 +1296,17 @@ class LLMClient:
                 model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
+        declined = _declined(response.choices[0], "Azure OpenAI")
         self._record_call(
             request_model=request_model, response_model=response_model_str,
             input_chars=input_chars, elapsed_ms=elapsed_ms,
-            outcome="ok", prompt_template=prompt_template,
+            outcome="error" if declined is not None else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
-        _raise_if_declined(response.choices[0], "Azure OpenAI")
+        if declined is not None:
+            raise declined
         content = response.choices[0].message.content
         if content is None:
             raise RuntimeError("Empty response from Azure OpenAI")
@@ -1413,18 +1431,21 @@ class LLMClient:
                 model_cap=_MODEL_MAX_OUTPUT_TOKENS.get(request_model),
             )
 
+        blocked = False
+        if not response.text:
+            feedback = getattr(response, "prompt_feedback", None)
+            block = getattr(getattr(feedback, "block_reason", None), "name", None)
+            blocked = finish_reason in _GEMINI_BLOCKS or block in _GEMINI_BLOCKS
         self._record_call(
             request_model=request_model, response_model=response_model_str,
             input_chars=input_chars, elapsed_ms=elapsed_ms,
-            outcome="ok", prompt_template=prompt_template,
+            outcome="error" if blocked else "ok", prompt_template=prompt_template,
             input_tokens=input_tokens, output_tokens=output_tokens,
             finish_reason=finish_reason, usage_source=usage_source,
         )
 
         if not response.text:
-            feedback = getattr(response, "prompt_feedback", None)
-            block = getattr(getattr(feedback, "block_reason", None), "name", None)
-            if finish_reason in _GEMINI_BLOCKS or block in _GEMINI_BLOCKS:
+            if blocked:
                 raise ContentBlockedError("Gemini declined this text (safety block).")
             raise RuntimeError("Empty response from Gemini")
 

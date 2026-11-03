@@ -27,8 +27,7 @@ description: |
   Transcription runs on your machine. The thematic analysis is sent to a
   language model you choose, using your own account: Claude, ChatGPT, Gemini
   or Azure OpenAI. A local model through Ollama is supported too, but it is
-  slower and wants a capable machine. Expect about $0.40 per hour of
-  interview audio with Claude; provider costs vary.
+  slower and wants a capable machine.
 
   Recordings in your home directory work straight away. For a USB stick or
   external drive, run: sudo snap connect bristlenose:removable-media

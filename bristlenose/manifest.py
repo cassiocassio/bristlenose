@@ -55,6 +55,11 @@ class SessionRecord(BaseModel):
     #: analysed video was served from the Whisper cache whenever a sibling's
     #: change kept the stage off the full-cache path.
     input_hash: str | None = None
+    #: Quote extraction only: how many quotes the model's reply got wrong and the
+    #: session went on without (``salvage_items``). ``None`` is none. Kept so a
+    #: resumed run, which serves the session from cache, can still say so (owner,
+    #: 3 Nov 2026); before, only the run that did the extraction ever did.
+    quotes_left_out: int | None = None
     # Phase 1f cost extension — additive, defaults to None for back-compat.
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -423,6 +428,7 @@ def mark_session_complete(
     model: str | None = None,
     content_hash: str | None = None,
     input_hash: str | None = None,
+    left_out: int | None = None,
 ) -> None:
     """Mark a single session as complete within a per-session stage.
 
@@ -449,8 +455,24 @@ def mark_session_complete(
         model=model,
         content_hash=content_hash,
         input_hash=input_hash,
+        quotes_left_out=left_out or None,
     )
     manifest.updated_at = _now_iso()
+
+
+def quotes_left_out_by_session(
+    manifest: PipelineManifest | None, stage: str, session_ids: set[str],
+) -> dict[str, int]:
+    """``{session_id: n}`` for the sessions in *session_ids* whose COMPLETE record
+    says the stage went on without *n* quotes. Reads only; never mutates."""
+    record = manifest.stages.get(stage) if manifest is not None else None
+    if record is None or not record.sessions:
+        return {}
+    return {
+        sid: rec.quotes_left_out
+        for sid, rec in record.sessions.items()
+        if sid in session_ids and rec.status == StageStatus.COMPLETE and rec.quotes_left_out
+    }
 
 
 def fresh_session_ids(

@@ -54,6 +54,7 @@ from bristlenose.manifest import (
     mark_session_failed,
     mark_stage_complete,
     mark_stage_running,
+    quotes_left_out_by_session,
     release_resume,
     resume_manifest,
     sessions_still_to_analyse,
@@ -1196,6 +1197,7 @@ def _record_analyzed_stage(
     provider: str | None = None,
     model: str | None = None,
     partial: bool = False,
+    left_out: dict[str, int] | None = None,
 ) -> None:
     """Record over the run's record what ``analyze`` has just written for
     *stage*, so the next ``run`` does not read it as changed on disk.
@@ -1214,7 +1216,7 @@ def _record_analyzed_stage(
     if session_ids is not None and outcome is not None:
         _record_session_outcomes(
             manifest, stage, session_ids, outcome,
-            provider=provider, model=model, input_hashes=fingerprints,
+            provider=provider, model=model, input_hashes=fingerprints, left_out=left_out,
         )
     present = [p.read_bytes() for p in paths if p.exists()]
     mark_stage_complete(
@@ -1523,6 +1525,7 @@ def _record_session_outcomes(
     provider: str | None = None,
     model: str | None = None,
     input_hashes: dict[str, str] | None = None,
+    left_out: dict[str, int] | None = None,
 ) -> set[str]:
     """Write one manifest record per session: COMPLETE, or FAILED for those the
     stage's outcome named. Returns the set recorded as failed.
@@ -1573,6 +1576,7 @@ def _record_session_outcomes(
         mark_session_complete(
             manifest, stage, sid, provider=provider, model=model,
             input_hash=(input_hashes or {}).get(sid),
+            left_out=(left_out or {}).get(sid),
         )
     return skipped
 
@@ -3638,6 +3642,13 @@ class Pipeline:
                     manifest, _prev_manifest, STAGE_QUOTE_EXTRACTION,
                     {t.session_id for t in clean_transcripts}, _quote_session_fps,
                 )
+                # What the run that did the extraction said (owner call 48).
+                _quote_drops.update(quotes_left_out_by_session(
+                    _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                    {t.session_id for t in clean_transcripts},
+                ))
+                if _left_out_line := _quote_shortfall(StageOutcome(), _quote_drops)[1]:
+                    _print_warn(_left_out_line)
             else:
                 self._stage_runs(STAGE_QUOTES)
                 # Per-session resume: keep the sessions whose transcript and
@@ -3675,6 +3686,13 @@ class Pipeline:
                         sid: n for sid, n in _analysis.quote_drops.items()
                         if sid in _chain_quote_fps
                     })
+                # A session served from the cache was salvaged by an earlier run;
+                # that run said so, and this one must not read as if nothing was left
+                # out (owner call 48).
+                _quote_drops.update(quotes_left_out_by_session(
+                    _prev_manifest, STAGE_QUOTE_EXTRACTION,
+                    _cached_quote_sids - set(_chain_quote_fps),
+                ))
                 _cached_q_count = len(_cached_quote_sids)
 
                 _remaining_transcripts_q = [
@@ -3697,6 +3715,7 @@ class Pipeline:
                         manifest, STAGE_QUOTE_EXTRACTION, sid,
                         provider=self.settings.llm_provider,
                         model=reported_model(self.settings), input_hash=fp,
+                        left_out=_quote_drops.get(sid),
                     )
 
                 status.update("[dim]Extracting quotes...[/dim]")
@@ -3732,6 +3751,7 @@ class Pipeline:
                             provider=self.settings.llm_provider,
                             model=reported_model(self.settings),
                             input_hash=_quote_session_fps.get(sid),
+                            left_out=_quote_drops.get(sid),
                         )
                         write_manifest(manifest, output_dir)
 
@@ -3758,6 +3778,7 @@ class Pipeline:
                         provider=self.settings.llm_provider,
                         model=reported_model(self.settings),
                         input_hashes=_quote_session_fps,
+                        left_out=_quote_drops,
                     )
                 else:
                     _fresh_quotes = []
@@ -4742,6 +4763,7 @@ class Pipeline:
                     outcome=_quote_outcome_a, fingerprints=_quote_fps,
                     input_hashes={"analyzed_transcripts": _fingerprints_key(_quote_fps)},
                     provider=self.settings.llm_provider, model=reported_model(self.settings),
+                    left_out=_quote_drops_a,
                 )
             _quotes_elapsed_a = time.perf_counter() - t0
             _msg_9a = f"Extracted {count_noun(len(all_quotes), 'quote')}"

@@ -227,7 +227,7 @@ class ChainAnalysis:
         mark_session_complete(
             self._manifest, STAGE_QUOTE_EXTRACTION, sid,
             provider=self.settings.llm_provider, model=reported_model(self.settings),
-            input_hash=quote_fp,
+            input_hash=quote_fp, left_out=self.quote_drops.get(sid),
         )
         write_manifest(self._manifest, self._output_dir)
 

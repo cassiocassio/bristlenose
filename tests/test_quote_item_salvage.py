@@ -534,3 +534,153 @@ def test_the_provider_call_keeps_the_valid_quotes(make):
     result = asyncio.run(client.analyze("sys", "usr", QuoteExtractionResult))
     assert [q.verbatim_excerpt for q in result.quotes] == ["quote number 0", "quote number 2"]
     assert dropped_items(result) == 1
+
+
+# ---------------------------------------------------------------------------
+# A resumed run still says what the first run left out (owner call 48, 3 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+def test_a_session_record_carries_the_quotes_left_out_of_it():
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        mark_session_complete,
+        quotes_left_out_by_session,
+    )
+
+    manifest = create_manifest("t", "x")
+    mark_session_complete(manifest, STAGE_QUOTE_EXTRACTION, "s10", left_out=2)
+    mark_session_complete(manifest, STAGE_QUOTE_EXTRACTION, "s11")
+    assert quotes_left_out_by_session(manifest, STAGE_QUOTE_EXTRACTION, {"s10", "s11", "s12"}) == {
+        "s10": 2,
+    }
+    # Only the sessions asked about: a session the run no longer serves from cache is
+    # not reported from the old record.
+    assert quotes_left_out_by_session(manifest, STAGE_QUOTE_EXTRACTION, {"s11"}) == {}
+    assert quotes_left_out_by_session(None, STAGE_QUOTE_EXTRACTION, {"s10"}) == {}
+
+
+def test_the_outcome_rollup_keeps_the_count_when_it_rewrites_the_record():
+    """``_record_session_outcomes`` writes every session's record again after stage 9;
+    a rewrite that forgot the count would erase it the moment the stage finished."""
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        quotes_left_out_by_session,
+    )
+    from bristlenose.pipeline import _record_session_outcomes
+
+    manifest = create_manifest("t", "x")
+    _record_session_outcomes(
+        manifest, STAGE_QUOTE_EXTRACTION, ["s1", "s10"], _failed("s1"),
+        left_out={"s10": 1, "s1": 4},
+    )
+    # s1 failed: it has no quotes, so none were "left out" of it.
+    assert quotes_left_out_by_session(manifest, STAGE_QUOTE_EXTRACTION, {"s1", "s10"}) == {
+        "s10": 1,
+    }
+
+
+def test_the_count_survives_the_manifest_file(tmp_path: Path):
+    from bristlenose.manifest import (
+        STAGE_QUOTE_EXTRACTION,
+        create_manifest,
+        load_manifest,
+        mark_session_complete,
+        quotes_left_out_by_session,
+        write_manifest,
+    )
+
+    manifest = create_manifest("t", "x")
+    mark_session_complete(manifest, STAGE_QUOTE_EXTRACTION, "s10", left_out=1)
+    write_manifest(manifest, tmp_path)
+    again = load_manifest(tmp_path)
+    assert quotes_left_out_by_session(again, STAGE_QUOTE_EXTRACTION, {"s10"}) == {"s10": 1}
+
+
+@pytest.mark.parametrize("first_run", ["finishes", "crashes after delivering"])
+def test_a_resumed_run_still_says_what_the_first_run_left_out(
+    tmp_path: Path, monkeypatch, first_run: str
+):
+    """Owner call 48: the second run serves s1 from the cache, so no model is asked
+    and nothing is dropped this time. The line still has to be printed. When the first
+    run finished stage 9 the second reads the whole stage from cache; when it died
+    after delivering s1 (the record written as the session finished), the stage is half
+    done and the second takes the per-session path. Two readers, one rule."""
+    from unittest.mock import patch
+
+    import bristlenose.pipeline as p
+    from bristlenose.models import ExtractedQuote, QuoteType
+    from tests.conftest import iter_transcribe_from
+    from tests.test_pipeline_abandon import _async_passthrough, _pii_run_fixture
+
+    (settings, input_dir, output_dir, sessions,
+     transcripts, fake_transcribe) = _pii_run_fixture(tmp_path)
+    settings.pii_enabled = False
+    settings.min_quote_words = 5
+
+    async def speakers(_segments, _client, **_kw):
+        return []
+
+    async def topics(ts, _client, **_kw):
+        return ([SessionTopicMap(session_id=t.session_id, participant_id=t.participant_id,
+                                 boundaries=[]) for t in ts],
+                StageOutcome(attempted=len(ts), succeeded=len(ts)))
+
+    asked: list[str] = []
+    crash = {"now": first_run != "finishes"}
+
+    async def extract(ts, _maps, _client, **kw):
+        """The first run's model: s1 comes back with one quote left out, delivered as
+        the real stage delivers it. A second ask is recorded."""
+        quotes = []
+        for t in ts:
+            asked.append(t.session_id)
+            if t.session_id != "s1":
+                continue
+            kw["dropped"]["s1"] = 1
+            quote = ExtractedQuote(
+                session_id="s1", participant_id="p1", start_timecode=1.0, end_timecode=2.0,
+                text="a quote", topic_label="t", quote_type=QuoteType.GENERAL_CONTEXT,
+            )
+            kw["on_session_done"]("s1", [quote])
+            quotes.append(quote)
+            if crash.get("now"):
+                raise RuntimeError("crash after delivering")
+        return quotes, StageOutcome(attempted=len(ts), succeeded=len(ts))
+
+    async def stop_here(*_a, **_kw):
+        raise RuntimeError("stop after stage 9")
+
+    def run_once(stop: str = "stop after stage 9") -> list[str]:
+        printed: list[str] = []
+        monkeypatch.setattr(p, "_print_warn", lambda msg, link="": printed.append(msg))
+        with (
+            patch("bristlenose.stages.s01_ingest.ingest", return_value=sessions),
+            patch("bristlenose.stages.s02_extract_audio.extract_audio_for_sessions",
+                  new=_async_passthrough),
+            patch("bristlenose.stages.s05_transcribe.iter_transcribe_sessions",
+                  new=iter_transcribe_from(fake_transcribe)),
+            patch("bristlenose.stages.s05b_identify_speakers.identify_speaker_roles_llm",
+                  new=speakers),
+            patch("bristlenose.stages.s06_merge_transcript.merge_transcripts",
+                  return_value=transcripts),
+            patch("bristlenose.stages.s08_topic_segmentation.segment_topics", new=topics),
+            patch("bristlenose.stages.s09_quote_extraction.extract_quotes", new=extract),
+            patch("bristlenose.stages.s10_quote_clustering.cluster_by_screen", new=stop_here),
+            patch("bristlenose.stages.s11_thematic_grouping.group_by_theme", new=stop_here),
+            patch.object(p.Pipeline, "_readable_chain", return_value=None),
+            pytest.raises(RuntimeError, match=stop),
+        ):
+            asyncio.run(p.Pipeline(settings).run(input_dir, output_dir))
+        return printed
+
+    first = run_once("crash after delivering" if crash["now"] else "stop after stage 9")
+    if not crash["now"]:
+        assert "1 unusable quote left out (s1)" in first
+    crash["now"] = False
+    asked.clear()
+    second = run_once()
+    assert "s1" not in asked, "the cached session was asked again; the test is not about a resume"
+    assert "1 unusable quote left out (s1)" in second

@@ -711,8 +711,8 @@ def _anyllm_environment_drift(version: str | None) -> str:
         )
     try:
         major = int(installed("anthropic").split(".")[0])
-    except (PackageNotFoundError, ValueError):
-        major = None
+    except (PackageNotFoundError, ValueError, AttributeError):
+        major = None  # absent, or a damaged install whose version cannot be read
     if major is not None and major < 1:
         notes.append("the Claude library (anthropic) is older than 1.0, which Bristlenose needs")
     return "; ".join(notes)

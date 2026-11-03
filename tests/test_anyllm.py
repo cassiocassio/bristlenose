@@ -890,6 +890,23 @@ def test_doctor_warns_when_a_shared_environment_moved_either_side(
         assert row.status is CheckStatus.OK
 
 
+def test_doctor_survives_an_anthropic_install_whose_version_cannot_be_read(
+    fake_anyllm: _FakeLibrary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A damaged dist-info can make ``metadata.version`` return None; the row must still
+    be a row, not an AttributeError out of ``doctor``."""
+    from importlib import metadata
+
+    from bristlenose.doctor import CheckStatus, check_anyllm
+
+    real_version = metadata.version
+    monkeypatch.setattr(anyllm, "installed_version", lambda: anyllm.SUPPORTED_VERSION)
+    monkeypatch.setattr(
+        metadata, "version", lambda name: None if name == "anthropic" else real_version(name)
+    )
+    assert check_anyllm().status is CheckStatus.OK
+
+
 @pytest.mark.parametrize("gate", ["desktop", "explicit-model"])
 def test_the_azure_model_copy_keeps_its_gates(monkeypatch: pytest.MonkeyPatch, gate: str) -> None:
     """CLI only (desktop Azure runs don't move in the reliability phase), and an

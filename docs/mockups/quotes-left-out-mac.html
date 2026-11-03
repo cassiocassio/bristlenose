@@ -745,10 +745,12 @@ h1{font-size:var(--bn-text-title);font-weight:var(--bn-weight-emphasis);margin:0
 .frame{border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-lg);overflow:hidden;background:var(--bn-colour-bg)}
 .chrome{font-size:var(--bn-text-caption);color:var(--bn-colour-muted);padding:6px 12px;border-bottom:1px solid var(--bn-colour-border);font-family:var(--bn-font-mono)}
 .grid{padding:8px 12px}
-.row{display:grid;grid-template-columns:3rem 1fr 6rem 9rem;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--bn-colour-border);font-size:var(--bn-text-body)}
+.row{display:grid;grid-template-columns:3rem 1fr 5rem 10rem;gap:12px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--bn-colour-border);font-size:var(--bn-text-body)}
 .row:last-child{border-bottom:0}
 .row .id{font-family:var(--bn-font-mono);font-weight:var(--bn-weight-mono)}
 .row .dim{color:var(--bn-colour-muted)}
+.sent{display:flex;align-items:center;gap:8px}
+.sent .bar{display:inline-block;height:6px;width:64px;border-radius:3px;background:var(--bn-colour-badge-bg)}
 .mark{display:inline-flex;align-items:center;gap:4px;color:var(--bn-colour-muted);font-size:var(--bn-text-caption)}
 .mark svg{width:12px;height:12px}
 .pop{margin:10px 12px 12px;border:1px solid var(--bn-colour-border);border-radius:var(--bn-radius-md);padding:8px 12px;font-size:var(--bn-text-label);box-shadow:0 2px 8px var(--bn-colour-shadow)}
@@ -772,50 +774,49 @@ table.str td,table.str th{border-bottom:1px solid var(--bn-colour-border);paddin
 
 <section class="opt">
 <h2>A. No change</h2>
-<div class="frame"><div class="chrome">Sessions grid, after a run where s10 had one quote left out</div>
+<div class="frame"><div class="chrome">Sessions grid, after a run where s10 had one quote left out (columns as shipped: id, speakers, duration, sentiment)</div>
 <div class="grid">
-<div class="row"><span class="id">s9</span><span>Interview 9</span><span class="dim">42 min</span><span class="dim">14 quotes</span></div>
-<div class="row"><span class="id">s10</span><span>Interview 10</span><span class="dim">38 min</span><span class="dim">12 quotes</span></div>
+<div class="row"><span class="id">s9</span><span>Sam</span><span class="dim">42 min</span><span class="sent"><span class="bar"></span></span></div>
+<div class="row"><span class="id">s10</span><span>Priya</span><span class="dim">38 min</span><span class="sent"><span class="bar"></span></span></div>
 </div></div>
 <div class="comm"><span class="tag">Commentary</span>
-<dl><dt>Today</dt><dd>The command line says it ("1 unusable quote left out (s10)"), including on a resumed run since 3 Nov. The Mac app says nothing, so a Mac-only researcher cannot know a quote is missing.</dd>
+<dl><dt>Today</dt><dd>The command line says it ("1 unusable quote left out (s10)"), including on a resumed run since 3 Nov. The Mac app says nothing, so a Mac-only researcher cannot know a quote is missing. The grid shows no quote count anywhere, so nothing here would look wrong.</dd>
 <dt>Cost</dt><dd>None.</dd><dt>Invents</dt><dd>Nothing.</dd>
 <dt>Risk</dt><dd>If a model keeps breaking one kind of quote, that kind quietly thins out in the report and nobody is told.</dd></dl></div>
 </section>
 
 <section class="opt">
-<h2>B. A quiet note on the session's row</h2>
-<div class="frame"><div class="chrome">Sessions grid, same run</div>
+<h2>B. A quiet mark in the session's Sentiment cell</h2>
+<div class="frame"><div class="chrome">Sessions grid, same run (the bar stands in for the shipped sentiment sparkline)</div>
 <div class="grid">
-<div class="row"><span class="id">s9</span><span>Interview 9</span><span class="dim">42 min</span><span class="dim">14 quotes</span></div>
-<div class="row"><span class="id">s10</span><span>Interview 10</span><span class="dim">38 min</span><span class="dim"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>12 quotes, 1 left out</span></span></div>
+<div class="row"><span class="id">s9</span><span>Sam</span><span class="dim">42 min</span><span class="sent"><span class="bar"></span></span></div>
+<div class="row"><span class="id">s10</span><span>Priya</span><span class="dim">38 min</span><span class="sent"><span class="bar"></span><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>1 left out</span></span></div>
 </div></div>
 <div class="comm"><span class="tag">Commentary</span>
-<dl><dt>Uses</dt><dd>The quotes cell of the Sessions grid and the shipped warning glyph (<code>Icon</code>, Lucide triangle-alert), muted like the grid's other secondary text. Shown only when the count is above zero.</dd>
-<dt>Cost</dt><dd>One cell state, one new string with a count (21 locales), the count on the sessions API.</dd>
-<dt>Invents</dt><dd>One new string. No new control, no new surface, no colour.</dd>
+<dl><dt>Uses</dt><dd>The existing Sentiment cell, which already summarises the session's quotes, and the shipped warning glyph (<code>Icon</code>, Lucide triangle-alert), muted like the grid's other secondary text. Shown only when the count is above zero.</dd>
+<dt>Cost</dt><dd>A new element inside an existing cell, one new string with a count (21 locales), the count on the sessions API. There is no quote-count column to attach it to, so it cannot be a bare "12 quotes, 1 left out".</dd>
+<dt>Invents</dt><dd>One new string and one mark. No new control, no new column, no colour.</dd>
 <dt>Does not</dt><dd>Say which quote or why, or offer to fix it. It is a fact, not a task.</dd></dl>
-<table class="str"><tr><th>String</th><th>Status</th></tr><tr><td>"{{count}} left out" next to the quote count</td><td>owner-written, new</td></tr></table></div>
+<table class="str"><tr><th>String</th><th>Status</th></tr><tr><td>"{{count}} left out"</td><td>owner-written, new</td></tr></table></div>
 </section>
 
 <section class="opt">
 <h2>C. A line in the run's popover</h2>
-<div class="frame"><div class="chrome">Pipeline popover after the run (native, schematic)</div>
+<div class="frame"><div class="chrome">Pipeline popover after the run (native, schematic: only the lines are proposed)</div>
 <div class="pop">
-<div>Extracted 26 quotes</div>
-<div class="w">Some files couldn't be analysed.</div>
-<div class="w">1 quote left out of Interview 10</div>
+<div class="w">1 quote left out of Priya's session</div>
 </div></div>
 <div class="comm"><span class="tag">Commentary</span>
-<dl><dt>Uses</dt><dd>The five-kind message vocabulary (a warning line, as the CLI prints it) in the popover that already lists a run's partial results. The popover is native; this frame is only a sketch of its lines.</dd>
+<dl><dt>Uses</dt><dd>The five-kind message vocabulary: a warning line, as the CLI prints it, in the popover that already lists a run's partial results. The popover is native; this frame sketches one line of it and does not claim to show its layout.</dd>
 <dt>Cost</dt><dd>A Swift row, the count passed through the run summary, one new string with a count (21 locales).</dd>
-<dt>Invents</dt><dd>One new string. It reads "Done with warnings" in the CLI, so the Mac would show the same status for a quote that was left out; that may be heavier than the fact deserves.</dd>
-<dt>Does not</dt><dd>Persist after the popover closes, unlike B.</dd></dl></div>
+<dt>Invents</dt><dd>One new string. In the CLI a left-out quote makes the run read "Done with warnings"; the Mac would have to choose whether it does too, which may be heavier than the fact deserves.</dd>
+<dt>Does not</dt><dd>Persist after the popover closes, unlike B.</dd></dl>
+<table class="str"><tr><th>String</th><th>Status</th></tr><tr><td>"{{count}} quote left out of {{session}}'s session"</td><td>owner-written, new</td></tr></table></div>
 </section>
 
 <section class="opt">
 <div class="comm"><span class="tag">Commentary: recommendation</span>
-<dl><dt>Lean</dt><dd>B. It is the only option that stays visible after the run, it sits where the researcher already looks at quote counts, and it is a fact rather than a status. A, if the owner reads one dropped quote as noise.</dd>
+<dl><dt>Lean</dt><dd>C if a note after the run is enough; B if it must still be there next week. B is the only one that stays visible, and the Sentiment cell is the natural home because it already summarises the session's quotes; its price is a new mark in the grid. A, if the owner reads one dropped quote as noise.</dd>
 <dt>Not asked</dt><dd>Which quotes were left out, a way to retry them, or a count on the project row.</dd></dl></div>
 </section>
 </div>

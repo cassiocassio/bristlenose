@@ -317,30 +317,33 @@ async def start_autocode_job(
                 "taxonomy in their context window.",
             )
 
-        if not _has_api_key(settings):
-            if settings.llm_provider == "anyllm":
-                # Through any-llm "not ready" is not always a missing key: a model not
-                # chosen, one that is malformed, or the add-on not installed. "Add an API
-                # key" sent the researcher to the wrong place (review finding 13); the
-                # existing "choose a provider" wording is the nearest true one, and
-                # nothing new is added to the screen.
-                from bristlenose.llm import anyllm
+        no_key = RefusalError(
+            503,
+            RefusalReason.NO_API_KEY,
+            "No API key configured for the current LLM provider "
+            f"({settings.llm_provider}). Set the appropriate key "
+            "in your .env file.",
+        )
+        if settings.llm_provider == "anyllm":
+            # Through any-llm "not ready" is not always a missing key: a model not chosen,
+            # one that is malformed, or the add-on not installed. "Add an API key" sent the
+            # researcher to the wrong place (review finding 13); the existing "choose a
+            # provider" wording is the nearest true one, and nothing new is added to the
+            # screen. Asked once: a refusal is a keystore lookup.
+            from bristlenose.llm import anyllm
 
-                ready = anyllm.readiness(settings)  # type: ignore[arg-type]
-                if ready.status != "no-key":
-                    lines = anyllm.explain(ready)
-                    raise RefusalError(
-                        503,
-                        RefusalReason.PROVIDER_AMBIGUOUS,
-                        lines[0] if lines else f"any-llm is not ready ({ready.status}).",
-                    )
-            raise RefusalError(
-                503,
-                RefusalReason.NO_API_KEY,
-                "No API key configured for the current LLM provider "
-                f"({settings.llm_provider}). Set the appropriate key "
-                "in your .env file.",
-            )
+            ready = anyllm.readiness(settings)  # type: ignore[arg-type]
+            if not ready.ready:
+                if ready.status == "no-key":
+                    raise no_key
+                lines = anyllm.explain(ready)
+                raise RefusalError(
+                    503,
+                    RefusalReason.PROVIDER_AMBIGUOUS,
+                    lines[0] if lines else f"any-llm is not ready ({ready.status}).",
+                )
+        elif not _has_api_key(settings):
+            raise no_key
 
         # A cancelled/failed job that was never applied (the only survivors of
         # the guards above) is run again, keeping its proposals and register rows: the

@@ -215,3 +215,71 @@ async def test_a_connection_error_on_the_schema_request_is_not_a_refusal(tmp_pat
     assert client._local_json_object is False
     rows = list(telemetry.iter_rows(run_dir))
     assert [(r["outcome"], r["retry_count"]) for r in rows] == [("error", 0)]
+
+
+# ---------------------------------------------------------------------------
+# A local model that breaks one quote keeps the others (owner call 56, 3 Nov 2026)
+# ---------------------------------------------------------------------------
+
+
+def _quote(i: int) -> dict:
+    return {
+        "start_timecode": f"00:00:{10 + i:02d}", "end_timecode": f"00:00:{11 + i:02d}",
+        "text": f"This is quote number {i} and it says something useful",
+        "verbatim_excerpt": f"quote number {i}", "topic_label": "Onboarding",
+        "quote_type": "general_context",
+    }
+
+
+def _quotes_reply(n: int, bad: tuple[int, ...]) -> SimpleNamespace:
+    """``n`` quotes, the ones in ``bad`` missing a required field."""
+    quotes = [_quote(i) for i in range(n)]
+    for i in bad:
+        del quotes[i]["start_timecode"]
+    return _reply(json.dumps({"quotes": quotes}))
+
+
+@pytest.mark.asyncio
+async def test_one_broken_quote_on_the_last_attempt_costs_that_quote_only(caplog) -> None:
+    """The cloud providers keep the rest (decided 23 Oct 2026); a local model that drops
+    one field used to lose the whole session after three whole-call retries."""
+    from bristlenose.llm.structured import dropped_items
+
+    client, create = _client(*[_quotes_reply(5, (3,))] * 3)
+    with caplog.at_level(logging.WARNING):
+        result = await _analyze(client)
+    assert len(result.quotes) == 4
+    assert dropped_items(result) == 1
+    assert create.await_count == 3  # it still asked again first; a retry may fix it whole
+    assert any("llm_shape_repair" in r.getMessage() and "provider=local" in r.getMessage()
+               for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_a_retry_that_returns_a_whole_reply_wins_over_salvage() -> None:
+    from bristlenose.llm.structured import dropped_items
+
+    client, create = _client(_quotes_reply(5, (3,)), _quotes_reply(5, ()))
+    result = await _analyze(client)
+    assert len(result.quotes) == 5
+    assert dropped_items(result) == 0
+    assert create.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_reply_that_is_mostly_wrong_still_fails_after_the_retries() -> None:
+    """The majority ceiling the cloud path has: two bad of three is a bad reply, not one
+    bad quote."""
+    client, create = _client(*[_quotes_reply(3, (0, 1))] * 3)
+    with pytest.raises(RuntimeError, match="failed to produce valid JSON"):
+        await _analyze(client)
+    assert create.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_the_salvaged_call_is_recorded_ok_with_its_retries(monkeypatch) -> None:
+    client, _ = _client(*[_quotes_reply(5, (3,))] * 3)
+    rows: list[dict] = []
+    monkeypatch.setattr(client, "_record_call", lambda **kw: rows.append(kw))
+    await _analyze(client)
+    assert [(r["outcome"], r["retry_count"]) for r in rows] == [("ok", 2)]

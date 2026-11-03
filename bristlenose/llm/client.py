@@ -149,9 +149,10 @@ def _validate_repairing(
     Deliberately NOT used on OpenAI or Azure. Those go through strict Structured
     Outputs, where the API itself guarantees the shape, so a validation failure
     there is a real break in the contract and repairing it would hide exactly the
-    regression we would need to see. Ollama is also left alone: it is asked for
-    the schema (``json_schema``, falling back to ``json_object``), and its path
-    retries with a turn naming what was wrong, which is a different remedy.
+    regression we would need to see. Ollama is asked for the schema
+    (``json_schema``, falling back to ``json_object``) and retries with a turn naming
+    what was wrong, which is a different remedy; only its LAST attempt comes here, so
+    a session loses one broken quote, not all of them (owner call 56).
 
     A repair is a WARNING, never silent. A provider quietly degrading its output
     shape is a thing to notice, not a thing to absorb -- the repair buys the
@@ -1626,7 +1627,16 @@ class LLMClient:
                     if isinstance(data, dict)
                     else type(data).__name__,
                 )
-                validated = response_model.model_validate(data)
+                if attempt < max_retries - 1:
+                    validated = response_model.model_validate(data)
+                else:
+                    # The last attempt gets what the cloud providers get: repair, and
+                    # failing that keep the items that validate and leave out the rest
+                    # (owner call 56, 3 Nov 2026). Earlier attempts do not, because
+                    # asking again may return the whole reply, and asking is free here.
+                    validated = _validate_repairing(
+                        data, response_model, provider="local", model=model,
+                    )
                 self._record_call(
                     request_model=model,
                     response_model=last_response_model,

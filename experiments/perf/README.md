@@ -44,3 +44,19 @@ Rows are matched on route and label; the delta column is the percentage change (
 ## cpu-profile.cjs
 
 `node cpu-profile.cjs` takes a CDP sampling CPU profile of the Quotes page through a 142-step width sweep and prints inclusive time by source location. Against the dev server only (it needs unminified names). Read the `react-dom` rows first: `performSyncWorkOnRoot` is the React work a width step causes, and the components under it are what re-rendered. It found the whole-report re-render of 4 Nov 2026; see `docs/design-client-performance.md`.
+
+## The ledger's two moments (`moments.mjs`)
+
+Baselines for `docs/design-perf-ledger.md` rows 1 and 2. Serve the PROD bundle on your own port (never `--dev`, never the shared :8484):
+
+```sh
+.venv/bin/python experiments/perf/serve-fixture.py <copy-of-a-project>     # prints BN_URL=http://127.0.0.1:<port>
+cd experiments/perf
+BN_URL=... node interaction-profile.mjs --cases=lens-content [--browser=webkit] [--reps=5] [--revisits=6] [--cache=warm]
+BN_URL=... node interaction-profile.mjs --cases=search       [--browser=webkit] [--reps=8]
+```
+
+- **lens-content**: click a lens tab in the page; the step ends at a double rAF after that lens's own content selector appears, with no sleep inside the timed region (the old `lenses` case sleeps 50 ms and stops at the blank Suspense frame, so its numbers are not a baseline). Each rep is a fresh page (cold HTTP cache unless `--cache=warm`): pass 1 is first visit, passes 2.. are revisits. The step is split from resource timing along the critical path into chunk (click to last JS/CSS byte), mount (chunk end to the lens's own read starting), fetch (the read) and render (read end to painted); `full` is when the card count stopped growing (a lens may draw in batches). The landing lens (Discussion) has no first visit. Signals is disabled on the synthetic fixtures (no sentiment data) and is skipped there.
+- **search**: browser field only (`SearchBox.tsx`; the Mac app's field is native). Types a 6-letter word that was probed to change the result set on its last character, at 700 / 170 / 60 ms between keys. Echo is keydown to the second rAF after the input event. Results are last keystroke to the last paint of a changed `.quote-card` count, minus the 150 ms debounce. Chromium also reports CDP script/layout/style ms per typing.
+- **Who re-rendered**: `BN_MODE=search BN_COUNT=1 node cpu-profile.cjs` counts components rendered per commit (a DevTools-style commit hook); without `BN_COUNT` it takes a CPU profile of the typing. Both need unminified source: run your own Vite (`BN_VITE`, see the header of `cpu-profile.cjs`).
+

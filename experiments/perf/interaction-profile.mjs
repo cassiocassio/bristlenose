@@ -56,6 +56,31 @@ const CASES = {
 };
 
 await requireServer();
+
+// The ledger's two moments (moments.mjs). They open their own pages, so they run instead of the cases above:
+//   node interaction-profile.mjs --cases=lens-content,search [--browser=webkit] [--reps=N] [--revisits=N] [--cache=warm]
+if (a.cases) {
+  const M = await import('./moments.mjs');
+  const want = String(a.cases).split(',');
+  const kinds = { 'lens-content': 'lens-content', search: 'search' };
+  for (const w of want) {
+    if (!kinds[w]) { console.error(`unknown case ${w}`); process.exit(2); }
+    const t = Date.now();
+    if (w === 'lens-content') {
+      const rows = await M.lensContent(a, browserName);
+      console.log(M.lensTable(rows, `${browserName} ${BASE} reps=${a.reps ?? 5} revisits=${a.revisits ?? 6} cache=${a.cache ?? 'cold'} (${((Date.now() - t) / 1000).toFixed(0)}s)`));
+      const bad = rows.filter((r) => r.error || r.preNonZero);
+      if (bad.length) console.log(`  WARNING: ${bad.length} steps with an error or content already on screen before the click`, [...new Set(bad.map((r) => r.lens + ':' + (r.error ?? 'pre')))].join(' '));
+      saveResult('lens-content', browserName, rows, { tag: a.tag ?? null, reps: a.reps ?? 5, revisits: a.revisits ?? 6, cache: a.cache ?? 'cold' });
+    } else {
+      const r = await M.search(a, browserName);
+      console.log(M.searchTable(r, `${browserName} ${BASE} reps=${a.reps ?? 8} (${((Date.now() - t) / 1000).toFixed(0)}s)`));
+      saveResult('search', browserName, r, { tag: a.tag ?? null, reps: a.reps ?? 8 });
+    }
+  }
+  process.exit(0);
+}
+
 const ctx = await openPage(browserName, `${BASE}/report/quotes/`);
 await ctx.page.waitForSelector('.quote-card', { timeout: 20000 });
 const out = [];

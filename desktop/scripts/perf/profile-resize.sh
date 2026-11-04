@@ -2,6 +2,8 @@
 # Records a Time Profiler trace of a real, scripted window drag and summarises it.
 #
 #   profile-resize.sh <path/to/Bristlenose.app> <label> [seconds=10] [outdir=/tmp/bn-perf]
+#   BN_RELEASE=1 BN_WAIT=90   a Release-configuration copy: it ignores the dev-server flag and starts its own
+#                             sidecar for the study, so skip the :8484 check and allow a cold start
 #   BN_ACTION=click   40 real clicks in the report area instead of a drag (what a click costs the main thread)
 #   BN_ACTION=lens    cycle the sidebar lens rows (Project, Sessions, Quotes, Signals) 5 times
 #   BN_STUDY=Talismanic BN_LENS=Quotes BN_APP_ENV=NAME=value   which sidebar row and lens to show (substring)
@@ -20,7 +22,7 @@ APP=${1:?app path}; LABEL=${2:?label}; SECS=${3:-10}; OUT=${4:-/tmp/bn-perf}
 HERE=$(cd "$(dirname "$0")" && pwd); PORT=${BRISTLENOSE_DEV_EXTERNAL_PORT:-8484}
 mkdir -p "$OUT"; BIN="$OUT/bin"; mkdir -p "$BIN"
 die() { echo "profile-resize: $*" >&2; exit 1; }
-curl -fsS -o /dev/null "http://127.0.0.1:$PORT/report/" || die "no serve on :$PORT (start: bristlenose serve --dev <project>)"
+[ "${BN_RELEASE:-0}" = 1 ] || curl -fsS -o /dev/null "http://127.0.0.1:$PORT/report/" || die "no serve on :$PORT (start: bristlenose serve --dev <project>)"
 for t in resize-drag select-study click-storm; do
   [ -x "$BIN/$t" ] && [ "$BIN/$t" -nt "$HERE/$t.swift" ] || swiftc -O "$HERE/$t.swift" -o "$BIN/$t" || die "could not build $t"
 done
@@ -38,9 +40,9 @@ PID=""; for _ in $(seq 1 60); do
 trap 'pkill -f "$EXE" 2>/dev/null' EXIT
 sleep 6   # window up
 # A copy opens on Welcome with no report: a profile of that measures a sidebar and no page.
-SEL=$("$BIN/select-study" "$PID" "$STUDY" --wait-web); echo "$LABEL study: $SEL"
+SEL=$("$BIN/select-study" "$PID" "$STUDY" --wait-web=${BN_WAIT:-20}); echo "$LABEL study: $SEL"
 echo "$SEL" | grep -q '"ok":true' || die "could not select a study ($SEL)"
-sleep 3; "$BIN/select-study" "$PID" "$LENS" --wait-web >/dev/null || die "no report after choosing lens $LENS"
+sleep 3; "$BIN/select-study" "$PID" "$LENS" --wait-web=${BN_WAIT:-20} >/dev/null || die "no report after choosing lens $LENS"
 sleep 6   # report loaded, startup work settled
 
 rm -rf "$OUT/$LABEL.trace"

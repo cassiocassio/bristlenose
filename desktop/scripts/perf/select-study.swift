@@ -1,7 +1,7 @@
 // Selects a sidebar row of a running app by (case-insensitive) substring, through the
 // Accessibility tree, so a profiled copy opens on a rendered report and not on Welcome.
 //   select-study <pid> [substring] [--wait-web]   with no substring: lists the rows.
-//   --wait-web: after selecting, wait up to 20 s for a rendered web area (the report) and exit 5
+//   --wait-web[=SECONDS]: after selecting, wait up to 20 s (or SECONDS) for a rendered web area (the report) and exit 5
 //   if there is none, so a profile can never silently measure an empty detail pane.
 import ApplicationServices
 import Foundation
@@ -30,7 +30,8 @@ let needle = CommandLine.arguments[2].lowercased()
 guard let i = labels.firstIndex(where: { $0.lowercased().contains(needle) }) else { print("{\"error\":\"no row matching \(needle)\"}"); exit(4) }
 let ok = AXUIElementSetAttributeValue(outline, kAXSelectedRowsAttribute as CFString, [rows[i]] as CFArray) == .success
 var web = ""
-if CommandLine.arguments.contains("--wait-web") {
+if let flag = CommandLine.arguments.first(where: { $0.hasPrefix("--wait-web") }) {
+    let patience = Double(flag.split(separator: "=").dropFirst().first ?? "20") ?? 20
     func webArea(_ e: AXUIElement, _ d: Int = 0) -> String? {
         if (attr(e, kAXRoleAttribute) as? String) == "AXWebArea" { return (attr(e, kAXTitleAttribute) as? String) ?? "" }
         if d > 16 { return nil }
@@ -38,7 +39,7 @@ if CommandLine.arguments.contains("--wait-web") {
         return nil
     }
     let app = AXUIElementCreateApplication(pid)
-    let deadline = Date().addingTimeInterval(20)
+    let deadline = Date().addingTimeInterval(patience)
     var found: String?
     while found == nil && Date() < deadline { found = webArea(app); if found == nil { Thread.sleep(forTimeInterval: 0.5) } }
     guard let t = found else { print("{\"error\":\"no web area rendered after selecting\"}"); exit(5) }

@@ -64,24 +64,13 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
                   let hit = content.hitTest(
                       content.superview?.convert(event.locationInWindow, from: nil)
                           ?? event.locationInWindow),
-                  let tableView = Self.enclosingTableView(of: hit) else { return }
+                  let tableView = SidebarClickTarget.enclosingTableView(of: hit) else { return }
             let point = tableView.convert(event.locationInWindow, from: nil)
             // Only act when click is inside the table view but below all rows.
             guard tableView.bounds.contains(point) else { return }
             if tableView.row(at: point) < 0 {
                 DispatchQueue.main.async { self.deselect() }
             }
-        }
-
-        /// The table the view is, or is inside. The sidebar's is the only one in this window; the
-        /// detail area is a WKWebView, which contains none.
-        private static func enclosingTableView(of view: NSView) -> NSTableView? {
-            var current: NSView? = view
-            while let v = current {
-                if let table = v as? NSTableView { return table }
-                current = v.superview
-            }
-            return nil
         }
 
         deinit { if let m = monitor { NSEvent.removeMonitor(m) } }

@@ -430,6 +430,17 @@ def no_local_llm_config(
     return monkeypatch
 
 
+@pytest.fixture(autouse=True)
+def _forget_keychain_reads() -> Any:
+    """The macOS store keeps a read for a few seconds (credentials_macos._cache); a test must
+    never see the previous test's answer."""
+    from bristlenose import credentials_macos
+
+    credentials_macos.clear_cache()
+    yield
+    credentials_macos.clear_cache()
+
+
 # ---------------------------------------------------------------------------
 # Pinning "this machine's clock" without time.tzset (which Windows lacks)
 # ---------------------------------------------------------------------------

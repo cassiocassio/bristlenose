@@ -32,11 +32,27 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import time
 
 from bristlenose.credentials import CredentialStore
 from bristlenose.providers import CREDENTIALS, credential_service_name
 
 logger = logging.getLogger(__name__)
+
+#: One ``security`` subprocess per key costs about 22 ms, and ``load_settings()`` reads five.
+#: A ``serve`` start calls it three times (the command, ``create_app``, the Signals-snapshot
+#: task): 15 spawns, 360 ms, measured 4 Nov 2026. A read is kept for this long so those
+#: collapse to one batch. Short on purpose: a key written by ``bristlenose configure`` in
+#: another terminal is seen within seconds, and a write from this process clears its entry.
+#: Absent keys are kept too, since most of the five usually are.
+_CACHE_TTL_S = 10.0
+_cache: dict[str, tuple[float, str | None]] = {}
+_clock = time.monotonic
+
+
+def clear_cache() -> None:
+    """Forget every cached read. Tests, and any caller that has just changed a key."""
+    _cache.clear()
 
 
 class MacOSCredentialStore(CredentialStore):
@@ -72,6 +88,15 @@ class MacOSCredentialStore(CredentialStore):
         as None rather than an unhandled traceback. The debug log preserves
         diagnostics for CLI users running with `-v`.
         """
+        service = self._service_name(key)
+        cached = _cache.get(service)
+        if cached is not None and _clock() - cached[0] < _CACHE_TTL_S:
+            return cached[1]
+        value = self._read(key)
+        _cache[service] = (_clock(), value)
+        return value
+
+    def _read(self, key: str) -> str | None:
         try:
             result = subprocess.run(
                 [
@@ -120,6 +145,7 @@ class MacOSCredentialStore(CredentialStore):
         ``credentials.set_verified`` and read the key back.
         """
         service = self._service_name(key)
+        _cache.pop(service, None)
 
         # Delete existing entry first (ignore errors if not found)
         try:
@@ -177,6 +203,7 @@ class MacOSCredentialStore(CredentialStore):
 
         No-op if the credential doesn't exist or subprocess-exec is blocked.
         """
+        _cache.pop(self._service_name(key), None)
         try:
             subprocess.run(
                 [

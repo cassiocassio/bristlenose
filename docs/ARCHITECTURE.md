@@ -179,6 +179,103 @@ where it is); the per-channel acquirers (Background Assets for TestFlight/App St
 HTTPS for the `.dmg`) land separately. Whisper-model delivery has no Background Assets code
 yet. See [release-channels.md](release-channels.md) for the pack as an artefact.
 
+### 6. Cross-cutting mechanisms
+
+The sections above are the pieces; these are the mechanisms that run *through* them. Each
+names where it lives and which doc owns the detail.
+
+**Where state lives (four stores, one direction of trust).**
+
+| Store | What it holds | Lives in |
+|---|---|---|
+| Files in the output folder | Pipeline output: transcripts, intermediate JSON, `pipeline-manifest.json`, `pipeline-events.jsonl`, logs | `<input>/bristlenose-output/` (`output_paths.py`) |
+| SQLite (WAL, FKs on) | Pipeline JSON imported idempotently, plus every researcher edit (tags, stars, hidden quotes, names). Schema by SQLAlchemy models, migrated by Alembic | `<output>/.bristlenose/bristlenose.db`, one per project (`server/db.py`, `server/importer.py`, `server/alembic/`) |
+| Browser stores | UI state: selection, focus, inspector, sidebar, undo; researcher edits are written through to the API | `frontend/src/contexts/` |
+| macOS app state | Project index, run queue, bookmarks, Keychain credentials, handshake file | `desktop/Bristlenose/` (`ProjectIndex`, `RunQueue`, `KeychainHelper`, `MCPHandshake`) |
+
+A study is identified by its database plus a marker id, not by a path — see
+[design-project-identity.md](design-project-identity.md) and
+[design-lifecycle-failure-modes.md](design-lifecycle-failure-modes.md) for what happens
+across stash, restore, crash, rename and move.
+
+**Run lifecycle and resilience.** Stages write a manifest as they complete so an interrupted
+run resumes (`manifest.py`); `events.py` appends every run-level outcome to an NDJSON event
+log that is the single source of truth for "what state is this run in"; `run_lifecycle.py`
+and `server/lifecycle.py` own process start, signal handling and cleanup. The desktop
+`ServeManager` supervises the sidecar and reaps orphans. Detail:
+[design-pipeline-resilience.md](design-pipeline-resilience.md) and
+[design-analysis-lifecycle.md](design-analysis-lifecycle.md) (analyse / re-analyse /
+incremental).
+
+**Reporting status honestly.** Messages that reach the user (pill, popover, sidebar glyph,
+toast) use a fixed five-kind taxonomy (`ui_kinds.py`, mirrored by `MessageKind.swift`) so a
+new failure fits an existing vocabulary instead of inventing a glyph —
+[design-pipeline-diagnostic-popover.md](design-pipeline-diagnostic-popover.md).
+`bristlenose doctor` and `preflight/` check the environment before a run.
+
+**The trust boundary and auth.** Serve binds to `127.0.0.1` only, and a loopback-host
+middleware refuses any other `Host` header (the DNS-rebinding gate). API routes require a
+per-run bearer token (`server/middleware.py`; the SPA gets the same token injected, with a
+cookie fallback for its own navigations only). `/media/` is deliberately outside the bearer
+rule, because `<video>` cannot send the header; it is guarded by an extension allowlist and
+path containment instead. `/mcp/` is bearer-only and, on the Mac, takes a separate scoped token that
+opens nothing else — it is the one credential that deliberately leaves the trust boundary.
+API keys sit in the Keychain on macOS (`credentials_macos.py`; Linux has
+`credentials_linux.py`) and reach Python as environment variables. Participant data has its
+own rules: PII redaction (stage 7, Presidio), and re-identification keys that never go into an
+export — [consent-gradient.md](methodology/consent-gradient.md).
+
+**LLM calls.** One client layer (`llm/client.py`) over six providers — Claude, ChatGPT, Azure
+OpenAI, Gemini, local Ollama, and any-llm as an optional sixth — with structured output and
+repair (`structured.py`), failure classification, per-call telemetry, cost and pricing, and an
+untrusted-input boundary against prompt injection (`boundary.py`). Prompts are Markdown files
+in `llm/prompts/`, versioned with an archive. Detail: `bristlenose/llm/CLAUDE.md`.
+
+**Analysis layers on top of quotes.** `signals/` (pure-math concentration metrics, no LLM);
+the codebook system (YAML frameworks in `server/codebook/`, `codebook_sync.py`, and the
+AutoCode engine in `server/autocode.py` that proposes tags the researcher accepts or
+denies); the discussion lens (`discussion/`, moderator questions and guide structure); and
+the journey and sentiment views. Quote exclusivity — every quote in exactly one report
+section — is enforced across stages 9–11.
+
+**Media and screens.** FFmpeg for audio extraction and thumbnails; Whisper for transcription;
+an optional voice pass to tell speakers apart (`s05b_voice.py`, the `voice` extra); on macOS
+26+ an Apple Speech helper (`desktop/speech-helper/`) that the sidecar launches. The Screens
+lens (`screen_text/`, Apple Vision through pyobjc) reads what was on the participant's shared
+screen; the session tapestry draws scene colours and strips, which **serve** computes in the
+background, never the pipeline. Screens never leave the machine on Bristlenose's own
+initiative — [design-screens.md](design-screens.md).
+
+**Import and export edges.** Cloud import from Zoom, Teams and Google Meet runs through native
+OAuth (PKCE, `AuthenticationServices`) in the Mac app — [design-cloud-import.md](design-cloud-import.md);
+file-provider placeholders are read with a bound, never skipped
+([design-cloud-files.md](design-cloud-files.md)). Outbound: HTML export, CSV/XLS quotes,
+clips, slides, Miro boards (`miro_client.py`, `MiroAPI.swift`), and FigJam
+(`routes/figjam.py`, `figjam-plugin/`).
+
+**Localisation.** The report and apps are localised through one set of locale files in
+`bristlenose/locales/` (22 locale directories; `zh-Hant-HK` takes only real overrides),
+consumed by i18next in the SPA, by Python at render time, and by Swift in the shell.
+CLI terminal text is English by design. One language per exported deliverable —
+[design-i18n.md](design-i18n.md), [design-export-locale.md](design-export-locale.md).
+
+**Design system.** Atomic CSS (tokens, atoms, molecules, organisms, templates) in
+`bristlenose/theme/`, shared with the desktop shell, with one appearance seam for light and
+dark. The vanilla JS modules there are frozen, kept only for the sealed static renderer.
+
+**Feature gating.** Five mechanisms, chosen by the question the gate answers: SPA parked-feature
+flags, Swift compile-time conditions and `DistributionChannel`, runtime host detection,
+`BRISTLENOSE_DEBUG_*` seeds, and the diagnostics preference —
+[design-feature-flags.md](design-feature-flags.md).
+
+**Quality gates.** Python (pytest, Hypothesis, Ruff, mypy), frontend (Vitest, ESLint with
+jsx-a11y, a bundle-size budget), end-to-end (Playwright on Chromium and WebKit), the Swift
+suite, and lifecycle and acceptance suites. Soft gates must declare a disposition (ratchet,
+expiry or conditional) in `docs/testing/soft-gates.json`, enforced by
+`scripts/check-gate-policy.py`; the release train is checked by `scripts/check-release-ready.sh`.
+Map of what runs where: [docs/testing/README.md](testing/README.md) and
+[design-ci.md](design-ci.md).
+
 ---
 
 ## How a release is cut
@@ -276,6 +373,84 @@ repo. They live in the maintainer's private planning notes, kept outside the pub
 tree, and are referenced here only as *maintainer-only*. This split is deliberate:
 architecture and local-dev instructions are public; release credentials and
 account-specific values are not.
+
+---
+
+## Addendum: the tech stack, long tail
+
+Everything the project depends on or builds with, grouped by layer. Versions are floors from
+`pyproject.toml` and `frontend/package.json` as of this writing — read those for the live
+values, and the comments beside the pinned ones for why they are capped.
+
+### Python core
+
+- **Language and shape:** Python 3.10+ (3.12 pinned in `.tool-versions`), Pydantic v2 models
+  and `pydantic-settings` for config, Typer + Rich for the CLI, `inflect` for plurals,
+  Jinja2 and PyYAML for the static renderer and codebooks.
+- **Transcription and audio:** `faster-whisper` (CTranslate2) with PyAV (`av<19`) as the
+  decoder; `mlx` + `mlx-whisper` on Apple Silicon (the `apple` extra); `huggingface-hub<2`
+  for model downloads; FFmpeg and ffprobe as external binaries.
+- **Voice pass (optional `voice` extra):** `onnxruntime` and `kaldi-native-fbank`.
+- **Subtitles and documents:** `pysrt`, `webvtt-py`, `python-docx`, `openpyxl`.
+- **PII:** `presidio-analyzer`, `presidio-anonymizer` with spaCy's `en_core_web_lg`
+  weights (acquired on demand on the Mac, via `spacy download` on the CLI).
+- **LLM SDKs:** `anthropic` (>=1, <2), `openai`, `google-genai`; optional `any-llm-sdk` with
+  `mistralai`; Ollama over HTTP.
+- **Serve mode:** FastAPI, Uvicorn (standard), SQLAlchemy 2 (asyncio extra), Alembic,
+  SQLAdmin (dev-only browser), SQLite; optional `mcp>=2` for the MCP endpoint.
+- **Text and layout:** `budoux` for Japanese and Chinese phrase breaks on boards; `certifi`
+  as the trust store.
+- **Screens (macOS):** `pyobjc-framework-Vision` and `-Quartz`.
+- **Packaging extras:** `pyinstaller` (the `desktop` extra), `pip-licenses` and
+  `cyclonedx-bom` (the `release` extra, for licences and the SBOM).
+
+### Frontend
+
+React 19, React Router 7, TypeScript 6, Vite 8 with a second, single-file Vite build for the
+export. i18next with `react-i18next` and the browser language detector, `lucide-react`
+icons, `lodash.deburr` for accent-folding search. Tests: Vitest, Testing Library, jsdom.
+Lint: ESLint 9 with typescript-eslint, `jsx-a11y` and react-hooks rules. No UI framework or
+state library: state is hand-rolled stores in `contexts/`.
+
+### macOS app
+
+SwiftUI plus AppKit, with WebKit's WKWebView hosting the SPA. Also Security (Keychain),
+`AuthenticationServices` and PKCE for OAuth, CryptoKit, OSLog, AVFoundation, and a SQLite
+Swift package. Two small Swift executables ship inside the bundle: the Apple Speech helper
+and the MCP helper. The Node `.mcpb` proxy is the fallback. App Sandbox plus Hardened
+Runtime, signed with an Apple Distribution identity for TestFlight and the App Store, with a
+Developer-ID `.dmg` as a second lane. Sparkle is not used.
+
+### Build and packaging
+
+PyInstaller `--onedir` for the sidecar; `xcodebuild` archive and export; `altool` or
+Transporter for upload; Hatch as the build backend; Homebrew tap (formula updated by a
+workflow), Snap (`snap/`), Fedora Copr (`rpm/`, `.copr/`), Inno Setup and winget for
+Windows (`packaging/windows/`), and a `.mcpb` bundle build.
+
+### CI, security and supply chain
+
+GitHub Actions: CI, release, CodeQL, secret and privacy scan (gitleaks), install smoke tests
+on clean VMs, Mac build and release-archive rehearsals, perf (post-merge), i18n check,
+mockup-register check, ratchet-tighten, Windows installer, Snap. Dependabot with a pin
+register and the `cassandra` pre-mortem for bumps ([design-platform-policy.md](design-platform-policy.md)).
+Pre-commit hooks: gitleaks, a tracked-vs-gitignore check, and the release freeze. Ruff and mypy
+run in CI and by hand; `pip-licenses` and CycloneDX generate the licence list and SBOM.
+
+### Testing and measurement
+
+pytest (with xdist, asyncio and coverage), Hypothesis for round-trip and format contracts,
+Playwright for end-to-end, and a Swift test target. Paid LLM tests are opt-in behind the
+`slow` marker. `experiments/` holds throwaway research (colour lab, Apple speech, board
+layout); `scripts/` holds the release machine, gate checkers and the perf harness.
+
+### Repository layout, in one screen
+
+`bristlenose/` Python core · `frontend/` SPA · `desktop/` Swift app, sidecar spec, helpers and
+build scripts · `e2e/` Playwright · `tests/` pytest · `scripts/` release and gates ·
+`docs/` design and methodology · `packaging/`, `snap/`, `rpm/`, `.copr/` channel packaging ·
+`figjam-plugin/` FigJam export · `experiments/` prototypes · `trial-runs/` and
+`docs/private/` (gitignored). Per-file detail: [file-map.md](file-map.md).
 
 ---
 

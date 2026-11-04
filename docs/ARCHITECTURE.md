@@ -10,6 +10,12 @@ the nested `CLAUDE.md` files (`bristlenose/`, `frontend/`, `desktop/`,
 `bristlenose/server/`, `bristlenose/stages/`, `bristlenose/llm/`, `bristlenose/theme/`)
 are the source of truth.
 
+**One picture first:** [how-bristlenose-works.html](how-bristlenose-works.html) is a short
+animation of the whole flow, from a folder of recordings through the pipeline and the
+server to the report, the Mac app, an agent and the HTML export. It is a standalone file:
+open it in a browser (on GitHub, use *Raw* or download it; the page shows its source).
+Everything below is the detail behind it.
+
 ---
 
 ## The one thing to understand first

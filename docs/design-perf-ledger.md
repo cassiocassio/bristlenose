@@ -2,6 +2,52 @@
 
 Opened 4 Nov 2026, after the window-resize work (`docs/design-client-performance.md`, which holds that work's numbers and is not edited from here). That work found its gains by measuring, not by trying to make everything fast. This file does the same for the other layers, one change at a time. Every claim is labelled **measured** (a number from a run you can repeat), **estimated** (reasoned, not run) or **reported** (a researcher's finding not yet checked here).
 
+## Scoreboard: done, outstanding, and what is left to gain
+
+Updated 4 Nov 2026. **Measured** is a number from a repeatable run; **estimate** is reasoned from a measured part and says so; **unmeasured** has no number yet and is not guessed. Gains are per occurrence on this Mac unless stated.
+
+### Done
+
+| Change | Moment | Gain | Basis | Commit |
+|---|---|---|---|---|
+| `inflect` loaded on first plural | every CLI command, every serve start | `import cli` 1.05 → 0.22 s; in the app `serve-ready` 3.19 → 2.24 s cold (−30%), 3.13 → 2.33 s warm (−25%); `project-select` 4.1 → 3.1 s | measured, identical app binary | `6f5b0e350`, `8000e1b17` |
+| Keychain reads kept 10 s | Mac CLI `serve` start (Homebrew / pip) | spawn → `Report:` 1.51 → 1.23 s (−19%), 15 → 5 subprocess reads | measured, interleaved ×2. App: unmeasured | `0418c7dd1` |
+| Export skips the parked pill's lookup | Export HTML | 1,500 quotes: 3.1–3.5 → 1.2 s, 9,346 → 343 statements. Real studies now 120–140 ms (the before at that size was not measured) | measured | `bcfae9c24` |
+| Codebook YAML via libyaml | every serve start | import 119–143 → 36–43 ms (−85 ms) | measured, 5 runs | `8cb124763` |
+| gzip level 1 | `/quotes`, `/tapestry` | −8 to −11 ms at 1,500 quotes; **about 0 at real size** (35–59 KB bodies) | measured (compression timed directly) | `b70c0787e` |
+| Scene-colour decode in a thread | first analysis, platform-transcript sessions | removes an event-loop stall of about 4 s per hour of video | estimate (the stall itself unmeasured) | `4b79de03a` |
+| Window resize, sidebar hold, selector fix, click monitor | resize, click | 10 → 59 window updates/s; WebContent main thread 4,145 → 1,705 ms | measured (earlier work, `design-client-performance.md`) | see that doc |
+| Instruments | all | `Server-Timing`, startup stamps (`BRISTLENOSE_STARTUP_TRACE`), `perf-route-baseline.py`, Mac signposts, page marks | n/a | `041df1eb0`, `f1963e516`, `7cba2417e`, `f2c49aa66`, `5cf46895f` |
+
+### Outstanding, ranked by frequency × felt, with what is left to gain
+
+| Candidate | Moment | Frequency | Estimated gain still available | Confidence | State |
+|---|---|---|---|---|---|
+| Lens chunk preload / last-answer cache | click a lens | many a day | server is under 10 ms at real size, so the wait is chunk + render; gain **unmeasured**, target revisit ≤ 100 ms | n/a | baselines running |
+| Search: 150 ms debounce, 8-way fan-out | type in search | many a day | up to 150 ms of echo-to-results if debounce goes to 0 and render is cheap (**estimate**) | medium | baselines running |
+| Defer `import mcp` | every app launch | daily | **275–280 ms** per start, about 13% of sidecar boot (measured import; deferral untested) | high on the number, owner call on the contract | awaiting owner |
+| Whole-store `useQuotesStore()` subscribers → selectors; per-id focus | tag, star, `j`/`k` | many a day | **unmeasured**; the sidebar fix was −58% WebContent main thread. Smaller than first claimed (six of eight sites already memoised) | low | needs mutate / keynav baselines |
+| Transcript write re-reads and rebuilds every word span | correct a transcript | many a day for a corrector | **unmeasured**: 14,228 spans on one real session | n/a | gap found by the critic |
+| Startup importer skip-when-unchanged | study start | daily | about 70 ms at real size; about 1 s at 1,500 quotes (measured importer cost, fast-path untested) | medium | declined at real size |
+| Remaining fixed start: Python + imports 740 ms, `create_app` tail 300 ms, lifespan 130 ms | every launch | daily | diffuse, no single item over 35 ms except `mcp`; **about 0** from further import work | high | declined |
+| Idle CPU / energy impact (3 page polls, Mac polls, a sidecar per project) | app open all day | continuous | **unmeasured** | n/a | gap found by the critic |
+| Playback follow (class toggles on every word span, about 4 Hz) | watching a recording | daily | **unmeasured** | n/a | gap found by the critic |
+| Sidebar `reloadData` per stdout line | during a run | occasional | premise stale (progress moved to the 1 Hz events poll); **about 0** until counted | low | measure first |
+| Signals snapshot holds the loop at start | first start after upgrade | once per study | about 0.8 s at 1,500 quotes, one-off | medium | declined |
+| Whisper alongside a mixed folder's hand-over | mixed folders only | rare | start latency only | low | declined for now |
+
+### Declined with the number
+
+| Idea | Why |
+|---|---|
+| Faster server reads for a lens switch | 2–11 ms per route at real size |
+| Import-time work beyond `inflect`, YAML and `mcp` | heaviest remaining single module 35 ms of 414 |
+| Hover-prefetch and warm-sidecar on hover | no precedent, speculative ~140 MB spawn, 20 ms to gain |
+| Dashboard query rework (S2) | SQL ≤ 4.4 ms; the 110 ms was a synthetic shape |
+| Project import / migration deferral (SS-3) | 0.1–0.9 s import, 4–150 ms migrations, nothing to defer |
+| VideoToolbox decode (MC-3) | refuted by two reviewers |
+| First-request cost | our handler is 25 ms of 96; the rest is framework first-use |
+
 ## The rule each entry follows
 
 1. A **moment** a researcher meets (not a function): "click a lens", "open a study", "double-click the app".

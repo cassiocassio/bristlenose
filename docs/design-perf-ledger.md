@@ -37,6 +37,8 @@ Updated 4 Nov 2026. **Measured** is a number from a repeatable run; **estimate**
 | Signals snapshot holds the loop at start | first start after upgrade | once per study | about 0.8 s at 1,500 quotes, one-off | medium | declined |
 | Whisper alongside a mixed folder's hand-over | mixed folders only | rare | start latency only | low | declined for now |
 
+**Blocked on file ownership:** the Quotes and search lever (`React.memo` on `QuoteCard` with stable props, and not re-rendering every card for a query that has not become active) lives in `frontend/src/islands/QuoteCard.tsx`, which carries uncommitted edits from a display-preferences session that has since ended (with `DisplayMenu`, `DisplayPrefsStore`, `Toolbar`, `bridge.ts`, `nativePrefs.ts` and the Swift display files). Nobody owns those hunks now, so they are not touched here; the memo change waits until they are committed or set aside.
+
 ### Declined with the number
 
 | Idea | Why |

@@ -51,7 +51,17 @@ a.timecode:hover {
 
 /* --- Progress fill: left border grows top-to-bottom during playback ---
    Driven by --bn-segment-progress (0–1) set in PlayerContext.tsx.
-   Only appears on transcript segments (not report blockquotes). */
+   Only appears on transcript segments (not report blockquotes).
+
+   Registered as NOT inherited. It is set on the playing paragraph about four times a second, and
+   an inherited custom property restyles every descendant: a paragraph of 400 word spans cost
+   about 20 layout passes a tick instead of one, and 21 ms of style and layout instead of 10
+   (measured 4 Nov 2026, experiments/perf/playback.mjs). Only the ::before below reads it. */
+@property --bn-segment-progress {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
 
 .transcript-segment.bn-timecode-glow {
     position: relative;

@@ -32,7 +32,7 @@ Updated 4 Nov 2026 (end of day). **Measured** is a number from a repeatable run;
 | Transcript write re-reads and rebuilds every word span | correct a transcript | many a day for a corrector | **unmeasured**: 14,228 spans on one real session | n/a | gap found by the critic |
 | Startup importer skip-when-unchanged | study start | daily | about 70 ms at real size; about 1 s at 1,500 quotes (measured importer cost, fast-path untested) | medium | declined at real size |
 | Remaining fixed start: Python + imports 740 ms, `create_app` tail 300 ms, lifespan 130 ms | every launch | daily | diffuse, no single item over 35 ms except `mcp`; **about 0** from further import work | high | declined |
-| Idle CPU / energy impact (3 page polls, Mac polls, a sidecar per project) | app open all day | continuous | **unmeasured** | n/a | gap found by the critic |
+| Idle CPU / energy: the Mac app's own polls (agent pulse 1.5 s, screens 3 s, run 1 s) and the WebContent process | app open all day | continuous | **unmeasured** (the web page and server half is measured and passes, see below) | n/a | for the resize session: `idle.mjs` shows the method |
 | Playback follow (class toggles on every word span, about 4 Hz) | watching a recording | daily | **unmeasured** | n/a | gap found by the critic |
 | Sidebar `reloadData` per stdout line | during a run | occasional | premise stale (progress moved to the 1 Hz events poll); **about 0** until counted | low | measure first |
 | Signals snapshot holds the loop at start | first start after upgrade | once per study | about 0.8 s at 1,500 quotes, one-off | medium | declined |
@@ -43,6 +43,10 @@ Updated 4 Nov 2026 (end of day). **Measured** is a number from a repeatable run;
 ### Tried and not kept: bulk-validate the Transcript route's words
 
 A `cProfile` of `/transcripts/{sid}` on a real 12,000-word session put 43 of 77 ms in pydantic's per-object `__init__` (12,386 `WordTimingResponse` objects). Validating each segment's words in one `TypeAdapter(list[...])` call returned **byte-identical responses on all 10 sessions**, and a first A/B read 300 → 266 ms. The interleaved repeat did not hold: **before 278 / 283 ms, after 271 / 269 ms over the ten sessions, about 1 ms a session, which is noise.** The profiler had inflated the cost of many tiny Python calls. Reverted. The route is 19–55 ms for 370–730 KB bodies, so the Transcript lens's 75 ms fetch is mostly the transfer and the parse in the page, not this. **A profile names a suspect; only a wall-clock A/B, interleaved and repeated, is a result.**
+
+### Idle: an open, untouched report (measured 4 Nov 2026, `experiments/perf/idle.mjs`)
+
+Quotes lens open on a real-size study, nothing touched, 90 s, headless Chromium and the serve: **40 requests a minute** (`/condition` and `/last-run`, every 3 s each), **page main thread 0.08% of a core** (70 ms of task time, 19 ms script), **server 0.49% of a core** (440 ms, about 7 ms a request). Bar set beforehand: combined CPU ≤ 1% and ≤ 1 request a second per window; passed (0.57% and 0.67 a second). Pausing the polls while the window is hidden would save about 0.5% of a core while hidden: declined. Not covered: the Mac app's own polls and its WebContent process, and powermetrics energy impact (needs sudo).
 
 ### Declined with the number
 

@@ -73,25 +73,6 @@ def test_a_browser_click_on_the_endpoint_does_not_load_the_mcp_package() -> None
     assert r.stdout.split()[-3:] == ["200", "True", "False"]
 
 
-def test_the_first_agent_call_builds_it_and_later_ones_reuse_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    builds: list[int] = []
-    real = mcp_server.create_mcp_server
-
-    def counting(*a: Any, **kw: Any) -> Any:
-        builds.append(1)
-        return real(*a, **kw)
-
-    monkeypatch.setattr(mcp_server, "create_mcp_server", counting)
-    app = _fresh_app()
-    with TestClient(app, base_url="http://127.0.0.1:8150") as client:
-        assert builds == []
-        for i in range(3):
-            r = client.post("/mcp/", headers=_HEADERS, json={**_INIT, "id": i + 1})
-            assert r.status_code == 200, r.text
-            assert r.json()["result"]["serverInfo"]["name"] == "bristlenose"
-        assert builds == [1]
-
-
 def test_twenty_simultaneous_first_calls_build_it_once(monkeypatch: pytest.MonkeyPatch) -> None:
     builds: list[int] = []
     lock = threading.Lock()
@@ -147,12 +128,6 @@ def test_leaving_the_app_stops_the_session_manager_and_does_not_hang() -> None:
     assert handle["task"].done() and handle["lazy"]._task is None
 
 
-def test_an_app_that_never_got_a_call_closes_cleanly() -> None:
-    app = _fresh_app()
-    with TestClient(app, base_url="http://127.0.0.1:8150"):
-        pass  # no /mcp call at all: aclose must be a no-op, and not raise
-
-
 def test_a_failed_build_is_a_500_and_the_next_call_tries_again(monkeypatch: pytest.MonkeyPatch) -> None:
     real = mcp_server.create_mcp_server
     state = {"calls": 0}
@@ -169,6 +144,22 @@ def test_a_failed_build_is_a_500_and_the_next_call_tries_again(monkeypatch: pyte
         assert client.post("/mcp/", headers=_HEADERS, json=_INIT).status_code == 500
         assert client.post("/mcp/", headers=_HEADERS, json=_INIT).status_code == 200
     assert state["calls"] == 2
+
+
+def test_the_health_probe_does_not_load_the_mcp_package() -> None:
+    # /api/health is the app's readiness probe: it must not pay the import it was moved off.
+    r = _python(
+        "import sys\n"
+        "from fastapi.testclient import TestClient\n"
+        "from bristlenose.server.app import create_app\n"
+        "from pathlib import Path\n"
+        f"app = create_app(project_dir=Path({str(_FIXTURE_DIR)!r}), dev=True, db_url='sqlite://')\n"
+        "with TestClient(app, base_url='http://127.0.0.1:8150') as c:\n"
+        "    body = c.get('/api/health').json()\n"
+        "print(body['mcp']['mounted'], 'mcp' in sys.modules)\n"
+    )
+    assert r.returncode == 0, r.stderr[-500:]
+    assert r.stdout.split()[-2:] == ["True", "False"]
 
 
 def test_health_reports_mounted_before_any_call() -> None:

@@ -82,7 +82,7 @@ def _project_key_or_none(request: Request) -> str | None:
     if factory is None:
         return None
     try:
-        from bristlenose.server.mcp_server import _project_key
+        from bristlenose.server.mcp_mount import _project_key
         from bristlenose.server.models import Project
 
         db = factory()

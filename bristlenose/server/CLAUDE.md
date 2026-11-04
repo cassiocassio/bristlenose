@@ -82,7 +82,7 @@ Connect Agent sheet + sidebar antenna badge are the desktop surface).
   275–280 ms and the whole eager path about 420 ms of every launch; the first agent call now
   pays 365–476 ms once, then 8–13 ms). Only an ABSENT package is "not installed"; a
   present-but-broken one fails loudly on the first request (log + 500, retried on the next),
-  never as "not installed". **Keep `mcp_server.py` out of `create_app`'s import path:** it imports
+  never as "not installed". **Keep `mcp_server.py` out of `create_app`'s import path, AND out of `/api/health`'s (`_project_key` lives in `mcp_mount` for that reason):** it imports
   the SDK at load because `ToolInputError` must subclass its `ToolError`, so `app.py` imports
   `mcp_mount` and `LazyMCP._build` imports `mcp_server` (`tests/test_mcp_lazy_mount.py` fails
   if building the app, or a browser click on `/mcp/`, loads `mcp`).

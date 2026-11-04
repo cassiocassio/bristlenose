@@ -26,10 +26,8 @@ change. The serve is single-project today, so the id is always 1.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import os
 import time
 from collections.abc import Callable
 from typing import Any, TypeVar, cast
@@ -43,7 +41,7 @@ from bristlenose.server.grounding import (
     resolve_speaker_names,
     session_team,
 )
-from bristlenose.server.mcp_mount import DOCS_URL  # noqa: F401 — re-exported; one source
+from bristlenose.server.mcp_mount import DOCS_URL, _project_key  # noqa: F401 — one source each
 from bristlenose.utils.timecodes import format_timecode, iso_utc
 
 logger = logging.getLogger(__name__)
@@ -150,44 +148,6 @@ def _get_project(db: Any, project_id: int) -> Any:
         valid = sorted(p.id for p in projects)
         raise ToolInputError(f"unknown project_id {project_id} — valid: {valid}")
     return project
-
-
-def _project_key(project: Any) -> str:
-    """Stable, opaque identity for one project — the first field of a citation.
-
-    ``project_id`` is a **slot**, not a name: the serve is single-project, so it
-    is always 1, and *which* project that means changes with the window the
-    researcher has open. Observed live 20 Aug 2026 — the same id returned "foo"
-    and then "IKEA with uxfriends" inside one conversation.
-
-    The name does not disambiguate either. A real sidebar holds "New Project",
-    "New Project 2", "New Project 3" and "New Project3"; two of those echoing
-    identical ``{id: 1, name: ...}`` payloads are indistinguishable.
-
-    So: sha256 of the resolved input path. Stable across restarts, unique per
-    project, and it leaks no filesystem path — §7 forbids paths reaching the
-    agent, and a digest is not a path. Resolved first because ``/private/var``
-    and ``/var`` spell the same folder two ways and would otherwise key one
-    project twice (the same standardisation ``AgentActivity.samePath`` makes on
-    the desktop side).
-
-    Since 15 Oct 2026 a project that carries a study id (``projects.study_id``,
-    from the output folder's marker) is keyed by that instead, so an agent
-    keeps its project across a move or a rename, and a copy, which the app
-    re-mints, is a different project (docs/design-project-identity.md §11).
-    """
-    study_id = getattr(project, "study_id", None)
-    if study_id:
-        return hashlib.sha256(f"study:{study_id}".encode()).hexdigest()[:8]
-    raw = project.input_dir
-    if not raw:
-        # `os.path.realpath("")` returns the CWD, which mints a perfectly
-        # well-formed key that is WRONG and that every project with an empty
-        # input_dir collides on. An unidentifiable project must be visibly
-        # unidentifiable — the caller omits `key` rather than shipping a lie.
-        raise ValueError("project has no input_dir, so it has no stable key")
-    real = os.path.realpath(raw)
-    return hashlib.sha256(real.encode("utf-8")).hexdigest()[:8]
 
 
 def _project_identity(project: Any) -> dict[str, Any]:

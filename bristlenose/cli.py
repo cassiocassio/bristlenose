@@ -2346,9 +2346,11 @@ def _print_mcp_connect(port: int) -> None:
     Prints the two primitives (URL + assembled Authorization header) and the
     permanent docs URL — never a vendor's command: dialects rot, so they
     live in the manual (and the Mac sheet) where they can update. Gated on
-    ``import mcp`` succeeding — the same probe ``mount_mcp_server`` uses, so
-    a present-but-broken install prints the unavailable line rather than a
-    working-looking block over a dead endpoint.
+    ``import mcp`` succeeding, so a present-but-broken install prints the unavailable line rather
+    than a working-looking block over a dead endpoint. (``mount_mcp_server`` no longer imports the
+    package: it asks ``find_spec`` and builds on the first request, so there the same broken
+    install is mounted and fails on first use. This import is after the bind and never runs for
+    the desktop-hosted sidecar, so it is off the launch path.)
     """
     if os.environ.get("_BRISTLENOSE_HOSTED_BY_DESKTOP") == "1":
         # The desktop-hosted sidecar's stdout is a machine channel

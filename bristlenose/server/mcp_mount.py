@@ -11,6 +11,7 @@ module imports nothing heavy; ``mcp_server`` is imported inside ``LazyMCP``'s bu
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import importlib.util
 import logging
 import os
@@ -26,6 +27,48 @@ logger = logging.getLogger(__name__)
 
 #: Where the connect instructions live (permanent URL — see the website repo).
 DOCS_URL = "https://bristlenose.app/docs/connect-an-agent.html"
+
+
+# ---------------------------------------------------------------------------
+# Project identity (light: /api/health needs it and must not load the SDK)
+# ---------------------------------------------------------------------------
+
+def _project_key(project: Any) -> str:
+    """Stable, opaque identity for one project — the first field of a citation.
+
+    ``project_id`` is a **slot**, not a name: the serve is single-project, so it
+    is always 1, and *which* project that means changes with the window the
+    researcher has open. Observed live 20 Aug 2026 — the same id returned "foo"
+    and then "IKEA with uxfriends" inside one conversation.
+
+    The name does not disambiguate either. A real sidebar holds "New Project",
+    "New Project 2", "New Project 3" and "New Project3"; two of those echoing
+    identical ``{id: 1, name: ...}`` payloads are indistinguishable.
+
+    So: sha256 of the resolved input path. Stable across restarts, unique per
+    project, and it leaks no filesystem path — §7 forbids paths reaching the
+    agent, and a digest is not a path. Resolved first because ``/private/var``
+    and ``/var`` spell the same folder two ways and would otherwise key one
+    project twice (the same standardisation ``AgentActivity.samePath`` makes on
+    the desktop side).
+
+    Since 15 Oct 2026 a project that carries a study id (``projects.study_id``,
+    from the output folder's marker) is keyed by that instead, so an agent
+    keeps its project across a move or a rename, and a copy, which the app
+    re-mints, is a different project (docs/design-project-identity.md §11).
+    """
+    study_id = getattr(project, "study_id", None)
+    if study_id:
+        return hashlib.sha256(f"study:{study_id}".encode()).hexdigest()[:8]
+    raw = project.input_dir
+    if not raw:
+        # `os.path.realpath("")` returns the CWD, which mints a perfectly
+        # well-formed key that is WRONG and that every project with an empty
+        # input_dir collides on. An unidentifiable project must be visibly
+        # unidentifiable — the caller omits `key` rather than shipping a lie.
+        raise ValueError("project has no input_dir, so it has no stable key")
+    real = os.path.realpath(raw)
+    return hashlib.sha256(real.encode("utf-8")).hexdigest()[:8]
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +243,7 @@ class LazyMCP:
         self._http_app: Any = None
         self._task: asyncio.Task[None] | None = None
         self._stop: asyncio.Event | None = None
+        self._closed = False
 
     async def _ensure(self) -> None:
         if self._http_app is not None:
@@ -207,6 +251,8 @@ class LazyMCP:
         async with self._lock:
             if self._http_app is not None:
                 return
+            if self._closed:
+                raise RuntimeError("the MCP endpoint is shutting down")
             try:
                 server, http_app = await asyncio.to_thread(self._build)
             except Exception:
@@ -214,6 +260,9 @@ class LazyMCP:
                 # fails here, loudly, on every call, and not as "not installed".
                 logger.exception("could not build the MCP endpoint")
                 raise
+            if self._closed:
+                # shutdown began while the build ran in its thread: start nothing after it
+                raise RuntimeError("the MCP endpoint is shutting down")
             stop = asyncio.Event()
             ready = asyncio.Event()
 
@@ -224,7 +273,15 @@ class LazyMCP:
 
             task = asyncio.create_task(_hold(), name="bristlenose-mcp-session-manager")
             waiter = asyncio.create_task(ready.wait())
-            await asyncio.wait({task, waiter}, return_when=asyncio.FIRST_COMPLETED)
+            try:
+                await asyncio.wait({task, waiter}, return_when=asyncio.FIRST_COMPLETED)
+            except BaseException:
+                # This call was cancelled while the manager started: nothing owns the task yet,
+                # so stop it here or it would hold the session manager open until the loop dies.
+                stop.set()
+                waiter.cancel()
+                task.cancel()
+                raise
             if not ready.is_set():
                 waiter.cancel()
                 try:
@@ -240,6 +297,7 @@ class LazyMCP:
 
     async def aclose(self) -> None:
         """Stop the session manager if it was ever started. Safe to call twice."""
+        self._closed = True
         task, stop = self._task, self._stop
         self._task = self._stop = self._http_app = None
         if task is None or stop is None:

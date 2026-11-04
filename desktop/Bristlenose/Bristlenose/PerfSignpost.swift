@@ -70,6 +70,17 @@ enum PerfSignpost {
         signposter.emitEvent("project-select-step", "\(name, privacy: .public)")
     }
 
+    /// A stage stamp the sidecar printed (`@startup-stage <name> <epoch_ms>`), re-emitted as a signpost
+    /// event so it sits on the app's own clock beside `serve-spawned` and `serve-port-parsed`.
+    /// Returns whether the line was a stamp.
+    @discardableResult
+    static func sidecarStage(fromLine line: String) -> Bool {
+        let prefix = "@startup-stage "
+        guard line.hasPrefix(prefix) else { return false }
+        signposter.emitEvent("sidecar-stage", "\(String(line.dropFirst(prefix.count)), privacy: .public)")
+        return true
+    }
+
     /// For tests: forget everything without emitting.
     static func resetForTests() { open.removeAll() }
 }

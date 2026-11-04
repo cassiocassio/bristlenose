@@ -60,6 +60,25 @@ About 0.9–1.0 s off a study's start, and the same off click-to-ready. Cold was
 
 About 70% of the wait is the sidecar booting (Python start, imports, app construction and bind, up to the line it prints). The 0.8 s after it answers is split roughly evenly between the health call, building the web view, the page load and the SPA mounting, so no single native or page step is large. The next lever is inside the sidecar's own start, and it needs a profile of that process, not of the Mac app.
 
+### Inside the sandboxed sidecar's start
+
+`BRISTLENOSE_STARTUP_TRACE=1` (Debug builds pass it through; `bristlenose/startup_trace.py` prints the stamps) makes the sidecar print `@startup-stage <name> <epoch_ms>`, which the app re-emits as `sidecar-stage` signposts. Medians over 7 starts of the sandboxed, ad-hoc-signed sidecar built after the lazy `inflect` import and the Keychain read cache, as ms after the app spawned it:
+
+| stage | ms after spawn | gap |
+|---|---|---|
+| `cli-imported` | 271 | 271 |
+| `serve-entered` | 442 | 171 |
+| `create-app-start` | 851 | **409** |
+| `database-ready` | 942 | 91 |
+| `startup-import-end` | 1,169 | 227 (the importer is 138 of it) |
+| `create-app-end` | 1,419 | 250 |
+| `lifespan-begin` | 1,438 | 19 |
+| `lifespan-tasks-started` (`mcp-starting`) | 1,739 | **301** |
+| `lifespan-ready` | 1,766 | 27 |
+| `socket-bound` | 1,818 | 52 |
+
+The 301 ms before the lifespan tasks start is the `import mcp` the server session measured at 275–280 ms; it is paid whether or not Agent Access is on. The 409 ms before `create-app-start` holds the server-app import and `load_settings`, so it cannot by itself say how much the Keychain cache saves. On whether the sandboxed sidecar launches `/usr/bin/security` at all: polling the process table during starts caught a `security` process whose parent was the sandboxed sidecar, so the sandbox does not forbid it. The poll is coarse (one hit in three starts), so that says the spawn is possible, not how often or how long.
+
 ## Considered and left, with the reason
 
 - **Shared rAF-coalescing `ResizeObserver` helper across 16 files.** The callback bodies total ~26 ms; the loop-error warning is noise, not cost. Revisit only if a profile names them.

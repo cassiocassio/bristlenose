@@ -187,6 +187,12 @@ enum BristlenoseShared {
                      "LANG", "LC_ALL", "LC_CTYPE", "VIRTUAL_ENV"] {
             if let val = parentEnv[key] { env[key] = val }
         }
+        #if DEBUG
+        // Opt-in stage stamps from the sidecar's own start (`bristlenose/startup_trace.py`): the app
+        // reads them back as `sidecar-stage` signposts (`PerfSignpost.sidecarStage`). Debug only, so
+        // a shipping build's sidecar environment is exactly what it was.
+        if let val = parentEnv["BRISTLENOSE_STARTUP_TRACE"] { env["BRISTLENOSE_STARTUP_TRACE"] = val }
+        #endif
         overlayPreferences(into: &env)
         return env
     }

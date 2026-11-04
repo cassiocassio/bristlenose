@@ -1635,6 +1635,8 @@ final class ServeManager: ObservableObject {
             withTemplate: ""
         )
 
+        PerfSignpost.sidecarStage(fromLine: clean)   // opt-in stamps from the sidecar's own start
+
         // Route by identity. A line from a PARKED (or already-superseded)
         // process must NOT run any fronted logic — not token capture, not the
         // published `outputLines`, not readiness/state. Otherwise a late stdout

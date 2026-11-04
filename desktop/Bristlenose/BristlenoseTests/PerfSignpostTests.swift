@@ -44,6 +44,14 @@ struct PerfSignpostTests {
         #expect(PerfSignpost.isOpen(.firstCardPainted, scope: "w1"))
     }
 
+    /// The sidecar's opt-in stage stamps are re-emitted as signposts; any other output line is not.
+    @Test func onlyAStageStampIsTakenForASidecarStage() {
+        #expect(PerfSignpost.sidecarStage(fromLine: "@startup-stage create-app-start 1793787585294"))
+        #expect(!PerfSignpost.sidecarStage(fromLine: "Report: http://127.0.0.1:51234/report/"))
+        #expect(!PerfSignpost.sidecarStage(fromLine: "[bristlenose] auth-token: abc"))
+        #expect(!PerfSignpost.sidecarStage(fromLine: ""))
+    }
+
     /// The names are the cross-layer contract with the server's Server-Timing and the page's
     /// performance.mark: a rename here has to be a rename there.
     @Test func theMomentNamesAreTheSharedOnes() {

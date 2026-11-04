@@ -10,6 +10,7 @@
 # WARM = relaunches of the last copy. Each run launches the copy WITHOUT the dev-server flag, so
 # it starts its own sidecar, selects a study with a report (BN_STUDY, default Talismanic), waits
 # for the web area, and reads the signposts back with `log stream --signpost`.
+# BN_APP_ENV="BRISTLENOSE_STARTUP_TRACE=1" also reports the sidecar's own start stages (Debug builds).
 # Never run two at once: it launches app copies and presses their sidebar through Accessibility.
 set -u
 TEMPLATE=${1:?template app}; LABEL=${2:?label}; COLD=${3:-5}; WARM=${4:-5}; OUT=${5:-/tmp/bn-perf}
@@ -27,22 +28,28 @@ one() { # kind index
   [ -z "$(pgrep -f "$exe")" ] || { echo "a copy is already running" >&2; return 1; }
   /usr/bin/log stream --predicate 'subsystem == "app.bristlenose" AND category == "perf"' --signpost --level debug --style compact > "$slog" 2>&1 &
   local lp=$!; sleep 2
-  open -n "$RUN"
+  local extra=(); [ -n "${BN_APP_ENV:-}" ] && extra=(--env "$BN_APP_ENV")
+  open -n ${extra[@]+"${extra[@]}"} "$RUN"
   for _ in $(seq 1 40); do pid=$(pgrep -f "$exe" | head -1); [ -n "$pid" ] && break; sleep 0.5; done
   sleep 6
   "$BIN/select-study" "$pid" "$STUDY" --wait-web=180 > /dev/null
   for _ in $(seq 1 60); do grep -q "end\] serve-ready" "$slog" && break; sleep 1; done
   sleep 2; pkill -f "$exe" 2>/dev/null; sleep 2; kill "$lp" 2>/dev/null
   python3 - "$slog" "$kind" "$OUT/$LABEL.runs" "$OUT/$LABEL.steps.jsonl" <<'PY'
-import json, re, sys
+import json, re, sys, time
 log, kind, out, steps_out = sys.argv[1:5]
 t = lambda s: sum(float(x) * m for x, m in zip(s.split(":"), (3600, 60, 1)))
-begins, ends, events = {}, {}, {}
+begins, ends, events, stages, epoch_of = {}, {}, {}, {}, {}
 for l in open(log):
-    m = re.match(r"\S+ ([\d:.]+) +Sp .*\[spid (0x[0-9a-f]+|excl), process, +(begin|end|event)\] ([a-z-]+)(?:: (.*))?", l)
+    m = re.match(r"(\d{4}-\d\d-\d\d) ([\d:.]+) +Sp .*\[spid (0x[0-9a-f]+|excl), process, +(begin|end|event)\] ([a-z-]+)(?:: (.*))?", l)
     if not m: continue
-    if m[3] == "event": events.setdefault(m[5], t(m[1]))
-    else: (begins if m[3] == "begin" else ends)[(m[2], m[4])] = t(m[1])
+    when = t(m[2])
+    day = time.mktime(time.strptime(m[1], "%Y-%m-%d"))
+    if m[4] == "event" and m[5] == "sidecar-stage":
+        name, ms = m[6].split()[:2]; stages.setdefault(name, int(ms) / 1000.0)   # sidecar's own clock, epoch seconds
+    elif m[4] == "event":
+        events.setdefault(m[6], when); epoch_of.setdefault(m[6], day + when)
+    else: (begins if m[4] == "begin" else ends)[(m[3], m[5])] = when
 def span(name):
     for (sp, n), b in begins.items():
         if n == name and (sp, n) in ends: return b, ends[(sp, n)]
@@ -56,8 +63,10 @@ seg = {}
 for (a, ta), (b, tb) in zip(pts, pts[1:]):
     seg[f"{a} -> {b}"] = round((tb - ta) * 1000) if ta is not None and tb is not None else None
 total = round((ps_e - ps_b) * 1000) if ps_b and ps_e else None
+spawn = epoch_of.get("serve-spawned")
+stage_ms = {k: round((v - spawn) * 1000) for k, v in stages.items()} if spawn else {}
 open(out, "a").write(f"{kind} {round((sr_e - sr_b) * 1000) if sr_b and sr_e else None} {total}\n")
-open(steps_out, "a").write(json.dumps({"kind": kind, "segments": seg, "total": total}) + "\n")
+open(steps_out, "a").write(json.dumps({"kind": kind, "segments": seg, "total": total, "stages": stage_ms}) + "\n")
 print(kind, "project-select", total, "ms:", seg)
 PY
 }
@@ -84,4 +93,13 @@ if rows:
         if v: print(f"  {n:46} {int(st.median(v)):>6}   (min {min(v)}, max {max(v)})")
     v = [r["total"] for r in rows if r["total"]]
     print(f'  {"TOTAL click -> report ready":46} {int(st.median(v)):>6}')
+    order = []
+    for r in rows:
+        for k in r.get("stages", {}):
+            if k not in order: order.append(k)
+    if order:
+        print(f"\n{sys.argv[2]}: the sidecar's own stages, ms after the app spawned it (median over runs that reported)")
+        for k in order:
+            v = [r["stages"][k] for r in rows if k in r.get("stages", {})]
+            print(f"  {k:46} {int(st.median(v)):>6}   (n={len(v)}, min {min(v)}, max {max(v)})")
 PY

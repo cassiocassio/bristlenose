@@ -42,10 +42,10 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 
 | Change | Measured | Commit |
 |---|---|---|
-| `inflect` loaded on first plural, not at import | `import bristlenose.cli` 1.05 s → 0.22 s; `import bristlenose.server.app` 1.8 s → 0.8 s (median of 3–5, `.venv`, warm cache). A subprocess test pins it and fails with the eager import put back. | `6f5b0e350` |
+| `inflect` loaded on first plural, not at import | `import bristlenose.cli` 1.05 s → 0.22 s; `import bristlenose.server.app` 1.8 s → 0.8 s (median of 3–5, `.venv`, warm cache). A subprocess test pins it and fails with the eager import put back. **In the app, `serve-ready` (bundled sidecar) went 3,194 ms → 2,241 ms cold (−30%) and 3,128 → 2,330 ms warm (−25%); `project-select` 4.1 s → 3.1 s** (median of 5, identical app binary in both arms, Debug-signed app, ad-hoc-signed hardened-runtime sidecar; method and spread in `design-client-performance.md` § Sidecar start). | `6f5b0e350`; measured `8000e1b17` |
 | Server-Timing instrument | n/a (instrument) | `041df1eb0` |
 
-`inflect` was found by `python -X importtime`, not by guess: it was 0.84 s of self time on the path of every command, `--help` and `serve` included. Re-measure on the signed sidecar, which this does not cover.
+`inflect` was found by `python -X importtime`, not by guess: it was 0.84 s of self time on the path of every command, `--help` and `serve` included. The A/B above covers the bundled sidecar; the App Store (Apple Distribution) signing and the sandboxed entitlements were not measured. Warm was noisier than cold (one 3.4 s outlier), and cold was not slower than warm, so this method does not reproduce a first-exec penalty.
 
 ## Baselines (measured, 4 Nov 2026)
 
@@ -122,5 +122,5 @@ Gate on **counts and sizes, not milliseconds**: shared CI runners cannot hold 2%
 
 - Baselines for the ten reviewed moments above; none is measured yet.
 - The engineering candidates have not had their three-lens review (in progress).
-- A launch-to-ready number on the signed sidecar, with and without the `inflect` change (the resize session is rebuilding the sidecar to measure it).
+- A launch-to-ready number (the full chain from double-click); `serve-ready` and `project-select` are measured above, and `first-card-painted` now begins on a route into `/report/quotes`.
 - Measured experiments on our own overhead around LLM calls (batching, concurrency, resume cache hits); none run yet.

@@ -187,7 +187,16 @@
   },
   "toolbar": {
     "matching": "{{count}}개 일치",
-    "focusMode": "\uc9d1\uc911 \ubaa8\ub4dc"
+    "focusMode": "\uc9d1\uc911 \ubaa8\ub4dc",
+    "display": "\ubcf4\uae30",
+    "displayLayout": "\ub808\uc774\uc544\uc6c3",
+    "displayColumns": "\uc5ec\ub7ec \uc5f4",
+    "displaySingleColumn": "\ub2e8\uc77c \uc5f4",
+    "displayDensity": "\ubc00\ub3c4",
+    "displayCompact": "\uc870\ubc00\ud558\uac8c",
+    "displayNormal": "\ubcf4\ud1b5",
+    "displaySpacious": "\uc5ec\uc720\ub86d\uac8c",
+    "displayBreakParagraphs": "\uae34 \ub2e8\ub77d \ub098\ub204\uae30"
   },
   "tags": {
     "noTags": "태그 없음",

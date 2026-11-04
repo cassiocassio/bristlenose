@@ -36,6 +36,9 @@ export const MIRRORED_PREF_KEYS: readonly string[] = [
   "bn-screens-nav-width",
   "bn-discussion-guide-open",
   "bn-discussion-nav-width",
+  "bn-display-layout",
+  "bn-display-density",
+  "bn-display-breaks",
 ];
 
 /** Keys mirrored by prefix. Serve always names the project "1", so in

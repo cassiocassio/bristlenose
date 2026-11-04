@@ -263,6 +263,7 @@ state is still evidenced, the day is not.
 | `transcript-paragraph-capitalisation.html` | 6 Oct 2026 | PROPOSED 6 Oct 2026 · IMPLEMENTED 8 Oct 2026 — four ways to draw a transcript paragraph's first letter; the owner chose **C** (a capital where a sentence begins, display only, `::first-letter` following the session's `lang`). `utils/sentenceStart.ts`; measured on 3,237 real paragraphs in `experiments/paragraph-case/`. Unreleased at 8 Oct. |
 | `transcript-readability-versions.html` | 8 Oct 2026 | *unreviewed* |
 | `quotes-display-options.html` | 3 Nov 2026 | PROPOSED 3 Nov 2026 — the Display popover (layout, density, break long paragraphs, focus) on 31 real Talismanic quotes, beside a line-break lab (placement, thought-length slider, blind labelling, compare and scoring). The lab half is a SANDPIT; the design of record is `design-display-preferences.md`. |
+| `display-popover-variants.html` | 3 Nov 2026 | SANDPIT — the Display popover's Layout, Density, Break and Focus Mode rows as five Mac variants (Battery-style icon rows, segmented with icons, plain menu rows, tiles, a density slider) and a web menu with icons, light and dark. A range to choose from, not a design. The owner picked: Layout as Battery-style icon rows, Density as a slider with a small A and a big A at its ends and the three words underneath, Break and Focus Mode as plain rows with a tick on the left; that is what `DisplayPopover.swift` draws. The design of record is `design-display-preferences.md`. |
 
 ## out-of-credit
 

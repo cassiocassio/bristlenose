@@ -428,6 +428,10 @@ export function useKeyboardShortcuts({
 
       // Escape — cascade: close modal → close overlay → clear search → clear selection → clear focus
       if (key === "Escape") {
+        // An open toolbar menu (Export, Display) closes itself on this key
+        // (useDropdown); the same press must not also clear the search, the
+        // selection or the cursor behind it.
+        if (document.querySelector('[role="menu"]')) return;
         if (settingsModalOpenRef.current) {
           e.preventDefault();
           onToggleSettings?.();

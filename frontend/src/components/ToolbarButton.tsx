@@ -6,7 +6,7 @@
  * Reuses atoms/button.css (.toolbar-btn, .toolbar-icon-svg, .toolbar-arrow).
  */
 
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import type { ReactNode, ButtonHTMLAttributes, Ref } from "react";
 import { Icon } from "./Icon";
 
 export interface ToolbarButtonProps
@@ -19,6 +19,8 @@ export interface ToolbarButtonProps
   arrow?: boolean;
   /** Whether the dropdown is open (sets aria-expanded). */
   expanded?: boolean;
+  /** Passed to the <button> (React 19: a ref is an ordinary prop). */
+  ref?: Ref<HTMLButtonElement>;
   "data-testid"?: string;
 }
 
@@ -28,6 +30,7 @@ export function ToolbarButton({
   arrow,
   expanded,
   className,
+  ref,
   "data-testid": testId,
   ...rest
 }: ToolbarButtonProps) {
@@ -35,6 +38,7 @@ export function ToolbarButton({
 
   return (
     <button
+      ref={ref}
       type="button"
       className={classes}
       aria-expanded={expanded}

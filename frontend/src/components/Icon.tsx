@@ -24,7 +24,7 @@
  * Add a concept here rather than inlining another <svg> in a component.
  */
 import {
-  AppWindowMac,
+  AArrowDown, AArrowUp, ALargeSmall, AppWindowMac, Columns2, RectangleVertical,
   MessageCircleQuestionMark,
   Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleHelp, CircleX, Download,
   ExternalLink, Eye, EyeOff, Folder, GalleryHorizontal, LayoutGrid, List, Minus, Moon, Pencil, Play, Plus,
@@ -72,6 +72,17 @@ const ICONS = {
   timeline: GalleryHorizontal,
   /** Focus mode: the moon, as Mail's View menu. */
   focus: Moon,
+  /** The Display menu (layout, density, breaks): "Aa", the reading-appearance convention; the Mac's SF Symbol is `textformat.size`. */
+  display: ALargeSmall,
+  /** Display ▸ Layout: Columns / Single column; the Mac's `rectangle.split.2x1` / `rectangle.portrait`. */
+  layoutColumns: Columns2,
+  layoutSingle: RectangleVertical,
+  /** Display ▸ Density: Compact / Normal / Spacious, as a small A, the Display button's own "Aa", and a
+   *  big A; the Mac's `textformat.size.smaller` / `textformat.size` / `textformat.size.larger`. Density
+   *  mostly changes the space around the text, but people read it as a text size, so the icons say that. */
+  densityCompact: AArrowDown,
+  densityNormal: ALargeSmall,
+  densitySpacious: AArrowUp,
   /** Settings (pick: the gear, over settings-2's sliders). */
   settings: Settings,
   /** Help (pick: circle-help, over info). */

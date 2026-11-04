@@ -14,7 +14,10 @@
     "bn-screens-nav-open",
     "bn-screens-nav-width",
     "bn-discussion-guide-open",
-    "bn-discussion-nav-width"
+    "bn-discussion-nav-width",
+    "bn-display-layout",
+    "bn-display-density",
+    "bn-display-breaks"
   ],
   "key_prefixes": [
     "bristlenose-quote-grouping-"

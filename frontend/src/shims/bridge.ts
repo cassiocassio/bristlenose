@@ -56,6 +56,7 @@ export type BridgeMessage =
   | { type: "search-suggestions"; query: string; rows: WireSuggestionRow[] }
   | ({ type: "search-badge-styles" } & BadgeStyles)
   | { type: "focus-mode"; active: boolean }
+  | { type: "display-prefs"; layout: string; density: number; breaks: string }
   | { type: "screens-arrangement"; custom: boolean }
   | {
       type: "undo-state";
@@ -435,6 +436,17 @@ export function postUndoState(
  */
 export function postFocusMode(active: boolean): void {
   postNativeMessage({ type: "focus-mode", active });
+}
+
+/**
+ * Mirror the Display preferences (layout, density, break long paragraphs) to
+ * the native Display popover. Same shape as Focus Mode: the SPA owns them and
+ * saves them (`storePref`); native only mirrors, so the popover shows the value
+ * the report actually has. Keyed on the values in AppLayout, so it fires on
+ * mount, which re-syncs a new web view.
+ */
+export function postDisplayPrefs(prefs: { layout: string; density: number; breaks: string }): void {
+  postNativeMessage({ type: "display-prefs", ...prefs });
 }
 
 /**

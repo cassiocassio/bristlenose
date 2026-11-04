@@ -80,6 +80,8 @@ _THEME_FILES: list[str] = [
     "molecules/threshold-review.css",
     "organisms/blockquote.css",
     "organisms/responsive-grid.css",
+    # After responsive-grid.css: Single column overrides its grid-lanes rule.
+    "organisms/display-prefs.css",
     "organisms/uncategorised-floor.css",
     "organisms/coverage.css",
     "organisms/sessions-grid.css",

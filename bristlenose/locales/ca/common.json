@@ -210,7 +210,16 @@
   },
   "toolbar": {
     "matching": "{{count}} coincidents",
-    "focusMode": "Mode immersió"
+    "focusMode": "Mode immersió",
+    "display": "Visualitzaci\u00f3",
+    "displayLayout": "Disposici\u00f3",
+    "displayColumns": "Columnes",
+    "displaySingleColumn": "Una columna",
+    "displayDensity": "Densitat",
+    "displayCompact": "Compacta",
+    "displayNormal": "Normal",
+    "displaySpacious": "Espaiosa",
+    "displayBreakParagraphs": "Divideix els par\u00e0grafs llargs"
   },
   "tags": {
     "noTags": "Cap etiqueta",

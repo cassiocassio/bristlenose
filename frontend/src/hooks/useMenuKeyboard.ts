@@ -44,10 +44,36 @@ export function useMenuKeyboard(options: UseMenuKeyboardOptions): UseMenuKeyboar
     });
   }, [open]);
 
-  // Restore focus to trigger on close
+  // Restore focus to the trigger on close, but only when the reader was last
+  // working inside the menu: a key press (Escape, Tab, Enter on a row) or a
+  // press on a row or on the trigger itself. A click elsewhere on the page has
+  // already put focus where the reader pointed (the search box, a quote), and
+  // pulling it back to the trigger would undo that. It is decided by the LAST
+  // interaction, not remembered for the life of the menu: the Display menu
+  // stays open through choices, so an earlier click on a row must not excuse a
+  // later click outside.
   const prevOpen = useRef(open);
+  const lastInteractionInside = useRef(false);
   useEffect(() => {
-    if (prevOpen.current && !open) {
+    if (!open) return;
+    lastInteractionInside.current = false;
+    const onKey = () => {
+      lastInteractionInside.current = true;
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      lastInteractionInside.current =
+        !!t && (!!menuRef.current?.contains(t) || !!triggerRef.current?.contains(t));
+    };
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("mousedown", onMouseDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
+    };
+  }, [open, triggerRef]);
+  useEffect(() => {
+    if (prevOpen.current && !open && lastInteractionInside.current) {
       triggerRef.current?.focus();
     }
     prevOpen.current = open;
@@ -100,6 +126,7 @@ export function useMenuKeyboard(options: UseMenuKeyboardOptions): UseMenuKeyboar
         case "Tab": {
           // Trap focus within menu — close instead of tabbing out
           e.preventDefault();
+          lastInteractionInside.current = true;
           onClose();
           break;
         }

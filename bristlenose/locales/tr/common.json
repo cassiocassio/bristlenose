@@ -210,7 +210,16 @@
   },
   "toolbar": {
     "matching": "{{count}} eşleşen",
-    "focusMode": "Odak modu"
+    "focusMode": "Odak modu",
+    "display": "G\u00f6r\u00fcn\u00fcm",
+    "displayLayout": "D\u00fczen",
+    "displayColumns": "S\u00fctunlar",
+    "displaySingleColumn": "Tek s\u00fctun",
+    "displayDensity": "Yo\u011funluk",
+    "displayCompact": "Kompakt",
+    "displayNormal": "Normal",
+    "displaySpacious": "Ferah",
+    "displayBreakParagraphs": "Uzun paragraflar\u0131 b\u00f6l"
   },
   "tags": {
     "noTags": "Etiket yok",

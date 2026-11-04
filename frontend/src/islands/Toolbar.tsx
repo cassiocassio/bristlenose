@@ -38,6 +38,7 @@ import { isEmbedded } from "../utils/embedded";
 import { isActiveQuery } from "../utils/searchMatch";
 import { useSearchAnnouncement } from "../hooks/useSearchAnnouncement";
 import { Icon } from "../components/Icon";
+import { DisplayMenu } from "../components/DisplayMenu";
 
 // ── Component ─────────────────────────────────────────────────────────
 
@@ -140,6 +141,7 @@ export function Toolbar() {
         onClick={toggleFocusMode}
         data-testid="bn-toolbar-focus-mode"
       />
+      <DisplayMenu />
     </div>
   );
 }

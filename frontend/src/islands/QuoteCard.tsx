@@ -14,7 +14,7 @@
  * via callbacks.
  */
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Badge,
@@ -33,6 +33,8 @@ import { isExportMode } from "../utils/exportData";
 import { reportHref } from "../utils/reportHref";
 import { featureFlags } from "../utils/featureFlags";
 import { highlightTerms } from "../utils/highlight";
+import { breakIntoBlocks } from "../utils/breakParagraphs";
+import { useDisplayBreaks } from "../contexts/DisplayPrefsStore";
 import type { SearchTerm } from "../utils/searchMatch";
 import { useCropEdit } from "../hooks/useCropEdit";
 import { useFocus, useQuoteFocusState } from "../contexts/FocusContext";
@@ -242,6 +244,16 @@ export function QuoteCard({
     onCommit: handleCropCommit,
     onCancel: handleCropCancel,
   });
+
+  // ── Break long paragraphs (Display menu) ────────────────────────────
+  // Idle display only: the edit modes always show the text unbroken. The
+  // blocks are computed from the text each time, never stored.
+  const breaksOn = useDisplayBreaks() === "on";
+  const blocks = useMemo(
+    () => (breaksOn && crop.mode === "idle" ? breakIntoBlocks(displayText) : [displayText]),
+    [breaksOn, crop.mode, displayText],
+  );
+  const broken = blocks.length > 1;
 
   // ── Bracket delayed entrance ────────────────────────────────────────
 
@@ -614,6 +626,35 @@ export function QuoteCard({
     }
 
     // Idle mode — plain text with optional ellipsis and search highlighting
+    if (broken) {
+      // Broken into blocks: the opening quote sits inside the first block and the
+      // closing one inside the last, so neither stands alone on a line, and the
+      // crop ellipses ride the first and last. The last block is drawn inline
+      // (display-prefs.css) so the speaker chip follows on its last line.
+      const last = blocks.length - 1;
+      return (
+        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+        <span
+          className="quote-text"
+          ref={textSpanRef}
+          style={{ cursor: "text" }}
+          onClick={handleQuoteTextClick}
+          data-testid={`bn-quote-${domId}-text`}
+          data-edit-key={`${domId}:text`}
+        >
+          {blocks.map((block, i) => (
+            <span key={i} className="bn-block">
+              {i === 0 && <span className="smart-quote">{"\u201c"}</span>}
+              {i === 0 && crop.hasLeftCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
+              {highlight ? highlightTerms(block, highlight) : block}
+              {i === last && crop.hasRightCrop && <span className="crop-ellipsis">{"\u2026"}</span>}
+              {i === last && <span className="smart-quote">{"\u201d"}</span>}
+            </span>
+          ))}
+        </span>
+      );
+    }
+
     return (
       // Click-to-edit quote text; card-level keyboard activation lives on
       // the parent <blockquote> (handleCardKeyDown).
@@ -755,9 +796,9 @@ export function QuoteCard({
             />
           )}
           <span className="quote-text-wrapper">
-            <span className="smart-quote">{"\u201c"}</span>
+            {!broken && <span className="smart-quote">{"\u201c"}</span>}
             {renderQuoteText()}
-            <span className="smart-quote">{"\u201d"}</span>
+            {!broken && <span className="smart-quote">{"\u201d"}</span>}
           </span>
           {" "}
           <span className="speaker">

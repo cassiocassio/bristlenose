@@ -149,6 +149,9 @@ otherwise.
 | Heatmap grid | `layout-grid` | `square.grid.2x2` | SVG |
 | Quotes lens | `text-quote` | `text.quote` | SVG traced from the SF Symbol |
 | Focus mode | `moon` | `moon` | SVG (an older Lucide `moon`) |
+| Display menu (layout, density, breaks) | `a-large-small` | `textformat.size` | Lucide, via `Icon.tsx` (`display`) |
+| Display ▸ Layout: Columns · Single column | `columns-2` · `rectangle-vertical` | `rectangle.split.2x1` · `rectangle.portrait` | Lucide, via `Icon.tsx` (`layoutColumns`, `layoutSingle`); rendered side by side 3 Nov 2026 |
+| Display ▸ Density: Compact · Normal · Spacious | `a-arrow-down` · `a-large-small` · `a-arrow-up` | `textformat.size.smaller` · `textformat.size` · `textformat.size.larger` | Lucide, via `Icon.tsx` (`densityCompact`, `densityNormal`, `densitySpacious`); chosen by the owner 3 Nov 2026: people read density as text size, so a small A and a big A, with Normal echoing the Display button's own "Aa". The Mac density control is a slider that uses only `textformat.size.smaller` and `textformat.size.larger`, at its ends, with the three words underneath; it has no mark for Normal. Earlier candidates (`fold-vertical`/`unfold-vertical`, `rows-4/3/2`) read as spacing and were dropped |
 | Session timeline | `gallery-horizontal` | `timeline.selection` | — (new, 17 Oct 2026). SF has no Gantt; `timeline.selection` is Apple's own timeline glyph (a frame between trim handles) and `gallery-horizontal` its silhouette twin. Rejected: `chart-gantt` ↔ `calendar.day.timeline.left` (a calendar day view), `align-start-vertical` ↔ `align.horizontal.left` (both mean align). `docs/mockups/transcript-timeline-toggle.html` |
 | Settings | `settings` (picked over `settings-2`) | `gearshape` | SVG drawn as a sun |
 | Help | `circle-help` (picked over `info`) | `questionmark.circle` | SVG |

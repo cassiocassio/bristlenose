@@ -283,6 +283,12 @@ final class BridgeHandler: ObservableObject {
     /// project boots in normal view). See docs/design-focus-mode.md.
     @Published var focusModeActive: Bool = false
 
+    /// The report's Display preferences (layout, density, break long paragraphs),
+    /// mirrored from the SPA (`display-prefs` message). The SPA owns and saves
+    /// them; this drives only the Display popover, which reads it on every open.
+    /// Resets on `reset()` because a new web view re-posts on mount.
+    @Published var displayPrefs: DisplayPrefs = .standard
+
     /// Whether the Screens board has a card placed by hand, so View ▸ Tidy
     /// enables only when there is something to tidy. Mirrored from the SPA
     /// (`screens-arrangement`), which owns the arrangement and re-posts on mount.
@@ -331,6 +337,7 @@ final class BridgeHandler: ObservableObject {
         "bn-inspector-open", "bn-inspector-height", "bn-inspector-dimension",
         "bn-screens-nav-open", "bn-screens-nav-width",
         "bn-discussion-guide-open", "bn-discussion-nav-width",
+        "bn-display-layout", "bn-display-density", "bn-display-breaks",
     ]
     /// Keys taken by prefix. Serve always names the project "1", so the quote
     /// grouping is in practice one key.
@@ -1434,6 +1441,12 @@ final class BridgeHandler: ObservableObject {
             let on = body["active"] as? Bool ?? false
             if on != focusModeActive { focusModeActive = on }
 
+        case "display-prefs":
+            // Sole writer, same shape as `focus-mode`: a mirror, never a second
+            // source of truth. The SPA re-posts on mount and on every change; a
+            // message with a value it could not have sent changes nothing.
+            if let prefs = DisplayPrefs(message: body), prefs != displayPrefs { displayPrefs = prefs }
+
         case "screens-arrangement":
             // Sole writer: a mirror of the Screens lens's arrangement, for the
             // View-menu Tidy row. The lens re-posts on mount.
@@ -1724,6 +1737,7 @@ final class BridgeHandler: ObservableObject {
         quotesSearchTokens = []
         searchBadgeStyles = .empty
         focusModeActive = false
+        displayPrefs = .standard
         screensArrangementCustom = false
         // The saved values, which the next webview is seeded with.
         playerSubtitlesOn = UserDefaults.standard.bool(forKey: Self.playerSubtitlesKey)

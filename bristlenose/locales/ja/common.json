@@ -205,7 +205,16 @@
   },
   "toolbar": {
     "matching": "{{count}} 件一致",
-    "focusMode": "\u30d5\u30a9\u30fc\u30ab\u30b9\u30e2\u30fc\u30c9"
+    "focusMode": "\u30d5\u30a9\u30fc\u30ab\u30b9\u30e2\u30fc\u30c9",
+    "display": "\u8868\u793a",
+    "displayLayout": "\u30ec\u30a4\u30a2\u30a6\u30c8",
+    "displayColumns": "\u8907\u6570\u5217",
+    "displaySingleColumn": "1\u5217",
+    "displayDensity": "\u5bc6\u5ea6",
+    "displayCompact": "\u30b3\u30f3\u30d1\u30af\u30c8",
+    "displayNormal": "\u6a19\u6e96",
+    "displaySpacious": "\u3086\u3063\u305f\u308a",
+    "displayBreakParagraphs": "\u9577\u3044\u6bb5\u843d\u3092\u5206\u5272"
   },
   "tags": {
     "noTags": "タグなし",

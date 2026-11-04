@@ -200,7 +200,16 @@
   },
   "toolbar": {
     "matching": "{{count}} correspondances",
-    "focusMode": "Mode concentration"
+    "focusMode": "Mode concentration",
+    "display": "Affichage",
+    "displayLayout": "Disposition",
+    "displayColumns": "Colonnes",
+    "displaySingleColumn": "Une colonne",
+    "displayDensity": "Densit\u00e9",
+    "displayCompact": "Compacte",
+    "displayNormal": "Normale",
+    "displaySpacious": "A\u00e9r\u00e9e",
+    "displayBreakParagraphs": "Scinder les longs paragraphes"
   },
   "tags": {
     "noTags": "Aucune étiquette",

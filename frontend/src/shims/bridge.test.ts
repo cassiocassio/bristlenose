@@ -11,6 +11,7 @@ import {
   postPlayerState,
   postStoreMiroToken,
   postFocusChange,
+  postDisplayPrefs,
   postReportError,
   postOpenProblemReport,
   PROBLEM_REPORT_MESSAGE_LIMIT,
@@ -299,6 +300,19 @@ describe("postTimelineState", () => {
     const post = installMockWebkit();
     postTimelineState(true, false, 3);
     expect(post).toHaveBeenCalledWith({ type: "timeline-state", available: true, on: false, lanes: 3 });
+  });
+});
+
+describe("postDisplayPrefs", () => {
+  it("posts the three Display preferences for the native popover to mirror", () => {
+    const post = installMockWebkit();
+    postDisplayPrefs({ layout: "single", density: 0.25, breaks: "on" });
+    expect(post).toHaveBeenCalledWith({
+      type: "display-prefs",
+      layout: "single",
+      density: 0.25,
+      breaks: "on",
+    });
   });
 });
 

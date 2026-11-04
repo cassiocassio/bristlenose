@@ -236,7 +236,16 @@
   },
   "toolbar": {
     "matching": "{{count}} odpovídá",
-    "focusMode": "Re\u017eim soust\u0159ed\u011bn\u00ed"
+    "focusMode": "Re\u017eim soust\u0159ed\u011bn\u00ed",
+    "display": "Zobrazen\u00ed",
+    "displayLayout": "Rozvr\u017een\u00ed",
+    "displayColumns": "Sloupce",
+    "displaySingleColumn": "Jeden sloupec",
+    "displayDensity": "Hustota",
+    "displayCompact": "Kompaktn\u00ed",
+    "displayNormal": "Norm\u00e1ln\u00ed",
+    "displaySpacious": "Prostorn\u00e1",
+    "displayBreakParagraphs": "Rozd\u011blit dlouh\u00e9 odstavce"
   },
   "tags": {
     "noTags": "Žádné štítky",

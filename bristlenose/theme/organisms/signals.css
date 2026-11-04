@@ -18,6 +18,17 @@
     gap: 0;
 }
 
+/* Held to the reading width Discussion and Quotes' single column use,
+   --bn-max-width (52rem), so a card's prose does not run the whole window
+   (about 140 characters a line on a 14-inch laptop, 170 on a 16). Only the
+   card stack: the page title, its rule and the stats block inside a card are
+   untouched, the stats block still floating right with the text round it.
+   Scoped to the SPA's .signals-center, so the sealed static report keeps the
+   width it had. */
+.signals-center .signal-cards {
+    max-width: var(--bn-max-width);
+}
+
 /* Radius comes from position in the run. An only child is BOTH :first-child
    and :last-child, so it keeps all four corners with no rule of its own —
    which matters, because a location with one card is the common case. */

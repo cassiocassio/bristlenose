@@ -773,6 +773,22 @@ describe("useKeyboardShortcuts", () => {
       unmount();
     });
 
+    it("Escape is left to an open menu, and clears nothing behind it", () => {
+      const { getCtx, unmount } = renderWithProviders();
+      act(() => getCtx().setFocus("q-1"));
+      const menu = document.createElement("ul");
+      menu.setAttribute("role", "menu");
+      document.body.appendChild(menu);
+
+      act(() => pressKey("Escape"));
+      expect(getCtx().focusedId).toBe("q-1");
+
+      menu.remove();
+      act(() => pressKey("Escape"));
+      expect(getCtx().focusedId).toBeNull();
+      unmount();
+    });
+
     it("Escape clears focus when focused", () => {
       const { getCtx, unmount } = renderWithProviders();
       act(() => getCtx().setFocus("q-1"));

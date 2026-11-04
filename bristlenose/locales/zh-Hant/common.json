@@ -195,7 +195,16 @@
   },
   "toolbar": {
     "matching": "{{count}} 則符合",
-    "focusMode": "\u5c08\u6ce8\u6a21\u5f0f"
+    "focusMode": "\u5c08\u6ce8\u6a21\u5f0f",
+    "display": "\u986f\u793a\u65b9\u5f0f",
+    "displayLayout": "\u7248\u9762\u914d\u7f6e",
+    "displayColumns": "\u591a\u6b04",
+    "displaySingleColumn": "\u55ae\u6b04",
+    "displayDensity": "\u5bc6\u5ea6",
+    "displayCompact": "\u7cbe\u7c21",
+    "displayNormal": "\u6a19\u6e96",
+    "displaySpacious": "\u5bec\u9b06",
+    "displayBreakParagraphs": "\u62c6\u5206\u904e\u9577\u6bb5\u843d"
   },
   "tags": {
     "noTags": "沒有標籤",

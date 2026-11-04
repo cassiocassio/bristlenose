@@ -200,7 +200,16 @@
   },
   "toolbar": {
     "matching": "{{count}} coincidencias",
-    "focusMode": "Modo enfoque"
+    "focusMode": "Modo enfoque",
+    "display": "Visualizaci\u00f3n",
+    "displayLayout": "Disposici\u00f3n",
+    "displayColumns": "Columnas",
+    "displaySingleColumn": "Una columna",
+    "displayDensity": "Densidad",
+    "displayCompact": "Compacta",
+    "displayNormal": "Normal",
+    "displaySpacious": "Espaciosa",
+    "displayBreakParagraphs": "Dividir p\u00e1rrafos largos"
   },
   "tags": {
     "noTags": "Sin etiquetas",

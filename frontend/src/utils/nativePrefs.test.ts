@@ -85,3 +85,13 @@ describe("storePref (R89)", () => {
     expect(postMessage).toHaveBeenCalledWith({ type: "report-pref", key: "bn-toc-open", value: "true" });
   });
 });
+
+describe("the Display preferences ride the mirror", () => {
+  it.each(["bn-display-layout", "bn-display-density", "bn-display-breaks"])(
+    "hands %s to the Mac app",
+    (key) => {
+      storePref(key, "on");
+      expect(postMessage).toHaveBeenCalledWith({ type: "report-pref", key, value: "on" });
+    },
+  );
+});

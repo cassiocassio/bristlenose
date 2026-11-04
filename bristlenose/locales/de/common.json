@@ -200,7 +200,16 @@
   },
   "toolbar": {
     "matching": "{{count}} Treffer",
-    "focusMode": "Fokusmodus"
+    "focusMode": "Fokusmodus",
+    "display": "Darstellung",
+    "displayLayout": "Layout",
+    "displayColumns": "Spalten",
+    "displaySingleColumn": "Eine Spalte",
+    "displayDensity": "Dichte",
+    "displayCompact": "Kompakt",
+    "displayNormal": "Normal",
+    "displaySpacious": "Gro\u00dfz\u00fcgig",
+    "displayBreakParagraphs": "Lange Abs\u00e4tze unterteilen"
   },
   "tags": {
     "noTags": "Keine Tags",

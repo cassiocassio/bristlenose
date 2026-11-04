@@ -48,11 +48,13 @@ import {
   postFocusChange,
   postQuoteActionState,
   postFocusMode,
+  postDisplayPrefs,
   postSubtitlePrefs,
   postPanelState,
   postTimelineState,
 } from "../shims/bridge";
 import { toggleFocusMode, useFocusMode } from "../contexts/FocusModeStore";
+import { getDisplayPrefs, setDisplayPref, subscribeDisplayPrefs, normaliseDensity, type Layout } from "../contexts/DisplayPrefsStore";
 import { useSubtitlePrefs } from "../utils/subtitlePrefs";
 import { getPlayerOpen, getPlayerPlaying } from "../contexts/PlayerContext";
 import type { CatchUpArmed } from "../utils/api";
@@ -355,6 +357,16 @@ function AppShell() {
     if (!embedded) return;
     postFocusMode(focusModeActive);
   }, [embedded, focusModeActive]);
+
+  // Mirror the Display preferences to the native Display popover: once on mount
+  // (the re-sync after a project switch) and on every change.
+  // Subscribed outside React so a change posts without re-rendering the whole lens.
+  useEffect(() => {
+    if (!embedded) return;
+    const post = () => postDisplayPrefs(getDisplayPrefs());
+    post();
+    return subscribeDisplayPrefs(post);
+  }, [embedded]);
 
   // Mirror the subtitle preferences to the native menus' checkmarks. Keyed on
   // the values, so it also fires on mount — the re-sync after a project switch.
@@ -708,6 +720,22 @@ function AppShell() {
           // the `focus-mode` bridge post below.
           toggleFocusMode();
           break;
+        // The native Display popover: it sends a choice, the store validates it
+        // (an unknown value is ignored), saves it and mirrors it back above.
+        case "setDisplayLayout":
+          setDisplayPref("layout", (payload as { value?: string } | undefined)?.value as Layout);
+          break;
+        case "setDisplayDensity": {
+          // 0 to 1 (a number, or a numeric string); anything else is ignored.
+          const d = normaliseDensity((payload as { value?: unknown } | undefined)?.value);
+          if (d !== null) setDisplayPref("density", d);
+          break;
+        }
+        case "setDisplayBreaks": {
+          const v = (payload as { value?: string } | undefined)?.value;
+          if (v === "on" || v === "off") setDisplayPref("breaks", v);
+          break;
+        }
         case "zoomIn":
           applyZoom(getZoom() + ZOOM_STEP);
           break;

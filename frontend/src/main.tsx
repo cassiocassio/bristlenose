@@ -4,6 +4,7 @@ import { router } from "./router";
 import { isExportMode } from "./utils/exportData";
 import { redirectHashToPathname } from "./utils/hashRedirect";
 import { applySavedZoom } from "./utils/zoom";
+import { applySavedDisplayPrefs } from "./contexts/DisplayPrefsStore";
 
 // Initialise i18next — must be imported before any component that uses useTranslation.
 import { desktopEnReady } from "./i18n";
@@ -23,6 +24,8 @@ if (
 // The saved zoom, before first paint (R89). On the Mac the native seed has put
 // it into this web view's storage already, at document start.
 applySavedZoom();
+// The saved Display choices (layout, density, breaks), before first paint.
+applySavedDisplayPrefs();
 
 // ── SPA mode (serve) / Export mode ──────────────────────────────────────
 // When #bn-app-root exists, mount the full React Router app.

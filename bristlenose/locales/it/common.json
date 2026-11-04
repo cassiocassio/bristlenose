@@ -210,7 +210,16 @@
   },
   "toolbar": {
     "matching": "{{count}} corrispondenti",
-    "focusMode": "Modalit\u00e0 focus"
+    "focusMode": "Modalit\u00e0 focus",
+    "display": "Visualizzazione",
+    "displayLayout": "Layout",
+    "displayColumns": "Colonne",
+    "displaySingleColumn": "Colonna singola",
+    "displayDensity": "Densit\u00e0",
+    "displayCompact": "Compatta",
+    "displayNormal": "Normale",
+    "displaySpacious": "Ampia",
+    "displayBreakParagraphs": "Dividi i paragrafi lunghi"
   },
   "tags": {
     "noTags": "Nessun tag",

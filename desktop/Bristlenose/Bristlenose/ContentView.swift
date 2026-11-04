@@ -3157,6 +3157,11 @@ struct ContentView: View {
                 ToolbarItem(placement: .primaryAction) {
                     QuotesStarredToggle(bridgeHandler: bridgeHandler, i18n: i18n)
                 }
+                // Layout, Density, Break long paragraphs, Focus Mode. The web toolbar
+                // renders nothing in the app, so this is the only Display control.
+                ToolbarItem(placement: .primaryAction) {
+                    DisplayMenuButton(bridgeHandler: bridgeHandler, i18n: i18n)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { bridgeHandler.menuAction("toggleRightPanel") } label: {
                         Label(i18n.t("desktop.toolbar.tags"), systemImage: "sidebar.right")

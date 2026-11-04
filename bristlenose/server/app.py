@@ -32,6 +32,8 @@ from bristlenose.server.middleware import (
     BearerTokenMiddleware,
     LoopbackHostMiddleware,
 )
+from bristlenose.server.perf_timing import ServerTimingMiddleware
+from bristlenose.server.perf_timing import enabled as server_timing_enabled
 from bristlenose.server.refusal import RefusalError, refusal_handler
 from bristlenose.server.routes.autocode import router as autocode_router
 from bristlenose.server.routes.clips_export import router as clips_export_router
@@ -337,6 +339,11 @@ def create_app(
     # CORS/auth so it wraps outermost (compresses the final response).  BREACH
     # is not a concern — no user input is reflected in token-bearing responses.
     app.add_middleware(GZipMiddleware, minimum_size=500)
+
+    # Server-Timing (perf moment timer): off unless --dev or BRISTLENOSE_SERVER_TIMING=1.
+    # Added before the loopback gate so that gate stays outermost.
+    if server_timing_enabled(dev):
+        app.add_middleware(ServerTimingMiddleware)
 
     # DNS-rebinding gate: refuse any Host that is not loopback. Added LAST so it
     # wraps outermost — a foreign Host is refused before routing, auth, /mcp,

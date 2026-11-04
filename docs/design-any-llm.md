@@ -16,6 +16,9 @@ last-trued: 2026-10-23
 
 ## Changelog
 
+- _2026-11-04_ — pin raised from 1.27.0 to 1.44.0, the first release since that
+  allows `anthropic>=1.0`; §5.6: the Snap and Fedora Copr now carry the extra.
+  Probed offline against the real library (stub server on the OpenRouter route).
 - _2026-10-23_ — errors from behind a gateway (§5.3e), from the OpenRouter
   walk: a failure at the model's host is worded about that host, not the key or
   OpenRouter, in `configure`, the run preflight and the run's banner; a reply
@@ -356,7 +359,7 @@ two privacy pages, terms.
 |---|---|---|
 | pip / pipx / uv | `[any-llm]` extra | The user adds it. Docs recommend pipx or uv, so Bristlenose's any-llm never shares an environment with the user's own |
 | Homebrew | carried | Owner, 23 Oct. Mac CLI users are the likeliest audience; the formula's `post_install` already pip-installs us |
-| Snap, Fedora Copr | not carried | Snap's confinement leaves only the file store; Copr would add wheels to track for CVEs. Revisit on request |
+| Snap, Fedora Copr | carried (4 Nov 2026) | Revisited on request, once 1.44.0 lifted the `anthropic<1` cap. Eight pure-Python wheels, 2.7 MB, resolved for cp314/x86_64 (Copr) and cp312 (snap). The file-only key store was already true of every provider in the snap. Mistral, OpenRouter and DeepSeek only: neither can add another inner provider's SDK, and says so |
 | Mac app bundle | not carried | v2 |
 
 Default inner set (owner, 23 Oct, revised the same day): **Mistral and

@@ -190,14 +190,14 @@ bristlenose run interviews --llm local
 
 ### Option F: Other providers, through any-llm
 
-On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew includes it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
+On the command line, Bristlenose reaches providers it doesn't build in through [any-llm](https://github.com/mozilla-ai/any-llm), Mozilla AI's library for talking to many model providers in one way. It needs Python 3.11 or newer. Homebrew, the Snap and the Fedora package include it; with pipx or uv, add it to the install you have (`--force` keeps your settings and keys, and if you added `[voice]`, list it too: `"bristlenose[voice,any-llm]"`):
 
 ```bash
 pipx install --force "bristlenose[any-llm]"    # or: uv tool install --force "bristlenose[any-llm]"
 bristlenose configure any-llm
 ```
 
-If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages don't include it.
+If it isn't installed, `configure any-llm` prints the exact command for your install. The Snap and Fedora packages carry Mistral, OpenRouter and DeepSeek only; any other provider's add-on needs pipx or uv.
 
 `configure any-llm` asks for the model, written as `provider:model`, then for that provider's API key, unless it's already set in your shell (`MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `DEEPSEEK_API_KEY`…; a `.env` file isn't read for these). It checks the key, stores it like the others, and makes it your provider. A key set in your shell takes precedence over the stored one. Switch between models you've set up with `bristlenose use deepseek:deepseek-v4-pro`, and back with `bristlenose use claude`.
 

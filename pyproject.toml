@@ -219,16 +219,18 @@ voice = [
 ]
 
 # any-llm (mozilla-ai): Mistral, OpenRouter, DeepSeek and the rest as the sixth
-# provider, `--llm any-llm` (docs/design-any-llm.md). CLI and Homebrew only; NOT
-# in the desktop sidecar yet. An EXACT pin, widened in a reviewed commit:
-# any-llm ships about three releases a week and has broken things in minors.
-# 1.27.0 because from 1.27.1 it caps anthropic<1 and we need >=1.0 (their
-# migration: mozilla-ai/any-llm#1370). [mistral] adds mistralai; OpenRouter and
+# provider, `--llm any-llm` (docs/design-any-llm.md). CLI, Homebrew, the Snap and
+# the Fedora RPM; NOT in the desktop sidecar yet. An EXACT pin, widened in a
+# reviewed commit: any-llm ships about three releases a week and has broken
+# things in minors. 1.44.0 (4 Nov 2026) because it is the first release since
+# 1.27.0 that allows anthropic>=1.0: 1.27.1 to 1.43.0 all cap anthropic<1, which
+# `pip` meets as a conflict with our own floor (their migration:
+# mozilla-ai/any-llm#1370). Probed against the real library, offline, 4 Nov 2026. [mistral] adds mistralai; OpenRouter and
 # DeepSeek ride on the openai SDK we already ship. Never [all]: it pulls the
 # `platform` extra's telemetry client. Needs Python >=3.11 — on 3.10 the install
 # fails loudly, which beats an extra that silently installs nothing.
 any-llm = [
-    "any-llm-sdk[mistral]==1.27.0",
+    "any-llm-sdk[mistral]==1.44.0",
     "mistralai>=3.3,<3.4",
 ]
 

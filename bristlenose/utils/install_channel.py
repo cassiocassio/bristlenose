@@ -77,7 +77,7 @@ def add_extra_command(extra: str) -> str:
 
 
 def inject_command(requirement: str) -> str:
-    """The command that adds one more package (``any-llm-sdk[cohere]==1.27.0``) here."""
+    """The command that adds one more package (``any-llm-sdk[cohere]==1.44.0``) here."""
     channel = install_channel()
     if channel == "pipx":
         return f'pipx inject bristlenose "{requirement}"'

@@ -52,7 +52,11 @@ parts:
       # amd64 and arm64, so nothing builds from source. The 40 MB model is NOT
       # bundled: it is fetched on first use into $SNAP_USER_COMMON/models/
       # (the network plug), hash-checked (docs/design-voice-diarization.md).
-      - ".[serve,voice]"
+      # any-llm: Mistral, OpenRouter and DeepSeek through `configure any-llm`.
+      # Eight pure-Python wheels, 2.7 MB, so nothing builds from source on
+      # either architecture. Other inner providers need their own SDK, which a
+      # read-only snap cannot add (anyllm.explain says so).
+      - ".[serve,voice,any-llm]"
     stage-packages:
       - ffmpeg
       - libsndfile1

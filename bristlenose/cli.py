@@ -618,14 +618,11 @@ def _print_provider_guidance() -> None:
         "For local models via Ollama:  [bold cyan]bristlenose configure local[/bold cyan]",
         highlight=False,
     )
-    from bristlenose.llm import anyllm
-
-    if not anyllm.packaged():  # the Snap and the RPM don't carry it
-        console.print(
-            "For Mistral, OpenRouter and others:  "
-            "[bold cyan]bristlenose configure any-llm[/bold cyan]",
-            highlight=False,
-        )
+    console.print(
+        "For Mistral, OpenRouter and others:  "
+        "[bold cyan]bristlenose configure any-llm[/bold cyan]",
+        highlight=False,
+    )
     console.print()
 
 

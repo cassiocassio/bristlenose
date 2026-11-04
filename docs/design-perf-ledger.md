@@ -4,7 +4,7 @@ Opened 4 Nov 2026, after the window-resize work (`docs/design-client-performance
 
 ## Scoreboard: done, outstanding, and what is left to gain
 
-Updated 4 Nov 2026. **Measured** is a number from a repeatable run; **estimate** is reasoned from a measured part and says so; **unmeasured** has no number yet and is not guessed. Gains are per occurrence on this Mac unless stated.
+Updated 4 Nov 2026 (end of day). **Measured** is a number from a repeatable run; **estimate** is reasoned from a measured part and says so; **unmeasured** has no number yet and is not guessed. Gains are per occurrence on this Mac unless stated.
 
 ### Done
 
@@ -54,6 +54,9 @@ A `cProfile` of `/transcripts/{sid}` on a real 12,000-word session put 43 of 77 
 | Project import / migration deferral (SS-3) | 0.1–0.9 s import, 4–150 ms migrations, nothing to defer |
 | VideoToolbox decode (MC-3) | refuted by two reviewers |
 | First-request cost | our handler is 25 ms of 96; the rest is framework first-use |
+| Share identical in-flight GETs (`apiGet`) | built, tested, measured, reverted: Codebooks 60 → 42 ms but Quotes 110 → 107 ms at real size (fetch time reappears as render) |
+| Bulk-validate the transcript's words | a profiler mirage: 278/283 → 271/269 ms over ten sessions, about 1 ms each |
+| Preload lens chunks on idle (all lenses) | chunks cost 8–40 ms; only Sessions suffered, from the Suspense throttle, and that is fixed on its own |
 
 ## The rule each entry follows
 

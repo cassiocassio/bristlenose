@@ -24,6 +24,12 @@ from bristlenose.server.routes.health import build_health_payload
 
 logger = logging.getLogger(__name__)
 
+#: Mirrors ``featureFlags.moderatorQuestionPill`` in the SPA, which gates the only reader of
+#: the embedded moderator-question data. A seam: ``tests/test_serve_export_moderator_questions.py``
+#: reads the frontend default and fails if the two disagree, so turning the pill on cannot
+#: leave an export with no data for it.
+MODERATOR_QUESTION_PILL_ENABLED = False
+
 router = APIRouter(prefix="/api")
 
 # Dedicated single-file export build (frontend/vite.export.config.ts) — one JS
@@ -556,22 +562,26 @@ def export_report(
 
     # Moderator questions — one embed key per quote that HAS a preceding
     # moderator utterance.  Absence (404) is legitimate, not a coverage gap.
-    mod_db = request.app.state.db_factory()
-    try:
-        dom_ids = [
-            _quote_dom_id(q)
-            for q in speaker_slots.evidence_quotes(mod_db, project_id)
-        ]
-    finally:
-        mod_db.close()
+    # Skipped while the pill is parked: the only reader is gated off in the SPA, and
+    # building this was six SQL statements per quote (9,346 at 1,500 quotes, about
+    # 8 s at 3,000 — measured 4 Nov 2026) for data nothing opens.
     moderator_questions: dict[str, Any] = {}
-    for dom_id in dom_ids:
+    if MODERATOR_QUESTION_PILL_ENABLED:
+        mod_db = request.app.state.db_factory()
         try:
-            moderator_questions[dom_id] = _get_moderator_question_handler(
-                project_id, dom_id, request
-            )
-        except HTTPException:
-            pass  # no preceding moderator segment — normal, skip
+            dom_ids = [
+                _quote_dom_id(q)
+                for q in speaker_slots.evidence_quotes(mod_db, project_id)
+            ]
+        finally:
+            mod_db.close()
+        for dom_id in dom_ids:
+            try:
+                moderator_questions[dom_id] = _get_moderator_question_handler(
+                    project_id, dom_id, request
+                )
+            except HTTPException:
+                pass  # no preceding moderator segment — normal, skip
 
     # --- Assemble the path-keyed embed (keys = relative API paths the SPA calls) ---
     endpoints: dict[str, Any] = {

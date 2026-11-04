@@ -169,7 +169,7 @@ def fake_anyllm(monkeypatch: pytest.MonkeyPatch) -> _FakeLibrary:
     monkeypatch.setitem(sys.modules, "any_llm", library.module())
     monkeypatch.setitem(sys.modules, "any_llm.exceptions", exceptions)
     monkeypatch.setattr(anyllm, "install_state", lambda: None)
-    monkeypatch.setattr(anyllm, "installed_version", lambda: "1.27.0")
+    monkeypatch.setattr(anyllm, "installed_version", lambda: "1.44.0")
     monkeypatch.setattr(anyllm, "stored_key", lambda inner: None)
     # Set by the client on first use; restored after the test.
     monkeypatch.delenv("ANY_LLM_UNIFIED_EXCEPTIONS", raising=False)
@@ -541,16 +541,16 @@ def test_a_provider_key_alone_never_chooses_any_llm(monkeypatch: pytest.MonkeyPa
     ("prefix", "extra", "inject"),
     [
         (("home", "u", ".venv"), 'pip install "bristlenose[any-llm]"',
-         'pip install "any-llm-sdk[cohere]==1.27.0"'),
+         'pip install "any-llm-sdk[cohere]==1.44.0"'),
         (("home", "u", ".local", "pipx", "venvs", "bristlenose"),
          'pipx install --force "bristlenose[any-llm]"',
-         'pipx inject bristlenose "any-llm-sdk[cohere]==1.27.0"'),
+         'pipx inject bristlenose "any-llm-sdk[cohere]==1.44.0"'),
         (("home", "u", ".local", "share", "uv", "tools", "bristlenose"),
          'uv tool install --force "bristlenose[any-llm]"',
-         'uv tool install --force "bristlenose[any-llm]" --with "any-llm-sdk[cohere]==1.27.0"'),
+         'uv tool install --force "bristlenose[any-llm]" --with "any-llm-sdk[cohere]==1.44.0"'),
         (("opt", "homebrew", "Cellar", "bristlenose", "0.43.0", "libexec"),
          '$(brew --prefix bristlenose)/libexec/bin/pip install "bristlenose[any-llm]==' + __version__ + '"',
-         '$(brew --prefix bristlenose)/libexec/bin/pip install "any-llm-sdk[cohere]==1.27.0"'),
+         '$(brew --prefix bristlenose)/libexec/bin/pip install "any-llm-sdk[cohere]==1.44.0"'),
     ],
 )
 def test_install_hints_follow_the_channel(
@@ -562,7 +562,7 @@ def test_install_hints_follow_the_channel(
 
     monkeypatch.setattr(sys, "prefix", str(Path("/", *prefix)))
     monkeypatch.setattr(install_channel, "installed_extras", list)
-    monkeypatch.setattr(anyllm, "installed_version", lambda: "1.27.0")
+    monkeypatch.setattr(anyllm, "installed_version", lambda: "1.44.0")
     assert anyllm.install_hint() == extra
     assert anyllm.inject_hint("cohere") == inject
 
@@ -855,10 +855,10 @@ def test_the_supported_version_is_the_one_pyproject_pins() -> None:
 @pytest.mark.parametrize(
     ("any_llm_version", "anthropic_version", "expect"),
     [
-        ("1.27.0", "1.5.0", "ok"),
-        ("1.40.1", "1.5.0", "warn"),   # a newer library than the one the code was written for
-        ("1.27.0", "0.77.0", "warn"),  # a later pip install pulled anthropic below the floor
-        ("1.27.0", None, "ok"),        # no anthropic installed: nothing to conflict with
+        ("1.44.0", "1.5.0", "ok"),
+        ("1.45.0", "1.5.0", "warn"),   # a newer library than the one the code was written for
+        ("1.44.0", "0.77.0", "warn"),  # a later pip install pulled anthropic below the floor
+        ("1.44.0", None, "ok"),        # no anthropic installed: nothing to conflict with
     ],
 )
 def test_doctor_warns_when_a_shared_environment_moved_either_side(

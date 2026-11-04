@@ -694,7 +694,7 @@ def check_anyllm() -> CheckResult:
 def _anyllm_environment_drift(version: str | None) -> str:
     """What a shared environment did to either side, or ``""`` (review finding 14).
 
-    any-llm moves about three releases a week and 1.27.1 onward caps ``anthropic<1``, so a
+    any-llm moves about three releases a week (and 1.27.1 to 1.43.0 capped ``anthropic<1``), so a
     later ``pip install`` in the same environment can quietly swap either library for one
     this code was not written against. Said here, in the row that names the version.
     """

@@ -18,6 +18,7 @@ Updated 4 Nov 2026 (end of day). **Measured** is a number from a repeatable run;
 | Scene-colour decode in a thread | first analysis, platform-transcript sessions | removes an event-loop stall of about 4 s per hour of video | estimate (the stall itself unmeasured) | `4b79de03a` |
 | Window resize, sidebar hold, selector fix, click monitor | resize, click | 10 → 59 window updates/s; WebContent main thread 4,145 → 1,705 ms | measured (earlier work, `design-client-performance.md`) | see that doc |
 | Sessions grid chunk preloaded on idle and rendered directly (`pages/SessionsTab.tsx`) | first click on Sessions | **first visit 361 → 86 / 91 ms (−75%, two runs)**; the gap before its read starts 280 → 10 ms; revisit and every other lens unchanged within noise; bundle 211.7 kB of 222 | measured, Chromium, production bundle, real-size study (242 quotes) | this commit |
+| One URL space for the bundle (`/assets/`, no rewrite to `/static/assets/`) | every first visit; correctness | 6+ shared chunks (`common`, `i18n`, `jsx-runtime`, `settings`, `enums`, `preload-helper`) were fetched twice and evaluated as two module instances; now 65 requests, 65 distinct files, 0 duplicated; first-visit chunk time −5 ms per lens, totals within noise | measured (`chunk-urls.mjs`) | this commit |
 | Instruments | all | `Server-Timing`, startup stamps (`BRISTLENOSE_STARTUP_TRACE`), `perf-route-baseline.py`, Mac signposts, page marks | n/a | `041df1eb0`, `f1963e516`, `7cba2417e`, `f2c49aa66`, `5cf46895f` |
 
 ### Outstanding, ranked by frequency × felt, with what is left to gain

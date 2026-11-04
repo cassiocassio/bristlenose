@@ -343,7 +343,8 @@ class TestProdServeReport:
 
     def test_report_contains_bundle_script(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")
-        assert "/static/assets/main-abc123.js" in resp.text
+        assert '"/assets/main-abc123.js"' in resp.text
+        assert "/static/assets/" not in resp.text  # one URL space: see _build_spa_html
 
     def test_report_contains_theme_css(self, prod_client: TestClient) -> None:
         resp = prod_client.get("/report/")

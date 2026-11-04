@@ -846,7 +846,7 @@ def _build_spa_html(
 ) -> str:
     """Read the Vite-built index.html and prepare it for serving.
 
-    - Rewrites ``/assets/`` paths to ``/static/assets/`` (bundle served via StaticFiles)
+    - Leaves the bundle's ``/assets/`` paths as Vite wrote them (see the comment below)
     - Injects ``<link>`` for the theme CSS (from the pipeline output dir)
     - Injects platform/theme attributes on ``<html>``
     - Injects auth token for API access control
@@ -855,8 +855,11 @@ def _build_spa_html(
     """
     index_path = _STATIC_DIR / "index.html"
     html = index_path.read_text(encoding="utf-8")
-    # Rewrite bundle asset paths: /assets/ → /static/assets/
-    html = re.sub(r'((?:src|href)=")/assets/', r'\1/static/assets/', html)
+    # The page keeps Vite's own /assets/ paths. Rewriting them to /static/assets/ made the entry
+    # and its modulepreloads one URL space while the lazy chunks, which Vite resolves against
+    # /assets/, were another: every shared chunk (common, i18n, jsx-runtime, settings, enums)
+    # was downloaded twice and evaluated as two module instances. Both routes serve the same
+    # files; the page just has to use one.
     # SF Pro on desktop — see _wants_inter_webfont. Strip before anything else
     # rewrites the head: this is the one render-blocking external request the
     # page makes, and on desktop it buys nothing.

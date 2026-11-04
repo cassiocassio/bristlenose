@@ -2,6 +2,8 @@
 
 Open-source user-research transcript analysis.
 
+**[Website](https://bristlenose.app)** · **[Docs](https://bristlenose.app/docs/)** · **[Install](#install)** ([full guide](INSTALL.md)) · **[Changelog](CHANGELOG.md)**
+
 Point Bristlenose at a folder of interview recordings – videos, audio or transcripts from Zoom, Teams or Google Meet. 
 
 It transcribes, identifies moderators and participants, extracts good verbatim quotes, groups them by screen and theme. Filler words are stripped, editorial context is (sparingly) added `[thus]`. Emotion and strong language are preserved.

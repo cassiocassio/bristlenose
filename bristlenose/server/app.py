@@ -420,7 +420,9 @@ def create_app(
 
     # Read through the app.state.settings-or-load_settings seam (per
     # server/CLAUDE.md) so an injected settings object is honoured.
+    startup_trace.mark("settings-begin")
     _settings = getattr(app.state, "settings", None) or load_settings()
+    startup_trace.mark("settings-loaded")
     if _settings.experimental_codebook_lab:
         from bristlenose.server.routes.dev import (
             build_codebook_lab_html,

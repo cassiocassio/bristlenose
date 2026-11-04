@@ -2533,7 +2533,9 @@ def serve(
             )
             raise typer.Exit(2)
         os.environ["BRISTLENOSE_PALETTE"] = palette
+    startup_trace.mark("cli-settings-begin")
     settings = load_settings()
+    startup_trace.mark("cli-settings-loaded")
     _run_preflight(settings, "serve")
     import uvicorn  # noqa: F401 — needed in the dev-mode branch below
 

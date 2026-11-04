@@ -103,6 +103,8 @@ class ScreenTextJob:
         # No `unavailable()` here: the first call imports the Vision frameworks (Foundation,
         # objc, Quartz, Vision: about 260 ms, measured 4 Nov 2026), and the server's lifespan
         # calls this on the event loop at every launch. The job's own thread asks instead.
+        # True means a pass thread was started, not that the engine can run here: that thread
+        # finds out, and exits at once if it cannot.
         if not self._enabled() or self._run_in_progress():
             return False
         with self._flag:

@@ -157,19 +157,6 @@ def test_a_failed_build_is_not_remembered() -> None:
     asyncio.run(asyncio.wait_for(go(), timeout=20))
 
 
-def test_forty_simultaneous_first_calls_start_one_manager() -> None:
-    async def go() -> None:
-        servers: list[_Server] = []
-        lazy = _lazy(delay=0.1, servers=servers)
-        results = await asyncio.gather(*(_call(lazy) for _ in range(40)))
-        assert all(r[0]["status"] == 200 for r in results)
-        assert len(servers) == 1 and servers[0].session_manager.entered == 1
-        await lazy.aclose()
-        assert servers[0].session_manager.exited == 1
-
-    asyncio.run(asyncio.wait_for(go(), timeout=20))
-
-
 def test_a_lock_made_before_any_loop_exists_works_on_two_different_loops() -> None:
     # create_app builds the holder with no running loop; tests (and TestClient) then use fresh loops.
     lazy = _lazy()

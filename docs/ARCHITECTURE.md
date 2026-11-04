@@ -27,8 +27,9 @@ that the SwiftUI shell spawns and talks to over local HTTP.
 
 So there are really three things layered on top of that shared core:
 
-- **The CLI** — Typer commands (`run`, `serve`, `analyze`, `status`, `doctor`, …),
-  shipped on PyPI, Homebrew, Snap, and a Fedora Copr.
+- **The CLI** — Typer commands (`run`, `transcribe`, `analyze`, `serve`, `status`, `use`,
+  `configure`, `doctor`, …), shipped on PyPI, Homebrew, Snap, and a Fedora Copr (plus
+  winget as a follower channel).
 - **The web SPA** — a React app served by `bristlenose serve`. This *is* the product UI.
 - **The macOS app** — a SwiftUI shell that wraps the SPA in a WKWebView and spawns the
   Python core as a bundled sidecar. Distributed via TestFlight / the Mac App Store.
@@ -75,15 +76,17 @@ quote extraction → quote clustering → thematic grouping → render
 
 One module per stage under [`bristlenose/stages/`](../bristlenose/stages/)
 (`s01_ingest.py` … `s12_render/`), wired together by
-[`bristlenose/pipeline.py`](../bristlenose/pipeline.py). Transcription runs locally
-(Whisper via MLX on Apple Silicon, faster-whisper elsewhere); the analysis stages call
-an LLM provider.
+[`bristlenose/pipeline.py`](../bristlenose/pipeline.py). Transcription runs on the user's
+machine (Whisper via MLX on Apple Silicon, faster-whisper elsewhere); the analysis stages
+make an outbound **cloud LLM call** to the researcher's chosen provider — that is the
+normal path, with local Ollama a supported minority option.
 
 - **Pipeline conventions, resume, caching, quote exclusivity** →
   [`bristlenose/stages/CLAUDE.md`](../bristlenose/stages/CLAUDE.md)
 - **Pipeline resilience** (manifest, event sourcing, resume, provenance) →
   [design-pipeline-resilience.md](design-pipeline-resilience.md)
-- **LLM providers** (Claude, ChatGPT, Azure OpenAI, Gemini, local Ollama) →
+- **LLM providers** (Claude, ChatGPT, Azure OpenAI, Gemini, local Ollama; no vendor default —
+  see [design-cli-provider-selection.md](design-cli-provider-selection.md)) →
   [`bristlenose/llm/CLAUDE.md`](../bristlenose/llm/CLAUDE.md)
 - **Analysis math** (signal concentration, pure computation, no LLM) →
   [design-signals-future.md](design-signals-future.md)
@@ -94,6 +97,25 @@ an LLM provider.
 SQLite, exposes a REST API for researcher edits (tags, stars, hidden quotes, name
 corrections), and serves the React SPA. Everything binds to `127.0.0.1` — nothing
 listens on an external interface.
+
+Two more things hang off serve mode:
+
+- **Assistant surfaces** — the in-app **chat lens** (a cited question box) and the
+  **MCP endpoint** at `/mcp/` (`server/mcp_server.py`; read-only, four tools, scoped
+  bearer) for external agents. Both ground in one shared core,
+  [`server/grounding.py`](../bristlenose/server/grounding.py), never parallel copies. On
+  the Mac the MCP transport is a `.mcpb` extension (`desktop/mcpb/`, with a sandboxed
+  native helper in `desktop/mcp-helper/`); exposure is per project. See
+  [design-mcp-server.md](design-mcp-server.md), [design-mcp-extension.md](design-mcp-extension.md)
+  and [design-chat-lens.md](design-chat-lens.md).
+- **Export** — a self-contained HTML leave-behind (the SPA plus inlined API data, opened
+  offline from `file://`), built by a dedicated single-file Vite build
+  (`frontend/vite.export.config.ts`) and assembled by `server/routes/export.py`. See
+  [design-export-html.md](design-export-html.md).
+
+Project identity — a study is its database plus a marker id (`study_marker.py`), a recording
+is a content fingerprint (`utils/fingerprint.py`), a path is only a hint — is specified in
+[design-project-identity.md](design-project-identity.md).
 
 - **Server architecture, routes, importer, data model** →
   [`bristlenose/server/CLAUDE.md`](../bristlenose/server/CLAUDE.md)
@@ -133,7 +155,7 @@ per-run auth token from its stdout, and points the WKWebView at it.
   contract, runtime resource resolution (FFmpeg, Whisper models, credentials) →
   [design-desktop-python-runtime.md](design-desktop-python-runtime.md) *(the canonical
   Mac-specific mechanics doc)*
-- **Overall app design** → [design-desktop-app.md](design-desktop-app.md)
+- **Overall app design** → [archive/design-desktop-app.md](archive/design-desktop-app.md)
 - **WKWebView ↔ Swift messaging** → [design-wkwebview-messaging.md](design-wkwebview-messaging.md)
 
 **Credential flow** is a good example of the no-fork principle in action: Swift reads the
@@ -143,7 +165,7 @@ code. Same pattern for the bundled FFmpeg path. Details in
 [design-modularity.md](design-modularity.md) §"Credential stores" and
 [design-desktop-python-runtime.md](design-desktop-python-runtime.md).
 
-### 5. Model delivery (planned): Background Assets
+### 5. Model delivery: Background Assets (partly built)
 
 Whisper models and large optional dependencies (PII / spaCy) are big enough that we don't
 want them in the initial `.app` download. The plan is Apple **Background Assets** —
@@ -151,8 +173,11 @@ OS-scheduled, Wi-Fi-opportunistic, Apple-hosted downloads that "trickle in" afte
 while the user is already productive. The acquisition strategy (and its many network
 failure modes) is captured in
 [design-modularity.md](design-modularity.md) §"Acquisition strategy: trickle to full
-capability". Implementation is planned, not shipped — the working design lives in a
-maintainer-only handoff kept outside the public repo.
+capability" — a plan, not a record. What exists in code today is the **handoff half** for
+the PII model pack (`PIIModelPack.swift`: given a pack that has arrived, tell the sidecar
+where it is); the per-channel acquirers (Background Assets for TestFlight/App Store, plain
+HTTPS for the `.dmg`) land separately. Whisper-model delivery has no Background Assets code
+yet. See [release-channels.md](release-channels.md) for the pack as an artefact.
 
 ---
 
@@ -163,18 +188,23 @@ There are two release paths, because there are two kinds of artefact.
 ### CLI release (PyPI / Homebrew / Snap / Copr)
 
 Ordinary day-to-day: commit to `main`, and when you want to ship, bump the version and
-tag. Version lives in exactly one place — `bristlenose/__init__.py`
+tag. Releases land after 9pm London on working days (any time on weekends and UK bank
+holidays); the tag push is the act that publishes, so it goes last. While a
+`release.sh run` is alive, a pre-commit hook freezes `main` locally, and work that must not
+go live before the version is on PyPI waits on an `after-pypi/<version>` branch. Version lives in exactly one place — `bristlenose/__init__.py`
 (`__version__`) — and `./scripts/bump-version.py` updates it plus the man page and the
 pbxproj, and **stages them without committing or tagging** — it cannot tag
 correctly, because the commit the tag belongs on does not exist yet (the
 CHANGELOG and README prose come after the bump). It stopped tagging on 14 Aug
 2026. You commit, then `git tag v<X.Y.Z>`, then push `main` and the tag as two
-separate pushes — never `--tags`. `./scripts/release.sh run` does this in order.
+separate pushes — never `--tags`. `./scripts/release.sh plan|run|verify` does this in order.
 GitHub Actions then does the rest: CI → PyPI publish → GitHub Release → Homebrew
-tap dispatch → Copr build (after PyPI is verified fetchable — Source0 comes from there); the Snap workflow builds edge on push and stable on a `v*` tag.
+tap dispatch → Copr build (after PyPI is verified fetchable — Source0 comes from there). Snap is
+run by hand: the workflow's ref is the channel (`main` → edge, a `vX.Y.Z` tag → stable).
 
 The full pipeline, secrets, cross-repo topology, and the mandatory **post-push PyPI
-verification** step live in [release.md](release.md) and the "Releasing" section of
+verification** step live in [release.md](release.md), the one-page channel map in
+[release-channels.md](release-channels.md) (eight lockstep channels plus winget), and the "Releasing" section of
 [CONTRIBUTING.md](../CONTRIBUTING.md). (PyPI immutability, tag-redelivery quirks, and the
 minor-vs-patch bump rule are all in the root [CLAUDE.md](../CLAUDE.md).)
 
@@ -214,8 +244,7 @@ its scripts are preserved as a future-state spec in
 The Mac app is a **nested binary** — an app bundle that contains other executables (the
 sidecar, FFmpeg, ffprobe, and CPython's `Python.framework`). Apple's *server-side*
 validation enforces rules that a local `codesign --verify` cannot catch, because they're
-App Store *policy*, not signature validity (see commit `4c549c36` on the `testflight-prep`
-branch for the fixes, and the `app-store-police` review agent for how they're checked).
+App Store *policy*, not signature validity (the `app-store-police` review agent checks them).
 The rules:
 
 - **Every nested executable needs `com.apple.security.app-sandbox` *and*

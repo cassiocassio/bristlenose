@@ -16,10 +16,16 @@ const URL = process.env.BN_URL ?? 'http://127.0.0.1:8484/report/quotes/';
   if (mode === 'resize') {
     for (let w = 1500; w >= 800; w -= 10) widths.push(w); for (let w = 800; w <= 1500; w += 10) widths.push(w);
     for (const w of widths) { await page.setViewportSize({ width: w, height: 900 }); await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); }
-  } else {
+  } else if (mode === 'sidebars') {
     // BN_MODE=sidebars: the contents panel ([) and the tag panel (]) opened and closed, six times each.
     await page.locator('.center').click({ position: { x: 5, y: 5 } }).catch(() => {});
     for (let i = 0; i < 12; i++) { widths.push(i); await page.keyboard.press(i % 2 ? '[' : ']'); await page.waitForTimeout(450); }
+  }
+  if (mode === 'lenses') {
+    // BN_MODE=lenses: click through the lens tabs (Project, Sessions, Quotes, Signals, ...) three times.
+    const tabs = page.locator('.bn-global-nav a');
+    const n = await tabs.count();
+    for (let r = 0; r < 3; r++) for (let i = 0; i < n; i++) { widths.push(i); await tabs.nth(i).click().catch(() => {}); await page.waitForTimeout(700); }
   }
   const { profile } = await cdp.send('Profiler.stop');
   const nodes = new Map(profile.nodes.map(n => [n.id, n]));

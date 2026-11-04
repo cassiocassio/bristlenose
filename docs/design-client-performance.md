@@ -11,7 +11,7 @@ Written 4 Nov 2026 after "redraw on window resize is getting slow". Safari was f
 | The page: layouts, style recalcs, script time, long tasks per route and interaction | `experiments/perf/` (Playwright, Chromium for CDP counters, WebKit for step times) | any browser against the dev server |
 | Which JS the page runs per step | `experiments/perf/cpu-profile.cjs` | dev server only (needs unminified source) |
 
-Three traps that cost time. A profile of a study with no report measures a sidebar and no page (an unanalysed study shows a native pane; `select-study` now fails if no web area renders). "Main thread busy" cannot rank builds once the thread is saturated: use window updates per second. And Debug numbers are inflated, so compare Debug with Debug; nothing here was measured in Release.
+Three traps that cost time. A profile of a study with no report measures a sidebar and no page (an unanalysed study shows a native pane; `select-study` now fails if no web area renders). "Main thread busy" cannot rank builds once the thread is saturated: use window updates per second. Debug inflation turned out small here: an optimised build (`-O`, no debug dylib, still Debug-signed so the external-server flag works) gave the same picture as Debug (before 10.3 updates/s, after 57–60), because the cost sits in AppKit, SwiftUI's AttributeGraph and WebKit, which are system code. The App Store Release build itself was not measured (it needs production signing and the bundled sidecar).
 
 ## What was found and fixed (Debug, rendered report, two runs each, repeatable to ~2%)
 
@@ -39,6 +39,6 @@ The web view, from the system-wide trace of the same drag (WebContent main threa
 
 ## Open
 
-- **A Release measurement.** The harness needs `BRISTLENOSE_DEV_EXTERNAL_PORT`, which only Debug builds read. A Release number needs the bundled sidecar or a flag.
-- **Sidebar toggle and lens switch.** Profiled with `BN_MODE=sidebars node cpu-profile.cjs` (dev build, six opens and six closes): about 43 ms of React work per toggle, mostly the panel mounting its own contents (`TagRow`, `TagGroupCard`, `SidebarLayout`) and `QuoteCard` about 5 ms. That is the cost of opening a panel and is not repeated work, so it was left. The lens switch (about 85 ms to paint in Chromium) was not profiled.
-- `ActivityStore.test.ts` fails in isolation (`a write that fails after one that worked...`), in files this work did not touch.
+- **The App Store Release build.** Needs production signing and the bundled sidecar, and `BRISTLENOSE_DEV_EXTERNAL_PORT` is Debug-only, so the harness cannot drive it. The `-O` build above is the closest proxy.
+- **Sidebar toggle and lens switch.** Profiled with `BN_MODE=sidebars node cpu-profile.cjs` (dev build, six opens and six closes): about 43 ms of React work per toggle, mostly the panel mounting its own contents (`TagRow`, `TagGroupCard`, `SidebarLayout`) and `QuoteCard` about 5 ms. That is the cost of opening a panel and is not repeated work, so it was left. Lens switch (`BN_MODE=lenses`, 24 clicks through the tabs): about 43 ms of React per switch, spread over whichever lens is being mounted; the hidden settings, export and feedback modals re-rendering is about 8% of it (under 4 ms a switch), so it was left.
+- `ActivityStore.test.ts` (`a write that fails after one that worked...`) fails on this machine because it runs Node 26 and the repo pins Node 24 (`.tool-versions`): Node's built-in web storage replaces jsdom's `Storage`, so the test's spy on `Storage.prototype.setItem` never intercepts. An environment difference, not a regression; it passes on the pinned Node.

@@ -40,5 +40,5 @@ The web view, from the system-wide trace of the same drag (WebContent main threa
 ## Open
 
 - **A Release measurement.** The harness needs `BRISTLENOSE_DEV_EXTERNAL_PORT`, which only Debug builds read. A Release number needs the bundled sidecar or a flag.
-- **Sidebar toggle and lens switch** in the browser still show a few long tasks (5 and 2 in the interaction profile); not investigated.
+- **Sidebar toggle and lens switch.** Profiled with `BN_MODE=sidebars node cpu-profile.cjs` (dev build, six opens and six closes): about 43 ms of React work per toggle, mostly the panel mounting its own contents (`TagRow`, `TagGroupCard`, `SidebarLayout`) and `QuoteCard` about 5 ms. That is the cost of opening a panel and is not repeated work, so it was left. The lens switch (about 85 ms to paint in Chromium) was not profiled.
 - `ActivityStore.test.ts` fails in isolation (`a write that fails after one that worked...`), in files this work did not touch.

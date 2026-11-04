@@ -11,8 +11,16 @@ const URL = process.env.BN_URL ?? 'http://127.0.0.1:8484/report/quotes/';
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval', { interval: 200 });
   await cdp.send('Profiler.start');
-  const widths = []; for (let w = 1500; w >= 800; w -= 10) widths.push(w); for (let w = 800; w <= 1500; w += 10) widths.push(w);
-  for (const w of widths) { await page.setViewportSize({ width: w, height: 900 }); await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); }
+  const mode = process.env.BN_MODE ?? 'resize';
+  const widths = [];
+  if (mode === 'resize') {
+    for (let w = 1500; w >= 800; w -= 10) widths.push(w); for (let w = 800; w <= 1500; w += 10) widths.push(w);
+    for (const w of widths) { await page.setViewportSize({ width: w, height: 900 }); await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); }
+  } else {
+    // BN_MODE=sidebars: the contents panel ([) and the tag panel (]) opened and closed, six times each.
+    await page.locator('.center').click({ position: { x: 5, y: 5 } }).catch(() => {});
+    for (let i = 0; i < 12; i++) { widths.push(i); await page.keyboard.press(i % 2 ? '[' : ']'); await page.waitForTimeout(450); }
+  }
   const { profile } = await cdp.send('Profiler.stop');
   const nodes = new Map(profile.nodes.map(n => [n.id, n]));
   const self = new Map(); const dt = profile.timeDeltas;
@@ -26,7 +34,7 @@ const URL = process.env.BN_URL ?? 'http://127.0.0.1:8484/report/quotes/';
     const k = key(nodes.get(id)); selfBy.set(k, (selfBy.get(k) ?? 0) + t);
   }
   const total = [...self.values()].reduce((a, b) => a + b, 0) / 1000;
-  console.log(`steps=${widths.length} sampled script+idle ms=${total.toFixed(0)}`);
+  console.log(`mode=${process.env.BN_MODE ?? "resize"} steps=${widths.length} sampled script+idle ms=${total.toFixed(0)}`);
   const show = (m, n, f) => [...m.entries()].filter(([k]) => f(k)).sort((a, b) => b[1] - a[1]).slice(0, n).forEach(([k, v]) => console.log(`${(v / 1000).toFixed(0).padStart(6)}ms  ${k}`));
   console.log('--- inclusive, our source (frontend/src)'); show(incl, 28, k => k.includes('/src/') && !k.includes('node_modules'));
   console.log('--- inclusive, react-dom'); show(incl, 8, k => /react-dom/.test(k));

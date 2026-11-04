@@ -45,6 +45,8 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 | `inflect` loaded on first plural, not at import | `import bristlenose.cli` 1.05 s → 0.22 s; `import bristlenose.server.app` 1.8 s → 0.8 s (median of 3–5, `.venv`, warm cache). A subprocess test pins it and fails with the eager import put back. **In the app, `serve-ready` (bundled sidecar) went 3,194 ms → 2,241 ms cold (−30%) and 3,128 → 2,330 ms warm (−25%); `project-select` 4.1 s → 3.1 s** (median of 5, identical app binary in both arms, Debug-signed app, ad-hoc-signed hardened-runtime sidecar; method and spread in `design-client-performance.md` § Sidecar start). | `6f5b0e350`; measured `8000e1b17` |
 | Server-Timing instrument | n/a (instrument) | `041df1eb0` |
 | Codebook templates parsed with libyaml (`CSafeLoader`) | cumulative import of `bristlenose.server.codebook` 119–143 ms → 36–43 ms (five runs each); all nine templates parse identically | `8cb124763` |
+| Keychain reads kept for ten seconds (`credentials_macos.py`) | `load_settings()` ran 3 times per serve start, 5 `security` subprocesses each: 15 spawns, 360 ms → 5 spawns, 106 ms. Spawn to `Report:` line on a copy of a real study, 7 runs each, interleaved, twice: **1,505 / 1,516 ms with the cache off, 1,229 / 1,226 ms on (−19%)**. Reaches the Homebrew and pip route on a Mac; the sandboxed app is documented as not reaching this store, so its gain is for the host session to measure | `0418c7dd1` |
+| Startup stage stamps (`BRISTLENOSE_STARTUP_TRACE=1`, `startup_trace.py`) | n/a (instrument: `@startup-stage <name> <epoch_ms>` on stderr at 14 points) | `f1963e516` |
 | gzip at level 1 on the loopback-only server | compression of `/quotes` 10.7 → 2.5 ms, `/tapestry` 12.7 → 1.8 ms (zlib on the real bodies, median of 30) | this commit |
 
 `inflect` was found by `python -X importtime`, not by guess: it was 0.84 s of self time on the path of every command, `--help` and `serve` included. The A/B above covers the bundled sidecar; the App Store (Apple Distribution) signing and the sandboxed entitlements were not measured. Warm was noisier than cold (one 3.4 s outlier), and cold was not slower than warm, so this method does not reproduce a first-exec penalty.
@@ -65,6 +67,28 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 - **HTML export: 3.5 s, 9,346 SQL statements (about 6 per quote), 0.49 s inside SQL.** Most of the rest is Python overhead per statement, not the database. Reported candidate: batch the moderator-question lookup.
 - **`serve` ready to `/api/health`: 4.6–4.8 s** on the dev venv, including the startup import of this study. Not the signed sidecar.
 - The first draft of the wire-size column read the decompressed body; it now counts raw bytes. The timings were never affected.
+
+## Where a serve start goes (measured 4 Nov 2026, dev venv, `BRISTLENOSE_STARTUP_TRACE=1`)
+
+Median of five, a synthetic 1,500-quote study (large) beside copies of two real studies (30 and 35 quotes, 3 and 5 sessions; copies, never served in place). Server-side only: the Mac's own steps (spawn call, window, page load) are in `design-client-performance.md`.
+
+| Stage | 1,500 quotes | real study |
+|---|---|---|
+| Python and the CLI imported | 177 ms | |
+| CLI imported → `serve` entered (including its own `load_settings`) | 147 ms | |
+| Importing the server app | 417 ms | |
+| Database ready → startup import begins (including `load_settings`) | 187 ms | |
+| **Startup import** | **1,097 ms** | **74–83 ms** |
+| Rest of app construction (event watcher, static mount, MCP mount) | 298 ms | |
+| Lifespan, then socket bound | 186 ms | |
+| **Spawn → `Report:` line** | **2.54 s** | **about 1.2–1.5 s** |
+
+- **`/api/health` is not doing work.** First call 12–40 ms server-side, the second 7 ms. The 197 ms the Mac measured for it is mostly the client's first connection.
+- **The importer is a size cost, not a daily one.** About 0.7 ms per quote (an existence query and an autoflush per quote); 74–83 ms at the 30–35 quotes of the real studies. Declined for now with those numbers. It becomes the largest item above about 1,000 quotes.
+- **The imports are diffuse.** The heaviest single module is 35 ms of 414 (`fastapi.openapi.models`); no one fix is worth making.
+- **`import mcp` is 275–280 ms on every start**, whether or not Agent Access is on. The largest fixed item left. Deferring it touches a shipped contract (the `/mcp` mount, `health.mcp.mounted`, the lifespan being composed last), so it is a proposal for the owner and the Agent Access work, not a one-liner.
+- **One-time cost to know about:** with a cloud key set, a study with no Signals snapshot builds one at start, and that holds the event loop for about 0.8 s at 1,500 quotes (the model call itself is separate). Once per study or contract upgrade.
+- **A harness that starts `serve` on a synthetic study and has a key configured makes a real model call at start.** `scripts/perf-route-baseline.py` now sets `BRISTLENOSE_LLM_PROVIDER=local`, which makes serve skip it. Any new harness must do the same.
 
 ## Reviewed targets: the moments a researcher feels most
 

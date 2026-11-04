@@ -137,3 +137,23 @@ def test_a_set_that_fails_still_leaves_no_stale_entry(spawns: _Spawns, monkeypat
     spawns.value = "sk-two"
     monkeypatch.setattr(subprocess, "run", spawns)
     assert store.get("anthropic") == "sk-two"
+
+
+def test_a_get_racing_the_write_cannot_keep_the_old_value(spawns: _Spawns) -> None:
+    store = MacOSCredentialStore()
+    assert store.get("anthropic") == "sk-one"
+    real = subprocess.run  # the _Spawns stand-in, installed by the fixture
+
+    def _during_the_write(argv: list[str], **kw: Any) -> Any:
+        if argv[1] == "delete-generic-password":
+            # another thread reads while set() is mid-flight: it sees the OLD value and caches it
+            MacOSCredentialStore().get("anthropic")
+        return real(argv, **kw)
+
+    import unittest.mock
+
+    with unittest.mock.patch.object(subprocess, "run", _during_the_write):
+        spawns.value = "sk-one"
+        store.set("anthropic", "sk-two")
+    spawns.value = "sk-two"
+    assert store.get("anthropic") == "sk-two"

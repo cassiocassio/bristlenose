@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, NoReturn
 import typer
 from rich.console import Console
 
-from bristlenose import __version__
+from bristlenose import __version__, startup_trace
 from bristlenose.config import load_settings
 from bristlenose.cost import compute_run_cost
 from bristlenose.events import CauseCategoryEnum, KindEnum, PipelineAbandonedError
@@ -24,6 +24,8 @@ from bristlenose.preflight.whisper import WHISPER_SIZE_HUMAN
 from bristlenose.run_lifecycle import ConcurrentRunError, run_lifecycle
 from bristlenose.ui_kinds import MessageKind, cli_prefix
 from bristlenose.utils.text import count_noun
+
+startup_trace.mark("cli-imported")
 
 if TYPE_CHECKING:  # imported lazily at runtime; mypy still resolves the name
     from collections.abc import Callable
@@ -2420,7 +2422,9 @@ def _serve_dynamic_port(
 
     import uvicorn
 
+    startup_trace.mark("serve-entered")
     app_instance = _create_admitted_app(project_dir, dev, verbose)
+    startup_trace.mark("app-built")
     config = uvicorn.Config(
         app_instance,
         host="127.0.0.1",
@@ -2434,6 +2438,7 @@ def _serve_dynamic_port(
         # as soon as the socket is bound. ``server.started`` flips True
         # after the lifespan startup completes, by which point
         # ``server.servers[0].sockets`` is populated.
+        startup_trace.mark("serve-task-created")
         serve_task = asyncio.create_task(server.serve())
         # Wait for the bind for as long as the server task lives. uvicorn opens the socket only
         # after the lifespan has started, so a slow lifespan is a late bind, not a missing one:
@@ -2447,6 +2452,7 @@ def _serve_dynamic_port(
         if server.started and server.servers and server.servers[0].sockets:
             actual_port = server.servers[0].sockets[0].getsockname()[1]
             report_url = f"http://127.0.0.1:{actual_port}/report/"
+            startup_trace.mark("socket-bound")
             console.print(f"\n  Report: [bold cyan]{report_url}[/bold cyan]\n")
             _print_mcp_connect(actual_port)
             if open_browser:

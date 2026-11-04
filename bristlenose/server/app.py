@@ -23,6 +23,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
+from bristlenose import startup_trace
 from bristlenose.models import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 from bristlenose.ports import DEFAULT_SERVE_PORT
 from bristlenose.run_condition import Condition
@@ -362,8 +363,10 @@ def create_app(
         db_url = db_url_for_project(project_dir)
         study_output_dir = project_output_dir(project_dir)
 
+    startup_trace.mark("create-app-start")
     engine = get_engine(db_url, study_output_dir=study_output_dir)
     init_db(engine)
+    startup_trace.mark("database-ready")
     # What the pool is attached to is what is on disk NOW, before anything else
     # runs: read after the startup import, a restore landing during it was
     # recorded as attached while the pool held the tree the restore set aside
@@ -479,7 +482,9 @@ def create_app(
 
         assert attached_at_connect is not None  # read above, for this same project_dir
         already_imported = completed_run_ids(events_path(project_output_dir(project_dir)))
+        startup_trace.mark("startup-import-begin")
         _import_on_startup(session_factory, project_dir)
+        startup_trace.mark("startup-import-end")
         _reconcile_orphaned_autocode_jobs(session_factory)
         _install_event_watcher(
             app, session_factory, project_dir, engine=engine, already_imported=already_imported,
@@ -536,6 +541,7 @@ def create_app(
     if hmr:
         _print_dev_urls()
 
+    startup_trace.mark("create-app-end")
     return app
 
 
@@ -557,7 +563,9 @@ def _compose_mcp_lifespan(app: FastAPI, mcp_server: object) -> None:
     @asynccontextmanager
     async def _with_mcp(app_: FastAPI) -> AsyncIterator[None]:
         async with previous(app_):
+            startup_trace.mark("mcp-starting")
             async with mcp_server.session_manager.run():  # type: ignore[attr-defined]
+                startup_trace.mark("lifespan-ready")
                 yield
 
     app.router.lifespan_context = _with_mcp
@@ -1747,6 +1755,7 @@ def _install_event_watcher(
 
     @asynccontextmanager
     async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+        startup_trace.mark("lifespan-begin")
         app.state.scene_strips.start()
         app.state.screen_text.start()
         # A key saved since quotes were owed codes them (the Mac restarts the serve on a key save).
@@ -1767,6 +1776,7 @@ def _install_event_watcher(
             ),
             name="bristlenose-event-watcher",
         )
+        startup_trace.mark("lifespan-tasks-started")
         try:
             yield
         finally:

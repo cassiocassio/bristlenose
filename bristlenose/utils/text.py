@@ -4,10 +4,21 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from typing import Any
 
-import inflect
+# ``inflect`` costs ~0.84 s to import (measured with ``python -X importtime``
+# on 4 Nov 2026) and this module is on every command's import path, so the
+# engine is built on first plural rather than at import.
+_inflect_engine: Any = None
 
-_inflect = inflect.engine()
+
+def _plural_noun(singular: str) -> str:
+    global _inflect_engine
+    if _inflect_engine is None:
+        import inflect
+
+        _inflect_engine = inflect.engine()
+    return _inflect_engine.plural_noun(singular)  # type: ignore[no-any-return]
 
 
 def count_noun(n: int, singular: str, plural: str | None = None) -> str:
@@ -19,9 +30,10 @@ def count_noun(n: int, singular: str, plural: str | None = None) -> str:
     Note: returns ``"0 sessions"`` for ``n == 0`` (matches existing voice).
     Use ``inflect.engine().no()`` directly if you want ``"no sessions"``.
     """
-    plural_form = plural if plural is not None else _inflect.plural_noun(singular)
-    word = singular if n == 1 else plural_form
-    return f"{n} {word}"
+    if n == 1:
+        return f"{n} {singular}"
+    plural_form = plural if plural is not None else _plural_noun(singular)
+    return f"{n} {plural_form}"
 
 # Maximum length for slugified project names in filenames
 _MAX_SLUG_LENGTH = 50

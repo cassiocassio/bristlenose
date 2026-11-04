@@ -56,6 +56,10 @@ Quotes lens open on a real-size study, nothing touched, 90 s, headless Chromium 
 
 The critic's worry was that every speaker pick, split or join re-reads the transcript and rebuilds every word span. Firing the event the page listens for (`bn:speakers-written`) on three real transcripts: **the word spans are kept, not replaced; one DOM mutation record per re-read; 8 ms of script on 3,183 words, 18 ms on 14,254, 25 ms on 12,049; style and layout 0**. Nothing to fix. Not covered: the server's read (19–55 ms per session, measured above) and a real UI-driven write.
 
+### What is left of the Screens-on premium (measured 4 Nov 2026, dev, desktop-hosted)
+
+Stage by stage to the socket, Screens on and off are identical (1,033 vs 1,032 ms spawn → socket-bound, median of six); the difference is at the first `/api/health`, which a stamp wrapper shows overlapping the Vision check (it starts 3 ms after the lifespan begins and runs 245–385 ms; the health call takes 117–150 ms instead of 5–15). But **delaying the import does not remove it**: 1.5 s (1,223 vs 1,191 ms) and 4 s (1,103–1,122 vs 1,070–1,124 ms) change nothing, and Screens off is 927–969 ms. So about 100–150 ms at first health remains with Screens on, and it is not the import's timing. Unexplained, and not chased: it is inside the noise of this machine (the same arm moved 120 ms between sessions), and the app's own result is unresolved (above).
+
 ### Declined with the number
 
 | Idea | Why |

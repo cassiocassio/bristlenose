@@ -67,6 +67,7 @@ The critic's worry was that every speaker pick, split or join re-reads the trans
 | First-request cost | our handler is 25 ms of 96; the rest is framework first-use |
 | Share identical in-flight GETs (`apiGet`) | built, tested, measured, reverted: Codebooks 60 → 42 ms but Quotes 110 → 107 ms at real size (fetch time reappears as render) |
 | Bulk-validate the transcript's words | a profiler mirage: 278/283 → 271/269 ms over ten sessions, about 1 ms each |
+| Everyday CLI commands | `--help` 270 ms, `--version` 240, `status` 270, `use` 260 (all after the `inflect` fix); `codebooks` 1.1 s (the first plural loads `inflect`, 0.82 s, so it is a real need) and `pipeline` 1.3 s (any-llm readiness for a configured any-llm model, 0.72 s): rare commands, not daily; `doctor` 1.7 s does real checks |
 | Preload lens chunks on idle (all lenses) | chunks cost 8–40 ms; only Sessions suffered, from the Suspense throttle, and that is fixed on its own |
 
 ## The rule each entry follows

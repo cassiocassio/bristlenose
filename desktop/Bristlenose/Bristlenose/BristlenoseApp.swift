@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated { PerfSignpost.begin(.launchToReady) }
         // Symmetry with the existing `Mode:` line in ServeManager — this one
         // captures provenance facts known at *build* time so support sessions
         // can disambiguate Debug vs Release archives even when the screenshot

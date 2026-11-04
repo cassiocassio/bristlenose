@@ -850,6 +850,10 @@ final class BridgeHandler: ObservableObject {
         switchToTab(target)
     }
 
+    /// This window's key for the perf moments (`PerfSignpost`): a lens switch here is only ended
+    /// by this window's route change.
+    var perfScope: String { String(UInt(bitPattern: ObjectIdentifier(self).hashValue)) }
+
     func activateLens(_ tab: Tab) {
         // A lens the document withholds during a run has nothing to show; every
         // caller (rail, outline, ⌘-number, menu) already dims it, this is the floor.
@@ -866,8 +870,10 @@ final class BridgeHandler: ObservableObject {
         Self.log.notice("activateLens(\(tab.rawValue, privacy: .public)) → \(String(describing: decision), privacy: .public) [doc: \(String(describing: self.documentState), privacy: .public)]")
         switch decision {
         case .root(let target):
+            PerfSignpost.begin(.lensSwitch, scope: perfScope)
             switchToTab(target)
         case .restore(let sessionID):
+            PerfSignpost.begin(.lensSwitch, scope: perfScope)
             navigateToSession(sessionID)
         case .queue(let target):
             pendingLensIntent = target
@@ -1242,6 +1248,9 @@ final class BridgeHandler: ObservableObject {
         case "ready":
             isReady = true
             documentState = .spa
+            PerfSignpost.end(.launchToReady)                       // the first report of the launch, any window
+            PerfSignpost.end(.projectSelect, scope: perfScope, outcome: "ready")
+            PerfSignpost.begin(.firstCardPainted, scope: perfScope)  // the page's `perf-mark` closes it
             // Replay the lens the user clicked during boot, if any — the
             // queue is what makes a lit-on-the-prior rail a promise rather
             // than a lie (P3). Routed back through `activateLens` so the
@@ -1282,11 +1291,25 @@ final class BridgeHandler: ObservableObject {
         case "route-change":
             if let url = body["url"] as? String {
                 currentPath = url
+                PerfSignpost.end(.lensSwitch, scope: perfScope, outcome: "route")
+                if url.hasPrefix("/report/sessions/"), url.count > "/report/sessions/".count {
+                    PerfSignpost.begin(.openTranscript, scope: perfScope)   // the page's `perf-mark` closes it
+                } else {
+                    PerfSignpost.end(.openTranscript, scope: perfScope, outcome: "left")
+                }
                 sessionsRouteMemory.observe(path: url)
                 leaveWithheldLens()
                 // AppLayout posts this from an effect, which runs only after
                 // the layout committed: the report rendered again.
                 reportCrash = nil
+            }
+
+        case "perf-mark":
+            // The page says a moment finished (`performance.mark` on its side, the same name):
+            // only the moments the page owns the end of can be closed this way.
+            if let name = body["name"] as? String, let moment = PerfMoment(rawValue: name),
+               moment == .openTranscript || moment == .firstCardPainted {
+                PerfSignpost.end(moment, scope: perfScope, outcome: "painted")
             }
 
         case "anchor-change":

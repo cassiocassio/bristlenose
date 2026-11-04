@@ -618,6 +618,10 @@ final class ServeManager: ObservableObject {
     ///     `ServeInstance.startedByRetry`, so a retry that fails offers Send
     ///     Feedback… rather than another Retry. Every other caller leaves it false,
     ///     which clears the bit.
+    /// This serve's key for `PerfSignpost`: one per study, so two studies booting at once do not
+    /// close each other's `serve-ready`.
+    private var perfScope: String { String(UInt(bitPattern: ObjectIdentifier(self).hashValue)) }
+
     func start(projectPath: String, isRetry: Bool = false) {
         // Expired alpha `.dmg` builds never start the sidecar (AlphaBuild is a
         // no-op on Debug / App Store / TestFlight). The expiry flow blocks the
@@ -692,6 +696,7 @@ final class ServeManager: ObservableObject {
         agentProxyVersions = [:]
         generation += 1
         state = .starting
+        PerfSignpost.begin(.serveReady, scope: perfScope)
         outputLines = []
         instance.pendingStartupRefusal = nil
         // Clean slate for this sidecar's stdout captures. Critical for the cold
@@ -724,6 +729,7 @@ final class ServeManager: ObservableObject {
             mcpToken = nil
             log.info("connecting to external server on port \(port, privacy: .public)")
             state = .running(port: port)
+            PerfSignpost.end(.serveReady, scope: perfScope, outcome: "external")
             return
         }
 
@@ -1698,6 +1704,7 @@ final class ServeManager: ObservableObject {
                 guard let self, self.generation == readyGeneration,
                       case .starting = self.state else { return }
                 self.state = .running(port: parsedPort)
+                PerfSignpost.end(.serveReady, scope: self.perfScope)
                 Task { await self.fetchServerVersion(port: parsedPort) }
             }
         }

@@ -1648,6 +1648,7 @@ struct ContentView: View {
 
         switch sole {
         case .project(let id):
+            PerfSignpost.begin(.projectSelect, scope: bridgeHandler.perfScope)
             bridgeHandler.selectedFolderName = ""
             if let project = projectIndex.projects.first(where: { $0.id == id }) {
                 persistedProjectID = id.uuidString

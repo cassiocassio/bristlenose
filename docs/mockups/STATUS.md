@@ -229,6 +229,7 @@ state is still evidenced, the day is not.
 | `nightfall-focus.html` | 9 Jul 2026 | PROPOSED 2026 · **SUPERSEDED** — named a “superseded mockup” in its own design doc; hand-rolled rather than on the theme |
 | `ollama-setup-popovers.html` | 3 Jun 2026 | PROPOSED 3 Jun 2026 · IMPLEMENTED — cited three times across the design docs; `OllamaDownloadPill.swift` ships |
 | `person-actions-everywhere.html` | 27 Aug 2026 | IMPLEMENTED — person actions ship across surfaces |
+| `perceived-wait-partial-report.html` | 4 Nov 2026 | PROPOSED 4 Nov 2026 — candidate 1 of `design-perceived-wait.md`: a partial Quotes lens says so; for owner scrutiny, not a spec |
 | `progressive-lenses-replay.html` | 15 Oct 2026 | *unreviewed* — added by `68c38db2`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-card-layout-lab.html` | 15 Oct 2026 | *unreviewed* — added by `89efd0a9`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |
 | `quote-grouping-control-lab.html` | 15 Oct 2026 | *unreviewed* — added by `c3f077da`; registered at the 0.38.0 release so the gate holds, not yet classified against the code |

@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState, useRef, useLayoutEffect, useCallback, useMemo } from "react";
+import { useMomentOnPaint } from "../utils/perfMoment";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import i18n from "../i18n";
@@ -552,6 +553,7 @@ export function TranscriptPage({ projectId: _projectId, sessionId }: TranscriptP
   const seenRefreshKey = useRef(refreshKey);
   const rereadOwed = useRef(false);
   const loaded = !loading && !!data;
+  useMomentOnPaint("open-transcript", loaded, sessionId);
   // The latest rereadNow, for the retry its own closure schedules.
   const rereadRef = useRef<() => void>(() => {});
   const rereadNow = useCallback(() => {

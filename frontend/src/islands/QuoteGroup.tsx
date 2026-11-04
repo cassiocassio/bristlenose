@@ -20,6 +20,7 @@ import type {
 } from "../utils/types";
 import { getModeratorQuestion } from "../utils/api";
 import { isExportMode } from "../utils/exportData";
+import { useMomentOnPaint } from "../utils/perfMoment";
 import { featureFlags } from "../utils/featureFlags";
 import { formatTimecode, stripSmartQuotes } from "../utils/format";
 import { deriveTagVisibility, isBadgeHidden } from "../utils/tagVisibility";
@@ -193,6 +194,7 @@ export function QuoteGroup({
   hasModerator,
   highlight,
 }: QuoteGroupProps) {
+  useMomentOnPaint("first-card-painted", quotes.length > 0, null, true);
   const { t } = useTranslation();
   // ── Shared quote state ─────────────────────────────────────────────────
 

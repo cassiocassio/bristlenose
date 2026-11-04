@@ -31,8 +31,10 @@ One name per moment, used by every layer so a click, its request and its paint r
 | Layer | Mechanism | State |
 |---|---|---|
 | Server | `Server-Timing: bn;dur=…, db;dur=…;desc="N queries"` (`bristlenose/server/perf_timing.py`; on with `serve --dev` or `BRISTLENOSE_SERVER_TIMING=1`) | **built** |
-| Mac | `OSSignposter`, subsystem `app.bristlenose`, category `perf` | in progress (resize session) |
-| Page | `performance.mark/measure`, `bn.<moment>.start/end`, and a `perf-mark` bridge message | not started |
+| Mac | `OSSignposter`, subsystem `app.bristlenose`, category `perf` (`PerfSignpost.swift`) | **built** (`f2c49aa66`); read with `log stream --signpost --predicate 'subsystem == "app.bristlenose" AND category == "perf"'` |
+| Page | `useMomentOnPaint` ends `first-card-painted` and `open-transcript` two frames after the content renders, posting `{type: "perf-mark", name}` and leaving `performance.mark("bn.<name>.end")` (`utils/perfMoment.ts`) | **built** (`5cf46895f`); `lens-switch` and search marks are the next entries |
+
+**The bridge is dead against an external dev server** (`BRISTLENOSE_DEV_EXTERNAL_PORT=8484`): the app has no token for it, so the page's `/api/health` fetch fails and `ready` never posts. Signposts only complete against a copy running its own bundled sidecar.
 
 Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `open-transcript`, `first-card-painted`. Names are lowercase kebab-case; start and end share a name.
 
@@ -62,37 +64,43 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 - **`serve` ready to `/api/health`: 4.6–4.8 s** on the dev venv, including the startup import of this study. Not the signed sidecar.
 - The first draft of the wire-size column read the decompressed body; it now counts raw bytes. The timings were never affected.
 
-## Candidate queue
+## Reviewed targets: the moments a researcher feels most
 
-From the 8-layer research (provider-bound LLM time and transcription tradeoffs excluded), pending the three-lens Fable review. **Reported, not yet confirmed here.** Order is provisional and will change after review.
+Three independent Fable reviewers (evidence, measurability, parsimony) checked each of ten perceived-performance candidates against the code at HEAD. **They refuted most of the experiments that were proposed**, often because the thing was already shipped, and corrected the numbers behind the rest. Ranked by how often the moment happens times how much it is felt. All good-enough numbers below are the reviewers' and are **not yet measured**; the first step is always the baseline.
+
+| # | Moment | Frequency | First measurement | Good enough | Smallest experiment (only after the baseline) |
+|---|---|---|---|---|---|
+| 1 | **Click a lens**: a blank pane until the lazy chunk loads (first visit) and until the read resolves (every visit, since the lens remounts) | many a day | `interaction-profile.mjs` `lenses` case, fixed to stop at the lens's content (not the blank frame), two passes (first visit, revisit), **prod bundle without `--dev`**, on a real-size and a 1,500-quote fixture | revisit p90 ≤ 100 ms, first visit ≤ 200 ms | split decides it: chunk-dominated → preload lens chunks on idle (the Sessions sidebar already does); fetch-dominated → a last-answer cache in `useLensRead`; render-dominated → record and close |
+| 2 | **Type in search**: a 150 ms debounce, then one write fanning out to eight `filterQuotes` callers | many a day | a `search` case: field echo per character, last keystroke to results (debounce excluded) | echo < 16 ms; results < 50 ms | if render is cheap, debounce to 0 on both the web and the native field; else dedupe the eight passes |
+| 3 | **Double-click the app to a readable report**: launch to Welcome, then click a study to a report | daily | Mac signposts (`launch-to-ready`, `serve-ready`); cold vs warm, 5 each | warm selection to report under about 2 s, the remainder being sidecar import | re-measure on a rebuilt sidecar (the `inflect` change is in it) |
+| 4 | **Open or switch a study** | daily | `project-select` signpost; warm and cold | warm p95 < 1 s | none until measured; the 500 ms "invisible" line is in the code's own note |
+| 5 | **First click on a timecode, and the Nth click that changes recording** | daily | a mark at click and `canplay` back | first frame < 1 s; seek < 300 ms | after the baseline |
+| 6 | Quotes-grid scroll on a big study | occasional | LoAF `blockingDuration` and notch-to-frame at 4× throttle, n=100 vs 1,500 | zero blocking frames > 50 ms; p90 < 33 ms | none; probably already passes |
+| 7 | Report sidebar toggle | occasional | 12 toggles, blocking LoAF | 0 of 12 | none |
+| 8 | Analyse / Stop | daily | `start()` inclusive time per press | < 100 ms; first progress < 1.5 s | none: both acknowledgements are already synchronous |
+| 9 | Hover thumbnails | occasional | fetch p95 | < 300 ms, inside the 700 ms design delay | none |
+| 10 | Export | rare | `time_starttransfer` | < 2 s | the 5 s label patience is the only real threshold |
+
+**Declined, with the reason** (so they are not proposed again): a stdout-driven readiness wake (readiness is already stdout-driven; the 500 ms loop is the give-up watchdog); showing the native sidebar at once with the web pane covered (shipped design); prefetching the next lens on sidebar hover (no precedent, a bridge channel for about 20 ms); a warm serve on hover (a speculative ~140 MB spawn, against the no-background-spawn stance); keeping the previous web view dimmed (deliberate veil; the old view is torn down); per-card `contain-intrinsic-size` (already per-card after first layout); idle-slice rendering (virtualisation by another name, left in `design-client-performance.md`); `startTransition` for search (the web field is already responsive and the Mac field is native); optimistic "Starting…" and "Stopping…" (shipped); a faster run poll (the native poll is already 1 s; the 3 s polls are the page's); streaming the export (WebKit's save panel needs the whole body); a hidden player window (needs a user activation); "show nothing until ready" for thumbnails (shipped 13 Oct 2026).
+
+**Corrections to the first research**, which the numbers above already use: the 180 ms lens read is `/quotes` alone at n=1,500 on a synthetic fixture; the warm-slot parked sidecar is unreachable dead code, not a live pool; the first timecode click seeks through the URL hash, not a message; the 3 s polls are the page's (`LastRunStore`, `ConditionStore`), not Swift's; the scroll sweep (17 Apr 2026) never measured scroll, so "jank above about 1,500 quotes" was inferred.
+
+**Switching and cold start belong to the Workspace work** (many projects open, switching instant, post-TestFlight; `docs/design-workspace.md`), whose direction is retained views. The signposts decide how much of each wait is sidecar spawn, web view load or data fetch, which tells that work where retained views would help before the architecture is chosen.
+
+## Candidate queue: engineering (layer research, pending its own review)
+
+Reported, not yet confirmed here. Order is provisional.
 
 | # | Candidate | Layer | First measurement |
 |---|---|---|---|
 | 1 | ~~Lazy `inflect`~~ | sidecar | **done** |
 | 2 | Gzip level on loopback | server | **measured above** |
-| 3 | Signposts and launch-to-ready / project-switch harness | Mac + sidecar | cold and warm, 5 each, signed build labelled |
-| 4 | React Profiler hook; keynav, search and mutate modes in `experiments/perf` | page | renders and script ms per step at 100/300/1000 quotes |
-| 5 | `useQuotesStore()` whole-store subscribers → selectors (same defect class as the sidebar fix) | page | `filterQuotes` calls per tag-add and per keystroke |
-| 6 | Sidebar `reloadData` on every pipeline stdout line | Mac | reloads per second during a replayed stream |
-| 7 | Export HTML: batch the per-quote moderator lookup | server | wall time at n=0/500/1500/3000, then `py-spy` |
-| 8 | Lazy codebook YAML at import (97 ms) | sidecar | `-X importtime` |
-| 9 | Scene-colour decode off the run's critical path | pipeline | `elapsed_ms` and bytes materialised, local and dataless |
-| 10 | Per-id focus selector so `j`/`k` doesn't re-render every card | page | renders per keypress |
-
-## The moments a researcher feels most (perceived performance)
-
-These come first because they happen many times a day. All are **unmeasured end to end**: the 43 ms and 240 ms lens-switch figures in `design-client-performance.md` are CPU totals, not click-to-painted.
-
-| Moment | Why it matters | Source of the wait (reported) |
-|---|---|---|
-| Cold app start to a readable report | first impression, every day | 500 ms start-watchdog poll; 2 s "ready" fallback; first-launch code-signature checks on the bundled sidecar |
-| Open or switch a study | every study change | a new web view per study; the warm-sidecar pool is one parked slot; nothing times it |
-| Switch lens | the most repeated action | `Suspense fallback={null}`: a blank pane on a lens's first visit; each lens re-reads its data on open (about 180 ms at n=1500 per `design-perf-stress-findings.md`) |
-| Search as you type | constant | a 150 ms debounce before any filtering; `startTransition` and `useDeferredValue` unused in `frontend/src` |
-| First click on a timecode | every clip | opens a popout window and loads the video before it seeks |
-| Analyse / Stop acknowledgement | every run | status polling at 3 s; Stop is a signal ladder |
-
-**Switching and cold start belong to the Workspace work** (many projects open, switching instant, post-TestFlight; `docs/design-workspace.md`). The direction there is retained views for instant switching, with the warm-sidecar pool already a single parked slot. The signposts above decide how much of the wait is sidecar spawn, web view load or data fetch. That tells the Workspace work where retained views would help most, before the architecture is chosen.
+| 3 | `useQuotesStore()` whole-store subscribers → selectors (the sidebar-store defect class) | page | `filterQuotes` calls per tag-add and per keystroke |
+| 4 | Sidebar `reloadData` on every pipeline stdout line | Mac | reloads per second during a replayed stream |
+| 5 | Export HTML: batch the per-quote moderator lookup | server | wall time at n=0/500/1500/3000, then `py-spy` |
+| 6 | Lazy codebook YAML at import (97 ms) | sidecar | `-X importtime` |
+| 7 | Scene-colour decode off the run's critical path | pipeline | `elapsed_ms` and bytes materialised, local and dataless |
+| 8 | Per-id focus selector so `j`/`k` doesn't re-render every card | page | renders per keypress |
 
 ## Instruments
 
@@ -112,7 +120,7 @@ Gate on **counts and sizes, not milliseconds**: shared CI runners cannot hold 2%
 
 ## Not yet done
 
-- Reviewed targets with good-enough numbers (three-lens Fable review in progress).
-- Page-side moment marks and the `perf-mark` bridge message.
-- A launch-to-ready number on the signed sidecar.
+- Baselines for the ten reviewed moments above; none is measured yet.
+- The engineering candidates have not had their three-lens review (in progress).
+- A launch-to-ready number on the signed sidecar, with and without the `inflect` change (the resize session is rebuilding the sidecar to measure it).
 - Measured experiments on our own overhead around LLM calls (batching, concurrency, resume cache hits); none run yet.

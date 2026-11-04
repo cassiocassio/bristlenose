@@ -39,6 +39,10 @@ Updated 4 Nov 2026. **Measured** is a number from a repeatable run; **estimate**
 
 **Blocked on file ownership:** the Quotes and search lever (`React.memo` on `QuoteCard` with stable props, and not re-rendering every card for a query that has not become active) lives in `frontend/src/islands/QuoteCard.tsx`, which carries uncommitted edits from a display-preferences session that has since ended (with `DisplayMenu`, `DisplayPrefsStore`, `Toolbar`, `bridge.ts`, `nativePrefs.ts` and the Swift display files). Nobody owns those hunks now, so they are not touched here; the memo change waits until they are committed or set aside.
 
+### Tried and not kept: bulk-validate the Transcript route's words
+
+A `cProfile` of `/transcripts/{sid}` on a real 12,000-word session put 43 of 77 ms in pydantic's per-object `__init__` (12,386 `WordTimingResponse` objects). Validating each segment's words in one `TypeAdapter(list[...])` call returned **byte-identical responses on all 10 sessions**, and a first A/B read 300 → 266 ms. The interleaved repeat did not hold: **before 278 / 283 ms, after 271 / 269 ms over the ten sessions, about 1 ms a session, which is noise.** The profiler had inflated the cost of many tiny Python calls. Reverted. The route is 19–55 ms for 370–730 KB bodies, so the Transcript lens's 75 ms fetch is mostly the transfer and the parse in the page, not this. **A profile names a suspect; only a wall-clock A/B, interleaved and repeated, is a result.**
+
 ### Declined with the number
 
 | Idea | Why |

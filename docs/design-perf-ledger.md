@@ -89,20 +89,27 @@ Three independent Fable reviewers (evidence, measurability, parsimony) checked e
 
 **Switching and cold start belong to the Workspace work** (many projects open, switching instant, post-TestFlight; `docs/design-workspace.md`), whose direction is retained views. The signposts decide how much of each wait is sidecar spawn, web view load or data fetch, which tells that work where retained views would help before the architecture is chosen.
 
-## Candidate queue: engineering (layer research, pending its own review)
+## Engineering candidates, after review
 
-Reported, not yet confirmed here. Order is provisional.
+Fifteen candidates, three Fable reviewers each (evidence, measurability, parsimony), then a completeness critic. Most were **partly** right: the idea held and the numbers or the cause did not. Done items are in the Done table.
 
-| # | Candidate | Layer | First measurement |
-|---|---|---|---|
-| 1 | ~~Lazy `inflect`~~ | sidecar | **done** |
-| 2 | ~~Gzip level on loopback~~ | server | **done**: −8 to −11 ms on `/quotes` and `/tapestry` |
-| 3 | `useQuotesStore()` whole-store subscribers → selectors (the sidebar-store defect class) | page | `filterQuotes` calls per tag-add and per keystroke |
-| 4 | Sidebar `reloadData` on every pipeline stdout line | Mac | reloads per second during a replayed stream |
-| 5 | Export HTML: batch the per-quote moderator lookup | server | wall time at n=0/500/1500/3000, then `py-spy` |
-| 6 | Lazy codebook YAML at import (97 ms) | sidecar | `-X importtime` |
-| 7 | Scene-colour decode off the run's critical path | pipeline | `elapsed_ms` and bytes materialised, local and dataless |
-| 8 | Per-id focus selector so `j`/`k` doesn't re-render every card | page | renders per keypress |
+| Candidate | Verdict | What the reviewers changed |
+|---|---|---|
+| Codebook YAML via libyaml | **done** | 3 of 3 yes |
+| Gzip level | **done** | smaller than first read: 8–11 ms on two routes |
+| **Export HTML moderator lookup (S3)** | confirmed 3 of 3 | exactly 6 statements per quote. **Simplest fix is to skip the loop while the moderator-question pill is parked**, since the only reader is gated off (`QuoteGroup.tsx`). That needs **an owner call**: the flag's own notes say the embedded data is kept so the pill can return. Otherwise batch per session. Target: statements independent of quote count; n=3,000 from about 8.4 s to about 3.7 s |
+| Scene-colour decode (PT2) | partly | one line: run it in a thread (`readable_chain.py`), which ends the event-loop stall and lets platform-transcript sessions decode concurrently. The wait is bounded at 30 min a file, not unbounded; measured about 4 s per hour of video today, not 1.5 |
+| Whole-store `useQuotesStore()` subscribers (spa-2) | partly | **smaller than claimed**: six of the eight sites are already inside a `useMemo` keyed on stable state. Try `memo(QuoteCard)` with stable callbacks first, measured with the mutate profile; one site (`QuotesArrival.tsx`) was missing from the list |
+| Per-id focus selector (spa-1) | confirmed 2 of 3 | `AppLayout.tsx:302` also subscribes to focus state and re-renders the chrome per keypress; use the `useSidebarSelector` pattern; target one frame per `j`/`k` at 300 quotes |
+| Sidebar `reloadData` per stdout line (C1) | partly | **premise stale**: progress moved to the 1 Hz events poll in April, so stdout no longer drives it. Count first; if anything matters, only a `✓` stage line needs to publish |
+| Transcript rows / `content-visibility` (spa-3) | partly | not one decision; the baseline splits mount from per-row cost. The harness had no transcript case |
+| Whisper alongside a mixed folder's hand-over (PT1) | partly | only when a platform session orders first; one `gather` before the Whisper loop |
+| OCR skip on identical frames (MC-2) | partly | already measured on 13 Oct 2026 (31–37% skipped, 95–96% of lines kept); the gate was consciously assigned elsewhere |
+| Dashboard / Sessions queries (S2) | measure-first | SQL is at most 4.4 ms a request; the 110 ms I recorded came from one quadratic `any()` scan (`dashboard.py:332`) on a synthetic 300-quotes-per-session shape. Probably not real |
+| Project import and migrations deferral (SS-3) | **no** | `import_project` is 0.1–0.2 s on small studies, 0.55–0.9 s on a 242-quote study; migrations 4–150 ms. Nothing to defer |
+| VideoToolbox decode (MC-3) | **no** | refuted by two reviewers |
+
+**Gaps the critic found** (moments nobody had covered; none measured yet): correcting a transcript (every write re-reads the whole transcript and rebuilds every word span, 14,228 of them on one real session); typing inside an inline quote edit; the app open all day (three page polls, the Mac's own polls, a sidecar per project; idle CPU and energy impact never measured); following the recording during playback (class toggles on every word span of the paragraph, about four times a second); expanding a Sessions-grid row; memory over a long session; toggling a codebook framework off and on; dropping a folder of recordings to the row becoming selectable.
 
 ## Instruments
 
@@ -123,6 +130,6 @@ Gate on **counts and sizes, not milliseconds**: shared CI runners cannot hold 2%
 ## Not yet done
 
 - Baselines for the ten reviewed moments above; none is measured yet.
-- The engineering candidates have not had their three-lens review (in progress).
+- Baselines for the critic's eight gaps, in order of how often they happen: transcript correction, inline edit echo, idle CPU and energy, playback follow.
 - A launch-to-ready number (the full chain from double-click); `serve-ready` and `project-select` are measured above, and `first-card-painted` now begins on a route into `/report/quotes`.
 - Measured experiments on our own overhead around LLM calls (batching, concurrency, resume cache hits); none run yet.

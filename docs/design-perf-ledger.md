@@ -69,6 +69,24 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 - **`serve` ready to `/api/health`: 4.6–4.8 s** on the dev venv, including the startup import of this study. Not the signed sidecar.
 - The first draft of the wire-size column read the decompressed body; it now counts raw bytes. The timings were never affected.
 
+## At real study sizes the server is not the wait (measured 4 Nov 2026)
+
+Server time to first byte on copies of two real studies (30 and 35 quotes, 3 and 5 sessions; `Server-Timing`, gzip on, median of ten after the first). Every read is a few milliseconds:
+
+| Route | project-ikea | IKEA with uxfriends |
+|---|---|---|
+| `/quotes` | 9.0 ms, 36 queries, 35 KB | 9.6 ms, 36 queries, 59 KB |
+| `/sessions` | 8.0 ms | 8.3 ms |
+| `/dashboard` | 7.4 ms | 10.9 ms |
+| `/tapestry` | 7.7 ms | 8.4 ms |
+| `/codebook` | 6.1 ms | 7.9 ms |
+| `/signals/snapshot` | 5.0 ms | 2.6 ms |
+| HTML export | 122 ms, 327 queries, 2.4 MB | 139 ms, 385 queries, 2.5 MB |
+
+So **a lens switch on a real study spends under 10 ms on the server**; whatever wait remains is the lens chunk loading and the page rendering, which is what the page baselines measure. This closes the server-side lens-switch candidates (S2, the Dashboard query cost, and the gzip work above) as not the lever at this size. The 1,500-quote numbers earlier in this file are the scale case: they matter for a study ten times the size of any real one here, not for the daily moment.
+
+The first `/quotes` request of a serve's life is slower (about 90 ms against 9): the handler itself is 25 ms cold, and the rest is the framework's first use. Declined, with that number.
+
 ## Where a serve start goes (measured 4 Nov 2026, dev venv, `BRISTLENOSE_STARTUP_TRACE=1`)
 
 Median of five, a synthetic 1,500-quote study (large) beside copies of two real studies (30 and 35 quotes, 3 and 5 sessions; copies, never served in place). Server-side only: the Mac's own steps (spawn call, window, page load) are in `design-client-performance.md`.

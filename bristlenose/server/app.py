@@ -1365,7 +1365,12 @@ def _make_run_completed_handler(
         if overlay is not None:
             overlay.update(importing=ev.run_id)
         first_analysis = getattr(app.state, "progress", None) is not None
-        project_id = await asyncio.to_thread(_reimport_sync, first_analysis)
+        # The import rebuilds the quotes: let a re-apply of the run before this one bank what
+        # answered and stop first, or its commit fails after every batch was paid for (N92).
+        from bristlenose.server.autocode import reapplies_paused_for_import
+
+        async with reapplies_paused_for_import():
+            project_id = await asyncio.to_thread(_reimport_sync, first_analysis)
         if overlay is not None:
             overlay.update(importing=None, failed_run_id=None if project_id is not None else ev.run_id)
         if project_id is None:

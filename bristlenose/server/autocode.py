@@ -14,6 +14,7 @@ Public API::
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import difflib
 import logging
 import math
@@ -739,6 +740,42 @@ def delete_jobs(db: SASession, job_ids: list[int]) -> None:
 _REAPPLY_IN_FLIGHT: dict[tuple[int, str], Any] = {}
 
 
+# A run's import rebuilds the quote rows, and a re-apply writes its proposals in one commit at
+# the end against the ids it read. One still coding when the next run's import landed lost the
+# commit to a foreign-key failure after every batch was paid for (N92). So an import asks the
+# re-applies to stop at their next batch (what answered is kept, the rest stays owed: the Stop
+# and switch-off path) and waits for them, for a bounded time, before it starts. A serve holds
+# one project, so the pause is not keyed by project.
+_IMPORTS_RUNNING = 0
+#: The longest an import waits for the batches already out to answer. A re-apply that has not
+#: ended by then (a hung call) is left to the old outcome: rolled back, and coded again later.
+IMPORT_WAIT_S = 60.0
+
+
+@contextlib.asynccontextmanager
+async def reapplies_paused_for_import() -> Any:
+    """Hold every re-apply at its next batch while a run's import rewrites the quotes.
+
+    Waits, up to ``IMPORT_WAIT_S``, for the live ones to bank what answered and end, so the
+    import never meets a commit in flight. A re-apply that starts meanwhile finds the pause at its
+    first batch and sends nothing. The registry's tasks are never cancelled here.
+    """
+    global _IMPORTS_RUNNING
+    _IMPORTS_RUNNING += 1
+    try:
+        live = [t for t in list(_REAPPLY_IN_FLIGHT.values()) if not t.done()]
+        if live:
+            _, still = await asyncio.wait(live, timeout=IMPORT_WAIT_S)
+            if still:
+                logger.warning(
+                    "Import started with %d re-apply(s) still coding after %.0f s; "
+                    "their pass may be rolled back and coded again", len(still), IMPORT_WAIT_S,
+                )
+        yield
+    finally:
+        _IMPORTS_RUNNING -= 1
+
+
 def live_reapply(project_id: int, framework_id: str) -> Any | None:
     """The re-apply task still coding this framework, or None."""
     task = _REAPPLY_IN_FLIGHT.get((project_id, framework_id))
@@ -1052,6 +1089,8 @@ async def reapply_to_new_quotes(
             N93: the catch-up read only the Stop, and went on paying after a
             switch-off). An uninstall ends it too: the job is gone, or the codebook
             no longer linked, and every batch after it was paid for and rolled back."""
+            if _IMPORTS_RUNNING:
+                return True  # a run's import is rewriting the quotes (N92)
             check = db_factory()
             try:
                 j = check.get(AutoCodeJob, job_id)

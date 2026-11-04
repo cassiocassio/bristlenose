@@ -129,6 +129,19 @@ grid in `SettingsModal.tsx` (data, one key).
   ([#1370](https://github.com/mozilla-ai/any-llm/issues/1370), open,
   unassigned, with a written plan).
 
+> **Update, 4 Nov 2026.** #1370 landed upstream as PR #1593 and shipped in
+> **any-llm 1.44.0**, the first release that allows `anthropic>=1.2,<2`
+> (1.27.1 to 1.43.0 cap `anthropic<1`). The extra's pin moved from `==1.27.0`
+> to `==1.44.0` (`d6b37874f`). Run against both versions with the same results:
+> Mistral, DeepSeek and OpenRouter pass `check-providers-live.py --anyllm`
+> (preflight, clusters, themes); Claude, ChatGPT and Gemini pass the
+> `acompletion` + `json_schema` call shape through any-llm; `pip check` clean.
+> The text below that says "1.27.0" records the 23 Oct decision and is left as
+> history. Known gap upstream, not ours: with `openai` 2.18 (the lowest it
+> allows) and `anthropic` 1.x, `meta`/`deepseek` accept no `http_client` (`httpx`
+> is rejected by the Anthropic SDK, `httpx2` by `AsyncOpenAI`); reported to the
+> maintainers on #1370.
+
 **Decision proposed (Fable's review): build now on an exact pin,
 `any-llm-sdk[mistral,groq]==1.27.0`, and decouple from #1370.** 1.27.0 is
 viable: its Anthropic SDK import is confined to the Anthropic provider we never

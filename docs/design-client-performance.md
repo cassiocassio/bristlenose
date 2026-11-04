@@ -25,16 +25,20 @@ Window size updates per second during a 10 s scripted drag (60 is the display):
 
 The web view, from the system-wide trace of the same drag (WebContent main thread): 4,145 ms busy, 2,337 ms of it `ResizeObserver` callbacks and the React re-render they trigger, layout only 666 ms. `useSidebarStore()` handed every subscriber the whole store and `SidebarLayout` writes the layout width into it on every step, so the whole report re-rendered per pixel, hidden modals and every quote card included. Fixed by `useSidebarSelector` (`a3a2c7b00`): WebContent main thread 4,145 → 1,705 ms, `ResizeObserver` JS 2,337 → 24 ms. Page-side (Chromium, 75-step sweep, Quotes): script 1,496 → 146 ms, long tasks 3 → 0; sessions, dashboard, transcript and signals also fell 49–93%.
 
+## Click latency (not resize)
+
+`SidebarDeselectMonitor` ran on every left mouse-down in the window and walked the whole view tree to find the sidebar's table before it looked at where the click was. It now hit-tests first and walks up from the view that was hit, with the same rule as before (a click only counts if it landed on the table or inside it). Forty scripted clicks in the report area (`BN_ACTION=click profile-resize.sh`, Debug, two runs each): the monitor's time 649 / 666 ms → 8 / 9 ms (about 16 ms → 0.2 ms a click), main thread busy 1,274 / 1,272 → 725 / 708 ms. The behaviour (deselecting on a click below the rows, not on a button drawn over the list) is unchanged by construction and has no unit test, because the coordinator is private.
+
 ## Considered and left, with the reason
 
 - **Shared rAF-coalescing `ResizeObserver` helper across 16 files.** The callback bodies total ~26 ms; the loop-error warning is noise, not cost. Revisit only if a profile names them.
 - **`React.memo` on `QuoteCard`, `contain: content`, `will-change`, virtualising the grid.** Each guards or targets work the selector change removed, or layout and paint (1.1 s combined, unchanged).
 - **Toolbar layout (`NSToolbarView layout`, ~1.6 s of a Debug trace).** AppKit laying out SwiftUI toolbar items; the window already updates at the display rate.
-- **Opaque `WKWebView` (currently `drawsBackground = false`).** No trace points at compositing. An A/B would be one environment variable in a throwaway worktree; do it only if the update rate falls short of 60 in Release.
+- **Opaque `WKWebView` (currently `drawsBackground = false`).** Measured, no effect. A throwaway build with an environment toggle, scripted drag, two runs per arm: window updates 60.0 / 59.3 per second transparent against 59.8 / 59.2 opaque, main thread busy 6.55–6.61 s against 6.60–6.66 s, WebKit's share the same. The window was already at the display rate, so there was no gap for compositing to explain.
+- **Other native ideas from the research, not pursued.** `NSHostingView.layout` and the AttributeGraph (about 1.2 s each in a Debug trace of 6.5 s busy) are the remaining shell cost; splitting `ContentView` into leaf views or setting `sizingOptions` would chase them, but the window is at 60 updates a second, so there is no felt gap to close in Debug. Revisit if a Release build falls short. Automatic row heights for the sidebar outline: not applicable (`rowSizeStyle = .custom`, so the setting is inert).
 
 ## Open
 
-- **Click latency, not resize.** `SidebarDeselectMonitor` (`ContentView.swift`) walks the whole view hierarchy to find the sidebar table on every left mouse-down: 190 ms in a Debug trace. A hit-test first, then an ancestor lookup, would replace it. Untested because the coordinator is private.
 - **A Release measurement.** The harness needs `BRISTLENOSE_DEV_EXTERNAL_PORT`, which only Debug builds read. A Release number needs the bundled sidecar or a flag.
 - **Sidebar toggle and lens switch** in the browser still show a few long tasks (5 and 2 in the interaction profile); not investigated.
 - `ActivityStore.test.ts` fails in isolation (`a write that fails after one that worked...`), in files this work did not touch.

@@ -23,6 +23,8 @@ KEY_FRAMES = [
     ("NSHostingView.layout", "@objc NSHostingView.layout()"),
     ("AttributeGraph update", "AG::Graph::UpdateStack::update()"),
     ("toolbar inset sync", "BridgeHandler.syncToolbarInset()"),
+    ("click monitor (handle)", "SidebarDeselectMonitor.Coordinator.handle(_:)"),
+    ("click monitor tree walk", "~sidebarTableView"),
     ("WebKit frames (any)", "~WebKit"),
     ("WKWebView frames", "~WKWebView"),
 ]

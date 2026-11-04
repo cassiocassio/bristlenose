@@ -2,7 +2,8 @@
 # Records a Time Profiler trace of a real, scripted window drag and summarises it.
 #
 #   profile-resize.sh <path/to/Bristlenose.app> <label> [seconds=10] [outdir=/tmp/bn-perf]
-#   BN_STUDY="ikea research" BN_LENS=Quotes   which sidebar row and lens to show (substring)
+#   BN_ACTION=click   40 real clicks in the report area instead of a drag (what a click costs the main thread)
+#   BN_STUDY=Talismanic BN_LENS=Quotes BN_APP_ENV=NAME=value   which sidebar row and lens to show (substring)
 #   the study must be one with a report; the script stops if no web area renders
 #
 # Launches a NEW copy of the app against an already-running `bristlenose serve --dev` on
@@ -19,7 +20,7 @@ HERE=$(cd "$(dirname "$0")" && pwd); PORT=${BRISTLENOSE_DEV_EXTERNAL_PORT:-8484}
 mkdir -p "$OUT"; BIN="$OUT/bin"; mkdir -p "$BIN"
 die() { echo "profile-resize: $*" >&2; exit 1; }
 curl -fsS -o /dev/null "http://127.0.0.1:$PORT/report/" || die "no serve on :$PORT (start: bristlenose serve --dev <project>)"
-for t in resize-drag select-study; do
+for t in resize-drag select-study click-storm; do
   [ -x "$BIN/$t" ] && [ "$BIN/$t" -nt "$HERE/$t.swift" ] || swiftc -O "$HERE/$t.swift" -o "$BIN/$t" || die "could not build $t"
 done
 STUDY=${BN_STUDY:-Talismanic}; LENS=${BN_LENS:-Quotes}
@@ -27,7 +28,9 @@ APP=$(cd "$APP" 2>/dev/null && pwd -P) || die "no such app"   # /tmp is /private
 EXE="$APP/Contents/MacOS/Bristlenose"; [ -x "$EXE" ] || die "no executable at $EXE"
 [ -z "$(pgrep -f "$EXE")" ] || die "a copy of $APP is already running"
 
-open -n --env BRISTLENOSE_DEV_EXTERNAL_PORT="$PORT" "$APP" || die "open failed"
+# BN_APP_ENV="NAME=value": one more variable for the copy (an experiment arm)
+EXTRA=(); [ -n "${BN_APP_ENV:-}" ] && EXTRA=(--env "$BN_APP_ENV")
+open -n --env BRISTLENOSE_DEV_EXTERNAL_PORT="$PORT" ${EXTRA[@]+"${EXTRA[@]}"} "$APP" || die "open failed"
 PID=""; for _ in $(seq 1 60); do
   PID=$(pgrep -f "$EXE" | head -1); [ -n "$PID" ] && break; sleep 0.5; done
 [ -n "$PID" ] || die "app did not start"
@@ -43,7 +46,8 @@ rm -rf "$OUT/$LABEL.trace"
 xcrun xctrace record --attach "$PID" --template 'Time Profiler' --time-limit "$((SECS + 4))s" \
   --output "$OUT/$LABEL.trace" --no-prompt > "$OUT/$LABEL.xctrace.log" 2>&1 &
 XT=$!; sleep 2
-DRAG=$("$BIN/resize-drag" "$PID" "$SECS" 900 1500 120)
+if [ "${BN_ACTION:-resize}" = click ]; then DRAG=$("$BIN/click-storm" "$PID" 40 150)
+else DRAG=$("$BIN/resize-drag" "$PID" "$SECS" 900 1500 120); fi
 echo "$LABEL drag: $DRAG"
 wait "$XT"
 pkill -f "$EXE" 2>/dev/null; trap - EXIT

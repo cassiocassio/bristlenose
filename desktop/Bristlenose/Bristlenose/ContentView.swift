@@ -54,34 +54,34 @@ private struct SidebarDeselectMonitor: NSViewRepresentable {
             guard let window = event.window,
                   // Our window, or none of our business — see the type doc.
                   window === host?.window,
-                  let tableView = Self.sidebarTableView(in: window) else { return }
+                  let content = window.contentView,
+                  // What the click landed on. Asked first and answered by hit-testing, which is
+                  // cheap: nearly every click is on the report, and finding the sidebar table by
+                  // walking the whole window's view tree first cost ~190 ms a click (Debug trace,
+                  // 4 Nov 2026). A click on something drawn over the table (on macOS 26 the list
+                  // slides under the sidebar footer, so Send Feedback is inside the table's bounds,
+                  // below the last row) is not on the table, so it never clears the selection.
+                  let hit = content.hitTest(
+                      content.superview?.convert(event.locationInWindow, from: nil)
+                          ?? event.locationInWindow),
+                  let tableView = Self.enclosingTableView(of: hit) else { return }
             let point = tableView.convert(event.locationInWindow, from: nil)
             // Only act when click is inside the table view but below all rows.
             guard tableView.bounds.contains(point) else { return }
-            // …and lands on the table itself, not on something drawn over it.
-            // On macOS 26 the list slides under the sidebar footer, so a click
-            // on its Send Feedback button is inside the table's bounds, below
-            // the last row — and would otherwise clear the selection.
-            if let content = window.contentView,
-               let hit = content.hitTest(
-                   content.superview?.convert(event.locationInWindow, from: nil)
-                       ?? event.locationInWindow),
-               hit !== tableView, !hit.isDescendant(of: tableView) {
-                return
-            }
             if tableView.row(at: point) < 0 {
                 DispatchQueue.main.async { self.deselect() }
             }
         }
 
-        /// Finds the sidebar NSTableView — the first one in the window hierarchy.
-        /// The detail area is a WKWebView; it contains no NSTableViews.
-        private static func sidebarTableView(in window: NSWindow) -> NSTableView? {
-            func find(in view: NSView) -> NSTableView? {
-                if let tv = view as? NSTableView { return tv }
-                return view.subviews.lazy.compactMap { find(in: $0) }.first
+        /// The table the view is, or is inside. The sidebar's is the only one in this window; the
+        /// detail area is a WKWebView, which contains none.
+        private static func enclosingTableView(of view: NSView) -> NSTableView? {
+            var current: NSView? = view
+            while let v = current {
+                if let table = v as? NSTableView { return table }
+                current = v.superview
             }
-            return window.contentView.flatMap { find(in: $0) }
+            return nil
         }
 
         deinit { if let m = monitor { NSEvent.removeMonitor(m) } }

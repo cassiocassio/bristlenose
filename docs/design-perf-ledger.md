@@ -17,14 +17,15 @@ Updated 4 Nov 2026. **Measured** is a number from a repeatable run; **estimate**
 | gzip level 1 | `/quotes`, `/tapestry` | −8 to −11 ms at 1,500 quotes; **about 0 at real size** (35–59 KB bodies) | measured (compression timed directly) | `b70c0787e` |
 | Scene-colour decode in a thread | first analysis, platform-transcript sessions | removes an event-loop stall of about 4 s per hour of video | estimate (the stall itself unmeasured) | `4b79de03a` |
 | Window resize, sidebar hold, selector fix, click monitor | resize, click | 10 → 59 window updates/s; WebContent main thread 4,145 → 1,705 ms | measured (earlier work, `design-client-performance.md`) | see that doc |
+| Sessions grid chunk preloaded on idle and rendered directly (`pages/SessionsTab.tsx`) | first click on Sessions | **first visit 361 → 86 / 91 ms (−75%, two runs)**; the gap before its read starts 280 → 10 ms; revisit and every other lens unchanged within noise; bundle 211.7 kB of 222 | measured, Chromium, production bundle, real-size study (242 quotes) | this commit |
 | Instruments | all | `Server-Timing`, startup stamps (`BRISTLENOSE_STARTUP_TRACE`), `perf-route-baseline.py`, Mac signposts, page marks | n/a | `041df1eb0`, `f1963e516`, `7cba2417e`, `f2c49aa66`, `5cf46895f` |
 
 ### Outstanding, ranked by frequency × felt, with what is left to gain
 
 | Candidate | Moment | Frequency | Estimated gain still available | Confidence | State |
 |---|---|---|---|---|---|
-| Lens chunk preload / last-answer cache | click a lens | many a day | server is under 10 ms at real size, so the wait is chunk + render; gain **unmeasured**, target revisit ≤ 100 ms | n/a | baselines running |
-| Search: 150 ms debounce, 8-way fan-out | type in search | many a day | up to 150 ms of echo-to-results if debounce goes to 0 and render is cheap (**estimate**) | medium | baselines running |
+| Lens revisit: Transcript p90 165–190, Quotes p90 150–160 against a ≤ 100 target | click Transcript or Quotes | many a day | render-bound at scale (Quotes 280 ms of render at 1,500 quotes); `QuoteCard` memoisation with stable props is the lever, gain **unmeasured** | medium | measure with `BN_COUNT=1 cpu-profile.cjs` |
+| Search at a typical typing pace: the first letter's commit re-renders every card | type in search at 1,500 quotes | many a day | echo 170 ms → under 16 ms if a not-yet-active query re-renders nothing (**estimate**, same lever as above) | medium | baselines done; fix pending |
 | Defer `import mcp` | every app launch | daily | **275–280 ms** per start, about 13% of sidecar boot (measured import; deferral untested) | high on the number, owner call on the contract | awaiting owner |
 | Whole-store `useQuotesStore()` subscribers → selectors; per-id focus | tag, star, `j`/`k` | many a day | **unmeasured**; the sidebar fix was −58% WebContent main thread. Smaller than first claimed (six of eight sites already memoised) | low | needs mutate / keynav baselines |
 | Transcript write re-reads and rebuilds every word span | correct a transcript | many a day for a corrector | **unmeasured**: 14,228 spans on one real session | n/a | gap found by the critic |
@@ -114,6 +115,30 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 - **HTML export: 3.5 s, 9,346 SQL statements (about 6 per quote), 0.49 s inside SQL.** Most of the rest is Python overhead per statement, not the database. Reported candidate: batch the moderator-question lookup.
 - **`serve` ready to `/api/health`: 4.6–4.8 s** on the dev venv, including the startup import of this study. Not the signed sidecar.
 - The first draft of the wire-size column read the decompressed body; it now counts raw bytes. The timings were never affected.
+
+## Lens switch and search: the page baselines (measured 4 Nov 2026)
+
+Production bundle, Chromium, headless Playwright against a copy of a real study (242 quotes, 10 sessions) and synthetic 500 and 1,500-quote studies. Each rep is a fresh page with a cold cache; pass 1 is the first visit, six more passes are revisits (n = 5 and 30 per run). `experiments/perf/moments.mjs`, `lens-requests.mjs`. Medians in ms; p50 repeats to 2–5% on revisits, p90 and first-visit values do not (n = 5).
+
+| Lens | first visit p50 | revisit p50 / p90 | revisit target ≤ 100 |
+|---|---|---|---|
+| Project | 90 | 54 / 62 | pass |
+| Sessions | **361 → 86–91** (this work) | 80 / 90 | pass |
+| Transcript | 172 | 133 / 190 | **fail** |
+| Quotes | 148 | 112 / 161 | **fail** |
+| Codebooks | 74 | 59 / 67 | pass |
+| Signals | 68 | 52 / 55 | pass |
+| Discussion (landing) | n/a | 19 / 21 | pass |
+
+- **Chunks never dominate**: 8–40 ms on a first visit over loopback. "Preload lens chunks" would save at most that.
+- **The wait is the fetch, then the render.** At 1,500 quotes a Quotes revisit is 515 ms (fetch 417, render 72; in WebKit render 678). The server itself answers in under 10 ms at real size, so the fetch figure is mostly the queue behind duplicate requests.
+- **Sessions first visit** was 360 ms because of **React 19's Suspense fallback throttle**: when a lazy component suspends, React commits the empty fallback and then holds the content back until 300 ms after that commit (`FALLBACK_THROTTLE_MS`). A 10 ms chunk cost 280 ms with the main thread idle. A patched react-dom with the throttle at 0 started the read at 46 ms instead of 309. A plain `import()` prefetch does not help, because a fresh `lazy()` always suspends on its first render; the loaded component itself must be rendered. Done for Sessions only, because only Sessions' chunk (a dependency chain) is slower than React's own commit of the fallback.
+- **Search** (the browser field; the Mac's is native): echo 10 ms at one key every 700 ms, fine. **At a typical typing pace (a key every 170 ms, just over the 150 ms debounce) at 1,500 quotes the second key's echo is 170 ms**: the first letter's debounced commit lands as the second key arrives and re-renders all 1,500 cards (22k component renders per commit), blocking the field; 44 ms at 500 quotes, none at 242. Most of the cost is re-rendering and re-highlighting cards, not filtering (`filterQuotes` is about 4% of the React work).
+- **A Quotes open fires 15 requests**: `/quotes` ×4, `/codebook` ×4, `/info` ×2; a Codebooks open fires 12. Lens chunks are also requested under two URL prefixes (`/assets/` and `/static/assets/`), so each is downloaded and evaluated twice (about 10 ms each, local).
+
+### Tried and not kept: share identical in-flight reads (`apiGet`)
+
+Identical GETs in flight together shared one request, with a write epoch (a read begun after a write never joins one begun before it), a one-second window and a copy per caller; 12 tests, four mutation proofs, full suite green. Quotes open went from `/quotes` ×4 to ×2. But: Codebooks revisit 60 → 42 ms (−30%); **Quotes revisit 110 → 107 ms at 242 quotes (noise) and 515 → 446 ms at 1,500 (−13%)**, because the fetch halves (88 → 44 ms) and the saved time reappears as render (14 → 54 ms) now that every consumer receives the data at once. Not worth a write epoch, a window and a copy rule for 18 ms on one lens. Reverted before commit. What it shows: at real size the Quotes lens is **render-bound**, so the lever is card re-render cost (`QuoteCard` memoisation with stable props), not the request count.
 
 ## At real study sizes the server is not the wait (measured 4 Nov 2026)
 

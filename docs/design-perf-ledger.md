@@ -31,7 +31,7 @@ Updated 4 Nov 2026 (end of day). **Measured** is a number from a repeatable run;
 | Search at a typical typing pace: the first letter's commit re-renders every card | type in search at 1,500 quotes | many a day | echo 170 ms → under 16 ms if a not-yet-active query re-renders nothing (**estimate**, same lever as above) | medium | baselines done; fix pending |
 | Defer `import mcp` | every app launch | daily | **275–280 ms** per start, about 13% of sidecar boot (measured import; deferral untested) | high on the number, owner call on the contract | awaiting owner |
 | Whole-store `useQuotesStore()` subscribers → selectors; per-id focus | tag, star, `j`/`k` | many a day | **unmeasured**; the sidebar fix was −58% WebContent main thread. Smaller than first claimed (six of eight sites already memoised) | low | needs mutate / keynav baselines |
-| Transcript write re-reads and rebuilds every word span | correct a transcript | many a day for a corrector | **unmeasured**: 14,228 spans on one real session | n/a | gap found by the critic |
+
 | Startup importer skip-when-unchanged | study start | daily | about 70 ms at real size; about 1 s at 1,500 quotes (measured importer cost, fast-path untested) | medium | declined at real size |
 | Remaining fixed start: Python + imports 740 ms, `create_app` tail 300 ms, lifespan 130 ms | every launch | daily | diffuse, no single item over 35 ms except `mcp`; **about 0** from further import work | high | declined |
 | Idle CPU / energy: the Mac app's own polls (agent pulse 1.5 s, screens 3 s, run 1 s) and the WebContent process | app open all day | continuous | **unmeasured** (the web page and server half is measured and passes, see below) | n/a | for the resize session: `idle.mjs` shows the method |
@@ -49,6 +49,10 @@ A `cProfile` of `/transcripts/{sid}` on a real 12,000-word session put 43 of 77 
 ### Idle: an open, untouched report (measured 4 Nov 2026, `experiments/perf/idle.mjs`)
 
 Quotes lens open on a real-size study, nothing touched, 90 s, headless Chromium and the serve: **40 requests a minute** (`/condition` and `/last-run`, every 3 s each), **page main thread 0.08% of a core** (70 ms of task time, 19 ms script), **server 0.49% of a core** (440 ms, about 7 ms a request). Bar set beforehand: combined CPU ≤ 1% and ≤ 1 request a second per window; passed (0.57% and 0.67 a second). Pausing the polls while the window is hidden would save about 0.5% of a core while hidden: declined. Not covered: the Mac app's own polls and its WebContent process, and powermetrics energy impact (needs sudo).
+
+### A transcript write (measured 4 Nov 2026, `experiments/perf/transcript-reread.mjs`)
+
+The critic's worry was that every speaker pick, split or join re-reads the transcript and rebuilds every word span. Firing the event the page listens for (`bn:speakers-written`) on three real transcripts: **the word spans are kept, not replaced; one DOM mutation record per re-read; 8 ms of script on 3,183 words, 18 ms on 14,254, 25 ms on 12,049; style and layout 0**. Nothing to fix. Not covered: the server's read (19–55 ms per session, measured above) and a real UI-driven write.
 
 ### Declined with the number
 

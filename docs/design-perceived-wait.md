@@ -26,7 +26,7 @@ None of these needs the design to change. They need the *reasons* corrected, and
 **What Bristlenose already does well.** Sessions appear as they become readable. One shimmer says "working." The status line carries stage, "N of M", "K readable" and "~N min left". Many of the cues a survey would suggest are shipped. The honest gaps are narrower than the brief assumed.
 
 **The gaps the audit found** (all audit, none observed live):
-1. The "~N min left" figure is only rewritten at stage boundaries. During transcription, the longest stage, it may sit at the opening figure for the whole stage while the count moves. That is a stale number presented as live.
+1. The "~N min left" figure is only rewritten at stage boundaries (confirmed on a recorded run, section 4.4; on that run it was also 2 to 5 times too long). During transcription, the longest stage, it sits at the opening figure for the whole stage while the count moves. That is a stale number presented as live.
 2. The Quotes lens fills session by session and says nothing about being partial. A researcher reading quotes from 3 of 8 sessions has no sign that more are coming. That is a research-validity problem as much as a feeling.
 3. Nothing marks "this run has finished and everything is now safe to read" for someone who has been reading a progressive report. The repo already lists this as a known open race.
 4. The worst wait on record (a 30-minute truncated quote call in the FOSSDA run) looked identical to a 7-second call.
@@ -36,6 +36,7 @@ None of these needs the design to change. They need the *reasons* corrected, and
 
 | # | Cue | Wait it targets | Evidence for the mechanism | Size |
 |---|---|---|---|---|
+| A | **Tell the researcher when the run is done, or failed, when they have left the app** (owner suggestion, 4 Nov); not a push of "about N min" | Run, minutes to an hour, walk-away | None found for notifications themselves; the argument is logical (the one cue that works at any length) | Recorded as post-TestFlight direction; the failure case is new |
 | 1 | Mark the partial report as partial, and say when it is complete | Run, minutes to an hour | Medium (lab, seconds) plus a validity argument that needs no psychology | Small: a header line, ~3 strings |
 | 2 | Make "~N min left" honest between stage boundaries (re-derive it as sessions complete, or show its age) | Run, minutes to an hour | Weak and contested; Apple HIG is the strongest statement | Medium; first confirm it is really frozen |
 | 3 | Lens click: keep the heading while the chunk loads; hold back "Loading…" until it has lasted about 200 ms | Lens click, under 1 s | Practice only, no peer-reviewed measure | Small, but measure first; may need nothing |
@@ -220,9 +221,59 @@ Other facts that shape any cue:
 - A **background run-complete notification** (banner, one informational Dock bounce) is already recorded as direction, post-TestFlight (`docs/macos-ux-checklist.md`). I do not re-propose it; there is no notification code in the Mac app today.
 - The earlier decision "no new in-progress messages" (`docs/design-progressive-lenses.md`, section 2) was relaxed once, for the readable count. Candidate 5 asks to relax it again.
 
+### 4.4 Observed: what the estimate does during a run (4 Nov 2026)
+
+Method: no live Mac session. I read the event stream of a recorded run (`pipeline-events.jsonl`, counts and timings only, no participant text) and the Swift code that turns it into the subtitle. The run is a 3-session synthetic trial, 98 s end to end. The table carries each estimate forward until the next one arrives, which is what the Mac does, and compares it with the true time left once the run's end is known.
+
+| Elapsed | Stage | Figure the Mac holds | True time left | Held figure ÷ true |
+|---|---|---|---|---|
+| 0 s | start | 332 s ("~6 min left") | 98 s | 3.4 |
+| 13 s | transcribe, 2 of 3 | 332 s, unchanged | 85 s | 3.9 |
+| 19 s | speakers entered | 216 s | 79 s | 2.7 |
+| 33 s | quotes entered | 170 s | 65 s | 2.6 |
+| 54 s | quotes, 2 of 3 | 170 s, unchanged | 44 s | 3.8 |
+| 66 s | quotes done | 70 s | 32 s | 2.2 |
+| 98 s | render | 57 s, still shown | 0 | n/a |
+
+What this shows:
+- **Confirmed: within a stage the figure does not move.** Of the 24 progress events, every one that carries a session count (`sessions_complete`) has no estimate. The estimate arrives only at stage entry and stage end. The Mac keeps the last one and never subtracts elapsed time. In the quotes stage the figure sat at 170 s for 33 s while the true remainder fell from 65 s to 32 s.
+- **New: on this run the level was wrong too, by a factor of 2 to 5, always too long.** The first figure promised about six minutes for a job that took 98 s. The estimator does not pad (`timing.py` uses the mean), so this is not deliberate padding; the cause is unknown. I did not inspect this machine's timing history, and one run says nothing about how large the error is in general.
+- **The run ended with a stale figure on screen.** The last estimate (57 s) stood through the render stage, which ended the run.
+
+Limits: one short run, 3 sessions, synthetic. It cannot show what an hour-long transcription looks like, only that the mechanism that would freeze it is real. The FOSSDA corpus has only start and end events, so no longer run was available. Nothing here was seen on a live Mac window.
+
+What to do with it: candidate 2's option (a) fits this directly, since a per-session event already exists on every line that lacks an estimate. The level error is a separate question for whoever owns `timing.py` and is worth checking on a second run before any design relies on the figure.
+
 ## 5. Candidate cues, ranked
 
 Ranking is frequency a day times how much it is felt, then cost. The run happens less often than a lens click but is felt far more, so it leads. Every good-enough number below is a proposal, **not measured**.
+
+### A. Tell them when it is done or has failed, wherever they are (owner suggestion, 4 Nov 2026)
+
+Ranked by value this belongs at or near the top; it is lettered because it came after the ranking and because it is already recorded as post-TestFlight, which is a scheduling fact and not a judgement of worth.
+
+- **Wait:** any run long enough to walk away from, which is most of them (about 37 minutes on FOSSDA).
+- **Mechanism:** the research cannot shorten a cloud-bound wait, but the one thing a tool can do at any length is release the person from watching it. Occupied time with their own work shortens perceived waits (Maister, essay; a crowd-sourced study found secondary tasks did, HCOMP 2021, abstract only), and a clear end closes the wait (peak-end evidence is weak here: 1.5). The strongest argument is not empirical: it is what the evidence gap in 1.6 leaves as the honest answer for a user who leaves.
+- **Evidence for notifications themselves:** none found. It is convention (Zoom and Teams transcripts, CI email, Deep Research reportedly).
+- **What is already decided** (`docs/design-desktop-nav-toolbar-rearrangement.md` section 10.4, post-TestFlight): when the app is not frontmost at completion, a Notification Centre banner with sound (click opens the project) plus one informational Dock bounce; no badge; opt-in or sensible default; only on genuine completion; gate on `NSApp.isActive`; VoiceOver announces completion. There is no notification code in the Mac app today.
+- **What the owner's suggestion adds, and my view of each part:**
+  - **"Done": yes.** A real, terminal state. It is news.
+  - **"Failed": yes, and it is the more valuable half.** A provider failure is fail-stop (a decided rule), so a researcher who left will otherwise come back to a stopped run and lost time. Reuse the shipped wording ("The analysis didn't finish"); it is not decided whether the banner also says why.
+  - **"Will be done in 10 minutes": not as a push, not yet.** Three reasons. The recorded run in 4.4 showed the held figure 2 to 5 times too long, so a pushed number would be a promise we cannot yet keep. A push cannot be corrected: the in-window figure can change, a banner already delivered cannot, and a second banner to fix the first is exactly the needy pattern. And it is not news: it restates the status line. If the estimate becomes trustworthy (candidate 2) it could be reconsidered as a single optional heads-up; I would not design it now.
+  - **Phone and Watch:** to my knowledge (unverified) a banner raised by a Mac app is not forwarded to an iPhone or Watch; the mirroring runs the other way. Reaching them would need either an iPhone app and a push service, which is a relay (parked until after launch) and sends a message through a third party, or a command the researcher supplies that runs on completion and pushes through a service they already use. The second is cheap, costs us no infrastructure, and puts the choice and the privacy decision with the researcher; it suits the CLI first. Either way the message must contain no participant data, and by default no project name either, since a lock screen is public.
+- **Honesty check:** fires only on terminal states that are true when sent. Plain words. No countdown, no progress, no cheer.
+- **Constraints:** a new feature under the beta rule and a permission prompt (one more first-run question; an opt-in keeps it from being needy). A new string or two in 21 locales. A banner must not fire for a run the researcher is watching.
+- **How we would know it helps:** this is the easiest cue to measure because it has a behavioural outcome. Take the gap between run end and the researcher's next return to the app, locally and never as telemetry, with the banner off then on; and in the diary question ask whether they left, and whether they came back too early or too late. Good enough, proposed and unmeasured: median return within 5 minutes of a finished run for researchers who left. The danger to look for is the opposite: banners for runs they were watching.
+
+#### A, the larger form: let the run outlive the app (owner's v2 idea, 4 Nov 2026)
+
+The owner's idea: close the Mac app, the analysis carries on in the background, and an alert on completion brings the researcher back to the UI. This is the strongest possible answer to "make leaving safe", because the researcher is then free to quit, close the lid on the app, and do other work, not merely to look away. Facts that decide its shape, all from the repo:
+
+- **Today leaving the app stops the run, by decision.** Since 20 Oct 2026 (R19) Quit sends the run a stop signal and a hosted run stops itself within 0.5 s of the app going; "Analyse" then resumes from the cache (`desktop/CLAUDE.md`, `docs/design-subprocess-lifecycle.md`). The note says not to make a hosted run outlive the app, because its stdout is a pipe to the app and it died at its next print, which is why the earlier "keep going after Quit" behaviour ended in "Resuming…" after a failure. So this idea reverses a recent decision, for a different design: a run that owns its own log and is not tied to the app's pipe.
+- **It is the same idea as the notification, one layer down.** A notification only helps if something is alive to send it. If the run dies with the app, "tell me when it's done" is limited to the researcher leaving the window, not the app.
+- **Mac constraints I have not checked and flag as open:** a process that continues after Quit in a sandboxed App Store app needs a supported mechanism (a login item or helper registered with the system), and the Mac app has a stated stance against background spawns (the ledger's declined list). A helper also has to be allowed to reach the Keychain provider key, send the notification, and honour the same study-safety and recovery rules. The existing PID-file attach and orphan-recovery machinery would be reused, not replaced.
+- **Honest behaviour on return:** the study opens as it left off. A run that finished says so once; one that failed says so with the existing "didn't finish" wording; one still going carries on showing the usual status line. It must not claim to be running if the helper has died, which is the same "never present a stale figure as live" rule as candidate 2.
+- **Beta and v2:** this is a feature with architecture behind it. It belongs after beta and is recorded here, not designed.
 
 ### 1. Mark a progressive report as partial, and say when it is complete
 
@@ -239,8 +290,8 @@ Ranking is frequency a day times how much it is felt, then cost. The run happens
 - **Wait:** transcription, the longest stage.
 - **Mechanism:** HIG's "keep it moving; explain stalls" and "be as accurate as possible"; the general finding that people infer a hang from a display that stops changing (guidance only).
 - **Evidence:** weak and contested. Tan and Nov found remaining-time displays raised frustration compared with elapsed time (10 to 60 s). No study tests revision direction. HIG is the strongest statement and it is guidance.
-- **First step is to observe, not build.** The "frozen within a stage" finding comes from reading the code (`RunProgressMath.swift:186`; Python re-emits at stage entry and completion). The audit marks the stale-persistence reading as inference. Watch one real run and record the text every minute.
-- **If confirmed, three honest options, in order of cost:** (a) re-emit the estimate each time a session completes (the data exists); (b) hold the figure but let it age visibly ("about 12 min left when transcription began"), which is true but clumsy; (c) drop "~N min left" during the stage and keep the count. The repo's `docs/design-progress-layer.md` (a proposal, not built) already designs hold, pad and ladder rules; this fits there.
+- **Observed 4 Nov 2026 (section 4.4): the figure is frozen between stage events, and on that run it was also 2 to 5 times too long.** The Mac passes the last received figure straight to the subtitle and never counts it down (`RunProgressMath.swift:186`; `SidebarSubtitleText.swift:99`), and the per-session events carry no estimate at all. A recorded 3-session run shows the displayed figure unchanged for up to 33 s while the true remaining time fell by half. One short run, not a long transcription; see the limits in 4.4.
+- **Three honest options, in order of cost. My recommendation is (a), because the per-session events already exist and only the estimate is missing from them; (b) and (c) are fallbacks if (a) shows the figure jittering:** (a) re-emit the estimate each time a session completes (the data exists); (b) hold the figure but let it age visibly ("about 12 min left when transcription began"), which is true but clumsy; (c) drop "~N min left" during the stage and keep the count. The repo's `docs/design-progress-layer.md` (a proposal, not built) already designs hold, pad and ladder rules; this fits there.
 - **Honesty check:** the current behaviour risks a number that is accurate at one instant and presented as live. The repair is a truth fix before it is a feel fix.
 - **Owner of the code:** the Mac app and `timing.py` belong to other sessions. This is a pointer, not a patch.
 
@@ -334,17 +385,17 @@ Five people can catch a cue that confuses. They cannot show that it works. The h
 | A wait label for cloud-backed files | Researchers hit it | Settled and not reopened. |
 | Words on the study-open bar | More explanation | Tried and removed. |
 | An in-app chat lens with streaming | Streaming is the best-evidenced "proof of life" | Parked 4 Oct 2026; no UI exists. |
-| A run-complete banner and Dock bounce | Closes the loop for someone who left | Already recorded as post-TestFlight direction. I do not duplicate it. |
+| A push of "about N min left" | The owner suggested it; useful for planning | An uncorrectable promise on top of an estimate that was 2 to 5 times off on the one run observed; see candidate A. Done and failed are in; this one is out until the estimate is trustworthy. |
 | ChatGPT-style "thinking" summaries | Plausible in an LLM tool | We have no reasoning stream to show, and a summary we write would be invented. |
 | A run view in the web report | Browser users see nothing | The product is the Mac app; question 6. |
 
 ## 8. Open questions for the owner
 
 1. **Candidate 1:** is a one-line "N of M sessions" caption on the Quotes lens during a first run a trivial change under the beta rule, or a feature that waits? And is the validity argument (a researcher reading partial quotes as complete) enough on its own to justify it?
-2. **Candidate 2:** may I observe a live run to confirm the estimate is frozen within transcription before anyone designs a fix? If confirmed, is the preference to re-emit at each session, to age the figure, or to drop it during the stage?
+2. **Candidate 2:** the freeze is confirmed on a recorded run (4.4). Do you want option (a), re-emit the estimate at each session, which I recommend; or to age the figure; or to drop it during the stage? And should someone check the level error on a second run first?
 3. **Candidate 5:** do you want to reopen "no new in-progress messages" for a quote count, knowing transparency can backfire when early counts are low?
 4. **Candidate 7:** is a topic tick on the tapestry worth considering after beta? And is "topics, not themes" the right word?
-5. **The run-complete notification** is recorded as post-TestFlight. Should the in-app "the run has finished" line move earlier on its own?
+5. **Candidate A:** done and failed notifications on the Mac are recorded as post-TestFlight. You asked for them now, with a phone and Watch reach. Do you want the Mac banner (done and failed) pulled forward? And for the phone and Watch, a user-supplied command first, or a relay later? I recommend the command route, and no "about N min" push. The v2 idea (the run outlives the app) is recorded under candidate A with the facts that decide it; it reverses the R19 decision, so is it still the intent?
 6. **Web report:** a browser or CLI-serve user has no run progress. Is that out of scope, or should the status page carry the same line as the sidebar?
 7. **Corrections to existing docs.** The claims in `docs/design-llm-call-telemetry.md` (upward revisions, Myers's tolerance) and `docs/design-motion.md` (Harrison 10 to 15%) are not supported by the papers. I did not edit them. Do you want a truing pass, with the design decisions kept and the reasons relabelled as hypotheses?
 8. **Who runs the five-person comparison, and when?** The alpha cohort is the natural pool, and the replay mockup is a usable stimulus.

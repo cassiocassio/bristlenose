@@ -133,6 +133,18 @@ So **a lens switch on a real study spends under 10 ms on the server**; whatever 
 
 The first `/quotes` request of a serve's life is slower (about 90 ms against 9): the handler itself is 25 ms cold, and the rest is the framework's first use. Declined, with that number.
 
+## Across macOS versions (correctness only, 4 Nov 2026)
+
+The one thing in today's changes that depends on the OS is the `security` command-line tool behind the Keychain cache. Checked in the Iona guests (`sequoia` 15.7.3, `tahoe` 26.6.2) and on the host (27):
+
+| | macOS 15.7.3 | macOS 26.6.2 | host (27) |
+|---|---|---|---|
+| Key not found | exit **44** | exit **44** | exit 44 |
+| Write into a locked login keychain | exit **36** ("User interaction is not allowed") | exit **36** | n/a |
+| Five lookups | 0.08 s | 0.11 s | 0.106 s |
+
+So the cache's rule (keep a found key and exit 44; never keep anything else) matches what the OS returns on all three, and exit 36 is a real transient case, not a theory. Not run in the guests: the Python suite (they have only the system Python 3.9 and no project environment; building one for this question was not proportionate).
+
 ## Where a serve start goes (measured 4 Nov 2026, dev venv, `BRISTLENOSE_STARTUP_TRACE=1`)
 
 Median of five, a synthetic 1,500-quote study (large) beside copies of two real studies (30 and 35 quotes, 3 and 5 sessions; copies, never served in place). Server-side only: the Mac's own steps (spawn call, window, page load) are in `design-client-performance.md`.

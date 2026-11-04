@@ -31,7 +31,8 @@ bristlenose/server/
   grounding.py    — SHARED CORE for assistant surfaces (chat lens + MCP)
   heading_names.py — a section's or theme's name as the researcher sees it (renames applied) + its id anchor; every surface that prints one reads it here
   chat_lens.py    — in-app cited question box (see docs/design-chat-lens.md)
-  mcp_server.py   — read-only MCP endpoint at /mcp/ (see below)
+  mcp_server.py   — the MCP tools (imports the `mcp` SDK at load: 275 ms; see below)
+  mcp_mount.py    — the /mcp mount, built on its FIRST REQUEST so a serve start does not import the SDK
   static/         — Vite build output (React Router SPA bundle)
 ```
 
@@ -74,15 +75,25 @@ since 30 Jul 2026: CLI via the optional extra, macOS app via the bundled
 sidecar (`build-sidecar.sh` installs `[serve,apple,desktop,mcp,voice]`; the
 Connect Agent sheet + sidebar antenna badge are the desktop surface).
 
-- **Optional dependency.** `pip install 'bristlenose[mcp]'` (also in `dev`
-  so CI runs the tests). `mount_mcp_server` catches `ImportError` /
-  `ModuleNotFoundError` **only** — a present-but-broken install must fail
-  loudly, not masquerade as "not installed".
+- **Optional dependency, and not imported at startup.** `pip install 'bristlenose[mcp]'` (also
+  in `dev` so CI runs the tests). `mount_mcp_server` (in `mcp_mount.py`) decides "installed" with
+  `find_spec`, which does not import the package; the SDK is imported, the server built and its
+  session manager started by `LazyMCP` on the FIRST `/mcp` request (4 Nov 2026: `import mcp` was
+  275–280 ms and the whole eager path about 420 ms of every launch; the first agent call now
+  pays 365–476 ms once, then 8–13 ms). Only an ABSENT package is "not installed"; a
+  present-but-broken one fails loudly on the first request (log + 500, retried on the next),
+  never as "not installed". **Keep `mcp_server.py` out of `create_app`'s import path:** it imports
+  the SDK at load because `ToolInputError` must subclass its `ToolError`, so `app.py` imports
+  `mcp_mount` and `LazyMCP._build` imports `mcp_server` (`tests/test_mcp_lazy_mount.py` fails
+  if building the app, or a browser click on `/mcp/`, loads `mcp`).
 - **Lifespan composition must be the LAST lifespan touch in `create_app`.**
   `_install_event_watcher` *assigns* `app.router.lifespan_context`; anything
-  composed earlier is silently overwritten, and then every `/mcp` request
-  500s ("Task group is not initialized") in production while a test app
-  built without `project_dir` stays green.
+  composed earlier is silently overwritten. Since 4 Nov 2026 the composed piece only STOPS the
+  session manager that `LazyMCP` started on the first request (`aclose`, in the lifespan's
+  `finally`), so an overwritten composition now leaks that task at shutdown instead of 500ing
+  every `/mcp` call; `test_leaving_the_app_stops_the_session_manager_and_does_not_hang` is the
+  guard. The manager is one long-lived task because anyio's task group must be entered and
+  left in the same task.
 - **Auth is bearer-only.** `/mcp` is in `_AUTH_REQUIRED_PREFIXES`
   unconditionally (fail closed when the extra is absent) and is explicitly
   **exempt from the auth-cookie fallback** — MCP clients always send the

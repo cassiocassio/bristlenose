@@ -533,7 +533,7 @@ def create_app(
     # importable: the dedicated `mcp` extra, or the `dev` extra (which
     # carries it so contributors and CI run the tests). Installation is the
     # opt-in; the endpoint is inert without the token.
-    from bristlenose.server.mcp_server import mount_mcp_server
+    from bristlenose.server.mcp_mount import mount_mcp_server
 
     _mcp_server = mount_mcp_server(app, session_factory)
     app.state.mcp_mounted = _mcp_server is not None
@@ -548,7 +548,7 @@ def create_app(
 
 
 def _compose_mcp_lifespan(app: FastAPI, mcp_server: object) -> None:
-    """Wrap the router lifespan with the MCP session manager.
+    """Wrap the router lifespan so the lazily started MCP session manager is stopped on exit.
 
     MUST be the LAST lifespan touch in ``create_app``: ``_install_event_watcher``
     ASSIGNS ``app.router.lifespan_context`` (it does not compose), so anything
@@ -565,10 +565,13 @@ def _compose_mcp_lifespan(app: FastAPI, mcp_server: object) -> None:
     @asynccontextmanager
     async def _with_mcp(app_: FastAPI) -> AsyncIterator[None]:
         async with previous(app_):
-            startup_trace.mark("mcp-starting")
-            async with mcp_server.session_manager.run():  # type: ignore[attr-defined]
-                startup_trace.mark("lifespan-ready")
+            startup_trace.mark("lifespan-ready")
+            try:
                 yield
+            finally:
+                # The session manager starts on the first /mcp request (LazyMCP); stop it here
+                # so it leaves before the lifespan beneath it, as it did when it started here.
+                await mcp_server.aclose()  # type: ignore[attr-defined]
 
     app.router.lifespan_context = _with_mcp
 

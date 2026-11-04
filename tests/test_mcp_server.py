@@ -1205,7 +1205,7 @@ class TestHealthAdvertisesMount:
     def test_absent_mount_reports_false(self, monkeypatch) -> None:
         # create_app imports the symbol at call time, so patch the source
         # module — patching the app module's namespace would silently no-op.
-        import bristlenose.server.mcp_server as mcp_module
+        import bristlenose.server.mcp_mount as mcp_module
 
         monkeypatch.setattr(mcp_module, "mount_mcp_server", lambda app, sf: None)
         app = create_app(dev=True, db_url="sqlite://")

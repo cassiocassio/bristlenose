@@ -18,7 +18,7 @@ enum PerfMoment: String, CaseIterable {
     case serveReady = "serve-ready"
     /// A transcript route reached, to the page reporting the transcript painted (`perf-mark`).
     case openTranscript = "open-transcript"
-    /// The report document ready, to the page reporting its first quote card painted (`perf-mark`).
+    /// The Quotes lens reached, to the page reporting its first quote card painted (`perf-mark`).
     case firstCardPainted = "first-card-painted"
 
     /// `OSSignposter` wants a literal.

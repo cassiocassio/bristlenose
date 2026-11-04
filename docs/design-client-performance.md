@@ -29,6 +29,19 @@ The web view, from the system-wide trace of the same drag (WebContent main threa
 
 `SidebarDeselectMonitor` ran on every left mouse-down in the window and walked the whole view tree to find the sidebar's table before it looked at where the click was. It now hit-tests first and walks up from the view that was hit, with the same rule as before (a click only counts if it landed on the table or inside it). Forty scripted clicks in the report area (`BN_ACTION=click profile-resize.sh`, Debug, two runs each): the monitor's time 649 / 666 ms → 8 / 9 ms (about 16 ms → 0.2 ms a click), main thread busy 1,274 / 1,272 → 725 / 708 ms. The behaviour (deselecting on a click below the rows, not on a button drawn over the list) is unchanged by construction and has no unit test, because the coordinator is private.
 
+## Sidecar start (the `serve-ready` signpost)
+
+`desktop/scripts/perf/serve-ready.sh` reads the app's own `serve-ready` signpost (the sidecar spawned until its port answers) from a copy of the app whose bundled sidecar is the one under test: cold is a fresh copy of the app per run, warm is a relaunch of the same copy. Measured 4 Nov 2026 as an A/B for the lazy `inflect` import (`6f5b0e350`: `import bristlenose.cli` 1.05 s to 0.22 s, `import bristlenose.server.app` 1.8 s to 0.8 s on the dev venv). Debug-signed app, ad-hoc-signed hardened-runtime sidecar (`ensure-sidecar.sh`'s default, which is what Cmd+R builds), the same app binary in both arms, 5 runs each:
+
+| sidecar | serve-ready median (min–max) | project-select median |
+|---|---|---|
+| old (0.44.0 build from before the change), cold | 3,194 ms (2,960–3,452) | 4,097 ms |
+| old, warm | 3,128 ms (2,983–3,487) | 4,000 ms |
+| new (rebuilt from the tree), cold | 2,241 ms (2,194–2,299) | 3,106 ms |
+| new, warm | 2,330 ms (2,007–3,428) | 3,192 ms |
+
+About 0.9–1.0 s off a study's start, and the same off click-to-ready. Cold was not slower than warm here (a fresh copy of the files did not cost a visible first-exec penalty), so the 15-to-90-second cold-start budget the desktop notes describe is not reproduced by this method. The new sidecar was built from the working tree, which carries other sessions' uncommitted edits (theme CSS and the like); none of them is on the import path.
+
 ## Considered and left, with the reason
 
 - **Shared rAF-coalescing `ResizeObserver` helper across 16 files.** The callback bodies total ~26 ms; the loop-error warning is noise, not cost. Revisit only if a profile names them.

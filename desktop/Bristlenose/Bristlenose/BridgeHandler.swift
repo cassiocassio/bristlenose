@@ -1250,7 +1250,6 @@ final class BridgeHandler: ObservableObject {
             documentState = .spa
             PerfSignpost.end(.launchToReady)                       // the first report of the launch, any window
             PerfSignpost.end(.projectSelect, scope: perfScope, outcome: "ready")
-            PerfSignpost.begin(.firstCardPainted, scope: perfScope)  // the page's `perf-mark` closes it
             // Replay the lens the user clicked during boot, if any — the
             // queue is what makes a lit-on-the-prior rail a promise rather
             // than a lie (P3). Routed back through `activateLens` so the
@@ -1296,6 +1295,13 @@ final class BridgeHandler: ObservableObject {
                     PerfSignpost.begin(.openTranscript, scope: perfScope)   // the page's `perf-mark` closes it
                 } else {
                     PerfSignpost.end(.openTranscript, scope: perfScope, outcome: "left")
+                }
+                // The first quote card exists only on the Quotes lens: begin there, not at `ready`, so a
+                // window that lands on the dashboard or Sessions never holds the interval open.
+                if url.hasPrefix("/report/quotes") {
+                    PerfSignpost.begin(.firstCardPainted, scope: perfScope)   // the page's `perf-mark` closes it
+                } else {
+                    PerfSignpost.end(.firstCardPainted, scope: perfScope, outcome: "left")
                 }
                 sessionsRouteMemory.observe(path: url)
                 leaveWithheldLens()

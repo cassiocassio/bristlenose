@@ -20,6 +20,8 @@ that measures a sidebar with no page behind it (the first runs of 4 Nov did exac
 
 `BN_ACTION=click` posts 40 real clicks in the report area (what a click costs the main thread) and `BN_ACTION=lens` cycles the sidebar's lens rows; `BN_APP_ENV=NAME=value` gives the copy one more variable, for an experiment arm.
 
+`serve-ready.sh <template.app> <label> [cold] [warm]` reads the `serve-ready` signpost for an A/B of the bundled sidecar (swap `Contents/Resources/bristlenose-sidecar` in a copy of the app). The signposts themselves (`PerfSignpost.swift`) are read with `log stream --signpost --predicate 'subsystem == "app.bristlenose" AND category == "perf"'`.
+
 It moves the real pointer for the length of the drag and needs Accessibility trust: run it
 when nobody is at the Mac, one run at a time. Debug numbers are inflated (SwiftUI and
 AttributeGraph most of all): compare Debug with Debug, Release with Release.

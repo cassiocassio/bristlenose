@@ -43,6 +43,7 @@ MIRRORS = {
     "e2e/playwright.config.ts": r"BN_E2E_PORT \?\? '(\d+)'",
     "frontend/src/components/SettingsModal.tsx": r'envVar: "_BRISTLENOSE_PORT", default: "(\d+)"',
     "experiments/icon-system/capture_icons.mjs": r"127\.0\.0\.1:(\d+)",
+    "desktop/scripts/perf/profile-resize.sh": r"BRISTLENOSE_DEV_EXTERNAL_PORT:-(\d+)",
     "bristlenose/data/bristlenose.1": r"Port to serve on\. Default: \\fB(\d+)\\fR",
     "desktop/Bristlenose/Bristlenose.xcodeproj/xcshareddata/xcschemes/"
     "Bristlenose (External Server).xcscheme": r'value = "(\d+)"',

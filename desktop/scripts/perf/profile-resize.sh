@@ -3,14 +3,14 @@
 #
 #   profile-resize.sh <path/to/Bristlenose.app> <label> [seconds=10] [outdir=/tmp/bn-perf]
 #   BN_RELEASE=1 BN_WAIT=90   a Release-configuration copy: it ignores the dev-server flag and starts its own
-#                             sidecar for the study, so skip the :8484 check and allow a cold start
+#                             sidecar for the study, so skip the dev-server check and allow a cold start
 #   BN_ACTION=click   40 real clicks in the report area instead of a drag (what a click costs the main thread)
 #   BN_ACTION=lens    cycle the sidebar lens rows (Project, Sessions, Quotes, Signals) 5 times
 #   BN_STUDY=Talismanic BN_LENS=Quotes BN_APP_ENV=NAME=value   which sidebar row and lens to show (substring)
 #   the study must be one with a report; the script stops if no web area renders
 #
 # Launches a NEW copy of the app against an already-running `bristlenose serve --dev` on
-# BRISTLENOSE_DEV_EXTERNAL_PORT (default 8484; Debug builds only), so every run shows the
+# BRISTLENOSE_DEV_EXTERNAL_PORT (default: the serve port; Debug builds only), so every run shows the
 # same report and no sidecar is spawned. Drags the window edge with a real mouse
 # (resize-drag.swift) while `xctrace` is attached, quits the copy, and writes
 # <outdir>/<label>.json. Compare runs with: summarise-trace.py --compare a.json b.json

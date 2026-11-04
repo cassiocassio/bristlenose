@@ -959,6 +959,35 @@ def test_each_sessions_scene_colours_are_written_before_it_is_readable(tmp_path:
     assert readable_in_manifest(load_manifest(out)) == {"s1", "s2"}
 
 
+def test_scene_colours_decode_off_the_event_loop(tmp_path: Path) -> None:
+    """The decode reads the whole video; on the loop it held every other delivery.
+    Measured scale (4 Nov 2026): about 4 s per hour of video on two real files."""
+    import threading
+
+    from bristlenose.stages.s05_transcribe import SessionTranscription
+
+    loop_thread: list[int] = []
+    decode_thread: list[int] = []
+
+    def _colours(sessions, transcripts, out_dir):
+        decode_thread.append(threading.get_ident())
+        return {}
+
+    def _iter(needs, _settings, **_kw):
+        yield SessionTranscription("s1", _two_speakers())
+
+    async def _roles(*_a, **_kw):
+        loop_thread.append(threading.get_ident())
+        return []
+
+    _run(
+        tmp_path, iter_fn=_iter, roles=_roles, match="stop after the speakers",
+        extra=(("bristlenose.utils.scene_colour.extract_scene_colours", {"new": _colours}),),
+    )
+    assert loop_thread and decode_thread
+    assert decode_thread[0] != loop_thread[0]
+
+
 def test_a_platform_transcripts_duration_is_known_at_ingest(tmp_path: Path) -> None:
     """§4.6 / §7 item 11: the last cue's end, so the timeline scale does not move
     when a platform transcript is imported."""

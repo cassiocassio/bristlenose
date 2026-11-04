@@ -405,7 +405,11 @@ class ReadableChain:
         try:
             from bristlenose.utils.scene_colour import extract_scene_colours
 
-            extract_scene_colours(
+            # Off the event loop: it decodes the whole video, and run on the loop it
+            # held every other session's delivery (and the hand-over of platform
+            # transcripts) until the decode finished.
+            await asyncio.to_thread(
+                extract_scene_colours,
                 [session], transcripts,
                 self._output_dir / ".bristlenose" / "intermediate" / "scene-colours",
             )

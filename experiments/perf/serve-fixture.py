@@ -32,7 +32,9 @@ if not port:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
 env = {**os.environ, "_BRISTLENOSE_AUTH_TOKEN": secrets.token_urlsafe(32),
-       "BRISTLENOSE_SERVER_TIMING": "1"}  # Server-Timing on every response: the harness reads it from resource timing
+       "BRISTLENOSE_SERVER_TIMING": "1",
+       # "local": serve start must never reach a paid provider (it builds a missing Signals snapshot with a real call)
+       "BRISTLENOSE_LLM_PROVIDER": "local"}  # Server-Timing on every response: the harness reads it from resource timing
 srv = subprocess.Popen(
     [str(REPO / ".venv/bin/bristlenose"), "serve", str(folder), "--port", str(port), "--no-open"],
     env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

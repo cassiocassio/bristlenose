@@ -44,6 +44,8 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 |---|---|---|
 | `inflect` loaded on first plural, not at import | `import bristlenose.cli` 1.05 s → 0.22 s; `import bristlenose.server.app` 1.8 s → 0.8 s (median of 3–5, `.venv`, warm cache). A subprocess test pins it and fails with the eager import put back. **In the app, `serve-ready` (bundled sidecar) went 3,194 ms → 2,241 ms cold (−30%) and 3,128 → 2,330 ms warm (−25%); `project-select` 4.1 s → 3.1 s** (median of 5, identical app binary in both arms, Debug-signed app, ad-hoc-signed hardened-runtime sidecar; method and spread in `design-client-performance.md` § Sidecar start). | `6f5b0e350`; measured `8000e1b17` |
 | Server-Timing instrument | n/a (instrument) | `041df1eb0` |
+| Codebook templates parsed with libyaml (`CSafeLoader`) | cumulative import of `bristlenose.server.codebook` 119–143 ms → 36–43 ms (five runs each); all nine templates parse identically | `8cb124763` |
+| gzip at level 1 on the loopback-only server | compression of `/quotes` 10.7 → 2.5 ms, `/tapestry` 12.7 → 1.8 ms (zlib on the real bodies, median of 30) | this commit |
 
 `inflect` was found by `python -X importtime`, not by guess: it was 0.84 s of self time on the path of every command, `--help` and `serve` included. The A/B above covers the bundled sidecar; the App Store (Apple Distribution) signing and the sandboxed entitlements were not measured. Warm was noisier than cold (one 3.4 s outlier), and cold was not slower than warm, so this method does not reproduce a first-exec penalty.
 
@@ -59,7 +61,7 @@ Moments: `launch-to-ready`, `serve-ready`, `project-select`, `lens-switch`, `ope
 | `/tapestry` | 13 | 121 ms | 137 ms | 548 KB → 64 KB |
 | `/signals/snapshot` | 2 | 2.5 ms | 2.5 ms | 65 B |
 
-- **Gzip costs 9–22 ms a request on a loopback-only server and saves nothing real** (the wire is memory). Repeats across two runs. Whether to lower the level or drop it is a decision for the next entry; the gain per lens switch is that 10–20 ms, which is small beside the other costs below.
+- **Gzip level.** My first reading was "gzip costs 9–22 ms a request". That was partly noise: the identity arm moved by 30 ms between runs. Timing the compression directly on the real bodies (zlib, median of 30): `/quotes` 10.7 ms at level 9 → 2.5 ms at level 1; `/tapestry` 12.7 → 1.8 ms; `/dashboard` and `/sessions` about 0.1 ms either way. **Level 1 saves 8–11 ms on the two big routes and nothing on the small ones**; the wire grows from 68 KB to 96 KB on `/quotes`, which on loopback is memory. Shipped as `compresslevel=1` (one parameter; a test pins it). A small win, and it lands on `/tapestry`, which the Sessions grid polls.
 - **HTML export: 3.5 s, 9,346 SQL statements (about 6 per quote), 0.49 s inside SQL.** Most of the rest is Python overhead per statement, not the database. Reported candidate: batch the moderator-question lookup.
 - **`serve` ready to `/api/health`: 4.6–4.8 s** on the dev venv, including the startup import of this study. Not the signed sidecar.
 - The first draft of the wire-size column read the decompressed body; it now counts raw bytes. The timings were never affected.
@@ -94,7 +96,7 @@ Reported, not yet confirmed here. Order is provisional.
 | # | Candidate | Layer | First measurement |
 |---|---|---|---|
 | 1 | ~~Lazy `inflect`~~ | sidecar | **done** |
-| 2 | Gzip level on loopback | server | **measured above** |
+| 2 | ~~Gzip level on loopback~~ | server | **done**: −8 to −11 ms on `/quotes` and `/tapestry` |
 | 3 | `useQuotesStore()` whole-store subscribers → selectors (the sidebar-store defect class) | page | `filterQuotes` calls per tag-add and per keystroke |
 | 4 | Sidebar `reloadData` on every pipeline stdout line | Mac | reloads per second during a replayed stream |
 | 5 | Export HTML: batch the per-quote moderator lookup | server | wall time at n=0/500/1500/3000, then `py-spy` |

@@ -338,7 +338,7 @@ def create_app(
     # GZip: compresses text responses (JSON, HTML, CSS, JS).  Added after
     # CORS/auth so it wraps outermost (compresses the final response).  BREACH
     # is not a concern — no user input is reflected in token-bearing responses.
-    app.add_middleware(GZipMiddleware, minimum_size=500)
+    app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=1)
 
     # Server-Timing (perf moment timer): off unless --dev or BRISTLENOSE_SERVER_TIMING=1.
     # Added before the loopback gate so that gate stays outermost.

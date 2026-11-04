@@ -95,3 +95,45 @@ def test_an_absent_key_is_kept_too(monkeypatch: pytest.MonkeyPatch) -> None:
     assert store.get("miro") is None
     assert store.get("miro") is None
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        subprocess.CalledProcessError(36, ["security"]),   # locked Keychain
+        subprocess.CalledProcessError(128, ["security"]),  # prompt dismissed
+        PermissionError("exec blocked"),
+        FileNotFoundError("no security binary"),
+    ],
+)
+def test_a_failure_that_says_nothing_about_the_key_is_never_kept(
+    monkeypatch: pytest.MonkeyPatch, failure: BaseException
+) -> None:
+    calls: list[int] = []
+
+    def _fail(argv: list[str], **_kw: Any) -> Any:
+        calls.append(1)
+        raise failure
+
+    monkeypatch.setattr(subprocess, "run", _fail)
+    store = MacOSCredentialStore()
+    assert store.get("anthropic") is None
+    assert store.get("anthropic") is None
+    assert len(calls) == 2  # asked twice: a locked Keychain unlocked a moment later is seen
+
+
+def test_a_set_that_fails_still_leaves_no_stale_entry(spawns: _Spawns, monkeypatch: pytest.MonkeyPatch) -> None:
+    store = MacOSCredentialStore()
+    assert store.get("anthropic") == "sk-one"
+
+    def _boom(argv: list[str], **_kw: Any) -> Any:
+        if argv[1] == "delete-generic-password":
+            raise RuntimeError("security exploded")
+        return spawns(argv)
+
+    monkeypatch.setattr(subprocess, "run", _boom)
+    with pytest.raises(RuntimeError):
+        store.set("anthropic", "sk-two")
+    spawns.value = "sk-two"
+    monkeypatch.setattr(subprocess, "run", spawns)
+    assert store.get("anthropic") == "sk-two"

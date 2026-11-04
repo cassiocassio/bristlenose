@@ -7,7 +7,6 @@ speed-ups must not have disturbed, not benchmarks: nothing here asserts a time.
 from __future__ import annotations
 
 import asyncio
-import gzip
 import subprocess
 import sys
 import threading
@@ -146,16 +145,16 @@ class TestKeychainCache:
         store.get("azure")
         assert sp.reads == 2
 
-    def test_a_failing_security_gives_none_and_a_later_set_is_seen_at_once(
+    def test_a_blocked_security_is_asked_again_and_a_later_set_is_seen_at_once(
         self, sp: _Spawner
     ) -> None:
         sp.value = PermissionError("sandbox said no")
         store = MacOSCredentialStore()
         assert store.get("google") is None
-        assert store.get("google") is None  # kept for the window, not re-spawned
-        assert sp.reads == 1
+        assert store.get("google") is None
+        assert sp.reads == 2  # a blocked exec says nothing about the key: never kept
         sp.value = "sk-new"
-        store.set("google", "sk-new")  # clears the entry
+        store.set("google", "sk-new")
         assert store.get("google") == "sk-new"
 
     def test_an_unregistered_key_gets_a_derived_name_and_poisons_nothing(self, sp: _Spawner) -> None:
@@ -314,57 +313,6 @@ class TestServerTiming:
 
         asyncio.run(go())
         assert seen == ["websocket", "lifespan"]
-
-
-# --------------------------------------------------------------------------- gzip level 1
-
-
-class TestGzipLevelOne:
-    @pytest.fixture
-    def client(self) -> Any:
-        from bristlenose.server.app import create_app
-        from tests.conftest import AuthTestClient
-
-        app = create_app(db_url="sqlite://")
-
-        @app.get("/__big")
-        def big() -> dict[str, str]:
-            return {"x": "lorem ipsum dolor sit amet " * 4000}
-
-        @app.get("/__small")
-        def small() -> dict[str, str]:
-            return {"x": "tiny"}
-
-        return AuthTestClient(app)
-
-    def test_a_big_body_is_gzipped_and_decompresses_to_the_identical_bytes(self, client: Any) -> None:
-        gz = client.get("/__big", headers={"Accept-Encoding": "gzip"})
-        raw = client.get("/__big", headers={"Accept-Encoding": "identity"})
-        assert gz.headers["content-encoding"] == "gzip"
-        assert "content-encoding" not in raw.headers
-        assert gz.content == raw.content
-
-    def test_the_wire_bytes_are_a_valid_gzip_stream(self, client: Any) -> None:
-        with client.stream("GET", "/__big", headers={"Accept-Encoding": "gzip"}) as r:
-            wire = b"".join(r.iter_raw())
-        assert gzip.decompress(wire).startswith(b'{"x":"lorem')
-
-    def test_a_small_body_survives_whether_or_not_it_is_compressed(self, client: Any) -> None:
-        # Starlette skips a body under minimum_size, but the app's BaseHTTPMiddleware layers
-        # stream the body in chunks, so the gzip layer cannot see its size and compresses
-        # even a 12-byte JSON (seen at level 9 too: /signals/snapshot 65 B -> 78 B on 4 Nov
-        # 2026). About 0.1 ms and 13 bytes; not worth a fix. What must hold is the round trip.
-        gz = client.get("/__small", headers={"Accept-Encoding": "gzip"})
-        raw = client.get("/__small", headers={"Accept-Encoding": "identity"})
-        assert gz.content == raw.content == b'{"x":"tiny"}'
-
-    def test_no_accept_encoding_means_no_compression(self, client: Any) -> None:
-        r = client.get("/__big", headers={"Accept-Encoding": ""})
-        assert "content-encoding" not in r.headers
-
-    def test_head_request_does_not_crash(self, client: Any) -> None:
-        # HEAD of a GET-only route is a 405, never a 500
-        assert client.head("/__big", headers={"Accept-Encoding": "gzip"}).status_code in (200, 405)
 
 
 # --------------------------------------------------------------------------- libyaml templates

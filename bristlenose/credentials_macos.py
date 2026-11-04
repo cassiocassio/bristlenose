@@ -44,7 +44,8 @@ logger = logging.getLogger(__name__)
 #: task): 15 spawns, 360 ms, measured 4 Nov 2026. A read is kept for this long so those
 #: collapse to one batch. Short on purpose: a key written by ``bristlenose configure`` in
 #: another terminal is seen within seconds, and a write from this process clears its entry.
-#: Absent keys are kept too, since most of the five usually are.
+#: Absent keys (exit 44) are kept too, since most of the five usually are; a failure that says
+#: nothing about the key (locked Keychain, dismissed prompt, blocked exec) is never kept.
 _CACHE_TTL_S = 10.0
 _cache: dict[str, tuple[float, str | None]] = {}
 _clock = time.monotonic
@@ -92,11 +93,18 @@ class MacOSCredentialStore(CredentialStore):
         cached = _cache.get(service)
         if cached is not None and _clock() - cached[0] < _CACHE_TTL_S:
             return cached[1]
-        value = self._read(key)
-        _cache[service] = (_clock(), value)
+        value, definite = self._read(key)
+        if definite:
+            _cache[service] = (_clock(), value)
         return value
 
-    def _read(self, key: str) -> str | None:
+    def _read(self, key: str) -> tuple[str | None, bool]:
+        """The value, and whether it is a definite answer worth keeping.
+
+        A found key and "not found" (exit 44) are definite. A locked Keychain, a dismissed
+        prompt or a blocked exec are not: they say nothing about whether the key exists, so
+        they are never kept, and the next read asks again.
+        """
         try:
             result = subprocess.run(
                 [
@@ -110,7 +118,7 @@ class MacOSCredentialStore(CredentialStore):
                 text=True, encoding="utf-8",
                 check=True,
             )
-            return result.stdout.strip()
+            return result.stdout.strip(), True
         except (
             subprocess.CalledProcessError,
             FileNotFoundError,
@@ -121,7 +129,8 @@ class MacOSCredentialStore(CredentialStore):
             # subprocess-exec blocked (sandbox, SIP, MDM). Fall through to
             # None so the caller's "no API key configured" error path runs.
             logger.debug("keychain read via security CLI failed for %s: %s", key, exc)
-            return None
+            not_found = isinstance(exc, subprocess.CalledProcessError) and exc.returncode == 44
+            return None, not_found
 
     def set(self, key: str, value: str) -> None:
         """Store a credential in Keychain.
@@ -146,7 +155,12 @@ class MacOSCredentialStore(CredentialStore):
         """
         service = self._service_name(key)
         _cache.pop(service, None)
+        try:
+            self._write(key, service, value)
+        finally:
+            _cache.pop(service, None)  # a get() racing the write must not keep the old value
 
+    def _write(self, key: str, service: str, value: str) -> None:
         # Delete existing entry first (ignore errors if not found)
         try:
             deleted = subprocess.run(

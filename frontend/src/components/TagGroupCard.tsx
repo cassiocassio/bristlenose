@@ -11,7 +11,9 @@ import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { CodebookTagResponse } from "../utils/types";
 import { getTagBg, getBarColour } from "../utils/colours";
-import { useSidebarStore } from "../contexts/SidebarStore";
+import { useSidebarSelector, type SidebarState } from "../contexts/SidebarStore";
+
+const selectHiddenTagGroups = (s: SidebarState) => s.hiddenTagGroups;
 import { EyeToggle } from "./EyeToggle";
 import { TagRow } from "./TagRow";
 
@@ -68,7 +70,7 @@ export function TagGroupCard({
   soloTag,
 }: TagGroupCardProps) {
   const { t } = useTranslation();
-  const { hiddenTagGroups } = useSidebarStore();
+  const hiddenTagGroups = useSidebarSelector(selectHiddenTagGroups);
   const isHidden = hiddenTagGroups.has(name);
 
   const handleEyeClick = useCallback((e: React.MouseEvent) => {

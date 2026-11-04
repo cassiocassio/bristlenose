@@ -89,6 +89,8 @@ vi.mock("../contexts/SidebarStore", async (importOriginal) => ({
   navBarNeeds: (await importOriginal<typeof import("../contexts/SidebarStore")>()).navBarNeeds,
   setLayoutContext: vi.fn(),
   useSidebarStore: () => mockState,
+  useSidebarSelector: (select: (s: unknown) => unknown) => select(mockState),
+  shallowEqual: (await importOriginal<typeof import("../contexts/SidebarStore")>()).shallowEqual,
   toggleTags: (...args: unknown[]) => mockToggleTags(...args),
   openTocPush: (...args: unknown[]) => mockOpenTocPush(...args),
   closeToc: (...args: unknown[]) => mockCloseToc(...args),

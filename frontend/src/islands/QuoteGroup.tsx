@@ -43,7 +43,9 @@ import {
   setStarred,
   starActionIsUnstar,
 } from "../contexts/QuotesContext";
-import { useSidebarStore, toggleTagGroupHidden } from "../contexts/SidebarStore";
+import { useSidebarSelector, shallowEqual, toggleTagGroupHidden, type SidebarState } from "../contexts/SidebarStore";
+
+const selectHiddenAndFrameworks = (s: SidebarState) => ({ hiddenTagGroups: s.hiddenTagGroups, disabledFrameworks: s.disabledFrameworks });
 import type { SearchTerm } from "../utils/searchMatch";
 import { Icon } from "../components/Icon";
 
@@ -195,7 +197,7 @@ export function QuoteGroup({
   // ── Shared quote state ─────────────────────────────────────────────────
 
   const store = useQuotesStore();
-  const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
+  const { hiddenTagGroups, disabledFrameworks } = useSidebarSelector(selectHiddenAndFrameworks, shallowEqual);
 
   // The hide/disable split (design-codebook-state-model.md §5), computed once:
   //  • isBadgeHidden      → quote-card badge filter (eye-hidden group ∪ disabled tag)

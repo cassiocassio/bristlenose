@@ -28,10 +28,14 @@ import {
   starActionIsUnstar,
 } from "../contexts/QuotesContext";
 import {
-  useSidebarStore,
+  useSidebarSelector,
+  shallowEqual,
   closeToc,
   exitSoloMode,
+  type SidebarState,
 } from "../contexts/SidebarStore";
+
+const selectTocModeAndSolo = (s: SidebarState) => ({ tocMode: s.tocMode, soloTag: s.soloTag });
 import { sidebarAnimations } from "../components/SidebarLayout";
 import { toggleInspector } from "../contexts/InspectorStore";
 import { toggleFocusMode } from "../contexts/FocusModeStore";
@@ -146,7 +150,7 @@ export function useKeyboardShortcuts({
   const navigate = useNavigate();
   const location = useLocation();
   const store = useQuotesStore();
-  const { tocMode, soloTag } = useSidebarStore();
+  const { tocMode, soloTag } = useSidebarSelector(selectTocModeAndSolo, shallowEqual);
 
   // Use refs for values that change frequently to avoid re-attaching the listener.
   const focusedIdRef = useRef(focusedId);

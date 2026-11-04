@@ -40,8 +40,17 @@ import {
   hydrateHiddenTagGroups,
   setTagGroupsHidden,
   toggleTagGroupHidden,
-  useSidebarStore,
+  useSidebarSelector,
+  shallowEqual,
+  type SidebarState,
 } from "../contexts/SidebarStore";
+
+const selectTagSidebarState = (s: SidebarState) => ({
+  hiddenTagGroups: s.hiddenTagGroups,
+  soloTag: s.soloTag,
+  pendingSoloTag: s.pendingSoloTag,
+  disabledFrameworks: s.disabledFrameworks,
+});
 import { EyeToggle } from "./EyeToggle";
 import { TagGroupCard } from "./TagGroupCard";
 import { Icon } from "./Icon";
@@ -289,7 +298,7 @@ export function TagSidebar() {
   const store = useQuotesStore();
   const tagFilter = store.tagFilter;
 
-  const { hiddenTagGroups, soloTag, pendingSoloTag, disabledFrameworks } = useSidebarStore();
+  const { hiddenTagGroups, soloTag, pendingSoloTag, disabledFrameworks } = useSidebarSelector(selectTagSidebarState, shallowEqual);
   const { selectedIds, flashTag } = useFocus();
 
   const assignActive = selectedIds.size > 0;

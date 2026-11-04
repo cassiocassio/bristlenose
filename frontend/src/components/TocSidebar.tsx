@@ -18,7 +18,9 @@ import type { QuoteResponse, QuotesListResponse, SessionsListResponse } from "..
 import { apiGet } from "../utils/api";
 import { useScrollSpy } from "../hooks/useScrollSpy";
 import { useLastRun } from "../contexts/LastRunStore";
-import { useSidebarStore, closeToc } from "../contexts/SidebarStore";
+import { useSidebarSelector, closeToc, type SidebarState } from "../contexts/SidebarStore";
+
+const selectTocMode = (s: SidebarState) => s.tocMode;
 import { useSidebarTuning } from "../contexts/sidebarTuning";
 import { filterStateOf, useQuotesStore } from "../contexts/QuotesContext";
 import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
@@ -58,7 +60,7 @@ interface TocSidebarProps {
 export function TocSidebar({ onOverlayClose }: TocSidebarProps) {
   const { t } = useTranslation();
   const projectId = useProjectId();
-  const { tocMode } = useSidebarStore();
+  const tocMode = useSidebarSelector(selectTocMode);
   const pg = useSidebarTuning();
   const store = useQuotesStore();
   const filterState = filterStateOf(store);

@@ -16,7 +16,7 @@
  * @module SidebarStore
  */
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { getFrameworkStates, getHiddenTagGroups, patchHiddenTagGroups } from "../utils/api";
 import type { TagFilterState } from "../utils/filter";
 import { storePref } from "../utils/nativePrefs";
@@ -856,4 +856,48 @@ export function resetSidebarStore(): void {
 /** Subscribe to the sidebar store. Re-renders on any mutation. */
 export function useSidebarStore(): SidebarState {
   return useSyncExternalStore(subscribe, getSnapshot);
+}
+
+/** Field-wise equality for a selection that is a flat object (see `useSidebarSelector`). */
+export function shallowEqual<T extends object>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  const ka = Object.keys(a) as (keyof T)[];
+  if (ka.length !== Object.keys(b).length) return false;
+  return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && Object.is(a[k], b[k]));
+}
+
+/**
+ * Subscribe to a slice of the sidebar store. Re-renders only when the selection changes by
+ * `isEqual` (default `Object.is`), not on every mutation.
+ *
+ * Why it exists: the layout reports its width into the store on every step of a window resize
+ * (`setLayoutContext`), which replaces the whole snapshot, so a bare `useSidebarStore()` re-rendered
+ * every subscriber once per pixel. Eight components subscribed, two of them once per card and per
+ * group, and a width drag spent ~17 ms a step re-rendering the whole report (CDP profile, 4 Nov 2026).
+ * A component that reads three fields should say so.
+ *
+ * `select` must be a pure function of the state it is given. Pass a module-level function or one
+ * whose identity is stable: a new `select` rebuilds the one-slot cache, which is only a cost.
+ * The selection is the standard cached `useSyncExternalStore` shape (as in React's `with-selector`):
+ * `getSnapshot` returns the previous selection while the store snapshot is the same object or the
+ * new selection is `isEqual` to it, so it never returns a fresh object for unchanged state.
+ */
+export function useSidebarSelector<T>(
+  select: (s: SidebarState) => T,
+  isEqual: (a: T, b: T) => boolean = Object.is,
+): T {
+  const getSelection = useMemo(() => {
+    let memo: { snap: SidebarState; sel: T } | null = null;
+    return (): T => {
+      const snap = getSnapshot();
+      if (memo === null) {
+        memo = { snap, sel: select(snap) };
+      } else if (memo.snap !== snap) {
+        const next = select(snap);
+        memo = { snap, sel: isEqual(memo.sel, next) ? memo.sel : next };
+      }
+      return memo.sel;
+    };
+  }, [select, isEqual]);
+  return useSyncExternalStore(subscribe, getSelection);
 }

@@ -36,7 +36,9 @@ import {
   toggleStar,
   useQuotesStore,
 } from "../contexts/QuotesContext";
-import { toggleTagGroupHidden, useSidebarStore } from "../contexts/SidebarStore";
+import { toggleTagGroupHidden, useSidebarSelector, shallowEqual, type SidebarState } from "../contexts/SidebarStore";
+
+const selectHiddenAndFrameworks = (s: SidebarState) => ({ hiddenTagGroups: s.hiddenTagGroups, disabledFrameworks: s.disabledFrameworks });
 import { apiGet, getCodebook } from "../utils/api";
 import { formatTimecode } from "../utils/format";
 import type { SearchTerm } from "../utils/searchMatch";
@@ -156,7 +158,7 @@ export function useQuoteCards(host: ReportQuotes, scope: string[]) {
   }, [scope]);
   const { store, tagInfo, vocabulary, groupedVocabulary, hasModerator } = host;
   const { selectedIds, clearSelection } = useFocus();
-  const { hiddenTagGroups, disabledFrameworks } = useSidebarStore();
+  const { hiddenTagGroups, disabledFrameworks } = useSidebarSelector(selectHiddenAndFrameworks, shallowEqual);
   const vis = useMemo(
     () => deriveTagVisibility(tagInfo, hiddenTagGroups, disabledFrameworks),
     [tagInfo, hiddenTagGroups, disabledFrameworks],

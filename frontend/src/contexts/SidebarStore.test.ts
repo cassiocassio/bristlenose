@@ -5,6 +5,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   useSidebarStore,
+  useSidebarSelector,
+  shallowEqual,
+  type SidebarState,
   resetSidebarStore,
   toggleTagGroupHidden,
   setTagGroupsHidden,
@@ -1063,3 +1066,55 @@ function snapshot() {
   const { result } = renderHook(() => useSidebarStore());
   return result.current;
 }
+
+// A window drag reports the layout's width into the store on every step. A component that reads
+// other fields must not re-render for it (traced 4 Nov 2026: the whole report re-rendered per step).
+describe("useSidebarSelector", () => {
+  const selectHidden = (s: SidebarState) => s.hiddenTagGroups;
+  const selectTwo = (s: SidebarState) => ({ tocMode: s.tocMode, soloTag: s.soloTag });
+
+  function counted<T>(select: (s: SidebarState) => T, isEqual?: (a: T, b: T) => boolean) {
+    let renders = 0;
+    const hook = renderHook(() => {
+      renders += 1;
+      return useSidebarSelector(select, isEqual);
+    });
+    return { hook, renders: () => renders };
+  }
+
+  it("does not re-render when only the layout width changes", () => {
+    const { renders } = counted(selectHidden);
+    const before = renders();
+    for (let w = 1500; w >= 900; w -= 25) act(() => setLayoutContext(w, true));
+    expect(renders()).toBe(before);
+  });
+
+  it("does not re-render a flat selection whose fields did not change (shallowEqual)", () => {
+    const { renders } = counted(selectTwo, shallowEqual);
+    const before = renders();
+    for (let w = 1500; w >= 900; w -= 25) act(() => setLayoutContext(w, true));
+    expect(renders()).toBe(before);
+  });
+
+  it("still re-renders for a change in what it selected", () => {
+    const { hook, renders } = counted(selectHidden);
+    const before = renders();
+    act(() => setTagGroupsHidden(["g1"], true));
+    expect(renders()).toBeGreaterThan(before);
+    expect(hook.result.current.has("g1")).toBe(true);
+  });
+
+  it("re-renders when one field of a shallow selection changes, and returns the new value", () => {
+    const { hook } = counted(selectTwo, shallowEqual);
+    expect(hook.result.current.tocMode).not.toBe("push");
+    act(() => openTocPush());
+    expect(hook.result.current.tocMode).toBe("push");
+  });
+
+  it("agrees with useSidebarStore on the value it selects", () => {
+    const sel = renderHook(() => useSidebarSelector((s) => s.tagsWidth));
+    const whole = renderHook(() => useSidebarStore());
+    act(() => setTagsWidth(333));
+    expect(sel.result.current).toBe(whole.result.current.tagsWidth);
+  });
+});

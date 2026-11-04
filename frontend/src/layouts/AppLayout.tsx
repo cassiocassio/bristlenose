@@ -74,7 +74,15 @@ import {
 import type { NormalisedJobStatus } from "../components/ActivityChipStack";
 import { toggleInspector, useInspectorStore } from "../contexts/InspectorStore";
 import { applyTimelineMenuAction, useTranscriptTimeline } from "../contexts/TranscriptTimelineStore";
-import { panelFit, useSidebarStore, wantedWidth } from "../contexts/SidebarStore";
+import { panelFit, shallowEqual, useSidebarSelector, wantedWidth, type SidebarState } from "../contexts/SidebarStore";
+
+// What this layout reads of the sidebar store: the panel fit (which flips at a few widths, not per
+// pixel) and the width the wish needs. Selecting these rather than the whole store keeps a window
+// drag from re-rendering the report once per step (CDP profile, 4 Nov 2026).
+const selectLayoutFit = (s: SidebarState) => {
+  const f = panelFit(s);
+  return { tocMode: s.tocMode, tocOpen: f.tocOpen, tagsOpen: f.tagsOpen, wanted: wantedWidth(s) };
+};
 import { useQuoteGroupingView } from "../contexts/QuoteGroupingSlot";
 import { QuoteGroupingToggle } from "../islands/QuoteGroupingToggle";
 import {
@@ -380,15 +388,12 @@ function AppShell() {
   // while the tag sidebar is open). Keyed on the three booleans, not the store
   // objects: a width drag, a tag-eye toggle, or a solo-tag entry mutates
   // SidebarStore without changing what the menu says.
-  const sidebar = useSidebarStore();
-  const { tocMode } = sidebar;
+  const { tocMode, tocOpen, tagsOpen, wanted } = useSidebarSelector(selectLayoutFit, shallowEqual);
   // The mirror carries what is SHOWING (the wish fitted to the width — a
   // panel the cascade has auto-closed must read "Show …", or the row is a dead
   // click), plus the width the WISH needs, which native declares on the
   // detail column so the projects sidebar collapses before the panels do.
-  const fit = panelFit(sidebar);
-  const tagsOpen = fit.tagsOpen;
-  const minWidth = isDiscussion ? discussionGuide.wanted : isScreens ? screensNav.wanted : wantedWidth(sidebar);
+  const minWidth = isDiscussion ? discussionGuide.wanted : isScreens ? screensNav.wanted : wanted;
   const { open: inspectorOpen } = useInspectorStore();
   // "overlay" is the transient hover-peek, and it can't occur embedded (the
   // rails that trigger it are hidden) — but it is open when it does, so treat
@@ -400,7 +405,7 @@ function AppShell() {
     ? discussionGuide.shown
     : isScreens
     ? screensNav.shown
-    : (tocMode === "overlay" || fit.tocOpen) && !embeddedSessionsPanelRemoved;
+    : (tocMode === "overlay" || tocOpen) && !embeddedSessionsPanelRemoved;
   useEffect(() => {
     if (!embedded) return;
     postPanelState(leftPanelOpen, tagsOpen, inspectorOpen, minWidth);
@@ -948,7 +953,7 @@ function AppShell() {
         // The embedded gate repeats here (belt to showSidebar's braces) so
         // SessionsSidebar never MOUNTS on the embedded Sessions lens — its
         // useEffect fetch would otherwise still fire behind an inactive layout.
-        isSessionsRoute && !embeddedSessionsPanelRemoved ? <DeferredSessionsSidebar visible={sidebar.tocMode !== "closed"} /> : isCodebook ? <CodebookV2Sidebar /> : isSignals ? <SignalsSidebar /> : undefined
+        isSessionsRoute && !embeddedSessionsPanelRemoved ? <DeferredSessionsSidebar visible={tocMode !== "closed"} /> : isCodebook ? <CodebookV2Sidebar /> : isSignals ? <SignalsSidebar /> : undefined
       }
       leftPanelTitle={
         // Codebooks dropped its title 14 Aug 2026, alongside Quotes' "Contents"

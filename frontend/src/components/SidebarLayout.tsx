@@ -24,10 +24,12 @@
  * @module SidebarLayout
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  useSidebarStore,
+  useSidebarSelector,
+  shallowEqual,
+  type SidebarState,
   toggleToc,
   toggleTags,
   toggleBoth,
@@ -136,42 +138,58 @@ interface SidebarLayoutProps {
   children: React.ReactNode;
 }
 
+/** Equality for `SidebarLayout`'s selection: `fit` and `inertFit` are fresh objects of flat fields each call. */
+function sameLayoutSelection(
+  a: { tocMode: string; tocWidth: number; tagsWidth: number; fit: object; inertFit: object },
+  b: { tocMode: string; tocWidth: number; tagsWidth: number; fit: object; inertFit: object },
+): boolean {
+  return a.tocMode === b.tocMode && a.tocWidth === b.tocWidth && a.tagsWidth === b.tagsWidth
+    && shallowEqual(a.fit, b.fit) && shallowEqual(a.inertFit, b.inertFit);
+}
+
 export function SidebarLayout({ active, leftPanel, leftPanelTitle, leftPanelHeader, showRightSidebar = true, inertRail, children }: SidebarLayoutProps) {
   const { t } = useTranslation();
-  const sidebar = useSidebarStore();
-  const { tocMode, tocWidth, tagsWidth } = sidebar;
-  // The store holds the WISH; the grid shows the wish fitted to the width it
-  // has (SidebarStore "Fit to width"). `showRightSidebar` is passed rather
-  // than read back from the store so a lens without the right column never
-  // counts a tag sidebar the persisted flag still wishes for.
-  const fit = fitPanels({
-    tocWanted: tocMode === "push",
-    tagsWanted: sidebar.tagsOpen,
-    tocWidth,
-    tagsWidth,
-    rightColumn: showRightSidebar,
-    available: sidebar.availableWidth ?? Infinity,
-    // The panel just opened stays (SidebarStore "Fit to width"). The store's
-    // own fit always honoured this; the grid did not, so a panel opened in a
-    // narrow window was reported open to the toggles and the Mac while the
-    // grid closed it — a press that showed nothing.
-    exempt: sidebar.lastOpened,
-    // The browser tab bar's needs (NavBar measures them); absent on the Mac.
-    bar: navBarNeeds(sidebar),
-    // The Mac folded its projects column: the minimap stays gone meanwhile.
-    hostColumnFolded: sidebar.hostColumnFolded,
-  });
-  // A lens with no shared panels still has the tab bar, so it gets the same
-  // tab-bar steps from the same function, with nothing else to give way.
-  const inertFit = fitPanels({
-    tocWanted: false,
-    tagsWanted: false,
-    tocWidth,
-    tagsWidth,
-    rightColumn: false,
-    available: sidebar.availableWidth ?? Infinity,
-    bar: navBarNeeds(sidebar),
-  });
+  // Select what the grid needs, not the whole store: the layout's own width is reported into the
+  // store on every step of a window resize, and a bare subscription re-rendered this component, and
+  // the sidebars it builds, once per pixel (CDP profile, 4 Nov 2026). The selection is the fit, which
+  // flips at a few widths, plus the panel widths, which change on a divider drag.
+  const select = useMemo(() => (sidebar: SidebarState) => {
+    const { tocMode, tocWidth, tagsWidth } = sidebar;
+    // The store holds the WISH; the grid shows the wish fitted to the width it
+    // has (SidebarStore "Fit to width"). `showRightSidebar` is passed rather
+    // than read back from the store so a lens without the right column never
+    // counts a tag sidebar the persisted flag still wishes for.
+    const fit = fitPanels({
+      tocWanted: tocMode === "push",
+      tagsWanted: sidebar.tagsOpen,
+      tocWidth,
+      tagsWidth,
+      rightColumn: showRightSidebar,
+      available: sidebar.availableWidth ?? Infinity,
+      // The panel just opened stays (SidebarStore "Fit to width"). The store's
+      // own fit always honoured this; the grid did not, so a panel opened in a
+      // narrow window was reported open to the toggles and the Mac while the
+      // grid closed it — a press that showed nothing.
+      exempt: sidebar.lastOpened,
+      // The browser tab bar's needs (NavBar measures them); absent on the Mac.
+      bar: navBarNeeds(sidebar),
+      // The Mac folded its projects column: the minimap stays gone meanwhile.
+      hostColumnFolded: sidebar.hostColumnFolded,
+    });
+    // A lens with no shared panels still has the tab bar, so it gets the same
+    // tab-bar steps from the same function, with nothing else to give way.
+    const inertFit = fitPanels({
+      tocWanted: false,
+      tagsWanted: false,
+      tocWidth,
+      tagsWidth,
+      rightColumn: false,
+      available: sidebar.availableWidth ?? Infinity,
+      bar: navBarNeeds(sidebar),
+    });
+    return { tocMode, tocWidth, tagsWidth, fit, inertFit };
+  }, [showRightSidebar]);
+  const { tocMode, tocWidth, tagsWidth, fit, inertFit } = useSidebarSelector(select, sameLayoutSelection);
   const tocPush = fit.tocOpen;
   const tagsOpen = fit.tagsOpen;
   const pg = useSidebarTuning();

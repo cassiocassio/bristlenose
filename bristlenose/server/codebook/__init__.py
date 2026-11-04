@@ -210,7 +210,11 @@ def _bundled_template_paths() -> dict[str, Path]:
 
 @cache
 def _load_template(path: Path) -> CodebookTemplate:
-    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    # CSafeLoader is libyaml's C parser with the same safe semantics; the pure-Python
+    # SafeLoader took ~97 ms across the bundled templates at import (python -X importtime,
+    # 4 Nov 2026). Falls back where libyaml is not built in.
+    loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+    raw = yaml.load(path.read_text(encoding="utf-8"), Loader=loader)
     return _parse_template(raw, path.name)
 
 

@@ -4,8 +4,8 @@
 
 Generates (once, under the temp dir) a synthetic study, serves it on an ephemeral port with
 a token it mints itself, and prints time to first byte, the SQL statement count and the wire
-size for each hot route, then the HTML export. It never touches a real study or the :8484
-dev server. ``ttfb`` is the server's own ``Server-Timing`` ``bn`` value, which includes gzip.
+size for each hot route, then the HTML export. It never touches a real study or a developer's running
+serve. ``ttfb`` is the server's own ``Server-Timing`` ``bn`` value, which includes gzip.
 Part of the perf ledger: docs/design-perf-ledger.md.
 """
 from __future__ import annotations
@@ -36,7 +36,11 @@ with socket.socket() as s:
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
 token = secrets.token_urlsafe(32)
-env = {**os.environ, "_BRISTLENOSE_AUTH_TOKEN": token, "BRISTLENOSE_SERVER_TIMING": "1"}
+# "local" so a serve started here can never reach a paid provider: with a key configured,
+# serve start builds a missing Signals snapshot with a real model call (app.py,
+# _schedule_missing_signal_snapshot), and a synthetic study never has one.
+env = {**os.environ, "_BRISTLENOSE_AUTH_TOKEN": token, "BRISTLENOSE_SERVER_TIMING": "1",
+       "BRISTLENOSE_LLM_PROVIDER": "local"}
 db = FIX / "bristlenose-output" / ".bristlenose" / "bristlenose.db"
 for p in (db, Path(str(db) + "-wal"), Path(str(db) + "-shm")):
     p.unlink(missing_ok=True)

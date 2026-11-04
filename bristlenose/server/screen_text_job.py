@@ -100,7 +100,10 @@ class ScreenTextJob:
         return self.engine.available()
 
     def start(self) -> bool:
-        if not self._enabled() or self._run_in_progress() or self.unavailable():
+        # No `unavailable()` here: the first call imports the Vision frameworks (Foundation,
+        # objc, Quartz, Vision: about 260 ms, measured 4 Nov 2026), and the server's lifespan
+        # calls this on the event loop at every launch. The job's own thread asks instead.
+        if not self._enabled() or self._run_in_progress():
             return False
         with self._flag:
             if not self._lock.acquire(blocking=False):
@@ -123,6 +126,10 @@ class ScreenTextJob:
 
     def _run(self) -> None:
         try:
+            if self.unavailable():  # off this machine: nothing to read, and nothing left running
+                with self._flag:
+                    self._finish()
+                return
             while True:
                 self._rerun = False
                 self._pass()

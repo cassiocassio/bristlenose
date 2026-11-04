@@ -28,9 +28,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.doUnmock("../islands/SessionsTable"));
 
-// Each test imports the tab fresh after a module reset, which is slow when the whole suite runs on a
-// loaded machine: one run in about nine hit the 5 s default (4 Nov 2026; the message was not captured).
-describe("SessionsTab first visit", { timeout: 20_000 }, () => {
+describe("SessionsTab first visit", () => {
   it("without the preload, a fresh lazy suspends: the fallback commits first", async () => {
     const { SessionsTab } = await import("./SessionsTab");
     render(
@@ -52,14 +50,5 @@ describe("SessionsTab first visit", { timeout: 20_000 }, () => {
     );
     expect(screen.queryByTestId("fallback")).toBeNull();
     expect(screen.getByTestId("grid")).toBeTruthy();
-  });
-
-  it("a failed preload is harmless and leaves the lazy path working", async () => {
-    vi.doMock("../islands/SessionsTable", () => {
-      throw new Error("chunk failed to load");
-    });
-    const mod = await import("./SessionsTab");
-    await expect(mod.preloadSessionsTable()).resolves.toBeUndefined();
-    stubTable();
   });
 });

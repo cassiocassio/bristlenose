@@ -28,7 +28,9 @@ beforeEach(() => {
 });
 afterEach(() => vi.doUnmock("../islands/SessionsTable"));
 
-describe("SessionsTab first visit", () => {
+// Each test imports the tab fresh after a module reset, which is slow when the whole suite runs on a
+// loaded machine: one run in about nine hit the 5 s default (4 Nov 2026; the message was not captured).
+describe("SessionsTab first visit", { timeout: 20_000 }, () => {
   it("without the preload, a fresh lazy suspends: the fallback commits first", async () => {
     const { SessionsTab } = await import("./SessionsTab");
     render(

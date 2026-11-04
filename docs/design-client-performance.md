@@ -42,6 +42,24 @@ The web view, from the system-wide trace of the same drag (WebContent main threa
 
 About 0.9–1.0 s off a study's start, and the same off click-to-ready. Cold was not slower than warm here (a fresh copy of the files did not cost a visible first-exec penalty), so the 15-to-90-second cold-start budget the desktop notes describe is not reproduced by this method. The new sidecar was built from the working tree, which carries other sessions' uncommitted edits (theme CSS and the like); none of them is on the import path.
 
+### Where the rest of `project-select` goes
+
+`PerfSignpost.step` marks points inside it (signpost event `project-select-step`), and `serve-ready.sh` prints the median of each part. Same new sidecar and same Debug app as above; 5 cold runs and 2 usable warm runs (3 warm relaunches in that batch never came up, so there is no warm n=5 here); medians in ms:
+
+| part | median | min–max |
+|---|---|---|
+| click to spawn requested | 112 | 105–114 |
+| process spawn call | 11 | 10–12 |
+| **process spawned to the sidecar printing its port** | **2,076** | 2,008–2,343 |
+| port line to the port answering | 67 | 26–73 |
+| port answering to `/api/health` answered | 197 | 190–218 |
+| health answered to the web view starting to load | 139 | 102–174 |
+| web view load started to `didFinish` | 201 | 182–455 |
+| `didFinish` to the page posting `ready` | 210 | 168–339 |
+| **click to report ready** | **2,948** | |
+
+About 70% of the wait is the sidecar booting (Python start, imports, app construction and bind, up to the line it prints). The 0.8 s after it answers is split roughly evenly between the health call, building the web view, the page load and the SPA mounting, so no single native or page step is large. The next lever is inside the sidecar's own start, and it needs a profile of that process, not of the Mac app.
+
 ## Considered and left, with the reason
 
 - **Shared rAF-coalescing `ResizeObserver` helper across 16 files.** The callback bodies total ~26 ms; the loop-error warning is noise, not cost. Revisit only if a profile names them.

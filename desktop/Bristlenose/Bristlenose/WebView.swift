@@ -557,6 +557,7 @@ struct WebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
                 guard let self, webView === self.webView else { return }
+                PerfSignpost.step("webview-load-started")
                 // The new document numbers its right-clicks from 1 again.
                 (webView as? BristlenoseWebView)?.contextTargets.newDocument()
                 log.notice("main-frame navigation started (url: \(webView.url?.path ?? "nil", privacy: .public)) → documentState .loading")
@@ -616,6 +617,7 @@ struct WebView: NSViewRepresentable {
         /// away rather than a mystery.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             Task { @MainActor [weak self] in
+                PerfSignpost.step("webview-did-finish")
                 try? await Task.sleep(for: .seconds(2))
                 guard let self else { return }
                 if !self.bridgeHandler.isReady {

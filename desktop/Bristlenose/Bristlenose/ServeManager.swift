@@ -820,6 +820,7 @@ final class ServeManager: ObservableObject {
 
         do {
             try proc.run()
+            PerfSignpost.step("serve-spawned")
         } catch {
             state = .failed(error: .keyed(
                 Self.B + "launchFailed",
@@ -1531,6 +1532,7 @@ final class ServeManager: ObservableObject {
         guard let url = URL(string: "http://127.0.0.1:\(port)/api/health") else { return }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
+            PerfSignpost.step("serve-health-answered")
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 // A completion that arrives after a project switch must not
                 // write the OLD serve's identity over the new one — with the
@@ -1696,6 +1698,7 @@ final class ServeManager: ObservableObject {
             return
         }
 
+        PerfSignpost.step("serve-port-parsed")
         timeoutTask?.cancel()
         let readyGeneration = self.generation
         Task { [weak self] in

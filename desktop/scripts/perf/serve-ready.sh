@@ -18,7 +18,7 @@ mkdir -p "$OUT/bin"; BIN="$OUT/bin"
 [ -x "$BIN/select-study" ] && [ "$BIN/select-study" -nt "$HERE/select-study.swift" ] \
   || swiftc -O "$HERE/select-study.swift" -o "$BIN/select-study" || { echo "cannot build select-study" >&2; exit 1; }
 RUN=/tmp/bn-ab-run.app
-: > "$OUT/$LABEL.runs"
+: > "$OUT/$LABEL.runs"; : > "$OUT/$LABEL.steps.jsonl"
 
 one() { # kind index
   local kind=$1 i=$2 exe pid slog
@@ -33,19 +33,32 @@ one() { # kind index
   "$BIN/select-study" "$pid" "$STUDY" --wait-web=180 > /dev/null
   for _ in $(seq 1 60); do grep -q "end\] serve-ready" "$slog" && break; sleep 1; done
   sleep 2; pkill -f "$exe" 2>/dev/null; sleep 2; kill "$lp" 2>/dev/null
-  python3 - "$slog" "$kind" "$OUT/$LABEL.runs" <<'PY'
-import re, sys
-log, kind, out = sys.argv[1:4]
+  python3 - "$slog" "$kind" "$OUT/$LABEL.runs" "$OUT/$LABEL.steps.jsonl" <<'PY'
+import json, re, sys
+log, kind, out, steps_out = sys.argv[1:5]
 t = lambda s: sum(float(x) * m for x, m in zip(s.split(":"), (3600, 60, 1)))
-begins, ends = {}, {}
+begins, ends, events = {}, {}, {}
 for l in open(log):
-    m = re.match(r"\S+ ([\d:.]+) +Sp .*\[spid (0x[0-9a-f]+), process, +(begin|end)\] ([a-z-]+)", l)
-    if m: (begins if m[3] == "begin" else ends)[(m[2], m[4])] = t(m[1])
-def dur(name):
+    m = re.match(r"\S+ ([\d:.]+) +Sp .*\[spid (0x[0-9a-f]+|excl), process, +(begin|end|event)\] ([a-z-]+)(?:: (.*))?", l)
+    if not m: continue
+    if m[3] == "event": events.setdefault(m[5], t(m[1]))
+    else: (begins if m[3] == "begin" else ends)[(m[2], m[4])] = t(m[1])
+def span(name):
     for (sp, n), b in begins.items():
-        if n == name and (sp, n) in ends: return round((ends[(sp, n)] - b) * 1000)
-open(out, "a").write(f'{kind} {dur("serve-ready")} {dur("project-select")}\n')
-print(kind, "serve-ready", dur("serve-ready"), "ms; project-select", dur("project-select"), "ms")
+        if n == name and (sp, n) in ends: return b, ends[(sp, n)]
+    return None, None
+ps_b, ps_e = span("project-select"); sr_b, sr_e = span("serve-ready")
+pts = [("click", ps_b), ("spawn requested", sr_b), ("process spawned", events.get("serve-spawned")),
+       ("sidecar port line", events.get("serve-port-parsed")), ("port answering", sr_e),
+       ("health answered", events.get("serve-health-answered")), ("web view load started", events.get("webview-load-started")),
+       ("web view did finish", events.get("webview-did-finish")), ("report ready", ps_e)]
+seg = {}
+for (a, ta), (b, tb) in zip(pts, pts[1:]):
+    seg[f"{a} -> {b}"] = round((tb - ta) * 1000) if ta is not None and tb is not None else None
+total = round((ps_e - ps_b) * 1000) if ps_b and ps_e else None
+open(out, "a").write(f"{kind} {round((sr_e - sr_b) * 1000) if sr_b and sr_e else None} {total}\n")
+open(steps_out, "a").write(json.dumps({"kind": kind, "segments": seg, "total": total}) + "\n")
+print(kind, "project-select", total, "ms:", seg)
 PY
 }
 
@@ -59,4 +72,16 @@ for kind in ("cold", "warm"):
     v = [int(r[1]) for r in rows if r[0] == kind and r[1] != "None"]
     p = [int(r[2]) for r in rows if r[0] == kind and r[2] != "None"]
     if v: print(f'{sys.argv[2]:>8} {kind}: serve-ready median {st.median(v)} ms (n={len(v)}, min {min(v)}, max {max(v)}); project-select median {st.median(p) if p else "-"} ms')
+PY
+python3 - "$OUT/$LABEL.steps.jsonl" "$LABEL" <<'PY'
+import json, statistics as st, sys
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+if rows:
+    names = list(rows[0]["segments"])
+    print(f"\n{sys.argv[2]}: median ms per part of project-select, over {len(rows)} runs")
+    for n in names:
+        v = [r["segments"][n] for r in rows if r["segments"][n] is not None]
+        if v: print(f"  {n:46} {int(st.median(v)):>6}   (min {min(v)}, max {max(v)})")
+    v = [r["total"] for r in rows if r["total"]]
+    print(f'  {"TOTAL click -> report ready":46} {int(st.median(v)):>6}')
 PY

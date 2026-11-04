@@ -63,6 +63,13 @@ enum PerfSignpost {
         open[key(moment, scope)] != nil
     }
 
+    /// A point inside a moment, so a trace can split `project-select` into its parts: the process
+    /// spawned, the port line parsed, the health answer, the web view's load start and finish. One
+    /// event name, the step as its message, so the readers need only one predicate.
+    static func step(_ name: String) {
+        signposter.emitEvent("project-select-step", "\(name, privacy: .public)")
+    }
+
     /// For tests: forget everything without emitting.
     static func resetForTests() { open.removeAll() }
 }

@@ -20,8 +20,11 @@ const LazySessionsTable = lazy(loadTable);
 // (measured 4 Nov 2026; a patched react-dom with the throttle at 0 started the read at
 // 46 ms instead of 309). A plain import() does not help, because a fresh lazy() always
 // suspends on its first render. So load the chunk when the browser is idle and render the
-// loaded component itself, which suspends for nothing. The same timer fallback as
-// PreloadSessionsSidebar, for browsers without requestIdleCallback.
+// loaded component itself, which suspends for nothing. WebKit, which is the Mac app's engine,
+// has no requestIdleCallback, so there it is a short timer: with the 1.5 s that
+// PreloadSessionsSidebar uses, a click on Sessions in the first 1.5 s after load still paid
+// the whole throttle (366 ms at 400 and 900 ms, 95 ms at 2 s; measured 4 Nov 2026). The chunk
+// is 10 ms, so 250 ms costs the first paint nothing.
 export function preloadSessionsTable(): Promise<unknown> {
   return loadTable().catch(() => {});
 }
@@ -30,7 +33,7 @@ if (typeof window !== "undefined" && import.meta.env.MODE !== "test") {
   if (typeof window.requestIdleCallback === "function") {
     window.requestIdleCallback(preload, { timeout: 2000 });
   } else {
-    setTimeout(preload, 1500);
+    setTimeout(preload, 250);
   }
 }
 

@@ -133,6 +133,8 @@ So `init([])` reads `knownfiles + []` = the full system list. Trying that landed
 
 ### Verification
 
+**Update 4 Nov 2026:** the page no longer names `/static/assets/` at all. `_build_spa_html` used to rewrite the page's script and preload paths from `/assets/` to `/static/assets/`, while Vite's lazy chunks resolve against `/assets/`, so every shared chunk was fetched twice and evaluated as two module instances. The rewrite is gone and the page uses `/assets/` throughout; both routes stay and serve the same files through the same reader, so the sandbox fix below applies to either.
+
 End-to-end under sandbox-on Debug, 6 May 2026: every `/static/assets/*.js` chunk returns 200, log shows zero `PermissionError` lines on `/static/*` paths, React UI mounts and all tabs render. Commit `768f9a4`.
 
 ## Plan B — adopt `WKURLSchemeHandler` for desktop asset serving (post-alpha)

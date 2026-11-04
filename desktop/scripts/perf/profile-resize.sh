@@ -3,6 +3,7 @@
 #
 #   profile-resize.sh <path/to/Bristlenose.app> <label> [seconds=10] [outdir=/tmp/bn-perf]
 #   BN_ACTION=click   40 real clicks in the report area instead of a drag (what a click costs the main thread)
+#   BN_ACTION=lens    cycle the sidebar lens rows (Project, Sessions, Quotes, Signals) 5 times
 #   BN_STUDY=Talismanic BN_LENS=Quotes BN_APP_ENV=NAME=value   which sidebar row and lens to show (substring)
 #   the study must be one with a report; the script stops if no web area renders
 #
@@ -47,6 +48,8 @@ xcrun xctrace record --attach "$PID" --template 'Time Profiler' --time-limit "$(
   --output "$OUT/$LABEL.trace" --no-prompt > "$OUT/$LABEL.xctrace.log" 2>&1 &
 XT=$!; sleep 2
 if [ "${BN_ACTION:-resize}" = click ]; then DRAG=$("$BIN/click-storm" "$PID" 40 150)
+elif [ "${BN_ACTION:-resize}" = lens ]; then
+  for _ in 1 2 3 4 5; do for l in Project Sessions Quotes Signals; do "$BIN/select-study" "$PID" "$l" >/dev/null; sleep 0.9; done; done; DRAG='{"lens_switches":20}'
 else DRAG=$("$BIN/resize-drag" "$PID" "$SECS" 900 1500 120); fi
 echo "$LABEL drag: $DRAG"
 wait "$XT"

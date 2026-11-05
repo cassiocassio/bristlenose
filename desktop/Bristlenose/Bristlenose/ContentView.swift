@@ -3649,10 +3649,7 @@ struct ContentView: View {
     /// same reload a completed one does; without it the pane went back to the
     /// PREVIOUS run's failure once a re-run failed.
     private func isSettledAfterRun(_ s: PipelineState?) -> Bool {
-        switch s {
-        case .ready, .completedPartial, .failed, .failedWithDiagnostic, .stopped: return true
-        default: return false
-        }
+        CompletionRescan.isSettledAfterRun(s)
     }
 
     /// A project actively mid-analysis. Used to distinguish a real run
@@ -3708,8 +3705,8 @@ struct ContentView: View {
     private func scheduleReportReloadOnCompletion(
         old: [UUID: PipelineState], new: [UUID: PipelineState]
     ) {
-        guard let id = selectedProjectID,
-              isAnalysing(old[id]), isSettledAfterRun(new[id]) else { return }
+        guard CompletionRescan.shouldReloadReport(selected: selectedProjectID, old: old, new: new),
+              let id = selectedProjectID else { return }
         Self.reloadLog.info("completion id=\(id.uuidString, privacy: .public)")
         // A run may have renumbered the positional session ids — a remembered
         // `s3` would then restore *successfully* to a different participant's

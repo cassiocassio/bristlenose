@@ -40,6 +40,28 @@ enum CompletionRescan {
         new.keys.filter { isAnalysing(old[$0]) && !isAnalysing(new[$0]) }
     }
 
+    /// A resting state a run can end in. The report is reloaded for these and not for `.idle` or a
+    /// partial that is still going.
+    static func isSettledAfterRun(_ state: PipelineState?) -> Bool {
+        switch state {
+        case .ready, .completedPartial, .failed, .failedWithDiagnostic, .stopped: return true
+        default: return false
+        }
+    }
+
+    /// Should the selected study's report be reloaded now because its **run** just finished?
+    ///
+    /// Only a real `.running` to resting transition counts. The passive manifest read the app does
+    /// at launch (`.scanning` to a resting state) is not a run, and treating it as one reloaded the
+    /// report on every restored launch, a second page load that landed after the restored lens was
+    /// activated, put the report back on Project, and recorded Project as the lens the researcher
+    /// had left on (found 5 Nov 2026). It also cleared the remembered Sessions route.
+    static func shouldReloadReport(selected: UUID?, old: [UUID: PipelineState],
+                                   new: [UUID: PipelineState]) -> Bool {
+        guard let id = selected, projectsFinishingRun(old: old, new: new).contains(id) else { return false }
+        return isSettledAfterRun(new[id])
+    }
+
     /// IDs whose **run** just finished — narrower than `projectsLeavingAnalysis`,
     /// which also fires when a passive `.scanning` manifest read ends.
     ///

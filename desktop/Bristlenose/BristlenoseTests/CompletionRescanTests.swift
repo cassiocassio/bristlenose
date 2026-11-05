@@ -162,4 +162,30 @@ import Testing
         #expect(Set(CompletionRescan.projectsLeavingAnalysis(old: old, new: new)) == [a, b])
         #expect(Set(CompletionRescan.projectsFinishingRun(old: old, new: new)) == [a])
     }
+
+    // MARK: - shouldReloadReport (the post-run reload gate)
+
+    @Test func reload_aRealRunFinishingReloadsTheSelectedReport() {
+        #expect(CompletionRescan.shouldReloadReport(
+            selected: a, old: [a: .running], new: [a: .ready(Date())]))
+    }
+
+    /// The bug: a restored launch has its study selected while the passive manifest read is still
+    /// running, and the read ending was taken for a finished run. That reloaded the report over the
+    /// restored lens and recorded Project as the lens the researcher left on.
+    @Test func reload_theLaunchTimeManifestReadIsNotARun() {
+        for settled: PipelineState in [.ready(Date()), .stopped(stagesComplete: []),
+                                       .failed(.passthrough("x"), category: .unknown)] {
+            #expect(!CompletionRescan.shouldReloadReport(
+                selected: a, old: [a: .scanning], new: [a: settled]))
+        }
+    }
+
+    @Test func reload_onlyTheSelectedStudyAndOnlyARestingState() {
+        let b = UUID()
+        #expect(!CompletionRescan.shouldReloadReport(selected: b, old: [a: .running], new: [a: .ready(Date())]))
+        #expect(!CompletionRescan.shouldReloadReport(selected: nil, old: [a: .running], new: [a: .ready(Date())]))
+        #expect(!CompletionRescan.shouldReloadReport(selected: a, old: [a: .running], new: [a: .idle]))
+        #expect(!CompletionRescan.shouldReloadReport(selected: a, old: [a: .running], new: [a: .running]))
+    }
 }

@@ -58,6 +58,15 @@ Quotes lens open on a real-size study, nothing touched, 90 s, headless Chromium 
 
 The critic's worry was that every speaker pick, split or join re-reads the transcript and rebuilds every word span. Firing the event the page listens for (`bn:speakers-written`) on three real transcripts: **the word spans are kept, not replaced; one DOM mutation record per re-read; 8 ms of script on 3,183 words, 18 ms on 14,254, 25 ms on 12,049; style and layout 0**. Nothing to fix. Not covered: the server's read (19–55 ms per session, measured above) and a real UI-driven write.
 
+### Design note (5 Nov 2026, not built): a standby sidecar
+
+The one big lever left on opening a study. **Estimate, not measured:** about 0.85 s per open, from the sandboxed app's own stage stamps (851 of 1,818 ms of a cold start is before `create_app`, and nothing in it depends on which study is chosen). Everything below is read from `cli.py` (`serve` binds the study at process start: `project_dir` goes in as an argument, `_refuse_unsafe_study` runs before the app is built, `create_app(project_dir, ...)` does the import) and `ServeManager.swift` (`start(projectPath:)` spawns per study, with the `ServeStartPolicy` watchdog).
+
+- **What can be paid early:** interpreter start and imports (Python plus imports about 740 ms in dev), which do not read the study. **What cannot:** `create_app`, the database, the importer, the study-safety check and the auth token tied to the port.
+- **Shape:** the app starts one standby `bristlenose serve --standby` at launch, which imports everything and then waits for one line (study path, token) on stdin or a control socket, and runs the existing bind path. The first open of a session is then mostly hidden behind the app's own launch; a second open needs a new standby started after the first is claimed.
+- **Cost and risk, each a reason it is a design decision and not a fix:** an idle process holding about 140 MB (the figure behind the earlier decline of "warm on hover"); the standby must be thrown away when anything its environment was built from changes (provider, Screens, Agent Access); the study-safety refusal and the project-identity checks must still run on the claim, not at standby start; the sandbox hands a child the app's access, but a study chosen by bookmark needs its scope open before the claim; a standby that crashes must fall back to today's cold spawn, never to a hang.
+- **Gate before building:** the interleaved sandboxed-app A/B (the open chip) must first show where the app's 851 ms really goes, because the dev numbers did not carry over once already.
+
 ### What is left of the Screens-on premium
 
 Delaying the Vision import does not remove it (1.5 s: 1,223 vs 1,191 ms; 4 s: 1,103–1,122 vs 1,070–1,124 ms; Screens off 927–969 ms), so about 100–150 ms at first health with Screens on is unexplained and inside this machine's noise: not chased. The `/screens` route handlers are plain `def`, so one that lands before the job's first check imports Vision in a threadpool thread, not on the event loop.

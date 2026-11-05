@@ -1,0 +1,501 @@
+{
+ "scannedAt": "2026-11-05",
+ "pages": [
+  {
+   "tab": "Project",
+   "scheme": "light",
+   "total": 87,
+   "top": [
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "color=rgb(0, 0, 238)",
+     14
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "paddingLeft=6.4px",
+     12
+    ],
+    [
+     "fontSize=11.05px",
+     11
+    ],
+    [
+     "fontSize=13.3333px",
+     10
+    ]
+   ]
+  },
+  {
+   "tab": "Sessions",
+   "scheme": "light",
+   "total": 103,
+   "top": [
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "borderTopLeftRadius=2px",
+     14
+    ],
+    [
+     "paddingTop=1.6px",
+     14
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "fontSize=13.3333px",
+     12
+    ],
+    [
+     "rowGap=1.6px",
+     7
+    ]
+   ]
+  },
+  {
+   "tab": "Quotes",
+   "scheme": "light",
+   "total": 649,
+   "top": [
+    [
+     "marginTop=-1px",
+     127
+    ],
+    [
+     "paddingLeft=7.2px",
+     121
+    ],
+    [
+     "fontSize=13.3333px",
+     65
+    ],
+    [
+     "paddingLeft=2px",
+     56
+    ],
+    [
+     "color=rgb(0, 0, 0)",
+     56
+    ],
+    [
+     "paddingTop=2px",
+     54
+    ]
+   ]
+  },
+  {
+   "tab": "Codebooks",
+   "scheme": "light",
+   "total": 77,
+   "top": [
+    [
+     "paddingLeft=16px",
+     15
+    ],
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "paddingTop=3.2px",
+     5
+    ],
+    [
+     "paddingTop=4px",
+     5
+    ],
+    [
+     "color=rgb(0, 0, 238)",
+     5
+    ]
+   ]
+  },
+  {
+   "tab": "Signals",
+   "scheme": "light",
+   "total": 90,
+   "top": [
+    [
+     "paddingLeft=16px",
+     15
+    ],
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "fontSize=13.3333px",
+     12
+    ],
+    [
+     "color=rgb(0, 0, 238)",
+     11
+    ],
+    [
+     "paddingLeft=7.2px",
+     10
+    ],
+    [
+     "paddingTop=3.2px",
+     7
+    ]
+   ]
+  },
+  {
+   "tab": "Discussion",
+   "scheme": "light",
+   "total": 52,
+   "top": [
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "paddingLeft=16px",
+     14
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "color=rgb(0, 0, 238)",
+     5
+    ],
+    [
+     "paddingTop=4px",
+     4
+    ],
+    [
+     "paddingLeft=6.4px",
+     4
+    ]
+   ]
+  },
+  {
+   "tab": "Screens",
+   "scheme": "light",
+   "total": 65,
+   "top": [
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "paddingLeft=6.4px",
+     7
+    ],
+    [
+     "paddingLeft=7.2px",
+     6
+    ],
+    [
+     "color=rgb(0, 0, 238)",
+     5
+    ]
+   ]
+  },
+  {
+   "tab": "Specimen",
+   "scheme": "light",
+   "total": 100,
+   "top": [
+    [
+     "fontSize=11px",
+     19
+    ],
+    [
+     "paddingLeft=16px",
+     16
+    ],
+    [
+     "color=rgb(0, 0, 0)",
+     15
+    ],
+    [
+     "fontSize=10px",
+     12
+    ],
+    [
+     "fontSize=13.3333px",
+     10
+    ],
+    [
+     "paddingLeft=7.2px",
+     8
+    ]
+   ]
+  },
+  {
+   "tab": "Project",
+   "scheme": "dark",
+   "total": 87,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     17
+    ],
+    [
+     "color=rgb(158, 158, 255)",
+     14
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "paddingLeft=6.4px",
+     12
+    ],
+    [
+     "fontSize=11.05px",
+     11
+    ],
+    [
+     "fontSize=13.3333px",
+     10
+    ]
+   ]
+  },
+  {
+   "tab": "Sessions",
+   "scheme": "dark",
+   "total": 103,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     18
+    ],
+    [
+     "borderTopLeftRadius=2px",
+     14
+    ],
+    [
+     "paddingTop=1.6px",
+     14
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "fontSize=13.3333px",
+     12
+    ],
+    [
+     "rowGap=1.6px",
+     7
+    ]
+   ]
+  },
+  {
+   "tab": "Quotes",
+   "scheme": "dark",
+   "total": 649,
+   "top": [
+    [
+     "marginTop=-1px",
+     127
+    ],
+    [
+     "paddingLeft=7.2px",
+     121
+    ],
+    [
+     "color=rgb(255, 255, 255)",
+     97
+    ],
+    [
+     "fontSize=13.3333px",
+     65
+    ],
+    [
+     "paddingLeft=2px",
+     56
+    ],
+    [
+     "paddingTop=2px",
+     54
+    ]
+   ]
+  },
+  {
+   "tab": "Codebooks",
+   "scheme": "dark",
+   "total": 77,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     18
+    ],
+    [
+     "paddingLeft=16px",
+     15
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "paddingTop=3.2px",
+     5
+    ],
+    [
+     "paddingTop=4px",
+     5
+    ],
+    [
+     "color=rgb(158, 158, 255)",
+     5
+    ]
+   ]
+  },
+  {
+   "tab": "Signals",
+   "scheme": "dark",
+   "total": 90,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     17
+    ],
+    [
+     "paddingLeft=16px",
+     15
+    ],
+    [
+     "fontSize=13.3333px",
+     12
+    ],
+    [
+     "color=rgb(158, 158, 255)",
+     11
+    ],
+    [
+     "paddingLeft=7.2px",
+     10
+    ],
+    [
+     "paddingTop=3.2px",
+     7
+    ]
+   ]
+  },
+  {
+   "tab": "Discussion",
+   "scheme": "dark",
+   "total": 52,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     17
+    ],
+    [
+     "paddingLeft=16px",
+     14
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "color=rgb(158, 158, 255)",
+     5
+    ],
+    [
+     "paddingTop=4px",
+     4
+    ],
+    [
+     "paddingLeft=6.4px",
+     4
+    ]
+   ]
+  },
+  {
+   "tab": "Screens",
+   "scheme": "dark",
+   "total": 65,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     18
+    ],
+    [
+     "paddingLeft=16px",
+     13
+    ],
+    [
+     "fontSize=13.3333px",
+     11
+    ],
+    [
+     "paddingLeft=6.4px",
+     7
+    ],
+    [
+     "paddingLeft=7.2px",
+     6
+    ],
+    [
+     "color=rgb(158, 158, 255)",
+     5
+    ]
+   ]
+  },
+  {
+   "tab": "Specimen",
+   "scheme": "dark",
+   "total": 100,
+   "top": [
+    [
+     "color=rgb(255, 255, 255)",
+     21
+    ],
+    [
+     "fontSize=11px",
+     19
+    ],
+    [
+     "paddingLeft=16px",
+     16
+    ],
+    [
+     "fontSize=10px",
+     12
+    ],
+    [
+     "fontSize=13.3333px",
+     10
+    ],
+    [
+     "paddingLeft=7.2px",
+     8
+    ]
+   ]
+  }
+ ]
+}

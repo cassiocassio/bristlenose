@@ -1,0 +1,976 @@
+{
+ "atoms/span-bar.css": {
+  "names": [
+   "span-bar"
+  ],
+  "specimens": [
+   "<div style=\"display:flex;gap:12px;align-items:stretch\">\n      <div style=\"position:relative;width:8px\"><span class=\"span-bar\" style=\"position:absolute;top:4px;height:64px\"></span></div>\n      <div style=\"font-size:var(--bn-text-label);color:var(--bn-colour-muted);line-height:1.9\">\n        <div>“…the checkout kept resetting…”</div><div>“…I lost the whole basket…”</div><div>“…had to start again…”</div></div>\n    </div>"
+  ],
+  "xr": [],
+  "prose": []
+ },
+ "atoms/timecode.css": {
+  "names": [
+   "timecode"
+  ],
+  "specimens": [
+   "<div style=\"display:flex;flex-direction:column;gap:9px;font-size:var(--bn-text-body);color:var(--bn-colour-text)\">\n      <div><a class=\"timecode cx-xr\" data-xr=\"3\" href=\"#\"><span class=\"timecode-bracket\">[</span>02:14<span class=\"timecode-bracket\">]</span></a>\n        &nbsp;a plain clickable timecode</div>\n      <div class=\"bn-timecode-glow\" style=\"display:inline-block;padding:4px 8px;width:max-content\">\n        <span class=\"timecode\"><span class=\"timecode-bracket\">[</span>05:40<span class=\"timecode-bracket\">]</span></span> synced-playback glow</div>\n    </div>"
+  ],
+  "xr": [
+   {
+    "sel": ".timecode",
+    "n": 3
+   }
+  ],
+  "prose": [
+   {
+    "value": "height 0.25s linear",
+    "defect": "0.25s isn't in the transition scale (fast .15 / normal .2 / slow .3) — it's an untokenised in-between value.",
+    "fix": "Add a <code>--bn-transition-quick: 0.25s ease</code> stop, or round to <code>--bn-transition-normal</code>."
+   },
+   {
+    "value": "2px",
+    "defect": "The word-highlight uses 2px; the radius scale starts at sm=3px, so there's no token for it.",
+    "fix": "Add <code>--bn-radius-xs: 2px</code> (recurs 7+ times across the theme)."
+   },
+   {
+    "value": "",
+    "defect": "Shadow colour is a token, but the geometry (0 0 8px 2px) is a literal repeated for the glow states.",
+    "fix": "Introduce a <code>--bn-glow-shadow</code> geometry token."
+   }
+  ]
+ },
+ "atoms/badge.css": {
+  "names": [
+   "badge"
+  ],
+  "specimens": [
+   "<div style=\"display:flex;flex-wrap:wrap;gap:8px;align-items:center\">\n      <span class=\"badge badge-frustration\">frustration</span>\n      <span class=\"badge badge-confidence\">confidence</span>\n      <span class=\"badge badge-ai cx-xr\" data-xr=\"2\" style=\"background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text)\">ai&nbsp;tag</span>\n      <span class=\"badge badge-user cx-xr\" data-xr=\"1\">user tag</span>\n      <span class=\"badge badge-add\">+ add</span>\n      <span class=\"badge badge-proposed cx-xr\" data-xr=\"1\" style=\"background:var(--bn-colour-badge-bg);color:var(--bn-colour-badge-text)\">proposed\n        <span class=\"badge-action-pill\" style=\"opacity:1;pointer-events:auto\"><span class=\"badge-action-deny\">✗</span><span class=\"badge-action-accept\">✓</span></span></span>\n    </div>"
+  ],
+  "xr": [
+   {
+    "sel": ".badge-ai",
+    "n": 2
+   },
+   {
+    "sel": ".badge-user",
+    "n": 1
+   },
+   {
+    "sel": ".badge-proposed",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "#fef2f2",
+    "defect": "Hover tints are raw hex with no dark-mode variant, so they wash out on dark grounds.",
+    "fix": "Derive from the semantic token: <code>background: color-mix(in srgb, var(--bn-colour-danger) 10%, transparent)</code>."
+   },
+   {
+    "value": "rgba(220,38,38,.25)#f87171",
+    "defect": "The dark-mode pill hover still hand-writes rgba/hex. Now that danger/success are real light-dark() tokens (fixed 12 Jul), this block can finally collapse onto them — it was only hand-written because the tokens didn't exist.",
+    "fix": "Replace with <code>color-mix(in srgb, var(--bn-colour-danger) 25%, transparent)</code> etc."
+   },
+   {
+    "value": "0 1px 4px rgba(0,0,0,.16), 0 0 1px rgba(0,0,0,.06)",
+    "defect": "The delete-circle shadow is copy-pasted verbatim three times here (five across the theme). No shadow-geometry token exists.",
+    "fix": "Introduce <code>--bn-shadow-chip</code> and reference it."
+   },
+   {
+    "value": "8px",
+    "defect": "A literal 8px where the exact token already exists — pure drift.",
+    "fix": "<code>border-radius: var(--bn-radius-lg)</code>."
+   },
+   {
+    "value": "1",
+    "defect": "Magic z-index with no scale. This value ‘200’ collides across ~9 unrelated components lens-wide.",
+    "fix": "Adopt a <code>--bn-z-*</code> ladder (base/dropdown/overlay/toast/modal)."
+   }
+  ]
+ },
+ "molecules/quote-actions.css": {
+  "names": [
+   "quote-actions"
+  ],
+  "specimens": [
+   "<blockquote class=\"quote-card starred\" style=\"max-width:22rem\">\n      <span class=\"context\">Onboarding · starred</span>\n      <div class=\"quote-row\"><span class=\"timecode\">[03:12]</span>\n        <span class=\"quote-body\">“Honestly this is the first tool that just got out of my way.”</span></div>\n      <span class=\"speaker\">— P4, first session</span>\n    </blockquote>"
+  ],
+  "xr": [
+   {
+    "sel": ".quote-card",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "1",
+    "defect": "Bare z-index during the star animation — same missing-scale story as everywhere else.",
+    "fix": "Reference a <code>--bn-z-raised</code> stop once the ladder exists."
+   }
+  ]
+ },
+ "molecules/editable-text.css": {
+  "names": [
+   "editable-text"
+  ],
+  "specimens": [
+   "<div style=\"font-size:var(--bn-text-body);color:var(--bn-colour-text);display:flex;flex-direction:column;gap:10px\">\n      <span class=\"editable-text editing cx-xr\" data-xr=\"1\" style=\"display:inline-block;width:max-content\">editing this heading</span>\n      <span>the price <span class=\"crop-included-region cx-xr\" data-xr=\"1\">was really steep</span> for what you get</span>\n      <span class=\"editable-text edited\" style=\"display:inline-block;width:max-content\">committed edit</span>\n    </div>"
+  ],
+  "xr": [
+   {
+    "sel": ".editable-text.editing",
+    "n": 1
+   },
+   {
+    "sel": ".crop-included-region",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "2px",
+    "defect": "Sub-scale radius (2px) — no token exists below sm=3px.",
+    "fix": "Add <code>--bn-radius-xs: 2px</code>."
+   },
+   {
+    "value": "1.15em",
+    "defect": "Relative em multiplier bypasses the 8-stop type scale; the bracket size is untracked.",
+    "fix": "Anchor to a scale stop or add a bracket size token."
+   }
+  ]
+ },
+ "molecules/person-badge.css": {
+  "names": [
+   "person-badge"
+  ],
+  "specimens": [
+   "<div style=\"display:flex;flex-direction:column;gap:12px;align-items:flex-start\">\n      <span class=\"bn-person-badge\"><span class=\"bn-speaker-badge--split\">\n        <span class=\"bn-speaker-badge-code\">P3</span><span class=\"bn-speaker-badge-name\">Amara O.</span></span></span>\n      <span class=\"bn-session-speaker-entry\"><span class=\"bn-speaker-editable-name cx-xr\" data-xr=\"1\">editable name</span></span>\n    </div>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-speaker-editable-name",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "",
+    "defect": "Token colour, literal 0 0 0 2px ring geometry — fine, but the ring geometry recurs uncaptured.",
+    "fix": "Optional: a <code>--bn-ring</code> geometry token if focus rings get unified."
+   }
+  ]
+ },
+ "molecules/tag-input.css": {
+  "names": [
+   "tag-input"
+  ],
+  "specimens": [
+   "<div style=\"font-size:var(--bn-text-body)\">\n      <div class=\"tag-suggest cx-xr\" data-xr=\"2\" style=\"position:static;box-shadow:0 2px 8px var(--bn-colour-shadow);width:max-content\">\n        <div class=\"tag-suggest-header\">UX friction</div>\n        <div class=\"tag-suggest-item active\"><span class=\"tag-suggest-pill\">checkout</span></div>\n        <div class=\"tag-suggest-item\"><span class=\"tag-suggest-pill\">navigation</span></div>\n      </div>\n    </div>"
+  ],
+  "xr": [
+   {
+    "sel": ".tag-suggest",
+    "n": 2
+   }
+  ],
+  "prose": [
+   {
+    "value": "#ffffff",
+    "defect": "Dark-mode active pill text is a raw white, duplicated for the two dark selectors — the same #ffffff appears in badge.css too.",
+    "fix": "Add a <code>--bn-colour-on-accent</code> (or on-emphasis) token and reference it."
+   },
+   {
+    "value": "5010",
+    "defect": "Two magic z-indexes (dropdown 50, card-raise 10) with no scale to relate them.",
+    "fix": "Map both onto a <code>--bn-z-*</code> ladder so the dropdown reliably sits above sibling cards."
+   }
+  ]
+ },
+ "organisms/blockquote.css": {
+  "names": [
+   "blockquote / quote-card"
+  ],
+  "specimens": [
+   "<blockquote class=\"quote-card cx-xr\" data-xr=\"8\" style=\"max-width:23rem\">\n      <span class=\"context\">Checkout · friction point</span>\n      <div class=\"quote-row\"><span class=\"timecode\">[08:03]</span>\n        <span class=\"quote-body\">“It said my card was declined but then charged me twice — I had no idea which one was real.”</span></div>\n      <span class=\"speaker\">— P7, mobile</span>\n      <div class=\"badges\" style=\"margin-top:.5rem\"><span class=\"badge badge-frustration\">frustration</span>\n        <span class=\"badge badge-confusion\">confusion</span></div>\n    </blockquote>"
+  ],
+  "xr": [
+   {
+    "sel": ".quote-card",
+    "n": 8
+   }
+  ],
+  "prose": [
+   {
+    "value": "0.8rem 0",
+    "defect": "0.8rem isn't a spacing stop. The scale (xs .15 / sm .35 / md .75 / lg 1.5 / xl 2rem) has a wide gap between md and lg, so real layout values keep landing off-grid.",
+    "fix": "Widen the spacing scale (e.g. add 0.5 / 1rem stops), then map these on."
+   },
+   {
+    "value": "1rem",
+    "defect": "Mixed: vertical padding is tokenised, horizontal is a literal 1rem — the tell that the scale lacks a 1rem stop.",
+    "fix": "Add a 1rem stop (or reuse md at 0.75) so both axes tokenise."
+   },
+   {
+    "value": "4.5rem",
+    "defect": "Reserves room for the action buttons — a real magic number tied to button geometry, not a spacing stop.",
+    "fix": "Derive from an action-column width token rather than a literal."
+   }
+  ]
+ },
+ "atoms/thumbnail.css": {
+  "names": [
+   "thumbnail"
+  ],
+  "specimens": [
+   "<div class=\"bn-video-thumb\"><span class=\"bn-play-icon\">&#9654;</span></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-play-icon",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "2px",
+    "defect": "A 2px optical-centring nudge for the triangle sits off the spacing scale — no token equals 2px.",
+    "fix": "Snap to the nearest token <code>var(--bn-space-xs)</code>, or accept it as a sub-token optical tweak."
+   }
+  ]
+ },
+ "atoms/journey-label.css": {
+  "names": [
+   "journey-label"
+  ],
+  "specimens": [
+   "<a class=\"bn-journey-label--interactive bn-journey-label--active\">Onboarding</a> <a class=\"bn-journey-label--interactive\">Checkout</a>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-journey-label--interactive",
+    "n": 2
+   }
+  ],
+  "prose": [
+   {
+    "value": "2px",
+    "defect": "The base rule rounds to 2px, but there is no 2px radius token — the scale jumps 0 → 3px (--bn-radius-sm).",
+    "fix": "Use <code>var(--bn-radius-sm)</code> (3px), which the active-state rule at :41 already uses."
+   },
+   {
+    "value": "0.1rem 0.3rem",
+    "defect": "Both padding values are off-scale — 0.1rem and 0.3rem match no spacing token.",
+    "fix": "Map to <code>var(--bn-space-xs)</code> / <code>var(--bn-space-sm)</code> (0.15rem / 0.35rem)."
+   },
+   {
+    "value": "0.15s",
+    "defect": "The 0.15s durations are literals that exactly equal an existing token, so theming drift is invisible today but latent.",
+    "fix": "Replace each 0.15s with <code>var(--bn-transition-fast)</code>."
+   }
+  ]
+ },
+ "molecules/sparkline.css": {
+  "names": [
+   "sparkline"
+  ],
+  "specimens": [
+   "<div class=\"bn-sparkline\"><div class=\"bn-sparkline-bar\" style=\"height:30%;background:var(--bn-sentiment-delight)\"></div><div class=\"bn-sparkline-bar\" style=\"height:60%;background:var(--bn-sentiment-frustration)\"></div><div class=\"bn-sparkline-bar\" style=\"height:45%;background:var(--bn-sentiment-confusion)\"></div></div>"
+  ],
+  "xr": [],
+  "prose": []
+ },
+ "organisms/coverage.css": {
+  "names": [
+   "coverage"
+  ],
+  "specimens": [
+   "<div class=\"bn-coverage-box\"><h3>Transcript coverage</h3><div class=\"bn-coverage-bar\"><div class=\"bn-coverage-bar-segment bn-coverage-bar-segment--report\" style=\"width:60%\"></div><div class=\"bn-coverage-bar-segment bn-coverage-bar-segment--moderator\" style=\"width:25%\"></div><div class=\"bn-coverage-bar-segment bn-coverage-bar-segment--omitted\" style=\"width:15%\"></div></div><div class=\"bn-coverage-legend\"><span class=\"bn-coverage-legend-item\"><span class=\"bn-coverage-legend-dot bn-coverage-legend-dot--report\"></span><span class=\"bn-coverage-legend-value\">60%</span></span></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-coverage-bar",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "4px",
+    "defect": "The stacked bar rounds to 4px, which falls in the gap between --bn-radius-sm (3px) and --bn-radius-md (6px) — no token equals it.",
+    "fix": "Round to <code>var(--bn-radius-sm)</code> or <code>var(--bn-radius-md)</code>."
+   },
+   {
+    "value": "1.6",
+    "defect": "Segment line-height is a bare 1.6 in both the legacy and React-island segment rules — line-height is themeable and should ride a paired text token.",
+    "fix": "Adopt the size+lh pair, e.g. <code>font-size: var(--bn-text-label)</code> with <code>line-height: var(--bn-text-label-lh)</code>."
+   },
+   {
+    "value": "0.2s",
+    "defect": "0.2s is a literal that exactly equals an existing token — fixable drift, not a broken value.",
+    "fix": "Use <code>var(--bn-transition-normal)</code>."
+   }
+  ]
+ },
+ "templates/report.css": {
+  "names": [
+   "session-table"
+  ],
+  "specimens": [
+   "<table class=\"bn-session-table\"><tbody><tr data-session=\"1\"><td class=\"bn-session-id\">#1</td><td class=\"bn-session-meta\">12 Jun 2026<div class=\"bn-session-journey\">Onboarding &rarr; Checkout</div></td><td class=\"bn-session-duration\">14:22</td></tr></tbody></table>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-session-moderators",
+    "n": 1
+   },
+   {
+    "sel": ".bn-interviews-link",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "0.5rem",
+    "defect": "The moderator-header bottom margin is a raw 0.5rem, between --bn-space-sm (0.35rem) and --bn-space-md (0.75rem) — no token matches.",
+    "fix": "Snap to <code>var(--bn-space-sm)</code> or <code>var(--bn-space-md)</code>."
+   },
+   {
+    "value": "0.25rem",
+    "defect": "The speaker-stack gap (:261) and journey margin-top (:277) both use 0.25rem, which is off the spacing scale.",
+    "fix": "Map both to <code>var(--bn-space-xs)</code> (0.15rem) or <code>var(--bn-space-sm)</code>."
+   },
+   {
+    "value": "0.3rem",
+    "defect": "The icon-to-text gap in the folder link is a bespoke 0.3rem, matching no spacing token.",
+    "fix": "Use <code>var(--bn-space-xs)</code> or <code>var(--bn-space-sm)</code>."
+   },
+   {
+    "value": "0.15s",
+    "defect": "The row-hover transition duration equals an existing token — invisible drift until the token changes.",
+    "fix": "Replace 0.15s with <code>var(--bn-transition-fast)</code>."
+   }
+  ]
+ },
+ "atoms/context-expansion.css": {
+  "names": [
+   "context-expansion"
+  ],
+  "specimens": [
+   "<div style=\"background: var(--bn-colour-bg); color: var(--bn-colour-text)\"><span class=\"timecode-expandable\"><button class=\"expand-arrow\" data-dir=\"up\">▲</button><span class=\"timecode\">00:12</span><button class=\"expand-arrow\" data-dir=\"down\">▲</button></span><div class=\"context-segment\"><div class=\"quote-row\"><span class=\"context-speaker\">P4</span><span class=\"context-text\">and then I clicked around a bit</span></div></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".timecode-expandable",
+    "n": 2
+   },
+   {
+    "sel": ".expand-arrow",
+    "n": 5
+   },
+   {
+    "sel": ".context-segment",
+    "n": 5
+   }
+  ],
+  "prose": [
+   {
+    "value": "0.75rem",
+    "defect": "Hover-target padding is a literal that exactly equals an existing spacing token.",
+    "fix": "Use <code>var(--bn-space-md)</code> (0.75rem) for both padding-top and padding-bottom."
+   },
+   {
+    "value": "0.15s",
+    "defect": "Fade duration is hardcoded to a value that already has a transition token.",
+    "fix": "Use <code>var(--bn-transition-fast)</code> (0.15s)."
+   },
+   {
+    "value": "1",
+    "defect": "Magic z-index literal with no stacking scale to anchor it.",
+    "fix": "There is no z-index token; introduce a <code>--bn-z-*</code> scale or document the intended layer."
+   },
+   {
+    "value": "1",
+    "defect": "Off-scale line-height literal not drawn from the paired typography tokens.",
+    "fix": "Pair with a token line-height such as <code>var(--bn-text-label-lh)</code> or document the icon exception."
+   },
+   {
+    "value": "0.5rem",
+    "defect": "Row gap is an off-scale literal between --bn-space-sm and --bn-space-md.",
+    "fix": "Snap to <code>var(--bn-space-sm)</code> (0.35rem) or <code>var(--bn-space-md)</code> (0.75rem)."
+   }
+  ]
+ },
+ "molecules/badge-row.css": {
+  "names": [
+   "badge-row"
+  ],
+  "specimens": [
+   "<div class=\"quote-card\" style=\"background: var(--bn-colour-bg); color: var(--bn-colour-text)\"><div class=\"badges\"><span class=\"badge\">frustration</span><span class=\"badge\">onboarding</span></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".quote-card .badges",
+    "n": 1
+   },
+   {
+    "sel": ".quote-card:hover .badges",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "0.4rem",
+    "defect": "Top margin is an off-scale literal just above the --bn-space-sm step (0.35rem).",
+    "fix": "Snap to <code>var(--bn-space-sm)</code> (0.35rem)."
+   }
+  ]
+ },
+ "organisms/toc.css": {
+  "names": [
+   "toc"
+  ],
+  "specimens": [
+   "<div class=\"toc\" style=\"background: var(--bn-colour-bg); color: var(--bn-colour-text)\"><div class=\"toc-row\"><nav><h2>Sections</h2><ul><li><a href=\"#s1\">Getting started</a></li><li><a href=\"#s2\">First run</a></li></ul></nav></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".toc-row",
+    "n": 2
+   },
+   {
+    "sel": ".toc li",
+    "n": 1
+   },
+   {
+    "sel": ".toc a",
+    "n": 2
+   }
+  ],
+  "prose": [
+   {
+    "value": "3rem",
+    "defect": "Column gap is a large off-scale literal well beyond the --bn-space-xl (2rem) top of the scale.",
+    "fix": "Use <code>var(--bn-space-xl)</code> (2rem) or add a wider spacing token if 3rem is intentional."
+   },
+   {
+    "value": "0.5rem",
+    "defect": "Heading margin is an off-scale literal between --bn-space-sm and --bn-space-md.",
+    "fix": "Snap to <code>var(--bn-space-sm)</code> (0.35rem) or <code>var(--bn-space-md)</code> (0.75rem)."
+   }
+  ]
+ },
+ "organisms/responsive-grid.css": {
+  "names": [
+   "responsive-grid"
+  ],
+  "specimens": [
+   "<div class=\"quote-group\" style=\"background: var(--bn-colour-bg); color: var(--bn-colour-text)\"><blockquote class=\"quote-card\">First quote</blockquote><blockquote class=\"quote-card\">Second quote</blockquote></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".quote-group",
+    "n": 4
+   },
+   {
+    "sel": ".quote-group .quote-card",
+    "n": 1
+   }
+  ],
+  "prose": []
+ },
+ "organisms/uncategorised-floor.css": {
+  "names": [
+   "uncategorised-floor"
+  ],
+  "specimens": [
+   "<section class=\"bn-uncategorised-floor\" style=\"background: var(--bn-colour-bg); color: var(--bn-colour-text)\"><h2>Uncategorised</h2><p class=\"description\">Nothing was lost.</p></section>"
+  ],
+  "xr": [
+   {
+    "sel": ".bn-uncategorised-floor",
+    "n": 1
+   },
+   {
+    "sel": ".bn-uncategorised-floor > h2",
+    "n": 1
+   }
+  ],
+  "prose": []
+ },
+ "atoms/bar.css": {
+  "names": [
+   "bar (sentiment histogram bar)"
+  ],
+  "specimens": [
+   "<div class=\"sentiment-chart\" style=\"background:var(--bn-colour-bg);color:var(--bn-colour-text)\"><div class=\"sentiment-bar-group\"><span class=\"sentiment-bar-label\">frustration<button class=\"histogram-bar-delete\">×</button></span><span class=\"sentiment-bar\" style=\"width:60%;background:var(--bn-sentiment-frustration)\"></span><span class=\"sentiment-bar-count\">12</span></div><div class=\"sentiment-divider\"></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".sentiment-bar-label",
+    "n": 2
+   },
+   {
+    "sel": ".histogram-bar-delete",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "0 1px 4px rgba(0,0,0,.16), 0 0 1px rgba(0,0,0,.06)",
+    "defect": "Delete-button shadow hardcodes rgba geometry instead of the shadow token.",
+    "fix": "Use <code>var(--bn-colour-shadow)</code> as the shadow colour, matching <code>.signal-card:hover</code>."
+   },
+   {
+    "value": "0.45rem",
+    "defect": "Label padding mixes a token with an off-scale 0.45rem inline value.",
+    "fix": "Replace 0.45rem with an on-scale token such as <code>var(--bn-space-sm)</code>."
+   }
+  ]
+ },
+ "molecules/bar-group.css": {
+  "names": [
+   "bar-group (chart row)"
+  ],
+  "specimens": [
+   "<div class=\"sentiment-chart\" style=\"background:var(--bn-colour-bg);color:var(--bn-colour-text)\"><div class=\"sentiment-bar-group\"><span class=\"sentiment-bar-label\">confusion</span><span class=\"sentiment-bar\" style=\"width:40%;background:var(--bn-sentiment-confusion)\"></span><span class=\"sentiment-bar-count\">7</span></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".sentiment-bar-group",
+    "n": 0
+   }
+  ],
+  "prose": []
+ },
+ "organisms/sentiment-chart.css": {
+  "names": [
+   "sentiment-chart (bar chart)"
+  ],
+  "specimens": [
+   "<div class=\"sentiment-row\" style=\"background:var(--bn-colour-bg);color:var(--bn-colour-text)\"><div class=\"sentiment-chart\"><div class=\"sentiment-chart-title\">AI sentiment</div><div class=\"sentiment-bar-group\"><span class=\"sentiment-bar-label\">doubt</span><span class=\"sentiment-bar\" style=\"width:30%;background:var(--bn-sentiment-doubt)\"></span><span class=\"sentiment-bar-count\">5</span></div></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".sentiment-chart",
+    "n": 1
+   },
+   {
+    "sel": ".sentiment-chart-title",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "0.5rem",
+    "defect": "Column gap between label, bar and count is an off-scale 0.5rem (between --bn-space-sm .35 and -md .75).",
+    "fix": "Snap to <code>var(--bn-space-sm)</code> or <code>var(--bn-space-md)</code>."
+   },
+   {
+    "value": "0.6rem",
+    "defect": "Title spacing uses an off-scale 0.6rem literal.",
+    "fix": "Use an on-scale token such as <code>var(--bn-space-md)</code>."
+   }
+  ]
+ },
+ "organisms/analysis.css": {
+  "names": [
+   "analysis (heatmap · signal card · tooltip)"
+  ],
+  "specimens": [
+   "<div style=\"background:var(--bn-colour-bg);color:var(--bn-colour-text);padding:1rem\"><table class=\"analysis-heatmap\"><tr><th class=\"heatmap-col-header\"><span class=\"heatmap-col-label\">Onboarding</span></th></tr><tr><td class=\"heatmap-cell heat-strong\" data-count=\"5\" style=\"background:oklch(0.55 0.15 25)\">5</td></tr></table><span class=\"pattern-label pattern-gap\">GAP</span><span class=\"confidence-badge confidence-strong\">Strong</span></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".confidence-strong",
+    "n": 2
+   },
+   {
+    "sel": ".heatmap-cell",
+    "n": 3
+   },
+   {
+    "sel": ".pattern-label",
+    "n": 8
+   },
+   {
+    "sel": ".cell-tooltip",
+    "n": 2
+   }
+  ],
+  "prose": [
+   {
+    "value": "light-dark(#9ca3af,#9ca3af)light-dark(#fff,#111)",
+    "defect": "Confidence chips hardcode grey fills and #fff/#111 text as raw hex inside light-dark() with no token (moderate/emerging add two more).",
+    "fix": "Route through neutrals like <code>var(--bn-colour-badge-bg)</code>/<code>var(--bn-colour-badge-text)</code>."
+   },
+   {
+    "value": "light-dark(#c9cdd3,#555)",
+    "defect": "Single-count cell text is a raw light/dark grey literal, not derived from --bn-heat-* or a neutral token.",
+    "fix": "Use <code>var(--bn-colour-muted)</code> or a <code>--bn-heat-*</code>-derived neutral."
+   },
+   {
+    "value": "light-dark(#fff,#111)",
+    "defect": "High-intensity cell text hardcodes #fff/#111 rather than an on-heat token.",
+    "fix": "Add a <code>--bn-colour-on-heat</code> token pairing light/dark text."
+   },
+   {
+    "value": "light-dark(#dcfce7,#14532d)light-dark(#166534,#86efac)",
+    "defect": "Four pattern badges (success/tension/gap/recovery) hardcode fill and text as raw hex — eight colour literals total.",
+    "fix": "Promote to the now-real <code>--bn-colour-success/-warning/-danger</code> token families."
+   },
+   {
+    "value": "0 4px 16px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06)",
+    "defect": "Tooltip shadow hardcodes rgba geometry instead of the shadow colour token.",
+    "fix": "Use <code>var(--bn-colour-shadow)</code> as the shadow colour, as <code>.signal-card:hover</code> does."
+   },
+   {
+    "value": "10",
+    "defect": "Magic z-index 10 with no layer scale.",
+    "fix": "Introduce and reference a <code>--bn-z-tooltip</code> token."
+   },
+   {
+    "value": "0.3s",
+    "defect": "Duration literal 0.3s exactly equals <code>--bn-transition-slow</code>.",
+    "fix": "Swap to <code>var(--bn-transition-slow)</code>."
+   }
+  ]
+ },
+ "atoms/autocode-toast.css": {
+  "names": [
+   "autocode-toast"
+  ],
+  "specimens": [
+   "<div class=\"autocode-toast\"><span class=\"toast-spinner\"></span><div class=\"toast-content\"><span>Coding session 3</span><div class=\"toast-progress-track\"><div class=\"toast-progress-fill\" style=\"width:60%\"></div></div></div><span class=\"toast-elapsed\">0:42</span><button class=\"toast-close\">×</button></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".autocode-toast",
+    "n": 9
+   },
+   {
+    "sel": ".toast-progress-fill",
+    "n": 3
+   }
+  ],
+  "prose": [
+   {
+    "value": "#60a5fa",
+    "defect": "The brand accent blue is hardcoded as #60a5fa in three places (spinner top, link, progress fill) with no token.",
+    "fix": "Introduce an accent token (e.g. <code>--bn-colour-accent</code>) and reference it in all three."
+   },
+   {
+    "value": "#e5e7eb#111",
+    "defect": "The inverted dark toast (#e5e7eb bg / #111 text / #2563eb links) is a full raw-hex palette, duplicated verbatim across the [data-theme] and prefers-color-scheme blocks.",
+    "fix": "Move the inverted surface to <code>light-dark()</code> tokens so a single declaration covers both themes."
+   },
+   {
+    "value": "rgba(255,255,255,0.4)",
+    "defect": "Close button, spinner track and progress track use raw white/black rgba overlays instead of colour-mix over tokens.",
+    "fix": "Use <code>color-mix(in srgb, var(--bn-colour-bg) …%, transparent)</code>."
+   },
+   {
+    "value": "0 4px 20px rgba(0,0,0,0.25)",
+    "defect": "Shadow geometry and colour are both literal; there is no shadow token.",
+    "fix": "Tokenise the shadow colour and, ideally, a <code>--bn-shadow-*</code> geometry."
+   },
+   {
+    "value": "200",
+    "defect": "Magic z-index 200 — the heavily overloaded system-wide value, with no scale.",
+    "fix": "Adopt a z-index scale token for floating overlays."
+   }
+  ]
+ },
+ "atoms/activity-chip.css": {
+  "names": [
+   "activity-chip"
+  ],
+  "specimens": [
+   "<div class=\"activity-chip-stack\"><div class=\"activity-chip\"><span class=\"chip-spinner\"></span><span>Transcribing session 2</span><button class=\"chip-cancel\">Cancel</button><button class=\"chip-close\">×</button></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".activity-chip",
+    "n": 8
+   },
+   {
+    "sel": ".chip-close",
+    "n": 4
+   }
+  ],
+  "prose": [
+   {
+    "value": "#60a5fa",
+    "defect": "Accent blue #60a5fa hardcoded on spinner and link, matching the toast atom's untokenised accent.",
+    "fix": "Reference a shared <code>--bn-colour-accent</code> token."
+   },
+   {
+    "value": "rgba(255,255,255,0.5)",
+    "defect": "Every close/cancel/toggle affordance (light + dark) uses raw white/black rgba tints — ~18 declarations across the two dark blocks alone.",
+    "fix": "Derive muted-on-surface colours via <code>color-mix()</code> over <code>--bn-colour-bg</code>/<code>--bn-colour-text</code>."
+   },
+   {
+    "value": "#e5e7eb#111",
+    "defect": "Inverted dark chip palette (#e5e7eb/#111/#2563eb) is raw hex, duplicated across [data-theme] and prefers-color-scheme.",
+    "fix": "Collapse to <code>light-dark()</code> tokens."
+   },
+   {
+    "value": "0 4px 20px rgba(0,0,0,0.25)",
+    "defect": "Literal shadow geometry + colour, no token.",
+    "fix": "Tokenise shadow colour/geometry."
+   },
+   {
+    "value": "0.2s",
+    "defect": "0.2s duration equals the existing <code>--bn-transition-normal</code> token value.",
+    "fix": "Use <code>var(--bn-transition-normal)</code> for the animation duration."
+   }
+  ]
+ },
+ "atoms/moderator-question.css": {
+  "names": [
+   "moderator-question"
+  ],
+  "specimens": [
+   "<div class=\"moderator-question-row\"><span class=\"moderator-question-badge\"><span class=\"badge\">m1</span></span><span class=\"moderator-question\"><span class=\"moderator-question-text\">So how did you find the checkout?</span> <button class=\"moderator-question-more\">more</button></span></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".moderator-pill",
+    "n": 6
+   },
+   {
+    "sel": ".moderator-question-dismiss",
+    "n": 5
+   }
+  ],
+  "prose": [
+   {
+    "value": "0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+    "defect": "Two literal tooltip-system shadows (pill + dismiss) — colour and geometry hardcoded despite this being the documented shared tooltip shadow.",
+    "fix": "Promote the shared tooltip shadow to a <code>--bn-shadow-tooltip</code> token."
+   },
+   {
+    "value": "12",
+    "defect": "Bare z-index literals with no scale.",
+    "fix": "Use a local stacking token."
+   },
+   {
+    "value": "0.2s0.2s",
+    "defect": "0.2s literals equal <code>--bn-transition-normal</code>, mixed in the same declaration as correctly-tokenised <code>var(--bn-transition-fast)</code>.",
+    "fix": "Replace the 0.2s literals with <code>var(--bn-transition-normal)</code>."
+   }
+  ]
+ },
+ "molecules/tag-filter.css": {
+  "names": [
+   "tag-filter"
+  ],
+  "specimens": [
+   "<div class=\"tag-filter\"><div class=\"tag-filter-menu open\"><div class=\"tag-filter-search\"><input class=\"tag-filter-search-input\" placeholder=\"Filter tags\"></div><div class=\"tag-filter-group\"><div class=\"tag-filter-group-header\">Usability</div><label class=\"tag-filter-item\"><input type=\"checkbox\"><span class=\"tag-filter-badge badge\">friction</span><span class=\"tag-filter-count\">12</span></label></div></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".tag-filter-menu",
+    "n": 7
+   },
+   {
+    "sel": ".tag-filter-item",
+    "n": 5
+   }
+  ],
+  "prose": [
+   {
+    "value": "0 4px 12px",
+    "defect": "Shadow colour is tokenised but the offset/blur geometry is literal, and there is no shadow-geometry token.",
+    "fix": "Add a <code>--bn-shadow-menu</code> geometry token."
+   },
+   {
+    "value": "200",
+    "defect": "Magic z-index 200 with no scale.",
+    "fix": "Use a dropdown-layer token."
+   },
+   {
+    "value": "0.15rem",
+    "defect": "0.15rem equals the <code>--bn-space-xs</code> token value.",
+    "fix": "Use <code>var(--bn-space-xs)</code>."
+   }
+  ]
+ },
+ "molecules/threshold-review.css": {
+  "names": [
+   "threshold-review"
+  ],
+  "specimens": [
+   "<div class=\"threshold-review\"><div class=\"threshold-histogram\"><div class=\"threshold-histogram-bin\"><div class=\"threshold-histogram-bar threshold-histogram-bar--green\" style=\"height:60%\"></div></div><div class=\"threshold-histogram-bin\"><div class=\"threshold-histogram-bar threshold-histogram-bar--amber\" style=\"height:30%\"></div></div></div><div class=\"threshold-zone-counters\"><span class=\"threshold-zone-counter threshold-zone-counter--accept\"><span class=\"threshold-zone-counter-count\">18</span> accept</span></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".threshold-slider-thumb",
+    "n": 1
+   },
+   {
+    "sel": ".threshold-zone-counter",
+    "n": 4
+   }
+  ],
+  "prose": [
+   {
+    "value": "#9ca3af",
+    "defect": "Four sites carry a hardcoded #9ca3af fallback baked into the muted token reference — it survives if the token is ever missing and doesn't adapt in dark mode.",
+    "fix": "Drop the fallback: <code>var(--bn-colour-muted)</code>."
+   },
+   {
+    "value": "#fff#3b82f6",
+    "defect": "Thumb bg (#fff), accent border (#3b82f6) and zone-counter border (#e5e7eb) all hardcode fallbacks.",
+    "fix": "Remove the literal fallbacks — the tokens are defined."
+   },
+   {
+    "value": "rgba(34,197,94,0.08)",
+    "defect": "Accept/deny hover washes are raw rgba(34,197,94)/rgba(220,38,38) rather than colour-mix over the success/danger tokens.",
+    "fix": "<code>color-mix(in srgb, var(--bn-colour-success) 8%, transparent)</code>."
+   },
+   {
+    "value": "0 1px 3px rgba(0,0,0,0.15)",
+    "defect": "Literal thumb shadow, colour + geometry.",
+    "fix": "Tokenise the shadow."
+   },
+   {
+    "value": "0.15s",
+    "defect": "0.15s equals <code>--bn-transition-fast</code> and 0.2s (zone-list-body) equals <code>--bn-transition-normal</code>.",
+    "fix": "Use the transition tokens."
+   }
+  ]
+ },
+ "molecules/autocode-report.css": {
+  "names": [
+   "autocode-report"
+  ],
+  "specimens": [
+   "<table class=\"report-table\"><tr class=\"report-row\"><td class=\"report-timecode\"><a href=\"#\">0:12</a></td><td class=\"report-speaker\">P3</td><td class=\"report-quote\">I couldn't find the button</td><td class=\"report-tag has-tooltip\"><span class=\"badge\">friction</span><span class=\"tooltip\">Model rationale…</span></td><td class=\"report-deny\"><button class=\"report-deny-btn\">×</button></td></tr></table>"
+  ],
+  "xr": [
+   {
+    "sel": ".report-row",
+    "n": 3
+   },
+   {
+    "sel": ".has-tooltip .tooltip",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "rgba(220,38,38,0.06)",
+    "defect": "Deny hover wash is raw rgba rather than colour-mix over <code>--bn-colour-danger</code>.",
+    "fix": "<code>color-mix(in srgb, var(--bn-colour-danger) 6%, transparent)</code>."
+   },
+   {
+    "value": "0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)",
+    "defect": "Shared tooltip shadow is a literal — same untokenised geometry as moderator-pill.",
+    "fix": "Promote to a <code>--bn-shadow-tooltip</code> token."
+   },
+   {
+    "value": "300",
+    "defect": "Magic z-index 300, no scale.",
+    "fix": "Use a tooltip-layer token."
+   },
+   {
+    "value": "0.3s",
+    "defect": "0.2s durations equal <code>--bn-transition-normal</code> and the 0.3s hover delay equals <code>--bn-transition-slow</code>.",
+    "fix": "Reference the transition tokens."
+   }
+  ]
+ },
+ "organisms/codebook-panel.css": {
+  "names": [
+   "codebook-panel"
+  ],
+  "specimens": [
+   "<div class=\"codebook-grid\"><div class=\"codebook-group\"><div class=\"group-header\"><div class=\"group-title-area\"><div class=\"group-title\"><span class=\"group-title-text\">Usability</span></div></div><button class=\"group-close\">×</button></div><div class=\"tag-list\"><div class=\"tag-row\"><div class=\"tag-name-area\"><span class=\"badge badge-user\">friction</span></div><div class=\"tag-bar-area\"><span class=\"tag-micro-bar\" style=\"width:40px\"></span><span class=\"tag-count\">12</span></div></div></div><div class=\"framework-section-actions\"><button class=\"autocode-btn\"><span class=\"sparkle\">✨</span> AutoCode</button><span class=\"proposed-count\">7</span></div></div></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".codebook-group",
+    "n": 4
+   },
+   {
+    "sel": ".picker-card",
+    "n": 6
+   },
+   {
+    "sel": ".tag-row",
+    "n": 2
+   }
+  ],
+  "prose": [
+   {
+    "value": "white#fff",
+    "defect": "Button text colours are literal white/#fff on token backgrounds — no on-accent text token.",
+    "fix": "Add <code>--bn-colour-on-accent</code> / <code>--bn-colour-on-danger</code> tokens."
+   },
+   {
+    "value": "rgba(37,99,235,0.08)rgba(0,0,0,0.5)",
+    "defect": "Accent pill wash and the modal scrim are raw rgba — the scrim especially should be a shared overlay token.",
+    "fix": "Use <code>color-mix()</code> over <code>--bn-colour-accent</code> and a <code>--bn-colour-scrim</code> token."
+   },
+   {
+    "value": "light-dark(#16a34a, #4ade80)",
+    "defect": "The 'Imported' badge hardcodes a green light-dark pair plus rgba backgrounds instead of the existing positive token.",
+    "fix": "Use <code>var(--bn-colour-positive)</code> and a colour-mix wash."
+   },
+   {
+    "value": "200150",
+    "defect": "Four ad-hoc z-index literals (200/100/150/200) with no layering scale.",
+    "fix": "Introduce a z-index scale for ghosts/dialogs/overlays."
+   },
+   {
+    "value": "0 20px 60px",
+    "defect": "Modal/ghost/dialog shadows tokenise colour but hardcode geometry (5 sites).",
+    "fix": "Add <code>--bn-shadow-modal</code>/<code>-popover</code> geometry tokens."
+   },
+   {
+    "value": "2rem",
+    "defect": "2rem equals <code>--bn-space-xl</code>, 0.15rem equals <code>--bn-space-xs</code>, 3px equals <code>--bn-radius-sm</code>, and 0.2s equals <code>--bn-transition-normal</code>.",
+    "fix": "Swap each literal for its matching token."
+   }
+  ]
+ },
+ "organisms/sidebar-tags.css": {
+  "names": [
+   "sidebar-tags"
+  ],
+  "specimens": [
+   "<div class=\"tag-sidebar\"><div class=\"tag-search-container\"><input class=\"tag-search-input\" placeholder=\"Search tags\"></div><details class=\"codebook-framework\" open><summary><span class=\"codebook-info\"><span class=\"codebook-title\">Grounded Theory</span><span class=\"codebook-author\">by J. Doe</span></span><button class=\"codebook-eye\">👁</button></summary><div class=\"codebook-body\"><div class=\"tag-row\"><label class=\"tag-checkbox-label\"><input type=\"checkbox\"></label><div class=\"tag-name-area\"><span class=\"badge\">friction</span></div><div class=\"tag-bar-area\"><span class=\"tag-micro-bar\" style=\"width:30px\"></span><span class=\"tag-count\">8</span></div></div></div></details></div>"
+  ],
+  "xr": [
+   {
+    "sel": ".tag-search-input",
+    "n": 1
+   },
+   {
+    "sel": ".codebook-framework",
+    "n": 3
+   },
+   {
+    "sel": ".tag-sidebar .tag-count",
+    "n": 1
+   }
+  ],
+  "prose": [
+   {
+    "value": "2px0.1rem",
+    "defect": "Eye-toggle padding/margins use bare 2px and 0.05rem/0.1rem, off the spacing scale.",
+    "fix": "Round to <code>var(--bn-space-xs)</code> or add a micro spacing token."
+   },
+   {
+    "value": "2.2rem",
+    "defect": "A magic 2.2rem indent (hand-computed from summary padding + chevron + gap) mixes literals with a token in one declaration.",
+    "fix": "Express the indent from spacing tokens or a named <code>--bn-tag-indent</code>."
+   },
+   {
+    "value": "1px 6px-1px -6px",
+    "defect": "Count-highlight and bar-area hit padding use bare 1px/4px/6px negative-margin pairs.",
+    "fix": "Use spacing tokens for the reserved highlight box."
+   }
+  ]
+ }
+}

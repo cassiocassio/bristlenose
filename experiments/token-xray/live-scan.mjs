@@ -27,14 +27,8 @@ if (!url) {
 }
 
 const browser = await chromium.launch();
-const page = await browser.newPage({
-  viewport: { width: 1280, height: 900 },
-  colorScheme: flag('--dark') ? 'dark' : 'light',
-});
-await page.goto(url, { waitUntil: 'load' });
-await page.waitForTimeout(1500); // SPA mount; networkidle is untrustworthy here
 
-const result = await page.evaluate((overlay) => {
+const scan = (page, overlay) => page.evaluate((overlay) => {
   const probe = document.createElement('div');
   probe.style.cssText = 'position:absolute;visibility:hidden';
   document.body.appendChild(probe);
@@ -110,14 +104,60 @@ const result = await page.evaluate((overlay) => {
   }
   probe.remove();
   return { tokens: names.size, findings };
-}, flag('--overlay'));
+}, overlay);
 
-const byValue = {};
-for (const f of result.findings) for (const b of f.bad) {
-  const k = `${b.prop}=${b.value}`;
-  byValue[k] = (byValue[k] ?? 0) + 1;
+const summarise = (findings) => {
+  const byValue = {};
+  for (const f of findings) for (const b of f.bad) {
+    const k = `${b.prop}=${b.value}`;
+    byValue[k] = (byValue[k] ?? 0) + 1;
+  }
+  return Object.entries(byValue).sort((a, b) => b[1] - a[1]).slice(0, 15);
+};
+
+if (flag('--all')) {
+  // Every tab, both colour schemes. Tabs come from the page's own tablist.
+  const pages = [];
+  for (const scheme of ['light', 'dark']) {
+    const pg = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
+    await pg.goto(url, { waitUntil: 'load' });
+    await pg.waitForTimeout(1500);
+    const tabs = await pg.evaluate(() =>
+      // the top tab bar only: sidebar and in-page anchors sit below it
+      [...document.querySelectorAll('[role=tab], [role=tablist] a, nav a')]
+        .filter((e) => e.getBoundingClientRect().top < 230)
+        .map((e) => ({ label: e.textContent.trim(), href: e.getAttribute('href') }))
+        .filter((t) => t.label));
+    const seen = new Set();
+    for (const t of tabs) {
+      if (seen.has(t.label)) continue;
+      seen.add(t.label);
+      if (t.href && t.href.startsWith('/')) await pg.goto(new URL(t.href, url).href, { waitUntil: 'load' });
+      else await pg.getByRole('tab', { name: t.label, exact: true }).first().click().catch(() => {});
+      await pg.waitForTimeout(1200);
+      const r = await scan(pg, false);
+      pages.push({ tab: t.label, scheme, url: pg.url(), tokens: r.tokens, total: r.findings.length,
+        freelance: r.findings.filter((f) => f.status === 'freelance').length,
+        deliberate: r.findings.filter((f) => f.status === 'deliberate').length,
+        topValues: summarise(r.findings), findings: r.findings });
+      console.log(`${scheme.padEnd(5)} ${t.label.padEnd(12)} off-token elements: ${r.findings.length}`);
+    }
+    await pg.close();
+  }
+  if (opt('--out')) writeFileSync(opt('--out'), JSON.stringify({ url, scannedAt: new Date().toISOString(), pages }, null, 2));
+  await browser.close();
+  process.exit(0);
 }
-const top = Object.entries(byValue).sort((a, b) => b[1] - a[1]).slice(0, 15);
+
+const page = await browser.newPage({
+  viewport: { width: 1280, height: 900 },
+  colorScheme: flag('--dark') ? 'dark' : 'light',
+});
+await page.goto(url, { waitUntil: 'load' });
+await page.waitForTimeout(1500); // SPA mount; networkidle is untrustworthy here
+const result = await scan(page, flag('--overlay'));
+
+const top = summarise(result.findings);
 
 const out = { url, tokens: result.tokens, total: result.findings.length,
   freelance: result.findings.filter((f) => f.status === 'freelance').length,

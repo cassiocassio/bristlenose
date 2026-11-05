@@ -60,3 +60,12 @@ BN_URL=... node interaction-profile.mjs --cases=search       [--browser=webkit] 
 - **search**: browser field only (`SearchBox.tsx`; the Mac app's field is native). Types a 6-letter word that was probed to change the result set on its last character, at 700 / 170 / 60 ms between keys. Echo is keydown to the second rAF after the input event. Results are last keystroke to the last paint of a changed `.quote-card` count, minus the 150 ms debounce. Chromium also reports CDP script/layout/style ms per typing.
 - **Who re-rendered**: `BN_MODE=search BN_COUNT=1 node cpu-profile.cjs` counts components rendered per commit (a DevTools-style commit hook); without `BN_COUNT` it takes a CPU profile of the typing. Both need unminified source: run your own Vite (`BN_VITE`, see the header of `cpu-profile.cjs`).
 
+
+
+## The 4 Nov 2026 probes (one line each; all need a served COPY, see `serve-fixture.py`)
+
+- `lens-requests.mjs`: API requests, repeats and chunk requests (and any under two URL prefixes) when a lens opens.
+- `page-ready.mjs`: navigation to the embedded `ready` message with a cold cache, as the app's per-study web view has.
+- `idle.mjs`: requests per minute and page and server CPU for an open, untouched report.
+- `playback.mjs`: what following a recording costs the transcript page (synthetic player time-updates).
+- `transcript-reread.mjs`: what a speaker write's re-read costs the transcript page.

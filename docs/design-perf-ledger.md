@@ -80,21 +80,26 @@ Delaying the Vision import does not remove it (1.5 s: 1,223 vs 1,191 ms; 4 s: 1,
 
 The moment: click a study in the sidebar, the report is ready. Measured in the Mac app (Debug build, the resize session's signposts, `design-client-performance.md` § Sidecar start); the page part measured here.
 
-| Part | Median | Basis |
+| | Median | Basis |
 |---|---|---|
 | Before the work | 4.1 s | measured |
 | After the lazy `inflect` change | **3.1 s** (3,106 cold, 3,192 warm) | measured in the app, 5 runs, identical app binary |
-| Of that 2,948 ms: click to spawn | 112 ms | measured |
-| **Sidecar boot to its port line** | **2,076 ms (70%)** | measured |
-| Port answers, then `/api/health` | 264 ms | measured |
-| Web view built and loading | 340 ms | measured |
-| Page mounts and posts `ready` | 210 ms | measured; matches the 243 ms WebKit and 160 ms Chromium below |
 
-- **The page is not the lever.** Navigation to `ready` with a cold cache (the app's web view has none: a fresh store per study): **WebKit 243 ms (220–272), Chromium 160 ms (144–197)**, 51 script files and about 290 KB on the wire before `ready`, four API calls (`health`, `condition`, two export statuses; `experiments/perf/page-ready.mjs`). Posting `ready` earlier would save at most the one health round trip (about 10–20 ms).
-- **Since then, in dev only:** the lazy MCP mount (about −0.4 s) and the Screens check off the event loop (about −0.3 s) took spawn → first health from 1,817 to 1,191 ms. **Not confirmed in the app** (a noisy non-interleaved batch showed no drop); the owner approved an interleaved app A/B for when the Mac is idle. If the dev gains carry over, an estimate, not a measurement: 3.0 s → about 2.3 s.
-- **The app A/B has no owner now:** the session that owned the Mac-side measurements has ended. The owner approved the run for when they are away from the Mac. Method, so any session can do it: build the Debug app once, copy it per run, swap only `Contents/Resources/bristlenose-sidecar` between arms built from `58f0477e3` (before the lazy MCP mount), `34c1ce020` and HEAD, alternate the arms 8 times each with Screens on, and read `desktop/scripts/perf/serve-ready.sh <template.app> <label> 8 0` (spawn → port answering, and `project-select`). It launches the app and moves the pointer: the Mac must be otherwise idle, and runs with a UI stall are dropped and counted. Extend it with the three unmeasured cases below.
-- **Not measured:** reopening a study whose sidecar is still alive (the app keeps one for 90 s after its window closes, so it may skip the spawn), switching between two open studies, a large study (the importer adds about 0.7 ms a quote), a Release build.
-- **The big lever is not tuning, and its size can now be bounded.** In the sandboxed app the sidecar reaches `create-app-start` **851 ms after spawn, of 1,818 ms to socket-bound (47%)** (the resize session's stage stamps, `design-client-performance.md`): that part is Python start and imports and does not depend on which study is opened. In dev it is 776 of about 1,150 ms (68%). A pre-started sidecar with its imports done, waiting for a study path, could therefore save **about 0.85 s per study open in the app** (an estimate from measured stages, assuming only the project-bound work is left to do after the click; it also needs `create_app(project_dir)` split so that binding happens after start, which is a design change, and costs about 140 MB of idle memory per spare). The "warm slot" in the code is dead. This is the Workspace item.
+Where a cold open goes, **from a separate batch of the same app** (5 cold runs, a different set of runs, so its 2,948 ms total and these medians do not sum to the 3,106 above):
+
+| Part | Median |
+|---|---|
+| Click to spawn requested | 112 ms |
+| **Sidecar boot to its port line** | **2,076 ms (70%)** |
+| Port answers, then `/api/health` | 264 ms |
+| Web view built and loading | 340 ms |
+| Page mounts and posts `ready` | 210 ms |
+
+- **The page is not the lever.** One run of `experiments/perf/page-ready.mjs` (10 reps, cold cache as the app's per-study web view has, on the 242-quote real-study copy; the output was not saved as a file): navigation to `ready` **WebKit 243 ms (220–272), Chromium 160 ms (144–197)**, 51 script files and about 290 KB on the wire before `ready`, four API calls (`health`, `condition`, two export statuses). Playwright's WebKit is not WKWebView and the app's 210 ms starts at `didFinish`, so read it as the same order of magnitude. `ready` follows one `/api/health` round trip after the shell mounts; that round trip was not timed.
+- **Since then, in dev only:** the lazy MCP mount (about −0.4 s) and the Screens check off the event loop (about −0.3 s) took spawn → first health from 1,817 to 1,191 ms (−626 ms). **Not confirmed in the app**: the one noisy, non-interleaved app batch showed no drop. If the full 0.6 s carried over, a cold open would be about 2.5 s; that is arithmetic on a number the app has not shown yet.
+- **Not measured:** reopening a study whose sidecar is still alive (the app keeps one for 90 s after its window closes, so it may skip the spawn), switching between two open studies, a large study (the importer adds about 0.7 ms a quote), a Release build. Not requested of anyone; named so the gap is visible.
+- **The app A/B** (interleaved, quiet Mac) was approved by the owner: "Yes, run it when I'm away from the Mac". The session that owned the Mac-side measurements has ended; the method is in `desktop/scripts/perf/README.md`.
+- **The big lever is not tuning, and its size can be bounded.** In the sandboxed app the sidecar reaches `create-app-start` **851 ms after spawn, of 1,818 ms to socket-bound (47%)** (the resize session's stage stamps): Python start and imports, which do not depend on which study is opened. In dev, with the same split, it is 776 of about 1,150 ms (the three project-independent parts: Python start, `serve` entry and importing the server app, 186 + 164 + 426 ms). A pre-started sidecar with its imports done, waiting for a study path, could therefore save **about 0.85 s per study open in the app** (an estimate from measured stages, assuming only the project-bound work is left after the click). It needs `create_app(project_dir)` split so binding happens after start, which is a design change, and costs about 140 MB of idle memory per spare. The "warm slot" in the code is dead. This is the Workspace item.
 
 ## The rule each entry follows
 

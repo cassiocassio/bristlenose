@@ -46,3 +46,13 @@ AttributeGraph most of all): compare Debug with Debug, Release with Release.
 
 The first fix moved the cost: with the sidebar no longer rebuilt, more frames got through,
 and each one paid the SwiftUI shell's re-evaluation. The second fix removed that.
+
+
+## The sidecar A/B for the lazy-MCP and Screens changes (4 Nov 2026, not yet run in the app)
+
+Dev measurements say the lazy MCP mount and the Screens-check-off-the-loop change shorten the
+sidecar's start; one noisy, non-interleaved batch in the app did not show it. To settle it, on an
+otherwise idle Mac: build the Debug app once, copy it per run, swap only
+`Contents/Resources/bristlenose-sidecar` between arms built from `58f0477e3` (before the lazy
+mount), `34c1ce020` and HEAD, alternate the arms 8 times each with Screens on (the Mac default),
+and read `serve-ready.sh <template.app> <label> 8 0`. Drop runs with a UI stall and count them.

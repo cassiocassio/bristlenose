@@ -49,24 +49,6 @@ enum CompletionRescan {
         }
     }
 
-    /// A run that ends through `.idle` (a CLI run attached at launch, a stop) reaches its resting
-    /// state one hop later, when the manifest is re-read. Remember such a study in `pending` and,
-    /// at that second hop, report the old state as `.running` so the end is still one run ending.
-    static func oldStateForRunEnd(old: [UUID: PipelineState], new: [UUID: PipelineState],
-                                  pending: inout Set<UUID>) -> [UUID: PipelineState] {
-        var effective = old
-        for (id, state) in new {
-            if case .running = old[id], case .idle = state {
-                pending.insert(id)
-            } else if pending.contains(id) {
-                if case .idle = state { continue }
-                pending.remove(id)
-                if isSettledAfterRun(state) { effective[id] = .running }
-            }
-        }
-        return effective
-    }
-
     /// Should the selected study's report be reloaded now because its **run** just finished?
     ///
     /// Only a real `.running` to resting transition counts. The launch-time manifest read

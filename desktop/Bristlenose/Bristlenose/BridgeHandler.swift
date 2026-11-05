@@ -871,6 +871,9 @@ final class BridgeHandler: ObservableObject {
         if let lens, lens != .project { pendingLensIntent = lens }
     }
 
+    /// The reload it was held for did not happen, so nothing should replay on a later `ready`.
+    func cancelHeldLens() { pendingLensIntent = nil }
+
     func activateLens(_ tab: Tab) {
         // A lens the document withholds during a run has nothing to show; every
         // caller (rail, outline, ⌘-number, menu) already dims it, this is the floor.

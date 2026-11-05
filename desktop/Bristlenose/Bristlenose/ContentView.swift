@@ -463,8 +463,6 @@ struct ContentView: View {
     /// In-flight retry task that reloads the detail WebView after a run finishes
     /// — see scheduleReportReloadIfNeeded.
     @State private var reportReloadTask: Task<Void, Never>?
-    /// Studies whose run ended through `.idle` and are waiting for the manifest re-read.
-    @State private var runsEndedIdle: Set<UUID> = []
     /// The lens a study was on when its run started: the run replaces the report with its own page,
     /// which records Project as the lens, so the lens to return to is taken before that happens.
     @State private var lensAtRunStart: [UUID: Tab] = [:]
@@ -3704,12 +3702,15 @@ struct ContentView: View {
     )
 
     private func scheduleReportReloadOnCompletion(
-        old rawOld: [UUID: PipelineState], new: [UUID: PipelineState]
+        old: [UUID: PipelineState], new: [UUID: PipelineState]
     ) {
-        let old = CompletionRescan.oldStateForRunEnd(old: rawOld, new: new, pending: &runsEndedIdle)
-        if let id = selectedProjectID, case .running = new[id], lensAtRunStart[id] == nil,
-           let tab = bridgeHandler.activeTab, tab != .project {
-            lensAtRunStart[id] = tab
+        // Taken afresh at every run start, so an earlier run's value can never outlive it.
+        if let id = selectedProjectID, case .running = new[id] {
+            var wasRunning = false
+            if case .running = old[id] { wasRunning = true }
+            if !wasRunning {
+                lensAtRunStart[id] = bridgeHandler.activeTab.flatMap { $0 == .project ? nil : $0 }
+            }
         }
         guard CompletionRescan.shouldReloadReport(selected: selectedProjectID, old: old, new: new),
               let id = selectedProjectID else { return }
@@ -3757,12 +3758,15 @@ struct ContentView: View {
                     Self.reloadLog.info("reload defer (editing) attempt=\(attempt)")
                     continue
                 }
+                // Only a lens that is on the rail now: a withheld or switched-off one is not replayed.
                 bridgeHandler.holdLensAcrossReload(
-                    remembered: lensAtRunStart[id]
-                        ?? selectedProject?.lastLens.flatMap(Tab.init(rawValue:)))
+                    remembered: lensAtRunStart[id].flatMap {
+                        LensMemory.restore($0.rawValue, rail: lensRail)
+                    })
                 let didReload = bridgeHandler.reloadWebView()
                 Self.reloadLog.info("reload attempt=\(attempt) didReload=\(didReload)")
                 if didReload { lensAtRunStart[id] = nil; return }
+                bridgeHandler.cancelHeldLens()
             }
             lensAtRunStart[id] = nil
             Self.reloadLog.info("reload gave up")

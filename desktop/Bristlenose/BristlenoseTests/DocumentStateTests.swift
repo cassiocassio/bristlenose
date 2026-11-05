@@ -126,6 +126,13 @@ struct BridgeHandlerLensIntentTests {
         #expect(bridge.lensIntentReplayed)
     }
 
+    @Test func aReloadThatDidNotHappenReleasesTheHeldLens() {
+        let bridge = BridgeHandler()
+        bridge.holdLensAcrossReload(remembered: .signals)
+        bridge.cancelHeldLens()
+        #expect(bridge.pendingLensIntent == nil)
+    }
+
     @Test func aReloadHoldsNothingWhenNothingOrProjectIsRemembered() {
         let bridge = BridgeHandler()
         bridge.holdLensAcrossReload(remembered: nil)

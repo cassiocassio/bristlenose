@@ -73,6 +73,19 @@ struct WindowSeed: Codable, Hashable {
         return lensIntentReplayed ? .forget : .go
     }
 
+    /// The study a window should open on, given its seed: nil when there is nothing to do.
+    ///
+    /// Asked at appear **and whenever the seed changes**. On macOS 27 a restored window is created
+    /// with a nil seed and `onAppear` runs with it; the restored value arrives a few hundred
+    /// milliseconds later (measured 5 Nov 2026: `WindowGroup content seed=nil` then `onAppear
+    /// seed=nil`, then the study's seed on the next evaluation). A seed read only at appear was
+    /// therefore never seen on a relaunch, and every restored window came back empty. Only an empty
+    /// selection is filled, so the write-back a study switch makes cannot loop or override a choice.
+    static func projectToOpen(seed: WindowSeed?, selectionIsEmpty: Bool, knownProjects: Set<UUID>) -> UUID? {
+        guard selectionIsEmpty, let wanted = seed?.project, knownProjects.contains(wanted) else { return nil }
+        return wanted
+    }
+
     /// This seed with its place consumed.
     var withoutPlace: WindowSeed {
         WindowSeed(token: token, project: project, lens: lens)

@@ -1153,10 +1153,7 @@ struct ContentView: View {
                 // it wrote back. `@AppStorage("selectedProjectID")` keeps only
                 // its non-window jobs; it stopped being *the* selection the
                 // moment windows became independent.
-                if let wanted = seed?.project,
-                   projectIndex.projects.contains(where: { $0.id == wanted }) {
-                    selection = [.project(wanted)]
-                }
+                applySeedSelection()
             }
             // First-run consent check.
             if !hasConsent {
@@ -1164,6 +1161,9 @@ struct ContentView: View {
                 showingAIConsent = true
             }
         }
+        // A restored window's seed arrives AFTER `onAppear` has run with nil (see
+        // `WindowSeed.projectToOpen`), so the study is also taken when the seed changes.
+        .onChange(of: seed?.project) { _, _ in applySeedSelection() }
         #if DEBUG
         // Debug-only: apply BRISTLENOSE_DEBUG_DIAGNOSTIC_FIXTURE only to
         // the currently-selected project, so the other sidebar rows keep
@@ -1636,6 +1636,15 @@ struct ContentView: View {
     }
 
     // MARK: - Selection change
+
+    /// Open this window's seeded study if it has none selected yet.
+    private func applySeedSelection() {
+        if let wanted = WindowSeed.projectToOpen(
+            seed: seed, selectionIsEmpty: selection.isEmpty,
+            knownProjects: Set(projectIndex.projects.map(\.id))) {
+            selection = [.project(wanted)]
+        }
+    }
 
     /// Resolve a sidebar selection — wires bridge state and orchestrates the
     /// serve sidecar lifecycle via `switchProject`. Called directly from
